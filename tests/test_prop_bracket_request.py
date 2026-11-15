@@ -41,7 +41,7 @@ def _ticket(tid, account, *, status="filled", direction="short", entry=87.64, sl
 def test_capability_names_why_each_account_can_or_cannot_amend():
     assert br.amend_capability("velotrade_1")["tp"] is True
     t = br.amend_capability("tradeify_1")
-    assert t["tp"] is False and t["sl"] is True and "TP_AMEND_SUPPORTED" in t["why"]
+    assert t["tp"] is True and t["sl"] is True and "TP-only rollout step" in t["why"]   # CAP-TRADEIFY-TP-AMEND
     p = br.amend_capability("breakout_2")
     assert p["tp"] is False and p["sl"] is False and "phone" in p["why"]
     assert br.amend_capability("no_such_account")["tp"] is False
@@ -62,8 +62,8 @@ def test_dry_run_writes_nothing_and_apply_writes_reads_back_and_is_projected():
 
 
 def test_refusals_are_named_and_write_nothing():
-    _ticket("prop-manual-bbbbbb", "tradeify_1")
-    r = br.request_bracket("prop-manual-bbbbbb", account_id="tradeify_1", tp=78.964, apply=True)
+    _ticket("prop-manual-bbbbbb", "breakout_2")      # a phone account: its amends go through the phone channel
+    r = br.request_bracket("prop-manual-bbbbbb", account_id="breakout_2", tp=78.964, apply=True)
     assert r["result"] == br.R_REFUSED and "cannot amend a TP" in r["detail"]
     _ticket("prop-manual-cccccc", "velotrade_1")
     for kw, frag in (({"tp": 90.0}, "profit side"), ({"sl": 90.0}, "looser"),
@@ -176,7 +176,7 @@ def _intent():
                                 expected_cost_r=-0.1, worst_case_delta_r=0.4)
 
 
-def test_live_review_prop_vm_move_tp_is_queued_for_velotrade_and_refused_for_tradeify():
+def test_live_review_prop_vm_move_tp_is_queued_for_velotrade_and_tradeify():
     assert "move_tp" in lra.ACTION_PATHS["prop_vm"]          # close / reduce joined it (CAP-PROP-VM-CLOSE)
     _ticket("prop-manual-ffffff", "velotrade_1")
     _ticket("prop-manual-abcdef", "tradeify_1")
@@ -186,7 +186,7 @@ def test_live_review_prop_vm_move_tp_is_queued_for_velotrade_and_refused_for_tra
     ok = lra._exec_prop_vm_tp({"row": {"ticket_id": "prop-manual-ffffff", "account_id": "velotrade_1"}}, V, _intent())
     assert ok["result"] == lra.X_APPLIED
     no = lra._exec_prop_vm_tp({"row": {"ticket_id": "prop-manual-abcdef", "account_id": "tradeify_1"}}, V, _intent())
-    assert no["result"] == lra.X_REFUSED and "TP_AMEND_SUPPORTED" in no["detail"]
+    assert no["result"] == lra.X_APPLIED                     # CAP-TRADEIFY-TP-AMEND (operator 2026-11-12): queued too
 
 
 def test_the_action_wrapper_resolves_the_runtime_journal_like_its_siblings():

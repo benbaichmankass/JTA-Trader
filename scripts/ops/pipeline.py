@@ -1932,6 +1932,13 @@ def _check(store: Path) -> int:
     return 0
 
 
+def _read_state() -> dict:
+    """What this run actually read (HEALTH-20261111-EXPORT-READS-STALE): the live store (VM db or
+    the API) or, only when asked for, the frozen export with its newest record."""
+    from src.runtime import work_read as _wr
+    return _wr.read_state()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
@@ -1985,7 +1992,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.check:
         return _check(store)
-    res = read_log(store)
+    from src.runtime import work_read as _wr
+    try:
+        res = read_log(store)
+    except _wr.WorkReadError as exc:  # off-VM and the live store unreachable: say so, never the export
+        print(json.dumps({"read_state": "could_not_look", "error": str(exc)}, indent=2))
+        return 2
     if args.gate:
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
         from src.runtime import checklist_store
@@ -1997,10 +2009,11 @@ def main(argv: list[str] | None = None) -> int:
         qdir = Path(__file__).resolve().parents[2] / "research" / "queue"
         g = gate_set(res.items.values(), rows,
                      unit_exists=lambda u: (qdir / f"{u}.yaml").exists())
+        g["read_state"] = _read_state()
         print(json.dumps(g, indent=2, sort_keys=True))
         return 0 if res.healthy else 1
     if args.stats:
-        print(json.dumps(stats(res), indent=2, sort_keys=True))
+        print(json.dumps({**stats(res), "read_state": _read_state()}, indent=2, sort_keys=True))
         return 0 if res.healthy else 1
     print("\n".join(render_section_0(res, limit=None if args.all else SECTION0_CAP)))
     return 0 if res.healthy else 1
