@@ -133,3 +133,29 @@ def test_unreadable_journal_or_no_linked_trade_keeps_the_plan_and_never_raises(t
     rec = pt.build_record(open_pkg=_pkg(linked_trade_id=None), meta=_meta(), window=_window(), direction="long",
                           current_price=0.1503)
     assert rec["entry"] == pytest.approx(PLAN_ENTRY)
+
+
+def test_upsert_moves_entry_and_risk_to_the_fill_on_a_row_opened_on_the_plan(tmp_path):
+    """TELEMETRY-UPSERT-ENTRY-RISK-COLUMNS: a row first written on the plan basis (before #26203) must not keep the
+    plan entry/risk beside a fill-based open_r once the fill is known; a later record without them never wipes them."""
+    db = _db(tmp_path, {"entry_price_source": "plan", "entry_price_source_reason": "fill_pending_writeback"},
+             entry=PLAN_ENTRY)
+    pt.record_position_telemetry(open_pkg=_pkg(), meta=_meta(), window=_window(), direction="long",
+                                 current_price=0.1503, db_path=db)
+    with sqlite3.connect(db) as c:
+        assert c.execute(f"SELECT entry FROM {pt.TABLE}").fetchone()[0] == pytest.approx(PLAN_ENTRY)
+        c.execute("UPDATE trades SET entry_price = ?, notes = ? WHERE id = 7260",
+                  (FILL, json.dumps({"entry_price_source": "bybit_order_history"})))
+    pt._PLAN_SEEN.clear()
+    pt.record_position_telemetry(open_pkg=_pkg(), meta=_meta(), window=_window(), direction="long",
+                                 current_price=0.1503, db_path=db)
+    with sqlite3.connect(db) as c:
+        entry, risk, open_r = c.execute(f"SELECT entry, risk_per_unit, open_r FROM {pt.TABLE}").fetchone()
+    assert entry == pytest.approx(FILL) and risk == pytest.approx(FILL - INITIAL_SL, rel=1e-6)
+    assert open_r == pytest.approx((0.1503 - FILL) / (FILL - INITIAL_SL), abs=1e-3)
+    rec = pt.build_record(open_pkg=_pkg(entry=None), meta=_meta(risk_per_unit=None), window=_window(),
+                          direction="long", current_price=0.1503)
+    pt.write_record(rec, db_path=db)
+    with sqlite3.connect(db) as c:
+        assert c.execute(f"SELECT entry, risk_per_unit FROM {pt.TABLE}").fetchone() == pytest.approx(
+            (FILL, FILL - INITIAL_SL), rel=1e-6)
