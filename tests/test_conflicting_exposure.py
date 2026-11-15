@@ -239,3 +239,136 @@ def test_no_order_packages_table_falls_back_to_the_stop_and_says_so(tmp_path, st
     db = _db(tmp_path, SOL_TRADES, SOL_TICKETS)
     legs = ce.read_open_legs(db, mark_fn=lambda s: 84.2, strategies_path=strategies_yaml)
     assert {x["open_r_basis"] for x in legs["legs"]} == {"current_stop"}
+
+
+# ── 2026-11-15: a leg LEAVING is not a new conflict (carry_forward) ──────────────────────────────────────────────
+# Tonight's ETHUSDT book, package ids as measured: one ml_entry_v2 long vs four shorts that exited one by one.
+ETH_LONG = ("pkg-ec790aada2a548dc", "ml_entry_v2", "ETHUSDT", "long", 1768.52, 1703.64, "bybit_1", "paper", "open")
+ETH_SHORTS = [
+    ("pkg-48c5cfab364e430c", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_1", "paper", "open"),
+    ("pkg-665b2dff5ef04889", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_1", "paper", "open"),
+    ("pkg-edd087a2c21c4421", "trend_donchian_eth", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_1", "paper", "open"),
+    ("pkg-fd52297225d14860", "trend_donchian_eth_prop", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_1", "paper",
+     "open"),
+]
+
+
+def _eth_book(tmp_path, n_shorts):
+    d = tmp_path / f"b{n_shorts}"
+    d.mkdir(exist_ok=True)
+    return _db(d, [ETH_LONG] + ETH_SHORTS[:n_shorts])
+
+
+def test_tonights_three_eth_keys_are_the_raw_package_hashes():
+    """Pins the diagnosis: the three keys that fired at 00:10Z / 02:20Z / 03:01Z are the sorted-package hashes of
+    the book as each short exited (nothing else churns into the key)."""
+    def key(n):
+        legs = [{"order_package_id": ETH_LONG[0], "direction": "long"}] + [
+            {"order_package_id": s[0], "direction": "short"} for s in ETH_SHORTS[:n]]
+        return ce.conflict_key("ETHUSDT", legs)
+    assert [key(4), key(3), key(2)] == ["ETHUSDT#f9b0dbe1d5", "ETHUSDT#43d62acadb", "ETHUSDT#71bffc9581"]
+
+
+def test_tonights_three_eth_keys_produce_one_alert_not_three(tmp_path):
+    st = tmp_path / "state.json"
+    sent = []
+    keys = []
+    for n in (4, 3, 2):                                   # 00:10Z, then fd522972 exits 02:20Z, edd087a2 exits 03:01Z
+        found = ce.detect(_eth_book(tmp_path, n), state=st)
+        keys.append(found["conflicts"][0]["key"])
+        ce.alert(found, path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 1
+    assert keys == ["ETHUSDT#f9b0dbe1d5"] * 3            # the review level never moves either
+    doc = json.loads(st.read_text())
+    assert list(doc["alerted"]) == ["ETHUSDT#f9b0dbe1d5"]
+    assert len(doc["alerted"]["ETHUSDT#f9b0dbe1d5"]["packages"]) == 5   # the alerted (superset) record is kept
+
+
+def test_alert_alone_carries_forward_even_without_detect(tmp_path):
+    """alert() applies the same rule to a doc whose keys were not carried (e.g. built before the state existed)."""
+    st = tmp_path / "state.json"
+    sent = []
+    for n in (4, 3):
+        found = ce.find_conflicts(ce.read_open_legs(_eth_book(tmp_path, n))["legs"])
+        r = ce.alert({"state": "read", "conflicts": found}, path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 1 and r["standing"] == ["ETHUSDT#f9b0dbe1d5"] and not r["sent"]
+
+
+def test_a_genuinely_new_joiner_still_alerts(tmp_path):
+    st = tmp_path / "state.json"
+    sent = []
+    ce.alert(ce.detect(_eth_book(tmp_path, 2), state=st), path=st, send=lambda t: sent.append(t) or True)
+    # a short that was NOT in the alerted set joins (here: the 3rd short opening after the first alert)
+    found = ce.detect(_eth_book(tmp_path, 3), state=st)
+    assert found["conflicts"][0]["key"] == "ETHUSDT#43d62acadb" and "carried_from" not in found["conflicts"][0]
+    r = ce.alert(found, path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 2 and r["sent"] == ["ETHUSDT#43d62acadb"]
+    # a joiner on the OTHER side alerts too
+    d = tmp_path / "join_long"
+    d.mkdir()
+    db = _db(d, [ETH_LONG, ("pkg-newlong", "e4_oi_shock_1h", "ETHUSDT", "long", 1800.0, 1750.0, "bybit_1", "paper",
+                            "open")] + ETH_SHORTS[:3])
+    ce.alert(ce.detect(db, state=st), path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 3
+
+
+def test_leave_then_join_alerts_on_the_join(tmp_path):
+    st = tmp_path / "state.json"
+    sent = []
+    ce.alert(ce.detect(_eth_book(tmp_path, 3), state=st), path=st, send=lambda t: sent.append(t) or True)
+    ce.alert(ce.detect(_eth_book(tmp_path, 2), state=st), path=st, send=lambda t: sent.append(t) or True)  # leave
+    assert len(sent) == 1
+    d = tmp_path / "swap"
+    d.mkdir()
+    db = _db(d, [ETH_LONG] + ETH_SHORTS[:2] + [ETH_SHORTS[3]])          # fd522972 was never alerted: a joiner
+    ce.alert(ce.detect(db, state=st), path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 2
+
+
+def test_an_emptied_side_resolves_and_a_recurrence_alerts_again(tmp_path):
+    st = tmp_path / "state.json"
+    sent = []
+    ce.alert(ce.detect(_eth_book(tmp_path, 4), state=st), path=st, send=lambda t: sent.append(t) or True)
+    d = tmp_path / "flat"
+    d.mkdir()
+    gone = ce.detect(_db(d, list(ETH_SHORTS)), state=st)                # the long exited: no conflict
+    assert gone["conflicts"] == []
+    ce.alert(gone, path=st, send=lambda t: sent.append(t) or True)
+    assert json.loads(st.read_text())["alerted"] == {}
+    found = ce.detect(_eth_book(tmp_path, 2), state=st)                 # same packages come back: a NEW conflict
+    assert found["conflicts"][0]["key"] == "ETHUSDT#71bffc9581"
+    ce.alert(found, path=st, send=lambda t: sent.append(t) or True)
+    assert len(sent) == 2
+
+
+def test_carry_forward_is_per_symbol_and_skips_malformed_records():
+    c = [{"symbol": "XRPUSDT", "key": "XRPUSDT#new", "packages": ["a", "b"]}]
+    known = {"ETHUSDT#old": {"symbol": "ETHUSDT", "packages": ["a", "b", "c"]},
+             "XRPUSDT#bad": None,
+             "XRPUSDT#late": {"symbol": "XRPUSDT", "packages": ["a", "b", "c"], "first_alerted_at": "2026-11-15T02"},
+             "XRPUSDT#early": {"symbol": "XRPUSDT", "packages": ["a", "b", "d"], "first_alerted_at": "2026-11-15T01"}}
+    out = ce.carry_forward(c, known)
+    assert out[0]["key"] == "XRPUSDT#early" and out[0]["raw_key"] == "XRPUSDT#new"
+    assert ce.carry_forward([{"symbol": "ETHUSDT", "key": "ETHUSDT#x", "packages": ["z"]}], known)[0]["key"] == \
+        "ETHUSDT#x"
+
+
+def test_unreadable_state_carries_nothing_forward(tmp_path):
+    st = tmp_path / "state.json"
+    st.write_text("{not json")
+    found = ce.detect(_eth_book(tmp_path, 3), state=st)
+    assert found["conflicts"][0]["key"] == "ETHUSDT#43d62acadb"         # raw key: fails toward re-alerting
+
+
+def test_review_level_stays_on_the_alerted_key_so_a_shrink_queues_no_second_review(tmp_path):
+    from src.runtime import live_review_due as lrd
+    st = tmp_path / "state.json"
+    ce.alert(ce.detect(_eth_book(tmp_path, 4), state=st), path=st, send=lambda t: True)
+    cfg = {"events": {}, "cooldown_exempt": [ce.EVENT], "default_timeframe": "2h"}
+    rows = [{"order_package_id": ETH_LONG[0], "strategy": "ml_entry_v2", "symbol": "ETHUSDT", "direction": "long",
+             "telemetry_absent": True}]
+    reviews = [{"order_package_id": ETH_LONG[0], "reviewed_at": "2026-11-15T00:15:00Z",
+                "trigger": {"event": ce.EVENT, "level": "ETHUSDT#f9b0dbe1d5"}, "recommendation": {"action": "hold"}}]
+    shrunk = ce.detect(_eth_book(tmp_path, 3), state=st)["conflicts"]
+    res = lrd.compute_due(rows, reviews, cfg, datetime(2026, 11, 15, 2, 21, tzinfo=timezone.utc), conflicts=shrunk)
+    assert not any(e["event"] == ce.EVENT for d in res["due"] for e in d["events"])
