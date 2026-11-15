@@ -92,8 +92,9 @@ in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
                               ▼  GATE 1  ▼
   STAGE 1   Soak                         bybit_1 · alpaca_paper
             Do the MECHANICS work? (edge was already proven at Stage 0)
-            SKIPPED when the leg's mechanics are already proven (§ "The soak is
-            MECHANICAL", 2026-11-01): Stage 0 -> Gate 2 directly.
+            NOT a step to real money (2026-11-12, § "The soak is MECHANICAL"):
+            a Stage-0 pass goes to Gate 2 directly. Stage 1 is the demo floor
+            for TESTING legs and for DEMOTED legs soaking for data.
             Passes when — the first 1–2 CLEAN trades: the signal fires, the
             order is placed with the right size and side, a real SL and TP
             rest at the venue, management (trail/amend) works, the exit is
@@ -144,7 +145,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 - **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
   roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
   roster, free to drift from it.
-- **Promotion MOVES a leg** (and, when its mechanics are already proven, it MOVES straight from Stage 0 to real money without ever being on general paper — § "The soak is MECHANICAL", 2026-11-01). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
+- **Promotion MOVES a leg** (since 2026-11-12 every Stage-0 pass MOVES straight to real money with no paper step — § "The soak is MECHANICAL"). Gate 2 (`MD-PROMOTE-S1-S2`, manager-merged PR on the data-backed rule, CLAUDE-RULES-CANONICAL § "Data-backed Tier-2/3 decisions"; no operator merge, 2026-11-03) adds it to real money **and** the mirror and removes it from its
   general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
   real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
   trade the paper book would (measured below).
@@ -184,6 +185,37 @@ help by cleaning up duplicate trades in the books and creating a more integrated
 5. **Inactive legs** — *"No shadow logging (Recommended)"*. Market-data collection continues under "Off the trade path is not off the
    data path".
 
+#### Open positions on a book move (row `STATUS-MOVE-OPEN-POSITIONS`, 2026-11-12)
+
+**Gates this adds or changes:** none. A status move changes what OPENS. This rule says what happens to positions that are
+ALREADY open. It decides no entry, and it adds no switch.
+
+The operator's words, which this applies. 2026-10-29, on ADA trade 6734, left open on `bybit_1` after #21038 promoted
+`ada_pullback_2h`: *"There shouldn't be three versions of this trade. There should be at most two."* 2026-11-12, planning page p3:
+*"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and
+in iteration, not a step on the way to real money"*.
+
+| move | positions open at the merge | what happens |
+|---|---|---|
+| **promotion** (testing → production) | the leg's general-paper copy, where the same trade is also open on real money or the mirror | **closed on the paper book.** It is the third version, and the mirror already carries the same trade, so no record is lost. Use the paper account's `flatten-<venue>-position` system-action, then `mark-operator-flattened` so exit analyses exclude it. If another open position shares that account and symbol, a whole-symbol flatten would close it too, so the close is per row instead. |
+| promotion | a general-paper copy with no real-money or mirror sibling | **runs to its own exit.** It is the only copy of that trade. Closing it would cut a record short, and a status change is not a market signal. |
+| **demotion** (production → testing) | the real-money and mirror copies | **run to their own exits.** They keep open, block new: SL/TP stay resting and the exit monitor keeps managing them (E21, `order_monitor.exit_population`). New entries go to the floor only: new real-money entries stop because the leg leaves the real-money roster (`Coordinator.multi_account_execute` drops a package for an account whose roster does not list the leg, `strategy_not_assigned`), not through a new flag. The trade desk can still act on any of them on its own merits (`MD-TRADE-DESK`). A status change does not choose an exit time on real money. Operator decision, 2026-11-12 decisions page x3, verbatim: *"Let them run to their own exits; block new real-money entries"*. |
+| **retirement** (→ inactive) | any copy | **runs to its own exit** (E21). |
+
+That is at most two copies of any trade on the judged books (general paper, real money, mirror). Prop and options accounts sit outside
+the status model and are reported, not judged.
+
+**The positions read** is `python3 scripts/ops/status_move_positions.py`, logic in `scripts/ops/status_move.py`. It is the runtime half of
+`strategy-status-guard`: the guard reads rosters in CI, where positions cannot be read. It classifies every open position as `on_book` ·
+`not_judged` · `close_duplicate` · `close_netted` · `run_out` · `unexplained`, and it lists any trade open more than twice. It reads
+`/api/bot/positions?include_paper=true`, whose rows carry `orderPackageId` since 2026-11-14 (#25993, row POSITIONS-API-ORDER-PACKAGE-ID),
+so siblings are matched by package (MEASURED); a row without one falls back to leg + symbol + side, labelled ESTIMATED. **Whoever merges a roster PR runs it after the
+merge** and handles each `close_*` row as in the table. Since STATUS-MOVE-AUTO-PAPER-CLOSE (2026-11-14) the deploy does the promotion
+close itself: a sync that changes `config/accounts.yaml` runs `scripts/ops/status_move_apply.py --apply`, which closes each MEASURED
+`close_*` row per trade on its general-paper account only (never real money or a mirror), through the directed-action ->
+`live_review_apply` path (the account's own risk manager, venue read-back, one ping), then marks it operator-flattened. A row it
+refuses (ESTIMATED match, non-paper target) is printed and stays for the merger.
+
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
 
 ⚠️ **AMENDED 2026-10-28 by "Three strategy statuses" above:** the floor is the home of every TESTING leg. A PRODUCTION leg
@@ -210,13 +242,26 @@ mechanical bugs while we're still improving the actual function."*
 - **Shadow is not a step on the way to real money — for strategies, ML heads and features alike** (operator, 2026-11-12, decisions page p3, verbatim): *"We already said that things get promoted to real money based on backtesting, shadow on paper is only for something that is demoted and in iteration, not a step on the way to real money "*. A Stage-0 pass on a registered rule, net of the full cost stack, is what promotes. A paper or shadow run is for a demoted leg or model while it iterates; it is never a stage a passing candidate must clear first. Record: [`thursday-planning-2026-11-12-answers.md`](thursday-planning-2026-11-12-answers.md).
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 
-### The soak is MECHANICAL — and a leg with proven mechanics skips it (operator, 2026-10-15 and 2026-11-01, binding)
+### The soak is MECHANICAL — and there is no soak step before real money (operator, 2026-10-15, 2026-11-01 and 2026-11-12, binding)
 
 <!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
      (soak-doctrine-guard CHECK E refuses a live doc or skill that restates a long soak). -->
 
-**Gates this adds or changes:** it REMOVES one — Gate 2 no longer requires a paper soak for a leg whose mechanics are already proven.
-It adds none (`config/mechanics_paths.yaml` is an evidence input to `MD-PROMOTE-S1-S2`, not a switch on what trades).
+**Gates this adds or changes:** it REMOVES one — Gate 2 requires no paper soak at all (2026-11-12; before that, only legs with
+proven mechanics skipped it). It adds none.
+
+⚠️ **2026-11-12 — NO STEP between Stage 0 and real money.** Operator, chat to Manager Session 2026-11-11a ~16:35Z, verbatim: *"you're going to retire the step from the ML. Everything goes through the new flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*
+Granted for the strategy ladder by popup ~21:10Z ("Grant it") as `MD-PROMOTE-S1-S2` `bar.soak_step: retired` (PRs #25401 / #25491).
+What this means, and it SUPERSEDES rules 1–2 below wherever they disagree:
+- A leg that clears Stage 0 goes to Stage 2 (live + mirror) on the Stage-0 record alone. No paper soak, no "one small trade" first,
+  no `mechanics_proven` precondition — `mandate_resolver` still RECORDS `mechanics_proven` as evidence, and the first live trades are
+  a named closing observation on the promoting PR (monitoring, never a gate).
+- A soak now has ONE job: a leg DEMOTED from real money soaks on the demo floor (Stage 1) to keep generating data while it is iterated
+  on. TESTING legs that have not cleared Stage 0 also trade there. Neither is a step a Stage-0 pass must clear.
+- The same flow governs ML models (registry stage is a housekeeping label; offline evidence → `advisory` directly; demotion →
+  `shadow` to soak for data) — ML-STAGE-RETIRE, PR #25400.
+
+(History, kept: `config/mechanics_paths.yaml` was an evidence input to the 2026-11-01 rule below, not a switch on what trades.)
 
 Verbatim (2026-10-15): *"A soak is a mechanical verification that was already proven in backtesting, and nothing
 needs to soak for more than one or two trades."*
@@ -280,7 +325,9 @@ path. The registry starts empty; the promoting PR adds the entry, and the resolv
   state `scripts/ops/soak_state.py::soak_states()` (`passed` · `mechanical_fail` · `in_progress` ·
   `awaiting_first_trade` · `unknown`) and `mechanics_proven()`; registry `config/mechanics_paths.yaml`; guards
   `soak-contract-guard` (the contracts and the registry's shape) and `soak-doctrine-guard` (the docs, skills and generators).
-- **Open:** the 2026-11-01 amendment of `MD-PROMOTE-S1-S2` (`bar.mechanics_proven`) is Tier 3 and lands only on the operator's yes.
+- **Landed:** the 2026-11-01 amendment (`bar.mechanics_proven`) landed; on 2026-11-12 `bar.soak_step: retired` (operator grant, PRs
+  #25401 / #25491) removed the soak precondition entirely. The soak definition above now describes the DEMOTED-leg data soak and the
+  first-live-trade closing observation, never a promotion step.
 
 - **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
   binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an

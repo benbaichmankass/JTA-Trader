@@ -1,6 +1,10 @@
 # UI workplan, 2026-11 — design for nine UI / work-surface rows
 
-> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+> **PLAN STATUS: `superseded`**
+> **Superseded by:** `docs/design/ui-redesign-2026-11-reconciliation.md`
+> Written without the operator's wording (see § 0). Its behaviour sections bind only where the reconciliation says **stands**; the operator spec is row `UI-REDESIGN-2026-11`.
+
+> **Doc status:** `superseded` · category `architecture` · last verified `2026-11-12` · superseded by [`docs/design/ui-redesign-2026-11-reconciliation.md`](ui-redesign-2026-11-reconciliation.md) · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Gates this adds or changes: none.** Every item below is a read surface, a Tier-1 store, or arms an already-built switch
 > (`SITE_AUTH_ENFORCE`) that is Tier-3 on its own row. Nothing here touches an order path, a risk cap, or a strategy.
 

@@ -484,6 +484,19 @@ def _isolate_telegram_settings(tmp_path):
         os.environ["TELEGRAM_SETTINGS_PATH"] = prior
 
 
+# ML-ENTRY-EQ-RESTART-REDECIDE: the ml_entry_eq* decided memo is ON DISK (it must survive trader restarts), so every test writes its own copy and
+# never the checkout's data/. Same plain-os.environ rule. (The in-memory memo is module state; tests that need a clean one clear it themselves.)
+@pytest.fixture(autouse=True)
+def _isolate_ml_pool_decided(tmp_path):
+    prior = os.environ.get("ML_POOL_DECIDED_DIR")
+    os.environ["ML_POOL_DECIDED_DIR"] = str(tmp_path / "ml_pool_decided")
+    yield
+    if prior is None:
+        os.environ.pop("ML_POOL_DECIDED_DIR", None)
+    else:
+        os.environ["ML_POOL_DECIDED_DIR"] = prior
+
+
 # TELEGRAM-TRIM: the package-event claim store and the alert ledger (where suppressed
 # messages are recorded) are ON
 # DISK (cross-process dedupe), so each test gets its own — a claim left by one

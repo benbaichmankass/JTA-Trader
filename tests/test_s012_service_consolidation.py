@@ -143,6 +143,9 @@ EXPECTED_SERVICES = {
     # installed and enabled only by breakout-login-check apply:
     # executor-enable-timer for a non-breakout account.
     "ict-prop-executor@.service",
+    # 2026-11-12 (DESK-TRIGGER-SCAN-TIMEOUT): template the trader starts to run a desk build outside its cgroup.
+    # install_systemd_units.sh copies it (skips *@*); never enabled, started on demand.
+    "ict-desk-build@.service",
     # 2026-07-19: daily Bybit funding pull (BL-20260719-FUNDING-NO-TIMER, PR #6901).
     # Timer-fired oneshot (ict-exchange-funding-pull.timer) that runs the funding
     # puller so the M24 go-forward fee+funding capture accrues without manual runs.
@@ -190,6 +193,11 @@ EXPECTED_SERVICES = {
     # 2026-11-11 (SEC-DETECTORS D1): 5-min oneshot (ict-security-watch.timer),
     # one red-flag ping per suspicious SSH event. Reads only. In DEFAULT_SKIP.
     "ict-security-watch.service",
+    # 2026-11-12 (MANAGER-VM-DIRECT-OPS): oneshot started by ict-ops-runner.path
+    # when the direct ops channel's queue is not empty; runs the queued jobs out
+    # of the web API's process. In DEFAULT_SKIP (a sync-now job runs the deploy
+    # from inside it).
+    "ict-ops-runner.service",
     # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018): daily oneshot
     # (ict-phone-capture-purge.timer) that deletes phone step captures older
     # than 7 days under <trade_journal.db dir>/phone_captures (operator: stored

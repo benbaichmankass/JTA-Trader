@@ -114,7 +114,8 @@ def test_direct_operator_row_gets_an_ask_once_with_latency(tmp_path, monkeypatch
     monkeypatch.setattr(w, "_proof", lambda fn: None)
     _write_direct(tmp_path / "direct", _row())
     st, calls, offers, lines = _pass(tmp_path)
-    assert calls == [] and offers == [(RID, "advice_only")] and st["handled"] == 1
+    # an operator_ask row is never dispatched; since advice-only ended (2026-11-14) its verdict is not_dispatchable
+    assert calls == [] and offers == [(RID, "not_dispatchable")] and st["handled"] == 1
     assert lines[0]["source"] == "direct" and lines[0]["approval"] == {"state": "offered"}
     assert lines[0]["reviewed_to_seen_s"] == 3.0
     st2, calls2, offers2, lines2 = _pass(tmp_path)

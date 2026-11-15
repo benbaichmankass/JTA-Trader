@@ -84,6 +84,8 @@ def format_trade_event_message(kind: str, payload: dict[str, Any]) -> str:
             emoji = "🟢" if pnl > 0 else ("🔴" if pnl < 0 else "⚪")
         pnl_str = _fmt_num(pnl)
         pct_str = f" ({_fmt_num(pnl_pct)}%)" if pnl_pct is not None else ""
+        if payload.get("pnl_estimated") and pnl is not None:
+            pct_str += " est"   # gross local estimate; the journal pnl lands from the PnL sweep
         reason = payload.get("exit_reason") or "—"
         return (
             f"{emoji} CLOSE {symbol} {direction} [{tag}] "

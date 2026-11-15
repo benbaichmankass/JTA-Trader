@@ -55,7 +55,7 @@ import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +281,11 @@ INSERT INTO {TABLE} (
 )
 ON CONFLICT(order_package_id) DO UPDATE SET
     trade_id=excluded.trade_id, last_price=excluded.last_price,
+    -- ENTRY-FILL-OPEN-R-BASIS follow-up (2026-11-15): entry/risk_per_unit were INSERT-only, so a row opened
+    -- before the fill re-basing kept the PLAN entry/risk beside a fill-based open_r (trade 7260: entry 0.1506,
+    -- open_r computed on 0.1501). They follow the record now; COALESCE so a pass without them never wipes them.
+    entry=COALESCE(excluded.entry, {TABLE}.entry),
+    risk_per_unit=COALESCE(excluded.risk_per_unit, {TABLE}.risk_per_unit),
     -- Backfill on UPDATE too: every row written before the resolver existed
     -- carries NULL, and the upsert is the only path a live open position takes
     -- after its first pass. COALESCE order is load-bearing — a later pass whose
@@ -531,6 +536,78 @@ def _tick_hook(name: str):
         return nullcontext()
 
 
+# ── ENTRY-FILL-OPEN-R-BASIS (manager decision 2026-11-15 04:18Z) ─────────────────────────────────────────────────
+# ENTRY-FILL-WRITEBACK rewrites trades.entry_price to the entry order's own fill; the telemetry row kept the PLAN
+# entry (the package's), so open_r disagreed with the venue (trade 7260: openR -0.0631 on the plan vs about +0.03R on
+# the fill, broker uPnL +0.07). One meaning of entry: once the linked trade carries a FILL entry, telemetry measures
+# from it, with 1R = |fill - initial SL| (initial SL = plan entry -/+ the plan risk_per_unit). Only the telemetry inputs
+# change: the caller's open_pkg / meta are copied, never mutated, so no exit lever, SL/TP or bracket sees this.
+# Rows already open keep plan R until their linked trade is re-read; nothing is backfilled.
+_FILL_CACHE: Dict[str, Tuple[float, Optional[float]]] = {}   # trade_id -> (fill, None) once a fill is known (it never changes)
+_PLAN_SEEN: Dict[str, float] = {}                           # trade_id -> monotonic time of the last "still plan" read
+_PLAN_RECHECK_S = 60.0
+
+
+def _linked_fill(trade_id: Any, db_path: Optional[str]) -> Optional[float]:
+    """The linked trade's FILL entry, or None (plan / pending / unreadable). One PK read, cached; never raises."""
+    if trade_id in (None, ""):
+        return None
+    tid = str(trade_id)
+    hit = _FILL_CACHE.get(tid)
+    if hit is not None:
+        return hit[0]
+    seen = _PLAN_SEEN.get(tid)
+    if seen is not None and time.monotonic() - seen < _PLAN_RECHECK_S:
+        return None
+    try:
+        from src.utils.paths import trade_journal_db_path
+        path = db_path or str(trade_journal_db_path())
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1.0)
+        try:
+            row = conn.execute("SELECT entry_price, notes FROM trades WHERE id = ?", (tid,)).fetchone()
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001  # allow-silent: an unreadable trade keeps the plan basis (today's behaviour)
+        logger.debug("position_telemetry: linked fill read failed for %s", tid, exc_info=True)
+        return None
+    fill = None
+    if row is not None:
+        try:
+            notes = json.loads(row[1]) if row[1] else {}
+        except (TypeError, ValueError):
+            notes = {}
+        src = notes.get("entry_price_source") if isinstance(notes, dict) else None
+        if src not in (None, "", "plan"):
+            fill = _f(row[0])
+    if fill is None:
+        _PLAN_SEEN[tid] = time.monotonic()
+        return None
+    _FILL_CACHE[tid] = (fill, None)
+    _PLAN_SEEN.pop(tid, None)
+    return fill
+
+
+def fill_basis(open_pkg: Dict[str, Any], meta: Dict[str, Any], direction: str,
+               fill: Optional[float]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """``(open_pkg, meta)`` COPIES re-based on ``fill``: entry = fill, risk_per_unit = |fill - initial SL|.
+
+    Pure. Returns the inputs unchanged (same objects) when there is no fill, no plan entry/risk, or the fill sits at or
+    beyond the initial stop (a non-positive risk is never written)."""
+    entry, risk = _f(open_pkg.get("entry")), _f(meta.get("risk_per_unit"))
+    if fill is None or entry is None or not risk or risk <= 0:
+        return open_pkg, meta
+    is_long = direction == "long"
+    initial_sl = entry - risk if is_long else entry + risk
+    new_risk = (fill - initial_sl) if is_long else (initial_sl - fill)
+    if new_risk <= 0:
+        return open_pkg, meta
+    pkg2 = dict(open_pkg)
+    pkg2["entry"] = fill
+    meta2 = dict(meta)
+    meta2["risk_per_unit"] = new_risk
+    return pkg2, meta2
+
+
 def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
     """Build + persist in one call, timed into ``offloop_hooks``.
 
@@ -549,6 +626,13 @@ def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
         from contextlib import nullcontext
         ctx = nullcontext()
     with ctx:
+        try:
+            op, mt = kwargs.get("open_pkg") or {}, kwargs.get("meta") or {}
+            fill = _linked_fill(op.get("linked_trade_id"), db_path)
+            if fill is not None:
+                kwargs["open_pkg"], kwargs["meta"] = fill_basis(op, mt, str(kwargs.get("direction") or ""), fill)
+        except Exception:  # noqa: BLE001  # allow-silent: the plan basis is today's behaviour; never break the pass
+            logger.debug("position_telemetry: fill basis skipped", exc_info=True)
         rec = build_record(**kwargs)
         if rec is not None:
             write_record(rec, db_path=db_path)

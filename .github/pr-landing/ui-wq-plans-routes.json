@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "UI-WQ-PLANS-ROUTES: new router src/web/api/routers/work_plans.py. GET /api/bot/ml/plan (Tier 1 read: ml-plan-items.yaml joined to live work-store rows + ml-dev-plan.yaml through scripts/ops/ml_dev_plan.py). POST /api/bot/work/plan-edits behind require_session (Tier 2): files one kind=observation work item with extra.plan_edit under the target item. No order path, no new gate. The frontier parent backfill (8 FRONTIER-Q-* items -> FRONTIER-RESEARCH) was a store data write, already done and observed.",
+  "hold_text": "Tier 2 operator-write route on ict-web-api; needs one operator OK. After deploy: GET /api/bot/ml/plan 200 read_state read with population.items 80-ish and dev_plan.read_state read; a signed-in SPA POST /api/bot/work/plan-edits {section, kind:add, text} returns 200 and the item appears under GET /api/bot/work/items?kind=observation&parent=FRONTIER-RESEARCH."
+}

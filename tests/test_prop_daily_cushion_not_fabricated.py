@@ -34,7 +34,7 @@ def _rd(monkeypatch, **status):
     to None, and the None-assertions below pass for entirely the wrong reason —
     so this fixture asserts the ruleset actually loaded.
     """
-    base = {"balance": 4764.0, "equity": 4764.0, "day_start_balance": None}
+    base = {"balance": 4800.0, "equity": 4800.0, "day_start_balance": None}
     base.update(status)
     rd = prop_reconcile.compute_rule_distance("breakout_1", base)
     assert rd.get("daily_loss_limit_usd") is not None, (
@@ -61,7 +61,7 @@ def test_a_genuinely_reported_zero_still_publishes_a_cushion(monkeypatch):
     rd = _rd(monkeypatch, realized_today=0.0, unrealized=0.0)
     assert rd["day_pnl"] == 0.0
     assert rd["daily_loss_used_usd"] == 0.0
-    assert rd["distance_to_daily_loss_usd"] == pytest.approx(0.03 * 4764.0)
+    assert rd["distance_to_daily_loss_usd"] == pytest.approx(0.03 * 4800.0)
     assert rd["day_pnl_state"] == "measured"
 
 
@@ -95,4 +95,4 @@ def test_the_dd_floor_is_unaffected_by_the_daily_loss_change(monkeypatch):
     """
     rd = _rd(monkeypatch, realized_today=None, unrealized=0.0)
     assert rd["static_dd_floor_usd"] == pytest.approx(4700.0)
-    assert rd["distance_to_dd_floor_usd"] == pytest.approx(64.0)
+    assert rd["distance_to_dd_floor_usd"] == pytest.approx(100.0)

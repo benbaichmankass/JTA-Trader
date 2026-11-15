@@ -1,0 +1,128 @@
+{
+  "state": {
+    "side": "short",
+    "open_r": -0.4274,
+    "peak_r": 0.6852,
+    "bars_held": 9,
+    "atr_stop_mult": 2.5,
+    "condition": "peak",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null
+  },
+  "population": {
+    "corpus_trades": 1182,
+    "side_filter": "short",
+    "side_excluded": 631,
+    "no_candles": 0,
+    "never_reached_peak": 267,
+    "beyond_bars_slack": 0,
+    "comparable": 284,
+    "mfe_replay_mismatch": 0,
+    "no_pullback_after_peak": 0,
+    "symbol_filter": null,
+    "symbol_excluded": 0,
+    "symbols": [
+      "ETHUSDT"
+    ]
+  },
+  "n_floor": 20,
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "options": [
+    {
+      "action": "hold",
+      "n": 284,
+      "state": "measured",
+      "n_floor": 20,
+      "mean_r": 0.6372,
+      "sd_r": 1.1702,
+      "worst_r": -0.8267,
+      "p05_r": -0.7044,
+      "p_giveback_gt_half": 0.5
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:1.0",
+      "stop_at_r_now": 0.2852,
+      "n": 284,
+      "state": "invalid_level",
+      "reason": "stop_level_not_below_price",
+      "mean_r": null,
+      "sd_r": null,
+      "worst_r": null,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "worst_case_gain_r": null,
+      "within_auto_bound": null,
+      "within_shadow_bound": null
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:1.5",
+      "stop_at_r_now": 0.0852,
+      "n": 284,
+      "state": "invalid_level",
+      "reason": "stop_level_not_below_price",
+      "mean_r": null,
+      "sd_r": null,
+      "worst_r": null,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "worst_case_gain_r": null,
+      "within_auto_bound": null,
+      "within_shadow_bound": null
+    },
+    {
+      "action": "tighten",
+      "spec": "atr:2.0",
+      "stop_at_r_now": -0.1148,
+      "n": 284,
+      "state": "invalid_level",
+      "reason": "stop_level_not_below_price",
+      "mean_r": null,
+      "sd_r": null,
+      "worst_r": null,
+      "p05_r": null,
+      "p_giveback_gt_half": null,
+      "ev_cost_r": null,
+      "ev_cost_se_r": null,
+      "worst_case_gain_r": null,
+      "within_auto_bound": null,
+      "within_shadow_bound": null
+    },
+    {
+      "action": "close",
+      "spec": "close",
+      "n": 284,
+      "state": "measured",
+      "n_floor": 20,
+      "mean_r": -0.4927,
+      "sd_r": 0.0335,
+      "worst_r": -0.6346,
+      "p05_r": -0.5597,
+      "p_giveback_gt_half": 1.0,
+      "ev_cost_r": 1.1298,
+      "ev_cost_se_r": 0.0694,
+      "worst_case_gain_r": 0.1921,
+      "within_auto_bound": false,
+      "within_shadow_bound": false
+    }
+  ],
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "read_state": "measured",
+  "leg": "trend_donchian_eth_prop",
+  "corpus": "comms/strategy_evidence/ltr_corpus/trend_donchian_eth_prop__trades.jsonl",
+  "candles": "/home/user/JTA-Trader/comms/research/RQ-20261026-f679-02/40574160194/data/ETHUSDT_60.csv",
+  "corpus_note": null
+}

@@ -1,0 +1,276 @@
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg tqqq_trend_long_1d --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=6200 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:585: Pandas4Warning: The inplace keyword in DataFrame.set_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  dividends.set_index("date", inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:587: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  dividends.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:604: Pandas4Warning: The inplace keyword in DataFrame.set_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  splits.set_index("date", inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:606: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  splits.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol TQQQ --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/H__bt.json --long-only --tp-cap-pct 0.099 --tp-r 1.5
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol TQQQ --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/T__bt.json --long-only --tp-cap-pct 0.099 --tp-r 1.5 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol TQQQ --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/tqqq_trend_long_1d/arms/C__bt.json --long-only --tp-cap-pct 0.099 --tp-r 1.5 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg slv_trend_1h --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=365 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 24 --data <data> --symbol SLV --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.3 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/H__bt.json --tp-cap-pct 0.099 --tp-r 6.0
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 24 --data <data> --symbol SLV --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.3 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/T__bt.json --tp-cap-pct 0.099 --tp-r 6.0 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 24 --data <data> --symbol SLV --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.3 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/slv_trend_1h/arms/C__bt.json --tp-cap-pct 0.099 --tp-r 6.0 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg trend_donchian_sol_prop --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=2170 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+Fetching SOLUSDT 60 candles 2020-12-04 -> 2026-11-13 (source=binance_vision) …
+  vision monthly 2020-12: 744 bars (672 kept)
+  vision monthly 2021-01: 744 bars (1416 kept)
+  vision monthly 2021-02: 672 bars (2088 kept)
+  vision monthly 2021-03: 744 bars (2832 kept)
+  vision monthly 2021-04: 720 bars (3552 kept)
+  vision monthly 2021-05: 744 bars (4296 kept)
+  vision monthly 2021-06: 720 bars (5016 kept)
+  vision monthly 2021-07: 744 bars (5760 kept)
+  vision monthly 2021-08: 744 bars (6504 kept)
+  vision monthly 2021-09: 720 bars (7224 kept)
+  vision monthly 2021-10: 744 bars (7968 kept)
+  vision monthly 2021-11: 720 bars (8688 kept)
+  vision monthly 2021-12: 744 bars (9432 kept)
+  vision monthly 2022-01: 744 bars (10176 kept)
+  vision monthly 2022-02: 600 bars (10776 kept)
+  vision monthly 2022-03: 744 bars (11520 kept)
+  vision monthly 2022-04: 672 bars (12192 kept)
+  vision monthly 2022-05: 744 bars (12936 kept)
+  vision monthly 2022-06: 720 bars (13656 kept)
+  vision monthly 2022-07: 744 bars (14400 kept)
+  vision monthly 2022-08: 744 bars (15144 kept)
+  vision monthly 2022-09: 720 bars (15864 kept)
+  vision monthly 2022-10: 744 bars (16608 kept)
+  vision monthly 2022-11: 720 bars (17328 kept)
+  vision monthly 2022-12: 744 bars (18072 kept)
+  vision monthly 2023-01: 744 bars (18816 kept)
+  vision monthly 2023-02: 672 bars (19488 kept)
+  vision monthly 2023-03: 744 bars (20232 kept)
+  vision monthly 2023-04: 720 bars (20952 kept)
+  vision monthly 2023-05: 744 bars (21696 kept)
+  vision monthly 2023-06: 720 bars (22416 kept)
+  vision monthly 2023-07: 744 bars (23160 kept)
+  vision monthly 2023-08: 744 bars (23904 kept)
+  vision monthly 2023-09: 720 bars (24624 kept)
+  vision monthly 2023-10: 744 bars (25368 kept)
+  vision monthly 2023-11: 720 bars (26088 kept)
+  vision monthly 2023-12: 744 bars (26832 kept)
+  vision monthly 2024-01: 744 bars (27576 kept)
+  vision monthly 2024-02: 696 bars (28272 kept)
+  vision monthly 2024-03: 744 bars (29016 kept)
+  vision monthly 2024-04: 720 bars (29736 kept)
+  vision monthly 2024-05: 744 bars (30480 kept)
+  vision monthly 2024-06: 720 bars (31200 kept)
+  vision monthly 2024-07: 744 bars (31944 kept)
+  vision monthly 2024-08: 744 bars (32688 kept)
+  vision monthly 2024-09: 720 bars (33408 kept)
+  vision monthly 2024-10: 744 bars (34152 kept)
+  vision monthly 2024-11: 720 bars (34872 kept)
+  vision monthly 2024-12: 744 bars (35616 kept)
+  vision monthly 2025-01: 744 bars (36360 kept)
+  vision monthly 2025-02: 672 bars (37032 kept)
+  vision monthly 2025-03: 744 bars (37776 kept)
+  vision monthly 2025-04: 720 bars (38496 kept)
+  vision monthly 2025-05: 744 bars (39240 kept)
+  vision monthly 2025-06: 720 bars (39960 kept)
+  vision monthly 2025-07: 744 bars (40704 kept)
+  vision monthly 2025-08: 744 bars (41448 kept)
+  vision monthly 2025-09: 720 bars (42168 kept)
+  vision monthly 2025-10: 744 bars (42912 kept)
+  vision monthly 2025-11: 720 bars (43632 kept)
+  vision monthly 2025-12: 744 bars (44376 kept)
+  vision monthly 2026-01: 744 bars (45120 kept)
+  vision monthly 2026-02: 672 bars (45792 kept)
+  vision monthly 2026-03: 744 bars (46536 kept)
+  vision monthly 2026-04: 720 bars (47256 kept)
+  vision monthly 2026-05: 744 bars (48000 kept)
+  vision monthly 2026-06: 720 bars (48720 kept)
+  vision monthly 2026-07: 744 bars (49464 kept)
+  vision monthly 2026-08: 744 bars (50208 kept)
+  vision monthly 2026-09: 720 bars (50928 kept)
+  vision monthly 2026-10: 744 bars (51672 kept)
+  vision daily 2026-11: 51960 bars kept so far
+Wrote 51960 rows (2020-12-04 -> 2026-11-12) to /tmp/exit_lever_ablation_vmuyl2ap/trend_donchian_sol_prop__data.csv
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.5 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/H__bt.json --long-only --tp-cap-pct 0.099 --tp-r 6.0
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.5 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/T__bt.json --long-only --tp-cap-pct 0.099 --tp-r 6.0 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.5 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_sol_prop/arms/C__bt.json --long-only --tp-cap-pct 0.099 --tp-r 6.0 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg trend_donchian_xrp_4h --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=1460 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+Fetching XRPUSDT 240 candles 2022-11-14 -> 2026-11-13 (source=binance_vision) …
+  vision monthly 2022-11: 180 bars (102 kept)
+  vision monthly 2022-12: 186 bars (288 kept)
+  vision monthly 2023-01: 186 bars (474 kept)
+  vision monthly 2023-02: 168 bars (642 kept)
+  vision monthly 2023-03: 186 bars (828 kept)
+  vision monthly 2023-04: 180 bars (1008 kept)
+  vision monthly 2023-05: 186 bars (1194 kept)
+  vision monthly 2023-06: 180 bars (1374 kept)
+  vision monthly 2023-07: 186 bars (1560 kept)
+  vision monthly 2023-08: 186 bars (1746 kept)
+  vision monthly 2023-09: 180 bars (1926 kept)
+  vision monthly 2023-10: 186 bars (2112 kept)
+  vision monthly 2023-11: 180 bars (2292 kept)
+  vision monthly 2023-12: 186 bars (2478 kept)
+  vision monthly 2024-01: 186 bars (2664 kept)
+  vision monthly 2024-02: 174 bars (2838 kept)
+  vision monthly 2024-03: 186 bars (3024 kept)
+  vision monthly 2024-04: 180 bars (3204 kept)
+  vision monthly 2024-05: 186 bars (3390 kept)
+  vision monthly 2024-06: 180 bars (3570 kept)
+  vision monthly 2024-07: 186 bars (3756 kept)
+  vision monthly 2024-08: 186 bars (3942 kept)
+  vision monthly 2024-09: 180 bars (4122 kept)
+  vision monthly 2024-10: 186 bars (4308 kept)
+  vision monthly 2024-11: 180 bars (4488 kept)
+  vision monthly 2024-12: 186 bars (4674 kept)
+  vision monthly 2025-01: 186 bars (4860 kept)
+  vision monthly 2025-02: 168 bars (5028 kept)
+  vision monthly 2025-03: 186 bars (5214 kept)
+  vision monthly 2025-04: 180 bars (5394 kept)
+  vision monthly 2025-05: 186 bars (5580 kept)
+  vision monthly 2025-06: 180 bars (5760 kept)
+  vision monthly 2025-07: 186 bars (5946 kept)
+  vision monthly 2025-08: 186 bars (6132 kept)
+  vision monthly 2025-09: 180 bars (6312 kept)
+  vision monthly 2025-10: 186 bars (6498 kept)
+  vision monthly 2025-11: 180 bars (6678 kept)
+  vision monthly 2025-12: 186 bars (6864 kept)
+  vision monthly 2026-01: 186 bars (7050 kept)
+  vision monthly 2026-02: 168 bars (7218 kept)
+  vision monthly 2026-03: 186 bars (7404 kept)
+  vision monthly 2026-04: 180 bars (7584 kept)
+  vision monthly 2026-05: 186 bars (7770 kept)
+  vision monthly 2026-06: 180 bars (7950 kept)
+  vision monthly 2026-07: 186 bars (8136 kept)
+  vision monthly 2026-08: 186 bars (8322 kept)
+  vision monthly 2026-09: 180 bars (8502 kept)
+  vision monthly 2026-10: 186 bars (8688 kept)
+  vision daily 2026-11: 8760 bars kept so far
+Wrote 8760 rows (2022-11-14 -> 2026-11-12) to /tmp/exit_lever_ablation_37jp583p/trend_donchian_xrp_4h__data.csv
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/H__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --tp-cap-pct 0.099 --tp-r 3
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/T__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --tp-cap-pct 0.099 --tp-r 3 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 4.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_4h/arms/C__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --tp-cap-pct 0.099 --tp-r 3 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg trend_donchian_xrp_adx25 --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=1460 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25 --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+Fetching XRPUSDT 240 candles 2022-11-14 -> 2026-11-13 (source=binance_vision) …
+  vision monthly 2022-11: 180 bars (102 kept)
+  vision monthly 2022-12: 186 bars (288 kept)
+  vision monthly 2023-01: 186 bars (474 kept)
+  vision monthly 2023-02: 168 bars (642 kept)
+  vision monthly 2023-03: 186 bars (828 kept)
+  vision monthly 2023-04: 180 bars (1008 kept)
+  vision monthly 2023-05: 186 bars (1194 kept)
+  vision monthly 2023-06: 180 bars (1374 kept)
+  vision monthly 2023-07: 186 bars (1560 kept)
+  vision monthly 2023-08: 186 bars (1746 kept)
+  vision monthly 2023-09: 180 bars (1926 kept)
+  vision monthly 2023-10: 186 bars (2112 kept)
+  vision monthly 2023-11: 180 bars (2292 kept)
+  vision monthly 2023-12: 186 bars (2478 kept)
+  vision monthly 2024-01: 186 bars (2664 kept)
+  vision monthly 2024-02: 174 bars (2838 kept)
+  vision monthly 2024-03: 186 bars (3024 kept)
+  vision monthly 2024-04: 180 bars (3204 kept)
+  vision monthly 2024-05: 186 bars (3390 kept)
+  vision monthly 2024-06: 180 bars (3570 kept)
+  vision monthly 2024-07: 186 bars (3756 kept)
+  vision monthly 2024-08: 186 bars (3942 kept)
+  vision monthly 2024-09: 180 bars (4122 kept)
+  vision monthly 2024-10: 186 bars (4308 kept)
+  vision monthly 2024-11: 180 bars (4488 kept)
+  vision monthly 2024-12: 186 bars (4674 kept)
+  vision monthly 2025-01: 186 bars (4860 kept)
+  vision monthly 2025-02: 168 bars (5028 kept)
+  vision monthly 2025-03: 186 bars (5214 kept)
+  vision monthly 2025-04: 180 bars (5394 kept)
+  vision monthly 2025-05: 186 bars (5580 kept)
+  vision monthly 2025-06: 180 bars (5760 kept)
+  vision monthly 2025-07: 186 bars (5946 kept)
+  vision monthly 2025-08: 186 bars (6132 kept)
+  vision monthly 2025-09: 180 bars (6312 kept)
+  vision monthly 2025-10: 186 bars (6498 kept)
+  vision monthly 2025-11: 180 bars (6678 kept)
+  vision monthly 2025-12: 186 bars (6864 kept)
+  vision monthly 2026-01: 186 bars (7050 kept)
+  vision monthly 2026-02: 168 bars (7218 kept)
+  vision monthly 2026-03: 186 bars (7404 kept)
+  vision monthly 2026-04: 180 bars (7584 kept)
+  vision monthly 2026-05: 186 bars (7770 kept)
+  vision monthly 2026-06: 180 bars (7950 kept)
+  vision monthly 2026-07: 186 bars (8136 kept)
+  vision monthly 2026-08: 186 bars (8322 kept)
+  vision monthly 2026-09: 180 bars (8502 kept)
+  vision monthly 2026-10: 186 bars (8688 kept)
+  vision daily 2026-11: 8760 bars kept so far
+Wrote 8760 rows (2022-11-14 -> 2026-11-12) to /tmp/exit_lever_ablation_nlbptac_/trend_donchian_xrp_adx25__data.csv
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/H__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --trail-adx-below 25 --trail-adx-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/T__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --trail-adx-below 25 --trail-adx-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol XRPUSDT --resample 4h --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/trend_donchian_xrp_adx25/arms/C__bt.json --stale-exit-bars 8 --stale-exit-below-r 0.0 --side-filter short --trail-decay-arm-r 2.0 --trail-decay-tight-mult 2.5 --skip-hours 0 --vol-skip-above-pctl 0.9 --trail-adx-below 25 --trail-adx-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+[run-legs] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py --leg ada_pullback_2h --arm H= --arm T=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0 --arm C=--cell-tighten-min-r=1.0;--cell-tighten-room-atr=1.0;--cell-tighten-mode=random;--cell-tighten-random-p=0.5;--cell-tighten-seed=20261113 --days=365 --grade risk_adjusted --baseline H --delta-r 0 --out comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h --folds 6 --fold-majority 4 --n-floor 39 --vs-control T=C
+Fetching ADAUSDT 120 candles 2025-11-13 -> 2026-11-13 (source=binance_vision) …
+  vision monthly 2025-11: 360 bars (216 kept)
+  vision monthly 2025-12: 372 bars (588 kept)
+  vision monthly 2026-01: 372 bars (960 kept)
+  vision monthly 2026-02: 336 bars (1296 kept)
+  vision monthly 2026-03: 372 bars (1668 kept)
+  vision monthly 2026-04: 360 bars (2028 kept)
+  vision monthly 2026-05: 372 bars (2400 kept)
+  vision monthly 2026-06: 360 bars (2760 kept)
+  vision monthly 2026-07: 372 bars (3132 kept)
+  vision monthly 2026-08: 372 bars (3504 kept)
+  vision monthly 2026-09: 360 bars (3864 kept)
+  vision monthly 2026-10: 372 bars (4236 kept)
+  vision daily 2026-11: 4380 bars kept so far
+Wrote 4380 rows (2025-11-13 -> 2026-11-12) to /tmp/exit_lever_ablation_pp0rc0y7/ada_pullback_2h__data.csv
+[H] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/H__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/H__bt.json --adx-min 28 --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 4
+[T] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/T__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/T__bt.json --adx-min 28 --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 4 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0
+[C] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/C__trades.jsonl --json comms/research/RQ-20261101-78fc-09/43447396502/ada_pullback_2h/arms/C__bt.json --adx-min 28 --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 4 --cell-tighten-min-r 1.0 --cell-tighten-room-atr 1.0 --cell-tighten-mode random --cell-tighten-random-p 0.5 --cell-tighten-seed 20261113
+{
+ "verdict": "fail",
+ "label": "no_candidate_passes",
+ "why": "every candidate fails a necessary clause (R1 cost, R2 risk cut, R3 folds or R4 control)"
+}
+{"verdict": "fail", "pooled_label": "no_candidate_passes"}

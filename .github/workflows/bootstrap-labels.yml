@@ -232,6 +232,11 @@ jobs:
                 description: 'Triggers vm-bybit-diag — reproduce the bot bybit_2 authenticated call on the VM (masked key + egress v4/v6) to pinpoint ErrCode 10010.',
               },
               {
+                name: 'oci-close-api-port',
+                color: 'b60205',
+                description: 'Triggers oci-close-api-port (Tier 2, SEC-8001-LOCKDOWN): remove the OCI ingress rule TCP 8001 from 0.0.0.0/0. Body: apply: true|false + reason:. Dry run by default.',
+              },
+              {
                 name: 'vm-net-diag-request',
                 color: '0e8a16',
                 description: 'Triggers vm-net-diag workflow — read-only network diagnostics for VM port reachability.',
