@@ -7,6 +7,23 @@ Lane OPDEC-20261112 (dispatched by Manager Session 2026-11-11a). Rows **PROMOTE-
 verbatim *"Rebuild the evidence record, then promote when it passes"*) and **PR1111-SURVIVOR-PROMOTIONS** (p8, verbatim *"Yes: evidence
 check, then a proposal per leg"*). Record: `docs/plans/thursday-planning-2026-11-12-answers.md`.
 
+## ⚠️ Superseded the same day (2026-11-12, after operator answers) -- read this first
+
+The per-leg proposals below were written at ~08:30Z. Two were overtaken by operator decisions later that day:
+
+- **slv_trend_1h: PROMOTED** in PR #25267 (Tier 3, held). The 2026-08-24 demote had already been reopened by the operator on
+  2026-11-04 ("Reopen, promote if it clears (Recommended)") and was confirmed 2026-11-12 ("I answer that I do want to promote
+  silver."; decisions page w4 "Lift the ban: run the normal promotion check"). It was an evidence-based ladder move, never a ban.
+  The real blocker was the TP: RQ-20261112-5ab1-03 selected tp_r 6.0 on discovery and confirmed it on the holdout (+33.37 R, n 108),
+  and the record was regenerated at that config (+39.09 R, n 73, 4/4).
+- **tlt_pullback_1h: PROMOTED LONG-ONLY** in PR #26094 (78bc787, 2026-11-14, operator-approved): `side_filter: long`, `tp_r: 3.5`,
+  on alpaca_live + alpaca_portfolio, on a fresh faithful record at that config (RQ-20261114-db1a-14: +8.17 R, n 75, 2025-07..2026-11, 3/4
+  folds; no holdout block). The interim plans in this lane were superseded: the paper-floor PR #25192 and the short-only mirror PR #25274
+  (operator decisions page w5) were both closed. The long-side figures below (-3.88 R / 46 at 365 d; -3.01 R / 60 held back) were
+  measured on the BOTH-SIDED, tp_r 50 config and are not a test of the promoted long-only tp_r 3.5 config.
+
+qqq_pullback_1h (affordability) and uso_trend_1h (non-financial constraint) are unchanged.
+
 ## What was measured, and on what
 
 - **Stage-0 records rebuilt** with `scripts/ops/build_strategy_evidence.py` (the promotion-corpus harness; not `backtest_orb.py`, not
