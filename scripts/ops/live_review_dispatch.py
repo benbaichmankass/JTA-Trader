@@ -198,14 +198,47 @@ def verify_ref(sha: str) -> Tuple[Optional[str], Optional[str]]:
     return "refused", f"ref_not_on_main_or_rows_branch:{sha[:12]}"
 
 
-def _run_apply(argv: List[str]) -> int:
-    """Run the apply script as its own process, so its output streams to this run's log."""
+#: The apply's own refusal line from the last :func:`_run_apply` (None when it gave none). LTR-APPLY-EXIT2
+#: (2026-11-15): the apply printed "evidence ... is not a file in the checkout" and exited 2, but the rows
+#: watcher keeps only ``>>>`` lines, so the reason was lost and nothing pinged.
+_LAST_APPLY_REFUSAL: List[Optional[str]] = [None]
+
+
+def apply_refusal_line(stdout: str) -> Optional[str]:
+    """The apply's refusal reason from its stdout: the result JSON's ``detail``, else its first bare line
+    (an argument/evidence refusal printed before any package is read)."""
+    text = stdout or ""
     try:
-        return subprocess.run([sys.executable, os.path.join(_REPO_ROOT, APPLY_SCRIPT), *argv],
-                              cwd=_REPO_ROOT).returncode
+        start = text.index("{")
+        detail = json.loads(text[start:text.rindex("}") + 1]).get("detail")
+        if detail:
+            return str(detail)
+    except (ValueError, AttributeError):
+        pass
+    for ln in text.splitlines():
+        s = ln.strip()
+        if s and not s.startswith((">>>", "{", "}", "[", "]", '"')):
+            return s[:300]
+    return None
+
+
+def _run_apply(argv: List[str]) -> int:
+    """Run the apply script as its own process. Its output is re-printed to this run's log, and on a refusal
+    (exit 2) its reason is ALSO printed as a ``>>>`` line, the only lines the rows watcher keeps."""
+    _LAST_APPLY_REFUSAL[0] = None
+    try:
+        r = subprocess.run([sys.executable, os.path.join(_REPO_ROOT, APPLY_SCRIPT), *argv],
+                           cwd=_REPO_ROOT, capture_output=True, text=True)
     except OSError as exc:
         print(f">>> live-review-apply: could not start {APPLY_SCRIPT}: {exc}")
         return EXIT_UNREADABLE
+    sys.stdout.write(r.stdout or "")
+    sys.stderr.write(r.stderr or "")
+    if r.returncode == EXIT_REFUSED:
+        why = apply_refusal_line(r.stdout) or ((r.stderr or "").strip().splitlines() or [None])[-1]
+        _LAST_APPLY_REFUSAL[0] = why
+        print(f">>> live-review-apply: the apply REFUSED (exit 2): {why or 'no reason printed'}")
+    return r.returncode
 
 
 def _ping(row: Dict[str, Any], line: str) -> None:
@@ -551,7 +584,11 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         out.update(verdict="could_not_look", detail=f"evidence_not_yet_at_ref:{row.get('outcome_table_source')}",
                    exit=EXIT_UNREADABLE)
         return out
-    if plan is not None and auto_id:
+    if plan is not None and auto_id and action in rows_lib.ADVICE_ONLY_ACTIONS:
+        # The auto mandate stands in ONLY where MD-TRADE-DESK leaves the action advice-only. Where the desk
+        # mandate already covers it, an ACCOUNT-scoped auto entry (MD-LTR-PROP-AUTO) would NARROW the apply to
+        # its own legs and leave a real-money leg untouched (LTR-APPLY-EXIT2, LR-20261115T0815Z-pkg-ec4066...:
+        # a close on bybit_2 + velotrade_1 was handed over under the prop-only mandate).
         plan["mandate"] = auto_id                   # the apply re-checks the grant and enforces its bounds
     if refusal:
         out.update(verdict="refused", detail=f"mandate_precondition:{refusal}", exit=EXIT_REFUSED)
@@ -562,8 +599,12 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         if persist and apply:
             _save_state(st)
         return out
-    if ref and plan.get("evidence") and ev_text is not None:     # HEAD = the checkout: nothing to materialize
-        plan["evidence"] = materialize_evidence(plan["evidence"], ev_text, at)
+    if plan.get("evidence") and ev_text is not None and (ref or LOCAL_ROOTS):
+        # A pinned ref OR a direct (--local-root) read: the bytes are not necessarily in this checkout, and the
+        # apply refuses an evidence path that is not a file here (exit 2). The direct route skipped this until
+        # LTR-APPLY-EXIT2 (2026-11-15): both direct trade actions ever dispatched were refused before any account.
+        # HEAD with no local root = the checkout: materialize_evidence returns the path unchanged.
+        plan["evidence"] = materialize_evidence(plan["evidence"], ev_text, at if ref else "direct")
     argv = apply_argv(plan, apply=apply)
     out["apply_argv"] = argv
     print(f">>> live-review-apply: {review_id} -> {APPLY_SCRIPT} {' '.join(argv)}")
@@ -573,6 +614,15 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     # applied: the deferred leg still owes its action, and every leg that DID act refuses a repeat by its own
     # duplicate_review_id guard (its journaled review_id), so a re-dispatch cannot act twice (ALPACA-LIVE-MECHANICS).
     sent = (bool(entry and entry.get("applied")) or rc == EXIT_FAILED) and rc != lri.EXIT_DEFERRED
+    if apply and rc == EXIT_REFUSED and not sent:
+        # A refusal INSIDE the apply (before or at every account) is a refused action too: ONE high ping per
+        # review_id on a real-money or prop row, as for the dispatcher's own refusals (PHONE-AMEND-REFUSED-1025).
+        why = _LAST_APPLY_REFUSAL[0] or "no reason printed"
+        out["apply_refusal"] = why
+        alerted = st.setdefault("alerted", {})
+        if is_money_row(row) and not alerted.get(review_id):
+            alerted[review_id] = started
+            _ping(row, f"{review_id}: {plan.get('action', 'tighten_sl')} refused by the apply (exit 2): {why}")
     out.update(verdict="dispatched", apply_exit=rc, exit=rc, accounts=summarize(entry),
                writeback=entry)
     if apply:
