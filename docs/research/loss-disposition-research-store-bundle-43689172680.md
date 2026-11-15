@@ -1,6 +1,6 @@
 # Loss disposition: `research-store-bundle` of run 43689172680 (expires 2026-11-18T07:34:51Z)
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-15`
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-11-15` · registered in [`../DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `RESEARCH-OPS-20261115-2247`
 
 Raised by the research loss detector (run 43749722621, question `C_expiring_unlanded_artifacts`). Dispositioned by
 RESEARCH-OPS-20261115-2247. Verdict: **safe to lose; not landed into the repo, and the reasons are checkable.**
