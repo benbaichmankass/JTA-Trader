@@ -173,13 +173,12 @@ def decide(res: dict[str, Any]) -> dict[str, Any]:
 def build_pairs(unit: dict[str, Any], out: Path, cache: Path) -> dict[str, dict[str, Any]]:
     import d5_concurrency_census as C
     import pandas as pd
-    import yaml
     from same_symbol_head_to_head import _load_bs, fetch_5m
 
     from src.research import risk_basis
     from src.research.run_costs import resolve_run_costs
-    accounts = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text())
-    accounts = accounts.get("accounts", accounts)
+    from src.config.accounts_loader import load_accounts_dict
+    accounts = load_accounts_dict(REPO / "config" / "accounts.yaml")
     bs = _load_bs()
     live = risk_basis.live_risk(risk_basis.DEFAULT_REFERENCE_ACCOUNT)
     risk_pct = float(live.percent) if live.ok and live.percent is not None else 1.0

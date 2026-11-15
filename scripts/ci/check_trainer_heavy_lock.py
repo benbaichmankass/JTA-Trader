@@ -75,6 +75,10 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_v1_filters_read.py":
+        "ML-BAR-ONE-READ (RQ-20261115-a474-04): inference only -- loads the committed served ENTRY v1 boosters and scores one "
+        "held-out year of public Binance Vision 1h rows (no training); minutes of CPU on a GitHub runner, never needs_vm_data, "
+        "never routed to the trainer.",
     "scripts/research/tradeify_futures_fit.py":
         "TRADEIFY-FUTURES-FRONTIER (units RQ-20261112-09d2-01..03): an ORB backtest, a survival Monte-Carlo and one scikit-learn "
         "HistGradientBoosting meta-label fit on ~11.6k ledger rows of public Dukascopy 5m proxies; minutes of CPU in a lane container or "
