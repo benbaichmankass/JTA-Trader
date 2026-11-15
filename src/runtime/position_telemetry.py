@@ -281,6 +281,11 @@ INSERT INTO {TABLE} (
 )
 ON CONFLICT(order_package_id) DO UPDATE SET
     trade_id=excluded.trade_id, last_price=excluded.last_price,
+    -- ENTRY-FILL-OPEN-R-BASIS follow-up (2026-11-15): entry/risk_per_unit were INSERT-only, so a row opened
+    -- before the fill re-basing kept the PLAN entry/risk beside a fill-based open_r (trade 7260: entry 0.1506,
+    -- open_r computed on 0.1501). They follow the record now; COALESCE so a pass without them never wipes them.
+    entry=COALESCE(excluded.entry, {TABLE}.entry),
+    risk_per_unit=COALESCE(excluded.risk_per_unit, {TABLE}.risk_per_unit),
     -- Backfill on UPDATE too: every row written before the resolver existed
     -- carries NULL, and the upsert is the only path a live open position takes
     -- after its first pass. COALESCE order is load-bearing — a later pass whose
