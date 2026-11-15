@@ -457,10 +457,49 @@ def merge_branch_rows(main_rows: List[Dict[str, Any]], branch_rows: Iterable[Dic
     return list(main_rows) + extra
 
 
+def read_direct_rows(root: Optional[str] = None) -> Dict[str, Any]:
+    """Rows a reviewer POSTed DIRECTLY to the VM (``POST /api/bot/live-review/rows``, TRADE-ACTION-DIRECT-PATH;
+    REVIEWER-BRIEF § 4a makes that the primary submit and says not to also write the branch file).
+
+    They live only in ``runtime_logs/live_review/direct/comms/live_review/rows/<review_id>.json``: nothing
+    exports them to ``live-review/rows`` or main, so without this read the due index and the packet's
+    ``previous_review`` never see them (LTR-DIRECT-ROWS-INVISIBLE). Local read, no network. ``state``
+    read | absent (no direct dir yet) | could_not_look; an unreadable single file is skipped and counted.
+    """
+    try:
+        from src.runtime import live_review_rows as rows_lib
+        if root is None:
+            from src.runtime import live_review_rows_watch as watch
+            root = str(watch.direct_root())
+        d = os.path.join(root, rows_lib.ROWS_DIR)
+        if not os.path.isdir(d):
+            return {"state": "absent", "rows": [], "bad_files": 0}
+        rows: List[Dict[str, Any]] = []
+        bad = 0
+        for name in sorted(os.listdir(d)):
+            if not name.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(d, name), "r", encoding="utf-8") as fh:
+                    obj = json.load(fh)
+            except (OSError, ValueError):
+                bad += 1
+                continue
+            if isinstance(obj, dict) and obj.get("review_id"):
+                rows.append(obj)
+            else:
+                bad += 1
+        return {"state": "read", "rows": rows, "bad_files": bad}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as direct_state could_not_look; main+branch stand
+        return {"state": "could_not_look", "rows": [], "reason": f"direct_error: {type(exc).__name__}: {exc}"}
+
+
 def read_reviews_merged(path: Optional[str] = None,
-                        branch: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
-    """:func:`read_reviews` plus the branch rows; ``branch_state`` / ``branch_added`` say what it did.
-    A branch read that fails leaves the main-only answer (never blocks a wake)."""
+                        branch: Optional[Callable[[], Dict[str, Any]]] = None,
+                        direct: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """:func:`read_reviews` plus the branch rows plus the direct-POST rows (deduped by review_id);
+    ``branch_state``/``branch_added`` and ``direct_state``/``direct_added`` say what it did. A branch or direct
+    read that fails leaves what was read (never blocks a wake)."""
     rv = read_reviews(path)
     br = (branch or read_branch_rows)()
     rv["branch_state"] = br["state"]
@@ -469,6 +508,16 @@ def read_reviews_merged(path: Optional[str] = None,
     if br["state"] == "read" and rv["state"] != "unreadable":
         merged = merge_branch_rows(rv["rows"], br["rows"])
         rv["branch_added"] = len(merged) - len(rv["rows"])
+        rv["rows"] = merged
+        if rv["state"] == "absent" and merged:
+            rv["state"] = "read"
+    dr = (direct or read_direct_rows)()
+    rv["direct_state"] = dr["state"]
+    rv["direct_reason"] = dr.get("reason")
+    rv["direct_added"] = 0
+    if dr["state"] == "read" and rv["state"] != "unreadable":
+        merged = merge_branch_rows(rv["rows"], dr["rows"])
+        rv["direct_added"] = len(merged) - len(rv["rows"])
         rv["rows"] = merged
         if rv["state"] == "absent" and merged:
             rv["state"] = "read"
@@ -1675,7 +1724,8 @@ def live_review_due(db_path: Optional[str] = None,
                     funding_db_path: Optional[str] = None,
                     calendar_path: Optional[str] = None,
                     branch: Optional[Callable[[], Dict[str, Any]]] = None,
-                    mark_fn: Optional[Callable[[Any], Optional[float]]] = None) -> Dict[str, Any]:
+                    mark_fn: Optional[Callable[[Any], Optional[float]]] = None,
+                    direct: Optional[Callable[[], Dict[str, Any]]] = None) -> Dict[str, Any]:
     """The route payload. ``mark_fn`` = the bot-feed mark (``local_pnl.last_mark_price``) the ROUTE supplies for
     prop uPnL estimates; None -> those fields are could_not_look ``no_mark_source_supplied``. Never raises. With the default reviews path the prior-review index also
     holds the rows on ``live-review/rows`` that main lacks (``branch`` overrides that read)."""
@@ -1698,10 +1748,13 @@ def live_review_due(db_path: Optional[str] = None,
     env["thresholds_source"] = CONFIG_REL.replace(os.sep, "/")
 
     t_rv = time.monotonic()
-    if reviews_path is None or branch is not None:
-        rv = read_reviews_merged(reviews_path, branch)
+    if reviews_path is None or branch is not None or direct is not None:
+        rv = read_reviews_merged(reviews_path, branch, direct)
         env["branch_state"], env["branch_reason"] = rv["branch_state"], rv["branch_reason"]
         env["branch_rows_added"] = rv["branch_added"]
+        # LTR-DIRECT-ROWS-INVISIBLE: direct-POST reviews count toward dedupe / cadence like any other row
+        env["direct_state"], env["direct_reason"] = rv["direct_state"], rv["direct_reason"]
+        env["direct_rows_added"] = rv["direct_added"]
     else:
         rv = read_reviews(reviews_path)
     timings["reviews"] = _ms(t_rv)
