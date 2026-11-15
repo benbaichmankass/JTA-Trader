@@ -399,8 +399,13 @@ LOUD_PREFIX = "\U0001F6A8\U0001F510 SECURITY ALERT \U0001F6A8\n"
 
 
 def loud(text: str) -> str:
-    """The operator-facing form of a security alert: a siren header line, then the alert."""
-    return text if text.startswith(LOUD_PREFIX) else LOUD_PREFIX + text
+    """The operator-facing form of a security alert: a siren header line, then the alert.
+
+    Only a ``[RED FLAG]`` gets the siren; an ``[INFO]`` line (a baseline recorded) is sent as is, so a
+    routine message never reads as a breach (2026-11-15 14:44Z: two INFO baseline lines arrived with the siren)."""
+    if text.startswith(LOUD_PREFIX) or "[RED FLAG]" not in text:
+        return text
+    return LOUD_PREFIX + text
 
 
 def main(argv: list[str] | None = None) -> int:
