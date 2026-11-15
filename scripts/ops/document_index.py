@@ -610,8 +610,15 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     "docs/reference/trading-pipeline-map.md": (
         "live",
         "read:PIPELINE-MAP-authored-paths-checked-on-main-2026-11-14",
-        "the trading pipeline map shown on the Work tab; generated block refreshed "
-        "weekly by doc-freshness (pipeline_map_numbers.py)",
+        "GENERATED snapshot of the pipeline map (src/runtime/pipeline_map.py); the Work tab "
+        "builds it live; doc-freshness refreshes the snapshot weekly",
+    ),
+    # The hand-written half of the generated map (manager design change 2026-11-14: generate from
+    # sources of truth). src/runtime/pipeline_map.py checks its cited paths on every build.
+    "docs/reference/trading-pipeline-map.skeleton.md": (
+        "live",
+        "read:PIPELINE-MAP-skeleton-paths-checked-by-generator-2026-11-14",
+        "hand-written skeleton of the generated pipeline map; edit this, never the snapshot",
     ),
 }
 

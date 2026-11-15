@@ -2,6 +2,8 @@
 
 > **Doc status:** `live` · category `lookup` · last verified `2026-11-14` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md)
 
+> **Generated 2026-11-14 23:19Z** from `docs/reference/trading-pipeline-map.skeleton.md` by `src/runtime/pipeline_map.py`. Edit the skeleton, never this output; the generated blocks are rebuilt from their sources on every build.
+
 **Gates this adds or changes:** none. This is a map, not a rule; it adds no CI guard, gate or required check.
 
 **What this is.** One page that walks the live trading pipeline from market data to the research loop. Each stage
@@ -12,20 +14,25 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
 
 **How to read it, and its limits.**
 
-- **Code and config are the truth; this page is a claim about them** (RULE ONE: field beats comment). Every path
-  below was checked to exist on `main` on 2026-11-14. If the code disagrees with this page, the code wins and this
-  page is wrong: fix it.
-- **Rosters and counts are not restated in prose.** `config/accounts.yaml` (rosters, account `mode:`) and
-  `config/strategies.yaml` (legs, `execution:`, `symbols:`) are the source. The per-leg table at the bottom is
-  generated from them.
-- **Numbers live only in the generated block** at the end, which `scripts/ops/pipeline_map_numbers.py` rewrites
-  from the evidence records, the config and the live performance route. Every number there has an "as of" date
-  and a provenance label (`src/runtime/provenance.py`). A missing value is "—", never 0.
+- **Code and config are the truth; this page is a claim about them** (RULE ONE: field beats comment). If the code
+  disagrees with this page, the code wins: fix the skeleton. The drift checks at the end catch a path that moved.
+- **This page is GENERATED.** The hand-written part is only this skeleton,
+  `docs/reference/trading-pipeline-map.skeleton.md` (stage order, what each stage does, which modules run it).
+  Every block marked "generated" is rebuilt from its source of truth by `src/runtime/pipeline_map.py`:
+  `config/accounts.yaml`, `config/strategies.yaml`, `scripts/ops/strategy_status.py`,
+  `comms/strategy_evidence/`, the journal's performance route, `ml/served/SERVED_MODELS.yaml`,
+  `config/mandates.yaml`, `config/live_trade_review.yaml`, the `deploy/` unit files,
+  `config/trader_import_closure.txt` and `scripts/ci/check_tp_doctrine.py`. The Work tab builds it live
+  (`GET /api/bot/work/pipeline-map`); the committed `docs/reference/trading-pipeline-map.md` is a snapshot
+  that `scripts/ops/pipeline_map_numbers.py` writes. Every number carries an "as of", a population and a
+  provenance label (`src/runtime/provenance.py`); an unreadable source reads "—" with its read state, never 0.
+- **The skeleton checks itself.** The "Drift checks" block at the end lists any module path the skeleton cites
+  that no longer exists, any rostered leg with no definition, and any enabled leg on no book.
 - **A live book never establishes edge.** Backtest evidence (offline, Stage 0) and live results are shown in
   separate columns. Live results check mechanics and cost only (OPERATING-PLAN § 2).
 - **Upkeep.** The weekly doc-freshness check (`.claude/skills/doc-freshness/SKILL.md` § "Weekly core-doc
-  currency") re-runs the generator and compares this page with the week's merged work. When a merged change alters a
-  stage below, update this page in the same PR or a follow-up (a habit, not a gate).
+  currency") re-runs the generator and compares the skeleton with the week's merged work. When a merged change alters a
+  stage below, update the skeleton in the same PR or a follow-up (a habit, not a gate).
 - **Deeper sources.** [`docs/ARCHITECTURE-CANONICAL.md`](../ARCHITECTURE-CANONICAL.md) § "End-to-End Trade
   Pipeline", § "TP doctrine", § "Active management", § "Prop ticket flow";
   [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../plans/OPERATING-PLAN-2026-09-21.md) § 2 (the ladder and statuses).
@@ -42,6 +49,67 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
 | **GitHub Actions** | Research harness runs, evidence records, live-review routines, system actions, diag relays. |
 | **Brokers** | Bybit (crypto), Alpaca (US equities and ETFs), Interactive Brokers (futures and equity ETFs), OANDA (FX and metals, practice), prop firms through the prop executors. |
 | **Dashboard** | `benbaichmankass/ict-trader-dashboard`, a Svelte SPA on GitHub Pages that calls the API browser-direct through Caddy (CORS is load-bearing). |
+
+<!-- BEGIN GEN:where -->
+**Every systemd unit in the repo and what it runs** (source: `deploy/*.service`, `deploy/trainer/*.service`; 54 units; a unit file in the repo is not proof it is enabled on the VM: `/api/diag/services` is the runtime truth).
+
+| Unit | Host | Runs |
+|---|---|---|
+| `ict-alpaca-fills-pull` | live VM (`ict-bot-arm`) | `python -u scripts/pull_alpaca_fills.py --all-alpaca-accounts --days 7` |
+| `ict-claude-bridge` | live VM (`ict-bot-arm`) | `python3 -u -B -m src.bot.claude_bridge` |
+| `ict-claude-decision-bot` | live VM (`ict-bot-arm`) | `python3 -u -B -m src.bot.claude_decision_bot` |
+| `ict-db-integrity` | live VM (`ict-bot-arm`) | `python -u scripts/db_integrity_alert.py` |
+| `ict-desk-build@` | live VM (`ict-bot-arm`) | `python3 -u -B scripts/ops/desk_build_job.py %i` |
+| `ict-devnull-guard` | live VM (`ict-bot-arm`) | `/bin/sh -c 'if [ ! -c /dev/null ] \|\| [ "$(stat -c %%t:%%T /dev/null 2>/dev/null)" != "1:3" ]; then rm -f /d…` |
+| `ict-env-check` | live VM (`ict-bot-arm`) | `python3 scripts/startup_env_check.py` |
+| `ict-exchange-fills-pull` | live VM (`ict-bot-arm`) | `python -u scripts/ops/pull_bybit_transaction_log.py --all-bybit-accounts --days 7` |
+| `ict-exchange-funding-pull` | live VM (`ict-bot-arm`) | `python -u scripts/pull_exchange_funding.py --all-bybit-accounts --days 7` |
+| `ict-git-sync` | live VM (`ict-bot-arm`) | `bash scripts/deploy_pull_restart.sh` |
+| `ict-health-snapshot` | live VM (`ict-bot-arm`) | `python -u scripts/write_health_snapshot.py` |
+| `ict-heartbeat` | live VM (`ict-bot-arm`) | `python3 -u scripts/daily_heartbeat.py` |
+| `ict-hourly-snapshot` | live VM (`ict-bot-arm`) | `python3 scripts/send_hourly_now.py` |
+| `ict-ib-executions-pull` | live VM (`ict-bot-arm`) | `python -u scripts/pull_ib_executions.py --all-ib-accounts --days 2` |
+| `ict-ib-gateway-reset` | live VM (`ict-bot-arm`) | `/usr/bin/docker restart ib-gateway` |
+| `ict-ib-gateway-watchdog` | live VM (`ict-bot-arm`) | `python3 -u scripts/check_ib_gateway.py --probe-account ib_paper \` |
+| `ict-insights-generator-strategies` | live VM (`ict-bot-arm`) | `scripts/ops/run_insights_strategies_cycle.sh` |
+| `ict-insights-generator` | live VM (`ict-bot-arm`) | `scripts/ops/run_insights_cycle.sh` |
+| `ict-liveness-watchdog` | live VM (`ict-bot-arm`) | `python3 -u scripts/check_heartbeat.py --interval 60 --grace 5 --auto-restart-after 3 --max-restarts 5 --coold…` |
+| `ict-mes-ibkr-pull` | live VM (`ict-bot-arm`) | `bash scripts/ops/pull_mes_ibkr_history.sh` |
+| `ict-ml-decision-shadow` | live VM (`ict-bot-arm`) | `python -u scripts/ops/ml_decision_shadow.py` |
+| `ict-notify-failure@` | live VM (`ict-bot-arm`) | `python3 -u scripts/ops/notify_unit_failure.py %i` |
+| `ict-ops-runner` | live VM (`ict-bot-arm`) | `python3 -u -B scripts/ops/ops_runner.py` |
+| `ict-phone-capture-purge` | live VM (`ict-bot-arm`) | `bash scripts/ops/phone_capture_purge.sh` |
+| `ict-prop-executor` | live VM (`ict-bot-arm`) | `bash scripts/ops/prop_executor_tick.sh` |
+| `ict-prop-executor@` | live VM (`ict-bot-arm`) | `bash scripts/ops/prop_executor_tick.sh` |
+| `ict-prop-feed` | live VM (`ict-bot-arm`) | `bash scripts/ops/prop_feed_tick.sh` |
+| `ict-prop-feed@` | live VM (`ict-bot-arm`) | `bash scripts/ops/prop_feed_tick.sh` |
+| `ict-research-results-gate` | live VM (`ict-bot-arm`) | `scripts/ops/run_research_results_gate.sh` |
+| `ict-security-watch` | live VM (`ict-bot-arm`) | `python -u scripts/ops/security_watch.py` |
+| `ict-shadow-log-rotate` | live VM (`ict-bot-arm`) | `python3 scripts/ops/rotate_shadow_log.py --gzip` |
+| `ict-smoke-once` | live VM (`ict-bot-arm`) | `bash scripts/run_smoke_once.sh` |
+| `ict-telegram-bot` | live VM (`ict-bot-arm`) | `python3 -u -B -m src.bot.telegram_query_bot` |
+| `ict-trader-live` | live VM (`ict-bot-arm`) | `python3 -u -B -m src.main` |
+| `ict-trainer-disk-alarm` | live VM (`ict-bot-arm`) | `python -u scripts/ops/trainer_disk_alarm.py` |
+| `ict-trainer-git-sync` | live VM (`ict-bot-arm`) | `bash scripts/ops/trainer_git_sync.sh` |
+| `ict-web-api-watchdog` | live VM (`ict-bot-arm`) | `python3 -u scripts/check_web_api.py --auto-restart --restart-after 2 --max-restarts 3 --cooldown-min 10` |
+| `ict-web-api` | live VM (`ict-bot-arm`) | `python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001` |
+| `ict-work-digest` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_digest_now.py` |
+| `ict-work-report` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_report.py` |
+| `ict-work-store-import` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_store_import.py --apply` |
+| `ict-candle-refresh` | trainer VM (`ict-trainer-vm`) | `python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15` |
+| `ict-drift-retrain` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_drift_retrain.sh` |
+| `ict-keeper-dispatch` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/keeper_dispatch.sh` |
+| `ict-offload-drain` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_offload_drain.sh` |
+| `ict-orderflow-capture` | trainer VM (`ict-trainer-vm`) | `python -m scripts.ml.orderflow_capture \` |
+| `ict-pm-snapshot` | trainer VM (`ict-trainer-vm`) | `python -u scripts/macro/pm_snapshot_collect.py` |
+| `ict-promotion-readiness` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_promotion_readiness.sh` |
+| `ict-trainer-catchup` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_training_cycle.sh` |
+| `ict-trainer-forecast` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_forecast_producer.sh` |
+| `ict-trainer-lifecycle` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_lifecycle_schedule.sh` |
+| `ict-trainer-publish` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/publish_trainer_mirror.sh` |
+| `ict-trainer` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_training_cycle.sh` |
+| `jta-console-connector` | trainer VM (`ict-trainer-vm`) | `python -m src.console_connector.server` |
+<!-- END GEN:where -->
 
 ## The flow
 
@@ -79,6 +147,21 @@ flowchart TD
 |---|---|
 | Strategy modules in `src/units/strategies/`: `trend_donchian.py`, `htf_pullback_trend_2h.py`, `fvg_range_15m.py`, `turtle_soup.py`, `ict_scalp.py`, `squeeze_breakout_4h.py`, `fade_breakout_4h.py`, `e4_oi_shock_1h.py`, `hf_displacement_cont.py`, `hf_vwap_revert.py`, `vwap.py`, `macro_thesis/`, the ML legs `ml_entry.py`, `ml_entry_v2.py`, `ml_entry_eq.py`, the Claude desk `claude_desk.py`, and the pairs sleeve (`pairs_engine.py`, `pairs_executor.py`, its own gate `config/pairs.yaml`). Leg config and params: `config/strategies.yaml`. Served ML artifacts: `ml/served/` (the entry pointer is `ml/served/ENTRY_SERVED.json`, read by `src/runtime/ml_entry_served.py`; the model inventory and stages are `ml/served/SERVED_MODELS.yaml`). Models are trained on `ict-trainer-vm` (`ml/` package, `python -m ml ...`) and published to the repo. | **Rule legs**: trend (Donchian breakout), pullback in trend (2h/1d), fair-value-gap range, liquidity sweep reversal (turtle soup), ICT scalp, squeeze and fade breakouts, OI-shock, VWAP. Each trades the symbol its own evidence measured. **ML legs**: `ml_entry` (crypto entry classifier: a served model scores each candidate and trades above a threshold), `ml_entry_v2`, `ml_entry_eq` / `ml_entry_eq_struct` (equities). An ML leg trades the population its pooled test passed on. **Claude desk**: `claude_desk` (judgement-driven entries, paper). **Status** (testing / production / inactive) is derived from roster membership by `scripts/ops/strategy_status.py`, never declared. **Track record**: backtest and live per leg in the generated table; ML headline metrics with provenance in `ml/served/SERVED_MODELS.yaml`. |
 
+<!-- BEGIN GEN:ml -->
+**Served ML models** (source: `ml/served/SERVED_MODELS.yaml`; 8 models; the entry pointer `ml/served/ENTRY_SERVED.json` serves `ml_decision_entry_v1r20261106`). Headline metrics are the registry's own, with its provenance and population.
+
+| Model | Stage | Headline metric | Value | n | Window | Verdict | Provenance | Source |
+|---|---|---|---|---|---|---|---|---|
+| `ml-decision-entry-v1` | advisory | heldout_mean_net_r_per_trade | +0.0371 | 907 | 2025-10-01..2026-09-29 | pass | MEASURED | `comms/strategy_evidence/ml_entry.json` |
+| `ml-decision-entry-v1r20261106` | advisory | promotion_grade_mean_net_r_per_trade | +0.0018 | 281 | 2026-10-23..2026-11-05 | pass | MEASURED | `comms/research/ml_entry_grade/42250040398/verdict_amended_2.json` |
+| `ml-decision-entry-v2` | advisory | w1_mean_net_r_per_trade | -0.1161 | 320 | W1 forward read | fail | MEASURED | `comms/research/RQ-20261101-b609-01/local-20261101T2000Z/result.json` |
+| `ml-entry-eq-v1` | advisory | confirm_mean_net_r_per_trade | +0.0392 | 858 | 2025-07-15..2026-10-31 | pass | MEASURED | `research/results/RQ-20261105-e9a1-02/42143223941.jsonl` |
+| `ml-entry-eq-struct-ens5-v1` | advisory | confirm_mean_net_r_per_trade | +0.4922 | 207 | 2025-07-15..2026-10-31 | pass | MEASURED | `comms/strategy_evidence/ml_entry_eq_struct.json` |
+| `ml-entry-tp-revision-v1` | advisory | mean_delta_net_r_per_trade_vs_fixed_tp | +0.0008 | 907 | 2025-10-01..2026-09-30 | — | MEASURED | `comms/research/RQ-20261101-383f-01/evidence_extend_only_c692-06_population.json` |
+| `overlay-td-v1` | advisory | noninferiority_verdict | — | 1830 | 2020-07-01..2026-10-15 | pass | MEASURED | `comms/research/RQ-20261029-5785-02/40869516819/verdict.json` |
+| `exit-head-donchian-1h-v1` | advisory | oos_recovered_r_per_trade | -0.0141 | 1041 | 2022-10-29..2026-07-10 (3 folds) | fail | MEASURED | `research/results/RQ-20260927-002/36302273043.jsonl` |
+<!-- END GEN:ml -->
+
 ## 4 · Intent layer: multiplexer, regime router, election
 
 | TECHNICAL | TRADING |
@@ -90,6 +173,27 @@ flowchart TD
 | TECHNICAL | TRADING |
 |---|---|
 | `src/core/coordinator.py::Coordinator.multi_account_execute` fans an elected signal to every account whose roster carries the leg, with a symbol-to-exchange guard. Rosters and account `mode:` are in `config/accounts.yaml`; leg `execution:` is in `config/strategies.yaml`; both fold into one `effective_dry`. Served on `/api/bot/config`. | **The only two gates**: account `mode: live \| dry_run` (written only by the operator-gated `set-account-mode` action) and leg `execution: live \| shadow` (shadow logs packages, sends nothing). There is no third gate. **The books**: Stage 1 demo floor (`bybit_1`, `alpaca_paper`, `ib_paper`): every testing leg trades there. Stage 2 real money plus its mirror (`bybit_2` + `bybit_portfolio`, `alpaca_live` + `alpaca_portfolio`). Prop accounts (`account_class: prop`) clear a superset bar. An account configures strategies, never symbols. |
+
+<!-- BEGIN GEN:accounts -->
+**Accounts** (source: `config/accounts.yaml`; names only, no ids or balances; 14 accounts).
+
+| Account | Class | Exchange | Mode (gate 1) | Position model | Daily DD switch | Legs on roster |
+|---|---|---|---|---|---|---|
+| `bybit_1` | paper | bybit | live | slices | disarmed | 29 |
+| `bybit_2` | real_money | bybit | live | slices | armed | 5 |
+| `bybit_portfolio` | paper | bybit | live | slices | armed | 5 |
+| `ib_paper` | paper | interactive_brokers | live | — (default) | disarmed | 11 |
+| `ib_live` | real_money | interactive_brokers | dry_run | — (default) | armed | 0 |
+| `oanda_practice` | paper | oanda | dry_run | — (default) | disarmed | 0 |
+| `alpaca_paper` | paper | alpaca | live | — (default) | disarmed | 18 |
+| `alpaca_portfolio` | paper | alpaca | live | — (default) | armed | 4 |
+| `alpaca_live` | real_money | alpaca | live | — (default) | armed | 4 |
+| `alpaca_options_paper` | paper | alpaca | live | — (default) | disarmed | 3 |
+| `breakout_1` | prop | breakout | dry_run | — (default) | disarmed | 0 |
+| `breakout_2` | prop | breakout | live | — (default) | armed | 0 |
+| `tradeify_1` | prop | breakout | live | — (default) | armed | 3 |
+| `velotrade_1` | prop | breakout | live | — (default) | armed | 3 |
+<!-- END GEN:accounts -->
 
 ## 6 · RiskManager and sizing
 
@@ -115,6 +219,38 @@ flowchart TD
 |---|---|
 | `src/runtime/order_monitor.py` (`run_monitor_tick`, `run_exit_evaluation_tick`) runs each strategy's monitor every tick inside `ict-trader-live.service`: partial closes, SL moves (`src/runtime/sl_mover.py`), trailing (`src/runtime/trail_vol.py`, `src/runtime/trail_decay.py`, `src/runtime/trail_cross.py`), TP revision (`src/runtime/tp_revision.py`), structure exits (`src/runtime/structure_exit_live.py`), regime-flip exits (`src/runtime/regime_flip_exit.py`), exit heads (`src/runtime/exit_head_apply.py`), protection re-assert (`src/runtime/protection_reassert.py`). Prop trails: `src/prop/prop_trail.py`. **Live-trade-review desk**: a reviewer (skill `.claude/skills/live-trade-review/SKILL.md`, priced by `scripts/research/live_review_outcomes.py`) writes one row per package to the `live-review/rows` branch and `comms/live_review/reviews.jsonl`; `src/runtime/live_review_rows_watch.py` (inside the trader) sees a new row and runs `scripts/ops/live_review_dispatch.py`, which hands over to `scripts/ops/live_review_apply.py`; each account decides through `RiskManager.approve_amend` and the venue is read back. Mandates: `config/mandates.yaml` (`MD-TRADE-DESK`). | **Strategy monitors** apply each leg's own exit rules (break-even, partials, trailing). **Active management**: any evidence-backed move of either bracket; each action class is advice-only until its own net-of-cost test passes (ARCHITECTURE-CANONICAL § "Active management"). **The desk**: decides the best trade action NOW for each open package (hold, close, partial, move TP, widen SL, resize), priced from the leg's own Stage-0 history; in-trade classes in `rows_lib.ADVICE_ONLY_ACTIONS` are logged, not sent. **Daily DD switch** (stage 6) blocks new entries only. Track record: desk rows and outcomes in `comms/live_review/reviews.jsonl`; exit-lever evidence per leg via skill `exit-refinement`; — as a single number. |
 
+<!-- BEGIN GEN:mandates -->
+**Granted mandates** (source: `config/mandates.yaml` `mandates:`; 23 granted; 1 proposed, not shown). A mandate decides what may be CHANGED without asking, never what runs.
+
+| Mandate | Kind | Grants | Granted | Auto-land |
+|---|---|---|---|---|
+| `MD-OBSERVABILITY-IN-A-GATED-PATH` | — | land_without_asking | 2026-09-24 | — |
+| `MD-DEPLOY-AN-APPROVED-MERGE` | — | deploy_and_verify | 2026-09-24 | — |
+| `MD-DERISK-ONLY-ROSTER-CUT` | — | derisk_only | 2026-09-24 | — |
+| `MD-STRIP-A-ZERO-MEASURED-LEVER` | — | strip_inert_lever | 2026-09-24 | — |
+| `MD-PREFER-THE-VERIFIABLE-SIDE` | — | resolve_stale_branch_conflict | 2026-09-24 | — |
+| `MD-PROMOTE-S0-S1` | — | add a leg to the Stage-1 soak book on a passing Stage-0 record | 2026-09-24 | — |
+| `MD-PROMOTE-S1-S2` | — | add a leg to a REAL-MONEY roster on Stage-0 evidence plus Stage-1 cost fidelity | 2026-09-24 | — |
+| `MD-DEMOTE-S2-S1` | — | demote a Stage-2 leg when the mirror goes net-negative net-of-cost | 2026-09-24 | yes |
+| `MD-DEMOTE-S1-OFF` | — | drop a RETIRED Stage-1 leg whose realized cost diverges from its harness assumption (AMENDED 2026-10-27, demo-floor rule -- a leg that is n… | 2026-09-24 | — |
+| `MD-KILL-QUESTION` | — | close a research question that failed its own pre-registered rule | 2026-09-24 | — |
+| `MD-LAND-RESEARCH-RESULT` | — | land_without_asking | 2026-09-27 | — |
+| `MD-PROP-JOURNAL-FROM-OPERATOR` | — | prop_journal_write | 2026-09-27 | — |
+| `MD-PAPER-PROTECTIVE-REPAIR` | — | place_missing_protective_on_paper | 2026-09-27 | — |
+| `MD-SOAK-EXIT-CELL-PATHB` | — | declare a passing stop-multiplier (atr_stop_mult) cell on a leg that sits ONLY on Stage-1 soak rosters | 2026-09-30 | — |
+| `MD-S1-CUT-ON-STAGE0-FAIL` | — | remove a RETIRED Stage-1 leg from its Stage-1 paper roster when its Stage-0 evidence record fails (AMENDED 2026-10-27, demo-floor rule -- a… | 2026-10-04 | — |
+| `MD-EXEC-DEV-TEST-TRADES` | — | open_and_close_exec_test_trades_on_prop_accounts | 2026-10-18 | — |
+| `MD-LIVE-TIGHTEN-SL` | — | tighten the protective stop of an OPEN order package on every account that carries it | 2026-10-25 | — |
+| `MD-TRADE-DESK` | — | every trade action of the Claude trading desk (tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry) on every accoun… | 2026-10-26 | — |
+| `MD-DEMO-FLOOR-BUILD` | — | merge_and_deploy_demo_floor_tier2_3_changes_without_per_pr_popup | 2026-10-27 | — |
+| `MD-LTR-ADA-AUTO` | ltr_auto_apply | the live reviewer's recommendation on order package pkg-465a5d7d27644027 (the ADA short) is applied automatically by the VM, every in-trade… | 2026-10-29 | — |
+| `MD-LTR-XRP-PC-20261109` | ltr_auto_apply | the live reviewer's partial_close (size_fraction 0.5) on order package pkg-633f05fad1ee4c1d (trend_donchian_xrp_4h XRPUSDT short) is applie… | 2026-11-09 | — |
+| `MD-LTR-PAPER-AUTO` | ltr_auto_apply | every in-trade live-review call (close, tighten, move TP and every other in-trade class) on a package carried by a Stage-1 demo-floor paper… | 2026-11-01 | — |
+| `MD-LTR-PROP-AUTO` | ltr_auto_apply | every live-review close, partial close or stop-tighten call on a package carried by a live prop account (tradeify_1, velotrade_1; breakout_… | 2026-11-12 | — |
+
+**Live trade review config** (`config/live_trade_review.yaml`): apply_mode `apply`, accounts `{}`.
+<!-- END GEN:mandates -->
+
 ## 10 · Close and reconcile
 
 | TECHNICAL | TRADING |
@@ -129,14 +265,12 @@ flowchart TD
 
 ## Per-leg status and track record (generated)
 
-<!-- BEGIN GENERATED: pipeline_map_numbers.py -->
-_Generated 2026-11-14 22:12Z by `scripts/ops/pipeline_map_numbers.py` — do not hand-edit this block; re-run the script._
-
+<!-- BEGIN GEN:legs -->
 **Population:** 62 legs in `config/strategies.yaml` — production 9, testing 50, inactive 3 (status DERIVED by `scripts/ops/strategy_status.py`).
 
-**Read this table in two halves.** *Backtest* is the offline Stage-0 evidence record (the only thing that establishes edge; provenance `measured` when the record's `coverage_state` is measured). *Live* is the journal's realized R from `/api/bot/performance?window=all` (lifetime window): it checks mechanics and cost, **never edge**. The live window is lifetime, so it can include trades from before a leg's current status. Live real money = the route's top-level real-money aggregate; live paper = its `paper` block. Live read-state: **read**; journal trust: known-divergent ['bybit_2'], unrecorded ['alpaca_live'].
+**Read this table in two halves.** *Backtest* is the offline Stage-0 evidence record (the only thing that establishes edge; provenance `measured` when the record's `coverage_state` is measured). *Live* is the journal's realized R from `/api/bot/performance?window=all` (lifetime window, so it can include trades from before a leg's current status): it checks mechanics and cost, **never edge**. Live real money = the route's top-level real-money aggregate; live paper = its `paper` block. Live read-state: **read**; journal trust: known-divergent ['bybit_2'], unrecorded ['alpaca_live'].
 
-| Leg | Status | Books | Exec | Backtest net R OOS (full cost) | n OOS | Folds + | Cost basis | Stage-0 verdict | Evidence as of | Live real money (R) | Live paper (R) |
+| Leg | Status | Books | Exec (gate 2) | Backtest net R OOS (full cost) | n OOS | Folds + | Cost basis | Stage-0 verdict | Evidence as of | Live real money (R) | Live paper (R) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `ada_pullback_2h` | production | bybit_2, bybit_portfolio | live | +27.09 `measured` | 67 | 4/4 | full | pass | [2026-11-06](../../comms/strategy_evidence/ada_pullback_2h.json) | n=19 · ΣR -0.56 · E[R] -0.03 · R basis: confirmed 7, unverified 8, contaminated 4 | n=52 · ΣR +10.35 · E[R] +0.20 · R basis: confirmed 13, unverified 29, contaminated 10 |
 | `ml_entry` | production | alpaca_paper, bybit_2, bybit_portfolio, tradeify_1, velotrade_1 | live | +33.68 `measured` | 907 | 1/1 | full | pass | [2026-11-04](../../comms/strategy_evidence/ml_entry.json) | n=27 · ΣR -4.41 · E[R] -0.16 · R basis: confirmed 11, unverified 16 | n=39 · ΣR -2.65 · E[R] -0.07 · R basis: confirmed 16, unverified 22, contaminated 1 |
@@ -203,9 +337,9 @@ _Generated 2026-11-14 22:12Z by `scripts/ops/pipeline_map_numbers.py` — do not
 
 **Active legs with NO evidence record** (4): `claude_desk`, `e4_oi_shock_1h`, `ml_entry_eq`, `ml_entry_v2`. A leg without a committed record has no Stage-0 evidence on file — it is not a pass.
 
-**Evidence records naming no leg in `config/strategies.yaml`** (matched on the record's `strategy` field): `comms/strategy_evidence/e4_oi_shock.json` (`e4_oi_shock`). Each is either a renamed leg (fix the record's `strategy` field) or a research record.
+**Evidence records naming no leg in `config/strategies.yaml`** (matched on the record's `strategy` field): `comms/strategy_evidence/e4_oi_shock.json` (`e4_oi_shock`). Each is a renamed leg (fix the record's `strategy` field) or a research record.
 
-**TP doctrine compliance** (`scripts/ci/check_tp_doctrine.py`, as of 2026-11-14 22:12Z):
+**TP doctrine compliance** (`scripts/ci/check_tp_doctrine.py`):
 
 ```
 population: 85 routings / 59 distinct legs, every account in config/accounts.yaml
@@ -214,5 +348,12 @@ population: 85 routings / 59 distinct legs, every account in config/accounts.yam
   mirror     routings= 9  entry_tp FAIL= 1  tp_revision FAIL= 8  compliant= 1
   paper      routings=61  entry_tp FAIL=28  tp_revision FAIL=56  compliant= 4
 ```
+<!-- END GEN:legs -->
 
-<!-- END GENERATED: pipeline_map_numbers.py -->
+## Drift checks (generated)
+
+<!-- BEGIN GEN:checks -->
+Checked 114 module/config paths cited by the skeleton (63 of them are in the trader's import closure, `config/trader_import_closure.txt`); 59 rostered legs against 62 defined legs.
+
+✅ No drift found: every cited path exists, every rostered leg is defined, every enabled leg is on a book.
+<!-- END GEN:checks -->
