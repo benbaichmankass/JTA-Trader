@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
 import urllib.request
 from collections.abc import Iterable
 from pathlib import Path
@@ -31,6 +32,15 @@ if str(ROOT) not in sys.path:
 BASE = "https://ict-bot.duckdns.org/api/bot/prop/tickets"
 OPEN_TICKET = ("placed", "filled")      # the phone/executor reported the order on the venue
 CLOSED_PACKAGE = ("closed",)
+
+
+def _service_headers() -> dict:
+    """``Authorization: Bearer $DASHBOARD_API_TOKEN`` when the token is in the
+    environment, else nothing: the read-only service credential the site gate
+    accepts on GET/HEAD once ``SITE_AUTH_ENFORCE`` is on (UI-OAUTH-SIGNIN; ignored
+    while it is off). Only ever sent to this project's own API."""
+    tok = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {tok}"} if tok else {}
 
 
 def prop_accounts() -> list[str]:
@@ -53,7 +63,8 @@ def divergent(tickets: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _fetch(account: str, limit: int) -> list[dict[str, Any]]:
-    with urllib.request.urlopen(f"{BASE}?account_id={account}&limit={limit}", timeout=40) as r:
+    req = urllib.request.Request(f"{BASE}?account_id={account}&limit={limit}", headers=_service_headers())
+    with urllib.request.urlopen(req, timeout=40) as r:
         d = json.load(r)
     return list(d.get("tickets") or [])
 

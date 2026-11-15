@@ -1,0 +1,504 @@
+{
+ "unit": "RQ-20261113-f251-03",
+ "rule": "RULE-FORMING-VS-CLOSED-4H-20261113",
+ "params": {
+  "folds": 6,
+  "fold_majority": 4,
+  "max_opposite": 1,
+  "floor_r": 1.0,
+  "floor_per_trade_r": 0.02
+ },
+ "generated_at": "2026-11-13T15:27:49+00:00",
+ "data_source": "Binance USD-M perp 1m klines (data.binance.vision); a LABELLED PROXY for Bybit (api.bybit.com is geo-blocked from the research containers)",
+ "window_end_pin": "2026-11-12 23:59",
+ "population": "2 leg runs (trend_donchian_eth_4h, trend_donchian_sol_4h); every (account, leg) routing under legs[].routings; arms config-exact to config/strategies.yaml (a __tp<x> run overrides tp_r only); entries on bars with a 200-bar live frame",
+ "complete": true,
+ "legs": {
+  "trend_donchian_eth_4h": {
+   "leg": "trend_donchian_eth_4h",
+   "family": "trend",
+   "symbol": "ETHUSDT",
+   "timeframe": "4h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 6.0,
+    "trail_decay_stall_bars": 10,
+    "trail_decay_tight_mult": 1.8,
+    "tp_revision": "donchian_measured_move",
+    "tp_revision_width_mult": 0.5,
+    "tp_r": 50.0,
+    "min_confidence": 0.6,
+    "side_filter": "both",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 15048,
+   "first_decision_bar": "2020-02-03 04:00:00+00:00",
+   "last_bar": "2026-11-12 20:00:00+00:00",
+   "A_closed": {
+    "n": 300,
+    "net_r": 97.871
+   },
+   "B_forming": {
+    "n": 450,
+    "net_r": 104.3893
+   },
+   "shared_n": 241,
+   "union_n": 509,
+   "jaccard": 0.4735,
+   "delta_net_r": 6.5183,
+   "tp_r": 50.0,
+   "tp_variant": false,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "tradeify_1",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "velotrade_1",
+     "account_class": "prop",
+     "mode": "live"
+    }
+   ],
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_eth_4h.json",
+    "window": [
+     "2023-10-29 00:00:00+00:00",
+     "2026-10-27 20:00:00+00:00"
+    ],
+    "record_net_r_oos": 44.6385,
+    "record_n": 135,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 135,
+     "net_r": 30.8448
+    },
+    "proxy_forming": {
+     "n": 209,
+     "net_r": 28.1983
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261022-4de5-01",
+    "params": {
+     "folds": 6,
+     "fold_majority": 4,
+     "max_opposite": 1,
+     "floor_r": 1.0,
+     "floor_per_trade_r": 0.02
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-02-03 04:00:00+00:00",
+     "2026-11-12 20:00:00+00:00"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "start": "2020-02-03 04:00:00+00:00",
+      "end": "2021-03-21 14:40:00+00:00",
+      "closed": {
+       "n": 51,
+       "net_r": 16.7216
+      },
+      "forming": {
+       "n": 77,
+       "net_r": 26.0007
+      },
+      "delta_r": -9.2791,
+      "floor_r": 1.54,
+      "call": "FORMING"
+     },
+     {
+      "fold": 2,
+      "start": "2021-03-21 14:40:00+00:00",
+      "end": "2022-05-08 01:20:00+00:00",
+      "closed": {
+       "n": 49,
+       "net_r": 21.6284
+      },
+      "forming": {
+       "n": 65,
+       "net_r": 27.8898
+      },
+      "delta_r": -6.2614,
+      "floor_r": 1.3,
+      "call": "FORMING"
+     },
+     {
+      "fold": 3,
+      "start": "2022-05-08 01:20:00+00:00",
+      "end": "2023-06-24 12:00:00+00:00",
+      "closed": {
+       "n": 48,
+       "net_r": 22.4828
+      },
+      "forming": {
+       "n": 75,
+       "net_r": 8.0093
+      },
+      "delta_r": 14.4735,
+      "floor_r": 1.5,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 4,
+      "start": "2023-06-24 12:00:00+00:00",
+      "end": "2024-08-09 22:40:00+00:00",
+      "closed": {
+       "n": 45,
+       "net_r": 14.0029
+      },
+      "forming": {
+       "n": 74,
+       "net_r": 20.2036
+      },
+      "delta_r": -6.2007,
+      "floor_r": 1.48,
+      "call": "FORMING"
+     },
+     {
+      "fold": 5,
+      "start": "2024-08-09 22:40:00+00:00",
+      "end": "2025-09-26 09:20:00+00:00",
+      "closed": {
+       "n": 47,
+       "net_r": 26.0024
+      },
+      "forming": {
+       "n": 76,
+       "net_r": 17.7191
+      },
+      "delta_r": 8.2833,
+      "floor_r": 1.52,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 6,
+      "start": "2025-09-26 09:20:00+00:00",
+      "end": "2026-11-12 20:00:00+00:00",
+      "closed": {
+       "n": 60,
+       "net_r": -2.9671
+      },
+      "forming": {
+       "n": 83,
+       "net_r": 4.5668
+      },
+      "delta_r": -7.5339,
+      "floor_r": 1.66,
+      "call": "FORMING"
+     }
+    ],
+    "better": "NO_MATERIAL_DIFFERENCE",
+    "folds_closed": 2,
+    "folds_forming": 4,
+    "folds_tie": 0,
+    "delta_r_full": -6.5183,
+    "rule_d1_record_window": {
+     "closed": true,
+     "forming": true,
+     "window": [
+      "2023-10-29 00:00:00+00:00",
+      "2026-10-27 20:00:00+00:00"
+     ]
+    },
+    "preferred": "closed",
+    "adopted": "closed",
+    "verdict": "SWITCH_TO_CLOSED",
+    "reason": "preferred_passes_d1"
+   }
+  },
+  "trend_donchian_sol_4h": {
+   "leg": "trend_donchian_sol_4h",
+   "family": "trend",
+   "symbol": "SOLUSDT",
+   "timeframe": "4h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 5.0,
+    "trail_decay_arm_r": 5.57,
+    "trail_decay_tight_mult": 2.5,
+    "tp_r": 50.0,
+    "min_confidence": 0.6,
+    "side_filter": "both",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 13474,
+   "first_decision_bar": "2020-10-17 12:00:00+00:00",
+   "last_bar": "2026-11-12 20:00:00+00:00",
+   "A_closed": {
+    "n": 267,
+    "net_r": 64.4031
+   },
+   "B_forming": {
+    "n": 422,
+    "net_r": 76.5552
+   },
+   "shared_n": 187,
+   "union_n": 502,
+   "jaccard": 0.3725,
+   "delta_net_r": 12.1521,
+   "tp_r": 50.0,
+   "tp_variant": false,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "tradeify_1",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "velotrade_1",
+     "account_class": "prop",
+     "mode": "live"
+    }
+   ],
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_sol_4h.json",
+    "window": [
+     "2023-10-29 00:00:00+00:00",
+     "2026-10-27 20:00:00+00:00"
+    ],
+    "record_net_r_oos": 36.8572,
+    "record_n": 116,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 117,
+     "net_r": 41.0743
+    },
+    "proxy_forming": {
+     "n": 195,
+     "net_r": 46.2055
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261022-4de5-01",
+    "params": {
+     "folds": 6,
+     "fold_majority": 4,
+     "max_opposite": 1,
+     "floor_r": 1.0,
+     "floor_per_trade_r": 0.02
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-10-17 12:00:00+00:00",
+     "2026-11-12 20:00:00+00:00"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "start": "2020-10-17 12:00:00+00:00",
+      "end": "2021-10-22 01:20:00+00:00",
+      "closed": {
+       "n": 63,
+       "net_r": 4.2354
+      },
+      "forming": {
+       "n": 93,
+       "net_r": 0.2327
+      },
+      "delta_r": 4.0027,
+      "floor_r": 1.86,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 2,
+      "start": "2021-10-22 01:20:00+00:00",
+      "end": "2022-10-26 14:40:00+00:00",
+      "closed": {
+       "n": 42,
+       "net_r": 1.5593
+      },
+      "forming": {
+       "n": 70,
+       "net_r": 1.5264
+      },
+      "delta_r": 0.0329,
+      "floor_r": 1.4,
+      "call": "TIE"
+     },
+     {
+      "fold": 3,
+      "start": "2022-10-26 14:40:00+00:00",
+      "end": "2023-10-31 04:00:00+00:00",
+      "closed": {
+       "n": 44,
+       "net_r": 18.643
+      },
+      "forming": {
+       "n": 63,
+       "net_r": 28.9541
+      },
+      "delta_r": -10.3111,
+      "floor_r": 1.26,
+      "call": "FORMING"
+     },
+     {
+      "fold": 4,
+      "start": "2023-10-31 04:00:00+00:00",
+      "end": "2024-11-03 17:20:00+00:00",
+      "closed": {
+       "n": 41,
+       "net_r": 15.3524
+      },
+      "forming": {
+       "n": 76,
+       "net_r": 1.2395
+      },
+      "delta_r": 14.1129,
+      "floor_r": 1.52,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 5,
+      "start": "2024-11-03 17:20:00+00:00",
+      "end": "2025-11-08 06:40:00+00:00",
+      "closed": {
+       "n": 42,
+       "net_r": 27.0876
+      },
+      "forming": {
+       "n": 54,
+       "net_r": 50.918
+      },
+      "delta_r": -23.8304,
+      "floor_r": 1.08,
+      "call": "FORMING"
+     },
+     {
+      "fold": 6,
+      "start": "2025-11-08 06:40:00+00:00",
+      "end": "2026-11-12 20:00:00+00:00",
+      "closed": {
+       "n": 35,
+       "net_r": -2.4746
+      },
+      "forming": {
+       "n": 66,
+       "net_r": -6.3155
+      },
+      "delta_r": 3.8409,
+      "floor_r": 1.32,
+      "call": "CLOSED"
+     }
+    ],
+    "better": "NO_MATERIAL_DIFFERENCE",
+    "folds_closed": 3,
+    "folds_forming": 2,
+    "folds_tie": 1,
+    "delta_r_full": -12.1521,
+    "rule_d1_record_window": {
+     "closed": true,
+     "forming": true,
+     "window": [
+      "2023-10-29 00:00:00+00:00",
+      "2026-10-27 20:00:00+00:00"
+     ]
+    },
+    "preferred": "closed",
+    "adopted": "closed",
+    "verdict": "SWITCH_TO_CLOSED",
+    "reason": "preferred_passes_d1"
+   }
+  }
+ },
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 1439,
+ "note": "every leg: propose decision_bar: closed (verdict SWITCH_TO_CLOSED)",
+ "records": [
+  {
+   "leg": "trend_donchian_eth_4h",
+   "verdict": "pass",
+   "read_state": "measured",
+   "n": 750,
+   "population": "trend_donchian_eth_4h: closed vs forming decision bar, Binance USD-M 1m proxy, full cost stack, improvement folds over ['2020-02-03 04:00:00+00:00', '2026-11-12 20:00:00+00:00'], RULE-D1 on the record window ['2023-10-29 00:00:00+00:00', '2026-10-27 20:00:00+00:00']",
+   "better": "NO_MATERIAL_DIFFERENCE",
+   "match_verdict": "SWITCH_TO_CLOSED",
+   "reason": "preferred_passes_d1",
+   "folds_closed": 2,
+   "folds_forming": 4,
+   "folds_tie": 0,
+   "delta_r_full": -6.5183,
+   "closed": {
+    "n": 300,
+    "net_r": 97.871
+   },
+   "forming": {
+    "n": 450,
+    "net_r": 104.3893
+   },
+   "rule_d1_record_window": {
+    "closed": true,
+    "forming": true
+   },
+   "note": "better=NO_MATERIAL_DIFFERENCE, verdict=SWITCH_TO_CLOSED: propose decision_bar: closed (Tier 3, through AM-ML to the manager)"
+  },
+  {
+   "leg": "trend_donchian_sol_4h",
+   "verdict": "pass",
+   "read_state": "measured",
+   "n": 689,
+   "population": "trend_donchian_sol_4h: closed vs forming decision bar, Binance USD-M 1m proxy, full cost stack, improvement folds over ['2020-10-17 12:00:00+00:00', '2026-11-12 20:00:00+00:00'], RULE-D1 on the record window ['2023-10-29 00:00:00+00:00', '2026-10-27 20:00:00+00:00']",
+   "better": "NO_MATERIAL_DIFFERENCE",
+   "match_verdict": "SWITCH_TO_CLOSED",
+   "reason": "preferred_passes_d1",
+   "folds_closed": 3,
+   "folds_forming": 2,
+   "folds_tie": 1,
+   "delta_r_full": -12.1521,
+   "closed": {
+    "n": 267,
+    "net_r": 64.4031
+   },
+   "forming": {
+    "n": 422,
+    "net_r": 76.5552
+   },
+   "rule_d1_record_window": {
+    "closed": true,
+    "forming": true
+   },
+   "note": "better=NO_MATERIAL_DIFFERENCE, verdict=SWITCH_TO_CLOSED: propose decision_bar: closed (Tier 3, through AM-ML to the manager)"
+  }
+ ]
+}

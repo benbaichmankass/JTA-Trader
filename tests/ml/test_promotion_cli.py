@@ -135,14 +135,21 @@ def test_gate_check_regime_profile_reports_mechanics_gates(tmp_path: Path):
     assert rc == 0
     payload = json.loads(out)
     gates = {g["name"]: g for g in payload["gates"]}
-    assert gates["live_parity"]["required"] is True
+    # Stage step RETIRED (operator, chat 2026-11-12, verbatim: "There is nothing in
+    # between proving edge on back testing and real money. Absolutely no steps."):
+    # the mechanics gates are still REPORTED (insufficient_data, fail-safe) but
+    # are not required and never block.
+    assert gates["live_parity"]["required"] is False
     assert gates["live_parity"]["status"] == "insufficient_data"
-    assert gates["labels_accruing"]["required"] is True
+    assert gates["labels_accruing"]["required"] is False
     assert gates["labels_accruing"]["status"] == "insufficient_data"
     assert gates["live_regime_discrimination"]["required"] is False
-    assert payload["ready"] is False
-    assert "live_parity" in payload["blocking"]
+    assert "live_parity" not in payload["blocking"]
+    assert "labels_accruing" not in payload["blocking"]
     assert "live_regime_discrimination" not in payload["blocking"]
+    # still not ready: no offline oos_edge was computed (no --datasets-root)
+    assert payload["ready"] is False
+    assert "oos_edge" in payload["blocking"]
 
 
 def test_gate_check_unknown_model_errors(tmp_path: Path):

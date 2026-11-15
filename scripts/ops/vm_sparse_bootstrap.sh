@@ -89,9 +89,21 @@ if [ "${APPLY}" != "true" ]; then
     exit 0
 fi
 
-PATTERNS="$(printf '%s' "${SPARSE_PATTERNS_B64:-}" | base64 -d 2>/dev/null || true)"
-if [ -z "${PATTERNS}" ] || ! printf '%s\n' "${PATTERNS}" | grep -qx '/\*'; then
-    echo "ERROR: SPARSE_PATTERNS_B64 missing or not a sparse pattern file (no '/*' line); refusing to apply." >&2
+# CI-SPARSE-BOOTSTRAP-FLAKE: three distinct refusals, and no `printf | grep -q`
+# pipe. Under `set -o pipefail` that pipe can report failure when grep exits on
+# its first match before the writer finishes (SIGPIPE), which made the
+# idempotent-second-run test refuse with patterns present (seen once in CI).
+if [ -z "${SPARSE_PATTERNS_B64:-}" ]; then
+    echo "ERROR: SPARSE_PATTERNS_B64 missing; refusing to apply." >&2
+    exit 2
+fi
+PATTERNS="$(base64 -d <<<"${SPARSE_PATTERNS_B64}" 2>/dev/null || true)"
+if [ -z "${PATTERNS}" ]; then
+    echo "ERROR: SPARSE_PATTERNS_B64 is not valid base64 (${#SPARSE_PATTERNS_B64} chars); refusing to apply." >&2
+    exit 2
+fi
+if [[ $'\n'"${PATTERNS}"$'\n' != *$'\n/*\n'* ]]; then
+    echo "ERROR: SPARSE_PATTERNS_B64 is not a sparse pattern file (no '/*' line); refusing to apply." >&2
     exit 2
 fi
 

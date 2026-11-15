@@ -1,0 +1,87 @@
+{
+  "unit": "RQ-20261113-b819-01",
+  "run_id": "43462233659",
+  "commit_sha": null,
+  "run_url": null,
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": null,
+    "cpu_simd": [
+      "asimd"
+    ],
+    "cores_logical": 1,
+    "cores_usable": 1,
+    "machine": "aarch64",
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-1060-oracle",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.11.0rc1",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.4",
+      "pandas": "3.0.3",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [
+      "cpu_model"
+    ],
+    "class_id": "8b8eea7d004b",
+    "read_state": "partial"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_vol_label_replay.py",
+        "replay",
+        "--symbol",
+        "BTCUSDT",
+        "--dataset",
+        "datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl",
+        "--model-id",
+        "btc-regime-15m-lgbm-fc-pcv-v2",
+        "--out",
+        "comms/research/RQ-20261113-b819-01/43462233659/BTCUSDT_labels.jsonl",
+        "--json"
+      ],
+      "log": "comms/research/RQ-20261113-b819-01/43462233659/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 17.9
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/d2_family_consumer_run.py",
+        "--out",
+        "comms/research/RQ-20261113-b819-01/43462233659/legs",
+        "--days",
+        "1460",
+        "--since",
+        "2026-07-01",
+        "--cells-per-leg",
+        "--leg",
+        "trend_donchian=comms/research/RQ-20261113-b819-01/43462233659/BTCUSDT_labels.jsonl",
+        "--leg",
+        "squeeze_breakout_4h=comms/research/RQ-20261113-b819-01/43462233659/BTCUSDT_labels.jsonl",
+        "--leg",
+        "ict_scalp_5m=comms/research/RQ-20261113-b819-01/43462233659/BTCUSDT_labels.jsonl",
+        "--verdict-json",
+        "comms/research/RQ-20261113-b819-01/43462233659/verdict.json"
+      ],
+      "log": "comms/research/RQ-20261113-b819-01/43462233659/logs/cmd-1.log",
+      "exit_code": 0,
+      "seconds": 1576.0
+    }
+  ],
+  "all_ok": true
+}

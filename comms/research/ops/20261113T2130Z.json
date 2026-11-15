@@ -1,0 +1,289 @@
+{
+  "run": "RESEARCH-OPS-20261113-2050",
+  "finished_at": "2026-11-13T21:30:00Z",
+  "by": "lane RESEARCH-OPS-20261113-2050 (session id not exposed to the lane)",
+  "floor": 84,
+  "floor_basis": "computed_floor(fired_24h 106)",
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 5,
+  "needs_review_left": 102,
+  "throughput": {
+    "runnable_before": 75,
+    "runnable_after": 76,
+    "queued": 290,
+    "fired_24h": 106,
+    "results_landed_24h": 524,
+    "hours_since_last_dispatch": 1.4,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 1.4 h before the pass)",
+    "collector": "ok",
+    "stranded_stamp_prs": [],
+    "incident": null,
+    "watchdog": "not re-read this pass",
+    "workflow_runs": "read_state tree_only: Actions run list not read; throughput + receipt used"
+  },
+  "results_read": {
+    "pass": null,
+    "fail": 2,
+    "indeterminate": 1,
+    "units": [
+      "RQ-20261113-f251-01",
+      "RQ-20261113-f251-02",
+      "RQ-20261105-d256-03",
+      "RQ-20261112-3c8f-01",
+      "RQ-20261112-3c8f-02",
+      "RQ-20261112-cd01-01",
+      "RQ-20261111-207f-01",
+      "RQ-20261111-207f-02"
+    ],
+    "note": "units with a single verdict: 3c8f-01 FAIL, 3c8f-02 FAIL, cd01-01 INDETERMINATE; mixed per-leg or per-row: f251-01, f251-02, d256-03 (faithful arm PASS +34.83 R n 188 beside an indeterminate row); producer_failed: 207f-01, 207f-02. Per-leg counts are in analysis.trading.meaning"
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [
+    "RQ-20261113-7857-01"
+  ],
+  "followups_filed": [
+    "research/queue/RQ-20261113-7857-01.yaml"
+  ],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "no programme node drafted; budget went to attribution of the f251 forming-bar batch and the e4_oi_shock_1h iteration"
+  },
+  "blocked_audit": {
+    "blocked_over_age": 0,
+    "slo_state": "ok (<= 10)",
+    "blocker_watch": "STALE_BLOCK 5 (FREE-CAPACITY-PLAN, LTR-TIGHTEN-FRESH-GO, MANAGER-VM-DIRECT-OPS, ML-AM-NEXT-LIVE, WEPE-BUILDOUT: checklist rows, not research units) / NOT_RUNNING 18 queued units never dispatched, all authored 2026-11-12/13 or one old (RQ-20261016-7ea6-01); 125 files in research/queue/blocked/ none over the SLO age",
+    "disposition": "no unit retired: nothing over age to unblock-or-retire; NOT_RUNNING units are fresh and waiting for compute; checklist STALE_BLOCK rows are the manager's and listed in handoff"
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 8,
+      "of": 8,
+      "note": "opened the rows of f251-01 (14 legs), f251-02 (16 legs), d256-03, 207f-01/-02, 3c8f-01/-02, cd01-01 and 78fc-11; lever_map --backfill refreshed the maps"
+    },
+    "map_entries_added": "backfill refreshed 16 lever-map files (entry count not measured)",
+    "next_tests_from_map": 1,
+    "lever_coverage": {
+      "strategy_leg": {
+        "note": "iteration_orphans.py --levers run; not re-counted"
+      }
+    },
+    "orphans_before": {
+      "strategy_leg": 3,
+      "ml_model": 3,
+      "ltr_class": 2
+    },
+    "orphans_after": {
+      "strategy_leg": 2,
+      "ml_model": 3,
+      "ltr_class": 2
+    },
+    "orphans_named_left": [
+      "claude_desk",
+      "turtle_soup",
+      "ml-exit-head-donchian-1h",
+      "ml-tm-action-value",
+      "ml-btc-router-cells",
+      "ltr-tighten-sl",
+      "ltr-close"
+    ],
+    "results_iterated": [
+      {
+        "result": "RQ-20261101-78fc-11",
+        "verdict": "fail",
+        "subject": "e4_oi_shock_1h",
+        "next": "RQ-20261113-7857-01",
+        "attempt": 2
+      }
+    ],
+    "advanced": 1,
+    "survivors": [],
+    "overdue": [
+      "ml-brackets",
+      "ml-setup-metalabel-p2pool",
+      "ml-holdbias-exit"
+    ],
+    "retired_by_review": []
+  },
+  "prior_calls_scorecard": [
+    {
+      "call": "RQ-20261113-f090-01 and -02 land measured rows by 2026-11-16",
+      "p": 0.6,
+      "check_rerun": "ls research/results/RQ-20261113-f090-01 research/results/RQ-20261113-f090-02",
+      "outcome": "unresolved",
+      "action_happened": true,
+      "note": "both stamped dispatched 2026-11-13T18:04Z, no result dir yet"
+    },
+    {
+      "call": "qqq and tlt pullback_1h are orphans again once the f090 units are done",
+      "p": 0.7,
+      "check_rerun": "python3 scripts/research/iteration_orphans.py | grep -E 'orphan.*(qqq|tlt)_pullback_1h'",
+      "outcome": "unresolved",
+      "action_happened": false,
+      "note": "units not done; both still covered"
+    }
+  ],
+  "checks": {
+    "packet_as_of": "2026-11-13T20:49:51Z",
+    "since": "2026-11-13T16:20:00Z",
+    "runnable_by_track": {
+      "TRADING": 62,
+      "MODEL": 12,
+      "INFRA": 1
+    },
+    "graded_by_window": "not copied",
+    "fails_without_next": 4,
+    "followups": "not copied",
+    "needs_review": 107,
+    "slo": {
+      "runnable_floor": "75 vs 84 BREACH",
+      "grade_latency_p90_d": "4 vs 2 BREACH",
+      "undispositioned_24h": "8 vs 5 BREACH",
+      "theme_share_min_ratio": "0.14 vs 0.5 BREACH",
+      "blocked_over_age": "0 ok",
+      "research_ops_not_run": "1 ok"
+    },
+    "could_not_look": [
+      "GitHub Actions run list",
+      "graded_by_window and followups blocks of the packet",
+      "hold_pr_wait_h"
+    ]
+  },
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261113-f251-01",
+      "RQ-20261113-f251-02",
+      "RQ-20261105-d256-03",
+      "RQ-20261111-207f-01",
+      "RQ-20261111-207f-02",
+      "RQ-20261112-3c8f-01",
+      "RQ-20261112-3c8f-02",
+      "RQ-20261112-cd01-01",
+      "RQ-20261101-78fc-11"
+    ],
+    "trading": {
+      "meaning": [
+        "f251-01 crypto forming-bar re-measure, per-leg RULE-D1: 5 PASS (sol_4h +41.97 R n 187, sol_prop +47.25 n 537, eth_4h +31.26 n 204, eth_pullback_2h +1.39 n 83, sol_pullback_2h +3.19 n 34), 6 FAIL (trend_donchian_1h -10.57, ada_4h -3.35, avax_4h -16.18, htf_pullback_2h -23.37, eth_pullback_prop_2h -6.57, avax_pullback_2h -15.74) and 3 indeterminate because the regenerated record omits the exit-head fields; so the closed-bar sign survived the forming bar on 10 of 11 decided legs, the exception being eth_pullback_2h (closed -5.61 -> forming +1.39, thin n and a 3-leg sample, a lead not a flip). Denominator: 14 legs, one pass; passes are a discovery set, not confirmed.",
+        "f251-02 equity forming-bar re-measure: 5 PASS (qqq_pullback_1h +5.49 n 73, tlt_pullback_1h +4.03 n 149 up from +0.23 closed, uso_trend_1h +18.94, slv_trend_1h +54.52, scha_trend_long_1d +1.65 n 28 vs +4.64 n 78 closed), 1 FAIL (tlt_pullback_1d -6.96 n 45 vs +12.69 n 134 closed), 5 indeterminate (1d legs n 1-6 < the n floor 10) and 5 no read (3 not_attempted futures 1m source ES=F/GC=F, 2 producer_failed); so the closed-bar record overstated tlt_pullback_1d by ~19.6 R, and 1d legs cannot be forming-bar graded at this window, only 1h/2h legs can. Denominator: 16 legs.",
+        "e4_oi_shock_1h oi_z response (78fc-11): mean net R/trade 0.022 (n 856) -> 0.071 (n 451, CI -0.045..0.187) -> 0.145 (n 256, CI -0.035..0.322), control reproduces 856/856; a smooth monotone response with the CI floor still below zero at every point is a power limit, not a single-point spike, so the gradient is walked further (6/7/8) before the horizon/side family is opened."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "e4_oi_shock_1h (orphan, fail)",
+          "hypotheses": [
+            "noise",
+            "power",
+            "test design (threshold too low)",
+            "idea wrong"
+          ],
+          "test": "RQ-20261113-7857-01 arms 6.0/7.0/8.0",
+          "survivor": "power",
+          "next": "RQ-20261113-7857-01"
+        },
+        {
+          "cluster": "IBS frozen arm L (3c8f-01/-02 FAIL)",
+          "hypotheses": [
+            "noise",
+            "idea wrong",
+            "control already positive"
+          ],
+          "test": "not iterated this pass; the every-day-long control is itself net positive (+0.0133 and +0.0170 R/trade), L adds +0.045 and +0.006, below the 0.05 materiality bar on both disjoint windows",
+          "survivor": "idea (incremental over a long-bias control)",
+          "next": "configuration closed; IBS family stays open; handoff to the static-market frontier lane"
+        },
+        {
+          "cluster": "fails_without_next (4: RQ-20261111-f5c8-01, RQ-20261112-4654-09, RQ-20261113-b819-01, RQ-20261113-f251-04)",
+          "hypotheses": [
+            "noise",
+            "test design",
+            "idea wrong"
+          ],
+          "test": "not opened this pass",
+          "survivor": "not determined",
+          "next": "handoff"
+        }
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261113-7857-01",
+          "decision_changed": "whether e4_oi_shock_1h stays orphan-fail or becomes a pass_unconfirmed lead",
+          "on_pass": "one disjoint-window confirmation unit, then a Tier-3 note",
+          "on_fail": "oi_z 6/7/8 on this window fail (configuration only); next lever horizon / side",
+          "premortem": "same held-out span as iteration 1, so a PASS is a deeper read of the same data; n at 8.0 may fall under 30 and grade indeterminate"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [
+        "207f-01/-02 (Foxhound-4 book survival / calibration) landed producer_failed on a verdict.json contract defect (n must be present), so MODEL gets no reading from them; owned by PI-20261113-SX5INCOP-0001. cd01-01 served crypto ml_entry replay: regime unresolved, cost is not the driver (d_cost +0.003 R), selection excess -0.011 +/- 0.031, so the served-model gap is mostly shared regime and neither cost nor selection explains it."
+      ],
+      "fail_diagnoses": [],
+      "next_tests": []
+    },
+    "cross_track": [
+      {
+        "from": "TRADING",
+        "finding": "forming-bar PASS on qqq_pullback_1h and tlt_pullback_1h corroborates the iteration-1/2 pass_unconfirmed results (RQ-20261113-f090-01/-02 in flight)",
+        "feeds": "PROMOTE-1H-SURVIVORS-20261104 (manager LEAD note, already filed by the 1545Z pass)"
+      },
+      {
+        "from": "TRADING",
+        "finding": "tlt_pullback_1d forming-bar FAIL (-6.96 n 45) against a +12.69 closed-bar record",
+        "feeds": "existing iteration RQ-20261106-015; the manager should check whether the leg is on a real-money roster (not read by this pass)"
+      }
+    ],
+    "surprises": [
+      "tlt_pullback_1h closed-bar +0.23 became +4.03 on the forming bar: the closed-bar record under-stated this leg by the same mechanism that over-stated tlt_pullback_1d, so the closed-bar basis is wrong in both directions",
+      "five f251-02 1d legs and three futures legs have no forming-bar read at all"
+    ]
+  },
+  "calls": [
+    {
+      "call": "RQ-20261113-7857-01 lands a measured row with at least 2 of 3 arms n >= 30 by 2026-11-16",
+      "p": 0.6,
+      "check": {
+        "command": "ls research/results/RQ-20261113-7857-01 && python3 scripts/research/research_ops_checks.py --since 3d",
+        "rule": "measured row; arms 6.0 and 7.0 report n >= 30",
+        "resolves_when": "2026-11-16"
+      }
+    },
+    {
+      "call": "No arm of RQ-20261113-7857-01 clears the cluster-CI floor (FAIL)",
+      "p": 0.65,
+      "check": {
+        "command": "cat research/results/RQ-20261113-7857-01/*.jsonl",
+        "rule": "verdict fail",
+        "resolves_when": "2026-11-16"
+      }
+    }
+  ],
+  "not_run": [
+    "authoring from programme nodes (drafted 0)"
+  ],
+  "limits": [
+    "GitHub Actions run list not read (tree-only)",
+    "pytest not installed",
+    "the 4 fails_without_next clusters were not opened",
+    "UNGRADED 3 left to the 6-hourly grader (3c8f-01/-02 read FAIL, cd01-01 INDETERMINATE, rules applied verbatim above)",
+    "next_rq_id.py minted without --fetch: id RQ-20261113-7857-01 not checked against remote"
+  ],
+  "handoff": [
+    "manager: the 5 checklist STALE_BLOCK rows (FREE-CAPACITY-PLAN, LTR-TIGHTEN-FRESH-GO, MANAGER-VM-DIRECT-OPS, ML-AM-NEXT-LIVE, WEPE-BUILDOUT)",
+    "manager: orphans claude_desk, turtle_soup, ml-exit-head-donchian-1h, ml-tm-action-value, ml-btc-router-cells, ltr-tighten-sl, ltr-close have no iteration unit; overdue ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit",
+    "manager: tlt_pullback_1d forming-bar FAIL vs closed-bar +12.69: check roster status before the next review",
+    "SLO red: runnable_floor 75<84, grade_latency_p90_d 4>2, undispositioned_24h 8>5, theme_share_min_ratio 0.14<0.5; thresholds untouched",
+    "forming-bar futures (ES=F, GC=F) have no 1m source the research runner can read: lever not filed this pass (not searched in the pipeline)",
+    "pipeline: python3 scripts/ops/pipeline.py --due count not read this pass"
+  ]
+}

@@ -213,3 +213,22 @@ def test_idempotent_second_run_is_also_a_clean_noop(tmp_path: Path) -> None:
     assert shared.read_text() == "OTHER=1\n"
     # No second backup — the second run found nothing to remove.
     assert list(tmp_path.glob(".env.bak.*")) == first_backups
+
+
+def test_live_review_routine_id_is_retirable_and_the_token_is_not(tmp_path: Path) -> None:
+    """2026-11-13 operator popup "1, but you pause it": LIVE_REVIEW_ROUTINE_ID is retirable
+    (unsetting it pauses the live-review routine fire -> not_configured). The routine TOKEN is a
+    credential and must stay refused."""
+    shared = tmp_path / ".env"
+    shared.write_text("LIVE_REVIEW_ROUTINE_ID=trig_x\nLIVE_REVIEW_ROUTINE_TOKEN=secret\nOTHER=1\n")
+    proc = _run(tmp_path, key="LIVE_REVIEW_ROUTINE_ID")
+    assert proc.returncode == 0, proc.stderr
+    body = shared.read_text()
+    assert "LIVE_REVIEW_ROUTINE_ID" not in body
+    assert "LIVE_REVIEW_ROUTINE_TOKEN=secret" in body
+    assert "LIVE_REVIEW_ROUTINE_ID=trig_x" in next(tmp_path.glob(".env.bak.*")).read_text()
+
+    before = shared.read_text()
+    proc = _run(tmp_path, key="LIVE_REVIEW_ROUTINE_TOKEN")
+    assert proc.returncode != 0, "the routine token must not be retirable"
+    assert shared.read_text() == before

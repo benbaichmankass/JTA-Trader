@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling + research artifact relabel. ml_entry_eq_htf_split.py wrote read_state measured with n null on the sha-gate path (cells NOT read), so research_result.py refused the record and run 43646720569 (RQ-20261112-8d20-02) was LOST at landing (dispatcher run 43656016005, collect lost=1). The producer now writes not_attempted. This run's committed record-inputs.json and verdict.json are relabelled measured -> not_attempted, with the relabel stated in the record, so recollect_orphans emits the E5 record (verified in a scratch worktree) without a 2.5 h re-run that would spend another holdout read. Nothing measured changes. No runtime or order path. Revert: git revert."
+}

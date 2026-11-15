@@ -3,15 +3,14 @@
 One JSON file per model id under the registry root. Status is the
 legacy WS4 backing state machine (5 states); `_ALLOWED_TRANSITIONS`
 enforces the legal edges. WS7 introduces a second, orthogonal
-`target_deployment_stage` field (3 canonical stages from
-`ml.manifest`: candidate → shadow → advisory) representing where in
-the deployment pipeline the model currently sits; `_STAGE_TRANSITIONS`
+`target_deployment_stage` field (3 canonical housekeeping stages from
+`ml.manifest`: candidate / shadow / advisory — no ladder, the stage step was
+retired 2026-11-12) representing where the model currently sits; `_STAGE_TRANSITIONS`
 enforces those edges and `stage_history` records the events. Legacy
 7-stage names are normalized to canonical via `canonical_stage` on
 read/register/promote so historical rows keep resolving.
 
-Promotion gates (the actual content of `reason`) live in
-`ml.promotion.checklist`.
+Promotion evidence is OFFLINE (`ml.promotion.gates` + the cost-net gate).
 """
 from __future__ import annotations
 
@@ -42,19 +41,32 @@ _ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
 }
 
 # Deployment-stage transitions over the 3 canonical stages (3-stage
-# collapse, 2026-06-16). The ladder is `candidate → shadow → advisory`
-# with a one-step rollback for each forward edge:
-#   - candidate (pre-shadow; refused by the shadow factory) ↔ shadow
-#   - shadow (observe-only) ↔ advisory (influences the order)
-# Legacy alias stages (research_only / backtest_approved / limited_live /
-# live_approved) never appear here as keys — incoming and stored stages are
-# normalized to canonical via `canonical_stage` before any transition check.
+# collapse, 2026-06-16).
+#
+# ⚠️ THE STAGE STEP IS RETIRED (operator, chat 2026-11-12 ~16:35Z, verbatim:
+# "you're going to retire the step from the ML. Everything goes through the new
+# flow, back testing, live money, and then if it gets demoted, it soaks to still
+# generate data while we iterate on it. That is the only acceptable flow. There
+# is nothing in between proving edge on back testing and real money. Absolutely
+# no steps."). The stage is a HOUSEKEEPING LABEL for where a model is:
+#   - candidate — not served (research / retired).
+#   - shadow    — served observe-only: a model DEMOTED from production soaks
+#                 here to keep generating data while it is iterated on. Shadow
+#                 is NOT a step on the way to production.
+#   - advisory  — production: influences real-money orders.
+# A model whose committed OFFLINE evidence clears the gates in
+# ml.promotion.gates (and the cost-net gate below) goes candidate → advisory
+# DIRECTLY; there is no intermediate stage. Demotion is advisory → shadow
+# (soak for data) or → candidate (retire). Legacy alias stages
+# (research_only / backtest_approved / limited_live / live_approved) never
+# appear here as keys — incoming and stored stages are normalized to canonical
+# via `canonical_stage` before any transition check.
 _STAGE_ORDER: tuple[str, ...] = ("candidate", "shadow", "advisory")
 
 _STAGE_TRANSITIONS: dict[str, frozenset[str]] = {
-    "candidate": frozenset({"shadow"}),
+    "candidate": frozenset({"shadow", "advisory"}),
     "shadow": frozenset({"advisory", "candidate"}),
-    "advisory": frozenset({"shadow"}),
+    "advisory": frozenset({"shadow", "candidate"}),
 }
 
 # Shadow is the default stage for a freshly-registered model
@@ -548,10 +560,11 @@ class ModelRegistry:
     ) -> RegistryEntry:
         """WS7 deployment-stage promotion.
 
-        Walks the model along the canonical
-        `candidate → shadow → advisory` ladder defined in
-        `ml.manifest.VALID_DEPLOYMENT_STAGES`, enforcing the
-        `_STAGE_TRANSITIONS` edges (forward + one-step rollback). The
+        Moves the model between the canonical housekeeping stages
+        (`candidate` / `shadow` / `advisory`, `ml.manifest.VALID_DEPLOYMENT_STAGES`),
+        enforcing the `_STAGE_TRANSITIONS` edges. There is no intermediate
+        step: candidate → advisory is a legal direct move on offline evidence
+        (stage step retired, operator 2026-11-12). The
         requested stage is normalized through the alias map first, so an
         old 7-stage name is accepted and stored canonical. Recorded as a
         `StageEvent` on `stage_history`.
@@ -561,7 +574,8 @@ class ModelRegistry:
 
         Raises :class:`CostGateRefused` for a forward move into shadow or
         advisory that the cost-net gate refuses (``_cost_gate_refusal``).
-        Rollbacks (advisory→shadow, shadow→candidate) are never gated.
+        Demotions/rollbacks (advisory→shadow/candidate, shadow→candidate) are
+        never gated.
         """
         # Normalize the requested stage through the alias map: a caller may
         # still pass an old name (e.g. `live_approved`); store the canonical.

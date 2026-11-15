@@ -1,0 +1,83 @@
+{
+  "unit": "RQ-20261111-3a23-01",
+  "run_id": "43180271207",
+  "commit_sha": "8692fce3f882c8b25ebe171f828edf9e752eb435",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43180271207",
+  "timeout_minutes": 30,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261101.186.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ledger_metalabel.py",
+        "--mode",
+        "classify",
+        "--group-by",
+        "family",
+        "--ledgers",
+        "comms/strategy_evidence/research_emits/2026-11-11/*__trades.jsonl",
+        "--target",
+        "won",
+        "--features",
+        "wide",
+        "--control-features",
+        "confidence,direction_long",
+        "--learners",
+        "prior,numpy_logit",
+        "--min-leg-n",
+        "300",
+        "--folds",
+        "4",
+        "--embargo",
+        "5",
+        "--min-train-frac",
+        "0.4",
+        "--skip-quantile",
+        "0.2",
+        "--auc-gain",
+        "0.05",
+        "--lift-r",
+        "0.05",
+        "--out",
+        "comms/research/RQ-20261111-3a23-01/43180271207"
+      ],
+      "log": "comms/research/RQ-20261111-3a23-01/43180271207/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.5
+    }
+  ],
+  "all_ok": true
+}

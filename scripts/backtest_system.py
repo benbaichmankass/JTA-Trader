@@ -206,6 +206,12 @@ ROSTER: Dict[str, Dict[str, str]] = {
     # RESEARCH ONLY; the live order path never reads ROSTER.
     "trend_donchian_xrp_4h": {"module": "src.units.strategies.trend_donchian", "tf": "4h"},
     "xrp_pullback_2h":       {"module": "src.units.strategies.htf_pullback_trend_2h", "tf": "2h"},
+    # --- D5 concurrency census legs (lane ML-PRIMARY, 2026-11-14, RQ-20261114-82fd-02) ---------------------
+    # Real-money bybit_2 / bybit_portfolio legs the census must replay solo. Same modules as their siblings
+    # (trend_donchian on a 4h clock; htf_pullback_trend_2h on ADA config); params come from
+    # config/strategies.yaml BY NAME. RESEARCH ONLY; the live order path never reads ROSTER.
+    "trend_donchian_xrp_adx25": {"module": "src.units.strategies.trend_donchian", "tf": "4h"},
+    "ada_pullback_2h":          {"module": "src.units.strategies.htf_pullback_trend_2h", "tf": "2h"},
 }
 _PANDAS_TF = {"5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "2h": "2h", "4h": "4h"}
 

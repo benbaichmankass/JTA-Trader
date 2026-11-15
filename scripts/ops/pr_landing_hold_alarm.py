@@ -158,6 +158,27 @@ def make_resolver(root: str = ".") -> Callable[[str], bool]:
                 pass
         return pipeline_ids
 
+    def _in_head_tree(path: str) -> bool:
+        """Is ``path`` a FILE in the commit checked out under ``root``? Reads git TREE objects only
+        (``git ls-tree``: no blob is read, so a blobless partial clone needs no network). The alarm
+        workflow's checkout is SPARSE (the script, .github/pr-landing/, docs/claude/work/checklist|pipeline/),
+        so a real research/ or comms/ path is absent from the working tree while present in the commit:
+        #25799 paged on exactly that (run 43476136968). Operator decision 2026-11-13 "fix_a"
+        (PR-ALARM-RESOLVER-FIX). Strict: blob entries only, the exact path, False on any git error."""
+        import subprocess
+        try:
+            out = subprocess.run(["git", "-C", root, "ls-tree", "-z", "HEAD", "--", path],
+                                 capture_output=True, text=True, timeout=30, check=False)
+        except (OSError, subprocess.SubprocessError):
+            return False
+        if out.returncode != 0:
+            return False
+        for entry in out.stdout.split("\0"):
+            meta, _, name = entry.partition("\t")
+            if name == path and meta.split(" ")[1:2] == ["blob"]:
+                return True
+        return False
+
     def resolve(token: str) -> bool:
         token = token.strip().strip(".,;:()[]\"'`")
         if not token or ".." in token or token.startswith("/"):
@@ -167,7 +188,7 @@ def make_resolver(root: str = ".") -> Callable[[str], bool]:
             return True
         if re.fullmatch(r"(PI|BL|OI)-[A-Za-z0-9-]+", token) and token in _pipeline_ids():
             return True
-        return "/" in token and os.path.isfile(os.path.join(root, token))
+        return "/" in token and (os.path.isfile(os.path.join(root, token)) or _in_head_tree(token))
 
     return resolve
 

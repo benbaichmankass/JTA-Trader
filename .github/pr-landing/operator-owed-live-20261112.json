@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI guard fix (WORK-EXPORT-GUARDS-FROZEN): scripts/ci/check_operator_owed.py grades the live work store (GET /api/bot/work/items, an open read) instead of the frozen WSD-S4 export, dating store items by their updated_at; if the store cannot be read it grades the committed files exactly as before under a ::warning::. Limit, verdict and escalation unchanged. CI script + its test only; no runtime, order-path or config change."
+}

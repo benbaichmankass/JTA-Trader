@@ -1,0 +1,46 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 354,
+  "population": "trend_donchian_1h: arm W vs A (config-exact), record 2025-11-13 to 2026-11-12 and prior 2024-11-13 to 2025-11-12, full cost stack",
+  "arm": "W",
+  "note": "trend_donchian_1h fail: record W -14.5432 (n 159, 1/4) vs A -19.6552; prior W -8.5506 vs A -7.8577",
+  "legs": [
+    {
+      "leg": "trend_donchian_1h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 354,
+      "record": {
+        "A_net_r": -19.6552,
+        "A_n": 183,
+        "X_net_r": -14.5432,
+        "X_n": 159,
+        "X_folds_positive": 1,
+        "X_n_folds": 4,
+        "X_stage0": false,
+        "X_beats_A": true
+      },
+      "prior": {
+        "A_net_r": -7.8577,
+        "A_n": 171,
+        "X_net_r": -8.5506,
+        "X_n": 153,
+        "holds": false
+      },
+      "note": "record W -14.5432 (n 159, 1/4) vs A -19.6552; prior W -8.5506 vs A -7.8577"
+    }
+  ],
+  "research_unit": "RQ-20261114-db1a-07",
+  "rule": "RULE-TD1H-ATRSTOP3125-20261114",
+  "records": [
+    {
+      "leg": "trend_donchian_1h",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 354,
+      "population": "trend_donchian_1h: arm W vs A, record + prior windows",
+      "note": "record W -14.5432 (n 159, 1/4) vs A -19.6552; prior W -8.5506 vs A -7.8577"
+    }
+  ]
+}
