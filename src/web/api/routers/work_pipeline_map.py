@@ -6,7 +6,8 @@
   in-process, R only), served ML models, mandates, unit files, the TP-doctrine guard. Cached for
   ``CACHE_S`` seconds so the Work tab is current without rebuilding on every request.
 
-Payload: ``{path, read_state, source, built_at, markdown, live_state, last_commit, file_mtime}``.
+Payload: ``{path, read_state, source, built_at, markdown, structured, live_state, last_commit, file_mtime}``.
+``structured`` (v2) = ``{steps: [{id, n, name, technical[], trading[]}], loops: [{from, to, label}]}`` for the spine UI.
 ``source`` is ``live`` (just built) or ``snapshot`` (the committed
 ``docs/reference/trading-pipeline-map.md``, served only when the live build fails, with the failure
 in ``build_error``). ``last_commit`` is the skeleton's last commit -- when the hand-written part last
@@ -81,7 +82,13 @@ def _build(root: Path) -> dict[str, Any]:
     try:
         from src.runtime import pipeline_map
         md = pipeline_map.build(root, live=live, live_state=live_state)
+        try:
+            structured = pipeline_map.build_structured(root, live=live, live_state=live_state)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- structured carries its error; markdown still serves
+            logger.warning("pipeline-map: structured build failed: %s", exc)
+            structured = {"steps": None, "loops": None, "error": f"{type(exc).__name__}: {str(exc)[:200]}"}
         return {**base, "read_state": "read", "source": "live", "markdown": md, "live_state": live_state,
+                "structured": structured,
                 "file_mtime": _mtime(root / SKELETON_REL), "build_error": None}
     except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- falls back to the snapshot and reports build_error
         logger.warning("pipeline-map: live build failed, serving the snapshot: %s", exc)

@@ -24,6 +24,15 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
   (`GET /api/bot/work/pipeline-map`); the committed `docs/reference/trading-pipeline-map.md` is a snapshot
   that `scripts/ops/pipeline_map_numbers.py` writes. Every number carries an "as of", a population and a
   provenance label (`src/runtime/provenance.py`); an unreadable source reads "—" with its read state, never 0.
+- **Structure the v2 view reads** (`GET /api/bot/work/pipeline-map` field `structured`, built by
+  `pipeline_map.build_structured`). The Work tab draws one straight vertical spine of these steps, technical
+  elements to the LEFT and trading elements to the RIGHT, with the loops on the side. It is PARSED from this file,
+  so keep the shape: each step is a `## N · Title` heading followed by a `| TECHNICAL | TRADING |` table with one row
+  (technical = backticked modules, files, units and routes; trading = `**Name**: text` rules, which become the
+  openable right-hand elements; if a cell has no bold rule it shows as one note). The loops are the DASHED edges
+  (`X -. "label" .-> Y`) of the mermaid flow below; node labels must stay `N · Name`. Generated trading elements
+  (legs, ML models, accounts, DD switch state, mandates) are attached by `pipeline_map.STEP_SOURCES`
+  (step number to source of truth). Add a step by adding a heading and a node; no UI change is needed.
 - **The skeleton checks itself.** The "Drift checks" block at the end lists any module path the skeleton cites
   that no longer exists, any rostered leg with no definition, and any enabled leg on no book.
 - **A live book never establishes edge.** Backtest evidence (offline, Stage 0) and live results are shown in
@@ -66,6 +75,7 @@ flowchart TD
   J --> K["11 · Grading, evidence, research<br/>promotion ladder"]
   K -. "new evidence changes rosters and params" .-> C
   K -. "retrained and promoted models" .-> C
+  J -. "the mirror's net-of-cost window demotes a leg to the demo floor" .-> E
 ```
 
 ## 1 · Data in

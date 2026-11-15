@@ -368,3 +368,188 @@ def build(root: Path = REPO, *, live: dict[str, Any] | None = None, live_state: 
     insert_at = next((i + 1 for i, ln in enumerate(lines) if ln.startswith("> **Doc status:**")), 1)
     lines[insert_at:insert_at] = ["", banner.rstrip()]
     return "\n".join(lines)
+
+
+# ── structured payload (v2, lane PIPELINE-MAP-V2, 2026-11-15) ────────────────────────────────
+# Operator, 2026-11-15: a straight vertical spine, technical elements LEFT, trading elements RIGHT,
+# iteration loops on the side, every element openable. Steps, their text and the loops are PARSED from
+# the same skeleton; the trading elements come from the same sources of truth as the markdown.
+_STEP = re.compile(r"^## (\d+) · (.+)$", re.M)
+_NODE = re.compile(r'\b([A-Z])\["(\d+) · ')
+_LOOP = re.compile(r'^\s*([A-Z]) -\. "([^"]+)" \.-> ([A-Z])\s*$')
+_BOLD = re.compile(r"\*\*([^*]+?)\*\*:?\s*")
+_TICK = re.compile(r"`([^`]+)`")
+# which sources of truth show up as TRADING elements at which step number
+STEP_SOURCES: dict[int, tuple[str, ...]] = {3: ("legs", "ml"), 5: ("accounts",), 6: ("dd",), 9: ("mandates",)}
+
+
+def _kind(tok: str) -> str:
+    t = tok.split("::")[0]
+    if t.startswith(("/api/", "GET /")):
+        return "route"
+    if t.endswith(".service") or t.startswith("ict-"):
+        return "service"
+    if t.endswith((".yaml", ".yml", ".json", ".jsonl", ".txt")):
+        return "config"
+    if t.endswith(".db"):
+        return "store"
+    if t.endswith((".py", ".sh")) or "/" in t:
+        return "module"
+    return ""
+
+
+def _tech_elements(cell: str) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set = set()
+    cur_dir = ""
+    for m in _TICK.finditer(cell):
+        tok = m.group(1).strip()
+        if tok.endswith("/") and "/" in tok[:-1]:
+            cur_dir = tok
+        elif "/" not in tok and tok.endswith(".py") and cur_dir:
+            tok = cur_dir + tok  # a bare module name listed under a directory token: resolve it
+        kind = _kind(tok)
+        if not kind or tok in seen or "<" in tok or (" " in tok and not tok.startswith("GET ")):
+            continue
+        seen.add(tok)
+        i = m.start()
+        lo = max(cell.rfind(". ", 0, i), cell.rfind("; ", 0, i), 0)
+        hi = [x for x in (cell.find(". ", m.end()), cell.find("; ", m.end())) if x != -1]
+        ctx = cell[lo:(min(hi) + 1) if hi else len(cell)].lstrip(".; ").strip()
+        if len(ctx) > 260:
+            ctx = "…" + ctx[max(0, i - lo - 110): i - lo + 150].strip() + "…"
+        path = tok.split("::")[0]
+        out.append({"id": f"t:{tok}", "kind": kind, "label": (path.rstrip("/").rsplit("/", 1)[-1] + ("/" if path.endswith("/") else "")) if kind == "module" else tok,
+                    "sub": tok if kind == "module" else None,
+                    "path": path if kind in ("module", "config") and "/" in path else None,
+                    "text": ctx, "details": {}})
+    return out
+
+
+def _rule_elements(cell: str) -> list[dict[str, Any]]:
+    parts = _BOLD.split(cell)
+    out = []
+    for i in range(1, len(parts) - 1, 2):
+        text = re.sub(r"<!--.*?-->", "", parts[i + 1]).strip().rstrip(".")
+        out.append({"id": f"r:{parts[i]}", "kind": "rule", "label": parts[i].strip(": "),
+                    "sub": None, "text": text, "details": {}})
+    return out
+
+
+def _leg_elements(root: Path, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    from scripts.ops import strategy_status as ss
+    status = ss.table(root)
+    strategies = ss.load(root)[1]
+    evidence = _evidence(root)
+    live, read = ctx.get("live"), ctx.get("live_state") == "read"
+    real, paper = _per_strategy(live), _per_strategy((live or {}).get("paper"))
+    order = {"production": 0, "testing": 1, "inactive": 2}
+    out = []
+    for leg, row in sorted(status.items(), key=lambda kv: (order.get(kv[1]["status"], 9), kv[0])):
+        ev = evidence.get(leg) or {}
+        rule = ev.get("decision_rule") if isinstance(ev.get("decision_rule"), dict) else {}
+        mod = f"src/units/strategies/{leg}.py"
+        out.append({"id": f"leg:{leg}", "kind": "leg", "label": leg, "sub": row["status"], "state": row["status"],
+                    "path": mod if (root / mod).is_file() else None, "text": None, "details": {
+                        "status": row["status"], "books": ", ".join(row["books"]) or None,
+                        "execution (gate 2)": (strategies.get(leg) or {}).get("execution"),
+                        "backtest net R OOS": ev.get("net_r_oos"), "backtest n OOS": ev.get("n_trades_oos"),
+                        "cost basis": _cost_basis(ev) if ev else None, "stage-0 verdict": rule.get("verdict"),
+                        "evidence record": ev.get("_path"),
+                        "live real money (R)": _live_cell(real.get(leg), read) if read else None,
+                        "live paper (R)": _live_cell(paper.get(leg), read) if read else None}})
+    return out
+
+
+def _account_elements(root: Path, dd_only: bool = False) -> list[dict[str, Any]]:
+    doc, _ = _yaml(root, "config/accounts.yaml")
+    accts = (doc or {}).get("accounts") if isinstance(doc, dict) else None
+    out = []
+    for name, cfg in (accts or {}).items():
+        if not isinstance(cfg, dict):
+            continue
+        rk = cfg.get("risk") if isinstance(cfg.get("risk"), dict) else {}
+        dd = rk.get("daily_dd_switch") if isinstance(rk.get("daily_dd_switch"), dict) else {}
+        armed = "armed" if dd.get("armed") is True else "disarmed"
+        st = armed if dd_only else cfg.get("mode")
+        out.append({"id": f"{'dd' if dd_only else 'acct'}:{name}", "kind": "account", "label": name, "sub": st,
+                    "state": st, "text": None,
+                    "details": {"class": cfg.get("account_class"), "exchange": cfg.get("exchange"),
+                                "mode (gate 1)": cfg.get("mode"), "position model": cfg.get("position_model"),
+                                "daily DD switch": armed, "legs on roster": len(cfg.get("strategies") or [])}})
+    return out
+
+
+def _ml_elements(root: Path) -> list[dict[str, Any]]:
+    doc, _ = _yaml(root, "ml/served/SERVED_MODELS.yaml")
+    models = (doc or {}).get("models") if isinstance(doc, dict) else None
+    out = []
+    for mid, m in (models or {}).items():
+        m = m if isinstance(m, dict) else {}
+        h = m.get("headline_metric") if isinstance(m.get("headline_metric"), dict) else {}
+        out.append({"id": f"ml:{mid}", "kind": "model", "label": mid, "sub": m.get("stage"), "state": m.get("stage"),
+                    "text": None, "details": {"stage": m.get("stage"), "metric": h.get("name"), "value": h.get("value"),
+                                              "n": h.get("n"), "window": h.get("window"), "verdict": h.get("verdict"),
+                                              "provenance": h.get("provenance"), "source": h.get("source")}})
+    return out
+
+
+def _mandate_elements(root: Path) -> list[dict[str, Any]]:
+    doc, _ = _yaml(root, "config/mandates.yaml")
+    granted = (doc or {}).get("mandates") if isinstance(doc, dict) else None
+    out = []
+    for m in granted or []:
+        if isinstance(m, dict):
+            out.append({"id": f"mandate:{m.get('id')}", "kind": "mandate", "label": str(m.get("id")),
+                        "sub": m.get("kind"), "state": None, "text": m.get("grants"),
+                        "details": {"kind": m.get("kind"), "granted": str(m.get("granted_at") or "")[:10] or None,
+                                    "auto-land": "yes" if m.get("autoland") else None}})
+    return out
+
+
+def parse_skeleton(skel: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(steps, loops) from the skeleton: ``## N · Title`` sections holding a TECHNICAL | TRADING row, and the
+    dashed edges of the mermaid flow (a node label ``N · Name`` ties a letter to a step number)."""
+    nodes: dict[str, int] = {}
+    loops: list[dict[str, Any]] = []
+    for m in _NODE.finditer(skel):
+        nodes[m.group(1)] = int(m.group(2))
+    for ln in skel.splitlines():
+        m = _LOOP.match(ln)
+        if m and m.group(1) in nodes and m.group(3) in nodes:
+            loops.append({"id": f"loop:{m.group(1)}{m.group(3)}:{len(loops)}", "label": m.group(2),
+                          "from": f"step-{nodes[m.group(1)]}", "to": f"step-{nodes[m.group(3)]}"})
+    heads = list(_STEP.finditer(skel))
+    steps = []
+    for i, h in enumerate(heads):
+        body = skel[h.end(): heads[i + 1].start() if i + 1 < len(heads) else len(skel)]
+        rows = [r for r in body.splitlines() if r.startswith("|") and not r.startswith(("| TECHNICAL", "|---"))]
+        cells = re.split(r"(?<!\\)\|", rows[0].strip().strip("|")) if rows else []
+        if len(cells) < 2:
+            continue
+        n = int(h.group(1))
+        rules = _rule_elements(cells[1]) or [{"id": "r:note", "kind": "rule", "label": "How it works here", "sub": None,
+                                              "text": re.sub(r"<!--.*?-->", "", cells[1]).strip(), "details": {}}]
+        steps.append({"id": f"step-{n}", "n": n, "name": h.group(2).split(":")[0].strip(), "title": h.group(2).strip(),
+                      "technical": _tech_elements(cells[0]), "trading": rules,
+                      "technical_text": cells[0].strip(), "trading_text": cells[1].replace("\\|", "|").strip()})
+    return steps, loops
+
+
+def build_structured(root: Path = REPO, *, live: dict[str, Any] | None = None, live_state: str = "not read") -> dict[str, Any]:
+    """The map as data: ordered steps (technical left, trading right) plus side loops. A bad source reads "—"."""
+    steps, loops = parse_skeleton((root / SKELETON_REL).read_text(encoding="utf-8"))
+    ctx: dict[str, Any] = {"live": live, "live_state": live_state}
+    makers: dict[str, Callable[[], list[dict[str, Any]]]] = {
+        "legs": lambda: _leg_elements(root, ctx), "ml": lambda: _ml_elements(root),
+        "accounts": lambda: _account_elements(root), "dd": lambda: _account_elements(root, dd_only=True),
+        "mandates": lambda: _mandate_elements(root)}
+    for st in steps:
+        st["read_state"] = {}
+        for src in STEP_SOURCES.get(st["n"], ()):
+            try:
+                els, st["read_state"][src] = makers[src](), "read"
+            except Exception as e:  # noqa: BLE001  # allow-silent: not silent -- the step's read_state names the failure
+                els, st["read_state"][src] = [], f"unreadable ({type(e).__name__})"
+            st["trading"] += els
+    return {"steps": steps, "loops": loops, "live_state": live_state}
