@@ -294,3 +294,43 @@ def test_fallback_package_with_no_trade_still_returned(db, client):
     assert row["pnl"] is None
     assert row["tradeStatus"] is None
     assert row["linkedTradeId"] is None
+
+
+# --- ?linked_trade_id= (UI-SPA-BACKEND-ROUTES) ---------------------------------
+
+def test_linked_trade_id_returns_only_that_trades_package(db, client):
+    t1 = _trade(db, strategy_name="vwap")
+    t2 = _trade(db, timestamp="2026-05-20T11:00:00Z", strategy_name="vwap")
+    _insert_package(db, order_package_id="op-a", linked_trade_id=t1,
+                    created_at="2026-05-20T10:00:00Z")
+    _insert_package(db, order_package_id="op-b", linked_trade_id=t2,
+                    created_at="2026-05-20T11:00:00Z")
+    body = client.get(f"/api/bot/order-packages?linked_trade_id={t1}").json()
+    assert [r["orderPackageId"] for r in body["rows"]] == ["op-a"]
+    assert body["linked_trade_id"] == str(t1)
+
+
+def test_linked_trade_id_reaches_paper_trade_not_hidden_by_default_filter(db, client):
+    demo = _trade(db, is_demo=1)
+    _insert_package(db, order_package_id="op-demo", linked_trade_id=demo,
+                    created_at="2026-05-20T10:00:00Z")
+    assert client.get("/api/bot/order-packages").json()["count"] == 0
+    body = client.get(f"/api/bot/order-packages?linked_trade_id={demo}").json()
+    assert body["count"] == 1 and body["rows"][0]["isDemo"] is True
+
+
+def test_linked_trade_id_matches_via_trade_order_package_id(db, client):
+    # package.linked_trade_id is NULL; the trade points at the package.
+    tid = _trade(db, order_package_id="op-fwd")
+    _insert_package(db, order_package_id="op-fwd", linked_trade_id=None,
+                    created_at="2026-05-20T10:00:00Z")
+    body = client.get(f"/api/bot/order-packages?linked_trade_id={tid}").json()
+    assert [r["orderPackageId"] for r in body["rows"]] == ["op-fwd"]
+
+
+def test_linked_trade_id_unknown_is_empty_and_absent_param_has_no_echo(db, client):
+    t1 = _trade(db)
+    _insert_package(db, order_package_id="op-a", linked_trade_id=t1,
+                    created_at="2026-05-20T10:00:00Z")
+    assert client.get("/api/bot/order-packages?linked_trade_id=999999").json()["count"] == 0
+    assert "linked_trade_id" not in client.get("/api/bot/order-packages").json()

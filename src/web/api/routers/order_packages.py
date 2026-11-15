@@ -139,6 +139,7 @@ def _decode_json_field(v: Any) -> Any:
 def _query_order_packages(
     db_path: Path, limit: int, since: Optional[str], strategy: Optional[str],
     include_demo: bool = False,
+    linked_trade_id: Optional[str] = None,
 ) -> List[sqlite3.Row]:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -206,9 +207,24 @@ def _query_order_packages(
             )
             WHERE COALESCE(t.is_backtest, 0) = 0
         """
-        if not include_demo:
+        # ``linked_trade_id`` is an EXPLICIT lookup of one trade's package(s)
+        # (trade drill-down in the SPA), so the default real-money-only
+        # predicate is NOT applied: a paper trade's id would otherwise answer
+        # ``rows: []`` -- "we looked and there is nothing" for a package that
+        # exists. Matches the package's own declared link OR a package that
+        # the trade references through ``trades.order_package_id`` (the legs
+        # whose package ``linked_trade_id`` is NULL, see the join above).
+        if not include_demo and linked_trade_id is None:
             sql += _NOT_PAPER_PREDICATE
         params: List[Any] = []
+        if linked_trade_id is not None:
+            sql += (
+                " AND (CAST(op.linked_trade_id AS TEXT) = ?"
+                " OR EXISTS (SELECT 1 FROM trades lt"
+                " WHERE CAST(lt.id AS TEXT) = ?"
+                " AND lt.order_package_id = op.order_package_id))"
+            )
+            params.extend([linked_trade_id, linked_trade_id])
         if strategy:
             sql += " AND op.strategy_name = ?"
             params.append(strategy)
@@ -229,6 +245,7 @@ def get_order_packages(
     strategy: Optional[str] = Query(None, max_length=64),
     include_paper: bool = Query(False),
     include_demo: bool = Query(False),
+    linked_trade_id: Optional[str] = Query(None, min_length=1, max_length=64),
 ) -> Dict[str, Any]:
     """Return up to ``limit`` order packages (newest-first by created_at),
     each enriched with its linked-trade PnL, the Claude decision score,
@@ -238,6 +255,12 @@ def get_order_packages(
     real-money (each row tagged via ``accountClass``). Default false
     preserves the prior behavior (real-money only). ``include_demo`` is a
     deprecated alias (effective include = include_paper OR include_demo).
+
+    ``linked_trade_id=<trade id>`` (additive) returns only the package(s) tied
+    to that trade -- by the package's own ``linked_trade_id`` or by the trade's
+    ``order_package_id`` -- across real-money AND paper (an explicit lookup is
+    never narrowed by the default real-money filter). The response then also
+    echoes ``linked_trade_id``. Absent, the response is unchanged.
 
     Best-effort: returns an empty ``rows`` list on missing DB or sqlite
     error so the dashboard tab stays usable.
@@ -251,6 +274,7 @@ def get_order_packages(
     try:
         rows = _query_order_packages(
             _DB_PATH, limit, since, strategy, include_demo=effective_include,
+            linked_trade_id=linked_trade_id,
         )
     except sqlite3.Error:  # allow-silent: best-effort read; logs + returns empty so the tab stays usable
         logger.exception("order_packages: sqlite read failed")
@@ -301,9 +325,12 @@ def get_order_packages(
             "modelScores": _decode_json_field(r["model_scores"]),
             "claudeScore": _claude_score_wire(claude.get(opid)),
         })
-    return {
+    resp: Dict[str, Any] = {
         "rows": out,
         "count": len(out),
         "filter_state": filter_state,
         "claude_log_present": _CLAUDE_SCORES.is_file(),
     }
+    if linked_trade_id is not None:
+        resp["linked_trade_id"] = linked_trade_id
+    return resp
