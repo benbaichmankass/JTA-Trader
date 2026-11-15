@@ -1,6 +1,6 @@
 id: RQ-20261026-e535-03
 title: 'Desk D-S0 entry generation (arm 1): on masked point-in-time scan packets, do Claude''s proposed entries earn a positive net R per capital-day, beat a random entry with the same bracket geometry at random times on the same symbols, and hold in >= 3 of 4 folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -129,3 +129,18 @@ iteration:
   hypothesis: Claude's proposed entries on masked scan packets earn positive net R per capital-day and beat the registered random control
   attempt: 1
   due_by: '2026-11-08'
+grading:
+  attested: RULE-RQ20261026-E535-03-DESK-GEN-ARM1
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261026-E535-03-DESK-GEN-ARM1
+  evidence:
+  - research/results/RQ-20261026-e535-03/40603772459.jsonl
+  graded_at: '2026-11-13'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 5 row(s), all measured, all indeterminate (1 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
+  rows: 5
+  verdict: indeterminate

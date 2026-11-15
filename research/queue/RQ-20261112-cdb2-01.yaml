@@ -1,0 +1,164 @@
+# Hand-authored 2026-11-12 by lane SLV-ITERATION (am:TRADING; reports to AM-TRADING, cc the manager). The decision rule is registered
+# BEFORE any run of this unit. Gates this adds or changes: none.
+id: RQ-20261112-cdb2-01
+title: 'SLV-ITERATION (a): FIXED-PARAMETER FULL-HISTORY Stage-0 of slv_trend_1h on RTH 1h bars (spot XAG as the SLV proxy,
+  2019-01..2026-10, live params, 5 bps): is the per-trade mean net R > 0 with a 95% CI clear of zero?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+question: 'slv_trend_1h went to real money on 2026-11-12 (operator, 16:10Z: "Promote it and get it into an iteration plan"). Its promotion
+  record (comms/strategy_evidence/slv_trend_1h.json) covers ~2025-04..2026-09 (n 68 at tp_r 50; n 73 at tp_r 6.0 after PR #25267). With
+  the live parameters held FIXED (donchian 24, atr_period 14, atr_stop_mult 1.5, trail_mult 4.0, tp_r 6.0, min_confidence 0.3), on 1h
+  bars restricted to the US cash session over 2019-01-01..2026-10-31, net of fee 0 + 5 bps RT slippage + 0 funding: is the mean net R per
+  trade > 0, with a two-sided 95% CI whose lower bound is above zero?'
+why_this_matters: 'The live leg''s only committed record covers about 17 months. The SLV-EVIDENCE-RECONCILE replay (as quoted in the
+  dispatch; this lane has not reproduced it) gives n 321, +0.255 R/trade, CI lower bound -0.067 on the full history. That is positive
+  but not resolved. This unit fixes the rule before the run so the full-history reading is a registered test, not a re-read. Its result
+  feeds AM-TRADING''s Gate-2 view of the leg (input only; this lane applies no demotion).'
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/slv_trend_1h.json
+  verdict_read: pass_short_window
+  diagnosis: 'Promotion record n 68 over ~17 months, param_selection_provenance not_established (now established in
+    docs/research/slv-trend-1h-param-provenance-2026-11-12.md: every parameter was chosen on windows that include most of this test''s
+    span). Full-history replay positive but its CI crosses zero.'
+  hypothesis: the declared configuration's per-trade net R over 2019-01..2026-10 RTH is > 0 and resolved at 95%
+  attempt: 1
+  due_by: '2026-11-19'
+power:
+  expected_n: 320
+  min_detectable_effect: 0.47
+  effect_units: r_per_trade
+  sd: 2.94
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED from the dispatch''s reconcile figures (n 321, mean +0.255, CI lower -0.067, so se ~0.164 and per-trade sd ~2.94 R).
+    At n 320 the MDE for the PASS clause (two-sided 95% lower bound > 0, power 0.8) is 2.80 x 0.164 = 0.46 R/trade; declared 0.47
+    (gate floor (2.80 x 2.94 / 0.47)^2 = 307 <= 320). A one-sided reading would detect 0.41 R/trade. STATED BEFORE THE RUN: if the true effect is the reconcile''s +0.255 R, the chance that the CI clears zero
+    is only ~0.34, and resolving 0.255 R at power 0.8 needs ~1,040 trades. So the likely outcome is INDETERMINATE/positive_unresolved,
+    which is a finding about POWER, not evidence against the leg. Floor 100: below it the unit grades INDETERMINATE/underpowered.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public Dukascopy 1h candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261112-cdb2-01
+  registered_at: '2026-11-12'
+  registered_before_run: true
+  statistic: 'scripts/research/slv_rth_stage0.py. PRIMARY source XAG = Dukascopy INSTRUMENT_FX_METALS_XAG_USD (spot silver, bid) 1h,
+    2019-01-01..2026-10-31. RTH = weekdays, bars whose start hour is 13..19 UTC in Apr-Oct and 14..20 UTC otherwise (the clock-aligned
+    hourly bars overlapping the cash session; the DST months are src.runtime.market_hours''s approximation; US holidays NOT removed).
+    One continuous harness pass (scripts/backtest_trend.py via exit_lever_ablation.py --grade stage0, the committed-record argv builder).
+    PRIMARY arm P: tp_r=6.0 and every other key as declared in config/strategies.yaml. Cost stack as the harness resolves it for an Alpaca
+    equity: fee 0 + 5.0 bps RT slippage + 0 funding. Over every trade P closes: n, mean net R/trade, sd, two-sided 95% t-interval (normal
+    quantile 1.96), and 4 equal calendar folds by entry time. DESCRIPTIVE ONLY, never graded: trade-bootstrap 95% interval (10,000
+    resamples, seed 20261112, iid so it ignores serial dependence), by-year, by-direction, by-exit-reason; arm R50 (tp_r=50.0, the
+    pre-#25267 sentinel) as a reconciliation against the quoted n 321; and source CFD (INSTRUMENT_ETF_CFD_US_SLV_US_USD, same RTH rule,
+    arm P) as a proxy-corroboration read.'
+  rule: 'Applied to the PRIMARY record (XAG, arm P) only. INDETERMINATE/underpowered if n < 100. FAIL/no_edge if n >= 100 AND mean net
+    R <= 0. PASS/edge_confirmed if n >= 100 AND the 95% CI lower bound > 0 AND >= 3 of 4 calendar folds net-positive. INDETERMINATE/positive_unresolved
+    otherwise (mean > 0 but the CI lower bound <= 0, or fewer than 3 positive folds). The CFD record is graded by the same rule and reported
+    beside it: if CFD and XAG disagree in SIGN, the result is flagged proxy_disagreement and read as a proxy-fidelity problem, never averaged.
+    Thresholds are not changed after any result.'
+  on_pass: 'Record it as the leg''s full-history Stage-0 reading (in-sample, see what_it_does_not_do). Report to AM-TRADING. No config change.'
+  on_fail: 'Report to AM-TRADING as a Gate-2 demotion INPUT, with the numbers. This lane applies no demotion and edits no roster. The demotion
+    signal remains the mirror''s (alpaca_portfolio) net-of-cost window.'
+  on_indeterminate: 'Report as power-limited. The open question goes to the fresh-span confirmation (RQ-20261104-7fdb-02) and to the lever
+    units RQ-20261112-cdb2-02..05. No roster consequence.'
+  what_it_does_not_do: 'Edits no config, roster or record; places no order. NOT OUT-OF-SAMPLE: every parameter was chosen on data inside
+    this window (donchian 24 and trail 4.0 in the 2026-06-20 SLV-CFD 1h RTH sweep over ~2017..2026-06-18, best of 5 variants; atr_stop_mult
+    1.5 in the 2026-08-26 E35 bracket run over ~1830 days; tp_r 6.0 selected on 2018-06..2024-09-17 by RQ-20261112-5ab1-03), so a PASS is a
+    consistency reading, not an edge confirmation. PROXY CAVEAT: spot XAG is not SLV. SLV carries a 0.50%/yr expense drag (about 0.14 bps
+    per calendar day, negligible per trade), trades only in the cash session with overnight and weekend gaps that spot silver prices continuously
+    (an RTH filter on spot bars removes those hours but not the price path between them), and tracks spot imperfectly intraday. Holidays when
+    spot trades and SLV does not are kept. Its 1h bars are the bid side. The live builder reads Alpaca IEX bars, which may include
+    extended-hours prints, so bar construction is a declared difference. Slippage 5 bps is a placeholder, not a measured SLV fill cost.'
+intervention_controls:
+  not_applicable: a config-exact harness re-measurement at fixed parameters, not an in-trade action
+practice_precedent: 'M2, M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of the full
+  cost stack, power stated, and the in-sample status of the parameters disclosed rather than read as out-of-sample.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  why_runner: Fetches keyless public Dukascopy candles for a pinned window; reads no trainer data; CPU only.
+  basis: two Dukascopy 1h fetches (~8 years each) plus three harness passes; estimate from RQ-20261112-5ab1-03.
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  bucket: structural
+  basis: 'stand-in: the evidence under a leg now trading real money; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/slv_rth_stage0.py
+  - --leg
+  - slv_trend_1h
+  - --source
+  - XAG=INSTRUMENT_FX_METALS_XAG_USD
+  - --source
+  - CFD=INSTRUMENT_ETF_CFD_US_SLV_US_USD
+  - --arm
+  - P=tp_r=6.0
+  - --arm
+  - R50=tp_r=50.0
+  - --start
+  - '2019-01-01'
+  - --end
+  - '2026-10-31'
+  - --n-floor
+  - '100'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --boot
+  - '10000'
+  - --seed
+  - '20261112'
+  - --research-unit
+  - RQ-20261112-cdb2-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261112-cdb2-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- SLV-EVIDENCE-RECONCILE
+- RQ-20261112-5ab1-03
+- RQ-20261104-7fdb-02
+- RQ-20261101-78fc-18
+- RQ-20261112-cdb2-02
+- RQ-20261112-cdb2-03
+- RQ-20261112-cdb2-04
+- RQ-20261112-cdb2-05
+last_dispatched_at: '2026-11-12T19:47:41+00:00'
+grading:
+  attested: RULE-RQ-20261112-cdb2-01
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ-20261112-cdb2-01
+  evidence:
+  - research/results/RQ-20261112-cdb2-01/43293794293.jsonl
+  graded_at: '2026-11-12'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

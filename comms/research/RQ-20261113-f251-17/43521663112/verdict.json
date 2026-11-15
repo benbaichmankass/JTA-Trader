@@ -1,0 +1,60 @@
+{
+  "population": "trend_donchian_1h: regime off-cell chop ['long', 'short'] on the router's 1-D ADX axis, forming replay; record window 2025-11-01T00:00:00..2026-10-31T23:00:00, confirmation window 2024-11-01T00:00:00..2025-10-31T23:00:00; net of the full cost stack",
+  "records": [
+    {
+      "leg": "trend_donchian_1h@ungated",
+      "role": "baseline",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 184,
+      "net_r": -10.5698,
+      "folds": [
+        0.4373,
+        -3.1947,
+        -7.7773,
+        -0.0351
+      ],
+      "population": "trend_donchian_1h ungated, record window",
+      "note": "confirmation-window net_r -1.115"
+    },
+    {
+      "leg": "trend_donchian_1h@chop_off",
+      "role": "candidate",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 118,
+      "net_r": -6.235,
+      "folds": [
+        7.6865,
+        -4.4903,
+        -9.9731,
+        0.5419
+      ],
+      "folds_positive": 2,
+      "n_folds": 4,
+      "population": "trend_donchian_1h without the chop ['long', 'short'] cell, record window",
+      "note": "confirmation-window net_r -1.1578 (n 97)"
+    },
+    {
+      "leg": "trend_donchian_1h@chop_cell",
+      "role": "dropped_cell",
+      "verdict": "fail",
+      "read_state": "measured",
+      "n": 66,
+      "net_r": -4.3348,
+      "population": "trend_donchian_1h trades in the chop ['long', 'short'] cell, record window",
+      "note": "long: pooled -12.5004 stable_drag=True (stable_drag); short: pooled 8.1656 stable_drag=False (no_stable_drag); confirmation-window cell net_r 0.0428 (n 71)"
+    }
+  ],
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 184,
+  "clauses": {
+    "R1_no_cosmetic_cell": false,
+    "R2_gated_stage0": false,
+    "R3_beats_ungated": true,
+    "C1_cell_loses_on_confirmation": false,
+    "C2_gated_book_holds_on_confirmation": false
+  },
+  "note": "gated book -6.235R over n 118, 2/4 folds (ungated -10.5698R); confirmation gated -1.1578R vs ungated -1.115R, cell 0.0428R; fails ['R1_no_cosmetic_cell', 'R2_gated_stage0', 'C1_cell_loses_on_confirmation', 'C2_gated_book_holds_on_confirmation']"
+}

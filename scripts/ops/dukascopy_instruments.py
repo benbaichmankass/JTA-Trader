@@ -87,6 +87,10 @@ SYMBOL_TO_INSTRUMENT: Dict[str, Mapping] = {
     "MES": Mapping("INSTRUMENT_IDX_AMERICA_E_SANDP_500", REL_PROXY,
                    "CFD vs future: different venue, hours, financing, settlement, "
                    "multiplier, no expiry/roll"),
+    # FUT-INTRADAY-DUKA-LANE (2026-11-12): the third Tradeify micro, for RQ-20261112-09d2-04.
+    "MNQ": Mapping("INSTRUMENT_IDX_AMERICA_E_NQ_100", REL_PROXY,
+                   "CFD vs future: different venue, hours, financing, settlement, "
+                   "multiplier, no expiry/roll"),
 }
 
 #: Symbols the adjudication REFUSED to proxy, and why. A refusal is a decision;
@@ -188,8 +192,8 @@ def _self_test() -> int:
        set(inv["INSTRUMENT_ETF_CFD_US_SPY_US_USD"]["serves"]) == {"SPY", "SPYM"})
     ck("a shared instrument's relation is composite",
        inv["INSTRUMENT_ETF_CFD_US_SPY_US_USD"]["relation"] == "same_ticker_cfd+proxy")
-    ck("11 distinct instruments cover 15 symbols",
-       len(inv) == 11 and len(SYMBOL_TO_INSTRUMENT) == 15)
+    ck("12 distinct instruments cover 16 symbols",
+       len(inv) == 12 and len(SYMBOL_TO_INSTRUMENT) == 16)
     ck("no refused symbol leaks into the mapped table",
        not (set(REFUSED) & set(SYMBOL_TO_INSTRUMENT)))
 

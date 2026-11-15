@@ -67,10 +67,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sqlite3
 import sys
-import time
 from typing import Any, Dict, List, Optional
 
 # Repo root on sys.path so `src.*` imports resolve when this runs as
@@ -97,11 +95,18 @@ def _canonical_direction(value: Any) -> str:
     from src.prop.prop_monitor_pulse import _canonical_direction as canon
     return canon(value)
 
+def _take_backup():
+    """The shared pre-APPLY backup with per-tag retention (scripts/ops/journal_backup.py)."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from scripts.ops.journal_backup import take_backup
+    return take_backup
+
 
 def _backup_db(db_path: str) -> str:
-    dest = f"{db_path}.bak-prop-fill-direction-{int(time.time())}"
-    shutil.copy2(db_path, dest)
-    return dest
+    """Pre-APPLY copy to <db>.bak-prop-fill-direction-<stamp>; keeps only the newest per tag (journal_backup.py)."""
+    return _take_backup()(db_path, "prop-fill-direction", method="copy", stamp_style="epoch")
 
 
 def _connect(db_path: str, read_only: bool) -> sqlite3.Connection:

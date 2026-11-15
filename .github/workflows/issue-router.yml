@@ -14,7 +14,11 @@ name: issue-router
 
 on:
   issues:
-    types: [opened]
+    # opened: one dispatch per label on the new issue (event_type = the label).
+    # labeled (phase 2, PI-20261112-FANOUT2-0001): one dispatch for the ADDED label (event_type = labeled:<label>),
+    # for the workflows that also ran on `labeled`. An issue created with N labels fires opened once and labeled
+    # N times, exactly as GitHub did for those workflows before; nothing that ran stops running.
+    types: [opened, labeled]
 
 permissions:
   contents: write   # POST /repos/{repo}/dispatches needs contents:write
@@ -30,6 +34,8 @@ jobs:
         with:
           script: |
             const issue = context.payload.issue;
+            const action = context.payload.action;
+            const added = action === 'labeled' && context.payload.label ? context.payload.label.name : null;
             const labels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name)).filter(Boolean);
             // Same fields, same shape as github.event.issue, so routed workflows read
             // github.event.client_payload.issue.<field> exactly as they read github.event.issue.<field>.
@@ -44,8 +50,11 @@ jobs:
                 state: issue.state,
               },
             };
+            if (added) payload.label = { name: added };
+            // labeled: forward ONLY the added label, as labeled:<label>; opened: every label, as <label>.
+            const targets = action === 'labeled' ? (added ? ['labeled:' + added] : []) : labels;
             let failed = 0;
-            for (const label of labels) {
+            for (const label of targets) {
               // A failed dispatch is retried, then reported; the other labels are still sent (no halting).
               let ok = false;
               for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
@@ -63,5 +72,5 @@ jobs:
               }
               if (!ok) failed++;
             }
-            core.info(`issue #${issue.number}: ${labels.length} label(s), ${failed} dispatch failure(s)`);
+            core.info(`issue #${issue.number} (${action}): ${targets.length} dispatch(es), ${failed} failure(s)`);
             if (failed) core.setFailed(`${failed} dispatch(es) failed for issue #${issue.number}`);

@@ -99,6 +99,17 @@ DEFERRED_VERIFY = {
         # record is not on main, and the "Close stale landing PRs" step clears a batch PR that did not merge.
         ("comms/research", "scripts/research/collect_runner_results.py", {"comms/research", "research/results"}),
     ],
+    # CI-SUITE-SLOWDOWN (2026-11-12): each mirror held a runner ~90 min in verify-merged while its own PR queued
+    # behind the 20-slot pool it was occupying. The mirror script is idempotent by id, so the next cycle re-lands
+    # anything main still lacks; the workflow's in-flight step closes + reds a mirror PR older than 4 h.
+    "live-review-rows-mirror.yml": [
+        ("comms/live_review", "scripts/ops/live_review_rows_mirror.py",
+         {"comms/live_review", "comms/live_review/outcomes.jsonl"}),
+    ],
+    "desk-decisions-mirror.yml": [
+        ("comms/desk", "scripts/ops/desk_branch.py",
+         {"comms/desk", "comms/desk/role_grade.json", "docs/claude/work/pipeline"}),
+    ],
 }
 
 

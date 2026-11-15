@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes how the live trader writes the signal SQL log (src/utils/signal_audit_logger.py, in the trader import closure) and what db_lock_diag logs. decision: 2026-11-12 operator-popup \"Merge + deploy on green\". Merging restarts the trader through git-sync, so the manager batches it with other restart-causing merges.",
+  "why": "DB-LOCK-HOLDERS-DESK-BUILD: 11-13 had 10 'SQL dual-write failed: database is locked', each stalling MainThread (inside a strategy signal builder) for the full 3 s busy_timeout and then dropping the SQL row. Experiment on the real schema: Database() init takes no write lock; insert_signal waits 3 s and fails only while another writer holds the lock. Fix: (1) the JSONL write stays synchronous (the source of truth); the SQL row goes to one daemon writer with lock retries (1/2/4 s) off the decision path, and a full queue drops the SQL row with one warning (JSONL keeps it); nothing halts. (2) db_lock_diag now also lists other processes holding trade_journal.db (or -wal/-shm) open, via a /proc fd scan, so a lock with no in-process holder (2/7 dumps on 11-13) names its candidates. Revert: git revert."
+}

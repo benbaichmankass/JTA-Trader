@@ -77,7 +77,7 @@ run:
     - trend_donchian_sol_4h
     - --out
     - '{out_dir}'
-  timeout_minutes: 60
+  timeout_minutes: 120
 lands:
   store: research/results/
   assert_field: read_state
@@ -86,4 +86,22 @@ related:
 - ML-PROP-ITERATE
 - RQ-20261011-6707-01
 - comms/strategy_evidence/trend_donchian_sol_4h.json
-last_dispatched_at: '2026-11-06T00:09:47+00:00'
+last_dispatched_at: '2026-11-13T13:57:10+00:00'   # re-armed 2026-11-13 ~13:1xZ (CRYPTO-FORMING-RDM-FORWARD): the faithful arm now models the forming decision bar; run 43381829839 read indeterminate only because decision_bar stayed omitted. RULE, window and command UNCHANGED (timeout 60 -> 120 for the 1m fetch).
+rearmed_at: '2026-11-13T13:15:00+00:00'
+grading:
+  attested: RULE-RQ1011-001-FAITHFUL-STAGE0
+  auto: true
+  decision_rule_id: RULE-RQ1011-001-FAITHFUL-STAGE0
+  evidence:
+  - research/results/RQ-20261105-d256-03/43381829839.jsonl
+  - research/results/RQ-20261105-d256-03/43438215301.jsonl
+  graded_at: '2026-11-14'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: RESEARCH-OPS-20261113-2050
+  owner_reason: mixed rows (an indeterminate row and a faithful-arm PASS, net +34.83 R n 188 vs approximate
+    +36.86 n 116); which row is the rule control (|delta| <= 0.10 R) needs a session read, recorded in
+    comms/research/ops/20261113T2130Z.json
+  reason: 'verdicts not unanimous-mechanical: [''indeterminate'', ''pass'']'
+  rows: 2
+  verdict: null

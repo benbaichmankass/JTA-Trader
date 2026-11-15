@@ -10,12 +10,22 @@ from __future__ import annotations
 import copy
 import json
 
+import pytest
+
 from src.units.accounts import alpaca_amend as aa
+
+
+@pytest.fixture(autouse=True)
+def _no_real_sleep(monkeypatch):
+    """The replace-settle re-read must never really wait in tests; record what it would have slept."""
+    slept = []
+    monkeypatch.setattr(aa, "_sleep", lambda s: slept.append(s))
+    return slept
 
 
 class FakeAlpaca:
     def __init__(self, *, legs, position=None, partial_parent_legs=(),
-                 patch_effective=True, patch_rc=0, patch_returns_id=True):
+                 patch_effective=True, patch_rc=0, patch_returns_id=True, replace_after_reads=0):
         self.legs = copy.deepcopy(legs)
         self.position = position or {"state": "open", "qty": 10.0, "side": "long",
                                      "current_price": 105.0}
@@ -25,11 +35,23 @@ class FakeAlpaca:
         self.patch_returns_id = patch_returns_id
         self.patches = []
         self._n = 0
+        # ALPACA-AMEND-REPLACE-RACE: the replace is asynchronous -- the new leg (and the old one going
+        # ``replaced``) becomes visible only after this many further leg reads.
+        self.replace_after_reads = replace_after_reads
+        self._pending = []
+        self.reads = 0
 
     def position_quote(self, symbol):
         return dict(self.position)
 
     def _open_orders_for_symbol(self, symbol, since=None):
+        self.reads += 1
+        if self._pending:
+            self._countdown -= 1
+            if self._countdown < 0:
+                for fn in self._pending:
+                    fn()
+                self._pending = []
         return [dict(o) for o in self.legs if o["status"] not in ("replaced", "canceled")]
 
     def _request(self, method, path, body=None):
@@ -47,13 +69,19 @@ class FakeAlpaca:
         self._n += 1
         new_id = f"{oid}-r{self._n}"
         if self.patch_effective:
-            for o in self.legs:
-                if o["id"] == oid:
-                    o["status"] = "replaced"
-                    new = {**o, "id": new_id, "status": "held" if "stop" in o["type"] else "new"}
-                    new.update({k: v for k, v in body.items()})
-                    self.legs.append(new)
-                    break
+            def _apply(oid=oid, new_id=new_id, body=body):
+                for o in self.legs:
+                    if o["id"] == oid:
+                        o["status"] = "replaced"
+                        new = {**o, "id": new_id, "status": "held" if "stop" in o["type"] else "new"}
+                        new.update({k: v for k, v in body.items()})
+                        self.legs.append(new)
+                        break
+            if self.replace_after_reads:
+                self._pending.append(_apply)
+                self._countdown = self.replace_after_reads
+            else:
+                _apply()
         return {"retCode": 0, "result": ({"id": new_id, "replaces": oid}
                                          if self.patch_returns_id else {})}
 
@@ -233,3 +261,36 @@ def test_dry_run_cli_lists_open_trades_read_only():
     assert rows[0]["result"] == "read_only" and rows[0]["oco_leg_ids"]["stop"] == "sl-1"
     rows = aa.dry_run("alpaca_live", db=FakeDB([trade]), client=c, new_sl=103.0)
     assert rows[0]["result"] == aa.X_PLANNED and c.patches == []
+
+
+# ── ALPACA-AMEND-REPLACE-RACE: an asynchronous replace is waited for, not called a failure ─────────────────────
+
+
+def test_a_replace_that_lands_a_few_reads_later_is_applied_not_apply_failed(_no_real_sleep):
+    """SLV 7114, 21:00:20Z: the read straight after the PATCH still showed the old leg; the next tick read 45.49."""
+    c = FakeAlpaca(legs=_oco(), replace_after_reads=3)
+    r = aa.tighten(c, symbol="SPY", direction="long", qty=10, new_sl=102.0, apply=True)
+    assert r["result"] == aa.X_APPLIED, r
+    assert r["venue_after"] == 102.0 and r["oco_leg_ids_after"]["stop"] == "sl-1-r1"
+    assert _no_real_sleep and all(x == aa._REPLACE_SETTLE_STEP_S for x in _no_real_sleep)
+    assert r["replace_settle_s"]["stop"] == pytest.approx(aa._REPLACE_SETTLE_STEP_S * len(_no_real_sleep))
+
+
+def test_a_replace_that_never_lands_is_still_apply_failed_after_a_bounded_wait(_no_real_sleep):
+    c = FakeAlpaca(legs=_oco(), patch_effective=False)
+    r = aa.tighten(c, symbol="SPY", direction="long", qty=10, new_sl=102.0, apply=True)
+    assert r["result"] == aa.X_APPLY_FAILED and "old stop leg sl-1 still rests" in r["detail"]
+    assert sum(_no_real_sleep) == pytest.approx(aa._REPLACE_SETTLE_MAX_S)   # bounded, then judged
+
+
+def test_an_immediate_replace_does_not_wait_at_all(_no_real_sleep):
+    c = FakeAlpaca(legs=_oco())
+    r = aa.tighten(c, symbol="SPY", direction="long", qty=10, new_sl=102.0, apply=True)
+    assert r["result"] == aa.X_APPLIED and _no_real_sleep == [] and "replace_settle_s" not in r
+
+
+def test_no_returned_id_is_judged_at_once_without_waiting(_no_real_sleep):
+    """Without a new id there is no replace to wait for: the price mismatch is the verdict."""
+    c = FakeAlpaca(legs=_oco(), patch_effective=False, patch_returns_id=False)
+    r = aa.tighten(c, symbol="SPY", direction="long", qty=10, new_sl=102.0, apply=True)
+    assert r["result"] == aa.X_APPLY_FAILED and _no_real_sleep == []

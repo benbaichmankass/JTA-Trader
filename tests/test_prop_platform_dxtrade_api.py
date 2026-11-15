@@ -521,3 +521,24 @@ def test_unparseable_execution_is_skipped_not_defaulted():
                                            "executions": [{"lastPrice": "n/a", "lastQuantity": 1},
                                                           {"lastPrice": 5, "lastQuantity": 0}]}]})
     assert rows == []
+
+
+def test_unrealized_is_derived_from_equity_minus_balance_when_openpl_is_absent():
+    """VELOTRADE-STATUS-SNAPSHOT-UNREADABLE: a firm whose metrics omit openPl still
+    yields a read unrealized (equity - balance), marked derived; openPl wins when sent,
+    and a missing balance or equity stays could-not-look."""
+    s = FakeServer()
+    s.on(("GET", f"{A}/metrics"), 200, {"metrics": [{"balance": 5000, "equity": 5040.85}]})
+    snap = _adapter(s)[0].read_account()
+    assert snap.unrealized == 40.85 and snap.derived == ["unrealized=equity-balance"]
+    assert "unrealized" not in snap.unparsed and "realized_today" in snap.unparsed
+
+    s = FakeServer()
+    s.on(("GET", f"{A}/metrics"), 200, {"metrics": [{"balance": 5000, "equity": 5040.85, "openPl": 40.0}]})
+    snap = _adapter(s)[0].read_account()
+    assert snap.unrealized == 40.0 and snap.derived == []
+
+    s = FakeServer()
+    s.on(("GET", f"{A}/metrics"), 200, {"metrics": [{"equity": 5040.85}]})
+    snap = _adapter(s)[0].read_account()
+    assert snap.unrealized is None and "unrealized" in snap.unparsed and snap.derived == []

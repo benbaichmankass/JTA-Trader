@@ -7,10 +7,25 @@ strings, but nothing computes them. This module turns those into
 **computed** checks so the operator approves a stage change on evidence,
 not vibes.
 
-Scope: this is the ``shadow → advisory`` gate — the go-live switch. It
-reports; it never mutates the registry and never touches the order path.
-The operator (or ``ml.promotion.stage_guard``) reads the report and
-decides.
+Scope: this is the gate into ``advisory`` (production, real-money
+influence). It reports; it never mutates the registry and never touches the
+order path. ``ml.promotion.stage_guard`` reads the report and proposes.
+
+⚠️ THE STAGE STEP IS RETIRED (operator, chat 2026-11-12 ~16:35Z, verbatim:
+"you're going to retire the step from the ML. Everything goes through the new
+flow, back testing, live money, and then if it gets demoted, it soaks to still
+generate data while we iterate on it. That is the only acceptable flow. There
+is nothing in between proving edge on back testing and real money. Absolutely
+no steps."). Readiness is therefore decided on OFFLINE evidence only —
+``oos_edge`` (purged WF-CV vs baseline), ``cost_net`` (the enforced cost-net
+decision value), ``non_degenerate``, ``sample_sufficiency`` (offline n_eval)
+and ``cross_run_stability``. Every LIVE-row gate (``shadow_soak``,
+``beats_baseline``, ``live_agreement``, ``live_regime_discrimination``,
+``live_parity``, ``labels_accruing``, ``drift_clean``) is still COMPUTED and
+REPORTED, ``required: false``: it is production monitoring and feeds the
+DEMOTE triggers in ``ml.promotion.stage_guard``, never a step a model must
+clear before real money. A candidate never served has no live rows, and must
+not need any.
 
 A gate is one of:
 
@@ -62,7 +77,9 @@ class GateThresholds:
     # docs/research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md): its
     # serving MECHANICS are already proven by `live_parity` + `labels_accruing`
     # + `drift_clean`, which are stricter than a clean-prediction count.
-    require_shadow_soak: bool = True
+    # RETIRED as a promotion requirement 2026-11-12 (operator: "Absolutely no
+    # steps"): still computed + reported, never required.
+    require_shadow_soak: bool = False
     min_auc: float = 0.55
     min_brier_lift: float = 0.0
     score_spread_eps: float = 1e-6
@@ -87,7 +104,9 @@ class GateThresholds:
     # turns this off so a classifier isn't blocked on a degenerate live
     # brier; `oos_edge` carries the beats-baseline role. (S-MLOPT regime
     # gate profile, 2026-06-07.)
-    require_beats_baseline: bool = True
+    # 2026-11-12: a LIVE gate — reported, never required for promotion (the
+    # offline `oos_edge` + `cost_net` carry beats-baseline). Stage step retired.
+    require_beats_baseline: bool = False
     # Live regime-discrimination gate (RG4, 2026-06-26 — regime profile only).
     # For a regime CLASSIFIER head the right LIVE track-record signal is not
     # rank-AUC(score vs trade WIN) — a vol-regime head predicts the *regime*,
@@ -141,10 +160,18 @@ class GateThresholds:
     # this off (a regime head is judged on live REGIME discrimination, not
     # trade win/loss), mirroring how `require_beats_baseline` opts the live
     # brier gate out for a classifier.
-    require_live_agreement: bool = True
+    # 2026-11-12: LIVE gate — reported, never required (stage step retired).
+    require_live_agreement: bool = False
+    # 2026-11-12: `drift_clean` needs two populated LIVE windows, so a model
+    # never served cannot have it. Reported + a DEMOTE trigger, never required
+    # for promotion (stage step retired).
+    require_drift_clean: bool = False
+    # 2026-11-12: `sample_sufficiency` reads the OFFLINE evaluation n (n_eval);
+    # live closed-trade n is reported in the detail, never required.
 
 
-# Regime-classifier promotion profile (2026-06-07, Tier-3 — operator-gated).
+# Regime-classifier promotion profile (2026-06-07; live gates made
+# non-required 2026-11-12 when the stage step was retired).
 # A regime head's promotion-worthy quality is its leak-free purged-WF-CV
 # macro_f1 edge over the modal baseline (`oos_edge`), NOT live-trade volume:
 # a 1h regime head joined to a thin-flow symbol accrues live scored trades
@@ -155,8 +182,9 @@ class GateThresholds:
 # small sanity count, (b) drops the degenerate live `beats_baseline`
 # requirement, and (c) swaps the live track-record gate — a vol-regime head
 # predicts the regime, not trade win/loss, so `live_agreement` (rank-AUC vs
-# trade WIN) is OFF (2026-06-26, option A). It NEVER loosens `oos_edge`,
-# `shadow_soak`, or `drift_clean`.
+# trade WIN) is OFF (2026-06-26, option A). It NEVER loosens `oos_edge`.
+# (2026-11-12: `shadow_soak` / `drift_clean` / the mechanics pair are
+# non-required in EVERY profile now — the stage step is retired.)
 #
 # M25 reframe (operator-approved 2026-07-19, docs/research/
 # M25-promotion-consolidation-DESIGN.md § "The promotion gate — REFRAMED
@@ -179,12 +207,11 @@ def regime_classifier_thresholds(base: GateThresholds | None = None) -> GateThre
         # M25 reframe 2026-07-19: RG4 discrimination demoted to advisory;
         # the required live gates are the serving-mechanics pair below.
         require_live_regime_discrimination=False,
-        require_live_parity=True,
-        require_labels_accruing=True,
-        # WS-1 de-soak 2026-07-26: the shadow-soak gate is advisory for a
-        # regime head (edge = oos_edge offline; mechanics = live_parity +
-        # labels_accruing + drift_clean). It never loosens oos_edge /
-        # drift_clean — those stay required.
+        # 2026-11-12 (stage step retired, operator "Absolutely no steps"):
+        # the serving-mechanics pair is production MONITORING now, reported
+        # and never required before real money. oos_edge stays required.
+        require_live_parity=False,
+        require_labels_accruing=False,
         require_shadow_soak=False,
     )
 
@@ -458,26 +485,24 @@ def _gate_oos_edge(oos_edge: Any, th: GateThresholds) -> GateResult:
 
 
 def _gate_sample_sufficiency(entry: Any, attribution: Any, th: GateThresholds) -> GateResult:
-    if attribution is not None and attribution.n > 0:
-        ok = attribution.n >= th.min_trades
-        return GateResult(
-            "sample_sufficiency",
-            "pass" if ok else "fail",
-            f"{attribution.n} live closed trades scored",
-            value=float(attribution.n), threshold=float(th.min_trades),
-        )
+    """OFFLINE sample sufficiency (stage step retired 2026-11-12): the
+    evaluation n the model was graded on. Live closed-trade n is reported in
+    the detail when present but never decides readiness — a model never served
+    has none, and must not need any."""
+    live_n = attribution.n if (attribution is not None and attribution.n > 0) else None
+    live_note = f"; {live_n} live closed trades scored (monitoring)" if live_n else ""
     n_eval = entry.metrics.get("n_eval")
     if n_eval is not None:
         ok = float(n_eval) >= th.min_eval
         return GateResult(
             "sample_sufficiency",
             "pass" if ok else "fail",
-            f"no live trades yet; falling back to eval n={float(n_eval):.0f}",
+            f"offline eval n={float(n_eval):.0f}{live_note}",
             value=float(n_eval), threshold=float(th.min_eval),
         )
     return GateResult(
         "sample_sufficiency", "insufficient_data",
-        "no live attribution and no n_eval metric",
+        f"no offline n_eval metric{live_note}",
     )
 
 
@@ -845,13 +870,20 @@ def _gate_drift_clean(drift: Any, th: GateThresholds) -> GateResult:
     2026-07-26). Keep this the only rolling-live gate; any new "wait N days"
     promotion criterion is a governance regression.
 
-    Behaviour is unchanged by this docstring — the gate logic below is exactly
-    as before (numeric KS/PSI ceilings, verdict-bucket fallback).
+    ⚠️ 2026-11-12 (stage step retired, operator: "There is nothing in between
+    proving edge on back testing and real money. Absolutely no steps."): this
+    gate is now ``required: false`` by default (``require_drift_clean``). A
+    model never served has no live windows; drift is a PRODUCTION monitor that
+    feeds the demote trigger in ``ml.promotion.stage_guard``, not a promotion
+    step.
     """
+    req = th.require_drift_clean
     if drift is None:
         return GateResult(
             "drift_clean", "insufficient_data",
-            "no drift report supplied (shadow-drift needs both windows populated)",
+            "no drift report supplied (shadow-drift needs both windows populated)"
+            + ("" if req else " — monitoring/demote signal, not required for promotion"),
+            required=req,
         )
     # Quantitative path: a real DriftReport carries the raw KS + PSI
     # statistics — gate on the pre-registered numeric ceilings directly so
@@ -865,7 +897,7 @@ def _gate_drift_clean(drift: Any, th: GateThresholds) -> GateResult:
             "pass" if ok else "fail",
             f"score-distribution drift KS = {float(ks):.4f} (≤ {th.max_ks}), "
             f"PSI = {float(psi):.4f} (≤ {th.max_psi})",
-            value=float(ks), threshold=th.max_ks,
+            value=float(ks), threshold=th.max_ks, required=req,
         )
     # Fallback for the dict the shadow-drift CLI emits (verdict only).
     verdict = getattr(drift, "overall_verdict", None) or drift.get("overall_verdict")  # type: ignore[union-attr]
@@ -874,6 +906,7 @@ def _gate_drift_clean(drift: Any, th: GateThresholds) -> GateResult:
         "drift_clean",
         "pass" if ok else "fail",
         f"score-distribution drift verdict = {verdict!r}",
+        required=req,
     )
 
 
@@ -890,7 +923,10 @@ def evaluate_gates(
     thresholds: GateThresholds | None = None,
     shadow_clean_count: int | None = None,
 ) -> GateReport:
-    """Evaluate the shadow→advisory promotion gates for one model.
+    """Evaluate the promotion gates into ``advisory`` (production) for one
+    model, from any pre-production stage (``candidate`` or ``shadow``) — the
+    stage step is retired (operator 2026-11-12), so only OFFLINE gates are
+    required by default.
 
     ``entry`` is a ``ml.registry.model_registry.RegistryEntry``.
     ``attribution`` is the matching ``ModelAttribution`` (or ``None``).
