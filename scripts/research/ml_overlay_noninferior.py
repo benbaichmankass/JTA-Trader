@@ -648,7 +648,8 @@ def run_refine(mode: str, name: str, legs: list[str], gate: list[str], corpus_di
             art = export_model(df.iloc[cut[0]], PRIMARY)
             pb = predict((X[cut[1]] - np.array(art["mean"])) / np.array(art["std"]), np.array(art["coef"]),
                          art["intercept"])
-            h = {**holdout, "build": False, "calibrator": isotonic_fit(pb, y[cut[1]]), "base_rate": float(y.mean())}
+            # build follows the CLI (False only with --holdout-corpus-dir); a hard False left runner holdouts empty (7e18-03)
+            h = {**holdout, "calibrator": isotonic_fit(pb, y[cut[1]]), "base_rate": float(y.mean())}
             hold = run_holdout(gate, df.iloc[cut[0]], h)
         hc = ((hold or {}).get("eval") or {}).get("calibration_refine") or {}
         ok_main = main["cal_gain_lb95"] > 0
@@ -662,7 +663,8 @@ def run_refine(mode: str, name: str, legs: list[str], gate: list[str], corpus_di
     ev = evaluate(df, res, gate_mask, rng)
     picks = res["picks"]
     top = json.loads(max(picks, key=picks.get))
-    hold = run_holdout(gate, df, {**holdout, "build": False}, cfg=top) if holdout is not None else None
+    # build follows the CLI: a hard False here left every runner nested holdout "no holdout corpus" (RQ-20261115-7e18-03)
+    hold = run_holdout(gate, df, dict(holdout), cfg=top) if holdout is not None else None
     verdict = "PASS" if ev["pass"] and (hold is None or hold["state"] == "CONFIRMS") else (
         "INDETERMINATE" if hold is not None and hold["state"] == "INDETERMINATE" else "FAIL")
     out.update(verdict=verdict, nested_eval={k: v for k, v in ev.items() if k != "folds"}, folds=ev["folds"],

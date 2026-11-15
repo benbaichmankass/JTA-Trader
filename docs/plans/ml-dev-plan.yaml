@@ -672,13 +672,14 @@ lines:
       baseline: overlay-td-v1 on the same rows; take-all; same-rate random reduce
       pass: Tier-3 artifact swap
       fail: v1 stays
+      graded: "RQ-20261115-7e18-03 (runner nested reproduction of 5785-04, RULE-RQ20261115-7e18-03-NESTED-REPRO, graded 2026-11-15 by ML-PRIMARY-4): NOT REPRODUCED -> the shipped C0.1/q0.2 stays, no V3 proposal. TD main window PASSES (a)-(e) (n_gate 1588, delta -0.0028, LB95 -0.0144, random p 0.026) but the verdict is INDETERMINATE because the holdout was never built ('no holdout corpus': --refine hard-coded build False; fixed in the same PR). Modal config C1.0/q0.1 (5 of 15, share 0.333) vs the local run's C1.0/q0.2 (4 of 15, 0.267); shipped C0.1/q0.2 picked 1 of 15. Two runs, two different modals, both shares at or below 0.33 = selection instability, so no grid config has a reproducible claim over the shipped primary. Population: TD gate legs eth_4h, xrp_4h, eth_prop, sol_prop, 2020-07..2026-10 (runner corpus n_gate 1588 vs local 1830, a corpus difference filed on ML-LINE-S3-GATE)."
     - lever: the demotion CUSUM's live join (overlay_shadow.jsonl x outcomes)
       ref: PI-20261029-XME2GXW7-0001
       baseline: n/a (instrument)
       pass: the declared demotion read becomes computable
       fail: a defect row
       graded: "BUILT (#25549, scripts/ops/overlay_cusum_join.py, weekly /ml-review check C11). FIRST READ 2026-11-15 (comms/ml-review/c11/c11-2026-11-15.json): 116 shadow rows x 501 closed trades, 23 joined, 0 ambiguous; n_reduced 1 on each real-money account (bybit_portfolio, bybit_2), S 0.0 vs H 2.0, state ok, no alarm. n=1 is no evidence; the demotion read is now computable and recurs weekly."
-  next_weeks: {W47: 'fix the 5785-03/-04 run.command (PI-20261030-0261030B-0001) and run', W48: grade, W49: CUSUM join, W50: 'first decision-level observation'}
+  next_weeks: {W47: 'nested repro graded (7e18-03 not reproduced; shipped stays)', W48: 'weekly C11 CUSUM read', W49: CUSUM join, W50: 'first decision-level observation'}
   exhaustion: its demotion read fires (CUSUM on the reduce legs' mirror net R) and no refine passes; then reduce -> annotate (Tier 3) and it iterates.
   owner: AM-ML
   plan_items: [ML-M4]
