@@ -1313,7 +1313,9 @@ def _rank_sorted(rows, key_of=lambda r: r) -> list[dict[str, Any]]:
     """Rows in the ONE display order (``work_reorder.display_key``): priority rank ascending, unranked
     last, then ``queue_pos`` (else register order), then id. ``key_of`` maps a row to its checklist shape."""
     from src.web.api.work_reorder import display_key
-    return sorted(rows, key=lambda r: display_key(key_of(r)))
+    # [:3] drops the id tiebreak: sorted() is stable, so rows with equal (rank, position) keep the
+    # register's own list order, exactly as before for rows that carry no ``_seq``.
+    return sorted(rows, key=lambda r: display_key(key_of(r))[:3])
 
 
 def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
