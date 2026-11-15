@@ -1,0 +1,472 @@
+{
+  "leg": "trend_donchian_eth_prop",
+  "label": "reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "donchian_25",
+    "baseline": "A",
+    "candidates": {
+      "donchian_15": {
+        "delta_net_r": 1.1579,
+        "delta_max_drawdown_r": -1.4438,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "donchian_25": {
+        "delta_net_r": 12.7805,
+        "delta_max_drawdown_r": -4.7497,
+        "fold_wins": 3,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "donchian_25 beats the removed-lever baseline by 12.7805 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 700,
+      "net_r": 26.7236,
+      "net_r_fee_only": 43.074,
+      "max_drawdown_r": 23.0991,
+      "by_outcome": {
+        "stop": 137,
+        "trail_stop": 529,
+        "take_profit": 33,
+        "timeout": 1
+      },
+      "mean_bars_held": 13.634,
+      "net_r_per_capital_day": 0.0672,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.8,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2021-11-11 00:00:00+00:00",
+      "data_end": "2026-11-14 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-11 00:00:00+00:00",
+          "end": "2023-02-11 11:45:00+00:00",
+          "trades": 173,
+          "net_r": 4.6923
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-11 11:45:00+00:00",
+          "end": "2024-05-13 23:30:00+00:00",
+          "trades": 183,
+          "net_r": -6.5143
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-13 23:30:00+00:00",
+          "end": "2025-08-14 11:15:00+00:00",
+          "trades": 172,
+          "net_r": 8.0188
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-14 11:15:00+00:00",
+          "end": "2026-11-14 23:00:00+00:00",
+          "trades": 172,
+          "net_r": 20.5269
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    },
+    "donchian_15": {
+      "reach_ge_6r": 0.0,
+      "n": 790,
+      "net_r": 27.8815,
+      "net_r_fee_only": 46.569,
+      "max_drawdown_r": 21.6553,
+      "by_outcome": {
+        "trail_stop": 600,
+        "stop": 153,
+        "take_profit": 36,
+        "timeout": 1
+      },
+      "mean_bars_held": 13.423,
+      "net_r_per_capital_day": 0.0631,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 15,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.8,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2021-11-11 00:00:00+00:00",
+      "data_end": "2026-11-14 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-11 00:00:00+00:00",
+          "end": "2023-02-11 11:45:00+00:00",
+          "trades": 197,
+          "net_r": 14.506
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-11 11:45:00+00:00",
+          "end": "2024-05-13 23:30:00+00:00",
+          "trades": 201,
+          "net_r": -4.786
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-13 23:30:00+00:00",
+          "end": "2025-08-14 11:15:00+00:00",
+          "trades": 196,
+          "net_r": 7.4107
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-14 11:15:00+00:00",
+          "end": "2026-11-14 23:00:00+00:00",
+          "trades": 196,
+          "net_r": 10.7515
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "15",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_15__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_15__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    },
+    "donchian_25": {
+      "reach_ge_6r": 0.0,
+      "n": 622,
+      "net_r": 39.5041,
+      "net_r_fee_only": 53.8127,
+      "max_drawdown_r": 18.3494,
+      "by_outcome": {
+        "stop": 120,
+        "trail_stop": 469,
+        "take_profit": 32,
+        "timeout": 1
+      },
+      "mean_bars_held": 13.907,
+      "net_r_per_capital_day": 0.1096,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 25,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.8,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2021-11-11 00:00:00+00:00",
+      "data_end": "2026-11-14 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-11 00:00:00+00:00",
+          "end": "2023-02-11 11:45:00+00:00",
+          "trades": 156,
+          "net_r": 9.7434
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-11 11:45:00+00:00",
+          "end": "2024-05-13 23:30:00+00:00",
+          "trades": 155,
+          "net_r": -1.855
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-13 23:30:00+00:00",
+          "end": "2025-08-14 11:15:00+00:00",
+          "trades": 155,
+          "net_r": 5.8519
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-14 11:15:00+00:00",
+          "end": "2026-11-14 23:00:00+00:00",
+          "trades": 156,
+          "net_r": 25.764
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "25",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_25__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_25__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2021-11-11 00:00:00+00:00",
+      "2023-02-11 11:45:00+00:00",
+      "2024-05-13 23:30:00+00:00",
+      "2025-08-14 11:15:00+00:00",
+      "2026-11-14 23:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "donchian_15": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "15",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_15__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_15__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ],
+      "cfg_set": {
+        "donchian": 15
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "donchian_25": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "25",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_25__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-bf1b-22/43759339326/arms/donchian_25__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ],
+      "cfg_set": {
+        "donchian": 25
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
