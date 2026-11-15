@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 regression fix (lane ML-PRIMARY, ordered by Manager Session 2026-11-14a). #26150 committed RQ-20261114-82fd-01/-02 and RQ-20261114-1ae8-01 without lands.store and routing, which failed tests/test_research_queue.py on every PR (3 structural tests + 3 w4 dispatcher dry-run tests, which fail on main and pass with this fix). Adds lands + routing per research/queue/PLANNING.md to all three; 82fd-02 (a census) becomes kind deterministic with why_not_inferential. No test loosened; no rule, threshold or window changed."
+}
