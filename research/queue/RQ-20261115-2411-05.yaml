@@ -1,0 +1,113 @@
+status: queued
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULE-RQ20261115241105-CONFIRM
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  rule: PASS/stage0_edge iff trail_mult_5.0 net R > control A net R AND trail_mult_5.0 net R > 0 AND n >= 25 AND the arm beats A in both folds AND net positive in at least 3 of the calendar years covered
+    with no single year above 50% of total net. INDETERMINATE/underpowered iff n < 25 (extend earlier, never a verdict). FAIL otherwise (closes THIS configuration on THIS window, never the lever family).
+    A PASS is a LEAD for a Tier-3 proposal NOTE on the owning checklist row, never a config edit. Thresholds not changed after any result.
+  statistic: scripts/research/exit_lever_ablation.py --grade sweep on mgc_trend_1h, arms A (config-exact) and trail_mult_5.0, window 2018-06-01 .. 2021-10-31 23:59 (entirely earlier than the discovery window,
+    which starts ~2021-11), one continuous harness pass, net of the full cost stack the harness resolves for the venue; 2 equal calendar folds. Arm fixed now, nothing re-selected. Per-year table reported
+    in the result (regime-robustness clause).
+  what_it_does_not_do: Edits no config, roster or record and places no order. One arm, one confirmation window; not a promotion case and not a P&L claim.
+id: RQ-20261115-2411-05
+intervention_controls:
+  not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself
+iteration:
+  attempt: 3
+  diagnosis: 'RQ-20261115-bf1b-10: trail_mult 5.0 vs control A +13.89 R, 3/4 folds, sibling 3.0 -24.02 R. One-factor sweep, pass is a discovery with no read outside the discovery window.'
+  due_by: '2026-11-22'
+  from_result: research/results/RQ-20261115-bf1b-10
+  levers:
+  - exit
+  map_entries:
+  - research/levers/mgc_trend_1h.yaml#levers.exit
+  search: ONE confirmation of the selected arm on pre-development history; no new arms
+  subject: mgc_trend_1h
+  subject_kind: strategy_leg
+  verdict_read: pass_unconfirmed
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: expected_n = the 25-trade floor on a ~3.4-year window (an ESTIMATE); n < 25 grades INDETERMINATE/underpowered, never FAIL.
+  design: one_sample
+  effect_units: sd
+  expected_n: 25
+  feasibility:
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.57
+  power: 0.8
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
+priority: 2
+programme: P1
+question: 'mgc_trend_1h: does the arm trail_mult_5.0 (--trail_mult=5.0), selected on the 1830 d window ending 2026-11 in RQ-20261115-bf1b-10, still beat the config-exact control A net of cost on the disjoint
+  pre-development window 2018-06-01..2021-10-31 that no selection step saw?'
+related:
+- research/queue/RQ-20261115-bf1b-10.yaml
+- scripts/research/exit_lever_ablation.py
+- research/levers/mgc_trend_1h.yaml
+roadmap:
+- L-ATM
+routing:
+  basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + 6 harness passes; same shape as RQ-20261016-077e-08 (estimate, not measured).'
+  est_minutes: 60
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads
+    no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - mgc_trend_1h
+  - --arm
+  - A=
+  - --arm
+  - trail_mult_5.0=trail_mult=5.0
+  - --days
+  - '3070'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2021-10-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '2'
+  - --fold-majority
+  - '2'
+  - --n-floor
+  - '25'
+  - --research-unit
+  - RQ-20261115-2411-05
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261115-2411-05
+  timeout_minutes: 90
+theme: live_strategy
+title: CONFIRMATION on pre-development history (2018-06..2021-10) of the sweep-selected trail_mult_5.0 arm of mgc_trend_1h, vs the config-exact control, net of the full cost stack (iteration from RQ-20261115-bf1b-10)
+value:
+  basis: stand-in planning weight from an orphan-leg iteration; an estimate, not a measurement.
+  bucket: own_losses
+  confidence: 0.2
+  usd_at_stake_per_month: 300
+why_this_matters: 'ITERATION (research-ops 2026-11-15 2247Z). RQ-20261115-bf1b-10 PASS (a discovery): trail_mult 5.0 vs control A +13.89 R, 3/4 folds; sibling arm 3.0 -24.02 R (arm denominator 3 incl. control).
+  ONE confirmation on pre-development history (RESEARCH-NO-WAIT order 1). DISCLOSURE (correlated evidence): control A was read over 2018-06..2026 by earlier mgc_trend_1h units; the pre-dev span is virgin
+  for this arm-selection step only. If dukascopy MGC history is unavailable the producer fails and the unit is INDETERMINATE (producer_failed), then the next window in order is another venue or a symbol
+  holdout. On PASS: Tier-3 proposal NOTE for the manager; on FAIL the lever response is recorded as window-specific.'
