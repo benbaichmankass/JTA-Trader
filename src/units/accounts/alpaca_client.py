@@ -1611,13 +1611,19 @@ class AlpacaClient:
                 return False, last_qty
             time.sleep(0.5)
 
-    def _escalate_not_flat(self, sym: str, confirm_s: float) -> Optional[Dict[str, Any]]:
+    def _escalate_not_flat(self, sym: str, confirm_s: float,
+                           own_order_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """The ladder for an ACCEPTED flatten that left the position open. ``None`` when this is not a wedge (no
         current resting closing-side order holds the whole position): the caller retries next tick and the
         naked-protection sweep restores any missing stop. Otherwise, in this call: rung 2 (reprice the current
         take-profit marketable; with the stop already gone it moves alone), then rung 3 (PAPER: documented close-all
         + the caller's account_reset journal sweep; LIVE: one red flag, never close-all). Returns a success envelope
-        (``retCode 0`` with ``result.scope``) or ``{"retCode": 1, "marker": "[...]"}`` naming what was tried."""
+        (``retCode 0`` with ``result.scope``) or ``{"retCode": 1, "marker": "[...]"}`` naming what was tried.
+
+        The order THIS close attempt just placed (``own_order_id``) and any resting MARKET order are never holders:
+        a slow paper fill of our own flatten is not a wedge (alpaca_paper USO 2026-11-16 14:32Z: the 6s confirm
+        timed out, our own DAY market sell was counted as the holder and rung 3 closed the whole paper account).
+        A true wedge holder is an older OCO limit/stop leg."""
         pos = self.position_quote(sym)
         if pos.get("state") != "open" or not pos.get("qty"):
             return None
@@ -1630,6 +1636,10 @@ class AlpacaClient:
             try:
                 oqty = abs(float(o.get("qty") or 0))
             except (TypeError, ValueError):
+                continue
+            if own_order_id and str(o.get("id") or "") == str(own_order_id):
+                continue
+            if str(o.get("type") or o.get("order_type") or "").lower() == "market":
                 continue
             if (str(o.get("side") or "").lower() == close_side
                     and str(o.get("status") or "").lower() in _RESTING_LEG_STATUSES
@@ -2158,7 +2168,7 @@ class AlpacaClient:
                 elif _scope == "account_reset":
                     esc = None
                 else:
-                    esc = self._escalate_not_flat(sym, confirm_s)
+                    esc = self._escalate_not_flat(sym, confirm_s, (env.get("result") or {}).get("id"))
                 if esc is not None and esc.get("retCode") == 0:
                     env = esc
                 else:
