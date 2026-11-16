@@ -1,0 +1,355 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_paper",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "tighten"
+   ],
+   "evidence": "alpaca_orders: SL 142.93 / TP 155.3, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "mechanics": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "long",
+    "order_package_id": "pkg-0bd9f0c6207a47e6",
+    "symbol": "QQQ"
+   },
+   {
+    "direction": "long",
+    "order_package_id": "pkg-4072f8c16bb743b4",
+    "symbol": "SOLUSDT"
+   },
+   {
+    "direction": "long",
+    "order_package_id": "pkg-a77b23af142c4697",
+    "symbol": "XRPUSDT"
+   }
+  ],
+  "direction": "long",
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": null,
+  "previous_review": {
+   "action": "hold",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.bars_ohlc 16:00 bar low 144.58, 17:00 close 145.025",
+     "chart.swings highs 146.99",
+     "htf adx 29.96 up",
+     "exit_plan sl 142.93 tp 155.30",
+     "context.previous_review forecast target 148.9 inv 144.0"
+    ],
+    "horizon_bars": 6,
+    "invalidation_px": 144.0,
+    "p_target": 0.3,
+    "target_px": 148.9,
+    "thesis": "1h broke 145.0 and is retesting it from above while 1d is still up (ADX 30); I expect continuation to 148.9 if 144.58 holds, but the giveback to the breakout level lowers the odds",
+    "timeframe": "1h"
+   },
+   "reason": "Hold. Prior forecast (14:56Z: target 148.9, inv 144.0, p 0.35, 8x1h) is unresolved and not invalidated: low since then 144.58, above 144.0, high 146.99 (target not traded). Position has given back from +0.64R peak to -0.13R (1h bars 146.99 -> 144.58 -> 145.03), the structure flipped from a clean break of 145.0 to a retest of it, and the stop 142.93 (0.87R away) is under the 143.61 swing high. Hol\u2026",
+   "review_id": "LR-20261113T1824Z-pkg-ccd62bd7265a4e33",
+   "reviewed_at": "2026-11-13T18:33:00Z",
+   "route": null
+  },
+  "symbol": "USO"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "short",
+    "mgc_pullback_1d",
+    2.92
+   ],
+   [
+    "MGC",
+    "short",
+    "mgc_trend_1h",
+    -0.62
+   ],
+   [
+    "SOLUSDT",
+    "short",
+    "sol_pullback_2h",
+    0.439
+   ],
+   [
+    "QQQ",
+    "long",
+    "qqq_pullback_1h",
+    0.157
+   ],
+   [
+    "AVAXUSDT",
+    "short",
+    "trend_donchian_avax_4h",
+    0.0458
+   ],
+   [
+    "SLV",
+    "short",
+    "slv_trend_1h",
+    1.88
+   ],
+   [
+    "AVAXUSDT",
+    "short",
+    "avax_pullback_2h",
+    0.354
+   ],
+   [
+    "SOLUSDT",
+    "long",
+    "ict_scalp_sol_15m",
+    -0.413
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "trend_donchian_eth_4h",
+    2.97
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "trend_donchian_ada_4h",
+    -0.261
+   ],
+   [
+    "ADAUSDT",
+    "short",
+    "ada_pullback_2h",
+    0.209
+   ],
+   [
+    "MHG",
+    "short",
+    "mhg_pullback_1d",
+    1.76
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "eth_pullback_2h",
+    0.112
+   ],
+   [
+    "SLV",
+    "short",
+    "slv_trend_1h",
+    0.752
+   ],
+   [
+    "XRPUSDT",
+    "long",
+    "ict_scalp_xrp_15m",
+    -0.662
+   ],
+   [
+    "GLD",
+    "short",
+    "gld_pullback_1d",
+    1.06
+   ],
+   [
+    "BTCUSDT",
+    "short",
+    "trend_donchian_1h",
+    0.0405
+   ],
+   [
+    "IAUM",
+    "short",
+    "iaum_pullback_1d",
+    1.15
+   ],
+   [
+    "GDX",
+    "short",
+    "gdx_pullback_1d",
+    0.695
+   ],
+   [
+    "ETHUSDT",
+    "short",
+    "eth_pullback_prop_2h",
+    0.106
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": 145.37,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": 142.926,
+   "tp_now": 155.297
+  },
+  "htf": null,
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": 0.32654310344827586,
+     "backtest_n": 58,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_LIVE_TRADES",
+     "why": "no closed trade with an R basis on this book"
+    },
+    {
+     "backtest_expectancy_r": 0.32654310344827586,
+     "backtest_n": 58,
+     "book": "mirror",
+     "closed": 11,
+     "live_percentile": 71.7,
+     "live_r": 7.0785,
+     "p5": -6.805,
+     "p50": 3.247,
+     "p95": 14.6526,
+     "r_trades": 11,
+     "verdict": "CONSISTENT",
+     "why": null
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 6,
+  "giveback_r": 1.4565,
+  "open_r": -0.7937,
+  "peak_r": 0.6628,
+  "r_to_stop": 0.2063,
+  "r_to_target": 4.8551
+ },
+ "generator": {
+  "head": "d7699a86b8",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-16T13:05:03Z",
+ "leg": "uso_trend_1h",
+ "mechanics": {
+  "evidence": "package sl 142.92571429 / tp 155.29714286 agree with every readable account",
+  "per_account": {
+   "alpaca_paper": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "package timeframe not recorded in meta"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.news",
+   "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no higher timeframe mapped for None"
+  }
+ ],
+ "order_package_id": "pkg-ccd62bd7265a4e33",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "priced_options",
+    "reason": "could_not_price"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   }
+  ],
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "could_not_price",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": null
+ },
+ "review_id": "LR-20261116T1305Z-pkg-ccd62bd7265a4e33",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 9,
+  "giveback_r": 1.4565,
+  "open_r": -0.7937,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6628,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 142.92571429,
+  "tp": 155.29714286
+ }
+}
