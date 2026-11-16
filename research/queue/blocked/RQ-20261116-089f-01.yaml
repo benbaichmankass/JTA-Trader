@@ -1,0 +1,126 @@
+id: RQ-20261116-089f-01
+title: 'CJ-4 blind-source label validation: does the blind post-trade grade (Sonnet, mask-v1) rank-predict realised net R on the 707 journal-joined closed
+  crypto trades, and does it beat the strategy''s own confidence on the same trades?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- M25
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'none: house-specific; instantiates docs/plans/ml-claude-distillation-DESIGN.md section 3.3 (operator-approved label-validation rule),
+  no external precedent applies'
+levers:
+- name: judgment_field
+  values:
+  - grade_score (primary, declared)
+  - expected_r (secondary, reported not gating)
+  hypothesised_effect: IC > 0 with the 95% CI lower bound > 0
+- name: source_pooling
+  values:
+  - pool prompt_sha within (author_kind, model_id, mask_version) (primary, declared)
+  - per-prompt_sha strata (sensitivity)
+  hypothesised_effect: 'no change. DECLARED DEVIATION from design 3.3 (source = tuple incl. prompt_sha): the 707 rows carry 14 distinct prompt_sha, 13 of
+    them single-shard backfill batches of 47-48 rows and one of 128 (MEASURED), so the literal per-sha reading can NEVER reach n >= 150 and the unit would
+    be INDETERMINATE by construction. The pooled reading is registered here before any run; the per-sha strata are reported so a source whose IC differs
+    is visible.'
+question: 'The claude_judgments dataset holds 707 blind grades (one per distinct closed single-leg crypto trade, decision_ts 2026-07-01..2026-11-11, judged
+  2026-10-26..11-11, MEASURED: comms/claude_judgments/blind_grades.jsonl) and 707 revealed grades. Per ml-claude-distillation-DESIGN section 3.3 a T0 label
+  source must show out-of-sample rank IC between the judgment and realised NET R > 0 (95% CI excludes 0, n >= 150 distinct trades) AND beat the strategy
+  confidence IC on the same trades before any student manifest may target it. On each trade take the blind row''s `grade_score` (ordinal, 5 distinct values)
+  and, separately, `expected_r` (continuous) as the judgment; net R = the journal closed-trade net R with the PACKAGE initial stop as the risk basis (src.runtime.net_r_label
+  via the claude_judgments family builder, label_net_r). Does the judgment rank-predict net R, and by more than strategy confidence does?'
+why_this_matters: 'This is the first link of the teacher -> student chain (CJ-3 -> CJ-4 -> CJ-5 -> DESK-19) and the chain has been stalled since 2026-10-26.
+  A PASS qualifies the blind source and unlocks the student manifests (CJ-5): an entry/in-trade model that imitates Claude''s judgment at zero inference
+  cost. A FAIL closes the chain cheaply (design section 8: "we have learned it cheaply and stop"), stops the $3/week backfill spend on a source that adds
+  nothing, and tells us the LTR/desk judgment is not a training signal for any model. The only prior is the n=50 pilot: blind expected_r vs net R Spearman
+  -0.12 [-0.38, +0.17] (CJ-3 row, MEASURED).'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 707
+  min_detectable_effect: 0.11
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, derived here: SE of a Spearman rho is about 1/sqrt(n-3) = 0.0377 at n = 707, so the 80%-power two-sided MDE is (1.96 + 0.84) x 0.0377
+    = 0.106 (registered 0.11). Trades are NOT independent (same leg, overlapping weeks), so the realised effective n is smaller: the result carries a leg-week
+    cluster bootstrap CI beside the analytic one and the PASS test uses the WIDER. The beat-confidence clause is a paired IC difference whose sd is not
+    derived here (declared, not computed); if the paired-difference CI half-width exceeds 0.12 the beat-confidence clause is INDETERMINATE, not PASS.'
+  feasibility:
+    source: none
+    accrual_basis: 'Nothing accrues: 707 blind rows and their journal outcomes already exist. The n is the distinct-trade count after the journal join;
+      the population report line of the claude_judgments build states it.'
+decision_rule:
+  id: RULE-RQ20261116-089f-01-BLIND-VALIDATION
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  baseline: 'Strategy confidence on the SAME trades: the order package `confidence` (decision-time, in the claude_judgments FEATURE columns). A source that
+    does not beat it adds nothing (design 3.3).'
+  statistic: Spearman rho(grade_score, label_net_r) over distinct closed trades whose journal net R is computable, rows with pre_cutoff true excluded. Also
+    rho(confidence, label_net_r) and the paired difference rho_judgment - rho_confidence with a 2000-draw leg-week cluster bootstrap 95% CI. Revealed grades
+    (T1) are reported against the NEXT-k same-leg trades as a non-gating control, per design 3.3 T1.
+  rule: 'PASS iff n distinct trades >= 150 AND rho(grade_score, net R) > 0 with the lower bound of the WIDER of the analytic and cluster-bootstrap 95% CIs
+    > 0 AND the paired difference rho_judgment - rho_confidence has a lower 95% bound > 0. FAIL iff n >= 150 AND (rho <= 0 OR the upper 95% bound of rho
+    < 0.05 OR the paired difference point estimate <= 0). INDETERMINATE otherwise (including n < 150 after the join). Net R is net of the full cost stack
+    by construction of label_net_r. Thresholds are not changed after any result. The pre_cutoff handling is declared: every row has pre_cutoff = null (MEASURED),
+    so the unit applies ONE rule to all of them: a row is kept iff decision_ts is after 2026-06-30 (the judge model''s stated knowledge cutoff, ESTIMATED:
+    the model''s own statement, not a vendor record); the earliest decision_ts is 2026-07-01T14:10Z, so the rule excludes 0 rows if the statement is right,
+    and the result states that count.'
+  pass_action: Write comms/claude_judgments/qualified.json with the blind source key (author_kind llm, model_id, mask-v1, rubric version) and verdict, then
+    the manager takes CJ-5 student manifests off blocked. A student is still graded on take/skip lift over take-all and over the confidence-only control
+    (design table 4.5).
+  fail_action: Record FAIL for the blind source, retire CJ-5 / DESK-19 student work for the blind-grade label, and bring the operator the weekly $3 backfill
+    cap as a spend question (the backfill buys a label that does not predict net R). LTR reviews stay as a decision aid for open trades; they are not a
+    training signal.
+  what_it_does_not_do: 'Trains no model, changes no config and no served artifact. Not a live feature test: Claude output as a live entry feature is the
+    operator''s later-only path (Q2, 2026-10-25). It tests the judgment against net R only; a student''s selection lift is CJ-5''s test. The judge could
+    not see post-decision data (blind, T0 by construction) but may know remembered price action; the mask (symbol, dates, absolute prices) is mask-v1 and
+    its adequacy is not tested here.'
+  min_n: 150 distinct closed trades after the journal join
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: the decision it changes is whether a real-money entry/teacher chain is refit or retired.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: replay on published klines; no trainer-resident data.
+  basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
+blocked_on:
+- what: 'The instrument: a script that reads the claude_judgments build output (or runs the family builder against the VM/trainer journal), computes the
+    registered statistics and writes a verdict.json. The family builder joins net R from trade_journal.db, which is NOT in the repo: a local run of python
+    -m ml.datasets.families.claude_judgments excludes all 707 blind rows as outcome_unjoined_no_journal (MEASURED 2026-11-16, journal absent), and the committed
+    comms/live_review/outcomes.jsonl joins only 51 of the 707 blind trades (MEASURED), so it must run where the journal is (trainer sync copy or a diag-token
+    journal read).'
+  ref: CML-HARNESS
+  kind: work_item
+  clears_when: row CML-HARNESS closes with scripts/research/cj4_blind_validation.py committed, a --self-test passing, and a run host named that holds the
+    journal; then git mv this file to research/queue/ and fill run.workflow, run.command and lands.store.
+run:
+  workflow: null
+  note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
+    lands.store when the harness row closes.'
+ml_consumer:
+  consumer: CJ-5-STUDENT-MANIFESTS
+  decision: whether any student model may target the blind grade as a label (qualified.json); no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- CJ-3-BLIND-GRADE-PILOT
+- CJ-4-LABEL-VALIDATION
+- CJ-5-STUDENT-MANIFESTS
+- DESK-19-STUDENT-HANDOFF
+- CJ-7-BACKFILL-SCOPE

@@ -1,0 +1,125 @@
+id: RQ-20261116-089f-03
+title: 'LTR -> ENTRY structure: is the best entry bracket (SL/TP in ATR) state-dependent? Does choosing among {2/3, 3/4.5, 4/6} ATR by entry-time (side
+  x ATR-percentile tercile) cell, selected on dev folds only, beat the static 2/3 bracket on the pooled ml_entry population, net of each symbol''s own cost
+  stack?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- M25
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'none: house-specific; motivated by the repo''s own fold split of RQ-20261112-4654-03, no external source read for this unit'
+levers:
+- name: bracket_by_cell
+  values:
+  - static 2/3
+  - best static on dev
+  - cell-conditional choice among {2/3, 3/4.5, 4/6}
+  hypothesised_effect: the conditional rule beats BOTH statics by >= +0.03 R/decision (the 4654-03 bar) in >= 5 of the 7 gradeable folds
+- name: cell_definition
+  values:
+  - side x ATR-percentile tercile (fixed on dev)
+  hypothesised_effect: fixed, not swept (declared); a finer cell is a different unit
+question: 'Global bracket geometry has been tested and is not the lever: RQ-20261112-4654-03 (wider 3/4.5 and 4/6 vs 2/3): FAIL, dev mean net R -0.0311
+  (n 30699), delta +0.0102 and +0.0150 against a +0.03 bar, better in 4/8 folds (bar 6) (MEASURED, research/results/RQ-20261112-4654-03). A fold split of
+  4/8 with a positive mean says the sign of the effect may depend on state rather than that there is no effect. The LTR record points the same way: its
+  tighten / close calls are conditional (stall beats a 24 h time exit by +0.25 R, n 3; adverse_r closes lose to random: LTR-CLOSE-AUDIT 2026-11-16, descriptive,
+  n 1-3 per trigger). So: with the ENTRY decisions, take-everything-the-served-model-takes held fixed, per cell c = (side, atr_pct tercile fixed on the
+  first fold), choose the bracket in {2/3, 3/4.5, 4/6} with the highest mean net R in c over the folds BEFORE the graded fold (expanding window, minimum
+  400 decisions per cell else keep 2/3), and grade the graded fold at actual net R; fold 1 is burn-in, so 7 folds are gradeable. No fold is graded on data
+  used to choose its own cells. Compare with static 2/3 and with the best static single bracket picked on dev (so a conditional rule must beat dev-selection
+  of a global bracket too).'
+why_this_matters: 'ml_entry (Foxhound-1) trades bybit_2 (real money), its mirror and three prop books with a fixed 2/3 ATR bracket. Bracket width changes
+  cost per R (cost is charged in R: wider means fewer R of cost), so a state-conditional geometry is a zero-model-cost change if it holds. If the cells
+  do not generalise, the structure side of the LTR -> entry link is closed: the dynamic-SL series (c692-08..14), MANAGE (c692-03) and the global bracket
+  (b601-01, 4654-03) already cover the rest of it, and this unit exists to avoid duplicating them while testing the one thing they did not (a state-conditional
+  choice).'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 7
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.02
+  design: paired
+  alpha: 0.05
+  power: 0.5
+  basis: 'ESTIMATE, weak: the 4654-03 grid has 8 dev folds (7 gradeable walk-forward here) and a +0.03 bar; the per-fold delta sd is not recorded in the
+    verdict note, so sd 0.02 is a placeholder DECLARED as such and is re-measured from the per-fold deltas in the result. Power is stated at 0.5 (not 0.8)
+    because 7 folds cannot give 80% power for a 0.03 effect at a per-fold sd above ~0.015; the verdict rule is therefore a fold-count + sign rule (below),
+    and the unit is INDETERMINATE if fewer than 5 gradeable folds have >= 400 prior decisions in every cell.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the dev table already built by scripts/research/ml_entry_cost_levers.py (Binance USD-M klines, per-symbol cost stack); nothing
+      accrues.
+decision_rule:
+  id: RULE-RQ20261116-089f-03-BRACKET-BY-CELL
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  baseline: Static 2/3 ATR (the served bracket) and the best static bracket chosen on the dev window.
+  statistic: 'per gradeable fold (walk-forward): mean net R per taken decision for the conditional rule minus static 2/3 and minus best-static; fold-win
+    count; pooled delta with a fold-block bootstrap 95% CI; cell choices and their dev sample sizes.'
+  rule: 'PASS iff (delta vs static 2/3) >= +0.03 AND (delta vs best-static) > 0 AND the conditional rule wins vs static 2/3 in >= 5 of 7 gradeable folds
+    AND the lower bound of the fold-block bootstrap 95% CI of the delta vs static 2/3 is > 0. FAIL iff delta vs static 2/3 < +0.03 OR wins < 3 of 7 gradeable
+    folds. INDETERMINATE otherwise. Net of the full cost stack. Thresholds are not changed after any result. The graded folds are the 8 dev folds of 4654-03
+    (declared: those folds were read once by the global-bracket grid, so this is a second read and is reported deflated for read 2). It is a DEV-stage read;
+    a PASS earns a forward confirmation, never a proposal on its own.'
+  pass_action: 'Note on ML-ENTRY-FINETUNE: a Tier-3 proposal candidate for a state-conditional bracket, plus a confirmation unit on a forward window after
+    2026-11.'
+  fail_action: Record FAIL; close the state-conditional bracket lever for ml_entry. The structure half of LTR -> entry is then fully covered by the existing
+    dynamic-SL / MANAGE / global-bracket units, all FAIL.
+  what_it_does_not_do: Changes no bracket, config or served model. Uses entry-time cells only (no in-trade information, no LTR output). Sizing is untouched.
+  min_n: 5 gradeable folds with >= 400 prior decisions in every cell
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: the decision it changes is whether a real-money entry/teacher chain is refit or retired.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: replay on published klines; no trainer-resident data.
+  basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
+blocked_on:
+- what: 'Harness: a bracket_cond lever in scripts/research/ml_entry_cost_levers.py (today --lever choices are tau and bracket only, MEASURED line 238).
+    The dev table, folds and cost stack already exist there.'
+  ref: CML-HARNESS
+  kind: work_item
+  clears_when: row CML-HARNESS closes with the bracket_cond lever committed and the script --self-test passing.
+run:
+  workflow: null
+  note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
+    lands.store when the harness row closes.'
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether the ml_entry bracket becomes state-conditional; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-4654-03
+- RQ-20261101-b601-01
+- RQ-20261105-c692-08
+- RQ-20261105-c692-09
+- RQ-20261105-c692-10
+- ML-ENTRY-DYNAMIC-SL
+- ML-ENTRY-FINETUNE
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    note: same number of decisions per fold taken at random with a random bracket from the same three (reported, not gating; the registered rule is unchanged)
+  best_static:
+    grid:
+    - served tau, served 2/3 ATR bracket
+    excludes_test_folds: true
+  bootstrap_group: window
