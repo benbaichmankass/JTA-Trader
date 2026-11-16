@@ -6,15 +6,12 @@ failed re-select leaves the original LookupError so the failure streak / single 
 No halt, no new gate."""
 from __future__ import annotations
 
-import io
 import json
-from contextlib import redirect_stdout
 from typing import Any, Dict, List
 
 import pytest
 
 from scripts.prop import prop_executor_tick as tick
-from src.prop.platform import dxtrade
 from src.prop.platform.dxtrade import DXtradeAdapter
 from tests.test_prop_instrument_info_probe import browser  # noqa: F401  (fixture reuse)
 
@@ -108,7 +105,7 @@ def test_the_tick_emits_the_event_and_a_recovered_alert_once(capsys):
     tick.emit_workspace_events(a)
     tick.emit_workspace_events(a)                              # drained: nothing twice
     lines = [json.loads(x) for x in capsys.readouterr().out.splitlines() if x.strip()]
-    assert [next(iter(l)) for l in lines] == ["action", "alert"]
+    assert [next(iter(ln)) for ln in lines] == ["action", "alert"]
     assert lines[0]["action"]["what"] == "workspace_reselect" and "re-selected" in lines[1]["alert"]
 
 
@@ -118,7 +115,7 @@ def test_the_tick_emits_the_refusal_without_a_recovered_alert(capsys):
         a.read_positions(None)
     tick.emit_workspace_events(a)
     lines = [json.loads(x) for x in capsys.readouterr().out.splitlines() if x.strip()]
-    assert [next(iter(l)) for l in lines] == ["action"] and "need exactly 1" in lines[0]["action"]["refused"]
+    assert [next(iter(ln)) for ln in lines] == ["action"] and "need exactly 1" in lines[0]["action"]["refused"]
 
 
 def test_a_non_dxtrade_adapter_without_the_hook_is_harmless(capsys):
