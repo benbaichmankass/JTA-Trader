@@ -278,7 +278,7 @@ def cond_decisions(base_preds, tables: dict[str, pd.DataFrame], keys: list[str],
     return t, {"n_taken_base": n0, "n_dropped_missing_in_alt_table": dropped, "atr_pct_edges": list(edges)}
 
 
-def run_bracket_cond(a, cache, pop_ok, ref_ok, costs, base_sc, base_preds, t0) -> dict:
+def run_bracket_cond(cache, pop_ok, ref_ok, costs, base_sc, base_preds) -> dict:
     keys = [bkey(*b) for b in COND_BRACKETS]
     static = keys[0]
     tables = {static: base_sc}
@@ -311,7 +311,7 @@ def run(a) -> int:
     base_preds = fold_predictions(base_sc)
     base = score(base_preds, BASE_TAU)
     if a.lever == "bracket_cond":
-        bc = run_bracket_cond(a, cache, pop_ok, ref_ok, costs, base_sc, base_preds, t0)
+        bc = run_bracket_cond(cache, pop_ok, ref_ok, costs, base_sc, base_preds)
         v = bc["verdict"]
         verdict = {"PASS": "pass", "FAIL": "fail"}.get(v["call"], "indeterminate")
         note = f"bracket_cond: {v['call']} | {v['why']} | mean net R cond {v['mean_net_r']['cond']:.4f} static {v['mean_net_r']['static']:.4f} " \
