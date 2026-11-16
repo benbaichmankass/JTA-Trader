@@ -2,7 +2,7 @@ id: RQ-20261116-089f-03
 title: 'LTR -> ENTRY structure: is the best entry bracket (SL/TP in ATR) state-dependent? Does choosing among {2/3, 3/4.5, 4/6} ATR by entry-time (side
   x ATR-percentile tercile) cell, selected on dev folds only, beat the static 2/3 bracket on the pooled ml_entry population, net of each symbol''s own cost
   stack?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -86,16 +86,29 @@ routing:
   est_minutes: 120
   why_runner: replay on published klines; no trainer-resident data.
   basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
-blocked_on:
-- what: 'Harness: a bracket_cond lever in scripts/research/ml_entry_cost_levers.py (today --lever choices are tau and bracket only, MEASURED line 238).
-    The dev table, folds and cost stack already exist there.'
-  ref: CML-HARNESS
-  kind: work_item
-  clears_when: row CML-HARNESS closes with the bracket_cond lever committed and the script --self-test passing.
 run:
-  workflow: null
-  note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
-    lands.store when the harness row closes.'
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_cost_levers.py
+  - run
+  - --lever
+  - bracket_cond
+  - --cache
+  - /tmp/ml_entry_cost_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --rule-id
+  - RULE-RQ20261116-089f-03-BRACKET-BY-CELL
+  - --registered-at
+  - '2026-11-16'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261116-089f-03
 ml_consumer:
   consumer: src/units/strategies/ml_entry.py
   decision: whether the ml_entry bracket becomes state-conditional; no change from this unit
