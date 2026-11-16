@@ -673,14 +673,25 @@ lines:
       pass: Tier-3 artifact swap
       fail: v1 stays
       graded: "RQ-20261115-7e18-03 (runner nested reproduction of 5785-04, RULE-RQ20261115-7e18-03-NESTED-REPRO, graded 2026-11-15 by ML-PRIMARY-4): NOT REPRODUCED -> the shipped C0.1/q0.2 stays, no V3 proposal. TD main window PASSES (a)-(e) (n_gate 1588, delta -0.0028, LB95 -0.0144, random p 0.026) but the verdict is INDETERMINATE because the holdout was never built ('no holdout corpus': --refine hard-coded build False; fixed in the same PR). Modal config C1.0/q0.1 (5 of 15, share 0.333) vs the local run's C1.0/q0.2 (4 of 15, 0.267); shipped C0.1/q0.2 picked 1 of 15. Two runs, two different modals, both shares at or below 0.33 = selection instability, so no grid config has a reproducible claim over the shipped primary. Population: TD gate legs eth_4h, xrp_4h, eth_prop, sol_prop, 2020-07..2026-10 (runner corpus n_gate 1588 vs local 1830, a corpus difference filed on ML-LINE-S3-GATE)."
-    - lever: the demotion CUSUM's live join (overlay_shadow.jsonl x outcomes)
+    - lever: spot-proxy larger holdout (diagnosis)
+      ref: RQ-20261029-5785-05
+      baseline: take-all on the same trades
+      pass: supporting evidence
+      fail: iteration input (operator 2026-11-16)
+      graded: 'FAIL as DIAGNOSIS, 2026-11-16 (run 43777436598): TD spot holdout 2017-09..2019-11 n 424, dR -0.0214, LB95 -0.052, random p 0.307; the reduced trades average +0.21 R vs +0.31 take-all (it halves profitable trades). Caveat: refit, not the shipped artifact. Operator ~06:30Z: live models stay trading; this seeds the challenger below.'
+    - lever: CHALLENGER, EV-thresholded reduce (cut only where predicted net R < 0)
+      ref: RQ-20261116-cc86-01
+      baseline: the live shipped overlay_td.json, paired on the same holdout trades (spot 2017-09..2020-06 + perp 2019-12..2020-06)
+      pass: 'Tier-3 swap proposal: overlay_td v2 replaces Beagle-1'
+      fail: iteration input; Beagle-1 keeps trading
+    - lever: the CUSUM's live join (overlay_shadow.jsonl x outcomes), an iteration read
       ref: PI-20261029-XME2GXW7-0001
       baseline: n/a (instrument)
-      pass: the declared demotion read becomes computable
+      pass: the weekly iteration read becomes computable (an alarm seeds a challenger)
       fail: a defect row
       graded: "BUILT (#25549, scripts/ops/overlay_cusum_join.py, weekly /ml-review check C11). FIRST READ 2026-11-15 (comms/ml-review/c11/c11-2026-11-15.json): 116 shadow rows x 501 closed trades, 23 joined, 0 ambiguous; n_reduced 1 on each real-money account (bybit_portfolio, bybit_2), S 0.0 vs H 2.0, state ok, no alarm. n=1 is no evidence; the demotion read is now computable and recurs weekly."
   next_weeks: {W47: 'nested repro graded (7e18-03 not reproduced; shipped stays)', W48: 'weekly C11 CUSUM read', W49: CUSUM join, W50: 'first decision-level observation'}
-  exhaustion: its demotion read fires (CUSUM on the reduce legs' mirror net R) and no refine passes; then reduce -> annotate (Tier 3) and it iterates.
+  exhaustion: 'none while live (operator 2026-11-16, drift-remediation § "A live model is the baseline"): Beagle-1 is the LIVE BASELINE and trades until a challenger beats it on a registered paired test. A CUSUM alarm or a holdout FAIL is an iteration input that seeds the next challenger, never a demotion.'
   owner: AM-ML
   plan_items: [ML-M4]
 

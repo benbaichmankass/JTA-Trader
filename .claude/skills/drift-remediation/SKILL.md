@@ -17,6 +17,22 @@ testing, live money, and then if it gets demoted, it soaks to still generate dat
 while we iterate on it. That is the only acceptable flow. There is nothing in between
 proving edge on back testing and real money. Absolutely no steps."*).
 
+## A live model is the baseline: it trades until a challenger beats it (operator, 2026-11-16, binding)
+
+Operator, 2026-11-16 ~06:30Z, verbatim: *"We need to have an ML that is live on every step of the decision, and from that is
+the baseline, and then we are iterating. We're improving them and making them better. Everything stays trading until we make
+something better to switch it out with. So we shouldn't be focusing on tests that demote live MLs as much as we should be
+focusing on the iterative process."* This section is the canonical home of that rule; other skills point here.
+
+- **Every decision slot keeps a live baseline ML.** A slot with no live ML first gets a cheap baseline live (do-not-lose-money
+  bar), then iterates.
+- **A live model stays trading until a challenger beats it** on a registered test: same corpus, same cost stack, same
+  holdouts, paired against the live model. The swap is the operator's question (data-backed Tier 3).
+- **A holdout or replay FAIL on a live model is an ITERATION INPUT (a diagnosis), never a demotion proposal.** A registered
+  consequence on a live model reads "FAIL -> iteration input", never "demotion input". Write the next challenger from it.
+- **The operator is asked only about** a challenger swap that passed, or genuine money-at-risk safety (step 5 below: actively
+  harmful now, with no replacement ready).
+
 ## The one rule
 
 A demote proposal from the daily report is a **trigger to diagnose, not an

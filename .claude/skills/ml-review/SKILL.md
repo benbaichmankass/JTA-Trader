@@ -104,7 +104,7 @@ footnote again (diagnosis § 2, "Checks actually run").
 | **C8** | **Concentration (aggregate model risk)** | `python3 scripts/ops/ml_plan_status.py --diversity`, plus from C3: how many advisory heads share one target/family/data source | registry; open family-tagged plan items | `CONCENTRATION` / `FAIL-STREAK`; all advisory heads on one target; a (symbol, target, timeframe) cell with > 3 nightly manifests (ML-PROGRAMME § 3.2 cap) |
 | **C9** | **Research landed + backlog population** | `git log --since=<last record> -- research/results comms/research`, filtered to ML plan refs; per result, the unit's `decision_rule` applied by `research_disposition.py --record` (research-ops grades; you read). Backlog: the pipeline population defined in § "Backlog drain" | results since the last record; the open ML pipeline rows | a result with no disposition; a unit `blocked` across 2 reviews (raise it, do not re-file); `count_untriaged > 0` |
 | **C10** | **DSR probation** (standing metric, never a gate) | `python3 scripts/research/dsr_probation.py`, read for the ML legs (e.g. `ml_entry`) | production ML legs | DSR ≤ 0.95 = probation: the leg keeps trading and must have a live iteration unit toward a DSR-proof version; `not_computed` is `could_not_look` |
-| **C11** | **Real-money overlay: what it resized + its demotion CUSUM** (a review step, never a gate; manager 2026-11-12) | pull `log_file?name=overlay_shadow` and `journal?table=trades` (page limit≤30) in one batched diag relay, then `python3 scripts/ops/overlay_cusum_join.py --shadow <log> --trades <pages…> --cusum`, once per `mode: reduce` account in `config/overlay_policy.yaml` (re-parse it; never quote the leg list) · journal grep `overlay_reduce` for applied resizes | every leg `config/overlay_policy.yaml` sets `mode: reduce`, per account carrying it, real money first; state the joined / ambiguous counts | a CUSUM alarm (S ≥ H) on any real-money account = a demotion proposal (Tier 3, to the manager); `no_reduced_trades` is `ok` (state n=0, never a pass); a would-be reduce (multiplier < 1.0 in the shadow log) on a `reduce` leg with no `overlay_reduce` journal line = a wiring finding |
+| **C11** | **Real-money overlay: what it resized + its demotion CUSUM** (a review step, never a gate; manager 2026-11-12) | pull `log_file?name=overlay_shadow` and `journal?table=trades` (page limit≤30) in one batched diag relay, then `python3 scripts/ops/overlay_cusum_join.py --shadow <log> --trades <pages…> --cusum`, once per `mode: reduce` account in `config/overlay_policy.yaml` (re-parse it; never quote the leg list) · journal grep `overlay_reduce` for applied resizes | every leg `config/overlay_policy.yaml` sets `mode: reduce`, per account carrying it, real money first; state the joined / ambiguous counts | a CUSUM alarm (S ≥ H) on any real-money account = an ITERATION INPUT: author a challenger from it (the overlay stays live; drift-remediation § "A live model is the baseline"; a demotion goes to the operator only as genuine money-at-risk safety); `no_reduced_trades` is `ok` (state n=0, never a pass); a would-be reduce (multiplier < 1.0 in the shadow log) on a `reduce` leg with no `overlay_reduce` journal line = a wiring finding |
 
 **The trainer block (one batched trainer-vm-diag issue, label `trainer-vm-diag-request`):**
 
@@ -263,8 +263,11 @@ Priority `high` only if an advisory head is decaying on labelled data.
 
 ---
 
-## Lifecycle rules (unchanged in substance; they feed C1/C5/C6 and the stages question)
+## Lifecycle rules (they feed C1/C5/C6 and the stages question)
 
+- **Live baseline + challenger (operator, 2026-11-16, binding):** every decision slot keeps a live baseline ML that trades until
+  a challenger beats it on a registered paired test; a FAIL on a live model is an iteration input, never a demotion proposal.
+  Canonical text and verbatim quote: [`drift-remediation` § "A live model is the baseline"](../drift-remediation/SKILL.md).
 - **Three stage labels, no ladder** — `candidate` · `shadow` · `advisory`. Normalize legacy names with
   `ml.manifest.canonical_stage` and report the canonical stage. A model whose committed offline evidence clears the gates goes
   `candidate → advisory` directly; `shadow` holds only a model DEMOTED from `advisory`, soaking to keep generating data while it is
@@ -272,8 +275,9 @@ Priority `high` only if an advisory head is decaying on labelled data.
   flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the
   only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*
 - **Refine, do not abandon** ([`docs/claude/model-refinement-lifecycle.md`](../../../docs/claude/model-refinement-lifecycle.md)):
-  - A stage-guard `demote` on an advisory head becomes a soft-off proposal (advisory → shadow) plus a `[refinement]` pipeline row,
-    with a hypothesis and `resolution_criteria`. The row resolves as re-gate → restore, or lever exhaustion → retire to candidate
+  - A stage-guard `demote` on an advisory head becomes an ITERATION INPUT: a `[refinement]` pipeline row with a hypothesis and
+    `resolution_criteria`, plus the challenger it implies; the head keeps trading. A soft-off (advisory → shadow) is proposed only
+    as money-at-risk safety (`drift-remediation` step 5). The row resolves as re-gate → restore, or lever exhaustion → retire to candidate
     (retirement is on lever exhaustion, never an attempt count — `programme-review` § iteration loop).
   - Drive each open `[refinement]` row one step every run.
 - **Lens role** (`docs/unified-confidence-risk-DESIGN.md`): tag each model as `c_reg` / `c_setup` / `c_wr` (conviction) or sizing.

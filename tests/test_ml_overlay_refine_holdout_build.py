@@ -52,3 +52,50 @@ def test_nested_builds_holdout_without_corpus_dir(monkeypatch, tmp_path):
 def test_nested_reuses_holdout_with_corpus_dir(monkeypatch, tmp_path):
     _out, seen = _run(monkeypatch, tmp_path, build=False)
     assert seen["build"] is False
+
+
+def test_holdout_artifact_is_scored_without_refit(monkeypatch, tmp_path):
+    """--holdout-artifact: run_holdout scores the given artifact; export_model (the refit) is never called."""
+    m = _mod()
+    rng = np.random.default_rng(0)
+    n = m.HOLDOUT_N_MIN + 50
+    feats = list(m.FEATURES)
+    df = pd.DataFrame({f: rng.normal(size=n) for f in feats})
+    df["leg"], df["scored"] = "a", True
+    df["entry_time"] = pd.date_range("2018-01-01", periods=n, freq="D", tz="UTC")
+    df["exit_time"] = df["entry_time"] + pd.Timedelta(hours=8)
+    df["direction"], df["aligned"] = "long", True
+    df["net_r"] = rng.normal(0.1, 1.0, size=n)
+    (tmp_path / "a__trades.jsonl").write_text("")
+    monkeypatch.setattr(m, "load_leg", lambda leg, d: df)
+    monkeypatch.setattr(m, "export_model", lambda *a, **k: (_ for _ in ()).throw(AssertionError("refit called")))
+    art = {"features": feats, "mean": [0.0] * len(feats), "std": [1.0] * len(feats), "coef": [0.0] * len(feats),
+           "intercept": 0.0, "tau": 0.4, "multiplier": 0.5}
+    h = {"start": "2017-09-01", "end": "2020-06-23", "days": 3500, "wd": tmp_path, "build": False,
+         "before": pd.Timestamp("2020-06-24", tz="UTC"), "artifact": art, "artifact_ref": "x sha256 y"}
+    out = m.run_holdout(["a"], df, h)
+    assert out["scored_artifact"] == "x sha256 y"
+    assert out["n"] == n
+
+
+def test_ev_breakeven_and_challenger_block(monkeypatch, tmp_path):
+    m = _mod()
+    assert abs(m.ev_breakeven_p(np.array([2.0, 2.0, -1.0, -1.0])) - 1 / 3) < 1e-9
+    rng = np.random.default_rng(1)
+    n = m.HOLDOUT_N_MIN + 80
+    feats = list(m.FEATURES)
+    df = pd.DataFrame({f: rng.normal(size=n) for f in feats})
+    df["leg"], df["scored"], df["direction"], df["aligned"] = "a", True, "long", True
+    df["entry_time"] = pd.date_range("2018-01-01", periods=n, freq="D", tz="UTC")
+    df["exit_time"] = df["entry_time"] + pd.Timedelta(hours=8)
+    df["net_r"] = rng.normal(0.1, 1.0, size=n)
+    (tmp_path / "a__trades.jsonl").write_text("")
+    monkeypatch.setattr(m, "load_leg", lambda leg, d: df)
+    base = m.export_model(df, m.PRIMARY)
+    h = {"start": "2017-09-01", "end": "2020-06-23", "days": 3500, "wd": tmp_path, "build": False,
+         "before": pd.Timestamp("2020-06-24", tz="UTC"), "artifact": base, "artifact_ref": "b", "challenger": "ev"}
+    out = m.run_holdout(["a"], df, h)
+    c = out["challenger"]
+    assert c["tau_rule"] == "ev" and c["n"] == n
+    # paired identity: (ch - base) == (ch - take) - (base - take)
+    assert abs(c["delta_ch_vs_base_mean_r"] - (c["delta_ch_vs_take_r"] - c["delta_base_vs_take_r"])) < 2e-4
