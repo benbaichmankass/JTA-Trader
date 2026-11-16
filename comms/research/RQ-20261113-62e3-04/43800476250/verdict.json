@@ -1,0 +1,41 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1491,
+ "population": "time-exit-only (no TP/SL) on BO1/FD1/BO1g/FD1g entries: control vs arm over the same 4-config grid, 10 symbols, daily, n_days=1491, arm DSR N=20",
+ "note": "arm selected BO1gt Sharpe -0.506 vs control FD1g -0.72; arm verdict fail",
+ "measurement": {
+  "factor": "time-exit-only (no TP/SL) on BO1/FD1/BO1g/FD1g entries",
+  "control": {
+   "selected": "FD1g",
+   "sharpe": -0.72,
+   "ann": -0.151,
+   "verdict": "fail"
+  },
+  "arm": {
+   "selected": "BO1gt",
+   "sharpe": -0.506,
+   "ann": -0.2155,
+   "stress_sharpe": -0.913,
+   "dsr": 0.002685,
+   "checks": {
+    "sharpe>=0.5": false,
+    "stress_sharpe>0": false,
+    "both_halves>0": false,
+    "boot_p05>0": false,
+    "dsr>0.95": false,
+    "clause:years": false,
+    "clause:concentration": false,
+    "clause:sides": false,
+    "clause:subperiods": false
+   },
+   "per_config_sharpe": {
+    "BO1t": -0.57,
+    "FD1t": -1.014,
+    "BO1gt": -0.506,
+    "FD1gt": -0.583
+   }
+  },
+  "delta_sharpe": 0.214
+ }
+}
