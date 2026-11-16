@@ -69,7 +69,7 @@ attribution:
       gross_r: 39.727
 manifest:
   entry: tested
-  exit: untested
+  exit: tested
   filter: untested
   regime_gating: untested
   timeframe: untested
@@ -81,6 +81,20 @@ levers:
   entry:
     donchian:
       tests:
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-004
+        window: 2024-07-07..2026-11-13
+        n: 221
+        net_r: -6.1315
+        baseline_n: 232
+        baseline_net_r: 13.6878
+        delta_net_r: -19.8193
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 26.6554
+        verdict: fail
+        joint_change: false
       - value: '25'
         baseline_value: '20'
         arm: donchian_hi
@@ -99,6 +113,20 @@ levers:
         baseline_value: '20'
         arm: donchian_lo
         unit: RQ-20261106-004
+        window: 2024-07-07..2026-11-13
+        n: 239
+        net_r: 15.5431
+        baseline_n: 232
+        baseline_net_r: 13.6878
+        delta_net_r: 1.8553
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 15.7908
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-004
         window: 2024-06-28..2026-11-06
         n: 239
         net_r: 13.784
@@ -109,8 +137,93 @@ levers:
         max_drawdown_r: 14.7342
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 2
+      shape: peaked
+      points: 4
       best_delta_r_per_trade: 0.0117
       fold_stability: 0.375
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+  exit:
+    trail_mult:
+      tests:
+      - value: '5.0'
+        baseline_value: '4.0'
+        arm: trail_mult_5.0
+        unit: RQ-20261115-2411-05
+        window: 2018-06-01..2021-10-31
+        n: 309
+        net_r: -54.7367
+        baseline_n: 361
+        baseline_net_r: -57.8966
+        delta_net_r: 3.1599
+        folds_ge_baseline: 1/2
+        max_drawdown_r: 57.0585
+        verdict: fail
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '4.0'
+        arm: trail_mult_3.0
+        unit: RQ-20261115-bf1b-10
+        window: 2024-07-08..2026-11-13
+        n: 295
+        net_r: -10.1845
+        baseline_n: 232
+        baseline_net_r: 13.8375
+        delta_net_r: -24.022
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 21.2455
+        verdict: pass
+        joint_change: false
+      - value: '5.0'
+        baseline_value: '4.0'
+        arm: trail_mult_5.0
+        unit: RQ-20261115-bf1b-10
+        window: 2024-07-08..2026-11-13
+        n: 191
+        net_r: 27.7304
+        baseline_n: 232
+        baseline_net_r: 13.8375
+        delta_net_r: 13.8929
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 18.5336
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 3
+      best_delta_r_per_trade: 0.0599
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    atr_stop_mult:
+      tests:
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_1.875
+        unit: RQ-20261115-bf1b-09
+        window: 2024-07-08..2026-11-13
+        n: 252
+        net_r: -0.0765
+        baseline_n: 232
+        baseline_net_r: 13.8375
+        delta_net_r: -13.914
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 29.5283
+        verdict: fail
+        joint_change: false
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_3.125
+        unit: RQ-20261115-bf1b-09
+        window: 2024-07-08..2026-11-13
+        n: 220
+        net_r: 4.2652
+        baseline_n: 232
+        baseline_net_r: 13.8375
+        delta_net_r: -9.5723
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 19.8081
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0413
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline

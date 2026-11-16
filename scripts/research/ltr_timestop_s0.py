@@ -189,7 +189,19 @@ def grade(a: argparse.Namespace) -> int:
                           "mean_hold_all": round(statistics.fmean(r["hold"] for r in rows), 4) if rows else None},
            "rule": {"n_floor": a.n_floor, "noninferiority_margin_r": a.margin, "arms_in_family": k_arms,
                     "month_min_n": a.month_min_n, "month_pos_min": a.month_pos_min},
-           "arms": out_arms, "read_state": "ok" if rows else "no_rows"}
+           "arms": out_arms}
+    # Collector contract (scripts/research/script_run.py): top-level verdict / read_state / population(str) / n. Added 2026-11-16 by
+    # RESEARCH-OPS-20261116-1448 after RQ-20261116-7c1a-01/-02 landed producer_failed (verdict '' , read_state 'ok', no n). The per-arm
+    # rule is unchanged; the unit-level verdict is an aggregate: pass if any arm is PASS_*, else fail if any arm is FAIL, else indeterminate.
+    vs = [v["verdict"] for v in out_arms.values()]
+    doc["read_state"] = "measured" if rows else "no_data"
+    doc["verdict"] = ("not_applicable" if not rows else "pass" if any(x.startswith("PASS") for x in vs)
+                      else "fail" if "FAIL" in vs else "indeterminate")
+    doc["n"] = len(rows) if rows else None
+    doc["population_detail"] = doc["population"]
+    doc["population"] = (f"{len(rows)} closed crypto packages with replayed close paths (first entry {doc['population_detail']['first_entry']}), "
+                         f"{k_arms} arms; unit verdict aggregates per-arm rule verdicts: " + ", ".join(f"{k}={v}" for k, v in zip(out_arms, vs)))
+    doc["note"] = "; ".join(f"{k} n={v['n_fired']} dMean={v['mean_delta_vs_hold']} {v['verdict']}" for k, v in out_arms.items())
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / "verdict.json").write_text(json.dumps(doc, indent=1) + "\n")
     for spec, v in out_arms.items():

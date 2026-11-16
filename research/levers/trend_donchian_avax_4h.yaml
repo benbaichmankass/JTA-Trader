@@ -105,6 +105,20 @@ levers:
         max_drawdown_r: 18.1412
         verdict: pass
         joint_change: false
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-026
+        window: 2021-11-11..2026-11-14
+        n: 199
+        net_r: 8.6541
+        baseline_n: 219
+        baseline_net_r: 30.6946
+        delta_net_r: -22.0405
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 19.8375
+        verdict: fail
+        joint_change: false
       - value: '15'
         baseline_value: '20'
         arm: donchian_lo
@@ -119,10 +133,24 @@ levers:
         max_drawdown_r: 11.3594
         verdict: pass
         joint_change: false
-      shape: noisy
-      points: 3
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-026
+        window: 2021-11-11..2026-11-14
+        n: 240
+        net_r: 41.7411
+        baseline_n: 219
+        baseline_net_r: 30.6946
+        delta_net_r: 11.0465
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 17.5142
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 5
       best_delta_r_per_trade: 0.0573
-      fold_stability: 0.361
+      fold_stability: 0.317
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     min_confidence:
       tests:
@@ -140,6 +168,20 @@ levers:
         max_drawdown_r: 11.0693
         verdict: pass
         joint_change: false
+      - value: '0.875'
+        baseline_value: '0.7'
+        arm: min_confidence_hi
+        unit: RQ-20261106-026
+        window: 2021-11-11..2026-11-14
+        n: 178
+        net_r: 27.193
+        baseline_n: 219
+        baseline_net_r: 30.6946
+        delta_net_r: -3.5016
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 18.4178
+        verdict: fail
+        joint_change: false
       - value: '0.525'
         baseline_value: '0.7'
         arm: min_confidence_lo
@@ -154,11 +196,25 @@ levers:
         max_drawdown_r: 16.9756
         verdict: pass
         joint_change: false
-      shape: monotone
-      points: 2
+      - value: '0.525'
+        baseline_value: '0.7'
+        arm: min_confidence_lo
+        unit: RQ-20261106-026
+        window: 2021-11-11..2026-11-14
+        n: 274
+        net_r: 12.4586
+        baseline_n: 219
+        baseline_net_r: 30.6946
+        delta_net_r: -18.236
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 24.4372
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 4
       best_delta_r_per_trade: 0.0254
-      fold_stability: 0.5
-      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+      fold_stability: 0.438
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     trail_decay_arm_r:
       tests:
@@ -1948,6 +2004,33 @@ levers:
       best_delta_r_per_trade: 0.0487
       fold_stability: 0.417
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
+    -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12,
+    read in f251-21) is +26.09R over n 55: the leg was strongly positive the year before, so the record year looks like a bad regime, not proof
+    of no edge.'
+  direction: 'TESTED forming: long-only (f251-07, FAIL): -4.09R n26 2/4 vs -16.18R. No prior-year read for this arm.'
+  filter: 'TESTED forming: vol_skip_below 0.3 (f251-21, FAIL): -7.09R n41 1/4; prior year +16.49R vs +26.09R (it removes winners). TESTED closed
+    2020-07..2026-10: vol_skip_below 0.2-0.35 pass (peaked, best 0.3 +54.8R n173), vol_skip_above monotone fail, adx_max flat, adx_min 25 +4.7R
+    n119 single point, cooldown flat.'
+  entry: 'TESTED closed: donchian 15 +11.75R n183 pass, 25 -4.82R pass, 40 +19.58R fail (noisy); min_confidence 0.525/0.875 pass. UNTESTED forming.'
+  exit: 'TESTED closed: about 25 exit params, all fail and mostly flat around +30..+40R (tp_target_r 3 peaked +41.96R, be_floor_r monotone). UNTESTED
+    forming.'
+  session: 'TESTED closed: skip_hours 0-7 +41.13R n190 pass, 20-23 +38.77R pass, 12-16 -25.64R. UNTESTED forming.'
+  regime_gating: UNTESTED; both forming arms lose on both sides in the record year, so no cell is obviously separable without a regime read.
+  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-12.77R).'
+  timeframe: UNTESTED; no diagnostic pointer.
+  symbol_set: UNTESTED; no diagnostic pointer.
+  next: 'Two forming levers have failed (long-only, vol_skip_below 0.3). The closed-bar vol_skip_below plateau did not carry to the forming bar.
+    Remaining closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year
+    regime split: +26.09R to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below
+    did). Not exhausted; manager decides.'
+  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed
+    WORSE the year before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs
+    +12.1, vol_skip_below 0.3 +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly
+    fires on the same bars).'
+  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever;
+    with +26.1R the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.
 units:
 - RQ-20261101-e5b1-12
 - RQ-20261113-f251-07
@@ -2234,30 +2317,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-manifest_notes:
-  census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard). Forming record (2025-11-13..2026-11-12):
-    -16.18R over n 57, gross -12.77R, cost 3.41R; short -13.07R n33, long -3.10R n24. The equal-length window before it (2024-11-13..2025-11-12,
-    read in f251-21) is +26.09R over n 55: the leg was strongly positive the year before, so the record year looks like a bad regime, not proof
-    of no edge.'
-  direction: 'TESTED forming: long-only (f251-07, FAIL): -4.09R n26 2/4 vs -16.18R. No prior-year read for this arm.'
-  filter: 'TESTED forming: vol_skip_below 0.3 (f251-21, FAIL): -7.09R n41 1/4; prior year +16.49R vs +26.09R (it removes winners). TESTED closed
-    2020-07..2026-10: vol_skip_below 0.2-0.35 pass (peaked, best 0.3 +54.8R n173), vol_skip_above monotone fail, adx_max flat, adx_min 25 +4.7R
-    n119 single point, cooldown flat.'
-  entry: 'TESTED closed: donchian 15 +11.75R n183 pass, 25 -4.82R pass, 40 +19.58R fail (noisy); min_confidence 0.525/0.875 pass. UNTESTED forming.'
-  exit: 'TESTED closed: about 25 exit params, all fail and mostly flat around +30..+40R (tp_target_r 3 peaked +41.96R, be_floor_r monotone). UNTESTED
-    forming.'
-  session: 'TESTED closed: skip_hours 0-7 +41.13R n190 pass, 20-23 +38.77R pass, 12-16 -25.64R. UNTESTED forming.'
-  regime_gating: UNTESTED; both forming arms lose on both sides in the record year, so no cell is obviously separable without a regime read.
-  sizing_vs_cost: 'INAPPLICABLE: gross is negative before cost on the forming record (-12.77R).'
-  timeframe: UNTESTED; no diagnostic pointer.
-  symbol_set: UNTESTED; no diagnostic pointer.
-  next: 'Two forming levers have failed (long-only, vol_skip_below 0.3). The closed-bar vol_skip_below plateau did not carry to the forming bar.
-    Remaining closed-bar responders never run forming: session skip_hours 0-7, entry donchian 15. Before a 3rd unit, read the record-vs-prior-year
-    regime split: +26.09R to -16.18R on similar n is a regime shift, and a lever that fixes the record year may only cost the prior year (as vol_skip_below
-    did). Not exhausted; manager decides.'
-  decision_bar_2026_11_14: 'Closed bar (RQ-20261114-db1a-01, FAIL): C -15.52R n46 1/4 vs F -16.18R; prior year C +17.35R vs F +26.09R (closed
-    WORSE the year before). C_VL30 is +0.01R n33 2/4 on the record. Closed lever deltas vs C on the record keep the forming sign (long +7.5 vs
-    +12.1, vol_skip_below 0.3 +15.5 vs +9.1); the year before, long is -8.5 and vol_skip_below +0.1. C/F entry overlap 0.49 (the 4h breakout mostly
-    fires on the same bars).'
-  next_2026_11_14: SUPERSEDES next. decision_bar closed is not the lever (db1a-01). The record-year loss is common to both bars and every lever;
-    with +26.1R the year before, this reads as a regime shift. Recommended next is a regime-level question, not a 3rd per-leg lever. Manager decides.

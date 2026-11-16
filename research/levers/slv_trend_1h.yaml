@@ -389,6 +389,20 @@ levers:
         max_drawdown_r: 22.9355
         verdict: fail
         joint_change: false
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-010
+        window: 2024-01-03..2026-11-13
+        n: 130
+        net_r: 23.1625
+        baseline_n: 141
+        baseline_net_r: 37.5624
+        delta_net_r: -14.3999
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 22.6534
+        verdict: fail
+        joint_change: false
       - value: '1.125'
         baseline_value: '1.5'
         arm: atr_stop_mult_lo
@@ -401,6 +415,20 @@ levers:
         delta_net_r: 7.799
         folds_ge_baseline: 3/4
         max_drawdown_r: 39.3811
+        verdict: fail
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-010
+        window: 2024-01-03..2026-11-13
+        n: 157
+        net_r: 46.5693
+        baseline_n: 141
+        baseline_net_r: 37.5624
+        delta_net_r: 9.0069
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 24.7332
         verdict: fail
         joint_change: false
       - value: '1.0'
@@ -488,9 +516,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 10
+      points: 12
       best_delta_r_per_trade: 0.36
-      fold_stability: 0.475
+      fold_stability: 0.458
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_r:
       tests:
@@ -508,6 +536,20 @@ levers:
         max_drawdown_r: 23.0622
         verdict: fail
         joint_change: false
+      - value: '62.5'
+        baseline_value: '6.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-010
+        window: 2024-01-03..2026-11-13
+        n: 131
+        net_r: 48.4098
+        baseline_n: 141
+        baseline_net_r: 37.5624
+        delta_net_r: 10.8474
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 23.0622
+        verdict: fail
+        joint_change: false
       - value: '37.5'
         baseline_value: '50.0'
         arm: tp_r_lo
@@ -522,11 +564,25 @@ levers:
         max_drawdown_r: 23.0622
         verdict: fail
         joint_change: false
-      shape: flat
-      points: 2
-      best_delta_r_per_trade: 0.0
-      fold_stability: 1.0
-      reading: no response at the tested values
+      - value: '37.5'
+        baseline_value: '6.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-010
+        window: 2024-01-03..2026-11-13
+        n: 131
+        net_r: 48.4098
+        baseline_n: 141
+        baseline_net_r: 37.5624
+        delta_net_r: 10.8474
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 23.0622
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 4
+      best_delta_r_per_trade: 0.0769
+      fold_stability: 0.875
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   filter:
     adx_min:
       tests:

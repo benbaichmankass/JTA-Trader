@@ -583,6 +583,20 @@ levers:
         baseline_value: '50.0'
         arm: tp_r_hi
         unit: RQ-20261106-025
+        window: 2021-11-11..2026-11-14
+        n: 197
+        net_r: 40.6071
+        baseline_n: 197
+        baseline_net_r: 40.6071
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.3153
+        verdict: fail
+        joint_change: false
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-025
         window: 2021-11-02..2026-11-05
         n: 172
         net_r: 9.1891
@@ -591,6 +605,20 @@ levers:
         delta_net_r: 0.0
         folds_ge_baseline: 4/4
         max_drawdown_r: 8.5447
+        verdict: fail
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-025
+        window: 2021-11-11..2026-11-14
+        n: 197
+        net_r: 40.6071
+        baseline_n: 197
+        baseline_net_r: 40.6071
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.3153
         verdict: fail
         joint_change: false
       - value: '37.5'
@@ -608,7 +636,7 @@ levers:
         verdict: fail
         joint_change: false
       shape: flat
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.0
       fold_stability: 1.0
       reading: no response at the tested values
@@ -1910,6 +1938,25 @@ levers:
       best_delta_r_per_trade: -0.0022
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+manifest_notes:
+  census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55,
+    gross -0.53R before 2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59):
+    the leg was clearly positive the year before.'
+  direction: 'TESTED forming (RQ-20261113-f251-06, FAIL): long-only +1.88R, 2/4 folds (needs 3): the closest any ada lever has come.'
+  exit: 'TESTED forming (RQ-20261113-f251-20, FAIL): stall-armed trail decay -10.46R vs -3.35R; it clips winners before the take-profit. momentum_stale
+    (closed +12.4R) is the same exit idea and is not expected to differ.'
+  structure_exit: 'INAPPLICABLE: the "structure_exit off" closed-bar responder reproduces the live configuration (the live leg runs no structure
+    exit).'
+  entry: UNTESTED forming; no closed-bar entry responder on the map.
+  filter: UNTESTED forming; no closed-bar filter responder on the map.
+  sizing_vs_cost: 'PLAUSIBLE but unmeasured: gross is near flat (-0.53R) and cost is 2.83R, so a cheaper route could matter; needs a measured
+    venue cost, never an assumed one.'
+  next: 'Regime is inapplicable; the only live pointer is direction, and long-only already ran (f251-06: +1.88R, 2/4). A measured venue cost is
+    the one untested lever with a pointer (gross -0.53R before 2.83R of cost). The leg was +13.4R on the prior year. Manager decides.'
+  regime_gating: 'READ 2026-11-14, INAPPLICABLE: regime_tag_emitted on the f251-20 arm A forming ledger (n 55), ADAUSDT 4h bars (comms/research/RQ-20261016-012/38965312507/candles/ADAUSDT_4h_390d.csv,
+    2025-09-21..2026-10-15), ADX-14: trending -2.59R n 22, transitional +1.00R n 14, chop -1.76R n 19. No regime cell concentrates the loss; the
+    split that does is direction (shorts lose in every cell: -3.01 / -4.62 / -0.76R; longs +0.41 / +5.62 / -1.00R). FRAGILE (30% of |R| near a
+    cutoff); 6 trades (-2.98R) enter after the bars end.'
 units:
 - RQ-20261101-e5b1-11
 - RQ-20261113-f251-06
@@ -2145,22 +2192,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-manifest_notes:
-  census_2026_11_14: 'DEMO-FLOOR-ITER census after the 2nd forming lever failed. Forming record (f251-06, 2025-11-13..2026-11-12): -3.35R n 55,
-    gross -0.53R before 2.83R of cost; long +5.03R vs short -8.39R; stops -33.5R (n 32), take-profits +35.8R (n 17). Prior year +13.4R (n 59):
-    the leg was clearly positive the year before.'
-  direction: 'TESTED forming (RQ-20261113-f251-06, FAIL): long-only +1.88R, 2/4 folds (needs 3): the closest any ada lever has come.'
-  exit: 'TESTED forming (RQ-20261113-f251-20, FAIL): stall-armed trail decay -10.46R vs -3.35R; it clips winners before the take-profit. momentum_stale
-    (closed +12.4R) is the same exit idea and is not expected to differ.'
-  structure_exit: 'INAPPLICABLE: the "structure_exit off" closed-bar responder reproduces the live configuration (the live leg runs no structure
-    exit).'
-  entry: UNTESTED forming; no closed-bar entry responder on the map.
-  filter: UNTESTED forming; no closed-bar filter responder on the map.
-  sizing_vs_cost: 'PLAUSIBLE but unmeasured: gross is near flat (-0.53R) and cost is 2.83R, so a cheaper route could matter; needs a measured
-    venue cost, never an assumed one.'
-  next: 'Regime is inapplicable; the only live pointer is direction, and long-only already ran (f251-06: +1.88R, 2/4). A measured venue cost is
-    the one untested lever with a pointer (gross -0.53R before 2.83R of cost). The leg was +13.4R on the prior year. Manager decides.'
-  regime_gating: 'READ 2026-11-14, INAPPLICABLE: regime_tag_emitted on the f251-20 arm A forming ledger (n 55), ADAUSDT 4h bars (comms/research/RQ-20261016-012/38965312507/candles/ADAUSDT_4h_390d.csv,
-    2025-09-21..2026-10-15), ADX-14: trending -2.59R n 22, transitional +1.00R n 14, chop -1.76R n 19. No regime cell concentrates the loss; the
-    split that does is direction (shorts lose in every cell: -3.01 / -4.62 / -0.76R; longs +0.41 / +5.62 / -1.00R). FRAGILE (30% of |R| near a
-    cutoff); 6 trades (-2.98R) enter after the bars end.'
