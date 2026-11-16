@@ -1,7 +1,7 @@
 id: RQ-20261115-2411-03
 title: CONFIRMATION on pre-development history (2018-06..2021-10) of the sweep-selected trend_lookback_45 arm of spy_pullback_1h, vs the config-exact control, net of the full cost stack (iteration from
   RQ-20261115-bf1b-07)
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -116,3 +116,16 @@ iteration:
   attempt: 3
   due_by: '2026-11-22'
 last_dispatched_at: '2026-11-16T00:25:17+00:00'
+grading:
+  attested: RULE-RQ20261115241103-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261115241103-CONFIRM
+  evidence:
+  - research/results/RQ-20261115-2411-03/43780290442.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

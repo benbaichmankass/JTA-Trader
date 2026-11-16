@@ -1,4 +1,4 @@
-status: queued
+status: done
 cadence: once
 compute: cpu_light
 decision_rule:
@@ -112,3 +112,16 @@ why_this_matters: 'ITERATION (research-ops 2026-11-15 2247Z). RQ-20261115-bf1b-1
   for this arm-selection step only. If dukascopy MGC history is unavailable the producer fails and the unit is INDETERMINATE (producer_failed), then the next window in order is another venue or a symbol
   holdout. On PASS: Tier-3 proposal NOTE for the manager; on FAIL the lever response is recorded as window-specific.'
 last_dispatched_at: '2026-11-16T01:40:47+00:00'
+grading:
+  attested: RULE-RQ20261115241105-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261115241105-CONFIRM
+  evidence:
+  - research/results/RQ-20261115-2411-05/43787674413.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
