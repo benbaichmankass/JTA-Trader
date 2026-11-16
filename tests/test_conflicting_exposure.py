@@ -63,14 +63,16 @@ def test_sol_book_is_one_conflict_across_journal_and_prop(tmp_path, strategies_y
     legs = ce.read_open_legs(db, mark_fn=lambda s: 84.2, strategies_path=strategies_yaml)
     assert legs["state"] == "read" and legs["books"]["journal"]["state"] == "read"
     by = {x["order_package_id"]: x for x in legs["legs"]}
-    assert set(by) == {"pkg-long", "pkg-pb", "pkg-eth", "pkg-short"}  # closed / suppressed / closed ticket excluded
+    # closed / suppressed / closed ticket excluded; pkg-pb is on bybit_1 (paper TESTING): out of scope
+    assert set(by) == {"pkg-long", "pkg-eth", "pkg-short"}
+    assert legs["books"]["journal"]["paper_testing_rows_skipped"] == 1
     assert by["pkg-long"]["accounts"] == ["bybit_2", "bybit_portfolio", "breakout_2"]
     assert by["pkg-long"]["timeframe"] == "1h" and by["pkg-short"]["timeframe"] == "4h"
     assert by["pkg-short"]["open_r"] == pytest.approx(2.35, abs=0.01)
     assert by["pkg-long"]["open_r"] == pytest.approx(-0.36, abs=0.01)
     conflicts = ce.find_conflicts(legs["legs"])
     assert [c["symbol"] for c in conflicts] == ["SOLUSDT"]  # ETH is long only: no conflict
-    assert set(conflicts[0]["packages"]) == {"pkg-long", "pkg-pb", "pkg-short"}
+    assert set(conflicts[0]["packages"]) == {"pkg-long", "pkg-short"}
     text = ce.render_alert(conflicts[0])
     for needle in ("SOLUSDT", "ml_entry (1h)", "trend_donchian_sol_4h (4h)", "velotrade_1", "+2.35R", "Alert only"):
         assert needle in text
@@ -216,9 +218,9 @@ def test_config_exempts_the_event_from_the_bar_cooldown():
 def test_open_r_measures_1r_from_the_initial_risk_not_the_trailed_stop(tmp_path, strategies_yaml):
     """2026-11-14 16:07Z: trend_donchian_1h BTC short pkg-13ec01223e304ad4 read '+60.52R est' while its packets read
     about +1.7R: 1R was |entry - CURRENT stop|, and the stop had trailed to within a few dollars of entry."""
-    trades = [("pkg-s", "trend_donchian", "BTCUSDT", "short", 100000.0, 99950.0, "bybit_1", "paper", "open"),
+    trades = [("pkg-s", "trend_donchian", "BTCUSDT", "short", 100000.0, 99950.0, "bybit_2", "real_money", "open"),
               ("pkg-l", "ml_entry", "BTCUSDT", "long", 97000.0, 96000.0, "bybit_2", "real_money", "open"),
-              ("pkg-n", "ml_entry", "BTCUSDT", "long", 97500.0, 96500.0, "bybit_1", "paper", "open")]
+              ("pkg-n", "ml_entry", "BTCUSDT", "long", 97500.0, 96500.0, "bybit_2", "real_money", "open")]
     db = _db(tmp_path, trades)
     c = sqlite3.connect(db)
     c.execute("CREATE TABLE order_packages (order_package_id TEXT, meta TEXT)")
@@ -243,12 +245,12 @@ def test_no_order_packages_table_falls_back_to_the_stop_and_says_so(tmp_path, st
 
 # ── 2026-11-15: a leg LEAVING is not a new conflict (carry_forward) ──────────────────────────────────────────────
 # Tonight's ETHUSDT book, package ids as measured: one ml_entry_v2 long vs four shorts that exited one by one.
-ETH_LONG = ("pkg-ec790aada2a548dc", "ml_entry_v2", "ETHUSDT", "long", 1768.52, 1703.64, "bybit_1", "paper", "open")
+ETH_LONG = ("pkg-ec790aada2a548dc", "ml_entry_v2", "ETHUSDT", "long", 1768.52, 1703.64, "bybit_2", "real_money", "open")
 ETH_SHORTS = [
-    ("pkg-48c5cfab364e430c", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_1", "paper", "open"),
-    ("pkg-665b2dff5ef04889", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_1", "paper", "open"),
-    ("pkg-edd087a2c21c4421", "trend_donchian_eth", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_1", "paper", "open"),
-    ("pkg-fd52297225d14860", "trend_donchian_eth_prop", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_1", "paper",
+    ("pkg-48c5cfab364e430c", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_2", "real_money", "open"),
+    ("pkg-665b2dff5ef04889", "trend_donchian_eth_4h", "ETHUSDT", "short", 1960.0, 2010.0, "bybit_2", "real_money", "open"),
+    ("pkg-edd087a2c21c4421", "trend_donchian_eth", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_2", "real_money", "open"),
+    ("pkg-fd52297225d14860", "trend_donchian_eth_prop", "ETHUSDT", "short", 1950.0, 2000.0, "bybit_2", "real_money",
      "open"),
 ]
 
@@ -306,7 +308,7 @@ def test_a_genuinely_new_joiner_still_alerts(tmp_path):
     # a joiner on the OTHER side alerts too
     d = tmp_path / "join_long"
     d.mkdir()
-    db = _db(d, [ETH_LONG, ("pkg-newlong", "e4_oi_shock_1h", "ETHUSDT", "long", 1800.0, 1750.0, "bybit_1", "paper",
+    db = _db(d, [ETH_LONG, ("pkg-newlong", "e4_oi_shock_1h", "ETHUSDT", "long", 1800.0, 1750.0, "bybit_2", "real_money",
                             "open")] + ETH_SHORTS[:3])
     ce.alert(ce.detect(db, state=st), path=st, send=lambda t: sent.append(t) or True)
     assert len(sent) == 3
@@ -372,3 +374,35 @@ def test_review_level_stays_on_the_alerted_key_so_a_shrink_queues_no_second_revi
     shrunk = ce.detect(_eth_book(tmp_path, 3), state=st)["conflicts"]
     res = lrd.compute_due(rows, reviews, cfg, datetime(2026, 11, 15, 2, 21, tzinfo=timezone.utc), conflicts=shrunk)
     assert not any(e["event"] == ce.EVENT for d in res["due"] for e in d["events"])
+
+
+# Operator 2026-11-16: the alert considers real money, prop and the paper-portfolio mirrors only, never the
+# paper-TESTING books. The 14:31 SOL alert named a bybit_1 scalp long and a bybit_1 pullback short.
+def test_paper_testing_legs_never_make_or_join_a_conflict(tmp_path, strategies_yaml):
+    trades = [
+        ("pkg-scalp", "ict_scalp_sol_15m", "SOLUSDT", "long", 71.0, 70.0, "bybit_1", "paper", "open"),
+        ("pkg-pb", "sol_pullback_2h", "SOLUSDT", "short", 72.0, 73.5, "bybit_1", "paper", "open"),
+        ("pkg-eqp", "slv_trend_1h", "SLV", "long", 30.0, 29.0, "alpaca_paper", "paper", "open"),
+        ("pkg-eql", "slv_trend_1h", "SLV", "short", 30.0, 31.0, "alpaca_live", "real_money", "open"),
+    ]
+    tickets = [("t1", "pkg-prop", "ml_entry", "SOLUSDT", "short", 71.34, 73.17, "tradeify_1", "filled")]
+    legs = ce.read_open_legs(_db(tmp_path, trades, tickets), strategies_path=strategies_yaml)
+    assert {x["order_package_id"] for x in legs["legs"]} == {"pkg-prop", "pkg-eql"}
+    assert legs["books"]["journal"]["paper_testing_rows_skipped"] == 3
+    assert ce.find_conflicts(legs["legs"]) == []  # the prop short alone, the SLV short alone
+
+
+def test_mirror_and_prop_still_conflict_with_real_money(tmp_path, strategies_yaml):
+    trades = [("pkg-m", "ml_entry", "SOLUSDT", "long", 71.0, 70.0, "bybit_portfolio", "paper", "open")]
+    tickets = [("t1", "pkg-prop", "ml_entry", "SOLUSDT", "short", 71.34, 73.17, "tradeify_1", "filled")]
+    legs = ce.read_open_legs(_db(tmp_path, trades, tickets), strategies_path=strategies_yaml)
+    conflicts = ce.find_conflicts(legs["legs"])
+    assert [set(c["packages"]) for c in conflicts] == [{"pkg-m", "pkg-prop"}]
+
+
+def test_in_scope_is_class_or_mirror():
+    mirrors = {"bybit_portfolio", "alpaca_portfolio"}
+    assert ce.in_scope("bybit_2", "real_money", mirrors) and ce.in_scope("tradeify_1", "prop", mirrors)
+    assert ce.in_scope("bybit_portfolio", "paper", mirrors) and ce.in_scope("alpaca_portfolio", "paper", mirrors)
+    for testing in ("bybit_1", "alpaca_paper", "ib_paper", "alpaca_options_paper"):
+        assert not ce.in_scope(testing, "paper", mirrors)
