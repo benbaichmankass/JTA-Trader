@@ -333,7 +333,10 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
         detail["open_r"] = round(open_r, 4)
 
     plan = TrailPlan("hold", "", replay_sl=trail, bars=n, close_lever=close_lever, detail=detail)
-    if n == 0:
+    if n == 0 and _sx_params is None and not floored:
+        # PROP-STRUCTURE-SL-LAG (velotrade_1 ETH pkg-fe0c0d8875b142f6, 2026-11-16): a structure exit replays from the
+        # decision bar, which is already closed at fill time, and the exchange monitor tightens from it at once; an
+        # approved sl_floor needs no bars at all. Only the chandelier needs a bar after the signal bar to replay.
         plan.why = "no closed bar since the signal bar"
         return plan
     step = price_step if price_step and price_step > 0 else None

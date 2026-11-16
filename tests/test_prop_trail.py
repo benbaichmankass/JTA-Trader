@@ -589,3 +589,25 @@ def test_a_corrupt_feed_ignores_a_floor_that_would_loosen(tmp_path):
     a = Adapter([pos()], guard=False)
     run(a, LooseApi(), "live", tmp_path, c=bars([(110, 30, 109)], forming=(109, 108, 108.5)))
     assert a.calls == []
+
+
+def test_structure_leg_tightens_before_a_bar_closes_after_the_signal_bar():
+    """PROP-STRUCTURE-SL-LAG: no closed bar since the signal bar must not hold a structure leg's stop at the entry stop."""
+    leg = {**SOL, "structure_exit": "pivot=2;sl_only"}
+    # closed decision-bar leg: bars through T0 (the decision bar) are closed, the signal bar (T0+1h) is still forming
+    c = bars([(101, 97, 98), (100, 90, 92), (99, 91, 93)], start=T0 - timedelta(hours=2), forming=(95, 92, 93))
+    sig = T0 + timedelta(minutes=8)
+    p = pt.plan_trail(leg=leg, direction="short", entry=100, initial_sl=105, signal_time=sig,
+                      resting_sl=105, candles=c, now=T0 + timedelta(minutes=20), price_step=0.01)
+    assert p.bars == 0
+    assert p.why != "no closed bar since the signal bar"
+    chand = pt.plan_trail(leg=SOL, direction="short", entry=100, initial_sl=105, signal_time=sig,
+                          resting_sl=105, candles=c, now=T0 + timedelta(minutes=20), price_step=0.01)
+    assert chand.why == "no closed bar since the signal bar"
+
+
+def test_an_approved_sl_floor_applies_before_a_bar_closes_after_the_signal_bar():
+    c = bars([(101, 97, 98)], start=T0 - timedelta(hours=1), forming=(99, 97, 98))
+    p = pt.plan_trail(leg=SOL, direction="short", entry=100, initial_sl=105, signal_time=T0 + timedelta(minutes=8),
+                      resting_sl=105, candles=c, now=T0 + timedelta(minutes=20), price_step=0.01, sl_floor=102.0)
+    assert p.bars == 0 and p.action == "tighten" and p.sl == pytest.approx(102.0)
