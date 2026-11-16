@@ -1,0 +1,100 @@
+# Hand-authored 2026-11-16 by lane ML-PRIMARY-4 (session_01AFoLuJazEnEQNP6MeVfuv3, Tier 1) for Manager Session 2026-11-15a, after the
+# cc86-01 grade (iteration input). Rule and n registered BEFORE any forward data exists (the challenger is not yet deployed). Gates: none.
+id: RQ-20261116-cc86-02
+title: 'Beagle-1 EV challenger FORWARD read: on live TD packages logged from the challenger''s deploy onward, does the EV-thresholded
+  reduce earn more R per package than the live Beagle-1 baseline, paired on the same packages?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'RQ-20261116-cc86-01 found the EV-thresholded challenger ahead of the live Beagle-1 on 541 historical TD trades
+  (paired +0.0241 R/trade, LB95 +0.0053), 0.0002 short of the deflated bar on windows read three times. Every pre-2020-07
+  window has now been read; the operator''s rule is to iterate, not re-read. This is the FRESH test: from the deploy of ml/overlay/challengers/overlay_td_ev.json
+  (shadow only, no order effect), every live TD gate package is scored by both. Paired on the same packages, net of realised
+  cost, does the challenger''s sizing decision earn more R than the live one?'
+why_this_matters: 'Beagle-1 stays live as the baseline (operator 2026-11-16). This is the only test of the challenger on data
+  no one has seen; a WIN is the evidence for a Tier-3 swap. It is slow: the two rules disagree on ~9% of packages, so the
+  decision rests on the disagreement packages.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.28
+  effect_units: r_per_trade
+  sd: 0.75
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = a DISAGREEMENT package (the two rules size it differently); agreement packages have d = 0 and are reported
+    but carry no information. Historical cc86-01: paired mean +0.0241 R over all trades at a disagreement rate of 0.0869,
+    so ~+0.28 R per disagreement package; |d| there is 0.5 x |R| (or 1.0 x |R| on reduce legs, rescaled), sd ~0.75 (an ESTIMATE).
+    d = 0.28/0.75 = 0.37 -> n ~56 at two-sided 0.05, power 0.8; fixed at n = 60 disagreement packages. ACCRUAL: ~1830 TD gate
+    trades over 6.3 years in backtest = ~24 packages/month, x 0.087 = ~2 disagreement packages/month (an ESTIMATE), so n =
+    60 takes ~2.5 years. Stated plainly: this is a slow test.'
+  feasibility:
+    source: none
+    accrual_basis: Live packages accrue in runtime_logs/overlay_shadow.jsonl from the challenger artifact's deploy; nothing
+      exists before it. ~2 disagreement packages per month (ESTIMATE).
+decision_rule:
+  id: RULE-RQ20261116-cc86-02-BEAGLE1-EV-FORWARD
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  statistic: 'scripts/ops/overlay_cusum_join.py --shadow <overlay_shadow log> --trades <trades pages> --account all --paired-challenger
+    overlay_td_ev.json (paired_challenger): per ORDER PACKAGE (first joined row; R is account-invariant), d = (m_ch - m_base)
+    / m_applied x net_R, m_applied = m_base on a leg in `mode: reduce` in config/overlay_policy.yaml at grading else 1.0;
+    net_R from src/runtime/net_r_label.net_r_for_trade (realised, net of fees and funding). Statistic: mean d over DISAGREEMENT
+    packages and its one-sided 95% LB (normal). Population: closed TD gate-leg trades whose shadow row carries the challenger,
+    deploy date onward, all accounts, deduped to one per package.'
+  rule: 'Read ONCE, when the disagreement-package count first reaches n = 60 (interim reads are monitoring only and never
+    graded). CHALLENGER WINS iff at that read the one-sided 95% LB of mean d over the 60 disagreement packages > 0 AND the
+    mean d over ALL packages >= 0. NOT A WIN otherwise. INDETERMINATE iff n = 60 is not reached by 2029-06-30, or the join''s
+    read_state is not `measured`. ROUTING: WIN -> a data-backed Tier-3 SWAP proposal to the manager (overlay_td_ev.json replaces
+    overlay_td.json on the same legs and modes). NOT A WIN -> an iteration input; Beagle-1 keeps trading. Nothing in this
+    unit can demote or reduce the live baseline.'
+  what_it_does_not_do: Changes no config and no order; the challenger is shadow-logged only. It is not a re-read of any historical
+    window.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and the take-all
+    baseline is the hold-equivalent.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: the size the reduce removes from profitable below-tau entries on the real-money TD legs; an estimate,
+    not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 10
+  why_runner: 'Not a runner job: the inputs are live runtime logs read through the diag relay, joined session-locally (as
+    /ml-review C11 does).'
+  basis: one batched diag-relay pull of overlay_shadow + trades pages, then the join script
+run:
+  workflow: session-local
+  note: 'Run SESSION-LOCAL by the ML lane (or /ml-review C11): pull log_file?name=overlay_shadow and journal?table=trades
+    pages (limit<=30) in one batched diag relay, then the statistic command above. Weekly interim counts are monitoring; grade
+    once at n = 60 disagreement packages.'
+  inputs:
+    research_unit: RQ-20261116-cc86-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261116-cc86-01
+- scripts/ops/overlay_cusum_join.py
+- src/runtime/overlay_shadow.py
+practice_precedent: 'M5, M10 (docs/reference/trading-and-model-practice-principles.md): a challenger confirmed on fresh, forward
+  data against the live model, paired on the same decisions, sample size fixed before any data accrues and read once'
+ml_consumer:
+  consumer: src/runtime/overlay_shadow.py
+  decision: replace the live Beagle-1 artifact with the EV challenger only if it beats it; never a demotion
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money

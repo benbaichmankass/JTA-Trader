@@ -190,13 +190,56 @@ def join(shadow: Iterable[dict], trades: Iterable[dict], window_min: float = 10.
             continue
         s = cands[0]
         used.add(id(s))
+        from src.runtime.net_r_label import net_r_for_trade
+        lab = net_r_for_trade(t)
         rows.append({"strategy": t.get("strategy_name"), "account": acct, "trade_id": t.get("id"),
                      "order_package_id": t.get("order_package_id"), "multiplier": float(s["would_be_multiplier"]),
                      "p_win": s.get("p_win"), "net_r": n, "net_pnl_usd": round(n, 6),
+                     "net_R": (round(float(lab["net_R"]), 6) if lab is not None else None),
+                     "challengers": s.get("challengers") or [],
                      "closed_at": t.get("closed_at"), "join_basis": basis})
     return {"rows": rows, "n_shadow": len(shadow), "n_closed_trades": len(closed), "n_joined": len(rows),
             "n_unmatched_trades": unmatched, "n_ambiguous_dropped": ambiguous,
             "read_state": "measured" if shadow and closed else ("no_shadow_rows" if not shadow else "no_closed_trades")}
+
+
+def paired_challenger(rows: list[dict], challenger_file: str, reduce_legs: set[str]) -> dict:
+    """Forward paired read (RQ-20261116-cc86-02): per ORDER PACKAGE (first joined row per order_package_id; R is
+    account-invariant), d = (m_ch - m_base) / m_applied x net_R, where m_base is the live artifact's would-be
+    multiplier, m_ch the challenger's, and m_applied = m_base on a leg in `mode: reduce` (its realised R already
+    carries the cut) else 1.0. Rows without net_R or without that challenger are counted and left out."""
+    import math
+    seen, d, d_dis, skipped = set(), [], [], {"no_net_R": 0, "no_challenger": 0, "duplicate_package": 0}
+    for r in rows:
+        key = r.get("order_package_id") or ("trade", r.get("trade_id"))
+        if key in seen:
+            skipped["duplicate_package"] += 1
+            continue
+        ch = next((c for c in r.get("challengers") or [] if c.get("artifact") == challenger_file
+                   and c.get("would_be_multiplier") is not None), None)
+        if ch is None:
+            skipped["no_challenger"] += 1
+            continue
+        if r.get("net_R") is None:
+            skipped["no_net_R"] += 1
+            continue
+        seen.add(key)
+        m_b, m_c = float(r["multiplier"]), float(ch["would_be_multiplier"])
+        applied = m_b if r.get("strategy") in reduce_legs else 1.0
+        x = (m_c - m_b) / (applied or 1.0) * float(r["net_R"])
+        d.append(x)
+        if m_c != m_b:
+            d_dis.append(x)
+
+    def _stats(v: list[float]) -> dict:
+        if not v:
+            return {"n": 0, "mean_r": None, "lb95_one_sided_r": None}
+        m = sum(v) / len(v)
+        sd = math.sqrt(sum((y - m) ** 2 for y in v) / (len(v) - 1)) if len(v) > 1 else None
+        return {"n": len(v), "mean_r": round(m, 4),
+                "lb95_one_sided_r": (round(m - 1.645 * sd / math.sqrt(len(v)), 4) if sd is not None else None)}
+    return {"challenger": challenger_file, "reduce_legs": sorted(reduce_legs), "all_packages": _stats(d),
+            "disagreement_packages": _stats(d_dis), "skipped": skipped}
 
 
 def _dedupe(trades: list[dict]) -> list[dict]:
@@ -255,6 +298,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--window-min", type=float, default=10.0)
     ap.add_argument("--out", default=None)
     ap.add_argument("--cusum", action="store_true", help="also run scripts/ops/overlay_cusum.py on the joined rows")
+    ap.add_argument("--paired-challenger", default=None,
+                    help="challenger artifact file name (ml/overlay/challengers/): add the forward paired read")
     a = ap.parse_args(argv)
     texts = {"shadow": [Path(a.shadow).read_text(encoding="utf-8")],
              "trades": [Path(p).read_text(encoding="utf-8") for p in a.trades]}
@@ -272,6 +317,13 @@ def main(argv: list[str] | None = None) -> int:
     elif a.cusum:
         from overlay_cusum import cusum
         out["cusum"] = cusum(j["rows"], None if a.account == "all" else a.account)
+    if a.paired_challenger:
+        import yaml
+        pol = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "overlay_policy.yaml").read_text())
+        reduce_legs = {k for k, v in ((pol or {}).get("strategies") or {}).items()
+                       if isinstance(v, dict) and v.get("mode") == "reduce"}
+        rows = j["rows"] if a.account == "all" else [r for r in j["rows"] if r.get("account") == a.account]
+        out["paired_challenger"] = paired_challenger(rows, a.paired_challenger, reduce_legs)
     print(json.dumps(out, indent=1, default=str))
     if j["read_state"] == "incomplete_read":
         return 2  # could not look: never reported as clean

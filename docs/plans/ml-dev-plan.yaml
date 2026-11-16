@@ -684,6 +684,12 @@ lines:
       baseline: the live shipped overlay_td.json, paired on the same holdout trades (spot 2017-09..2020-06 + perp 2019-12..2020-06)
       pass: 'Tier-3 swap proposal: overlay_td v2 replaces Beagle-1'
       fail: iteration input; Beagle-1 keeps trading
+      graded: 'NOT A WIN -> iteration input, 2026-11-16 (run 43849787455): spot A n 541, paired ch-base +0.0241 R/trade, LB95 +0.0053, deflated LB -0.0002 (bar > 0); vs take-all ch +0.0136, base -0.0105; perp B n 95 printed no paired block (harness gap, fixed in #26512). Every pre-2020-07 window is now read 3x, so the next test is forward.'
+    - lever: CHALLENGER FORWARD read (EV rule shadow-logged beside Beagle-1 on live TD packages)
+      ref: RQ-20261116-cc86-02 (artifact ml/overlay/challengers/overlay_td_ev.json, shadow only)
+      baseline: the live overlay_td.json, paired per order package, net_R realised
+      pass: 'Tier-3 swap proposal (read once at n = 60 disagreement packages, ~2.5 years at ~2/month; ESTIMATE)'
+      fail: iteration input; Beagle-1 keeps trading
     - lever: the CUSUM's live join (overlay_shadow.jsonl x outcomes), an iteration read
       ref: PI-20261029-XME2GXW7-0001
       baseline: n/a (instrument)

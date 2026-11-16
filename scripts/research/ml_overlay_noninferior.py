@@ -493,6 +493,15 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
                                                          "reduced_mean_r", "take_all_mean_r", "folds_passing")},
            "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep,
            "parity_basis": parity_basis, "holdout": hold}
+    if CHALLENGER_EXPORT.get("dir") is not None:  # --export-challenger: the forward-read artifact (shadow only)
+        ch = export_model(df, PRIMARY, tau_rule=CHALLENGER_EXPORT["rule"])
+        ch.update({"family": name, "legs_gate": gate, "legs_train": legs, "role": "challenger",
+                   "challenger_of": f"overlay_{name.lower()}.json", "rule": CHALLENGER_EXPORT["unit_rule"]})
+        cdir = CHALLENGER_EXPORT["dir"]
+        cdir.mkdir(parents=True, exist_ok=True)
+        fp = cdir / f"overlay_{name.lower()}_{CHALLENGER_EXPORT['rule']}.json"
+        fp.write_text(json.dumps(ch, indent=1) + "\n")
+        out["exported_challenger"] = str(fp)
     if export_dir is not None and verdict == "PASS":
         art = export_model(df, PRIMARY)
         art.update({"family": name, "legs_gate": gate, "legs_train": legs})
@@ -503,6 +512,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
 
 
 HOLDOUT_N_MIN = 100
+CHALLENGER_EXPORT: dict = {"dir": None, "rule": "ev", "unit_rule": None}
 
 
 def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
@@ -823,10 +833,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--holdout-challenger", choices=("ev",), default=None,
                     help="also fit a CHALLENGER (tau_rule ev) on the main-window pool and compare it, paired, to the scored "
                          "baseline on the holdout (RQ-20261116-cc86-01)")
+    ap.add_argument("--export-challenger", default=None,
+                    help="write the tau_rule=ev challenger, fit on the main-window family pool, to this dir "
+                         "(the forward shadow read's artifact; training window only, reads no holdout)")
     ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
                     help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
+    if a.export_challenger:
+        CHALLENGER_EXPORT.update(dir=Path(a.export_challenger), rule="ev", unit_rule="RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     fams = [parse_family(s) for s in a.family]
