@@ -1,7 +1,7 @@
 id: RQ-20261116-089f-01
 title: 'CJ-4 blind-source label validation: does the blind post-trade grade (Sonnet, mask-v1) rank-predict realised net R on the 707 journal-joined closed
   crypto trades, and does it beat the strategy''s own confidence on the same trades?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -134,3 +134,16 @@ related:
 - DESK-19-STUDENT-HANDOFF
 - CJ-7-BACKFILL-SCOPE
 last_dispatched_at: '2026-11-16T12:35:10+00:00'
+grading:
+  attested: RULE-RQ20261116-089f-01-BLIND-VALIDATION
+  auto: true
+  decision_rule_id: RULE-RQ20261116-089f-01-BLIND-VALIDATION
+  evidence:
+  - research/results/RQ-20261116-089f-01/43867947801.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

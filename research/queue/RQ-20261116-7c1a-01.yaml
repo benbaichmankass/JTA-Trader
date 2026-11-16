@@ -1,6 +1,6 @@
 id: RQ-20261116-7c1a-01
 title: 'LTR-STALL-TIMESTOP-S0: per-leg max-hold and stall time stops vs hold vs random-time close, month folds, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -109,10 +109,11 @@ grading:
   auto: true
   decision_rule_id: RULE-RQ20261116-7c1a-01-TIMESTOP
   evidence:
-  - research/results/RQ-20261116-7c1a-01/43849790850.jsonl
+  - research/results/RQ-20261116-7c1a-01/43903776410.jsonl
   graded_at: '2026-11-16'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
   rows: 1
-  verdict: null
+  verdict: fail

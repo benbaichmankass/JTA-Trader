@@ -1,6 +1,6 @@
 id: RQ-20261116-d5a7-08
 title: 'turtle_soup: one-factor sweep of sweep_lookback_15m (entry family) around the configured 60, 1830 d, net of the full cost stack (iteration)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -109,3 +109,16 @@ iteration:
   due_by: '2026-11-30'
 follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
 last_dispatched_at: '2026-11-16T15:19:20+00:00'
+grading:
+  attested: RULE-RQ20261116-d5a7-08-SWEEP-LOOKBACK-15M-SWEEP
+  auto: true
+  decision_rule_id: RULE-RQ20261116-d5a7-08-SWEEP-LOOKBACK-15M-SWEEP
+  evidence:
+  - research/results/RQ-20261116-d5a7-08/43895129811.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
