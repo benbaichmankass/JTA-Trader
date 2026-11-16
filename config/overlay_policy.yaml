@@ -27,8 +27,13 @@
 #   eth_4h pkg-a04b68a15ea14d19, relay #21439; the closed-bar legs xrp_4h / eth_prop read 0.0 bps). They are
 #   out of reduce until they decide on the closed bar. They are still scored and logged to overlay_shadow.jsonl
 #   (that is keyed on the artifact's legs_gate, not on this file).
+# DEMOTED reduce -> annotate (decision: <YYYY-MM-DD> operator "<verbatim>"): RQ-20261029-5785-05,
+#   RULE-ML-OVERLAY-SPOT-HOLDOUT-V1 (registered 2026-10-29), run 43777436598, TD spot-proxy holdout 2017-09..2019-11
+#   FAILS: n 424, dR -0.0214 R/trade (LB95 -0.052 vs bar -0.02), random-control p 0.307; the reduced trades average
+#   +0.21 R vs take-all +0.31. Caveats: spot is a perp proxy; refit on today's corpus (parity vs the V2 reference
+#   failed). Still scored and logged (annotate). Revert: set both back to `mode: reduce`.
 strategies:
   trend_donchian_eth_4h: {mode: annotate, artifact: overlay_td.json}
-  trend_donchian_xrp_4h: {mode: reduce, artifact: overlay_td.json}
-  trend_donchian_eth_prop: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_xrp_4h: {mode: annotate, artifact: overlay_td.json}
+  trend_donchian_eth_prop: {mode: annotate, artifact: overlay_td.json}
   trend_donchian_sol_prop: {mode: annotate, artifact: overlay_td.json}
