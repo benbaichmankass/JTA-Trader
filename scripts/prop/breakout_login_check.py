@@ -504,6 +504,9 @@ def main(argv: Optional[list] = None) -> int:
                 except LookupError as le:
                     print(_redact(f"{label}: UNPARSED ({le})", username, password))
                     rc = EXIT_UNPARSED
+            # PROP-TRADEIFY-WORKSPACE-RECUR: a workspace re-select the reads made (one click, then the re-read)
+            for ev in (adapter.pop_workspace_events() if hasattr(adapter, "pop_workspace_events") else []):
+                print("workspace_reselect: " + json.dumps(ev, default=str), flush=True)
 
             if args.dump_tables and hasattr(adapter, "dump_tables"):
                 try:
