@@ -1,0 +1,201 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T0821Z-pkg-fe0c0d8875b142f6",
+ "reviewed_at": "2026-11-16T08:32:00Z",
+ "order_package_id": "pkg-fe0c0d8875b142f6",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-16T08:00:00+00:00",
+  "l0_snapshot_at": "2026-11-16T08:20:27.966587+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T08:21:38Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 10,
+  "giveback_r": 0.101,
+  "open_r": 0.6912,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7923,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1847.19857143,
+  "tp": 1740.37857143
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 7,
+  "giveback_r": 0.101,
+  "open_r": 0.6912,
+  "peak_r": 0.7923,
+  "r_to_stop": 1.0503,
+  "r_to_target": 1.7172
+ },
+ "mechanics": {
+  "evidence": "velotrade_1: venue TP 1777.97 != package TP 1740.37857143",
+  "verdict": "mismatch"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3099,
+   "sd_r": 1.2121,
+   "worst_r": -1.2043,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3545,
+   "sd_r": 0.3535,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3613,
+   "sd_r": 0.5356,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3376,
+   "sd_r": 0.6517,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3763,
+   "sd_r": 0.8705,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.3666,
+   "sd_r": 0.5787,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 256,
+   "mean_r": 0.6078,
+   "sd_r": 0.0346,
+   "worst_r": 0.4591,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T0821Z-pkg-fe0c0d8875b142f6.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.2979,
+  "worst_case_delta_r": 1.6634,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.6,
+  "reason": "Previous 04:12Z call was flag_mechanics with no forecast, so nothing to grade. Table (n=256, state-conditioned): close mean +0.608R worst +0.459R vs hold mean +0.310R sd 1.212 worst -1.204R; gap +0.298R is ~3.9 SE (SE 0.076), worst case +1.663R better; every tighten (+0.34..+0.38R) leaves worst -1.636R. Open +0.69R, peak +0.79R 7 bars ago, 1h chop (ADX 12.4), lower high 1833.58 vs 1842.5 but 2h/1h range 1802.8-1833.6 unresolved, no structure trigger toward the 1740.38 TP 1.72R away. Book already carries 3 other ETH shorts (trend_donchian_eth_4h +2.81R) plus 9 correlated shorts, so banking this one cuts duplicated exposure. Bank +0.69R rather than hold a leg whose live expectancy is -0.04R/trade."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: packet verdict mismatch = velotrade_1 venue TP 1777.97 != package TP 1740.38; manager disposition BY DESIGN (velotrade_1 runs this leg sl_only, TP never follows package TP revisions #26220, prop TP is the closer one; noted on PROP-VELO-SOL-TP-DIVERGE); velotrade_1 SL 1846.28 tighter than package SL 1847.2. Not treated as a broken trade; exit call made. Verdict recorded as given so route is operator_ask (VM never auto-dispatches a non-match row)",
+  "table: close/hold cells n=256 >= n_floor 20, measured; HOLD corpus is the extend-only exit without the structure SL, so hold is flattered or penalised vs live; table is evidence not constraint",
+  "table: tail tie-break not applicable to tighten (tighten worst -1.636R vs hold -1.204R, worse by 0.432R)",
+  "overlay: correlated_exposure: 9 other open shorts incl. ETHUSDT x2 (pkg-665b2dff5ef04889, pkg-a29e677a8dc24525) and book ETH shorts trend_donchian_eth_4h +2.81R, eth_pullback_2h +0.06R, eth_pullback_prop_2h +0.05R",
+  "missing_input: regime.atr_now_over_entry null, regime cell entry/now null, context.funding null, context.news null",
+  "live_vs_backtest: realMoney 35 closed live_r -2.21R CONSISTENT with backtest (expectancy +0.037R, n 907)",
+  "packet_health ok (no defects)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1847.2 / TP 1740.38, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1847.2 / TP 1740.38, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuHbhd9wFuGJfWRqyoV_child_livereview_0821Z",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "96505fd2f64de69f8d8c350ab669244987e03c616d7c7e40d83e9beef9c8f148",
+ "forecast": {
+  "thesis": "1h is range-bound 1802.8-1833.6 inside a 4h bounce off 1709; lower high 1833.58 keeps the short alive but momentum is flat, so I expect a retest of the since-entry high before any run to the 1740 TP; banking now beats a hold whose table mean is below the open R",
+  "direction": "against_trade",
+  "target_px": 1833.58,
+  "p_target": 0.4,
+  "invalidation_px": 1802.76,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 1833.58 (+0.74 ATR), low 1802.76 (-0.99 ATR)",
+   "chart.swings: highs 1842.5/1833.86",
+   "chart.htf: 4h trending ADX 60, swing high 1842.5/1844.43",
+   "regime.trend_now: chop, adx 12.4",
+   "book: 3 other ETH shorts + 9 correlated shorts",
+   "priced_options: close +0.608R vs hold +0.310R n=256"
+  ]
+ }
+}
