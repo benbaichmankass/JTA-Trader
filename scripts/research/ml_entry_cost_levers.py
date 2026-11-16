@@ -420,7 +420,8 @@ def _self_test_cond() -> None:
     assert cond_core(bad, keys, st)["choices"][7] == c1[7]
     # fold 0 is burn-in: never graded
     assert all(r["fold"] >= 1 for r in cond_core(pos, keys, st)["per_fold"])
-    e = cell_edges(np.arange(300)); assert 98 < e[0] < 101 and 198 < e[1] < 201
+    e = cell_edges(np.arange(300))
+    assert 98 < e[0] < 101 and 198 < e[1] < 201
     assert cond_random_control(pos, keys, st)["draws"] == COND_RANDOM_DRAWS
 
 

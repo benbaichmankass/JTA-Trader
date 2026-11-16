@@ -196,28 +196,37 @@ def build_frame(blind: list[dict], journal: dict[int, dict] | None, conf: dict[i
     for r in blind:
         tid = r.get("trade_id")
         if not isinstance(tid, int):
-            bump("no_trade_id"); continue
+            bump("no_trade_id")
+            continue
         if tid in seen:
-            bump("duplicate_trade"); continue
+            bump("duplicate_trade")
+            continue
         seen.add(tid)
         dts = _ts(r.get("decision_ts"))
         if r.get("pre_cutoff") is True or dts is None or dts <= cutoff:
-            bump("date_rule_pre_cutoff"); continue
+            bump("date_rule_pre_cutoff")
+            continue
         gs = r.get("grade_score")
         if not isinstance(gs, int) or isinstance(gs, bool):
-            bump("no_grade_score"); continue
+            bump("no_grade_score")
+            continue
         if journal is None:
-            bump("outcome_unjoined_no_journal"); continue
+            bump("outcome_unjoined_no_journal")
+            continue
         jr = journal.get(tid)
         if jr is None:
-            bump("outcome_unjoined_trade_not_in_journal"); continue
+            bump("outcome_unjoined_trade_not_in_journal")
+            continue
         if not jr["closed"]:
-            bump("outcome_pending"); continue
+            bump("outcome_pending")
+            continue
         if jr["net_r"] is None:
-            bump("outcome_no_net_r"); continue
+            bump("outcome_no_net_r")
+            continue
         closed, info = _ts(jr["closed_at"]), _ts(r.get("info_cutoff_at"))
         if closed is not None and info is not None and not info < closed:
-            bump("blind_grade_not_t0"); continue
+            bump("blind_grade_not_t0")
+            continue
         wk = dts.isocalendar()
         rows.append({"trade_id": tid, "leg": r.get("leg"), "decision_ts": dts, "net_r": float(jr["net_r"]), "grade_score": gs,
                      "expected_r": r.get("expected_r"), "confidence": conf.get(tid), "prompt_sha": r.get("prompt_sha"),
