@@ -1,7 +1,5 @@
 """LTR-GRADE-MAXHOLD: the hold replay honours max_hold_min; time-stop arms fire as registered; the grade alarm sees ungraded closes."""
-import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
