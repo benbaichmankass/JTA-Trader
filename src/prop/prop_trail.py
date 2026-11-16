@@ -333,7 +333,10 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
         detail["open_r"] = round(open_r, 4)
 
     plan = TrailPlan("hold", "", replay_sl=trail, bars=n, close_lever=close_lever, detail=detail)
-    if n == 0:
+    if n == 0 and _sx_params is None and not floored:
+        # PROP-STRUCTURE-SL-LAG (velotrade_1 ETH pkg-fe0c0d8875b142f6, 2026-11-16): a structure exit replays from the
+        # decision bar, which is already closed at fill time, and the exchange monitor tightens from it at once; an
+        # approved sl_floor needs no bars at all. Only the chandelier needs a bar after the signal bar to replay.
         plan.why = "no closed bar since the signal bar"
         return plan
     step = price_step if price_step and price_step > 0 else None
@@ -550,7 +553,11 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         tid = j.get("ticket_id")
         t = tickets.get(tid) or {}
         leg = legs.get(str(t.get("strategy") or ""))
-        entry, isl, sig_t = _f(t.get("entry")), _f(t.get("sl")), _parse_ts(t.get("signal_time"))
+        # PROP-STRUCTURE-SL-LAG: the initial stop is the EMITTED one (``ticket_sl``). The ticket row's ``sl`` on
+        # /api/bot/prop/tickets is the package's CURRENT stop once a structure/trail amend has moved it, so using it
+        # understated risk and ATR (velotrade_1 ETH: atr 7.39 vs 18.79) and replayed from a tightened start.
+        entry, sig_t = _f(t.get("entry")), _parse_ts(t.get("signal_time"))
+        isl = _f(t.get("ticket_sl")) if _f(t.get("ticket_sl")) is not None else _f(t.get("sl"))
         if not leg or entry is None or isl is None or sig_t is None:
             res.log("trail_skip", ticket_id=tid, venue=venue,
                     why="ticket or leg not found (strategy/entry/sl/signal_time)")
