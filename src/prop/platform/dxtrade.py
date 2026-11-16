@@ -5437,7 +5437,7 @@ class DXtradeAdapter(PropPlatformAdapter):
         # SL / TP took the same call. Default "fill", so breakout_1's fill
         # path is unchanged.
         self.limit_price_fill = "fill"
-        # PROP-TRADEIFY-WORKSPACE-RECUR (manager 2026-11-16; operator "it has to be able to do it on its own"): when the
+        # PROP-TRADEIFY-WORKSPACE-RECUR (manager order 2026-11-16, after the 11-15 13:18Z and 11-16 ~08:50Z recurrences): when the
         # Positions / Orders table is missing because the terminal fell back to another workspace tab (a page-load
         # timeout reloads the default "Trading Dashboard"; 11-15 13:18Z and 11-16 ~08:50Z left the tradeify_1 executor
         # blind for hours with an open position), a read re-selects "My Trading Account" ONCE per adapter (= once per
