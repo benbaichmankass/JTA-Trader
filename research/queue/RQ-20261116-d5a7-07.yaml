@@ -1,7 +1,7 @@
 id: RQ-20261116-d5a7-07
 title: 'ml-exit-head-donchian-1h ITERATION: does the volume-composition feature add at lookback 1000 (vs 500 in 0bc8-02)? Out-of-sample replayed R per trade vs the
   champion recipe, net of cost'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
@@ -138,3 +138,16 @@ related:
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
 last_dispatched_at: '2026-11-16T10:32:16+00:00'
+grading:
+  attested: RULE-RQ20261116-d5a7-07-LOOKBACK1000
+  auto: true
+  decision_rule_id: RULE-RQ20261116-d5a7-07-LOOKBACK1000
+  evidence:
+  - research/results/RQ-20261116-d5a7-07/43849780749.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
