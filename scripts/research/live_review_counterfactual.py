@@ -143,6 +143,31 @@ def replay(bars: List[dict], *, side: str, entry: float, r_dist: float, start_ts
     return None
 
 
+def hold_replay(bars: List[dict], *, pkg: dict, trade: Optional[dict], side: str, entry: float, r_dist: float,
+                start_ts: float, stop: float, tp: Optional[float], extreme_r0: float,
+                trail_dist: Optional[float]) -> Optional[dict]:
+    """The HOLD path: ``replay`` plus the package's own ``max_hold_min`` time exit (LTR-GRADE-MAXHOLD 2026-11-16).
+
+    Before this, a hold that neither stopped nor hit its TP never resolved, so every applied close on a leg whose
+    real exit is the time stop (ml_entry, ``max_hold_min`` 1440) read ``hold_replay_unresolved_before_close`` and
+    was never priced (measured 2026-11-16: 8 of 8 applied ml_entry closes since 11-15 unpriced). A time exit fills at
+    the OPEN of the first bar at/after entry + max_hold_min; None when the bars end before that boundary."""
+    meta = _meta(pkg)
+    mh = _num(meta.get("max_hold_min"))
+    t_entry = _ts(pkg.get("created_at")) or _ts(meta.get("entry_time")) or (_ts(trade.get("timestamp")) if trade else None)
+    t_limit = (t_entry + mh * 60.0) if (mh and t_entry) else None
+    seg = [b for b in bars if t_limit is None or b["time"] < t_limit]
+    hit = replay(seg, side=side, entry=entry, r_dist=r_dist, start_ts=start_ts, stop=stop, tp=tp,
+                 extreme_r0=extreme_r0, trail_dist=trail_dist)
+    if hit is not None or t_limit is None:
+        return hit
+    tx = next((b for b in bars if b["time"] >= t_limit and b["time"] >= start_ts), None)
+    if tx is None:
+        return None
+    sign = 1.0 if side == "long" else -1.0
+    return {"gross_r": sign * (tx["open"] - entry) / r_dist, "ts": tx["time"], "reason": "max_hold"}
+
+
 # --------------------------------------------------------------------------- costs
 
 def cost_legs(trade: dict, symbol: str, entry: float, r_dist: float, risk_usd: Optional[float]) -> Tuple[float, float, float, str]:
@@ -225,8 +250,8 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     tf_s = _TF_SECONDS.get(str(meta.get("timeframe") or "1h"), 3600)
     if bars[0]["time"] > t0 + tf_s:
         return _result(review, state="could_not_price", reason="candles_start_after_review")
-    hold = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now, tp=tp,
-                  extreme_r0=peak_r, trail_dist=trail_dist)
+    hold = hold_replay(bars, pkg=pkg, trade=trade, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now,
+                       tp=tp, extreme_r0=peak_r, trail_dist=trail_dist)
     if action in PAIRED:
         return _price_paired(review, rec, action, pkg, trade, bars, hold, side=side, entry=entry, r_dist=r_dist,
                              sl0=sl0, t0=t0, stop_now=stop_now, tp=tp, peak_r=peak_r, trail_dist=trail_dist,
@@ -431,7 +456,9 @@ def applied_by_outcome(review: dict, trade: Optional[dict]) -> bool:
     if str(trade.get("exit_reason") or "") != "live_review_close":
         return False
     t_rev, t_close = _ts(review.get("reviewed_at")), _ts(trade.get("closed_at"))
-    return t_rev is not None and t_close is not None and 0 <= t_close - t_rev <= CLOSE_ATTRIBUTION_S
+    # EITHER side: a row's reviewed_at is sometimes stamped minutes AFTER the apply it records (measured 2026-11-16:
+    # dda66b33 close 13:19:35, row reviewed_at 13:25; a2c1ef8b close 08:18:24, row 08:20), which left the close unattributed.
+    return t_rev is not None and t_close is not None and abs(t_close - t_rev) <= CLOSE_ATTRIBUTION_S
 
 
 def _outcome_row(review: dict, trade: Optional[dict], *, delta: Optional[float], rec_r: Optional[float],
@@ -520,9 +547,18 @@ def fetch_candles_live(symbol: str, interval: str, limit: int = 1000) -> Optiona
 
 
 def load_live_sources(reviews: List[dict]) -> Tuple[Dict[str, dict], Dict[int, dict]]:
-    pk = fetch_diag("journal?table=order_packages&limit=150")
-    pk = pk.get("rows", pk) if isinstance(pk, dict) else pk
-    packages = {p["order_package_id"]: p for p in pk}
+    # LTR-GRADE-MAXHOLD 2026-11-16: ONE page of 150 left every review of an older package `no_package_row` (66 of 782
+    # reviews on 2026-11-16); page until the join set is covered or the journal runs out.
+    packages: Dict[str, dict] = {}
+    need = {r["order_package_id"] for r in reviews}
+    for off in range(0, 3000, 150):
+        pk = fetch_diag(f"journal?table=order_packages&limit=150&offset={off}")
+        pk = pk.get("rows", pk) if isinstance(pk, dict) else pk
+        if not pk:
+            break
+        packages.update({p["order_package_id"]: p for p in pk})
+        if need <= set(packages) or len(pk) < 150:
+            break
     trades: Dict[int, dict] = {}
     for off in (0, 1000, 2000):
         page = fetch_diag(f"journal?table=trades&limit=1000&offset={off}")

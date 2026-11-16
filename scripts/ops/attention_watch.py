@@ -326,6 +326,42 @@ def probe_soak_grade(now: datetime) -> dict:
                                     f"bound {SOAK_GRADE_MAX_DAYS}d)"}
 
 
+def probe_ltr_grade(now: datetime) -> dict:
+    """LTR-GRADE-ALARM (operator 2026-11-16): an APPLIED live-review close on a closed trade, ungraded > 24 h.
+
+    Applied = a package whose trade row in outcomes.jsonl carries ``exit_reason == live_review_close``; graded = a
+    ``close`` outcome row for it priced by ``paired_replay_v1`` (a ``no_path_change`` hold row is NOT a grade).
+    An ALARM, never a gate. Not measured here (so said, not hidden): grader run age (outcomes.jsonl only gains
+    rows when something prices) and prop closes (not in the journal trades table)."""
+    path = REPO_ROOT / "comms" / "live_review" / "outcomes.jsonl"
+    if not path.exists():
+        return {"status": UNKNOWN, "detail": "comms/live_review/outcomes.jsonl absent: could not look"}
+    closed_at: dict[str, datetime] = {}
+    graded: set[str] = set()
+    try:
+        for ln in path.read_text().splitlines():
+            if not ln.strip() or ln.startswith('{"_meta"'):
+                continue
+            r = json.loads(ln)
+            if r.get("exit_reason") != "live_review_close":
+                continue
+            pid = r["order_package_id"]
+            t = datetime.fromisoformat(str(r["closed_at"]).replace("Z", "+00:00"))
+            closed_at[pid] = max(t, closed_at.get(pid, t))
+            if r.get("action") == "close" and str(r.get("cf_method", "")).startswith("paired_replay"):
+                graded.add(pid)
+    except (ValueError, KeyError, OSError) as exc:
+        return {"status": UNKNOWN, "detail": f"outcomes.jsonl unreadable ({type(exc).__name__}): could not look"}
+    stale = sorted((pid for pid, t in closed_at.items() if pid not in graded and (now - t).total_seconds() > 24 * 3600),
+                   key=lambda pid: closed_at[pid])
+    n = len(closed_at)
+    if stale:
+        return {"status": BREACHED, "detail": f"{len(stale)} of {n} applied live-review close package(s) ungraded >24h "
+                                              f"(oldest {stale[0]}, closed {closed_at[stale[0]]:%Y-%m-%d %H:%MZ}); prop closes and grader run age not measured"}
+    return {"status": OK, "detail": f"all {n} applied live-review close package(s) older than 24h are graded; "
+                                    "prop closes and grader run age not measured"}
+
+
 def probe_research(now: datetime, shallow: bool | None) -> dict:
     t = _last_commit_time(RESEARCH_RESULTS)
     if t is None:
@@ -935,6 +971,7 @@ def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
         "probes": {
             "soak_grade": probe_soak_grade(now),
             "research": probe_research(now, shallow),
+            "ltr_grade": probe_ltr_grade(now),
             "inflight": probe_inflight(now, shallow),
             "manager": probe_manager(now),
             "report": probe_report(now),
@@ -959,6 +996,7 @@ def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
 PROBE_LABEL = {
     "soak_grade": "R5 weekly soak grade missing",
     "research": "research results not landing",
+    "ltr_grade": "an applied live-review close has gone ungraded for more than 24h (the LTR grader/counterfactual is not pricing it)",
     "inflight": "in_flight rows gone quiet",
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
