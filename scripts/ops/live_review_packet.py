@@ -803,8 +803,24 @@ def _compare_levels(aid: str, symbol: str, exchange: str, sl: Optional[float], t
     return bad, ev, compared
 
 
+def _sl_only_leg(strategy: Optional[str]) -> bool:
+    """True when the leg's declared structure exit moves ONLY the stop (``structure_exit: "...;sl_only"``, #26220):
+    its TP has ONE owner (the tp_revision rule), so a prop leg's TP that did not follow a package TP revision is
+    by design, not a mechanics mismatch."""
+    try:
+        import yaml
+        from src.runtime.structure_exit_live import declared
+        doc = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text()) or {}
+        leg = (doc.get("strategies", doc) or {}).get(str(strategy or ""))
+        params = declared(leg) if isinstance(leg, dict) else None
+        return bool(params and params.get("sl_only"))
+    except Exception:  # allow-silent: an unreadable config means "not by design"; the strict compare then stands
+        return False
+
+
 def _compare_prop_levels(aid: str, symbol: str, direction: str, sl: Optional[float], tp: Optional[float],
-                         pos: List[dict]) -> Tuple[int, List[str], int]:
+                         pos: List[dict], *, ticket_tp: Optional[float] = None,
+                         tp_by_design: bool = False) -> Tuple[int, List[str], int]:
     """Compare the package's SL/TP with the prop venue's position row (phone Positions read).
 
     Returns ``(mismatches, evidence, levels_compared)``. Only ONE venue position on this symbol + side can be
@@ -824,6 +840,13 @@ def _compare_prop_levels(aid: str, symbol: str, direction: str, sl: Optional[flo
         if got is None:
             ev.append(f"{aid}: venue {name} not in the Positions read (not compared)")
             continue
+        if name == "TP" and tp_by_design and ticket_tp is not None and _close(got, ticket_tp) and not _close(got, pkg):
+            # LTR-MECHANICS-ROW-BLOCKS-DECISION (c): an sl_only leg's prop TP rests at the TICKET's entry TP while the
+            # package TP follows the tp_revision rule (#26220). Same level as the ticket = by design, not a mismatch.
+            compared += 1
+            ev.append(f"{aid}: venue TP {got} = the ticket's entry TP; package TP {pkg} follows the tp_revision rule "
+                      f"(sl_only leg, by design #26220: not a mismatch)")
+            continue
         compared += 1
         if not _close(got, pkg):
             bad += 1
@@ -841,8 +864,10 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
     pkg_status = p.get("status") if p else None
     pkg_id = (p or {}).get("order_package_id") or next(
         (x.get("order_package_id") for x in view["trades"] + view["telemetry"] + view["tickets"] if x.get("order_package_id")), None)
+    per_account: Dict[str, dict] = {}
     for a in accts:
         aid, cls, ex = a["account_id"], a["account_class"], a.get("exchange")
+        bad0, fail0, ev0 = bad, looked_fail, len(ev)
         item = {"account_id": aid, "account_class": cls, "read": None,
                 "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
                 "read_if_amend": "unknown", "evidence": None}
@@ -865,7 +890,9 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                     # LTR-PACKET-READ-REACH (2026-11-11): the prop venue's own SL/TP, from the phone's Positions read,
                     # compared with the package -- TP as well as SL. Before this a prop account was never compared, so
                     # velotrade_1 SOL TP 76.535 vs package 78.964 read "match".
-                    bad_i, ev_i, compared = _compare_prop_levels(aid, symbol, direction, sl, tp, pos)
+                    bad_i, ev_i, compared = _compare_prop_levels(
+                        aid, symbol, direction, sl, tp, pos, ticket_tp=_f(tk.get("tp")),
+                        tp_by_design=_sl_only_leg((p or {}).get("strategy_name") or tk.get("strategy")))
                     bad += bad_i
                     ev.extend(ev_i)
                     if not compared:
@@ -984,6 +1011,13 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                 else:
                     item["evidence"] += (f"; apply paths {', '.join(paths)}; would_apply = an executor reaches this leg, "
                                          "NOT that its RiskManager approved (LTR-6 gap)")
+        # LTR-MECHANICS-ROW-BLOCKS-DECISION: this account's OWN verdict, from the same checks as the package one
+        per_account[aid] = {
+            "verdict": "mismatch" if bad > bad0 else "could_not_look" if looked_fail > fail0 else "match",
+            "evidence": "; ".join(ev[ev0:]) or None,
+            "by_design": next((e.split(": ", 1)[1] for e in ev[ev0:] if "by design" in e), None),
+        }
+        item["mechanics"] = per_account[aid]
         bounds.append(item)
     verdict = "mismatch" if bad else "match"
     if not bad and looked_fail:
@@ -995,7 +1029,7 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
         ev.append("no account carries this package in the reads (no trade / ticket row): nothing compared")
     if not ev:
         ev.append(f"package sl {sl} / tp {tp} agree with every readable account")
-    return {"verdict": verdict, "evidence": "; ".join(ev)}, bounds
+    return {"verdict": verdict, "evidence": "; ".join(ev), "per_account": per_account}, bounds
 
 
 def _calendar(symbol: str, cutoff: datetime) -> dict:
