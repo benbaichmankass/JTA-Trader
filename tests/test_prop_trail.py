@@ -611,3 +611,15 @@ def test_an_approved_sl_floor_applies_before_a_bar_closes_after_the_signal_bar()
     p = pt.plan_trail(leg=SOL, direction="short", entry=100, initial_sl=105, signal_time=T0 + timedelta(minutes=8),
                       resting_sl=105, candles=c, now=T0 + timedelta(minutes=20), price_step=0.01, sl_floor=102.0)
     assert p.bars == 0 and p.action == "tighten" and p.sl == pytest.approx(102.0)
+
+
+def test_the_trail_replays_from_the_emitted_stop_not_the_packages_current_stop(tmp_path):
+    """PROP-STRUCTURE-SL-LAG: the tickets API's ``sl`` is the package's current stop; ``ticket_sl`` is the emitted one."""
+    class TightenedApi(Api):
+        def all_tickets(self, account_id):
+            return [{"ticket_id": "t1", "strategy": "trend_donchian_sol_prop", "entry": 100, "sl": 99,
+                     "ticket_sl": 95, "signal_time": T0.isoformat()}]
+    a, api = Adapter([pos()], guard=False), TightenedApi()
+    run(a, api, "live", tmp_path)
+    assert a.calls == [("SOLUSD", pytest.approx(STEP_SL), None, True)]       # the same step as an untightened ticket
+    assert "rollout step toward 103" in api.posted[0]["reason"]
