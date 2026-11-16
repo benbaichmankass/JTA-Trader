@@ -1362,6 +1362,17 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             out.update(exit=EXIT_REFUSED, detail=f"mandate {intent.mandate} scopes no open leg of "
                                                  f"{intent.order_package_id} (accounts {sorted(auto_accounts)})")
             return out
+    if intent.account_scope is not None:
+        # LTR-MECHANICS-ROW-BLOCKS-DECISION: the decision applies on every account whose mechanics MATCH; an account
+        # whose mechanics differ is skipped here (the dispatcher already recorded why) and never touched.
+        scope = set(intent.account_scope)
+        out["mechanics_scope"] = sorted(scope)
+        out["mechanics_skipped"] = sorted({str(lg.get("account_id")) for lg in legs if lg.get("account_id") not in scope})
+        legs = [lg for lg in legs if lg.get("account_id") in scope]
+        if not legs:
+            out.update(exit=EXIT_REFUSED, detail=f"mechanics_scope_empty: no open leg of {intent.order_package_id} "
+                                                 f"on a matching account ({sorted(scope)})")
+            return out
     for leg in legs:
         aid = leg["account_id"]
         rec: Dict[str, Any] = {"account_id": aid, "leg_kind": leg["kind"]}
@@ -1467,7 +1478,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     levels = set(trade_applied.values())
     # An account-scoped apply never moves the SHARED package stop: the legs outside its scope keep theirs.
     if (n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1 and not intent.target_account_id
-            and auto_accounts is None):
+            and auto_accounts is None and intent.account_scope is None):
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
             pkg_write: Dict[str, Any] = {"sl": lvl}
@@ -1538,7 +1549,8 @@ def build_intent(pkg: Dict[str, Any], *, new_sl: Optional[float], review_id: str
                  mechanics_verdict: Optional[str] = None,
                  worst_case_delta_r: Optional[float] = None, action: str = "tighten_sl",
                  new_tp: Optional[float] = None, size_fraction: Optional[float] = None,
-                 size_multiplier: Optional[float] = None) -> lri.LiveReviewIntent:
+                 size_multiplier: Optional[float] = None,
+                 account_scope: Optional[Tuple[str, ...]] = None) -> lri.LiveReviewIntent:
     """An intent for ``pkg``. With no ``new_sl`` it is a PROBE at the noise
     floor (the tightest stop the floor allows), used only by ``--dry-run`` to
     show what each account's own bounds would do."""
@@ -1552,7 +1564,7 @@ def build_intent(pkg: Dict[str, Any], *, new_sl: Optional[float], review_id: str
         bar_ts=market.get("bar_ts"), min_buffer_atr=min_buffer_atr, mandate=mandate,
         basis=basis, confidence=confidence, reason=reason, mechanics_verdict=mechanics_verdict,
         worst_case_delta_r=worst_case_delta_r, new_tp=new_tp, size_fraction=size_fraction,
-        size_multiplier=size_multiplier)
+        size_multiplier=size_multiplier, account_scope=account_scope)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -1575,6 +1587,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--new-tp", type=float, default=None, help="move_tp: the new take-profit")
     ap.add_argument("--size-fraction", type=float, default=None, help="partial_close / add_entry")
     ap.add_argument("--size-multiplier", type=float, default=None, help="change_size")
+    ap.add_argument("--accounts", default=None,
+                    help="comma list: act ONLY on these accounts' legs (the accounts whose mechanics match); the "
+                         "others are skipped and the shared package stop is not moved (LTR-MECHANICS-ROW-BLOCKS-DECISION)")
     ap.add_argument("--dry-run", action="store_true", help="read-only: print what each account WOULD do")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args(argv)
@@ -1608,7 +1623,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                               expected_cost_r=a.expected_cost_r, basis=a.basis,
                               confidence=a.confidence, reason=a.reason, mechanics_verdict=a.mechanics,
                               worst_case_delta_r=a.worst_case_delta_r, action=a.action, new_tp=a.new_tp,
-                              size_fraction=a.size_fraction, size_multiplier=a.size_multiplier)
+                              size_fraction=a.size_fraction, size_multiplier=a.size_multiplier,
+                              account_scope=(tuple(x.strip() for x in a.accounts.split(",") if x.strip())
+                                             if a.accounts else None))
         res = run(intent, apply=bool(a.apply), db=db, accounts=accounts, strategies=strategies,
                   review_cfg=cfg)
         res["probe"] = a.new_sl is None
