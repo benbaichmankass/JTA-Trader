@@ -1,0 +1,176 @@
+{
+ "schema_version": 1,
+ "trade_id": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuHbhd9wFuGJfWRqyoV_child_livereview",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "review_id": "LR-20261116T0402Z-pkg-fe0c0d8875b142f6",
+ "reviewed_at": "2026-11-16T04:12:00Z",
+ "order_package_id": "pkg-fe0c0d8875b142f6",
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-16T04:00:00+00:00",
+  "l0_snapshot_at": "2026-11-16T03:59:54.542429+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T04:02:34Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.6386,
+  "open_r": 0.1536,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7923,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1849.12857143,
+  "tp": 1740.37857143
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.6386,
+  "open_r": 0.1536,
+  "peak_r": 0.7923,
+  "r_to_stop": 0.5627,
+  "r_to_target": 2.2548
+ },
+ "mechanics": {
+  "evidence": "velotrade_1: venue SL 1846.28 != package SL 1849.12857143; velotrade_1: venue TP 1777.97 != package TP 1740.37857143",
+  "verdict": "mismatch"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 161,
+   "mean_r": -0.2664,
+   "sd_r": 0.9996,
+   "worst_r": -1.2043,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 161,
+   "mean_r": -0.2001,
+   "sd_r": 0.2595,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 161,
+   "mean_r": -0.2045,
+   "sd_r": 0.3159,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 161,
+   "mean_r": -0.1934,
+   "sd_r": 0.3862,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 161,
+   "mean_r": -0.1988,
+   "sd_r": 0.2801,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 161,
+   "mean_r": 0.067,
+   "sd_r": 0.0346,
+   "worst_r": -0.0504,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T0402Z-pkg-fe0c0d8875b142f6.json",
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Mechanics mismatch persists, narrower than the 00:13Z flag. The stop is fixed: velotrade_1 venue SL 1846.28 is now tighter than the package SL 1849.13 (2.85 px, about 0.14 ATR 1h), no longer the wide 1871.94. The TP still disagrees: velotrade_1 venue TP 1777.97 (the entry-time 1.5R target) vs package TP 1740.38, which bybit_2 and bybit_portfolio now carry (their read at 00:13Z was 1777.97, so the package TP moved after that and did not reach the prop leg). Both brackets remain on every leg, so this is a TP divergence on a tighter-stop prop leg, not an orphan. No exit judgement on a mismatched package; operator to confirm whether velotrade_1 should follow the 1740.38 target or keep 1777.97 by design."
+ },
+ "context_flags": [
+  "mechanics_mismatch: velotrade_1: venue SL 1846.28 != package SL 1849.12857143; venue TP 1777.97 != package TP 1740.37857143",
+  "rerun_of_00:13Z_flag: SL part resolved (venue now tighter than package), TP part open",
+  "live_vs_backtest: CONSISTENT (real money n=33 live -3.08R pct 25.9; mirror n=33 -2.38R pct 29.4; backtest n=907 exp +0.037R)",
+  "regime: 4h trending ADX 60.1 but 1h adx_now 14.2 trend_now chop; atr_now_over_entry null (missing_input), regime cells null",
+  "missing_input: context.funding, regime.atr_now_over_entry, regime.vol_now, regime.cell_entry",
+  "book: 7 other open crypto shorts listed as correlated (SOL x2, AVAX x2, ADA, ETH x2): correlated beta exposure",
+  "table (not decisive on a mechanics row): hold n=161 mean -0.266R worst -1.204R",
+  "packet_health ok; inapplicable option 1/6 (stop_level_not_below_price), not a defect"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "flag_mechanics: no bracket move requested; bybit_orders: SL 1849.13 / TP 1740.38, position True, matched by order_id"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "flag_mechanics: no bracket move requested; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "flag_mechanics: no bracket move requested; apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "flag_mechanics: no bracket move requested; bybit_orders: SL 1849.13 / TP 1740.38, position True, matched by order_id"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "packet_sha": "042c585bf8a9de838761ecc931f247178a52f42ec8747906c005a3081eb0a6ad"
+}
