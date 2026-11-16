@@ -128,9 +128,24 @@ def load_suppressed(path: Path, now: datetime) -> int:
         cutoff = now.timestamp() - MARKER_LOOKBACK_DAYS * 86400
         have = {json.dumps(m, sort_keys=True, default=str) for m in _suppressed_markers}
         n = 0
+        try:
+            from src.runtime import wake_toggles as _wt
+            _st = _wt.read()
+        except Exception:  # noqa: BLE001
+            _wt, _st = None, None
         for m in raw:
             if not isinstance(m, dict) or not isinstance(m.get("entries"), list):
                 continue
+            if _wt is not None:
+                # An entry whose switch is ON now (the mirror after LTR-PAPER-PORTFOLIO-WAKE-SUPPRESSED) is no longer
+                # suppressed: it must not read as "already handled", or its still-due events never post.
+                try:
+                    kept = [e for e in m["entries"] if not _wt.ltr_entry_on(e, _st)]
+                except Exception:  # noqa: BLE001
+                    kept = m["entries"]
+                if not kept:
+                    continue
+                m = dict(m, entries=kept)
             try:
                 at = datetime.fromisoformat(str(m.get("posted_at")).replace("Z", "+00:00"))
                 if (at if at.tzinfo else at.replace(tzinfo=timezone.utc)).timestamp() < cutoff:

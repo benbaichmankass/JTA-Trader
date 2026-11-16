@@ -430,3 +430,30 @@ def test_an_unreadable_or_stale_suppressed_file_reads_as_empty(tmp_path):
            "entries": [{"order_package_id": "p", "event": "e", "level": 1}]}
     f.write_text(json.dumps({"version": 1, "markers": [old]}))
     assert post.load_suppressed(f, NOW) == 0 and post._suppressed_markers == []
+
+
+def test_earlier_suppressed_mirror_entries_do_not_count_as_already_handled(tmp_path, monkeypatch):
+    """LTR-PAPER-PORTFOLIO-WAKE-SUPPRESSED: entries suppressed while the mirror rode ltr_paper must not stay 'seen'
+    once the mirror follows ltr_real_money; paper-testing suppressions stay."""
+    from src.runtime import wake_toggles as wt
+    st = {"read_state": "read", "toggles": dict(wt._defaults())}          # ltr_paper False, ltr_real_money True
+    monkeypatch.setattr(wt, "read", lambda remote=None: st)
+    monkeypatch.setattr(post, "_suppressed_markers", [])
+    monkeypatch.setattr(post, "_suppressed_loaded_from", None)
+    mirror = {"order_package_id": "pkg-a5ebf7ae", "event": "judgement_cadence", "level": "2026-11-16T16:00:00+00:00",
+              "accounts": ["alpaca_portfolio"]}
+    testing = {"order_package_id": "pkg-paper", "event": "r_milestone", "level": 1, "accounts": ["bybit_1"]}
+    marker = {"kind": "ltr-wake", "posted_at": (NOW - timedelta(hours=2)).isoformat(), "entries": [mirror, testing]}
+    only_mirror = dict(marker, entries=[mirror])
+    f = tmp_path / post.SUPPRESSED_STATE_NAME
+    f.write_text(json.dumps({"version": 1, "markers": [marker, only_mirror]}))
+    assert post.load_suppressed(f, NOW) == 1                              # the mirror-only marker is dropped whole
+    (kept,) = post._suppressed_markers
+    assert [e["order_package_id"] for e in kept["entries"]] == ["pkg-paper"]
+    wake = post.wake_module()
+    due_doc = {"read_state": "looked", "due_count": 1, "generated_at": NOW.isoformat(),
+               "due": [{"order_package_id": "pkg-a5ebf7ae", "leg": "slv_trend_1h", "symbol": "SLV",
+                        "account_id": "alpaca_portfolio", "telemetry_updated_at": NOW.isoformat(),
+                        "events": [{"event": "judgement_cadence", "level": "2026-11-16T16:00:00+00:00", "why": "x"}]}]}
+    p = wake.plan(due_doc, post._suppressed_markers, wake.load_cfg(), NOW)
+    assert p["kind"] == "wake" and p["entries"][0]["order_package_id"] == "pkg-a5ebf7ae"

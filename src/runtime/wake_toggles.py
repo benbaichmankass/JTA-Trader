@@ -41,8 +41,12 @@ TOGGLES: Dict[str, Dict[str, Any]] = {
     "short_hold": {"label": "Short-hold wake", "default": False, "group": "short_hold"},
 }
 #: telegram_policy.account_class -> toggle key.  Unknown accounts ride the real-money switch (never silenced by doubt).
+#: The paper-portfolio MIRRORS (paper_role portfolio: alpaca_portfolio, bybit_portfolio) follow the real-money switch,
+#: not the paper one: their window is the real-money legs' demotion signal. Operator popup 2026-11-16 ~18:35Z, answer
+#: verbatim "Follow real money (Recommended)" (LTR-PAPER-PORTFOLIO-WAKE-SUPPRESSED). Paper TESTING accounts stay on
+#: ``ltr_paper`` (default off).
 LTR_CLASS_KEY = {"real_money": "ltr_real_money", "prop": "ltr_prop",
-                 "paper_portfolio": "ltr_paper", "testing_paper": "ltr_paper"}
+                 "paper_portfolio": "ltr_real_money", "testing_paper": "ltr_paper"}
 REMOTE_URL = "https://ict-bot.duckdns.org/api/bot/wake-toggles"
 SUPPRESSED_RECEIPT = "suppressed_by_wake_toggle"
 _RATE_S = 3600.0
