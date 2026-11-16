@@ -1,0 +1,180 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T1433Z-pkg-897d89b7edf34aa3",
+ "reviewed_at": "2026-11-16T14:38:00Z",
+ "order_package_id": "pkg-897d89b7edf34aa3",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-16T12:00:00+00:00",
+  "l0_snapshot_at": "2026-11-16T14:33:17.779251+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T14:33:59Z",
+ "state": {
+  "atr_now_over_entry": 0.5763,
+  "bars_held": 12,
+  "giveback_r": 0.5015,
+  "open_r": -0.1254,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3761,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.15997857,
+  "tp": 0.1379431
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.5763,
+  "bars_since_peak": 0,
+  "giveback_r": 0.5015,
+  "open_r": -0.1254,
+  "peak_r": 0.3761,
+  "r_to_stop": 0.8746,
+  "r_to_target": 2.195
+ },
+ "mechanics": {
+  "evidence": "package sl 0.15997857 / tp 0.1379431 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 95,
+   "mean_r": -0.0071,
+   "sd_r": 1.7927,
+   "worst_r": -1.1996,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 95,
+   "mean_r": -0.3352,
+   "sd_r": 0.1594,
+   "worst_r": -0.8408,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 95,
+   "mean_r": -0.3337,
+   "sd_r": 0.424,
+   "worst_r": -0.8408,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 95,
+   "mean_r": -0.3456,
+   "sd_r": 0.7887,
+   "worst_r": -0.9995,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 95,
+   "mean_r": -0.1808,
+   "sd_r": 0.0267,
+   "worst_r": -0.2865,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T1433Z-pkg-897d89b7edf34aa3.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Previous forecast (target 0.1424, invalidation 0.15998, 6 bars on 2h) did not resolve: neither level touched (since-entry high 0.1557, low 0.1501, last close 0.1518); I carry the target and put p at 0.2 because the 1d low (0.1424) sweep already happened and price has stalled for 10 bars. Open -0.125R, peak +0.376R, giveback 0.50R, 12 bars. Table (n=95, floor 20): hold mean -0.007 sd 1.793 worst -1.200 is flat, but every tighten is worse on mean (atr:1.0 -0.335, atr:1.5 -0.334, atr:2.0 -0.346; gaps ~0.33R vs SE 0.16-0.18) and close -0.181 (gap 0.17R < SE 0.18, worst gain 0.913R < 1R), so the tail tie-break does not fire. Price holds below the 0.1557/0.1566 2h lower-high cluster and 1d is trending down (ADX 35.5-39.4), so the strategy bracket (SL 0.15998, TP 0.13794) already expresses my view; hold with a modest p_target."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "book: 10 other open short packages correlated (MGC, SOL, AVAX x2, ETH x2, SLV x2, BTC, IAUM); same short crypto-beta bet, no size change; trend_donchian_ada_4h also short ADA at -0.406R",
+  "table: hold n=95 measured mean -0.007 (flat, not positive); every tighten and close measured, none beats hold on mean",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding, context.news",
+  "regime: atr_now_over_entry 0.58 (calm vs entry), 1d trending ADX 39.4, 2h ADX 35.5",
+  "calendar: no events next 24h",
+  "live_vs_backtest: realMoney CONSISTENT live_r -0.563 n=19; mirror CONSISTENT n=13",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJXmGuLfiRGi3rCAHV",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "505c900a8cba3144fc934b4f449ade5dc2707c2700843fdf594f5e3b4a70d164",
+ "forecast": {
+  "thesis": "Short with the 1d downtrend (ADX 39.4); price is stuck in 0.1501-0.1557 under the 0.1557/0.1566 2h lower-high cluster, so I still expect a retest of the 0.1424 swing low before the stop, but the stall and 0.50R giveback keep p modest.",
+  "direction": "with_trade",
+  "target_px": 0.1424,
+  "p_target": 0.2,
+  "invalidation_px": 0.15998,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings highs 0.1557/0.1566, lows 0.1514/0.1518",
+   "chart.htf 1d trending ADX 39.42",
+   "exit_plan sl 0.159979 tp 0.137943",
+   "context.previous_review forecast carried",
+   "table hold n=95 mean -0.0071"
+  ]
+ }
+}
