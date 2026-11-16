@@ -1,0 +1,1936 @@
+{
+ "runs": {
+  "ada_pullback_2h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ADAUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/ada_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/ada_pullback_2h__bt.json",
+    "--adx-min",
+    "28",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/ada_pullback_2h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ADAUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "timeframe_declared": "2h",
+   "timeframe_bt": "2h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 449,
+   "bt_net_expectancy_r": 0.1373
+  },
+  "xrp_pullback_2h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "<data>",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "6.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/xrp_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/xrp_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.0",
+    "--tp-target-r",
+    "3.0",
+    "--tp-extend-r",
+    "1.0",
+    "--tp-approach-frac",
+    "0.85",
+    "--tp-max-extends",
+    "3",
+    "--tp-thesis",
+    "native",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/xrp_pullback_2h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "timeframe_declared": "2h",
+   "timeframe_bt": "2h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 394,
+   "bt_net_expectancy_r": 0.0724
+  },
+  "eth_pullback_2h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/eth_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/eth_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/eth_pullback_2h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "timeframe_declared": "2h",
+   "timeframe_bt": "2h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 437,
+   "bt_net_expectancy_r": 0.0606
+  },
+  "sol_pullback_2h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/sol_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/sol_pullback_2h__bt.json",
+    "--adx-min",
+    "30",
+    "--side-filter",
+    "short",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/sol_pullback_2h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "timeframe_declared": "2h",
+   "timeframe_bt": "2h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 147,
+   "bt_net_expectancy_r": 0.049
+  },
+  "avax_pullback_2h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "<data>",
+    "--symbol",
+    "AVAXUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/avax_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/avax_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--trail-decay-arm-r",
+    "4.86",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/avax_pullback_2h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "AVAXUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "timeframe_declared": "2h",
+   "timeframe_bt": "2h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 465,
+   "bt_net_expectancy_r": 0.0154
+  },
+  "trend_donchian_eth_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "6.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4.0",
+    "--tp-revision",
+    "donchian_measured_move",
+    "--tp-revision-width-mult",
+    "0.5",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 275,
+   "bt_net_expectancy_r": 0.3112
+  },
+  "trend_donchian_xrp_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_4h__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 68,
+   "bt_net_expectancy_r": 0.2351
+  },
+  "trend_donchian_eth_prop": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_prop__bt.json",
+    "--trail-decay-arm-r",
+    "2.99",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_eth_prop__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "timeframe_declared": "1h",
+   "timeframe_bt": "1h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 865,
+   "bt_net_expectancy_r": 0.0875
+  },
+  "trend_donchian_sol_prop": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "4.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_prop__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_prop__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "timeframe_declared": "1h",
+   "timeframe_bt": "1h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 388,
+   "bt_net_expectancy_r": 0.1472
+  },
+  "trend_donchian_sol_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_4h__bt.json",
+    "--trail-decay-arm-r",
+    "5.57",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_sol_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 267,
+   "bt_net_expectancy_r": 0.2485
+  },
+  "trend_donchian_ada_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ADAUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_ada_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_ada_4h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_ada_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ADAUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 259,
+   "bt_net_expectancy_r": 0.2245
+  },
+  "trend_donchian_avax_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "AVAXUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.7",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_avax_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_avax_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_avax_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "AVAXUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 263,
+   "bt_net_expectancy_r": 0.1077
+  },
+  "trend_donchian_xrp_adx25": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_adx25__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_adx25__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--trail-adx-below",
+    "25",
+    "--trail-adx-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261029-5785-05/43777436598/corpus/trend_donchian_xrp_adx25__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 68,
+   "bt_net_expectancy_r": 0.2427
+  }
+ },
+ "families": [
+  {
+   "family": "PB2H",
+   "legs_all": [
+    "ada_pullback_2h",
+    "xrp_pullback_2h",
+    "eth_pullback_2h",
+    "sol_pullback_2h",
+    "avax_pullback_2h"
+   ],
+   "legs_gate": [
+    "ada_pullback_2h",
+    "xrp_pullback_2h"
+   ],
+   "n_pool_scored": 1883,
+   "verdict": "INDETERMINATE",
+   "reasons": [
+    "ada_pullback_2h: parity 0.755 < 0.98"
+   ],
+   "primary": {
+    "C": 0.1,
+    "q": 0.2
+   },
+   "primary_eval": {
+    "n_gate": 838,
+    "take_all_mean_r": 0.1091,
+    "delta_mean_r": -0.014,
+    "delta_lb95_r": -0.0316,
+    "delta_lb_bonferroni_r": -0.0403,
+    "maxdd_take_r": 31.208,
+    "maxdd_overlay_r": 26.9,
+    "cvar5_take_r": -1.1126,
+    "cvar5_overlay_r": -1.1022,
+    "random_delta_mean_r": -0.0119,
+    "random_delta_p90_r": -0.0003,
+    "random_p_value": 0.5825,
+    "reduce_rate": 0.1883,
+    "reduced_mean_r": 0.1483,
+    "net_total_r_take": 91.44,
+    "net_total_r_overlay": 79.74,
+    "paths_delta_mean_r": [
+     0.003,
+     -0.0236,
+     -0.0179,
+     -0.0024,
+     -0.0289
+    ],
+    "calibration": {
+     "brier": 0.2343,
+     "brier_const": 0.2337,
+     "ece": 0.0262,
+     "base_rate": 0.3723
+    },
+    "folds": [
+     {
+      "group": 0,
+      "n": 184,
+      "delta": 0.0125,
+      "random_mean": 0.0015,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 1,
+      "n": 139,
+      "delta": 0.0031,
+      "random_mean": -0.021,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 2,
+      "n": 126,
+      "delta": 0.0404,
+      "random_mean": -0.0061,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 3,
+      "n": 125,
+      "delta": -0.0532,
+      "random_mean": -0.0175,
+      "a": false,
+      "b": false,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 4,
+      "n": 134,
+      "delta": -0.0378,
+      "random_mean": -0.0042,
+      "a": false,
+      "b": false,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 5,
+      "n": 130,
+      "delta": -0.0601,
+      "random_mean": -0.0332,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     }
+    ],
+    "folds_passing": 3,
+    "checks": {
+     "a_noninferior": false,
+     "b_risk": true,
+     "c_beats_random": false,
+     "d_not_vacuous": false,
+     "e_folds": false
+    },
+    "pass": false
+   },
+   "pool_eval_primary": {
+    "n_gate": 1883,
+    "delta_mean_r": -0.0072,
+    "delta_lb95_r": -0.0195,
+    "reduce_rate": 0.2186,
+    "reduced_mean_r": 0.0662,
+    "take_all_mean_r": 0.0703,
+    "folds_passing": 3
+   },
+   "trials": [
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0107,
+     "delta_lb95_r": -0.0242,
+     "reduce_rate": 0.1,
+     "folds_passing": 3
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.2
+     },
+     "primary": true,
+     "pass": false,
+     "delta_mean_r": -0.014,
+     "delta_lb95_r": -0.0316,
+     "reduce_rate": 0.1883,
+     "folds_passing": 3
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0215,
+     "delta_lb95_r": -0.0438,
+     "reduce_rate": 0.2924,
+     "folds_passing": 3
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.01,
+     "delta_lb95_r": -0.0236,
+     "reduce_rate": 0.1005,
+     "folds_passing": 3
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.2
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0123,
+     "delta_lb95_r": -0.0299,
+     "reduce_rate": 0.1919,
+     "folds_passing": 3
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0196,
+     "delta_lb95_r": -0.0421,
+     "reduce_rate": 0.2938,
+     "folds_passing": 3
+    }
+   ],
+   "n_trials": 6,
+   "pbo": 0.15,
+   "legs": {
+    "ada_pullback_2h": {
+     "n_trades": 449,
+     "n_scored": 446,
+     "n_aligned": 449,
+     "gate_leg": true,
+     "net_expectancy_r": 0.1373,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 402,
+      "n_ours_in_ref_span": 449,
+      "n_same_trade": 339,
+      "parity_share": 0.755,
+      "cost_stack_net_r_shift_mean": -0.01174
+     }
+    },
+    "xrp_pullback_2h": {
+     "n_trades": 394,
+     "n_scored": 392,
+     "n_aligned": 394,
+     "gate_leg": true,
+     "net_expectancy_r": 0.0725,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 394,
+      "n_ours_in_ref_span": 394,
+      "n_same_trade": 387,
+      "parity_share": 0.9822,
+      "cost_stack_net_r_shift_mean": -0.00712
+     }
+    },
+    "eth_pullback_2h": {
+     "n_trades": 437,
+     "n_scored": 435,
+     "n_aligned": 437,
+     "gate_leg": false,
+     "net_expectancy_r": 0.0606,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "sol_pullback_2h": {
+     "n_trades": 147,
+     "n_scored": 147,
+     "n_aligned": 147,
+     "gate_leg": false,
+     "net_expectancy_r": 0.049,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "avax_pullback_2h": {
+     "n_trades": 465,
+     "n_scored": 463,
+     "n_aligned": 465,
+     "gate_leg": false,
+     "net_expectancy_r": 0.0154,
+     "parity": {
+      "state": "training_only"
+     }
+    }
+   },
+   "parity_basis": "trade",
+   "holdout": {
+    "state": "FAILS",
+    "reasons": [
+     "a_noninferior",
+     "c_beats_random"
+    ],
+    "window": [
+     "2017-09-01",
+     "2020-06-24 00:00:00+00:00"
+    ],
+    "n": 201,
+    "market": "spot",
+    "n_by_leg": {
+     "ada_pullback_2h": 118,
+     "xrp_pullback_2h": 83
+    },
+    "checks": {
+     "a_noninferior": false,
+     "b_risk": true,
+     "c_beats_random": false,
+     "d_not_vacuous": true
+    },
+    "eval": {
+     "n_gate": 201,
+     "take_all_mean_r": 0.1491,
+     "delta_mean_r": 0.0064,
+     "delta_lb95_r": -0.0313,
+     "delta_lb_bonferroni_r": -0.0507,
+     "maxdd_take_r": 32.417,
+     "maxdd_overlay_r": 29.232,
+     "cvar5_take_r": -1.1087,
+     "cvar5_overlay_r": -1.0982,
+     "random_delta_mean_r": -0.0146,
+     "random_delta_p90_r": 0.01,
+     "random_p_value": 0.144,
+     "reduce_rate": 0.1592,
+     "reduced_mean_r": -0.0807,
+     "net_total_r_take": 29.96,
+     "net_total_r_overlay": 31.25,
+     "paths_delta_mean_r": [
+      0.0064
+     ],
+     "calibration": {
+      "brier": 0.2358,
+      "brier_const": 0.2386,
+      "ece": 0.0155,
+      "base_rate": 0.393
+     },
+     "folds": [
+      {
+       "group": 0,
+       "n": 74,
+       "delta": -0.0351,
+       "random_mean": -0.0358,
+       "a": false,
+       "b": true,
+       "c": true,
+       "pass": false
+      },
+      {
+       "group": 1,
+       "n": 67,
+       "delta": 0.0182,
+       "random_mean": -0.0099,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      },
+      {
+       "group": 2,
+       "n": 60,
+       "delta": 0.0444,
+       "random_mean": 0.0061,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      }
+     ],
+     "folds_passing": 2
+    },
+    "runs": {
+     "ada_pullback_2h": {
+      "state": "ok",
+      "argv": [
+       "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+       "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+       "--trend-lookback",
+       "40",
+       "--pullback-lookback",
+       "10",
+       "--pullback-frac",
+       "0.618",
+       "--data",
+       "<data>",
+       "--symbol",
+       "ADAUSDT",
+       "--resample",
+       "2h",
+       "--atr-period",
+       "14",
+       "--atr-stop-mult",
+       "1.5",
+       "--trail-mult",
+       "5.0",
+       "--min-confidence",
+       "0.0",
+       "--fee-bps-roundtrip",
+       "11.0",
+       "--emit-trades",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/ada_pullback_2h__trades.jsonl",
+       "--json",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/ada_pullback_2h__bt.json",
+       "--adx-min",
+       "28",
+       "--vol-skip-below-pctl",
+       "0.1",
+       "--tp-cap-pct",
+       "0.099",
+       "--tp-r",
+       "4",
+       "--start",
+       "2017-09-01",
+       "--end",
+       "2019-11-30 23:59",
+       "--emit-paths",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/ada_pullback_2h__paths.jsonl"
+      ],
+      "feed": {
+       "source": "binance_spot_proxy",
+       "ticker": "ADAUSDT",
+       "interval": "120",
+       "resample": "2h",
+       "window": [
+        "2017-05-04",
+        "2019-11-30"
+       ]
+      },
+      "timeframe_declared": "2h",
+      "timeframe_bt": "2h",
+      "cost_policy": {
+       "fee_bps_roundtrip": 11.0,
+       "slippage_bps_roundtrip": 3.0,
+       "funding_bps_per_window": 1.0
+      },
+      "bt_total_trades": 121,
+      "bt_net_expectancy_r": 0.1559
+     },
+     "xrp_pullback_2h": {
+      "state": "ok",
+      "argv": [
+       "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+       "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+       "--trend-lookback",
+       "40",
+       "--pullback-lookback",
+       "10",
+       "--pullback-frac",
+       "0.5",
+       "--data",
+       "<data>",
+       "--symbol",
+       "XRPUSDT",
+       "--resample",
+       "2h",
+       "--atr-period",
+       "14",
+       "--atr-stop-mult",
+       "2.5",
+       "--trail-mult",
+       "6.0",
+       "--min-confidence",
+       "0.0",
+       "--fee-bps-roundtrip",
+       "11.0",
+       "--emit-trades",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/xrp_pullback_2h__trades.jsonl",
+       "--json",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/xrp_pullback_2h__bt.json",
+       "--adx-min",
+       "25",
+       "--tp-cap-pct",
+       "0.099",
+       "--tp-r",
+       "3.0",
+       "--tp-target-r",
+       "3.0",
+       "--tp-extend-r",
+       "1.0",
+       "--tp-approach-frac",
+       "0.85",
+       "--tp-max-extends",
+       "3",
+       "--tp-thesis",
+       "native",
+       "--start",
+       "2017-09-01",
+       "--end",
+       "2019-11-30 23:59",
+       "--emit-paths",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/xrp_pullback_2h__paths.jsonl"
+      ],
+      "feed": {
+       "source": "binance_spot_proxy",
+       "ticker": "XRPUSDT",
+       "interval": "120",
+       "resample": "2h",
+       "window": [
+        "2017-05-04",
+        "2019-11-30"
+       ]
+      },
+      "timeframe_declared": "2h",
+      "timeframe_bt": "2h",
+      "cost_policy": {
+       "fee_bps_roundtrip": 11.0,
+       "slippage_bps_roundtrip": 3.0,
+       "funding_bps_per_window": 1.0
+      },
+      "bt_total_trades": 85,
+      "bt_net_expectancy_r": 0.1241
+     }
+    }
+   }
+  },
+  {
+   "family": "TD",
+   "legs_all": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop",
+    "trend_donchian_sol_4h",
+    "trend_donchian_ada_4h",
+    "trend_donchian_avax_4h",
+    "trend_donchian_xrp_adx25"
+   ],
+   "legs_gate": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop"
+   ],
+   "n_pool_scored": 2434,
+   "verdict": "INDETERMINATE",
+   "reasons": [
+    "trend_donchian_eth_4h: parity 0.8473 < 0.98",
+    "trend_donchian_xrp_4h: parity 0.0882 < 0.98",
+    "trend_donchian_eth_prop: parity 0.5779 < 0.98",
+    "trend_donchian_sol_prop: parity 0.4194 < 0.98"
+   ],
+   "primary": {
+    "C": 0.1,
+    "q": 0.2
+   },
+   "primary_eval": {
+    "n_gate": 1587,
+    "take_all_mean_r": 0.1428,
+    "delta_mean_r": 0.0003,
+    "delta_lb95_r": -0.0138,
+    "delta_lb_bonferroni_r": -0.021,
+    "maxdd_take_r": 23.644,
+    "maxdd_overlay_r": 22.267,
+    "cvar5_take_r": -1.1311,
+    "cvar5_overlay_r": -1.0889,
+    "random_delta_mean_r": -0.018,
+    "random_delta_p90_r": -0.0082,
+    "random_p_value": 0.006,
+    "reduce_rate": 0.2704,
+    "reduced_mean_r": -0.0021,
+    "net_total_r_take": 226.63,
+    "net_total_r_overlay": 227.08,
+    "paths_delta_mean_r": [
+     0.0008,
+     -0.0027,
+     -0.0028,
+     0.004,
+     0.0021
+    ],
+    "calibration": {
+     "brier": 0.234,
+     "brier_const": 0.2331,
+     "ece": 0.0295,
+     "base_rate": 0.3699
+    },
+    "folds": [
+     {
+      "group": 0,
+      "n": 248,
+      "delta": -0.0302,
+      "random_mean": -0.0279,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 1,
+      "n": 270,
+      "delta": -0.0015,
+      "random_mean": -0.0139,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 2,
+      "n": 269,
+      "delta": 0.0508,
+      "random_mean": -0.0137,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 3,
+      "n": 260,
+      "delta": -0.0187,
+      "random_mean": -0.0231,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 4,
+      "n": 265,
+      "delta": -0.0087,
+      "random_mean": -0.0217,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 5,
+      "n": 275,
+      "delta": 0.0068,
+      "random_mean": -0.012,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     }
+    ],
+    "folds_passing": 5,
+    "checks": {
+     "a_noninferior": true,
+     "b_risk": true,
+     "c_beats_random": true,
+     "d_not_vacuous": true,
+     "e_folds": true
+    },
+    "pass": true
+   },
+   "pool_eval_primary": {
+    "n_gate": 2434,
+    "delta_mean_r": -0.0042,
+    "delta_lb95_r": -0.0155,
+    "reduce_rate": 0.2218,
+    "reduced_mean_r": 0.0382,
+    "take_all_mean_r": 0.16,
+    "folds_passing": 5
+   },
+   "trials": [
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0018,
+     "delta_lb95_r": -0.0084,
+     "reduce_rate": 0.141,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.2
+     },
+     "primary": true,
+     "pass": true,
+     "delta_mean_r": 0.0003,
+     "delta_lb95_r": -0.0138,
+     "reduce_rate": 0.2704,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.005,
+     "delta_lb95_r": -0.0212,
+     "reduce_rate": 0.3865,
+     "folds_passing": 4
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0015,
+     "delta_lb95_r": -0.0083,
+     "reduce_rate": 0.1403,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.2
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0006,
+     "delta_lb95_r": -0.0136,
+     "reduce_rate": 0.2687,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0045,
+     "delta_lb95_r": -0.0211,
+     "reduce_rate": 0.3882,
+     "folds_passing": 4
+    }
+   ],
+   "n_trials": 6,
+   "pbo": 0.85,
+   "legs": {
+    "trend_donchian_eth_4h": {
+     "n_trades": 275,
+     "n_scored": 270,
+     "n_aligned": 275,
+     "gate_leg": true,
+     "net_expectancy_r": 0.3112,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 275,
+      "n_ours_in_ref_span": 275,
+      "n_same_trade": 233,
+      "parity_share": 0.8473,
+      "cost_stack_net_r_shift_mean": -0.01333
+     }
+    },
+    "trend_donchian_xrp_4h": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": true,
+     "net_expectancy_r": 0.2351,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 68,
+      "n_ours_in_ref_span": 68,
+      "n_same_trade": 6,
+      "parity_share": 0.0882,
+      "cost_stack_net_r_shift_mean": -0.02595
+     }
+    },
+    "trend_donchian_eth_prop": {
+     "n_trades": 865,
+     "n_scored": 862,
+     "n_aligned": 865,
+     "gate_leg": true,
+     "net_expectancy_r": 0.0875,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 1085,
+      "n_ours_in_ref_span": 865,
+      "n_same_trade": 627,
+      "parity_share": 0.5779,
+      "cost_stack_net_r_shift_mean": -0.01707
+     }
+    },
+    "trend_donchian_sol_prop": {
+     "n_trades": 388,
+     "n_scored": 387,
+     "n_aligned": 388,
+     "gate_leg": true,
+     "net_expectancy_r": 0.1472,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 403,
+      "n_ours_in_ref_span": 388,
+      "n_same_trade": 169,
+      "parity_share": 0.4194,
+      "cost_stack_net_r_shift_mean": -0.01049
+     }
+    },
+    "trend_donchian_sol_4h": {
+     "n_trades": 267,
+     "n_scored": 264,
+     "n_aligned": 267,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2485,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_ada_4h": {
+     "n_trades": 259,
+     "n_scored": 256,
+     "n_aligned": 259,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2245,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_avax_4h": {
+     "n_trades": 263,
+     "n_scored": 259,
+     "n_aligned": 263,
+     "gate_leg": false,
+     "net_expectancy_r": 0.1077,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_xrp_adx25": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2427,
+     "parity": {
+      "state": "training_only"
+     }
+    }
+   },
+   "parity_basis": "trade",
+   "holdout": {
+    "state": "FAILS",
+    "reasons": [
+     "a_noninferior",
+     "c_beats_random"
+    ],
+    "window": [
+     "2017-09-01",
+     "2020-06-24 00:00:00+00:00"
+    ],
+    "n": 424,
+    "market": "spot",
+    "n_by_leg": {
+     "trend_donchian_eth_prop": 295,
+     "trend_donchian_eth_4h": 105,
+     "trend_donchian_xrp_4h": 24
+    },
+    "checks": {
+     "a_noninferior": false,
+     "b_risk": true,
+     "c_beats_random": false,
+     "d_not_vacuous": true
+    },
+    "eval": {
+     "n_gate": 424,
+     "take_all_mean_r": 0.308,
+     "delta_mean_r": -0.0214,
+     "delta_lb95_r": -0.052,
+     "delta_lb_bonferroni_r": -0.0693,
+     "maxdd_take_r": 11.477,
+     "maxdd_overlay_r": 10.197,
+     "cvar5_take_r": -1.0956,
+     "cvar5_overlay_r": -1.085,
+     "random_delta_mean_r": -0.0297,
+     "random_delta_p90_r": -0.0103,
+     "random_p_value": 0.307,
+     "reduce_rate": 0.2052,
+     "reduced_mean_r": 0.2087,
+     "net_total_r_take": 130.6,
+     "net_total_r_overlay": 121.52,
+     "paths_delta_mean_r": [
+      -0.0214
+     ],
+     "calibration": {
+      "brier": 0.2522,
+      "brier_const": 0.2459,
+      "ece": 0.0914,
+      "base_rate": 0.4363
+     },
+     "folds": [
+      {
+       "group": 0,
+       "n": 136,
+       "delta": -0.024,
+       "random_mean": -0.0259,
+       "a": false,
+       "b": true,
+       "c": true,
+       "pass": false
+      },
+      {
+       "group": 1,
+       "n": 157,
+       "delta": -0.0281,
+       "random_mean": -0.0469,
+       "a": false,
+       "b": true,
+       "c": true,
+       "pass": false
+      },
+      {
+       "group": 2,
+       "n": 131,
+       "delta": -0.0107,
+       "random_mean": -0.015,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      }
+     ],
+     "folds_passing": 1
+    },
+    "runs": {
+     "trend_donchian_eth_4h": {
+      "state": "ok",
+      "argv": [
+       "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+       "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+       "--donchian",
+       "20",
+       "--data",
+       "<data>",
+       "--symbol",
+       "ETHUSDT",
+       "--resample",
+       "4h",
+       "--atr-period",
+       "14",
+       "--atr-stop-mult",
+       "1.5",
+       "--trail-mult",
+       "6.0",
+       "--min-confidence",
+       "0.6",
+       "--fee-bps-roundtrip",
+       "11.0",
+       "--emit-trades",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_4h__trades.jsonl",
+       "--json",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_4h__bt.json",
+       "--trail-decay-stall-bars",
+       "10",
+       "--trail-decay-tight-mult",
+       "1.8",
+       "--tp-cap-pct",
+       "0.099",
+       "--tp-r",
+       "4.0",
+       "--tp-revision",
+       "donchian_measured_move",
+       "--tp-revision-width-mult",
+       "0.5",
+       "--start",
+       "2017-09-01",
+       "--end",
+       "2019-11-30 23:59",
+       "--emit-paths",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_4h__paths.jsonl"
+      ],
+      "feed": {
+       "source": "binance_spot_proxy",
+       "ticker": "ETHUSDT",
+       "interval": "240",
+       "resample": "4h",
+       "window": [
+        "2017-05-04",
+        "2019-11-30"
+       ]
+      },
+      "timeframe_declared": "4h",
+      "timeframe_bt": "4h",
+      "cost_policy": {
+       "fee_bps_roundtrip": 11.0,
+       "slippage_bps_roundtrip": 3.0,
+       "funding_bps_per_window": 1.0
+      },
+      "bt_total_trades": 107,
+      "bt_net_expectancy_r": 0.6126
+     },
+     "trend_donchian_xrp_4h": {
+      "state": "ok",
+      "argv": [
+       "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+       "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+       "--donchian",
+       "20",
+       "--data",
+       "<data>",
+       "--symbol",
+       "XRPUSDT",
+       "--resample",
+       "4h",
+       "--atr-period",
+       "14",
+       "--atr-stop-mult",
+       "1.5",
+       "--trail-mult",
+       "4.0",
+       "--min-confidence",
+       "0.8",
+       "--fee-bps-roundtrip",
+       "11.0",
+       "--emit-trades",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_xrp_4h__trades.jsonl",
+       "--json",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_xrp_4h__bt.json",
+       "--stale-exit-bars",
+       "8",
+       "--stale-exit-below-r",
+       "0.0",
+       "--side-filter",
+       "short",
+       "--trail-decay-arm-r",
+       "2.0",
+       "--trail-decay-tight-mult",
+       "2.5",
+       "--skip-hours",
+       "0",
+       "--vol-skip-above-pctl",
+       "0.9",
+       "--tp-cap-pct",
+       "0.099",
+       "--tp-r",
+       "3",
+       "--start",
+       "2017-09-01",
+       "--end",
+       "2019-11-30 23:59",
+       "--emit-paths",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_xrp_4h__paths.jsonl"
+      ],
+      "feed": {
+       "source": "binance_spot_proxy",
+       "ticker": "XRPUSDT",
+       "interval": "240",
+       "resample": "4h",
+       "window": [
+        "2017-05-04",
+        "2019-11-30"
+       ]
+      },
+      "timeframe_declared": "4h",
+      "timeframe_bt": "4h",
+      "cost_policy": {
+       "fee_bps_roundtrip": 11.0,
+       "slippage_bps_roundtrip": 3.0,
+       "funding_bps_per_window": 1.0
+      },
+      "bt_total_trades": 27,
+      "bt_net_expectancy_r": 0.1531
+     },
+     "trend_donchian_eth_prop": {
+      "state": "ok",
+      "argv": [
+       "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+       "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+       "--donchian",
+       "20",
+       "--data",
+       "<data>",
+       "--symbol",
+       "ETHUSDT",
+       "--resample",
+       "1h",
+       "--atr-period",
+       "14",
+       "--atr-stop-mult",
+       "2.5",
+       "--trail-mult",
+       "3.5",
+       "--min-confidence",
+       "0.8",
+       "--fee-bps-roundtrip",
+       "11.0",
+       "--emit-trades",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_prop__trades.jsonl",
+       "--json",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_prop__bt.json",
+       "--trail-decay-arm-r",
+       "2.99",
+       "--trail-decay-stall-bars",
+       "10",
+       "--trail-decay-tight-mult",
+       "1.8",
+       "--tp-cap-pct",
+       "0.099",
+       "--tp-r",
+       "6.0",
+       "--start",
+       "2017-09-01",
+       "--end",
+       "2019-11-30 23:59",
+       "--emit-paths",
+       "comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_eth_prop__paths.jsonl"
+      ],
+      "feed": {
+       "source": "binance_spot_proxy",
+       "ticker": "ETHUSDT",
+       "interval": "60",
+       "resample": "1h",
+       "window": [
+        "2017-05-04",
+        "2019-11-30"
+       ]
+      },
+      "timeframe_declared": "1h",
+      "timeframe_bt": "1h",
+      "cost_policy": {
+       "fee_bps_roundtrip": 11.0,
+       "slippage_bps_roundtrip": 3.0,
+       "funding_bps_per_window": 1.0
+      },
+      "bt_total_trades": 295,
+      "bt_net_expectancy_r": 0.2144
+     },
+     "trend_donchian_sol_prop": {
+      "state": "harness_failed",
+      "error": "Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3', '/home/runner/work/JTA-Trader/JTA-Trader/scripts/ops/fetch_backtest_candles.py', '--symbol', 'SOLUSDT', '--interval', '60', '--start-date', '2017-05-04', '--end-date', '2019-11-30', '--output', 'comms/research/RQ-20261029-5785-05/43777436598/holdout_corpus/trend_donchian_sol_prop__data.csv', '--source', 'binance_vision', '--vision-ma"
+     }
+    }
+   }
+  }
+ ]
+}
