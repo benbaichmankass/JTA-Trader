@@ -91,10 +91,13 @@ value:
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
-  peak_memory_gb: 8.0
+  peak_memory_gb: 1.0
   est_minutes: 5
-  why_runner: the net R join needs trade_journal.db, which only the trainer holds (not in the repo, not on a GitHub runner).
-  basis: 'ESTIMATE: 707 rows, 2000-draw bootstrap x 2 statistics, numpy only: seconds to a few minutes; the 2.9 GB journal is opened read-only and queried by trade id.'
+  why_runner: 'the net R join needs trade_journal.db (2.9 GB, MEASURED 2026-11-16), which only the trainer holds: it is not in the repo and not on a GitHub runner.'
+  basis: 'MEASURED for the compute: the harness --self-test (synthetic n=707, 14 prompt_sha strata, five 2000-draw cluster bootstraps) peaked at 71 MB max RSS in 10.8 s
+    (resource.getrusage, 2026-11-16, this lane). NOT measured: the real run, which needs the trainer journal. It adds a read-only sqlite open and an indexed lookup of ~707
+    trade ids (default page cache, a few MB); 1.0 GB is a ~14x margin over the measured compute, set well under the trainer 6 GB because the trainer is memory-tight
+    (mem_max 96% on 2026-11-15). est_minutes 5 is an ESTIMATE: ~20 s of bootstrap plus a cold-cache journal read.'
 run:
   workflow: research-script-run-trainer.yml
   command:

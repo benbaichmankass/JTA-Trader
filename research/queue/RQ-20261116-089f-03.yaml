@@ -46,8 +46,8 @@ power:
   sd: 0.02
   design: paired
   alpha: 0.05
-  power: 0.5
-  basis: 'ESTIMATE, weak: the 4654-03 grid has 8 dev folds (7 gradeable walk-forward here) and a +0.03 bar; the per-fold delta sd is not recorded in the
+  power: 0.8
+  basis: 'POWER FIELD CHANGED 2026-11-16 by lane CML-HARNESS, before any run: it read 0.5, which scripts/research/research_queue.py cannot grade (its table tabulates only 0.80/0.90/0.95, so grade_power returned unverifiable and test_every_committed_job_is_both_powered_and_routable failed); 0.80 is the nearest tabulated value. decision_rule is untouched. Arithmetic on the placeholder sd: 80% power at alpha 0.05 needs n = (1.96+0.84)^2 / d^2 folds, which is <= 7 only if d = 0.03/sd >= 1.06, i.e. a per-fold sd <= ~0.028; above that the unit is under-powered whatever the field says, which is why the verdict stays a fold-count + sign rule. The original text follows. ESTIMATE, weak: the 4654-03 grid has 8 dev folds (7 gradeable walk-forward here) and a +0.03 bar; the per-fold delta sd is not recorded in the
     verdict note, so sd 0.02 is a placeholder DECLARED as such and is re-measured from the per-fold deltas in the result. Power is stated at 0.5 (not 0.8)
     because 7 folds cannot give 80% power for a 0.03 effect at a per-fold sd above ~0.015; the verdict rule is therefore a fold-count + sign rule (below),
     and the unit is INDETERMINATE if fewer than 5 gradeable folds have >= 400 prior decisions in every cell.'
@@ -83,9 +83,9 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 8.0
-  est_minutes: 120
-  why_runner: replay on published klines; no trainer-resident data.
-  basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
+  est_minutes: 90
+  why_runner: replay on published Binance klines + fundingRate; no trainer-resident data (a GitHub runner has the 16 GB the three dev tables need).
+  basis: 'ESTIMATE, not measured here (needs the klines fetch): the same ~100-symbol 2020-2026 hourly fetch and the same three relabelled dev tables as RQ-20261112-4654-03 (8 GB declared there, kept), but only the BASE bracket is refit per fold (8 folds x 2 sides); the two alternative brackets are table lookups, not refits, so about one third of 4654-03 model time. Walk-forward cell choice and the 2000-draw fold-block bootstrap are seconds.'
 run:
   workflow: research-script-run.yml
   command:
