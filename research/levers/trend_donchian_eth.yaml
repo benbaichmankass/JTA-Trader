@@ -85,6 +85,20 @@ levers:
         baseline_value: '20'
         arm: donchian_hi
         unit: RQ-20261106-027
+        window: 2021-11-11..2026-11-14
+        n: 538
+        net_r: 35.3439
+        baseline_n: 592
+        baseline_net_r: 11.3468
+        delta_net_r: 23.9971
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 29.1107
+        verdict: pass
+        joint_change: false
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-027
         window: 2021-11-02..2026-11-05
         n: 537
         net_r: 30.7279
@@ -93,6 +107,20 @@ levers:
         delta_net_r: 25.0602
         folds_ge_baseline: 4/4
         max_drawdown_r: 29.1107
+        verdict: pass
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-027
+        window: 2021-11-11..2026-11-14
+        n: 628
+        net_r: 25.6737
+        baseline_n: 592
+        baseline_net_r: 11.3468
+        delta_net_r: 14.3269
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 29.0992
         verdict: pass
         joint_change: false
       - value: '15'
@@ -110,12 +138,26 @@ levers:
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.0423
-      fold_stability: 0.875
+      fold_stability: 0.812
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     min_confidence:
       tests:
+      - value: '0.75'
+        baseline_value: '0.6'
+        arm: min_confidence_hi
+        unit: RQ-20261106-027
+        window: 2021-11-11..2026-11-14
+        n: 529
+        net_r: 39.6663
+        baseline_n: 592
+        baseline_net_r: 11.3468
+        delta_net_r: 28.3195
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 19.6184
+        verdict: pass
+        joint_change: false
       - value: '0.75'
         baseline_value: '0.6'
         arm: min_confidence_hi
@@ -134,6 +176,20 @@ levers:
         baseline_value: '0.6'
         arm: min_confidence_lo
         unit: RQ-20261106-027
+        window: 2021-11-11..2026-11-14
+        n: 646
+        net_r: 6.5592
+        baseline_n: 592
+        baseline_net_r: 11.3468
+        delta_net_r: -4.7876
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 38.4457
+        verdict: pass
+        joint_change: false
+      - value: '0.45'
+        baseline_value: '0.6'
+        arm: min_confidence_lo
+        unit: RQ-20261106-027
         window: 2021-11-02..2026-11-05
         n: 646
         net_r: 0.8801
@@ -145,9 +201,9 @@ levers:
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.0478
-      fold_stability: 0.5
+      fold_stability: 0.562
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     be_floor_r:
@@ -776,6 +832,11 @@ levers:
       best_delta_r_per_trade: 0.0336
       fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+units:
+- RQ-20261114-db1a-02
+- RQ-20261114-db1a-03
+- RQ-20261114-db1a-04
+- RQ-20261114-db1a-05
 levers_tested:
 - family: regime_gating (pooled ADX cell x direction)
   varied: ungated vs the worst pooled (ADX regime x direction) cell across 15 crypto demo-floor legs, picked on 2025-11-13..2026-11-12, checked
@@ -934,8 +995,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-units:
-- RQ-20261114-db1a-02
-- RQ-20261114-db1a-03
-- RQ-20261114-db1a-04
-- RQ-20261114-db1a-05

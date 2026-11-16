@@ -82,6 +82,20 @@ levers:
         baseline_value: '0.618'
         arm: pullback_frac_hi
         unit: RQ-20261105-023
+        window: 2019-08-06..2026-11-13
+        n: 82
+        net_r: 8.5812
+        baseline_n: 69
+        baseline_net_r: 17.7837
+        delta_net_r: -9.2025
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 8.4192
+        verdict: fail
+        joint_change: false
+      - value: '0.7725'
+        baseline_value: '0.618'
+        arm: pullback_frac_hi
+        unit: RQ-20261105-023
         window: 2019-07-29..2026-11-05
         n: 72
         net_r: -7.7542
@@ -110,6 +124,20 @@ levers:
         baseline_value: '0.618'
         arm: pullback_frac_lo
         unit: RQ-20261105-023
+        window: 2019-08-06..2026-11-13
+        n: 50
+        net_r: 18.5596
+        baseline_n: 69
+        baseline_net_r: 17.7837
+        delta_net_r: 0.7759
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.6549
+        verdict: fail
+        joint_change: false
+      - value: '0.4635'
+        baseline_value: '0.618'
+        arm: pullback_frac_lo
+        unit: RQ-20261105-023
         window: 2019-07-29..2026-11-05
         n: 46
         net_r: -1.6853
@@ -134,10 +162,10 @@ levers:
         max_drawdown_r: 6.5645
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 4
+      shape: peaked
+      points: 6
       best_delta_r_per_trade: 0.0427
-      fold_stability: 0.25
+      fold_stability: 0.333
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     trail_adx_below:
