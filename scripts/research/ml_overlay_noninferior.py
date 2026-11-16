@@ -528,14 +528,26 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
     if not frames:
         return {"state": "INDETERMINATE", "reasons": ["no holdout corpus"], "runs": runs}
     df = pd.concat(frames, ignore_index=True).sort_values("entry_time", kind="stable").reset_index(drop=True)
-    if len(df) < HOLDOUT_N_MIN:
-        return {"state": "INDETERMINATE", "reasons": [f"n {len(df)} < {HOLDOUT_N_MIN}"], "n": len(df), "runs": runs}
     X = df[list(FEATURES)].to_numpy(float)
     Xs = (X - np.array(art["mean"])) / np.array(art["std"])
     p = predict(Xs, np.array(art["coef"]), art["intercept"])
+    m_base = np.where(p < art["tau"], MULTIPLIER, 1.0)
+    # The paired challenger block is computed BEFORE the n floor so it always reports (RQ-20261116-cc86-01 holdout B
+    # had n 95 and printed nothing); the holdout verdict below the floor stays INDETERMINATE.
+    challenger = None
+    if h.get("challenger"):
+        ch = export_model(train_df, cfg or PRIMARY, tau_rule=h["challenger"])
+        pch = predict((X - np.array(ch["mean"])) / np.array(ch["std"]), np.array(ch["coef"]), ch["intercept"])
+        challenger = challenger_compare(df, m_base, np.where(pch < ch["tau"], MULTIPLIER, 1.0),
+                                        np.random.default_rng(SEED + 2))
+        challenger.update(tau_rule=h["challenger"], tau=round(float(ch["tau"]), 4))
+    if len(df) < HOLDOUT_N_MIN:
+        return {"state": "INDETERMINATE", "reasons": [f"n {len(df)} < {HOLDOUT_N_MIN}"], "n": len(df),
+                "challenger": challenger, "scored_artifact": h.get("artifact_ref") or "refit PRIMARY on the main-window pool",
+                "n_by_leg": df["leg"].value_counts().to_dict(), "runs": runs}
     t = df["entry_time"]
     g = np.minimum(((t - t.min()) / (t.max() - t.min()) * 3).astype(float).to_numpy().astype(int), 2)
-    res = {"mult": np.where(p < art["tau"], MULTIPLIER, 1.0)[:, None], "score": p[:, None], "groups": g,
+    res = {"mult": m_base[:, None], "score": p[:, None], "groups": g,
            "y": (df["net_r"].to_numpy() > 0).astype(float)}
     ev = evaluate(df, res, np.ones(len(df), dtype=bool), np.random.default_rng(SEED + 1), n_groups=3)
     if h.get("calibrator") is not None:  # REFINE calibration: Brier skill of the calibrated score on the holdout
@@ -545,13 +557,6 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
         ev["calibration_refine"] = {"brier_raw": round(float(np.mean((p - y) ** 2)), 4),
                                     "brier_cal": round(float(np.mean((pc - y) ** 2)), 4),
                                     "brier_const_train_base": round(float(np.mean((base - y) ** 2)), 4)}
-    challenger = None
-    if h.get("challenger"):  # CHALLENGER vs the scored baseline, paired on the same holdout trades
-        ch = export_model(train_df, cfg or PRIMARY, tau_rule=h["challenger"])
-        pch = predict((X - np.array(ch["mean"])) / np.array(ch["std"]), np.array(ch["coef"]), ch["intercept"])
-        m_b, m_c = res["mult"][:, 0], np.where(pch < ch["tau"], MULTIPLIER, 1.0)
-        challenger = challenger_compare(df, m_b, m_c, np.random.default_rng(SEED + 2))
-        challenger.update(tau_rule=h["challenger"], tau=round(float(ch["tau"]), 4))
     ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
     return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
             "challenger": challenger,
