@@ -1,0 +1,177 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T0411Z-pkg-a2c1ef8b5cb74083",
+ "reviewed_at": "2026-11-16T04:14:00Z",
+ "order_package_id": "pkg-a2c1ef8b5cb74083",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "conflicting_exposure",
+  "level": "XRPUSDT#f2ea202413",
+  "l0_snapshot_at": "2026-11-16T04:09:26.814676+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T04:11:32Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.0,
+  "open_r": 0.1739,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1739,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.98073214,
+  "tp": 0.9292142857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.0,
+  "open_r": 0.1739,
+  "peak_r": 0.1739,
+  "r_to_stop": 0.9617,
+  "r_to_target": 1.1709
+ },
+ "mechanics": {
+  "evidence": "package sl 0.98073214 / tp 0.9292142857142857 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.2176,
+   "sd_r": 1.2921,
+   "worst_r": -1.2395,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.2029,
+   "sd_r": 0.5801,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.2273,
+   "sd_r": 0.7937,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.206,
+   "sd_r": 0.7774,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.1948,
+   "sd_r": 0.6901,
+   "worst_r": -1.9922,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 500,
+   "mean_r": 0.094,
+   "sd_r": 0.0333,
+   "worst_r": -0.0965,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T0411Z-pkg-a2c1ef8b5cb74083.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "No previous review. Keep both sides of XRP (timeframe separation): this 1h short is +0.17R at peak (giveback 0), 1.17R to TP 0.9292 and 0.96R to SL 0.9807; the two XRP longs are 1h e4_oi_shock -0.39R and 15m ict_scalp -0.37R, and closing this winner would not reduce risk on them. Table hold n=500 mean +0.218R vs tighten atr:1.5 +0.227R (higher mean but worst -1.99R vs -1.24R hold) and close +0.094R: no option clearly beats hold, tail tie-break not met (no option has a better worst than hold except close, whose mean is lower and sd 0.03 is a locked-peak artefact). 1h is in chop (ADX 13.5) inside 0.945-0.978 while 4h stays trending down (ADX 54.7); the strategy bracket already expresses this view."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "also_due: judgement_cadence @ 2026-11-16T04:00:00+00:00 (same package, covered by this row)",
+  "conflicting_exposure: XRPUSDT short vs e4_oi_shock_1h long (-0.39R) and ict_scalp_xrp_15m long (-0.371R); keep both, timeframe separation",
+  "book: 9 correlated short crypto-beta packages open (SOL x3, AVAX x2, ETH x3, ADA); same-direction crypto short book is concentrated",
+  "missing_input: regime.atr_now_over_entry candles unavailable or meta.atr not recorded",
+  "missing_input: context_v3.chart.since_entry package open time not in journal reads",
+  "missing_input: context.funding not reachable read-only",
+  "table: hold n=500 mean +0.2176 sd 1.2921 worst -1.2395 (measured, ml_entry short corpus 907 trades, 311 side-excluded); tighten atr:2.0 invalid_level not used",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 0.9807 / TP 0.9292, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 0.9807 / TP 0.9292, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuHvYD7U2ysJNVnqTqH",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "184893d79c0cd6ef2e8fc065920f35d00a45d5ce1090cbc58452b2823fbff31b",
+ "forecast": {
+  "thesis": "1h range 0.945-0.978 is chop while the 4h trend stays down; the lower highs at 0.9775/0.979 cap the bounces, so price rotates to the 0.945 range low before the 0.9775 high is taken out",
+  "direction": "with_trade",
+  "target_px": 0.945,
+  "p_target": 0.45,
+  "invalidation_px": 0.9775,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs 0.9775 and 0.9779, low 0.945",
+   "chart.htf: 4h trend_now trending, adx 54.68",
+   "exit_plan: SL 0.9807, TP 0.9292 already beyond the view",
+   "book: XRP longs -0.39R and -0.371R"
+  ]
+ }
+}
