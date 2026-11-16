@@ -394,14 +394,28 @@ def pbo(delta_by_cfg_group: np.ndarray) -> float:
     return round(float(np.mean(np.array(logits) <= 0)), 4)
 
 
-def export_model(df: pd.DataFrame, cfg: dict) -> dict:
+def ev_breakeven_p(net_r: np.ndarray) -> float:
+    """p* at which a trade's expected net R is zero: p*W - (1-p*)L = 0 -> p* = L / (W + L), W = mean winning net R,
+    L = |mean losing net R| (net of the full cost stack, training rows only)."""
+    w, lo = net_r[net_r > 0], net_r[net_r <= 0]
+    if not len(w) or not len(lo):
+        return 0.0
+    W, L = float(w.mean()), float(abs(lo.mean()))
+    return L / (W + L) if (W + L) > 0 else 0.0
+
+
+def export_model(df: pd.DataFrame, cfg: dict, tau_rule: str = "quantile") -> dict:
+    """tau_rule "quantile" (V1/V2, the shipped Beagle-1): reduce the bottom q of training scores. "ev" (challenger
+    RQ-20261116-cc86-01): reduce only where the predicted win probability is below the training breakeven p*, i.e.
+    only entries whose predicted net R is negative."""
     X = df[list(FEATURES)].to_numpy(float)
     y = (df["net_r"].to_numpy() > 0).astype(float)
     mu, sd, (Xs,) = standardise(X)
     coef, b = fit_logistic(Xs, y, cfg["C"])
-    tau = float(np.quantile(predict(Xs, coef, b), cfg["q"]))
+    tau = (ev_breakeven_p(df["net_r"].to_numpy(float)) if tau_rule == "ev"
+           else float(np.quantile(predict(Xs, coef, b), cfg["q"])))
     return {"features": list(FEATURES), "mean": mu.tolist(), "std": sd.tolist(), "coef": coef.tolist(),
-            "intercept": b, "tau": tau, "multiplier": MULTIPLIER, "config": cfg, "n_train": int(len(df)),
+            "intercept": b, "tau": tau, "tau_rule": tau_rule, "multiplier": MULTIPLIER, "config": cfg, "n_train": int(len(df)),
             "rule": RULE_ID}
 
 
@@ -531,12 +545,39 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
         ev["calibration_refine"] = {"brier_raw": round(float(np.mean((p - y) ** 2)), 4),
                                     "brier_cal": round(float(np.mean((pc - y) ** 2)), 4),
                                     "brier_const_train_base": round(float(np.mean((base - y) ** 2)), 4)}
+    challenger = None
+    if h.get("challenger"):  # CHALLENGER vs the scored baseline, paired on the same holdout trades
+        ch = export_model(train_df, cfg or PRIMARY, tau_rule=h["challenger"])
+        pch = predict((X - np.array(ch["mean"])) / np.array(ch["std"]), np.array(ch["coef"]), ch["intercept"])
+        m_b, m_c = res["mult"][:, 0], np.where(pch < ch["tau"], MULTIPLIER, 1.0)
+        challenger = challenger_compare(df, m_b, m_c, np.random.default_rng(SEED + 2))
+        challenger.update(tau_rule=h["challenger"], tau=round(float(ch["tau"]), 4))
     ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
     return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
+            "challenger": challenger,
             "window": [h["start"], str(h["before"])], "n": len(df), "market": h.get("market", "perp"),
             "scored_artifact": h.get("artifact_ref") or "refit PRIMARY on the main-window pool",
             "n_by_leg": df["leg"].value_counts().to_dict(), "checks": ck,
             "eval": {k: v for k, v in ev.items() if k not in ("checks", "pass")}, "runs": runs}
+
+
+def challenger_compare(df: pd.DataFrame, m_base: np.ndarray, m_ch: np.ndarray, rng: np.random.Generator) -> dict:
+    """Paired per-trade comparison on one holdout: d = (m_ch - m_base) * net_R (overlay R of the challenger minus the
+    baseline's). Month-block one-sided LBs at ALPHA and ALPHA/3 (the M13 re-read deflation for a third read), maxDD and
+    CVaR5 of each arm, and how often they disagree. Each arm's delta vs take-all is reported beside it."""
+    order = np.argsort(df["exit_time"].to_numpy())
+    r = df["net_r"].to_numpy(float)
+    d = (m_ch - m_base) * r
+    months = pd.DatetimeIndex(df["entry_time"]).strftime("%Y-%m").to_numpy()
+    rb, rc = m_base * r, m_ch * r
+    return {"n": int(len(d)), "delta_ch_vs_base_mean_r": round(float(d.mean()), 4),
+            "delta_ch_vs_base_lb95_r": round(month_block_lb(d, months, rng, ALPHA), 4),
+            "delta_ch_vs_base_lb_deflated_r": round(month_block_lb(d, months, rng, ALPHA / 3), 4),
+            "disagree_rate": round(float(np.mean(m_ch != m_base)), 4),
+            "reduce_rate_base": round(float(np.mean(m_base < 1)), 4), "reduce_rate_ch": round(float(np.mean(m_ch < 1)), 4),
+            "delta_base_vs_take_r": round(float((rb - r).mean()), 4), "delta_ch_vs_take_r": round(float((rc - r).mean()), 4),
+            "maxdd_base_r": round(max_dd(rb[order]), 3), "maxdd_ch_r": round(max_dd(rc[order]), 3),
+            "cvar5_base_r": round(cvar5(rb), 4), "cvar5_ch_r": round(cvar5(rc), 4)}
 
 
 # ----------------------------------------------------------------------------------------------- REFINE (V2 follow-ups)
@@ -774,6 +815,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="spot = build the holdout from Binance SPOT candles, a labelled perp PROXY (RQ-20261029-5785-05)")
     ap.add_argument("--holdout-artifact", default=None,
                     help="score this committed artifact JSON on the holdout instead of refitting PRIMARY (byte-exact replay)")
+    ap.add_argument("--holdout-challenger", choices=("ev",), default=None,
+                    help="also fit a CHALLENGER (tau_rule ev) on the main-window pool and compare it, paired, to the scored "
+                         "baseline on the holdout (RQ-20261116-cc86-01)")
     ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
                     help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
@@ -794,7 +838,7 @@ def main(argv: list[str] | None = None) -> int:
         hwd = Path(a.holdout_corpus_dir) if a.holdout_corpus_dir else out / "holdout_corpus"
         hwd.mkdir(parents=True, exist_ok=True)
         holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
-                   "build": not a.holdout_corpus_dir, "market": a.holdout_market,
+                   "build": not a.holdout_corpus_dir, "market": a.holdout_market, "challenger": a.holdout_challenger,
                    "artifact": json.loads(Path(a.holdout_artifact).read_text()) if a.holdout_artifact else None,
                    "artifact_ref": (f"{a.holdout_artifact} sha256 "
                                     + hashlib.sha256(Path(a.holdout_artifact).read_bytes()).hexdigest())
