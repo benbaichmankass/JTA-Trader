@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "KEEPER-VM-FLOOR follow-up (manager order 2026-11-16 22:15Z). MEASURED from the Actions API: trainer-capture-watch's cron ('23 */6 * * *') lost its 12:23Z and 18:23Z slots on 2026-11-16 (last scheduled run 06:49Z, run 1674) and schedule-keeper did not backfill them because the workflow was not in TARGETS (0 matches). Its receipt-age guard (check_trainer_capture_watch, 15 h window) went red on every PR at about 21:50Z. The keeper now grades it (stale_hours 8 = one 6 h slot + 2 h) and re-dispatches a missed slot; self_dedupes is declared (concurrency group, and a graded run only rewrites the dated receipt). Tests: tests/test_schedule_keeper.py 7 pass, schedule_keeper.py --self-test OK. CI tooling only. Revert: git revert."
+}
