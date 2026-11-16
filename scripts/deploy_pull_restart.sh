@@ -107,7 +107,22 @@ echo ">>> Pre-sync HEAD: ${PRE_SYNC_HEAD}"
 # after a successful prune, so a failed prune is retried on the next tick.
 # ---------------------------------------------------------------------------
 GIT_GC_LOG="${REPO_DIR}/.git/gc.log"
-if [ -f "${GIT_GC_LOG}" ]; then
+# GIT-SYNC-PRUNE-STUCK (2026-11-16, manager go): this clone is a PARTIAL clone (vm_sparse_bootstrap.sh sets
+# remote.origin.promisor=true, and the fetch below uses --filter=blob:limit). `git prune` on a promisor clone walks
+# reachability and lazily fetches each missing promisor object, one `git fetch` child per object (the ~1/s
+# "too many unreachable loose objects" lines, new PID each, MEASURED 2026-11-16 19:20-19:29Z), so it never finishes
+# inside its 300 s cap and every sync paid the full 5 min. Skip it there. gc.log is deliberately LEFT in place: it is
+# what keeps `git gc --auto` from running the same storm on every fetch; only the non-fetching `git prune-packed`
+# (drops loose copies of objects already in a pack) runs, bounded, and its failure is only a warning.
+GIT_IS_PARTIAL_CLONE=0
+if [ "$(git config --get remote.origin.promisor 2>/dev/null || true)" = "true" ] \
+   || [ -n "$(git config --get extensions.partialclone 2>/dev/null || true)" ]; then
+    GIT_IS_PARTIAL_CLONE=1
+fi
+if [ -f "${GIT_GC_LOG}" ] && [ "${GIT_IS_PARTIAL_CLONE}" = "1" ]; then
+    echo ">>> ${GIT_GC_LOG} present but this is a partial (promisor) clone: skipping 'git prune' (it lazily fetches every missing object and never finishes); leaving gc.log so auto-gc stays off; running bounded 'git prune-packed' only."
+    timeout "${GIT_PRUNE_PACKED_TIMEOUT_S:-120}" git prune-packed || echo ">>> WARNING: git prune-packed failed or timed out — continuing with the pull."
+elif [ -f "${GIT_GC_LOG}" ]; then
     echo ">>> ${GIT_GC_LOG} present (auto-gc is stuck) — running a bounded git prune..."
     if timeout "${GIT_PRUNE_TIMEOUT_S:-300}" git prune --expire=1.hour.ago; then
         rm -f "${GIT_GC_LOG}" || true
