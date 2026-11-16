@@ -1,0 +1,81 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T1232Z-pkg-65ed44d36d514203",
+ "reviewed_at": "2026-11-16T12:40:00Z",
+ "order_package_id": "pkg-65ed44d36d514203",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": ["tradeify_1", "velotrade_1"],
+ "trigger": {"event": "conflicting_exposure", "level": "SOLUSDT#d4af90f04f", "l0_snapshot_at": "2026-11-16T12:31:55.276846+00:00"},
+ "info_cutoff_at": "2026-11-16T12:32:54Z",
+ "state": {"open_r": 0.005, "peak_r": 0.507, "peak_provenance": "estimated", "giveback_r": 0.502, "bars_held": 3, "sl": 73.17285714285714, "tp": 68.5907142857143, "atr_now_over_entry": null, "regime_cell_now": null, "regime_cell_entry": null},
+ "features_at_review": {"open_r": 0.005, "peak_r": 0.507, "giveback_r": 0.502},
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 73.17285714285714 / tp 68.5907142857143 agree with every readable account",
+  "per_account": {
+   "tradeify_1": {"by_design": null, "evidence": null, "verdict": "match"},
+   "velotrade_1": {"by_design": null, "evidence": null, "verdict": "match"}
+  }
+ },
+ "options": [
+  {"action": "hold", "level": null, "n": 220, "mean_r": -0.3954, "sd_r": 0.9664, "worst_r": -1.2043, "net": true},
+  {"action": "tighten", "level": null, "n": 220, "mean_r": -0.3522, "sd_r": 0.3853, "worst_r": -2.8107, "net": true},
+  {"action": "tighten", "level": null, "n": 220, "mean_r": -0.3798, "sd_r": 0.4251, "worst_r": -2.8107, "net": true},
+  {"action": "tighten", "level": null, "n": 220, "mean_r": -0.358, "sd_r": 0.3589, "worst_r": -2.8107, "net": true},
+  {"action": "close", "level": null, "n": 220, "mean_r": -0.0824, "sd_r": 0.0331, "worst_r": -0.221, "net": true}
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T1232Z-pkg-65ed44d36d514203.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.313,
+  "worst_case_delta_r": 0.9833,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.6,
+  "reason": "No previous review. Short SOL entered 71.34, mark 71.33 (open +0.005R), peak +0.507R fully given back in 3 bars; 1h chop (ADX 13.4) rejected at 71.89 while 4h is trending down (ADX 55) but the 1.5R TP 68.59 sits below the 70.41 low and the stop 73.17 is 1.0R away. Table: close mean -0.0824R (n=220, sd 0.0331, worst -0.221) vs hold -0.3954R (sd 0.9664, worst -1.2043); delta +0.313R, SE ~0.065 so >4 SE; p_giveback_gt_half 0.79 for hold. No tighten beats close (r:0 -0.358, atr:1.5 -0.352, atr:2.0 -0.380, all worst -2.81). Hold cell is the leg's peak-then-pullback population, not this trade, and live ml_entry is -1.63R over 36 closed (CONSISTENT with backtest +0.037R/907)."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {"bound_r": 0.25, "within_bound": null, "tighten_r": null},
+ "shadow_policy": {"bound_r": 0.5, "within_bound": null, "would_apply": null, "tighten_r": null},
+ "context_flags": [
+  "conflicting_exposure: SOLUSDT short here (and sol_pullback_2h short +0.477R) vs ict_scalp_sol_15m long -0.506R; different timeframes and books, so not itself a reason to close; closing this short also trims the net short SOL beta",
+  "judgement_cadence: also due 2026-11-16T12:00:00+00:00 (4h slot); this one row answers both events, trigger recorded as conflicting_exposure",
+  "book: 9 other open packages are correlated shorts (MGC, SOL, AVAX x2, ETH x2, ADA, BTC, IAUM): same risk-off bet",
+  "overlay: atr_now_over_entry null (candles/meta.atr not recorded), regime.cell_entry null, funding null (geo-blocked)",
+  "estimated_state: open_r and peak_r are ESTIMATED from prop ticket prop-manual-7c99387b16ae + last 1h close, not a venue mark",
+  "unreadable: tradeify_1 prop feed has been failing to parse part of its read since ~09:30Z (manager note); account_bounds read_if_amend unknown for both accounts, tradeify_1 positions read: 1 open, velotrade_1 0 open; per_account mechanics say match but could not be independently confirmed against the venue",
+  "tighten_bias: stop-at-price fills flatter any tighten; close priced at spec close",
+  "calendar: no events next 24h; news neutral (adj +0.006)"
+ ],
+ "account_reads": [
+  {"account_id": "tradeify_1", "account_class": "prop", "read": "unknown", "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open; read_if_amend unknown"},
+  {"account_id": "velotrade_1", "account_class": "prop", "read": "unknown", "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open; read_if_amend unknown"}
+ ],
+ "disposition": {"route": "recommended", "mandate": "MD-TRADE-DESK", "action_issue": null, "applied_at": null, "verified_readback": null},
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuLaPqEE2uJPoyGxKu8",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "34ddc94942cce320e4c4366ed52ffdf78bd8cf7eda44766eb9aead039763cc3a",
+ "forecast": {
+  "thesis": "1h is range-bound around entry after rejecting 71.89, so price more likely drifts back toward the 70.41 low than reaches the 68.59 TP before a rebound; edge is roughly zero so protect the full peak giveback by exiting near flat",
+  "direction": "flat",
+  "target_px": 70.41,
+  "p_target": 0.5,
+  "invalidation_px": 71.89,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 71.89 low 70.41",
+   "regime: 1h trend chop ADX 13.4",
+   "chart.htf: 4h trending ADX 55, price below swing high 73.23",
+   "exit_plan: sl 73.17 tp 68.59"
+  ]
+ }
+}
