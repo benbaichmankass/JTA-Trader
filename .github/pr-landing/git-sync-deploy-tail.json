@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits scripts/deploy_pull_restart.sh (the deploy path run by ict-git-sync every ~5 min; trader_import_closure decide says SKIP, no trader restart). Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\"; manager go 2026-11-16 20:28Z and 20:30Z (a, b, c). The manager merges.",
+  "why": "GIT-SYNC-PRUNE-STUCK: the first run with the #26557 script took 5:39 (prune-packed burned its 120 s cap, fetch 49 s, then 165 s from hard-reset to COMPLETE on a run with no restart), and the run that pulled a change spent ~8.6 min silent plus 4 min 22 s blocked restarting ict-trainer-git-sync (Type=oneshot). (a) drop prune-packed on partial clones (gc.log and the skip line stay); (b) Type=oneshot units restart with --no-block (other types keep the blocking restart); (c) timing lines around the sparse re-apply, runtime gate and trader gate so the silent stretches get named."
+}
