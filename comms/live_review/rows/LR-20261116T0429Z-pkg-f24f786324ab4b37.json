@@ -1,0 +1,187 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T0429Z-pkg-f24f786324ab4b37",
+ "reviewed_at": "2026-11-16T04:36:00Z",
+ "order_package_id": "pkg-f24f786324ab4b37",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "tradeify_1",
+  "velotrade_1"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-16T04:00:00+00:00",
+  "l0_snapshot_at": "2026-11-16T04:29:05.491067+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T04:29:43Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.6218,
+  "open_r": 0.1705,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7923,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1867.1614285714286,
+  "tp": 1766.232857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.6218,
+  "open_r": 0.1705,
+  "peak_r": 0.7923,
+  "r_to_stop": 0.5795,
+  "r_to_target": 2.2379
+ },
+ "mechanics": {
+  "evidence": "order_packages status=emitted close_reason=prop_ticket_emitted; package sl 1867.1614285714286 / tp 1766.232857142857 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 162,
+   "mean_r": -0.2629,
+   "sd_r": 0.9974,
+   "worst_r": -1.2043,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 162,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 162,
+   "mean_r": -0.1835,
+   "sd_r": 0.2631,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 162,
+   "mean_r": -0.1939,
+   "sd_r": 0.3121,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 162,
+   "mean_r": -0.1848,
+   "sd_r": 0.3841,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 162,
+   "mean_r": -0.1839,
+   "sd_r": 0.2816,
+   "worst_r": -1.6363,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 162,
+   "mean_r": 0.0839,
+   "sd_r": 0.0345,
+   "worst_r": -0.0335,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T0429Z-pkg-f24f786324ab4b37.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.3468,
+  "worst_case_delta_r": 1.1708,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "State is pullback (peak 0.79R, giveback 0.62R, open 0.17R). Table (n=162 comparable shorts): hold mean -0.2629R worst -1.2043R vs close mean +0.0839R worst -0.0335R, delta +0.3468R, close SE 0.0778; no tighten beats close. 1h is chop (ADX 14) inside 1802-1842 while price sits under the 4h swing high 1844; five-plus correlated crypto shorts open. First review, no previous forecast. Caveat: corpus HOLD omits the structure SL; one leg, one window."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_attribution: wake entry names accounts [tradeify_1] only but packet.account_bounds lists tradeify_1 and velotrade_1 (1 open position each); velotrade_1 also holds older ml_entry ETH short pkg-fe0c0d8875b142f6 (SL 1846.28), so its single read position cannot be attributed to this package (SL 1867.16, TP 1766.23); only tradeify_1 is attributed by the wake entry",
+  "state_inconsistency: features r_to_stop 0.5795 / r_to_target 2.2379 do not reconcile with open_r 0.1705 and exit_plan.entry 1826.79 equal to last 1h close; live price unverified, state taken as given",
+  "overlay: 4h trend_now trending adx 60.06 vs 1h chop adx 14.19; cell_entry/cell_now null",
+  "overlay: correlated shorts: ETH x4 (incl fe0c, 665b, a29e), SOL x3, AVAX x2, ADA x1, XRP x1 open packages",
+  "missing_inputs: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding, context_v3.chart.since_entry",
+  "table: hold n=162 mean -0.2629 sd 0.9974 worst -1.2043; close n=162 mean 0.0839 worst -0.0335; atr:1.0 tighten invalid_level (stop_level_not_below_price)",
+  "live_vs_backtest: CONSISTENT (realMoney live_r -3.08 n=33, pct 25.9)",
+  "calendar: no events next 24h; news neutral"
+ ],
+ "account_reads": [
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "packet.account_bounds: apply paths close,move_tp,reduce,tighten; read_if_amend unknown; positions read: 1 open (not attributable to this package, see context_flags)"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "packet.account_bounds: apply paths close,move_tp,reduce,tighten; read_if_amend unknown; positions read: 1 open (not attributable to this package, see context_flags)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuK4k6nzMWqn3vJkyHM",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "befd54020cd350a70ced26e2cd2ef301e1a7f7af99c3fe19992e6bbdb9cbeab0",
+ "forecast": {
+  "thesis": "1h range chop with 4h swing high 1844 overhead; after a 0.79R peak and 0.62R giveback the short is more likely to retest 1842 than reach 1766, so the open gain is best banked",
+  "direction": "against_trade",
+  "target_px": 1842.5,
+  "p_target": 0.55,
+  "invalidation_px": 1802.76,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: highs 1842.5 and 1833.86, low 1802.76",
+   "chart.htf: 4h swing high 1844.43, trending adx 60",
+   "regime: 1h chop adx 14.19",
+   "features: giveback_r 0.6218, peak_r 0.7923",
+   "priced_options: close vs hold n=162"
+  ]
+ }
+}
