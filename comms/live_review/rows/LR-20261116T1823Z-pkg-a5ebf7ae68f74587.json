@@ -1,0 +1,150 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T1823Z-pkg-a5ebf7ae68f74587",
+ "reviewed_at": "2026-11-16T18:30:00Z",
+ "order_package_id": "pkg-a5ebf7ae68f74587",
+ "trade_id": 7190,
+ "leg": "slv_trend_1h",
+ "accounts": [
+  "alpaca_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-16T16:00:00+00:00",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-16T18:23:22Z",
+ "state": {
+  "atr_now_over_entry": 1.1851,
+  "bars_held": 11,
+  "giveback_r": 0.5565,
+  "open_r": 4.2762,
+  "peak_provenance": "estimated",
+  "peak_r": 4.8326,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 43.3,
+  "tp": 41.43714286
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1851,
+  "bars_since_peak": 2,
+  "giveback_r": 0.5565,
+  "open_r": 4.2762,
+  "peak_r": 4.8326,
+  "r_to_stop": 1.9135,
+  "r_to_target": 1.7238
+ },
+ "mechanics": {
+  "evidence": "package sl 43.3 / tp 41.43714286 agree with every readable account",
+  "per_account": {
+   "alpaca_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T1823Z-pkg-a5ebf7ae68f74587.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "size_fraction": null,
+  "size_multiplier": null,
+  "reason": "Hold. The 15:26Z tighten WAS applied (venue SL 43.30 placed 15:29Z, TP 41.44 intact). Previous forecast (target 41.44 p0.40, inv 43.30, 16x1h) is unresolved and intact: low since is 42.035 (target untouched), 43.30 never retaken (post-gap high 42.90, last close 42.495). Open +4.28R, peak +4.83R, giveback 0.56R after two bars holding above the 42.035 low; 1h and 4h (adx 25.5) still trending down. HOLD already expresses the view: SL 43.30 is 2.0 ATR above price (1.91R, above the 42.90 post-gap high) and TP is a real target 1.72R away. Tightening to ~42.95 would sit ~1.1 ATR from price, inside one-bar noise (recent bar ranges 0.3-0.5), for what is mostly variance reduction, and class tighten evidence is -0.097R (n=981). Table thin (hold n=4 < 20, tighten unpriced no_candles) so judgement. Carry forward target 41.44, invalidation 43.30, p 0.40."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold cell n=4 < floor 20, all means null; tighten/close options could_not_look (no_candles) - table is not evidence",
+  "tighten_bias: stop-at-price fills flatter any tighten; class evidence 981 tightens -0.097R net",
+  "correlated_exposure: 16 other open packages, many shorts incl. MGC x2 and GLD (same metals/USD beta)",
+  "htf: 4h adx 25.5 trending; 1h adx 48.1",
+  "live_vs_backtest: mirror BELOW_BACKTEST (8 closed, -7.42R, 4.1th pct); real money NO_LIVE_TRADES",
+  "gap: weekend gap 44.125->42.83 unfilled after 4 closed bars; gap-fill retrace is the main risk, covered by SL 43.30",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 4/4",
+  "packet_defect: priced_options.candles candles_missing 4/4",
+  "missing_input: regime.vol_now frozen edges not reachable; regime.cell_entry vol_regime unknown"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: the package intent changes nothing, so there is nothing to apply"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review lane)",
+ "session": "session_01AFoLuMDcwpfwQR2Mby4bsu",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [
+  {
+   "count": 4,
+   "denominator": 4,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 4,
+   "denominator": 4,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "efb95138dc8530cce00f219fe9108dc346f77e72569e9255c46ae544f4bd7c82",
+ "forecast": {
+  "thesis": "Downtrend extended with the post-weekend gap to 42.035 and is consolidating above it on lower highs; I expect a further push to the 41.44 TP, with a partial gap-fill toward 43 the alternative; a close above 43.30 proves the move done",
+  "direction": "with_trade",
+  "target_px": 41.4371,
+  "p_target": 0.4,
+  "invalidation_px": 43.3,
+  "horizon_bars": 16,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry low 42.035 high 44.44",
+   "chart.bars last_close 42.495 post-gap high 42.90",
+   "chart.htf 4h adx 25.5 trending",
+   "exit_plan sl_now 43.3 tp_now 41.4371",
+   "features r_to_stop 1.91 r_to_target 1.72",
+   "context.previous_review forecast target 41.44 inv 43.30"
+  ]
+ }
+}
