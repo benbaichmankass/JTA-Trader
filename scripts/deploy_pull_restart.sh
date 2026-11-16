@@ -1170,10 +1170,17 @@ elif [ -z "${DIAG_TOKEN}" ]; then
 else
     echo ">>> Asserting web-api git_sha matches HEAD..."
     EXPECTED_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    # Allow up to 30 s for the freshly-restarted web-api to come up.
+    # GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 23:03Z): wait up to ~3 min (backoff) for the freshly-restarted web-api. MEASURED
+    # 2026-11-16 22:01-22:02Z on this saturated VM: systemd "Started" 22:01:24, uvicorn "Started server process" 22:02:34 (70 s of Python
+    # start before the app even binds), first served request 22:02:56. The old 6 x 5 s window ended 22:02:08, 26 s BEFORE the port was
+    # bound, and paged a false "DEPLOY FAILURE" (exit 4). The schedule is a count (not a wall-clock deadline) so the sleep stub in the
+    # tests stays instant; override with ASSERT_SLEEPS="5 5 ..." (seconds before each attempt). A real mismatch still pages and exits 4.
+    ASSERT_SLEEPS="${ASSERT_SLEEPS:-5 5 10 10 15 15 20 20 20 20 20 20}"
     ASSERT_OK=0
-    for attempt in 1 2 3 4 5 6; do
-        sleep 5
+    attempt=0
+    for ASSERT_SLEEP_S in ${ASSERT_SLEEPS}; do
+        attempt=$((attempt + 1))
+        sleep "${ASSERT_SLEEP_S}"
         # A mid-loop /dev/null strip would EACCES the curl/python 2>/dev/null
         # below → all 6 attempts "fail" → a false `exit 4`. Re-heal each pass.
         heal_devnull || true
