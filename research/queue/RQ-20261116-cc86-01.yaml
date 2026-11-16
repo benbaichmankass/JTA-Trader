@@ -6,7 +6,7 @@
 id: RQ-20261116-cc86-01
 title: 'Beagle-1 CHALLENGER (EV-thresholded reduce) vs the LIVE baseline (shipped overlay_td.json, bottom-20% reduce): does
   cutting only entries with negative predicted net R beat the live baseline on the same TD trades, cost stack and holdouts?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -163,3 +163,17 @@ ml_consumer:
   - trend_donchian_sol_prop
   book: money
 last_dispatched_at: '2026-11-16T10:32:16+00:00'
+grading:
+  attested: RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV
+  evidence:
+  - research/results/RQ-20261116-cc86-01/43849787455.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -1,7 +1,7 @@
 id: RQ-20261116-d5a7-01
 title: 'ml-tm-action-value ITERATION 5 (horizon24): Stage B with label horizon 12 -> 24 bars; does acting on close / partial_close_50 beat hold, the best static rule,
   the distance logit and matched random, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -173,3 +173,16 @@ related:
 - ML-AM-NEXT-LIVE
 population: TM-BENCH v1 (tmb-73f5c3660014), the six money legs as traded, 2,627 test trades in 6 purged calendar folds by entry.
 last_dispatched_at: '2026-11-16T08:59:10+00:00'
+grading:
+  attested: RULE-RQ20261116-d5a7-01-STAGE-B
+  auto: true
+  decision_rule_id: RULE-RQ20261116-d5a7-01-STAGE-B
+  evidence:
+  - research/results/RQ-20261116-d5a7-01/43835757163.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
