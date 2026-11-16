@@ -1,0 +1,87 @@
+{
+  "unit": "RQ-20261116-7c1a-01",
+  "run_id": "43903776410",
+  "commit_sha": "3f57377a4a6ff810106e75ac6c9c2d2d733ed4eb",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43903776410",
+  "timeout_minutes": 30,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ltr_timestop_s0.py",
+        "grade",
+        "--paths",
+        "comms/research/ltr_timestop_s0/paths.jsonl",
+        "--arm",
+        "ts:4",
+        "--arm",
+        "ts:8",
+        "--arm",
+        "ts:12",
+        "--arm",
+        "ts:24",
+        "--arm",
+        "ts:48",
+        "--arm",
+        "stall:8:0.5",
+        "--arm",
+        "stall:12:0.5",
+        "--arm",
+        "stall:24:0.5",
+        "--n-floor",
+        "100",
+        "--margin",
+        "0.05",
+        "--month-min-n",
+        "8",
+        "--month-pos-min",
+        "3",
+        "--out",
+        "comms/research/RQ-20261116-7c1a-01/43903776410"
+      ],
+      "log": "comms/research/RQ-20261116-7c1a-01/43903776410/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 3.3
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

@@ -58,7 +58,7 @@
     "expired": 12,
     "invalidation_first": 5,
     "no_data": 0,
-    "pending": 0,
+    "pending": 1,
     "target_first": 7,
     "tie_unresolved": 0
    },
@@ -66,7 +66,7 @@
     "n": 24,
     "rate": 0.5833
    },
-   "n": 24,
+   "n": 25,
    "n_graded": 24,
    "n_packages": 0,
    "n_scored_with_p": 24,
@@ -75,19 +75,19 @@
   "live_review": {
    "brier_by_class": {
     "expired": {
-     "brier": 0.1541,
-     "n": 129
+     "brier": 0.1562,
+     "n": 135
     },
     "invalidation_first": {
-     "brier": 0.1484,
-     "n": 144
+     "brier": 0.1467,
+     "n": 148
     },
     "target_first": {
-     "brier": 0.3383,
-     "n": 133
+     "brier": 0.338,
+     "n": 134
     }
    },
-   "brier_overall": 0.2124,
+   "brier_overall": 0.2112,
    "brier_ref_constant_0_5": 0.25,
    "calibration_bins": [
     {
@@ -98,25 +98,25 @@
      "target_first_rate": 0.0
     },
     {
-     "mean_p": 0.3102,
-     "n": 162,
+     "mean_p": 0.3096,
+     "n": 168,
      "p_hi": 0.4,
      "p_lo": 0.2,
-     "target_first_rate": 0.2654
+     "target_first_rate": 0.256
     },
     {
-     "mean_p": 0.4516,
-     "n": 228,
+     "mean_p": 0.4518,
+     "n": 232,
      "p_hi": 0.6,
      "p_lo": 0.4,
-     "target_first_rate": 0.3684
+     "target_first_rate": 0.3664
     },
     {
-     "mean_p": 0.6056,
-     "n": 9,
+     "mean_p": 0.605,
+     "n": 10,
      "p_hi": 0.8,
      "p_lo": 0.6,
-     "target_first_rate": 0.6667
+     "target_first_rate": 0.6
     },
     {
      "mean_p": null,
@@ -127,111 +127,90 @@
     }
    ],
    "classes": {
-    "expired": 129,
-    "invalidation_first": 144,
-    "no_data": 19,
-    "pending": 8,
-    "target_first": 133,
+    "expired": 135,
+    "invalidation_first": 148,
+    "no_data": 14,
+    "pending": 4,
+    "target_first": 134,
     "tie_unresolved": 0
    },
    "direction_hit_rate": {
-    "n": 394,
-    "rate": 0.4721
+    "n": 403,
+    "rate": 0.469
    },
-   "n": 433,
-   "n_graded": 406,
+   "n": 435,
+   "n_graded": 417,
    "n_packages": 136,
-   "n_scored_with_p": 406,
+   "n_scored_with_p": 417,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-16T14:21:42Z",
+ "computed_at": "2026-11-16T17:14:58Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 194,
-   "records": 218,
-   "with_forecast": 24
+   "records": 219,
+   "with_forecast": 25
   },
   "live_review": {
-   "records": 823,
-   "with_forecast": 433
+   "records": 825,
+   "with_forecast": 435
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
  "pending": [
   {
-   "fid": "LR-20261115T0011Z-pkg-48c5cfab364e430c",
-   "horizon_end": "2026-11-17T00:16:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 35657
-  },
-  {
-   "fid": "LR-20261115T0627Z-pkg-48c5cfab364e430c",
-   "horizon_end": "2026-11-17T06:29:37Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 58074
-  },
-  {
-   "fid": "LR-20261115T0632Z-pkg-48c5cfab364e430c",
-   "horizon_end": "2026-11-17T06:34:59Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 58396
-  },
-  {
-   "fid": "LR-20261115T0811Z-pkg-48c5cfab364e430c",
-   "horizon_end": "2026-11-17T08:17:15Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 64532
-  },
-  {
-   "fid": "LR-20261115T1601Z-pkg-48c5cfab364e430c",
-   "horizon_end": "2026-11-16T16:12:00Z",
-   "source": "live_review",
-   "symbol": "ETHUSDT",
-   "time_remaining_s": 6617
-  },
-  {
    "fid": "LR-20261116T0602Z-pkg-897d89b7edf34aa3",
    "horizon_end": "2026-11-16T18:06:59Z",
    "source": "live_review",
    "symbol": "ADAUSDT",
-   "time_remaining_s": 13516
+   "time_remaining_s": 3120
   },
   {
    "fid": "LR-20261116T0951Z-pkg-897d89b7edf34aa3",
    "horizon_end": "2026-11-16T21:56:00Z",
    "source": "live_review",
    "symbol": "ADAUSDT",
-   "time_remaining_s": 27257
+   "time_remaining_s": 16861
   },
   {
-   "fid": "LR-20261116T0401Z-pkg-897d89b7edf34aa3",
-   "horizon_end": "2026-11-16T16:10:00Z",
+   "fid": "LR-20261116T1433Z-pkg-897d89b7edf34aa3",
+   "horizon_end": "2026-11-17T02:38:00Z",
    "source": "live_review",
    "symbol": "ADAUSDT",
-   "time_remaining_s": 6497
+   "time_remaining_s": 33781
+  },
+  {
+   "fid": "LR-20261116T1526Z-pkg-a5ebf7ae68f74587",
+   "horizon_end": "2026-11-17T07:27:42Z",
+   "source": "live_review",
+   "symbol": "SLV",
+   "time_remaining_s": 51163
+  },
+  {
+   "fid": "DD-20261116T1654Z-scan-1h-1",
+   "horizon_end": "2026-11-17T05:02:48Z",
+   "source": "desk_entry",
+   "symbol": "XRPUSDT",
+   "time_remaining_s": 42469
   }
  ],
  "pooled": {
   "brier_by_class": {
    "expired": {
-    "brier": 0.1514,
-    "n": 141
+    "brier": 0.1534,
+    "n": 147
    },
    "invalidation_first": {
-    "brier": 0.1475,
-    "n": 149
+    "brier": 0.1458,
+    "n": 153
    },
    "target_first": {
-    "brier": 0.3393,
-    "n": 140
+    "brier": 0.3391,
+    "n": 141
    }
   },
-  "brier_overall": 0.2112,
+  "brier_overall": 0.2101,
   "brier_ref_constant_0_5": 0.25,
   "calibration_bins": [
    {
@@ -242,25 +221,25 @@
     "target_first_rate": 0.0
    },
    {
-    "mean_p": 0.3118,
-    "n": 176,
+    "mean_p": 0.3112,
+    "n": 182,
     "p_hi": 0.4,
     "p_lo": 0.2,
-    "target_first_rate": 0.2614
+    "target_first_rate": 0.2527
    },
    {
-    "mean_p": 0.4497,
-    "n": 238,
+    "mean_p": 0.45,
+    "n": 242,
     "p_hi": 0.6,
     "p_lo": 0.4,
-    "target_first_rate": 0.3697
+    "target_first_rate": 0.3678
    },
    {
-    "mean_p": 0.6056,
-    "n": 9,
+    "mean_p": 0.605,
+    "n": 10,
     "p_hi": 0.8,
     "p_lo": 0.6,
-    "target_first_rate": 0.6667
+    "target_first_rate": 0.6
    },
    {
     "mean_p": null,
@@ -271,36 +250,36 @@
    }
   ],
   "classes": {
-   "expired": 141,
-   "invalidation_first": 149,
-   "no_data": 19,
-   "pending": 8,
-   "target_first": 140,
+   "expired": 147,
+   "invalidation_first": 153,
+   "no_data": 14,
+   "pending": 5,
+   "target_first": 141,
    "tie_unresolved": 0
   },
   "direction_hit_rate": {
-   "n": 418,
-   "rate": 0.4785
+   "n": 427,
+   "rate": 0.4754
   },
-  "n": 457,
-  "n_graded": 430,
+  "n": 460,
+  "n_graded": 441,
   "n_packages": 136,
-  "n_scored_with_p": 430,
+  "n_scored_with_p": 441,
   "unresolved_ties": 0
  },
- "population": "457 forecasts: live_review=433, desk_entry=24 (every record carrying target+invalidation+horizon+probability)",
+ "population": "460 forecasts: live_review=435, desk_entry=25 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
-   "branch": 218,
+   "branch": 219,
    "main_decisions": 218,
-   "union": 218
+   "union": 219
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
-   "main_reviews": 785,
-   "rows_branch": 499,
-   "union": 823
+   "main_reviews": 786,
+   "rows_branch": 501,
+   "union": 825
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000
