@@ -1,0 +1,134 @@
+# Hand-authored 2026-11-16 by lane ML-PRIMARY-4 (session_01AFoLuJazEnEQNP6MeVfuv3, Tier 1) for Manager Session 2026-11-15a,
+# after the operator's decision on the Beagle-1 demotion (2026-11-16 ~06:25Z, popup, verbatim): "Wait for more data".
+# Rule registered BEFORE the run. Gates this adds or changes: none.
+id: RQ-20261116-cc86-01
+title: 'Beagle-1 (overlay-td-v1, real money) DECISIVE holdout: does the SHIPPED artifact, scored byte for byte (no refit),
+  stay non-inferior and beat a random reduce on every TD gate trade from 2017-09 to 2020-06 (Binance spot proxy)?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: 'The out-of-sample evidence on Beagle-1 is split. The perp holdout 2019-12..2020-06 CONFIRMED (n 105, dR +0.033,
+  RQ-20261029-5785-02). The spot-proxy holdout 2017-09..2019-11 FAILED (n 424, dR -0.0214, LB95 -0.052, random p 0.307,
+  RQ-20261029-5785-05), but it scored a REFIT of the primary config on today''s corpus, whose parity against the V2
+  reference failed. This unit removes the refit caveat and pools both windows. The committed shipped artifact
+  ml/overlay/overlay_td.json (sha256 26a55f1ab05044f117395378f755da33ee8ce2a46200b9f08979fbed72e3bb2b; trained on
+  2020-07..2026-10, so disjoint) scores every TD gate trade on Binance spot candles from 2017-09-01 to 2020-06-23. On
+  that one population, is the reduce non-inferior to take-all, and does it beat a same-rate random reduce?'
+why_this_matters: 'Beagle-1 halves the size of below-tau entries on the real-money TD legs (bybit_2, bybit_portfolio).
+  The operator chose to wait for more data rather than demote (HELD PR #26437). This is the read that decides between
+  keeping it and demoting it to annotate. Options weighed, by power per cost. (1) THIS unit: a byte-exact replay plus
+  the pooled window, n ~530, about 30 runner minutes, one new harness flag. (2) A perp-native holdout from another venue
+  (Bybit or BitMEX perps before 2019-12): a new fetch lane, and a different venue''s microstructure; not cheaper and not
+  cleaner. (3) A pooled perp+spot fit with a venue term: the perp side has n 105, so the venue term has almost no
+  power.'
+power:
+  expected_n: 530
+  min_detectable_effect: 0.031
+  effect_units: r_per_trade
+  sd: 0.3
+  design: one_sample
+  alpha: 0.0083
+  power: 0.8
+  basis: 'n: 424 TD gate trades on spot 2017-09..2019-11 (RQ-20261029-5785-05, MEASURED), plus about 105 over 2019-12..2020-06
+    (the perp count over that window, MEASURED in 5785-02; the spot count is an ESTIMATE). sd 0.3 is the sd of the per-trade
+    DELTA (zero on taken trades, 0.5 x R on reduced trades), consistent with the measured LB half-widths in 5785-02/-05.
+    se ~ 0.3 / sqrt(530) = 0.013. The bar is the deflated LB (alpha 0.05/6 one-sided, delta_lb_bonferroni_r, z ~2.39): both
+    windows have been read once already (holdout ledger re-read rule, N = 2), and the stricter Bonferroni bound is used
+    in place of Sidak N=2, which is conservative toward DEMOTE. KEEP therefore needs a true delta of about
+    -0.02 + 2.39 x 0.013 = +0.011 R/trade or better, plus beating the random control. A harmless but useless overlay
+    (true delta 0) FAILS: under the operator''s do-not-lose-money bar, a size cut must earn its keep.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261116-cc86-01-BEAGLE1-DECISIVE
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_overlay_noninferior.py, TD family as in 5785-05, holdout built from Binance SPOT klines
+    over 2017-09-01..2020-06-23 (--holdout-market spot; off-grid spot bars dropped) and scored by the SHIPPED artifact
+    via --holdout-artifact ml/overlay/overlay_td.json (no refit; the record carries its sha256). The read is the TD
+    holdout record: n, delta_mean_r, delta_lb_bonferroni_r (month-block LB at alpha 0.05/6), maxDD and CVaR5 vs take-all,
+    and the random-control p90 (2000 same-rate random reduces permuted within 3 calendar groups). Full cost stack as in
+    V2 (fee 11 + slippage 3 bps round trip, funding 1 bps per 8h).'
+  rule: 'TD holdout only (PB2H is not run). KEEP iff, on n >= 300 gate trades: (a) delta_lb_bonferroni_r > -0.02, (b)
+    maxDD and CVaR5 not worse than take-all, (c) delta_mean_r > the random-control p90, and (d) reduce rate >= 5% with
+    the reduced mean R <= the take-all mean. DEMOTE iff n >= 300 and any of (a)-(d) fails. INDETERMINATE iff n < 300
+    or the scored_artifact sha256 differs from the one registered above. ROUTING: KEEP -> Beagle-1 stays in reduce, HELD
+    PR #26437 is closed, and the result is recorded on ML-REAL-MONEY-OVERLAY. DEMOTE -> a data-backed Tier-3 record
+    to the manager and operator to merge #26437 (reduce -> annotate on trend_donchian_xrp_4h and trend_donchian_eth_prop;
+    still scored and logged). INDETERMINATE -> no change, and the cause is filed.'
+  what_it_does_not_do: Changes no config or artifact; it proposes and never applies. It is not a re-grade of 5785-02 or
+    5785-05. The 2019-12..2020-06 part of the window is spot, not the perp the legs trade, so the whole read remains a
+    labelled spot proxy.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and the
+    take-all baseline is the hold-equivalent.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: the size the reduce removes from profitable below-tau entries on the real-money TD legs; an estimate,
+    not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 5785-05 ran 8 TD legs plus the holdout in about 17 minutes (run 43777436598); PB2H is dropped here.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_overlay_noninferior.py
+  - --family
+  - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --days
+  - '2330'
+  - --reference-corpus
+  - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+  - --parity-basis
+  - trade
+  - --holdout-start
+  - '2017-09-01'
+  - --holdout-end
+  - 2020-06-23 23:59
+  - --holdout-days
+  - '3500'
+  - --holdout-market
+  - spot
+  - --holdout-artifact
+  - ml/overlay/overlay_td.json
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261116-cc86-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261029-5785-02
+- RQ-20261029-5785-05
+- scripts/research/ml_overlay_noninferior.py
+practice_precedent: 'M5, M13 (docs/reference/trading-and-model-practice-principles.md): a blind fresh-window confirmation of the
+  shipped model, scored without refitting, the re-read bar raised (M13); graded against take-all and a same-rate random control, as in 5785-02/-05'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: keep or demote the reduce-only overlay (config/overlay_policy.yaml) on trend_donchian_xrp_4h and trend_donchian_eth_prop
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money

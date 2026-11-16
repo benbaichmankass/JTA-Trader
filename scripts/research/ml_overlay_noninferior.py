@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import hashlib
 import json
 import math
 import sys
@@ -495,7 +496,8 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
     (tau from those training scores, exactly the artifact that would ship), then scores every gate-leg trade of a
     disjoint earlier window it has never seen. CONFIRMS iff (a) LB > margin, (b), (c) and (d) hold on those
     trades; random permutation within 3 calendar groups. Below HOLDOUT_N_MIN gate trades -> INDETERMINATE."""
-    art = export_model(train_df, cfg or PRIMARY)
+    # --holdout-artifact: score the SHIPPED artifact byte for byte (no refit), RQ-20261116 Beagle-1 decisive read
+    art = h["artifact"] if h.get("artifact") is not None else export_model(train_df, cfg or PRIMARY)
     wd = h["wd"]
     if h.get("build", True):
         _o, runs = build_corpus(gate, start=h["start"], end=h["end"], days=h["days"], wd=wd,
@@ -532,6 +534,7 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
     ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
     return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
             "window": [h["start"], str(h["before"])], "n": len(df), "market": h.get("market", "perp"),
+            "scored_artifact": h.get("artifact_ref") or "refit PRIMARY on the main-window pool",
             "n_by_leg": df["leg"].value_counts().to_dict(), "checks": ck,
             "eval": {k: v for k, v in ev.items() if k not in ("checks", "pass")}, "runs": runs}
 
@@ -769,6 +772,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="reuse an already-built holdout corpus (same window) instead of re-running the harness")
     ap.add_argument("--holdout-market", choices=("perp", "spot"), default="perp",
                     help="spot = build the holdout from Binance SPOT candles, a labelled perp PROXY (RQ-20261029-5785-05)")
+    ap.add_argument("--holdout-artifact", default=None,
+                    help="score this committed artifact JSON on the holdout instead of refitting PRIMARY (byte-exact replay)")
     ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
                     help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
@@ -790,6 +795,10 @@ def main(argv: list[str] | None = None) -> int:
         hwd.mkdir(parents=True, exist_ok=True)
         holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
                    "build": not a.holdout_corpus_dir, "market": a.holdout_market,
+                   "artifact": json.loads(Path(a.holdout_artifact).read_text()) if a.holdout_artifact else None,
+                   "artifact_ref": (f"{a.holdout_artifact} sha256 "
+                                    + hashlib.sha256(Path(a.holdout_artifact).read_bytes()).hexdigest())
+                                   if a.holdout_artifact else None,
                    "before": pd.Timestamp(a.start, tz="UTC") - pd.Timedelta(days=EMBARGO_DAYS)}
     if a.refine:
         rr = [run_refine(a.refine, n, legs, g, corpus, holdout) for n, legs, g in fams]
