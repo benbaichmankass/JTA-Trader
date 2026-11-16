@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits src/runtime/mirror_pairs.py, src/core/coordinator.py, src/runtime/execution_diagnostics.py (order path; trader RESTART per trader_import_closure). Tier 2, data-backed per the operator rule on record: 2026-11-01 Alpaca SUPERSET (tests/test_paper_portfolio_accounts.py:17-22) plus standing decision 2026-11-12 operator-popup \"Merge + deploy on green\". The manager merges on green and runs the post-deploy SL/TP check.",
+  "why": "alpaca_portfolio (the alpaca_live mirror) was SKIPPED with mirror_primary_not_placed whenever alpaca_live's real-money cash book refused with sized_qty=0, so the operator-rule superset (the mirror carries at least everything live does) was violated and every such signal paged ALL accounts failed. 2026-11-16: 19 of 25 ALL-failed alerts. alpaca_portfolio now dispatches on its own sizing (named INFO reason mirror_independent:alpaca_live_not_placed:<error>); bybit_portfolio keeps the strict follow; the divergence ERROR (live placed, mirror did not) is unchanged; a round whose every genuine failure is a pure affordability read is downgraded to a low-priority info line (ring row kept with route)."
+}

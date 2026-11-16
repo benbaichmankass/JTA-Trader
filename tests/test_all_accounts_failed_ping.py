@@ -81,6 +81,44 @@ class TestEnqueueAllAccountsFailed:
         assert "bybit_2: RuntimeError: Bybit ErrCode 170131" in body
         assert "bybit_3: zero_balance" in body
 
+    def test_a_pure_affordability_refusal_round_is_downgraded_not_paged(self, pings_dir, monkeypatch):
+        """2026-11-16: 19 of 25 'ALL accounts failed' pages were alpaca_live refusing with sized_qty=0 at ~$195 balance
+        / $54 available (cash tied up). Downgraded to a low-priority info line; the ring row still lands with route."""
+        rows = []
+        monkeypatch.setattr(
+            "src.runtime.execution_diagnostics._append_operator_alert",
+            lambda kind, priority, body, extra=None: rows.append((kind, priority, extra)),
+        )
+        refused = ("risk_refused: sized_qty=0 with balance=194.60 available_usd=54.45 total_account_usd=n/a "
+                   "direction=long market_type=spot")
+        enqueue_all_accounts_failed_dispatch(
+            strategy="ml_entry_eq_struct", symbol="SVXY", side="buy",
+            results=[{"name": "alpaca_live", "trade_id": None, "error": refused},
+                     {"name": "alpaca_portfolio", "trade_id": None, "error": refused}],
+        )
+        (evt,) = _read_payloads(pings_dir)
+        assert evt["priority"] == "low"
+        assert "🚨" not in evt["body"] and "affordability" in evt["body"]
+        assert rows == [("all_accounts_failed", "low", {"route": "affordability_downgrade"})]
+
+    def test_a_real_failure_next_to_an_affordability_refusal_still_pages(self, pings_dir):
+        refused = "risk_refused: sized_qty=0 with balance=194.60 available_usd=54.45 direction=long"
+        enqueue_all_accounts_failed_dispatch(
+            strategy="vwap", symbol="BTCUSDT", side="buy",
+            results=[{"name": "alpaca_live", "trade_id": None, "error": refused},
+                     {"name": "bybit_2", "trade_id": None, "error": "RuntimeError: Bybit ErrCode 170131"}],
+        )
+        (evt,) = _read_payloads(pings_dir)
+        assert evt["priority"] == "high" and "🚨" in evt["body"]
+
+    def test_a_sized_qty_zero_without_the_balance_read_is_not_an_affordability_refusal(self, pings_dir):
+        enqueue_all_accounts_failed_dispatch(
+            strategy="vwap", symbol="BTCUSDT", side="buy",
+            results=[{"name": "alpaca_live", "trade_id": None, "error": "risk_refused: sized_qty=0 (price unreadable)"}],
+        )
+        (evt,) = _read_payloads(pings_dir)
+        assert evt["priority"] == "high" and "🚨" in evt["body"]
+
     def test_slice_budget_exhausted_is_labelled_a_hold_in_a_mixed_round(self, pings_dir):
         """Operator 2026-11-15: a slice-budget refusal is a declared risk hold,
         so a mixed round lists it under 'Policy holds', not as a failure."""
