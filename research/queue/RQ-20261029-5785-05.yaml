@@ -5,7 +5,7 @@
 id: RQ-20261029-5785-05
 title: 'ML-REAL-MONEY-OVERLAY refine 3/3 -- LARGER HOLDOUT: does the shipped TD artifact confirm on 2017-09..2019-11
   SPOT candles (the perp archive starts 2019-12, which capped V2''s holdout at n 105)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -122,3 +122,17 @@ ml_consumer:
   book: money
 rearmed_at: '2026-11-15T23:20:00+00:00'
 last_dispatched_at: '2026-11-15T23:55:41+00:00'
+grading:
+  attested: RULE-ML-OVERLAY-SPOT-HOLDOUT-V1
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-OVERLAY-SPOT-HOLDOUT-V1
+  evidence:
+  - research/results/RQ-20261029-5785-05/43777436598.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
