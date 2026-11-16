@@ -1,0 +1,252 @@
+{
+  "leg": "trend_donchian_eth_4h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 22.3502,
+    "n": 41,
+    "max_drawdown_r": 7.603,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 1,
+    "control": null,
+    "why": "net_r=22.3502 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0244,
+      "n": 41,
+      "net_r": 22.3502,
+      "net_r_fee_only": 24.3064,
+      "max_drawdown_r": 7.603,
+      "by_outcome": {
+        "trail_stop": 15,
+        "stop": 19,
+        "take_profit": 7
+      },
+      "mean_bars_held": 12.073,
+      "net_r_per_capital_day": 0.2709,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 6.0,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8,
+        "tp_revision": "donchian_measured_move",
+        "tp_revision_width_mult": 0.5,
+        "tp_revisions_applied": 454,
+        "tp_revisions_clamped": 60
+      },
+      "data_start": "2022-11-13 00:00:00+00:00",
+      "data_end": "2023-11-12 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-11-13 00:00:00+00:00",
+          "end": "2023-02-12 05:00:00+00:00",
+          "trades": 11,
+          "net_r": 10.7035
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-12 05:00:00+00:00",
+          "end": "2023-05-14 10:00:00+00:00",
+          "trades": 9,
+          "net_r": 6.0702
+        },
+        {
+          "fold": 3,
+          "start": "2023-05-14 10:00:00+00:00",
+          "end": "2023-08-13 15:00:00+00:00",
+          "trades": 12,
+          "net_r": -3.8446
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-13 15:00:00+00:00",
+          "end": "2023-11-12 20:00:00+00:00",
+          "trades": 9,
+          "net_r": 9.4211
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_eth_4h/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_eth_4h/arms/A__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "4.0",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--start",
+        "2022-11-13T00:00:00",
+        "--end",
+        "2023-11-12T20:00:00"
+      ]
+    },
+    "H": {
+      "reach_ge_6r": 0.0,
+      "n": 34,
+      "net_r": -0.0425,
+      "net_r_fee_only": 1.4042,
+      "max_drawdown_r": 7.0752,
+      "by_outcome": {
+        "trail_stop": 13,
+        "stop": 17,
+        "take_profit": 4
+      },
+      "mean_bars_held": 11.559,
+      "net_r_per_capital_day": -0.0006,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 6.0,
+        "min_confidence": 0.6,
+        "htf_long_sma_days": 200,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8,
+        "tp_revision": "donchian_measured_move",
+        "tp_revision_width_mult": 0.5,
+        "tp_revisions_applied": 359,
+        "tp_revisions_clamped": 86
+      },
+      "data_start": "2022-11-13 00:00:00+00:00",
+      "data_end": "2023-11-12 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-11-13 00:00:00+00:00",
+          "end": "2023-02-12 05:00:00+00:00",
+          "trades": 8,
+          "net_r": -3.8817
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-12 05:00:00+00:00",
+          "end": "2023-05-14 10:00:00+00:00",
+          "trades": 9,
+          "net_r": 6.0702
+        },
+        {
+          "fold": 3,
+          "start": "2023-05-14 10:00:00+00:00",
+          "end": "2023-08-13 15:00:00+00:00",
+          "trades": 12,
+          "net_r": -3.8446
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-13 15:00:00+00:00",
+          "end": "2023-11-12 20:00:00+00:00",
+          "trades": 5,
+          "net_r": 1.6136
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_eth_4h/arms/H__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_eth_4h/arms/H__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "4.0",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--htf-long-sma-days",
+        "200",
+        "--start",
+        "2022-11-13T00:00:00",
+        "--end",
+        "2023-11-12T20:00:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2022-11-13T00:00:00",
+    "end": "2023-11-12T20:00:00",
+    "fetch_days": 1700,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2022-11-13 00:00:00+00:00",
+      "2023-02-12 05:00:00+00:00",
+      "2023-05-14 10:00:00+00:00",
+      "2023-08-13 15:00:00+00:00",
+      "2023-11-12 20:00:00+00:00"
+    ]
+  }
+}

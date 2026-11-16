@@ -1,0 +1,256 @@
+{
+  "leg": "sol_pullback_2h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 1.7067,
+    "n": 30,
+    "max_drawdown_r": 5.5248,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 1,
+    "control": null,
+    "why": "net_r=1.7067 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 30,
+      "net_r": 1.7067,
+      "net_r_fee_only": 2.5828,
+      "max_drawdown_r": 5.5248,
+      "by_outcome": {
+        "trail_stop": 7,
+        "take_profit": 10,
+        "stop": 12,
+        "timeout": 1
+      },
+      "mean_bars_held": 48.433,
+      "net_r_per_capital_day": 0.0141,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2022-11-13 00:00:00+00:00",
+      "data_end": "2023-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-11-13 00:00:00+00:00",
+          "end": "2023-02-12 05:30:00+00:00",
+          "trades": 7,
+          "net_r": 2.7097
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-12 05:30:00+00:00",
+          "end": "2023-05-14 11:00:00+00:00",
+          "trades": 8,
+          "net_r": 0.6109
+        },
+        {
+          "fold": 3,
+          "start": "2023-05-14 11:00:00+00:00",
+          "end": "2023-08-13 16:30:00+00:00",
+          "trades": 7,
+          "net_r": 0.5273
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-13 16:30:00+00:00",
+          "end": "2023-11-12 22:00:00+00:00",
+          "trades": 8,
+          "net_r": -2.1412
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_sol_pullback_2h/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_sol_pullback_2h/arms/A__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "sol_pullback_2h",
+        "--start",
+        "2022-11-13T00:00:00",
+        "--end",
+        "2023-11-12T22:00:00"
+      ]
+    },
+    "H": {
+      "reach_ge_6r": 0.0,
+      "n": 30,
+      "net_r": 1.7067,
+      "net_r_fee_only": 2.5828,
+      "max_drawdown_r": 5.5248,
+      "by_outcome": {
+        "trail_stop": 7,
+        "take_profit": 10,
+        "stop": 12,
+        "timeout": 1
+      },
+      "mean_bars_held": 48.433,
+      "net_r_per_capital_day": 0.0141,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "htf_long_sma_days": 200
+      },
+      "data_start": "2022-11-13 00:00:00+00:00",
+      "data_end": "2023-11-12 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-11-13 00:00:00+00:00",
+          "end": "2023-02-12 05:30:00+00:00",
+          "trades": 7,
+          "net_r": 2.7097
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-12 05:30:00+00:00",
+          "end": "2023-05-14 11:00:00+00:00",
+          "trades": 8,
+          "net_r": 0.6109
+        },
+        {
+          "fold": 3,
+          "start": "2023-05-14 11:00:00+00:00",
+          "end": "2023-08-13 16:30:00+00:00",
+          "trades": 7,
+          "net_r": 0.5273
+        },
+        {
+          "fold": 4,
+          "start": "2023-08-13 16:30:00+00:00",
+          "end": "2023-11-12 22:00:00+00:00",
+          "trades": 8,
+          "net_r": -2.1412
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_sol_pullback_2h/arms/H__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261115-2411-04/43780283246/pre_sol_pullback_2h/arms/H__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--decision-bar",
+        "forming",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--strategy-name",
+        "sol_pullback_2h",
+        "--htf-long-sma-days",
+        "200",
+        "--start",
+        "2022-11-13T00:00:00",
+        "--end",
+        "2023-11-12T22:00:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2022-11-13T00:00:00",
+    "end": "2023-11-12T22:00:00",
+    "fetch_days": 1700,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2022-11-13 00:00:00+00:00",
+      "2023-02-12 05:30:00+00:00",
+      "2023-05-14 11:00:00+00:00",
+      "2023-08-13 16:30:00+00:00",
+      "2023-11-12 22:00:00+00:00"
+    ]
+  }
+}
