@@ -1,0 +1,123 @@
+id: RQ-20261116-089f-02
+title: 'LTR -> ENTRY selection: does refitting the crypto ENTRY recipe on the net R it would REALISE under the codified in-trade management policy (instead
+  of hold-to-bracket net R) beat the raw-target refit, graded at realised-under-management net R? (13 monthly refits, shuffled-label placebo; no Claude
+  output as a feature)'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- M25
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'practice: train the decision model on the realised (policy-conditional) outcome it will actually be graded on rather than a surrogate
+  label; the repo precedent is RQ-20261112-4654-01 (target-definition lever on the same recipe).'
+levers:
+- name: target_definition
+  values:
+  - raw net R (hold-to-bracket)
+  - net R under management policy M
+  - placebo (MANAGED labels permuted across timestamps within symbol)
+  hypothesised_effect: the MANAGED target raises held-out realised net R per decision by >= +0.06 vs RAW; the placebo does not
+- name: policy_M
+  values:
+  - as registered in RQ-20261116-7c1a-01 / -02, frozen at the origin of this unit
+  hypothesised_effect: fixed, not swept (declared)
+question: 'ml_entry is trained on hold-to-bracket labels (net_long / net_short at 2 ATR stop, 3 ATR target, 24 h horizon, E.HORIZON_H) but live trades are
+  managed in-trade (TP revision, and the LTR desk closes / tightens). The realised R of a taken decision therefore differs from the R the model was trained
+  to predict. Refit the SAME recipe (ml_decision_entry FEATURES, LGB_PARAMS, E.purge_train, served tau) at each of 13 monthly origins over 2025-10..2026-09
+  on two targets: RAW (net R, hold-to-bracket) and MANAGED (net R of the same decision under management policy M, the codified stall / time-stop and weak-leg-close
+  rules registered in RQ-20261116-7c1a-01 / -02, parameters exactly as registered there), plus a PLACEBO (MANAGED labels permuted across timestamps within
+  the symbol). Grade every arm on the decisions it takes at the ACTUAL net R of that decision under policy M (canonical cost stack via ml_decision_entry._cost_r).
+  Features are the 20 decision-time ENTRY features only; no LTR review, grade or Claude text enters the model.'
+why_this_matters: 'It is the operator''s question 2026-11-16 in its testable form: can the entry model learn from how trades turned out under management,
+  instead of only from kline brackets? It is the ONLY LTR -> entry link whose population is large enough to test: the realised LTR record is 148 distinct
+  trades with a priced counterfactual, of which 28 are priced closes and 10 priced tightens (outcomes.jsonl, MEASURED), and 630 of its 668 priced rows are
+  cf_method no_path_change, i.e. delta 0 by construction. VALUE-OF-INFORMATION GATE (declared): if policy M is within noise of hold-to-bracket on replay,
+  the two targets are the same label and this test is worth ~0. Existing evidence points that way for ML-driven management: RQ-20261101-c692-03 (MANAGE
+  head), c692-13/-14 (ML SL revision) and RQ-20261112-0be0-01 all read delta vs hold <= 0 at their registered margins. So this unit waits until a codified
+  M shows a non-zero hold gap.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived): the paired window sd of 0.074 R/decision for two refits of this recipe over the same 13 x 28-day windows, from
+    frontier-scan-2026-11-11 K1 (as quoted in RQ-20261112-4654-01); se = 0.074/sqrt(13) = 0.0205, 80%-power MDE at alpha 0.05 two-sided ~ 0.063, registered
+    effect +0.06 (same as 4654-01 so the two targets are comparable). Fewer than 10 windows with n >= 30 decisions per arm is INDETERMINATE. The window
+    sd is re-measured in the result; if it is > 0.10 the design was underpowered and that is stated.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261116-089f-02-MANAGED-TARGET
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  baseline: 'RAW: the same recipe refit on the raw hold-to-bracket net R, same rows, same tau, same cost stack, graded under the same policy M. The frozen
+    served v1 is context only.'
+  statistic: per 28-day window, mean actual net R per taken decision under policy M for each arm; d_w = MANAGED - RAW over windows where both took >= 30
+    decisions; mean, sd and 95% t-interval of d_w; the same for PLACEBO - RAW; pooled means and n.
+  rule: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND MANAGED pooled n >= 300 AND PLACEBO does not pass
+    (PLACEBO-RAW mean < +0.06 or CI lower bound <= 0) AND MANAGED pooled mean > PLACEBO pooled mean. FAIL iff >= 10 paired windows AND (mean d <= 0 OR PLACEBO-RAW
+    mean >= MANAGED-RAW mean). INDETERMINATE otherwise. Net of the full cost stack. Thresholds are not changed after any result. The grading window was
+    read before by the 4654 series (declared); a PASS is a discovery until its confirmation unit.
+  pass_action: 'Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for a MANAGED-target ENTRY refit, plus the confirmation unit on a post-2026-11
+    forward window.'
+  fail_action: Record FAIL for this configuration; close the managed-target lever for ml_entry (LTR outcomes are not an entry-training signal at the available
+    population) unless the placebo matched (then the target lever is noise).
+  what_it_does_not_do: 'Changes no served model, tau, roster or config. Policy M is a CODIFIED replayable proxy: the desk''s judgement-driven closes (conflicting_exposure,
+    judgement_cadence) are not replayable offline (LTR-CLOSE-AUDIT 2026-11-16) and are NOT in M. Prop closes have no journal R. Trades stay outright.'
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled MANAGED decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: the decision it changes is whether a real-money entry/teacher chain is refit or retired.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  why_runner: replay on published klines; no trainer-resident data.
+  basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
+blocked_on:
+- what: 'Policy M must exist as registered units with a recorded replay verdict: RQ-20261116-7c1a-01 / -02 (authored on lane/ltr-close-audit-20261116, not
+    on main at 2026-11-16). VoI condition: the unit is promoted only if M''s replay hold gap |M - hold| is >= 0.05 R/trade on the S0 corpus; below that
+    the two targets coincide and the test is not run.'
+  ref: RQ-20261116-7c1a-01
+  kind: research_unit
+  clears_when: RQ-20261116-7c1a-01 or -02 is graded and its record states M's mean net R minus hold-to-bracket net R on the replay corpus.
+- what: 'Harness: a managed-label variant of scripts/research/ml_entry_residual.py (same fetch, refit and grading code; the label builder takes policy M).
+    Does not exist.'
+  ref: CML-HARNESS
+  kind: work_item
+  clears_when: row CML-HARNESS closes with scripts/research/ml_entry_managed_target.py committed and --self-test passing.
+run:
+  workflow: null
+  note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
+    lands.store when the harness row closes.'
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 is refit on a management-aware target; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-4654-01
+- RQ-20261101-c692-03
+- RQ-20261105-c692-13
+- RQ-20261112-0be0-01
+- RQ-20261116-7c1a-01
+- ML-ENTRY-FINETUNE
+- ML-ENTRY-TP-REVISION
+- ML-ENTRY-DYNAMIC-SL
