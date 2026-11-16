@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits scripts/deploy_pull_restart.sh (the deploy path run by ict-git-sync every ~5 min; trader_import_closure decide says SKIP, no trader restart). Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\"; manager go 2026-11-16 21:17Z with conditions. The manager merges.",
+  "why": "GIT-SYNC-PRUNE-STUCK: the [timing] lines of the first sync with the #26569 script (21:12:46-21:14:55Z) show `git read-tree -mu HEAD` took 2 min 9 s of a 2 min 20 s no-change run. read-tree now runs only when the sparse patterns sha differs from a marker written after the last successful run, the marker is missing, sparse was just enabled, the patterns are unreadable, or the marker is a day old; it logs one [timing] line when it skips; the marker is written only after read-tree succeeds."
+}

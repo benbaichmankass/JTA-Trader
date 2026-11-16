@@ -180,9 +180,23 @@ fi
 
 SPARSE_SRC="deploy/vm-sparse-checkout"
 SPARSE_DST="$(git rev-parse --git-path info/sparse-checkout)"
+# GIT-SYNC-PRUNE-STUCK (manager go 2026-11-16): `git read-tree -mu HEAD` below took 2 min 9 s of a 2 min 20 s no-change
+# run (MEASURED by the [timing] lines, 21:12:46-21:14:55Z). It only has work to do when the PATTERNS changed (or the
+# sparse checkout was just enabled): `reset --hard` already handles every entry it updates. So it runs when the sha of
+# the patterns differs from the marker written after the last successful run, when the marker is missing, when sparse
+# was just enabled, when the patterns are unreadable (old behaviour), or when the marker is a day old (drift
+# self-heals). The marker is written ONLY after read-tree succeeds.
+SPARSE_APPLIED_MARKER="${SPARSE_APPLIED_MARKER:-${SPARSE_DST}.applied}"
+SPARSE_REAPPLY_MAX_AGE_S="${SPARSE_REAPPLY_MAX_AGE_S:-86400}"
+SPARSE_SHA=""
+SPARSE_JUST_ENABLED=0
 if SPARSE_PATTERNS="$(git show "origin/main:${SPARSE_SRC}" 2>/dev/null)" && [ -n "${SPARSE_PATTERNS}" ]; then
     mkdir -p "$(dirname "${SPARSE_DST}")"
     printf '%s\n' "${SPARSE_PATTERNS}" > "${SPARSE_DST}.tmp" && mv -f "${SPARSE_DST}.tmp" "${SPARSE_DST}"
+    SPARSE_SHA="$(printf '%s\n' "${SPARSE_PATTERNS}" | sha256sum | cut -d' ' -f1)"
+    if [ "$(git config --bool core.sparseCheckout 2>/dev/null || echo false)" != "true" ]; then
+        SPARSE_JUST_ENABLED=1
+    fi
     git config core.sparseCheckout true
     git config core.sparseCheckoutCone false
     echo ">>> Sparse checkout patterns applied from origin/main:${SPARSE_SRC}."
@@ -198,9 +212,40 @@ echo ">>> [timing] hard-reset done"
 # removed (the one-time cleanup) and the shape is idempotent every tick.
 # `read-tree -mu HEAD` is the portable form of `git sparse-checkout reapply`.
 if [ "$(git config --bool core.sparseCheckout 2>/dev/null || echo false)" = "true" ]; then
-    echo ">>> [timing] sparse re-apply (git read-tree -mu HEAD) start"
-    git read-tree -mu HEAD || echo ">>> WARNING: sparse re-apply (git read-tree -mu HEAD) failed — continuing."
-    echo ">>> [timing] sparse re-apply done"
+    SPARSE_RUN_WHY=""
+    SPARSE_MARK_SHA=""
+    SPARSE_MARK_AT=""
+    if [ -r "${SPARSE_APPLIED_MARKER}" ]; then
+        read -r SPARSE_MARK_SHA SPARSE_MARK_AT < "${SPARSE_APPLIED_MARKER}" 2>/dev/null || true
+    fi
+    SPARSE_NOW="$(date +%s)"
+    case "${SPARSE_MARK_AT}" in ''|*[!0-9]*) SPARSE_MARK_AT="";; esac
+    if [ -z "${SPARSE_SHA}" ]; then
+        SPARSE_RUN_WHY="patterns unreadable (old behaviour)"
+    elif [ "${SPARSE_JUST_ENABLED}" = "1" ]; then
+        SPARSE_RUN_WHY="sparse checkout just enabled"
+    elif [ -z "${SPARSE_MARK_SHA}" ] || [ -z "${SPARSE_MARK_AT}" ]; then
+        SPARSE_RUN_WHY="no applied marker"
+    elif [ "${SPARSE_MARK_SHA}" != "${SPARSE_SHA}" ]; then
+        SPARSE_RUN_WHY="patterns changed (${SPARSE_MARK_SHA:0:8} -> ${SPARSE_SHA:0:8})"
+    elif [ $(( SPARSE_NOW - SPARSE_MARK_AT )) -ge "${SPARSE_REAPPLY_MAX_AGE_S}" ]; then
+        SPARSE_RUN_WHY="periodic safety re-apply (marker $(( SPARSE_NOW - SPARSE_MARK_AT )) s old)"
+    fi
+    if [ -n "${SPARSE_RUN_WHY}" ]; then
+        echo ">>> [timing] sparse re-apply (git read-tree -mu HEAD) start: ${SPARSE_RUN_WHY}"
+        if git read-tree -mu HEAD; then
+            if [ -n "${SPARSE_SHA}" ]; then
+                { printf '%s %s\n' "${SPARSE_SHA}" "${SPARSE_NOW}" > "${SPARSE_APPLIED_MARKER}.tmp" \
+                    && mv -f "${SPARSE_APPLIED_MARKER}.tmp" "${SPARSE_APPLIED_MARKER}"; } \
+                    || echo ">>> WARNING: could not write the sparse applied marker ${SPARSE_APPLIED_MARKER} — the next run re-applies."
+            fi
+        else
+            echo ">>> WARNING: sparse re-apply (git read-tree -mu HEAD) failed — continuing (marker not written, the next run retries)."
+        fi
+        echo ">>> [timing] sparse re-apply done"
+    else
+        echo ">>> [timing] sparse re-apply skipped: patterns unchanged (${SPARSE_SHA:0:8}), last applied $(( SPARSE_NOW - SPARSE_MARK_AT )) s ago"
+    fi
 fi
 # <<< VM-SPARSE-SYNC end
 
