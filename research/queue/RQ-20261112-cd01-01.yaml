@@ -79,7 +79,15 @@ run:
   inputs:
     research_unit: RQ-20261112-cd01-01
 grading:
-  auto: true
+  auto: false
+  decision_rule_id: RULE-RQ20261112-cd01-01-REGIME-SELECT-COST
+  evidence:
+  - research/results/RQ-20261112-cd01-01/local-20261112T1500Z.jsonl
+  graded_at: '2026-11-16'
+  grader: session RESEARCH-OPS-20261116-0715 (triage)
+  note: "Rule applied verbatim: R1 gap -0.2113 R/trade = regime -0.2002 + selection -0.0112; verdict REGIME-UNRESOLVED (leader regime, |t| 1.13 < 2, gap_se 0.186); cost verdict COST-NOT-DRIVER (d_cost +0.0033). The rule's own INDETERMINATE: the recent-window drop is attributable to market regime rather than model selection or cost, but not at power. Disposition: no change to the served ml_entry; the window needs more trades or a pooled population read, not a different rule."
+  rows: 1
+  verdict: indeterminate
 related:
 - CRYPTO-ENTRY-RETRAIN-UNIT
 - ML-DECISION-LABEL-VOL-CONFOUND
