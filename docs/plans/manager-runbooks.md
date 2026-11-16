@@ -41,6 +41,13 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
+  **Getting the brief to the reviewer** (2026-11-16: the SLV reviewer's bare `git fetch origin main` hung and timed out, so it wrote its row
+  without REVIEWER-BRIEF.md): the reviewer's checkout is `live-review/rows` only (no brief on it), so put the brief text in the dispatch prompt, or
+  tell the reviewer to read it with a bounded shallow fetch, **never a bare `git fetch origin main`** (this repo is too large for it):
+  `timeout 120 git fetch --depth=1 --filter=blob:none origin main && git show FETCH_HEAD:.claude/skills/live-trade-review/REVIEWER-BRIEF.md`,
+  or the GitHub MCP `get_file_contents` for that path at `ref: refs/heads/main`. A row written without the brief is still valid if
+  `check_live_review_records.py` passes, but say so in the report. (Runbook recipe only; the REVIEWER-BRIEF contract text is unchanged, so no
+  AMENDMENTS entry.)
   **Event `mandate_cadence`** (a per-package auto-apply mandate, `kind: ltr_auto_apply` in `config/mandates.yaml`, first MD-LTR-ADA-AUTO,
   operator 2026-10-29): the VM emits it for the scoped open package once per `review_cadence_minutes` slot after the bar boundary, with
   the packet committed first; dispatch the reviewer exactly as above, packet inline, and the VM applies its `recommended` row within the
