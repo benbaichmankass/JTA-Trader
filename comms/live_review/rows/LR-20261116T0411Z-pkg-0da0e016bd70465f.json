@@ -1,0 +1,158 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261116T0411Z-pkg-0da0e016bd70465f",
+ "reviewed_at": "2026-11-16T04:20:00Z",
+ "order_package_id": "pkg-0da0e016bd70465f",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "mechanics",
+  "level": "venue_sl_diverges",
+  "l0_snapshot_at": "2026-11-16T04:09:26.838004+00:00"
+ },
+ "info_cutoff_at": "2026-11-16T04:11:04Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.0142,
+  "open_r": 0.1182,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1324,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 73.46803571,
+  "tp": 69.26357142857142
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.0142,
+  "open_r": 0.1182,
+  "peak_r": 0.1324,
+  "r_to_stop": 0.8552,
+  "r_to_target": 1.1334
+ },
+ "mechanics": {
+  "evidence": "bybit_portfolio: venue SL 74.02 != package SL 73.46803571",
+  "verdict": "mismatch"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 395,
+   "mean_r": -0.1687,
+   "sd_r": 1.1829,
+   "worst_r": -1.2043,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 395,
+   "mean_r": -0.158,
+   "sd_r": 0.4797,
+   "worst_r": -2.1344,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 395,
+   "mean_r": -0.1722,
+   "sd_r": 0.4501,
+   "worst_r": -2.1344,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 395,
+   "mean_r": 0.0379,
+   "sd_r": 0.0321,
+   "worst_r": -0.1078,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261116T0411Z-pkg-0da0e016bd70465f.json",
+ "recommendation": {
+  "action": "flag_mechanics",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "mechanics",
+  "confidence": "anecdote",
+  "evidence_source": "none",
+  "judgement_confidence": null,
+  "reason": "Mechanics mismatch is on the paper mirror only: bybit_portfolio venue SL 74.02 (the entry-time plan stop, exit_plan_state.stop 74.0243) vs package SL 73.468; bybit_2 venue SL 73.47 matches the package. Gap 0.552 = 0.58 ATR (0.952) > 0.25 ATR, so the mirror carries ~0.55 more stop risk than the real-money leg. No exit judgement on a mismatched trade; operator/manager to confirm why the mirror's stop was not tightened with bybit_2's. Other events in this wake, answered in passing: conflicting_exposure - keep both, no closing action: SOL short ml_entry (open +0.118R, 1h) vs ict_scalp_sol_15m long (-0.124R, 15m) and ml_entry_v2 long (+0.572R, 1h) are different legs and horizons, and the SOL book is 3 shorts (ml_entry, sol_pullback_2h, claude_desk) vs 2 longs, so closing the short would not reduce net exposure much; judgement_cadence - hold is the call absent the mismatch (open +0.118R, peak +0.132R, 0.85R to stop, 1.13R to target; hold n=395 mean -0.1687R is the leg's whole peak-pullback population, tighten/close cells do not beat hold net of cost beyond SE, no new structure break since entry; 4h ADX 56 trending, 1h chop ADX 17.6), no tighten or other action recommended."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics: bybit_portfolio venue SL 74.02 != package SL 73.46803571 (gap 0.551964 > 0.25 x ATR 0.952143); bybit_2 SL 73.47 matches",
+  "events_in_wake: conflicting_exposure @ SOLUSDT#e3db395784, judgement_cadence @ 2026-11-16T04:00:00+00:00, mechanics @ venue_sl_diverges, all due 2026-11-16T04:09:26.838004+00:00; one row covers all three (trigger names the mechanics event; the other two pairs are answered in reason)",
+  "correlated_exposure: SOLUSDT short ml_entry vs ict_scalp_sol_15m long (-0.124R) and ml_entry_v2 long (+0.572R); 9 other short packages open",
+  "missing_input: regime.atr_now_over_entry candles unavailable or meta.atr not recorded",
+  "missing_input: context.funding null (no diag route); context_v3.chart.since_entry null (package open time not in journal reads)",
+  "table: hold n=395 mean -0.1687 worst -1.2043 (measured, side_filter short, corpus HOLD is extend-only exit without structure SL)",
+  "prop accounts tradeify_1 and velotrade_1 read 0 open positions",
+  "no forecast: mechanics row"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 73.47 / TP 69.26, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "no_action",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "bybit_orders: SL 74.02 / TP 69.26, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "operator_ask",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (live-review reviewer)",
+ "session": "session_01AFoLuMQSKxq5LRxnvfasSY",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "7c72b330c8c313a87b9bc5bb07c0be23d954694fcae19ffcb8c980db5fe9f7fa"
+}
