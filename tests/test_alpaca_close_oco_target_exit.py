@@ -480,3 +480,23 @@ def test_reprice_accepted_but_ineffective_on_live_never_closes_all_and_flags_onc
     assert "close ladder exhausted on a LIVE account" in out["retMsg"]
     (flag,) = calls["flags"]
     assert flag["op"] == "close_ladder_exhausted_live" and "reprice_not_flat" in flag["error"]
+
+
+# ALPACA-PAPER-BRACKETS-GONE-1116: our own just-placed flatten is never the wedge holder.
+def test_own_slow_flatten_order_is_not_a_wedge_and_never_resets_the_account(monkeypatch):
+    b = _NotFlatBroker()
+    own = {"id": "liq-accepted", "symbol": "GLD", "type": "market", "side": "sell", "qty": "39", "status": "accepted"}
+    b.residual = lambda: [] if b.flat else [own]
+    cli, flags = _not_flat_client(monkeypatch, b)
+    out = cli.close("GLD")
+    assert b.close_all == 0 and b.patches == [] and flags == []
+    assert out["retCode"] == 1 and "leaving DB row open to retry" in out["retMsg"]
+
+
+def test_escalate_excludes_own_order_id_even_when_not_typed_market(monkeypatch):
+    b = _NotFlatBroker()
+    own = {"id": "liq-accepted", "symbol": "GLD", "type": "limit", "side": "sell", "qty": "39", "status": "new"}
+    b.residual = lambda: [] if b.flat else [own]
+    cli, _ = _not_flat_client(monkeypatch, b)
+    assert cli._escalate_not_flat("GLD", 0.05, own_order_id="liq-accepted") is None
+    assert b.close_all == 0
