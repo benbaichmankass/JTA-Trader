@@ -1,7 +1,7 @@
 id: RQ-20261116-089f-01
 title: 'CJ-4 blind-source label validation: does the blind post-trade grade (Sonnet, mask-v1) rank-predict realised net R on the 707 journal-joined closed
   crypto trades, and does it beat the strategy''s own confidence on the same trades?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -89,26 +89,35 @@ value:
   confidence: 0.1
   basis: 'stand-in, not a P&L measurement: the decision it changes is whether a real-money entry/teacher chain is refit or retired.'
 routing:
-  needs_trainer_resident_data: false
+  needs_trainer_resident_data: true
   needs_gpu: false
-  peak_memory_gb: 8.0
-  est_minutes: 120
-  why_runner: replay on published klines; no trainer-resident data.
-  basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
-blocked_on:
-- what: 'The instrument: a script that reads the claude_judgments build output (or runs the family builder against the VM/trainer journal), computes the
-    registered statistics and writes a verdict.json. The family builder joins net R from trade_journal.db, which is NOT in the repo: a local run of python
-    -m ml.datasets.families.claude_judgments excludes all 707 blind rows as outcome_unjoined_no_journal (MEASURED 2026-11-16, journal absent), and the committed
-    comms/live_review/outcomes.jsonl joins only 51 of the 707 blind trades (MEASURED), so it must run where the journal is (trainer sync copy or a diag-token
-    journal read).'
-  ref: CML-HARNESS
-  kind: work_item
-  clears_when: row CML-HARNESS closes with scripts/research/cj4_blind_validation.py committed, a --self-test passing, and a run host named that holds the
-    journal; then git mv this file to research/queue/ and fill run.workflow, run.command and lands.store.
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  why_runner: 'the net R join needs trade_journal.db (2.9 GB, MEASURED 2026-11-16), which only the trainer holds: it is not in the repo and not on a GitHub runner.'
+  basis: 'MEASURED for the compute: the harness --self-test (synthetic n=707, 14 prompt_sha strata, five 2000-draw cluster bootstraps) peaked at 71 MB max RSS in 10.8 s
+    (resource.getrusage, 2026-11-16, this lane). NOT measured: the real run, which needs the trainer journal. It adds a read-only sqlite open and an indexed lookup of ~707
+    trade ids (default page cache, a few MB); 1.0 GB is a ~14x margin over the measured compute, set well under the trainer 6 GB because the trainer is memory-tight
+    (mem_max 96% on 2026-11-15). est_minutes 5 is an ESTIMATE: ~20 s of bootstrap plus a cold-cache journal read.'
 run:
-  workflow: null
-  note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
-    lands.store when the harness row closes.'
+  workflow: research-script-run-trainer.yml
+  command:
+  - python3
+  - scripts/research/cj4_blind_validation.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --db
+  - data/trade_journal.db
+  - --where
+  - trainer-vm
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261116-089f-01
+  host_note: 'RUN HOST = the TRAINER VM. It holds the journal (MEASURED 2026-11-16 via trainer-vm-diag: data/trade_journal.db 2957631488 B, written 08:03Z) and a checkout
+    with comms/claude_judgments/{blind,revealed}_grades.jsonl (707 + 707 rows). On the trainer the 2026-11-16T00:43Z claude_judgments build already emitted 707
+    blind_grade rows joined to net R, so the join works there. A run on any host without the journal lands read_state could_not_look and INDETERMINATE, never a number.
+    Run once (cadence once); the instrument was built by row CML-HARNESS and self-tests on planted positive / null / n<150.'
 ml_consumer:
   consumer: CJ-5-STUDENT-MANIFESTS
   decision: whether any student model may target the blind grade as a label (qualified.json); no change from this unit
