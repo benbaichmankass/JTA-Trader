@@ -354,6 +354,22 @@ def _code_sha() -> str:
 
 
 
+def emit_workspace_events(adapter: Any, *secrets: str) -> None:
+    """PROP-TRADEIFY-WORKSPACE-RECUR: every workspace re-select the adapter attempted since the last flush, as ONE
+    ``action`` line each, with a ``workspace_recovered`` alert when a click landed (positive evidence) and the
+    refusal reason otherwise. Never raises."""
+    try:
+        evs = adapter.pop_workspace_events() if hasattr(adapter, "pop_workspace_events") else []
+    except Exception:  # noqa: BLE001
+        return
+    for ev in evs:
+        emit({"action": ev}, *secrets)
+        if ev.get("selected"):
+            emit({"alert": "workspace re-selected: the terminal had fallen back to another workspace tab; "
+                           "'My Trading Account' is current again and the table read was retried "
+                           f"(trigger: {ev.get('trigger')})"}, *secrets)
+
+
 def emit_trail_pulse(account: str, state_dir: Path, *secrets: str) -> None:
     """TRAIL-PAUSE-PULSE: one pulse per tick carrying ``trail_paused_since``
     (null = latch absent, ISO = the RETIRED latch file is present -- since
@@ -395,6 +411,7 @@ def run_cycle_and_trail(*, adapter, page, api, cfg, mode, args, state_dir, secre
         emit({"report": r}, *secrets)
     for al in res.alerts:
         emit({"alert": al}, *secrets)
+    emit_workspace_events(adapter, *secrets)
     emit({"executor": "done", "mode": res.mode, "halted": res.halted}, *secrets)
     emit_trail_pulse(args.account, state_dir, *secrets)
     if save_session is not None:
@@ -453,6 +470,7 @@ def run_cycle_and_trail(*, adapter, page, api, cfg, mode, args, state_dir, secre
             emit({"report": r}, *secrets)
         for al in res.alerts[n_al:]:
             emit({"alert": al}, *secrets)
+    emit_workspace_events(adapter, *secrets)     # a re-select made by the close / trail step's reads
     # NO-HALT (operator 2026-10-09): a cycle that ran exits 0 whatever it
     # contained or held; its alerts are what reach a person.
     return EXIT_OK

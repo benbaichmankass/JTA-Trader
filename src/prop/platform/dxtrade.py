@@ -5437,6 +5437,39 @@ class DXtradeAdapter(PropPlatformAdapter):
         # SL / TP took the same call. Default "fill", so breakout_1's fill
         # path is unchanged.
         self.limit_price_fill = "fill"
+        # PROP-TRADEIFY-WORKSPACE-RECUR (manager order 2026-11-16, after the 11-15 13:18Z and 11-16 ~08:50Z recurrences): when the
+        # Positions / Orders table is missing because the terminal fell back to another workspace tab (a page-load
+        # timeout reloads the default "Trading Dashboard"; 11-15 13:18Z and 11-16 ~08:50Z left the tradeify_1 executor
+        # blind for hours with an open position), a read re-selects "My Trading Account" ONCE per adapter (= once per
+        # tick; the 5-minute cadence is the backoff) through the SAME click-only guarded step as select-workspace, then
+        # re-reads. ``workspace_events`` records each attempt for the tick to emit; a failed re-select leaves the
+        # original LookupError, so the existing failure streak, single red flag and RECOVERED line apply unchanged.
+        self.auto_reselect_workspace = True
+        self.workspace_events: List[Dict[str, Any]] = []
+        self._reselect_tried = False
+
+    def recover_workspace(self, page: Any, trigger: str) -> bool:
+        """One guarded re-select of the workspace tab after a table read came back missing. Returns True only when a
+        click landed and the tab now reads current (so a re-read is worth making). Never raises; at most once per
+        adapter instance; no halt and no new gate (the guards are ``select_workspace``'s own: one-click OFF, exactly
+        one tab of that name, never a close control)."""
+        if not self.auto_reselect_workspace or self._reselect_tried:
+            return False
+        self._reselect_tried = True
+        try:
+            got = self.select_workspace(page)
+        except Exception as exc:  # noqa: BLE001
+            got = {"selected": False, "refused": f"{type(exc).__name__}: {exc}"}
+        self.workspace_events.append({
+            "what": "workspace_reselect", "trigger": trigger, "selected": bool(got.get("selected")),
+            "already_current": bool(got.get("already_current")), "refused": got.get("refused"),
+            "clicks": got.get("clicks") or [], "watchlist_ok": got.get("watchlist_ok"),
+            "workspaces_before": got.get("workspaces_before")})
+        return bool(got.get("selected"))
+
+    def pop_workspace_events(self) -> List[Dict[str, Any]]:
+        out, self.workspace_events = self.workspace_events, []
+        return out
 
     # ---- page probes ---------------------------------------------------
     @staticmethod
@@ -5668,6 +5701,9 @@ class DXtradeAdapter(PropPlatformAdapter):
     def read_positions(self, page: Any) -> List[Position]:
         self._show_tab(page, "tab_positions")
         got = positions_from_tables(self._tables(page))
+        if got is None and self.recover_workspace(page, "positions table not found"):
+            self._show_tab(page, "tab_positions")
+            got = positions_from_tables(self._tables(page))
         if got is None:
             raise LookupError("no positions table found on the page (selector drift or unmeasured layout)")
         return got
@@ -5675,6 +5711,9 @@ class DXtradeAdapter(PropPlatformAdapter):
     def read_orders(self, page: Any) -> List[WorkingOrder]:
         self._show_tab(page, "tab_orders")
         got = orders_from_tables(self._tables(page))
+        if got is None and self.recover_workspace(page, "orders table not found"):
+            self._show_tab(page, "tab_orders")
+            got = orders_from_tables(self._tables(page))
         if got is None:
             raise LookupError("no orders table found on the page (selector drift or unmeasured layout)")
         return got
