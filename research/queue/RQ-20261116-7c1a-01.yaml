@@ -1,0 +1,104 @@
+id: RQ-20261116-7c1a-01
+title: 'LTR-STALL-TIMESTOP-S0: per-leg max-hold and stall time stops vs hold vs random-time close, month folds, net of the full cost stack'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): a rule registered before the run, month folds, a random-time control, net of
+  the full cost stack'
+question: Does a mechanical time stop (close at 4/8/12/24/48 h after entry) or stall stop (close at 8/12/24 h if the peak close-R is still < 0.5) beat, or at least
+  not lose to, holding, net of the full cost stack, stable across months, on the committed crypto roster corpus?
+why_this_matters: 'LTR-STALL-TIMESTOP-S0 (queued 2026-11-01 from comms/research/ltr_trigger_close_s0/VERDICT.md, never authored). The S0 verdict found stall the only
+  trigger beating hold (+0.36 R) but no better than a random-time close, so the content is "trades bleed with time": a max-hold question. On 2026-11-15/16 the live
+  review closed ml_entry packages on stall and conflicting-exposure triggers; a pass here is the mechanical fallback for when no live reviewer runs.'
+power:
+  expected_n: 263
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.25 (sd units, paired delta) needs ~126 fired packages at alpha 0.05 power 0.8; the n_fired floor is 100, so an arm firing on fewer reads INDETERMINATE,
+    not PASS.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand corpus of closed roster crypto packages (journal pages since 2026-07-29); the arm only counts packages it fires on, n_fired is reported
+      per arm.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261116-7c1a-01-TIMESTOP
+  statistic: 'ltr_timestop_s0.py grade: per arm, delta = CLOSE - HOLD (net R, paired per package) over the packages the arm fires on before the realised close; mean,
+    Bonferroni CI, one-sided lower bound, month table, matched random control.'
+  rule: 'An arm is PASS_NONINFERIOR IF ALL: n_fired >= 100 packages; mean (CLOSE - HOLD) >= 0 R; the one-sided 95% lower bound of that mean >= -0.05 R; mean delta
+    >= 0 in >= 3 of the calendar months holding >= 8 fired packages (and >= 3 such months exist); and no single month supplies > 50% of the total gain. It is PASS_BEATS_HOLD
+    if it also has a Bonferroni (family of 8 arms) 95% CI lower bound > 0. FAIL IF n_fired >= 100 and the mean delta is < 0. INDETERMINATE otherwise. The matched
+    random-time close is reported as the control, and an arm that passes but does not beat its own random control is read as ''trades bleed with time'', which is
+    still a valid fallback. The operator''s bar for a first local LTR is ''does not lose money vs hold''.'
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path. A PASS is a Tier-3 proposal for a mechanical fallback close when no live reviewer runs; it is
+    not applied here.
+  baseline: HOLD = the realised net R of the same packages (journal fills, initial-stop R basis).
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'stand-in: a mechanical fallback for the live trade review; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: pure replay over a committed corpus; no network.
+  why_runner: No VM data or secrets; the corpus is committed.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 30
+  command:
+  - python3
+  - scripts/research/ltr_timestop_s0.py
+  - grade
+  - --paths
+  - comms/research/ltr_timestop_s0/paths.jsonl
+  - --arm
+  - ts:4
+  - --arm
+  - ts:8
+  - --arm
+  - ts:12
+  - --arm
+  - ts:24
+  - --arm
+  - ts:48
+  - --arm
+  - stall:8:0.5
+  - --arm
+  - stall:12:0.5
+  - --arm
+  - stall:24:0.5
+  - --n-floor
+  - '100'
+  - --margin
+  - '0.05'
+  - --month-min-n
+  - '8'
+  - --month-pos-min
+  - '3'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261116-7c1a-01
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based mechanical close replayed against holding.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+follow_up: Grader applies the rule mechanically. PASS_NONINFERIOR or PASS_BEATS_HOLD goes to the manager as a Tier-3 proposal for a live baseline fallback close;
+  FAIL records the arm as dead.
