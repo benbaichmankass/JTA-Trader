@@ -2,7 +2,7 @@ id: RQ-20261116-089f-03
 title: 'LTR -> ENTRY structure: is the best entry bracket (SL/TP in ATR) state-dependent? Does choosing among {2/3, 3/4.5, 4/6} ATR by entry-time (side
   x ATR-percentile tercile) cell, selected on dev folds only, beat the static 2/3 bracket on the pooled ml_entry population, net of each symbol''s own cost
   stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -137,3 +137,16 @@ intervention_controls:
     excludes_test_folds: true
   bootstrap_group: window
 last_dispatched_at: '2026-11-16T12:35:10+00:00'
+grading:
+  attested: RULE-RQ20261116-089f-03-BRACKET-BY-CELL
+  auto: true
+  decision_rule_id: RULE-RQ20261116-089f-03-BRACKET-BY-CELL
+  evidence:
+  - research/results/RQ-20261116-089f-03/43867943676.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
