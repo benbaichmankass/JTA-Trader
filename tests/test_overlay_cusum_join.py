@@ -56,7 +56,8 @@ def test_paired_challenger_per_package_and_applied_rescale():
     spec = importlib.util.spec_from_file_location("ocj_pc", Path(__file__).resolve().parents[1] / "scripts/ops/overlay_cusum_join.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
-    ch = lambda mult: [{"artifact": "overlay_td_ev.json", "would_be_multiplier": mult}]
+    def ch(mult):
+        return [{"artifact": "overlay_td_ev.json", "would_be_multiplier": mult}]
     rows = [
         # reduce leg, base cut 0.5, challenger keeps 1.0, realised R +0.4 at half size -> d = (1-0.5)/0.5*0.4 = +0.4
         {"strategy": "leg_r", "order_package_id": "p1", "account": "a1", "multiplier": 0.5, "net_R": 0.4, "challengers": ch(1.0)},
