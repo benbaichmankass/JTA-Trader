@@ -99,3 +99,25 @@ def test_ev_breakeven_and_challenger_block(monkeypatch, tmp_path):
     assert c["tau_rule"] == "ev" and c["n"] == n
     # paired identity: (ch - base) == (ch - take) - (base - take)
     assert abs(c["delta_ch_vs_base_mean_r"] - (c["delta_ch_vs_take_r"] - c["delta_base_vs_take_r"])) < 2e-4
+
+
+def test_challenger_block_reports_below_the_n_floor(monkeypatch, tmp_path):
+    """cc86-01 holdout B (n 95): the verdict stays INDETERMINATE but the paired numbers are printed."""
+    m = _mod()
+    rng = np.random.default_rng(2)
+    n = m.HOLDOUT_N_MIN - 5
+    feats = list(m.FEATURES)
+    df = pd.DataFrame({f: rng.normal(size=n) for f in feats})
+    df["leg"], df["scored"], df["direction"], df["aligned"] = "a", True, "long", True
+    df["entry_time"] = pd.date_range("2019-12-01", periods=n, freq="D", tz="UTC")
+    df["exit_time"] = df["entry_time"] + pd.Timedelta(hours=8)
+    df["net_r"] = rng.normal(0.1, 1.0, size=n)
+    (tmp_path / "a__trades.jsonl").write_text("")
+    monkeypatch.setattr(m, "load_leg", lambda leg, d: df)
+    big = pd.concat([df] * 3, ignore_index=True)
+    h = {"start": "2019-12-01", "end": "2020-06-23", "days": 3500, "wd": tmp_path, "build": False,
+         "before": pd.Timestamp("2020-06-24", tz="UTC"), "artifact": m.export_model(big, m.PRIMARY),
+         "artifact_ref": "b", "challenger": "ev"}
+    out = m.run_holdout(["a"], big, h)
+    assert out["state"] == "INDETERMINATE" and out["n"] == n
+    assert out["challenger"] is not None and out["challenger"]["n"] == n
