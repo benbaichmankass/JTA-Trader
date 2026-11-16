@@ -48,3 +48,27 @@ def test_a_truncated_relay_block_reads_incomplete_never_zero(tmp_path):
     assert J.main(["--shadow", str(sh), "--trades", str(tr), "--cusum"]) == 2
     good = "```json\n" + json.dumps([{"id": 2, "order_package_id": "q", "pnl": 1.0, "status": "closed"}]) + "\n```\n"
     assert J.relay_completeness(good)["complete"] is True
+
+
+def test_paired_challenger_per_package_and_applied_rescale():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location("ocj_pc", Path(__file__).resolve().parents[1] / "scripts/ops/overlay_cusum_join.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    ch = lambda mult: [{"artifact": "overlay_td_ev.json", "would_be_multiplier": mult}]
+    rows = [
+        # reduce leg, base cut 0.5, challenger keeps 1.0, realised R +0.4 at half size -> d = (1-0.5)/0.5*0.4 = +0.4
+        {"strategy": "leg_r", "order_package_id": "p1", "account": "a1", "multiplier": 0.5, "net_R": 0.4, "challengers": ch(1.0)},
+        {"strategy": "leg_r", "order_package_id": "p1", "account": "a2", "multiplier": 0.5, "net_R": 0.4, "challengers": ch(1.0)},
+        # annotate leg, base would cut, challenger keeps, realised R -1.0 at full size -> d = (1-0.5)/1*-1 = -0.5
+        {"strategy": "leg_a", "order_package_id": "p2", "account": "a1", "multiplier": 0.5, "net_R": -1.0, "challengers": ch(1.0)},
+        # agree -> d 0
+        {"strategy": "leg_a", "order_package_id": "p3", "account": "a1", "multiplier": 1.0, "net_R": 2.0, "challengers": ch(1.0)},
+        {"strategy": "leg_a", "order_package_id": "p4", "account": "a1", "multiplier": 1.0, "net_R": None, "challengers": ch(1.0)},
+        {"strategy": "leg_a", "order_package_id": "p5", "account": "a1", "multiplier": 1.0, "net_R": 1.0, "challengers": []},
+    ]
+    out = m.paired_challenger(rows, "overlay_td_ev.json", {"leg_r"})
+    assert out["all_packages"]["n"] == 3 and out["disagreement_packages"]["n"] == 2
+    assert abs(out["disagreement_packages"]["mean_r"] - (-0.05)) < 1e-9
+    assert out["skipped"] == {"no_net_R": 1, "no_challenger": 1, "duplicate_package": 1}

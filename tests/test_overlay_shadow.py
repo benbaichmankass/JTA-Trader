@@ -177,3 +177,43 @@ def test_committed_policy_forming_bar_legs_annotate_closed_bar_legs_reduce():
         pkg = SimpleNamespace(strategy=leg, meta={"_overlay_shadow": {"action": "annotate",
                                                                       "would_be_multiplier": 0.5}})
         assert ovs.apply_overlay_reduce(pkg, 10.0) == 5.0, leg
+
+
+def test_challenger_is_logged_beside_the_live_record_and_never_sizes(logs, monkeypatch, tmp_path):
+    """Forward read (RQ-20261116-cc86-01 iteration): a challenger artifact is scored and logged under
+    `challengers`, while the live record and apply_overlay_reduce read ONLY the live artifact. Here the live
+    artifact never cuts (tau 0.0) and the challenger always would (tau 0.99): qty must stay unchanged."""
+    b = _bars()
+    live = _art(["leg_a"], tau=0.0)
+    ch = dict(_art(["leg_a"], tau=0.99), _file="overlay_t_ev.json", tau_rule="ev", role="challenger")
+    monkeypatch.setattr(ovs, "_ARTIFACTS", {"leg_a": live})
+    monkeypatch.setattr(ovs, "_CHALLENGERS", {"leg_a": [ch]})
+    monkeypatch.setattr(ovs, "_leg_bars", lambda s, y: (b, "4h", "2026-10-29 04:00"))
+    pkg = SimpleNamespace(strategy="leg_a", symbol="XRPUSDT", direction="long", entry=b["close"][-1],
+                          trace_id="t2", meta={})
+    assert ovs.record_overlay_shadow(pkg, "bybit_2") is None
+    rec = json.loads((logs / "overlay_shadow.jsonl").read_text().splitlines()[-1])
+    assert rec["would_be_multiplier"] == 1.0
+    assert rec["challengers"][0]["artifact"] == "overlay_t_ev.json"
+    assert rec["challengers"][0]["would_be_multiplier"] == 0.5
+    pol = tmp_path / "overlay_policy.yaml"
+    pol.write_text("strategies: {leg_a: {mode: reduce}}\n")
+    monkeypatch.setattr(ovs.overlay_policy_mode, "__defaults__", (pol,))
+    assert ovs.apply_overlay_reduce(pkg, 10.0) == 10.0
+
+
+def test_challenger_loader_and_missing_dir(tmp_path):
+    assert ovs._load_challengers(tmp_path / "nope") == {}
+    (tmp_path / "overlay_x_ev.json").write_text(json.dumps({"legs_gate": ["a", "b"], "tau": 0.3}))
+    (tmp_path / "overlay_bad.json").write_text("{not json")
+    got = ovs._load_challengers(tmp_path)
+    assert set(got) == {"a", "b"} and got["a"][0]["_file"] == "overlay_x_ev.json"
+
+
+def test_committed_challengers_are_shadow_only():
+    """Every committed challenger names its live artifact, is reduce-only and is never listed in the policy file."""
+    for p in sorted((REPO / "ml" / "overlay" / "challengers").glob("overlay_*.json")):
+        art = json.loads(p.read_text())
+        assert art.get("role") == "challenger" and art.get("challenger_of"), p.name
+        assert 0.0 <= float(art["multiplier"]) <= 1.0, p.name
+        assert p.name not in (REPO / "config" / "overlay_policy.yaml").read_text(), p.name
