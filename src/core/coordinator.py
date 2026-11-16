@@ -1561,6 +1561,23 @@ class Coordinator:
                     "error": str(_mreason),
                 })
                 continue
+            if _mv == _mirror_pairs.INDEPENDENT:
+                # Alpaca superset rule (operator 2026-11-01): the mirror is not starved by the real-money
+                # account's cash constraint. It dispatches on its OWN sizing; named INFO reason, no skip.
+                logger.info(
+                    "[coordinator] mirror independent: %s dispatching %s/%s on its own sizing — %s",
+                    account.name, pkg.strategy, pkg.symbol, _mreason,
+                )
+                try:
+                    from src.runtime.outcomes import Level, report
+                    report(
+                        "mirror_gate", "mirror_independent_primary_not_placed",
+                        level=Level.INFO, reason=str(_mreason),
+                        account_id=str(account.name),
+                        strategy=pkg.strategy, symbol=pkg.symbol,
+                    )
+                except Exception:  # noqa: BLE001 — observability never blocks
+                    logger.debug("mirror independent outcome report failed", exc_info=True)
             if _mv == _mirror_pairs.UNOBSERVED:
                 logger.warning(
                     "[coordinator] mirror gate: %s dispatching %s/%s with its "

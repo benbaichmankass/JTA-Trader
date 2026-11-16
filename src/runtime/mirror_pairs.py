@@ -16,6 +16,10 @@ a short the real-money account never had. Measured over 2026-07-16 → 2026-10-1
 (the mirror's whole life): 9 packages filled on bybit_portfolio while bybit_2
 did not place (8 × ErrCode 110007 on BTCUSDT, 1 × 110094 on XRPUSDT).
 
+**Exception (2026-11-16, operator superset rule 2026-11-01): ``INDEPENDENT_MIRRORS``.** ``alpaca_portfolio`` does not
+follow ``alpaca_live``'s non-placement; it dispatches on its own sizing and the reason is logged as
+``mirror_independent:...`` at INFO. The divergence ERROR (primary placed, mirror did not) is unchanged for every pair.
+
 **The rule here.** A mirror follows its primary's OUTCOME for the same package
 in the same dispatch call: primary placed → mirror dispatches normally; primary
 did not place (any reason — venue reject, sub-min delta, risk refusal, netting
@@ -49,7 +53,17 @@ MIRROR_PAIRS: Dict[str, str] = {mirror: live for live, mirror in STAGE2_PAIRS}
 FOLLOW = "follow"                  # primary placed -> dispatch the mirror
 SKIP = "skip"                      # primary did not place -> mirror skips
 UNOBSERVED = "unobserved"          # primary absent from this call -> dispatch + WARN
+INDEPENDENT = "independent"        # primary did not place -> mirror dispatches on its OWN sizing (INFO)
 NOT_A_MIRROR = "not_a_mirror"
+
+#: Mirrors that do NOT follow their primary's non-placement. Alpaca is a SUPERSET (operator 2026-11-01, verbatim in
+#: ``tests/test_paper_portfolio_accounts.py``: "there's no excuse for that account having nothing/less than alpaca
+#: live trading"): ``alpaca_portfolio`` must carry at least everything ``alpaca_live`` does, so a real-money CASH
+#: constraint on alpaca_live (``risk_refused: sized_qty=0``, balance ~$195 tied up in open positions) must not starve
+#: the mirror. The bybit pair keeps the strict MIRROR-QTY-DIVERGE follow above: there the equality is the point
+#: (a mirror holding a trade the real-money account never had). 2026-11-16: 19 of the day's 25 "ALL accounts failed"
+#: alerts were alpaca_live sized_qty=0 + alpaca_portfolio ``mirror_primary_not_placed``.
+INDEPENDENT_MIRRORS = frozenset({"alpaca_portfolio"})
 
 
 def primary_of(account_name: str) -> Optional[str]:
@@ -94,11 +108,19 @@ def follow_decision(
     for r in results:
         if r.get("name") == primary:
             row = r
+    independent = str(mirror) in INDEPENDENT_MIRRORS
     if row is not None:
         if row.get("trade_id"):
             return FOLLOW, None
+        if independent:
+            return INDEPENDENT, f"mirror_independent:{primary}_not_placed:{row.get('error')}"
         return SKIP, f"mirror_primary_not_placed:{primary}:{row.get('error')}"
     if primary in excluded_by_account:
+        if independent:
+            return INDEPENDENT, (
+                f"mirror_independent:{primary}_not_dispatched:"
+                f"{excluded_by_account[primary]}"
+            )
         return SKIP, (
             f"mirror_primary_not_dispatched:{primary}:"
             f"{excluded_by_account[primary]}"

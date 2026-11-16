@@ -88,6 +88,33 @@ def test_follow_decision(results, excluded, verdict):
         assert reason.startswith("mirror_primary_")
 
 
+def test_alpaca_mirror_does_not_follow_a_primary_that_did_not_place():
+    """LTR/ALPACA superset (operator 2026-11-01): alpaca_portfolio is not starved by alpaca_live's cash constraint."""
+    refused = "risk_refused: sized_qty=0 with balance=194.60 available_usd=54.45"
+    v, reason = mp.follow_decision(
+        "alpaca_portfolio", [{"name": "alpaca_live", "trade_id": None, "error": refused}], {})
+    assert v == mp.INDEPENDENT
+    assert reason == f"mirror_independent:alpaca_live_not_placed:{refused}"
+    v, reason = mp.follow_decision("alpaca_portfolio", [], {"alpaca_live": "outside_account_scope"})
+    assert v == mp.INDEPENDENT and reason == "mirror_independent:alpaca_live_not_dispatched:outside_account_scope"
+    # a primary that DID place still means FOLLOW, and an absent primary is still UNOBSERVED
+    assert mp.follow_decision("alpaca_portfolio", [{"name": "alpaca_live", "trade_id": "t1"}], {}) == (mp.FOLLOW, None)
+    assert mp.follow_decision("alpaca_portfolio", [], {})[0] == mp.UNOBSERVED
+
+
+def test_the_bybit_pair_keeps_the_strict_follow():
+    v, reason = mp.follow_decision(
+        "bybit_portfolio", [{"name": "bybit_2", "trade_id": None, "error": "RuntimeError: 110094"}], {})
+    assert v == mp.SKIP and reason.startswith("mirror_primary_not_placed:bybit_2:")
+    assert mp.follow_decision("bybit_portfolio", [], {"bybit_2": "outside_account_scope"})[0] == mp.SKIP
+
+
+def test_independent_mirrors_are_exactly_the_alpaca_mirror_and_a_real_pair():
+    assert mp.INDEPENDENT_MIRRORS == frozenset({"alpaca_portfolio"})
+    assert mp.INDEPENDENT_MIRRORS <= set(mp.MIRROR_PAIRS)
+    assert mp.MIRROR_PAIRS["alpaca_portfolio"] == "alpaca_live"
+
+
 def test_follow_decision_non_mirror():
     assert mp.follow_decision("bybit_1", [], {}) == (mp.NOT_A_MIRROR, None)
 
@@ -216,6 +243,34 @@ def test_mirror_follows_when_primary_placed(env, monkeypatch):
     assert [c[0] for c in calls] == ["bybit_2", "bybit_portfolio"]
     assert all(r["trade_id"] for r in results)
     assert not [a for a in alerts if a[0] == "error"]
+
+
+def test_independent_mirror_dispatches_when_primary_failed_and_logs_the_named_reason(env, monkeypatch, caplog):
+    """The coordinator honours INDEPENDENT: no skip, the mirror attempts on its own sizing, INFO reason logged, and
+    no divergence ERROR (the divergence is primary-placed / mirror-failed only). bybit_portfolio is declared
+    independent here only to exercise the generic path on the harness's bybit pair."""
+    import logging
+    calls, rej, alerts = [], [], []
+    _patch(monkeypatch, fail_on={"bybit_2"}, calls=calls, rejections=rej, alerts=alerts)
+    monkeypatch.setattr(mp, "INDEPENDENT_MIRRORS", frozenset({"bybit_portfolio"}))
+    with caplog.at_level(logging.INFO):
+        results = _run(env)
+    assert [c[0] for c in calls] == ["bybit_2", "bybit_portfolio"]          # the mirror attempted
+    by = {r["name"]: r for r in results}
+    assert by["bybit_portfolio"]["trade_id"]                                 # and placed on its own
+    assert by["bybit_2"]["trade_id"] is None
+    assert "mirror independent: bybit_portfolio" in caplog.text
+    assert "mirror_independent:bybit_2_not_placed:" in caplog.text
+    assert not [a for a in alerts if a[0] == "error"]
+    assert not [kw for acct, kw in rej if acct == "bybit_portfolio"]          # no skip row journalled
+
+
+def test_independent_mirror_failing_after_a_placed_primary_still_raises_the_divergence_alert(env, monkeypatch):
+    calls, rej, alerts = [], [], []
+    _patch(monkeypatch, fail_on={"bybit_portfolio"}, calls=calls, rejections=rej, alerts=alerts)
+    monkeypatch.setattr(mp, "INDEPENDENT_MIRRORS", frozenset({"bybit_portfolio"}))
+    _run(env)
+    assert [m for lvl, m in alerts if lvl == "error" and "mirror divergence" in m]
 
 
 def test_primary_placed_mirror_failed_raises_error_alert(env, monkeypatch):

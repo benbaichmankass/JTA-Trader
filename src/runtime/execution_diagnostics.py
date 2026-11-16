@@ -1039,6 +1039,20 @@ def enqueue_all_accounts_failed_dispatch(
         held = [r for r in results if _is_hold(str(r.get("error") or ""))]
         n_failed = len(genuine)
 
+        # A round where EVERY genuine failure is a pure affordability read (sized_qty=0 with the account's
+        # balance / available_usd printed: the cash book is tied up in open positions) is information, not a
+        # dispatch fault: 2026-11-16, 19 of the day's 25 "ALL accounts failed" pages were alpaca_live at
+        # ~$195 balance / $54 available refusing ml_entry_eq_struct buys. Downgraded, never dropped: the row still
+        # lands in the operator-alert ring carrying ``route`` so the quiet path stays measurable. No new gate.
+        def _is_affordability(err: str) -> bool:
+            return err.startswith("risk_refused: sized_qty=0") and "available_usd=" in err
+
+        affordability_only = bool(genuine) and all(
+            _is_affordability(str(r.get("error") or "")) for r in genuine
+        )
+        if affordability_only and priority == "high":
+            priority = "low"
+
         # Build failure lines from genuine failures only. Cap to 5 lines.
         lines = []
         for r in genuine[:5]:
@@ -1051,7 +1065,14 @@ def enqueue_all_accounts_failed_dispatch(
             lines.append(f"  • … and {suppressed} more")
 
         # Headline distinguishes "all genuine failures" from "some held by policy".
-        if held:
+        if affordability_only:
+            headline = "ℹ️ No account could size this signal (affordability: cash tied up)"
+            held_note = (
+                "\nPolicy holds (not failures): "
+                + ", ".join(str(r.get("name") or "?") for r in held[:3])
+                if held else ""
+            )
+        elif held:
             headline = f"🚨 {n_failed}/{attempted} accounts failed to dispatch"
             held_names = ", ".join(str(r.get("name") or "?") for r in held[:3])
             held_note = f"\nPolicy holds (not failures): {held_names}"
@@ -1065,7 +1086,10 @@ def enqueue_all_accounts_failed_dispatch(
             f"Accounts attempted: {attempted} | Trades placed: {placed}\n"
             "Failures:\n" + "\n".join(lines) + held_note
         )[:1024]
-        _append_operator_alert("all_accounts_failed", priority, body)
+        _append_operator_alert(
+            "all_accounts_failed", priority, body,
+            extra={"route": "affordability_downgrade"} if affordability_only else None,
+        )
         payload = {"priority": priority, "body": body}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-allfail.json"
