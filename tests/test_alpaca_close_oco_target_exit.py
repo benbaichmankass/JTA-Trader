@@ -500,3 +500,12 @@ def test_escalate_excludes_own_order_id_even_when_not_typed_market(monkeypatch):
     cli, _ = _not_flat_client(monkeypatch, b)
     assert cli._escalate_not_flat("GLD", 0.05, own_order_id="liq-accepted") is None
     assert b.close_all == 0
+
+
+def test_a_resting_market_order_of_another_id_is_not_a_holder(monkeypatch):
+    b = _NotFlatBroker()
+    mkt = {"id": "other-mkt", "symbol": "GLD", "type": "market", "side": "sell", "qty": "39", "status": "accepted"}
+    b.residual = lambda: [] if b.flat else [mkt]
+    cli, _ = _not_flat_client(monkeypatch, b)
+    assert cli._escalate_not_flat("GLD", 0.05) is None
+    assert b.close_all == 0 and b.patches == []
