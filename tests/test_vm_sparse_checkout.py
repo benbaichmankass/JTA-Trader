@@ -76,8 +76,9 @@ def _sync_block() -> str:
     return "set -euo pipefail\n" + text[start:end]
 
 
-def _run_sync(vm: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(["bash", "-c", _sync_block()], cwd=vm, capture_output=True, text=True)
+def _run_sync(vm: Path, env: dict | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(["bash", "-c", _sync_block()], cwd=vm, capture_output=True, text=True,
+                          env={**os.environ, **(env or {})})
 
 
 def _missing_objects(vm: Path) -> set[str]:
@@ -180,3 +181,137 @@ def test_missing_patterns_file_leaves_checkout_unchanged(world):
     assert r.returncode == 0, r.stdout + r.stderr
     assert "unreadable" in r.stdout
     assert (vm / "src/new_runtime.py").is_file()
+
+
+# --- GIT-SYNC-PRUNE-STUCK (manager go 2026-11-16): read-tree only when it has work to do ----------------------------
+def _read_tree_spy(tmp_path: Path, fail: bool = False) -> tuple[dict, Path]:
+    """A `git` shim first on PATH that logs every `read-tree` call (and can make it fail), then runs the real git."""
+    real = shutil.which("git")
+    bindir = tmp_path / "spy-bin"
+    bindir.mkdir(exist_ok=True)
+    log = tmp_path / "read-tree.log"
+    shim = bindir / "git"
+    shim.write_text(
+        "#!/bin/bash\n"
+        f'if [ "$1" = "read-tree" ]; then echo "$*" >> "{log}"; {"exit 1;" if fail else ""} fi\n'
+        f'exec "{real}" "$@"\n'
+    )
+    shim.chmod(0o755)
+    return {"PATH": f"{bindir}:{os.environ['PATH']}"}, log
+
+
+def _calls(log: Path) -> list[str]:
+    return log.read_text().splitlines() if log.exists() else []
+
+
+def _land_patterns(seed: Path, extra: str = "") -> None:
+    _write(seed, "deploy/vm-sparse-checkout", PATTERNS.read_text() + extra)
+    _git(seed, "add", "-A")
+    _git(seed, "commit", "-qm", f"patterns{len(extra)}")
+    _git(seed, "push", "-q", "origin", "main")
+
+
+def _marker(vm: Path) -> Path:
+    return vm / ".git" / "info" / "sparse-checkout.applied"
+
+
+def test_read_tree_runs_when_sparse_was_just_enabled_then_skips_while_the_patterns_are_unchanged(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    r1 = _run_sync(vm, env)
+    assert r1.returncode == 0, r1.stdout + r1.stderr
+    assert "start: sparse checkout just enabled" in r1.stdout
+    assert len(_calls(log)) == 1 and _marker(vm).is_file()
+    sha, at = _marker(vm).read_text().split()
+    assert len(sha) == 64 and at.isdigit()
+    r2 = _run_sync(vm, env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert "[timing] sparse re-apply skipped: patterns unchanged" in r2.stdout
+    assert len(_calls(log)) == 1                        # read-tree did NOT run again
+    for rel in CACHE_PATHS:                             # and the tree is still in shape
+        assert not (vm / rel).exists()
+    assert _git(vm, "status", "--porcelain") == ""
+
+
+def test_read_tree_runs_again_when_the_patterns_change(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    assert _run_sync(vm, env).returncode == 0
+    _land_patterns(seed, extra="\n# a changed pattern file\n")
+    r = _run_sync(vm, env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "start: patterns changed (" in r.stdout
+    assert len(_calls(log)) == 2
+
+
+def test_read_tree_runs_when_the_marker_is_missing(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    assert _run_sync(vm, env).returncode == 0
+    _marker(vm).unlink()
+    r = _run_sync(vm, env)
+    assert "start: no applied marker" in r.stdout
+    assert len(_calls(log)) == 2 and _marker(vm).is_file()
+
+
+def test_read_tree_runs_again_when_sparse_was_just_re_enabled(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    assert _run_sync(vm, env).returncode == 0
+    _git(vm, "config", "--unset", "core.sparseCheckout")
+    r = _run_sync(vm, env)
+    assert "start: sparse checkout just enabled" in r.stdout
+    assert len(_calls(log)) == 2
+
+
+def test_a_day_old_marker_triggers_the_periodic_safety_re_apply(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    assert _run_sync(vm, env).returncode == 0
+    sha, _ = _marker(vm).read_text().split()
+    _marker(vm).write_text(f"{sha} {int(__import__('time').time()) - 90000}\n")      # 25 h old
+    r = _run_sync(vm, env)
+    assert "start: periodic safety re-apply" in r.stdout
+    assert len(_calls(log)) == 2
+    sha2, at2 = _marker(vm).read_text().split()
+    assert sha2 == sha and int(__import__('time').time()) - int(at2) < 600            # marker refreshed
+    # a fresh marker skips again
+    r3 = _run_sync(vm, env)
+    assert "[timing] sparse re-apply skipped" in r3.stdout and len(_calls(log)) == 2
+
+
+def test_a_failing_read_tree_does_not_write_the_marker_and_the_next_run_retries(world, tmp_path):
+    origin, seed, vm = world
+    _land_patterns(seed)
+    (tmp_path / "bad").mkdir()
+    (tmp_path / "good").mkdir()
+    bad_env, bad_log = _read_tree_spy(tmp_path / "bad", fail=True)
+    r = _run_sync(vm, bad_env)
+    assert r.returncode == 0, r.stdout + r.stderr                      # never a halt
+    assert "marker not written, the next run retries" in r.stdout
+    assert not _marker(vm).exists()
+    assert len(_calls(bad_log)) == 1
+    good_env, good_log = _read_tree_spy(tmp_path / "good")
+    r2 = _run_sync(vm, good_env)
+    assert "start:" in r2.stdout and len(_calls(good_log)) == 1 and _marker(vm).is_file()
+
+
+def test_unreadable_patterns_keep_the_old_behaviour_and_write_no_marker(world, tmp_path):
+    """No patterns file on main: sparse stays as it was and read-tree runs only if sparse is already on."""
+    origin, seed, vm = world
+    _land_patterns(seed)
+    env, log = _read_tree_spy(tmp_path)
+    assert _run_sync(vm, env).returncode == 0                      # sparse now on, marker written
+    _git(seed, "rm", "-q", "deploy/vm-sparse-checkout")
+    _git(seed, "commit", "-qm", "drop patterns")
+    _git(seed, "push", "-q", "origin", "main")
+    before = len(_calls(log))
+    r = _run_sync(vm, env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "patterns unreadable (old behaviour)" in r.stdout
+    assert len(_calls(log)) == before + 1

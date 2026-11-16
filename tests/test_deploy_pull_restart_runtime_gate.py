@@ -165,7 +165,8 @@ esac
 
 
 def _run(fake, env_extra=None):
-    env = {**os.environ, "PATH": f"{fake['bindir']}:/usr/bin:/bin"}
+    env = {**os.environ, "PATH": f"{fake['bindir']}:/usr/bin:/bin",
+           "SPARSE_APPLIED_MARKER": str(fake["repo"] / ".sparse-applied")}
     if env_extra:
         env.update(env_extra)
     return subprocess.run(
@@ -389,7 +390,8 @@ def test_failed_prune_never_blocks_the_pull_and_keeps_gc_log(fake_repo):
 
 @pytest.mark.parametrize("env", [{"FAKE_PROMISOR": "1"}, {"FAKE_PARTIALCLONE": "1"}])
 def test_partial_clone_skips_every_prune_leaves_gc_log_and_still_deploys(fake_repo, env):
-    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone neither `git prune` (lazily fetches every missing object) nor
+    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone neither `git prune` (never finished inside its 300 s cap there;
+    WHY is unproven, a local partial-clone test did not show it fetching) nor
     `git prune-packed` (burned its 120 s cap on 4755 packs) runs; gc.log stays (keeps auto-gc off); the deploy proceeds."""
     gc_log = _seed_gc_log(fake_repo)
     fake_repo["diff_files"].write_text("src/main.py\n")
