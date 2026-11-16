@@ -736,11 +736,17 @@ fi
 # every deploy that restarts units took ~18 min and a 900 s `sync-now` ops job
 # timed out holding the single runner (GITSYNC-SLOW-ONESHOTS). Their timers
 # run them on the new code at the next tick; let the timers own them.
+# ict-trainer-git-sync.service (15-min timer) runs `git fetch` + `git checkout --force -B main origin/main` in THIS
+# repo (scripts/ops/trainer_git_sync.sh, lock-free). Since #26569 made oneshot restarts --no-block, restarting it here
+# overlapped the NEXT ict-git-sync run and the two git writers collided on .git/index.lock (MEASURED 2026-11-16 21:53:11Z:
+# 'Unable to create .git/index.lock', exit 128, OnFailure fired, HEAD moved by the other writer). Its timer owns it.
+# ict-web-api-watchdog.service (2-min timer): a --no-block restart ran it DURING the web-api restart (MEASURED
+# 2026-11-16 21:52:29Z: probe 'Connection refused', false 'wedge detected' alert, exit 2, OnFailure). Its timer owns it.
 # ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service ict-trainer-git-sync.service ict-web-api-watchdog.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes
