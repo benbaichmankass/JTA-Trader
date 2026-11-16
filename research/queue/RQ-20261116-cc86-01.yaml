@@ -26,17 +26,19 @@ why_this_matters: 'Beagle-1 resizes real-money TD entries (bybit_2, bybit_portfo
   re-read. It swaps in ONLY on a win; otherwise it is an iteration input and Beagle-1 keeps trading.'
 power:
   expected_n: 530
-  min_detectable_effect: 0.02
+  min_detectable_effect: 0.036
   effect_units: r_per_trade
-  sd: 0.3
+  sd: 0.29
   design: one_sample
-  alpha: 0.0167
+  alpha: 0.05
   power: 0.8
   basis: 'n: spot 2017-09..2020-06 = 424 MEASURED (5785-05) + ~105 over 2019-12..2020-06 (ESTIMATE from the perp count); perp
     2019-12..2020-06 n 105 MEASURED (5785-02). The paired delta d = (m_ch - m_base) x net_R is non-zero only where the two
     arms disagree; at a disagreement rate of ~15% with |0.5 x R| ~ 0.75 on those, sd(d) ~ sqrt(0.15) x 0.75 ~ 0.29 (an ESTIMATE).
-    se ~ 0.29/sqrt(530) ~ 0.0126. The bar is the deflated one-sided LB at alpha 0.05/3 (z ~2.13; both windows have now been
-    read twice, so this is the third read under M13), so a win needs a true paired gain of about +0.027 R/trade. Below that
+    se ~ 0.29/sqrt(530) ~ 0.0126. power.alpha is the calculator''s two-sided 0.05 (it accepts 0.10/0.05/0.01); at n 530, power
+    0.8 that detects d ~0.12, i.e. ~+0.036 R/trade. The decision bar itself is stricter and lives in the rule: the deflated
+    one-sided LB at alpha 0.05/3 (z ~2.13; both windows have now been read twice, so this is the third read under M13), which
+    a true paired gain of about +0.027 R/trade clears at the point estimate and ~+0.036 clears with power 0.8. Below that
     it is an iteration input, never a demotion.'
   feasibility:
     source: none
