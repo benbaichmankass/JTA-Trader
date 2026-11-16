@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits scripts/deploy_pull_restart.sh (the deploy path run by ict-git-sync every ~5 min; no trader import closure: trader_import_closure decide says SKIP). Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\"; manager go 2026-11-16 ~19:31Z. The manager merges.",
+  "why": "GIT-SYNC-PRUNE-STUCK: every sync waits the full 300 s cap of a bare `git prune` that cannot finish on this PARTIAL (promisor) clone (it lazily fetches each missing object, ~1 git child per second, MEASURED in the ict-git-sync journal 2026-11-16 19:20-19:29Z). The prune stage is skipped on a promisor/partial clone with one log line; gc.log is left in place on purpose (keeps auto-gc from running the same storm); only the non-fetching git prune-packed runs, bounded."
+}

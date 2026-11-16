@@ -98,6 +98,14 @@ case "$1" in
     ;;
   diff) cat "{diff_files}" ;;
   prune) echo "$*" >> "{prune_log}"; exit "$(cat "{prune_rc}")" ;;
+  prune-packed) echo "$*" >> "{prune_log}"; exit "$(cat "{prune_rc}")" ;;
+  config)
+    # GIT-SYNC-PRUNE-STUCK: FAKE_PROMISOR=1 -> a partial clone; every other key stays empty (exit 0) as before.
+    case "$*" in
+      *remote.origin.promisor*) [ "${{FAKE_PROMISOR:-}}" = "1" ] && echo true ;;
+      *extensions.partialclone*) [ "${{FAKE_PARTIALCLONE:-}}" = "1" ] && echo origin ;;
+    esac
+    exit 0 ;;
   fetch|reset) exit 0 ;;
   *) exit 0 ;;
 esac
@@ -365,6 +373,39 @@ def test_failed_prune_never_blocks_the_pull_and_keeps_gc_log(fake_repo):
     assert gc_log.exists()  # retried on the next tick
     assert "git prune failed" in res.stdout
     assert "ict-trader-live.service" in _restarted(fake_repo)  # the deploy still ran
+
+
+@pytest.mark.parametrize("env", [{"FAKE_PROMISOR": "1"}, {"FAKE_PARTIALCLONE": "1"}])
+def test_partial_clone_skips_git_prune_runs_prune_packed_and_leaves_gc_log(fake_repo, env):
+    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone `git prune` is skipped (it lazily fetches every missing object),
+    gc.log stays (keeps auto-gc off), only the non-fetching prune-packed runs, and the deploy still proceeds."""
+    gc_log = _seed_gc_log(fake_repo)
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, env)
+    assert res.returncode == 0, res.stderr
+    calls = fake_repo["prune_log"].read_text().splitlines()
+    assert calls == ["prune-packed"], calls          # never `prune --expire=...`
+    assert gc_log.exists()
+    assert "partial (promisor) clone: skipping 'git prune'" in res.stdout
+    assert "removed .git/gc.log" not in res.stdout
+    assert "ict-trader-live.service" in _restarted(fake_repo)
+
+
+def test_partial_clone_prune_packed_failure_is_only_a_warning(fake_repo):
+    _seed_gc_log(fake_repo)
+    fake_repo["prune_rc"].write_text("1")
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, {"FAKE_PROMISOR": "1"})
+    assert res.returncode == 0, res.stderr
+    assert "git prune-packed failed" in res.stdout
+    assert "ict-trader-live.service" in _restarted(fake_repo)
+
+
+def test_partial_clone_without_gc_log_runs_nothing(fake_repo):
+    fake_repo["diff_files"].write_text("docs/x.md\n")
+    res = _run(fake_repo, {"FAKE_PROMISOR": "1"})
+    assert res.returncode == 0, res.stderr
+    assert not fake_repo["prune_log"].exists()
 
 
 def test_no_gc_log_means_no_prune(fake_repo):
