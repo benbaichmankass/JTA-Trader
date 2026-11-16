@@ -1,0 +1,110 @@
+id: RQ-20261116-d5a7-08
+title: 'turtle_soup: one-factor sweep of sweep_lookback_15m (entry family) around the configured 60, 1830 d, net of the full cost stack (iteration)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run; one-factor
+  sensitivity before combinations'
+question: Does stepping sweep_lookback_15m off its configured value 60 to [40, 90] (one factor, all else config-exact) improve turtle_soup net R over the 1830-day
+  window versus the config-exact control A, net of the full cost stack, in >= 3 of 4 calendar folds?
+why_this_matters: 'ITERATION (research-ops 2026-11-16 0715Z): iteration_orphans.py --levers shows turtle_soup with the entry family untested (`.`); sweep_lookback_15m
+  is a configured parameter of the leg (config/strategies.yaml) that no committed unit arm varies. A smooth fold-stable response is potential, a single-point spike
+  is overfit, flat is evidence of no edge on this family. On PASS: ONE confirmation on pre-development history (RESEARCH-NO-WAIT order 1) before any Tier-3 proposal
+  note; on FAIL: the response is recorded in the lever map and the next untested family of turtle_soup is chosen. Arm denominator 3 including control.'
+power:
+  expected_n: 50
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor) for the CONTROL reading; each variant paired against the control on the same trades, 3-of-4
+    fold bar, materiality 4.0 R; arms counted in iteration.multiple_testing, best-of-k is a LEAD not a finding.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261116-d5a7-08-SWEEP-LOOKBACK-15M-SWEEP
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD, and the number of 4 calendar folds in which it beats A,
+    all net of the full cost stack (execution_costs.resolve_cost_policy); the control''s own n, net R and fold signs are reported in verdict.json (the standing walk-forward
+    reading).'
+  rule: PASS (a LEAD for a holdout read, never a setting change here) IF some sweep_lookback_15m arm beats control A by >= 4.0 R with maxDD no worse and >= 3 of 4
+    folds, at A n >= 39; and net positive in >= 3 of 4 calendar years, no single year > 50% of total net, long and short net both >= 0 where two-sided, per-year table
+    reported. FAIL IF none does at n >= 39 (family stays open until its map is flat/noisy at power). INDETERMINATE IF A n < 39 or the producer failed. Arm denominator
+    = 3.
+  registered_at: '2026-11-16'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path; a PASS is a lead for a pre-registered holdout read then a Tier-3 proposal, not a promotion case.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: iteration of a leg with an untested lever family; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, control + 2 arms through the committed-record argv builder on a GitHub runner.
+  why_runner: Fetches keyless public candles for a pinned window and runs the committed harness; no trainer data, no secrets; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - turtle_soup
+  - --arm
+  - A=
+  - --arm
+  - sweep_lookback_15m_40=sweep_lookback_15m=40
+  - --arm
+  - sweep_lookback_15m_90=sweep_lookback_15m=90
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261116-d5a7-08
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: turtle_soup
+  subject_kind: strategy_leg
+  from_result: research/levers/turtle_soup.yaml
+  verdict_read: indeterminate
+  diagnosis: 'iteration_orphans.py --levers (2026-11-16): turtle_soup entry family untested; sweep_lookback_15m never appears as an arm in a committed unit.'
+  search: entry family, sweep_lookback_15m one-factor low/high around 60
+  levers:
+  - entry
+  map_entries:
+  - research/levers/turtle_soup.yaml
+  attempt: 1
+  due_by: '2026-11-30'
+follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.

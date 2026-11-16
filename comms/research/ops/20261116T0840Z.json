@@ -1,0 +1,219 @@
+{
+  "run": "RESEARCH-OPS-20261116-0715",
+  "finished_at": "2026-11-16T08:40:00Z",
+  "by": "session_01AFoLuJXnWVBbe7jSw8aogd",
+  "floor": 56,
+  "floor_basis": "computed_floor(fired_24h 70)",
+  "authoring_queue_depth": 51,
+  "idle_backends": [
+    "github_runner",
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 5,
+  "needs_review_left": 105,
+  "throughput": {
+    "runnable_before": 11,
+    "runnable_after": 25,
+    "queued": 272,
+    "fired_24h": 70,
+    "results_landed_24h": 90,
+    "hours_since_last_dispatch": 3.4,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "not_checked",
+    "collector": "not_checked",
+    "stranded_stamp_prs": [],
+    "incident": "queue starved: runnable 11 of 2367, 0 runnable in every theme but infra (research_queue_health run)"
+  },
+  "results_read": {
+    "pass": 1,
+    "fail": 3,
+    "indeterminate": 1,
+    "units": [
+      "RQ-20261112-3c8f-01",
+      "RQ-20261112-3c8f-02",
+      "RQ-20261112-cd01-01",
+      "RQ-20261113-1449-01",
+      "RQ-20261113-e44a-01"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [
+    "RQ-20261116-d5a7-01",
+    "RQ-20261116-d5a7-02",
+    "RQ-20261116-d5a7-03",
+    "RQ-20261116-d5a7-04",
+    "RQ-20261116-d5a7-05",
+    "RQ-20261116-d5a7-06",
+    "RQ-20261116-d5a7-07",
+    "RQ-20261116-d5a7-08",
+    "RQ-20261116-d5a7-09",
+    "RQ-20261116-d5a7-10",
+    "RQ-20261116-d5a7-11",
+    "RQ-20261116-d5a7-12",
+    "RQ-20261116-d5a7-13",
+    "RQ-20261116-d5a7-14"
+  ],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": 51,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "None of the 51 ready programme nodes was authored as a node this pass. Spot-read the top by value: P3-Q1-live-bt-stage-b is gated on build row LIVE-BT-STAGE-B; the P1-Q6 declare nodes are gated on MOMENTUM-LEVERS-LIVE or need the doctrine read of the closed records first; P2-MECE-D5 needs journal data and an operator scoping question. 14 iteration units were authored from the loop's diagnoses instead. Theme shortfalls (regime 13, live_strategy 11, ml_health 8, new_strategy_prop 16, macro 3, timeframes 3) are only partly cleared; new_strategy_prop, macro and timeframes got no unit.."
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 5,
+      "of": 5
+    },
+    "map_entries_added": 0,
+    "next_tests_from_map": 14,
+    "orphans_before": {
+      "strategy_leg": 7,
+      "ml_model": 3,
+      "ltr_class": 5
+    },
+    "orphans_after": {
+      "strategy_leg": 6,
+      "ml_model": 1,
+      "ltr_class": 5
+    },
+    "results_iterated": [
+      {
+        "result": "RQ-20261115-7e18-01",
+        "verdict": "fail",
+        "subject": "ml-tm-action-value",
+        "next": "RQ-20261116-d5a7-01..05",
+        "attempt": 5
+      },
+      {
+        "result": "RQ-20261112-0bc8-02",
+        "verdict": "fail",
+        "subject": "ml-exit-head-donchian-1h",
+        "next": "RQ-20261116-d5a7-06,07",
+        "attempt": 2
+      },
+      {
+        "result": "iteration_orphans.py (no result unit)",
+        "verdict": "indeterminate",
+        "subject": "turtle_soup",
+        "next": "RQ-20261116-d5a7-08..10",
+        "attempt": 1
+      }
+    ],
+    "advanced": 3,
+    "survivors": [],
+    "overdue": [
+      "RQ-20261101-78fc-34",
+      "RQ-20261101-78fc-20",
+      "RQ-20261101-78fc-52",
+      "RQ-20261101-78fc-53"
+    ]
+  },
+  "checks": {
+    "packet_as_of": "2026-11-16T07:14:24Z",
+    "runnable_by_track": {
+      "TRADING": 0,
+      "MODEL": 1,
+      "INFRA": 10
+    },
+    "fails_without_next": null,
+    "needs_review": 105,
+    "could_not_look": [
+      "dispatch receipt and collector workflow runs not read this pass",
+      "fails_without_next and followups blocks of the checks packet not opened",
+      "stranded stamp PRs not checked"
+    ]
+  },
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261115-7e18-01",
+      "RQ-20261112-0bc8-02",
+      "RQ-20261112-3c8f-01",
+      "RQ-20261112-3c8f-02",
+      "RQ-20261112-cd01-01",
+      "RQ-20261113-1449-01",
+      "RQ-20261113-e44a-01"
+    ],
+    "model": {
+      "meaning": [
+        "ml-tm-action-value Stage B (7e18-01): lgbm +0.0033 R/trade vs hold, CI95 [-0.0070,+0.0131], 3/6 folds, acts on 5.4% of check-ins, while the static rule (-0.0315) and distance logit (-0.0163) lose to hold: the learned policy is not harmful but its gain sits inside noise, so the open levers are label horizon, feature block and training width (authored as d5a7-01..05, one factor each, denominator 5).",
+        "ml-exit-head-donchian-1h (0bc8-02): champion, volume and composition arms all sit at -0.0135 R/trade vs hold (n 11160), comp-champion -0.0016 CI95 [-0.0036,+0.0004]: composition is flat at lookback 500, so the remaining unscanned parameter of that feature is its window (d5a7-06/07)."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "tm Stage B",
+          "hypotheses": [
+            "noise",
+            "label horizon",
+            "feature content",
+            "training width"
+          ],
+          "test": "d5a7-01..05",
+          "survivor": "noise not excluded",
+          "next": "RQ-20261116-d5a7-01..05"
+        }
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261116-d5a7-01..05",
+          "decision_changed": "whether in-trade action value earns a fresh-window read",
+          "on_pass": "fresh-window confirmation unit",
+          "on_fail": "lever recorded, next family (actions, learner)",
+          "premortem": "if all five are flat the cause is noise, not a lever"
+        }
+      ]
+    },
+    "trading": {
+      "meaning": [
+        "IBS arm L (3c8f-01/-02): margin over every-day-long 0.0446 R/trade (recent, symbol-disjoint) and 0.0064 (2010-2020), net positive pooled in both, below the pre-registered 0.05 in both, so IBS is not a lead and the config closes; the family stays open.",
+        "eth_4h tp_r 4 prop (e44a-01): first row PASS was a property of the a7c3-04 ledger (paired A passes identically); the fidelity re-run on the prop record's own ledger FAILs v3 edge (CI lo -0.049), so no eth_4h tp_r 4 prop PR is supported."
+      ],
+      "fail_diagnoses": [],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261116-d5a7-08..14",
+          "decision_changed": "whether turtle_soup, fvg_range_15m and fade_breakout_4h get a declared lever change or stay flat on the untested families",
+          "on_pass": "one pre-dev confirmation then Tier-3 note",
+          "on_fail": "response recorded, next family",
+          "premortem": "15m legs may have few trades at n floor 39 and read INDETERMINATE"
+        }
+      ]
+    },
+    "cross_track": [
+      {
+        "from": "MODEL",
+        "finding": "exit-head and tm-action-value are both flat vs hold on money legs",
+        "feeds": "RQ-20261116-d5a7-01..07"
+      }
+    ],
+    "surprises": [
+      "5 results had sat ungraded 3-4 days because their rows were local hand rows the grader did not attest"
+    ]
+  },
+  "not_run": [
+    "A workflow-run list and stranded-PR check (GitHub MCP not used this pass)",
+    "E authoring of programme nodes (nodes_drafted 0; see authoring.reason)"
+  ],
+  "limits": [
+    "lever_map backfill and iteration_orphans run; map entries not written by hand",
+    "full-suite pytest not run; tests/test_research_queue.py 92 passed",
+    "pytest installed this session (it was absent)",
+    "next_rq_id --fetch hung >2 min so ids used the local hash allocator (batch d5a7)",
+    "ML tm units were not executed locally (corpus v2 is a runner artifact); sweeps not executed"
+  ],
+  "handoff": [
+    "MANAGER: runnable 25 vs floor 56 after this pass: regime/new_strategy_prop/macro/timeframes remain thin; the programme authoring queue (51) is mostly build-gated: LIVE-BT-STAGE-B, MOMENTUM-LEVERS-LIVE; manager to choose which builds to unblock",
+    "e4_oi_shock_1h and claude_desk have no ablation harness (exit_lever_ablation covers trend/pullback/ict_scalp/turtle_soup): lever needed; tsmom-*/xsec-crypto/ml_entry_eq orphans not reached",
+    "timeframe lever is global in exit_lever_ablation (--timeframe applies to all arms): a per-leg timeframe unit needs one run per timeframe; not authored",
+    "4 OVERDUE iterations 78fc-34/-20/-52/-53 need re-dating or replacement",
+    "105 needs_review (owned 89) not triaged beyond the 5 ungraded",
+    "remaining orphans (iteration_orphans.py, measured after authoring): strategy_leg claude_desk, e4_oi_shock_1h, ml_entry_eq, tsmom-crypto, xsec-crypto, tsmom-etf; ml_model ml-btc-router-cells; 5 ltr classes"
+  ]
+}

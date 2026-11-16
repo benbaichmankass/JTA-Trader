@@ -105,7 +105,15 @@ run:
   inputs:
     research_unit: RQ-20261112-3c8f-02
 grading:
-  auto: true
+  auto: false
+  decision_rule_id: RULE-RQ202611123c8f02
+  evidence:
+  - research/results/RQ-20261112-3c8f-02/local-20261112T0648Z.jsonl
+  graded_at: '2026-11-16'
+  grader: session RESEARCH-OPS-20261116-0715 (triage)
+  note: "Rule applied verbatim: arm L pooled n 3069, net +71.67 R (0.0234 R/trade), 5 folds positive, 7 powered cells pass, but the edge over control C is 0.0064 R/trade < the 0.05 bar. FAIL. Together with 3c8f-01 (0.0446) the IBS arm is net positive pooled in both windows but misses the pre-registered margin over every-day-long in both. Configuration closed: frozen IBS arm L on the 2010-01..2020-05 window; family stays open."
+  rows: 1
+  verdict: fail
 related:
 - RQ-20261112-a7e8-01
 - RQ-20261112-3c8f-01
