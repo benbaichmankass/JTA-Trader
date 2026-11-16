@@ -108,20 +108,22 @@ echo ">>> Pre-sync HEAD: ${PRE_SYNC_HEAD}"
 # ---------------------------------------------------------------------------
 GIT_GC_LOG="${REPO_DIR}/.git/gc.log"
 # GIT-SYNC-PRUNE-STUCK (2026-11-16, manager go): this clone is a PARTIAL clone (vm_sparse_bootstrap.sh sets
-# remote.origin.promisor=true, and the fetch below uses --filter=blob:limit). `git prune` on a promisor clone walks
-# reachability and lazily fetches each missing promisor object, one `git fetch` child per object (the ~1/s
-# "too many unreachable loose objects" lines, new PID each, MEASURED 2026-11-16 19:20-19:29Z), so it never finishes
-# inside its 300 s cap and every sync paid the full 5 min. Skip it there. gc.log is deliberately LEFT in place: it is
-# what keeps `git gc --auto` from running the same storm on every fetch; only the non-fetching `git prune-packed`
-# (drops loose copies of objects already in a pack) runs, bounded, and its failure is only a warning.
+# remote.origin.promisor=true, and the fetch below uses --filter=blob:limit). `git prune` never finishes inside its
+# 300 s cap here (MEASURED: every sync, 5 min, "git prune failed or timed out"; ~1 git process per second printing the
+# gc.log warning during that stage, 2026-11-16 19:20-19:29Z) and `git prune-packed` burned its whole 120 s cap too
+# (60k loose objects x 4755 packs, 20:24-20:26Z). WHY is NOT proven: a local partial-clone test (git 2.43.0, file://
+# remote, blob:limit=1k) showed neither `git prune --expire=now` nor `git repack -a -d` fetching anything, while a
+# plain `git rev-list --objects --all` did, so the earlier "prune lazily fetches every missing object" explanation is a
+# hypothesis. The gate rests on the measured wait. gc.log is deliberately LEFT in place: it keeps `git gc --auto` from
+# starting on every fetch. NOTHING else runs on a partial clone; the real fix is a consolidating repack in a quiet
+# window (an operator-approved exec job), not a per-sync prune.
 GIT_IS_PARTIAL_CLONE=0
 if [ "$(git config --get remote.origin.promisor 2>/dev/null || true)" = "true" ] \
    || [ -n "$(git config --get extensions.partialclone 2>/dev/null || true)" ]; then
     GIT_IS_PARTIAL_CLONE=1
 fi
 if [ -f "${GIT_GC_LOG}" ] && [ "${GIT_IS_PARTIAL_CLONE}" = "1" ]; then
-    echo ">>> ${GIT_GC_LOG} present but this is a partial (promisor) clone: skipping 'git prune' (it lazily fetches every missing object and never finishes); leaving gc.log so auto-gc stays off; running bounded 'git prune-packed' only."
-    timeout "${GIT_PRUNE_PACKED_TIMEOUT_S:-120}" git prune-packed || echo ">>> WARNING: git prune-packed failed or timed out — continuing with the pull."
+    echo ">>> ${GIT_GC_LOG} present but this is a partial (promisor) clone: skipping 'git prune' (it never finishes inside its cap on this clone, MEASURED 2026-11-16); leaving gc.log so auto-gc stays off; nothing else runs here (prune-packed burned its whole cap on this pack count too)."
 elif [ -f "${GIT_GC_LOG}" ]; then
     echo ">>> ${GIT_GC_LOG} present (auto-gc is stuck) — running a bounded git prune..."
     if timeout "${GIT_PRUNE_TIMEOUT_S:-300}" git prune --expire=1.hour.ago; then
@@ -190,12 +192,15 @@ fi
 
 echo ">>> Hard-resetting to origin/main (VM is a read-only mirror)..."
 git reset --hard origin/main
+echo ">>> [timing] hard-reset done"
 # reset --hard only re-evaluates entries it updates; re-apply the patterns to
 # the WHOLE index so files already on disk that now match an exclusion are
 # removed (the one-time cleanup) and the shape is idempotent every tick.
 # `read-tree -mu HEAD` is the portable form of `git sparse-checkout reapply`.
 if [ "$(git config --bool core.sparseCheckout 2>/dev/null || echo false)" = "true" ]; then
+    echo ">>> [timing] sparse re-apply (git read-tree -mu HEAD) start"
     git read-tree -mu HEAD || echo ">>> WARNING: sparse re-apply (git read-tree -mu HEAD) failed — continuing."
+    echo ">>> [timing] sparse re-apply done"
 fi
 # <<< VM-SPARSE-SYNC end
 
@@ -497,7 +502,9 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     # --no-renames: a rename is reported as BOTH paths, so moving a runtime file
     # into a non-runtime directory (src/x.py -> scripts/research/x.py) still
     # restarts — rename detection would otherwise show only the new path.
+    echo ">>> [timing] runtime gate (git diff ${RUNTIME_BASE:0:7}..${POST_SYNC_HEAD:0:7}) start"
     CHANGED_FILES="$(git diff --no-renames --name-only "${RUNTIME_BASE}" "${POST_SYNC_HEAD}" 2>/dev/null || true)"
+    echo ">>> [timing] runtime gate git diff done"
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
@@ -549,6 +556,7 @@ fi
 # active is never skipped (the deploy's revive of a crashed trader is kept).
 # DEPLOY_FORCE_RESTART=1 bypasses the gate.
 # ---------------------------------------------------------------------------
+echo ">>> [timing] trader restart gate (import closure) start"
 TRADER_DEPLOYED_SHA_FILE="${REPO_DIR}/runtime_logs/deployed_sha_trader.txt"
 TRADER_RESTART=1
 TRADER_GATE_NOTE="restart (default)"
@@ -856,6 +864,7 @@ send_deploy_failure_ping() {
     fi
 }
 
+echo ">>> [timing] trader restart gate done"
 echo ">>> Restarting services (enumeration: ${#ICT_UNITS[@]} ict-* unit(s))..."
 RESTARTED_UNITS=()
 for unit in "${ICT_UNITS[@]}"; do
@@ -956,8 +965,19 @@ for unit in "${ICT_UNITS[@]}"; do
             "${POST_SYNC_HEAD}" "${TRADER_BASE}" "${TRADER_UNIT}" "$(date +%s)" \
             > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
     fi
-    if "${SYSTEMCTL[@]}" restart "${unit}"; then
-        echo ">>>   restarted ${unit}"
+    # GIT-SYNC-PRUNE-STUCK (manager go 2026-11-16): `systemctl restart` on a Type=oneshot runs the job to completion
+    # INSIDE this loop (MEASURED 2026-11-16: ict-trainer-git-sync held it 4 min 22 s). A oneshot is queued with
+    # --no-block (its own timer owns the cadence; the new code runs from this start on); every other unit type keeps
+    # the blocking restart and the health check after it. A type that cannot be read keeps the blocking restart.
+    RESTART_FLAGS=()
+    RESTART_MODE=""
+    unit_type="$("${SYSTEMCTL[@]}" show -p Type --value "${unit}" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [ "${unit_type}" = "oneshot" ]; then
+        RESTART_FLAGS=(--no-block)
+        RESTART_MODE=" (no-block, Type=oneshot)"
+    fi
+    if "${SYSTEMCTL[@]}" restart ${RESTART_FLAGS[@]+"${RESTART_FLAGS[@]}"} "${unit}"; then
+        echo ">>>   restarted ${unit}${RESTART_MODE}"
         RESTARTED_UNITS+=("${unit}")
         if [ "${unit}" = "${TRADER_UNIT}" ]; then
             # Per-unit marker, written the moment the trader is on POST: a later

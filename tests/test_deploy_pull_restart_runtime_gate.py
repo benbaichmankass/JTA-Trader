@@ -104,6 +104,7 @@ case "$1" in
     case "$*" in
       *remote.origin.promisor*) [ "${{FAKE_PROMISOR:-}}" = "1" ] && echo true ;;
       *extensions.partialclone*) [ "${{FAKE_PARTIALCLONE:-}}" = "1" ] && echo origin ;;
+      *core.sparseCheckout*) [ "${{FAKE_SPARSE:-}}" = "1" ] && echo true ;;
     esac
     exit 0 ;;
   fetch|reset) exit 0 ;;
@@ -128,7 +129,18 @@ case "$1" in
     pattern="${{*: -1}}"
     if [[ "$pattern" == "ict-*.service" ]]; then cat "{units_file}"; fi
     exit 0 ;;
-  restart) echo "$2" >> "{restart_log}"; exit 0 ;;
+  restart)
+    shift; flags=""
+    while [[ "$1" == --* ]]; do flags="$flags $1"; shift; done
+    echo "$1" >> "{restart_log}"
+    [ -n "$flags" ] && echo "$1$flags" >> "{restart_log}.flags"
+    exit 0 ;;
+  show)
+    # GIT-SYNC-PRUNE-STUCK: `show -p Type --value <unit>`; FAKE_ONESHOT lists the oneshot units, every other unit
+    # prints nothing (an unreadable type keeps the blocking restart).
+    unit="${{*: -1}}"
+    case " ${{FAKE_ONESHOT:-}} " in *" $unit "*) echo oneshot ;; esac
+    exit 0 ;;
   status|start) exit 0 ;;
   is-active) echo "active"; exit 0 ;;
   *) exit 0 ;;
@@ -376,28 +388,17 @@ def test_failed_prune_never_blocks_the_pull_and_keeps_gc_log(fake_repo):
 
 
 @pytest.mark.parametrize("env", [{"FAKE_PROMISOR": "1"}, {"FAKE_PARTIALCLONE": "1"}])
-def test_partial_clone_skips_git_prune_runs_prune_packed_and_leaves_gc_log(fake_repo, env):
-    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone `git prune` is skipped (it lazily fetches every missing object),
-    gc.log stays (keeps auto-gc off), only the non-fetching prune-packed runs, and the deploy still proceeds."""
+def test_partial_clone_skips_every_prune_leaves_gc_log_and_still_deploys(fake_repo, env):
+    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone neither `git prune` (lazily fetches every missing object) nor
+    `git prune-packed` (burned its 120 s cap on 4755 packs) runs; gc.log stays (keeps auto-gc off); the deploy proceeds."""
     gc_log = _seed_gc_log(fake_repo)
     fake_repo["diff_files"].write_text("src/main.py\n")
     res = _run(fake_repo, env)
     assert res.returncode == 0, res.stderr
-    calls = fake_repo["prune_log"].read_text().splitlines()
-    assert calls == ["prune-packed"], calls          # never `prune --expire=...`
+    assert not fake_repo["prune_log"].exists()           # no prune, no prune-packed
     assert gc_log.exists()
     assert "partial (promisor) clone: skipping 'git prune'" in res.stdout
     assert "removed .git/gc.log" not in res.stdout
-    assert "ict-trader-live.service" in _restarted(fake_repo)
-
-
-def test_partial_clone_prune_packed_failure_is_only_a_warning(fake_repo):
-    _seed_gc_log(fake_repo)
-    fake_repo["prune_rc"].write_text("1")
-    fake_repo["diff_files"].write_text("src/main.py\n")
-    res = _run(fake_repo, {"FAKE_PROMISOR": "1"})
-    assert res.returncode == 0, res.stderr
-    assert "git prune-packed failed" in res.stdout
     assert "ict-trader-live.service" in _restarted(fake_repo)
 
 
@@ -406,6 +407,51 @@ def test_partial_clone_without_gc_log_runs_nothing(fake_repo):
     res = _run(fake_repo, {"FAKE_PROMISOR": "1"})
     assert res.returncode == 0, res.stderr
     assert not fake_repo["prune_log"].exists()
+
+
+def test_oneshot_units_restart_no_block_and_other_types_keep_the_blocking_restart(fake_repo):
+    """GIT-SYNC-PRUNE-STUCK: ict-trainer-git-sync (Type=oneshot) held the loop 4 min 22 s; a oneshot is queued with
+    --no-block and logged; a unit whose type is simple/unreadable restarts as before (no flag)."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, {"FAKE_ONESHOT": "ict-telegram-bot.service"})
+    assert res.returncode == 0, res.stderr
+    flags = Path(str(fake_repo["restart_log"]) + ".flags").read_text().splitlines()
+    assert flags == ["ict-telegram-bot.service --no-block"], flags
+    restarted = _restarted(fake_repo)
+    assert "ict-telegram-bot.service" in restarted                   # still restarted
+    assert "ict-web-api.service" in restarted and "ict-trader-live.service" in restarted
+    assert ">>>   restarted ict-telegram-bot.service (no-block, Type=oneshot)" in res.stdout
+    assert ">>>   restarted ict-web-api.service\n" in res.stdout      # blocking restart: no suffix
+
+
+def test_sparse_reapply_is_bracketed_by_timing_lines(fake_repo):
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, {"FAKE_SPARSE": "1"})
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    assert out.index("[timing] hard-reset done") < out.index("[timing] sparse re-apply (git read-tree -mu HEAD) start") \
+        < out.index("[timing] sparse re-apply done") < out.index("Post-sync HEAD")
+
+
+def test_no_oneshot_means_no_no_block_flag(fake_repo):
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo)
+    assert res.returncode == 0, res.stderr
+    assert not Path(str(fake_repo["restart_log"]) + ".flags").exists()
+
+
+def test_timing_lines_bracket_the_gate_steps(fake_repo):
+    """GIT-SYNC-PRUNE-STUCK (c): journald stamps every line, so these markers bound the formerly silent stretches."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo)
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    for marker in (">>> [timing] hard-reset done", ">>> [timing] runtime gate", ">>> [timing] runtime gate git diff done",
+                   ">>> [timing] trader restart gate (import closure) start", ">>> [timing] trader restart gate done"):
+        assert marker in out, marker
+    assert out.index("[timing] runtime gate (git diff") < out.index("[timing] runtime gate git diff done") \
+        < out.index("[timing] trader restart gate (import closure) start") < out.index("[timing] trader restart gate done") \
+        < out.index("Restarting services")
 
 
 def test_no_gc_log_means_no_prune(fake_repo):
