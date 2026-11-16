@@ -1,6 +1,6 @@
 # gitleaks baseline — what it accepts and why
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-09-29` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `evidence` · last verified `2026-11-16` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 
 `.gitleaks-baseline.json` (repo root) is the accepted-findings list read by
 `.github/workflows/gitleaks-history-weekly.yml`. With it, the weekly full-history
@@ -75,3 +75,39 @@ gitleaks detect --source . --redact=100 --no-banner --log-level error --exit-cod
 
 Re-baselining accepts everything currently found, so do it only after reading the
 new rows (`scripts/ops/gitleaks_summarize.py` prints rule / file / commit / line).
+
+## 2026-11-16 refresh (SEC-GITLEAKS-BASELINE-1116)
+
+**Why.** `gitleaks-history-weekly` was red every Monday from 2026-11-02 (runs 7, 8, 9; run 43878123590 on 2026-11-16 had
+**387** findings the 2026-09-29 baseline did not cover). The job itself was healthy; the research pipeline writes new
+machine-made result files every day and the default `generic-api-key` rule matches them.
+
+**What the 387 were (population: the full run log, every line read; rule / path / commit / line only, no value).**
+
+| class | rows | what it is |
+|---:|---:|---|
+| research artifacts | 384 | `comms/research/RQ-*/{verdict,measurement}.json` (367), `research/results/RQ-*.jsonl` (16), `comms/research/broad_paths/bp2-*/manifest.json` (1): `*_sha256` content hashes (e.g. `trade_key_sha256`) and ids, matched on the key NAME ("key") plus entropy |
+| other | 3 | `config/prop_phone_devices.yaml:18` (`token_sha256`, a hash digest of a device token, not the token), `tests/test_prop_platform_dxtrade_api.py:23` (a test constant), `docs/claude/work/checklist/E61.json:14` (prose in a checklist note) |
+
+All 387 are rule `generic-api-key`; **0** came from a vendor rule. Classification is by rule id and key shape, values never
+printed. No live credential; nothing was rotated.
+
+**Two changes, both tight.**
+
+1. **`.gitleaks.toml`** (read automatically from the scan root): an allowlist for rule `generic-api-key` ONLY, paths
+   `^comms/research/` and `^research/results/` ONLY (manager approval 2026-11-16). Every vendor rule (github-pat, aws,
+   telegram-bot-api-token, private-key, ...) still scans those paths, and `generic-api-key` still scans everything else.
+   `tests/test_gitleaks_baseline.py` pins the scope (one rule, two paths, no regex or commit exemptions) and, when a
+   gitleaks binary is present, plants a synthetic `ghp_`-shaped token under `comms/research/` and proves it is still caught
+   (and a planted generic key outside the research paths).
+2. **`.gitleaks-baseline.json`**: the 352 original entries are kept byte for byte (the four known-revoked rows above are
+   unchanged) and **7** fingerprints are appended after a full-history scan of `main` with the new config (gitleaks 8.24.3,
+   sha256-verified, `--redact=100`): the 3 "other" rows above, plus 4 test/workflow strings that this scan reports with a
+   fingerprint the old file does not hold: `.github/workflows/vm-net-diag.yml:99` (the RFC 6455 sample `Sec-WebSocket-Key`),
+   `tests/test_validation.py:23` and `tests/test_vwap_strategy.py:1028` (a Telegram-token-SHAPED string the test itself labels
+   `fake, shape-valid`), `tests/test_api_reporting.py:25` (`key=...` in a test string). These four were not in the CI log's
+   printed list; why CI matched them to the old file and the local scan did not is NOT established (UNVERIFIED), so they are
+   baselined here rather than assumed.
+
+**Check.** The same scan with `.gitleaks.toml` and the new baseline applied reports **0** new findings (see the PR).
+The next scheduled run (Mondays 05:17Z) is the real test.
