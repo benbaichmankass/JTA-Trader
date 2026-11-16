@@ -10,8 +10,7 @@ roadmap:
 - M25
 kind: experiment
 origin: new_hypothesis
-practice_precedent: 'practice: condition the exit geometry on the entry state (volatility regime) rather than one global multiplier; precedent is the repo''s
-  own fold-split of 4654-03.'
+practice_precedent: 'none: house-specific; motivated by the repo''s own fold split of RQ-20261112-4654-03, no external source read for this unit'
 levers:
 - name: bracket_by_cell
   values:
@@ -114,3 +113,13 @@ related:
 - RQ-20261105-c692-10
 - ML-ENTRY-DYNAMIC-SL
 - ML-ENTRY-FINETUNE
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    note: same number of decisions per fold taken at random with a random bracket from the same three (reported, not gating; the registered rule is unchanged)
+  best_static:
+    grid:
+    - served tau, served 2/3 ATR bracket
+    excludes_test_folds: true
+  bootstrap_group: window

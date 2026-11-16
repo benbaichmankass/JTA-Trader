@@ -9,8 +9,8 @@ roadmap:
 - M25
 kind: experiment
 origin: new_hypothesis
-practice_precedent: docs/plans/ml-claude-distillation-DESIGN.md section 3.3 (the in-repo, operator-approved validation rule); the unit instantiates it,
-  it does not redesign it.
+practice_precedent: 'none: house-specific; instantiates docs/plans/ml-claude-distillation-DESIGN.md section 3.3 (operator-approved label-validation rule),
+  no external precedent applies'
 levers:
 - name: judgment_field
   values:
@@ -110,9 +110,10 @@ run:
   note: 'Null on purpose: the instrument does not exist yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command +
     lands.store when the harness row closes.'
 ml_consumer:
-  consumer: ml/datasets/families/claude_judgments.py (qualified.json gates student manifests CJ-5)
-  decision: whether any student model may target the blind grade as a label; no change from this unit
-  legs: []
+  consumer: CJ-5-STUDENT-MANIFESTS
+  decision: whether any student model may target the blind grade as a label (qualified.json); no change from this unit
+  legs:
+  - ml_entry
 lands:
   store: research/results/
   assert_field: read_state

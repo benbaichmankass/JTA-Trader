@@ -10,8 +10,8 @@ roadmap:
 - M25
 kind: experiment
 origin: new_hypothesis
-practice_precedent: 'practice: train the decision model on the realised (policy-conditional) outcome it will actually be graded on rather than a surrogate
-  label; the repo precedent is RQ-20261112-4654-01 (target-definition lever on the same recipe).'
+practice_precedent: 'none: house-specific; the repo precedent is RQ-20261112-4654-01 (target-definition lever on the same recipe), no external source read
+  for this unit'
 levers:
 - name: target_definition
   values:
@@ -88,9 +88,8 @@ routing:
   why_runner: replay on published klines; no trainer-resident data.
   basis: 'ESTIMATE: scaled from RQ-20261112-4654-01 (39 LightGBM fits, ~110 min).'
 blocked_on:
-- what: 'Policy M must exist as registered units with a recorded replay verdict: RQ-20261116-7c1a-01 / -02 (authored on lane/ltr-close-audit-20261116, not
-    on main at 2026-11-16). VoI condition: the unit is promoted only if M''s replay hold gap |M - hold| is >= 0.05 R/trade on the S0 corpus; below that
-    the two targets coincide and the test is not run.'
+- what: 'Policy M must have a recorded replay verdict: RQ-20261116-7c1a-01 / -02 (merged to main with #26480, 8d921f4d). VoI condition: the unit is promoted
+    only if M''s replay hold gap |M - hold| is >= 0.05 R/trade on the S0 corpus; below that the two targets coincide and the test is not run.'
   ref: RQ-20261116-7c1a-01
   kind: research_unit
   clears_when: RQ-20261116-7c1a-01 or -02 is graded and its record states M's mean net R minus hold-to-bracket net R on the replay corpus.
@@ -121,3 +120,13 @@ related:
 - ML-ENTRY-FINETUNE
 - ML-ENTRY-TP-REVISION
 - ML-ENTRY-DYNAMIC-SL
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    note: same number of decisions per window taken at random at the served side mix (reported, not gating; the registered rule is unchanged)
+  best_static:
+    grid:
+    - served tau, served 2/3 ATR bracket
+    excludes_test_folds: true
+  bootstrap_group: window
