@@ -179,6 +179,10 @@ class LiveReviewIntent:
     operator_quote: Optional[str] = None      # the operator's words, verbatim (refused without them)
     target_account_id: Optional[str] = None   # scope: only this account's legs (None = every account)
     target_trade_id: Optional[str] = None     # scope: only this trade / prop ticket (needs target_account_id)
+    # -- LTR-MECHANICS-ROW-BLOCKS-DECISION (operator 2026-11-16): the accounts whose mechanics MATCH. None = every
+    #    account carrying the package. Set = only those accounts' legs are acted on; the others are skipped and flagged
+    #    by the caller, and the SHARED package stop is never moved by a scoped apply.
+    account_scope: Optional[Tuple[str, ...]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

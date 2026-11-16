@@ -378,6 +378,31 @@ def evidence_path(row: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def mechanics_scope(row: Dict[str, Any]) -> Tuple[Optional[List[str]], Dict[str, str], Optional[str]]:
+    """``(accounts, skipped, refusal)`` -- LTR-MECHANICS-ROW-BLOCKS-DECISION (operator 2026-11-16: "even [if] there
+    is a legitimate reason to not apply on one account, it shouldn't prevent the decision from being applied on
+    other accounts holding the same trade").
+
+    * package ``mechanics.verdict == match``: ``(None, {}, None)`` -- every account, exactly as before.
+    * otherwise, with ``mechanics.per_account`` stated: the accounts whose own verdict is ``match`` apply; every
+      other account is SKIPPED with its reason in ``skipped``; no matching account = refusal ``mechanics_<verdict>``.
+    * otherwise (a legacy row with no per-account verdicts): refusal ``mechanics_<verdict|unstated>``.
+    """
+    mech = row.get("mechanics") or {}
+    verdict = mech.get("verdict")
+    if verdict == "match":
+        return None, {}, None
+    per = mech.get("per_account")
+    if isinstance(per, dict) and per:
+        ok = sorted(a for a, v in per.items() if isinstance(v, dict) and v.get("verdict") == "match")
+        skipped = {a: f"mechanics_{(v or {}).get('verdict') or 'unstated'}: "
+                      f"{str((v or {}).get('evidence') or 'no evidence stated')[:240]}"
+                   for a, v in per.items() if a not in ok}
+        if ok:
+            return ok, skipped, None
+    return None, {}, f"mechanics_{verdict or 'unstated'}"
+
+
 def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """(plan, refusal). ``plan`` holds the apply arguments; ``refusal`` names the
     first mandate clause the row fails. Pure: ``evidence_text`` is the committed
@@ -393,9 +418,9 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
     pkg = row.get("order_package_id")
     if not pkg:
         return None, "order_package_id_missing"
-    mech = (row.get("mechanics") or {}).get("verdict")
-    if mech != "match":
-        return None, f"mechanics_{mech or 'unstated'}"
+    scope, skipped, mech_refusal = mechanics_scope(row)
+    if mech_refusal:
+        return None, mech_refusal
     route = (row.get("disposition") or {}).get("route")
     if route not in DISPATCHABLE_ROUTES:
         return None, f"route_{route or 'unstated'}"
@@ -404,6 +429,8 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
         return None, "evidence_not_committed"
     plan: Dict[str, Any] = {"package": pkg, "new_sl": level, "review_id": row.get("review_id"),
                             "evidence": evidence, "packet_sha": row.get("packet_sha")}
+    if scope is not None:
+        plan.update(accounts=scope, skipped_accounts=skipped)
     basis, src = rec.get("basis"), rec.get("evidence_source")
     if basis == "judgement" or src == "judgement":
         if basis != "judgement" or src not in (None, "judgement"):
@@ -441,9 +468,9 @@ def check_trade_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[
     pkg = row.get("order_package_id")
     if not pkg:
         return None, "order_package_id_missing"
-    mech = (row.get("mechanics") or {}).get("verdict")
-    if mech != "match":
-        return None, f"mechanics_{mech or 'unstated'}"
+    scope, skipped, mech_refusal = mechanics_scope(row)
+    if mech_refusal:
+        return None, mech_refusal
     route = (row.get("disposition") or {}).get("route")
     if route not in DISPATCHABLE_ROUTES:
         return None, f"route_{route or 'unstated'}"
@@ -453,6 +480,8 @@ def check_trade_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[
     plan: Dict[str, Any] = {"package": pkg, "review_id": row.get("review_id"), "action": act,
                             "evidence": row.get("outcome_table_source"), "packet_sha": row.get("packet_sha"),
                             "reason": reason}
+    if scope is not None:
+        plan.update(accounts=scope, skipped_accounts=skipped)
     level, sf, sm = _num(rec.get("level")), _num(rec.get("size_fraction")), _num(rec.get("size_multiplier"))
     if act in ("move_tp", "widen_sl"):
         if level is None or level <= 0:
@@ -506,6 +535,8 @@ def apply_argv(plan: Dict[str, Any], *, apply: bool) -> List[str]:
                 argv += [flag, repr(plan[k])]
         if plan.get("packet_sha"):
             argv += ["--packet-sha", plan["packet_sha"]]
+        if plan.get("accounts"):
+            argv += ["--accounts", ",".join(plan["accounts"])]
         argv.append("--apply" if apply else "--dry-run")
         return argv
     argv = ["--package", plan["package"], "--new-sl", repr(plan["new_sl"]),
@@ -518,6 +549,8 @@ def apply_argv(plan: Dict[str, Any], *, apply: bool) -> List[str]:
                  "--worst-case-delta-r", repr(plan["worst_case_delta_r"])]
     else:
         argv += ["--confidence", repr(plan["confidence"]), "--reason", plan["reason"]]
+    if plan.get("accounts"):
+        argv += ["--accounts", ",".join(plan["accounts"])]
     argv.append("--apply" if apply else "--dry-run")
     return argv
 
@@ -641,6 +674,11 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     argv = apply_argv(plan, apply=apply)
     out["apply_argv"] = argv
     print(f">>> live-review-apply: {review_id} -> {APPLY_SCRIPT} {' '.join(argv)}")
+    # LTR-MECHANICS-ROW-BLOCKS-DECISION: an account whose mechanics differ is skipped and FLAGGED here, with its
+    # reason; the decision still applies on every account whose mechanics match.
+    out["mechanics_skipped"] = plan.get("skipped_accounts") or {}
+    for aid, why in sorted(out["mechanics_skipped"].items()):
+        print(f">>> live-review-apply: {review_id} SKIPPED {aid} (decision not applied there): {why}")
     rc = _run_apply(argv)
     entry = _applied_entry(review_id, started) if apply else None
     # A venue-DEFERRED apply (exit 4, live_review_intent.EXIT_DEFERRED) stays retryable even if another account
@@ -661,7 +699,8 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
     if apply:
         st.setdefault("dispatched", {})[review_id] = {"at": started, "exit": rc, "sent": sent,
                                                       "package": plan["package"], "level": plan.get("new_sl"),
-                                                      "action": plan.get("action", "tighten_sl")}
+                                                      "action": plan.get("action", "tighten_sl"),
+                                                      "mechanics_skipped": sorted(out["mechanics_skipped"])}
         if persist:
             _save_state(st)
     return out
