@@ -1,0 +1,546 @@
+{
+  "judge": {
+    "verdict": "pass",
+    "chosen": "holding_pays_neg25",
+    "why": "holding_pays_neg25 - champion +0.0160 R/trade, deflated CI LB +0.0063 > 0",
+    "arms": {
+      "holding_pays_neg25": {
+        "n": 18649,
+        "mean": 0.01596,
+        "se": 0.00494,
+        "ci": [
+          0.00628,
+          0.02564
+        ],
+        "z": 1.96
+      }
+    }
+  },
+  "arm_dr_vs_hold_context": {
+    "holding_pays": {
+      "n": 18649,
+      "mean": 0.01036,
+      "se": 0.0128,
+      "ci": [
+        -0.01472,
+        0.03544
+      ],
+      "z": 1.96
+    },
+    "holding_pays_neg25": {
+      "n": 18649,
+      "mean": 0.02632,
+      "se": 0.01188,
+      "ci": [
+        0.00303,
+        0.04961
+      ],
+      "z": 1.96
+    }
+  },
+  "fired": {
+    "holding_pays": 16739,
+    "holding_pays_neg25": 12702
+  },
+  "target_coverage": {
+    "holding_pays_neg25": 1.0
+  },
+  "cost_basis": {
+    "XRPUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "ADAUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "AVAXUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "DOGEUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "LINKUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "BNBUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "LTCUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "DOTUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "TRXUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "NEARUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+    "BTCUSDT": 11443,
+    "ETHUSDT": 15202,
+    "SOLUSDT": 8274
+  },
+  "excluded_train_symbols": [
+    "ADAUSDT",
+    "AVAXUSDT",
+    "BNBUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "TRXUSDT",
+    "XRPUSDT"
+  ],
+  "train_rows_after_exclusion": 34919,
+  "z": 1.96,
+  "pass_dr": 0.01,
+  "legs": [
+    {
+      "leg": "trend_donchian",
+      "symbol": "XRPUSDT",
+      "read_state": "measured",
+      "n_total_trades": 4471,
+      "block_n": 745,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 745,
+          "train_rows_n": 3768,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 666,
+            "holding_pays_neg25": 473
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 745,
+          "train_rows_n": 8865,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 641,
+            "holding_pays_neg25": 499
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 745,
+          "train_rows_n": 14030,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 654,
+            "holding_pays_neg25": 539
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 745,
+          "train_rows_n": 20498,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 673,
+            "holding_pays_neg25": 543
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 745,
+          "train_rows_n": 26970,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 675,
+            "holding_pays_neg25": 528
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "ADAUSDT",
+      "read_state": "measured",
+      "n_total_trades": 4801,
+      "block_n": 800,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 800,
+          "train_rows_n": 2833,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 710,
+            "holding_pays_neg25": 380
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 800,
+          "train_rows_n": 8130,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 712,
+            "holding_pays_neg25": 538
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 800,
+          "train_rows_n": 13616,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 727,
+            "holding_pays_neg25": 558
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 800,
+          "train_rows_n": 19918,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 734,
+            "holding_pays_neg25": 563
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 800,
+          "train_rows_n": 26333,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 726,
+            "holding_pays_neg25": 573
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "AVAXUSDT",
+      "read_state": "measured",
+      "n_total_trades": 4153,
+      "block_n": 692,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 692,
+          "train_rows_n": 6732,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 597,
+            "holding_pays_neg25": 477
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 692,
+          "train_rows_n": 11379,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 618,
+            "holding_pays_neg25": 464
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 692,
+          "train_rows_n": 16334,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 626,
+            "holding_pays_neg25": 474
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 692,
+          "train_rows_n": 22174,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 643,
+            "holding_pays_neg25": 512
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 692,
+          "train_rows_n": 28329,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 625,
+            "holding_pays_neg25": 478
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "read_state": "producer_failed",
+      "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'DOGEUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "LINKUSDT",
+      "read_state": "measured",
+      "n_total_trades": 5259,
+      "block_n": 876,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 876,
+          "train_rows_n": 444,
+          "read_state": "unestablishable",
+          "reason": "test n 876 / train rows 444 under floor"
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 876,
+          "train_rows_n": 6901,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 775,
+            "holding_pays_neg25": 585
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 876,
+          "train_rows_n": 12676,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 794,
+            "holding_pays_neg25": 588
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 876,
+          "train_rows_n": 18911,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 814,
+            "holding_pays_neg25": 623
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 876,
+          "train_rows_n": 26285,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 792,
+            "holding_pays_neg25": 600
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "BNBUSDT",
+      "read_state": "measured",
+      "n_total_trades": 4753,
+      "block_n": 792,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 792,
+          "train_rows_n": 4625,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 699,
+            "holding_pays_neg25": 522
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 792,
+          "train_rows_n": 10130,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 680,
+            "holding_pays_neg25": 476
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 792,
+          "train_rows_n": 14722,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 710,
+            "holding_pays_neg25": 577
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 792,
+          "train_rows_n": 20951,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 718,
+            "holding_pays_neg25": 575
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 792,
+          "train_rows_n": 27263,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 730,
+            "holding_pays_neg25": 557
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "read_state": "producer_failed",
+      "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'LTCUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+    },
+    {
+      "leg": "trend_donchian",
+      "read_state": "producer_failed",
+      "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'DOTUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+    },
+    {
+      "leg": "trend_donchian",
+      "read_state": "producer_failed",
+      "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'TRXUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+    },
+    {
+      "leg": "trend_donchian",
+      "read_state": "producer_failed",
+      "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'NEARUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+    }
+  ]
+}
