@@ -143,6 +143,6 @@ grading:
   - comms/research/RQ-20261117-aadc-06/local-20261117T1100Z-read2/verdict.json
   graded_at: '2026-11-17'
   grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
-  reason: 'row measured on read2: demote-on-alarm added_r +149.47 R over 529 skipped trades (26 legs, 18 positive) but control_p 0.0545 > 0.05 -> FAIL by the registered rule (near miss). Matched random skips average +116.4 R (the legs are net-negative over the window), so the alarm adds ~33 R over random. Read1 (added_r +1,275 R) was produced by the units defect (mgc_trend_1h +2,550 R); the fix and a disclosed amendment came after read1 and before read2; the rule was not changed. Iteration input: next lever is the action (halve size) with the control restricted to net-negative legs.'
+  reason: 'row measured on read2: demote-on-alarm added_r +149.47 R over 529 skipped trades (26 legs, 18 positive) but control_p 0.0545 > 0.05 -> FAIL by the registered rule (near miss). Matched random skips average +116.4 R (the legs are net-negative over the window), so the alarm adds ~33 R over random. Read1 (added_r +1,275 R) was produced by the units defect (mgc_trend_1h +2,550 R); the fix and a disclosed amendment came after read1 and before read2; the rule was not changed. Iteration input: the next lever is the alarm level H (RQ-20261117-aadc-07, PR #26664: H 2/4/6, Bonferroni). Halving size was dropped because it scales added_r and every control draw by 0.5, so control_p cannot move.'
   rows: 1
   verdict: fail
