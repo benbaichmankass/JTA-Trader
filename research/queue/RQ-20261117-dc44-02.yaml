@@ -1,0 +1,157 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117 (manager-dispatched, Tier 1), slot D2 (Collie).
+# One factor: on the yz feature set, does CatBoost beat LightGBM (the learner lever, GBDT family) on the 1h regime label?
+# Gates this adds or changes: none.
+id: RQ-20261117-dc44-02
+title: 'D2 Collie learner lever on the challenger features: does CatBoost beat LightGBM on the range-vol (yz) feature set for
+  the 1h regime label on BTCUSDT / ETHUSDT / SOLUSDT log-loss (one factor: learner)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: eth-regime-1h-lgbm-xasset-v1
+  subject_kind: ml_model
+  from_result: RQ-20261117-c21d-03
+  verdict_read: pass
+  diagnosis: 'de02-01 (2026-10-14, PASS): on the plain v2 columns, catboost beat lgbm on the 1h regime label by +0.0035 (BTC) and
+    +0.0053 (ETH) nats; hgb +0.0015/+0.0037; extratrees worse (-0.025/-0.019). That learner read predates the yz block. c21d-03
+    (PASS) then moved the D2 challenger to lgbm + yz. c21d-05 (FAIL) closed the sequence learner (GRU worse than lgbm_yz by 0.018 to
+    0.025 nats, CI excluding 0 on all three shards). So the learner lever is open only inside the GBDT family, and it has never been
+    read on the challenger feature set. If CatBoost''s edge over LightGBM came from base columns that yz now explains, it vanishes
+    here. If not, the trainer head for ETH/SOL (row ML-D2-YZ-HEADS-ETH-SOL) should be a CatBoost head. Sibling dc44-01 reads the
+    feature lever (+ har_rv) on the same shards.'
+  search: 'lever family learner: lightgbm -> catboost (de02-01 params: iterations 300, lr 0.05, depth 6) on identical yz columns;
+    one factor; same shards, CV and embargo as c21d-03'
+  levers:
+  - learner
+  map_entries:
+  - research/levers/eth-regime-1h-lgbm-xasset-v1.yaml
+  attempt: 1
+  due_by: '2026-11-21'
+question: 'With the yz feature set fixed, is CatBoost a better 1h regime learner than LightGBM on the three published crypto
+  shards?'
+why_this_matters: 'It fixes the learner of the D2 challenger before the ETH/SOL yz heads are trained. PASS: the trainer manifest
+  uses CatBoost on yz (catboost in the trainer venv is row ML-NONGBDT-RUNNERS, state landed_unproven; catboost arms ran ok on
+  Kaggle CPU in b3c9-14/-18 and c4f1-09). FAIL: LightGBM stays and the GBDT
+  learner lever is recorded flat on yz. Either way, one trainer cycle is not spent on the weaker learner.'
+power:
+  expected_n: 78840
+  min_detectable_effect: 0.1
+  effect_units: sd
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: tail_rows 60000 per shard, about 26,280 OOS rows over 5 folds each (as c21d-03 / b3c9-18; b3c9-18 reported n
+    78,840 over 3 shards). Bars are autocorrelated, so effective n is lower. n is fixed by construction and does not grow with
+    waiting. The +0.002-nat bar is inherited from ef4c-02 / c21d-03; it is not a power calculation.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly-rebuilt published shards).
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: 'learner of the D2 yz challenger head (LightGBM or CatBoost) before the ETH/SOL trainer run'
+  legs: [trend_donchian_eth_4h, trend_donchian_sol_prop]
+  book: money
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 60000
+    extra_columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm_yz
+  controls: [prior]
+  candidates: [cb_yz]
+  learners:
+    prior:
+      kind: prior
+    lgbm_yz:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+    cb_yz:
+      kind: catboost
+      params: {iterations: 300, learning_rate: 0.05, depth: 6}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: [ETHUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [SOLUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [BTCUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.0}
+    fail_if_no_candidate_reaches:
+    - {group: any, vs: baseline, window: cv, op: '>=', value: 0.0}
+run:
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs:
+    research_unit: RQ-20261117-dc44-02
+decision_rule:
+  id: RULE-RQ20261117-dc44-02-D2-YZ-LEARNER
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: lgbm_yz (the c21d-03 PASS head, identical spec)
+  statistic: 'Per group, CV mean log-loss improvement of cb_yz over lgbm_yz (nats, positive = CatBoost better), 5 expanding folds,
+    24-row embargo; the prior is a control.'
+  rule: 'PASS IF cb_yz beats lgbm_yz by >= +0.002 nats CV mean on ETHUSDT_1h AND on SOLUSDT_1h, AND is not worse (>= 0) on
+    BTCUSDT_1h. FAIL IF it does not reach >= 0 on any group. INDETERMINATE otherwise, or if folds < 3, a shard is stale or withheld
+    (published-data.json), a yz column is missing, or the catboost arm is unavailable. Thresholds are fixed now and not changed after any
+    result.'
+  proposal_mapping: 'pass -> the ETH/SOL yz head trainer manifest uses CatBoost (note to the ML-D2-YZ-HEADS-ETH-SOL owner); no
+    config change from this unit. fail -> LightGBM stays; the GBDT learner lever is recorded flat on yz. indeterminate -> the
+    failing clause is reported; the trainer spec keeps LightGBM (the incumbent).'
+  what_it_does_not_do: 'Changes no regime cell, trains no served head, serves nothing, places no order. Model quality only, not
+    money.'
+  min_n: 3 folds per group
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'ESTIMATE: it sets the learner of the D2 challenger; money only through the later consumer test.'
+intervention_controls:
+  not_applicable: 'a model-quality bake-off of a regime label head; no trade intervention is tested here'
+practice_precedent: 'M6, M12 (docs/reference/trading-and-model-practice-principles.md): RQ-20261014-de02-01 (same catboost params,
+  PASS on v2 columns) and RQ-20261117-c21d-03 (identical yz spec, PASS); one-factor learner swap against the incumbent, per-asset
+  reporting.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  basis: 'ESTIMATE from c21d-03 (2 shards, 3 arms, measured 17 s of fit time in the kernel) and de02-01 (catboost 300 iterations on
+    1h shards, est 20): 3 shards x 3 arms x 5 folds. Kernel queue and bundle overhead dominate the wall clock.'
+  why_runner: 'Published 1h shards (metis-market-data) and a CPU-only learner, so it routes to the idle Kaggle CPU backend; no
+    trainer-resident data and no GPU needed.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: null

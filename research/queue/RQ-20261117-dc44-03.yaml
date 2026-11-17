@@ -1,0 +1,159 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117 (manager-dispatched, Tier 1), slot D2 (Collie).
+# One factor (+ yz block) at the cadence the LIVE D2 heads serve (15m), on the full published history rather than ef4c-01's 60k tail.
+# Gates this adds or changes: none.
+id: RQ-20261117-dc44-03
+title: 'D2 Collie challenger at the LIVE cadence: does the range-vol (yz) LightGBM regime head beat the v2 LightGBM head on
+  BTCUSDT / SOLUSDT / ETHUSDT 15m log-loss over the full published history (ef4c-01 was INDETERMINATE on a 60k-row tail)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: btc-regime-15m-lgbm-fc-pcv-v2
+  subject_kind: ml_model
+  from_result: RQ-20261112-ef4c-01
+  verdict_read: indeterminate
+  diagnosis: 'The yz block PASSED at 1h on all three shards (ef4c-02 BTC; c21d-03 ETH +0.0097, SOL +0.0129 nats). But the two
+    advisory heads that gate money-path cells serve 15m labels: btc-regime-15m-lgbm-fc-pcv-v2 and sol-regime-15m-lgbm-fc-pcv-v2
+    (aadc-01 measured 2,214 and 1,541 live regime_ml_vol_shadow rows for them). At 15m the only read is ef4c-01 (BTC, 60k-row tail,
+    5 folds): +0.0017 nats, CV CI [-0.0025, +0.0059], so it is INDETERMINATE between the +0.002 bar and the 0 floor. The interval is
+    about twice the bar, so the read was underpowered rather than flat. 60k 15m rows is about 625 days. The published 15m shards
+    hold more history than that (the run reports the true n; c21d-05 notes the SOL 15m shard is truncated). So the missing lever
+    is window length and fold count at the live cadence, not a new feature. A 1h PASS does not transfer to a 15m label by
+    assumption.'
+  search: 'lever family features: + range-vol block (same as ef4c-01), one factor, at 15m on BTC/SOL/ETH, with tail_rows raised
+    from 60,000 to 175,000 (about 5 years of 15m bars, or the whole shard if shorter) and 8 folds instead of 5 to tighten the
+    fold-mean CI'
+  levers:
+  - features
+  map_entries:
+  - research/levers/sol-regime-15m-lgbm-fc-pcv-v2.yaml
+  - research/levers/ml-btc-router-cells.yaml
+  attempt: 2
+  due_by: '2026-11-21'
+question: 'At the 15m cadence the live D2 heads serve, does the yz block improve the regime head''s log-loss, measured over
+  enough history to resolve the +0.002-nat bar?'
+why_this_matters: 'The money-path D2 heads are 15m. If the yz challenger only helps at 1h, moving the 15m BTC/SOL heads to yz is
+  unsupported, and the D2 consumer tests (aadc-08, 0f87-01) must use 1h-derived labels or stay on v2. PASS: the yz spec is the
+  15m challenger too, and the trainer retrains the 15m heads with it. FAIL: the yz block is a 1h result only (ef4c-01''s own
+  mapping retires the 15m yz head). Either way the 15m question stops being indeterminate.'
+power:
+  expected_n: 280000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: up to 175,000 tail rows per shard with min_train_frac 0.4, so up to about 105,000 OOS rows per shard over 8
+    folds (fewer for SOL if its shard is truncated; the run reports the true n). ef4c-01 at 60k rows / 5 folds had a CV CI
+    half-width of about 0.0042 nats. More history and 8 folds should narrow it, but the CI is over fold means, so regime
+    non-stationarity between folds is not removed by rows alone. If the read is still INDETERMINATE, that is reported as the 15m
+    ceiling of this dataset, not re-run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly-rebuilt published shards).
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: 'keep the v2 features on the 15m BTC/SOL advisory heads, or retrain them with the yz block'
+  legs: [trend_donchian, squeeze_breakout_4h, ict_scalp_5m, trend_donchian_sol_prop]
+  book: money
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_15m:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      SOLUSDT_15m:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+      ETHUSDT_15m:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 175000
+    extra_columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  cv:
+    folds: 8
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls: [prior]
+  candidates: [lgbm_yz]
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+    lgbm_yz:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: [BTCUSDT_15m], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [SOLUSDT_15m], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [ETHUSDT_15m], vs: baseline, window: cv, op: '>=', value: 0.0}
+    fail_if_no_candidate_reaches:
+    - {group: any, vs: baseline, window: cv, op: '>=', value: 0.0}
+run:
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs:
+    research_unit: RQ-20261117-dc44-03
+decision_rule:
+  id: RULE-RQ20261117-dc44-03-D2-YZ-15M-FULL
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: lgbm on the v2 columns (the ef4c-01 baseline, identical params)
+  statistic: 'Per group, CV mean log-loss improvement of lgbm_yz over lgbm (nats, positive = yz better), 8 expanding folds, 96-row
+    (24 h) embargo, tail 175,000 rows or the whole shard; the prior is a control.'
+  rule: 'PASS IF lgbm_yz beats lgbm by >= +0.002 nats CV mean on BTCUSDT_15m AND on SOLUSDT_15m (the two served 15m heads), AND is
+    not worse (>= 0) on ETHUSDT_15m. FAIL IF it does not reach >= 0 on any group. INDETERMINATE otherwise, or if folds < 3, a shard
+    is stale or withheld (published-data.json), or a yz column is missing. Thresholds are fixed now and not changed after any
+    result.'
+  proposal_mapping: 'pass -> the yz spec is the 15m challenger; the next step is the trainer retrain of the 15m BTC/SOL heads with
+    the yz block, then their consumer test; no config change from this unit. fail -> the yz block is recorded as a 1h-only result;
+    the 15m heads keep v2 (ef4c-01''s own mapping retires the 15m yz head). indeterminate -> reported as the 15m ceiling of the
+    published history; not re-run on the same shards.'
+  what_it_does_not_do: 'Changes no regime cell, retrains no served head, serves nothing, places no order. Model quality only, not
+    money.'
+  min_n: 3 folds per group
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'ESTIMATE: it decides the feature spec of the two 15m heads that gate bybit_1 cells; money only through the consumer test.'
+intervention_controls:
+  not_applicable: 'a model-quality bake-off of a regime label head; no trade intervention is tested here'
+practice_precedent: 'M6, M12 (docs/reference/trading-and-model-practice-principles.md): RQ-20261112-ef4c-01 (identical arms at
+  15m, INDETERMINATE on a 60k tail) and RQ-20261117-c21d-03 (1h PASS); purged, embargoed walk-forward CV; per-asset reporting.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 6.0
+  est_minutes: 75
+  basis: 'ESTIMATE, not measured: about 3x the rows of ef4c-01 per shard, 3 shards, 3 arms, 8 folds; reading the full 15m jsonl
+    shards dominates memory. Kernel queue and bundle overhead add a fixed cost.'
+  why_runner: 'Published 15m shards (metis-market-data) and a CPU-only learner, so it routes to the idle Kaggle CPU backend; no
+    trainer-resident data and no GPU needed.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: null
