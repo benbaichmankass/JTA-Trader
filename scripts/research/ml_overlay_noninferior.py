@@ -71,10 +71,13 @@ SEED = 20261029
 
 
 # ----------------------------------------------------------------------------------------------- model
-def fit_logistic(X: np.ndarray, y: np.ndarray, C: float, iters: int = 50) -> tuple[np.ndarray, float]:
+def fit_logistic(X: np.ndarray, y: np.ndarray, C: float, iters: int = 50,
+                 sw: np.ndarray | None = None) -> tuple[np.ndarray, float]:
     """L2-penalised logistic regression by Newton/IRLS (penalty 1/(2C)||w||^2, intercept unpenalised).
-    Deterministic; numpy only (the research runner installs no sklearn)."""
+    Deterministic; numpy only (the research runner installs no sklearn). ``sw`` = optional per-row sample weights
+    (normalised to mean 1 so the penalty keeps its scale); None reproduces the unweighted fit exactly."""
     n, p = X.shape
+    sw = np.ones(n) if sw is None else np.asarray(sw, float) / float(np.mean(sw))
     Xa = np.hstack([np.ones((n, 1)), X])
     w = np.zeros(p + 1)
     lam = np.full(p + 1, 1.0 / C)
@@ -82,8 +85,8 @@ def fit_logistic(X: np.ndarray, y: np.ndarray, C: float, iters: int = 50) -> tup
     for _ in range(iters):
         z = np.clip(Xa @ w, -30, 30)
         mu = 1.0 / (1.0 + np.exp(-z))
-        g = Xa.T @ (mu - y) + lam * w
-        H = (Xa * (mu * (1 - mu))[:, None]).T @ Xa + np.diag(lam) + 1e-9 * np.eye(p + 1)
+        g = Xa.T @ (sw * (mu - y)) + lam * w
+        H = (Xa * (sw * mu * (1 - mu))[:, None]).T @ Xa + np.diag(lam) + 1e-9 * np.eye(p + 1)
         step = np.linalg.solve(H, g)
         w -= step
         if np.max(np.abs(step)) < 1e-8:
@@ -243,10 +246,31 @@ def cpcv_splits(times: pd.Series, exits: pd.Series):
         yield sid, tg, train, test, g
 
 
-def run_cpcv(df: pd.DataFrame, cfg: dict) -> dict:
+# Label targets for the overlay's logistic (RQ-20261117-aadc-03, the D4 challengers that change the TARGET, not the
+# threshold). "win" is Beagle-1's own label and the default everywhere. Every target exports the same artifact form
+# (standardised logistic over FEATURES), so src/runtime/overlay_features.score_overlay scores it with no runtime change.
+TAIL_R = 1.0
+EVW_CLIP = (0.05, 5.0)
+
+
+def target_labels(net_r: np.ndarray, target: str = "win") -> tuple[np.ndarray, np.ndarray | None]:
+    """(y, sample_weight). win: P(net_r > 0). tail1r: P(net_r >= TAIL_R) -- the trend payoff is carried by tail winners,
+    and 5785-05 found the reduce halves trades that still average +0.21 R. evweight: P(net_r > 0) with each row weighted
+    by |net_r| (clipped), so a model is paid for ranking by money, not by win count."""
+    r = np.asarray(net_r, float)
+    if target == "win":
+        return (r > 0).astype(float), None
+    if target == "tail1r":
+        return (r >= TAIL_R).astype(float), None
+    if target == "evweight":
+        return (r > 0).astype(float), np.clip(np.abs(r), *EVW_CLIP)
+    raise ValueError(f"unknown target {target!r}")
+
+
+def run_cpcv(df: pd.DataFrame, cfg: dict, target: str = "win") -> dict:
     """Out-of-sample reduce decisions per trade per CPCV path. Returns m (n x paths multiplier), p (scores)."""
     X = df[list(FEATURES)].to_numpy(float)
-    y = (df["net_r"].to_numpy() > 0).astype(float)
+    y, sw = target_labels(df["net_r"].to_numpy(), target)
     n = len(df)
     n_paths = math.comb(N_GROUPS - 1, K_TEST - 1)
     mult = np.full((n, n_paths), np.nan)
@@ -256,7 +280,7 @@ def run_cpcv(df: pd.DataFrame, cfg: dict) -> dict:
     for _sid, tg, train, test, g in cpcv_splits(df["entry_time"], df["exit_time"]):
         groups = g
         _mu, _sd, (Xtr, Xte) = standardise(X[train], X[test])
-        coef, b = fit_logistic(Xtr, y[train], cfg["C"])
+        coef, b = fit_logistic(Xtr, y[train], cfg["C"], sw=None if sw is None else sw[train])
         tau = float(np.quantile(predict(Xtr, coef, b), cfg["q"]))
         pte = predict(Xte, coef, b)
         te_idx = np.where(test)[0]
@@ -404,19 +428,22 @@ def ev_breakeven_p(net_r: np.ndarray) -> float:
     return L / (W + L) if (W + L) > 0 else 0.0
 
 
-def export_model(df: pd.DataFrame, cfg: dict, tau_rule: str = "quantile") -> dict:
+def export_model(df: pd.DataFrame, cfg: dict, tau_rule: str = "quantile", target: str = "win") -> dict:
     """tau_rule "quantile" (V1/V2, the shipped Beagle-1): reduce the bottom q of training scores. "ev" (challenger
     RQ-20261116-cc86-01): reduce only where the predicted win probability is below the training breakeven p*, i.e.
     only entries whose predicted net R is negative."""
     X = df[list(FEATURES)].to_numpy(float)
-    y = (df["net_r"].to_numpy() > 0).astype(float)
+    y, sw = target_labels(df["net_r"].to_numpy(), target)
     mu, sd, (Xs,) = standardise(X)
-    coef, b = fit_logistic(Xs, y, cfg["C"])
+    coef, b = fit_logistic(Xs, y, cfg["C"], sw=sw)
     tau = (ev_breakeven_p(df["net_r"].to_numpy(float)) if tau_rule == "ev"
            else float(np.quantile(predict(Xs, coef, b), cfg["q"])))
-    return {"features": list(FEATURES), "mean": mu.tolist(), "std": sd.tolist(), "coef": coef.tolist(),
-            "intercept": b, "tau": tau, "tau_rule": tau_rule, "multiplier": MULTIPLIER, "config": cfg, "n_train": int(len(df)),
-            "rule": RULE_ID}
+    art = {"features": list(FEATURES), "mean": mu.tolist(), "std": sd.tolist(), "coef": coef.tolist(),
+           "intercept": b, "tau": tau, "tau_rule": tau_rule, "multiplier": MULTIPLIER, "config": cfg, "n_train": int(len(df)),
+           "rule": RULE_ID}
+    if target != "win":
+        art["target"] = target
+    return art
 
 
 # ----------------------------------------------------------------------------------------------- family
@@ -493,6 +520,18 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
                                                          "reduced_mean_r", "take_all_mean_r", "folds_passing")},
            "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep,
            "parity_basis": parity_basis, "holdout": hold}
+    if CPCV_CHALLENGERS["targets"]:  # --cpcv-challenger: target-variant challengers vs Beagle-1 on the same CPCV splits
+        out["cpcv_challengers"] = cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"])
+        chosen = out["cpcv_challengers"]["chosen"]
+        if chosen and CPCV_CHALLENGERS.get("export_dir") is not None:
+            ch = export_model(df, PRIMARY, target=chosen)
+            ch.update({"family": name, "legs_gate": gate, "legs_train": legs, "role": "challenger",
+                       "challenger_of": f"overlay_{name.lower()}.json", "rule": CPCV_RULE_ID})
+            cdir = CPCV_CHALLENGERS["export_dir"]
+            cdir.mkdir(parents=True, exist_ok=True)
+            fp = cdir / f"overlay_{name.lower()}_{chosen}.json"
+            fp.write_text(json.dumps(ch, indent=1) + "\n")
+            out["exported_cpcv_challenger"] = str(fp)
     if CHALLENGER_EXPORT.get("dir") is not None:  # --export-challenger: the forward-read artifact (shadow only)
         ch = export_model(df, PRIMARY, tau_rule=CHALLENGER_EXPORT["rule"])
         ch.update({"family": name, "legs_gate": gate, "legs_train": legs, "role": "challenger",
@@ -513,6 +552,41 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
 
 HOLDOUT_N_MIN = 100
 CHALLENGER_EXPORT: dict = {"dir": None, "rule": "ev", "unit_rule": None}
+CPCV_CHALLENGERS: dict = {"targets": [], "export_dir": None}
+CPCV_RULE_ID = "RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER"
+MIN_DISAGREE = 0.20   # 2.3x the EV challenger's 0.0869 (cc86-01): what makes a forward paired read reachable in < 1 year
+
+
+def cpcv_challengers(df: pd.DataFrame, gate_mask: np.ndarray, targets: list[str]) -> dict:
+    """RQ-20261117-aadc-03. Base = Beagle-1's recipe (PRIMARY, target win) refit per CPCV split; each challenger = the
+    same features, config and q but another TARGET, on the SAME splits. Per arm, on the gate legs' OOS trades:
+      own:      the V1 gate (evaluate: a-e) vs take-all;
+      paired:   d = (m_ch - m_base) x net_R on path-averaged multipliers (challenger_compare);
+      disagree: share of (trade, path) cells where the two arms' multipliers differ.
+    Arm PASS iff own pass AND paired mean > 0 AND disagree >= MIN_DISAGREE. chosen = the passing arm with the
+    highest paired mean (ties: list order); None if no arm passes. Every arm is counted and reported."""
+    base = run_cpcv(df, PRIMARY, "win")
+    gdf = df[gate_mask].reset_index(drop=True)
+    mb = np.nanmean(base["mult"], axis=1)[gate_mask]
+    arms = []
+    for i, t in enumerate(targets):
+        res = run_cpcv(df, PRIMARY, t)
+        own = evaluate(df, res, gate_mask, np.random.default_rng(SEED + 10 + i))
+        mc = np.nanmean(res["mult"], axis=1)[gate_mask]
+        paired = challenger_compare(gdf, mb, mc, np.random.default_rng(SEED + 20 + i))
+        bm, cm = base["mult"][gate_mask], res["mult"][gate_mask]
+        cells = ~np.isnan(bm) & ~np.isnan(cm)
+        dis = float(np.mean(bm[cells] != cm[cells])) if cells.any() else 0.0
+        y_rate = float(target_labels(gdf["net_r"].to_numpy(), t)[0].mean())
+        ok = bool(own["pass"] and paired["delta_ch_vs_base_mean_r"] > 0 and dis >= MIN_DISAGREE)
+        arms.append({"target": t, "pass": ok, "disagree_rate_cells": round(dis, 4), "target_base_rate": round(y_rate, 4),
+                     "own_checks": own["checks"], "own_delta_mean_r": own["delta_mean_r"], "own_delta_lb95_r": own["delta_lb95_r"],
+                     "own_reduce_rate": own["reduce_rate"], "own_reduced_mean_r": own["reduced_mean_r"],
+                     "own_folds_passing": own["folds_passing"], "paired": paired})
+    passing = [a for a in arms if a["pass"]]
+    chosen = max(passing, key=lambda a: a["paired"]["delta_ch_vs_base_mean_r"])["target"] if passing else None
+    return {"rule": CPCV_RULE_ID, "n_gate": int(gate_mask.sum()), "min_disagree": MIN_DISAGREE, "arms": arms,
+            "n_arms": len(arms), "chosen": chosen, "verdict": "PASS" if chosen else "FAIL"}
 
 
 def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
@@ -791,10 +865,26 @@ def _self_test() -> int:
             with open(d / f"{leg}__trades.jsonl", "w") as fh:
                 fh.write("\n".join(json.dumps(x) for x in rows) + "\n")
         a = run_family("SYN", ["syn"], ["syn"], d, {}, None, None)
+        CPCV_CHALLENGERS.update(targets=["tail1r", "evweight"])
+        try:
+            cpa = run_family("SYN", ["syn"], ["syn"], d, {}, None, None)["cpcv_challengers"]
+        finally:
+            CPCV_CHALLENGERS.update(targets=[])
         b = run_family("NOISE", ["noise"], ["noise"], d, {}, None, None)
         rc = run_refine("calibration", "SYN", ["syn"], ["syn"], d, None)
         rn = run_refine("nested", "SYN", ["syn"], ["syn"], d, None)
     pa, pb = a["primary_eval"], b["primary_eval"]
+    # target plumbing: win reproduces the unweighted default; uniform weights are a no-op; tail1r labels >= 1 R
+    r_ = np.array([2.0, -1.0, 0.5, 1.0])
+    assert target_labels(r_, "tail1r")[0].tolist() == [1.0, 0.0, 0.0, 1.0]
+    assert target_labels(r_, "win")[1] is None and target_labels(r_, "evweight")[1].tolist() == [2.0, 1.0, 0.5, 1.0]
+    Xs_ = rng.normal(size=(200, 3))
+    ys_ = (Xs_[:, 0] + rng.normal(size=200) > 0).astype(float)
+    c1, b1 = fit_logistic(Xs_, ys_, 1.0)
+    c2, b2 = fit_logistic(Xs_, ys_, 1.0, sw=np.full(200, 3.0))
+    assert np.allclose(c1, c2) and abs(b1 - b2) < 1e-9
+    assert cpa["n_arms"] == 2 and all(0.0 <= x["disagree_rate_cells"] <= 1.0 for x in cpa["arms"]), cpa
+    assert {x["target"] for x in cpa["arms"]} == {"tail1r", "evweight"} and cpa["verdict"] in ("PASS", "FAIL")
     ok = (pa["checks"]["c_beats_random"] and pa["checks"]["d_not_vacuous"] and pa["delta_mean_r"] > pb["delta_mean_r"]
           and not pb["checks"]["c_beats_random"] and a["n_trials"] == len(GRID) and 0.0 <= a["pbo"] <= 1.0
           and np.allclose(pa["reduce_rate"], PRIMARY["q"], atol=0.08)
@@ -836,10 +926,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--export-challenger", default=None,
                     help="write the tau_rule=ev challenger, fit on the main-window family pool, to this dir "
                          "(the forward shadow read's artifact; training window only, reads no holdout)")
+    ap.add_argument("--cpcv-challenger", action="append", choices=("tail1r", "evweight"), default=[],
+                    help="RQ-20261117-aadc-03: a TARGET-variant challenger compared, paired, with Beagle-1 on the same CPCV "
+                         "splits (repeatable; every arm counted)")
+    ap.add_argument("--export-cpcv-challenger", default=None,
+                    help="write the chosen --cpcv-challenger arm (fit on the main-window pool) here, only if one PASSES")
     ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
                     help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
+    if a.cpcv_challenger:
+        CPCV_CHALLENGERS.update(targets=list(dict.fromkeys(a.cpcv_challenger)),
+                                export_dir=Path(a.export_cpcv_challenger) if a.export_cpcv_challenger else None)
     if a.export_challenger:
         CHALLENGER_EXPORT.update(dir=Path(a.export_challenger), rule="ev", unit_rule="RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV")
     out = Path(a.out)
@@ -901,6 +999,24 @@ def main(argv: list[str] | None = None) -> int:
     verdict["records"] = [{"family": r["family"], "verdict": r["verdict"].lower(), "n": (r.get("primary_eval") or {}).get("n_gate"),
                            "population": f"{r['family']} gate legs {','.join(r.get('legs_gate', []))}",
                            "checks": (r.get("primary_eval") or {}).get("checks"), "reasons": r["reasons"]} for r in results]
+    if CPCV_CHALLENGERS["targets"]:
+        # The unit's registered rule is the CHALLENGER rule: the family V1 verdict is context, the arms decide.
+        cc = [r.get("cpcv_challengers") for r in results]
+        fam_state = {r["family"]: r["verdict"] for r in results}
+        verdict.update({
+            "rule": CPCV_RULE_ID,
+            "verdict": ("indeterminate" if any(c is None or fam_state[r["family"]] == "INDETERMINATE"
+                                               for c, r in zip(cc, results))
+                        else "pass" if any(c["chosen"] for c in cc) else "fail"),
+            "note": "; ".join(f"{r['family']}: chosen {c['chosen'] if c else None}, arms " + ", ".join(
+                f"{a['target']} {'PASS' if a['pass'] else 'FAIL'} (paired {a['paired']['delta_ch_vs_base_mean_r']:+.4f}, "
+                f"disagree {a['disagree_rate_cells']:.3f}, own {'pass' if all(a['own_checks'].values()) else 'fail'})"
+                for a in (c["arms"] if c else [])) for c, r in zip(cc, results)),
+            "records": [{"family": r["family"], "target": a["target"], "verdict": "pass" if a["pass"] else "fail",
+                         "n": c["n_gate"], "population": f"{r['family']} gate legs CPCV OOS trades, arm {a['target']}",
+                         "paired": a["paired"], "disagree_rate_cells": a["disagree_rate_cells"], "own_checks": a["own_checks"]}
+                        for c, r in zip(cc, results) if c for a in c["arms"]] or verdict["records"],
+        })
     (out / "measurement.json").write_text(json.dumps({"runs": runs, "families": results}, indent=1, default=str) + "\n")
     (out / "verdict.json").write_text(json.dumps(verdict, indent=1) + "\n")
     print(json.dumps(verdict, indent=1))
