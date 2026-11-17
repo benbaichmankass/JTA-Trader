@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-06
 title: 'D10 ITERATION: does DEMOTE-ON-ALARM (stop a leg''s real-money trades while its net-R CUSUM vs Stage-0 is alarmed, keep it on
   the demo floor) add net R versus no action, beyond skipping the same number of trades at random?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -135,3 +135,14 @@ related:
 - RQ-20261117-aadc-05
 - ML-D10-BASSET-BASELINE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-06-D10-ALARM-ACTION
+  evidence:
+  - research/results/RQ-20261117-aadc-06/local-20261117T1100Z.jsonl
+  - comms/research/RQ-20261117-aadc-06/local-20261117T1100Z-read2/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured on read2: demote-on-alarm added_r +149.47 R over 529 skipped trades (26 legs, 18 positive) but control_p 0.0545 > 0.05 -> FAIL by the registered rule (near miss). Matched random skips average +116.4 R (the legs are net-negative over the window), so the alarm adds ~33 R over random. Read1 (added_r +1,275 R) was produced by the units defect (mgc_trend_1h +2,550 R); the fix and a disclosed amendment came after read1 and before read2; the rule was not changed. Iteration input: the next lever is the alarm level H (RQ-20261117-aadc-07, PR #26664: H 2/4/6, Bonferroni). Halving size was dropped because it scales added_r and every control draw by 0.5, so control_p cannot move.'
+  rows: 1
+  verdict: fail

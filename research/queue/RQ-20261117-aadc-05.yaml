@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-05
 title: 'D10 Basset BASELINE: does a Page CUSUM on realised net R below each leg''s Stage-0 expectancy anticipate the leg''s next 20 trades
   going net-negative (leg-clustered AUC > 0.5), and does the blind post-trade grade do any better?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -136,3 +136,14 @@ related:
 - RQ-20261116-089f-01
 - scripts/ops/overlay_cusum.py
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-05-D10-BASELINE
+  evidence:
+  - research/results/RQ-20261117-aadc-05/local-20261117T1100Z.jsonl
+  - comms/research/RQ-20261117-aadc-05/local-20261117T1100Z-read2/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured on read2: CUSUM-vs-Stage-0 decay detector AUC 0.6541, leg-cluster CI95 [0.5498, 0.7498] > 0.5 at n 664 labelled points / 24 legs -> PASS by the registered rule. Read1 (AUC 0.658) had a units defect in the net-R basis (futures/options without contract multiplier; order_packages.sl sometimes the amended ~breakeven stop); the fix and a disclosed amendment were pushed (f0952679, 11:00:01Z) AFTER read1 and BEFORE read2; the statistic, rule and thresholds were not changed. Read1 is kept, marked defective. Caveat: leg-clustered CI, effective n ~24. The blind-grade comparator (0.458, CI [0.327, 0.630]) does not change the verdict.'
+  rows: 1
+  verdict: pass
