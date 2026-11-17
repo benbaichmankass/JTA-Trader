@@ -436,6 +436,55 @@ class Deck:
             self.slides[-1].setdefault("table", {"header": list(header), "rows": [[str(v) for v in r] for r in rows]})
         self.md.append("")
 
+    def model_card(self, s, good, stats, nxt):
+        """A 'model card': what makes it good (plain English) · headline stats (big number + bar) · what's next."""
+        y0 = Inches(1.75)
+        colw = Inches(3.9)
+        # left: what makes it good
+        self._box(s, Inches(0.6), y0, colw, Inches(4.75), LIGHT)
+        self._text(s, Inches(0.75), y0 + Inches(0.1), colw - Inches(0.3), Inches(0.4), "Why it's good at its job",
+                   size=15, bold=True, color=NAVY)
+        self._text(s, Inches(0.75), y0 + Inches(0.55), colw - Inches(0.3), Inches(4.1), good, size=13, color=INK)
+        # middle: stat tiles
+        mx, mw = Inches(4.7), Inches(4.3)
+        th = Inches(1.12)
+        vmax = max([abs(t["r"]) for t in stats if t.get("r") is not None] or [1]) or 1
+        for i, t in enumerate(stats):
+            ty = y0 + (th + Inches(0.09)) * i
+            self._box(s, mx, ty, mw, th, WHITE, line=LIGHT)
+            self._text(s, mx + Inches(0.12), ty + Inches(0.02), Inches(1.9), Inches(0.6), t["big"], size=24, bold=True,
+                       color=(RED if t.get("bad") else NAVY))
+            self._text(s, mx + Inches(2.0), ty + Inches(0.06), mw - Inches(2.1), Inches(0.6), t["label"], size=10,
+                       color=INK)
+            self._text(s, mx + Inches(0.12), ty + Inches(0.72), mw - Inches(0.2), Inches(0.38),
+                       f"{t['prov']} · {t['kind']} · {t['meta']}", size=8, color=GREY)
+            if t.get("r") is not None:
+                cx = mx + Inches(2.0) + Inches(1.1)
+                ln = int(Inches(1.05) * min(1.0, abs(t["r"]) / vmax))
+                if ln > 0:
+                    self._box(s, cx if t["r"] >= 0 else cx - ln, ty + Inches(0.58), ln, Inches(0.1),
+                              TEAL if t["r"] >= 0 else AMBER)
+                self._box(s, cx, ty + Inches(0.52), Inches(0.015), Inches(0.22), GREY)
+        # right: next
+        rx = Inches(9.2)
+        rw = W - rx - Inches(0.6)
+        self._box(s, rx, y0, rw, Inches(4.75), LIGHT)
+        self._text(s, rx + Inches(0.15), y0 + Inches(0.1), rw - Inches(0.3), Inches(0.4), "What's next",
+                   size=15, bold=True, color=NAVY)
+        self._text(s, rx + Inches(0.15), y0 + Inches(0.55), rw - Inches(0.3), Inches(4.1),
+                   [f"→ {x}" for x in nxt], size=13, color=INK)
+        self.slides[-1]["card"] = {"good": good, "stats": stats, "next": nxt}
+        self.md.append("**Why it's good at its job.** " + " ".join(good) + "\n")
+        self.md.append("| Stat | What | Provenance · kind · n / window |")
+        self.md.append("|---|---|---|")
+        for t in stats:
+            self.md.append(f"| {t['big']} | {t['label']} | {t['prov']} · {t['kind']} · {t['meta']} |")
+            self.slides[-1]["numbers"].append(dict(label=t["label"], value=t["big"], provenance=t["prov"],
+                                                   source=t["source"], live_endpoint_candidate=t.get("live")))
+        self.md.append("\n**What's next.** " + " ".join(f"→ {x}" for x in nxt) + "\n")
+        for x in good + nxt:
+            self._b(x)
+
     def footnote(self, s, text, y=None):
         self._text(s, Inches(0.6), y or (H - Inches(1.05)), Inches(12.1), Inches(0.55), text, size=12,
                    color=GREY)
@@ -642,76 +691,106 @@ def build():
                   "verified here.", y=H - Inches(0.95))
     d.end_md()
 
-    # ---------------------------------------------------------------- 7 Foxhound
+    # ---------------------------------------------------------------- 7 Foxhound card
     e1 = sv.get("ml-decision-entry-v1", {}).get("headline_metric", {})
-    e2 = sv.get("ml-decision-entry-v2", {}).get("headline_metric", {})
-    s = d.new_at((3,), "Step 3 · Foxhound: how an entry model decides",
-              "Every four hours, for each market, the model reads about twenty numbers on recent moves, volatility "
-              "and range position, and predicts the net R of a standard trade: stop two average ranges away, target "
-              "three, held up to a day. Above a threshold it trades; otherwise it does nothing. The crypto model "
-              "learned from about 660 thousand past decisions on 60 coins. The equity model averages five models "
-              "on 173 funds, long only. Not every challenger wins: the second crypto version failed and stays on paper.",
-              tags=("MEASURED",))
-    d.flow(s, [
-        ("Reads", ["~20 inputs: returns 1h–1wk, volatility, range position."]),
-        ("Trees", ["300 gradient-boosted trees (equity: 5-model average)."]),
-        ("Predicts", ["Net R of a standard 2-stop / 3-target trade."]),
-        ("Acts", ["Score above threshold → trade. Else nothing."]),
-    ], size=14, h=Inches(1.25))
-    d.footnote(s, f"Crypto, live: {e1.get('value', 0):+.3f}R per trade, n {e1.get('n', '—')}, held out. "
-                  f"Crypto v2: {e2.get('value', 0):+.2f}R, n {e2.get('n', '—')}, failed → paper. "
-                  "MEASURED: ml/served/ml_decision_entry_v1/model.json, ml/candidates/ml_entry_eq_v3_struct_ens5/"
-                  "model.json, ml/served/SERVED_MODELS.yaml.", y=H - Inches(1.6))
-    d.num("crypto entry model held-out expectancy", e1.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1")
-    d.num("crypto entry v2 forward read", e2.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-decision-entry-v2")
+    e4 = sv.get("ml-entry-eq-struct-ens5-v1", {}).get("headline_metric", {})
+    rf = sv.get("ml-decision-entry-v1r20261106", {}).get("headline_metric", {})
+    s = d.new_at((3,), "Model card · Foxhound, the entry model (step 3)",
+              "Foxhound answers the first question of every trade: is there one worth taking right now? Think of a "
+              "scout that has studied hundreds of thousands of past situations and only signals when the odds after "
+              "costs look good; most of the time it says nothing. The crypto version trades real money on its "
+              "held-out result. The equity version showed a much larger held-out result, but our own follow-up found "
+              "it mostly picks trades that are cheap to make relative to their risk, so the next challenger targets "
+              "that. A broader test on 51 coins at each coin's own costs failed, which is why it trades only the "
+              "five it passed on.", tags=("MEASURED",))
+    d.model_card(s, [
+        "It scans every market every four hours and asks one question: after costs, would a standard trade here "
+        "pay? If not, it stays out.",
+        "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules "
+        "someone wrote down.",
+        "It is judged only on data it never saw while learning.",
+    ], [
+        dict(big=f"{e1.get('value', 0):+.3f}R", r=e1.get("value"), label="Crypto model, average result per trade",
+             prov="MEASURED", kind="offline, held-out", meta=f"n {e1.get('n')} · 2025-10 → 2026-09",
+             source="ml/served/SERVED_MODELS.yaml ml-decision-entry-v1"),
+        dict(big=f"{e4.get('value', 0):+.2f}R", r=e4.get("value"), label="Equity model, per trade (mostly a cost effect)",
+             prov="MEASURED", kind="offline, held-out", meta=f"n {e4.get('n')} · 2025-07 → 2026-10",
+             source="ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1"),
+        dict(big=f"{rf.get('value', 0):+.4f}R", r=rf.get("value"), label="Refit vs old model (−0.092R) on recent weeks",
+             prov="MEASURED", kind="offline, 14-day grade", meta=f"n {rf.get('n')} · 2026-10-23 → 11-05",
+             source="ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106"),
+        dict(big="−0.068R", r=-0.068, bad=True, label="Wider test, 51 coins at own costs: FAIL",
+             prov="MEASURED", kind="offline, held-out", meta="n 12,746 decisions · year to 2026-10",
+             source="research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)"),
+    ], [
+        "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+        "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+        "Widen to new coins only where each coin's own costs still leave a profit.",
+    ])
     d.end_md()
 
-    # ---------------------------------------------------------------- 8 step 4
+    # ---------------------------------------------------------------- 8 Beagle card
     ov = sv.get("overlay-td-v1", {}).get("headline_metric", {})
     inv = f["ml_inv"]
-    s = d.new_at((4,), "Step 4 · Collie and Beagle: when to step aside",
-              "Two families act between a proposal and an order. Collie classifies the market regime, calm or "
-              "volatile, trending or not, from returns, volatility, time of day and six forecast features from a "
-              "small pretrained forecaster; a strategy can be switched off only in the regimes where it loses. "
-              "Beagle scores each signal from two trend strategies and halves the size of weak ones; it passed a "
-              "no-harm test on 1,830 historical trades. An 11 November inventory proposed retiring most registered "
-              "models that nothing uses: the loop pruning itself.", tags=("MEASURED",))
-    d.flow(s, [
-        ("Collie reads", ["Returns, volatility, hour, weekday + 6 forecast features."]),
-        ("Collie decides", ["Regime class → strategy steps aside where it loses."]),
-        ("Beagle reads", ["9 trend and volatility features per signal."]),
-        ("Beagle decides", ["Weak signal → halve size. Strong → take it."]),
-    ], size=14, h=Inches(1.25))
-    d.footnote(s, f"Beagle no-harm test: n {ov.get('n', '—')}, {ov.get('verdict', '—')}. Inventory {inv['as_of']}: "
-                  f"{inv['total']} models; keep {inv['proposals']['KEEP']}, review {inv['proposals']['REVIEW']}, "
-                  f"retire {inv['proposals']['RETIRE']}. MEASURED: ml/overlay/overlay_td.json, "
-                  "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, comms/ml_consolidation/.", y=H - Inches(1.6))
-    d.num("overlay no-harm test sample", ov.get("n"), "MEASURED", "ml/served/SERVED_MODELS.yaml overlay-td-v1")
-    d.num("registered models (inventory)", inv["total"], "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json", "/api/bot/ml/registry")
-    d.num("models proposed keep / review / retire", f"{inv['proposals']['KEEP']} / {inv['proposals']['REVIEW']} / {inv['proposals']['RETIRE']}", "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json", "/api/bot/ml/registry")
+    s = d.new_at((4,), "Model card · Beagle, the signal filter (step 4)",
+              "Beagle sits between a strategy's signal and the order. It does not veto; it turns the volume down on "
+              "signals that look weak, halving their size, on two trend strategies. It is deliberately simple, a "
+              "logistic regression on nine inputs, because simple models are harder to fool themselves with. It "
+              "passed a test that it does no harm across 1,830 historical trades. Its first challenger did not "
+              "beat it, so the next one has to disagree with it more often to be worth testing. The regime family, "
+              "Collie, also sits at this step; an inventory on 11 November proposed retiring most of its unused "
+              "models.", tags=("MEASURED",))
+    d.model_card(s, [
+        "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+        "Like a volume knob, not an off switch, so a wrong call costs little.",
+        "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose.",
+    ], [
+        dict(big=str(ov.get("verdict", "—")).upper(), r=None, label="No-harm test vs taking every signal",
+             prov="MEASURED", kind="offline, out-of-sample", meta=f"n {ov.get('n')} trades · 2020-07 → 2026-10",
+             source="ml/served/SERVED_MODELS.yaml overlay-td-v1"),
+        dict(big="2 legs", r=None, label="Live: halves size on weak signals",
+             prov="MEASURED", kind="live, mechanics only", meta="config/overlay_policy.yaml",
+             source="ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis"),
+        dict(big="NOT A WIN", r=None, bad=True, label="First challenger vs Beagle",
+             prov="MEASURED", kind="offline", meta="graded indeterminate · 2026-11-16",
+             source="research/queue/RQ-20261116-cc86-01.yaml grading"),
+    ], [
+        "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+        "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+        f"Regime models: keep only those that beat a simple baseline ({inv['proposals']['RETIRE']} of "
+        f"{inv['total']} proposed for retirement).",
+    ])
     d.end_md()
 
-    # ---------------------------------------------------------------- 9 step 9
+    # ---------------------------------------------------------------- 9 Labrador card
     tpr = sv.get("ml-entry-tp-revision-v1", {}).get("headline_metric", {})
     xh = sv.get("exit-head-donchian-1h-v1", {}).get("headline_metric", {})
-    s = d.new_at((7, 9), "Steps 7 and 9 · Labrador: managing the open trade",
-              "Labrador re-predicts where a live trade is likely to get to at five check-ins, choosing among 18 "
-              "target levels, and may only extend the target, never pull it in. Its measured gain is small but "
-              "positive. The exit head decides whether to close now; it failed out of sample on two of three "
-              "markets, so it closes trades only on the demo floor. Showing the small and failed results is part "
-              "of the discipline.", tags=("MEASURED",))
-    d.flow(s, [
-        ("Check-in", ["At 5 points in the trade, read 29 inputs."]),
-        ("Classify", ["Gradient-boosted classifier over 18 target levels."]),
-        ("Compare", ["Expected net R of each level vs the current target."]),
-        ("Act", ["Clearly better → extend the target. Never pull it in."]),
-    ], size=14, h=Inches(1.25))
-    d.footnote(s, f"Target revision: {tpr.get('value', 0):+.4f}R per trade vs a fixed target, n {tpr.get('n', '—')}. "
-                  f"Exit head: {xh.get('value', 0):+.4f}R per trade, n {xh.get('n', '—')}, {xh.get('verdict', '—')} → "
-                  "demo floor. MEASURED: ml/served/ml_entry_tp_revision_v1/model.json, ml/served/SERVED_MODELS.yaml.",
-               y=H - Inches(1.6))
-    d.num("TP revision gain per trade", tpr.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1")
-    d.num("exit head out-of-sample R per trade", xh.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1")
+    s = d.new_at((7, 9), "Model card · Labrador, the in-trade manager (steps 7 and 9)",
+              "Labrador manages a trade that is already open. At five check-ins it re-estimates how far the trade is "
+              "likely to run and can only move the target further out, never closer, so it cannot cut a winner "
+              "short. Its registered forward test passed and its live gain is small but positive. Its sibling, the "
+              "exit head, decides whether to close now; it failed out of sample on two of three markets and only "
+              "acts on the demo floor. A new training label for it showed a small gain that missed the pass bar, "
+              "and the next version is queued.", tags=("MEASURED",))
+    d.model_card(s, [
+        "Once a trade is open, it re-checks five times where the price is likely to get to.",
+        "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+        "So it can add profit on strong trades without ever cutting a winner short.",
+    ], [
+        dict(big="+0.0081R", r=0.0081, label="Registered forward test, per trade: PASS",
+             prov="MEASURED", kind="offline, forward", meta="n 868 · Oct 2026",
+             source="research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)"),
+        dict(big=f"{tpr.get('value', 0):+.4f}R", r=tpr.get("value"), label="Live policy (extend only), per trade",
+             prov="MEASURED", kind="offline replay", meta=f"n {tpr.get('n')} · 2025-10 → 2026-09",
+             source="ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1"),
+        dict(big=f"{xh.get('value', 0):+.4f}R", r=xh.get("value"), bad=True, label="Exit head (close now?): FAIL",
+             prov="MEASURED", kind="offline, out-of-sample", meta=f"n {xh.get('n')} · 3 folds 2022–2026",
+             source="ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1"),
+    ], [
+        "Re-check it once 300 live trades have closed since 12 November.",
+        "Test checking in on market events, not only on a timer.",
+        "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin.",
+    ])
     d.end_md()
 
     # ---------------------------------------------------------------- 10 live on real money
@@ -740,43 +819,38 @@ def build():
                   "(config/values_exclusions.yaml).", y=H - Inches(1.2))
     d.end_md()
 
-    # ---------------------------------------------------------------- 11 ML serving live decisions
-    s = d.new_at((3, 4, 9, 11), "Produced so far 2 — models changing live orders",
-              "Every learned model that changes an order today, where it acts and the committed number behind it. "
-              "Three act on real money. The second crypto entry model and the exit head stay on the demo floor "
-              "because their evidence failed. The last row is the newest: a drift detector for D10 spots a fading "
-              "strategy better than chance in-window (AUC 0.654 over 664 points on 24 strategies), but acting on "
-              "its alarm did not replicate on a fresh window, so it does not act. Both results are kept.",
-              tags=("MEASURED",))
-    order = [("ml-decision-entry-v1", "Foxhound-1 · crypto entry", "Real money + paper + prop"),
-             ("ml-entry-eq-struct-ens5-v1", "Foxhound-4 · US-fund entry", "Real money + mirror"),
-             ("ml-entry-tp-revision-v1", "Labrador-1b · target revision", "Every crypto ML-entry trade"),
-             ("overlay-td-v1", "Beagle-1 · signal filter", "2 trend strategies (one on real money)"),
-             ("ml-entry-eq-v1", "Foxhound-3 · US-fund entry v1", "Paper (testing)"),
-             ("ml-decision-entry-v2", "Foxhound-2 · crypto entry v2", "Paper (testing)"),
-             ("exit-head-donchian-1h-v1", "Labrador-2 · exit head", "Demo floor closes")]
-    rows = []
-    for mid, name, where in order:
-        hm = (sv.get(mid) or {}).get("headline_metric") or {}
-        val = hm.get("value")
-        rows.append([name, where, f"{val:+.4f}R" if isinstance(val, (int, float)) else "—", str(hm.get("n", "—")),
-                     str(hm.get("verdict") or "—")])
-        d.num(f"headline metric: {mid}", val, "MEASURED", f"ml/served/SERVED_MODELS.yaml {mid}.headline_metric", "/api/bot/ml/registry")
-    rows.append(["Basset baseline · D10 drift alarm", "Not acting (in-window pass, fresh-window fail)",
-                 "AUC 0.654", "664", "pass → fail"])
-    d.num("D10 drift detector AUC (in-window)", 0.6541, "MEASURED", "research/queue/RQ-20261117-aadc-05.yaml grading.reason")
-    d.num("D10 drift detector labelled points", 664, "MEASURED", "research/queue/RQ-20261117-aadc-05.yaml grading.reason (24 legs)")
-    d.num("D10 demote-on-alarm, fresh window", "fail (control_p 0.994)", "MEASURED", "research/queue/RQ-20261117-aadc-09.yaml grading.reason")
-    d.table(s, ["Model", "Where it changes orders", "Headline", "n", "Verdict"], rows,
-            col_w=[3.6, 3.6, 1.8, 1.1, 1.4], size=12, h_row=Inches(0.42))
-    d.footnote(s, "MEASURED: ml/served/SERVED_MODELS.yaml (each headline copied from the committed record it names; "
-                  "metrics differ by model: held-out net R, forward read, gain vs fixed target, no-harm test). "
-                  "The filter's record states a verdict, not a number.", y=H - Inches(1.2))
+    # ---------------------------------------------------------------- 11 Basset card
+    s = d.new_at((11,), "Model card · Basset, the early-warning light (step 11)",
+              "The newest family, and an honest one to show. Basset's job is to spot a strategy that is starting to "
+              "fade before the losses pile up. The first baseline is a classic statistical alarm, a CUSUM: it adds up "
+              "how far each strategy's live results fall short of its backtest and rings when the shortfall builds "
+              "up. It works as a warning, better than chance in its test window. But stopping strategies when it "
+              "rang did not hold up on a fresh window of data, so it stays a warning light and does not act. Both "
+              "results are recorded, which is exactly how the loop is meant to work.", tags=("MEASURED",))
+    d.model_card(s, [
+        "It watches every strategy's results against what its backtest promised, trade by trade.",
+        "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+        "Today it is a warning light, not an automatic switch, because the switch failed a fresh test.",
+    ], [
+        dict(big="0.654", r=None, label="Spots a fading strategy (0.5 = coin flip): PASS",
+             prov="MEASURED", kind="offline, in-window", meta="AUC · n 664 points · 24 strategies",
+             source="research/queue/RQ-20261117-aadc-05.yaml grading.reason"),
+        dict(big="PASS", r=None, label="Stopping on the alarm beat random stops, in-window",
+             prov="MEASURED", kind="offline, in-window", meta="p 0.0115 · 654 skipped trades",
+             source="research/queue/RQ-20261117-aadc-07.yaml grading.reason"),
+        dict(big="FAIL", r=None, bad=True, label="Same rule on a fresh window: did not replicate",
+             prov="MEASURED", kind="offline, fresh window", meta="p 0.994 · 620 skipped · before 2026-05",
+             source="research/queue/RQ-20261117-aadc-09.yaml grading.reason"),
+    ], [
+        "Keep the alarm as a warning in reviews; it does not switch anything off.",
+        "Redesign the action before retesting, on data it has never seen.",
+        "Find out why AI grades of past trades ran opposite to their results before using them as a signal.",
+    ])
     d.end_md()
 
     # ---------------------------------------------------------------- 12 throughput
     decisive = qv["pass"] + qv["fail"]
-    s = d.new_at((11,), "Produced so far 3 — research throughput, and how much fails",
+    s = d.new_at((11,), "Produced so far 2 — research throughput, and how much fails",
               f"The volume behind the results. The research queue has {q['done']} completed questions. Of the graded "
               f"ones, {qv['pass']} passed their pre-registered rule and {qv['fail']} failed, with {qv['indeterminate']} "
               f"indeterminate because the sample was too small to call. That is a pass rate of "

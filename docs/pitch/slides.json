@@ -1,6 +1,6 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "8545532c7",
+ "built_from_commit": "6cce2b110",
  "built_on": "2026-11-17",
  "slide_count": 15,
  "spec": {
@@ -366,31 +366,47 @@
   {
    "number": 7,
    "section": "The ML families",
-   "title": "Step 3 · Foxhound: how an entry model decides",
+   "title": "Model card · Foxhound, the entry model (step 3)",
    "kicker": null,
    "provenance": [
     "MEASURED"
    ],
    "bullets": [
-    "1. Reads — ~20 inputs: returns 1h–1wk, volatility, range position.",
-    "2. Trees — 300 gradient-boosted trees (equity: 5-model average).",
-    "3. Predicts — Net R of a standard 2-stop / 3-target trade.",
-    "4. Acts — Score above threshold → trade. Else nothing."
+    "It scans every market every four hours and asks one question: after costs, would a standard trade here pay? If not, it stays out.",
+    "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules someone wrote down.",
+    "It is judged only on data it never saw while learning.",
+    "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+    "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+    "Widen to new coins only where each coin's own costs still leave a profit."
    ],
-   "notes": "Every four hours, for each market, the model reads about twenty numbers on recent moves, volatility and range position, and predicts the net R of a standard trade: stop two average ranges away, target three, held up to a day. Above a threshold it trades; otherwise it does nothing. The crypto model learned from about 660 thousand past decisions on 60 coins. The equity model averages five models on 173 funds, long only. Not every challenger wins: the second crypto version failed and stays on paper.",
+   "notes": "Foxhound answers the first question of every trade: is there one worth taking right now? Think of a scout that has studied hundreds of thousands of past situations and only signals when the odds after costs look good; most of the time it says nothing. The crypto version trades real money on its held-out result. The equity version showed a much larger held-out result, but our own follow-up found it mostly picks trades that are cheap to make relative to their risk, so the next challenger targets that. A broader test on 51 coins at each coin's own costs failed, which is why it trades only the five it passed on.",
    "numbers": [
     {
-     "label": "crypto entry model held-out expectancy",
-     "value": 0.0371,
+     "label": "Crypto model, average result per trade",
+     "value": "+0.037R",
      "provenance": "MEASURED",
      "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1",
      "live_endpoint_candidate": null
     },
     {
-     "label": "crypto entry v2 forward read",
-     "value": -0.1161,
+     "label": "Equity model, per trade (mostly a cost effect)",
+     "value": "+0.49R",
      "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v2",
+     "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Refit vs old model (−0.092R) on recent weeks",
+     "value": "+0.0018R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Wider test, 51 coins at own costs: FAIL",
+     "value": "−0.068R",
+     "provenance": "MEASURED",
+     "source": "research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)",
      "live_endpoint_candidate": null
     }
    ],
@@ -398,80 +414,182 @@
    "stages": [
     3
    ],
-   "footnote": "Crypto, live: +0.037R per trade, n 907, held out. Crypto v2: -0.12R, n 320, failed → paper. MEASURED: ml/served/ml_decision_entry_v1/model.json, ml/candidates/ml_entry_eq_v3_struct_ens5/model.json, ml/served/SERVED_MODELS.yaml.",
+   "card": {
+    "good": [
+     "It scans every market every four hours and asks one question: after costs, would a standard trade here pay? If not, it stays out.",
+     "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules someone wrote down.",
+     "It is judged only on data it never saw while learning."
+    ],
+    "stats": [
+     {
+      "big": "+0.037R",
+      "r": 0.0371,
+      "label": "Crypto model, average result per trade",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 907 · 2025-10 → 2026-09",
+      "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1"
+     },
+     {
+      "big": "+0.49R",
+      "r": 0.4922,
+      "label": "Equity model, per trade (mostly a cost effect)",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 207 · 2025-07 → 2026-10",
+      "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1"
+     },
+     {
+      "big": "+0.0018R",
+      "r": 0.0018,
+      "label": "Refit vs old model (−0.092R) on recent weeks",
+      "prov": "MEASURED",
+      "kind": "offline, 14-day grade",
+      "meta": "n 281 · 2026-10-23 → 11-05",
+      "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106"
+     },
+     {
+      "big": "−0.068R",
+      "r": -0.068,
+      "bad": true,
+      "label": "Wider test, 51 coins at own costs: FAIL",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 12,746 decisions · year to 2026-10",
+      "source": "research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)"
+     }
+    ],
+    "next": [
+     "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+     "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+     "Widen to new coins only where each coin's own costs still leave a profit."
+    ]
+   },
    "live_refreshable": false
   },
   {
    "number": 8,
    "section": "The ML families",
-   "title": "Step 4 · Collie and Beagle: when to step aside",
+   "title": "Model card · Beagle, the signal filter (step 4)",
    "kicker": null,
    "provenance": [
     "MEASURED"
    ],
    "bullets": [
-    "1. Collie reads — Returns, volatility, hour, weekday + 6 forecast features.",
-    "2. Collie decides — Regime class → strategy steps aside where it loses.",
-    "3. Beagle reads — 9 trend and volatility features per signal.",
-    "4. Beagle decides — Weak signal → halve size. Strong → take it."
+    "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+    "Like a volume knob, not an off switch, so a wrong call costs little.",
+    "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose.",
+    "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+    "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+    "Regime models: keep only those that beat a simple baseline (72 of 106 proposed for retirement)."
    ],
-   "notes": "Two families act between a proposal and an order. Collie classifies the market regime, calm or volatile, trending or not, from returns, volatility, time of day and six forecast features from a small pretrained forecaster; a strategy can be switched off only in the regimes where it loses. Beagle scores each signal from two trend strategies and halves the size of weak ones; it passed a no-harm test on 1,830 historical trades. An 11 November inventory proposed retiring most registered models that nothing uses: the loop pruning itself.",
+   "notes": "Beagle sits between a strategy's signal and the order. It does not veto; it turns the volume down on signals that look weak, halving their size, on two trend strategies. It is deliberately simple, a logistic regression on nine inputs, because simple models are harder to fool themselves with. It passed a test that it does no harm across 1,830 historical trades. Its first challenger did not beat it, so the next one has to disagree with it more often to be worth testing. The regime family, Collie, also sits at this step; an inventory on 11 November proposed retiring most of its unused models.",
    "numbers": [
     {
-     "label": "overlay no-harm test sample",
-     "value": 1830,
+     "label": "No-harm test vs taking every signal",
+     "value": "PASS",
      "provenance": "MEASURED",
      "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1",
      "live_endpoint_candidate": null
     },
     {
-     "label": "registered models (inventory)",
-     "value": 106,
+     "label": "Live: halves size on weak signals",
+     "value": "2 legs",
      "provenance": "MEASURED",
-     "source": "comms/ml_consolidation/2026-11-11.json",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
+     "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis",
+     "live_endpoint_candidate": null
     },
     {
-     "label": "models proposed keep / review / retire",
-     "value": "15 / 19 / 72",
+     "label": "First challenger vs Beagle",
+     "value": "NOT A WIN",
      "provenance": "MEASURED",
-     "source": "comms/ml_consolidation/2026-11-11.json",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
+     "source": "research/queue/RQ-20261116-cc86-01.yaml grading",
+     "live_endpoint_candidate": null
     }
    ],
    "sources": [],
    "stages": [
     4
    ],
-   "footnote": "Beagle no-harm test: n 1830, pass. Inventory 2026-11-11: 106 models; keep 15, review 19, retire 72. MEASURED: ml/overlay/overlay_td.json, ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, comms/ml_consolidation/.",
-   "live_refreshable": true
+   "card": {
+    "good": [
+     "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+     "Like a volume knob, not an off switch, so a wrong call costs little.",
+     "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose."
+    ],
+    "stats": [
+     {
+      "big": "PASS",
+      "r": null,
+      "label": "No-harm test vs taking every signal",
+      "prov": "MEASURED",
+      "kind": "offline, out-of-sample",
+      "meta": "n 1830 trades · 2020-07 → 2026-10",
+      "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1"
+     },
+     {
+      "big": "2 legs",
+      "r": null,
+      "label": "Live: halves size on weak signals",
+      "prov": "MEASURED",
+      "kind": "live, mechanics only",
+      "meta": "config/overlay_policy.yaml",
+      "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis"
+     },
+     {
+      "big": "NOT A WIN",
+      "r": null,
+      "bad": true,
+      "label": "First challenger vs Beagle",
+      "prov": "MEASURED",
+      "kind": "offline",
+      "meta": "graded indeterminate · 2026-11-16",
+      "source": "research/queue/RQ-20261116-cc86-01.yaml grading"
+     }
+    ],
+    "next": [
+     "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+     "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+     "Regime models: keep only those that beat a simple baseline (72 of 106 proposed for retirement)."
+    ]
+   },
+   "live_refreshable": false
   },
   {
    "number": 9,
    "section": "The ML families",
-   "title": "Steps 7 and 9 · Labrador: managing the open trade",
+   "title": "Model card · Labrador, the in-trade manager (steps 7 and 9)",
    "kicker": null,
    "provenance": [
     "MEASURED"
    ],
    "bullets": [
-    "1. Check-in — At 5 points in the trade, read 29 inputs.",
-    "2. Classify — Gradient-boosted classifier over 18 target levels.",
-    "3. Compare — Expected net R of each level vs the current target.",
-    "4. Act — Clearly better → extend the target. Never pull it in."
+    "Once a trade is open, it re-checks five times where the price is likely to get to.",
+    "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+    "So it can add profit on strong trades without ever cutting a winner short.",
+    "Re-check it once 300 live trades have closed since 12 November.",
+    "Test checking in on market events, not only on a timer.",
+    "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin."
    ],
-   "notes": "Labrador re-predicts where a live trade is likely to get to at five check-ins, choosing among 18 target levels, and may only extend the target, never pull it in. Its measured gain is small but positive. The exit head decides whether to close now; it failed out of sample on two of three markets, so it closes trades only on the demo floor. Showing the small and failed results is part of the discipline.",
+   "notes": "Labrador manages a trade that is already open. At five check-ins it re-estimates how far the trade is likely to run and can only move the target further out, never closer, so it cannot cut a winner short. Its registered forward test passed and its live gain is small but positive. Its sibling, the exit head, decides whether to close now; it failed out of sample on two of three markets and only acts on the demo floor. A new training label for it showed a small gain that missed the pass bar, and the next version is queued.",
    "numbers": [
     {
-     "label": "TP revision gain per trade",
-     "value": 0.0008,
+     "label": "Registered forward test, per trade: PASS",
+     "value": "+0.0081R",
+     "provenance": "MEASURED",
+     "source": "research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Live policy (extend only), per trade",
+     "value": "+0.0008R",
      "provenance": "MEASURED",
      "source": "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1",
      "live_endpoint_candidate": null
     },
     {
-     "label": "exit head out-of-sample R per trade",
-     "value": -0.0141,
+     "label": "Exit head (close now?): FAIL",
+     "value": "-0.0141R",
      "provenance": "MEASURED",
      "source": "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1",
      "live_endpoint_candidate": null
@@ -482,7 +600,48 @@
     7,
     9
    ],
-   "footnote": "Target revision: +0.0008R per trade vs a fixed target, n 907. Exit head: -0.0141R per trade, n 1041, fail → demo floor. MEASURED: ml/served/ml_entry_tp_revision_v1/model.json, ml/served/SERVED_MODELS.yaml.",
+   "card": {
+    "good": [
+     "Once a trade is open, it re-checks five times where the price is likely to get to.",
+     "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+     "So it can add profit on strong trades without ever cutting a winner short."
+    ],
+    "stats": [
+     {
+      "big": "+0.0081R",
+      "r": 0.0081,
+      "label": "Registered forward test, per trade: PASS",
+      "prov": "MEASURED",
+      "kind": "offline, forward",
+      "meta": "n 868 · Oct 2026",
+      "source": "research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)"
+     },
+     {
+      "big": "+0.0008R",
+      "r": 0.0008,
+      "label": "Live policy (extend only), per trade",
+      "prov": "MEASURED",
+      "kind": "offline replay",
+      "meta": "n 907 · 2025-10 → 2026-09",
+      "source": "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1"
+     },
+     {
+      "big": "-0.0141R",
+      "r": -0.0141,
+      "bad": true,
+      "label": "Exit head (close now?): FAIL",
+      "prov": "MEASURED",
+      "kind": "offline, out-of-sample",
+      "meta": "n 1041 · 3 folds 2022–2026",
+      "source": "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1"
+     }
+    ],
+    "next": [
+     "Re-check it once 300 live trades have closed since 12 November.",
+     "Test checking in on market events, not only on a timer.",
+     "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin."
+    ]
+   },
    "live_refreshable": false
   },
   {
@@ -637,80 +796,38 @@
   {
    "number": 11,
    "section": "What the R&D has produced",
-   "title": "Produced so far 2 — models changing live orders",
+   "title": "Model card · Basset, the early-warning light (step 11)",
    "kicker": null,
    "provenance": [
     "MEASURED"
    ],
-   "bullets": [],
-   "notes": "Every learned model that changes an order today, where it acts and the committed number behind it. Three act on real money. The second crypto entry model and the exit head stay on the demo floor because their evidence failed. The last row is the newest: a drift detector for D10 spots a fading strategy better than chance in-window (AUC 0.654 over 664 points on 24 strategies), but acting on its alarm did not replicate on a fresh window, so it does not act. Both results are kept.",
+   "bullets": [
+    "It watches every strategy's results against what its backtest promised, trade by trade.",
+    "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+    "Today it is a warning light, not an automatic switch, because the switch failed a fresh test.",
+    "Keep the alarm as a warning in reviews; it does not switch anything off.",
+    "Redesign the action before retesting, on data it has never seen.",
+    "Find out why AI grades of past trades ran opposite to their results before using them as a signal."
+   ],
+   "notes": "The newest family, and an honest one to show. Basset's job is to spot a strategy that is starting to fade before the losses pile up. The first baseline is a classic statistical alarm, a CUSUM: it adds up how far each strategy's live results fall short of its backtest and rings when the shortfall builds up. It works as a warning, better than chance in its test window. But stopping strategies when it rang did not hold up on a fresh window of data, so it stays a warning light and does not act. Both results are recorded, which is exactly how the loop is meant to work.",
    "numbers": [
     {
-     "label": "headline metric: ml-decision-entry-v1",
-     "value": 0.0371,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: ml-entry-eq-struct-ens5-v1",
-     "value": 0.4922,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: ml-entry-tp-revision-v1",
-     "value": 0.0008,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: overlay-td-v1",
-     "value": null,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: ml-entry-eq-v1",
-     "value": 0.0392,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: ml-decision-entry-v2",
-     "value": -0.1161,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v2.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "headline metric: exit-head-donchian-1h-v1",
-     "value": -0.0141,
-     "provenance": "MEASURED",
-     "source": "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1.headline_metric",
-     "live_endpoint_candidate": "/api/bot/ml/registry"
-    },
-    {
-     "label": "D10 drift detector AUC (in-window)",
-     "value": 0.6541,
+     "label": "Spots a fading strategy (0.5 = coin flip): PASS",
+     "value": "0.654",
      "provenance": "MEASURED",
      "source": "research/queue/RQ-20261117-aadc-05.yaml grading.reason",
      "live_endpoint_candidate": null
     },
     {
-     "label": "D10 drift detector labelled points",
-     "value": 664,
+     "label": "Stopping on the alarm beat random stops, in-window",
+     "value": "PASS",
      "provenance": "MEASURED",
-     "source": "research/queue/RQ-20261117-aadc-05.yaml grading.reason (24 legs)",
+     "source": "research/queue/RQ-20261117-aadc-07.yaml grading.reason",
      "live_endpoint_candidate": null
     },
     {
-     "label": "D10 demote-on-alarm, fresh window",
-     "value": "fail (control_p 0.994)",
+     "label": "Same rule on a fresh window: did not replicate",
+     "value": "FAIL",
      "provenance": "MEASURED",
      "source": "research/queue/RQ-20261117-aadc-09.yaml grading.reason",
      "live_endpoint_candidate": null
@@ -718,85 +835,56 @@
    ],
    "sources": [],
    "stages": [
-    3,
-    4,
-    9,
     11
    ],
-   "table": {
-    "header": [
-     "Model",
-     "Where it changes orders",
-     "Headline",
-     "n",
-     "Verdict"
+   "card": {
+    "good": [
+     "It watches every strategy's results against what its backtest promised, trade by trade.",
+     "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+     "Today it is a warning light, not an automatic switch, because the switch failed a fresh test."
     ],
-    "rows": [
-     [
-      "Foxhound-1 · crypto entry",
-      "Real money + paper + prop",
-      "+0.0371R",
-      "907",
-      "pass"
-     ],
-     [
-      "Foxhound-4 · US-fund entry",
-      "Real money + mirror",
-      "+0.4922R",
-      "207",
-      "pass"
-     ],
-     [
-      "Labrador-1b · target revision",
-      "Every crypto ML-entry trade",
-      "+0.0008R",
-      "907",
-      "—"
-     ],
-     [
-      "Beagle-1 · signal filter",
-      "2 trend strategies (one on real money)",
-      "—",
-      "1830",
-      "pass"
-     ],
-     [
-      "Foxhound-3 · US-fund entry v1",
-      "Paper (testing)",
-      "+0.0392R",
-      "858",
-      "pass"
-     ],
-     [
-      "Foxhound-2 · crypto entry v2",
-      "Paper (testing)",
-      "-0.1161R",
-      "320",
-      "fail"
-     ],
-     [
-      "Labrador-2 · exit head",
-      "Demo floor closes",
-      "-0.0141R",
-      "1041",
-      "fail"
-     ],
-     [
-      "Basset baseline · D10 drift alarm",
-      "Not acting (in-window pass, fresh-window fail)",
-      "AUC 0.654",
-      "664",
-      "pass → fail"
-     ]
+    "stats": [
+     {
+      "big": "0.654",
+      "r": null,
+      "label": "Spots a fading strategy (0.5 = coin flip): PASS",
+      "prov": "MEASURED",
+      "kind": "offline, in-window",
+      "meta": "AUC · n 664 points · 24 strategies",
+      "source": "research/queue/RQ-20261117-aadc-05.yaml grading.reason"
+     },
+     {
+      "big": "PASS",
+      "r": null,
+      "label": "Stopping on the alarm beat random stops, in-window",
+      "prov": "MEASURED",
+      "kind": "offline, in-window",
+      "meta": "p 0.0115 · 654 skipped trades",
+      "source": "research/queue/RQ-20261117-aadc-07.yaml grading.reason"
+     },
+     {
+      "big": "FAIL",
+      "r": null,
+      "bad": true,
+      "label": "Same rule on a fresh window: did not replicate",
+      "prov": "MEASURED",
+      "kind": "offline, fresh window",
+      "meta": "p 0.994 · 620 skipped · before 2026-05",
+      "source": "research/queue/RQ-20261117-aadc-09.yaml grading.reason"
+     }
+    ],
+    "next": [
+     "Keep the alarm as a warning in reviews; it does not switch anything off.",
+     "Redesign the action before retesting, on data it has never seen.",
+     "Find out why AI grades of past trades ran opposite to their results before using them as a signal."
     ]
    },
-   "footnote": "MEASURED: ml/served/SERVED_MODELS.yaml (each headline copied from the committed record it names; metrics differ by model: held-out net R, forward read, gain vs fixed target, no-harm test). The filter's record states a verdict, not a number.",
-   "live_refreshable": true
+   "live_refreshable": false
   },
   {
    "number": 12,
    "section": "What the R&D has produced",
-   "title": "Produced so far 3 — research throughput, and how much fails",
+   "title": "Produced so far 2 — research throughput, and how much fails",
    "kicker": null,
    "provenance": [
     "MEASURED"
@@ -848,7 +936,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 8545532c7.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 6cce2b110.",
    "live_refreshable": true
   },
   {
@@ -975,7 +1063,7 @@
     "R = one unit of risk: what a trade loses if its stop is hit. Expectancy = average R per trade after costs.",
     "MEASURED = read from a committed file or result. ESTIMATED = rests on an assumption (e.g. a slippage allowance).",
     "Held-out = data never used for tuning; the real-money pass is judged on it. Fold = one separate time slice.",
-    "Built 2026-11-17 from commit 8545532c7 by docs/pitch/build_deck.py.",
+    "Built 2026-11-17 from commit 6cce2b110 by docs/pitch/build_deck.py.",
     "Sources: config/strategies.yaml + accounts.yaml (via scripts/ops/strategy_status.py), comms/strategy_evidence/, research/queue/, ml/served/SERVED_MODELS.yaml and model artifacts, comms/ml_consolidation/, scripts/ci/check_tp_doctrine.py, comms/live_review/reviews.jsonl, config/mandates.yaml.",
     "Plans: docs/reference/trading-pipeline-map.skeleton.md, docs/plans/ML-ROADMAP-MECE-2026-11.md, docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
     "Left out on purpose: live and paper profit figures (a live book never establishes edge) and every dollar amount, balance, account id and server address."
