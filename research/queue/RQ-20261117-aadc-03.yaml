@@ -99,6 +99,13 @@ intervention_controls:
   matched_random:
     draws: 2000
     note: the V1 same-rate random reduce (permutation within calendar groups), applied to each arm's own gate
+  best_static:
+    grid:
+    - target_win_c0.1_q0.20 (Beagle-1, fixed)
+    - target_tail1r_c0.1_q0.20
+    - target_evweight_c0.1_q0.20
+    excludes_test_folds: true
+    note: nothing is tuned on a test fold; every arm uses Beagle-1's fixed C and q, and each CPCV split fits on its training folds only
   bootstrap_group: month
   hold_to_bracket: true
   hold_to_bracket_note: every arm keeps the leg's own entry, bracket and exit; only the size multiplier (1.0 or 0.5) differs
