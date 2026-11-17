@@ -768,7 +768,8 @@ def build():
         for book, key in (("real money", "rm"), ("demo", "paper")):
             if t[key] and t[key]["sr"] > 0:
                 entries.append((t, book, t[key]))
-    entries.sort(key=lambda e: -e[2]["sr"])
+    # Operator comment 2026-11-17 17:04Z: "lead with the live money R positive ones, then paper".
+    entries.sort(key=lambda e: (e[1] != "real money", -e[2]["sr"]))
     n_pos = len({e[0]["leg"] for e in entries})
     _names = collections.Counter(plain_leg(t["leg"]) for t in {e[0]["leg"]: e[0] for e in entries}.values())
 

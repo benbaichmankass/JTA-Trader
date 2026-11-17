@@ -1,6 +1,6 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "eb5db522e",
+ "built_from_commit": "cb0cd8d18",
  "built_on": "2026-11-17",
  "slide_count": 15,
  "spec": {
@@ -270,6 +270,34 @@
    "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. The table shows only strategies with a positive live record, on any book. For context, if asked: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The table shows the production strategies with a positive actual record, and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
    "numbers": [
     {
+     "label": "live real money ΣR: trend_donchian",
+     "value": 7.64,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: ict_scalp_5m",
+     "value": 4.94,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: trend_donchian_eth_4h",
+     "value": 4.66,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: tlt_pullback_1h",
+     "value": 1.29,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
      "label": "live demo ΣR: trend_donchian",
      "value": 23.71,
      "provenance": "MEASURED",
@@ -340,13 +368,6 @@
      "live_endpoint_candidate": "/api/bot/performance?window=all"
     },
     {
-     "label": "live real money ΣR: trend_donchian",
-     "value": 7.64,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
      "label": "live demo ΣR: trend_donchian_eth_prop",
      "value": 6.4,
      "provenance": "MEASURED",
@@ -368,20 +389,6 @@
      "live_endpoint_candidate": "/api/bot/performance?window=all"
     },
     {
-     "label": "live real money ΣR: ict_scalp_5m",
-     "value": 4.94,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live real money ΣR: trend_donchian_eth_4h",
-     "value": 4.66,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
      "label": "live demo ΣR: trend_donchian_1h",
      "value": 2.36,
      "provenance": "MEASURED",
@@ -398,13 +405,6 @@
     {
      "label": "live demo ΣR: iaum_pullback_1d",
      "value": 1.34,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live real money ΣR: tlt_pullback_1h",
-     "value": 1.29,
      "provenance": "MEASURED",
      "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
      "live_endpoint_candidate": "/api/bot/performance?window=all"
@@ -453,6 +453,30 @@
     "rows": [
      [
       "Trend breakout · BTC 1h [trend_donchian] · testing",
+      "real money",
+      "+7.64R · n 15 · E[R] +0.51 · 5 of 15 confirmed",
+      "-16.2R · n 71 · 1/4 folds +"
+     ],
+     [
+      "ICT scalp · BTC 5m · testing",
+      "real money",
+      "+4.94R · n 35 · E[R] +0.14 · 6 of 35 confirmed",
+      "-42.5R · n 146 · 0/4 folds +"
+     ],
+     [
+      "Ether trend breakout (4-hour bars) · testing",
+      "real money",
+      "+4.66R · n 19 · E[R] +0.24 · 6 of 19 confirmed",
+      "+30.9R · n 135 · 3/4 folds +"
+     ],
+     [
+      "Long-bond-ETF pullback (hourly bars) · production",
+      "real money",
+      "+1.29R · n 1 · E[R] +1.29 · 0 of 1 confirmed",
+      "+8.2R · n 75 · 3/4 folds +"
+     ],
+     [
+      "Trend breakout · BTC 1h [trend_donchian] · testing",
       "demo",
       "+23.71R · n 29 · E[R] +0.82 · 4 of 29 confirmed",
       "-16.2R · n 71 · 1/4 folds +"
@@ -474,34 +498,10 @@
       "demo",
       "+10.35R · n 52 · E[R] +0.20 · 13 of 52 confirmed",
       "+27.1R · n 67 · 4/4 folds +"
-     ],
-     [
-      "ICT scalp · SOL 15m · testing",
-      "demo",
-      "+9.32R · n 51 · E[R] +0.18 · 9 of 51 confirmed",
-      "-12.5R · n 87 · 1/4 folds +"
-     ],
-     [
-      "ICT scalp · SOL 5m · testing",
-      "demo",
-      "+9.29R · n 66 · E[R] +0.14 · 20 of 66 confirmed",
-      "-31.5R · n 181 · 0/4 folds +"
-     ],
-     [
-      "Trend breakout · SOL 4h · testing",
-      "demo",
-      "+8.91R · n 23 · E[R] +0.39 · 5 of 23 confirmed",
-      "+36.4R · n 115 · 3/4 folds +"
-     ],
-     [
-      "ICT scalp · MGC 15m · testing",
-      "demo",
-      "+8.24R · n 22 · E[R] +0.37 · 15 of 22 confirmed",
-      "no record yet"
      ]
     ]
    },
-   "rest_line": "Also net positive: ICT scalp · ETH 15m (demo) +8.1R · Event: open-interest shock (1h) (demo) +7.8R · Trend breakout · BTC 1h [trend_donchian] (real money) +7.6R · Trend breakout · ETH 1h (prop variant) (demo) +6.4R · Trend breakout · AVAX 4h (demo) +6.4R · Pullback · IEF 1d (demo) +5.9R · ICT scalp · BTC 5m (real money) +4.9R · Ether trend breakout (4-hour bars) (real money) +4.7R · Trend breakout · BTC 1h [trend_donchian_1h] (demo) +2.4R · Pullback · ETH 2h (demo) +1.9R · Gold-ETF pullback (daily bars) (demo) +1.3R · Long-bond-ETF pullback (hourly bars) (real money) +1.3R · Trend · MGC 1h (demo) +1.1R",
+   "rest_line": "Also net positive: ICT scalp · SOL 15m (demo) +9.3R · ICT scalp · SOL 5m (demo) +9.3R · Trend breakout · SOL 4h (demo) +8.9R · ICT scalp · MGC 15m (demo) +8.2R · ICT scalp · ETH 15m (demo) +8.1R · Event: open-interest shock (1h) (demo) +7.8R · Trend breakout · ETH 1h (prop variant) (demo) +6.4R · Trend breakout · AVAX 4h (demo) +6.4R · Pullback · IEF 1d (demo) +5.9R · Trend breakout · BTC 1h [trend_donchian_1h] (demo) +2.4R · Pullback · ETH 2h (demo) +1.9R · Gold-ETF pullback (daily bars) (demo) +1.3R · Trend · MGC 1h (demo) +1.1R",
    "track_record": {
     "aggregate": {
      "rm": {
@@ -1047,7 +1047,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit eb5db522e.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit cb0cd8d18.",
    "live_refreshable": true
   },
   {
