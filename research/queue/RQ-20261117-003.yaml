@@ -4,7 +4,7 @@
 id: RQ-20261117-003
 title: 'Stage B, new-symbol cells of trend_donchian_eth_4h: do the six 7c2b-06 cells (BNB/DOGE/LINK/LTC/BCH/DOT
   4h) add at least one independent bet to the live bybit_2 trend legs (N_eff >= 3.0 of 8)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -147,3 +147,13 @@ generated:
   params:
     node: P3-Q8-new-symbols
 last_dispatched_at: '2026-11-17T13:12:32+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q8-NEW-SYMBOLS-STAGEB-OVERLAP
+  evidence:
+  - research/results/RQ-20261117-003/44087745861.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

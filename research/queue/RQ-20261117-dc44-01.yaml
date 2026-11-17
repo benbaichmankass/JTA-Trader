@@ -4,7 +4,7 @@
 id: RQ-20261117-dc44-01
 title: 'D2 Collie feature additivity: does adding the HAR-RV block to the range-vol (yz) LightGBM regime head lift log-loss on
   BTCUSDT / ETHUSDT / SOLUSDT 1h, or is HAR redundant with yz (one factor: + har_rv)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -158,3 +158,17 @@ lands:
   assert_field: read_state
   min_rows: 1
 last_dispatched_at: '2026-11-17T13:12:28+00:00'
+grading:
+  attested: RULE-RQ20261117-dc44-01-D2-YZ-HAR-ADDITIVITY
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261117-dc44-01-D2-YZ-HAR-ADDITIVITY
+  evidence:
+  - research/results/RQ-20261117-dc44-01/44087731644.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

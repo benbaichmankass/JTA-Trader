@@ -4,7 +4,7 @@
 id: RQ-20261117-dc44-03
 title: 'D2 Collie challenger at the LIVE cadence: does the range-vol (yz) LightGBM regime head beat the v2 LightGBM head on
   BTCUSDT / SOLUSDT / ETHUSDT 15m log-loss over the full published history (ef4c-01 was INDETERMINATE on a 60k-row tail)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -157,3 +157,14 @@ lands:
   assert_field: read_state
   min_rows: 1
 last_dispatched_at: '2026-11-17T13:59:56+00:00'
+grading:
+  attested: RULE-RQ20261117-dc44-03-D2-YZ-15M-FULL
+  auto: true
+  decision_rule_id: RULE-RQ20261117-dc44-03-D2-YZ-15M-FULL
+  evidence:
+  - research/results/RQ-20261117-dc44-03/44098406786.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

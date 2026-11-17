@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-17 by AM-OPS-2 (row XRP-DOUBLE-EXPOSURE, Tier 3 question, Tier-1 unit). Decision rule registered before the run.
 id: RQ-20261117-ea57-01
 title: 'XRP donchian paired exit re-test: trend_donchian_xrp_4h exits (atr 1.5 / trail 4.0) vs trend_donchian_xrp_adx25 exits (atr 2.0 / trail 5.0 + ADX<25 -> 2.5) on the SAME entries, paired per-trade dR, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -87,3 +87,16 @@ lands:
   min_rows: 1
 follow_up: On the verdict AM-OPS-2 (row XRP-DOUBLE-EXPOSURE) drafts the Tier-3 packet with the exact roster diff and hands it to the manager; it is never applied by a lane.
 last_dispatched_at: '2026-11-17T13:12:34+00:00'
+grading:
+  attested: RULE-RQ20261117-ea57-01-XRP-PAIRED-EXIT
+  auto: true
+  decision_rule_id: RULE-RQ20261117-ea57-01-XRP-PAIRED-EXIT
+  evidence:
+  - research/results/RQ-20261117-ea57-01/44089514640.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
