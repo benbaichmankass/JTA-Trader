@@ -1,0 +1,152 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 909,
+ "population": "harness trades of trend_donchian (BTCUSDT 1h, approximate), squeeze_breakout_4h (BTCUSDT 4h, faithful), ict_scalp_5m (BTCUSDT 5m, faithful), 1460d Binance-vision candles, full cost stack, tagged by replayed vol labels",
+ "measurement": {
+  "primary": {
+   "cells": {
+    "ict_scalp_5m": [
+     "chop/volatile/long",
+     "chop/volatile/short",
+     "trending/volatile/long",
+     "trending/volatile/short"
+    ],
+    "squeeze_breakout_4h": [
+     "trending/calm/short"
+    ],
+    "trend_donchian": [
+     "chop/calm/long",
+     "transitional/calm/long",
+     "trending/volatile/long"
+    ]
+   },
+   "legs": {
+    "trend_donchian": {
+     "trades": 300,
+     "dropped": 186,
+     "added_r": 10.7789
+    },
+    "squeeze_breakout_4h": {
+     "trades": 81,
+     "dropped": 14,
+     "added_r": 3.0831
+    },
+    "ict_scalp_5m": {
+     "trades": 528,
+     "dropped": 52,
+     "added_r": 8.3128
+    }
+   },
+   "trades_total": 909,
+   "dropped_n": 252,
+   "added_r": 22.1748,
+   "min_dropped": 25,
+   "folds": 6,
+   "draws": 5000,
+   "seed": 20261112,
+   "fold_added_r": [
+    -18.2503,
+    -7.0519,
+    20.6794,
+    4.1804,
+    6.3985,
+    16.2187
+   ],
+   "fold_wins": 4,
+   "control_p": 0.2456,
+   "verdict": "fail"
+  },
+  "since": {
+   "cells": {
+    "ict_scalp_5m": [
+     "chop/volatile/long",
+     "chop/volatile/short",
+     "trending/volatile/long",
+     "trending/volatile/short"
+    ],
+    "squeeze_breakout_4h": [
+     "trending/calm/short"
+    ],
+    "trend_donchian": [
+     "chop/calm/long",
+     "transitional/calm/long",
+     "trending/volatile/long"
+    ]
+   },
+   "legs": {
+    "trend_donchian": {
+     "trades": 32,
+     "dropped": 23,
+     "added_r": 19.0708
+    },
+    "squeeze_breakout_4h": {
+     "trades": 8,
+     "dropped": 1,
+     "added_r": 0.6349
+    },
+    "ict_scalp_5m": {
+     "trades": 48,
+     "dropped": 1,
+     "added_r": 1.142
+    }
+   },
+   "trades_total": 88,
+   "dropped_n": 25,
+   "added_r": 20.8477,
+   "min_dropped": 25,
+   "folds": 6,
+   "draws": 5000,
+   "seed": 20261112,
+   "fold_added_r": [
+    3.6833,
+    3.9114,
+    6.2734,
+    -0.7378,
+    4.6734,
+    3.044
+   ],
+   "fold_wins": 5,
+   "control_p": 0.019,
+   "verdict": "pass"
+  },
+  "since_date": "2026-07-01",
+  "legs": [
+   {
+    "strategy": "trend_donchian",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "harness": "trend",
+    "fidelity": "approximate",
+    "omitted_levers": [
+     "decision_bar",
+     "exit_head_action",
+     "exit_head_model",
+     "exit_head_threshold"
+    ],
+    "tagged": "comms/research/RQ-20261117-aadc-08/44083945805/legs/trend_donchian__tagged.jsonl"
+   },
+   {
+    "strategy": "squeeze_breakout_4h",
+    "symbol": "BTCUSDT",
+    "timeframe": "4h",
+    "harness": "squeeze",
+    "fidelity": "faithful",
+    "omitted_levers": [],
+    "tagged": "comms/research/RQ-20261117-aadc-08/44083945805/legs/squeeze_breakout_4h__tagged.jsonl"
+   },
+   {
+    "strategy": "ict_scalp_5m",
+    "symbol": "BTCUSDT",
+    "timeframe": "5m",
+    "harness": "ict_scalp",
+    "fidelity": "faithful",
+    "omitted_levers": [],
+    "tagged": "comms/research/RQ-20261117-aadc-08/44083945805/legs/ict_scalp_5m__tagged.jsonl"
+   }
+  ],
+  "rule_reason": "primary fail (added_r <= 0, fold_wins < 4 or control_p > 0.05) on a window biased toward the cells",
+  "min_since_dropped": 25
+ },
+ "note": "primary fail (added_r <= 0, fold_wins < 4 or control_p > 0.05) on a window biased toward the cells"
+}

@@ -5,7 +5,7 @@ id: RQ-20261117-001
 title: 'DISJOINT-SYMBOL confirmation of the daily long-only Donchian-20 (f679-05 PASS): does LONG pass
   the same pooled Stage-0 rule and beat unfiltered B by >= 0.10 R/trade on six perps outside the twelve
   (TRX/ETC/XLM/ATOM/VET/FIL)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -161,3 +161,13 @@ generated:
   params:
     node: P7-Q5-confirm
 last_dispatched_at: '2026-11-17T12:31:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P7-Q5-CONFIRM-DISJOINT-SYMBOLS
+  evidence:
+  - research/results/RQ-20261117-001/44083950914.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
