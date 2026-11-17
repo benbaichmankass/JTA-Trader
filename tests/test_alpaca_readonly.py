@@ -100,3 +100,31 @@ def test_threads_share_one_pacing_clock():
     assert c.calls == 8
     # slots are handed out 0.5s apart on ONE clock: the 8 waits are spread over >= 7 * 0.5s, never 8 simultaneous calls
     assert max(sl) >= 3.0 and len(sl) >= 7, sl
+
+
+# ── RUNNER-ALPACA-BARS-THROTTLE (2026-11-17): RQ-20261108-98e3-15 died twice at symbol 22/25 of 173 with ~30% of calls throttled ──
+def test_a_long_429_storm_is_ridden_out_instead_of_killing_the_run():
+    """Before: 8 attempts (~3 min of waiting) then RuntimeError. A bucket shared with other jobs stays throttled longer than that."""
+    sl = []
+    c = AR.AlpacaReadOnly("K", "S", session=_S([_R(429)] * 15 + [_R(200, {"bars": {"SPY": [1]}})]), sleep=sl.append, min_interval=0)
+    assert AR.AlpacaReadOnly("K", "S", session=object()).max_retries == 20
+    assert c.bars(["SPY"], "1Hour", "s", "e") == {"SPY": [1]} and c.n_429 == 15
+    assert max(sl) == 60.0                                     # the per-wait cap is unchanged
+
+
+def test_a_storm_that_never_ends_still_raises_after_max_retries_without_leaking_the_key():
+    """Negative control: the retry budget is bounded, so a dead endpoint is a loud failure, not an infinite loop."""
+    c = AR.AlpacaReadOnly("K", "S", session=_S([_R(429)] * 25), sleep=lambda x: None, min_interval=0)
+    with pytest.raises(RuntimeError, match="still throttled/unavailable after 20 attempts") as e:
+        c.assets()
+    assert "S\"" not in str(e.value)
+
+
+def test_pacing_widens_on_429_is_capped_and_decays_back_to_the_floor():
+    c = AR.AlpacaReadOnly("K", "S", session=_S([_R(429)] * 3 + [_R(200, {"bars": {}})] * 400), sleep=lambda x: None, min_interval=0.4,
+                          max_interval=1.0)
+    c.get("data.alpaca.markets", "/v2/stocks/bars", {})
+    assert 0.9 < c._interval <= 1.0                            # 0.4 -> 0.6 -> 0.9 -> 1.0 (capped), then one good call took 2% off
+    for _ in range(399):
+        c.get("data.alpaca.markets", "/v2/stocks/bars", {})
+    assert c._interval == pytest.approx(0.4)                   # never below the configured floor

@@ -9,9 +9,12 @@ doesn't interfere with trading". The three conditions that make that true are en
 (b) PAPER/DATA KEY FIRST. ``from_env`` reads ``ALPACA_API_KEY_ID`` / ``ALPACA_API_SECRET_KEY`` (the paper pair; market data is the
     same data) and falls back to the ``_LIVE`` pair only when the paper pair is absent. ``key_kind`` records which was used. The
     research-script-run workflow wires the paper pair only.
-(c) BACK OFF ON 429. HTTP 429 and 5xx wait ``Retry-After`` (else 2**attempt, capped 60s) and retry; calls are also paced at
-    ``min_interval`` seconds, far under the 200/min data limit, so a research run can never throttle the live trader (which uses
-    its own key and its own rate bucket in any case).
+(c) BACK OFF ON 429. HTTP 429 and 5xx wait ``Retry-After`` (else 2**attempt, capped 60s) and retry, up to ``max_retries`` (20 since
+    2026-11-17, about 15 min of waiting in the worst case; 8 gave up after about 3 min and killed RQ-20261108-98e3-15 twice at symbol
+    22 and 25 of 173 with 30% of its calls throttled while pacing was well under the limit, i.e. the key's 200/min bucket was shared
+    with other jobs). Calls are paced at ``min_interval`` seconds, far under the 200/min data limit, so a research run can never
+    throttle the live trader (which uses its own key and its own rate bucket in any case). The shared pacing clock also WIDENS on every
+    429 (x1.5, up to ``max_interval``) and narrows back by 2% per good call, so a throttled bucket is given room instead of hammered.
 
 A key value is never printed, logged or put in an exception message.
 """
@@ -47,7 +50,8 @@ def check_request(method: str, url: str) -> None:
 
 class AlpacaReadOnly:
     def __init__(self, key_id: str, secret: str, key_kind: str = "paper", session: Any = None,
-                 sleep: Callable[[float], None] = time.sleep, min_interval: float = 0.4, max_retries: int = 8):
+                 sleep: Callable[[float], None] = time.sleep, min_interval: float = 0.4, max_retries: int = 20,
+                 max_interval: float = 3.0):
         if not (key_id and secret):
             raise ValueError("Alpaca data keys missing")
         if session is None:
@@ -57,6 +61,8 @@ class AlpacaReadOnly:
         self._h = {"APCA-API-KEY-ID": key_id, "APCA-API-SECRET-KEY": secret,
                    "User-Agent": "jta-trader-research (read-only market data)"}
         self.key_kind, self.min_interval, self.max_retries = key_kind, float(min_interval), int(max_retries)
+        self.max_interval = max(float(max_interval), float(min_interval))
+        self._interval = float(min_interval)             # the live spacing: widens on 429, decays back to min_interval
         self._next, self._lock = 0.0, threading.Lock()   # one shared pacing clock: N threads never exceed 1/min_interval calls/s
         self.calls, self.n_429, self.n_bars = 0, 0, 0
 
@@ -77,7 +83,7 @@ class AlpacaReadOnly:
             with self._lock:
                 now = time.monotonic()
                 start = max(now, self._next)
-                self._next = start + self.min_interval
+                self._next = start + self._interval
             if start - now > 0:
                 self._sleep(start - now)
             r = self._s.get(url, headers=self._h, params=params, timeout=120)
@@ -86,6 +92,8 @@ class AlpacaReadOnly:
             if r.status_code == 429 or r.status_code >= 500:
                 with self._lock:
                     self.n_429 += r.status_code == 429
+                    if r.status_code == 429:
+                        self._interval = min(self.max_interval, max(self._interval * 1.5, self.min_interval))
                 ra = (getattr(r, "headers", None) or {}).get("Retry-After")
                 try:
                     delay = float(ra) if ra is not None else float(min(60, 2 ** attempt))
@@ -93,6 +101,8 @@ class AlpacaReadOnly:
                     delay = float(min(60, 2 ** attempt))
                 self._sleep(max(delay, 0.0))
                 continue
+            with self._lock:
+                self._interval = max(self.min_interval, self._interval * 0.98)
             if r.status_code >= 400:
                 raise RuntimeError(f"alpaca GET {path} -> HTTP {r.status_code}: {str(r.text)[:160]}")
             return r.json()

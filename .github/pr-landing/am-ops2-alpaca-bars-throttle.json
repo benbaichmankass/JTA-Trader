@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "RUNNER-ALPACA-BARS-THROTTLE (manager order 2026-11-17 09:52Z). RQ-20261108-98e3-15 (ENTRY-EQ pivot=3) failed twice as producer_failed: runs 42483502138 and 43504856587 died with 'alpaca GET /v2/stocks/bars: still throttled/unavailable after 8 attempts' at symbol 22 and 25 of 173, with 695/1700 and 558/1796 calls throttled (about 30%) although pacing (0.4 s, 4 workers on one clock, about 150/min) is under the 200/min limit, so the bucket is shared with other jobs. Fix in scripts/research/alpaca_readonly.py only: max_retries 8 -> 20 (about 15 min of waiting in the worst case, per-wait cap 60 s unchanged), and the shared pacing clock widens x1.5 on every 429 (cap 3 s) and decays 2% per good call back to the 0.4 s floor. Same endpoint, window, allowlist, read-only rules; no gate. Tests: a 15-429 storm is ridden out, 25 still raises, widening capped and decays. d5a7-12/-13/-14 are NOT throttling (exit_lever_ablation.py ValueError: harness fvg_range/fade not covered) and are untouched. Tier 1 research tooling, no src/, no config/, no order path."
+}
