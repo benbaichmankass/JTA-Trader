@@ -1,0 +1,241 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261108-98e3-15",
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "population": "DEV stage: purged walk-forward OOF restricted-long decisions on the 172-ETF Alpaca liquidity pool, dates <= 2025-06-30, 2 (config, tau) draws",
+ "note": "DEV stage (walk-forward <= 2025-06-30; no confirming window loaded). Selected B_ens|0.25: OOF mean net R 0.07663310860700306 at n=1490",
+ "generated_at": "2026-11-17T12:27:48Z",
+ "measurement": {
+  "grid": {
+   "B_ens|0.2": {
+    "config": "B_ens",
+    "tau": 0.2,
+    "n": 2588,
+    "mean_net_r": 0.05489968003667446,
+    "mean_gross_r": 0.11200972281095191,
+    "mean_cost_r": 0.057110042774277434,
+    "n_symbols": 157,
+    "se": 0.022111340137584385,
+    "by_fold": {
+     "0": {
+      "n": 780,
+      "mean_net_r": 0.117
+     },
+     "1": {
+      "n": 728,
+      "mean_net_r": 0.2568
+     },
+     "2": {
+      "n": 463,
+      "mean_net_r": -0.0919
+     },
+     "3": {
+      "n": 296,
+      "mean_net_r": -0.3697
+     },
+     "4": {
+      "n": 321,
+      "mean_net_r": 0.0495
+     }
+    }
+   },
+   "B_ens|0.25": {
+    "config": "B_ens",
+    "tau": 0.25,
+    "n": 1490,
+    "mean_net_r": 0.07663310860700306,
+    "mean_gross_r": 0.13472063277771235,
+    "mean_cost_r": 0.058087524170709295,
+    "n_symbols": 154,
+    "se": 0.030150362809051184,
+    "by_fold": {
+     "0": {
+      "n": 511,
+      "mean_net_r": 0.1239
+     },
+     "1": {
+      "n": 424,
+      "mean_net_r": 0.3382
+     },
+     "2": {
+      "n": 259,
+      "mean_net_r": -0.0679
+     },
+     "3": {
+      "n": 159,
+      "mean_net_r": -0.3549
+     },
+     "4": {
+      "n": 137,
+      "mean_net_r": -0.1349
+     }
+    }
+   }
+  },
+  "n_selection_draws": 2,
+  "selection_rule": "max pooled dev out-of-fold mean net R over (config, tau) subject to >= 300 OOF trades",
+  "selected": {
+   "key": "B_ens|0.25",
+   "config": "B_ens",
+   "tau": 0.25,
+   "n": 1490,
+   "mean_net_r": 0.07663310860700306,
+   "mean_gross_r": 0.13472063277771235,
+   "mean_cost_r": 0.058087524170709295,
+   "n_symbols": 154,
+   "se": 0.030150362809051184,
+   "by_fold": {
+    "0": {
+     "n": 511,
+     "mean_net_r": 0.1239
+    },
+    "1": {
+     "n": 424,
+     "mean_net_r": 0.3382
+    },
+    "2": {
+     "n": 259,
+     "mean_net_r": -0.0679
+    },
+    "3": {
+     "n": 159,
+     "mean_net_r": -0.3549
+    },
+    "4": {
+     "n": 137,
+     "mean_net_r": -0.1349
+    }
+   }
+  },
+  "dev_rows": 377068,
+  "structure_exit": "pivot=3;sl_only",
+  "train_end": "2025-06-30",
+  "pool": {
+   "n_assets_active_tradable": 13509,
+   "n_etf_candidates": 5784,
+   "n_pool": 172,
+   "n_excluded_no_dev_bars": 3726,
+   "n_excluded_illiquid": 1886,
+   "assets_sha256": "1570935d9d4add12dc16fdd56035395e88f98a9f332a95c5da363e568db552e2",
+   "etf_file_sha256": "fcd9a6eef2e11285be3b005ef44265bcbc84cf9ae98d0a05e8d5786f480a7b27",
+   "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
+   "key_kind": "paper"
+  },
+  "n_pool": 172,
+  "costs": {
+   "slippage_bps": 5.0,
+   "fee_bps": 0.0,
+   "regulatory_bps": 0.5
+  },
+  "configs": {
+   "A": {
+    "features": [
+     "ret_1",
+     "ret_4",
+     "ret_12",
+     "ret_24",
+     "ret_72",
+     "ret_168",
+     "vol24",
+     "vol_ratio",
+     "atr_pct",
+     "range_pos_24",
+     "range_pos_168",
+     "vol_z",
+     "rsi14",
+     "hour",
+     "dow",
+     "xs_rank_ret24",
+     "xs_rank_ret168",
+     "xs_rank_vol24",
+     "xs_rank_volz",
+     "breadth_up24",
+     "rel_vol",
+     "spy_ret24",
+     "spy_ret168",
+     "spy_vol24",
+     "qqq_ret24",
+     "iwm_ret24",
+     "tlt_ret24",
+     "vixy_ret24",
+     "vixy_vol24",
+     "rel_ret_spy"
+    ],
+    "params": {}
+   },
+   "B": {
+    "features": [
+     "ret_1",
+     "ret_4",
+     "ret_12",
+     "ret_24",
+     "ret_72",
+     "ret_168",
+     "vol24",
+     "vol_ratio",
+     "atr_pct",
+     "range_pos_24",
+     "range_pos_168",
+     "vol_z",
+     "rsi14",
+     "hour",
+     "dow",
+     "xs_rank_ret24",
+     "xs_rank_ret168",
+     "xs_rank_vol24",
+     "xs_rank_volz",
+     "breadth_up24",
+     "rel_vol"
+    ],
+    "params": {}
+   },
+   "C": {
+    "features": [
+     "ret_1",
+     "ret_4",
+     "ret_12",
+     "ret_24",
+     "ret_72",
+     "ret_168",
+     "vol24",
+     "vol_ratio",
+     "atr_pct",
+     "range_pos_24",
+     "range_pos_168",
+     "vol_z",
+     "rsi14",
+     "hour",
+     "dow",
+     "xs_rank_ret24",
+     "xs_rank_ret168",
+     "xs_rank_vol24",
+     "xs_rank_volz",
+     "breadth_up24",
+     "rel_vol",
+     "spy_ret24",
+     "spy_ret168",
+     "spy_vol24",
+     "qqq_ret24",
+     "iwm_ret24",
+     "tlt_ret24",
+     "vixy_ret24",
+     "vixy_vol24",
+     "rel_ret_spy"
+    ],
+    "params": {
+     "n_estimators": 200,
+     "num_leaves": 15,
+     "min_child_samples": 2000
+    }
+   }
+  },
+  "alpaca_calls": 8547,
+  "runtime_s": 8156.5
+ },
+ "n": 1490,
+ "produced_by": {
+  "tool": "python3 scripts/research/ml_entry_equity.py dev",
+  "where": "research-script-run"
+ }
+}
