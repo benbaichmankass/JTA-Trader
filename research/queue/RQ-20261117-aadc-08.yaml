@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-08
 title: 'ITERATION 2 of ml-btc-router-cells (fail): by MONEY, not macro-F1: do the 8 authored BTC trend_vol OFF-cells drop trades that lose more
   net R than the same number dropped at random, on the 3 bybit_1 legs they veto?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -180,3 +180,13 @@ what_it_does_not_do: Edits no regime cell, flips no router or verdict mode, re-s
 intervention_controls:
   not_applicable: an offline consumer evaluation; any cell change is a separate Tier-3 act
 last_dispatched_at: '2026-11-17T12:31:15+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261117-aadc-08-BTC-CELLS-KEEP
+  evidence:
+  - research/results/RQ-20261117-aadc-08/44083945805.jsonl
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44083945805) -> FAIL by the registered rule: PRIMARY window dropped_n 252 (>= 25), added_r +22.17 R over 909 trades, fold_wins 4 of 6, but control_p 0.2456 > 0.05, so the yz-head cells do not beat a matched random drop on the window biased toward them. Per leg (reported, not graded): ict_scalp_5m +8.31 R (52 dropped of 528), squeeze_breakout_4h +3.08 (14 of 81), trend_donchian +10.78 (186 of 300). SINCE window (reported only): +20.85 R, control_p 0.019, but dropped_n 25 with 23 from trend_donchian. fail_action: a Tier-3 removal proposal only for legs whose per-leg added_r <= 0; NONE qualifies (all three positive), so no removal proposal follows. The cells add R but not more than a random drop of the same size; the in-sample and not-live-verified caveats stand (aadc-01, the live label verify, is still queued on the trainer).'
+  rows: 1
+  verdict: fail
