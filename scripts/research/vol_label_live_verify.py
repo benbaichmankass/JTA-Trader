@@ -190,8 +190,11 @@ def run_head(h: Dict[str, Optional[str]], out_dir: Path, th: Dict[str, float],
                    traceback=traceback.format_exc()[-2000:])
         return rec
     if not h["audit"]:
-        rec.update(verdict="not_applicable", read_state="measured",
-                   note="replay only: no live labelled audit rows exist for this head, so nothing to verify against")
+        # read_state no_data: there is no live label to verify against, so nothing was measured. research_result.py --emit
+        # refuses measured + not_applicable and measured without an integer n (RQ-20261117-aadc-01 run 44080314119 was LOST on
+        # this record, the replay-only ETH head). The replay counts stay in measurement.heads.
+        rec.update(verdict="not_applicable", read_state="no_data", n=None,
+                   note="replay only: no live labelled audit rows exist for this head (shadow stage), so nothing to verify against")
         return rec
     labels = (labels_loader or _vr().load_labels)(out)
     audit = [json.loads(line) for line in Path(h["audit"]).read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -200,6 +203,13 @@ def run_head(h: Dict[str, Optional[str]], out_dir: Path, th: Dict[str, float],
     rec.update(verdict=verdict, read_state="measured", alignment_used=alignment, alignments=per,
                n=max(per[a]["bars"] for a in ALIGNMENTS))
     return rec
+
+
+def record_n(r: Dict[str, Any]) -> Optional[int]:
+    """A measured record always carries an integer n (the emitter refuses null); a producer_failed one carries None."""
+    if r.get("read_state", "measured") != "measured":
+        return None
+    return int(r.get("n") or 0)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -236,7 +246,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "measurement": {"heads": records, "thresholds": th},
         "records": [{"verdict": r["verdict"], "read_state": r.get("read_state", "measured"),
                      "population": f"{r['symbol']} {r['model_id']} live-vs-replay bars",
-                     "n": r.get("n"), "note": r.get("note") or f"alignment {r.get('alignment_used')}",
+                     "n": record_n(r), "note": r.get("note") or f"alignment {r.get('alignment_used')}",
                      "symbol": r["symbol"], "model_id": r["model_id"]} for r in records],
         "data_inputs": [r["audit"] for r in records if r.get("audit")],
     }
@@ -297,6 +307,17 @@ def _self_test() -> int:
             return {"labelled": 300, "counts": {}, "feature_audit": {"ok": True}}
         r = run_head({"symbol": "X", "model_id": "m", "dataset": "d", "audit": str(aud)}, Path(td), th, replay_fn=stub)
         assert r["verdict"] == "pass" and r["alignment_used"] == "prev_bar", r
+    # every measured record carries an integer n (the replay-only head included); producer_failed carries None
+    with tempfile.TemporaryDirectory() as td:
+        def stub2(dataset, symbol, out_path, model_id):
+            assert (str(dataset), symbol, model_id) == ("d2", "E", "e")
+            out_path.write_text(json.dumps({"ts": "2026-01-01T00:00:00Z", "vol_regime": CALM, "p_volatile": 0.1}) + "\n")
+            return {"labelled": 1234, "counts": {}, "feature_audit": {"ok": True}}
+        ro = run_head({"symbol": "E", "model_id": "e", "dataset": "d2", "audit": None}, Path(td), th, replay_fn=stub2)
+        assert ro["read_state"] == "no_data" and ro["verdict"] == "not_applicable" and record_n(ro) is None, ro
+        assert ro["replay"]["labelled"] == 1234
+        assert record_n({"read_state": "producer_failed"}) is None
+        assert isinstance(record_n({"read_state": "measured", "n": None}), int)
     print("vol_label_live_verify self-test: OK")
     return 0
 
