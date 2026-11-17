@@ -1,6 +1,6 @@
 id: RQ-20261116-7c1a-02
 title: 'LTR-WEAK-LEG-CLOSE-S0: close a leg that is behind (current close-R below x) after N hours vs hold vs random, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -98,12 +98,14 @@ rearmed_at: '2026-11-16T15:10:00+00:00'
 grading:
   attested: RULE-RQ20261116-7c1a-02-WEAKLEG
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-RQ20261116-7c1a-02-WEAKLEG
   evidence:
-  - research/results/RQ-20261116-7c1a-02/43859129884.jsonl
-  graded_at: '2026-11-16'
+  - research/results/RQ-20261116-7c1a-02/43903780926.jsonl
+  graded_at: '2026-11-17'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
   rows: 1
-  verdict: null
+  verdict: indeterminate
