@@ -1002,14 +1002,18 @@ follow_up: 'On the verdict a session reports to the manager: pooled H-A on both 
   proposals. Then the censuses for trend_donchian_1h / trend_donchian_eth_prop.'
 last_dispatched_at: '2026-11-16T00:25:17+00:00'
 grading:
-  attested: RULE-DFR-HTF-NATIVE-W34-20261115
-  auto: true
+  auto: false
+  graded_at: '2026-11-17'
+  grader: session RESEARCH-OPS-20261117-1006 (triage)
+  verdict: fail
+  note: 'Rule applied verbatim: UNIT verdict = pooled sum over graded legs of (H net_r - A net_r) on W3 (record)
+    AND W4 (prior); row 1 reads record -27.8769 R and prior -121.9405 R, both < 0, 15 legs graded (>= 12), so
+    UNIT FAIL. The single pass row is the PER-LEG PASS for trend_donchian_eth_prop (record H 16.75 n 118 3/4 vs
+    A 12.72; prior H 5.71 vs A -7.30), which by the registered rule never changes the unit verdict and is a
+    Tier-3 proposal to the operator via the manager (a prop leg: the prop superset gate applies before any
+    roster change). Configuration closed: the fixed SMA200 HTF long gate on the demo-floor 2h/4h pullback +
+    Donchian legs over 2022-11..2024-11; the regime_gating family stays open per leg.'
   decision_rule_id: RULE-DFR-HTF-NATIVE-W34-20261115
   evidence:
   - research/results/RQ-20261115-2411-04/43780283246.jsonl
-  graded_at: '2026-11-16'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
   rows: 16
-  verdict: null

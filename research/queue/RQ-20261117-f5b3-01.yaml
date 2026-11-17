@@ -1,0 +1,124 @@
+id: RQ-20261117-f5b3-01
+title: 'SL (--skip-hours=20,21,22,23) on eth_pullback_2h against the LIVE exit (trail_decay 10/2.5 forwarded): re-read of 2022-10-05..2024-10-04, net of the full cost stack (closes the gap in the P2-R3.c03
+  Tier-3 packet)'
+status: queued
+cadence: once
+kind: experiment
+theme: regime
+priority: 1
+roadmap:
+- L-REGIME
+programme: P2
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): a holdout re-read is allowed, recorded and graded on a stricter bar; T1 one setting tested on a disjoint window.'
+question: 'eth_pullback_2h: on 2022-10-05..2024-10-04, does the skip-hours arm SL (no entries on trigger bars at 20-23 UTC) still beat the declared leg when the control is the CURRENT live exit (trail_decay_stall_bars
+  10 / tight 2.5 forwarded by the argv builder), net of the full cost stack, by >= 1.0 R with no worse drawdown in >= 3 of 4 folds?'
+why_this_matters: 'TIER-3 PACKET GAP (P2-R3.c03-pass; manager ask PI-20261117-ZFRREVN5-0005; packet docs/research/regime-tier3-packets-2026-11-17.md). SL has PASSED on three disjoint windows: 2020-07..2022-10
+  (47b6-03, +8.66 R, 4/4) and 2024-10..2026-10 (47b6-04, +5.51 R, 3/4) against the live exit, but the middle window 2022-10..2024-10 (65ff-03, +7.92 R, 4/4) was read on 2026-10-16 when the pullback argv
+  builder still DROPPED --trail-decay-* (its B argv carries no decay flag; 47b6-0x''s do). So one of the three windows was measured against an exit the leg does not run. This re-read makes all three windows
+  comparable before the operator flips. On PASS: the packet is READY (three disjoint live-exit windows); on FAIL: the packet stays NOT READY and the middle-window response is recorded as exit-dependent.
+  The decision differs by branch.'
+power:
+  expected_n: 106
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: control n 106 on this exact window in 65ff-03 (MEASURED, without decay); decay changes exits, not entries, so n should be similar. n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays fetched history over a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-f5b3-01-SL-LIVEEXIT-MIDWINDOW
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: exit_lever_ablation.py --grade sweep on eth_pullback_2h, arms B (config-exact; the builder forwards trail_decay 10/2.5 as in 47b6-03/-04) and SL, ETHUSDT 2h 2022-10-05..2024-10-04 23:59, full
+    cost stack (fee 7.5 + slippage 3 bps rt + funding 1 bps/8h as resolved), 4 equal calendar folds. The reading session first confirms B's argv carries --trail-decay-stall-bars 10 --trail-decay-tight-mult
+    2.5; if not, the result is INDETERMINATE (wrong incumbent).
+  rule: 'INDETERMINATE IF n(B) < 39 or B''s argv lacks the live trail_decay flags. Candidate SL PASSES iff dR = net_r(SL) - net_r(B) >= 1.0 R AND maxDD(SL) <= maxDD(B) AND fold_wins >= 3 of 4 (the 65ff-03
+    bar, unchanged). Regime-robustness clause: per-fold table reported; SL net positive in >= 3 of 4 folds with no fold above 50% of its net is reported, and a pass that misses it is a LEAD with that caveat.
+    Long and short net reported separately. FAIL IF not passed at n >= 39 (this configuration closes on this window; the session family stays open). M13: second read of this window for this arm (65ff-03
+    was the first). Thresholds fixed now.'
+  what_it_does_not_do: Edits no config, roster or order path; it completes a Tier-3 packet's evidence and is not itself a declare.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  basis: node P2-R3.c03-pass value block; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: same shape as RQ-20261107-47b6-03 (one fetch, two harness passes).
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data (Kaggle CPU has no internet).
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - SL=--skip-hours=20,21,22,23
+  - --days
+  - '1500'
+  - --start
+  - '2022-10-05'
+  - --end
+  - 2024-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-f5b3-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-f5b3-01
+ml_consumer:
+  not_applicable: 'Not an ML unit: one entry-filter setting on a rule-based leg.'
+intervention_controls:
+  not_applicable: entry-filter arm vs the declared config on the same replay, not an active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261016-65ff-03.yaml
+- research/queue/RQ-20261107-47b6-03.yaml
+- research/queue/RQ-20261107-47b6-04.yaml
+- research/levers/eth_pullback_2h.yaml
+- docs/research/regime-tier3-packets-2026-11-17.md
+iteration:
+  subject: eth_pullback_2h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261016-65ff-03
+  verdict_read: pass_unconfirmed
+  diagnosis: SL passed 3 disjoint windows, but the 2022-10..2024-10 read (65ff-03) ran before the pullback builder forwarded trail_decay, so its control is not the live exit; the other two windows (47b6-03/-04)
+    are against the live exit.
+  search: one re-read of the fixed SL arm on the stale-incumbent window; no new arms
+  levers:
+  - session
+  map_entries:
+  - research/levers/eth_pullback_2h.yaml#levers.session.skip_hours
+  attempt: 1
+  due_by: '2026-11-24'
+follow_up: PASS -> packet READY for the manager (P2-R3.c03); FAIL -> packet stays NOT READY with this record.
+last_dispatched_at: null
