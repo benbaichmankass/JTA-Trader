@@ -320,8 +320,10 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-11-11 THURSDAY-PLANNING b2 (operator "Promote to real money"): the leg moves bybit_1 -> bybit_2 + mirror with
     # the SAME debt (entry TP tp_r 3 declared; tp_revision undeclared), as trend_donchian_xrp_4h carries above.
     # Not new debt, a moved line. Row TPX-XRP-ADX25-REVISION owns declaring the revision producer.
-    "bybit_2/trend_donchian_xrp_adx25": R,
-    "bybit_portfolio/trend_donchian_xrp_adx25": R,
+    # 2026-11-17 XRP-DOUBLE-EXPOSURE (Tier-3, operator popup "Follow the rule: demote adx25 (Recommended)"): trend_donchian_xrp_adx25 leaves
+    # bybit_2 + bybit_portfolio for the bybit_1 demo floor (paired exit re-test RQ-20261117-ea57-01 = TIE, keep xrp_4h). Its debt is
+    # RELOCATED, not added: the same dimension on the same leg (2 real-money/mirror lines -> 1 demo line, net -1).
+    "bybit_1/trend_donchian_xrp_adx25": R,
     # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
     # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
     # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
