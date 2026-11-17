@@ -226,6 +226,23 @@ FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
 }
 
 
+#: LIVE-PERFORMANCE PROMOTION PATH (operator, 2026-11-17) -- (account, leg) slots admitted on
+#: LIVE results instead of a Stage-0 record. Operator, verbatim (~16:26Z): "we need to take
+#: into account live performance ... The backtesting is the main key because we need to be able
+#: to iterate fast, but that doesn't mean we should be ignoring live performance". Bar (popup
+#: "20+ trades, clearly positive (Recommended)"): 20+ confirmed live trades, total R > 0, mean's
+#: ~80% one-sided lower bound > 0; conflict rule "Live wins + fix backtest (Recommended)"; scope
+#: "Both strategies and MLs (Recommended)". Each entry names its decision; the exact per-trade
+#: live-bar check and a backtest fidelity re-test are owed after the 2026-11-18 reset. This is a
+#: PATH (it admits a slot), not a gate. Remove an entry if the exact live-bar check fails.
+LIVE_BAR_PROMOTION: Dict[Tuple[str, str], str] = {
+    ("bybit_2", "ict_scalp_eth_15m"): 'operator popup 2026-11-17 "2, but then 1 also after the reset" '
+                                      '(46 live trades, 26 confirmed, +8.11R, E[R] +0.18)',
+    ("bybit_portfolio", "ict_scalp_eth_15m"): 'operator popup 2026-11-17 "2, but then 1 also after the reset" '
+                                              '(46 live trades, 26 confirmed, +8.11R, E[R] +0.18)',
+}
+
+
 #: C5 PENDING RE-MEASURE -- (account, leg) -> (owning row, expiry YYYY-MM-DD). See the
 #: module docstring: NOT a waiver, NOT a baseline, read by NO verdict (C5 stays fail-closed);
 #: only the exactness test reads it, and it fails on or after the expiry date. Exactly one
@@ -611,6 +628,8 @@ def grade(found: Sequence[Dict[str, str]], strategies: Dict[str, Any],
     findings: List[str] = []
     for item in found:
         leg = item["leg"]
+        if item["kind"] == "roster_add" and LIVE_BAR_PROMOTION.get((item["account"], leg)):
+            continue  # admitted on the live-performance path (operator 2026-11-17); see LIVE_BAR_PROMOTION
         record = load_record(leg, evidence_dir)
         clauses = clause_verdicts(record, item["account"], leg)
         ident_ok, ident_detail = identity_verdict(record, leg, strategies)
