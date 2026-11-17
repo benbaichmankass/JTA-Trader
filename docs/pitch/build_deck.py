@@ -217,6 +217,10 @@ FONT = "Calibri"
 
 W, H = Inches(13.333), Inches(7.5)
 
+# The trading pipeline map's eleven steps (docs/reference/trading-pipeline-map.skeleton.md § The flow): the deck's spine.
+STAGES = ["Data in", "Signals", "Strategies + ML", "Intent layer", "Routing", "Risk", "Order + bracket",
+          "Execution", "Live mgmt", "Close", "Grade + R&D"]
+
 
 class Deck:
     def __init__(self, facts):
@@ -285,14 +289,34 @@ class Deck:
         r.text = kind
         r.font.size, r.font.bold, r.font.color.rgb, r.font.name = Pt(11), True, WHITE, FONT
 
-    def new(self, title, notes, kicker=None, tags=()):
+    def strip(self, s, stages, y=Inches(1.2)):
+        """The compact pipeline strip: all eleven steps, the current ones highlighted."""
+        gap = Inches(0.05)
+        bw = (W - Inches(1.2) - gap * 10) / 11
+        for i, name in enumerate(STAGES):
+            on = (i + 1) in stages
+            b = self._box(s, Inches(0.6) + (bw + gap) * i, y, bw, Inches(0.34), TEAL if on else LIGHT,
+                          shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            tf = b.text_frame
+            tf.margin_top = tf.margin_bottom = tf.margin_left = tf.margin_right = 0
+            para = tf.paragraphs[0]
+            para.alignment = PP_ALIGN.CENTER
+            r = para.add_run()
+            r.text = f"{i + 1} {name}"
+            r.font.size, r.font.bold, r.font.name = Pt(9), on, FONT
+            r.font.color.rgb = WHITE if on else GREY
+
+    def new_at(self, stages, title, notes, **kw):
+        return self.new(title, notes, stages=stages, **kw)
+
+    def new(self, title, notes, kicker=None, tags=(), stages=()):
         self.n += 1
         s = self.p.slides.add_slide(self.blank)
         self._box(s, 0, 0, W, Inches(1.1), NAVY)
         self._box(s, 0, Inches(1.1), W, Inches(0.06), TEAL)
         self._text(s, Inches(0.6), Inches(0.18), Inches(11.0), Inches(0.8), title, size=28, bold=True,
                    color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
-        if kicker:
+        if kicker and not stages:
             self._text(s, Inches(0.6), Inches(1.28), Inches(12.0), Inches(0.5), kicker, size=16,
                        color=TEAL, bold=True)
         for i, t in enumerate(tags):
@@ -310,6 +334,10 @@ class Deck:
             self.md.append("Provenance: " + ", ".join(tags) + "\n")
         self._cur_notes = notes
         self._rec(title, notes, kicker, tags)
+        if stages:
+            self.strip(s, stages)
+            self.slides[-1]["stages"] = list(stages)
+            self.md.append("Pipeline stage(s): " + ", ".join(f"{i} {STAGES[i - 1]}" for i in stages) + "\n")
         return s
 
     def end_md(self):
@@ -472,27 +500,42 @@ def build():
               "back into which strategies and models run, and the paper mirror of each real-money book can demote "
               "a strategy back to the demo floor. Per-trade risk sizing is deliberately not a model decision; it "
               "stays with the rule-based risk manager.")
-    d.table(s, ["Step", "What happens", "Where a model decides (plan slot)"], [
-        ["1 · Data in", "Prices, funding and other feeds; model features and forecasts", "—"],
-        ["2 · Signal builders", "Each strategy computes its own inputs every bar", "—"],
-        ["3 · Strategies + ML heads", "Rules and models propose trades (intents)", "D3 Entry — Foxhound"],
-        ["4 · Intent layer", "Combine proposals; step aside in losing market regimes", "D2 Regime — Collie · D4 Filter — Beagle · D5 Aggregate — Mastiff"],
-        ["5 · Account routing", "Which accounts carry the strategy; the two on/off switches", "D1 Universe & book — a rule (the ladder)"],
-        ["6 · Risk manager", "Per-account limits and size, in R; daily loss brake", "not a model slot, by design"],
-        ["7 · Order + bracket", "Stop-loss plus a predictive profit target at entry", "D6 Bracket — Pointer"],
-        ["8 · Venue execution", "Orders go to the broker or exchange", "D9 Execution — Whippet"],
-        ["9 · Live management", "Move either bracket, part-close or close on market evidence", "D7 In-trade · D8 Exit — Labrador"],
-        ["10 · Close + reconcile", "Venue fill and P&L matched to the journal", "—"],
-        ["11 · Grade + research", "Every trade and test graded; evidence changes what runs", "D10 Review — Basset"],
-    ], col_w=[2.0, 4.7, 5.3], size=11, h_row=Inches(0.36))
+    slots = ["—", "—", "D3 Entry · Foxhound", "D2 Regime · Collie / D4 Filter · Beagle", "D1 Book · rule",
+             "D5 Aggregate · Mastiff (research)", "D6 Bracket · Pointer", "D9 Execution · Whippet",
+             "D7/D8 In-trade + exit · Labrador; review desk", "—", "D10 Review · Basset; the R&D loop"]
+    what = ["Prices, feeds, features", "Each strategy's inputs", "Rules + models propose trades",
+            "Combine; step aside in bad regimes", "Which accounts; two switches", "Size in R; daily brake",
+            "Stop + predictive target", "Orders to the venue", "Move brackets on evidence", "Venue P&L reconciled",
+            "Grade every trade and test"]
+    bw, bh, gx = Inches(1.9), Inches(1.25), Inches(0.17)
+    for i, name in enumerate(STAGES):
+        row, col = divmod(i, 6)
+        x = Inches(0.6) + (bw + gx) * col
+        y = Inches(1.6) + Inches(2.35) * row
+        ml = slots[i] != "—"
+        b = d._box(s, x, y, bw, bh, TEAL if ml else NAVY, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        d._text(s, x + Inches(0.08), y + Inches(0.06), bw - Inches(0.16), bh - Inches(0.1),
+                [f"{i + 1} · {name}", what[i]], size=11, color=WHITE, bold=False)
+        d._text(s, x, y + bh + Inches(0.05), bw, Inches(0.8), slots[i] if ml else "", size=10, color=TEAL, bold=True)
+    d._text(s, Inches(10.9), Inches(4.0), Inches(1.9), Inches(1.3),
+            ["↺ The loop", "Step 11 feeds evidence and retrained models back into steps 3–9."], size=11, color=NAVY,
+            bold=True)
+    rows = [[f"{i + 1} · {STAGES[i]}", what[i], slots[i]] for i in range(11)]
+    d.md.append("| Step | What happens | Where a model decides |")
+    d.md.append("|---|---|---|")
+    for r in rows:
+        d.md.append("| " + " | ".join(r) + " |")
+    d.md.append("")
+    d.slides[-1]["table"] = {"header": ["Step", "What happens", "Where a model decides"], "rows": rows}
+    d.slides[-1]["visual"] = "pipeline_full"
     d.cite("docs/reference/trading-pipeline-map.skeleton.md", "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2")
     d.footnote(s, "Source: the trading pipeline map (docs/reference/trading-pipeline-map.skeleton.md; live at "
                   "/api/bot/work/pipeline-map) and the ML plan's ten decision slots (docs/plans/ML-ROADMAP-MECE-2026-11.md). "
-                  "Family names are internal labels.", y=H - Inches(0.85))
+                  "Teal = a model decides here. Family names are internal labels.", y=H - Inches(1.0))
     d.end_md()
 
     # ---------------------------------------------------------------- 3 trade management
-    s = d.new("Trade management: entry, in-trade, exit",
+    s = d.new_at((7, 8, 9, 10), "Trade management: entry, in-trade, exit",
               "Steps 7 to 11 in detail, because this is where the trade is actually managed. At entry every order "
               "carries a protective stop, which defines 1R, and a profit target that must be a real prediction, "
               "not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the "
@@ -523,7 +566,7 @@ def build():
 
     # ---------------------------------------------------------------- 4 R&D loop
     d.section = "How we find edge"
-    s = d.new("The R&D loop: how a model earns, and keeps, its place",
+    s = d.new_at((11,), "The R&D loop: how a model earns, and keeps, its place",
               "This is the core of the project. Every strategy and every model sits in the same loop. Start from a "
               "diagnosis of why the current version is not better. Write down the test and its pass mark before "
               "running it. Run it on data held out from tuning, charged with the full cost of trading. Compare the "
@@ -547,7 +590,7 @@ def build():
 
     # ---------------------------------------------------------------- 5 worked example
     ex = sv.get("ml-entry-eq-struct-ens5-v1", {}).get("headline_metric", {})
-    s = d.new("One real cycle: the equity entry model, November 2026",
+    s = d.new_at((3, 11), "One real cycle: the equity entry model, November 2026",
               "A worked example of the loop on a model trading real money today. The equity entry model, "
               "internally Foxhound-4, passed its held-out confirmation and was promoted to real money on 8 November. "
               "Its diagnosis said it trades in clusters during volatile months. So a test was pre-registered: does "
@@ -574,117 +617,106 @@ def build():
                y=H - Inches(1.05))
     d.end_md()
 
-    # ---------------------------------------------------------------- 6 ML families overview
+    # ---------------------------------------------------------------- 6 ML families on the map
     d.section = "The ML families"
-    s = d.new("The model families at a glance",
-              "One family per decision. Each row says what kind of model it is, what it decides, what data it "
-              "reads and how far it has got. Most families use gradient-boosted decision trees: many small "
-              "decision trees added together, each correcting the last, which work well on tabular market "
-              "features and are fast to retrain. The overlay is a simple logistic regression on purpose. Three "
-              "decisions have no model yet and run on rules; that is stated, not hidden.", tags=("MEASURED",))
-    d.table(s, ["Family · slot", "Model type", "Decides", "Reads", "Where it stands"], [
-        ["Foxhound · D3", "Gradient-boosted trees (LightGBM)", "Open long, short or nothing", "20–21 price, volatility, range features", "Real money (crypto + US funds)"],
-        ["Collie · D2", "Gradient-boosted tree classifier", "Which market regime we are in", "Returns, volatility, time; forecast features", "Advisory on paper; most in shadow"],
-        ["Beagle · D4", "Logistic regression", "Take or halve a strategy's signal", "9 trend and volatility features", "Live: halves size on 2 legs"],
-        ["Labrador · D7", "Gradient-boosted classifier, 18 classes", "Extend the profit target mid-trade", "29 features at 5 check-ins", "Live on every ML-entry trade"],
-        ["Labrador · D8", "Learned close/hold head", "Close the trade now?", "Position state + market features", "Demo floor; failed on 2 of 3 markets"],
-        ["Whippet · D9", "Baseline only", "How to place the order", "Fill and cost history", "Shadow baseline"],
-        ["Basset / Mastiff / Pointer", "None yet", "Review · aggregate · bracket", "—", "Rules today; research queued"],
-    ], col_w=[2.3, 2.9, 2.6, 2.9, 2.6], size=11, h_row=Inches(0.55))
+    s = d.new_at((3, 4, 6, 7, 9), "The model families, placed on the map",
+              "Each family sits on the step where it decides. Most are gradient-boosted decision trees: many "
+              "small trees added together, each correcting the last; they suit tabular market data and retrain "
+              "fast. The filter is a deliberately simple logistic regression. Three decisions have no model yet "
+              "and run on rules, which we state rather than hide.", tags=("MEASURED",))
+    d.table(s, ["Step", "Family · slot", "Model type", "Decides", "Where it stands"], [
+        ["3 Strategies", "Foxhound · D3", "Gradient-boosted trees", "Open long, short or nothing", "Real money"],
+        ["4 Intent layer", "Collie · D2", "Gradient-boosted classifier", "Which market regime", "Advisory on paper"],
+        ["4 Intent layer", "Beagle · D4", "Logistic regression", "Take or halve a signal", "Live on 2 legs"],
+        ["6 Risk", "Mastiff · D5", "None yet", "Combine signals on one market", "Research only"],
+        ["7 Order", "Pointer · D6", "None yet", "Stop and target at entry", "Rule today"],
+        ["9 Live mgmt", "Labrador · D7", "Gradient-boosted classifier", "Extend the target", "Live on ML trades"],
+        ["9 Live mgmt", "Labrador · D8", "Close/hold head", "Close now?", "Demo floor"],
+        ["11 Grade", "Basset · D10", "CUSUM baseline", "Is a strategy fading?", "Baseline tested"],
+    ], col_w=[2.0, 2.2, 2.8, 3.2, 2.2], size=12, h_row=Inches(0.48))
     d.cite("docs/reference/model_names.yaml", "ml/served/SERVED_MODELS.yaml", "ml/served/*/model.json",
-           "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json", "ml/overlay/overlay_td.json",
-           "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml", "comms/ml_consolidation/2026-11-11.json")
-    d.footnote(s, "MEASURED from the model artifacts: ml/served/*/model.json, ml/candidates/, ml/overlay/overlay_td.json, "
-                  "ml/configs/*.yaml; stages from ml/served/SERVED_MODELS.yaml and docs/reference/model_names.yaml. "
-                  "The D8 exit head's artifact lives on the trainer, so its model type is not verified here.",
-               y=H - Inches(1.0))
+           "ml/overlay/overlay_td.json", "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml",
+           "research/queue/RQ-20261117-aadc-05.yaml")
+    d.footnote(s, "MEASURED from model artifacts (ml/served, ml/candidates, ml/overlay, ml/configs) and "
+                  "ml/served/SERVED_MODELS.yaml. The D8 exit head's artifact lives on the trainer; its type is not "
+                  "verified here.", y=H - Inches(0.95))
     d.end_md()
 
     # ---------------------------------------------------------------- 7 Foxhound
     e1 = sv.get("ml-decision-entry-v1", {}).get("headline_metric", {})
     e2 = sv.get("ml-decision-entry-v2", {}).get("headline_metric", {})
-    s = d.new("Entry models (Foxhound): how they decide",
-              "How the entry models work, in plain terms. Every four hours, for each market in its universe, the "
-              "model looks at about twenty numbers describing recent price moves, volatility and where price sits "
-              "in its recent range. It predicts how many R a standard trade would make, net of costs: a stop two "
-              "average daily ranges away, a target three away, held up to a day. If the prediction clears a "
-              "threshold, it trades; otherwise it does nothing. The crypto model learned from about 660 thousand "
-              "past decisions on 60 coins and trades five of them. The equity model is an average of five models "
-              "trained with different random seeds, on 173 funds, long only. Not every challenger wins: the "
-              "second crypto version failed its forward read and trades only on paper.", tags=("MEASURED",))
-    d.cards(s, [
-        ("What it reads", ["Returns over 1 hour to 1 week, volatility, average range, position in the recent "
-                           "range, volume. About 20 inputs per market."]),
-        ("What it predicts", ["Net R of a standard bracket (2-range stop, 3-range target, up to 24 hours). "
-                              "Trades when the prediction clears a threshold, every 4 hours."]),
-        ("Results", [f"Crypto (live): {e1.get('value', 0):+.3f}R per trade, n {e1.get('n', '—')}, held out.",
-                     f"Second crypto version: {e2.get('value', 0):+.2f}R, n {e2.get('n', '—')} — failed, paper only."]),
-    ], size=15, h=Inches(3.4))
-    d.num("crypto entry model held-out expectancy", e1.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1 (comms/strategy_evidence/ml_entry.json)")
+    s = d.new_at((3,), "Step 3 · Foxhound: how an entry model decides",
+              "Every four hours, for each market, the model reads about twenty numbers on recent moves, volatility "
+              "and range position, and predicts the net R of a standard trade: stop two average ranges away, target "
+              "three, held up to a day. Above a threshold it trades; otherwise it does nothing. The crypto model "
+              "learned from about 660 thousand past decisions on 60 coins. The equity model averages five models "
+              "on 173 funds, long only. Not every challenger wins: the second crypto version failed and stays on paper.",
+              tags=("MEASURED",))
+    d.flow(s, [
+        ("Reads", ["~20 inputs: returns 1h–1wk, volatility, range position."]),
+        ("Trees", ["300 gradient-boosted trees (equity: 5-model average)."]),
+        ("Predicts", ["Net R of a standard 2-stop / 3-target trade."]),
+        ("Acts", ["Score above threshold → trade. Else nothing."]),
+    ], size=14, h=Inches(1.25))
+    d.footnote(s, f"Crypto, live: {e1.get('value', 0):+.3f}R per trade, n {e1.get('n', '—')}, held out. "
+                  f"Crypto v2: {e2.get('value', 0):+.2f}R, n {e2.get('n', '—')}, failed → paper. "
+                  "MEASURED: ml/served/ml_decision_entry_v1/model.json, ml/candidates/ml_entry_eq_v3_struct_ens5/"
+                  "model.json, ml/served/SERVED_MODELS.yaml.", y=H - Inches(1.6))
+    d.num("crypto entry model held-out expectancy", e1.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1")
     d.num("crypto entry v2 forward read", e2.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-decision-entry-v2")
-    d.footnote(s, "MEASURED: ml/served/ml_decision_entry_v1/model.json (LightGBM, 300 trees, 20 features, 662,930 training "
-                  "rows, 60-coin reference set); ml/candidates/ml_entry_eq_v3_struct_ens5/model.json (5-seed ensemble, "
-                  "21 features, 173 funds); results ml/served/SERVED_MODELS.yaml.", y=H - Inches(1.3))
     d.end_md()
 
-    # ---------------------------------------------------------------- 8 in-trade, exit, filter
-    tpr = sv.get("ml-entry-tp-revision-v1", {}).get("headline_metric", {})
+    # ---------------------------------------------------------------- 8 step 4
     ov = sv.get("overlay-td-v1", {}).get("headline_metric", {})
-    xh = sv.get("exit-head-donchian-1h-v1", {}).get("headline_metric", {})
-    s = d.new("Filter, in-trade and exit models: Beagle and Labrador",
-              "Three models act after a trade is proposed. The filter, Beagle, is a logistic regression on nine "
-              "trend and volatility features; on two trend strategies it halves the size of signals it scores as "
-              "weak. It passed a test that it does no harm on 1,830 historical trades. The target-revision model, "
-              "Labrador, re-predicts where a live trade is likely to get to at five check-ins and may only extend "
-              "the target, never pull it in; its measured gain is small and positive. The exit head decides whether "
-              "to close now; it failed its out-of-sample test on two of three markets, so it only closes trades on "
-              "the demo floor and annotates elsewhere. Being honest about the small and failed ones is part of the "
-              "discipline.", tags=("MEASURED",))
-    d.cards(s, [
-        ("Beagle · signal filter", ["Logistic regression, 9 inputs. Halves size on weak signals for 2 trend "
-                                    f"strategies. No-harm test on n {ov.get('n', '—')} trades: "
-                                    f"{ov.get('verdict', '—')}."]),
-        ("Labrador · target revision", ["Gradient-boosted classifier over 18 target levels, 29 inputs, 5 check-ins; "
-                                        f"extend-only. Gain vs fixed target: {tpr.get('value', 0):+.4f}R per trade, "
-                                        f"n {tpr.get('n', '—')}."]),
-        ("Labrador · exit head", [f"Close-now scorer. Out of sample: {xh.get('value', 0):+.4f}R per trade, "
-                                  f"n {xh.get('n', '—')} — {xh.get('verdict', '—')}. Demo floor only."]),
-    ], size=15, h=Inches(3.6))
+    inv = f["ml_inv"]
+    s = d.new_at((4,), "Step 4 · Collie and Beagle: when to step aside",
+              "Two families act between a proposal and an order. Collie classifies the market regime, calm or "
+              "volatile, trending or not, from returns, volatility, time of day and six forecast features from a "
+              "small pretrained forecaster; a strategy can be switched off only in the regimes where it loses. "
+              "Beagle scores each signal from two trend strategies and halves the size of weak ones; it passed a "
+              "no-harm test on 1,830 historical trades. An 11 November inventory proposed retiring most registered "
+              "models that nothing uses: the loop pruning itself.", tags=("MEASURED",))
+    d.flow(s, [
+        ("Collie reads", ["Returns, volatility, hour, weekday + 6 forecast features."]),
+        ("Collie decides", ["Regime class → strategy steps aside where it loses."]),
+        ("Beagle reads", ["9 trend and volatility features per signal."]),
+        ("Beagle decides", ["Weak signal → halve size. Strong → take it."]),
+    ], size=14, h=Inches(1.25))
+    d.footnote(s, f"Beagle no-harm test: n {ov.get('n', '—')}, {ov.get('verdict', '—')}. Inventory {inv['as_of']}: "
+                  f"{inv['total']} models; keep {inv['proposals']['KEEP']}, review {inv['proposals']['REVIEW']}, "
+                  f"retire {inv['proposals']['RETIRE']}. MEASURED: ml/overlay/overlay_td.json, "
+                  "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, comms/ml_consolidation/.", y=H - Inches(1.6))
     d.num("overlay no-harm test sample", ov.get("n"), "MEASURED", "ml/served/SERVED_MODELS.yaml overlay-td-v1")
+    d.num("registered models (inventory)", inv["total"], "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json", "/api/bot/ml/registry")
+    d.num("models proposed keep / review / retire", f"{inv['proposals']['KEEP']} / {inv['proposals']['REVIEW']} / {inv['proposals']['RETIRE']}", "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json", "/api/bot/ml/registry")
+    d.end_md()
+
+    # ---------------------------------------------------------------- 9 step 9
+    tpr = sv.get("ml-entry-tp-revision-v1", {}).get("headline_metric", {})
+    xh = sv.get("exit-head-donchian-1h-v1", {}).get("headline_metric", {})
+    s = d.new_at((7, 9), "Steps 7 and 9 · Labrador: managing the open trade",
+              "Labrador re-predicts where a live trade is likely to get to at five check-ins, choosing among 18 "
+              "target levels, and may only extend the target, never pull it in. Its measured gain is small but "
+              "positive. The exit head decides whether to close now; it failed out of sample on two of three "
+              "markets, so it closes trades only on the demo floor. Showing the small and failed results is part "
+              "of the discipline.", tags=("MEASURED",))
+    d.flow(s, [
+        ("Check-in", ["At 5 points in the trade, read 29 inputs."]),
+        ("Classify", ["Gradient-boosted classifier over 18 target levels."]),
+        ("Compare", ["Expected net R of each level vs the current target."]),
+        ("Act", ["Clearly better → extend the target. Never pull it in."]),
+    ], size=14, h=Inches(1.25))
+    d.footnote(s, f"Target revision: {tpr.get('value', 0):+.4f}R per trade vs a fixed target, n {tpr.get('n', '—')}. "
+                  f"Exit head: {xh.get('value', 0):+.4f}R per trade, n {xh.get('n', '—')}, {xh.get('verdict', '—')} → "
+                  "demo floor. MEASURED: ml/served/ml_entry_tp_revision_v1/model.json, ml/served/SERVED_MODELS.yaml.",
+               y=H - Inches(1.6))
     d.num("TP revision gain per trade", tpr.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1")
     d.num("exit head out-of-sample R per trade", xh.get("value"), "MEASURED", "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1")
-    d.footnote(s, "MEASURED: ml/overlay/overlay_td.json, ml/served/ml_entry_tp_revision_v1/model.json; results "
-                  "ml/served/SERVED_MODELS.yaml (each entry names its committed source record).", y=H - Inches(1.1))
-    d.end_md()
-
-    # ---------------------------------------------------------------- 9 regime
-    inv = f["ml_inv"]
-    s = d.new("Regime models (Collie): knowing when to step aside",
-              "The largest family by count. A regime model classifies the current market state, for example calm "
-              "or volatile, trending or not, every 5 minutes to every day depending on the head. It reads recent "
-              "returns, volatility and time of day, and the newest versions add six forecast features from a small "
-              "pretrained time-series forecasting model. A strategy that loses money in a given regime can be "
-              "switched off in that regime only. Today three heads are advisory on paper books and most others are "
-              "in shadow, scoring without acting. An inventory on 11 November found most registered models had no "
-              "consumer and proposed retiring them, which is the loop pruning itself.", tags=("MEASURED",))
-    d.cards(s, [
-        ("What it reads", ["Recent returns and volatility, hour and weekday; newer heads add 6 forecast "
-                           "features from a frozen pretrained forecaster."]),
-        ("What it decides", ["The market's regime, so a strategy can step aside in the regimes where it "
-                             "loses net of cost."]),
-        ("Inventory", [f"{inv['total']} registered models on {inv['as_of']}: keep {inv['proposals']['KEEP']}, "
-                       f"review {inv['proposals']['REVIEW']}, retire {inv['proposals']['RETIRE']}."]),
-    ], size=15, h=Inches(3.4))
-    d.num("registered models (inventory)", inv["total"], "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json", "/api/bot/ml/registry")
-    d.num("models proposed keep / review / retire", f"{inv['proposals']['KEEP']} / {inv['proposals']['REVIEW']} / {inv['proposals']['RETIRE']}", "MEASURED", f"comms/ml_consolidation/{inv['as_of']}.json (proposal)", "/api/bot/ml/registry")
-    d.footnote(s, "MEASURED: ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml (LightGBM multiclass, regime label, forecast "
-                  "features from chronos-bolt-tiny); stages docs/reference/model_names.yaml; inventory "
-                  f"comms/ml_consolidation/{inv['as_of']}.json (dated snapshot).", y=H - Inches(1.2))
     d.end_md()
 
     # ---------------------------------------------------------------- 10 live on real money
     d.section = "What the R&D has produced"
-    s = d.new("Produced so far 1 — what trades real money, and why",
+    s = d.new_at((5,), "Produced so far 1 — what trades real money, and why",
               "Every strategy on real money today, with the held-out backtest result it was promoted on, net of the "
               "full cost stack. Two of the nine are machine-learning models. Expectancy is average profit per trade "
               "in units of risk. Positive folds counts how many separate time periods came out positive. These are "
@@ -709,10 +741,12 @@ def build():
     d.end_md()
 
     # ---------------------------------------------------------------- 11 ML serving live decisions
-    s = d.new("Produced so far 2 — models changing live orders",
+    s = d.new_at((3, 4, 9, 11), "Produced so far 2 — models changing live orders",
               "Every learned model that changes an order today, where it acts and the committed number behind it. "
-              "Three of them act on real money. The second crypto entry model and the exit head are kept on the "
-              "demo floor because their evidence failed: they keep generating data while they are improved.",
+              "Three act on real money. The second crypto entry model and the exit head stay on the demo floor "
+              "because their evidence failed. The last row is the newest: a drift detector for D10 spots a fading "
+              "strategy better than chance in-window (AUC 0.654 over 664 points on 24 strategies), but acting on "
+              "its alarm did not replicate on a fresh window, so it does not act. Both results are kept.",
               tags=("MEASURED",))
     order = [("ml-decision-entry-v1", "Foxhound-1 · crypto entry", "Real money + paper + prop"),
              ("ml-entry-eq-struct-ens5-v1", "Foxhound-4 · US-fund entry", "Real money + mirror"),
@@ -728,8 +762,13 @@ def build():
         rows.append([name, where, f"{val:+.4f}R" if isinstance(val, (int, float)) else "—", str(hm.get("n", "—")),
                      str(hm.get("verdict") or "—")])
         d.num(f"headline metric: {mid}", val, "MEASURED", f"ml/served/SERVED_MODELS.yaml {mid}.headline_metric", "/api/bot/ml/registry")
-    d.table(s, ["Model", "Where it changes orders", "Headline per trade", "n", "Verdict"], rows,
-            col_w=[3.6, 3.6, 1.8, 1.1, 1.4], size=12, h_row=Inches(0.45))
+    rows.append(["Basset baseline · D10 drift alarm", "Not acting (in-window pass, fresh-window fail)",
+                 "AUC 0.654", "664", "pass → fail"])
+    d.num("D10 drift detector AUC (in-window)", 0.6541, "MEASURED", "research/queue/RQ-20261117-aadc-05.yaml grading.reason")
+    d.num("D10 drift detector labelled points", 664, "MEASURED", "research/queue/RQ-20261117-aadc-05.yaml grading.reason (24 legs)")
+    d.num("D10 demote-on-alarm, fresh window", "fail (control_p 0.994)", "MEASURED", "research/queue/RQ-20261117-aadc-09.yaml grading.reason")
+    d.table(s, ["Model", "Where it changes orders", "Headline", "n", "Verdict"], rows,
+            col_w=[3.6, 3.6, 1.8, 1.1, 1.4], size=12, h_row=Inches(0.42))
     d.footnote(s, "MEASURED: ml/served/SERVED_MODELS.yaml (each headline copied from the committed record it names; "
                   "metrics differ by model: held-out net R, forward read, gain vs fixed target, no-harm test). "
                   "The filter's record states a verdict, not a number.", y=H - Inches(1.2))
@@ -737,7 +776,7 @@ def build():
 
     # ---------------------------------------------------------------- 12 throughput
     decisive = qv["pass"] + qv["fail"]
-    s = d.new("Produced so far 3 — research throughput, and how much fails",
+    s = d.new_at((11,), "Produced so far 3 — research throughput, and how much fails",
               f"The volume behind the results. The research queue has {q['done']} completed questions. Of the graded "
               f"ones, {qv['pass']} passed their pre-registered rule and {qv['fail']} failed, with {qv['indeterminate']} "
               f"indeterminate because the sample was too small to call. That is a pass rate of "
@@ -767,7 +806,7 @@ def build():
 
     # ---------------------------------------------------------------- 13 how it runs
     d.section = "How it runs"
-    s = d.new("How it runs automatically, in one slide",
+    s = d.new_at((1, 2, 5, 8, 10), "How it runs automatically, in one slide",
               f"The infrastructure, briefly. The trader runs around the clock on cloud servers, on crypto, US funds "
               f"and futures venues, plus prop-firm accounts. {f['accounts_live_mode']} of {f['accounts_total']} "
               f"accounts are switched on to send orders. Exactly two switches decide whether something trades: one "
@@ -793,7 +832,7 @@ def build():
 
     # ---------------------------------------------------------------- 14 roadmap
     d.section = "Where it goes next"
-    s = d.new("Roadmap: the next ML milestone at each decision",
+    s = d.new_at((3, 4, 6, 7, 8, 9, 11), "Roadmap: the next ML milestone at each decision",
               "Where the loop goes next, decision by decision. The entry model's next challenger tests a "
               "cost-neutral target. The regime family is being pruned to the heads that beat their baseline. The "
               "empty slots each have a first question: predicted brackets at entry, combining several signals on one "
