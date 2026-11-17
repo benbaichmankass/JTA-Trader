@@ -91,6 +91,16 @@ decision_rule:
     places no order; adds no gate. It verifies LABELS, not edge: a PASS says the replay is the live population, not that any cell makes
     money. In-sample caveat stands (the heads are fit through their dataset end). The audit snapshot ends 2026-11-17 ~10:20Z.'
   min_n: 100 distinct bars per head
+amendments:
+- at: '2026-11-17'
+  before_any_run: false
+  by: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)
+  text:
+  - 'Run 44080314119 was LOST on collection, not graded: research_result.py --emit refused record 4 (the replay-only ETH head):
+    read_state measured with population.n null, and measured with verdict not_applicable. Fix in scripts/research/vol_label_live_verify.py:
+    a replay-only head (no live labels to verify against) is read_state no_data / verdict not_applicable / n null, and every measured
+    record carries an integer n (record_n; self-test extended; checked end to end through research_result.py --emit). The rule, statistic
+    and thresholds are NOT edited; the outputs of the lost run were not read by this lane.'
 practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify an offline feature/label path
   against the served one before grading anything on it; chance-corrected agreement for an imbalanced label'
 compute: needs_vm_data
@@ -136,4 +146,5 @@ ml_consumer:
     from this unit
   legs: [trend_donchian, squeeze_breakout_4h, ict_scalp_5m]
   book: demo_floor
-last_dispatched_at: '2026-11-17T12:07:54+00:00'
+last_dispatched_at: null
+rearmed_at: '2026-11-17T12:46:10+00:00'
