@@ -373,15 +373,6 @@ def action_verdict(r: dict) -> tuple[str, str]:
 def run(a) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    trades = load_db(Path(a.journal_db)) if a.journal_db else load_pages(a.trades, a.packages)
-    mu = stage0(Path(a.evidence_dir))
-    grades = {}
-    for line in Path(a.judgments).read_text().splitlines():
-        if line.strip():
-            r = json.loads(line)
-            if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
-                grades[r["trade_id"]] = r["grade_score"]
-    by, ex = leg_series(trades, mu)
     if a.stage0_confirm:
         sby, sinfo = stage0_series(Path(a.evidence_dir), STAGE0_BEFORE)
         ar = action_replay(sby, {}, h=CONFIRM_H)
@@ -395,6 +386,15 @@ def run(a) -> int:
         out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
         print(json.dumps({"verdict": v, "note": why}, indent=1))
         return 0
+    trades = load_db(Path(a.journal_db)) if a.journal_db else load_pages(a.trades, a.packages)
+    mu = stage0(Path(a.evidence_dir))
+    grades = {}
+    for line in Path(a.judgments).read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
+                grades[r["trade_id"]] = r["grade_score"]
+    by, ex = leg_series(trades, mu)
     if a.alarm_h_sweep:
         arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
