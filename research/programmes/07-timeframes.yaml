@@ -141,14 +141,117 @@ nodes:
   after:
   - {unit: RQ-20261021-7c2b-03, verdict: any}
   - {unit: RQ-20261026-f679-05, verdict: any}
-  needs_authoring: >-
-    AUTHORED 2026-10-26 (7c2b-03 transfer: LONG pooled 0.369 R/trade n=209, p 0.017, but 3 of 6 folds and 2 of 6 cells): the twelve-perp
-    pooled LONG read as RQ-20261026-f679-05 (pools symbols with two committed records on purpose; a PASS is a lead for a disjoint-symbol
-    check). Original ask:
-    Programme review 2026-10-21 authored the transfer as RQ-20261021-7c2b-03 (LONG vs B on BNB/DOGE/LINK/LTC/BCH/DOT
-    daily, delta 0.10 R). On its verdict: PASS -> the overlap read in P7-Q6-daily-donchian uses the LONG arm; FAIL ->
-    the ef5d-06 win was symbol-selected, record it here and on 07 s1; INDETERMINATE -> say which cells were under the
-    floor, never lower it.
+  unit:
+    title: 'DISJOINT-SYMBOL confirmation of the daily long-only Donchian-20 (f679-05 PASS): does LONG pass the same pooled Stage-0 rule and beat unfiltered B by >= 0.10 R/trade on six perps outside the twelve
+      (TRX/ETC/XLM/ATOM/VET/FIL)?'
+    cadence: once
+    priority: 2
+    kind: experiment
+    theme: timeframes
+    question: On Binance USD-M daily candles for TRXUSDT, ETCUSDT, XLMUSDT, ATOMUSDT, VETUSDT, FILUSDT over 2020-06-01..2026-10-25 (donchian 20, trail_mult 5.0, the f679-05 parameters and window unchanged),
+      does LONG (--long-only) pass the pooled Stage-0 rule AND beat unfiltered B by >= 0.10 R per trade?
+    why_this_matters: 'Node P7-Q5-confirm, PASS branch. RQ-20261026-f679-05 PASSED: LONG pooled 181.4 R over 12 perps (ef5d-06 six + 7c2b-03 six), beating B; but it pooled symbols that already had two committed
+      records on purpose, so its own rule names this disjoint-symbol check as the next unit before the long-only daily filter is treated as fold-consistent (RESEARCH-NO-WAIT order 2: a symbol holdout; correlated
+      evidence, said so: crypto alts co-move). Symbols fixed now, chosen only for a Binance USD-M daily history covering most of the window and a Bybit linear listing; none of the six appears in any committed
+      daily-Donchian record. Decision changed: PASS -> the P7-Q6-daily-donchian overlap read uses the LONG arm and the long-only filter enters any daily re-entry case with an out-of-sample breadth read; FAIL
+      -> the f679-05 pass is recorded on 07 s1 as specific to the twelve (a symbol fit) and the daily arm proceeds unfiltered. Arm denominator 2 (B, LONG), nothing re-selected.'
+    power:
+      expected_n: 200
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'f679-05 LONG kept 32-41 trades per perp over the same window and params (MEASURED); six perps with shorter listings (FIL from 2020-10) -> ~200 pooled LONG trades (an estimate). Floors as f679-05:
+        20 per cell, 39 pooled; a cell under 20 is named indeterminate, never dropped.'
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    evidence_class:
+      holdout: holdout_window
+      claim: edge
+    decision_rule:
+      id: RULE-P7-Q5-CONFIRM-DISJOINT-SYMBOLS
+      registered_before_run: true
+      statistic: 'harness_stage0.py --family trend --timeframe 1d, arms fixed now: B=; LONG=--long-only; baseline B; per cell and pooled across TRXUSDT,ETCUSDT,XLMUSDT,ATOMUSDT,VETUSDT,FILUSDT; 6 calendar folds
+        (~1 year each over the 6.4-year window), net of the harness''s venue-aware fee + slippage + funding.'
+      rule: 'PASS iff LONG passes the pooled Stage-0 rule (pooled n >= 39, pooled net R > 0, pooled folds >= 4 of 6 net positive, cells passing >= half of the powered cells) AND beats B by >= 0.10 R/trade.
+        FAIL iff LONG fails with pooled n >= 39. INDETERMINATE iff pooled n < 39, fewer than 2 powered cells, or fewer than half the declared cells measured (cells under the floor named, the floor never lowered).
+        Verdicts are harness_stage0.py''s own under exactly these flags. Regime-robustness (REPORTED in the result''s per-fold table and read before any Tier-3 note, not separately graded by the harness): net
+        positive in >= 4 of the 6 roughly-yearly folds is graded above; no single fold above 50% of total pooled net R; long-only, so the short-side clause does not apply. Holm-corrected p-values are reported,
+        not graded. Thresholds are not changed after any result.'
+      what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; adds no symbol to any book; tunes nothing beyond the two fixed arms; does not pool with f679-05 or any committed
+        record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) and funding is a directionless magnitude, both stated in the record.
+    compute: cpu_long
+    value:
+      bucket: frontier
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+      basis: 'stand-in (node weight): decides whether the daily arm''s one live lead carries a long-only filter; an estimate.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 40
+      basis: Half the cells of f679-05 (est 60 min for 12 perps x 2 arms); estimate, the first run replaces it.
+      why_runner: harness_stage0.py fetches keyless public Binance candles; these symbols are not in the metis-market-data allowlist and a Kaggle kernel has no internet; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/harness_stage0.py
+      - --family
+      - trend
+      - --symbols
+      - TRXUSDT,ETCUSDT,XLMUSDT,ATOMUSDT,VETUSDT,FILUSDT
+      - --timeframe
+      - 1d
+      - --days
+      - '2500'
+      - --start
+      - '2020-06-01'
+      - --end
+      - '2026-10-25'
+      - --param
+      - trail_mult=5.0
+      - --arm
+      - B=
+      - --arm
+      - LONG=--long-only
+      - --baseline
+      - B
+      - --delta-r-per-trade
+      - '0.1'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '20'
+      - --pooled-n-floor
+      - '39'
+      - --breadth-frac
+      - '0.5'
+      - --rule-id
+      - RULE-P7-Q5-CONFIRM-DISJOINT-SYMBOLS
+      - --data-dir
+      - '{out_dir}/data'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 240
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based daily trend filter read on a symbol holdout.'
+    intervention_controls:
+      not_applicable: Entry-filter A/B (B vs LONG) over the harness, not an active-management action.
+    programme: P7
+    related:
+    - research/queue/RQ-20261026-f679-05.yaml
+    - research/queue/RQ-20261021-7c2b-03.yaml
+    - research/queue/RQ-20261018-ef5d-06.yaml
+    - scripts/research/harness_stage0.py
 - id: P7-Q5-indeterminate
   goal: G1
   roadmap: [L-TIMEFRAMES, L-REGIME]
@@ -195,13 +298,97 @@ nodes:
   value: {usd_at_stake_per_month: 150, confidence: 0.3}
   after:
   - {unit: RQ-20261018-ef5d-05, verdict: pass}
-  needs_authoring: >-
-    ef5d-05 PASSED (LO or BOTH, the record names it). Overlap read against the live alpaca_live legs (ief/slv/iaum_pullback_1d)
-    and the alpaca_paper 1d trend legs: SPY/QQQ/QLD/TQQQ/SPLG/IWM/SCHA are one equity-beta factor (programme 03 node
-    P3-Q3-soak-equity-overlap) -- the weekly arm's per-symbol passes must be read as one bet before any count of 'passing
-    cells' is quoted. Then a re-entry case on alpaca_paper under MD-PROMOTE-S0-S1 with a holdout confirmation; the futures
-    proxies (ES=F/GC=F/HG=F) are NOT re-entry candidates from a Yahoo continuous series -- an IBKR candidate needs the
-    account's own fills and the per-contract commission modelled first.
+  unit:
+    title: 'Weekly ETF trend (ef5d-05 LO PASS): how many independent bets are the twelve powered weekly long-only ETF cells (N_eff >= 3.0), and which are same-bet clusters, before any count of passing cells
+      is quoted?'
+    cadence: once
+    priority: 2
+    kind: deterministic
+    theme: timeframes
+    question: 'Using the committed LO-arm trade ledgers of RQ-20261018-ef5d-05''s twelve powered US ETF cells (SPY, QQQ, QLD, TQQQ, IWM, SCHA, GLD, SLV, GDX, IEF, TLT, USO; weekly Donchian trend, long-only,
+      2007..2026), each trade''s net R spread evenly over its calendar holding days and summed to W-SUN weekly series over the common weeks: is the participation-ratio effective number of independent bets N_eff
+      at least 3.0, which pairs are same-bet (r >= 0.5), and which cell''s removal lowers the pooled weekly information ratio most?'
+    why_this_matters: 'Node P7-Q6-weekly-etf. ef5d-05 PASSED (LO pooled 127.7 R; BOTH also passed). The node requires the weekly arm''s per-symbol passes to be read as one bet before any count of passing cells
+      is quoted: SPY/QQQ/QLD/TQQQ/IWM/SCHA are one equity-beta factor on priors, GLD/SLV/GDX one metals factor, IEF/TLT one rates factor, USO its own. Decision changed: PASS (N_eff >= 3.0) -> a re-entry case
+      may carry at most floor(N_eff) weekly legs, one per same-bet cluster, the strongest per cluster named by the leave-one-out table, each needing its own holdout confirmation before a book; FAIL -> the weekly
+      arm is at most two bets and a case carries at most one leg per the leave-one-out table. Cells fixed before the run by a rule that does not look at outcomes: every LO ETF cell with n >= the parent''s n_floor
+      10; excluded: IAUM (n 7, under the floor), SPLG (not measured), and the futures proxies MES/MGC/MHG (the node rules them out as re-entry candidates from a Yahoo continuous series).'
+    why_not_inferential: 'A descriptive measurement on committed ledgers: N_eff >= 3.0 either holds or does not on these series; the edge question was ef5d-05''s.'
+    decision_rule:
+      id: RULE-P7-Q6-WEEKLY-ETF-OVERLAP
+      registered_before_run: true
+      statistic: 'scripts/research/soak_equity_overlap.py on the twelve committed LO ledgers named in run.command: weekly (W-SUN) net R with each trade''s net_r spread evenly over entry..exit calendar days,
+        common weeks only (expected ~2010-10..2026-01, ~790 weeks); N_eff = (sum lambda)^2 / sum lambda^2 of the Pearson correlation matrix; same-bet pairs r >= 0.5; leave-one-out pooled mean/sd of the equal-weight
+        weekly series; --min-neff 3.0 --min-weeks 104 --same-bet-corr 0.5 (the script''s verdict is this rule).'
+      rule: 'INDETERMINATE IF common weeks < 104 or fewer than 2 ledgers load. PASS IF N_eff >= 3.0. FAIL IF N_eff < 3.0. Either way the same-bet pairs and the leave-one-out table are carried into any re-entry
+        case, which may name at most floor(N_eff) weekly legs and at most one per same-bet cluster. Regime-robustness clause: not applicable to an overlap read (no P&L claim is graded; any re-entry case restates
+        the per-year table of each leg it names). Thresholds are not changed after any result.'
+      what_it_does_not_do: 'Promotes nothing, edits no config or roster, places no order. Reads harness ledgers built on unadjusted Yahoo daily bars resampled weekly (no dividends), not live fills. Does not
+        read overlap with the LIVE alpaca legs: tqqq_trend_long_1d''s committed ledger starts 2021-06 and slv_trend_1h / tlt_pullback_1h start 2025-07, so adding them would cut the common window to < 104 weeks
+        or to 2021+; the TQQQ weekly cell is the same instrument as live tqqq_trend_long_1d and is treated as the same bet by construction in any case.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+      basis: 'stand-in (node weight): stops one equity-beta bet being counted as several passing cells in a re-entry case; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 5
+      why_runner: Reads committed ledgers in the repo checkout; no network, no secret; seconds of CPU.
+      basis: Twelve JSONL files of 14-28 rows and a 12x12 eigen decomposition (the RQ-20261022-008 shape).
+    run:
+      command:
+      - python3
+      - scripts/research/soak_equity_overlap.py
+      - --leg
+      - SPY=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SPY_1w_LO__trades.jsonl
+      - --leg
+      - QQQ=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_QQQ_1w_LO__trades.jsonl
+      - --leg
+      - QLD=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_QLD_1w_LO__trades.jsonl
+      - --leg
+      - TQQQ=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_TQQQ_1w_LO__trades.jsonl
+      - --leg
+      - IWM=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_IWM_1w_LO__trades.jsonl
+      - --leg
+      - SCHA=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SCHA_1w_LO__trades.jsonl
+      - --leg
+      - GLD=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_GLD_1w_LO__trades.jsonl
+      - --leg
+      - SLV=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SLV_1w_LO__trades.jsonl
+      - --leg
+      - GDX=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_GDX_1w_LO__trades.jsonl
+      - --leg
+      - IEF=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_IEF_1w_LO__trades.jsonl
+      - --leg
+      - TLT=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_TLT_1w_LO__trades.jsonl
+      - --leg
+      - USO=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_USO_1w_LO__trades.jsonl
+      - --min-weeks
+      - '104'
+      - --min-neff
+      - '3.0'
+      - --same-bet-corr
+      - '0.5'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 20
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an overlap read of rule-based strategy ledgers.'
+    intervention_controls:
+      not_applicable: An overlap measurement on committed ledgers; no active-management action is tested.
+    programme: P7
+    related:
+    - research/queue/RQ-20261018-ef5d-05.yaml
+    - research/queue/RQ-20261022-008.yaml
+    - scripts/research/soak_equity_overlap.py
 # ── Q7 -- cost-gated 30m breakout (arm B2) ─────────────────────────────────────────────────────────────────────────────
 - id: P7-Q7-confirm
   goal: G1

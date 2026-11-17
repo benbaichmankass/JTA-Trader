@@ -1,0 +1,187 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1, research-ops fork A), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-43b6-02
+title: 'ITERATION 2 of ltr-close (indeterminate): does a FULL close at the first near_target or stall trigger clear RULE-AM-RISK-ADJUSTED-V1 on four legs
+  never in the ed2b selection population?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On four holdout testing-leg corpora (eth_pullback_2h, sol_pullback_2h, trend_donchian_avax_4h, trend_donchian_ada_4h), does closing the WHOLE
+  position at the next bar's open after the first near_target or stall trigger cut book risk (maxDD or weekly CVaR5 >= 15%) at <= 0.05 R/trade net of the
+  full cost stack, hold in >= 4 of 6 folds, and beat the same close at a random bar?
+why_this_matters: 'ltr-close is an orphan (iteration_orphans.py 2026-11-17): its only positive signal is one live window (docs/audits/2026-11-01-from-scratch/AUDIT.md
+  § 8, 18 priced packages), its iteration 1 (RQ-20261101-78fc-10) was retired, LTR-CLOSE-CLASS-TEST was dropped, and RQ-20261112-c1a5-01 waits for a live
+  window (not_before 2026-12-01) and carries no iteration block. This is the in-hand test (RESEARCH-NO-WAIT). On PASS: a Tier-3 proposal note for the close
+  class (advice-only -> its own net-of-cost pass, ARCHITECTURE-CANONICAL § Active management), then ONE confirmation. On FAIL: the close response at profit-side
+  triggers is recorded and the next family is the timing lever (per-leg max-hold, which RQ-20261116-7c1a-01 already read FAIL at the package level, so the
+  class moves toward retirement review only through family_retirement_policy). HOLDOUT POPULATION (RESEARCH-NO-WAIT order 2, a leg/symbol holdout, correlated
+  evidence and said so): four testing legs whose corpora were never in the 8-leg selection population of RQ-20261113-ed2b-01/-03/-05 (ada_pullback_2h, iaum_pullback_1d,
+  ml_entry, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h). The run builds them with scripts/research/build_ltr_corpus.py
+  --mode harness (exit_lever_ablation arm A, config-exact, closed bar, full cost stack) from committed candle CSVs and restricts the harness to them with
+  --legs. CORRELATION DISCLOSED: ETH/SOL/ADA/AVAX trade in the same crypto regime as the selection legs, and trend_donchian_sol_4h is excluded because trend_donchian_sol_prop
+  is in the selection population. eth/sol_pullback_2h trade the forming bar live; the corpus scores the CLOSED bar (stated bias).'
+iteration:
+  subject: ltr-close
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261113-ed2b-01/43492518743.jsonl
+  verdict_read: indeterminate
+  diagnosis: 'The live close class has one positive window and no grade (AUDIT.md § 8). LTR-TRIGGER-CLOSE-S0 (552 live packages): profit triggers beat a
+    random close but never beat hold. The sharper evidence is RQ-20261113-ed2b-01 (partial_close at f = 0.5 on the 4,076-trade Stage-0 corpus): ltr_action_trigger_s0.price_partial
+    is EXACTLY linear in f (net = f x banked + (1 - f) x recorded), so a full close is the f = 1 arm of the same pricer. At f = 0.5: near_target cost -0.0005
+    R/trade (a small gain) with maxDD cut 8.3% / CVaR5 cut 6.2%, n_fired 388; stall cost 0.0119 R/trade with cuts 10.6% / 10.2%, n_fired 1,167; r_milestone
+    cost 0.041 R/trade (doubling breaks R1, so excluded). At f = 1 the R cost doubles exactly (near_target ~-0.001, stall ~0.024, both inside R1) and the
+    risk cuts roughly double (~16-21%), which is what R2 needs: the partial failed R2/R3 on SIZE, and the close is the size lever at its bound. Because
+    the triggers were chosen from ed2b-01''s numbers on the 8-leg corpus, the read is on four legs that corpus never held.'
+  search: action_bounds at its bound (close fraction 1.0) on the two triggers whose f = 0.5 R cost stays inside R1 when doubled (near_target, stall); arm
+    denominator 2 (+ hold)
+  levers:
+  - action_bounds
+  - trigger
+  map_entries:
+  - research/levers/ltr-close.yaml#levers.trigger.close_trigger
+  - research/levers/ltr-partial-close.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window,
+    as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 1138
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'MDE 0.06 R/trade declared (the holdout book is ~1,138 trades; at 0.05 the router floor is 1,168). INFERRED, not measured: about 1,138 trades on the four holdout corpora (dry-run counts 2026-11-17 from the committed candle CSVs: eth_pullback_2h
+    454, sol_pullback_2h 147, trend_donchian_avax_4h 264, trend_donchian_ada_4h 273; the run''s own counts replace them). On ed2b-01 near_target fired on
+    388 of 3,921 priced trades (~10%) and stall on 1,167 (~30%), so ~110 and ~340 fired trades are expected here; above V1''s n_floor 39. At sd 0.5 and
+    alpha 0.01, ~110 fired trades detect ~0.14 R/trade and ~340 detect ~0.08 R/trade: the cost clause R1 is coarse for near_target, so an R1 read near the
+    bar is reported as such.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261117-43b6-02
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Over the four holdout corpora built in this run, per pre-registered trigger T in {near_target, stall}: the book that banks the WHOLE position
+    at bar j0+1''s open after T first fires (ltr_action_trigger_s0 --action partial_close --partial-frac 1.0, i.e. a full close, cost charged at that bar),
+    vs the HOLD book, against 200 matched random-time full closes on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.975), plus L1: a pass must
+    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static rule (hold +
+    the registered trigger arms, chosen leave-one-fold-out) and each candidate''s margin over it. Two pre-registered candidates (n_comparisons 2, Bonferroni
+    1 - 0.05/2), so R4 uses 0.975 and the reported edge CI is at 0.975. PASS: at least one trigger clears R1-R4 and L1. It is a SCREEN pass (per-trade R
+    books, graduation_eligible false until BOOK-SIM-REAL-SIZER): a Tier-3 proposal input for the class''s status, never an apply. FAIL: every candidate
+    fails a read necessary clause (R1, R2 or R3) or is beaten by its random control (R4). INDETERMINATE: anything else, i.e. the best candidate is under
+    the n floor, never fired, carried by one leg (L1 fails), or no trade could be priced (read_state no_data). Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control
+  in the same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; a close fills at the next bar's open
+- triggers are evaluated on bar closes, live on telemetry passes
+- the holdout corpora score the CLOSED bar; eth/sol_pullback_2h trade the forming bar live
+- the triggers were chosen from RQ-20261113-ed2b-01's f = 0.5 numbers on the 8-leg corpus; this read is on legs that corpus never held, but ETH/SOL/ADA/AVAX
+  share its crypto regime
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - partial_close@near_target
+    - partial_close@stall
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261117-43b6-02
+  timeout_minutes: 120
+  commands:
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - eth_pullback_2h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-05/40090264368/data/ETHUSDT_120.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - sol_pullback_2h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-05/40090264368/data/SOLUSDT_120.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-18/40740537150/data/AVAXUSDT_240.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - trend_donchian_ada_4h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-18/40740537150/data/ADAUSDT_240.csv
+  - - python3
+    - scripts/research/ltr_action_trigger_s0.py
+    - --action
+    - partial_close
+    - --partial-frac
+    - '1.0'
+    - --triggers
+    - near_target,stall
+    - --legs
+    - eth_pullback_2h,sol_pullback_2h,trend_donchian_avax_4h,trend_donchian_ada_4h
+    - --draws
+    - '200'
+    - --min-control-beat-frac
+    - '0.975'
+    - --n-comparisons
+    - '2'
+    - --out
+    - '{out_dir}'

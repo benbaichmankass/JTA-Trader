@@ -1,0 +1,117 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1), dispatched by Manager Session session_01AFoLuHbhd9wFuGJfWRqyoV. ITERATION unit (blocked on a named build). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-617c-02
+title: 'tsmom-crypto ITERATION 4: ONE read of the funding-aware arm FS2 (fixed) on the untouched in-hand window 2024-07-01 .. 2026-10-31: does it clear the registered
+  portfolio rule out of sample, where the in-sample DSR penalty no longer binds?'
+status: blocked
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): select on the discovery span, read a held-back span with the read recorded and
+  graded on the deflated bar; RESEARCH-NO-WAIT order 1 (an in-hand window, never a future month).'
+question: Does the tsmom-crypto arm FS2 (T4 + keep a short only while its trailing-7d funding >= 0.0003), fixed exactly as graded in RQ-20261113-62e3-01, clear the
+  registered portfolio rule on 2024-07-01 .. 2026-10-31, a window no selection step has loaded?
+why_this_matters: 'ITERATION (research-ops 2026-11-17, fork B). RQ-20261113-62e3-01 FAIL read row by row: FS2 net Sharpe 1.008 (control 0.761), stress Sharpe 0.979,
+  halves 1.455 / 0.448 (both > 0), short side -0.068 (from -0.127), by-year 2022 -0.097. It fails ONLY the DSR clause (0.553 < 0.95 at N_cum = 20). Any further in-sample
+  arm is graded at N >= 21 and cannot clear DSR by construction (value of information ~0), so the informative next read is the untouched window, where the read is
+  graded on holdout_lock''s deflated bar for its own N. On PASS: the sleeve is a Stage-0 candidate and its evidence record + a Tier-3 proposal note go to the manager;
+  on FAIL: the funding filter is recorded as an in-sample-only response and the next lever is the regime gate on the funding trend (untested), the decision differs.'
+power:
+  expected_n: 850
+  min_detectable_effect: 2.0
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '~28 months of daily portfolio returns (~850 obs); at sd 15.87 per-observation conversion (as RQ-20261101-d1f3-07) the smallest separable annualised Sharpe
+    is ~2.0, above the 0.5 bar, so the rule is an absolute bar with a bootstrap CI at the deflated z, not a delta vs the control. A near-miss is underpowered by construction.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand archive through 2026-10-31; nothing accrues.
+  sd: 15.874507866387544
+evidence_class:
+  holdout: holdout
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-617c-02-TSMOM-FS2-HOLDOUT
+  statistic: 'edge_portfolio_discovery.py holdout-read of the tsmom arm FS2 exactly as ITER_GRIDS["62e3"]["tsmom"]["FS2"] (no parameter changed), daily net returns
+    on 2024-07-01 .. 2026-10-31, primary cost stack and 2x stress, the read claimed through scripts/research/holdout_lock.py claim_read (family TSMOM-CRYPTO, train_end
+    2024-06-30), which returns the deflated bar for this read''s N.'
+  rule: 'PASS iff net Sharpe >= 0.5 AND stress (2x fee+slippage) Sharpe > 0 AND Sharpe > 0 in BOTH halves of the window AND the stationary-bootstrap lower bound of the
+    annualised mean net return at the deflated z (bar["ci_z"]; 1.96 at N=1) > 0 AND net positive in >= 2 of the 3 calendar years covered (2024H2, 2025, 2026 to Oct)
+    with no single year above 50% of total net AND long-side and short-side net both reported (short-side net >= 0 required, since the funding filter exists to repair
+    it). FAIL otherwise (closes THIS configuration on THIS window, never the family). INDETERMINATE iff the window holds < 200 daily returns or the producer failed.
+    DSR is not re-applied (a single pre-registered arm, N handled by the deflated bar). Thresholds not changed after any result.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Edits no config or roster, places no order and proposes no live sleeve; a PASS is a Stage-0 candidate for a Tier-3 proposal note, never a book.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in: an uncorrelated portfolio sleeve candidate; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  basis: same data build as RQ-20261113-62e3-01 plus one arm (estimate).
+  why_runner: builds the panel from the keyless public Binance Vision archive; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - tsmom
+  - --holdout-read
+  - --arm
+  - 62e3:FS2
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-617c-02
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based portfolio sleeve read.'
+intervention_controls:
+  not_applicable: an offline research read, not an in-trade action
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261113-62e3-01.yaml
+- research/levers/tsmom-crypto.yaml
+- scripts/research/edge_portfolio_discovery.py
+- scripts/research/holdout_lock.py
+iteration:
+  subject: tsmom-crypto
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261113-62e3-01
+  verdict_read: fail
+  diagnosis: 'RQ-20261113-62e3-01: FS2 Sharpe 1.008 / stress 0.979 / halves 1.455, 0.448 / short side -0.068 / 2022 -0.097 -- every clause but DSR (0.553 at N_cum
+    20). Test design, not the idea, is binding: the cumulative in-sample trial count makes DSR unreachable for any further arm; an untouched window is the next informative
+    read. Regime gate (d1f3 R1/R2), rebalance, universe and funding side filter are tested; funding-trend regime gate and stops remain.'
+  search: ONE holdout read of the selected arm FS2; no new arms
+  levers:
+  - direction
+  map_entries:
+  - research/levers/tsmom-crypto.yaml#levers.direction
+  attempt: 4
+  due_by: '2026-12-01'
+blocked_on:
+- what: 'edge_portfolio_discovery.py has no --holdout-read / --arm mode: edge_data.MAX_MONTH = 2024-06 makes 2024-07+ unloadable unless a mode passes allow_holdout=True
+    and claims the read through holdout_lock.claim_read.'
+  ref: EDGE-HOLDOUT-READ-MODE
+  kind: build
+  clears_when: 'the mode lands with a self-test (refuses a window overlapping training; records the read; arm spec "<grid>:<arm>" resolves to the committed ITER_GRIDS
+    entry); then git mv this file to research/queue/ with status queued, adjusting run.command to the landed flags without changing the rule.'
+  owner: checklist row EDGE-HOLDOUT-READ-MODE (filed by RESEARCH-OPS-20261117-1006)

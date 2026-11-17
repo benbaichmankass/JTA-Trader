@@ -1,0 +1,145 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1, research-ops fork A), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-43b6-03
+title: 'ITERATION 2 of ltr-partial-close (ed2b-01 FAIL, risk cut too small): does banking half at the first ADVERSE-side trigger (adverse 0.5 R / 0.75 R,
+  structure break, momentum flip) cut the left tail enough to clear RULE-AM-RISK-ADJUSTED-V1?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: Over the committed Stage-0 per-trade corpora (comms/strategy_evidence/ltr_corpus, 8 legs), does partial_close (bank 50% at the next bar's open)
+  at the first adverse_r_0.5, adverse_r_0.75, structure_break or momentum_flip trigger cut maxDD or weekly CVaR5 by >= 15% at <= 0.05 R/trade net of the
+  full cost stack, hold in >= 4 of 6 folds, and beat the same partial at a random bar?
+why_this_matters: 'ltr-partial-close is an orphan (iteration_orphans.py 2026-11-17): iteration 1 (RQ-20261113-ed2b-01) FAILED on every trigger and nothing
+  iterated from it. The diagnosis below points at the trigger family: the three triggers tested all fire on trades already in profit, while the V1 risk
+  clauses read the left tail. On PASS: a discovery, ONE confirmation on the holdout legs of RQ-20261117-43b6-01, then a Tier-3 class-status note. On FAIL:
+  the partial class has been read on 7 of 10 triggers at f = 0.5; the remaining family is action_bounds (f), which RQ-20261117-43b6-02 reads at its bound
+  (f = 1, the close class).'
+iteration:
+  subject: ltr-partial-close
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261113-ed2b-01/43492518743.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261113-ed2b-01 (3,921 priced trades): every candidate failed R2/R3, i.e. on RISK, not cost: near_target cost -0.0005 R/trade with maxDD
+    cut 8.3% / CVaR5 cut 6.2% (n_fired 388); r_milestone cost 0.041 with cuts 11.2% / 11.3% (n_fired 1,426); stall cost 0.012 with cuts 10.6% / 10.2% (n_fired
+    1,167); 0 of 6 folds held for any. All three triggers fire on trades that are in profit or flat, so banking half removes upside variance and leaves
+    the losers, which hold the weekly CVaR5 (-10.3 R) and the drawdown, untouched. The untested triggers that fire on the losing side (adverse_r_0.5, adverse_r_0.75,
+    structure_break, momentum_flip) act where the tail lives. Counter-evidence named: the plain tighten class lost on early (losing-side) cells (comms/research/ltr_tighten_optimize/verdict.json),
+    so the R1 cost of an adverse partial may exceed 0.05 R; that is exactly what this reads.'
+  search: trigger family, the 4 untested adverse-side triggers at the fixed f = 0.5 of iteration 1; arm denominator 4 (+ hold); cumulative family 7 triggers
+    read for this class
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-partial-close.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window,
+    as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 4076
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED, not measured: the book is the 4,076 committed corpus trades (3,921 priced in ed2b-01); the paired difference partial - hold is assumed
+    ~0.5 R sd because the action touches only the post-trigger part of a trade. At alpha 0.0125 (Bonferroni over 4; 0.01 declared because research_queue
+    tabulates only 0.10 / 0.05 / 0.01) and power 0.8, ~1,170 fired trades detect ~0.05 R/trade. adverse triggers fire on roughly the losing half of trades,
+    so the R1 read is powered; V1''s n_floor 39 governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261117-43b6-03
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (8 legs; each row''s net_r net of fee + slippage
+    + funding), per pre-registered trigger T in {adverse_r_0.5, adverse_r_0.75, structure_break, momentum_flip}: the book that banks 50% of the position
+    at bar j0+1''s open after T first fires (the rest keeps the recorded exit), vs the HOLD book, against 200 matched random-time partials on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.9875), plus L1: a pass must
+    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static rule (hold +
+    the registered trigger arms, chosen leave-one-fold-out) and each candidate''s margin over it. Four pre-registered candidates (n_comparisons 4, Bonferroni
+    1 - 0.05/4), so R4 uses 0.9875 and the reported edge CI is at 0.9875; the 3 triggers of ed2b-01 are disclosed as prior reads of the same class (cumulative
+    7). PASS: at least one trigger clears R1-R4 and L1 (a discovery). It is a SCREEN pass (per-trade R books, graduation_eligible false until BOOK-SIM-REAL-SIZER):
+    a Tier-3 proposal input for the class''s status, never an apply. FAIL: every candidate fails a read necessary clause (R1, R2 or R3) or is beaten by
+    its random control (R4). INDETERMINATE: anything else, i.e. the best candidate is under the n floor, never fired, carried by one leg (L1 fails), or
+    no trade could be priced (read_state no_data). Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control
+  in the same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; a partial banks at the next bar's open
+- triggers are evaluated on bar closes, live on telemetry passes
+- 8 legs; trend_donchian_eth_prop is 1,182 of 4,076 trades, so L1 (drop the best leg) is a pass condition
+- the same corpus was read by ed2b-01 for this class (3 other triggers)
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - partial_close@adverse_r_0.5
+    - partial_close@adverse_r_0.75
+    - partial_close@structure_break
+    - partial_close@momentum_flip
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261117-43b6-03
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - partial_close
+  - --partial-frac
+  - '0.5'
+  - --triggers
+  - adverse_r_0.5,adverse_r_0.75,structure_break,momentum_flip
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9875'
+  - --n-comparisons
+  - '4'
+  - --out
+  - '{out_dir}'

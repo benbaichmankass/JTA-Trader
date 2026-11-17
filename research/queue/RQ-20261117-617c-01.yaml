@@ -1,0 +1,136 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1), dispatched by Manager Session session_01AFoLuHbhd9wFuGJfWRqyoV. ITERATION unit for the subject cost-levers-live-legs; supersedes the accrual-bound RQ-20261101-d1f3-03. Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-617c-01
+title: 'cost-levers-live-legs ITERATION 2: does a signal-strength threshold (min_confidence 0.5 / 0.75) on the real-money leg xrp_pullback_2h cut losing, cost-heavy
+  entries on PRE-DEVELOPMENT history (2019-01..2021-11), net of the full cost stack?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+programme: P1
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): one-factor sensitivity against a config-exact control on a window no selection
+  step saw; every arm counted.'
+question: Does raising xrp_pullback_2h's min_confidence from the configured 0.0 to 0.5 or 0.75 (one factor, all else config-exact) beat the control A net of the
+  full cost stack on the disjoint pre-development window 2019-01-01..2021-11-10, in >= 2 of 3 calendar folds, with no worse drawdown?
+why_this_matters: 'ITERATION (research-ops 2026-11-17, fork B). The subject cost-levers-live-legs (scripts/research/iteration_subjects.yaml) FAILED on RQ-20261101-58e4-04:
+  costs are ~7% of the loss and the live legs are gross-negative, and its top untested lever is "signal-strength threshold". Its only queued next step, RQ-20261101-d1f3-03,
+  waits for 150 broker-costed real-money trades to accrue: that is live-cost MONITORING (RESEARCH-NO-WAIT class B), not research, so it is retired in favour of this
+  in-hand test. The lever is reachable: pullback confidence (trend depth / ATR, capped at 1) is emitted per trade and min_confidence is a config key no committed unit
+  arm has varied on this leg (research/levers/xrp_pullback_2h.yaml has no min_confidence entry). On PASS: a Tier-3 proposal NOTE for the manager on a real-money leg
+  (a fewer-trades, lower-cost setting), after ONE further read on the 1830 d record window; on FAIL: the signal-strength lever is recorded flat in the map and the next
+  cost lever is hold length (timeout_bars is already tested and flat) or symbol pruning on the pooled pullback family. The decision differs by branch.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.23
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'The control fired 288 trades over the 1830 d window ending 2026-11 (RQ-20261115-bf1b-21 arm A); the pre-dev window is ~2.9 years, so ~150 control trades
+    is an ESTIMATE. d=0.23 at n=150 (alpha 0.05, power 0.8). Arms are paired against the control on the same bars; 3 arms counted including the control.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand historical window on keyless public candles; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-617c-01-MINCONF-PREDEV
+  statistic: 'scripts/research/exit_lever_ablation.py --grade sweep on xrp_pullback_2h, arms A (config-exact), min_confidence_0.5, min_confidence_0.75, window 2019-01-01
+    .. 2021-11-10 23:59 (entirely before the 1830 d record/discovery window), one continuous harness pass, net of the full cost stack the harness resolves for the venue
+    (fee + slippage + funding); per variant delta net R vs A, delta maxDD, folds won of 3 calendar folds.'
+  rule: 'PASS (a LEAD, never a setting change here) IF some min_confidence arm beats control A by >= 3.0 R with maxDD no worse than A (the harness sweep clause) and
+    wins >= 2 of 3 folds, at A n >= 39; and, read from the per-fold table, the arm is net positive in >= 2 of 3 folds with no single fold above 50% of its total net,
+    long and short net both >= 0 where the leg trades both sides. FAIL IF no arm does at A n >= 39 (closes THESE settings on THIS window, never the lever family).
+    INDETERMINATE IF A n < 39 or the producer failed. Arm denominator = 3. DISCLOSURE: the arm values were chosen from the confidence quartiles of the CONTROL arm''s
+    trades in RQ-20261115-bf1b-21 (2021-11..2026-11: p25 0.65, median 1.0); that window is disjoint from this one and no arm was run on it. Thresholds not changed
+    after any result.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path and places no order; not a promotion case. A PASS is a lead for one further read then a Tier-3
+    proposal note on a real-money leg.
+  baseline: control arm A = xrp_pullback_2h config-exact (min_confidence 0.0), same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: a real-money leg whose loss the 58e4-04 audit attributed to entries, not cost; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, control + 2 arms through the committed-record argv builder; same shape as RQ-20261115-bf1b-21 (estimate).
+  why_runner: Fetches keyless public Binance Vision candles for a pinned window and runs the committed harness; no trainer data, no secrets; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - min_confidence_0.5=min_confidence=0.5
+  - --arm
+  - min_confidence_0.75=min_confidence=0.75
+  - --days
+  - '2900'
+  - --start
+  - '2019-01-01'
+  - --end
+  - 2021-11-10 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '3.0'
+  - --folds
+  - '3'
+  - --fold-majority
+  - '2'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-617c-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-617c-01
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+intervention_controls:
+  not_applicable: lever sweep against the declared config on the same bars (A/B arms), not an active-management action
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/blocked/RQ-20261101-d1f3-03.yaml
+- research/queue/RQ-20261101-58e4-04.yaml
+- research/levers/xrp_pullback_2h.yaml
+- scripts/research/exit_lever_ablation.py
+iteration:
+  subject: cost-levers-live-legs
+  subject_kind: strategy_leg
+  from_result: research/queue/RQ-20261101-58e4-04.yaml
+  verdict_read: fail
+  diagnosis: 'RQ-20261101-58e4-04 FAIL: costs ~7% of the loss; legs gross-negative (xrp_pullback_2h -35.9 R, ada_pullback_2h -15.9 R). The loss is entry selection,
+    so the cost levers that matter are the ones that drop entries (signal strength, symbol pruning), not cheaper fills. d1f3-03 (re-measure on broker-sourced costs)
+    is accrual-bound monitoring and is retired. Signal strength is untested on this leg (no min_confidence entry in its lever map).'
+  search: filter family (signal-strength threshold), min_confidence one-factor 0.5 / 0.75 vs 0.0, pre-dev window
+  levers:
+  - filter
+  map_entries:
+  - research/levers/cost-levers-live-legs.yaml
+  - research/levers/xrp_pullback_2h.yaml#levers.filter
+  attempt: 2
+  due_by: '2026-11-24'
+follow_up: The grader applies the rule mechanically; a PASS goes to one read on the 1830 d record window and then a Tier-3 proposal note; a FAIL moves the next iteration
+  to symbol pruning on the pooled pullback family.
