@@ -85,6 +85,10 @@ power:
 intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: 'both arms hold the identical v1 entry and bracket; only the price and fee of the time-stop closing order differ'
+  matched_random:
+    draws: 200
+    note: 'same exit moments, closing-order side drawn at random (p_long = v1''s long share): is the time-stop exit really
+      non-directional (v1''s own mean inside the 5-95% band of the draws)? Reported, never gating.'
   best_static:
     grid:
     - market_exit

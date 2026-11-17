@@ -279,6 +279,19 @@ def block_ci(values: np.ndarray, days: np.ndarray, lo_pct: float, reps: int = 20
     return float(values.mean()), float(np.percentile(boots, lo_pct)), float(np.percentile(boots, 100.0 - lo_pct))
 
 
+def matched_random_side(ok: pd.DataFrame, draws: int = 200) -> dict:
+    """Reported, never gating: at the SAME exit moments, the closing order's side drawn at random with v1's long share.
+    If the time-stop exit is truly non-directional, v1's own mean should sit inside the random draws' 5-95% band."""
+    p_long = float((ok.side == "long").mean())
+    is_long = (ok.side == "long").to_numpy()
+    own, opp = ok.delta_r.to_numpy(), ok.delta_r_opp.to_numpy()
+    sell_d, buy_d = np.where(is_long, own, opp), np.where(is_long, opp, own)   # closing a long = sell
+    rng = np.random.default_rng(DMF.BOOT_SEED)
+    means = [float(np.where(rng.random(len(ok)) < p_long, sell_d, buy_d).mean()) for _ in range(draws)]
+    return {"draws": draws, "p_long": p_long, "own_mean": float(own.mean()), "mean_of_means": float(np.mean(means)),
+            "p05": float(np.percentile(means, 5)), "p95": float(np.percentile(means, 95))}
+
+
 def exit_verdict(cal_ok: bool, n: int, ns: int, mean: float | None, lo: float | None) -> tuple[str, str]:
     if not cal_ok:
         return "indeterminate", "1m approximation not calibrated against a3f1-01"
@@ -318,19 +331,23 @@ def run_exit(a) -> int:
     rows = []
     for r in ts_exit.itertuples(index=False):
         d = day_frame(r.symbol, int(r.T), frames)
-        res = None
+        res = opp = None
         if d is not None and len(d) > 100:
-            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tick_of(d))
+            tk = tick_of(d)
+            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
+            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
         atr = getattr(r, "atr", np.nan)
         mid = (res or {}).get("mid", np.nan)
         rows.append({"symbol": r.symbol, "day": datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat(),
-                     "side": r.side, "net_r_taker": r.net_r,
+                     "side": r.side, "net_r_taker": r.net_r, "delta_bps_opp": (opp or {}).get("delta_bps", np.nan),
                      "per_r": (mid / (E.SL_ATR * atr)) if atr and atr > 0 else np.nan,
                      **(res or {"delta_bps": np.nan, "filled": None, "mid": np.nan, "tick_bps": np.nan})})
     df = pd.DataFrame(rows)
     df["delta_r"] = df.delta_bps / 1e4 * df.per_r
-    ok = df.dropna(subset=["delta_r"])
+    df["delta_r_opp"] = df.delta_bps_opp / 1e4 * df.per_r
+    ok = df.dropna(subset=["delta_r", "delta_r_opp"])
     n, ns = len(ok), int(ok.symbol.nunique())
+    matched = matched_random_side(ok) if n else None
     if n:
         mean, lo, hi = block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy(), lo_pct)
         mb, lob, hib = block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy(), lo_pct)
@@ -349,6 +366,7 @@ def run_exit(a) -> int:
            "taker_mean_net_r_time_stop": float(ok.net_r_taker.mean()) if n else None,
            "share_of_all_decisions": (len(ts_exit) / n_all) if n_all else None,
            "per_all_decisions_delta_r": (mean * n / n_all) if (n_all and mean is not None) else None,
+           "matched_random_side": matched,
            "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "exits.csv.gz", index=False)
@@ -414,6 +432,8 @@ def _self_test() -> None:
     assert exit_verdict(True, 2500, 40, 0.01, -0.001)[0] == "fail"
     assert exit_verdict(True, 900, 40, 0.01, 0.001)[0] == "indeterminate"
     assert exit_verdict(False, 2500, 40, 0.01, 0.001)[0] == "indeterminate"
+    mr = matched_random_side(pd.DataFrame({"side": ["long", "short"] * 50, "delta_r": [0.01] * 100, "delta_r_opp": [0.01] * 100}))
+    assert mr["draws"] == 200 and abs(mr["mean_of_means"] - 0.01) < 1e-12, mr
     m, lo, hi = block_ci(np.array([1.0, 1.0, 1.0, 1.0]), np.array(["a", "a", "b", "b"]), 2.5)
     assert m == lo == hi == 1.0
     print("ml_entry_maker_replay self-test OK")
