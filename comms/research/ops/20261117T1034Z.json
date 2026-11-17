@@ -63,12 +63,12 @@
    {
     "unit": "RQ-20261116-d5a7-13/-14",
     "verdict": "producer_failed",
-    "line": "driver gap (exit_lever_ablation refuses harness fade), not the Alpaca throttle -> blocked/, row FADE-ABLATION-DRIVER"
+    "line": "driver gap (exit_lever_ablation refused harness fade), not the Alpaca throttle; fade support landed in #26638 during this pass -> re-queued with last_dispatched_at null (owner RESEARCH-OPS-20261117-1006)"
    },
    {
     "unit": "RQ-20261116-d5a7-12",
     "verdict": "producer_failed",
-    "line": "driver gap fvg_range; grading owner set to FVG-RANGE-ABLATION-DRIVER"
+    "line": "driver gap fvg_range; fixed by #26638 and re-queued by #26643 (AM-OPS-2) during this pass; this branch takes main's version"
    },
    {
     "unit": "RQ-20261115-2411-04",
@@ -106,10 +106,6 @@
  ],
  "levers_filed": [
   {
-   "lever": "fade branch in exit_lever_ablation",
-   "ref": "FADE-ABLATION-DRIVER"
-  },
-  {
    "lever": "E4 exit-arm flags in desk_event_entry_replay",
    "ref": "E4-EXIT-LEVER-DRIVER"
   },
@@ -128,6 +124,10 @@
   {
    "lever": "ledger_ethsol emission in ml_entry_tp_revision evidence-extend-only",
    "ref": "ML-ENTRY-STRUCT-LEDGER"
+  },
+  {
+   "lever": "fade branch in exit_lever_ablation",
+   "ref": "FADE-ABLATION-DRIVER (filed 10:2xZ, closed: already delivered by #26638)"
   }
  ],
  "units_authored": {
@@ -262,7 +262,7 @@
  "handoff": [
   "Merge order: refill PR #26634 (c21d) and #26637 (24 node closures) before/alongside this PR; P3-Q8/P7-Q5/P7-Q6 edits merge cleanly with #26637 (checked by fork C).",
   "Trainer idle with nothing due (manager + ML-PRIMARY-5); Kaggle CPU/GPU only get c21d-03/-05 from #26634.",
-  "Driver rows unowned: FADE-ABLATION-DRIVER, FVG-RANGE-ABLATION-DRIVER, E4-EXIT-LEVER-DRIVER, LTR-ACTION-TIGHTEN-BE, EDGE-HOLDOUT-READ-MODE, ML-ENTRY-EQ-NEUTRAL-ARM, ML-ENTRY-STRUCT-LEDGER -> 6 blocked units wait on them.",
+  "Driver rows unowned: E4-EXIT-LEVER-DRIVER, LTR-ACTION-TIGHTEN-BE, EDGE-HOLDOUT-READ-MODE, ML-ENTRY-EQ-NEUTRAL-ARM, ML-ENTRY-STRUCT-LEDGER -> 6 blocked units wait on them.",
   "#26637 marks P3-RG1025-lever-pooled blocked with a stale reason (pool_arm_diff.py exists); a ready body is in this lane's notes for whoever owns that PR.",
   "P3-Q1-live-bt-stage-b: propose kill (answered by PR #18870 + 2a10-01); P4-Q2-ppi-rty-econ: lever MACRO-EVENT-RANKTILT-ARM dropped 2026-10-29 -> reopen or kill.",
   "RQ-20261112-c1a5-01 waits on not_before 2026-12-01 with no iteration block: classify under RESEARCH-NO-WAIT.",
