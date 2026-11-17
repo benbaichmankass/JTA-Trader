@@ -140,14 +140,12 @@ def test_routing_is_keyed_on_declared_strategies_not_on_symbols() -> None:
     `real_money` today; the leg-keyed one must not.
     """
     routing = ROLLUP._funding_by_leg()
-    # POSITIVE ANCHOR MOVED 2026-11-06 (PROD-LEGS-DSR-DECISION): ml_entry is the one leg bybit_2 still declares (operator
-    # exception "Move all but ml_entry (Rec.)"). trend_donchian_eth_4h left bybit_2 and becomes a THIRD negative control of
-    # exactly this shape: it trades ETHUSDT, which bybit_2 still trades (ml_entry), and bybit_2 no longer declares it -- it
-    # grades `prop` (breakout_2 / tradeify_1 / velotrade_1 baseline), never `real_money`.
+    # POSITIVE ANCHORS: ml_entry (operator exception 2026-11-06 "Move all but ml_entry (Rec.)") and, since the
+    # 2026-11-17 re-promotion (popup "ETH 4h breakout (Recommended)", PR #26718), trend_donchian_eth_4h -- both are
+    # DECLARED by bybit_2.strategies, so the leg-keyed resolver grades them real_money. The negative controls below
+    # (htf_pullback_trend_2h, eth_pullback_2h) trade instruments bybit_2 trades but are NOT declared there.
     assert ROLLUP._leg_funding("ml_entry", routing) == "real_money"
-    assert ROLLUP._leg_funding("trend_donchian_eth_4h", routing) != "real_money", (
-        "trend_donchian_eth_4h graded real_money -- it trades ETHUSDT, which bybit_2 trades, but since "
-        "2026-11-06 (PROD-LEGS-DSR-DECISION) bybit_2.strategies does not list it")
+    assert ROLLUP._leg_funding("trend_donchian_eth_4h", routing) == "real_money"
     # Since 2026-10-05 (MD-S1-CUT-ON-STAGE0-FAIL, #16548) eth_pullback_2h is on
     # no roster at all, so it reads `unresolved`; the regression this guards is
     # a symbol-keyed `real_money` grade, which must still never happen.
