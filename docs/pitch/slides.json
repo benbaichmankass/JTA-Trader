@@ -1,6 +1,6 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "e89a9ed58",
+ "built_from_commit": "713d15a07",
  "built_on": "2026-11-17",
  "slide_count": 15,
  "spec": {
@@ -266,11 +266,8 @@
    "provenance": [
     "MEASURED"
    ],
-   "bullets": [
-    "Real money, all-time: -156.2R — 478 trades · E[R] -0.33 · 47 of 478 confirmed · 4 of 17 strategies net positive",
-    "Demo, all-time: -106.3R — 1111 trades · E[R] -0.10 · 310 of 1111 confirmed · 17 of 54 strategies net positive"
-   ],
-   "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. Honest headline first: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The table shows the production strategies with a positive actual record, and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
+   "bullets": [],
+   "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. The table shows only strategies with a positive live record. For context, if asked: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The table shows the production strategies with a positive actual record, and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
    "numbers": [
     {
      "label": "live real money ΣR: tlt_pullback_1h",
@@ -322,49 +319,29 @@
    "table": {
     "header": [
      "Strategy",
-     "Book",
-     "Actual ΣR",
-     "n · E[R]",
-     "Confirmed",
-     "Backtest (net R · n · folds +)",
-     "Status"
+     "Live result (actual)",
+     "Backtest (net R, out of sample)"
     ],
     "rows": [
      [
-      "Long-bond-ETF pullback (hourly bars)",
-      "Real money",
-      "+1.29R",
-      "n 1 · E[R] +1.29",
-      "0 of 1",
-      "+8.2R · n 75 · 3/4",
-      "production"
+      "Long-bond-ETF pullback (hourly bars) · production",
+      "+1.29R · n 1 · E[R] +1.29 · real money · 0 of 1 confirmed",
+      "+8.2R · n 75 · 3/4 folds +"
      ],
      [
-      "Cardano pullback (2-hour bars)",
-      "Paper",
-      "+10.35R",
-      "n 52 · E[R] +0.20",
-      "13 of 52",
-      "+27.1R · n 67 · 4/4",
-      "production"
+      "Cardano pullback (2-hour bars) · production",
+      "+10.35R · n 52 · E[R] +0.20 · paper · 13 of 52 confirmed",
+      "+27.1R · n 67 · 4/4 folds +"
      ],
      [
-      "ICT scalp · MGC 15m",
-      "Paper (IB)",
-      "+8.24R",
-      "n 22 · E[R] +0.37",
-      "15 of 22",
-      "no record",
-      "testing"
+      "ICT scalp · MGC 15m · testing",
+      "+8.24R · n 22 · E[R] +0.37 · IB paper · 15 of 22 confirmed",
+      "no record yet"
      ],
      [
-      "Trend · MGC 1h",
-      "Paper (IB)",
-      "+1.07R",
-      "n 4 · E[R] +0.27",
-      "1 of 4",
-      "+25.6R · n 118 · 2/4",
-      "testing"
+      "Trend · MGC 1h · testing",
+      "+1.07R · n 4 · E[R] +0.27 · IB paper · 1 of 4 confirmed",
+      "+25.6R · n 118 · 2/4 folds +"
      ]
     ]
    },
@@ -913,7 +890,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit e89a9ed58.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 713d15a07.",
    "live_refreshable": true
   },
   {

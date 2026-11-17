@@ -769,30 +769,31 @@ def build():
     ra, pa = agg["rm"], agg["paper"]
     s = d.new_at((3,), "What our strategies have delivered",
               "The track record of the rule-based strategies, the part of the system that has run long enough to "
-              "have one; the ML models are too new and are judged on their offline evidence. Honest headline first: "
+              "have one; the ML models are too new and are judged on their offline evidence. The table shows only "
+              "strategies with a positive live record. For context, if asked: "
               f"across all {len(tr)} rule strategies, all-time realized results are negative, "
               f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
               "That total includes strategies that have since failed their backtests and been taken off real money, "
               "which is the ladder working. The table shows the production strategies with a positive actual record, "
               "and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result "
               "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
-    d.cards(s, [
-        (f"Real money, all-time: {ra['sr']:+.1f}R", [f"{ra['n']} trades · E[R] {ra['er']:+.2f} · {ra['conf']} of "
-                                                     f"{ra['n']} confirmed · {ra['pos']} of {ra['legs']} strategies net positive"]),
-        (f"Demo, all-time: {pa['sr']:+.1f}R", [f"{pa['n']} trades · E[R] {pa['er']:+.2f} · {pa['conf']} of {pa['n']} "
-                                               f"confirmed · {pa['pos']} of {pa['legs']} strategies net positive"]),
-    ], y=Inches(1.7), h=Inches(0.95), cols=2, size=12, head=15)
     rows = []
     for book, lst in (("Real money", pos_rm), ("Demo", pos_pp)):
         for t in lst:
             x = t["rm"] if book == "Real money" else t["paper"]
             bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']}" if t["bt"] is not None else "no record")
-            bk = book if book == "Real money" else ("Paper (IB)" if t["status"] != "production" else "Paper")
-            rows.append([plain_leg(t["leg"]), bk, f"{x['sr']:+.2f}R", f"n {x['n']} · E[R] {x['er']:+.2f}",
-                         f"{x['conf']} of {x['n']}", bt, t["status"]])
+            bk = "real money" if book == "Real money" else ("IB paper" if t["status"] != "production" else "paper")
+            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']} folds +" if t["bt"] is not None
+                  else "no record yet")
+            rows.append([f"{plain_leg(t['leg'])} · {t['status']}",
+                         f"{x['sr']:+.2f}R · n {x['n']} · E[R] {x['er']:+.2f} · {bk} · {x['conf']} of {x['n']} confirmed",
+                         bt])
             d.num(f"live {book.lower()} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.table(s, ["Strategy", "Book", "Actual ΣR", "n · E[R]", "Confirmed", "Backtest (net R · n · folds +)", "Status"],
-            rows, y=Inches(2.9), col_w=[3.4, 1.3, 1.2, 1.7, 1.2, 2.6, 1.1], size=12, h_row=Inches(0.45))
+    d.table(s, ["Strategy", "Live result (actual)", "Backtest (net R, out of sample)"],
+            rows[:6], y=Inches(1.9), col_w=[3.6, 5.4, 3.0], size=15, h_row=Inches(0.62))
+    if len(rows) > 6:
+        d._text(s, Inches(0.6), Inches(1.9) + Inches(0.62) * 7, Inches(4), Inches(0.3), f"+{len(rows) - 6} more",
+                size=11, color=GREY)
     d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
     d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
     d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
