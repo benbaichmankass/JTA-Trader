@@ -1,0 +1,118 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (owner of PI-20261117-ZFRREVN5-0004), from the graded RQ-20261111-207f-03. Gates this adds or changes: none.
+id: RQ-20261117-c21d-06
+title: 'D3 Foxhound-4 ITERATION 2 (labels, cost-neutral): does an ATR-neutral net-R target, or a gross-R direction head minus the known pre-trade
+  cost per R, beat the live net-R recipe at tau 0.25, count-matched, on the 172-ETF pool dev walk-forward?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P8
+kind: experiment
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: RQ-20261111-207f-03
+  verdict_read: fail
+  diagnosis: '207f-03 FAIL (graded by ML-PRIMARY-4, held PR #26635): neither gross-R (L1) nor raw-return (L2) labels beat net R at matched count.
+    Its registered diagnostic fired: the live net-R model ranks COST PER R, not direction (IC pred vs cost_long -0.527; ATR-neutral IC pred vs
+    raw return -0.013, t -0.95; the net-R target itself carries IC +0.143, t 7.0). 207f-02 FAIL: no tau / selection policy beats tau 0.25, so
+    the threshold is not the lever. L1 dropped cost entirely; nothing yet REMOVED the cost-per-R component while keeping net R, or ADDED the known
+    cost back to a direction head.'
+  search: 'lever family labels: target net_long -> (A1) ATR-bucket-neutral net_long, (A2) gross_long with score = pred - cost_long; one factor
+    each'
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+  attempt: 2
+  due_by: '2026-11-20'
+question: Foxhound-4 (ml_entry_eq_struct) is a live real-money D3 model whose score mostly encodes cost per R. If the target is made cost-neutral
+  (A1) or split into a direction head plus the known cost (A2), does the same recipe pick trades with higher realised net R at the same trade
+  count?
+why_this_matters: 'PASS -> the first new D3 lever for the equity book: a retrain of Foxhound-4 on that target goes to a confirm-window read, then
+  a Tier-3 challenger proposal (the live model keeps trading until then). FAIL -> the label family is exhausted on direction-vs-cost decompositions
+  for this leg; the next lever is features (direction-bearing inputs), recorded in the lever map.'
+power:
+  expected_n: 1600
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = dev OOF trade, count-matched to the tau-0.25 baseline (n 1691 in 98e3-06); 2 arms deflate the bar (bar_for(2)), as 207f-03.
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history to TRAIN_END; nothing accrues.
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: (the pool picks that feed ml_entry_eq_struct, config/strategies.yaml) whether ml_entry_eq_struct's selection rule (tau / top-k / adaptive),
+    training label or book filter is changed (Tier 3, operator) on alpaca_live + alpaca_portfolio, or a challenger replaces it
+  legs:
+  - ml_entry_eq_struct
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --section
+  - neutral
+  - --rule-id
+  - RULE-RQ20261117-c21d-06-COSTNEUTRAL
+  - --registered-at
+  - '2026-11-17'
+  inputs:
+    research_unit: RQ-20261117-c21d-06
+decision_rule:
+  id: RULE-RQ20261117-c21d-06-COSTNEUTRAL
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Dev walk-forward OOF (ml_entry_equity DEV_FOLDS to TRAIN_END, 5-seed pinned ensemble, config B features, structure exit pivot=5;sl_only)
+    restricted-LONG decisions on the Foxhound-4 ETF pool. Baseline = the live net-R recipe taken at tau 0.25. Each arm is taken at the count-matched
+    threshold (the same number of rows above threshold as the baseline). Per arm: mean realised net_long of the taken trades, se, folds with mean
+    > 0, diff vs baseline and t = diff / sqrt(se_a^2 + se_b^2).'
+  rule: INDETERMINATE IF the baseline n < 30. PASS IF A1 or A2 has n >= 30 AND mean net R >= baseline + 0.03 R AND t >= holdout_lock.bar_for(2).point_t_min
+    AND mean net R > 0 in >= 3 of 5 folds. FAIL otherwise. Thresholds fixed now, never changed after any result.
+  proposal_mapping: pass -> a confirm-window read of the winning target (fresh unit), then a Tier-3 challenger proposal for ml_entry_eq_struct;
+    fail -> label family closed for direction-vs-cost decompositions on this leg; next family = features. indeterminate -> baseline n starved,
+    reported.
+  what_it_does_not_do: Reads no confirm-window row (bars end at TRAIN_END), serves nothing, places no order, changes no config. Not a promotion
+    case.
+  min_n: 30 trades per arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.35
+  basis: 'carried from 207f-03 (same decision: whether the real-money equity model is retrained on a different target).'
+intervention_controls:
+  not_applicable: a selection / label / sizing replay of entry decisions on history, not an active-management action on live check-ins; the declared
+    live leg (tau 0.25 on the net-R label) is the control arm
+practice_precedent: M1, M2 (cost-net labels; check what the label rewards), M6 -- docs/reference/trading-and-model-practice-principles.md; RQ-20261111-207f-03
+  diagnostic; RQ-20261115-7e18-02 (crypto gross-minus-cost decomposition, the same A2 idea on Foxhound-1).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 240
+  why_runner: 'Alpaca 1h bars need the read-only paper key on research-script-run, and the 5-seed LightGBM ensemble has no GPU path in this harness,
+    so neither the trainer nor Kaggle GPU can run it as written. Risk: RQ-20261108-98e3-15 failed twice on the Alpaca bars throttle (row RUNNER-ALPACA-BARS-THROTTLE);
+    207f-02/-03 on the same fetch completed.'
+  basis: MEASURED shape from 207f-03 (same harness, 2 extra fits).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
