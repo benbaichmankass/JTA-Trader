@@ -32,8 +32,8 @@ question: Foxhound-4 (ml_entry_eq_struct) is a live real-money D3 model whose sc
   (A1) or split into a direction head plus the known cost (A2), does the same recipe pick trades with higher realised net R at the same trade
   count?
 why_this_matters: 'PASS -> the first new D3 lever for the equity book: a retrain of Foxhound-4 on that target goes to a confirm-window read, then
-  a Tier-3 challenger proposal (the live model keeps trading until then). FAIL -> the label family is exhausted on direction-vs-cost decompositions
-  for this leg; the next lever is features (direction-bearing inputs), recorded in the lever map.'
+  a Tier-3 challenger proposal (the live model keeps trading until then). FAIL -> these two target configurations (A1, A2) close on this leg (the label family stays open)
+  and the next lever tested is features (direction-bearing inputs), recorded in the lever map.'
 power:
   expected_n: 1600
   min_detectable_effect: 0.1
@@ -87,7 +87,7 @@ decision_rule:
   rule: INDETERMINATE IF the baseline n < 30. PASS IF A1 or A2 has n >= 30 AND mean net R >= baseline + 0.03 R AND t >= holdout_lock.bar_for(2).point_t_min
     AND mean net R > 0 in >= 3 of 5 folds. FAIL otherwise. Thresholds fixed now, never changed after any result.
   proposal_mapping: pass -> a confirm-window read of the winning target (fresh unit), then a Tier-3 challenger proposal for ml_entry_eq_struct;
-    fail -> label family closed for direction-vs-cost decompositions on this leg; next family = features. indeterminate -> baseline n starved,
+    fail -> the A1 and A2 target configurations close on this leg (the labels family stays open); next lever tested = features. indeterminate -> baseline n starved,
     reported.
   what_it_does_not_do: Reads no confirm-window row (bars end at TRAIN_END), serves nothing, places no order, changes no config. Not a promotion
     case.
