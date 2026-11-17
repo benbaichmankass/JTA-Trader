@@ -109,6 +109,7 @@ routing layer, not a replacement for reading it.
 | The direct two-feed test of that | `scripts/research/regime_tag_emitted.py --sensitivity-data <second-feed>` |
 | **Per-bar `calm`/`volatile` labels** — replay the live ML vol axis offline | `scripts/research/ml_vol_label_replay.py` |
 | Does that replay actually reproduce the LIVE label? | `scripts/research/ml_vol_label_replay.py verify` |
+| ...per head, chance-corrected (kappa), under two bar alignments, failure-contained per head (ML-VOL-LABEL-LIVE-VERIFY) | `scripts/research/vol_label_live_verify.py` |
 | The same, driven per-strategy off live config, with a fidelity label? | `scripts/research/regime_debt_matrix.py` |
 | Is ONE (regime, direction) cell **temporally stable** (the #7915 gate)? | `scripts/research/regime_cell_walkforward.py` |
 | Would the authored regime OFF-cells, applied to a strategy FAMILY pooled, have added net R out of sample and beaten a matched-random drop? | `scripts/research/regime_gate_family_consumer.py` |
