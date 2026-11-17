@@ -1,0 +1,111 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 664,
+ "population": "(leg, trade) points of closed live/paper trades on legs with a measured Stage-0 record, net R on the package initial stop, each with 20 later trades on the same leg; 48 legs",
+ "note": "CUSUM baseline AUC 0.6541 (leg-cluster CI95 [0.5498, 0.7498]) > 0.5: a working decay detector; comparator (blind grade, low = decay) AUC 0.4583 CI95 [0.3269, 0.6296] on n 460",
+ "measurement": {
+  "rule": "RULE-RQ20261117-aadc-05-D10-BASELINE",
+  "baseline_cusum": {
+   "n": 664,
+   "legs": 24,
+   "decay_rate": 0.6039,
+   "auc": 0.6541,
+   "ci95": [
+    0.5498,
+    0.7498
+   ]
+  },
+  "comparator_blind_grade": {
+   "n": 460,
+   "legs": 17,
+   "decay_rate": 0.5717,
+   "auc": 0.4583,
+   "ci95": [
+    0.3269,
+    0.6296
+   ]
+  },
+  "alarm": {
+   "h": 3.0,
+   "alarm_share": 0.3765,
+   "decay_rate_alarmed": 0.752,
+   "decay_rate_not_alarmed": 0.5145
+  },
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "H": 3.0,
+   "N_NEXT": 20,
+   "W_GRADE": 10
+  },
+  "trades_in": 7692,
+  "excluded": {
+   "not_closed": 4960,
+   "no_leg_record": 1187,
+   "no_contract_multiplier": 50,
+   "degenerate_risk_basis": 47,
+   "no_net_r": 140,
+   "backtest": 0
+  },
+  "legs": {
+   "ict_scalp_eth_15m": 45,
+   "ict_scalp_5m": 89,
+   "ict_scalp_avax_5m": 81,
+   "spy_pullback_1h": 15,
+   "trend_donchian_eth": 35,
+   "trend_donchian_1h": 9,
+   "ml_entry": 84,
+   "trend_donchian_xrp_adx25": 4,
+   "trend_donchian_xrp_4h": 26,
+   "trend_donchian_eth_prop": 13,
+   "trend_donchian_avax_4h": 29,
+   "ict_scalp_xrp_15m": 48,
+   "trend_donchian_sol_4h": 27,
+   "qqq_pullback_1h": 22,
+   "ict_scalp_sol_15m": 46,
+   "trend_donchian_sol_prop": 11,
+   "xrp_pullback_2h": 66,
+   "gdx_pullback_1d": 5,
+   "iaum_pullback_1d": 4,
+   "ief_pullback_1d": 6,
+   "tlt_pullback_1d": 10,
+   "ada_pullback_2h": 77,
+   "trend_donchian_eth_4h": 58,
+   "ict_scalp_xrp_5m": 43,
+   "trend_donchian_sol": 11,
+   "tqqq_trend_long_1d": 1,
+   "ict_scalp_sol_5m": 65,
+   "squeeze_breakout_4h": 8,
+   "uso_trend_1h": 22,
+   "eth_pullback_2h": 70,
+   "qld_trend_long_1d": 2,
+   "qqq_trend_long_1d": 3,
+   "trend_donchian_ada_4h": 33,
+   "tlt_pullback_1h": 12,
+   "trend_donchian": 43,
+   "slv_pullback_1d": 5,
+   "sol_pullback_2h": 29,
+   "gld_pullback_1d": 2,
+   "gld_pullback_1h": 13,
+   "slv_trend_1h": 26,
+   "scha_trend_long_1d": 2,
+   "htf_pullback_trend_2h": 59,
+   "iwm_trend_long_1d": 4,
+   "spy_trend_long_1d": 1,
+   "avax_pullback_2h": 21,
+   "eth_pullback_prop_2h": 6,
+   "fvg_range_15m": 1,
+   "fade_breakout_4h": 16
+  },
+  "stage0_records": 54,
+  "grades_in": 707
+ },
+ "run": {
+  "kind": "session-local",
+  "by": "ML-PRIMARY-5 session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "inputs": "same pull as read1: journal trades (7,692 rows 2026-05-01..2026-11-17) + order_packages via scripts/ops/diag_fetch.sh, ~10:15-10:45Z",
+  "read_status": "DECISION READ (second read, disclosed).",
+  "registered_commit_before_run": "f09526791d (fix + amendment pushed 11:00:01Z, before this read)"
+ }
+}
