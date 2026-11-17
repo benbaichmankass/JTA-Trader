@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "FVG-RANGE-ABLATION-DRIVER follow-up (manager order 2026-11-17 10:11Z). Moves RQ-20261116-d5a7-12 (fvg_range_15m adx_max sweep) from research/queue/blocked/ back to research/queue/ as status queued and drops its blocked_on, whose clears_when (exit_lever_ablation.py covers fvg_range, self-test passing) is met by PR #26638. The unit's decision rule, command and routing are byte-identical. Hold because the landing guard will not vouch for a unit file that already has a landed result (research/results/RQ-20261116-d5a7-12/, the producer_failed run 43859133629); the manager merges. Merge after #26638.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Re-queues RQ-20261116-d5a7-12, which already has a landed (producer_failed) result; the landing guard cannot vouch for that file (a rule written after a result is not pre-registered). The rule text is unchanged. The manager reads and merges after #26638."
+}
