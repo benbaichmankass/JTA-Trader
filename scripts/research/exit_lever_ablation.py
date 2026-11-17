@@ -162,7 +162,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0", "replace", "holdout", "risk_adjusted")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout", "risk_adjusted", "paired")
 N_FOLDS = 4
 
 
@@ -428,6 +428,61 @@ def grade_parity(arms: dict[str, dict[str, Any]], *, baseline: str, candidate: s
     return {"verdict": "fail", "label": "live_without_lever", **m,
             "why": f"dR={d_r} / dDD={d_dd} against bar {delta_r} with {wins}/{N_FOLDS} fold wins: the lever's "
                    "measured value is inside the materiality bar, so declared == executable (strip it) is the cheaper fix"}
+
+
+def grade_paired(arms: dict[str, dict[str, Any]], books: dict[str, list[dict[str, Any]]], *, baseline: str, candidate: str,
+                 t_bar: float, mean_bar: float, fold_majority: int, n_floor: int, min_match: float,
+                 control: dict[str, Any] | None) -> dict[str, Any]:
+    """PAIRED per-trade exit comparison (XRP-DOUBLE-EXPOSURE, 2026-11-17): two exit configs over the SAME entry rule and window.
+
+    Trades are paired by entry_time (+ direction when recorded); dR_i = candidate net_r_i - baseline net_r_i, net of the full cost
+    stack. CANDIDATE WINS iff mean dR > ``mean_bar`` AND t >= ``t_bar`` AND the candidate out-earns the baseline in >=
+    ``fold_majority`` disjoint calendar folds. The BASELINE (the incumbent) wins on the mirrored rule. Anything else is a TIE, which
+    keeps the baseline (the incumbent). Entries can diverge when an exit frees or holds the position, so fewer than ``min_match`` of
+    the smaller arm's trades pairing is INDETERMINATE (the arms no longer share entries), never a read.
+    """
+    import math
+    b, c = arms[baseline], arms[candidate]
+
+    def key(t: dict[str, Any]) -> tuple:
+        return (str(_ts(t["entry_time"])), str(t.get("direction") or t.get("side") or ""))
+
+    bk = {key(t): float(t.get("net_r") or 0.0) for t in books[baseline]}
+    ck = {key(t): float(t.get("net_r") or 0.0) for t in books[candidate]}
+    both = sorted(set(bk) & set(ck))
+    d = [ck[k] - bk[k] for k in both]
+    n = len(d)
+    mean = sum(d) / n if n else 0.0
+    sd = math.sqrt(sum((x - mean) ** 2 for x in d) / (n - 1)) if n > 1 else 0.0
+    t = (mean / (sd / math.sqrt(n))) if n > 1 and sd > 0 else None
+    wins_c, wins_b = _fold_wins(c, b), _fold_wins(b, c)
+    m = {"baseline": baseline, "candidate": candidate, "n_paired": n, "n_baseline": len(bk), "n_candidate": len(ck),
+         "match_share": round(n / max(1, min(len(bk), len(ck))), 4), "mean_dR": round(mean, 4), "sd_dR": round(sd, 4),
+         "t": None if t is None else round(t, 3), "sum_dR_paired": round(sum(d), 4),
+         "delta_net_r_window": round(c["net_r"] - b["net_r"], 4), "fold_wins_candidate": wins_c, "fold_wins_baseline": wins_b,
+         "n_folds": N_FOLDS, "t_bar": t_bar, "mean_bar": mean_bar, "fold_majority": fold_majority, "n_floor": n_floor,
+         "min_match": min_match, "control": control}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the baseline arm does not reproduce the committed record: the corpus differs, so no delta is read"}
+    if b["n"] < n_floor or c["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"n baseline {b['n']} / candidate {c['n']} < n_floor {n_floor}"}
+    if m["match_share"] < min_match:
+        return {"verdict": "indeterminate", "label": "entries_diverge", **m,
+                "why": f"only {n} of the smaller arm's trades pair by entry time (share {m['match_share']} < {min_match}): the "
+                       "two exit configs no longer share entries, so a per-trade pairing is not a like-for-like read"}
+    if mean > mean_bar and t is not None and t >= t_bar and wins_c >= fold_majority:
+        return {"verdict": "pass", "label": "candidate_beats_incumbent", "keep": candidate, **m,
+                "why": f"paired dR mean {m['mean_dR']} (t={m['t']}, n={n}) and the candidate out-earns in {wins_c}/{N_FOLDS} folds: "
+                       f"the candidate ({candidate}) clears the registered bar"}
+    if mean < -mean_bar and t is not None and t <= -t_bar and wins_b >= fold_majority:
+        return {"verdict": "fail", "label": "incumbent_beats_candidate", "keep": baseline, **m,
+                "why": f"paired dR mean {m['mean_dR']} (t={m['t']}, n={n}) and the incumbent out-earns in {wins_b}/{N_FOLDS} folds: "
+                       f"the incumbent ({baseline}) clears the mirrored bar"}
+    return {"verdict": "fail", "label": "tie_keep_incumbent", "keep": baseline, **m,
+            "why": f"neither side clears (paired dR mean {m['mean_dR']}, t={m['t']}, n={n}, fold wins candidate {wins_c} / "
+                   f"incumbent {wins_b} of {N_FOLDS}): TIE, keep the incumbent ({baseline})"}
 
 
 TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-FLOOR, 2026-10-14)
@@ -831,6 +886,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--baseline", required=True)
     ap.add_argument("--candidate", default=None, help="parity: the lever-off arm")
     ap.add_argument("--same-as", default=None, help="sweep: X=Y, two arms asserted identical")
+    ap.add_argument("--paired-t-bar", type=float, default=2.0, help="paired: |t| the mean per-trade dR must reach")
+    ap.add_argument("--paired-min-mean", type=float, default=0.0, help="paired: the mean per-trade dR must beat this (R)")
+    ap.add_argument("--paired-min-match", type=float, default=0.8,
+                    help="paired: share of the smaller arm's trades that must pair by entry time, else indeterminate")
     ap.add_argument("--delta-r", type=float, required=True, help="materiality bar in R over the window (the unit's)")
     ap.add_argument("--fold-majority", type=int, required=True)
     ap.add_argument("--folds", type=int, default=4,
@@ -911,8 +970,8 @@ def main(argv: list[str] | None = None) -> int:
         if need not in labels:
             print(f"ERROR: arm {need!r} is not declared ({labels})", file=sys.stderr)
             return 2
-    if a.grade == "parity" and not a.candidate:
-        print("ERROR: --grade parity needs --candidate", file=sys.stderr)
+    if a.grade in ("parity", "paired") and not a.candidate:
+        print(f"ERROR: --grade {a.grade} needs --candidate", file=sys.stderr)
         return 2
     same_as = None
     if a.same_as:
@@ -1106,6 +1165,11 @@ def main(argv: list[str] | None = None) -> int:
     if a.grade == "parity":
         g = grade_parity(arms, baseline=a.baseline, candidate=a.candidate, delta_r=a.delta_r,
                          fold_majority=a.fold_majority, n_floor=a.n_floor, control=control)
+    elif a.grade == "paired":
+        books = {lab: _load_trades(str(arms_dir / f"{lab}__trades.jsonl")) for lab in (a.baseline, a.candidate)}
+        g = grade_paired(arms, books, baseline=a.baseline, candidate=a.candidate, t_bar=a.paired_t_bar,
+                         mean_bar=a.paired_min_mean, fold_majority=a.fold_majority, n_floor=a.n_floor,
+                         min_match=a.paired_min_match, control=control)
     elif a.grade == "stage0" and split:
         import pandas as pd
         bt_trades = _load_trades(str(arms_dir / f"{a.baseline}__trades.jsonl"))
@@ -1325,6 +1389,47 @@ def _self_test() -> int:
         check("pullback arm argv: the builder omits --trail-decay-* (why the record is approximate); the raw flag adds it",
               "--trail-decay-arm-r" not in n_argv and s_argv[s_argv.index("--trail-decay-arm-r") + 1] == "4.49"
               and "--tp-r" in n_argv and n_argv[n_argv.index("--tp-r") + 1] == "3.0")
+    # paired per-trade exit comparison (XRP-DOUBLE-EXPOSURE, 2026-11-17): planted books, no network.
+    def _book(rs, start="2024-01-01T00:00:00+00:00", step_h=4):
+        import pandas as pd
+        t0 = pd.Timestamp(start)
+        return [{"entry_time": str(t0 + pd.Timedelta(hours=step_h * i)), "direction": "short", "net_r": float(r)}
+                for i, r in enumerate(rs)]
+
+    base_r = [(-1.0 if i % 3 == 0 else 0.5) for i in range(48)]
+    pa = {"A": _arm(48, sum(base_r), 5.0, [1, 1, 1, 1]), "B": _arm(48, sum(base_r) + 9.6, 5.0, [2, 2, 2, 2])}
+    better = _book([r + 0.2 + (0.05 if i % 2 else -0.05) for i, r in enumerate(base_r)])      # +0.2 per trade, small spread
+    gp = grade_paired(pa, {"A": _book(base_r), "B": better}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                      fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: a steady per-trade gain in 4/4 folds -> candidate wins", gp["verdict"] == "pass"
+          and gp["label"] == "candidate_beats_incumbent" and gp["keep"] == "B" and gp["n_paired"] == 48)
+    worse = _book([r - 0.2 + (0.05 if i % 2 else -0.05) for i, r in enumerate(base_r)])
+    pw = {"A": _arm(48, sum(base_r), 5.0, [2, 2, 2, 2]), "B": _arm(48, sum(base_r) - 9.6, 5.0, [1, 1, 1, 1])}
+    gp = grade_paired(pw, {"A": _book(base_r), "B": worse}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                      fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: a steady per-trade loss -> the incumbent wins (mirrored bar)", gp["verdict"] == "fail"
+          and gp["label"] == "incumbent_beats_candidate" and gp["keep"] == "A")
+    noisy = _book([r + (1.5 if i % 2 else -1.4) for i, r in enumerate(base_r)])               # mean ~0, huge spread
+    pt = {"A": _arm(48, 4.0, 5.0, [1, 1, 1, 1]), "B": _arm(48, 4.2, 5.0, [2, 0, 2, 0])}
+    gp = grade_paired(pt, {"A": _book(base_r), "B": noisy}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                      fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: no clear gap -> TIE, the incumbent is kept", gp["verdict"] == "fail" and gp["label"] == "tie_keep_incumbent"
+          and gp["keep"] == "A")
+    gp = grade_paired(pa, {"A": _book(base_r), "B": better}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                      fold_majority=3, n_floor=39, min_match=0.8, control={"ok": False})
+    check("paired: a failed control -> indeterminate", gp["verdict"] == "indeterminate" and gp["label"] == "control_failed")
+    gp = grade_paired({"A": _arm(20, 5.0, 3.0, [1, 1, 1, 1]), "B": _arm(20, 9.0, 3.0, [2, 2, 2, 2])},
+                      {"A": _book(base_r[:20]), "B": _book(base_r[:20])}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                      fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: n below the floor -> indeterminate", gp["verdict"] == "indeterminate" and gp["label"] == "underpowered")
+    gp = grade_paired(pa, {"A": _book(base_r), "B": _book(base_r, start="2024-01-01T01:00:00+00:00")}, baseline="A",
+                      candidate="B", t_bar=2.0, mean_bar=0.0, fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: entries that do not line up -> indeterminate, never a read",
+          gp["verdict"] == "indeterminate" and gp["label"] == "entries_diverge" and gp["n_paired"] == 0)
+    flat = grade_paired(pa, {"A": _book(base_r), "B": _book(base_r)}, baseline="A", candidate="B", t_bar=2.0, mean_bar=0.0,
+                        fold_majority=3, n_floor=39, min_match=0.8, control=None)
+    check("paired: identical books (sd 0, mean 0) -> TIE, no divide-by-zero", flat["label"] == "tie_keep_incumbent"
+          and flat["t"] is None)
     # fade / fvg_range (FVG-RANGE-ABLATION-DRIVER, 2026-11-17). Fixtures set every key they assert on, so a later edit to the live legs
     # cannot break the check with the builder intact (the lesson of the eth fixture above).
     fade = {"symbols": ["BTCUSDT"], "donchian": 20, "pierce_min": 0.0, "atr_stop_buffer": 0.5, "trail_mult": 3.0, "adx_max": 20.0}
