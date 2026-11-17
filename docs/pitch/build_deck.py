@@ -1070,6 +1070,39 @@ def build():
                   "questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).", y=H - Inches(1.1))
     d.end_md()
 
+    # ---------------------------------------------------------------- 16 ML infrastructure roadmap (operator comment 17:13Z)
+    s = d.new_at((1, 11), "ML infrastructure roadmap",
+              "The operator asked what comes next for the ML infrastructure and for building more powerful models. "
+              "Left, the infrastructure being built and what each piece unlocks; every item is a filed build or a "
+              "queued research unit. Right, how the models get more powerful. The lesson so far is that labels and "
+              "new information, not computing power, are the binding constraint: a sequence model lost to gradient-"
+              "boosted trees on regime, and a tabular foundation model only tied. So GPU time is pointed at the "
+              "questions with a diagnosis behind them, once their data is published where the GPU can read it.")
+    d.cards(s, [
+        ("Infrastructure we're building", [
+            "1 · Entry and exit data published as GPU datasets → the diagnosed entry and exit questions can run on GPU.",
+            "2 · Pooled reads across a strategy family → bigger samples in every test.",
+            "3 · Live results as a column in the promotion packet → live evidence feeds the ladder (after the 18 Nov reset).",
+            "4 · A benchmark for in-trade check-ins → test acting on market events, not only a timer.",
+            "5 · A new teacher label for the review student model → the first AI grade ran opposite to results.",
+        ]),
+        ("How we'll get more powerful models", [
+            "1 · More and better labels: the binding constraint on every model.",
+            "2 · New information, not more price data: a news-layer veto and prediction-market surprises.",
+            "3 · New model families, tested fairly: a sequence model lost and a tabular foundation model tied; next tries run on GPU.",
+            "4 · Regime-transition research: spotting when markets change state.",
+            "5 · Faster iteration: every ML test runs the same registered-rule pipeline as strategy tests.",
+        ]),
+    ], y=Inches(1.75), h=Inches(4.6), cols=2, size=13, head=17)
+    d.cite("PI-20261117-ZQKSKUGH-0001 (Kaggle GPU datasets)", "PI-20261117-NIVCJP7T-0007 (pooled cells)",
+           "PI-20261117-LSFHBH4A-0007 (live-performance promotion path, post-reset)",
+           "research/queue/RQ-20261117-c21d-04.yaml (check-in cadence)", "CJ-LABEL-ALTERNATIVE (student teacher label)",
+           "PI-20261117-LSFHBH4A-0004 (regime-transition research)", "ROADMAP.md § AI trader (ML) — build plan (tracks D, N, F)")
+    d.footnote(s, "Sources: work-store items PI-20261117-ZQKSKUGH-0001, -NIVCJP7T-0007, -LSFHBH4A-0007, -LSFHBH4A-0004, "
+                  "CJ-LABEL-ALTERNATIVE; unit RQ-20261117-c21d-04; ROADMAP.md § AI trader (ML) build plan. Dates only "
+                  "where a plan states one.", y=H - Inches(0.95))
+    d.end_md()
+
     d.p.save(OUT_PPTX)
     header = ("# JTA Trader — pitch deck: markdown source and speaker notes\n\n"
               f"> **Doc status:** `live` · category `unknown` · last verified `{f['date']}` · registered in "

@@ -1,8 +1,8 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "58cd6fe2a",
+ "built_from_commit": "38cf4a56e",
  "built_on": "2026-11-17",
- "slide_count": 15,
+ "slide_count": 16,
  "spec": {
   "audience": "smart non-expert",
   "numbers": "ratios only, no $, each tagged MEASURED or ESTIMATED",
@@ -1034,7 +1034,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 58cd6fe2a.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 38cf4a56e.",
    "live_refreshable": true
   },
   {
@@ -1149,6 +1149,34 @@
     ]
    },
    "footnote": "Source: ROADMAP.md live block (docs/roadmap/milestones.yaml, goal G4) and the ML plan's slot questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).",
+   "live_refreshable": false
+  },
+  {
+   "number": 16,
+   "section": "Where it goes next",
+   "title": "ML infrastructure roadmap",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [
+    "Infrastructure we're building — 1 · Entry and exit data published as GPU datasets → the diagnosed entry and exit questions can run on GPU. 2 · Pooled reads across a strategy family → bigger samples in every test. 3 · Live results as a column in the promotion packet → live evidence feeds the ladder (after the 18 Nov reset). 4 · A benchmark for in-trade check-ins → test acting on market events, not only a timer. 5 · A new teacher label for the review student model → the first AI grade ran opposite to results.",
+    "How we'll get more powerful models — 1 · More and better labels: the binding constraint on every model. 2 · New information, not more price data: a news-layer veto and prediction-market surprises. 3 · New model families, tested fairly: a sequence model lost and a tabular foundation model tied; next tries run on GPU. 4 · Regime-transition research: spotting when markets change state. 5 · Faster iteration: every ML test runs the same registered-rule pipeline as strategy tests."
+   ],
+   "notes": "The operator asked what comes next for the ML infrastructure and for building more powerful models. Left, the infrastructure being built and what each piece unlocks; every item is a filed build or a queued research unit. Right, how the models get more powerful. The lesson so far is that labels and new information, not computing power, are the binding constraint: a sequence model lost to gradient-boosted trees on regime, and a tabular foundation model only tied. So GPU time is pointed at the questions with a diagnosis behind them, once their data is published where the GPU can read it.",
+   "numbers": [],
+   "sources": [
+    "PI-20261117-ZQKSKUGH-0001 (Kaggle GPU datasets)",
+    "PI-20261117-NIVCJP7T-0007 (pooled cells)",
+    "PI-20261117-LSFHBH4A-0007 (live-performance promotion path, post-reset)",
+    "research/queue/RQ-20261117-c21d-04.yaml (check-in cadence)",
+    "CJ-LABEL-ALTERNATIVE (student teacher label)",
+    "PI-20261117-LSFHBH4A-0004 (regime-transition research)",
+    "ROADMAP.md § AI trader (ML) — build plan (tracks D, N, F)"
+   ],
+   "stages": [
+    1,
+    11
+   ],
+   "footnote": "Sources: work-store items PI-20261117-ZQKSKUGH-0001, -NIVCJP7T-0007, -LSFHBH4A-0007, -LSFHBH4A-0004, CJ-LABEL-ALTERNATIVE; unit RQ-20261117-c21d-04; ROADMAP.md § AI trader (ML) build plan. Dates only where a plan states one.",
    "live_refreshable": false
   }
  ]
