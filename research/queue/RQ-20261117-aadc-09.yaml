@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-09
 title: 'D10 CONFIRMATION (fresh window): does demote-on-alarm at H 2, which passed in-window (aadc-07), also add net R beyond a matched
   within-leg random skip on the legs'' Stage-0 OOS trade series before 2026-05-01, a window no D10 read has touched?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -119,3 +119,14 @@ related:
 - RQ-20261117-aadc-05
 - ML-D10-BASSET-BASELINE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-09-D10-H2-STAGE0-CONFIRM
+  evidence:
+  - research/results/RQ-20261117-aadc-09/local-20261117T1239Z.jsonl
+  - comms/research/RQ-20261117-aadc-09/local-20261117T1239Z/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured: demote-on-alarm at H 2 on the Stage-0 OOS series before 2026-05-01 (1,469 scored trades, 51 legs read): added_r -19.55 R over 620 skipped trades (mean skipped R +0.03), within-leg random mean +36.62, control_p 0.994 -> FAIL by the registered rule. The aadc-07 in-window PASS (H 2, p 0.0115) does NOT replicate on a disjoint window: the alarm action is recorded flat; no desk proposal. Disclosed: 2 legs (e4_oi_shock, ml_entry; 2,526 rows) were not read (different field names); the run crashed once in plumbing before reading any outcome (fix 1bf7f0b3), rule unchanged.'
+  rows: 1
+  verdict: fail
