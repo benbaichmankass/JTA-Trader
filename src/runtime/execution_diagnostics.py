@@ -1236,6 +1236,52 @@ def enqueue_naked_position_alert(
         return None
 
 
+def enqueue_rearm_restore_failed(
+    *,
+    account: str,
+    symbol: str,
+    trade_id: Any,
+    detail: str,
+    priority: str = "critical",
+) -> Optional[Path]:
+    """Page: an Alpaca re-arm was REFUSED and putting the cancelled protective legs back FAILED too.
+
+    PI-20261027-KYYBSZXS-0001. ``AlpacaClient.place_protective`` cancels the position's own legs,
+    the new OCO was refused, and the restore failed: the position MAY BE UNPROTECTED. Goes through
+    the same two surfaces as :func:`enqueue_naked_position_alert` (the operator-alert log and a
+    Telegram-ready pending ping), critical priority. The next monitor tick's sweep retries the
+    re-arm (no halt, no gate). Never raises.
+    """
+    try:
+        body = (
+            "🚨 ALPACA RE-ARM REFUSED AND RESTORE FAILED — position may be unprotected\n"
+            f"Trade id: {trade_id}\n"
+            f"Account: {account}\n"
+            f"Symbol: {symbol}\n"
+            f"Detail: {detail}\n"
+            "The re-arm cancelled this position's own protective legs, the new OCO was refused and "
+            "re-placing the old legs failed. The next sweep tick retries the re-arm; check the "
+            "position's resting orders at the broker."
+        )[:1024]
+        _append_operator_alert("rearm_restore_failed", priority, body)
+        payload = {"priority": priority, "body": body}
+        PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
+        name = f"{int(uuid.uuid4().int % 10**12):012d}-rearm-restore-failed.json"
+        path = PENDING_PINGS_DIR / name
+        tmp = path.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+        os.replace(tmp, path)
+        return path
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "execution_diagnostics: re-arm-restore-failed ping enqueue failed for "
+            "trade_id=%s symbol=%s: %s",
+            trade_id, symbol, exc,
+        )
+        return None
+
+
 def enqueue_bybit_protection_refused(
     *,
     account: str,

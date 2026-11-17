@@ -3920,10 +3920,10 @@ def _alert_rearm_restore_failed(account_id: str, symbol: str, trade_id: Any,
                                 restored: Dict[str, Any]) -> None:
     """Money-path ERROR alert: a refused Alpaca re-arm AND the restore of the cancelled legs failed.
 
-    PI-20261027-KYYBSZXS-0001. ``AlpacaClient.place_protective`` cancels the position's own legs, the
-    OCO was refused, and putting those legs back failed too: the position MAY BE UNPROTECTED. Names
-    account / symbol / trade_id. Latched per (account, symbol, trade) so the per-tick retry cannot
-    flood. Best-effort: never raises into the sweep; the next tick's repair path re-arms."""
+    PI-20261027-KYYBSZXS-0001. Raised through the same path as the naked-position alert
+    (``execution_diagnostics.enqueue_rearm_restore_failed``): account / symbol / trade_id, "position
+    may be unprotected". Latched per (account, symbol, trade) so the per-tick retry cannot flood.
+    Best-effort: never raises into the sweep; the next tick's repair path re-arms."""
     try:
         key = (str(account_id), str(symbol), trade_id)
         now = time.time()
@@ -3934,14 +3934,9 @@ def _alert_rearm_restore_failed(account_id: str, symbol: str, trade_id: Any,
         logger.error(
             "ALPACA RE-ARM REFUSED AND RESTORE FAILED: account=%s symbol=%s trade_id=%s: position may be "
             "unprotected (%s)", account_id, symbol, trade_id, detail)
-        msg = (
-            f"\U0001F6A8 [ERROR] Alpaca re-arm refused AND restore failed: {account_id} {symbol} "
-            f"trade_id={trade_id}\n"
-            "The re-arm cancelled this position's own protective legs, the new OCO was refused, and "
-            f"putting the old legs back failed ({detail}). The position may be UNPROTECTED. "
-            "The next sweep tick retries the re-arm; no action is taken on the position by this alert."
-        )
-        _send_reset_alert(msg, caller="_alert_rearm_restore_failed")
+        from src.runtime.execution_diagnostics import enqueue_rearm_restore_failed
+        enqueue_rearm_restore_failed(account=str(account_id), symbol=str(symbol),
+                                     trade_id=trade_id, detail=detail)
     except Exception as exc:  # noqa: BLE001
         logger.warning("_alert_rearm_restore_failed: %s", exc)
 

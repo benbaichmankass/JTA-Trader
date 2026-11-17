@@ -4,8 +4,10 @@
 seven refusals, "insufficient qty available for order (requested: 9375, available: 0)" (during the false close-all
 that #26522 fixed; the flatten itself had cancelled the legs). "Place first" cannot work on Alpaca (the resting
 legs reserve the shares, hence available 0), so after a refusal the legs it cancelled are put back, at their OLD
-prices, always GTC, READ BACK from the venue, and a failed restore is reported (and alerted by the order monitor).
-Another package's legs are never deleted.
+prices, always GTC, READ BACK from the venue, and a failed restore is reported (and alerted, through the
+naked-position alert path, by the order monitor). A sibling's standalone target released for the retry is put back
+when the retry is also refused; when the retry succeeds it stays released (documented, manager 2026-11-17 06:02Z:
+the shares are shared on Alpaca, so both cannot be held; a merged-OCO design is filed).
 
 Fixtures reuse the captured alpaca_paper/SPY shape of tests/test_alpaca_rearm_scoped_cancel.py.
 """
@@ -138,19 +140,34 @@ def test_a_raising_restore_post_is_contained():
     assert r["retCode"] == 403 and r["restored"]["failed"] and "socket closed" in r["retMsg"]
 
 
-def test_a_sibling_package_target_is_never_deleted_on_a_refusal():
-    """The retry branch that RELEASED a standalone sibling target is gone (manager order 2026-11-17)."""
-    sibling_tp = {"id": "22222222-aaaa-4bbb-8ccc-000000000002", "symbol": "SPY",
-                  "order_class": "simple", "type": "limit", "side": "sell",
-                  "qty": "11", "limit_price": "830.43", "status": "new", "legs": None}
-    v = _Readback([sibling_tp], post_results=[_REFUSED, _OK])
+_SIB_TP = {"id": "22222222-aaaa-4bbb-8ccc-000000000002", "symbol": "SPY",
+           "order_class": "simple", "type": "limit", "side": "sell",
+           "qty": "11", "limit_price": "830.43", "status": "new", "legs": None}
+
+
+def test_released_sibling_target_is_restored_when_the_retry_is_also_refused():
+    v = _Readback([_SIB_TP], post_results=[_REFUSED, _REFUSED, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 403
-    assert v.deletes() == []                              # nothing deleted: no own leg, sibling kept
-    assert len(_posts(v)) == 1                            # no retry POST
+    assert v.deletes() == [_SIB_TP["id"]]
+    posts = _posts(v)
+    assert len(posts) == 3                                # OCO, retry OCO, restore of the sibling target
+    assert posts[2] == {"symbol": "SPY", "qty": "11", "side": "sell", "type": "limit",
+                        "time_in_force": "gtc", "limit_price": "830.43"}
+    assert r["restored"]["ok"] == 1 and not r["restored"]["failed"]
 
 
-def test_sibling_legs_survive_a_refusal_that_also_restores_the_own_legs():
+def test_released_sibling_target_stays_released_when_the_retry_succeeds():
+    """Documented, kept (manager 2026-11-17 06:02Z): arming the STOP outranks the sibling's target geometry."""
+    v = _Readback([_SIB_TP], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}}])
+    r = _rearm(v, 8, sibling_qtys=[11])
+    assert r["retCode"] == 0 and "restored" not in r
+    assert v.deletes() == [_SIB_TP["id"]]
+    assert len(_posts(v)) == 2
+
+
+def test_a_sibling_bracket_or_stop_is_never_deleted_on_a_refusal():
+    """A sibling STOP (or a target sharing its group) is never released, refusal or not."""
     v = _Readback(_LIVE_SPY, post_results=[_REFUSED, _OK])
     _rearm(v, 8, sibling_qtys=[11])
     deleted = v.deletes()
@@ -168,18 +185,29 @@ def test_cancel_row_protection_is_an_intended_cancel_and_restores_nothing():
 # ---------------------------------------------------------------------------
 # The order monitor raises ONE money-path ERROR alert when the restore also failed.
 # ---------------------------------------------------------------------------
-def test_restore_failure_alert_names_account_symbol_and_trade_and_is_latched(monkeypatch):
-    sent: list = []
-    monkeypatch.setattr(order_monitor, "_send_reset_alert", lambda msg, caller: sent.append((msg, caller)))
+def test_restore_failure_raises_exactly_one_critical_alert_through_the_naked_position_path(monkeypatch, tmp_path):
+    """The alert goes through execution_diagnostics (the naked-position alert's own surfaces):
+    one operator-alert record and one pending ping, critical, naming account/symbol/trade_id."""
+    from src.runtime import execution_diagnostics as ed
+    appended: list = []
+    monkeypatch.setattr(ed, "PENDING_PINGS_DIR", tmp_path / "pings")
+    monkeypatch.setattr(ed, "_append_operator_alert", lambda kind, prio, body: appended.append((kind, prio, body)))
     monkeypatch.setattr(order_monitor, "_REARM_RESTORE_ALERT_AT", {})
     restored = {"attempted": 1, "ok": 0, "failed": ["own OCO: still no shares"], "summary": "x"}
     order_monitor._alert_rearm_restore_failed("alpaca_live", "SPY", 7001, restored)
-    order_monitor._alert_rearm_restore_failed("alpaca_live", "SPY", 7001, restored)   # latched
-    order_monitor._alert_rearm_restore_failed("alpaca_live", "SLV", 7002, restored)   # another trade
-    assert len(sent) == 2
-    msg = sent[0][0]
-    assert "alpaca_live" in msg and "SPY" in msg and "7001" in msg and "may be UNPROTECTED" in msg
-    assert "still no shares" in msg
+    order_monitor._alert_rearm_restore_failed("alpaca_live", "SPY", 7001, restored)   # latched: same trade
+    assert len(appended) == 1
+    kind, prio, body = appended[0]
+    assert kind == "rearm_restore_failed" and prio == "critical"
+    for needle in ("alpaca_live", "SPY", "7001", "position may be unprotected", "still no shares"):
+        assert needle in body, needle
+    pings = list((tmp_path / "pings").glob("*-rearm-restore-failed.json"))
+    assert len(pings) == 1                                                            # exactly one ping file
+    import json
+    payload = json.loads(pings[0].read_text())
+    assert payload["priority"] == "critical" and "7001" in payload["body"]
+    order_monitor._alert_rearm_restore_failed("alpaca_live", "SLV", 7002, restored)   # another trade: its own alert
+    assert len(appended) == 2
 
 
 def _sweep_with(monkeypatch, tmp_path, restored):
