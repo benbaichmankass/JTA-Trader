@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-1c4e-01.yaml (ENTRY execution lever: maker entry on ml_entry's own decisions, lane ML-DECISION-MODELS)
+# wiring: research/queue/RQ-20261117-aadc-02.yaml (`exit`: maker EXIT on v1's 24h time-stop exits, row ML-D9-MAKER-EXIT-HARNESS)
 """Does a post-only MAKER entry (DESK-MAKER-FILLS policy F: join the near touch, 5-min fallback to the market) improve the FROZEN
 ENTRY v1 model's own decisions, net of fees and adverse selection, in R per decision? (Tier-1 research; no order, no config.)
 
@@ -16,7 +17,14 @@ In R: delta_R = delta_F / 1e4 x entry / risk, risk = 2 x ATR14 (the leg's stop d
 
     python3 scripts/research/ml_entry_maker_replay.py calibrate --out O        # a3f1-01's 40 days x 6 perps, random direction
     python3 scripts/research/ml_entry_maker_replay.py run --unit RQ-20261112-1c4e-01 --out O [--cache C]
+    python3 scripts/research/ml_entry_maker_replay.py exit --unit RQ-20261117-aadc-02 --out O [--cache C]
     python3 scripts/research/ml_entry_maker_replay.py --self-test
+
+EXIT (row ML-D9-MAKER-EXIT-HARNESS, 2026-11-17): the same policy F, on the CLOSING order of v1's held-out decisions that leave on the
+24h TIME STOP (reason 0). Why only those: 1c4e-01 FAILED because a directional pick runs away from a resting entry limit; a time-stop
+exit is a clock event, not a directional pick, so that selection is absent. SL/TP exits are resting orders already and are untouched.
+Exit epoch T = decision bar open + (HORIZON_H + 1) h (bar t+H's close); the closing order's direction is -side (sell to close a long).
+delta_R = delta_F / 1e4 x mid / (SL_ATR x ATR14). An exit at 00:00Z needs the previous day's last minute, so that day is stitched in.
 """
 from __future__ import annotations
 
@@ -230,6 +238,147 @@ def run(a) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------------------------ exit (v1's time-stop exits)
+EXIT_UNIT = "RQ-20261117-aadc-02"
+EXIT_RULE_ID = "RULE-RQ20261117-aadc-02-MAKER-EXIT"
+EXIT_MODEL_ID = "EXEC-maker-exit-ml_entry_v1"
+EXIT_N_FLOOR, EXIT_SYM_FLOOR = 1000, 10
+
+
+def exit_epoch(ts, horizon_h: int) -> int:
+    """Epoch second of the time-stop exit: the close of bar t+H, i.e. decision bar open + (H + 1) h."""
+    return int((pd.Timestamp(ts).tz_convert("UTC") if pd.Timestamp(ts).tzinfo else pd.Timestamp(ts, tz="UTC")).timestamp()) \
+        + 3600 * (horizon_h + 1)
+
+
+def day_frame(sym: str, T: int, frames: dict) -> pd.DataFrame | None:
+    """1m bars for the day of T; at 00:00Z the previous day is stitched in (the minute ending at T starts the day before)."""
+    day = datetime.fromtimestamp(T, tz=timezone.utc).date()
+    d = frames.get((sym, day))
+    if d is None:
+        return None
+    if T % 86400 == 0:
+        prev = frames.get((sym, date.fromordinal(day.toordinal() - 1)))
+        if prev is None:
+            return None
+        d = pd.concat([prev, d], ignore_index=True)
+    return d
+
+
+def block_ci(values: np.ndarray, days: np.ndarray, lo_pct: float, reps: int = 2000, seed: int = 20261117):
+    """Day-block bootstrap mean CI at an arbitrary lower percentile (the deflated holdout bar's ci_lo_percentile)."""
+    uniq = np.unique(days)
+    idx = [np.flatnonzero(days == d) for d in uniq]
+    sums = np.array([values[i].sum() for i in idx])
+    cnts = np.array([len(i) for i in idx])
+    rng = np.random.default_rng(seed)
+    boots = np.empty(reps)
+    for r in range(reps):
+        pick = rng.integers(0, len(uniq), len(uniq))
+        boots[r] = sums[pick].sum() / cnts[pick].sum()
+    return float(values.mean()), float(np.percentile(boots, lo_pct)), float(np.percentile(boots, 100.0 - lo_pct))
+
+
+def matched_random_side(ok: pd.DataFrame, draws: int = 200) -> dict:
+    """Reported, never gating: at the SAME exit moments, the closing order's side drawn at random with v1's long share.
+    If the time-stop exit is truly non-directional, v1's own mean should sit inside the random draws' 5-95% band."""
+    p_long = float((ok.side == "long").mean())
+    is_long = (ok.side == "long").to_numpy()
+    own, opp = ok.delta_r.to_numpy(), ok.delta_r_opp.to_numpy()
+    sell_d, buy_d = np.where(is_long, own, opp), np.where(is_long, opp, own)   # closing a long = sell
+    rng = np.random.default_rng(DMF.BOOT_SEED)
+    means = [float(np.where(rng.random(len(ok)) < p_long, sell_d, buy_d).mean()) for _ in range(draws)]
+    return {"draws": draws, "p_long": p_long, "own_mean": float(own.mean()), "mean_of_means": float(np.mean(means)),
+            "p05": float(np.percentile(means, 5)), "p95": float(np.percentile(means, 95))}
+
+
+def exit_verdict(cal_ok: bool, n: int, ns: int, mean: float | None, lo: float | None) -> tuple[str, str]:
+    if not cal_ok:
+        return "indeterminate", "1m approximation not calibrated against a3f1-01"
+    if n < EXIT_N_FLOOR or ns < EXIT_SYM_FLOOR:
+        return "indeterminate", f"measured time-stop exits {n} / symbols {ns} below floor ({EXIT_N_FLOOR} / {EXIT_SYM_FLOOR})"
+    if mean is not None and lo is not None and mean > 0 and lo > 0:
+        return "pass", f"maker exit delta {mean:+.4f} R/decision, deflated lower bound {lo:+.4f} > 0, n={n}"
+    return "fail", f"maker exit delta {mean:+.4f} R/decision, deflated lower bound {lo:+.4f} does not clear 0, n={n}"
+
+
+def run_exit(a) -> int:
+    import holdout_lock as HL
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    cal = calibrate(a)
+    (out / "calibration.json").write_text(json.dumps(cal, indent=1) + "\n")
+    taken = v1_decisions(Path(a.kcache))
+    n_all = len(taken)
+    ts_exit = taken[taken.reason == 0].reset_index(drop=True)
+    print(f"v1 held-out decisions {n_all}; time-stop exits {len(ts_exit)}", flush=True)
+    # the claim comes BEFORE any post-exit 1m outcome is read
+    claim = HL.claim_read(EXIT_MODEL_ID, E.HOLDOUT_START, E.END, a.unit, a.reader, Path(a.ledger), train_end="2025-09-30",
+                          family="EXEC")
+    lo_pct = float(claim["bar"]["ci_lo_percentile"])
+    cache = Path(a.cache)
+    ts_exit["T"] = [exit_epoch(t, E.HORIZON_H) for t in ts_exit.ts]
+    need = set()
+    for sym, T in zip(ts_exit.symbol, ts_exit["T"]):
+        day = datetime.fromtimestamp(int(T), tz=timezone.utc).date()
+        need.add((sym, day))
+        if int(T) % 86400 == 0:
+            need.add((sym, date.fromordinal(day.toordinal() - 1)))
+    jobs = sorted(need)
+    with cf.ThreadPoolExecutor(24) as ex:
+        frames = dict(zip(jobs, ex.map(lambda j: fetch_1m(j[0], j[1], cache), jobs)))
+    rows = []
+    for r in ts_exit.itertuples(index=False):
+        d = day_frame(r.symbol, int(r.T), frames)
+        res = opp = None
+        if d is not None and len(d) > 100:
+            tk = tick_of(d)
+            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
+            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
+        atr = getattr(r, "atr", np.nan)
+        mid = (res or {}).get("mid", np.nan)
+        rows.append({"symbol": r.symbol, "day": datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat(),
+                     "side": r.side, "net_r_taker": r.net_r, "delta_bps_opp": (opp or {}).get("delta_bps", np.nan),
+                     "per_r": (mid / (E.SL_ATR * atr)) if atr and atr > 0 else np.nan,
+                     **(res or {"delta_bps": np.nan, "filled": None, "mid": np.nan, "tick_bps": np.nan})})
+    df = pd.DataFrame(rows)
+    df["delta_r"] = df.delta_bps / 1e4 * df.per_r
+    df["delta_r_opp"] = df.delta_bps_opp / 1e4 * df.per_r
+    ok = df.dropna(subset=["delta_r", "delta_r_opp"])
+    n, ns = len(ok), int(ok.symbol.nunique())
+    matched = matched_random_side(ok) if n else None
+    if n:
+        mean, lo, hi = block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy(), lo_pct)
+        mb, lob, hib = block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy(), lo_pct)
+    else:
+        mean = lo = hi = mb = lob = hib = None
+    v, why = exit_verdict(bool(cal["calibrated"]), n, ns, mean, lo)
+    fl = ok.filled.astype(bool) if n else pd.Series(dtype=bool)
+    res = {"unit": a.unit, "rule": EXIT_RULE_ID, "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
+           "n_time_stop_exits": len(ts_exit), "n_measured": n, "n_symbols": ns, "mean_delta_r": mean,
+           "deflated_ci_delta_r": [lo, hi], "ci_lo_percentile": lo_pct, "mean_delta_bps": mb, "deflated_ci_delta_bps": [lob, hib],
+           "fill_rate": float(fl.mean()) if n else None,
+           "delta_bps_if_filled": float(ok.delta_bps[fl].mean()) if n and fl.any() else None,
+           "delta_bps_if_unfilled": float(ok.delta_bps[~fl].mean()) if n and (~fl).any() else None,
+           "by_side": {s: {"n": int((ok.side == s).sum()), "mean_delta_r": float(ok.delta_r[ok.side == s].mean())}
+                       for s in ("long", "short") if n and (ok.side == s).any()},
+           "taker_mean_net_r_time_stop": float(ok.net_r_taker.mean()) if n else None,
+           "share_of_all_decisions": (len(ts_exit) / n_all) if n_all else None,
+           "per_all_decisions_delta_r": (mean * n / n_all) if (n_all and mean is not None) else None,
+           "matched_random_side": matched,
+           "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
+    (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    df.to_csv(out / "exits.csv.gz", index=False)
+    verdict = {"verdict": v, "read_state": "measured", "n": n,
+               "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END} that exit on "
+                              "the 24h time stop, measured where 1m Binance-vision klines exist"),
+               "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock")}}
+    (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "why": why}), flush=True)
+    return 0
+
+
 # ------------------------------------------------------------------------------------------------ self-test
 def _self_test() -> None:
     T0 = 1_700_000_000 - (1_700_000_000 % 3600)
@@ -259,13 +408,41 @@ def _self_test() -> None:
     assert r["filled"] and abs(r["delta_bps"] - (0.01 / 100 * 1e4 + 3.5)) < 1e-6, r
     # the minute ending at T must exist
     assert delta_f(d[d.t != T0 - 60], int(T0), 1, tick) is None
+    # EXIT: closing a long is a SELL (-1). A 2-tick pop fills the resting sell at the ask: +1 tick + 3.5 bps fee saving.
+    d5 = d.copy()
+    d5.loc[d5.t == T0 + 120, "high"] = 100.03
+    r = delta_f(d5, int(T0), -1, tick)
+    assert r["filled"] and abs(r["delta_bps"] - (0.01 / 100 * 1e4 + 3.5)) < 1e-6, r
+    # exit epoch = decision bar open + 25 h
+    assert exit_epoch(pd.Timestamp("2025-10-01 03:00", tz="UTC"), 24) == int(pd.Timestamp("2025-10-02 04:00", tz="UTC").timestamp())
+    # 00:00Z exit stitches the previous day's last minute
+    day0 = 1_700_006_400 - (1_700_006_400 % 86400)
+    tp = np.arange(day0 - 3600, day0, 60)
+    tn = np.arange(day0, day0 + 3600, 60)
+    def mk(t):
+        return pd.DataFrame({"t": t, "open": 100.0, "high": 100.01, "low": 99.99, "close": 100.0})
+    from datetime import datetime as _dt
+    dd = _dt.fromtimestamp(day0, tz=timezone.utc).date()
+    frames = {("X", dd): mk(tn), ("X", date.fromordinal(dd.toordinal() - 1)): mk(tp)}
+    st = day_frame("X", day0, frames)
+    assert st is not None and delta_f(st, day0, -1, 0.01) is not None
+    assert delta_f(frames[("X", dd)], day0, -1, 0.01) is None   # without the stitch the minute ending at T is missing
+    # verdict mapping
+    assert exit_verdict(True, 2500, 40, 0.01, 0.001)[0] == "pass"
+    assert exit_verdict(True, 2500, 40, 0.01, -0.001)[0] == "fail"
+    assert exit_verdict(True, 900, 40, 0.01, 0.001)[0] == "indeterminate"
+    assert exit_verdict(False, 2500, 40, 0.01, 0.001)[0] == "indeterminate"
+    mr = matched_random_side(pd.DataFrame({"side": ["long", "short"] * 50, "delta_r": [0.01] * 100, "delta_r_opp": [0.01] * 100}))
+    assert mr["draws"] == 200 and abs(mr["mean_of_means"] - 0.01) < 1e-12, mr
+    m, lo, hi = block_ci(np.array([1.0, 1.0, 1.0, 1.0]), np.array(["a", "a", "b", "b"]), 2.5)
+    assert m == lo == hi == 1.0
     print("ml_entry_maker_replay self-test OK")
 
 
 def main(argv=None) -> int:
     import holdout_lock as HL
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "calibrate"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "calibrate", "exit"])
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--out", default="/tmp/maker_replay")
     ap.add_argument("--cache", default="/tmp/maker_1m")
@@ -280,6 +457,10 @@ def main(argv=None) -> int:
     if a.cmd == "calibrate":
         print(json.dumps(calibrate(a), indent=1))
         return 0
+    if a.cmd == "exit":
+        if a.unit == UNIT:
+            a.unit = EXIT_UNIT
+        return run_exit(a)
     return run(a)
 
 
