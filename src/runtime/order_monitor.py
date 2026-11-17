@@ -3910,6 +3910,37 @@ def _send_reset_alert(msg: str, *, caller: str) -> None:
         logger.debug("%s: fcm WARNING publish failed: %s", caller, exc)
 
 
+_REARM_RESTORE_ALERT_AT: Dict[Tuple[str, str, Any], float] = {}
+#: One alert per (account, symbol, trade) per this many seconds: the sweep retries every tick and a
+#: persistent failure must not flood the channel.
+_REARM_RESTORE_ALERT_EVERY_S = 6 * 3600
+
+
+def _alert_rearm_restore_failed(account_id: str, symbol: str, trade_id: Any,
+                                restored: Dict[str, Any]) -> None:
+    """Money-path ERROR alert: a refused Alpaca re-arm AND the restore of the cancelled legs failed.
+
+    PI-20261027-KYYBSZXS-0001. Raised through the same path as the naked-position alert
+    (``execution_diagnostics.enqueue_rearm_restore_failed``): account / symbol / trade_id, "position
+    may be unprotected". Latched per (account, symbol, trade) so the per-tick retry cannot flood.
+    Best-effort: never raises into the sweep; the next tick's repair path re-arms."""
+    try:
+        key = (str(account_id), str(symbol), trade_id)
+        now = time.time()
+        if now - _REARM_RESTORE_ALERT_AT.get(key, 0.0) < _REARM_RESTORE_ALERT_EVERY_S:
+            return
+        _REARM_RESTORE_ALERT_AT[key] = now
+        detail = "; ".join(str(x) for x in (restored.get("failed") or [])[:3])
+        logger.error(
+            "ALPACA RE-ARM REFUSED AND RESTORE FAILED: account=%s symbol=%s trade_id=%s: position may be "
+            "unprotected (%s)", account_id, symbol, trade_id, detail)
+        from src.runtime.execution_diagnostics import enqueue_rearm_restore_failed
+        enqueue_rearm_restore_failed(account=str(account_id), symbol=str(symbol),
+                                     trade_id=trade_id, detail=detail)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_alert_rearm_restore_failed: %s", exc)
+
+
 def _alert_account_reset(account_id: str, symbols: List[str]) -> None:
     """One consolidated 'account reset SUSPECTED' alert (Telegram + WARNING FCM).
 
@@ -10315,6 +10346,12 @@ def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
                 "_attempt_naked_autoprotect: place_protective refused for "
                 "trade_id=%s: %r", row["id"], (resp or {}).get("retMsg"),
             )
+            # PI-20261027-KYYBSZXS-0001: the client put back the legs it cancelled; if THAT also
+            # failed the position may have no bracket, so say so once. The next tick's sweep retries
+            # the re-arm (no halt, no gate).
+            _restored = (resp or {}).get("restored")
+            if isinstance(_restored, dict) and _restored.get("failed"):
+                _alert_rearm_restore_failed(account_id, symbol, row["id"], _restored)
             return False
         _stamp_repair(db, row, "naked_rearm")
         return True

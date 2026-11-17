@@ -2948,6 +2948,13 @@ class AlpacaClient:
         # OCO/bracket cancel). It also cancelled opening-side ENTRY orders a
         # strategy had resting. Now only reducing-side protective legs sized to
         # THIS row's qty are cleared; see `_scoped_rearm_cancel`.
+        # What this call cancels, kept so a REFUSED OCO can be undone (PI-20261027-KYYBSZXS-0001):
+        # a refusal after the own-leg cancel used to leave the position with NO bracket until the
+        # next sweep, MEASURED 2026-11-16 14:32:55-14:35:03Z on alpaca_paper (seven refusals,
+        # "insufficient qty available ... available: 0").
+        cancelled: List[Dict[str, Any]] = []
+        target_specs: Dict[str, Dict[str, Any]] = {}
+        released_targets: List[Dict[str, Any]] = []
         if order.get("additive"):
             # QUANTITY TOP-UP (PI-20260929-PR6YRTQY-0003): protection for the
             # UNCOVERED shares only, placed BESIDE the legs that already rest.
@@ -2957,6 +2964,7 @@ class AlpacaClient:
         else:
             refusal, kept_targets = self._scoped_rearm_cancel(
                 sym, close_side, qty, order.get("sibling_qtys"),
+                cancelled_out=cancelled, target_specs_out=target_specs,
             )
         if refusal:
             return {"retCode": -3, "retMsg": refusal}
@@ -2984,6 +2992,10 @@ class AlpacaClient:
             # legs are released and the OCO retried ONCE. A sibling STOP is
             # never released here: if one rests, the position is not stop-naked
             # and the refusal stands. Named in the log, never silent.
+            # KEPT as documented (manager 2026-11-17 06:02Z: on Alpaca the shares are shared, so
+            # both cannot be held; the sibling's TP loss is a TP-doctrine gap filed for a
+            # merged-OCO design). NEW: if the retry is ALSO refused, the released targets are put
+            # back below, so a failed re-arm never leaves a sibling with less than it had.
             logger.warning(
                 "alpaca place_protective(%s): OCO refused (%s) with %d sibling "
                 "take-profit leg(s) resting — releasing %s and retrying once so "
@@ -2992,12 +3004,116 @@ class AlpacaClient:
                 ",".join(kept_targets),
             )
             for oid in kept_targets:
-                self._request("DELETE", f"/v2/orders/{oid}")
+                _denv = self._request("DELETE", f"/v2/orders/{oid}")
+                if _denv.get("retCode") == 0 and oid in target_specs:
+                    released_targets.append(target_specs[oid])
             env = self._request("POST", "/v2/orders", body)
         if env.get("retCode") != 0:
+            # The OCO was refused (and so was its retry). Put back what this call cancelled so the
+            # position is never left with LESS protection than it had (BRACKETS-ALWAYS).
+            if cancelled or released_targets:
+                restored = self._restore_cancelled_protection(
+                    sym, close_side, qty, cancelled, released_targets)
+                return {**env, "restored": restored,
+                        "retMsg": f"{env.get('retMsg')} | restore: {restored.get('summary')}"}
             return env
         result = env.get("result") or {}
         return {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
+
+    def _restore_cancelled_protection(
+        self, sym: str, close_side: str, qty: int, own_legs: List[Dict[str, Any]],
+        released_targets: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Re-place the own protective legs :meth:`place_protective` cancelled, after the OCO was REFUSED.
+
+        PI-20261027-KYYBSZXS-0001. ``place_protective`` is cancel-before-place; "place first" cannot
+        work on Alpaca, because the resting legs reserve the shares (the venue refuses the new OCO
+        with ``insufficient qty available ... available: 0``). So the undo is a RESTORE:
+
+        * a stop AND a target -> one GTC OCO at the OLD prices;
+        * only a stop -> a plain GTC stop; only a target -> a plain GTC limit;
+        * each sibling target released for the retry -> a plain GTC limit.
+
+        Always GTC. One leg per kind is restored (an own set holds one stop and one target; more is
+        logged, not guessed at). Each placed order is READ BACK (``GET /v2/orders/{id}``) and only a
+        resting status counts as restored. Never raises; a leg whose price cannot be read is
+        reported in ``failed``, never invented. Never deletes anything. Returns ``{"attempted", "ok", "failed", "summary"}``; a non-empty ``failed`` means
+        the position MAY BE UNPROTECTED and the caller must say so."""
+        attempted, ok, failed = 0, 0, []
+
+        def _post(label: str, body: Dict[str, Any]) -> None:
+            nonlocal attempted, ok
+            attempted += 1
+            try:
+                env = self._request("POST", "/v2/orders", body)
+            except Exception as exc:  # noqa: BLE001
+                failed.append(f"{label}: {type(exc).__name__}: {exc}")
+                return
+            if env.get("retCode") != 0:
+                failed.append(f"{label}: {env.get('retMsg')}")
+                return
+            oid = str((env.get("result") or {}).get("id") or "")
+            status = None
+            if oid:
+                try:
+                    back = self._request("GET", f"/v2/orders/{oid}")
+                    res = back.get("result") if back.get("retCode") == 0 else None
+                    status = str(res.get("status") or "").lower() if isinstance(res, dict) else None
+                except Exception:  # noqa: BLE001
+                    status = None
+            if status in _RESTING_LEG_STATUSES:
+                ok += 1
+            else:
+                failed.append(f"{label}: placed but read back as {status!r}, not resting")
+
+        try:
+            stops = [o for o in own_legs
+                     if self._leg_protective_side(o.get("type") or o.get("order_type")) == "stop"]
+            targets = [o for o in own_legs
+                       if self._leg_protective_side(o.get("type") or o.get("order_type")) == "target"]
+            if len(stops) > 1 or len(targets) > 1:
+                logger.warning(
+                    "alpaca place_protective(%s): %d stop and %d target own leg(s) were cancelled; "
+                    "restoring one of each kind", sym, len(stops), len(targets))
+            sp = self._leg_price(stops[0], "stop") if stops else None
+            tp = self._leg_price(targets[0], "target") if targets else None
+            q = int(round(float(qty)))
+            if stops and targets:
+                if sp is None or tp is None:
+                    failed.append("own OCO: a cancelled leg's price was unreadable, not invented")
+                else:
+                    _post("own OCO", {
+                        "symbol": sym, "qty": str(q), "side": close_side, "type": "limit",
+                        "time_in_force": "gtc", "order_class": "oco",
+                        "take_profit": {"limit_price": f"{tp:.2f}"},
+                        "stop_loss": {"stop_price": f"{sp:.2f}"},
+                    })
+            elif stops:
+                if sp is None:
+                    failed.append("own stop: price unreadable, not invented")
+                else:
+                    _post("own stop", {"symbol": sym, "qty": str(q), "side": close_side, "type": "stop",
+                                       "time_in_force": "gtc", "stop_price": f"{sp:.2f}"})
+            elif targets:
+                if tp is None:
+                    failed.append("own target: price unreadable, not invented")
+                else:
+                    _post("own target", {"symbol": sym, "qty": str(q), "side": close_side, "type": "limit",
+                                         "time_in_force": "gtc", "limit_price": f"{tp:.2f}"})
+            for o in released_targets or []:
+                px, lq = self._leg_price(o, "target"), self._leg_qty(o)
+                if px is None or lq is None or not lq > 0:
+                    failed.append(f"sibling target {o.get('id')}: price/qty unreadable, not invented")
+                    continue
+                _post(f"sibling target {o.get('id')}", {
+                    "symbol": sym, "qty": str(int(round(lq))), "side": close_side, "type": "limit",
+                    "time_in_force": "gtc", "limit_price": f"{px:.2f}"})
+        except Exception as exc:  # noqa: BLE001
+            failed.append(f"{type(exc).__name__}: {exc}")
+        summary = f"restored {ok}/{attempted}" + (f"; FAILED: {'; '.join(failed)}" if failed else "")
+        logger.log(logging.ERROR if failed else logging.WARNING,
+                   "alpaca place_protective(%s): OCO refused after cancelling protection; %s", sym, summary)
+        return {"attempted": attempted, "ok": ok, "failed": failed, "summary": summary}
 
     # ── ALPACA-PARTIAL-TP-STOP-GAP (2026-11-13) ─────────────────────────────────────────────
     # On a take-profit PARTIAL fill Alpaca cancels the bracket's stop leg, and the still-resting
@@ -3179,8 +3295,19 @@ class AlpacaClient:
 
     def _scoped_rearm_cancel(
         self, sym: str, close_side: str, qty: int, sibling_qtys: Any = None,
+        *, cancelled_out: Optional[List[Dict[str, Any]]] = None,
+        target_specs_out: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Tuple[Optional[str], List[str]]:
         """Cancel THIS position's own resting protective legs; keep the rest.
+
+        *cancelled_out* / *target_specs_out* (both optional, observe-only):
+        :meth:`place_protective` passes them so that, if the OCO it places next
+        is REFUSED, it can put back exactly what it cancelled
+        (:meth:`_restore_cancelled_protection`). ``cancelled_out`` receives the
+        raw order dict of every own leg whose DELETE the venue ACCEPTED;
+        ``target_specs_out`` maps each releasable standalone target's id to its
+        raw order dict. Callers that pass neither (``cancel_row_protection``,
+        an INTENDED cancel) behave exactly as before.
 
         Returns ``(refusal, releasable_targets)``. A non-``None`` *refusal*
         means NOTHING was cancelled and :meth:`place_protective` must not POST.
@@ -3249,6 +3376,7 @@ class AlpacaClient:
             return msg, []
 
         own: List[str] = []
+        own_specs: Dict[str, Dict[str, Any]] = {}
         kept_targets: List[str] = []
         other_stop = False
         seen: set = set()
@@ -3265,6 +3393,7 @@ class AlpacaClient:
             lq = self._leg_qty(o)
             if lq is not None and abs(lq - qty) <= _QTY_EPS:
                 own.append(str(oid))
+                own_specs[str(oid)] = o
             elif kind == "target":
                 # Only a STANDALONE target may ever be released. A target in a
                 # bracket/OCO/OTO group shares it with a stop that may rest
@@ -3272,6 +3401,8 @@ class AlpacaClient:
                 # would strip that stop (REVIEW-14127 danger (i)).
                 if str(o.get("order_class") or "").lower() == "simple":
                     kept_targets.append(str(oid))
+                    if target_specs_out is not None:
+                        target_specs_out[str(oid)] = o
             else:
                 other_stop = True
         for oid in own:
@@ -3281,6 +3412,8 @@ class AlpacaClient:
                     "alpaca place_protective(%s): cancel of own leg %s refused: "
                     "rc=%s %s", sym, oid, env.get("retCode"), env.get("retMsg"),
                 )
+            elif env.get("retCode") == 0 and cancelled_out is not None:
+                cancelled_out.append(own_specs[oid])
         if other_stop or not children_seen:
             if kept_targets and not children_seen:
                 logger.warning(
