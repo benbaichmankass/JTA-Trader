@@ -1,0 +1,194 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117, slot D2. Powered follow-up of the ML-F29 GRU pilot. Gates this adds or changes: none.
+id: RQ-20261117-c21d-05
+title: 'D2 Collie family-diversity challenger, POWERED: does a 2-layer GRU regime head (32-bar window) beat the yz LightGBM head on BTCUSDT /
+  ETHUSDT / SOLUSDT 1h log-loss, same 10 columns both arms (follow-up of the ML-F29 measurement pilot)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: eth-regime-1h-lgbm-xasset-v1
+  subject_kind: ml_model
+  from_result: RQ-20261113-4654-02
+  verdict_read: indeterminate
+  diagnosis: 'ML-F29 pilot (15m, macro-F1, measurement only, no verdict): GRU minus LightGBM, block-bootstrap sd ~0.009-0.010 per symbol at n
+    36,000; BTC boot mean -0.027 (CI excludes 0, GRU worse), SOL +0.013 (CI includes 0). No powered decision unit followed, so the only non-GBDT
+    family ever tried on D2 has no verdict. GBDT is 77 of 98 registered models (ml_plan_status --diversity, 2026-11-04). The pilot used macro-F1
+    on a 3-class label, which PLANNING § 1 says can be chance; this unit registers log-loss and moves to the 1h shards (15m SOL was the truncated
+    shard).'
+  search: 'lever family learner: LightGBM(yz) -> torch_gru on the same columns; one factor'
+  levers:
+  - learner
+  map_entries:
+  - research/levers/eth-regime-1h-lgbm-xasset-v1.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+question: Is a sequence learner a real D2 challenger, or does GBDT dominate the regime task? Same shards, columns, CV and embargo for both arms;
+  the baseline is the yz LightGBM head that passed on BTC 1h (ef4c-02).
+why_this_matters: 'PASS -> the first non-GBDT challenger in the D2 slot; the next unit is its money consumer test. FAIL -> the GRU family is recorded
+  as tested on D2 at power (lever map: learner), and the diversity effort goes to a different slot instead of re-trying GRUs here.'
+power:
+  expected_n: 105120
+  min_detectable_effect: 0.1
+  effect_units: sd
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 40,000 tail rows x 3 shards, ~17,520 OOS rows per shard over 5 folds. The pilot measured block-bootstrap sd ~0.01 of a macro-F1
+    delta at n 36,000; log-loss sd is not yet measured, so the 0.002-nat bar inherits ef4c-02, not a power calculation.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of published shards).
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: keep v2 or move to the yz head as the D2 regime label for ETH/SOL (and whether the yz-label money consumer test is run)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_prop
+  book: money
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    extra_columns:
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm_yz
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lgbm_yz:
+      kind: lightgbm
+      params:
+        learning_rate: 0.05
+        min_child_samples: 50
+        n_estimators: 200
+        num_leaves: 31
+      feature_blocks: &id001
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 32
+        hidden: 32
+        layers: 2
+        epochs: 8
+        threads: 4
+        device: auto
+      feature_blocks: *id001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.002
+    - group:
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.002
+    - group:
+      - BTCUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-c21d-05
+decision_rule:
+  id: RULE-RQ20261117-c21d-05-D2-GRU-POWERED
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: Per group, CV mean log-loss improvement of gru over lgbm_yz (nats, positive = GRU better), 5 expanding folds, 24-row embargo; prior
+    is a control.
+  rule: PASS IF gru beats lgbm_yz by >= +0.002 nats CV mean on ETHUSDT_1h AND on SOLUSDT_1h, AND is not worse (>= 0) on BTCUSDT_1h. FAIL IF it
+    does not reach >= 0 on any group. INDETERMINATE otherwise, or if folds < 3, a shard is stale/withheld, or the GRU arm errors. Thresholds fixed
+    now.
+  proposal_mapping: pass -> money consumer test of GRU-labelled cells on the TD family (next unit). fail -> learner family 'sequence/GRU' recorded
+    as tested for D2 in the lever map. indeterminate -> reported; no re-run of the same spec.
+  what_it_does_not_do: Changes no regime cell, retires no head, serves nothing, places no order. Model quality only.
+  min_n: 3 folds per group
+compute: gpu
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'ESTIMATE: family diversity on D2; money only through the later consumer test.'
+intervention_controls:
+  not_applicable: a model-quality bake-off of a regime label head; no trade intervention is tested here
+practice_precedent: 'M6, M12 (docs/reference/trading-and-model-practice-principles.md): RQ-20261113-4654-02 (ML-F29 pilot, same learner spec at
+  15m) and RQ-20261112-ef4c-02 (the yz baseline), frontier-research diversity check, PLANNING § 1 (proper score for a multi-class label).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-data
+  peak_memory_gb: 5.0
+  est_minutes: 90
+  basis: 'ESTIMATE: the CPU pilot took 240 min on the trainer for 2 x 60k rows at 15m; a GPU GRU at hidden 32 is several times faster, LightGBM
+    arm on the kernel CPU dominates. Not measured.'
+  why_runner: 'GPU-shaped: torch_gru selects cuda when present (row ML-BAKEOFF-TORCH-DEVICE, same PR); published 1h shards -> Kaggle GPU with
+    metis-market-data mounted. The verdict records measurement.torch_devices so a CPU fallback is visible.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

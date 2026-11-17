@@ -28,9 +28,12 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
+import contextlib
+import functools
 import io
 import json
 import re
+import shutil
 import sys
 import time
 import zipfile
@@ -256,6 +259,21 @@ def verdict(m: dict, n_pop: int, n_ref: int, missing: float, bar: dict) -> tuple
     return ("pass" if ok else "fail"), why
 
 
+@contextlib.contextmanager
+def _tp_bracket(tp_atr: float):
+    """Relabel at TP = tp_atr ATR with SL unchanged. ml_decision_entry.label_symbol calls bracket_outcome at call time, so it is swapped
+    for the duration and restored after (the same mechanism as ml_entry_cost_levers.bracket). At the base TP it is a no-op."""
+    if tp_atr == mde.TP_ATR:
+        yield
+        return
+    orig = mde.bracket_outcome
+    mde.bracket_outcome = functools.partial(orig, sl_atr=mde.SL_ATR, tp_atr=tp_atr)
+    try:
+        yield
+    finally:
+        mde.bracket_outcome = orig
+
+
 # ----------------------------------------------------------------------------------------------- run
 def run(args) -> int:
     import holdout_lock
@@ -267,6 +285,12 @@ def run(args) -> int:
     pop, spec = frz["population"], frz["spec"]
     meta, models = mde._frozen_models(Path(args.served))
     tau, feats = float(meta["tau"]), meta["features"]
+    # one-factor overrides for a later unit (defaults reproduce 2e3b-01 exactly): --tau changes only the entry threshold on the SAME
+    # frozen boosters; --tp-atr relabels the SAME decisions at a different take-profit (SL stays SL_ATR, so risk and cost per R are unchanged)
+    if getattr(args, "tau", None) is not None:
+        tau = float(args.tau)
+    unit, rule_id = getattr(args, "unit", None) or UNIT, getattr(args, "rule_id", None) or RULE_ID
+    tp_atr = float(args.tp_atr) if getattr(args, "tp_atr", None) is not None else mde.TP_ATR
     ref = _xs_ref()
     syms = sorted(set(pop) | set(ref))
     with cf.ThreadPoolExecutor(8) as ex:
@@ -276,7 +300,8 @@ def run(args) -> int:
     with cf.ThreadPoolExecutor(8) as ex:
         fund = dict(zip(pop_ok, ex.map(fetch_funding, pop_ok)))
     print(f"fetched: population {len(pop_ok)}/{len(pop)} reference {len(ref_ok)}/{len(ref)} t={time.time()-t0:.0f}s", flush=True)
-    tab = mde.build_table(cache, sorted(set(pop_ok) | set(ref_ok)), xs_symbols=ref_ok, recost_inputs=True)
+    with _tp_bracket(tp_atr):
+        tab = mde.build_table(cache, sorted(set(pop_ok) | set(ref_ok)), xs_symbols=ref_ok, recost_inputs=True)
     tab = tab[tab.symbol.isin(pop_ok)]
     ws, we = pd.Timestamp(WIN_START, tz="UTC"), pd.Timestamp(WIN_END, tz="UTC") + pd.Timedelta(days=1)
     # a decision is in the window iff its 24h outcome also ends inside it
@@ -286,8 +311,15 @@ def run(args) -> int:
     missing = float((~sc.cost_ok).mean()) if len(sc) else 1.0
     sc = sc[sc.cost_ok].reset_index(drop=True)
     # the read is claimed BEFORE any outcome is summarised
-    ledger = Path(args.ledger) if args.ledger else holdout_lock.LEDGER
-    claim = holdout_lock.claim_read(MODEL_ID, WIN_START, WIN_END, UNIT, args.reader, ledger, symbols=pop_ok, train_end=TRAIN_END)
+    # PI-20261115-PWMQY8LM-0001: the runner does not commit the repo ledger, so by default the claim is made against a COPY inside
+    # the out dir (it lands with the result; the grading lane appends the new line to comms/research/holdout_reads.jsonl)
+    if args.ledger:
+        ledger = Path(args.ledger)
+    else:
+        ledger = out / "holdout_reads.jsonl"
+        if not ledger.exists() and holdout_lock.LEDGER.exists():
+            shutil.copy(holdout_lock.LEDGER, ledger)
+    claim = holdout_lock.claim_read(MODEL_ID, WIN_START, WIN_END, unit, args.reader, ledger, symbols=pop_ok, train_end=TRAIN_END)
     # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
     pl, ps = models["long"].predict(sc[feats]), models["short"].predict(sc[feats])
     tk = mde.policy(sc, pl, ps, tau)
@@ -319,7 +351,8 @@ def run(args) -> int:
         "funding_months_defaulted_in_window": int(sum(int(v[v.month.isin(months(WIN_START[:7], WIN_END[:7]))].fund_defaulted.sum())
                                                       for v in costs.values())),
     }
-    res = {"schema": "ml_entry_population_test/1", "unit": UNIT, "rule_id": RULE_ID, "verdict": v, "why": why, "tau": tau,
+    res = {"schema": "ml_entry_population_test/1", "unit": unit, "rule_id": rule_id, "verdict": v, "why": why, "tau": tau,
+           "bracket_atr": {"sl": mde.SL_ATR, "tp": tp_atr},
            "window": [WIN_START, WIN_END], "population_frozen": len(pop), "population_scored": len(pop_ok),
            "population_unscorable": sorted(set(pop) - set(pop_ok)), "xs_reference_used": len(ref_ok),
            "cost_missing_share": missing, "pooled": m, "reported": reported, "holdout_claim": claim,
@@ -327,7 +360,7 @@ def run(args) -> int:
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     tk.to_csv(out / "decisions.csv.gz", index=False)
     vj = {"verdict": v, "read_state": "measured", "n": m.get("n"), "note": why,
-          "population": (f"frozen ml_decision_entry_v1 (tau {tau}) decisions {WIN_START}..{WIN_END} on the {len(pop_ok)} scorable symbols of the "
+          "population": (f"frozen ml_decision_entry_v1 (tau {tau}, SL {mde.SL_ATR} / TP {tp_atr} ATR) decisions {WIN_START}..{WIN_END} on the {len(pop_ok)} scorable symbols of the "
                          f"{len(pop)}-symbol frozen Bybit USDT-perp population (F1-F5), each re-costed with its own fee 11 + max(3, quoted spread "
                          f"+ sqrt impact Q {Q_USD:.0f}) + its own |funding| per 8h"),
           "measurement": {"pooled": m, "holdout_claim": claim, "cost_missing_share": missing,
@@ -335,8 +368,8 @@ def run(args) -> int:
     (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     # the population record (src/config/ml_universe.py, the only writer): written into the output dir, seeded from the committed record
     from src.config import ml_universe
-    ml_universe.write_population("ml_entry", {"unit": UNIT, "rule_id": RULE_ID, "verdict": v,
-                                              "result": f"research/results/{UNIT}/",
+    ml_universe.write_population("ml_entry", {"unit": unit, "rule_id": rule_id, "verdict": v,
+                                              "result": f"research/results/{unit}/",
                                               "symbols": {s: {"venues": ["bybit"]} for s in pop_ok}},
                                  base=out / "ml_universe", seed_from=ml_universe.RECORD_DIR)
     print(json.dumps({"verdict": v, "why": why}), flush=True)
@@ -397,6 +430,9 @@ def main(argv=None) -> int:
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--ledger", default="")
+    ap.add_argument("--tau", type=float, default=None, help="override the frozen artifact's tau (same boosters); default = model.json tau")
+    ap.add_argument("--tp-atr", dest="tp_atr", type=float, default=None, help="relabel the same decisions at this TP (ATR); SL unchanged")
+    ap.add_argument("--rule-id", dest="rule_id", default="", help="the calling unit's registered rule id (default: 2e3b-01's)")
     a = ap.parse_args(argv)
     if a.cmd == "self-test":
         _self_test()

@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (Manager Session 2026-11-15a dispatch), slot D3 (Foxhound).
+# Diagnosis-driven iteration of RQ-20261112-4654-02 (graded PASS on dev: arm tau=0.30 WON) whose held-out read was never authored.
+# Gates this adds or changes: none.
+id: RQ-20261117-c21d-01
+title: 'D3 Foxhound-1 tau lever, HELD-OUT read: does the frozen served ml_decision_entry_v1 traded at entry tau 0.30 (instead of 0.10),
+  same boosters, have pooled mean net R >= the deflated holdout bar on the 2e3b-01 population, each symbol at its own cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261112-4654-02
+  verdict_read: pass
+  diagnosis: '4654-02 (dev folds only, per-symbol cost stack, c692-01 recipe refit per fold): base tau 0.10 pooled -0.0311 net R (gross
+    +0.0826, cost 0.1138, n 30,699): cost kills the model. Arm tau=0.30 WON (+0.0366 R over base, better in 6/8 folds); tau=0.20 lost
+    (+0.0116, 5/8); tau=0.50 indeterminate (min fold n 13). The harness says a dev WIN is a candidate for one later held-out read; none
+    was authored (found by this lane, 2026-11-17). 2e3b-01 read the SAME frozen artifact at tau 0.10 on the held-out year: -0.0680
+    (se 0.0098, n 12,746, 51 symbols) FAIL.'
+  search: 'lever family selectivity: entry threshold tau 0.10 -> 0.30, one factor; boosters, features, population, window, cost stack
+    identical to 2e3b-01'
+  levers:
+  - selectivity
+  map_entries:
+  - research/levers/ml-entry.yaml#manifest.ranked_levers
+  attempt: 1
+  due_by: '2026-11-20'
+question: 'Foxhound-1 is the live D3 baseline on real money. Its held-out per-symbol-cost read is negative (2e3b-01, -0.068 R) because
+  cost per R is ~0.14 against ~0.07 gross. Keeping only decisions with predicted net R >= 0.30 attacks the cost ratio directly and won
+  on the dev folds. On the held-out year, scored with the SAME frozen boosters, does tau 0.30 clear the deflated hurdle?'
+why_this_matters: 'A PASS is a data-backed Tier-3 challenger proposal for the live baseline (ml_entry tau 0.10 -> 0.30 on bybit_2 /
+  bybit_portfolio and the prop books): fewer, larger trades on a model that today loses its cost. A FAIL closes the tau lever for this
+  recipe under per-symbol costs; the next D3 lever is the target (the gross-decomposed arm RQ-20261115-7e18-02, +0.0097 point,
+  indeterminate on k=13).'
+power:
+  expected_n: 3500
+  min_detectable_effect: 0.04
+  effect_units: R_per_decision
+  sd: 0.9
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 2e3b-01 took 12,746 decisions at tau 0.10 on this window; tau 0.30 kept roughly 0.25-0.3x the dev decisions in
+    4654-02 (floor 1000 was met pooled), so ~3,000-4,000 here. Per-decision sd ~0.9 R from 2e3b-01 se 0.0098 x sqrt(12,746). SE ~0.015,
+    so the deflated hurdle (point_t_min ~1.7 x se at n_tries ~13) is ~+0.026 R.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines + fundingRate; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: ml/served/ml_decision_entry_v1
+  decision: 'the entry threshold the live Foxhound-1 baseline trades at (0.10 today) on its real-money and prop books'
+  legs: [ml_entry]
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_population_test.py
+  - run
+  - --tau
+  - '0.30'
+  - --rule-id
+  - RULE-RQ20261117-c21d-01-ENTRY-TAU030-HELDOUT
+  - --cache
+  - /tmp/ml_entry_population_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-c21d-01
+decision_rule:
+  id: RULE-RQ20261117-c21d-01-ENTRY-TAU030-HELDOUT
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Population: the frozen ml_decision_entry_v1 boosters (no refit) scored on every decision bar 2025-10-01..2026-10-31 on the
+    scorable symbols of the frozen 2e3b-01 Bybit USDT-perp population, a decision taken iff max(predicted long, short) net R > 0.30,
+    each re-costed with its own fee 11 + max(3, quoted spread + sqrt impact) + own |funding| per 8h (ml_entry_population_test, the
+    2e3b-01 harness, only --tau changed). Pooled mean net R per decision, se, n, symbols. The read is claimed in the holdout ledger
+    (scripts/research/holdout_lock.py) BEFORE any outcome is summarised; the ledger returns the deflated bar.'
+  rule: 'INDETERMINATE IF the scorable population < 10 symbols, OR < 40 reference symbols have data, OR cost missing for > 10% of
+    decision rows, OR n < 300, OR < 10 distinct symbols traded. PASS IF pooled mean net R >= point_t_min x se of the ledger bar
+    (holdout_lock.point_ok). FAIL otherwise. Reported, never gating: per-symbol, fresh vs reference subsets, bybit_2 subset, flat c692
+    stack, always-long/short and matched-random baselines. Thresholds fixed now, never changed after any result.'
+  proposal_mapping: 'pass -> a data-backed Tier-3 challenger proposal to the manager: ml_entry tau 0.10 -> 0.30 (the live baseline keeps
+    trading until the manager acts; per-account read named). fail -> tau lever closed for this recipe under per-symbol costs; D3 next
+    lever is the target (powered re-read of the gross-decomposed arm). indeterminate -> the starved floor named in the verdict becomes
+    the next unit.'
+  what_it_does_not_do: 'Refits nothing, changes no bracket, serves nothing, places no order, edits no config. The held-out year has been
+    read by family ENTRY before; the deflated bar prices that (M13), it is not "spent".'
+  min_n: 300
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 600
+  confidence: 0.25
+  basis: 'ESTIMATE: Foxhound-1 is the only learned entry model on real money; at tau 0.10 its held-out per-symbol-cost read is -0.068
+    R/decision, so a threshold that turns it non-negative changes what the real-money book does.'
+intervention_controls:
+  not_applicable: 'an entry-threshold selection test on fixed decisions; controls are the 2e3b-01 baselines (always-long/short,
+    matched random at the same take rate), reported'
+practice_precedent: 'RQ-20261112-4654-02 (the dev WIN this reads) and RQ-20261112-2e3b-01 (the same harness at tau 0.10); M13
+  (deflated re-read of a used holdout), M4/M5 (rule registered before the run, out-of-sample grade).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: 'Keyless public Binance Vision klines + fundingRate; scoring frozen boosters on CPU; the Bybit snapshot is committed.'
+  basis: 'MEASURED shape from 2e3b-01 (same subcommand, same population); only the threshold differs.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
