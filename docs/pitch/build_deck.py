@@ -2,10 +2,11 @@
 """Build the JTA Trader pitch deck (docs/pitch/jta-trader-pitch-deck.pptx) and its
 markdown source / speaker notes (docs/pitch/jta-trader-pitch-deck.md).
 
-Row PROJECT-PITCH-DECK. Every number on a slide is COMPUTED here from a file on
+Rows PROJECT-PITCH-DECK (v1, 2026-11-04) and PITCH-DECK-V2 (2026-11-17 refresh + docs/pitch/slides.json). Every number on a slide is COMPUTED here from a file on
 disk at build time (config/strategies.yaml + scripts/ops/strategy_status.py,
-config/accounts.yaml, config/mandates.yaml, comms/strategy_evidence/*.json,
-research/queue/*.yaml) and carries a provenance tag (src/runtime/provenance.py
+config/accounts.yaml, config/mandates.yaml, config/values_exclusions.yaml,
+comms/strategy_evidence/*.json, comms/live_review/reviews.jsonl, comms/ml_consolidation/*.json,
+research/queue/*.yaml, scripts/ci/check_tp_doctrine.py) and carries a provenance tag (src/runtime/provenance.py
 vocabulary: MEASURED / ESTIMATED). Re-run to refresh; never hand-edit numbers.
 
 Shareability: the deck names no account ids, hosts, addresses, balances or dollar
@@ -34,6 +35,7 @@ from pptx.util import Emu, Inches, Pt
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_PPTX = os.path.join(ROOT, "docs", "pitch", "jta-trader-pitch-deck.pptx")
 OUT_MD = os.path.join(ROOT, "docs", "pitch", "jta-trader-pitch-deck.md")
+OUT_JSON = os.path.join(ROOT, "docs", "pitch", "slides.json")
 
 # ----------------------------------------------------------------------------- data
 
@@ -104,7 +106,7 @@ def load_facts() -> dict:
         h = str(d.get("harness"))
         # A record's harness field can carry a full run descriptor, e.g.
         # "ml_entry_tp_revision ... (on ml_decision_entry)"; group by the family it names.
-        for known in ("ml_decision_entry", "event_oi_shock"):
+        for known in ("ml_decision_entry", "event_oi_shock", "ml_entry_equity"):
             if known in h:
                 h = known
         fam[h].append(d)
@@ -123,6 +125,9 @@ def load_facts() -> dict:
         fd = d.get("fold_detail") or []
         start = (fd[0].get("start") if fd else None) or ""
         end = (fd[-1].get("end") if fd else None) or ""
+        win = d.get("window") or []
+        if not start and len(win) == 2:
+            start, end = str(win[0]), str(win[1])
         fee_only = d.get("net_r_oos_fee_only")
         rows.append(dict(
             leg=leg, exp=d["expectancy_r_oos"], n=d["n_trades_oos"], net=d["net_r_oos"],
@@ -139,6 +144,33 @@ def load_facts() -> dict:
                     if (d.get("cost_stack") or {}).get("slippage") is not None})
     f["slippage_bps"] = slips
     f["scalp"] = f["families"].get("ict_scalp")
+
+    # Real-money legs by venue (the production legs' real-money accounts).
+    by_venue = collections.Counter()
+    for leg in f["production_legs"]:
+        venues = {str(v.get("exchange")) for v in acc.values()
+                  if v.get("account_class") == "real_money" and leg in (v.get("strategies") or [])}
+        for ven in venues:
+            by_venue[ven] += 1
+    f["prod_by_venue"] = by_venue
+
+    # TP doctrine compliance (the guard itself, never a quoted count).
+    tp = json.loads(subprocess.check_output([sys.executable, os.path.join(ROOT, "scripts/ci/check_tp_doctrine.py"),
+                                             "--json"], text=True, cwd=ROOT))
+    f["tp"] = tp["summary"]
+
+    # Values exclusions (real money only).
+    vx = yaml.safe_load(open(os.path.join(ROOT, "config/values_exclusions.yaml")))
+    f["fossil_n"] = len(vx["fossil_fuels"]["symbols"])
+
+    # Live-trade review record (append-only JSONL).
+    lr = os.path.join(ROOT, "comms/live_review/reviews.jsonl")
+    f["reviews_n"] = sum(1 for line in open(lr) if line.strip()) if os.path.exists(lr) else None
+    # ML inventory by decision slot (dated snapshot; the live feed is /api/bot/ml/registry).
+    mc = json.load(open(os.path.join(ROOT, "comms/ml_consolidation/2026-11-11.json")))
+    slot_keep = collections.Counter(m["slot"] for m in mc["models"] if str(m.get("proposal", "")).startswith("KEEP (consumer)"))
+    f["ml_inv"] = dict(as_of=str(mc.get("as_of"))[:10], total=len(mc["models"]), keep_consumer=slot_keep,
+                       proposals=collections.Counter(str(m.get("proposal", "")).split(" ")[0] for m in mc["models"]))
     f["sha"] = _git_sha()
     f["date"] = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
     return f
@@ -152,11 +184,16 @@ PLAIN = {
     "trend_donchian_sol_prop": "Solana trend breakout (hourly bars)",
     "trend_donchian_xrp_4h": "XRP trend breakout (4-hour bars)",
     "xrp_pullback_2h": "XRP pullback (2-hour bars)",
+    "ml_entry_eq_struct": "ML entry model (US funds pool, hourly)",
+    "slv_trend_1h": "Silver-ETF trend breakout (hourly bars)",
+    "tlt_pullback_1h": "Long-bond-ETF pullback (hourly bars)",
+    "tqqq_trend_long_1d": "Leveraged Nasdaq-ETF trend, long only (daily)",
+    "trend_donchian_xrp_adx25": "XRP trend breakout, strong-trend filter (4-hour)",
 }
 
 FAMILY_PLAIN = {
     "trend": "Trend breakouts", "pullback": "Pullbacks in a trend", "ict_scalp": "Short-term scalps",
-    "ml_decision_entry": "ML entry model", "event_oi_shock": "Event: open-interest shock",
+    "ml_decision_entry": "ML entry model (crypto)", "ml_entry_equity": "ML entry model (US funds)", "event_oi_shock": "Event: open-interest shock",
     "fade": "Fade a breakout", "fvg_range": "Price-gap range", "squeeze": "Volatility squeeze",
 }
 
@@ -185,6 +222,24 @@ class Deck:
         self.md: list[str] = []
         self.f = facts
         self.section = ""
+        self.slides: list[dict] = []
+
+    # -- slide records (docs/pitch/slides.json)
+    def _rec(self, title, notes, kicker=None, tags=()):
+        self.slides.append(dict(number=self.n, section=self.section or "Opening", title=title, kicker=kicker,
+                                provenance=list(tags), bullets=[], notes=notes, numbers=[], sources=[]))
+
+    def num(self, label, value, provenance, source, live_endpoint=None):
+        """Register one number shown on the current slide, with where it comes from and what would refresh it."""
+        self.slides[-1]["numbers"].append(dict(label=label, value=value, provenance=provenance, source=source,
+                                                live_endpoint_candidate=live_endpoint))
+
+    def cite(self, *paths):
+        self.slides[-1]["sources"].extend(p for p in paths if p not in self.slides[-1]["sources"])
+
+    def _b(self, text):
+        if self.slides:
+            self.slides[-1]["bullets"].append(text)
 
     # -- primitives
     def _text(self, slide, x, y, w, h, text, size=18, bold=False, color=INK, align=PP_ALIGN.LEFT,
@@ -249,6 +304,7 @@ class Deck:
         if tags:
             self.md.append("Provenance: " + ", ".join(tags) + "\n")
         self._cur_notes = notes
+        self._rec(title, notes, kicker, tags)
         return s
 
     def end_md(self):
@@ -270,6 +326,7 @@ class Deck:
             r.text = text
             r.font.size, r.font.color.rgb, r.font.name = Pt(size - (3 if sub else 0)), INK, FONT
             self.md.append(("  - " if sub else "- ") + text)
+            self._b(("  – " if sub else "") + text)
         self.md.append("")
         return tb
 
@@ -290,6 +347,7 @@ class Deck:
             self._text(s, x + Inches(0.2), yy + Inches(0.62), cw - Inches(0.3), ch - Inches(0.7),
                        body if isinstance(body, list) else [body], size=size, color=INK)
             self.md.append(f"- **{head_txt}** — " + " ".join(body if isinstance(body, list) else [body]))
+            self._b(f"{head_txt} — " + " ".join(body if isinstance(body, list) else [body]))
         self.md.append("")
 
     def flow(self, s, steps, y=Inches(2.2), h=Inches(1.6), size=14, sub=None):
@@ -309,6 +367,7 @@ class Deck:
             self._text(s, x, y + h + Inches(0.15), cw, Inches(2.3), body, size=size, color=INK,
                        align=PP_ALIGN.CENTER)
             self.md.append(f"{i + 1}. **{head_txt}** — " + " ".join(body if isinstance(body, list) else [body]))
+            self._b(f"{i + 1}. {head_txt} — " + " ".join(body if isinstance(body, list) else [body]))
         self.md.append("")
 
     def table(self, s, header, rows, y=Inches(1.9), col_w=None, size=13, h_row=Inches(0.42)):
@@ -340,12 +399,16 @@ class Deck:
         self.md.append("|" + "---|" * ncol)
         for row in rows:
             self.md.append("| " + " | ".join(str(v) for v in row) + " |")
+        if self.slides:
+            self.slides[-1].setdefault("table", {"header": list(header), "rows": [[str(v) for v in r] for r in rows]})
         self.md.append("")
 
     def footnote(self, s, text, y=None):
         self._text(s, Inches(0.6), y or (H - Inches(1.05)), Inches(12.1), Inches(0.55), text, size=12,
                    color=GREY)
         self.md.append(f"> {text}\n")
+        if self.slides:
+            self.slides[-1]["footnote"] = text
 
 
 def pct(x):
@@ -381,6 +444,11 @@ def build():
                 f"Project walkthrough · {f['date']}. Ratios only; each number tagged MEASURED or ESTIMATED; "
                 "no dollar amounts. Not investment advice.\n")
     d._cur_notes = notes
+    d._rec("JTA Trader — an automated trading system that only trusts what it can prove", notes)
+    d._b("An automated trading system that only trusts what it can prove")
+    d._b("What it is · how it works · how it keeps improving · where it goes next")
+    d._b(f"Project walkthrough · {f['date']}")
+    d.num("build date", f["date"], "MEASURED", "docs/pitch/build_deck.py (build time, UTC)")
     d.end_md()
 
     # ---------------------------------------------------------------- PART 1
@@ -395,7 +463,7 @@ def build():
                                  "target from the moment it opens."]),
         ("It proves before it risks", ["A strategy reaches real money only after a historical test, charged "
                                        "with realistic trading costs, clears a pass mark that was written "
-                                       "down before the test was run."]),
+                                       "down before the test was run. Then it goes straight to real money."]),
         ("It keeps learning", ["Failures go back into research, not the bin. AI agent sessions run the "
                                "research, the reviews and the bookkeeping. A human operator sets strategy "
                                "and risk policy."]),
@@ -455,6 +523,10 @@ def build():
         ("Always on", ["Runs 24/7 on cloud servers. It never switches itself off; problems are "
                        "handled trade by trade."]),
     ], cols=2, size=16)
+    d.num("strategy legs", f["legs_total"], "MEASURED", "scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml", "/api/bot/strategies")
+    d.num("accounts configured", f["accounts_total"], "MEASURED", "config/accounts.yaml", "/api/bot/config")
+    d.num("accounts sending orders", f["accounts_live_mode"], "MEASURED", "config/accounts.yaml (mode: live)", "/api/bot/config")
+    d.num("accounts in dry run", f["accounts_dry"], "MEASURED", "config/accounts.yaml (mode: dry_run)", "/api/bot/config")
     d.footnote(s, f"MEASURED: config/strategies.yaml (via scripts/ops/strategy_status.py) and config/accounts.yaml, "
                   f"commit {f['sha']}, {f['date']}. Population: every leg / account in those files.")
     d.end_md()
@@ -466,14 +538,20 @@ def build():
               tags=("MEASURED",))
     d.cards(s, [
         ("Crypto", ["Bitcoin, Ether, Solana, XRP, Cardano, Avalanche and others, as perpetual futures on "
-                    "Bybit. Paper, real-money and mirror accounts."]),
-        ("US funds (ETFs)", ["Broad index, bond, gold, silver, oil and leveraged funds on Alpaca. Paper, "
-                             "real money, mirror and an options paper account."]),
+                    f"Bybit. Paper, real-money and mirror accounts. {f['prod_by_venue'].get('bybit', 0)} legs "
+                    "trade real money here."]),
+        ("US funds (ETFs)", ["Broad index, bond, gold, silver and leveraged funds on Alpaca. Paper, real money, "
+                             f"mirror and an options paper account. {f['prod_by_venue'].get('alpaca', 0)} legs "
+                             "trade real money here."]),
         ("Futures", ["Micro index and metals futures on Interactive Brokers, on paper. A real-money account "
                      "exists in dry run with no strategies yet."]),
         ("Prop firms", [f"{f['prop_total']} prop-firm accounts are configured; {f['prop_live']} are switched on. "
-                        "They must clear a stricter bar than real money (slide 14)."]),
+                        "They must clear a stricter bar than real money."]),
     ], cols=2, size=16)
+    d.num("real-money legs on Bybit", f["prod_by_venue"].get("bybit", 0), "MEASURED", "config/accounts.yaml (account_class real_money) × strategy_status.py production", "/api/bot/config")
+    d.num("real-money legs on Alpaca", f["prod_by_venue"].get("alpaca", 0), "MEASURED", "config/accounts.yaml (account_class real_money) × strategy_status.py production", "/api/bot/config")
+    d.num("prop accounts configured", f["prop_total"], "MEASURED", "config/accounts.yaml (type: prop)", "/api/bot/config")
+    d.num("prop accounts switched on", f["prop_live"], "MEASURED", "config/accounts.yaml (type: prop, mode: live)", "/api/bot/config")
     d.footnote(s, f"MEASURED: config/accounts.yaml, {f['accounts_total']} accounts, commit {f['sha']}.")
     d.end_md()
 
@@ -502,7 +580,7 @@ def build():
               "out with a stop and a target already attached. While it is open, management may move the "
               "brackets. When it closes, the reason is recorded and the trade is graded.")
     d.flow(s, [
-        ("Data", ["Prices arrive from four broker connections, every bar, every market."]),
+        ("Data", ["Prices arrive from each broker connection, every bar, every market."]),
         ("Signal", ["Each strategy checks its own rules on its own markets."]),
         ("Risk check", ["Per-account limits decide yes/no and the size, in R."]),
         ("Order", ["Sent with a stop-loss and a profit target already attached."]),
@@ -511,20 +589,50 @@ def build():
     ], size=14)
     d.end_md()
 
+    tp = f["tp"]["by_class"]
+    rm = tp["real_money"]
     s = d.new("Every trade carries a real stop and a real target",
               "A rule the operator set: no fictional take-profits. Many systems put a target so far away it "
               "never triggers, which is a way of not having one. Here, each strategy's target must be a real "
-              "prediction of where price is going, and compliance is checked by a script. Active management "
-              "means the system may move either bracket while a trade is open, but each kind of move stays "
-              "advice-only until its own cost-aware test passes.")
+              "prediction of where price is going, and the prediction should keep moving with the trade. A script "
+              "measures compliance on every routing of a strategy to an account. Honest status: on real money, "
+              f"{rm['routings'] - rm['entry_fail']} of {rm['routings']} routings set a real target at entry, but only "
+              f"{rm['routings'] - rm['revision_fail']} of {rm['routings']} also revise it during the trade. That gap is "
+              "open work, and the checker only lets the list of exceptions shrink.",
+              tags=("MEASURED",))
     d.cards(s, [
         ("Stop-loss from the start", ["Every order rests at the broker with a protective stop. That stop "
                                       "defines 1R."]),
         ("A real profit target", ["The target is a prediction, not a placeholder. A target set so far away "
                                   "it can never fill counts as no target, and a checker flags it."]),
-        ("Evidence-backed management", ["Moving a stop or a target mid-trade is allowed. Each kind of move "
-                                        "is advice only until its own test, net of costs, says it helps."]),
+        ("Real money today", [f"Target at entry: {rm['routings'] - rm['entry_fail']} of {rm['routings']} routings.",
+                              f"Target revised in the trade: {rm['routings'] - rm['revision_fail']} of "
+                              f"{rm['routings']}. Closing this gap is on the roadmap."]),
     ], size=16, h=Inches(3.0))
+    d.num("real-money routings with an entry target", f"{rm['routings'] - rm['entry_fail']} of {rm['routings']}", "MEASURED", "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)")
+    d.num("real-money routings revising the target in-trade", f"{rm['routings'] - rm['revision_fail']} of {rm['routings']}", "MEASURED", "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)")
+    d.footnote(s, f"MEASURED: scripts/ci/check_tp_doctrine.py, {f['tp']['routings']} routings over every account in "
+                  f"config/accounts.yaml, commit {f['sha']}. A routing is one strategy on one account.",
+               y=H - Inches(1.6))
+    d.end_md()
+
+    s = d.new("Active management: either bracket can move, on market evidence",
+              "Once a trade is open, the system may move the stop or the target, or close part or all of the "
+              "position. The trigger must be something in the live market: structure, volatility, momentum, regime, "
+              "a scheduled event. Never the trade's profit alone and never the clock alone. Both brackets always "
+              "stay in place. Since 14 November, every action a reviewed recommendation names is applied through "
+              "each account's own risk manager, and the operator gets a ping for each change. Each kind of action "
+              "is still graded separately against a risk-adjusted, cost-aware rule.")
+    d.cards(s, [
+        ("The whole bracket", ["Stop: tighten, widen or move to a structure level. Target: extend, pull in or "
+                               "re-estimate. Position: partial or full close. Or hold, which is recorded too."]),
+        ("Market-triggered", ["Structure, volatility, momentum, regime, scheduled events or liquidity levels. "
+                              "Never P&L alone; never the clock alone."]),
+        ("Applied, then graded", ["Reviewed actions are applied through each account's own risk checks, with a "
+                                  "ping per change. Each action class is graded on its own rule: a small cost "
+                                  "for a material cut in risk, holding across time and beating chance."]),
+    ], size=15, h=Inches(3.4))
+    d.cite("docs/ARCHITECTURE-CANONICAL.md § Active management")
     d.end_md()
 
     s = d.new("Risk controls that never switch the system off",
@@ -561,22 +669,23 @@ def build():
                   "above zero (rule RULE-D1-STAGE0-NET-OF-FULL-COST, registered 2026-09-22).", y=H - Inches(1.3))
     d.end_md()
 
-    s = d.new("The promotion ladder: three stages, two gates",
+    s = d.new("The promotion ladder: a backtest pass goes straight to real money",
               "This is how an idea becomes a real-money strategy. Stage 0 decides whether there is an edge, "
-              "offline. Stage 1, paper trading, is not a performance test. It is a mechanical check: does the "
-              "order go out at the right size, do the stop and target rest at the broker, does the close get "
-              "recorded. One or two clean trades are enough. If the execution path is already proven, Stage 1 "
-              "is skipped. Stage 2 is real money plus a paper mirror that copies it exactly; if the mirror turns "
-              "net-negative after costs over its window, the strategy is demoted.")
+              "offline, on history, net of the full cost stack. Since 12 November there is no step in between: a "
+              "strategy that passes Stage 0 goes straight to real money, with a paper mirror that copies it "
+              "exactly. The first live trades are watched as a mechanical check, never as a gate. The demo floor, "
+              "Stage 1, is where every strategy that has not passed yet trades on paper to generate data, and "
+              "where a demoted strategy goes back to keep generating data while it is improved. If the mirror "
+              "turns net-negative after costs over its window, the strategy is demoted to the floor.")
     y = Inches(1.9)
     bw, bh, gap = Inches(3.6), Inches(3.2), Inches(0.55)
     stages = [
         ("STAGE 0 · Backtest", "Is there an edge, net of all costs?",
-         "Passes only by clearing a pass mark registered before the run.", NAVY),
-        ("STAGE 1 · Paper", "Do the mechanics work?",
-         "1–2 clean trades. Skipped when the execution path is already proven.", TEAL),
-        ("STAGE 2 · Real money", "Does it hold up live, with its mirror?",
-         "A paper mirror copies every trade; net-negative after costs → demoted.", GREEN),
+         "Passes only by clearing a pass mark registered before the run, on held-out data.", NAVY),
+        ("STAGE 2 · Real money", "Live, with a paper mirror",
+         "Entered directly on a Stage-0 pass. The mirror net-negative after costs → demoted.", GREEN),
+        ("STAGE 1 · Demo floor", "Paper trading, for data",
+         "Home of every testing leg, and of demoted legs while they are iterated on.", TEAL),
     ]
     for i, (h1, q, body, col) in enumerate(stages):
         x = Inches(0.6) + (bw + gap) * i
@@ -587,11 +696,31 @@ def build():
         d._text(s, x + Inches(0.2), y + Inches(1.8), bw - Inches(0.4), Inches(1.3), body, size=15, color=WHITE)
         if i < 2:
             d._box(s, x + bw + Inches(0.07), y + bh / 2 - Inches(0.25), Inches(0.42), Inches(0.5), GREY,
-                       shape=MSO_SHAPE.RIGHT_ARROW)
-        d.md.append(f"- **{h1}** — {q} {body}")
+                   shape=MSO_SHAPE.RIGHT_ARROW)
+        d.md.append(f"- **{h1}** — {q}. {body}")
+        d._b(f"{h1} — {q}. {body}")
     d.md.append("")
-    d.footnote(s, "A paper or live record never proves an edge; it checks mechanics and cost. Edge is decided "
-                  "offline, at Stage 0.", y=H - Inches(1.6))
+    d.footnote(s, "No soak step between a backtest pass and real money (operator, 2026-11-12). A paper or live record "
+                  "never proves an edge; it checks mechanics and cost.", y=H - Inches(1.6))
+    d.cite("docs/plans/OPERATING-PLAN-2026-09-21.md § 2")
+    d.end_md()
+
+    s = d.new("What “pass” means for real money",
+              "Two clarifications on the pass mark. First, real money is governed by a held-out test: the chosen "
+              "configuration must clear its registered rule on data it never saw during tuning, net of the full "
+              "cost stack, written into a committed evidence record. Second, a stricter statistic, the deflated "
+              "Sharpe ratio, which corrects for how many variants were tried, is reported on every promotion but "
+              "does not block it. A live strategy below its bar is on probation: it keeps an open research unit "
+              "whose goal is a version that clears it.")
+    d.cards(s, [
+        ("Held-out data decides", ["The chosen configuration must pass its pre-registered rule on data it was "
+                                   "not tuned on, after fees, slippage and funding."]),
+        ("A committed record", ["The result is written by a script into an evidence record in the repository. "
+                                "A claim in a message is not a record."]),
+        ("Probation, not a block", ["The deflated Sharpe ratio is reported on every decision. A live strategy "
+                                    "below 0.95 stays live but keeps iterating toward a version that clears it."]),
+    ], size=16, h=Inches(3.4))
+    d.cite("docs/plans/OPERATING-PLAN-2026-09-21.md § 2 “The HOLDOUT governs real money”")
     d.end_md()
 
     s = d.new("Three statuses, derived from the books",
@@ -609,6 +738,8 @@ def build():
     ]
     d.table(s, ["Status", "Where it trades", "Legs", "Share"], rows, col_w=[2, 5, 1.2, 1.2], size=17,
             h_row=Inches(0.62))
+    for k in ("testing", "production", "inactive"):
+        d.num(f"{k} legs", st[k], "MEASURED", "scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml", "/api/bot/strategies")
     d.footnote(s, f"MEASURED: scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml, "
                   f"{total} legs, commit {f['sha']}. Shares are of those {total} legs.", y=H - Inches(2.0))
     d.end_md()
@@ -624,14 +755,37 @@ def build():
         "Prop trades are executed and protected automatically, like any other account.",
         f"{f['prop_total']} prop accounts are configured; {f['prop_live']} are switched on to send orders.",
     ])
+    d.num("prop accounts configured", f["prop_total"], "MEASURED", "config/accounts.yaml (type: prop)", "/api/bot/config")
+    d.num("prop accounts switched on", f["prop_live"], "MEASURED", "config/accounts.yaml (type: prop, mode: live)", "/api/bot/config")
+    d.cite("comms/prop_survival/<leg>.json", "docs/plans/OPERATING-PLAN-2026-09-21.md § Prop legs clear a SUPERSET")
     d.footnote(s, f"MEASURED: config/accounts.yaml (type: prop), commit {f['sha']}.")
+    d.end_md()
+
+    s = d.new("Values: no fossil fuels on real money",
+              "A values rule, not a performance rule. The operator asked on 17 November: “In general, I ask that we "
+              "not trade fossil fuels.” Oil, gas, coal and energy-infrastructure funds are excluded from every "
+              "real-money, prop and real-money-mirror roster. Paper accounts may still trade them, because the data "
+              "helps research. No backtest result can re-open the list, and an automated test fails any change "
+              "that would put one back on real money.", tags=("MEASURED",))
+    d.cards(s, [
+        ("What is excluded", [f"{f['fossil_n']} oil, gas, coal and energy-infrastructure funds and producers, "
+                              "long, inverse and leveraged."]),
+        ("Where it applies", ["Real money, prop accounts and the real-money mirrors. Paper accounts are exempt, "
+                              "so research keeps its data."]),
+        ("How it is held", ["One list in configuration, read by an automated test that fails any change "
+                            "re-opening a gap. A good backtest does not override it."]),
+    ], size=16, h=Inches(3.2))
+    d.num("excluded fossil-fuel symbols", f["fossil_n"], "MEASURED", "config/values_exclusions.yaml (fossil_fuels.symbols)")
+    d.footnote(s, "MEASURED: config/values_exclusions.yaml; enforced by tests/test_values_exclusions_real_money.py. "
+                  "The quote is on record verbatim in that file.")
     d.end_md()
 
     # ---------------------------------------------------------------- PART 4
     d.section = "The evidence"
     cov = f["coverage"]
     other = f["evidence_records"] - sum(cov[k] for k in ("measured", "harness_failed", "no_harness"))
-    s = d.new("The evidence bar in numbers: about half of what we test fails",
+    fail_share = f["measured_fail"] / cov["measured"]
+    s = d.new(f"The evidence bar in numbers: {pct(fail_share)} of what we measure fails",
               f"This is the slide that shows the discipline is real. Of {f['evidence_records']} strategy evidence "
               f"records on file, {cov['measured']} have a real measured backtest. Of those, {f['measured_pass']} "
               f"passed their pre-registered rule and {f['measured_fail']} failed. Failing is normal and expected: "
@@ -647,6 +801,11 @@ def build():
         (f"{f['measured_fail']} failed", [f"{pct(f['measured_fail'] / cov['measured'])} did not. Failures stay "
                                           "on paper and go back into research, or are retired by record."]),
     ], size=17, head=22, h=Inches(3.6))
+    d.num("evidence records", f["evidence_records"], "MEASURED", "comms/strategy_evidence/*.json")
+    d.num("measured records", cov["measured"], "MEASURED", "comms/strategy_evidence/*.json (coverage_state)")
+    d.num("measured records passed", f["measured_pass"], "MEASURED", "comms/strategy_evidence/*.json (decision_rule.verdict)")
+    d.num("measured records failed", f["measured_fail"], "MEASURED", "comms/strategy_evidence/*.json (decision_rule.verdict)")
+    d.num("pass rate", pct(f["measured_pass"] / cov["measured"]), "MEASURED", "comms/strategy_evidence/*.json")
     d.footnote(s, f"MEASURED: comms/strategy_evidence/*.json, {f['evidence_records']} files, commit {f['sha']}. "
                   f"Pass/fail = decision_rule.verdict. Percentages are of the {cov['measured']} measured records.")
     d.end_md()
@@ -655,22 +814,26 @@ def build():
               "The strategies trading real money right now, with the out-of-sample backtest result each was "
               "promoted on. Read the expectancy column as average profit per trade in units of risk, after the "
               "full cost stack. Positive folds means: of the separate time periods tested, how many came out "
-              "positive. Two caveats are shown rather than hidden: the gold-ETF leg has very few trades, and "
-              "rows marked approximate are from a harness that did not model every setting the live strategy "
-              "uses.", tags=("MEASURED",))
+              "positive. Caveats are shown rather than hidden: some legs have few test trades, and any row "
+              "marked approximate is from a harness that did not model every setting the live strategy uses.",
+              tags=("MEASURED",))
     rows = []
     for r in f["prod_rows"]:
         if r.get("missing"):
             rows.append([PLAIN.get(r["leg"], r["leg"]), "—", "—", "—", "—", "—"])
             continue
         rows.append([PLAIN.get(r["leg"], r["leg"]), f"{r['exp']:+.2f}R" if abs(r['exp']) >= 0.05 else f"{r['exp']:+.3f}R",
-                     str(r["n"]), f"{r['folds_pos']} of {r['folds']}", f"{r['start']} → {r['end']}",
+                     str(r["n"]), f"{r['folds_pos']} of {r['folds']}" if r["folds"] else "held-out",
+                     f"{r['start']} → {r['end']}" if r["start"] else "—",
                      r["fidelity"]])
     d.table(s, ["Strategy (production)", "Expectancy / trade", "Trades", "Positive folds", "Test window",
-                "Harness fidelity"], rows, col_w=[4.2, 1.8, 1.1, 1.6, 2.4, 1.6], size=14, h_row=Inches(0.5))
+                "Harness fidelity"], rows, col_w=[4.2, 1.8, 1.1, 1.6, 2.4, 1.6], size=12, h_row=Inches(0.4))
+    for r in f["prod_rows"]:
+        if not r.get("missing"):
+            d.num(f"expectancy per trade: {r['leg']}", round(r["exp"], 3), "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (expectancy_r_oos)")
     d.footnote(s, "MEASURED (backtest, out-of-sample, net of fees + slippage + funding): comms/strategy_evidence/"
-                  "<leg>.json. The ML model's row is one held-out year scored once, not folds. "
-                  "Parameter-selection history is not established for the six rule-based legs.",
+                  "<leg>.json. The two ML rows are a held-out window scored once, not folds. "
+                  "Parameter-selection history is not established for every rule-based leg.",
                y=H - Inches(1.25))
     d.end_md()
 
@@ -689,14 +852,18 @@ def build():
         ("The effect", [f"On the {f['cost_cut_n']} production legs with a fee-only figure, slippage + funding "
                         f"cut {pct(f['cost_cut_min'])}–{pct(f['cost_cut_max'])} of net R. ESTIMATED."]),
     ], cols=2, size=16)
+    d.num("slippage allowance (bps per round trip)", "–".join(str(int(x)) for x in f["slippage_bps"]), "ESTIMATED", "comms/strategy_evidence/*.json (cost_stack.slippage)")
+    d.num("share of fee-only net R removed by slippage + funding", f"{pct(f['cost_cut_min'])}–{pct(f['cost_cut_max'])}", "ESTIMATED", "comms/strategy_evidence/<production leg>.json (net_r_oos vs net_r_oos_fee_only)")
     d.footnote(s, "Inputs MEASURED from comms/strategy_evidence/<leg>.json (net_r_oos vs net_r_oos_fee_only, "
                   "cost_stack); the resulting range is ESTIMATED because the slippage and funding inputs are "
                   "allowances.")
     d.end_md()
 
+    sc = f["scalp"] or {}
+    scalp_line = (f"The short-term scalp family looked attractive, but on honest testing {sc.get('passed', 0)} of its "
+                  f"{sc.get('records', 0)} measured records passed, so it is not on real money." if sc else "")
     s = d.new("What fails is useful",
-              "An example of the filter working. The short-term scalp family looked attractive, but on honest "
-              "testing every one of its measured records failed, so it is not on real money. That is a result, "
+              "An example of the filter working. " + scalp_line + " That is a result, "
               "not a waste: it tells us where not to spend capital, and those records stay on file so nobody "
               "re-runs the same idea by accident. The table groups every measured record by strategy family.",
               tags=("MEASURED",))
@@ -704,6 +871,8 @@ def build():
     for h, v in sorted(f["families"].items(), key=lambda kv: -kv[1]["records"]):
         rows.append([FAMILY_PLAIN.get(h, h), str(v["records"]), str(v["passed"]),
                      f"{v['median_exp']:+.2f}R", str(v["trades"])])
+    for h, v in f["families"].items():
+        d.num(f"records passed: {FAMILY_PLAIN.get(h, h)}", f"{v['passed']} of {v['records']}", "MEASURED", "comms/strategy_evidence/*.json (harness, decision_rule.verdict)")
     d.table(s, ["Family", "Records", "Passed", "Median expectancy", "Test trades"], rows,
             col_w=[4, 1.4, 1.4, 2.2, 1.6], size=14, h_row=Inches(0.46))
     d.footnote(s, f"MEASURED: the {cov['measured']} measured records in comms/strategy_evidence/, grouped by their "
@@ -726,6 +895,11 @@ def build():
         ("Grade", ["The result is graded against the rule that was registered."]),
         ("Act", ["Pass → next stage. Fail → back to research with a diagnosis."]),
     ], size=15, h=Inches(1.4))
+    d.num("research questions in the queue", f["queue_total"], "MEASURED", "research/queue/*.yaml (status)", "/api/bot/research/catalog")
+    d.num("questions done", q["done"], "MEASURED", "research/queue/*.yaml (status: done)", "/api/bot/research/catalog")
+    d.num("questions waiting", q["queued"], "MEASURED", "research/queue/*.yaml (status: queued)", "/api/bot/research/catalog")
+    d.num("questions retired", q["retired"], "MEASURED", "research/queue/*.yaml (status: retired)", "/api/bot/research/catalog")
+    d.num("questions parked as blocked", f["queue_blocked"], "MEASURED", "research/queue/blocked/*.yaml", "/api/bot/research/catalog")
     d.footnote(s, f"MEASURED: research/queue/*.yaml status fields — {f['queue_total']} units: {q['done']} done, "
                   f"{q['queued']} queued, {q['retired']} retired; {f['queue_blocked']} more in research/queue/blocked/. "
                   f"Commit {f['sha']}.", y=H - Inches(1.3))
@@ -750,16 +924,43 @@ def build():
               "Live and paper trades are watched closely, but they do not decide whether a strategy has an "
               "edge; a handful of live trades is far too few. They check that the machinery works and that "
               "costs match what the backtest assumed. The paper mirror of each real-money book is the early "
-              "warning: if it goes net-negative after costs over its window, the strategy moves back to paper.")
+              "warning: if it goes net-negative after costs over its window, the strategy moves back to the demo "
+              "floor, where it keeps trading on paper for data while it is improved.")
     d.cards(s, [
         ("Mechanics", ["Did the signal fire, the order go out at the right size, the brackets rest at the "
                        "broker, and the close get a real reason?"]),
         ("Cost", ["Are real fees and slippage in line with the backtest's allowances?"]),
         ("Demotion signal", ["The paper mirror's net-of-cost result over its declared window triggers "
-                             "demotion to paper."]),
-        ("Live-trade review", ["An AI review of open trades recommends the best action now, each option "
-                               "priced from that strategy's own history."]),
+                             "demotion back to the demo floor."]),
+        ("Probation", ["A live strategy whose deflated Sharpe ratio is below its bar keeps an open research "
+                       "unit to build a stronger version."]),
     ], cols=2, size=16)
+    d.end_md()
+
+    s = d.new("The trading desk and the live-trade review",
+              "Two AI functions work on live trades. The live-trade review looks at every open order package, "
+              "checks the mechanics first, then asks what the best decision is right now. Each option, such as hold, "
+              "tighten or close, is priced from that strategy's own backtest history, and one recommendation per "
+              "package is written to an append-only record. Since 14 November, recommended actions are applied "
+              "automatically under one standing mandate, through each account's own risk checks, with a ping to "
+              "the operator. The trading desk is the other half: an AI trader that finds trades the strategies are "
+              "not taking, today on the demo floor only. The system's own models learn from its decisions, with the "
+              "aim of eventually replacing it.", tags=("MEASURED",))
+    d.cards(s, [
+        ("Live-trade review", ["Every open package, every account. Mechanics first, then the best decision now, "
+                               "each option priced from the strategy's own history.",
+                               f"{f['reviews_n']} reviews on record." if f["reviews_n"] is not None else "—"]),
+        ("Applied, with a ping", ["Recommended actions are applied through each account's own risk manager, "
+                                  "with one ping per change. Each action class is graded afterwards."]),
+        ("The trading desk", ["An AI trader that enters, manages and exits its own trades. Today it trades on "
+                              "the demo floor only; real money is gated behind its own evidence."]),
+        ("Teaching the models", ["The desk's decisions become labels for the system's own models, which aim to "
+                                 "take over the job."]),
+    ], cols=2, size=15)
+    d.num("live-trade reviews on record", f["reviews_n"], "MEASURED", "comms/live_review/reviews.jsonl (line count)")
+    d.cite(".claude/skills/live-trade-review/SKILL.md", ".claude/skills/trading-desk/SKILL.md", "config/mandates.yaml (MD-TRADE-DESK)")
+    d.footnote(s, "MEASURED: comms/live_review/reviews.jsonl, one line per review, all accounts, commit "
+                  f"{f['sha']}.")
     d.end_md()
 
     s = d.new("Run by AI agents, governed by a human",
@@ -767,7 +968,8 @@ def build():
               f"work and dispatches focused lanes, like the one that built this deck. The operator sets "
               f"strategy and risk policy and grants standing authorizations, called mandates, for decisions the "
               f"data can settle. Currently {f['mandates_granted']} mandates are granted and {f['mandates_proposed']} "
-              f"is proposed. Agents may propose a mandate; only the operator grants one.", tags=("MEASURED",))
+              f"{'is' if f['mandates_proposed'] == 1 else 'are'} proposed. Agents may propose a mandate; only the "
+              f"operator grants one.", tags=("MEASURED",))
     d.cards(s, [
         ("Manager + lanes", ["One manager session keeps the work register and dispatches narrow lanes, each "
                              "with one question and a spending ceiling."]),
@@ -778,6 +980,8 @@ def build():
         ("Permission tiers", ["Docs and tooling: autonomous. Runtime changes: one OK. Strategy and risk: "
                               "operator approval, or a committed evidence record."]),
     ], cols=2, size=16)
+    d.num("mandates granted", f["mandates_granted"], "MEASURED", "config/mandates.yaml (mandates)")
+    d.num("mandates proposed", f["mandates_proposed"], "MEASURED", "config/mandates.yaml (proposed)")
     d.footnote(s, f"MEASURED: config/mandates.yaml, commit {f['sha']}.")
     d.end_md()
 
@@ -798,82 +1002,119 @@ def build():
     ], cols=2, size=16)
     d.end_md()
 
+    mls = [r for r in f["prod_rows"] if r["leg"] in ("ml_entry", "ml_entry_eq_struct") and not r.get("missing")]
     s = d.new("Machine learning today",
-              "Where ML stands, honestly. The first ML-driven leg, a learned entry model, now trades real money; "
-              "its evidence is one held-out year scored once, with a small positive expectancy over many trades. "
-              "Elsewhere, ML is used for advice about market regime, for example whether volatility is high. "
-              "Earlier attempts to have models predict what to do from price data alone failed offline, and "
-              "the lesson recorded was that the binding constraint is labelled outcomes, not computing power.",
-              tags=("MEASURED",))
-    ml = next((r for r in f["prod_rows"] if r["leg"] == "ml_entry" and not r.get("missing")), None)
+              "Where ML stands, honestly. Two learned entry models now trade real money: one on crypto and one on a "
+              "pool of US funds. Each was promoted on a held-out window scored once, net of the full cost stack. "
+              "Models follow the same flow as strategies: offline evidence goes straight to use, and a demoted "
+              "model drops back to shadow, where it keeps scoring for data while it is improved. Earlier attempts "
+              "to predict direction from price data alone failed offline; the lesson recorded was that the binding "
+              "constraint is labelled outcomes, not computing power.", tags=("MEASURED",))
     items = []
-    if ml:
-        items.append(f"A learned entry model is in production: {ml['exp']:+.3f}R per trade over {ml['n']} trades "
-                     f"in one held-out year ({ml['start']} → {ml['end']}), net of costs. Small, but over many trades.")
+    for r in mls:
+        items.append(f"{PLAIN.get(r['leg'], r['leg'])}: {r['exp']:+.3f}R per trade over {r['n']} held-out trades "
+                     f"({r['start'][:7]} → {r['end'][:7]}), net of costs.")
+        d.num(f"held-out expectancy: {r['leg']}", round(r["exp"], 3), "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (expectancy_r_oos)")
+        d.num(f"held-out trades: {r['leg']}", r["n"], "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (n_trades_oos)")
     items += [
-        "Per the ML plan (last measured 2026-10-11, not re-checked for this deck), the advisory models are "
-        "volatility-regime models: they advise on when conditions suit a strategy.",
-        "Lesson recorded in the ML plan: models fed only price data did not predict direction; "
-        "the limit is labelled outcomes, not compute.",
-        "Every model follows the same ladder: candidate → shadow → advisory, and nothing past shadow without "
-        "the operator.",
+        "Same ladder as strategies: offline evidence → in use; demotion → shadow, still scoring for data.",
+        f"An inventory on {f['ml_inv']['as_of']} counted {f['ml_inv']['total']} registered models; it proposed keeping "
+        f"{f['ml_inv']['proposals']['KEEP']}, reviewing {f['ml_inv']['proposals']['REVIEW']} and retiring "
+        f"{f['ml_inv']['proposals']['RETIRE']} that nothing uses.",
+        "Lesson recorded: models fed only price data did not predict direction; the limit is labelled outcomes.",
     ]
-    d.bullets(s, items)
-    d.footnote(s, "MEASURED: comms/strategy_evidence/ml_entry.json (basis "
-                  f"{ml['basis'] if ml else '—'}, fidelity {ml['fidelity'] if ml else '—'}). "
-                  "The ML plan's lessons: ROADMAP.md § “AI trader (ML) — build plan”.")
+    d.num("registered models (inventory)", f["ml_inv"]["total"], "MEASURED", f"comms/ml_consolidation/{f['ml_inv']['as_of']}.json", "/api/bot/ml/registry")
+    d.bullets(s, items, size=18)
+    d.footnote(s, "MEASURED: comms/strategy_evidence/ml_entry.json and ml_entry_eq_struct.json (basis heldout_window); "
+                  f"inventory comms/ml_consolidation/{f['ml_inv']['as_of']}.json, a dated snapshot.")
+    d.end_md()
+
+    kc = f["ml_inv"]["keep_consumer"]
+    s = d.new("The ML programme: ten decisions, one model family each",
+              "The ML plan cuts the life of a trade into ten decisions, from which markets to trade to grading a "
+              "closed trade. Each decision is owned by exactly one model family, with one question, a baseline it "
+              "must beat net of cost, a label, and an offline test. Each slot runs its own champion and challenger "
+              "loop: the model in use is the champion, a retrained or new model is the challenger, and the challenger "
+              "replaces it only by beating it on the same data and the same costs. Several slots have no model yet; "
+              "they run on rules today, which is stated rather than hidden.", tags=("MEASURED",))
+    slots = [
+        ("D1", "Universe & book", "Which markets and strategies sit on which account", "rule (the ladder)"),
+        ("D2", "Regime gate", "May this strategy fire in today's market?", "Collie"),
+        ("D3", "Entry", "Open long, short or nothing", "Foxhound"),
+        ("D4", "Signal filter", "Take, reduce or skip a strategy's signal", "Beagle"),
+        ("D5", "Position aggregation", "Combine several signals on one market", "Mastiff"),
+        ("D6", "Bracket at entry", "Where the stop and target sit", "Pointer"),
+        ("D7", "In-trade management", "Hold, move a bracket, take a partial", "Labrador"),
+        ("D8", "Exit now", "Close the whole position now?", "Labrador"),
+        ("D9", "Execution", "How to place the order to cut cost", "Whippet"),
+        ("D10", "Review & grading", "Grade the decision; feed labels back", "Basset"),
+    ]
+    rows = [[sid, name, q, fam, str(kc.get(sid, 0)) if sid != "D1" else "—"] for sid, name, q, fam in slots]
+    d.table(s, ["Slot", "Decision", "The question", "Family", "Models with a consumer"], rows,
+            col_w=[0.8, 2.4, 4.6, 1.6, 1.4], size=12, h_row=Inches(0.4))
+    for sid, *_ in slots[1:]:
+        d.num(f"models with a consumer: {sid}", kc.get(sid, 0), "MEASURED", f"comms/ml_consolidation/{f['ml_inv']['as_of']}.json (proposal KEEP (consumer))", "/api/bot/ml/registry")
+    d.cite("docs/plans/ML-ROADMAP-MECE-2026-11.md § 2", "docs/plans/ML-CONSOLIDATION-2026-11-11.md")
+    d.footnote(s, f"Map: docs/plans/ML-ROADMAP-MECE-2026-11.md. “Models with a consumer” = a strategy, account or config uses it (demo floor included), per the "
+                  f"{f['ml_inv']['as_of']} inventory (MEASURED, dated). Family names are internal labels.",
+               y=H - Inches(0.95))
     d.end_md()
 
     # ---------------------------------------------------------------- PART 6 roadmap
     d.section = "Where it goes next"
     s = d.new("Roadmap 1 — scale the real-money strategies",
-              "Goal one on the roadmap is real-money edge, decided offline. The near-term work: make active "
-              "management a standard on every real-money strategy, finish making the promotion ladder fully "
-              "mechanical, keep pushing the testing legs through Stage 0, and explore longer and shorter "
-              "timeframes, always net of cost.")
+              "Goal one on the roadmap is real-money edge, decided offline. The near-term work: active management "
+              "as a standard on every real-money strategy, with targets that are real predictions and move with the "
+              "trade; a promotion ladder that runs mechanically from a backtest pass to real money and back; more "
+              "testing legs pushed through Stage 0; and longer and shorter timeframes, always net of cost.")
     d.cards(s, [
-        ("Active management as standard", ["Evidence-backed stop and target moves on every real-money "
-                                           "strategy."]),
-        ("A fully mechanical ladder", ["Promotion and demotion decided by registered rules and standing "
-                                       "mandates, without a human in the loop for routine calls."]),
+        ("Active management as standard", ["Evidence-backed stop and target moves on every real-money strategy, "
+                                           "and targets revised during every trade."]),
+        ("A mechanical ladder", ["Backtest pass → real money; mirror net-negative → back to the demo floor. "
+                                 "Decided by registered rules and standing mandates."]),
         ("More legs through Stage 0", [f"{st['testing']} testing legs keep iterating on their levers; each one "
-                                       "that passes moves to real money."]),
+                                       "that passes goes to real money."]),
         ("New horizons", ["Daily and weekly holds, and sub-hour breakout families, tested net of cost."]),
     ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block (generated from docs/roadmap/milestones.yaml), goal G1. "
-                  "Testing-leg count MEASURED as on slide 13.")
+    d.num("testing legs", st["testing"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
+    d.cite("docs/roadmap/milestones.yaml (G1: L-AM-STANDARD, L-ATM, L-LADDER, L-TIMEFRAMES)")
+    d.footnote(s, "Source: ROADMAP.md live block (generated from docs/roadmap/milestones.yaml), goal G1: L-AM-STANDARD, "
+                  "L-ATM, L-LADDER, L-TIMEFRAMES. Testing-leg count MEASURED.")
     d.end_md()
 
-    s = d.new("Roadmap 2 — machine learning",
-              "Goal four on the roadmap is the AI trader. Near-term priorities: more ML in the live trading "
-              "loops, with the infrastructure to run and monitor it; the regime programme, which asks when "
-              "each strategy is primed; a frontier programme that tests newer model families against what we "
-              "use today; and a data programme to collect, process and label more outcomes, since labels are "
-              "the binding constraint.")
+    s = d.new("Roadmap 2 — machine learning and the desk",
+              "Goal four on the roadmap is the AI trader. Near-term priorities: more ML in the live trading loops, "
+              "with the infrastructure to run and monitor it; every one of the ten trade decisions with an owning "
+              "model family and a registered test; the regime programme, which asks when each strategy is primed; "
+              "the trading desk made production-ready; and a data programme to collect and label more outcomes, "
+              "since labels are the binding constraint.")
     d.cards(s, [
-        ("ML in the live loops", ["Extend the ML entry model and add ML heads to live decisions, with the "
-                                  "infrastructure to serve and monitor them."]),
-        ("Regime: when to trade", ["Learn when each strategy is primed, and step aside when it is not."]),
-        ("Model frontier", ["Bake newer forecasting and tabular models off against today's, on the same "
-                            "data and cost stack."]),
+        ("ML in the live loops", ["More learned decisions changing live orders, with serving and monitoring "
+                                  "infrastructure."]),
+        ("Ten slots, one loop each", ["Every trade decision gets a question, a baseline, a label and a "
+                                      "champion-versus-challenger test."]),
+        ("Regime and the desk", ["Learn when each strategy is primed; make the AI trading desk "
+                                 "production-ready."]),
         ("Data and labels", ["Grow the store of labelled outcomes, the binding constraint on every model."]),
     ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block, goal G4 (L-ML-LIVE, L-REGIME, frontier track, L-DATA).")
+    d.cite("docs/roadmap/milestones.yaml (G4: L-ML-LIVE, L-ML-MECE, L-REGIME, L-DESK-V1, L-DESK, L-DATA)")
+    d.footnote(s, "Source: ROADMAP.md live block, goal G4: L-ML-LIVE, L-ML-MECE, L-REGIME, L-DESK-V1, L-DESK, L-DATA.")
     d.end_md()
 
     s = d.new("Roadmap 3 — the learning machine",
               "The last part of the roadmap is about the machine that does the improving: prop accounts that "
-              "qualify on their own, plumbing that can be trusted, a research queue that turns evidence into "
-              "decisions without the operator in the path, and a slower macro and value sleeve. This is where "
-              "the deck ends: no request, just the plan.")
+              "qualify on their own, plumbing and alerts that can be trusted, research programmes that turn "
+              "evidence into decisions without the operator in the path, and a slower macro and value sleeve. "
+              "This is where the deck ends: no request, just the plan.")
     d.cards(s, [
         ("Prop accounts", ["Automate, protect and qualify the prop-firm accounts."]),
-        ("Trustworthy plumbing", ["Every position protected, every close explained, every number labelled."]),
-        ("Research machine", ["Evidence turns into decisions on its own: questions run, get graded, and "
-                              "act."]),
+        ("Trustworthy plumbing", ["Every position protected, every close explained, every number labelled, "
+                                  "every alert reaching the system without a human relaying it."]),
+        ("Research machine", ["Research programmes with weekly plans: questions run, get graded, and act."]),
         ("Macro and value", ["A slower, thesis-driven sleeve expressed through defined-risk options."]),
     ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block, goals G2, G3, G5, G6.")
+    d.cite("docs/roadmap/milestones.yaml (G2 L-PROP; G3 M39, L-ALERT-INTEGRATION; G5 L-PROGRAMMES, M40; G6 M28)")
+    d.footnote(s, "Source: ROADMAP.md live block: G2 L-PROP · G3 M39, L-ALERT-INTEGRATION · G5 L-PROGRAMMES, M40 · G6 M28.")
     d.end_md()
 
     # ---------------------------------------------------------------- APPENDIX
@@ -925,9 +1166,9 @@ def build():
         rows.append([PLAIN.get(r["leg"], r["leg"]), f"{r['net']:+.1f}R", str(r["n"]),
                      f"{r['maxdd']:.1f}R" if r["maxdd"] is not None else "—", r["basis"].replace("_", " ")])
     d.table(s, ["Strategy (production)", "Net R, out of sample", "Trades", "Max drawdown", "Basis"], rows,
-            col_w=[4.2, 2, 1.2, 1.8, 2.4], size=14, h_row=Inches(0.5))
+            col_w=[4.2, 2, 1.2, 1.8, 2.4], size=12, h_row=Inches(0.4))
     d.footnote(s, "MEASURED: comms/strategy_evidence/<leg>.json fields net_r_oos, n_trades_oos, "
-                  "path_stats.max_drawdown_r, basis. Windows differ by leg (slide 16).", y=H - Inches(1.1))
+                  "path_stats.max_drawdown_r, basis. Windows differ by leg (see the production-strategies slide).", y=H - Inches(1.1))
     d.end_md()
 
     s = d.new("Appendix D — glossary",
@@ -942,7 +1183,10 @@ def build():
         ["Paper / mirror", "Simulated-money account at the broker / a paper copy of a real-money book"],
         ["Mandate", "A standing operator grant to act on a class of decision when the evidence settles it"],
         ["Prop firm", "A firm that funds traders under strict loss limits"],
-    ], col_w=[2.4, 8], size=14, h_row=Inches(0.5))
+        ["Demo floor", "The paper accounts where every testing or demoted strategy trades for data"],
+        ["Held-out", "Data kept aside and never used for tuning; the real-money pass is judged on it"],
+        ["Champion / challenger", "The model in use vs a new one; the new one replaces it only by beating it on the same data"],
+    ], col_w=[2.4, 8], size=12, h_row=Inches(0.38))
     d.end_md()
 
     s = d.new("Appendix E — sources and provenance",
@@ -951,28 +1195,51 @@ def build():
     d.bullets(s, [
         f"Built {f['date']} from repo commit {f['sha']} by docs/pitch/build_deck.py (numbers are computed, not typed).",
         "Leg counts and statuses: scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml.",
-        "Accounts, prop accounts, modes: config/accounts.yaml. Mandates: config/mandates.yaml.",
+        "Accounts, prop accounts, modes: config/accounts.yaml. Mandates: config/mandates.yaml. Fossil-fuel list: "
+        "config/values_exclusions.yaml.",
+        "Target compliance: scripts/ci/check_tp_doctrine.py. Live-trade reviews: comms/live_review/reviews.jsonl. "
+        "ML inventory: comms/ml_consolidation/ (dated snapshot).",
         "Backtest evidence: comms/strategy_evidence/*.json (out of sample, net of the full cost stack).",
         "Research queue: research/queue/*.yaml status fields.",
-        "Concepts and rules: docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
+        "Concepts and rules: docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, "
+        "docs/plans/ML-ROADMAP-MECE-2026-11.md, ROADMAP.md.",
+        "Machine-readable: docs/pitch/slides.json lists every slide with each number's provenance and source.",
         "Left out on purpose: live and paper profit figures (a live book never establishes edge, and they were "
         "not re-verified for this build), and every dollar amount, balance, account id and server address.",
-    ], size=16, gap=8)
+    ], size=15, gap=6)
     d.end_md()
 
     d.p.save(OUT_PPTX)
     header = ("# JTA Trader — pitch deck: markdown source and speaker notes\n\n"
-              "> **Doc status:** `live` · category `unknown` · last verified `2026-11-04` · registered in "
+              f"> **Doc status:** `live` · category `unknown` · last verified `{f['date']}` · registered in "
               "[`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)\n\n"
               "Generated by [`build_deck.py`](build_deck.py) together with "
-              "[`jta-trader-pitch-deck.pptx`](jta-trader-pitch-deck.pptx) (row `PROJECT-PITCH-DECK`). "
+              "[`jta-trader-pitch-deck.pptx`](jta-trader-pitch-deck.pptx) and [`slides.json`](slides.json) "
+              "(rows `PROJECT-PITCH-DECK`, `PITCH-DECK-V2`). "
               "Do not hand-edit: change the builder and re-run `python3 docs/pitch/build_deck.py`. "
               f"Built from commit `{f['sha']}` on {f['date']}; {d.n} slides.\n\n"
               "Audience: a smart non-expert. Numbers: ratios only (R, %, counts), each tagged MEASURED or "
               "ESTIMATED; no dollar amounts, balances, account ids, hosts or addresses.\n")
     with open(OUT_MD, "w") as fh:
         fh.write(header + "\n".join(d.md) + "\n")
-    print(f"wrote {OUT_PPTX} ({d.n} slides) and {OUT_MD}")
+    for sl in d.slides:
+        # A slide is live-refreshable when every number on it is recomputable from a script or file at build time
+        # (all are) AND at least one has a read-only API endpoint that could feed it without a rebuild.
+        sl["live_refreshable"] = any(n.get("live_endpoint_candidate") for n in sl["numbers"])
+    doc = dict(
+        schema="jta-pitch-slides/v1",
+        built_from_commit=f["sha"], built_on=f["date"], slide_count=len(d.slides),
+        spec=dict(audience="smart non-expert", numbers="ratios only, no $, each tagged MEASURED or ESTIMATED",
+                  length="deep dive, 20+ slides", close="roadmap, no ask"),
+        refresh="python3 docs/pitch/build_deck.py (recomputes every number from the files named in `source`)",
+        note=("live_endpoint_candidate names a read-only API route that serves the same underlying data; a UI that "
+              "wires it must verify the field it reads matches `source` before showing the number."),
+        slides=d.slides)
+    assert [sl["number"] for sl in d.slides] == list(range(1, d.n + 1)), "slide records out of step with the deck"
+    with open(OUT_JSON, "w") as fh:
+        json.dump(doc, fh, indent=1, ensure_ascii=False, default=str)
+        fh.write("\n")
+    print(f"wrote {OUT_PPTX} ({d.n} slides), {OUT_MD} and {OUT_JSON}")
 
 
 if __name__ == "__main__":
