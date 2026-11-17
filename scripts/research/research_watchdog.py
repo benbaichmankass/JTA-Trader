@@ -163,7 +163,7 @@ def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: d
     if runnable_n is None or research_runs is None:
         return verdict("dispatcher_fires", CNL, "could not count runnable units or list research compute runs")
     if runnable_n == 0:
-        return verdict("dispatcher_fires", OK, "nothing runnable, so nothing is owed a fire", evidence={"runnable": 0})
+        return verdict("dispatcher_fires", OK, "nothing due now, so nothing is owed a fire", evidence={"runnable": 0})
     act = _active(research_runs, now)
     ages = [a for a in (_age_min(r.get("created_at"), now) for r in research_runs) if a is not None]
     ev = {"runnable": runnable_n, "active_research_runs": len(act), "runs_listed": len(research_runs),
@@ -636,6 +636,7 @@ def queue_facts(root: Path, now: datetime, *, pending_fn: Optional[Callable] = N
         uncounted = sum(1 for u in units.values() if u.get("status") == "queued" and u.get("compute")
                         and not qr.dispatchable(u) and due_within(u, now, qr.DISPATCH_CYCLE_HOURS))
         return {"runnable": len(run_ids), "by_backend": by_be, "by_backend_due_now": due_now_be,
+                "due_now_total": sum(due_now_be.values()),
                 "unplaceable": unplaceable, "units_total": len(units),
                 "unreadable_units": len(bad), "backends": [n for n, b in cfg["backends"].items() if b.get("auto_route", True)],
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
@@ -672,7 +673,11 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
             break
         research_runs += r
     n = facts["runnable"] if facts else None
-    out.append(check_fires(n, research_runs, now, th, counted))
+    # dispatcher_fires owes a fire only for units DUE NOW (STOP-GENERATED-AUTHORING 2026-11-01: a sparse queue is by design;
+    # `runnable` looks a cycle ahead and read 6 "runnable" with 0 due at 08:54Z 2026-11-17, a false page). Facts that predate
+    # due_now_total fall back to the old count.
+    n_due = facts.get("due_now_total", facts["runnable"]) if facts else None
+    out.append(check_fires(n_due, research_runs, now, th, counted))
     out.append(check_queue(n, th, {k: facts[k] for k in ("by_backend", "unplaceable", "router_style_due_not_counted_by_dispatchable")}
                            if facts else None))
     skip = set(cfg.get("backends_not_graded") or [])

@@ -233,7 +233,9 @@ def grade(h: dict, *, min_runnable: int, max_idle_hours: float, refill: dict = N
             problems.append(f"H1 {base}{cap} -- a refill cannot close this gap")
     if h["hours_since_last_dispatch"] is None:
         problems.append("H2 no unit carries a last_dispatched_at at all -- nothing has ever run")
-    elif h["hours_since_last_dispatch"] > max_idle_hours:
+    elif h["hours_since_last_dispatch"] > max_idle_hours and h.get("due_now", 1) > 0:
+        # Pages only when units were DUE NOW and nothing fired (STOP-GENERATED-AUTHORING 2026-11-01 popup "Stop floor-driven
+        # units (Rec.)"; research-ops SKILL § B: the runnable count is a diagnostic). A sparse queue with nothing due is idle by design.
         problems.append(f"H2 last dispatch {h['hours_since_last_dispatch']} h ago > {max_idle_hours} h "
                         f"(newest stamp {h['last_dispatched_at']})")
     if h["unreadable"]:
@@ -267,10 +269,10 @@ def _self_test() -> int:
         # page; an unfillable one pages; an H2 beside a fillable H1 still pages.
         p_fill = grade(h, min_runnable=25, max_idle_hours=48, refill={"deficit": 22, "capacity": 153, "fillable": True})
         assert len(p_fill) == 1 and p_fill[0].startswith("H1-REFILL"), p_fill
-        assert _exit_code(p_fill) == EXIT_REFILL
+        assert _exit_code(p_fill) == 0        # STOP-GENERATED-AUTHORING: every H1 is a diagnostic, never a refill trigger or a page
         p_dry = grade(h, min_runnable=25, max_idle_hours=48, refill={"deficit": 22, "capacity": 3, "fillable": False})
         assert len(p_dry) == 1 and p_dry[0].startswith("H1 ") and "cannot close" in p_dry[0], p_dry
-        assert _exit_code(p_dry) == 1 and _exit_code(p_fill + ["H2 idle"]) == 1 and _exit_code([]) == 0
+        assert _exit_code(p_dry) == 0 and _exit_code(p_fill + ["H2 idle"]) == 1 and _exit_code([]) == 0
         assert grade(h, min_runnable=3, max_idle_hours=48) == []
         # RC4 (2026-10-15): an unfillable H1 with ready questions in the authoring queue is a
         # drafting task, not a page; with an empty authoring queue it still pages; H2 beside it pages.
@@ -279,7 +281,7 @@ def _self_test() -> int:
         assert len(p_auth) == 1 and p_auth[0].startswith("H1-AUTHOR") and _exit_code(p_auth) == 0, p_auth
         p_none = grade(h, min_runnable=25, max_idle_hours=48,
                        refill={"deficit": 22, "capacity": 0, "fillable": False, "authoring_queue": 0})
-        assert p_none[0].startswith("H1 ") and "authoring queue is empty" in p_none[0] and _exit_code(p_none) == 1
+        assert p_none[0].startswith("H1 ") and "authoring queue is empty" in p_none[0] and _exit_code(p_none) == 0
         assert _exit_code(p_auth + ["H2 idle"]) == 1
         # between the paging floor and the computed floor, with nothing to refill or author: warn only
         p_thin = grade(h, min_runnable=25, max_idle_hours=48, page_floor=3,
@@ -288,7 +290,16 @@ def _self_test() -> int:
         # ready programme nodes count as refill capacity -> exit 3, not a page
         p_prog = grade(h, min_runnable=25, max_idle_hours=48,
                        refill={"deficit": 5, "capacity": 6, "templates": 0, "programme_ready": 6, "fillable": True})
-        assert _exit_code(p_prog) == EXIT_REFILL
+        assert _exit_code(p_prog) == 0
+        # NEGATIVE CONTROLS (manager 2026-11-17, false page at 08:54Z): H2 pages only when units are DUE NOW and nothing fired.
+        assert h["due_now"] == 3, h
+        assert any(x.startswith("H2") for x in grade(h, min_runnable=1, max_idle_hours=12))             # due now + idle: PAGES
+        assert _exit_code(grade(h, min_runnable=1, max_idle_hours=12)) == 1
+        h_quiet = dict(h, due_now=0)
+        assert not any(x.startswith("H2") for x in grade(h_quiet, min_runnable=1, max_idle_hours=12))     # idle but nothing due: silent
+        assert _exit_code(grade(h_quiet, min_runnable=25, max_idle_hours=12)) == 0
+        assert h_quiet["hours_since_last_dispatch"] is not None
+        assert any(x.startswith("H2 no unit") for x in grade(dict(h_quiet, hours_since_last_dispatch=None), min_runnable=1, max_idle_hours=12))
         # the computed floor: 19 h of supply at the observed rate, never below 25
         assert computed_floor(32) == 26 and computed_floor(79) == 63 and computed_floor(0) == 25 and computed_floor(None) == 25
         # idle backends: measured + free slot + nothing due; runpod never listed; unreadable -> could_not_look
@@ -349,7 +360,9 @@ def _self_test() -> int:
 def _exit_code(problems: list) -> int:
     """0 clean, or only an H1-AUTHOR (a scheduled drafting task, warned, not paged);
     EXIT_REFILL when every other problem is a fillable H1; else 1 (page)."""
-    pageable = [x for x in problems if not x.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED"))]
+    # Every H1 is a DIAGNOSTIC since STOP-GENERATED-AUTHORING (operator popup 2026-11-01 "Stop floor-driven units (Rec.)";
+    # research-ops SKILL § B): the runnable count is never a page and never a refill trigger. H2 (due-now units, nothing fired) pages.
+    pageable = [x for x in problems if not x.startswith(("H1", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED"))]
     if not pageable:
         return 0
     return EXIT_REFILL if all(x.startswith("H1-REFILL") for x in pageable) else 1
@@ -422,7 +435,7 @@ def main(argv=None) -> int:
         print(f"::warning::research-queue-health: programme coverage could not be measured ({e!r})")
     rc = _exit_code(problems)
     for p in problems:
-        level = "warning" if p.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED")) else ("notice" if rc == EXIT_REFILL else "error")
+        level = "warning" if p.startswith(("H1", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED")) else ("notice" if rc == EXIT_REFILL else "error")
         print(f"::{level}::research-queue-health: {p}")
     return rc
 

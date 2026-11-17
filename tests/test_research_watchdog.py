@@ -461,3 +461,28 @@ def test_backend_idle_clock_is_capped_by_minutes_since_due():
     far = (NOW - timedelta(minutes=lim + 100)).isoformat()
     v = w.check_backend("trainer", 4, old_start, NOW, TH, due_since=far)
     assert v["state"] == w.BAD and f"{lim + 100:.0f} min" in v["detail"]                # reports time since due, not 462
+
+
+# ── dispatcher_fires owes a fire only for units DUE NOW (STOP-GENERATED-AUTHORING 2026-11-01; false page 2026-11-17 08:54Z) ──
+def _idle_fixture():
+    fx = fixture(dispatch_age=5)
+    fx["workflow_runs"].update({wf: [run(10 + i, 600)] for i, wf in enumerate(w.RESEARCH_WORKFLOWS)})   # newest compute run 10 h ago
+    return fx
+
+
+def _fires(facts):
+    out = w.evaluate(P(_idle_fixture()), CFG, NOW, facts)
+    return next(v for v in out if v["check"] == "dispatcher_fires")
+
+
+def test_fires_silent_when_runnable_within_a_cycle_but_nothing_due_now():
+    facts = dict(HEALTHY, runnable=6, due_now_total=0)
+    v = _fires(facts)
+    assert v["state"] == w.OK and "nothing due now" in v["detail"], v
+
+
+def test_fires_still_pages_when_units_are_due_now_and_nothing_fired():
+    """Negative control: the same idle compute history with 3 units DUE NOW must still fail, and heal by dispatching."""
+    v = _fires(dict(HEALTHY, runnable=6, due_now_total=3))
+    assert v["state"] == w.BAD and v["heal"] == "dispatch", v
+    assert _fires(dict(HEALTHY, runnable=6))["state"] == w.BAD     # facts without due_now_total: the old, stricter count

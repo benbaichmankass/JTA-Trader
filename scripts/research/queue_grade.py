@@ -1009,7 +1009,9 @@ def health(root: Path, *, now: Optional[datetime] = None) -> Dict[str, Any]:
     if rt and (last is None or rt > last):
         last = rt
     review = sorted(uid for uid, u in units.items() if isinstance(u.get("grading"), dict) and u["grading"].get("needs_review"))
-    return {"runnable": len(runnable(units, now=now)), "queued": len(queued), "units": len(units), "unreadable": bad,
+    from scripts.research.dispatch_queue import due_within
+    due_now = sorted(uid for uid in runnable(units, now=now) if due_within(units[uid], now, 0.0))
+    return {"runnable": len(runnable(units, now=now)), "due_now": len(due_now), "queued": len(queued), "units": len(units), "unreadable": bad,
             "last_dispatched_at": last.isoformat() if last else None,
             "hours_since_last_dispatch": round((now - last).total_seconds() / 3600, 1) if last else None,
             "needs_review": review}

@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research alarm false positive (manager order 2026-11-17 09:06Z). The queue is sparse by design since STOP-GENERATED-AUTHORING (operator popup 2026-11-01 'Stop floor-driven units (Rec.)'; research-ops SKILL section B: the runnable count is a diagnostic). MEASURED 2026-11-17 08:54Z: watchdog dispatcher_fires paged '6 runnable, no compute run for 513 min' while the dispatcher fired hourly and a dry run saw 2262 job files all not_due; 'runnable' looks one cycle ahead, the dispatcher fires only what is due now. Change: dispatcher_fires owes a fire only for units due NOW (due_now_total); check_research_queue_health H2 pages only when units are due now; every H1 is a warning, no refill trigger, no page. Negative controls prove due-now plus idle still pages. Closes incident dispatcher_fires@20261117T0854Z in the ledger as a false alarm. CI/tooling only, no gate added, no src/, no config/, no order path."
+}
