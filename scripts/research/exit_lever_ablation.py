@@ -253,9 +253,13 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
     # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
     # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
-    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup"):
+    # fade (fade_breakout_4h -> scripts/backtest_fade.py) and fvg_range (fvg_range_15m -> scripts/backtest_fvg_range.py) joined
+    # 2026-11-17 (FVG-RANGE-ABLATION-DRIVER; RQ-20261116-d5a7-12/-13/-14 were producer_failed on this very refusal). Their argv
+    # comes from the same rdm.build_harness_cmd branch the evidence builder runs; both harnesses emit net_total_r, max_drawdown_r,
+    # total_trades and per-trade entry_time/net_r, which is all summarize_arm reads. Nothing is reimplemented here.
+    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup", "fade", "fvg_range"):
         raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback, "
-                         "ict_scalp and turtle_soup harnesses")
+                         "ict_scalp, turtle_soup, fade and fvg_range harnesses")
     # forming_1m (EQ-FORMING-BAR-REPLAY): replay the leg's live FORMING-bar decision from 1m
     # data, through the same build_harness_cmd path the evidence builder uses.
     fkw = {"forming_1m": forming_1m, "forming_session": forming_session} if forming_1m else {}
@@ -1321,6 +1325,30 @@ def _self_test() -> int:
         check("pullback arm argv: the builder omits --trail-decay-* (why the record is approximate); the raw flag adds it",
               "--trail-decay-arm-r" not in n_argv and s_argv[s_argv.index("--trail-decay-arm-r") + 1] == "4.49"
               and "--tp-r" in n_argv and n_argv[n_argv.index("--tp-r") + 1] == "3.0")
+    # fade / fvg_range (FVG-RANGE-ABLATION-DRIVER, 2026-11-17). Fixtures set every key they assert on, so a later edit to the live legs
+    # cannot break the check with the builder intact (the lesson of the eth fixture above).
+    fade = {"symbols": ["BTCUSDT"], "donchian": 20, "pierce_min": 0.0, "atr_stop_buffer": 0.5, "trail_mult": 3.0, "adx_max": 20.0}
+    f_base, f_om = build_arm_argv("fade_breakout_4h", fade, "<d>", "4h", "<e>", "<j>", [], None, None)
+    f_arm, _ = build_arm_argv("fade_breakout_4h", arm_cfg(fade, {"adx_max": 15.0, "donchian": 30}, []), "<d>", "4h", "<e>", "<j>",
+                              [], "2024-01-01", "2026-01-01")
+    check("fade arm argv: routes to backtest_fade.py; the arm's adx_max/donchian reach the flags; the window pins",
+          any(t.endswith("scripts/backtest_fade.py") for t in f_base) and "--atr-stop-mult" not in f_base
+          and f_base[f_base.index("--adx-max") + 1] == "20.0" and f_arm[f_arm.index("--adx-max") + 1] == "15.0"
+          and f_arm[f_arm.index("--donchian") + 1] == "30" and f_base[f_base.index("--donchian") + 1] == "20"
+          and "--start" in f_arm and "--start" not in f_base)
+    fvg = {"symbols": ["BTCUSDT"], "range_lookback": 48, "third_frac": 0.33, "timeframe": "15m"}
+    v_base, _ = build_arm_argv("fvg_range_15m", fvg, "<d>", "15m", "<e>", "<j>", [], None, None)
+    v_arm, _ = build_arm_argv("fvg_range_15m", arm_cfg(fvg, {"range_lookback": 96}, []), "<d>", "15m", "<e>", "<j>", [], None, None)
+    check("fvg_range arm argv: routes to backtest_fvg_range.py without the trend-only flags; the arm's range_lookback reaches it",
+          any(t.endswith("scripts/backtest_fvg_range.py") for t in v_base) and "--atr-stop-mult" not in v_base
+          and "--trail-mult" not in v_base and v_base[v_base.index("--range-lookback") + 1] == "48"
+          and v_arm[v_arm.index("--range-lookback") + 1] == "96")
+    try:
+        build_arm_argv("squeeze_leg", {"symbols": ["BTCUSDT"], "kc_mult": 1.5, "bb_period": 20}, "<d>", "1h", "<e>", "<j>", [], None, None)
+        refused = False
+    except ValueError as e:
+        refused = "fade and fvg_range" in str(e)
+    check("a harness still outside the list (squeeze) is refused loudly, not run", refused)
     print("self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 

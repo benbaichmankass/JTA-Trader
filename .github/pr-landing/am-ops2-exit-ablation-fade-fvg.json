@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "FVG-RANGE-ABLATION-DRIVER, widened (manager order 2026-11-17 10:11Z). exit_lever_ablation.py refused harnesses fvg_range and fade with a ValueError although rdm.build_harness_cmd already builds both argv (backtest_fvg_range.py, backtest_fade.py) and both emit the net_total_r / max_drawdown_r / total_trades / per-trade entry_time + net_r that summarize_arm reads. RQ-20261116-d5a7-12 (fvg_range, run 43859133629), -13 (fade, run 43895125533) and -14 (fade, run 43912586581) were producer_failed on that refusal. Change: the allowlist gains fade and fvg_range (nothing reimplemented), with one self-test per branch (argv routes to the right harness, the arm's levers reach the flags, trend-only flags absent) and a negative control that a harness still outside the list (squeeze) is refused. Also moves RQ-20261116-d5a7-11 and -12 from research/queue/blocked/ back to research/queue/ as queued, dropping their blocked_on (its clears_when is met). Tier 1 research tooling and queue data; no src/, no config/, no order path."
+}
