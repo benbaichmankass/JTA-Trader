@@ -9,7 +9,8 @@ thresholded by ``ML_VOL_VERDICT_THRESHOLD`` (default 0.5):
 
     ml_vol_regime(symbol, timeframe, candles_df=None) ->
       {vol_regime: calm|volatile|unknown, p_volatile: float|None,
-       source: "ml-advisory:<model_id>" | "unavailable",
+       source: "ml-advisory:<model_id>" | "unavailable:<reason>"  (reason: no_symbol_or_timeframe | no_advisory_head |
+                p_volatile_uncomputable | scoring_error),
        model_id: <model_id> | None}
 
 This module is the verdict SOURCE for all three Design-A modes; the live mode is
@@ -238,14 +239,20 @@ def _p_volatile_from_cache(model_id: Optional[str]) -> Optional[float]:
     return p_vol
 
 
+#: Returned by ``_p_volatile_inline`` (instead of ``None``) when the scorer RAISED, so the caller can label that "scoring_error"
+#: (we could not look) apart from "no candles / no feature row / no predict_proba" (nothing to score). Never leaves this module.
+_INLINE_SCORE_ERROR: Any = object()
+
+
 def _p_volatile_inline(predictor: Any, symbol: str, timeframe: str, candles_df: Any) -> Optional[float]:
     """Fallback: score ``P(volatile)`` inline for the current bar.
 
     Builds the parity feature row via ``feature_row_for_predictor`` (identical
     to the per-bar + signal-time paths) and reads the ``volatile`` class prob
     off ``predictor.wrapped.predict_proba``. Returns ``None`` (caller →
-    ``unknown``) when candles are absent, the feature row can't be built, the
-    predictor has no ``predict_proba``, or anything raises. Never raises.
+    ``unknown``) when candles are absent, the feature row can't be built or the
+    predictor has no ``predict_proba``; returns ``_INLINE_SCORE_ERROR`` when the
+    scoring itself raised (caller labels it ``scoring_error``). Never raises.
     """
     if candles_df is None:
         return None
@@ -271,7 +278,22 @@ def _p_volatile_inline(predictor: Any, symbol: str, timeframe: str, candles_df: 
         val = proba.get(_VOLATILE_CLASS)
         return float(val) if val is not None else None
     except Exception:  # noqa: BLE001 — fail-permissive, never break a tick
-        return None
+        return _INLINE_SCORE_ERROR
+
+
+# ML-VOL-SHADOW-SOURCE-COLLAPSE (2026-11-17, collapsed-states rule): "unavailable" used to cover FOUR different states, so a
+# logged ``ml_source: unavailable`` could not say whether we could not look (a scoring error) or there was nothing to look at (no
+# head). The prefix stays ``unavailable`` (a prefix reader keeps working); the reason follows the colon. LABEL ONLY: the verdict
+# dict is otherwise identical (vol_regime unknown, p_volatile None, model_id None) and every path stays fail-permissive.
+SOURCE_UNAVAILABLE = "unavailable"
+UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME = f"{SOURCE_UNAVAILABLE}:no_symbol_or_timeframe"
+UNAVAILABLE_NO_ADVISORY_HEAD = f"{SOURCE_UNAVAILABLE}:no_advisory_head"
+UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE = f"{SOURCE_UNAVAILABLE}:p_volatile_uncomputable"
+UNAVAILABLE_SCORING_ERROR = f"{SOURCE_UNAVAILABLE}:scoring_error"
+
+
+def _unavailable(reason: str) -> dict:
+    return {"vol_regime": VOL_UNKNOWN, "p_volatile": None, "source": reason, "model_id": None}
 
 
 def ml_vol_regime(
@@ -300,19 +322,14 @@ def ml_vol_regime(
     ``specs`` is injectable (tests / a non-registry caller); when ``None`` the
     cached registry-resolved advisory map is used.
     """
-    out = {
-        "vol_regime": VOL_UNKNOWN,
-        "p_volatile": None,
-        "source": "unavailable",
-        "model_id": None,
-    }
     if not symbol or not timeframe:
-        return out
+        return _unavailable(UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME)
+    out = _unavailable(UNAVAILABLE_SCORING_ERROR)   # overwritten below on every non-error path
     try:
         table = discover_advisory_stage_regime_specs() if specs is None else specs
         entry = table.get((_norm(symbol), _norm(timeframe)))
         if entry is None:
-            return out  # no advisory head for this market → unknown (permissive)
+            return _unavailable(UNAVAILABLE_NO_ADVISORY_HEAD)  # no advisory head for this market → unknown (permissive)
         model_id = entry.get("model_id")
         predictor = entry.get("predictor")
         # Preferred: the per-bar publish cache (zero fetches on the decision path).
@@ -320,8 +337,10 @@ def ml_vol_regime(
         # Fallback: inline score (only when the cache is cold AND candles given).
         if p_vol is None and predictor is not None:
             p_vol = _p_volatile_inline(predictor, str(symbol), str(timeframe), candles_df)
+        if p_vol is _INLINE_SCORE_ERROR:
+            return _unavailable(UNAVAILABLE_SCORING_ERROR)
         if p_vol is None:
-            return out  # uncomputable P(volatile) → unknown (permissive)
+            return _unavailable(UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE)  # uncomputable P(volatile) → unknown (permissive)
         threshold = _ml_vol_verdict_threshold()
         vol_regime = VOL_VOLATILE if float(p_vol) >= threshold else VOL_CALM
         out["vol_regime"] = vol_regime
@@ -330,12 +349,7 @@ def ml_vol_regime(
         out["source"] = f"ml-advisory:{model_id}" if model_id else "ml-advisory"
         return out
     except Exception:  # noqa: BLE001 — observability-only, never break a tick
-        return {
-            "vol_regime": VOL_UNKNOWN,
-            "p_volatile": None,
-            "source": "unavailable",
-            "model_id": None,
-        }
+        return _unavailable(UNAVAILABLE_SCORING_ERROR)
 
 
 def _advisory_entry_for_symbol(symbol: Optional[str], specs: Optional[dict]) -> Optional[dict]:
@@ -384,22 +398,23 @@ def ml_vol_regime_for_symbol(
     no advisory head / uncomputable ``P(volatile)`` / any exception →
     ``{"vol_regime": "unknown", ...}``.
     """
-    out = {"vol_regime": VOL_UNKNOWN, "p_volatile": None,
-           "source": "unavailable", "model_id": None}
+    out = _unavailable(UNAVAILABLE_SCORING_ERROR)   # overwritten below on every non-error path
     if not symbol:
-        return out
+        return _unavailable(UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME)
     try:
         entry = _advisory_entry_for_symbol(symbol, specs)
         if entry is None:
-            return out
+            return _unavailable(UNAVAILABLE_NO_ADVISORY_HEAD)
         model_id = entry.get("model_id")
         predictor = entry.get("predictor")
         p_vol = _p_volatile_from_cache(model_id)
         if p_vol is None and predictor is not None:
             p_vol = _p_volatile_inline(
                 predictor, str(symbol), str(entry.get("timeframe") or ""), candles_df)
+        if p_vol is _INLINE_SCORE_ERROR:
+            return _unavailable(UNAVAILABLE_SCORING_ERROR)
         if p_vol is None:
-            return out
+            return _unavailable(UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE)
         threshold = _ml_vol_verdict_threshold()
         out["vol_regime"] = VOL_VOLATILE if float(p_vol) >= threshold else VOL_CALM
         out["p_volatile"] = round(float(p_vol), 8)
@@ -407,11 +422,15 @@ def ml_vol_regime_for_symbol(
         out["source"] = f"ml-advisory:{model_id}" if model_id else "ml-advisory"
         return out
     except Exception:  # noqa: BLE001 — observability-only, never break a tick
-        return {"vol_regime": VOL_UNKNOWN, "p_volatile": None,
-                "source": "unavailable", "model_id": None}
+        return _unavailable(UNAVAILABLE_SCORING_ERROR)
 
 
 __all__ = [
+    "SOURCE_UNAVAILABLE",
+    "UNAVAILABLE_NO_ADVISORY_HEAD",
+    "UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME",
+    "UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE",
+    "UNAVAILABLE_SCORING_ERROR",
     "VOL_CALM",
     "VOL_UNKNOWN",
     "VOL_VOLATILE",
