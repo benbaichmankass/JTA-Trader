@@ -1,6 +1,6 @@
 id: RQ-20261116-d5a7-14
 title: 'fade_breakout_4h: one-factor sweep of donchian (entry family) around the configured 20, 1830 d, net of the full cost stack (iteration)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -114,11 +114,11 @@ grading:
   decision_rule_id: RULE-RQ20261116-d5a7-14-DONCHIAN-SWEEP
   evidence:
   - research/results/RQ-20261116-d5a7-14/43912586581.jsonl
+  - research/results/RQ-20261116-d5a7-14/44067006339.jsonl
   graded_at: '2026-11-17'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-OPS-20261117-1006
-  owner_reason: 'producer_failed is not a verdict: the run refused harness fade (exit_lever_ablation driver gap). Fade support landed in #26638 (f83079c414); re-queued with last_dispatched_at null so the dispatcher re-fires it. Not the Alpaca throttle.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail

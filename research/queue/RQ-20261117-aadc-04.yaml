@@ -3,7 +3,7 @@
 id: RQ-20261117-aadc-04
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL family): does training the head on holding_pays_0 (future R >= 0) or more_mfe (new
   favourable excursion still ahead) instead of holding_pays (future R >= +0.25) improve its out-of-sample replayed R per trade, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -150,3 +150,17 @@ related:
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
 last_dispatched_at: '2026-11-17T12:07:49+00:00'
+grading:
+  attested: RULE-RQ20261117-aadc-04-EXITHEAD-LABEL
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261117-aadc-04-EXITHEAD-LABEL
+  evidence:
+  - research/results/RQ-20261117-aadc-04/44070631985.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

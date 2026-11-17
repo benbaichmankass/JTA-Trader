@@ -1,7 +1,7 @@
 id: RQ-20261117-b3aa-07
 title: 'trend_donchian_eth_4h: single-vs-combo read of the confirmed ADX-tightened trail (trail_adx 20 / 2.5) against the LIVE exit (trail_decay 10 / 1.8), 2020-07..2026-11, net of the full cost stack (closes
   or packets P1-Q6-eth4h-stop-declare)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -129,3 +129,14 @@ iteration:
 follow_up: PASS -> research-ops writes the Tier-3 packet (exact config diff, both reads) for the manager and closes node P1-Q6-eth4h-stop-declare; FAIL -> node P1-Q6-eth4h-stop-declare closes as superseded
   by the live trail_decay, with this record.
 last_dispatched_at: '2026-11-17T12:07:54+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-07-SINGLE-VS-COMBO
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-07-SINGLE-VS-COMBO
+  evidence:
+  - research/results/RQ-20261117-b3aa-07/44080309612.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
