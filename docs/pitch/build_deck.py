@@ -186,6 +186,25 @@ def load_facts() -> dict:
         md = open(os.path.join(ROOT, "docs/reference/trading-pipeline-map.md")).read()
         src = "snapshot: docs/reference/trading-pipeline-map.md"
     live = {}
+    _re = __import__("re")
+
+    def _lv(c):
+        m = _re.search(r"n=(\d+) · ΣR ([+-]?[0-9.]+) · E\[R\] ([+-]?[0-9.]+)", c)
+        if not m:
+            return None
+        cf = _re.search(r"confirmed (\d+)", c)
+        return dict(n=int(m.group(1)), sr=float(m.group(2)), er=float(m.group(3)), conf=int(cf.group(1)) if cf else 0)
+    track = []
+    for line in md.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 12 and cells[0].startswith("`"):
+            leg = cells[0].strip("`")
+            if leg.startswith("ml_") or leg.endswith("_ml") or leg == "claude_desk":
+                continue
+            bt = _re.search(r"([+-][0-9.]+)", cells[4])
+            track.append(dict(leg=leg, status=cells[1], bt=float(bt.group(1)) if bt else None,
+                              bt_n=cells[5], bt_folds=cells[6], rm=_lv(cells[10]), paper=_lv(cells[11])))
+    f["track"] = track
     for line in md.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) >= 12 and cells[0].startswith("`") and cells[1] == "production":
@@ -521,6 +540,33 @@ def pct(x):
     return f"{x * 100:.0f}%"
 
 
+_STRATS = None
+
+
+def plain_leg(leg):
+    global _STRATS
+    if leg in PLAIN:
+        return PLAIN[leg]
+    if _STRATS is None:
+        d0 = yaml.safe_load(open(os.path.join(ROOT, "config/strategies.yaml")))
+        _STRATS = d0.get("strategies", d0)
+    cfg = _STRATS.get(leg) or {}
+    syms = cfg.get("symbols") or ([cfg["symbol"]] if cfg.get("symbol") else [])
+    tf = cfg.get("timeframe") or ""
+    fam = ("Trend breakout" if "donchian" in leg else "ICT scalp" if "ict_scalp" in leg else
+           "Pullback" if "pullback" in leg else "Trend" if "trend" in leg else None)
+    if fam and len(syms) == 1:
+        sym = str(syms[0]).replace("USDT", "")
+        return f"{fam} · {sym} {tf}".strip() + (" (prop variant)" if leg.endswith("_prop") else "")
+    t = leg.split("_")
+    tf = next((x for x in t if x[:-1].isdigit() and x[-1] in "mhd"), "")
+    words = {"trend": "trend", "donchian": "breakout", "pullback": "pullback", "ict": "ICT", "scalp": "scalp",
+             "prop": "(prop variant)", "long": "long-only", "oi": "open-interest", "shock": "shock", "e4": "Event:"}
+    out = [words.get(x, x.upper()) for x in t if x != tf]
+    name = " ".join(out).replace("trend breakout", "trend breakout")
+    return (name[0].upper() + name[1:] + (f" ({tf})" if tf else "")).replace("TREND", "Trend")
+
+
 def build():
     f = load_facts()
     d = Deck(f)
@@ -685,7 +731,9 @@ def build():
               "Each family sits on the step where it decides. Most are gradient-boosted decision trees: many "
               "small trees added together, each correcting the last; they suit tabular market data and retrain "
               "fast. The filter is a deliberately simple logistic regression. Three decisions have no model yet "
-              "and run on rules, which we state rather than hide.", tags=("MEASURED",))
+              "and run on rules, which we state rather than hide. The ML models have only been live a short time, "
+              "so their story is the R&D process and the offline evidence; the rule strategies carry the live "
+              "track record.", tags=("MEASURED",))
     d.table(s, ["Step", "Family · slot", "Model type", "Decides", "Where it stands"], [
         ["3 Strategies", "Foxhound · D3", "Gradient-boosted trees", "Open long, short or nothing", "Real money"],
         ["4 Intent layer", "Collie · D2", "Gradient-boosted classifier", "Which market regime", "Advisory on paper"],
@@ -699,7 +747,8 @@ def build():
     d.cite("docs/reference/model_names.yaml", "ml/served/SERVED_MODELS.yaml", "ml/served/*/model.json",
            "ml/overlay/overlay_td.json", "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml",
            "research/queue/RQ-20261117-aadc-05.yaml")
-    d.footnote(s, "MEASURED from model artifacts (ml/served, ml/candidates, ml/overlay, ml/configs) and "
+    d.footnote(s, "The ML models have only been live a short time: judge them on the R&D process and offline evidence. "
+                  "MEASURED from model artifacts (ml/served, ml/candidates, ml/overlay, ml/configs) and "
                   "ml/served/SERVED_MODELS.yaml. The D8 exit head's artifact lives on the trainer; its type is not "
                   "verified here.", y=H - Inches(0.95))
     d.end_md()
@@ -806,55 +855,50 @@ def build():
     ])
     d.end_md()
 
-    # ---------------------------------------------------------------- 10 best strategies card
+    # ---------------------------------------------------------------- 10 strategies track record
     d.section = "What the R&D has produced"
-    MARKET = {"bybit": "Crypto", "alpaca": "US funds"}
-    acc = yaml.safe_load(open(os.path.join(ROOT, "config/accounts.yaml")))["accounts"]
-    best = sorted([r for r in f["prod_rows"] if not r.get("missing")], key=lambda r: -r["net"])[:5]
-    s = d.new_at((3, 5), "Our best performing strategies today",
-              "The five real-money strategies with the strongest offline evidence, ranked by total net R on test "
-              "data they were not tuned on, after the full cost stack. Three are rule strategies and two are ML "
-              "models. The small line under each is the live real-money record so far; with so few live trades it "
-              "checks that the mechanics work, it does not measure edge. Two of the five have no live real-money "
-              "trades yet.", tags=("MEASURED",))
-    vmax = max(r["net"] for r in best) or 1
-    rows_out = []
-    for i, r in enumerate(best):
-        y = Inches(1.7) + Inches(0.96) * i
-        venue = next((str(v.get("exchange")) for v in acc.values()
-                      if v.get("account_class") == "real_money" and r["leg"] in (v.get("strategies") or [])), "")
-        kind = "ML model" if r["leg"].startswith("ml_") else "Rule strategy"
-        ev = json.load(open(os.path.join(ROOT, f"comms/strategy_evidence/{r['leg']}.json")))
-        ev_date = str(ev.get("generated_at") or ev.get("as_of") or "")[:10] or "—"
-        lv = f["live_rm"].get(r["leg"], {})
-        live_txt = (f"Live real money: n {lv['n']} · E[R] {lv['er']:+.2f} — live checks mechanics, not edge"
-                    if lv.get("n") else "Live real money: no trades yet")
-        folds = f"{r['folds_pos']}/{r['folds']} folds +" if r["folds"] else "held-out window"
-        d._box(s, Inches(0.6), y, W - Inches(1.2), Inches(0.88), LIGHT)
-        d._text(s, Inches(0.75), y + Inches(0.05), Inches(5.6), Inches(0.45), f"{i + 1}. {PLAIN.get(r['leg'], r['leg'])}",
-                size=15, bold=True, color=NAVY)
-        d._text(s, Inches(0.75), y + Inches(0.47), Inches(5.6), Inches(0.4),
-                f"{kind} · {MARKET.get(venue, venue)} · {live_txt}", size=10, color=GREY)
-        d._text(s, Inches(6.5), y + Inches(0.12), Inches(1.7), Inches(0.6), f"{r['net']:+.1f}R", size=24, bold=True,
-                color=NAVY)
-        d._box(s, Inches(8.25), y + Inches(0.36), int(Inches(2.0) * r["net"] / vmax), Inches(0.14), TEAL)
-        d._text(s, Inches(10.4), y + Inches(0.1), Inches(2.4), Inches(0.75),
-                [f"n {r['n']} test trades · {folds}", f"MEASURED · evidence {ev_date}"], size=10, color=INK)
-        rows_out.append(dict(leg=r["leg"], name=PLAIN.get(r["leg"], r["leg"]), kind=kind,
-                             market=MARKET.get(venue, venue), net_r_oos=round(r["net"], 2), n_oos=r["n"],
-                             folds=folds, evidence_date=ev_date, live_n=lv.get("n", 0), live_er=lv.get("er")))
-        d.num(f"net R OOS: {r['leg']}", round(r["net"], 2), "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (net_r_oos)")
-        d.num(f"live real-money E[R]: {r['leg']}", lv.get("er"), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.slides[-1]["best"] = rows_out
-    d.md.append("| # | Strategy | Kind · market | Net R OOS (full cost) | n OOS · folds | Evidence | Live real money |")
-    d.md.append("|---|---|---|---|---|---|---|")
-    for i, r in enumerate(rows_out):
-        d.md.append(f"| {i + 1} | {r['name']} | {r['kind']} · {r['market']} | {r['net_r_oos']:+.1f}R | {r['n_oos']} · "
-                    f"{r['folds']} | {r['evidence_date']} | " + (f"n {r['live_n']} · E[R] {r['live_er']:+.2f}"
-                                                                  if r['live_n'] else "no trades yet") + " |")
-    d.md.append("")
-    d.footnote(s, "MEASURED: comms/strategy_evidence/<leg>.json (net R out of sample, full cost); live line: pipeline-map "
-                  "per-leg table, rebuilt at build time.", y=H - Inches(0.82))
+    tr = f["track"]
+    agg = {}
+    for book in ("rm", "paper"):
+        xs = [t[book] for t in tr if t[book]]
+        n = sum(x["n"] for x in xs)
+        sr = sum(x["sr"] for x in xs)
+        agg[book] = dict(n=n, sr=sr, er=(sr / n if n else None), conf=sum(x["conf"] for x in xs),
+                         legs=len(xs), pos=sum(1 for x in xs if x["sr"] > 0))
+    pos_rm = sorted([t for t in tr if t["rm"] and t["rm"]["sr"] > 0], key=lambda t: -t["rm"]["sr"])[:4]
+    pos_pp = sorted([t for t in tr if t["paper"] and t["paper"]["sr"] > 0], key=lambda t: -t["paper"]["sr"])[:5]
+    ra, pa = agg["rm"], agg["paper"]
+    s = d.new_at((3,), "What our strategies have delivered",
+              "The track record of the rule-based strategies, the part of the system that has run long enough to "
+              "have one; the ML models are too new and are judged on their offline evidence. Honest headline first: "
+              f"across all {len(tr)} rule strategies, all-time realized results are negative, "
+              f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
+              "That total includes strategies that have since failed their backtests and been taken off real money, "
+              "which is the ladder working. The strategies below are the ones whose actual results are net positive, "
+              "real money first, with their backtest beside them. Only a minority of live trades have their result "
+              "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
+    d.cards(s, [
+        (f"Real money, all-time: {ra['sr']:+.1f}R", [f"{ra['n']} trades · E[R] {ra['er']:+.2f} · {ra['conf']} of "
+                                                     f"{ra['n']} confirmed · {ra['pos']} of {ra['legs']} strategies net positive"]),
+        (f"Demo, all-time: {pa['sr']:+.1f}R", [f"{pa['n']} trades · E[R] {pa['er']:+.2f} · {pa['conf']} of {pa['n']} "
+                                               f"confirmed · {pa['pos']} of {pa['legs']} strategies net positive"]),
+    ], y=Inches(1.7), h=Inches(0.95), cols=2, size=12, head=15)
+    rows = []
+    for book, lst in (("Real money", pos_rm), ("Demo", pos_pp)):
+        for t in lst:
+            x = t["rm"] if book == "Real money" else t["paper"]
+            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']}" if t["bt"] is not None else "no record")
+            rows.append([plain_leg(t["leg"]), book, f"{x['sr']:+.2f}R", f"n {x['n']} · E[R] {x['er']:+.2f}",
+                         f"{x['conf']} of {x['n']}", bt, t["status"]])
+            d.num(f"live {book.lower()} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.table(s, ["Strategy", "Book", "Actual ΣR", "n · E[R]", "Confirmed", "Backtest (net R · n · folds +)", "Status"],
+            rows, y=Inches(2.85), col_w=[3.4, 1.3, 1.2, 1.7, 1.2, 2.6, 1.1], size=11, h_row=Inches(0.36))
+    d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
+    d.footnote(s, f"Live results are real but small samples; edge is established offline, live checks it holds. "
+                  f"MEASURED, journal all-time to {f['date']} (pipeline-map per-leg table); backtests "
+                  "comms/strategy_evidence/. ML legs and the AI desk excluded.", y=H - Inches(0.85))
     d.end_md()
 
     # ---------------------------------------------------------------- 11 Basset card
