@@ -3,7 +3,7 @@
 id: RQ-20261117-aadc-04
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL family): does training the head on holding_pays_0 (future R >= 0) or more_mfe (new
   favourable excursion still ahead) instead of holding_pays (future R >= +0.25) improve its out-of-sample replayed R per trade, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -150,3 +150,14 @@ related:
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
 last_dispatched_at: '2026-11-17T12:07:49+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-04-EXITHEAD-LABEL
+  evidence:
+  - research/results/RQ-20261117-aadc-04/44070631985.jsonl
+  - comms/research/RQ-20261117-aadc-04/44070631985/measurement.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44070631985) -> INDETERMINATE by the registered rule: holding_pays_0 vs the champion +0.00687 R/trade, deflated CI [+0.00269, +0.01105], n 11,160 pooled OOS trades: the lower bound clears 0 but the mean is below the +0.01 pass bar (and the upper bound is above it, so not a fail). more_mfe is could_not_look: peak_is_in is absent from rows.jsonl (target_coverage 0.0, fired 0), which the rule makes INDETERMINATE, never FAIL. Context (z 1.96, not gating): vs HOLD the champion is -0.0135 R/trade [-0.042, +0.015] and holding_pays_0 -0.0067, so the exit head as labelled does not beat holding; the label change recovers about half the champion''s give-up. Iteration input: (1) more_mfe needs peak_is_in emitted by the exit-head row builder before it can be read; (2) holding_pays_0 is a real but sub-bar improvement over the champion while neither beats hold.'
+  rows: 1
+  verdict: indeterminate

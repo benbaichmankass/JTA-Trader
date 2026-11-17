@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-02
 title: 'D9 Whippet, EXIT execution lever: does a post-only MAKER exit (join the touch, 5-min market fallback; policy F) on the frozen ENTRY v1
   model''s 24h TIME-STOP exits improve R per decision over the market exit, on the held-out year?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -150,3 +150,14 @@ related:
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-17T12:31:15+00:00'
 rearmed_at: '2026-11-17T11:47:36+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-02-MAKER-EXIT
+  evidence:
+  - research/results/RQ-20261117-aadc-02/44083941845.jsonl
+  - comms/research/RQ-20261117-aadc-02/44083941845/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44083941845): maker minus market time-stop exit +0.0019 R per exit (+0.19 bps), deflated CI [-0.0026, +0.0063] at percentile 0.84, n 2,786 measured exits on 53 symbols (2 flat symbol-days unmeasured) -> FAIL by the registered rule (lower bound does not clear 0; underpowered near the prior, as the power block said). Diagnosis: fill rate 0.72; if filled +7.18 bps, if unfilled -18.19 bps, the same split as the maker ENTRY (1c4e-01: +7.16 / -22.6). The time stop is NOT non-directional: v1''s own mean (+0.0019) sits BELOW the matched-random-side 5% band (p05 +0.0023, mean +0.0036), so price keeps drifting in the trade''s favour after the 24h stop and an unfilled closing order chases it. Longs +0.0001 (n 873) vs shorts +0.0027 (n 1,913). Iteration input (fail_action): the unfilled leg still loses, so the next lever is the fallback window W (shorter) or a mid-price peg; per exit it is +0.0005 R across all decisions. The previous failed run 44067666610 also made an EXEC claim (disclosed in the amendment).'
+  rows: 1
+  verdict: fail
