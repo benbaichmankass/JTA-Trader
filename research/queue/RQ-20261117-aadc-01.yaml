@@ -126,6 +126,10 @@ run:
   note: 'Dataset paths are each head manifest''s dataset block (ml/configs/<model_id>.yaml: market_features / <symbol> / <tf> / v002) under
     the trainer checkout''s datasets-out/, the layout b819-01 read successfully on 2026-11-13 (BTC). A missing dataset is producer_failed
     for that head only.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 ml_consumer:
   consumer: config/regime_policy.yaml
   decision: whether replayed vol labels may grade the trend_vol OFF-cells that drop BTC bybit_1 intents (and future SOL/MES cells); no change
