@@ -942,6 +942,7 @@ nodes:
     after:
     - unit: RQ-20261016-65ff-03
       verdict: pass
+    authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action (`REGIME-PROGRAM`) -- eth_pullback_2h regime gate confirmed on a disjoint window: write the packet'
     needs_authoring: 'RQ-20261016-65ff-03 CONFIRMED the first-window regime gate on eth_pullback_2h on a disjoint
       window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
       windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
@@ -958,6 +959,7 @@ nodes:
     after:
     - unit: RQ-20261016-65ff-04
       verdict: pass
+    authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action (`REGIME-PROGRAM`) -- trend_donchian_sol, same'
     needs_authoring: 'RQ-20261016-65ff-04 CONFIRMED the first-window regime gate on trend_donchian_sol on a disjoint
       window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
       windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
@@ -1304,6 +1306,7 @@ nodes:
     after:
     - unit: RQ-20261016-65ff-04
       verdict: any
+    authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `IR-VOL-TARGET-SIZING-STAGE0` -- per-trade sizing is the RiskManager’s (MECE § 2.1)'
     needs_authoring: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
       skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py;
       rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg). Once
@@ -1460,6 +1463,7 @@ nodes:
     roadmap: [M23]
     value: {usd_at_stake_per_month: 100, confidence: 0.25}
     after: []
+    authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `unit_result:RQ-20261117-c21d-01` -- D2 cross-asset already tested (c4f1-01..06). For D3, a feature family on an entry model that loses its cost waits until the model is non-negative'
     needs_authoring: >-
       OPERATOR IDEA (IDEAS.md 2026-10-21): cross-symbol and cross-asset CORRELATION features beyond
       FRONTIER-LEVER-LEADLAG (which covers only BTC->alt 5m lead-lag). Candidates, each fixed before the run: rolling 1h
@@ -2338,6 +2342,7 @@ nodes:
     roadmap: [M23]
     value: {usd_at_stake_per_month: 300, confidence: 0.3}
     after: []
+    authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `ML-P1-COSTNET-REBUILD` -- the node says BUILD-GATED'
     needs_authoring: 'BUILD-GATED (programme review 2026-10-28). PR #20869 (cost-net labels + an enforced cost gate) refuses all 9 setup-candidates metalabel heads, but the refusal reason is eval_not_cost_net: the 7 setup_candidates datasets are frozen GROSS builds (triple-barrier-v1, 2026-06-06..08-04) and the cycle never rebuilds them (trainer-vm-diag #20864/#20865, MEASURED by that lane). So the refusal is NOT a measured loss of edge; it is an unread question. When PI-20261028-V8KBRR5H-0004 (rebuild the setup_candidates datasets cost-net) lands, author ONE unit: the 9 heads retrained on the cost-net build, graded by ml/promotion/cost_gate.py (strictly beat take-all, take-none, matched-random and the incumbent on net R per opportunity, every eval row cost-net), denominator 9 heads with the deflated Sharpe reported. PASS on >= 1 head -> a shadow candidate under the mechanical 1-2 prediction soak; FAIL on all 9 -> the M23 setup-metalabel line is closed for this feature set (gross-label history explains the old shadow scores) and capacity moves to the in-trade label line (P2-desk-checkin-exit-head, P1-Q11). Do not author before the rebuild: a re-run on gross rows only reproduces the refusal.'
   - id: P2-desk-checkin-exit-head
     goal: G4
@@ -2347,7 +2352,8 @@ nodes:
     after:
     - unit: RQ-20261028-d1f5-02
       verdict: fail
-    needs_authoring: 'MODEL feed from P1 (programme review 2026-10-28). PR #20967 commits 12,500 per-check-in priced labels (comms/research/desk_lifecycle/full-c4e/, for the F.2 ML target): at each check-in the R value of hold vs close vs tighten, net of the full cost stack, on 938 walked trades from two entry sources. The finding to learn from: holds were worth +0.142 R vs closing and tightens -0.097 R, so the class that matters is ''tighten loses'' (the negative class) and the rare ''close at <= -0.5 R wins''. Author ONE ml_bakeoff unit once #20967 is on main: purged walk-forward by week (the run''s own cluster), features = the per-bar path state already used by RQ-20261024-09a6-01 (open R, peak, bars since peak, momentum, ADX slope) plus vol ratio; target = sign(value(close) - value(hold)); metric log-loss vs the class prior AND net R of the policy ''close when P > tau'' vs hold vs a matched-random close, at tau fixed before the run. Decision: PASS -> an exit-head candidate that composes with P1-Q8; FAIL -> in-trade state does not separate close-worthy check-ins beyond the prior on this sample, and the desk exit line rests on mechanical rules (P1-Q4). Check first that the labels'' entry sources do not leak future bars (the run''s isolation audit covers the judge, not the label join).'
+    authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: superseded -- RQ-20261114-1ae8-01 (exit-now v0), then the tm-action-value line, now c21d-04'
+    authoring_closed_ask: 'MODEL feed from P1 (programme review 2026-10-28). PR #20967 commits 12,500 per-check-in priced labels (comms/research/desk_lifecycle/full-c4e/, for the F.2 ML target): at each check-in the R value of hold vs close vs tighten, net of the full cost stack, on 938 walked trades from two entry sources. The finding to learn from: holds were worth +0.142 R vs closing and tightens -0.097 R, so the class that matters is ''tighten loses'' (the negative class) and the rare ''close at <= -0.5 R wins''. Author ONE ml_bakeoff unit once #20967 is on main: purged walk-forward by week (the run''s own cluster), features = the per-bar path state already used by RQ-20261024-09a6-01 (open R, peak, bars since peak, momentum, ADX slope) plus vol ratio; target = sign(value(close) - value(hold)); metric log-loss vs the class prior AND net R of the policy ''close when P > tau'' vs hold vs a matched-random close, at tau fixed before the run. Decision: PASS -> an exit-head candidate that composes with P1-Q8; FAIL -> in-trade state does not separate close-worthy check-ins beyond the prior on this sample, and the desk exit line rests on mechanical rules (P1-Q4). Check first that the labels'' entry sources do not leak future bars (the run''s isolation audit covers the judge, not the label join).'
   - id: P2-VOLWIN-direction-head
     goal: G4
     theme: ml_health
@@ -2379,7 +2385,8 @@ nodes:
     roadmap: [L-ML-LIVE]
     value: {usd_at_stake_per_month: 150, confidence: 0.2}
     after: []
-    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 2 (unit RQ-20261105-mece-01, draft id): VALUE-OF-INFORMATION census before
+    authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: answered -- RQ-20261114-82fd-02 census PASS, then RQ-20261115-a474-02 FAIL; rule-exhausted (PI-20261117-ZFRREVN5-0001)'
+    authoring_closed_ask: 'ML-ROADMAP-MECE (PR #22892) proposal 2 (unit RQ-20261105-mece-01, draft id): VALUE-OF-INFORMATION census before
       any position-aggregator (Mastiff, slot D5) build -- 14-day refusal counts by reason per slices account (real vs demo) plus a Stage-0
       count of concurrent same-symbol episodes per symbol. Decision it changes: whether D5 is worth any build (AGG-HARNESS). Pre-mortem: if
       it shows little concurrency, the most likely reason is that the M18 same-symbol reads (EV pick ~96-97% = priority) already captured
@@ -2391,7 +2398,8 @@ nodes:
     roadmap: [L-ML-LIVE, L-AM-STANDARD]
     value: {usd_at_stake_per_month: 120, confidence: 0.2}
     after: []
-    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 4 (unit RQ-20261105-mece-02, draft id): POINTER v0 (slot D6, bracket at
+    authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: answered -- RQ-20261114-82fd-01 and RQ-20261115-a474-01, both FAIL; D6 next step is RQ-20261117-c21d-02'
+    authoring_closed_ask: 'ML-ROADMAP-MECE (PR #22892) proposal 4 (unit RQ-20261105-mece-02, draft id): POINTER v0 (slot D6, bracket at
       entry) -- score the SERVED Labrador-1b TP-revision model at bar 0 of Foxhound-1 entries vs the fixed 3-ATR TP, on the frozen held-out
       window, one read, net of the full cost stack, pooled over the population Foxhound-1 trades (group-level rule). Decision it changes:
       whether bracket-at-entry gets a learned candidate (first D6 evidence) or stays rule-set. Pre-mortem: FAIL most likely because a
@@ -2403,7 +2411,8 @@ nodes:
     roadmap: [L-REGIME, L-ML-LIVE]
     value: {usd_at_stake_per_month: 200, confidence: 0.15}
     after: []
-    needs_authoring: 'ML-ROADMAP-MECE (PR #22892) proposal 6 (unit RQ-20261105-mece-04, draft id): the advisory regime heads (Collie,
+    authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: answered -- RQ-20261112-bcd2-01 consumer test on the TD family FAIL; the yz variant waits on c21d-03'
+    authoring_closed_ask: 'ML-ROADMAP-MECE (PR #22892) proposal 6 (unit RQ-20261105-mece-04, draft id): the advisory regime heads (Collie,
       slot D2) on a REAL-MONEY leg -- regime_cell_walkforward.py on the real-money roster legs (xrp/eth Donchian, ada/xrp pullbacks) on the
       advisory vol label where it exists, rule label elsewhere (regime-selectivity skill: no cosmetic cell, walk-forward before Tier 3).
       Decision it changes: whether the head that beat the class prior on 1h/15m log-loss this week (41cc-12..27, a4e7-08/-11, d5dd-17)
