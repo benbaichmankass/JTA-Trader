@@ -88,18 +88,20 @@ def paired(d: List[float], z: float = 1.96) -> Dict[str, Any]:
     return {"n": n, "mean": round(m, 5), "se": round(se, 5), "ci": [round(m - z * se, 5), round(m + z * se, 5)], "z": z}
 
 
-def judge(arm_d: Dict[str, List[float]]) -> Dict[str, Any]:
+def judge(arm_d: Dict[str, List[float]], z: float = None, pass_dr: float = None) -> Dict[str, Any]:
     """RULE-RQ20261117-aadc-04 (registered before any run). Per arm: paired d vs champion, CI at Z_DEFLATED.
     PASS iff some arm has n >= N_OOS_MIN, mean >= PASS_DR and CI lower > 0 (chosen = highest mean among those).
     FAIL iff every arm is measured (n >= N_OOS_MIN) and every CI upper < PASS_DR. INDETERMINATE otherwise."""
-    stats = {a: paired(d, Z_DEFLATED) for a, d in arm_d.items()}
+    z = Z_DEFLATED if z is None else z
+    pass_dr = PASS_DR if pass_dr is None else pass_dr
+    stats = {a: paired(d, z) for a, d in arm_d.items()}
     measured = {a: s for a, s in stats.items() if s["n"] >= N_OOS_MIN and s["ci"] is not None}
-    winners = [a for a, s in measured.items() if s["mean"] >= PASS_DR and s["ci"][0] > 0]
+    winners = [a for a, s in measured.items() if s["mean"] >= pass_dr and s["ci"][0] > 0]
     if winners:
         best = max(winners, key=lambda a: measured[a]["mean"])
         return {"verdict": "pass", "chosen": best, "why": f"{best} - champion {measured[best]['mean']:+.4f} R/trade, "
                 f"deflated CI LB {measured[best]['ci'][0]:+.4f} > 0", "arms": stats}
-    if measured and len(measured) == len(stats) and all(s["ci"][1] < PASS_DR for s in measured.values()):
+    if measured and len(measured) == len(stats) and all(s["ci"][1] < pass_dr for s in measured.values()):
         return {"verdict": "fail", "chosen": None, "why": "every label arm's deflated CI upper bound < +0.01 R/trade",
                 "arms": stats}
     return {"verdict": "indeterminate", "chosen": None,
@@ -184,6 +186,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--candles-dir", default=None, help="local override: <dir>/<SYM>_<tf>.csv instead of the trainer resolver")
     ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}")
     ap.add_argument("--unit", default=UNIT)
+    ap.add_argument("--exclude-train-symbol", action="append", default=[],
+                    help="drop rows.jsonl rows of this symbol from every fold's training (a held-out-symbol read); repeatable")
+    ap.add_argument("--z", type=float, default=Z_DEFLATED, help="CI z for the judge (default the aadc-04 deflated 2.241)")
+    ap.add_argument("--pass-dr", type=float, default=PASS_DR, help="pass bar in R/trade (default +0.01)")
     ap.add_argument("--rule-id", default=RULE_ID)
     ap.add_argument("--json", dest="json_out", required=False)
     ap.add_argument("--self-test", action="store_true")
@@ -204,6 +210,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     rows_path = Path(a.rows) if os.path.isabs(a.rows) else Path(_REPO_ROOT) / a.rows
     rows = teh.load_rows(rows_path)
+    from collections import Counter
+    rows_by_symbol = dict(Counter(str(r.get("symbol") or "unknown") for r in rows))
+    excl = set(a.exclude_train_symbol)
+    if excl:
+        rows = [r for r in rows if str(r.get("symbol") or "unknown") not in excl]
     label_arms = [x for x in a.arms.split(",") if x]
     unknown = [x for x in label_arms if x not in TARGETS]
     if unknown:
@@ -220,7 +231,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         out_legs.append(run_leg(strategy, symbol, rows, arms, a, harness, conf))
     recs = [r for lg in out_legs for r in lg.get("records", [])]
     arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms}
-    j = judge(arm_d)
+    j = judge(arm_d, a.z, a.pass_dr)
     context = {arm: paired([r[f"r_{arm}"] - r["baseline_r"] for r in recs if f"r_{arm}" in r]) for arm in arms}
     fired = {arm: sum(1 for r in recs if r.get(f"fired_{arm}")) for arm in arms}
     measured = bool(recs)
@@ -234,6 +245,8 @@ def main(argv: Optional[List[str]] = None) -> int:
            "decision_rule": {"id": a.rule_id, "registered_at": "2026-11-17", "registered_before_run": True},
            "measurement": {"judge": j, "arm_dr_vs_hold_context": context, "fired": fired, "target_coverage": coverage,
                            "cost_basis": cost, "lookback": a.lookback,
+                           "rows_by_symbol": rows_by_symbol, "excluded_train_symbols": sorted(excl),
+                           "train_rows_after_exclusion": len(rows), "z": a.z, "pass_dr": a.pass_dr,
                            "legs": [{k: v for k, v in lg.items() if k != "records"} for lg in out_legs]},
            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "produced_by": {"tool": "python3 scripts/research/exit_head_label_bakeoff.py"}}
@@ -257,6 +270,8 @@ def _self_test() -> int:
     assert judge({"holding_pays_0": [0.03] * 400, "more_mfe": [0.0] * 400})["chosen"] == "holding_pays_0"
     assert judge({"holding_pays_0": [-0.01, 0.0] * 200, "more_mfe": [0.0, -0.005] * 200})["verdict"] == "fail"
     assert judge({"holding_pays_0": [0.03] * 100, "more_mfe": [0.03] * 100})["verdict"] == "indeterminate"
+    assert judge({"holding_pays_neg25": [0.006, 0.004] * 200}, 1.96, 0.005)["verdict"] == "pass"
+    assert judge({"holding_pays_neg25": [0.006, 0.004] * 200})["verdict"] == "fail"   # default bar +0.01
     assert judge({"holding_pays_0": [-0.01, 0.0] * 200, "more_mfe": [0.03] * 100})["verdict"] == "indeterminate"
     print("exit_head_label_bakeoff self-test OK")
     return 0
