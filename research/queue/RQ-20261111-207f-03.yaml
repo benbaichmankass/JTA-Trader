@@ -3,7 +3,7 @@
 id: RQ-20261111-207f-03
 title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE + ITERATE (P8-Q3): does the net-R label rank by cost-per-R instead of direction on the equity pool, and does a direction-only
   label (gross R, or raw return) select better trades at the same count?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -121,18 +121,13 @@ iteration:
   due_by: '2026-11-18'
 last_dispatched_at: '2026-11-14T03:23:22+00:00'
 grading:
-  attested: RULE-RQ20261111-207f-03-LABEL
-  auto: true
   decision_rule_id: RULE-RQ20261111-207f-03-LABEL
   evidence:
   - research/results/RQ-20261111-207f-03/43551399631.jsonl
-  graded_at: '2026-11-15'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-OPS-20261115-1447
-  owner_reason: 'producer_failed: the producer wrote a malformed verdict.json (n must be present, null
-    when not measured). Not a verdict; a producer defect in the Foxhound-4 diagnose script. Filed as pipeline
-    item (see run record); re-run after the producer writes n.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  - comms/research/RQ-20261111-207f-03/43551399631/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-4 (session_01AFoLuJazEnEQNP6MeVfuv3), hand-graded from the committed measurement
+  needs_review: false
+  reason: 'Hand-graded by lane ML-PRIMARY-4 under RULE-RQ20261111-207f-03-LABEL from the producer''s own measurement (read_state measured, verdict fail). Same verdict.json top-level-n defect only. RESULT: neither direction-only label beats the net-R label at matched trade count by the registered bar. DIAGNOSTIC: the net-R model reads COST PER R, not direction (IC of prediction vs long cost -0.527; vs raw return -0.084; ATR-neutral IC vs raw return -0.013, t -0.95; the net-R target IC itself is +0.143, t 7.0). Population as 207f-02. FAIL -> iteration input: the net-R label stays, but its edge is a cost/volatility ranking, so the next lever is a cost-neutral or ATR-neutral target, or a separate direction head.'
   rows: 1
-  verdict: null
+  verdict: fail
