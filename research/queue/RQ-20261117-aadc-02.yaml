@@ -1,0 +1,136 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a. Builds row
+# ML-D9-MAKER-EXIT-HARNESS (filed by ML-ITERATION-REFILL-20261117). Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261117-aadc-02
+title: 'D9 Whippet, EXIT execution lever: does a post-only MAKER exit (join the touch, 5-min market fallback; policy F) on the frozen ENTRY v1
+  model''s 24h TIME-STOP exits improve R per decision over the market exit, on the held-out year?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series execution practice (docs/reference/trading-and-model-practice-principles.md): passive working of a
+  non-urgent, non-directional order with a timed aggressive fallback, graded net of fees and of the adverse selection carried by unfilled
+  orders; RQ-20261027-a3f1-01 (+2.03 bps per order, PASS, random direction, Bybit prints).'
+question: 'On the frozen v1 booster''s held-out decisions 2025-10-01..2026-09-30 (60-perp pool, tau 0.10, the live booster
+  comms/research/RQ-20261101-c692-06/41324826751/model) that leave on the 24h TIME STOP, what is the paired delta, maker minus market
+  CLOSING order, in R per decision? Look-before-retest: 1c4e-01 measured the maker ENTRY on the same decisions (FAIL); a3f1-01 measured
+  random-direction orders (PASS). No unit has measured a maker exit on any ML decision model.'
+why_this_matters: 'D9 (execution, Whippet) has no model in iteration; its last lever (maker entry) failed on adverse selection. Cost takes
+  ~90% of v1''s gross on its held-out decisions (+0.073 gross vs +0.007 net R per decision, RQ-20261112-a7e8-03), so execution is the
+  measured binding constraint on the real-money D3 model. A PASS is a Tier-3 packet (a maker time-stop exit for ml_entry, demo first),
+  never a self-merge.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261112-1c4e-01
+  verdict_read: fail
+  diagnosis: '1c4e-01 FAILED: maker entry delta -0.0041 R/decision, day-block CI95 [-0.0087, +0.0002], n 9,210. Fill rate 0.73; delta if
+    filled +7.16 bps, if unfilled -22.6 bps. The unfilled orders lose because a directional pick runs away from a resting limit (adverse
+    selection on the model''s own signal). The calibration arm on random direction reproduced a3f1-01. A time-stop exit is a clock event
+    24h after entry, carrying no fresh directional information, so the same selection should be absent; the a3f1-01 random-direction
+    result (+2.03 bps) is the prior.'
+  search: 'one lever (order type of the time-stop closing order: market vs post-only at the touch, W 5 min, k 0), the a3f1-01 primary arm;
+    nothing chosen on the test window'
+  attempt: 1
+  due_by: '2026-11-24'
+levers:
+- name: exit_order_type
+  values: [market_exit, post_only_touch_w5_k0]
+  hypothesised_effect: maker exit delta > 0 on time-stop exits (random-direction-like fills), unlike the maker entry
+data_and_approximation: 'The 1c4e-01 approximation, unchanged, calibrated in the same run on a3f1-01''s 40 days x 6 perps: Binance Vision
+  daily 1m futures klines; touch at T = close of the minute ending at T with a one-tick spread; closing order direction = -side (sell to
+  close a long: rest at the ask, STRICT fill iff some 1m high in (T, T+5m] >= L + tick; else market at the T+5m bid). Exit epoch T =
+  decision bar open + 25 h (bar t+24 close). An exit at 00:00Z stitches in the previous day''s last minute. delta_R = delta_F / 1e4 x mid
+  / (2 x ATR14).'
+decision_rule:
+  id: RULE-RQ20261117-aadc-02-MAKER-EXIT
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Pooled mean paired delta_R (maker minus market closing order) per time-stop exit over the measured v1 held-out decisions, with a
+    day-block bootstrap CI (2000 reps, whole calendar days of the exit resampled) at the DEFLATED level holdout_lock.claim_read returns for
+    this read (family EXEC: the second read on this window after 1c4e-01, so the lower percentile is bar.ci_lo_percentile, ~1.26 at
+    n_tries 2). Reported, never gating: delta in bps, fill rate, delta if filled / unfilled, by side, taker mean net R on the measured rows,
+    the time-stop share of all decisions and the delta per ALL decisions, the calibration arm.'
+  rule: 'INDETERMINATE IF the calibration arm is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured time-stop exits < 1000
+    OR distinct symbols < 10. PASS IF mean delta_R > 0 AND the deflated lower bound > 0. FAIL otherwise. The holdout ledger is claimed
+    BEFORE any post-exit 1m bar is read. Thresholds fixed now and not changed after any result.'
+  pass_action: 'Tier-3 PROPOSAL to the manager: a post-only time-stop exit for ml_entry (W 5, k 0, market fallback), demo/paper first, with
+    the exact change and this record.'
+  fail_action: 'Iteration input: read delta if filled vs unfilled and by side. If the unfilled leg still loses, the next lever is the
+    fallback window (W) or a mid-price peg; if fills are rare, the next lever is k (join inside the spread). D9 stays in iteration.'
+  what_it_does_not_do: No sizing, no config change, no order; SL/TP exits are untouched (they are resting orders already). A PASS is a
+    Tier-3 PROPOSAL, not a change.
+  min_n: 1000 measured time-stop exits on >= 10 symbols
+family_note: 'Ledger family EXEC (as 1c4e-01): the decision set is fixed (v1''s already-read held-out decisions) and this unit selects
+  nothing; the factor under test is the execution of a fixed exit, paired.'
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.009
+  effect_units: metric
+  sd: 0.08
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED. expected_n: 1c4e-01 had 11,240 v1 held-out decisions (9,210 measured); the time-stop share on v1''s dev read was 200 of
+    907 (22%, RQ-20261101-c692-06 summary exit_reason_counts), so ~2,500 time-stop exits, ~2,000 measured. sd 0.08 R per order (1c4e-01
+    basis). Day clustering (~6 exits per day) leaves ~700 effective rows: MDE ~ 2.8 x 0.08 / sqrt(700) ~ 0.0085 R, a little more at the
+    deflated bar. The prior (a3f1-01 +2.03 bps at ~50 R-per-unit price) is ~+0.010 R, so the unit is powered only near that prior: a
+    near-miss FAIL is underpowered by construction and is said so at grading.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms hold the identical v1 entry and bracket; only the price and fee of the time-stop closing order differ'
+  best_static:
+    grid:
+    - market_exit
+    - post_only_touch_w5_k0
+    excludes_test_folds: true
+    note: nothing is chosen on the test window; the maker arm is a3f1-01's registered primary (W 5, k 0)
+  bootstrap_group: day
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in: +0.010 R on ~22% of ml_entry decisions; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 75
+  why_runner: needs_internet (keyless public Binance Vision klines); scores a committed booster (no fit). Kaggle kernels have no internet.
+  basis: 'INFERRED from 1c4e-01 (same world build and calibration; ~2,900 symbol-days of 1m files instead of ~9,000).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - exit
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261117-aadc-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry's 24h time-stop exit should be worked post-only at the touch with a 5-min market fallback (an exit counterpart
+    of the demo/paper-fenced maker entry; none exists today)
+  legs:
+  - ml_entry
+  book: money
+related:
+- ML-D9-MAKER-EXIT-HARNESS
+- RQ-20261112-1c4e-01
+- RQ-20261027-a3f1-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
