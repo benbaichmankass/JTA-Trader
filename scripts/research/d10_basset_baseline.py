@@ -165,6 +165,15 @@ def leg_series(trades: List[dict], mu: Dict[str, float]) -> tuple[Dict[str, List
 
 
 # ── scoring ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+def cusum_path_mu(rs: List[float], mus: List[float]) -> List[float]:
+    """CUSUM with a per-trade reference expectancy (RQ-20261117-aadc-09: the expectancy of the folds BEFORE each trade)."""
+    s, out = 0.0, []
+    for r, m in zip(rs, mus):
+        s = max(0.0, s + (float(m) - K - float(np.clip(r, -CLIP, CLIP))))
+        out.append(s)
+    return out
+
+
 def cusum_path(rs: List[float], mu0: float) -> List[float]:
     s, out = 0.0, []
     for r in rs:
@@ -248,7 +257,7 @@ def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = 
     split = {"onset_cum_negative": [], "onset_cum_nonnegative": []}   # RQ-20261117-aadc-07 (b): no lookahead
     for leg, seq in by.items():
         rs = np.array([x["r"] for x in seq], float)
-        S = cusum_path(list(rs), mu[leg])
+        S = cusum_path_mu(list(rs), [x.get("mu", mu.get(leg)) for x in seq])
         alarmed = np.array([i > 0 and S[i - 1] >= h for i in range(len(rs))])
         k = int(alarmed.sum())
         legs_r.append((rs, k))
@@ -278,6 +287,57 @@ def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = 
             "split_by_onset_cum_sign": {k2: {"n": len(v2), "added_r": round(float(-np.sum(v2)), 3),
                                              "mean_r": round(float(np.mean(v2)), 4) if v2 else None} for k2, v2 in split.items()},
             "per_leg": per_leg}
+
+
+# ── fresh-window confirmation (RQ-20261117-aadc-09) ──────────────────────────────────────────────────────────────────
+CONFIRM_RULE_ID = "RULE-RQ20261117-aadc-09-D10-H2-STAGE0-CONFIRM"
+CONFIRM_H = 2.0
+STAGE0_BEFORE = "2026-05-01"
+
+
+def stage0_series(evidence_dir: Path, before: str) -> tuple[Dict[str, List[dict]], dict]:
+    """Per leg: its Stage-0 OOS trades (source_run) entered before `before`, in entry order, each carrying mu = mean net R of the
+    leg's trades in folds that ENDED before this trade's fold started (fold_detail start/end). Trades in a leg's first fold, or with
+    no earlier fold trades, are not scored (counted). Net R is winsorised at +-CLIP like the live series."""
+    by: Dict[str, List[dict]] = {}
+    info = {"legs_with_series": 0, "trades_read": 0, "trades_after_cutoff": 0, "trades_no_prior_fold": 0, "trades_used": 0}
+    for f in sorted(evidence_dir.glob("*.json")):
+        try:
+            d = json.loads(f.read_text())
+        except json.JSONDecodeError:
+            continue
+        src = d.get("source_run")
+        folds = d.get("fold_detail") or []
+        if d.get("coverage_state") != "measured" or not src or not (REPO / src).exists() or not folds:
+            continue
+        info["legs_with_series"] += 1
+        bounds = sorted((str(fd.get("start")), str(fd.get("end"))) for fd in folds if fd.get("start") and fd.get("end"))
+        rows = []
+        for line in (REPO / src).read_text().splitlines():
+            if line.strip():
+                t = json.loads(line)
+                if _f(t.get("net_r")) is not None and t.get("entry_time"):
+                    rows.append(t)
+        info["trades_read"] += len(rows)
+        rows.sort(key=lambda t: str(t["entry_time"]))
+        seq = []
+        for t in rows:
+            et = str(t["entry_time"])
+            if et[:10] >= before:
+                info["trades_after_cutoff"] += 1
+                continue
+            k = next((i for i, (a0, b0) in enumerate(bounds) if a0[:10] <= et[:10] <= b0[:10]), None)
+            prior = [float(np.clip(_f(x["net_r"]), -CLIP, CLIP)) for x in rows
+                     if k is not None and k > 0 and str(x["entry_time"])[:10] <= bounds[k - 1][1][:10]]
+            if not prior:
+                info["trades_no_prior_fold"] += 1
+                continue
+            seq.append({"trade_id": len(seq), "closed_at": et, "r": float(np.clip(_f(t["net_r"]), -CLIP, CLIP)),
+                        "mu": float(np.mean(prior))})
+        if seq:
+            by[f.stem] = seq
+            info["trades_used"] += len(seq)
+    return by, info
 
 
 # ── alarm-level sweep (RQ-20261117-aadc-07) ──────────────────────────────────────────────────────────────────────────
@@ -322,6 +382,19 @@ def run(a) -> int:
             if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
                 grades[r["trade_id"]] = r["grade_score"]
     by, ex = leg_series(trades, mu)
+    if a.stage0_confirm:
+        sby, sinfo = stage0_series(Path(a.evidence_dir), STAGE0_BEFORE)
+        ar = action_replay(sby, {}, h=CONFIRM_H)
+        v, why = action_verdict(ar)
+        res = {"verdict": v, "read_state": "measured", "n": ar["n_alarmed"],
+               "population": (f"Stage-0 OOS per-trade series (comms/strategy_evidence/<leg>.json source_run) of {len(sby)} legs, trades "
+                              f"entered before {STAGE0_BEFORE} (disjoint from the aadc-05..07 window), CUSUM reference = mean net R of "
+                              f"the leg's EARLIER folds; demote-on-alarm at H {CONFIRM_H}"),
+               "note": why, "measurement": {"rule": CONFIRM_RULE_ID, "replay": {k2: v2 for k2, v2 in ar.items() if k2 != "per_leg"},
+                                            "per_leg": ar["per_leg"], "series": sinfo, "params": {"K": K, "CLIP": CLIP, "H": CONFIRM_H}}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
     if a.alarm_h_sweep:
         arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
@@ -419,6 +492,19 @@ def _self_test() -> int:
                           {"h": 6, "n_alarmed": 80, "added_r": 1, "control_p": 0.5}])[2] == 4
     assert sweep_verdict([{"h": 2, "n_alarmed": 80, "added_r": 5, "control_p": 0.02}] * 3)[0] == "fail"
     assert sweep_verdict([{"h": 2, "n_alarmed": 10, "added_r": 5, "control_p": 0.5}] * 3)[0] == "indeterminate"
+    assert cusum_path_mu([0.5, -1.0, -1.0, 2.0], [0.25] * 4) == cusum_path([0.5, -1.0, -1.0, 2.0], 0.25)
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        ev = Path(td)
+        src = ev / "_selftest_leg__trades.jsonl"
+        lines = [{"entry_time": f"2026-0{m}-15 00:00:00+00:00", "net_r": r} for m, r in ((1, 1.0), (2, -1.0), (3, 0.5), (6, 2.0))]
+        src.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+        (ev / "L.json").write_text(json.dumps({"coverage_state": "measured", "source_run": str(src),
+            "fold_detail": [{"start": "2026-01-01", "end": "2026-01-31"}, {"start": "2026-02-01", "end": "2026-02-28"},
+                            {"start": "2026-03-01", "end": "2026-06-30"}]}))
+        sb, si = stage0_series(ev, "2026-05-01")
+        assert si["trades_after_cutoff"] == 1 and si["trades_no_prior_fold"] == 1 and si["trades_used"] == 2, si
+        assert sb["L"][0]["mu"] == 1.0 and sb["L"][1]["mu"] == 0.0, sb
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -433,10 +519,13 @@ def main(argv=None) -> int:
     ap.add_argument("--out")
     ap.add_argument("--action-replay", action="store_true", help="RQ-20261117-aadc-06: demote-on-alarm replay instead of the AUC read")
     ap.add_argument("--alarm-h-sweep", action="store_true", help="RQ-20261117-aadc-07: demote-on-alarm at H in SWEEP_H, Bonferroni")
+    ap.add_argument("--stage0-confirm", action="store_true", help="RQ-20261117-aadc-09: H 2 on the Stage-0 OOS series before 2026-05-01")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
+    if a.stage0_confirm and a.out:
+        return run(a)
     if not a.out or not (a.journal_db or (a.trades and a.packages)):
         ap.error("--out and either --journal-db or (--trades and --packages) are required")
     return run(a)
