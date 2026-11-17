@@ -1,0 +1,104 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 654,
+ "population": "closed live/paper journal trades on 48 legs with a measured Stage-0 record (as aadc-05/-06); demote-on-alarm at H in [2.0, 4.0, 6.0], within-leg matched-random control per arm",
+ "note": "H 2.0 adds +172.93 R, control_p 0.0115 <= 0.0167",
+ "measurement": {
+  "rule": "RULE-RQ20261117-aadc-07-D10-ALARM-H-SWEEP",
+  "chosen_h": 2.0,
+  "bonferroni_bar": 0.016666666666666666,
+  "arms": [
+   {
+    "n_alarmed": 654,
+    "legs_with_alarm": 32,
+    "added_r": 172.931,
+    "mean_r_skipped": -0.2644,
+    "control_mean_added_r": 122.116,
+    "control_p95_added_r": 159.525,
+    "control_p": 0.0115,
+    "legs_positive": 22,
+    "h": 2.0,
+    "split_by_onset_cum_sign": {
+     "onset_cum_negative": {
+      "n": 255,
+      "added_r": 75.406,
+      "mean_r": -0.2957
+     },
+     "onset_cum_nonnegative": {
+      "n": 399,
+      "added_r": 97.525,
+      "mean_r": -0.2444
+     }
+    }
+   },
+   {
+    "n_alarmed": 453,
+    "legs_with_alarm": 25,
+    "added_r": 134.321,
+    "mean_r_skipped": -0.2965,
+    "control_mean_added_r": 110.628,
+    "control_p95_added_r": 140.883,
+    "control_p": 0.1044,
+    "legs_positive": 17,
+    "h": 4.0,
+    "split_by_onset_cum_sign": {
+     "onset_cum_negative": {
+      "n": 205,
+      "added_r": 67.99,
+      "mean_r": -0.3317
+     },
+     "onset_cum_nonnegative": {
+      "n": 248,
+      "added_r": 66.332,
+      "mean_r": -0.2675
+     }
+    }
+   },
+   {
+    "n_alarmed": 355,
+    "legs_with_alarm": 18,
+    "added_r": 105.798,
+    "mean_r_skipped": -0.298,
+    "control_mean_added_r": 96.13,
+    "control_p95_added_r": 120.953,
+    "control_p": 0.2859,
+    "legs_positive": 13,
+    "h": 6.0,
+    "split_by_onset_cum_sign": {
+     "onset_cum_negative": {
+      "n": 206,
+      "added_r": 89.758,
+      "mean_r": -0.4357
+     },
+     "onset_cum_nonnegative": {
+      "n": 149,
+      "added_r": 16.04,
+      "mean_r": -0.1076
+     }
+    }
+   }
+  ],
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0
+  },
+  "trades_in": 7692,
+  "excluded": {
+   "not_closed": 4960,
+   "no_leg_record": 1187,
+   "no_contract_multiplier": 50,
+   "degenerate_risk_basis": 47,
+   "no_net_r": 140,
+   "backtest": 0
+  }
+ },
+ "run": {
+  "kind": "session-local",
+  "by": "ML-PRIMARY-5 session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "registered_commit_before_run": "b32a434f31 (11:37:14Z; power-block alpha fix 69726d6f51 at 11:39:42Z, rule unchanged)",
+  "inputs": "the aadc-05/-06 pull: journal trades 7,692 rows 2026-05-01..2026-11-17 + order_packages via scripts/ops/diag_fetch.sh ~10:15-10:45Z",
+  "disclosure": "second alarm-action family read on this window (after aadc-06 H 3 FAIL); a PASS goes to the fresh-window confirmation in the unit, never to a proposal directly",
+  "familywise": "Family-wise read, stated explicitly: four alarm-level arms have now been read on this window (aadc-06 H 3; aadc-07 H 2, 4, 6). Bonferroni over all 4 gives a bar of 0.05/4 = 0.0125; H 2 control_p 0.0115 also clears it. The registered rule (0.0167 over the 3 new arms) decides the verdict; this note does not change it. The fresh-window confirmation is still required before any proposal."
+ }
+}
