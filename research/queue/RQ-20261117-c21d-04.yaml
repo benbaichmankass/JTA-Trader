@@ -5,7 +5,7 @@
 id: RQ-20261117-c21d-04
 title: 'ml-tm-action-value ITERATION 6 (check-in cadence): Stage B with check-ins every 4 bars + event triggers, and triggers only,
   instead of every bar; does acting on close / partial_close_50 beat hold, the best static rule, the distance logit and matched random?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -157,3 +157,16 @@ lands:
   assert_field: read_state
   min_rows: 1
 last_dispatched_at: '2026-11-17T12:07:48+00:00'
+grading:
+  attested: RULE-RQ20261117-c21d-04-TM-CADENCE
+  auto: true
+  decision_rule_id: RULE-RQ20261117-c21d-04-TM-CADENCE
+  evidence:
+  - research/results/RQ-20261117-c21d-04/44070624046.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

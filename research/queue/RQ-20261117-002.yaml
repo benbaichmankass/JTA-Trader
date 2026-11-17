@@ -4,7 +4,7 @@
 id: RQ-20261117-002
 title: 'Weekly ETF trend (ef5d-05 LO PASS): how many independent bets are the twelve powered weekly long-only
   ETF cells (N_eff >= 3.0), and which are same-bet clusters, before any count of passing cells is quoted?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-TIMEFRAMES
@@ -137,3 +137,13 @@ generated:
   params:
     node: P7-Q6-weekly-etf
 last_dispatched_at: '2026-11-17T12:31:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P7-Q6-WEEKLY-ETF-OVERLAP
+  evidence:
+  - research/results/RQ-20261117-002/44083955012.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

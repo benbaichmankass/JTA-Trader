@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-03
 title: 'D4 Beagle-1 challengers that change the TARGET: on the same CPCV splits, does a tail-winner (P(net_r >= 1R)) or a money-weighted
   (|net_r|-weighted P(win)) overlay pass the V1 gate, beat Beagle-1 paired, AND disagree with it on >= 20% of decisions?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -168,3 +168,16 @@ related:
 - RQ-20261029-5785-05
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-17T12:07:47+00:00'
+grading:
+  attested: RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER
+  auto: true
+  decision_rule_id: RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER
+  evidence:
+  - research/results/RQ-20261117-aadc-03/44070620023.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
