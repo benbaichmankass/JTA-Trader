@@ -1,0 +1,128 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117 (manager-dispatched, Tier 1). Iteration of d5a7-14's donchian_30 lead.
+# Gates this adds or changes: none.
+id: RQ-20261117-dc44-04
+title: 'fade_breakout_4h: on the donchian 30 lead, does a stricter chop gate (adx_max 15 / 17.5 vs the configured 20) remove the
+  fold-3 stop streak that failed d5a7-14 on maxDD, net of the full cost stack (iteration, one factor on top of donchian 30)?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run; one-factor
+  sensitivity before combinations'
+question: 'With donchian 30 fixed (the d5a7-14 lead), does lowering adx_max from 20 to 17.5 or 15 (one factor) make the leg clear
+  the SAME rule d5a7-14 applied against the config-exact control A: net R +4.0 R or more, maxDD no worse, and 3 of 4 calendar
+  folds, net of the full cost stack, over the 1830-day window?'
+why_this_matters: 'ITERATION of d5a7-14 (graded FAIL 2026-11-17). Its donchian_30 arm was +14.57 R over control A and won 3 of 4
+  folds, but maxDD was worse by 16.98 R, so it failed the rule only on drawdown. If a regime gate removes the drawdown without
+  removing the edge, the lead becomes a holdout candidate. If it does not, the donchian 30 lead is a single regime-lucky window.
+  On PASS: ONE confirmation on pre-development history (RESEARCH-NO-WAIT order 1) before any Tier-3 note. On FAIL: the
+  regime-gating response on d30 goes into the lever map, and the direction family (shorts carried the fold-3 loss) is next. Arm
+  denominator: 3 here (A and two adx arms), 5 distinct arms in the family counting d5a7-14.'
+power:
+  expected_n: 105
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor) for the CONTROL reading (A had n 136 in d5a7-14). The
+    d30 arm had n 105, and a stricter ADX gate will cut that, so each adx arm reports its own n. Each variant is paired against
+    the control on the same window, with a 3-of-4 fold bar and 4.0 R materiality. Arms are counted in iteration.multiple_testing;
+    best-of-k is a LEAD, not a finding.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-dc44-04-D30-ADX-GATE
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD, and the number of 4 calendar folds in which it beats A,
+    all net of the full cost stack (execution_costs.resolve_cost_policy); the control''s own n, net R and fold signs are reported in verdict.json (the standing walk-forward
+    reading).'
+  rule: 'PASS (a LEAD for a holdout read, never a setting change here) IF some donchian-30 + adx arm beats control A by >= 4.0 R
+    with maxDD no worse than A and >= 3 of 4 folds, at that arm''s n >= 39 and A n >= 39; and it is net positive in >= 3 of 4
+    calendar years, with no single year > 50% of total net, and the per-year and per-direction table reported. FAIL IF none does.
+    The ungated d30 arm is not re-run: d5a7-14 measured it (+14.57 R, maxDD +16.98 R vs A) and it is the reference this lever is
+    read against. INDETERMINATE IF A n < 39 or the producer failed. Arm denominator = 3 (5 distinct arms in the family with d5a7-14).'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path; a PASS is a lead for a pre-registered holdout read then a Tier-3 proposal, not a promotion case.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: iteration of a testing (bybit_1) leg whose lead failed only on drawdown; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 70
+  basis: one leg, control + 2 arms through the committed-record argv builder on a GitHub runner.
+  why_runner: Fetches keyless public candles for a pinned window and runs the committed harness; no trainer data, no secrets; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - fade_breakout_4h
+  - --arm
+  - A=
+  - --arm
+  - d30_adx17p5=donchian=30;adx_max=17.5
+  - --arm
+  - d30_adx15=donchian=30;adx_max=15.0
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-dc44-04
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: fade_breakout_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261116-d5a7-14
+  verdict_read: fail
+  diagnosis: 'Read from the committed donchian_30 trade emits of d5a7-14 (run 44067006339; n 105). The arm''s maxDD of 38.9 R is
+    one stop streak in fold 3 (2024-05-15..2025-08-16): 28 trades, 27 stopped and 1 target, -28.40 R net, gross -25.0 R. So the
+    loss is not cost (fold-3 cost is 3.4 R of the 28.4 R) and not big single losses (each stop is about -1.1 R). Entry quality collapsed in that
+    fold: median MFE 0.28 R vs 1.14 R in the other three folds, share of trades reaching MFE >= 1 R 0.25 vs 0.55, and median hold
+    16 h vs 40 h. Exits were not the problem (only 9 of 27 fold-3 stops had MFE >= 0.5 R). A failed-breakout fade that stops working in one
+    regime is a regime-gating question. The leg''s only regime lever in the harness is adx_max (configured
+    20). Shorts carried 19.1 of the 28.4 R fold-3 loss, and short net over the whole window is -3.78 R vs long +19.87 R. Direction
+    is a candidate next lever, but backtest_fade.py has no side filter, so it is not this unit.'
+  search: 'regime_gating family: adx_max 20 -> 17.5 / 15 with donchian 30 held fixed (one factor on top of the lead); the ungated
+    d30 reading is d5a7-14''s'
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/fade_breakout_4h.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
+last_dispatched_at: null
