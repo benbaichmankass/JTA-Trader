@@ -199,7 +199,8 @@ def load_facts() -> dict:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) >= 12 and cells[0].startswith("`"):
             leg = cells[0].strip("`")
-            if leg.startswith("ml_") or leg.endswith("_ml") or leg == "claude_desk":
+            if (leg.startswith("ml_") or leg.endswith("_ml") or leg == "claude_desk" or "pair" in leg
+                    or any(t["leg"] == leg for t in track)):
                 continue
             bt = _re.search(r"([+-][0-9.]+)", cells[4])
             track.append(dict(leg=leg, status=cells[1], books=cells[2], bt=float(bt.group(1)) if bt else None,
@@ -760,17 +761,25 @@ def build():
         sr = sum(x["sr"] for x in xs)
         agg[book] = dict(n=n, sr=sr, er=(sr / n if n else None), conf=sum(x["conf"] for x in xs),
                          legs=len(xs), pos=sum(1 for x in xs if x["sr"] > 0))
-    # Operator comment 2026-11-17 16:54Z: only PRODUCTION strategies with a positive record, or IB-paper strategies
-    # with a positive record.
-    pos_rm = sorted([t for t in tr if t["status"] == "production" and t["rm"] and t["rm"]["sr"] > 0],
-                    key=lambda t: -t["rm"]["sr"])
-    pos_pp = sorted([t for t in tr if t["paper"] and t["paper"]["sr"] > 0
-                     and (t["status"] == "production" or "ib_paper" in t["books"])], key=lambda t: -t["paper"]["sr"])
+    # Operator comments 2026-11-17 16:54Z / 16:57Z ("these are the only strategies with positive records? That can't
+    # be"): every rule strategy with a net-positive live record on ANY book (real money or demo/paper).
+    entries = []
+    for t in tr:
+        for book, key in (("real money", "rm"), ("demo", "paper")):
+            if t[key] and t[key]["sr"] > 0:
+                entries.append((t, book, t[key]))
+    entries.sort(key=lambda e: -e[2]["sr"])
+    n_pos = len({e[0]["leg"] for e in entries})
+    _names = collections.Counter(plain_leg(t["leg"]) for t in {e[0]["leg"]: e[0] for e in entries}.values())
+
+    def nm(leg):
+        n0 = plain_leg(leg)
+        return f"{n0} [{leg}]" if _names[n0] > 1 else n0
     ra, pa = agg["rm"], agg["paper"]
     s = d.new_at((3,), "What our strategies have delivered",
               "The track record of the rule-based strategies, the part of the system that has run long enough to "
               "have one; the ML models are too new and are judged on their offline evidence. The table shows only "
-              "strategies with a positive live record. For context, if asked: "
+              "strategies with a positive live record, on any book. For context, if asked: "
               f"across all {len(tr)} rule strategies, all-time realized results are negative, "
               f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
               "That total includes strategies that have since failed their backtests and been taken off real money, "
@@ -778,22 +787,26 @@ def build():
               "and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result "
               "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
     rows = []
-    for book, lst in (("Real money", pos_rm), ("Demo", pos_pp)):
-        for t in lst:
-            x = t["rm"] if book == "Real money" else t["paper"]
-            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']}" if t["bt"] is not None else "no record")
-            bk = "real money" if book == "Real money" else ("IB paper" if t["status"] != "production" else "paper")
-            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']} folds +" if t["bt"] is not None
-                  else "no record yet")
-            rows.append([f"{plain_leg(t['leg'])} · {t['status']}",
-                         f"{x['sr']:+.2f}R · n {x['n']} · E[R] {x['er']:+.2f} · {bk} · {x['conf']} of {x['n']} confirmed",
-                         bt])
-            d.num(f"live {book.lower()} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.table(s, ["Strategy", "Live result (actual)", "Backtest (net R, out of sample)"],
-            rows[:6], y=Inches(1.9), col_w=[3.6, 5.4, 3.0], size=15, h_row=Inches(0.62))
-    if len(rows) > 6:
-        d._text(s, Inches(0.6), Inches(1.9) + Inches(0.62) * 7, Inches(4), Inches(0.3), f"+{len(rows) - 6} more",
-                size=11, color=GREY)
+    for t, book, x in entries[:8]:
+        bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']} folds +" if t["bt"] is not None else "no record yet")
+        rows.append([f"{nm(t['leg'])} · {t['status']}", book,
+                     f"{x['sr']:+.2f}R · n {x['n']} · E[R] {x['er']:+.2f} · {x['conf']} of {x['n']} confirmed", bt])
+    for t, book, x in entries:
+        d.num(f"live {book} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d._text(s, Inches(0.6), Inches(1.65), Inches(12), Inches(0.5),
+            f"{n_pos} rule strategies are net positive live", size=22, bold=True, color=TEAL)
+    d.md.append(f"**{n_pos} rule strategies are net positive live.**\n")
+    d.slides[-1]["headline"] = f"{n_pos} rule strategies are net positive live"
+    d.num("rule strategies net positive live (any book)", n_pos, "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.table(s, ["Strategy", "Book", "Live result (actual)", "Backtest (net R, out of sample)"],
+            rows, y=Inches(2.3), col_w=[3.7, 1.4, 4.4, 2.5], size=12, h_row=Inches(0.42))
+    rest = entries[8:]
+    if rest:
+        line = "Also net positive: " + " · ".join(f"{nm(t['leg'])} ({book}) {x['sr']:+.1f}R" for t, book, x in rest)
+        d._text(s, Inches(0.6), Inches(2.3) + Inches(0.42) * 9 + Inches(0.08), Inches(12.1), Inches(0.9), line,
+                size=10, color=GREY)
+        d.md.append(f"> {line}\n")
+        d.slides[-1]["rest_line"] = line
     d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
     d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
     d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
