@@ -2634,6 +2634,7 @@ nodes:
   after:
   - node: P1-Q4-eth4h-momentum-confirm
     verdict: pass
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- RQ-20261016-005 confirmed; not checked whether it was already applied'
   needs_authoring: 'CONFIRMED 2026-10-18 (RQ-20261016-005, run 39103761258): M1 trail_adx_below 20 / trail_adx_tight_mult 2.5
     111.37 vs 88.27 R, n 270 vs 262, 5 of 6 folds, maxDD 16.12 vs 18.06, vs the NEW incumbent (atr 1.5 / trail 6.0).
     The live-monitor check was DONE the same day: NO producer -- trend_donchian.monitor() reads only trail_decay_*;
@@ -2652,7 +2653,8 @@ nodes:
   after:
   - node: P1-Q4-xrp4h-exit-confirm
     verdict: pass
-  needs_authoring: 'AUTHORED 2026-11-01 (daily authoring lane): the er_6 < 0.30 / 1.5 R / 2.0 x ATR corroboration on a different leg is RQ-20261101-e5b1-15 (trend_donchian_sol_4h) and -16 (trend_donchian_eth_4h), one dose, UT20 control; this node follows their verdicts. STATUS 2026-10-22: FIRST CORROBORATION FAILED -> VARIANTS QUEUED (not retired; operator 2026-10-22: a first-test fail is not a dead idea). RQ-20261022-511e-01 graded UNIT FAIL (M2 adx25_k0_t2.5 fails on sol_4h, 1 of 4 folds, and eth_4h), so the real-money declare stays OFF (xrp_4h ADX trail on the bybit_1 alias trend_donchian_xrp_adx25 only). DIAGNOSIS: ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / eth_4h / xrp_4h already carry their own tighteners that compose by minimum; the cell was carried from ONE n 68 leg. VARIANTS: RQ-20261022-eba2-15 (momentum LOSS on eth_4h: ADX < 20; ADX < 30 or 20 AND falling 3 bars). Next: read eba2-15; a PASS there is the corroboration this node waits for (then a sibling/xrp_4h cell on the same trigger), a FAIL leaves this node open for a further variant (sol_4h, other thresholds). UPDATE 2026-10-23: eba2-15 read FAIL on eth_4h (M3 +1.56 R, M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted); the sibling-leg variant is RQ-20261023-8961-01 (same arms, sol_4h). Read it next; a PASS there is the corroboration this node waits for. UPDATE 2026-10-25 (research-ops 08:47Z): RQ-20261024-0142-04 (xrp_4h ER-gate dose, er_6 < 0.30, arm 1.5 R) read PASS under its own rule: E30M20 (tight 2.0 x ATR) 15.88 vs A 14.30 R (+1.58 R, bar 1.36), 6 of 6 folds, maxDD 4.30 vs 4.57, beats UT20 by 5.36 R; E30M15 did not pass (+0.12 R). It is a DISCOVERY on the SAME n 68 window (the 2.5 x ATR version of this gate missed the bar, so 2 doses and the earlier 2.5 were looked at on this leg -- multiple-testing denominator 3), NOT a confirmation of the ADX cell above. n 68 cannot be split further, so the confirmation is the same gate/dose on a different leg or forward accrual: author ONE unit on the sol_4h/eth_4h legs (same er_6 < 0.30, 1.5 R, 2.0 x ATR, unconditional UT20 control) before any Tier-3 proposal; no live producer exists for er-gated tightening (MOMENTUM-LEVERS-LIVE). ORIGINAL TEXT: CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: corroboration FAIL -- e5b1-15 FAIL and e5b1-16 FAIL (read here: incumbent exit stands)'
+  authoring_closed_ask: 'AUTHORED 2026-11-01 (daily authoring lane): the er_6 < 0.30 / 1.5 R / 2.0 x ATR corroboration on a different leg is RQ-20261101-e5b1-15 (trend_donchian_sol_4h) and -16 (trend_donchian_eth_4h), one dose, UT20 control; this node follows their verdicts. STATUS 2026-10-22: FIRST CORROBORATION FAILED -> VARIANTS QUEUED (not retired; operator 2026-10-22: a first-test fail is not a dead idea). RQ-20261022-511e-01 graded UNIT FAIL (M2 adx25_k0_t2.5 fails on sol_4h, 1 of 4 folds, and eth_4h), so the real-money declare stays OFF (xrp_4h ADX trail on the bybit_1 alias trend_donchian_xrp_adx25 only). DIAGNOSIS: ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / eth_4h / xrp_4h already carry their own tighteners that compose by minimum; the cell was carried from ONE n 68 leg. VARIANTS: RQ-20261022-eba2-15 (momentum LOSS on eth_4h: ADX < 20; ADX < 30 or 20 AND falling 3 bars). Next: read eba2-15; a PASS there is the corroboration this node waits for (then a sibling/xrp_4h cell on the same trigger), a FAIL leaves this node open for a further variant (sol_4h, other thresholds). UPDATE 2026-10-23: eba2-15 read FAIL on eth_4h (M3 +1.56 R, M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted); the sibling-leg variant is RQ-20261023-8961-01 (same arms, sol_4h). Read it next; a PASS there is the corroboration this node waits for. UPDATE 2026-10-25 (research-ops 08:47Z): RQ-20261024-0142-04 (xrp_4h ER-gate dose, er_6 < 0.30, arm 1.5 R) read PASS under its own rule: E30M20 (tight 2.0 x ATR) 15.88 vs A 14.30 R (+1.58 R, bar 1.36), 6 of 6 folds, maxDD 4.30 vs 4.57, beats UT20 by 5.36 R; E30M15 did not pass (+0.12 R). It is a DISCOVERY on the SAME n 68 window (the 2.5 x ATR version of this gate missed the bar, so 2 doses and the earlier 2.5 were looked at on this leg -- multiple-testing denominator 3), NOT a confirmation of the ADX cell above. n 68 cannot be split further, so the confirmation is the same gate/dose on a different leg or forward accrual: author ONE unit on the sol_4h/eth_4h legs (same er_6 < 0.30, 1.5 R, 2.0 x ATR, unconditional UT20 control) before any Tier-3 proposal; no live producer exists for er-gated tightening (MOMENTUM-LEVERS-LIVE). ORIGINAL TEXT: CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
     14.30 R, 4 of 4 folds, DD 4.15 vs 4.57; M1 (adx 20) also passes; R1 tp_retarget stall_pull_in (target 3 R, 10
     bars) 16.55 R, 3 of 4 folds, DD 4.04 -- the one TP-side pass on a real-money leg today. The corroboration this
     node asked for EXISTS: the ADX-trail family passed on trend_donchian_eth_4h the same day (RQ-20261016-005 M1,
@@ -3201,7 +3203,8 @@ nodes:
   value:
     usd_at_stake_per_month: 300
     confidence: 0.3
-  needs_authoring: 'RESULT 2026-10-27 (research-ops 1930): RQ-20261027-d789-01 read FAIL under its own rule (run 40488856601): configuration closed (SOL prop, tp_r 3.0 vs 6.0, 2023-09-24..2025-09-23 at the breakout_1 stack); the TP-geometry family stays open; next test = P1-Q2-solprop-derive, and the same lever on the eth prop leg is RQ-20261027-4ceb-03. AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: configuration closed -- d789-01 FAIL; the node names its own next test'
+  authoring_closed_ask: 'RESULT 2026-10-27 (research-ops 1930): RQ-20261027-d789-01 read FAIL under its own rule (run 40488856601): configuration closed (SOL prop, tp_r 3.0 vs 6.0, 2023-09-24..2025-09-23 at the breakout_1 stack); the TP-geometry family stays open; next test = P1-Q2-solprop-derive, and the same lever on the eth prop leg is RQ-20261027-4ceb-03. AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
     folds), scored with prop_ev_sim on the operator''s B6 bar for tradeify_1 / velotrade_1 / breakout_2. Find E65''s
     window in docs/research/prop-exit-evidence-2026-09-24.json first; the instrument is exit_lever_ablation (tp_r=3.0
     arm, prop cost flags) for the trades + prop_ev_grid for the EV. Superseded if P1-Q2-solprop-derive lands a K*.'
@@ -3212,7 +3215,8 @@ nodes:
   value:
     usd_at_stake_per_month: 250
     confidence: 0.3
-  needs_authoring: 'AUTHORED 2026-10-27 (research-ops 1930) as hand units RQ-20261027-4ceb-01 (sol_prop) and -02 (eth_prop): --timeout-bars 120 vs declared, 2024-09-24..2026-09-23, delta_r 3.0, 3 of 4 folds; this node only follows their verdicts (PASS -> ONE confirmation on a disjoint window, then prop_ev_grid + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, family open). ORIGINAL ASK: PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: configuration closed FAIL -- 4ceb-01 FAIL and 4ceb-02 FAIL (read here)'
+  authoring_closed_ask: 'AUTHORED 2026-10-27 (research-ops 1930) as hand units RQ-20261027-4ceb-01 (sol_prop) and -02 (eth_prop): --timeout-bars 120 vs declared, 2024-09-24..2026-09-23, delta_r 3.0, 3 of 4 folds; this node only follows their verdicts (PASS -> ONE confirmation on a disjoint window, then prop_ev_grid + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, family open). ORIGINAL ASK: PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
     d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar. The harness lever is --timeout-bars
     on backtest_trend.py (an exit_lever_ablation arm), then prop_ev_grid. CAVEAT (manager 2026-10-27 merge of #20718 with #20717): the daily authoring lane CHECKED this node the same day and did NOT author it: the sol_prop half already ran as RQ-20261018-023 (bar-count time-close, graded FAIL) and the eth_prop half is vacuous by construction (trend_donchian_eth_prop declares stale_exit_bars 12, so a 120-bar time-close never binds). So 4ceb-01 is a re-test of 023 on a later window and 4ceb-02 is expected to be a null by construction; read RQ-20261018-023 before grading either.'
 - id: P1-Q3-eth4h-measured-move-w05-confirm
@@ -3356,6 +3360,7 @@ nodes:
   after:
   - node: P1-Q3-eth4h-measured-move-w05-confirm
     verdict: pass
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- confirm PASS: doctrine read, then a declaration'
   needs_authoring: 'Width 0.5 measured-move CONFIRMED on trend_donchian_eth_4h. FIRST the doctrine read from the record:
     clamped_share (tp_revisions_clamped / applied) and net_r_per_capital_day(MM05) vs (A). clamped_share >= 0.5 or a
     worse capital-day figure = forward to the manager as "P&L at the cap", no declare, route Q8. Otherwise register
@@ -3369,6 +3374,7 @@ nodes:
   value:
     usd_at_stake_per_month: 400
     confidence: 0.2
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `FIRST-PASSAGE-ON-PATHS` -- the node says so'
   needs_authoring: 'Q8 on the legs AS TRADED. The fixed-bracket linear line is closed FAIL (d6e7-02, RQ-20261016-012/-013,
     1fa6-06) while the 8.1 prize stands (d6e7-01 PASS, oracle 0.656 R/trade). Not a new unit: when checklist row
     FIRST-PASSAGE-ON-PATHS lands (first_passage.py --paths over --emit-paths rows, #18536), PROMOTE
@@ -3386,6 +3392,7 @@ nodes:
   after:
   - node: P1-Q4-slv1d-ms-confirm
     verdict: pass
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- RQ-20261016-016 confirmed; not checked whether it was already applied'
   needs_authoring: 'CONFIRMED 2026-10-18 (RQ-20261016-016, run 39103752013): momentum_stale_bars 8 / momentum_stale_adx_below 20
     on slv_pullback_1d 20.73 vs 12.82 R, n 89 vs 69, 3 of 4 folds (all four positive), DD 6.36 vs 7.02, 2018-03..2026-10
     dukascopy. The pullback monitor has no momentum-stale producer (src/research/trail_levers.py is harness-only):
@@ -15904,7 +15911,8 @@ nodes:
   after:
   - unit: RQ-20261022-b7e1-01
     verdict: any
-  needs_authoring: 'Rung 1e TRANSFER (RQ-20261022-b7e1-01, runnable): per-bar path state vs "gives back >= 1.5 R from here", stop room controlled, six legs not in the discovery run. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- b7e1-01 closed FAIL'
+  authoring_closed_ask: 'Rung 1e TRANSFER (RQ-20261022-b7e1-01, runnable): per-bar path state vs "gives back >= 1.5 R from here", stop room controlled, six legs not in the discovery run. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
 - id: P1-Q13-pathstate-w12
   goal: G1
   roadmap:
@@ -15915,7 +15923,8 @@ nodes:
   after:
   - unit: RQ-20261022-b7e1-02
     verdict: any
-  needs_authoring: 'Rung 1e WINDOW VARIANT (RQ-20261022-b7e1-02, runnable): w=12 on ada/xrp pullback_2h + eth_4h, stop room controlled. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- b7e1-02 closed FAIL'
+  authoring_closed_ask: 'Rung 1e WINDOW VARIANT (RQ-20261022-b7e1-02, runnable): w=12 on ada/xrp pullback_2h + eth_4h, stop room controlled. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
 - id: P1-Q13-pathstate-prop
   goal: G1
   roadmap:
@@ -15926,7 +15935,8 @@ nodes:
   after:
   - unit: RQ-20261022-b7e1-03
     verdict: any
-  needs_authoring: 'Rung 1e PROP (RQ-20261022-b7e1-03, runnable): X=1.0 on eth/sol prop 1h legs, w=12, stop room controlled; INDETERMINATE is possible (positives are scarce). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- b7e1-03 closed FAIL; the PASS branch was not taken'
+  authoring_closed_ask: 'Rung 1e PROP (RQ-20261022-b7e1-03, runnable): X=1.0 on eth/sol prop 1h legs, w=12, stop room controlled; INDETERMINATE is possible (positives are scarce). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
 - id: P1-Q14-er-gated-trail-ada
   goal: G1
   roadmap:
@@ -16030,7 +16040,8 @@ nodes:
   after:
   - unit: RQ-20261025-d7e6-07
     verdict: any
-  needs_authoring: 'STATUS 2026-10-25 (lane EXITS-ROUND2-1026): AUTHORED as hand units RQ-20261025-d7e6-02..06 (25% bank at +1 R, trigger P >= 0.7, one per pullback-2h leg: ada, xrp, eth, sol, avax; arms A / MB / UB / RB random control) and the pooled decision unit RQ-20261025-d7e6-07 (scripts/research/pool_arm_diff.py; the node asked for one pooled unit, but the harness takes one --leg per command). Prop stays out, as asked. This node only follows the pooled verdict now: PASS -> ONE confirmation on a disjoint window, then the bar sweep 3/12 (this node asked for 3/6/12; only 6 is registered, the others wait on a PASS so the trial count stays honest), then Q6 parity and a Tier-3 proposal; FAIL -> the bank-selector half is closed at these settings and the sweep is not built. ORIGINAL TEXT: Q11 rung 1b/1d PASSED (eba2-01: log-loss gain +0.0115, 5/6 folds, n 1209; eba2-04: +0.0145, 5/6 folds, volatility-controlled) but every exit lever rung 2 and the
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- d7e6-07 closed FAIL'
+  authoring_closed_ask: 'STATUS 2026-10-25 (lane EXITS-ROUND2-1026): AUTHORED as hand units RQ-20261025-d7e6-02..06 (25% bank at +1 R, trigger P >= 0.7, one per pullback-2h leg: ada, xrp, eth, sol, avax; arms A / MB / UB / RB random control) and the pooled decision unit RQ-20261025-d7e6-07 (scripts/research/pool_arm_diff.py; the node asked for one pooled unit, but the harness takes one --leg per command). Prop stays out, as asked. This node only follows the pooled verdict now: PASS -> ONE confirmation on a disjoint window, then the bar sweep 3/12 (this node asked for 3/6/12; only 6 is registered, the others wait on a PASS so the trial count stays honest), then Q6 parity and a Tier-3 proposal; FAIL -> the bank-selector half is closed at these settings and the sweep is not built. ORIGINAL TEXT: Q11 rung 1b/1d PASSED (eba2-01: log-loss gain +0.0115, 5/6 folds, n 1209; eba2-04: +0.0145, 5/6 folds, volatility-controlled) but every exit lever rung 2 and the
     Q10/Q12/Q13/Q14 variants (eba2-03, -05..-15, 13 units, ada/xrp pullback 2h and eth prop) read "incumbent stands"; R2 gain is negative or ~0, so the metric ranks giveback but
     does not size it. Diagnosis: the lever, not the signal -- a 50%-at-+1R bank fires on the metric trigger regardless of the predicted size. Author ONE unit that uses the metric as a
     SELECTOR (bank 25%/50% only when predicted P(big giveback) is in the top tercile, trigger bar swept 3/6/12 pre-registered, same net R / fold / drawdown bar) pooled across the three legs.
@@ -16047,7 +16058,8 @@ nodes:
   after:
   - unit: RQ-20261025-d7e6-01
     verdict: any
-  needs_authoring: 'Hand unit RQ-20261025-d7e6-01 (pooled paired read of the 9a7e-01/-02/-03 tighten gate; bar 0.07 R per trade because the measured paired sd of a tight trail is 0.82 R). This node only follows its verdict. PASS -> ONE confirmation on a disjoint window, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> the tighten gate is closed on the pullback-2h legs at P 0.6 / 2.5 x ATR; try sol and avax pullback 2h before calling the family dead (they are not in the pool). INDETERMINATE with MDE above the bar -> add sol/avax tighten units rather than lowering the bar. No family is retired.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- d7e6-01 closed FAIL'
+  authoring_closed_ask: 'Hand unit RQ-20261025-d7e6-01 (pooled paired read of the 9a7e-01/-02/-03 tighten gate; bar 0.07 R per trade because the measured paired sd of a tight trail is 0.82 R). This node only follows its verdict. PASS -> ONE confirmation on a disjoint window, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> the tighten gate is closed on the pullback-2h legs at P 0.6 / 2.5 x ATR; try sol and avax pullback 2h before calling the family dead (they are not in the pool). INDETERMINATE with MDE above the bar -> add sol/avax tighten units rather than lowering the bar. No family is retired.'
 - id: P1-ATM-remaining-move-flow-variant
   goal: G1
   theme: live_strategy
@@ -16371,6 +16383,7 @@ nodes:
   after:
   - unit: RQ-20261026-1b57-08
     verdict: pass
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on the manager’s roster read -- 1b57-08 PASS on basket B; next step is an overlap / roster decision'
   needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-1b57-08 read PASS (rule: pooled n >= 88, net > 0, >= 4 of 6 folds, >= half of powered cells) -- sol_4h as declared on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC): pooled n 1375, net +111.77 R, 4 of 6 folds positive, 3 of 6 powered cells pass; the last fold is -24.6 R and the pooled t one-sided p is 0.10, so it is a discovery with a weak recent fold, not a confirmation. Per the rule, next = same-book correlation/overlap read of the passing CELLS against the live legs, then the prop EV/survival gate; a re-entry case under MD-PROMOTE-S0-S1 needs its own evidence record (never a roster act). Author the overlap-read unit (cells named in the result''s grade block) and ONE disjoint-window confirmation.'
 # ── PROGRAMME-REVIEW-20261028 (2026-10-28, lane PROGRAMME-REVIEW-20261028) ──
 - id: P1-Q4-desk-losscut-ada-pb
@@ -16480,7 +16493,8 @@ nodes:
   after:
   - unit: RQ-20261028-d1f5-02
     verdict: fail
-  needs_authoring: 'DESK-LIFECYCLE-S0 full run FAILED (PR #20967, RULE-RQ20261028-D1F5-02-LIFECYCLE): Claude whole-trade management -0.159 R vs hold on Claude entries (n 473) and -0.124 R on random entries (n 465); 981 of 1,155 non-hold actions were stop tightens worth -0.097 R each, while its 2,001 holds were worth +0.142 R each vs closing. DIAGNOSIS (programme review 2026-10-28): the lever, not the judge -- the same loss appears in 129 of ~140 mechanical tightening units this week, so a judge restricted from tightening is the variant that tests it. NOT a re-scoring of the recorded decisions (selecting the non-tighten subset after seeing outcomes is data-snooped). Author ONE pre-registered unit only after #20967 merges and the manager decides judge spend: the C4E protocol with the action set {hold, close, take-profit move} (no stop tighten), on a FRESH pair sample, graded on the same three contrasts (vs hold, vs matched random, vs best fixed rule). A cheaper mechanical twin is P1-Q4-desk-losscut-ada-pb (no judge). Retiring Claude-management is not on the table from one test (operator 2026-10-22).'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: answered -- d1f5-02 FAIL (981 of 1,155 non-hold actions were stop tightens, worth −0.097 R); the finding is recorded, and no unit adds to it'
+  authoring_closed_ask: 'DESK-LIFECYCLE-S0 full run FAILED (PR #20967, RULE-RQ20261028-D1F5-02-LIFECYCLE): Claude whole-trade management -0.159 R vs hold on Claude entries (n 473) and -0.124 R on random entries (n 465); 981 of 1,155 non-hold actions were stop tightens worth -0.097 R each, while its 2,001 holds were worth +0.142 R each vs closing. DIAGNOSIS (programme review 2026-10-28): the lever, not the judge -- the same loss appears in 129 of ~140 mechanical tightening units this week, so a judge restricted from tightening is the variant that tests it. NOT a re-scoring of the recorded decisions (selecting the non-tighten subset after seeing outcomes is data-snooped). Author ONE pre-registered unit only after #20967 merges and the manager decides judge spend: the C4E protocol with the action set {hold, close, take-profit move} (no stop tighten), on a FRESH pair sample, graded on the same three contrasts (vs hold, vs matched random, vs best fixed rule). A cheaper mechanical twin is P1-Q4-desk-losscut-ada-pb (no judge). Retiring Claude-management is not on the table from one test (operator 2026-10-22).'
 # ── 2026-10-28 full action space (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch) ───────────────────────────
 # Operator 2026-10-28, verbatim: "active management isn't only tightening - it can be any movement in either bracket
 # triggered by developments in the live market data" / "SL tightening is just one lever". Each action class graduates
@@ -16496,7 +16510,8 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'C2 SL widen: does widening the stop on a live trigger (vol expansion, event risk, a liquidity sweep before a level) beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): already authored as a class: route -- a live-review class question with no diagnosis; belongs to the LTR orphans in research-ops (iteration_orphans `ltr_class`, 5 orphan)'
+  authoring_closed_ask: 'C2 SL widen: does widening the stop on a live trigger (vol expansion, event risk, a liquidity sweep before a level) beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
 - id: P1-Q15-c3-sl-structure
   question: Q15
   goal: G1
@@ -16505,7 +16520,8 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'C3 SL move-to-structure: does re-anchoring the stop to new structure (swing / FVG / level) beat hold net of cost? Reuse the Q10 --trail-level flags as a re-anchor, not a trail. Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): already authored as a class: route -- same; lever map `ltr-sl-to-structure.yaml`'
+  authoring_closed_ask: 'C3 SL move-to-structure: does re-anchoring the stop to new structure (swing / FVG / level) beat hold net of cost? Reuse the Q10 --trail-level flags as a re-anchor, not a trail. Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
 - id: P1-Q15-c5-tp-pullin
   question: Q15
   goal: G1
@@ -16514,7 +16530,8 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'C5 TP pull-in: does pulling the target in on momentum loss, a liquidity level ahead, or vol contraction beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): already authored as a class: route -- same; tp_pull_in did not pass Stage A (3144-02)'
+  authoring_closed_ask: 'C5 TP pull-in: does pulling the target in on momentum loss, a liquidity level ahead, or vol contraction beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
 - id: P1-Q15-c7-partial
   question: Q15
   goal: G1
@@ -16523,7 +16540,8 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'C7 partial close: does a triggered partial close (level reached, event ahead), with both brackets kept on the remainder, beat hold net of cost? Judge on expectancy, not on distribution shape (principle T10). Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: superseded -- partial_close_50 is in the tm-action-value line (c21d-04); RQ-20261029-a7e1-01 ML-gated partial FAIL'
+  authoring_closed_ask: 'C7 partial close: does a triggered partial close (level reached, event ahead), with both brackets kept on the remainder, beat hold net of cost? Judge on expectancy, not on distribution shape (principle T10). Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
 - id: P1-Q15-c8-full-close
   question: Q15
   goal: G1
@@ -16532,7 +16550,8 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: superseded -- close is in c21d-04; 1ae8-01 INDET'
+  authoring_closed_ask: 'C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
 - id: P1-VOLWIN-desk-wake
   goal: G1
   theme: live_strategy

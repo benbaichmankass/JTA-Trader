@@ -690,8 +690,11 @@ def load_programmes(root: Path) -> List[Tuple[str, str, Dict[str, Any]]]:
             if nid in seen:
                 raise ValueError(f"{rel}: node id {nid} is duplicated across programme files")
             seen.add(nid)
-            if bool(n.get("unit")) == bool(n.get("needs_authoring")):
-                raise ValueError(f"{rel}: node {nid} needs exactly one of `unit:` or `needs_authoring:`")
+            # `authoring_closed:` (2026-11-17, lane ML-ITERATION-REFILL-20261117): a needs_authoring node a triage closed
+            # (answered, superseded or configuration closed FAIL) keeps its text under `authoring_closed_ask:` and leaves the
+            # authoring queue with state `closed`, instead of being deleted (a dropped question is one nobody can re-ask).
+            if sum(bool(n.get(k)) for k in ("unit", "needs_authoring", "authoring_closed")) != 1:
+                raise ValueError(f"{rel}: node {nid} needs exactly one of `unit:`, `needs_authoring:` or `authoring_closed:`")
             for a in n.get("after") or []:
                 if str(a.get("verdict")) not in _VERDICTS or not (a.get("unit") or a.get("node")):
                     raise ValueError(f"{rel}: node {nid} has a malformed `after` entry {a!r}")
@@ -832,6 +835,8 @@ def programme_plan(root: Path, units: Dict[str, Dict[str, Any]]) -> Dict[str, An
         prog = str(doc["programme"])
         for n in doc["nodes"]:
             st, why = node_state(n, units, by_key)
+            if n.get("authoring_closed"):
+                st, why = "closed", [str(n["authoring_closed"])[:200]]
             materialised = by_key.get(node_key(n["id"]))
             if materialised:
                 v = closed_verdict(units.get(materialised))
