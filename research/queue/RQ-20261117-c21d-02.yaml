@@ -1,0 +1,115 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (Manager Session 2026-11-15a dispatch), slot D6 (Pointer).
+# D6 has no model at any stage. This is the slot's BASELINE unit: the static bracket a Pointer model must beat, read on the held-out year
+# at per-symbol cost. Iterates the overdue subject ml-brackets (its RQ-20261101-78fc-01 is blocked on a missing subcommand).
+# Gates this adds or changes: none.
+id: RQ-20261117-c21d-02
+title: 'D6 baseline: on the SAME frozen Foxhound-1 held-out decisions, does a static TP of 4 ATR (the c692-02 best static cell, SL 2
+  unchanged) beat the live 3 ATR TP net of each symbol''s own cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261101-c692-02
+  verdict_read: indeterminate
+  diagnosis: 'c692-02: the learned per-decision bracket composed held-out +0.0143 R/decision (n 11,118, flat c692 stack) but the best
+    STATIC cell chosen on dev, SL 2 / TP 4 ATR, gave +0.0144: the learned choice adds nothing over a fixed wider TP. Pointer v0
+    (RQ-20261114-82fd-01 / RQ-20261115-a474-01) FAILED: a per-trade entry TP moves ~11.5k trades for delta ~0. bracket_cond
+    (RQ-20261116-089f-03) FAILED (+0.0094 vs bar +0.03). 4654-03 scaled BOTH SL and TP (3/4.5, 4/6) and failed on dev. The TP-only
+    widening 2/4 has never been read under the per-symbol cost stack, which is what kills Foxhound-1 (2e3b-01).'
+  search: 'lever family bracket: TP 3 -> 4 ATR at fixed SL 2 and fixed decisions; one factor'
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  attempt: 2
+  due_by: '2026-11-21'
+question: 'Before any D6 model is built again, the bar it has to clear must be measured on the cost basis that matters. Holding the
+  frozen Foxhound-1 decisions fixed (tau 0.10, the live threshold), does TP 4 ATR instead of 3 ATR lift pooled mean net R on the held-out
+  year at per-symbol costs, enough to clear the deflated hurdle?'
+why_this_matters: 'TP doctrine: the TP must be a real predicted target. If a static 4 ATR clears the hurdle it is a data-backed Tier-3
+  bracket proposal for ml_entry AND the new D6 baseline every Pointer variant must beat; if it fails, the static-widening family is
+  closed on this model and D6 work waits for the entry model to have positive net edge (no bracket rescues a -0.068 R entry).'
+power:
+  expected_n: 12000
+  min_detectable_effect: 0.03
+  effect_units: R_per_decision
+  sd: 0.9
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: same decisions as 2e3b-01 (n 12,746, se 0.0098). The gate is on the absolute pooled mean vs the deflated bar
+    (~+0.017 R at n_tries ~13); the paired delta vs 3 ATR is reported.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines + fundingRate; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: 'where ml_entry places its take-profit at entry (3 ATR today) and the baseline a D6 Pointer model must beat'
+  legs: [ml_entry]
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_population_test.py
+  - run
+  - --tp-atr
+  - '4.0'
+  - --rule-id
+  - RULE-RQ20261117-c21d-02-STATIC-TP4-HELDOUT
+  - --cache
+  - /tmp/ml_entry_population_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-c21d-02
+decision_rule:
+  id: RULE-RQ20261117-c21d-02-STATIC-TP4-HELDOUT
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'The 2e3b-01 population, window 2025-10-01..2026-10-31, frozen boosters, tau from model.json (0.10): the SAME decisions
+    (features and predictions do not depend on the bracket) relabelled with SL 2 ATR / TP 4 ATR / 24 h time stop and re-costed per
+    symbol (fee 11 + max(3, spread + sqrt impact) + own |funding|; risk = 2 x ATR so cost per R is unchanged). Pooled mean net R, se,
+    n. Read claimed in the holdout ledger before any summary. The paired difference vs 2e3b-01 (same decisions at TP 3) is reported.'
+  rule: 'INDETERMINATE under the 2e3b-01 floors (population < 10, reference < 40, cost missing > 10%, n < 300, < 10 symbols). PASS IF
+    pooled mean net R >= point_t_min x se of the ledger bar. FAIL otherwise. Fixed now, never changed after any result.'
+  proposal_mapping: 'pass -> data-backed Tier-3 proposal: ml_entry TP 3 -> 4 ATR (TP-doctrine record), and TP 4 becomes the D6 baseline
+    in docs/plans/ML-ROADMAP-MECE-2026-11.md. fail -> static TP widening closed on Foxhound-1; D6 waits on a positive-net entry model
+    (D3) before the next Pointer unit. indeterminate -> the starved floor becomes the next unit.'
+  what_it_does_not_do: 'Moves no TP in-trade (Labrador-1b, D7), changes no SL, no tau, serves nothing, no order, no config. Not a
+    learned bracket; it is the baseline a learned one must beat.'
+  min_n: 300
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'ESTIMATE: ml_entry is the real-money learned leg; a bracket that changes its sign is material, but the dev prior is weak.'
+intervention_controls:
+  not_applicable: 'a static TP on FIXED decisions moves every trade by the same rule; there is no selection to match at random. The
+    controls are hold-to-bracket (the live 2/3 on the same decisions, 2e3b-01, reported paired) and best-static chosen on dev folds only
+    (c692-02 best_static_dev cell [2.0, 4.0]); the held-out year is not used to choose TP 4.'
+practice_precedent: 'RQ-20261101-c692-02 (best static cell on dev) and RQ-20261112-2e3b-01 (harness, population, cost stack);
+  docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D6 (baseline = static per-leg best bracket chosen without the test folds); M6, M13.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: 'Keyless public Binance Vision data; frozen boosters on CPU.'
+  basis: 'MEASURED shape from 2e3b-01; relabelling at another TP is the same walk.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

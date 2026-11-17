@@ -1,0 +1,138 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (Manager Session 2026-11-15a dispatch), slot D2 (Collie).
+# Challenger vs baseline on one replay: does the BTC 1h range-vol (yz) challenger PASS generalise to the population (ETH, SOL)?
+# Gates this adds or changes: none.
+id: RQ-20261117-c21d-03
+title: 'D2 Collie challenger, population read: does the range-vol (yz) LightGBM regime head beat the same-asset v2 LightGBM head on
+  ETHUSDT 1h AND SOLUSDT 1h log-loss, as it did on BTCUSDT 1h (RQ-20261112-ef4c-02 PASS)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: eth-regime-1h-lgbm-xasset-v1
+  subject_kind: ml_model
+  from_result: RQ-20261112-ef4c-02
+  verdict_read: pass
+  diagnosis: 'ef4c-02 PASS: lgbm_yz (v2 features + Parkinson / Garman-Klass / Rogers-Satchell / Yang-Zhang vol) beat lgbm v2 by >=
+    +0.002 nats on BTCUSDT 1h CV (n ~26,280 OOS). ef4c-01 BTC 15m was INDETERMINATE (between bar and floor). ef4c-03 ETH 1h: lgbm beats
+    the prior (feature-set read only). The challenger has only ever been read on ONE symbol; under the operator population rule
+    (2026-11-04) a head is judged on a pooled population, so one-symbol evidence cannot retire the v2 head.'
+  search: 'lever family features: + range-vol block, one factor, read on the two other published 1h shards'
+  levers:
+  - features
+  map_entries:
+  - research/levers/eth-regime-1h-lgbm-xasset-v1.yaml
+  attempt: 1
+  due_by: '2026-11-21'
+question: 'Is the range-vol feature block a population-level improvement to the D2 regime head, or a BTC-1h artefact? Same learner,
+  params, CV, embargo and target as ef4c-02; only the shard differs.'
+why_this_matters: 'D2 is the most mature slot but its only gated legs are BTC on bybit_1, and the consumer tests (bcd2-01, b819-01)
+  failed by money. Before a consumer test of yz-labelled cells is worth running, the label head itself must be better than v2 on the
+  population. PASS -> the yz head is the D2 challenger for every symbol and the next unit is the money consumer test with the yz label;
+  FAIL -> keep v2, the yz block stays BTC-only and is not promoted.'
+power:
+  expected_n: 52560
+  min_detectable_effect: 0.1
+  effect_units: sd
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: tail_rows 60000 per shard, ~26,280 OOS rows over 5 folds each (as ef4c-02); bars are autocorrelated so effective n
+    is lower; n is fixed by construction, it does not grow with waiting.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of a nightly-rebuilt published shard).
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: 'keep v2 or move to the yz head as the D2 regime label for ETH/SOL (and whether the yz-label money consumer test is run)'
+  legs: [trend_donchian_eth_4h, trend_donchian_sol_prop]
+  book: money
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 60000
+    extra_columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls: [prior]
+  candidates: [lgbm_yz]
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+    lgbm_yz:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: [ETHUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [SOLUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    fail_if_no_candidate_reaches:
+    - {group: any, vs: baseline, window: cv, op: '>=', value: 0.0}
+run:
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs:
+    research_unit: RQ-20261117-c21d-03
+decision_rule:
+  id: RULE-RQ20261117-c21d-03-D2-YZ-POPULATION
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Per group, CV mean log-loss improvement of lgbm_yz over lgbm (nats, positive = yz better), 5 expanding folds, 24-row
+    embargo; the prior is a control.'
+  rule: 'PASS IF lgbm_yz beats lgbm by >= +0.002 nats CV mean on BOTH ETHUSDT_1h and SOLUSDT_1h. FAIL IF it does not beat lgbm by >= 0
+    on any group. INDETERMINATE otherwise, or if folds < 3, a shard is stale/withheld (published-data.json) or a yz column is missing.
+    Thresholds are not changed after any result.'
+  proposal_mapping: 'pass -> next unit: the money consumer test of yz-labelled trend_vol cells (regime_cell_walkforward) on the TD
+    family, pooled; no config change from this unit. fail -> keep v2; the yz head stays a BTC 1h result (reported). indeterminate ->
+    the failing clause is reported; a 15m read is not the follow-up (ef4c-01 already indeterminate).'
+  what_it_does_not_do: 'Changes no regime cell, retires no head, serves nothing, places no order. Model quality only, not money.'
+  min_n: 3 folds per group
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'ESTIMATE: D2 gates bybit_1 legs today; a population-level label improvement is the precondition for the money consumer test.'
+intervention_controls:
+  not_applicable: 'a model-quality bake-off of a regime label head; no trade intervention is tested here'
+practice_precedent: 'RQ-20261112-ef4c-02 (identical spec on BTC 1h, PASS); docs/plans/ML-ROADMAP-MECE-2026-11.md § 3.0 population rule;
+  M12 (per-asset vs baseline reported).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate from ef4c-02 (same spec, 1 shard): 2 shards x 3 arms x 5 folds.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

@@ -1,0 +1,158 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (Manager Session 2026-11-15a dispatch), slots D7 + D8 (Labrador).
+# Clears the orphan ml-tm-action-value: iterations 1-5 searched label, feature block and training width at ONE check-in cadence
+# (every_bar); the check-in-policy factor (ML-PROGRAMME-2026-10-28 § 1-4, cadence x triggers) is untested in Stage B.
+# Gates this adds or changes: none.
+id: RQ-20261117-c21d-04
+title: 'ml-tm-action-value ITERATION 6 (check-in cadence): Stage B with check-ins every 4 bars + event triggers, and triggers only,
+  instead of every bar; does acting on close / partial_close_50 beat hold, the best static rule, the distance logit and matched random?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261116-d5a7-05
+  verdict_read: fail
+  diagnosis: 'Five Stage-B passes all FAIL S-OFFLINE at every_bar: 7e18-01 (h12) +0.0033 R/trade vs B0, CI [-0.0070,+0.0131], 3/6
+    folds, action rate 5.4%; d5a7-01 (h24), -02 (h6), -03 (signature), -04 (path_state+signature), -05 (train x8) all fail. Stage A on
+    corpus_v2 (3144-02) PASSES for close and partial_close_50 (4/6 folds each): there IS out-of-fold action-value rank signal, but a
+    policy that may act on any of ~50,926 states per 2,627 trades turns a weak per-state signal into many marginal actions. The lever
+    families searched (label, features, train width) all held cadence fixed. Cadence is the untested family.'
+  search: 'lever family checkin_policy: every_bar -> {every_4+triggers, triggers_only}; all else config-identical to 7e18-01'
+  levers:
+  - checkin_policy
+  map_entries:
+  - research/levers/ml-tm-action-value.yaml
+  attempt: 6
+  due_by: '2026-11-24'
+question: 'With fewer, event-driven decision points (every 4th bar plus the harness triggers, or triggers only), does the same
+  corpus_v2-trained action-value LightGBM, acting only on close (D8) or partial_close_50 (D7), clear S-OFFLINE on the money-leg test
+  corpus?'
+why_this_matters: 'D7 and D8 have one live model (Labrador-1b, TP extend) and every learned close/partial policy has failed. The live
+  check-in cadence is a design choice (ML-PROGRAMME § check-in policy) that no Stage-B test has varied. PASS -> a fresh-window,
+  full-label net-of-cost confirmation unit for that cadence on the money legs; FAIL -> the cadence family is recorded as tested and the
+  subject''s lever map moves to the remaining untested family (learner class beyond GBDT) at the next programme review.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'test n MEASURED (v1, 2,627 trades, 3144-02); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE ~0.0088 R,
+    MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. Two cadence arms; Holm across the family.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: 'whether ml-tm-action-value proceeds to a fresh-window confirmation for close / partial_close_50 at a coarser check-in
+    cadence on the money legs'
+  legs: [ada_pullback_2h, xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+run:
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_4+triggers,triggers_only
+  - --actions
+  - close,partial_close_50
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261117-c21d-04
+decision_rule:
+  id: RULE-RQ20261117-c21d-04-TM-CADENCE
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: 'B0 hold-to-bracket; B1 best static rule chosen on train folds; B2 distance logit at the same cadence; B4 matched random at
+    the same cadence and action rate'
+  statistic: 'tm_bench S-OFFLINE per lgbm arm (one per cadence cell): gain over max(B0, B1) in R/trade, CI95, folds positive of 6, max
+    drawdown and capital-day checks, vs B2, vs own B4, Holm p over the family.'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for at least one lgbm cadence arm:
+    gain >= 0.03 R/trade over max(B0, B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2,
+    beats its own matched random B4 (margin CI lower > 0), Holm p < 0.05. FAIL iff every lgbm arm''s CI95 upper < max(B0, B1) + 0.03.
+    INDETERMINATE otherwise, or if the test corpus is not tmb-73f5c3660014, the train corpus is not bp2-f4271084b120 with >= 10,000
+    de-duplicated trades after purge, or the selfcheck fails. Thresholds, actions, cadences and margin grid fixed now.'
+  pass_action: 'author the fresh-window full-label (net-of-cost policy value) confirmation for the passing cadence; a horizon-label arm
+    delta is not itself a net-of-cost policy value (tm_bench label note).'
+  fail_action: 'record the checkin_policy family as tested in research/levers/ml-tm-action-value.yaml; next family = learner class.'
+  what_it_does_not_do: 'Changes no live leg, no Labrador-1b setting, no config; places no order. Not a promotion case.'
+  min_n: 2000 test trades
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.12
+  bucket: ai_trader
+  basis: 'planning weight carried from 7e18-01; an estimate, not a measurement.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and mix as the lgbm policy on each test fold, random eligible check-ins at the
+      same cadence, sequential'
+  best_static:
+    grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20]
+    excludes_test_folds: true
+    how: 'tm_bench B1: the static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md); docs/plans/ML-PROGRAMME-2026-10-28.md
+  check-in-policy factor (cadence x triggers); RQ-20261115-7e18-01 (config this varies one factor of).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 90
+  basis: 'ESTIMATE carried from 7e18-01 (same data); fewer check-in states per trade lowers fit cost.'
+  why_runner: 'corpus v2 is an Actions artifact / regenerable on a runner (the workflow''s corpus_v2 step); CPU only.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
