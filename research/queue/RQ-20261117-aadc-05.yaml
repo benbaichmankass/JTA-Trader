@@ -81,6 +81,19 @@ decision_rule:
   what_it_does_not_do: Grades, demotes or retires no leg; edits no config; places no order; adds no gate. In-sample for the blind grade
     (089f-01 already read these grades), said so.
   min_n: 200 labelled points on >= 3 legs
+amendments:
+- at: '2026-11-17'
+  before_any_run: false
+  by: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)
+  text:
+  - 'DISCLOSED HARNESS DEFECT, found on the first read of RQ-20261117-aadc-06 (same journal pull as aadc-05). Two units bugs in the
+    net R basis, both MEASURED: (a) futures (ib_paper, 69 closed rows) and options (alpaca_options_paper, 8) carry the contract
+    multiplier in pnl but not in entry x qty, so R was inflated by the multiplier (mgc_trend_1h +2,550 R over 18 trades); (b) on some
+    rows order_packages.sl is the AMENDED (~breakeven) stop, not the initial one (trade 6168: entry 10.541, package sl 10.542163),
+    giving |R| up to 3,587. FIX (scripts/research/d10_basset_baseline.py): a row lacking its contract multiplier, or whose stop is
+    within 0.1% of entry, is uncomputable and counted; net R is winsorised at +-3 in the decay labels and action sums as well as in
+    the CUSUM. The statistic, the rule and every threshold are NOT edited. Both units are re-read once on the same pull; the first
+    reads are kept in the record and disclosed.'
 practice_precedent: 'M10 (monitor live performance with a sequential test against the registered band; win/loss or winsorised, because
   per-trade R is heavy-tailed: scripts/ops/overlay_cusum.py precedent), docs/reference/trading-and-model-practice-principles.md'
 compute: cpu_light

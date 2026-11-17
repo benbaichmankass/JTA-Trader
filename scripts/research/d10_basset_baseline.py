@@ -42,6 +42,7 @@ UNIT = "RQ-20261117-aadc-05"
 RULE_ID = "RULE-RQ20261117-aadc-05-D10-BASELINE"
 K, CLIP, H = 0.25, 3.0, 3.0      # CUSUM slack (R), winsor (R), alarm level (R): fixed by the unit before the run
 N_NEXT, W_GRADE = 20, 10
+MIN_STOP_FRAC = 0.001   # a risk basis tighter than 0.1% of entry is degenerate (see degenerate_basis)
 MIN_POINTS, MIN_LEGS = 200, 3
 BOOT, SEED = 2000, 20261117
 
@@ -55,11 +56,36 @@ def _f(v) -> Optional[float]:
         return None
 
 
+def needs_multiplier(t: dict) -> bool:
+    """Futures (IB) and options legs: the journal pnl carries the contract multiplier but entry x qty does not, so R without the
+    row's own contract value is inflated by the multiplier (MEASURED 2026-11-17 on the first aadc-06 read: mgc_trend_1h +2,550 R
+    over 18 trades, mhg_pullback_1d -1,052 R over 5). Such a row is uncomputable unless it carries contract_value(_usd)."""
+    acct = str(t.get("account_id") or "")
+    return acct.startswith("ib") or "option" in acct
+
+
+def contract_value(t: dict) -> Optional[float]:
+    for k in ("contract_value_usd", "contract_value"):
+        v = _f(t.get(k))
+        if v is not None and v > 0:
+            return v
+    return None if needs_multiplier(t) else 1.0
+
+
+def degenerate_basis(t: dict) -> bool:
+    """MEASURED 2026-11-17 (second read of aadc-05/-06): on some closed rows order_packages.sl equals the AMENDED stop (moved to
+    ~breakeven), e.g. trade 6168 entry 10.541, package sl 10.542163, so |entry - sl| / entry ~ 1e-4 and net R reaches +1,475 R.
+    The package sl is therefore not always the initial stop; such a row has no usable initial-risk basis."""
+    e, sl = _f(t.get("entry_price")), _f(t.get("pkg_sl"))
+    return e is not None and sl is not None and e > 0 and abs(e - sl) / e < MIN_STOP_FRAC
+
+
 def net_r(t: dict, pkg_sl: Optional[float]) -> Optional[float]:
     pnl, e, q = _f(t.get("pnl")), _f(t.get("entry_price")), _f(t.get("position_size"))
-    if pnl is None or e is None or q is None or pkg_sl is None:
+    cv = contract_value(t)
+    if pnl is None or e is None or q is None or pkg_sl is None or cv is None:
         return None
-    risk = abs(e - pkg_sl) * abs(q)
+    risk = abs(e - pkg_sl) * abs(q) * cv
     if risk <= 0:
         return None
     net = pnl - (_f(t.get("fee_taker_usd")) or 0.0) - (_f(t.get("fee_maker_usd")) or 0.0) - (_f(t.get("funding_paid_usd")) or 0.0)
@@ -106,7 +132,8 @@ def stage0(evidence_dir: Path) -> Dict[str, float]:
 
 
 def leg_series(trades: List[dict], mu: Dict[str, float]) -> tuple[Dict[str, List[dict]], dict]:
-    ex = {"not_closed": 0, "no_leg_record": 0, "no_net_r": 0, "backtest": 0}
+    ex = {"not_closed": 0, "no_leg_record": 0, "no_contract_multiplier": 0, "degenerate_risk_basis": 0, "no_net_r": 0,
+          "backtest": 0}
     by: Dict[str, List[dict]] = {}
     for t in trades:
         if t.get("is_backtest"):
@@ -119,11 +146,19 @@ def leg_series(trades: List[dict], mu: Dict[str, float]) -> tuple[Dict[str, List
         if leg not in mu:
             ex["no_leg_record"] += 1
             continue
+        if contract_value(t) is None:
+            ex["no_contract_multiplier"] += 1
+            continue
+        if degenerate_basis(t):
+            ex["degenerate_risk_basis"] += 1
+            continue
         r = net_r(t, t.get("pkg_sl"))
         if r is None:
             ex["no_net_r"] += 1
             continue
-        by.setdefault(leg, []).append({"trade_id": int(t["id"]), "closed_at": str(t["closed_at"]), "r": r})
+        # winsorised at +-CLIP everywhere (labels and action sums too, not only inside the CUSUM): per-trade R is heavy-tailed
+        by.setdefault(leg, []).append({"trade_id": int(t["id"]), "closed_at": str(t["closed_at"]),
+                                       "r": float(np.clip(r, -CLIP, CLIP)), "r_raw": r})
     for v in by.values():
         v.sort(key=lambda x: (x["closed_at"], x["trade_id"]))
     return by, ex
@@ -293,6 +328,10 @@ def _self_test() -> int:
     assert net_r({"pnl": 10, "entry_price": 100, "position_size": 2, "fee_taker_usd": 1, "fee_maker_usd": 0,
                   "funding_paid_usd": 1}, 95.0) == 0.8
     assert net_r({"pnl": 10, "entry_price": 100, "position_size": 2}, None) is None
+    assert net_r({"pnl": 10, "entry_price": 100, "position_size": 2, "account_id": "ib_paper"}, 95.0) is None
+    assert net_r({"pnl": 10, "entry_price": 100, "position_size": 2, "account_id": "ib_paper", "contract_value": 10}, 95.0) == 0.1
+    assert net_r({"pnl": 10, "entry_price": 100, "position_size": 2, "account_id": "alpaca_options_paper"}, 95.0) is None
+    assert degenerate_basis({"entry_price": 10.541, "pkg_sl": 10.542163}) and not degenerate_basis({"entry_price": 100, "pkg_sl": 98})
     assert auc(np.array([1, 2, 3, 4.0]), np.array([0, 0, 1, 1])) == 1.0
     assert auc(np.array([1, 1, 1, 1.0]), np.array([0, 1, 0, 1])) == 0.5
     # synthetic: legs that turn bad mid-series -> CUSUM must detect (AUC > 0.5); a grade unrelated to decay ~0.5
