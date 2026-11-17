@@ -196,6 +196,52 @@ def verdict(base: dict) -> tuple[str, str]:
     return "fail", f"CUSUM baseline AUC {base['auc']} (CI95 {base['ci95']}) does not clear 0.5: no baseline skill"
 
 
+# ── ACTION replay (RQ-20261117-aadc-06): does acting on the alarm add net R? ─────────────────────────────────────────
+ACTION_UNIT = "RQ-20261117-aadc-06"
+ACTION_RULE_ID = "RULE-RQ20261117-aadc-06-D10-ALARM-ACTION"
+MIN_ALARMED = 50
+
+
+def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = BOOT, seed: int = SEED) -> dict:
+    """Policy DEMOTE-ON-ALARM: trade i of a leg is NOT taken on the real-money book when the leg's CUSUM through trade i-1 is
+    >= H (the alarm is known before trade i is entered). The leg keeps trading on the demo floor, so the CUSUM keeps updating on
+    every trade (alarmed ones included) and the alarm clears when S falls below H. added_r = -(sum net R of the skipped trades).
+    Control: per leg, skip the SAME number of trades at uniformly random positions (draws, seed); control_p = share of draws
+    whose added_r >= actual (+1 smoothing). Per-leg added_r reported."""
+    rng = np.random.default_rng(seed)
+    skipped_r, per_leg, legs_r = [], {}, []
+    for leg, seq in by.items():
+        rs = np.array([x["r"] for x in seq], float)
+        S = cusum_path(list(rs), mu[leg])
+        alarmed = np.array([i > 0 and S[i - 1] >= H for i in range(len(rs))])
+        k = int(alarmed.sum())
+        legs_r.append((rs, k))
+        if k:
+            per_leg[leg] = {"n": len(rs), "skipped": k, "added_r": round(float(-rs[alarmed].sum()), 3)}
+            skipped_r.extend(rs[alarmed].tolist())
+    actual = float(-np.sum(skipped_r)) if skipped_r else 0.0
+    ctrl = np.empty(draws)
+    for d in range(draws):
+        tot = 0.0
+        for rs, k in legs_r:
+            if k:
+                tot -= rs[rng.choice(len(rs), k, replace=False)].sum()
+        ctrl[d] = tot
+    p = float((np.sum(ctrl >= actual) + 1) / (draws + 1))
+    return {"n_alarmed": len(skipped_r), "legs_with_alarm": len(per_leg), "added_r": round(actual, 3),
+            "mean_r_skipped": round(float(np.mean(skipped_r)), 4) if skipped_r else None,
+            "control_mean_added_r": round(float(ctrl.mean()), 3), "control_p95_added_r": round(float(np.percentile(ctrl, 95)), 3),
+            "control_p": round(p, 4), "legs_positive": sum(1 for v in per_leg.values() if v["added_r"] > 0), "per_leg": per_leg}
+
+
+def action_verdict(r: dict) -> tuple[str, str]:
+    if r["n_alarmed"] < MIN_ALARMED:
+        return "indeterminate", f"alarmed trades {r['n_alarmed']} < {MIN_ALARMED}"
+    if r["added_r"] > 0 and r["control_p"] <= 0.05:
+        return "pass", f"demote-on-alarm adds {r['added_r']:+.2f} R over {r['n_alarmed']} skipped trades, control_p {r['control_p']}"
+    return "fail", f"demote-on-alarm added_r {r['added_r']:+.2f} R, control_p {r['control_p']} (needs > 0 and <= 0.05)"
+
+
 def run(a) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -208,6 +254,18 @@ def run(a) -> int:
             if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
                 grades[r["trade_id"]] = r["grade_score"]
     by, ex = leg_series(trades, mu)
+    if a.action_replay:
+        ar = action_replay(by, mu)
+        v, why = action_verdict(ar)
+        res = {"verdict": v, "read_state": "measured", "n": ar["n_alarmed"],
+               "population": (f"closed live/paper journal trades on {len(by)} legs with a measured Stage-0 record, net R on the package "
+                              "initial stop, in closed_at order; skipped = trades entered while the leg's CUSUM through the previous "
+                              f"trade was >= {H}"),
+               "note": why, "measurement": {"rule": ACTION_RULE_ID, "replay": ar, "params": {"K": K, "CLIP": CLIP, "H": H},
+                                            "trades_in": len(trades), "excluded": ex, "stage0_records": len(mu)}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
     pts = points(by, mu, grades)
     base, comp = leg_boot(pts, "cusum"), leg_boot(pts, "grade_score_signal")
     al = [p for p in pts if p["cusum"] >= H]
@@ -260,6 +318,14 @@ def _self_test() -> int:
     assert verdict({"n": 500, "legs": 6, "auc": 0.55, "ci95": [0.45, 0.65]})[0] == "fail"
     by2, ex = leg_series([{"id": 1, "status": "open"}, {"id": 2, "status": "closed", "closed_at": "x", "strategy_name": "nope"}], mu)
     assert ex["not_closed"] == 1 and ex["no_leg_record"] == 1 and not by2
+    # action replay: a leg that turns bad -> skipping alarmed trades adds R and beats random skips
+    ar = action_replay(by, mu, draws=300)
+    assert ar["n_alarmed"] > 0 and ar["added_r"] > 0 and ar["control_p"] < 0.05, ar
+    assert action_verdict({"n_alarmed": 10, "added_r": 5, "control_p": 0.01})[0] == "indeterminate"
+    assert action_verdict({"n_alarmed": 80, "added_r": 5, "control_p": 0.2})[0] == "fail"
+    # the alarm uses S through trade i-1 only: a single huge loss at the last trade is never itself skipped
+    one = {"L": [{"trade_id": 0, "closed_at": "a", "r": 0.3}, {"trade_id": 1, "closed_at": "b", "r": -3.0}]}
+    assert action_replay(one, {"L": 0.2}, draws=10)["n_alarmed"] == 0
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -272,6 +338,7 @@ def main(argv=None) -> int:
     ap.add_argument("--evidence-dir", default=str(REPO / "comms" / "strategy_evidence"))
     ap.add_argument("--judgments", default=str(REPO / "comms" / "claude_judgments" / "blind_grades.jsonl"))
     ap.add_argument("--out")
+    ap.add_argument("--action-replay", action="store_true", help="RQ-20261117-aadc-06: demote-on-alarm replay instead of the AUC read")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

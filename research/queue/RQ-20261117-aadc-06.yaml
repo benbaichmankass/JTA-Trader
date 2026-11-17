@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (manager 10:53Z:
+# "the next question is whether acting on it adds net R versus no action, in a pre-registered replay"). Decision rule registered
+# and pushed BEFORE any real-data run of the action mode. Gates this adds or changes: none.
+id: RQ-20261117-aadc-06
+title: 'D10 ITERATION: does DEMOTE-ON-ALARM (stop a leg''s real-money trades while its net-R CUSUM vs Stage-0 is alarmed, keep it on
+  the demo floor) add net R versus no action, beyond skipping the same number of trades at random?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-05
+  verdict_read: pass_unconfirmed
+  diagnosis: 'aadc-05 (registered rule PASS, held PR #26649): the CUSUM on net R below Stage-0 anticipates next-20 decay at AUC 0.658,
+    leg-cluster CI95 [0.522, 0.766], n 706 points / 25 legs; at S >= 3 the decay rate is 0.474 alarmed vs 0.226 not. Ranking decay
+    is not money: the question that decides whether a desk would act is whether skipping the alarmed trades adds net R, and whether
+    that beats skipping as many trades at random (an alarm that only fires in volatile periods would skip big winners too).'
+  search: 'one policy (demote-on-alarm at the aadc-05 parameters K 0.25, clip 3, H 3); no grid'
+  attempt: 2
+  due_by: '2026-11-24'
+levers:
+- name: alarm_action
+  values: [no action, demote_on_alarm_h3]
+  hypothesised_effect: the alarmed trades have negative mean net R, so skipping them adds R beyond a matched random skip
+evidence_class:
+  holdout: none
+  claim: edge
+power:
+  expected_n: 250
+  min_detectable_effect: 0.2
+  effect_units: r_multiple
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from aadc-05: 35.6% of 706 labelled points were alarmed at S >= 3, so ~250 alarmed trades over the full series. Per
+    trade net R sd ~1.2 (winsorised trend/scalp mix, an ESTIMATE). MDE on the mean skipped R ~ 2.8 x 1.2 / sqrt(250) ~ 0.21 R. The
+    matched random control is the test; it is correlated within legs, so a near-miss is underpowered by construction.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the live journal through the diag relay as of the run; nothing accrues.
+baseline:
+  definition: 'No action (take every trade). Control: per leg, skip the same number of trades at uniformly random positions (2000
+    draws, seed 20261117).'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-06-D10-ALARM-ACTION
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: no action; matched random skip
+  statistic: 'scripts/research/d10_basset_baseline.py --action-replay (function action_replay): per leg in closed_at order, trade i is
+    skipped iff the CUSUM through trade i-1 is >= 3 (the alarm is known before entry; the leg keeps trading on the demo floor, so the
+    CUSUM updates on every trade). added_r = -(sum net R of skipped trades); control_p = (#random draws with added_r >= actual + 1) /
+    (2000 + 1). Net R as aadc-05 (package initial stop, pnl - fees - funding). Reported: skipped count, mean skipped R, legs positive,
+    per-leg added_r.'
+  rule: 'INDETERMINATE iff skipped trades < 50. PASS iff added_r > 0 AND control_p <= 0.05. FAIL otherwise. Fixed now.'
+  pass_action: 'This is an in-sample read of the window aadc-05 already scored (the CUSUM parameters were fixed before either read, none
+    tuned), so a PASS goes to ONE forward confirmation (a log-only alarm on the live journal, read at 50 newly skipped trades) before
+    any data-backed Tier-3 proposal to make demote-on-alarm a standing desk action.'
+  fail_action: 'Iteration input: the alarm ranks decay but acting on it does not pay; next lever is the action (halve size instead of
+    demote) or the alarm level H, one factor.'
+  what_it_does_not_do: Demotes, sizes or retires no leg; edits no config; places no order; adds no gate. Same window as aadc-05, said so.
+  min_n: 50 skipped trades
+practice_precedent: 'M10 (sequential monitoring against the registered band) and a matched-random intervention control (M6),
+  docs/reference/trading-and-model-practice-principles.md'
+intervention_controls:
+  matched_random:
+    draws: 2000
+    note: per leg, skip the same number of trades at uniformly random positions
+  hold_to_bracket: true
+  hold_to_bracket_note: skipped trades are removed whole; kept trades keep their own entry, bracket and exit
+  best_static:
+    grid:
+    - no_action
+    - demote_on_alarm_h3
+    excludes_test_folds: true
+    note: one fixed policy; nothing is tuned on this window
+  bootstrap_group: leg
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: real-money trades avoided while a leg is in measured decay; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 10
+  why_runner: 'Not a runner job: the live journal is read through the diag relay and joined session-locally (cc86-02 pattern).'
+  basis: as aadc-05
+run:
+  workflow: session-local
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --action-replay
+  - --trades
+  - '<pull>/trades_*.json'
+  - --packages
+  - '<pull>/op_*.json'
+  - --out
+  - '{out_dir}'
+  note: 'Run SESSION-LOCAL by the ML lane with the same pull as aadc-05 (journal trades + order_packages via scripts/ops/diag_fetch.sh).'
+  inputs:
+    research_unit: RQ-20261117-aadc-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; a PASS leads to a forward confirmation, then a Tier-3 desk-action proposal. No order changes.'
+related:
+- RQ-20261117-aadc-05
+- ML-D10-BASSET-BASELINE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
