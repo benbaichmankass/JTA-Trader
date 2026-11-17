@@ -1,18 +1,23 @@
 """PI-20261027-KYYBSZXS-0001: a REFUSED re-arm OCO must not leave the position with less protection.
 
 `AlpacaClient.place_protective` is cancel-before-place. MEASURED 2026-11-16 14:32:55-14:35:03Z on alpaca_paper:
-seven refusals, "insufficient qty available for order (requested: 9375, available: 0)". "Place first" cannot work on
-Alpaca (the resting legs reserve the shares, hence available 0), so after a refusal the legs it cancelled are put
-back, at their OLD prices, always GTC, and read as restored or failed in the returned envelope.
+seven refusals, "insufficient qty available for order (requested: 9375, available: 0)" (during the false close-all
+that #26522 fixed; the flatten itself had cancelled the legs). "Place first" cannot work on Alpaca (the resting
+legs reserve the shares, hence available 0), so after a refusal the legs it cancelled are put back, at their OLD
+prices, always GTC, READ BACK from the venue, and a failed restore is reported (and alerted by the order monitor).
+Another package's legs are never deleted.
 
 Fixtures reuse the captured alpaca_paper/SPY shape of tests/test_alpaca_rearm_scoped_cancel.py.
 """
 from __future__ import annotations
 
+import logging
+
+from src.runtime import order_monitor
 from src.units.accounts.alpaca_client import AlpacaClient
 
 from tests.test_alpaca_rearm_scoped_cancel import (
-    _LIVE_SPY, _OCO8, _OCO8_STOP, _OCO11, _Venue, _rearm,
+    _LIVE_SPY, _OCO8, _OCO8_STOP, _Venue, _rearm,
 )
 
 _REFUSED = {"retCode": 403,
@@ -20,12 +25,28 @@ _REFUSED = {"retCode": 403,
 _OK = {"retCode": 0, "result": {"id": "restored-1"}}
 
 
+class _Readback(_Venue):
+    """_Venue plus ``GET /v2/orders/<id>`` (the restore's read-back) answering ``read_status``."""
+
+    def __init__(self, open_rows, post_results=None, read_status="new"):
+        super().__init__(open_rows, post_results)
+        self.read_status = read_status
+
+    def _request(self, method, path, json_body=None):  # type: ignore[override]
+        if method == "GET" and path.startswith("/v2/orders/") and "?" not in path:
+            self.calls.append((method, path, json_body))
+            if self.read_status is None:
+                return {"retCode": 404, "retMsg": "not found"}
+            return {"retCode": 0, "result": {"id": path.rsplit("/", 1)[1], "status": self.read_status}}
+        return super()._request(method, path, json_body)
+
+
 def _posts(v):
     return [b for m, p, b in v.calls if m == "POST"]
 
 
-def test_refused_oco_restores_the_cancelled_own_oco_at_its_old_prices():
-    v = _Venue(_LIVE_SPY, post_results=[_REFUSED, _OK])
+def test_refused_oco_restores_the_cancelled_own_oco_at_its_old_prices_and_reads_it_back():
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 403                           # the re-arm still reads as refused
     assert r["restored"]["ok"] == 1 and r["restored"]["attempted"] == 1 and not r["restored"]["failed"]
@@ -36,11 +57,25 @@ def test_refused_oco_restores_the_cancelled_own_oco_at_its_old_prices():
     assert restore["time_in_force"] == "gtc"
     assert restore["take_profit"] == {"limit_price": "840.65"}           # the OLD target
     assert restore["stop_loss"] == {"stop_price": "763.69"}              # the OLD stop
+    assert ("GET", "/v2/orders/restored-1", None) in v.calls             # read back
     assert v.deletes() == sorted([_OCO8["id"], _OCO8_STOP["id"]])        # the 11-share sibling untouched
 
 
+def test_restore_that_reads_back_as_not_resting_counts_as_failed():
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED, _OK], read_status="rejected")
+    r = _rearm(v, 8, sibling_qtys=[11])
+    assert r["restored"]["ok"] == 0
+    assert any("read back as 'rejected'" in f for f in r["restored"]["failed"])
+
+
+def test_restore_whose_readback_fails_counts_as_failed_not_ok():
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED, _OK], read_status=None)
+    r = _rearm(v, 8, sibling_qtys=[11])
+    assert r["restored"]["ok"] == 0 and r["restored"]["failed"]
+
+
 def test_successful_oco_places_nothing_to_restore():
-    v = _Venue(_LIVE_SPY, post_results=[{"retCode": 0, "result": {"id": "oco-new"}}])
+    v = _Readback(_LIVE_SPY, post_results=[{"retCode": 0, "result": {"id": "oco-new"}}])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 0 and r["result"]["orderId"] == "oco-new"
     assert "restored" not in r
@@ -49,21 +84,21 @@ def test_successful_oco_places_nothing_to_restore():
 
 def test_refusal_with_nothing_cancelled_is_returned_unchanged():
     """No own leg rests (a genuinely naked position): there is nothing to put back."""
-    v = _Venue([], post_results=[_REFUSED])
+    v = _Readback([], post_results=[_REFUSED])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r == _REFUSED
     assert len(_posts(v)) == 1
 
 
 def test_could_not_look_cancels_nothing_so_restores_nothing():
-    v = _Venue(_LIVE_SPY, post_results=[_REFUSED])
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED])
     r = _rearm(v, 8, sibling_qtys=None)                  # sibling sizes unreadable: nothing cancelled
     assert v.deletes() == [] and r == _REFUSED
 
 
 def test_own_stop_only_is_restored_as_a_plain_gtc_stop():
     own_stop = {**_OCO8_STOP, "order_class": "simple"}
-    v = _Venue([own_stop], post_results=[_REFUSED, _OK])
+    v = _Readback([own_stop], post_results=[_REFUSED, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["restored"]["ok"] == 1
     _, restore = _posts(v)
@@ -73,7 +108,7 @@ def test_own_stop_only_is_restored_as_a_plain_gtc_stop():
 
 def test_own_target_only_is_restored_as_a_plain_gtc_limit():
     own_tp = {**_OCO8, "order_class": "simple", "legs": None}
-    v = _Venue([own_tp], post_results=[_REFUSED, _OK])
+    v = _Readback([own_tp], post_results=[_REFUSED, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["restored"]["ok"] == 1
     _, restore = _posts(v)
@@ -81,16 +116,18 @@ def test_own_target_only_is_restored_as_a_plain_gtc_limit():
                        "time_in_force": "gtc", "limit_price": "840.65"}
 
 
-def test_a_refused_restore_is_reported_never_raised_and_the_retcode_still_reads_refused():
-    v = _Venue(_LIVE_SPY, post_results=[_REFUSED, {"retCode": 403, "retMsg": "still no shares"}])
-    r = _rearm(v, 8, sibling_qtys=[11])
+def test_a_refused_restore_is_reported_never_raised_and_the_retcode_still_reads_refused(caplog):
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED, {"retCode": 403, "retMsg": "still no shares"}])
+    with caplog.at_level(logging.ERROR):
+        r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 403
     assert r["restored"]["ok"] == 0 and r["restored"]["failed"]
     assert "FAILED" in r["retMsg"] and "still no shares" in r["retMsg"]
+    assert any(rec.levelno == logging.ERROR for rec in caplog.records)
 
 
 def test_a_raising_restore_post_is_contained():
-    class _Raises(_Venue):
+    class _Raises(_Readback):
         def _request(self, method, path, json_body=None):  # type: ignore[override]
             if method == "POST" and len([c for c in self.calls if c[0] == "POST"]) >= 1:
                 self.calls.append((method, path, json_body))
@@ -101,34 +138,82 @@ def test_a_raising_restore_post_is_contained():
     assert r["retCode"] == 403 and r["restored"]["failed"] and "socket closed" in r["retMsg"]
 
 
-def test_released_sibling_target_is_restored_when_the_retry_is_also_refused():
+def test_a_sibling_package_target_is_never_deleted_on_a_refusal():
+    """The retry branch that RELEASED a standalone sibling target is gone (manager order 2026-11-17)."""
     sibling_tp = {"id": "22222222-aaaa-4bbb-8ccc-000000000002", "symbol": "SPY",
                   "order_class": "simple", "type": "limit", "side": "sell",
                   "qty": "11", "limit_price": "830.43", "status": "new", "legs": None}
-    v = _Venue([sibling_tp], post_results=[_REFUSED, _REFUSED, _OK])
+    v = _Readback([sibling_tp], post_results=[_REFUSED, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 403
-    assert v.deletes() == [sibling_tp["id"]]
-    posts = _posts(v)
-    assert len(posts) == 3                                # OCO, retry OCO, restore of the sibling target
-    assert posts[2] == {"symbol": "SPY", "qty": "11", "side": "sell", "type": "limit",
-                        "time_in_force": "gtc", "limit_price": "830.43"}
-    assert r["restored"]["ok"] == 1
+    assert v.deletes() == []                              # nothing deleted: no own leg, sibling kept
+    assert len(_posts(v)) == 1                            # no retry POST
 
 
-def test_a_successful_retry_does_not_restore_the_released_sibling_target():
-    """Unchanged documented behaviour: arming the STOP outranks a sibling's target geometry."""
-    sibling_tp = {"id": "22222222-aaaa-4bbb-8ccc-000000000002", "symbol": "SPY",
-                  "order_class": "simple", "type": "limit", "side": "sell",
-                  "qty": "11", "limit_price": "830.43", "status": "new", "legs": None}
-    v = _Venue([sibling_tp], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}}])
-    r = _rearm(v, 8, sibling_qtys=[11])
-    assert r["retCode"] == 0 and "restored" not in r
-    assert len(_posts(v)) == 2
+def test_sibling_legs_survive_a_refusal_that_also_restores_the_own_legs():
+    v = _Readback(_LIVE_SPY, post_results=[_REFUSED, _OK])
+    _rearm(v, 8, sibling_qtys=[11])
+    deleted = v.deletes()
+    assert not any(i in deleted for i in ("6682fcfd-ed19-41ab-984e-674189d2f8d1",
+                                         "8b4956ce-1782-47cc-a6f0-379bddbe4aba"))
 
 
 def test_cancel_row_protection_is_an_intended_cancel_and_restores_nothing():
-    v = _Venue(_LIVE_SPY)
+    v = _Readback(_LIVE_SPY)
     r = AlpacaClient.cancel_row_protection(v, "SPY", qty=8, direction="long", sibling_qtys=[11])
     assert r["retCode"] == 0
     assert _posts(v) == []
+
+
+# ---------------------------------------------------------------------------
+# The order monitor raises ONE money-path ERROR alert when the restore also failed.
+# ---------------------------------------------------------------------------
+def test_restore_failure_alert_names_account_symbol_and_trade_and_is_latched(monkeypatch):
+    sent: list = []
+    monkeypatch.setattr(order_monitor, "_send_reset_alert", lambda msg, caller: sent.append((msg, caller)))
+    monkeypatch.setattr(order_monitor, "_REARM_RESTORE_ALERT_AT", {})
+    restored = {"attempted": 1, "ok": 0, "failed": ["own OCO: still no shares"], "summary": "x"}
+    order_monitor._alert_rearm_restore_failed("alpaca_live", "SPY", 7001, restored)
+    order_monitor._alert_rearm_restore_failed("alpaca_live", "SPY", 7001, restored)   # latched
+    order_monitor._alert_rearm_restore_failed("alpaca_live", "SLV", 7002, restored)   # another trade
+    assert len(sent) == 2
+    msg = sent[0][0]
+    assert "alpaca_live" in msg and "SPY" in msg and "7001" in msg and "may be UNPROTECTED" in msg
+    assert "still no shares" in msg
+
+
+def _sweep_with(monkeypatch, tmp_path, restored):
+    """Run the real broker-naked sweep against a fake Alpaca whose re-arm is refused with *restored*."""
+    from tests.test_alpaca_naked_rearm import _FakeAlpaca, _FakeDB, _insert
+
+    class _Refusing(_FakeAlpaca):
+        def place_protective(self, order):
+            self.rearmed.append(order)
+            return {"retCode": 403, "retMsg": "insufficient qty available", "restored": restored}
+
+    db = _FakeDB(tmp_path / "j.db")
+    _insert(db, id=7001, account_id="alpaca_live", symbol="SPY", direction="long",
+            position_size=20, stop_loss=730.0, take_profit_1=818.5,
+            created_at="2026-06-25T00:00:00+00:00", status="open")
+    monkeypatch.setattr("src.bot.data_loaders.list_accounts",
+                        lambda: [{"account_id": "alpaca_live", "exchange": "alpaca"}])
+    fake = _Refusing(protected=False)
+    monkeypatch.setattr("src.units.accounts.clients.alpaca_client_for", lambda acc: fake)
+    alerts: list = []
+    monkeypatch.setattr(order_monitor, "_alert_rearm_restore_failed",
+                        lambda acct, sym, tid, rest: alerts.append((acct, sym, tid, rest)))
+    summary = order_monitor._check_broker_naked_equity_positions(db)
+    return summary, alerts
+
+
+def test_sweep_alerts_when_the_refused_rearm_could_not_be_restored(monkeypatch, tmp_path):
+    restored = {"attempted": 1, "ok": 0, "failed": ["own OCO: still no shares"], "summary": "x"}
+    summary, alerts = _sweep_with(monkeypatch, tmp_path, restored)
+    assert summary["rearmed"] == 0
+    assert alerts == [("alpaca_live", "SPY", 7001, restored)]
+
+
+def test_sweep_does_not_alert_when_the_refused_rearm_was_restored(monkeypatch, tmp_path):
+    restored = {"attempted": 1, "ok": 1, "failed": [], "summary": "restored 1/1"}
+    summary, alerts = _sweep_with(monkeypatch, tmp_path, restored)
+    assert summary["rearmed"] == 0 and alerts == []

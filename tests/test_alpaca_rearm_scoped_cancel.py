@@ -85,9 +85,14 @@ def test_opening_side_entry_order_is_never_cancelled():
     assert v.deletes() == []
 
 
-def test_venue_refusal_releases_sibling_targets_but_never_a_sibling_stop():
-    """Stop-naked position, a sibling TARGET-only leg reserving shares, venue
-    refuses the OCO -> release the sibling target (not any stop) and retry once."""
+def test_venue_refusal_never_deletes_a_sibling_target():
+    """Stop-naked position, a sibling TARGET-only leg resting, venue refuses the OCO.
+
+    CHANGED 2026-11-17 (manager order 05:59Z, PI-20261027-KYYBSZXS-0001, BRACKETS-ALWAYS: nothing removes
+    a bracket). This test used to assert the sibling target was RELEASED and the OCO retried once
+    (FIX-SA-03: "arming a STOP on a naked position outranks a sibling's target geometry"). Another
+    package's legs are no longer deleted by a re-arm: the refusal stands, nothing is deleted, one POST
+    is sent, and the sweep retries next tick."""
     sibling_tp = {"id": "22222222-aaaa-4bbb-8ccc-000000000002", "symbol": "SPY",
                   "order_class": "simple", "type": "limit", "side": "sell",
                   "qty": "11", "limit_price": "830.43", "status": "new", "legs": None}
@@ -96,9 +101,9 @@ def test_venue_refusal_releases_sibling_targets_but_never_a_sibling_stop():
         {"retCode": 0, "result": {"id": "oco-new"}},
     ])
     r = _rearm(v, 8, sibling_qtys=[11])
-    assert r["retCode"] == 0 and r["result"]["orderId"] == "oco-new"
-    assert v.deletes() == [sibling_tp["id"]]
-    assert sum(1 for m, *_ in v.calls if m == "POST") == 2
+    assert r["retCode"] == 403
+    assert v.deletes() == []
+    assert sum(1 for m, *_ in v.calls if m == "POST") == 1
 
 
 def test_refusal_with_only_a_sibling_stop_resting_is_reported_not_stripped():
