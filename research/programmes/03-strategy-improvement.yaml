@@ -224,6 +224,7 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-13
     verdict: indeterminate
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action (L-LADDER note) -- c56e-13 INDETERMINATE, n-bound'
   needs_authoring: c56e-13 read INDETERMINATE (n < 39 on 2018-10..2022-10 for the short-only, min_confidence 0.8
     leg). State the leg `infeasible at 4y` on L-LADDER and decide whether the record's own 4-fold grade is the only
     Stage-0 evidence it can carry, or whether the both-sides arm (side_filter both) is worth a separate Stage-0
@@ -1159,7 +1160,8 @@ nodes:
   value:
     usd_at_stake_per_month: 60
     confidence: 0.3
-  needs_authoring: 'ANSWERED ELSEWHERE (programme review 2026-11-04): RQ-20261101-78fc-18 (ITERATION 1, dukascopy 1h, a second feed, 2018-06..2026-10) CONFIRMED the leg on a holdout: discovery n 316 net +41.66 R (3 of 4 folds), holdout 2024-09..2026-10 n 104 net +35.99 R; RQ-20261103-5a03-02 PASS agrees. The figure is not a Yahoo feed artifact; the next step is the leg''s promotion proposal (manager, Tier 3), not a unit. Do not re-author. Original ask: slv_trend_1h (alpaca_paper, alpaca_options_paper; execution shadow) reads 1.06 R per capital-day
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: answered elsewhere -- 78fc-18 confirmed (the node says so)'
+  authoring_closed_ask: 'ANSWERED ELSEWHERE (programme review 2026-11-04): RQ-20261101-78fc-18 (ITERATION 1, dukascopy 1h, a second feed, 2018-06..2026-10) CONFIRMED the leg on a holdout: discovery n 316 net +41.66 R (3 of 4 folds), holdout 2024-09..2026-10 n 104 net +35.99 R; RQ-20261103-5a03-02 PASS agrees. The figure is not a Yahoo feed artifact; the next step is the leg''s promotion proposal (manager, Tier 3), not a unit. Do not re-author. Original ask: slv_trend_1h (alpaca_paper, alpaca_options_paper; execution shadow) reads 1.06 R per capital-day
     (n=68, +53.1 R on 365d) -- ~6x any other leg (programme 03 § 1: check before anyone quotes it). A preceding-window
     Stage 0 is underpowered (Yahoo 1h is capped at ~730 days: ~5 months before the record, ~19 trades). Register
     a data-fidelity unit instead: the same leg on Alpaca 1h bars vs Yahoo 1h bars over the record window (same argv),
@@ -1174,6 +1176,7 @@ nodes:
   after:
   - unit: RQ-20261014-470a-12
     verdict: any
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- 470a-12 FAIL, so the retire case goes per pair through the manager'
   needs_authoring: 'The honest-R-scale pairs re-measure (470a-12, unblocked by build row PAIRS-R-SCALE) closed.
     Decide the M22 sleeve from THAT record, not the sprint log: PASS -> a Tier-3 keep note per pair with both records;
     FAIL -> the retire case per pair through the manager (config/pairs.yaml is the sleeve''s own gate); INDETERMINATE
@@ -1402,6 +1405,7 @@ nodes:
   after:
   - unit: RQ-20260928-001
     verdict: pass
+  authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- HTF filter ON beats OFF, but stays net-negative on 5/6 legs: a roster decision'
   needs_authoring: 'RESULT 2026-10-25 (lane RQ-20260928-001-RUN, docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json): 6 of 7 legs PASS
     (mgc_15m no_data); ON beats OFF by +91 R (sol_5m) .. +4 R, pooled -318.3 R OFF vs -97.9 R ON, but ON is still net-negative on 5 of 6 legs
     and the outlier clause is already discharged (ON > OFF with each arm''s worst trade removed, all 6). The remaining step is the disjoint-window confirmation.
@@ -1435,7 +1439,8 @@ nodes:
     verdict: any
   - unit: RQ-20261015-1631-02
     verdict: any
-  needs_authoring: 'Both same-symbol allocation inputs closed (ETH: eth_4h vs eth_prop; XRP: xrp_4h vs xrp_pullback_2h).
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: superseded -- same-symbol allocation is the D5 question; answered by 82fd-02 / a474-02'
+  authoring_closed_ask: 'Both same-symbol allocation inputs closed (ETH: eth_4h vs eth_prop; XRP: xrp_4h vs xrp_pullback_2h).
     Read solo vs shared net R per capital-day for each pair and register the next M18 question: is the live election
     (src/runtime/intents.py, ties broken by NAME) costing the book R measurably -- a replay of the contested ticks
     under a backtest-quality tie-break vs the live one -- or a stated no-action with the number. Propose-only for
@@ -1579,6 +1584,7 @@ nodes:
   after:
   - unit: RQ-20261022-4b82-10
     verdict: any
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on a trading-lane harness read -- pooled re-read of thin single-leg levers; needs the harness_stage0 owner'
   needs_authoring: 'Single-leg lever tests (326f-01..05/-07/-08, 3a84-02..04, 4b82-10..13/-15..17) ran at n_B 68-430 against an ABSOLUTE bar (dR >= 1.0 R, >= 3 of 4 folds),
     and read "lines are dead config -- strip them". That strip reading is NOT adopted: one window, thin n, and 4b82-10..17 are already the variants (hot-vol trail, funding hour).
     Author ONE pooled unit per lever (direction filter, cold-vol skip, hot-vol trail-tighten): the same lever on all legs that carry it, dR expressed per trade, pooled n >= 1.5k, the
@@ -1948,7 +1954,8 @@ nodes:
   value: {usd_at_stake_per_month: 120, confidence: 0.1}
   after:
   - {unit: RQ-20261031-28bf-01, verdict: fail}
-  needs_authoring: >-
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill: already authored and parent FAIL -- a4e7-15 authored; 28bf-01 FAIL'
+  authoring_closed_ask: >-
     AUTHORED 2026-10-31 (lane RESEARCH-PROP-REPLACEMENT-20261031) as RQ-20261031-a4e7-15 (rule RULE-VOLWIN-A2-LONGER-HOLD registered before the run; scripts/research/vol_window_scan.py
     gained --lengths/--rules, self-tested). Do not re-author. PASS -> author the three VOLWIN nodes on the qualifying cells; FAIL -> this configuration is closed (window family open).
 - id: P3-VOLWIN-s0-breakout
