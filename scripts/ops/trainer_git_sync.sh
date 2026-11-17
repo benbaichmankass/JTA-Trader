@@ -32,6 +32,15 @@ set -uo pipefail
 REPO_ROOT="${REPO_ROOT:-/home/ubuntu/ict-trading-bot}"
 cd "$REPO_ROOT" 2>/dev/null || exit 0
 
+# One shared lock with deploy_pull_restart.sh around the git mutations (MEASURED 2026-11-16 21:53:11Z: the two writers
+# collided on .git/index.lock). Bounded wait; on timeout exit 0 so the next tick retries. No flock / unwritable lock
+# file => run as before.
+SYNC_LOCK_FILE="${SYNC_LOCK_FILE:-${REPO_ROOT}/.git/jta-sync.lock}"
+SYNC_LOCK_WAIT_S="${SYNC_LOCK_WAIT_S:-300}"
+if command -v flock >/dev/null 2>&1 && exec {SYNC_LOCK_FD}>>"${SYNC_LOCK_FILE}" 2>/dev/null; then
+    flock -w "${SYNC_LOCK_WAIT_S}" "${SYNC_LOCK_FD}" || { echo "trainer-git-sync: shared git sync lock held after ${SYNC_LOCK_WAIT_S}s; skipping this tick"; exit 0; }
+fi
+
 git fetch --quiet origin main 2>/dev/null || exit 0
 git checkout --quiet --force -B main origin/main 2>/dev/null || exit 0
 

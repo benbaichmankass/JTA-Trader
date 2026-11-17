@@ -411,19 +411,46 @@ def test_partial_clone_without_gc_log_runs_nothing(fake_repo):
     assert not fake_repo["prune_log"].exists()
 
 
-def test_oneshot_units_restart_no_block_and_other_types_keep_the_blocking_restart(fake_repo):
-    """GIT-SYNC-PRUNE-STUCK: ict-trainer-git-sync (Type=oneshot) held the loop 4 min 22 s; a oneshot is queued with
-    --no-block and logged; a unit whose type is simple/unreadable restarts as before (no flag)."""
+def test_oneshot_units_are_skipped_and_other_types_keep_the_blocking_restart(fake_repo):
+    """GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 21:58Z): a Type=oneshot unit is not restarted inside the deploy
+    loop (its timer runs it on the new code); a unit whose type is simple/unreadable restarts as before, blocking."""
     fake_repo["diff_files"].write_text("src/main.py\n")
     res = _run(fake_repo, {"FAKE_ONESHOT": "ict-telegram-bot.service"})
     assert res.returncode == 0, res.stderr
-    flags = Path(str(fake_repo["restart_log"]) + ".flags").read_text().splitlines()
-    assert flags == ["ict-telegram-bot.service --no-block"], flags
     restarted = _restarted(fake_repo)
-    assert "ict-telegram-bot.service" in restarted                   # still restarted
+    assert "ict-telegram-bot.service" not in restarted               # oneshot: left to its timer
     assert "ict-web-api.service" in restarted and "ict-trader-live.service" in restarted
-    assert ">>>   restarted ict-telegram-bot.service (no-block, Type=oneshot)" in res.stdout
-    assert ">>>   restarted ict-web-api.service\n" in res.stdout      # blocking restart: no suffix
+    assert ">>>   skip ict-telegram-bot.service (Type=oneshot" in res.stdout
+    assert ">>>   restarted ict-web-api.service\n" in res.stdout      # blocking restart
+    assert not Path(str(fake_repo["restart_log"]) + ".flags").exists()   # nothing is ever --no-block now
+
+
+def test_shared_sync_lock_is_acquired_and_logged(fake_repo):
+    fake_repo["diff_files"].write_text("docs/x.md\n")
+    lock = fake_repo["repo"] / "jta-sync.lock"
+    res = _run(fake_repo, {"SYNC_LOCK_FILE": str(lock), "SYNC_LOCK_WAIT_S": "5"})
+    assert res.returncode == 0, res.stderr
+    assert "[timing] shared git sync lock acquired" in res.stdout
+    assert lock.exists()
+
+
+def test_shared_sync_lock_held_by_another_writer_waits_then_exits_zero(fake_repo):
+    """A held lock never makes the run die on index.lock: it waits, and on timeout logs and exits 0 (no halt, the next
+    tick retries) without touching git."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    lock = fake_repo["repo"] / "jta-sync.lock"
+    holder = subprocess.Popen(["flock", str(lock), "sleep", "20"])
+    try:
+        import time
+        time.sleep(0.5)
+        res = _run(fake_repo, {"SYNC_LOCK_FILE": str(lock), "SYNC_LOCK_WAIT_S": "1"})
+    finally:
+        holder.kill()
+        holder.wait()
+    assert res.returncode == 0, res.stderr
+    assert "shared git sync lock still held after 1s" in res.stdout
+    assert "Hard-resetting" not in res.stdout
+    assert _restarted(fake_repo) == []
 
 
 def test_sparse_reapply_is_bracketed_by_timing_lines(fake_repo):

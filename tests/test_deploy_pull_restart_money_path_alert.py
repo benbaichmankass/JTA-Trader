@@ -341,3 +341,41 @@ def test_sha_same_commit_prefix_rule():
     assert not same("unknown", "unknown1")          # non-hex sentinel
     assert not same("", "")
     assert not same("parse_error", "9ab32c9f34")
+
+
+def _assert_env(fake):
+    unit = fake["repo"] / "ict-web-api.service"
+    unit.write_text("")
+    return {"WEB_API_UNIT_FILE": str(unit), "DIAG_READ_TOKEN": "test-token"}
+
+
+def test_version_assertion_waits_at_least_180s_then_pages_once(fake_deploy):
+    """GIT-SYNC-PRUNE-STUCK (MEASURED 2026-11-16 22:01-22:02Z): web-api needed ~70 s before uvicorn even bound; the old 6 x 5 s window
+    paged a false DEPLOY FAILURE. The default schedule sleeps >= 180 s in total (12 attempts, backoff) and a web-api that never
+    answers still pages exactly once and exits 4."""
+    fake_deploy["deployed_sha_file"].write_text("priorsha0")
+    sleep_log = fake_deploy["repo"].parent / "sleep.log"
+    _make_stub(fake_deploy["bindir"] / "sleep", f'#!/bin/bash\necho "$1" >> "{sleep_log}"\nexit 0\n')
+    res = _run(fake_deploy, env_extra=_assert_env(fake_deploy))
+    assert res.returncode == 4, res.stderr
+    assert res.stdout.count("not yet reachable") == 12
+    sleeps = [int(x) for x in sleep_log.read_text().split()]
+    # the harness's other sleeps (none expected inside the loop) are not counted: take the 12 loop sleeps
+    assert sum(sleeps[-12:]) >= 180, sleeps
+    assert len(_pings(fake_deploy)) == 1
+
+
+def test_version_assertion_passes_when_web_api_answers_late(fake_deploy):
+    """A web-api that binds on the 9th attempt (well past the old 6-attempt window) passes: no ping, exit 0."""
+    fake_deploy["deployed_sha_file"].write_text("priorsha0")
+    counter = fake_deploy["repo"].parent / "curl.count"
+    _make_stub(fake_deploy["bindir"] / "curl", f"""#!/bin/bash
+n=$(cat "{counter}" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "{counter}"
+if [ "$n" -ge 9 ]; then echo '{{"git_sha": "newsha8"}}'; exit 0; fi
+exit 7
+""")
+    res = _run(fake_deploy, env_extra=_assert_env(fake_deploy))
+    assert res.returncode == 0, res.stderr
+    assert "attempt 8: /api/diag/version not yet reachable" in res.stdout
+    assert "matches HEAD" in res.stdout
+    assert _pings(fake_deploy) == []

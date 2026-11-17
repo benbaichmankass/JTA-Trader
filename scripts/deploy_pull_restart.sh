@@ -76,6 +76,23 @@ echo "===== DEPLOY STARTED: $(date) ====="
 
 cd "$REPO_DIR"
 
+# GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 21:58Z): ONE shared lock around every git mutation of this repo. The
+# trainer sync (scripts/ops/trainer_git_sync.sh, own 15-min timer) runs `git fetch` + `git checkout --force` in the
+# SAME repo; MEASURED 2026-11-16 21:53:11Z the two collided on .git/index.lock and this script died at the hard-reset
+# (exit 128). Both take .git/jta-sync.lock with a bounded wait: a run waits for the other instead of dying; if the
+# wait runs out it logs and exits 0 so the next tick retries (never a halt). No flock / unwritable lock file => run as
+# before. The lock is held for the whole run and dies with the process.
+SYNC_LOCK_FILE="${SYNC_LOCK_FILE:-${REPO_DIR}/.git/jta-sync.lock}"
+SYNC_LOCK_WAIT_S="${SYNC_LOCK_WAIT_S:-600}"
+if command -v flock >/dev/null 2>&1 && exec {SYNC_LOCK_FD}>>"${SYNC_LOCK_FILE}" 2>/dev/null; then
+    echo ">>> [timing] waiting for the shared git sync lock (up to ${SYNC_LOCK_WAIT_S}s)"
+    if ! flock -w "${SYNC_LOCK_WAIT_S}" "${SYNC_LOCK_FD}"; then
+        echo ">>> WARNING: shared git sync lock still held after ${SYNC_LOCK_WAIT_S}s (another git writer is running); exiting 0, the next tick retries."
+        exit 0
+    fi
+    echo ">>> [timing] shared git sync lock acquired"
+fi
+
 # ---------------------------------------------------------------------------
 # Capture current HEAD before we sync. Together with the deploy marker
 # (runtime_logs/deployed_sha.txt, read at the restart-decision gate below) this
@@ -736,11 +753,17 @@ fi
 # every deploy that restarts units took ~18 min and a 900 s `sync-now` ops job
 # timed out holding the single runner (GITSYNC-SLOW-ONESHOTS). Their timers
 # run them on the new code at the next tick; let the timers own them.
+# ict-trainer-git-sync.service (15-min timer) runs `git fetch` + `git checkout --force -B main origin/main` in THIS
+# repo (scripts/ops/trainer_git_sync.sh, lock-free). Since #26569 made oneshot restarts --no-block, restarting it here
+# overlapped the NEXT ict-git-sync run and the two git writers collided on .git/index.lock (MEASURED 2026-11-16 21:53:11Z:
+# 'Unable to create .git/index.lock', exit 128, OnFailure fired, HEAD moved by the other writer). Its timer owns it.
+# ict-web-api-watchdog.service (2-min timer): a --no-block restart ran it DURING the web-api restart (MEASURED
+# 2026-11-16 21:52:29Z: probe 'Connection refused', false 'wedge detected' alert, exit 2, OnFailure). Its timer owns it.
 # ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-security-watch.service ict-phone-capture-purge.service ict-ml-decision-shadow.service ict-ops-runner.service ict-work-digest.service ict-work-report.service ict-trainer-git-sync.service ict-web-api-watchdog.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes
@@ -1010,16 +1033,17 @@ for unit in "${ICT_UNITS[@]}"; do
             "${POST_SYNC_HEAD}" "${TRADER_BASE}" "${TRADER_UNIT}" "$(date +%s)" \
             > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
     fi
-    # GIT-SYNC-PRUNE-STUCK (manager go 2026-11-16): `systemctl restart` on a Type=oneshot runs the job to completion
-    # INSIDE this loop (MEASURED 2026-11-16: ict-trainer-git-sync held it 4 min 22 s). A oneshot is queued with
-    # --no-block (its own timer owns the cadence; the new code runs from this start on); every other unit type keeps
-    # the blocking restart and the health check after it. A type that cannot be read keeps the blocking restart.
+    # GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 21:58Z): `systemctl restart` on a Type=oneshot runs the job to
+    # completion INSIDE this loop (MEASURED 2026-11-16: ict-trainer-git-sync held it 4 min 22 s) and, with --no-block,
+    # overlaps the NEXT sync (ict-trainer-git-sync: index.lock clash 21:53:11Z; ict-web-api-watchdog: false wedge alert
+    # 21:52:29Z). A oneshot is skipped here: its timer/path runs it on the new code at its next fire. Every other unit
+    # type keeps the blocking restart and the health check after it. A type that cannot be read keeps the restart.
     RESTART_FLAGS=()
     RESTART_MODE=""
     unit_type="$("${SYSTEMCTL[@]}" show -p Type --value "${unit}" 2>/dev/null | tr -d '[:space:]' || true)"
     if [ "${unit_type}" = "oneshot" ]; then
-        RESTART_FLAGS=(--no-block)
-        RESTART_MODE=" (no-block, Type=oneshot)"
+        echo ">>>   skip ${unit} (Type=oneshot: its own timer runs it on the new code; not restarted inside the deploy loop)"
+        continue
     fi
     if "${SYSTEMCTL[@]}" restart ${RESTART_FLAGS[@]+"${RESTART_FLAGS[@]}"} "${unit}"; then
         echo ">>>   restarted ${unit}${RESTART_MODE}"
@@ -1146,10 +1170,17 @@ elif [ -z "${DIAG_TOKEN}" ]; then
 else
     echo ">>> Asserting web-api git_sha matches HEAD..."
     EXPECTED_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    # Allow up to 30 s for the freshly-restarted web-api to come up.
+    # GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 23:03Z): wait up to ~3 min (backoff) for the freshly-restarted web-api. MEASURED
+    # 2026-11-16 22:01-22:02Z on this saturated VM: systemd "Started" 22:01:24, uvicorn "Started server process" 22:02:34 (70 s of Python
+    # start before the app even binds), first served request 22:02:56. The old 6 x 5 s window ended 22:02:08, 26 s BEFORE the port was
+    # bound, and paged a false "DEPLOY FAILURE" (exit 4). The schedule is a count (not a wall-clock deadline) so the sleep stub in the
+    # tests stays instant; override with ASSERT_SLEEPS="5 5 ..." (seconds before each attempt). A real mismatch still pages and exits 4.
+    ASSERT_SLEEPS="${ASSERT_SLEEPS:-5 5 10 10 15 15 20 20 20 20 20 20}"
     ASSERT_OK=0
-    for attempt in 1 2 3 4 5 6; do
-        sleep 5
+    attempt=0
+    for ASSERT_SLEEP_S in ${ASSERT_SLEEPS}; do
+        attempt=$((attempt + 1))
+        sleep "${ASSERT_SLEEP_S}"
         # A mid-loop /dev/null strip would EACCES the curl/python 2>/dev/null
         # below → all 6 attempts "fail" → a false `exit 4`. Re-heal each pass.
         heal_devnull || true

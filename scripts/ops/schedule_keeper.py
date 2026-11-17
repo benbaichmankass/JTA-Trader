@@ -162,6 +162,11 @@ TARGETS: dict[str, dict] = {
                            "self_dedupes": "concurrency-serialised and idempotent per slot: final rows are frozen in the ledger and files are committed only when content changed"},
     "research-slo.yml": {"stale_hours": 3,
                          "self_dedupes": "alerts are change-keyed (research_slo.py): a second run of one slot re-measures and re-sends nothing"},
+    # KEEPER-VM-FLOOR follow-up (2026-11-16): the capture watcher's cron ('23 */6 * * *') lost its 12:23Z and 18:23Z slots (last scheduled run 06:49Z;
+    # MEASURED from the Actions API) and nothing re-dispatched them, so its receipt-age guard (check_trainer_capture_watch, 15 h window) went red on
+    # every PR at ~21:50Z. stale_hours 8 = one 6 h slot + 2 h. A second run of one slot is harmless.
+    "trainer-capture-watch.yml": {"stale_hours": 8,
+                                  "self_dedupes": "concurrency group trainer-capture-watch serialises overlapping runs, and a graded run only rewrites the dated receipt (docs/claude/work/TRAINER-CAPTURE-WATCH.json), so a second run of one slot just refreshes it"},
 }
 
 #: A slot younger than this is left to GitHub's own scheduler.
