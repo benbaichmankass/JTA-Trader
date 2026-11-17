@@ -1,0 +1,183 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1, research-ops fork A), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-43b6-01
+title: 'ITERATION 2 of ltr-sl-to-structure (ed2b-03 PASS@new_peak, a discovery chosen from 3 triggers): ONE confirmation of sl_to_structure@new_peak on
+  four holdout legs never in the selection population'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On four testing-leg corpora that were never in ed2b-03's selection population (eth_pullback_2h, sol_pullback_2h, trend_donchian_avax_4h, trend_donchian_ada_4h),
+  does sl_to_structure at the first new_peak (stop to the 5-bar swing extreme less 0.1 ATR, only when tighter) still clear RULE-AM-RISK-ADJUSTED-V1 vs hold
+  and vs a random-time structure move, net of the full cost stack?
+why_this_matters: 'ltr-sl-to-structure is an orphan (scripts/research/iteration_orphans.py 2026-11-17): its only test, RQ-20261113-ed2b-03, PASSED on one
+  trigger of three (batch denominator: 1 of 9 candidates across ed2b-01/-03/-05), and a PASS read on one population is a discovery. This is its ONE confirmation
+  on an in-hand disjoint population (RESEARCH-NO-WAIT; never a future month). On PASS: a Tier-3 proposal note for the class''s status (advice-only -> eligible
+  for auto-apply on its own net-of-cost test, docs/ARCHITECTURE-CANONICAL.md § Active management). On FAIL: the new_peak response is recorded as population-specific
+  in research/levers/ltr-sl-to-structure.yaml and the next untested family (action_bounds: pivot_bars / buffer) is chosen. The two branches lead to different
+  class decisions. HOLDOUT POPULATION (RESEARCH-NO-WAIT order 2, a leg/symbol holdout, correlated evidence and said so): four testing legs whose corpora
+  were never in the 8-leg selection population of RQ-20261113-ed2b-01/-03/-05 (ada_pullback_2h, iaum_pullback_1d, ml_entry, trend_donchian_eth_4h, trend_donchian_eth_prop,
+  trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h). The run builds them with scripts/research/build_ltr_corpus.py --mode harness (exit_lever_ablation
+  arm A, config-exact, closed bar, full cost stack) from committed candle CSVs and restricts the harness to them with --legs. CORRELATION DISCLOSED: ETH/SOL/ADA/AVAX
+  trade in the same crypto regime as the selection legs, and trend_donchian_sol_4h is excluded because trend_donchian_sol_prop is in the selection population.
+  eth/sol_pullback_2h trade the forming bar live; the corpus scores the CLOSED bar (stated bias).'
+iteration:
+  subject: ltr-sl-to-structure
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261113-ed2b-03/43492522846.jsonl
+  verdict_read: pass_unconfirmed
+  diagnosis: 'RQ-20261113-ed2b-03: sl_to_structure@new_peak PASS (risk_adjusted_pass): maxDD cut 19.0%, weekly-CVaR5 cut 13.3%, 4 of 6 folds held, 200 of
+    200 random books beaten, r_cost 0.0215 R/trade (mean dT vs hold -0.040 R, CI95 [-0.073, -0.011]: it costs R and buys risk), L1 holds (r_cost 0.036 without
+    ml_entry, the leg contributing +26 R of dT); n_fired 2,083. Siblings r_milestone (dd cut 2.3%) and swing FAILED R2/R3. The pass is selected from 3 triggers
+    on one 8-leg population with trend_donchian_eth_prop 1,182 of 4,076 trades, so it needs one read on legs the selection never saw.'
+  search: ONE confirmation of the selected trigger on a disjoint leg population; no new arms, parameters fixed at ed2b-03's (pivot_bars 5, buffer 0.1 ATR)
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-sl-to-structure.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window,
+    as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 1138
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'MDE 0.06 R/trade declared (the holdout book is ~1,138 trades; at 0.05 the router floor is 1,168). INFERRED, not measured: about 1,138 trades on the four holdout corpora (dry-run counts 2026-11-17 from the committed candle CSVs: eth_pullback_2h
+    454, sol_pullback_2h 147, trend_donchian_avax_4h 264, trend_donchian_ada_4h 273; the run''s own counts replace them). ed2b-03 fired new_peak on 2,083
+    of 4,076 trades (51%), so ~580 fired trades are expected. At alpha 0.01 and power 0.8 a paired difference of ~0.06 R/trade is detectable at sd 0.5 over
+    ~580 fired trades, near the 0.05 R R1 bar; V1''s n_floor 39 governs. A near-miss on R2 is the informative failure here, not R1.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261117-43b6-01
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Over the four holdout corpora built in this run (each row net of fee + slippage + funding by the corpus harness), for trigger new_peak only:
+    the book with the stop moved at the bar after new_peak fires to the swing extreme against the position over the last 5 closed bars less 0.1 ATR (taken
+    only when > -1 R and below the next open; else the trade holds), replayed to the recorded exit, vs the HOLD book, against 200 matched random-time structure
+    moves on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.95), plus L1: a pass must
+    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static rule (hold +
+    the registered trigger arms, chosen leave-one-fold-out) and each candidate''s margin over it. One pre-registered candidate (n_comparisons 1), so R4
+    uses V1''s 0.95. PASS: sl_to_structure@new_peak clears R1-R4 and L1. It is a SCREEN pass (per-trade R books, graduation_eligible false until BOOK-SIM-REAL-SIZER):
+    a Tier-3 proposal input for the class''s status, never an apply. FAIL: every candidate fails a read necessary clause (R1, R2 or R3) or is beaten by
+    its random control (R4). INDETERMINATE: anything else, i.e. the best candidate is under the n floor, never fired, carried by one leg (L1 fails), or
+    no trade could be priced (read_state no_data). Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control
+  in the same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; the action arm replays on committed candles from the action bar, so a leg's own trail path after the
+  action is not modelled except through its recorded exit
+- a replayed stop fills at its level (a gap fills at the open), which flatters stop-based actions
+- triggers are evaluated on bar closes, live on telemetry passes
+- the holdout corpora score the CLOSED bar; eth/sol_pullback_2h trade the forming bar live
+- 'ETH/SOL/ADA/AVAX share the crypto regime of the selection legs: correlated evidence, not independent'
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - sl_to_structure@new_peak
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261117-43b6-01
+  timeout_minutes: 120
+  commands:
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - eth_pullback_2h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-05/40090264368/data/ETHUSDT_120.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - sol_pullback_2h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-05/40090264368/data/SOLUSDT_120.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - trend_donchian_avax_4h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-18/40740537150/data/AVAXUSDT_240.csv
+  - - python3
+    - scripts/research/build_ltr_corpus.py
+    - --leg
+    - trend_donchian_ada_4h
+    - --mode
+    - harness
+    - --source
+    - comms/research/RQ-20261022-4b82-18/40740537150/data/ADAUSDT_240.csv
+  - - python3
+    - scripts/research/ltr_action_trigger_s0.py
+    - --action
+    - sl_to_structure
+    - --triggers
+    - new_peak
+    - --legs
+    - eth_pullback_2h,sol_pullback_2h,trend_donchian_avax_4h,trend_donchian_ada_4h
+    - --draws
+    - '200'
+    - --min-control-beat-frac
+    - '0.95'
+    - --n-comparisons
+    - '1'
+    - --pivot-bars
+    - '5'
+    - --pivot-buffer-atr
+    - '0.1'
+    - --out
+    - '{out_dir}'

@@ -1,0 +1,160 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117 (manager-dispatched, Tier 1), slot D2 (Collie).
+# One factor: does the HAR-RV block add log-loss over the yz head, or are the two vol-feature families redundant?
+# Gates this adds or changes: none.
+id: RQ-20261117-dc44-01
+title: 'D2 Collie feature additivity: does adding the HAR-RV block to the range-vol (yz) LightGBM regime head lift log-loss on
+  BTCUSDT / ETHUSDT / SOLUSDT 1h, or is HAR redundant with yz (one factor: + har_rv)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: eth-regime-1h-lgbm-xasset-v1
+  subject_kind: ml_model
+  from_result: RQ-20261117-c21d-03
+  verdict_read: pass
+  diagnosis: 'Two vol-feature families each PASSED on the 1h regime label, but on different learners and never together.
+    c21d-03 (2026-11-17, PASS): lgbm + yz block (Parkinson / Garman-Klass / Rogers-Satchell / Yang-Zhang) beat lgbm on ETH by
+    +0.0097 nats and on SOL by +0.0129 nats (ef4c-02 BTC also PASS). b3c9-18 (2026-11-04, PASS): catboost + har_rv beat catboost on
+    BTC +0.0073, ETH +0.0108, SOL +0.0129 nats. The lifts are about the same size, and both blocks encode realised-vol
+    persistence (range estimators vs multi-horizon realised variance), so they may be the same information twice. The yz head is
+    about to become the D2 challenger for ETH/SOL (row ML-D2-YZ-HEADS-ETH-SOL, trainer). Its feature spec should not be fixed
+    before we know whether HAR adds anything on top. c21d-05 closed the sequence learner (GRU worse than lgbm_yz by 0.018 to 0.025
+    nats, CI excluding 0 on all three), so the open D2 levers are features and the GBDT learner (sibling unit dc44-02).'
+  search: 'lever family features: lgbm_yz -> lgbm_yz + har_rv (bars_per_unit 24, same as b3c9-18); one factor; same shards,
+    columns, CV and embargo as c21d-03'
+  levers:
+  - features
+  map_entries:
+  - research/levers/eth-regime-1h-lgbm-xasset-v1.yaml
+  attempt: 1
+  due_by: '2026-11-21'
+question: 'With the yz columns already in, does HAR-RV add log-loss information to the 1h regime head on the three published
+  crypto shards, or is it redundant?'
+why_this_matters: 'It fixes the feature spec of the D2 challenger before the ETH/SOL yz heads are trained. PASS: the trainer
+  manifest gets yz + har_rv, and the money consumer test uses that head. FAIL: HAR is redundant with yz, the simpler yz spec
+  stands, and har_rv is recorded in the lever map as flat-over-yz. Either way, one trainer cycle is not spent on the wrong spec.'
+power:
+  expected_n: 78840
+  min_detectable_effect: 0.1
+  effect_units: sd
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: tail_rows 60000 per shard, about 26,280 OOS rows over 5 folds each (as c21d-03 / b3c9-18; b3c9-18 reported n
+    78,840 over 3 shards). Bars are autocorrelated, so effective n is lower. n is fixed by construction and does not grow with
+    waiting. The +0.002-nat bar is inherited from ef4c-02 / c21d-03; it is not a power calculation.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly-rebuilt published shards).
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+ml_consumer:
+  consumer: src/runtime/regime_shadow.py
+  decision: 'feature spec of the D2 yz challenger head (yz only, or yz + har_rv) before the ETH/SOL trainer run'
+  legs: [trend_donchian_eth_4h, trend_donchian_sol_prop]
+  book: money
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 60000
+    extra_columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm_yz
+  controls: [prior]
+  candidates: [lgbm_yz_har]
+  learners:
+    prior:
+      kind: prior
+    lgbm_yz:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+    lgbm_yz_har:
+      kind: lightgbm
+      params: {learning_rate: 0.05, min_child_samples: 50, n_estimators: 200, num_leaves: 31}
+      feature_blocks:
+      - kind: df_columns
+        columns: [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol]
+      - kind: har_rv
+        return_col: log_return
+        bars_per_unit: 24
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: [ETHUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [SOLUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.002}
+    - {group: [BTCUSDT_1h], vs: baseline, window: cv, op: '>=', value: 0.0}
+    fail_if_no_candidate_reaches:
+    - {group: any, vs: baseline, window: cv, op: '>=', value: 0.0}
+run:
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs:
+    research_unit: RQ-20261117-dc44-01
+decision_rule:
+  id: RULE-RQ20261117-dc44-01-D2-YZ-HAR-ADDITIVITY
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: lgbm_yz (the c21d-03 PASS head, identical spec)
+  statistic: 'Per group, CV mean log-loss improvement of lgbm_yz_har over lgbm_yz (nats, positive = adding HAR helps), 5 expanding
+    folds, 24-row embargo; the prior is a control.'
+  rule: 'PASS IF lgbm_yz_har beats lgbm_yz by >= +0.002 nats CV mean on ETHUSDT_1h AND on SOLUSDT_1h, AND is not worse (>= 0) on
+    BTCUSDT_1h. FAIL IF it does not reach >= 0 on any group. INDETERMINATE otherwise, or if folds < 3, a shard is stale or withheld
+    (published-data.json), or a yz column or the har_rv block is missing. Thresholds are fixed now and not changed after any
+    result.'
+  proposal_mapping: 'pass -> the ETH/SOL yz head trainer manifest uses yz + har_rv (note to the ML-D2-YZ-HEADS-ETH-SOL owner); no
+    config change from this unit. fail -> yz alone stands as the challenger spec; har_rv is recorded flat-over-yz in the lever
+    map. indeterminate -> the failing clause is reported; the trainer spec defaults to yz alone (the simpler head).'
+  what_it_does_not_do: 'Changes no regime cell, trains no served head, serves nothing, places no order. Model quality only, not
+    money.'
+  min_n: 3 folds per group
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'ESTIMATE: it sets the feature spec of the D2 challenger; money only through the later consumer test.'
+intervention_controls:
+  not_applicable: 'a model-quality bake-off of a regime label head; no trade intervention is tested here'
+practice_precedent: 'M6, M12 (docs/reference/trading-and-model-practice-principles.md): RQ-20261117-c21d-03 (identical yz spec,
+  PASS) and RQ-20261103-b3c9-18 (same har_rv block, PASS); ablation of one feature block against the incumbent, per-asset
+  reporting.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  basis: 'ESTIMATE from c21d-03 (2 shards, 3 arms, measured 17 s of fit time in the kernel) and b3c9-18 (3 shards, est 30): 3
+    shards x 3 arms x 5 folds plus the har_rv block. Kernel queue and bundle overhead dominate the wall clock.'
+  why_runner: 'Published 1h shards (metis-market-data) and a CPU-only learner, so it routes to the idle Kaggle CPU backend; no
+    trainer-resident data and no GPU needed.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: '2026-11-17T12:55:30+00:00'

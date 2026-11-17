@@ -1,0 +1,114 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1), dispatched by Manager Session session_01AFoLuHbhd9wFuGJfWRqyoV. ITERATION unit (blocked on a named build). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-617c-03
+title: 'tsmom-etf ITERATION 4: ONE read of the total-return arm TR1 (fixed) on the untouched in-hand window 2024-07-01 .. 2026-10-31: does the ETF trend sleeve clear
+  the registered rule out of sample, where the in-sample DSR penalty no longer binds?'
+status: blocked
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 3
+roadmap:
+- L-PROGRAMMES
+programme: P6
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): read a held-back span once per hypothesis with the read recorded and graded on
+  the deflated bar; RESEARCH-NO-WAIT order 1.'
+question: Does the ETF vol-targeted TSMOM arm TR1 (E5 on total-return closes), fixed exactly as graded in RQ-20261113-62e3-03, clear the registered rule on 2024-07-01
+  .. 2026-10-31, a window no selection step has loaded?
+why_this_matters: 'ITERATION (research-ops 2026-11-17, fork B). RQ-20261113-62e3-03 FAIL read row by row: TR1 net Sharpe 0.522 (control 0.418), stress 0.496, halves
+  0.668 / 0.378 (both > 0), dividend parity ok on every distributing ETF; it fails ONLY the DSR clause (0.624 < 0.95 at N_cum 16). The total-return series is the
+  CORRECT series (a data-fidelity fix, not a tuned lever), so every later lever is measured on it; but another in-sample arm is graded at N >= 17 and cannot clear DSR
+  by construction. The untouched window is the informative next read. On PASS: an evidence record + Tier-3 proposal note for an alpaca_paper sleeve; on FAIL: the
+  sleeve''s whipsaw is recorded and the next lever is breadth (a wider ETF universe, untested), the decision differs.'
+power:
+  expected_n: 580
+  min_detectable_effect: 2.4
+  effect_units: annualised_sharpe
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '~28 months of trading days (~580 obs); at the d1f3-07 per-observation conversion the smallest separable annualised Sharpe is ~2.4, far above the 0.5 bar:
+    a read that cannot confirm a Sharpe-0.5 sleeve with power. Stated honestly: a FAIL is weakly informative, a PASS at this n is a strong signal. The rule is an absolute
+    bar, not a delta vs the control.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand daily closes through 2026-10-31; nothing accrues.
+  sd: 15.874507866387544
+evidence_class:
+  holdout: holdout
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-617c-03-ETF-TR1-HOLDOUT
+  statistic: 'edge_etf_tsmom.py holdout-read of TR1 exactly as ITER_GRIDS["62e3"]["TR1"] (no parameter changed), daily net returns on 2024-07-01 .. 2026-10-31 at
+    2 bps/side and 2x stress, the read claimed through scripts/research/holdout_lock.py claim_read (family TSMOM-ETF, train_end 2024-06-30), which returns the deflated
+    bar for this read''s N.'
+  rule: 'PASS iff net Sharpe >= 0.5 AND stress Sharpe > 0 AND Sharpe > 0 in BOTH halves AND the stationary-bootstrap lower bound of the annualised mean net at the deflated
+    z (bar["ci_z"]) > 0 AND net positive in >= 2 of the 3 calendar years covered with no single year above 50% of total net AND long and short side net reported (both
+    >= 0 for a PASS, the sleeve being two-sided). FAIL otherwise (closes THIS configuration on THIS window, never the family). INDETERMINATE iff < 200 daily returns,
+    dividend parity fails for a distributing symbol, or the producer failed. Thresholds not changed after any result.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Edits no config or roster and places no order; a PASS is a Stage-0 candidate for a Tier-3 proposal note, never a book.
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 80
+  confidence: 0.1
+  basis: 'stand-in: a small (Sharpe ~0.5) diversifying ETF sleeve; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: same shape as RQ-20261113-62e3-03 (estimate).
+  why_runner: fetches the yfinance dividend factor and post-2024-06 closes over the internet; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/edge_etf_tsmom.py
+  - --data-dir
+  - comms/research
+  - --holdout-read
+  - --arm
+  - 62e3:TR1
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-617c-03
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based ETF sleeve read.'
+intervention_controls:
+  not_applicable: an offline research read, not an in-trade action
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261113-62e3-03.yaml
+- research/levers/tsmom-etf.yaml
+- scripts/research/edge_etf_tsmom.py
+- scripts/research/holdout_lock.py
+iteration:
+  subject: tsmom-etf
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261113-62e3-03
+  verdict_read: fail
+  diagnosis: 'RQ-20261113-62e3-03: TR1 Sharpe 0.522 / stress 0.496 / halves 0.668, 0.378 / short side -0.039 -- every clause but DSR (0.624 at N_cum 16). Test design
+    is binding (cumulative in-sample trials), not the series fix. Asset-class gating and SPY regime gate (d1f3-04) are tested and flat; breadth and long-only on the
+    TR series remain, both in-sample and DSR-bound.'
+  search: ONE holdout read of the fixed TR1 arm; no new arms
+  levers:
+  - entry
+  map_entries:
+  - research/levers/tsmom-etf.yaml#levers.entry
+  attempt: 4
+  due_by: '2026-12-01'
+blocked_on:
+- what: 'edge_etf_tsmom.py has no --holdout-read / --arm mode and its committed close panel ends 2024-06; the read needs post-2024-06 closes, the dividend factor over
+    the same span, and a holdout_lock.claim_read claim.'
+  ref: EDGE-HOLDOUT-READ-MODE
+  kind: build
+  clears_when: 'the mode lands with a self-test (refuses a window overlapping training; records the read); then git mv this file to research/queue/ with status queued,
+    adjusting run.command to the landed flags without changing the rule.'
+  owner: checklist row EDGE-HOLDOUT-READ-MODE (filed by RESEARCH-OPS-20261117-1006)

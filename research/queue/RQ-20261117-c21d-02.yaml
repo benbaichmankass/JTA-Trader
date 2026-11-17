@@ -5,7 +5,7 @@
 id: RQ-20261117-c21d-02
 title: 'D6 baseline: on the SAME frozen Foxhound-1 held-out decisions, does a static TP of 4 ATR (the c692-02 best static cell, SL 2
   unchanged) beat the live 3 ATR TP net of each symbol''s own cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -113,4 +113,17 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-last_dispatched_at: '2026-11-17T10:44:38+00:00'
+last_dispatched_at: '2026-11-17T11:03:55+00:00'
+grading:
+  attested: RULE-RQ20261117-c21d-02-STATIC-TP4-HELDOUT
+  auto: true
+  decision_rule_id: RULE-RQ20261117-c21d-02-STATIC-TP4-HELDOUT
+  evidence:
+  - research/results/RQ-20261117-c21d-02/44067663703.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

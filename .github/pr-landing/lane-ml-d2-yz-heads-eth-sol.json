@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "HELD for the manager's merge: ml/configs/ is Tier-2 by name (the trainer trains it nightly). Row ML-D2-YZ-HEADS-ETH-SOL (owner: lane ML-ITERATION-REFILL-2-20261117). Adds two research_only training manifests, ml/configs/eth-regime-1h-lgbm-yz-v1.yaml and sol-regime-1h-lgbm-yz-v1.yaml. Both are the btc-regime-1h-lgbm-yz-v1 recipe with only the symbol changed, backed by RQ-20261117-c21d-03 PASS. The nightly run_training_cycle.sh trains every ml/configs yaml, so landing them is the trainer run. research_only: serves nothing, gates no cell, places no order; any stage move is a separate Tier-3 decision. Both manifests load via ml.manifest.TrainingManifest; tests/test_research_queue.py, test_run_training_cycle_regime_order.py, test_ml_data_published.py and tests/ml/test_dataset_audit.py: 133 passed. Gates this adds or changes: none. Data-backed (c21d-03 PASS committed). Reversible: delete the two files; at research_only nothing is served."
+}

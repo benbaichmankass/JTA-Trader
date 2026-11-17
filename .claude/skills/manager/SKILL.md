@@ -376,6 +376,16 @@ names that file; read it before running or changing the planning.** What binds, 
   protocol): `config/reset_protocol.yaml` and `list_triggers` are the source; the moved doc carries the table as agreed 2026-10-14. Unchanged:
   research-ops 4×/day, the daily review ONCE a day at 05:52Z, lane check-ins.
 
+### Research queue full from the start of the week (operator 2026-11-17, binding) — gates this adds or changes: none
+
+Operator, verbatim: *Part of the weekly planning is making sure that we have a robust research plan ... including what iterations and testing and experiments we're doing for each of the existing models, so that basically we don't end up in this kind of situation again ... we don't necessarily need to be writing tests if some of the future tests are dependent on other things passing first ... but we need to make sure that we have more than enough work items to keep, like at the beginning of the week, we already need to have enough work items to keep the queue full. We can update the work items as time goes on if results change or whatever, or priorities change, but the work queue needs to be full, and then we need to have the Sonnet lane writing as many of the tests as we can be sure we're going to run basically at any given time, so that the queue is always as full as possible, not like minimally full ... that should be done proactively from the beginning of the week, not reactively when we realize that the research queue is dead.*
+
+1. **Thursday planning agrees a research plan per slot D1-D10 and per model and leg.** It covers the dependency tree and the hours per backend against the week, and it must be MORE than full, not minimally full.
+2. **The weekly reset starts a standing Sonnet `QUEUE-FILL` lane.** It writes spec-only units from those plans, all week, while respecting the dependency gates (a unit whose input waits on another result is not authored early).
+3. **The floor-filler stays banned** (STOP-GENERATED-AUTHORING, operator popup 2026-11-01 "Stop floor-driven units (Rec.)"): a unit is written because a plan calls for it, never to meet a queue count.
+
+Full text: [`docs/plans/weekly-planning-protocol.md`](../../../docs/plans/weekly-planning-protocol.md) § "Research queue full from the start of the week".
+
 ## Assistant managers: one per class of work, at least through every surge (operator, 2026-11-12, binding) — gates this adds or changes: none
 
 Operator, 2026-11-12 ~09:00Z, verbatim: *"use assitant managers if needed (e.g. UI assistant manager, ML assitant manager, that manage all of their
@@ -514,6 +524,8 @@ it in a dispatch, row note or contract. A Stage-1 placement needs a contract in 
 under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION` or filed with a reason, never just read.
 
 ## Weekly reset protocol (operator, 2026-11-02, binding) — gates this adds or changes: none
+
+**Standing lane started at the reset (operator 2026-11-17):** a Sonnet `QUEUE-FILL` lane that writes spec-only research units from the agreed plans, all week, respecting dependency gates; the floor-filler stays banned. Rule text: § "Research queue full from the start of the week" above.
 
 **One source:** [`config/reset_protocol.yaml`](../../../config/reset_protocol.yaml) (jobs with cadence/order/offset/model/ceiling/skill/dedupe tag,
 and one-shot `after_reset` items); machinery `scripts/ops/reset_protocol.py` (`--plan <reset-ts>`, `--receipt`, `--sweep`, `--self-test`); receipts

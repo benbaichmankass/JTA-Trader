@@ -1,0 +1,182 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1230,
+ "note": "pooled mean net R -0.2107 (se 0.0312) at n=1230 on 51 symbols vs the deflated hurdle mean >= 1.90 x se (read 20 of family ENTRY on this window)",
+ "population": "frozen ml_decision_entry_v1 (tau 0.3, SL 2.0 / TP 3.0 ATR) decisions 2025-10-01..2026-10-31 on the 51 scorable symbols of the 51-symbol frozen Bybit USDT-perp population (F1-F5), each re-costed with its own fee 11 + max(3, quoted spread + sqrt impact Q 5000) + its own |funding| per 8h",
+ "measurement": {
+  "pooled": {
+   "n": 1230,
+   "mean_net_r": -0.2107394417741571,
+   "sum_net_r": -259.20951338221323,
+   "se_net_r": 0.03116011043249567,
+   "mean_gross_r": -0.09127093159462098,
+   "mean_cost_r": 0.11946851017953614,
+   "n_symbols": 51,
+   "by_side": {
+    "long": {
+     "n": 395,
+     "mean_net_r": -0.18401901416710328
+    },
+    "short": {
+     "n": 835,
+     "mean_net_r": -0.22337964405533822
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 660,
+    "tp": 328,
+    "time": 242
+   },
+   "ex_max_symbol": {
+    "symbol": "RENDERUSDT",
+    "n": 1200,
+    "mean_net_r": -0.20134213838257392
+   },
+   "by_month": {
+    "2025-10": {
+     "n": 160,
+     "mean_net_r": -0.4241
+    },
+    "2025-11": {
+     "n": 97,
+     "mean_net_r": -0.0008
+    },
+    "2025-12": {
+     "n": 102,
+     "mean_net_r": -0.5957
+    },
+    "2026-01": {
+     "n": 82,
+     "mean_net_r": 0.4809
+    },
+    "2026-02": {
+     "n": 204,
+     "mean_net_r": -0.3408
+    },
+    "2026-03": {
+     "n": 31,
+     "mean_net_r": 0.2422
+    },
+    "2026-04": {
+     "n": 45,
+     "mean_net_r": -0.0768
+    },
+    "2026-05": {
+     "n": 89,
+     "mean_net_r": -0.5448
+    },
+    "2026-06": {
+     "n": 141,
+     "mean_net_r": -0.0213
+    },
+    "2026-07": {
+     "n": 44,
+     "mean_net_r": -0.3148
+    },
+    "2026-08": {
+     "n": 72,
+     "mean_net_r": -0.0241
+    },
+    "2026-09": {
+     "n": 30,
+     "mean_net_r": -0.4592
+    },
+    "2026-10": {
+     "n": 133,
+     "mean_net_r": -0.1777
+    }
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.26990419675244376,
+    -0.14293715387920042
+   ]
+  },
+  "holdout_claim": {
+   "model_id": "ENTRY-v1-population-2e3b",
+   "family": "ENTRY",
+   "start": "2025-10-01",
+   "end": "2026-10-31",
+   "train_end": "2025-09-22",
+   "unit": "RQ-20261117-c21d-01",
+   "reader": "research-script-run",
+   "read_at": "2026-11-17T10:47:46Z",
+   "backfilled": false,
+   "symbols": [
+    "1000PEPEUSDT",
+    "AAVEUSDT",
+    "ADAUSDT",
+    "AEROUSDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "ATOMUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "DASHUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ENAUSDT",
+    "ETHUSDT",
+    "FARTCOINUSDT",
+    "FILUSDT",
+    "GRASSUSDT",
+    "HBARUSDT",
+    "HUSDT",
+    "HYPEUSDT",
+    "ICPUSDT",
+    "INITUSDT",
+    "INJUSDT",
+    "JUPUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "ONDOUSDT",
+    "OPUSDT",
+    "PAXGUSDT",
+    "QNTUSDT",
+    "RENDERUSDT",
+    "SOLUSDT",
+    "STRKUSDT",
+    "STXUSDT",
+    "SUIUSDT",
+    "TAOUSDT",
+    "TIAUSDT",
+    "TRUMPUSDT",
+    "UNIUSDT",
+    "VIRTUALUSDT",
+    "VVVUSDT",
+    "WIFUSDT",
+    "WLDUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZROUSDT"
+   ],
+   "variants_on_window": 30,
+   "n_tries": 20,
+   "bar": {
+    "n_tries": 20,
+    "alpha_one_sided": 0.001265,
+    "ci_level": 0.99747,
+    "ci_z": 3.0197,
+    "ci_lo_percentile": 0.1265,
+    "point_t_min": 1.9007,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   },
+   "next_bar": {
+    "n_tries": 21,
+    "alpha_one_sided": 0.001205,
+    "ci_level": 0.99759,
+    "ci_z": 3.0344,
+    "ci_lo_percentile": 0.1205,
+    "point_t_min": 1.9221,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   }
+  },
+  "cost_missing_share": 0.0,
+  "fresh_symbols_mean_net_r": -0.2249622933470584
+ }
+}

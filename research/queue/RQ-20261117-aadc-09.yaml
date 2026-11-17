@@ -1,0 +1,132 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a. The fresh-window
+# confirmation RQ-20261117-aadc-07 (PASS at H 2, graded on main) registered as its pass_action. Decision rule registered and pushed
+# BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-aadc-09
+title: 'D10 CONFIRMATION (fresh window): does demote-on-alarm at H 2, which passed in-window (aadc-07), also add net R beyond a matched
+  within-leg random skip on the legs'' Stage-0 OOS trade series before 2026-05-01, a window no D10 read has touched?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'On each leg''s Stage-0 OOS per-trade series (comms/strategy_evidence/<leg>.json source_run, measured legs), trades entered before
+  2026-05-01, with the CUSUM reference set per trade to the mean net R of the leg''s EARLIER folds (net R winsorised at +-3), does skipping
+  every trade entered while the leg''s CUSUM through the previous trade is >= 2 give added_r > 0 and control_p <= 0.05 against a within-leg
+  matched random skip?'
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-07
+  verdict_read: pass_unconfirmed
+  diagnosis: 'aadc-07 PASSED at H 2 in-window (added_r +172.93 R over 654 skipped trades vs within-leg random +122.12, control_p 0.0115; also
+    clears the 4-arm family bar 0.0125) on live/paper journal trades 2026-05-01..2026-11-17. That window was read twice by the action family
+    (aadc-06 H 3, aadc-07 H 2/4/6), so the PASS is a discovery. Its registered pass_action is ONE confirmation on a disjoint window, order (1)
+    of RESEARCH-NO-WAIT: the legs'' own Stage-0 OOS series, in hand. The Stage-0 corpus is a different population (harness trades, the
+    harness cost stack, not fills), which is the price of an untouched in-hand window; said so.'
+  search: 'none: one fixed policy (H 2, K 0.25, clip 3, demote) and the registered rule unchanged; only the window and the source move'
+  attempt: 4
+  due_by: '2026-11-24'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 600
+  min_detectable_effect: 0.2
+  effect_units: r_multiple
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED. The Stage-0 source_run files hold 6,374 OOS trades over 53 legs (MEASURED 2026-11-17 by reading every
+    comms/strategy_evidence/*.json source_run); after the 2026-05-01 cutoff and dropping each leg''s first fold, a few thousand remain
+    (ESTIMATE). At H 2 the live window skipped ~23% of points (654 / 2,800ish scored trades), so ~600 skipped is a guess. MDE ~ 2.8 x 1.2 /
+    sqrt(600) ~ 0.14 R; the within-leg control is correlated, so treat it as ~0.2 R.'
+  feasibility:
+    source: none
+    accrual_basis: Reads committed Stage-0 per-trade files; nothing accrues.
+baseline:
+  definition: 'No action; within-leg matched random skip of the same count (2000 draws, seed 20261117).'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-09-D10-H2-STAGE0-CONFIRM
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: no action; within-leg matched random skip
+  statistic: 'scripts/research/d10_basset_baseline.py --stage0-confirm (functions stage0_series + action_replay(h=2)): per leg, Stage-0
+    OOS trades entered before 2026-05-01 in entry order; mu per trade = mean winsorised net R of the leg''s trades in folds that ended
+    before the trade''s fold (fold_detail start/end); trades in a leg''s first fold are not scored (counted). Trade i is skipped iff the
+    CUSUM through trade i-1 is >= 2; added_r = -(sum net R of skipped trades); control_p = (#within-leg random draws with added_r >=
+    actual + 1) / (2000 + 1). Reported: skipped count, mean skipped R, legs positive, per-leg added_r, the onset-sign split, series counts.'
+  rule: 'INDETERMINATE iff skipped trades < 50. PASS iff added_r > 0 AND control_p <= 0.05 (the aadc-06/-07 rule, H fixed at the
+    discovery''s 2). FAIL otherwise. Fixed now; one read.'
+  pass_action: 'A confirmed PASS goes to the manager as a data-backed Tier-3 desk-action proposal: demote-on-alarm at H 2 as a standing
+    policy (a leg whose CUSUM vs its Stage-0 expectancy reaches 2 stops trading real money and keeps trading on the demo floor until it
+    clears), with this record and aadc-07. The live journal read after 2026-11-17T10:45Z stays as monitoring.'
+  fail_action: 'The in-window PASS did not replicate: the alarm action is recorded flat on the lever map; D10 work moves to a learned grade
+    that must beat the aadc-05 baseline AUC 0.654 on decay.'
+  what_it_does_not_do: Demotes, sizes or retires no leg; edits no config; places no order; adds no gate. Stage-0 harness trades are not
+    fills (cost stack = the harness's, per leg); said so.
+  min_n: 50 skipped trades
+practice_precedent: 'M5 confirmation on an untouched window, M13 deflation by family read count (here one read on a fresh window),
+  docs/reference/trading-and-model-practice-principles.md'
+intervention_controls:
+  matched_random:
+    draws: 2000
+    note: per leg, skip the same number of trades at uniformly random positions
+  hold_to_bracket: true
+  hold_to_bracket_note: skipped trades are removed whole; kept trades keep their own entry, bracket and exit
+  best_static:
+    grid:
+    - h_2 (fixed by the discovery)
+    excludes_test_folds: true
+    note: nothing is chosen on this window
+  bootstrap_group: leg
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: real-money trades avoided while a leg is in measured decay; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 5
+  why_runner: 'Session-local: reads committed files only; seconds of CPU.'
+  basis: 6,374 trades
+run:
+  workflow: session-local
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --stage0-confirm
+  - --out
+  - '{out_dir}'
+  note: Run SESSION-LOCAL by the ML lane from a checkout of main; no network.
+  inputs:
+    research_unit: RQ-20261117-aadc-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; a confirmed PASS leads to a Tier-3 desk-action proposal. No order changes.'
+related:
+- RQ-20261117-aadc-07
+- RQ-20261117-aadc-06
+- RQ-20261117-aadc-05
+- ML-D10-BASSET-BASELINE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-09-D10-H2-STAGE0-CONFIRM
+  evidence:
+  - research/results/RQ-20261117-aadc-09/local-20261117T1239Z.jsonl
+  - comms/research/RQ-20261117-aadc-09/local-20261117T1239Z/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured: demote-on-alarm at H 2 on the Stage-0 OOS series before 2026-05-01 (1,469 scored trades, 51 legs read): added_r -19.55 R over 620 skipped trades (mean skipped R +0.03), within-leg random mean +36.62, control_p 0.994 -> FAIL by the registered rule. The aadc-07 in-window PASS (H 2, p 0.0115) does NOT replicate on a disjoint window: the alarm action is recorded flat; no desk proposal. Disclosed: 2 legs (e4_oi_shock, ml_entry; 2,526 rows) were not read (different field names); the run crashed once in plumbing before reading any outcome (fix 1bf7f0b3), rule unchanged.'
+  rows: 1
+  verdict: fail

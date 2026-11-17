@@ -1,0 +1,514 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "qqq_pullback_1h: 101 trades in the baseline arm 'A' on QQQ 1h candles 2018-06-01 .. 2021-10-31 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'trend_lookback_75', 'pullback_lookback_15']",
+  "n": 101,
+  "measurement": {
+    "leg": "qqq_pullback_1h",
+    "label": "candidate_replaces_incumbent",
+    "grade": {
+      "verdict": "pass",
+      "label": "candidate_replaces_incumbent",
+      "best": "trend_lookback_75",
+      "baseline": "A",
+      "candidates": {
+        "trend_lookback_75": {
+          "net_r": 44.0138,
+          "delta_net_r": 8.4539,
+          "max_drawdown_r": 5.6146,
+          "max_drawdown_cap": 9.0463,
+          "folds_ge_incumbent": 3,
+          "passes": true,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": 50.0,
+            "reach_ge_6r": 0.0294,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        },
+        "pullback_lookback_15": {
+          "net_r": 43.0747,
+          "delta_net_r": 7.5148,
+          "max_drawdown_r": 9.0305,
+          "max_drawdown_cap": 9.0463,
+          "folds_ge_incumbent": 4,
+          "passes": true,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": 50.0,
+            "reach_ge_6r": 0.0417,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        }
+      },
+      "fold_majority": 3,
+      "n_floor": 25,
+      "dd_tol_frac": 0.1,
+      "control": null,
+      "delta_r_per_trade": 0.0,
+      "delta_r_bar": 0.0,
+      "why": "trend_lookback_75 beats the incumbent A (net R 44.0138 vs 35.5599) in >= 3/4 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0297,
+        "n": 101,
+        "net_r": 35.5599,
+        "net_r_fee_only": 39.3498,
+        "max_drawdown_r": 8.2239,
+        "by_outcome": {
+          "trail_stop": 47,
+          "stop": 43,
+          "take_profit": 6,
+          "timeout": 5
+        },
+        "mean_bars_held": 43.238,
+        "net_r_per_capital_day": 0.1954,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2018-06-22 13:00:00+00:00",
+        "data_end": "2021-10-29 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-22 13:00:00+00:00",
+            "end": "2019-04-25 09:44:45+00:00",
+            "trades": 28,
+            "net_r": -1.9079
+          },
+          {
+            "fold": 2,
+            "start": "2019-04-25 09:44:45+00:00",
+            "end": "2020-02-26 06:29:30+00:00",
+            "trades": 22,
+            "net_r": 11.9252
+          },
+          {
+            "fold": 3,
+            "start": "2020-02-26 06:29:30+00:00",
+            "end": "2020-12-29 03:14:15+00:00",
+            "trades": 21,
+            "net_r": 16.7277
+          },
+          {
+            "fold": 4,
+            "start": "2020-12-29 03:14:15+00:00",
+            "end": "2021-10-31 23:59:00+00:00",
+            "trades": 30,
+            "net_r": 8.8145
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ]
+      },
+      "trend_lookback_75": {
+        "reach_ge_6r": 0.0294,
+        "n": 102,
+        "net_r": 44.0138,
+        "net_r_fee_only": 47.7463,
+        "max_drawdown_r": 5.6146,
+        "by_outcome": {
+          "stop": 44,
+          "trail_stop": 44,
+          "take_profit": 7,
+          "timeout": 7
+        },
+        "mean_bars_held": 44.784,
+        "net_r_per_capital_day": 0.2312,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 75,
+          "pullback_lookback": 12,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2018-06-22 13:00:00+00:00",
+        "data_end": "2021-10-29 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-22 13:00:00+00:00",
+            "end": "2019-04-25 09:44:45+00:00",
+            "trades": 27,
+            "net_r": 4.5234
+          },
+          {
+            "fold": 2,
+            "start": "2019-04-25 09:44:45+00:00",
+            "end": "2020-02-26 06:29:30+00:00",
+            "trades": 23,
+            "net_r": 10.582
+          },
+          {
+            "fold": 3,
+            "start": "2020-02-26 06:29:30+00:00",
+            "end": "2020-12-29 03:14:15+00:00",
+            "trades": 24,
+            "net_r": 18.9787
+          },
+          {
+            "fold": 4,
+            "start": "2020-12-29 03:14:15+00:00",
+            "end": "2021-10-31 23:59:00+00:00",
+            "trades": 28,
+            "net_r": 9.9294
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "75",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/trend_lookback_75__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/trend_lookback_75__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ]
+      },
+      "pullback_lookback_15": {
+        "reach_ge_6r": 0.0417,
+        "n": 96,
+        "net_r": 43.0747,
+        "net_r_fee_only": 46.4519,
+        "max_drawdown_r": 9.0305,
+        "by_outcome": {
+          "trail_stop": 45,
+          "stop": 40,
+          "take_profit": 4,
+          "timeout": 7
+        },
+        "mean_bars_held": 45.76,
+        "net_r_per_capital_day": 0.2353,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 60,
+          "pullback_lookback": 15,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2018-06-22 13:00:00+00:00",
+        "data_end": "2021-10-29 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-22 13:00:00+00:00",
+            "end": "2019-04-25 09:44:45+00:00",
+            "trades": 29,
+            "net_r": -1.263
+          },
+          {
+            "fold": 2,
+            "start": "2019-04-25 09:44:45+00:00",
+            "end": "2020-02-26 06:29:30+00:00",
+            "trades": 18,
+            "net_r": 17.1813
+          },
+          {
+            "fold": 3,
+            "start": "2020-02-26 06:29:30+00:00",
+            "end": "2020-12-29 03:14:15+00:00",
+            "trades": 20,
+            "net_r": 17.1491
+          },
+          {
+            "fold": 4,
+            "start": "2020-12-29 03:14:15+00:00",
+            "end": "2021-10-31 23:59:00+00:00",
+            "trades": 29,
+            "net_r": 10.0071
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "15",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/pullback_lookback_15__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/pullback_lookback_15__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2018-06-01",
+      "end": "2021-10-31 23:59",
+      "fetch_days": 3070,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "QQQ",
+        "interval": "60m",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2018-06-22 13:00:00+00:00",
+        "2019-04-25 09:44:45+00:00",
+        "2020-02-26 06:29:30+00:00",
+        "2020-12-29 03:14:15+00:00",
+        "2021-10-31 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "trend_lookback_75": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "75",
+          "--pullback-lookback",
+          "12",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/trend_lookback_75__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/trend_lookback_75__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ],
+        "cfg_set": {
+          "trend_lookback": 75
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "pullback_lookback_15": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "60",
+          "--pullback-lookback",
+          "15",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QQQ",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/pullback_lookback_15__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261117-b3aa-03/44090485872/arms/pullback_lookback_15__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2021-10-31 23:59"
+        ],
+        "cfg_set": {
+          "pullback_lookback": 15
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "PASS / candidate_replaces_incumbent: trend_lookback_75 beats the incumbent A (net R 44.0138 vs 35.5599) in >= 3/4 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

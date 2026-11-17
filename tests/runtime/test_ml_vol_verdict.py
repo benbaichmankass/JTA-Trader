@@ -163,7 +163,7 @@ def test_no_advisory_head_is_unknown():
     out = ml_vol_regime("BTCUSDT", "1h", _candles(), specs={})
     assert out["vol_regime"] == VOL_UNKNOWN
     assert out["p_volatile"] is None
-    assert out["source"] == "unavailable"
+    assert out["source"] == "unavailable:no_advisory_head"
     assert out["model_id"] is None
 
 
@@ -293,3 +293,66 @@ def test_prefer_v2_over_yz_in_discovery(monkeypatch):
     entry = table[("BTCUSDT", "1H")]
     assert entry["model_id"] == "btc-regime-1h-v2"
     assert entry["is_yz"] is False
+
+
+# --- ML-VOL-SHADOW-SOURCE-COLLAPSE: "unavailable" said four different things; the reason now follows the colon -------------
+
+def _only_label_differs(out):
+    """Label-only change: every unavailable verdict is the same fail-permissive dict apart from `source`."""
+    assert out["vol_regime"] == VOL_UNKNOWN and out["p_volatile"] is None and out["model_id"] is None
+    assert out["source"].startswith(mvv.SOURCE_UNAVAILABLE)          # a prefix reader still sees 'unavailable'
+
+
+def test_unavailable_reason_no_symbol_or_timeframe():
+    pred = _advisory_predictor("btc-regime-1h-v2", 0.9)
+    table = {("BTCUSDT", "1H"): _entry(pred)}
+    for out in (ml_vol_regime(None, "1h", _candles(), specs=table), ml_vol_regime("BTCUSDT", None, _candles(), specs=table),
+                mvv.ml_vol_regime_for_symbol(None, specs=table)):
+        _only_label_differs(out)
+        assert out["source"] == mvv.UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME
+
+
+def test_unavailable_reason_no_advisory_head_both_resolvers():
+    for out in (ml_vol_regime("BTCUSDT", "1h", _candles(), specs={}), mvv.ml_vol_regime_for_symbol("BTCUSDT", _candles(), specs={})):
+        _only_label_differs(out)
+        assert out["source"] == mvv.UNAVAILABLE_NO_ADVISORY_HEAD
+
+
+def test_unavailable_reason_p_volatile_uncomputable_when_nothing_to_score():
+    """Cold cache and no candles: there was nothing to score. NOT an error."""
+    pred = _advisory_predictor("btc-regime-1h-v2", 0.9)
+    table = {("BTCUSDT", "1H"): _entry(pred)}
+    out = ml_vol_regime("BTCUSDT", "1h", candles_df=None, specs=table)
+    _only_label_differs(out)
+    assert out["source"] == mvv.UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE
+    out2 = mvv.ml_vol_regime_for_symbol("BTCUSDT", None, specs=table)
+    assert out2["source"] == mvv.UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE
+
+
+def test_unavailable_reason_scoring_error_when_the_scorer_raises():
+    """The scorer RAISED: we could not look. This is the state that used to read the same as 'no advisory head'."""
+    pred = ShadowPredictor(_RaisingProbaBase(_spec()), model_id="m", stage="advisory", log_path=None)
+    table = {("BTCUSDT", "1H"): _entry(pred)}
+    out = ml_vol_regime("BTCUSDT", "1h", _candles(), specs=table)
+    _only_label_differs(out)
+    assert out["source"] == mvv.UNAVAILABLE_SCORING_ERROR
+    assert mvv.ml_vol_regime_for_symbol("BTCUSDT", _candles(), specs=table)["source"] == mvv.UNAVAILABLE_SCORING_ERROR
+
+
+def test_unavailable_reason_scoring_error_when_discovery_raises(monkeypatch):
+    def _boom(*a, **k):
+        raise RuntimeError("registry down")
+
+    monkeypatch.setattr(mvv, "discover_advisory_stage_regime_specs", _boom)
+    out = ml_vol_regime("BTCUSDT", "1h", _candles())
+    _only_label_differs(out)
+    assert out["source"] == mvv.UNAVAILABLE_SCORING_ERROR
+
+
+def test_the_four_reasons_are_distinct_and_a_good_verdict_is_not_unavailable():
+    reasons = {mvv.UNAVAILABLE_NO_SYMBOL_OR_TIMEFRAME, mvv.UNAVAILABLE_NO_ADVISORY_HEAD,
+               mvv.UNAVAILABLE_P_VOLATILE_UNCOMPUTABLE, mvv.UNAVAILABLE_SCORING_ERROR}
+    assert len(reasons) == 4
+    pred = _advisory_predictor("btc-regime-1h-v2", 0.9)
+    good = ml_vol_regime("BTCUSDT", "1h", _candles(), specs={("BTCUSDT", "1H"): _entry(pred)})   # negative control
+    assert good["vol_regime"] == VOL_VOLATILE and not good["source"].startswith(mvv.SOURCE_UNAVAILABLE)

@@ -1,0 +1,129 @@
+# Hand-authored 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117 (manager-dispatched, Tier 1). Fidelity iteration of fvg_range_15m (d5a7-11/-12).
+# Gates this adds or changes: none.
+id: RQ-20261117-dc44-05
+title: 'fvg_range_15m FIDELITY: every replay so far ran the harness''s MIDLINE target while the live strategy targets the
+  OPPOSITE boundary. What does the leg earn as it actually trades (far target), and does far beat the midline, net of the full cost
+  stack, 1830 d?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run; one-factor
+  sensitivity before combinations'
+question: 'On the 1830-day window, net of the full cost stack: (1) what are n, net R, maxDD and fold signs of fvg_range_15m with the
+  live opposite-boundary target (the first faithful Stage-0 reading of this leg); (2) does that arm beat the midline-target arm that
+  d5a7-11/-12 used as control (+4.0 R, maxDD no worse, 3 of 4 folds)?'
+why_this_matters: 'fvg_range_15m is a testing leg (bybit_1). Its control read -13.84 R at n 45 in d5a7-11/-12, and both lever
+  sweeps failed on that control. If the control was the wrong strategy, those FAILs grade a configuration the leg never trades, and
+  the leg is neither lever-exhausted nor diagnosed. This unit replaces the unfaithful reading. PASS: the far target is the leg''s
+  real Stage-0 base, and the exit and regime_gating sweeps are re-run on it (the d5a7-12 adx_max 15 arm, +5.33 R at n 14, is the
+  first lead to re-check). FAIL: the far target does not rescue it either; the leg is then read on its faithful control, and if
+  flat, the entry family (min_touches / third_frac) is next. Arm denominator 2.'
+power:
+  expected_n: 45
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor). The midline control had n 45 over 1830 days in
+    d5a7-11. The far target changes exits, not entries, except where the degenerate-target guard skips a signal, so n should stay
+    near 45, just above the floor. A near-miss is underpowered by construction on this single-symbol window, and the result
+    says so.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-dc44-05-FVG-FAR-TARGET
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD, and the number of 4 calendar folds in which it beats A,
+    all net of the full cost stack (execution_costs.resolve_cost_policy); the control''s own n, net R and fold signs are reported in verdict.json (the standing walk-forward
+    reading).'
+  rule: 'Baseline = arm mid (--exit-style mid, the harness default every earlier replay used). PASS (a LEAD for a holdout read,
+    never a setting change here) IF arm A (config-exact with the live far target, the builder pin of FVG-EXIT-STYLE-FIDELITY)
+    beats mid by >= 4.0 R with maxDD no worse and >= 3 of 4 folds, at n >= 39 for both arms; and A is net positive in >= 3 of 4
+    calendar years, with no single year > 50% of total net, and the per-year and per-direction table reported. FAIL IF A does
+    not clear that bar at n >= 39. INDETERMINATE IF either arm has n < 39, the producer failed, or arm A''s argv does not carry
+    --exit-style far (fidelity). A''s own n, net R, maxDD and fold signs are reported in every case: that is the leg''s first
+    faithful reading. Arm denominator = 2.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path; a PASS is a lead for a pre-registered holdout read then a Tier-3 proposal, not a promotion case.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: replaces an unfaithful control on a testing (bybit_1) leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 50
+  basis: one leg, 2 arms through the committed-record argv builder on a GitHub runner.
+  why_runner: Fetches keyless public candles for a pinned window and runs the committed harness; no trainer data, no secrets; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - fvg_range_15m
+  - --arm
+  - A=
+  - --arm
+  - mid=--exit-style=mid
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - mid
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-dc44-05
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: fvg_range_15m
+  subject_kind: strategy_leg
+  from_result: RQ-20261116-d5a7-11
+  verdict_read: fail
+  diagnosis: 'Read from the committed control trades of d5a7-11 (run 44066996242, arm A, n 45, 2021-11..2026-11): gross -2.21 R,
+    net -13.84 R, so cost (0.258 R per trade, 11.6 R in all) is 84% of the loss. 23 targets averaged +0.81 R gross (+0.54 net)
+    against 21 stops at -1.25 R net; median MFE 0.30 R; only 4.4% of trades reached 1 R. tp_basis is unit_tp on all 45. The
+    target sits about 0.8 R away, so the trade cannot clear a 0.26 R cost. That is the "tight-target / fee trap" the live strategy
+    docstring says the far-boundary target was chosen to avoid (src/units/strategies/fvg_range_15m.py: tp = R for a long, tp = S
+    for a short). The replay did not use that target. regime_debt_matrix.py''s fvg_range branch forwards exit_style only if the
+    config declares it, the live config does not, and backtest_fvg_range.py defaults to --exit-style mid. Every replay (both d5a7
+    sweeps, their controls and arms) therefore measured a midline-target strategy and still declared itself faithful. Fixed in
+    the same PR (FVG-EXIT-STYLE-FIDELITY: the builder pins --exit-style far when the config is silent, with a regression test).'
+  search: 'exit family, fidelity first: the live far target (arm A) vs the midline the earlier replays ran (arm mid); one factor'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/fvg_range_15m.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
+last_dispatched_at: null

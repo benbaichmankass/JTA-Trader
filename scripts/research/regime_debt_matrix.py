@@ -1125,6 +1125,13 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         for k, flag in _FVG_LEVER_FLAG.items():
             if cfg.get(k) is not None:
                 argv += [flag, str(cfg[k])]
+        # FVG-EXIT-STYLE-FIDELITY (2026-11-17, lane ML-ITERATION-REFILL-2-20261117): the LIVE strategy
+        # (src/units/strategies/fvg_range_15m.py, `tp = R` / `tp = S`) targets the OPPOSITE range boundary, and the
+        # live config carries no `exit_style` key. backtest_fvg_range.py defaults to `--exit-style mid` (the midline).
+        # Without this pin every fvg_range replay ran the midline target and was still declared `faithful` (no key
+        # omitted) -- e.g. RQ-20261116-d5a7-11/-12's control A. A leg that declares exit_style keeps it (above).
+        if cfg.get("exit_style") is None:
+            argv += ["--exit-style", "far"]
         omitted = sorted(k for k in cfg
                          if k not in _FVG_PLAIN and k not in _FVG_LEVER_FLAG)
         faithful = not omitted

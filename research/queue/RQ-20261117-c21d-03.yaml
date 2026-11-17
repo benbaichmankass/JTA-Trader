@@ -4,7 +4,7 @@
 id: RQ-20261117-c21d-03
 title: 'D2 Collie challenger, population read: does the range-vol (yz) LightGBM regime head beat the same-asset v2 LightGBM head on
   ETHUSDT 1h AND SOLUSDT 1h log-loss, as it did on BTCUSDT 1h (RQ-20261112-ef4c-02 PASS)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -136,4 +136,15 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-last_dispatched_at: '2026-11-17T10:44:38+00:00'
+last_dispatched_at: '2026-11-17T11:03:57+00:00'
+grading:
+  attested: RULE-RQ20261117-c21d-03-D2-YZ-POPULATION
+  auto: true
+  decision_rule_id: RULE-RQ20261117-c21d-03-D2-YZ-POPULATION
+  evidence:
+  - research/results/RQ-20261117-c21d-03/44067669945.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

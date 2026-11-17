@@ -1,0 +1,121 @@
+id: RQ-20261117-b3aa-05
+title: 'spy_pullback_1h: regime_gating family (HTF SMA200 / SMA100 long gate) on the 2024-01..2026-11 window where the control loses, net of the full cost stack (iteration; orphan)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+practice_precedent: 'R5 + M2 (docs/reference/trading-and-model-practice-principles.md): one lever chosen from the leg''s own R diagnosis; one-factor sweep against the control.'
+question: 'spy_pullback_1h: does gating long entries on the prior completed daily close vs its 200-day (or 100-day) SMA improve net R over the 1830-day window (control -26.4 R there), versus the config-exact
+  control, in >= 3 of 4 folds, net of the full cost stack?'
+why_this_matters: 'ITERATION (research-ops 2026-11-17 1006Z; spy_pullback_1h is an ORPHAN). DIAGNOSIS from the map rows: the control is +66.7 R on 2018-06..2026-10 (78fc-55) and +34.4 R on the 2018-06..2021-10
+  pre-dev span (2411-03), but -26.4 R on the recent window 2024-01..2026-11 (bf1b-05/-08 controls): the leg DECAYED, i.e. a regime/window problem, not a missing lever setting (trail, pullback lookback,
+  atr stop, adx, vol skip were all one-factor tested and none fixes the recent window). Live attribution (75 trades): gross -1.06 R, longs +3.81 R, shorts -12.36 R; no gross edge in 2026. The regime_gating
+  family is UNTESTED (`.`) on this leg. A daily-trend gate is the standard cut for a pullback-in-trend rule (enter pullbacks only with the higher-timeframe trend). Shorts are never gated by this harness
+  flag, so the arm isolates whether counter-trend longs carry the decay; the short-side loss is reported separately and points to the direction family next if longs are not the problem. On PASS: a pre-dev
+  confirmation (2018-06..2021-10) before any Tier-3 note; on FAIL: the regime family''s first configuration closes and the next test is the short side (side_filter long on THIS window, which was never read
+  here). Arm denominator 3 incl. control.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: control n 154 on this window (bf1b-08, MEASURED); gated arms trade less. n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-05-SPY-HTF-GATE
+  statistic: 'exit_lever_ablation.py --grade sweep: per arm, delta net R vs control A, delta maxDD, and folds (of 4) in which it beats A, net of the full cost stack, same 1830-day window as bf1b-05/-08.'
+  rule: 'PASS (a LEAD for a pre-dev confirmation, never a setting change here) IF some arm beats control A by >= 4.0 R with maxDD no worse and >= 3 of 4 folds at A n >= 39; Regime-robustness clause (set
+    before the run): the result reports the per-fold table; the arm is net positive in at least 3 of 4 folds with no single fold above 50% of its total net R; long and short net reported separately (both
+    >= 0 where the leg is two-sided, else reported as a LEAD with that caveat). FAIL IF none does at n >= 39 (the configuration closes; the regime family stays open). INDETERMINATE IF A n < 39 or the producer
+    failed. Arm denominator = 3.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path; a PASS is a lead for a pre-registered holdout read, not a promotion case.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: testing equity leg decaying on the recent window; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: same shape as RQ-20261115-bf1b-05 (spy_pullback_1h 1830 d sweep).
+  why_runner: Fetches public candles for a pinned window via the harness's non-crypto lane; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - spy_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - H200=--htf-long-sma-days=200
+  - --arm
+  - H100=--htf-long-sma-days=100
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-b3aa-05
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-05
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+intervention_controls:
+  not_applicable: entry-gate sweep against the declared config (A/B arms), not an active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/spy_pullback_1h.yaml
+- research/queue/RQ-20261115-bf1b-05.yaml
+- scripts/research/htf_daily_gate.py
+iteration:
+  subject: spy_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/levers/spy_pullback_1h.yaml
+  verdict_read: fail
+  diagnosis: 'Control +66.7 R (2018-26) / +34.4 R (pre-dev) / -26.4 R (2024-01..2026-11): window decay; every tested one-factor lever fails to fix the recent window; regime_gating untested; live shorts
+    -12.4 R.'
+  search: 'regime_gating family: HTF daily SMA long gate at 200 and 100 days'
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/spy_pullback_1h.yaml#levers.exit.trail_mult
+  - research/levers/spy_pullback_1h.yaml#levers.direction.side_filter
+  attempt: 5
+  due_by: '2026-11-24'
+follow_up: A PASS goes to a pre-dev confirmation; a FAIL moves the next test to side_filter long on this window.
+last_dispatched_at: '2026-11-17T13:59:51+00:00'

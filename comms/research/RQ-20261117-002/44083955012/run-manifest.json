@@ -1,0 +1,90 @@
+{
+  "unit": "RQ-20261117-002",
+  "run_id": "44083955012",
+  "commit_sha": "84f76a877ec6e91c53816bd45e12b884183a267d",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/44083955012",
+  "timeout_minutes": 20,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/soak_equity_overlap.py",
+        "--leg",
+        "SPY=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SPY_1w_LO__trades.jsonl",
+        "--leg",
+        "QQQ=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_QQQ_1w_LO__trades.jsonl",
+        "--leg",
+        "QLD=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_QLD_1w_LO__trades.jsonl",
+        "--leg",
+        "TQQQ=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_TQQQ_1w_LO__trades.jsonl",
+        "--leg",
+        "IWM=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_IWM_1w_LO__trades.jsonl",
+        "--leg",
+        "SCHA=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SCHA_1w_LO__trades.jsonl",
+        "--leg",
+        "GLD=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_GLD_1w_LO__trades.jsonl",
+        "--leg",
+        "SLV=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_SLV_1w_LO__trades.jsonl",
+        "--leg",
+        "GDX=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_GDX_1w_LO__trades.jsonl",
+        "--leg",
+        "IEF=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_IEF_1w_LO__trades.jsonl",
+        "--leg",
+        "TLT=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_TLT_1w_LO__trades.jsonl",
+        "--leg",
+        "USO=comms/research/RQ-20261018-ef5d-05/39124033697/cells/trend_USO_1w_LO__trades.jsonl",
+        "--min-weeks",
+        "104",
+        "--min-neff",
+        "3.0",
+        "--same-bet-corr",
+        "0.5",
+        "--out",
+        "comms/research/RQ-20261117-002/44083955012"
+      ],
+      "log": "comms/research/RQ-20261117-002/44083955012/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 0.5
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
