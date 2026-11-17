@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-11
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future R >= -0.25),
   improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -156,3 +156,13 @@ related:
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
 last_dispatched_at: '2026-11-17T13:59:56+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+  evidence:
+  - research/results/RQ-20261117-aadc-11/44098413330.jsonl
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44098413330) -> PASS by the registered rule: holding_pays_neg25 - champion +0.0134 R/trade, deflated CI (z 2.241) [+0.0020, +0.0247], n 11,160 >= 300. The head fires less (8,100 vs 10,223 trades with a close) and vs HOLD the arm is -0.0002 R [-0.027, +0.027] against the champion''s -0.0135: the label change removes the champion''s give-up rather than adding edge over holding. Family-wise: two margin arms have been read on these rows (0 in aadc-04, -0.25 here), and z 2.241 is the Bonferroni z for exactly 2; the value -0.25 was chosen after reading margin 0, so this is a dev pass. pass_action: one confirmation on held-out symbols, RQ-20261117-aadc-12 (10 donchian 1h perps never in the training rows), before any Tier-3 retrain proposal.'
+  rows: 1
+  verdict: pass

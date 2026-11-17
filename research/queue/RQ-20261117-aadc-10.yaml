@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-10
 title: 'D9 Whippet, EXIT fallback window: does a post-only maker time-stop exit with a 1-minute market fallback (W 1, k 0) improve R per
   exit over the market exit on v1''s held-out time-stop exits, where W 5 (aadc-02) did not?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -139,3 +139,13 @@ related:
 - RQ-20261027-a3f1-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-17T13:59:56+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-10-MAKER-EXIT-W1
+  evidence:
+  - research/results/RQ-20261117-aadc-10/44098400127.jsonl
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44098400127) -> FAIL by the registered rule: maker exit at W 1 +0.0018 R per exit, deflated CI [-0.0013, +0.0049], n 2,786 on 53 symbols. The window lever moved the legs as predicted: unfilled -18.19 -> -6.87 bps, fill rate 0.72 -> 0.54, filled +7.18 -> +6.41 bps; v1''s own mean now sits INSIDE the matched-random-side band (p05 +0.0008, p95 +0.0029), so the extra adverse selection seen at W 5 is gone, but the net delta did not move (+0.0019 -> +0.0018). Disclosure: ci_lo_percentile 0.8404 equals aadc-02''s; runner claims do not land in the repo ledger (PI-20261115-PWMQY8LM-0001), so n_tries did not count 1c4e-01 + 3 exit runs; a stricter deflation would only widen the CI, so the verdict stands. fail_action: the window is flat at the net level; the next lever is the order PRICE (mid-peg or k inside the spread).'
+  rows: 1
+  verdict: fail
