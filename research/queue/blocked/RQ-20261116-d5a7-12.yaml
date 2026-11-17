@@ -1,6 +1,6 @@
 id: RQ-20261116-d5a7-12
 title: 'fvg_range_15m: one-factor sweep of adx_max (regime_gating family) around the configured 20.0, 1830 d, net of the full cost stack (iteration)'
-status: queued
+status: blocked
 cadence: once
 kind: experiment
 theme: regime
@@ -119,3 +119,9 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+blocked_on:
+- what: 'Driver gap: scripts/research/exit_lever_ablation.py build_arm_argv raises ValueError for harness fvg_range ("this ablation covers the trend, pullback, ict_scalp and turtle_soup harnesses"); RQ-20261116-d5a7-12 landed producer_failed exit=1 on it (run 43859133629). Re-running gives the same traceback.'
+  ref: scripts/research/exit_lever_ablation.py
+  kind: build
+  clears_when: exit_lever_ablation.py build_arm_argv gains an fvg_range branch (or the unit is re-pointed at a driver that already covers fvg_range, e.g. scripts/research/mi319_fvg_parity.py), --self-test passing; then git mv back to research/queue/ and fill run.command.
+  owner: 'next research-ops pass; filed once as the lever row of RESEARCH-OPS-20261116-1448'
