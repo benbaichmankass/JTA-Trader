@@ -98,6 +98,7 @@
   "by": "ML-PRIMARY-5 session_01AFoLuMFLP9yi6gZzUfKM1F",
   "registered_commit_before_run": "b32a434f31 (11:37:14Z; power-block alpha fix 69726d6f51 at 11:39:42Z, rule unchanged)",
   "inputs": "the aadc-05/-06 pull: journal trades 7,692 rows 2026-05-01..2026-11-17 + order_packages via scripts/ops/diag_fetch.sh ~10:15-10:45Z",
-  "disclosure": "second alarm-action family read on this window (after aadc-06 H 3 FAIL); a PASS goes to the fresh-window confirmation in the unit, never to a proposal directly"
+  "disclosure": "second alarm-action family read on this window (after aadc-06 H 3 FAIL); a PASS goes to the fresh-window confirmation in the unit, never to a proposal directly",
+  "familywise": "Family-wise read, stated explicitly: four alarm-level arms have now been read on this window (aadc-06 H 3; aadc-07 H 2, 4, 6). Bonferroni over all 4 gives a bar of 0.05/4 = 0.0125; H 2 control_p 0.0115 also clears it. The registered rule (0.0167 over the 3 new arms) decides the verdict; this note does not change it. The fresh-window confirmation is still required before any proposal."
  }
 }
