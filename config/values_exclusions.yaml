@@ -1,0 +1,73 @@
+# VALUES EXCLUSIONS: instruments the operator does not want TRADED WITH REAL MONEY, on non-financial grounds.
+# ONE source of the list. It is a CONFIG RECORD that a CI test reads (tests/test_values_exclusions_real_money.py); it is NOT a runtime
+# gate and changes no trading behaviour by itself: the real-money / prop / real-money-mirror rosters are narrowed where they are
+# DEFINED (config/strategies.yaml pool_exclude + symbols, config/accounts.yaml), and the test fails the PR that re-opens a gap.
+#
+# SCOPE: accounts whose account_class is real_money or prop, and the real-money MIRRORS (config/accounts.yaml; src/runtime/mirror_pairs.py
+# MIRROR_PAIRS: alpaca_portfolio, bybit_portfolio). PAPER-testing accounts are EXEMPT by the operator's own words below: paper trades
+# these symbols to create data and learn.
+#
+# NOT a performance argument and not removable by one: a backtest or a paper P&L does not re-open this list (same shape as the
+# 2026-08-29 USO line in config/accounts.yaml).
+fossil_fuels:
+  decision: '2026-11-17 operator-chat "In general, I ask that we not trade fossil fuels."'
+  standing_rule: 'operator 2026-08-29 (config/accounts.yaml, the alpaca_live roster): "I don''t wanna put USO on real money. I don''t wanna make money from fossil fuels."'
+  quotes:
+    - '2026-11-17 ~07:15Z: "I see that there''s a USO trade on live money. We''re not supposed to be trading USO on live money, so we can let this trade close, but we need to make sure that it''s not on the live money roster."'
+    - '2026-11-17 ~07:15Z: "In general, I ask that we not trade fossil fuels."'
+    - '2026-11-17 ~07:15Z: "We can do it on paper in order to create data and learn from it. I just don''t want to trade it on actual live money."'
+  # Reachable today (MEASURED 2026-11-17 against the runtime resolver; ml_entry_eq_struct on alpaca_live + alpaca_portfolio, via its 173-ETF pool):
+  reachable_2026_11_17: [USO, UCO, UNG, XLE, XOP, OIH, GUSH, AMLP, NFX]
+  symbols:
+    # oil, gas, coal and energy-infrastructure ETFs / ETNs (long, inverse and levered), and E&P equities that sit in a pool
+    - USO     # crude oil
+    - UCO     # 2x crude oil
+    - SCO     # -2x crude oil
+    - BNO     # Brent oil
+    - USL     # 12-month crude oil
+    - UWT     # 3x crude oil
+    - DWT     # -3x crude oil
+    - UNG     # natural gas
+    - BOIL    # 2x natural gas
+    - KOLD    # -2x natural gas
+    - GAZ     # natural gas ETN
+    - UNL     # 12-month natural gas
+    - UGA     # gasoline
+    - XLE     # energy sector
+    - VDE     # energy sector
+    - IYE     # energy sector
+    - FENY    # energy sector
+    - IXC     # global energy
+    - ERX     # 2x energy
+    - ERY     # -2x energy
+    - XOP     # oil & gas exploration and production
+    - XES     # oil & gas equipment and services
+    - IEO     # oil & gas exploration
+    - IEZ     # oil & gas equipment and services
+    - OIH     # oil services
+    - FCG     # natural gas producers
+    - PXE     # energy exploration and production
+    - PXJ     # oil & gas services
+    - DIG     # 2x oil & gas
+    - DUG     # -2x oil & gas
+    - GUSH    # 2x oil & gas exploration and production
+    - DRIP    # -2x oil & gas exploration and production
+    - CRAK    # oil refiners
+    - AMLP    # energy MLPs
+    - MLPA    # energy MLPs
+    - MLPX    # energy infrastructure
+    - EMLP    # energy infrastructure
+    - ENFR    # energy infrastructure
+    - KOL     # coal
+    - COAL    # coal
+    - NFX     # Newfield Exploration (oil & gas E&P) sits in the 173-name pool
+    # futures roots (CME): crude, micro crude, e-mini crude, natural gas, e-mini natural gas, gasoline, heating oil, Brent
+    - CL
+    - MCL
+    - QM
+    - NG
+    - QG
+    - RB
+    - HO
+    - BZ
+    - MNG
