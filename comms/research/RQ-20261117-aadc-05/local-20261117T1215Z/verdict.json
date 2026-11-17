@@ -1,0 +1,113 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 706,
+ "population": "(leg, trade) points of closed live/paper trades on legs with a measured Stage-0 record, net R on the package initial stop, each with 20 later trades on the same leg; 52 legs",
+ "note": "CUSUM baseline AUC 0.6579 (leg-cluster CI95 [0.5216, 0.7663]) > 0.5: a working decay detector; comparator (blind grade, low = decay) AUC 0.3136 CI95 [0.1522, 0.5047] on n 494",
+ "measurement": {
+  "rule": "RULE-RQ20261117-aadc-05-D10-BASELINE",
+  "baseline_cusum": {
+   "n": 706,
+   "legs": 25,
+   "decay_rate": 0.3144,
+   "auc": 0.6579,
+   "ci95": [
+    0.5216,
+    0.7663
+   ]
+  },
+  "comparator_blind_grade": {
+   "n": 494,
+   "legs": 17,
+   "decay_rate": 0.249,
+   "auc": 0.3136,
+   "ci95": [
+    0.1522,
+    0.5047
+   ]
+  },
+  "alarm": {
+   "h": 3.0,
+   "alarm_share": 0.3555,
+   "decay_rate_alarmed": 0.4741,
+   "decay_rate_not_alarmed": 0.2264
+  },
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "H": 3.0,
+   "N_NEXT": 20,
+   "W_GRADE": 10
+  },
+  "trades_in": 7692,
+  "excluded": {
+   "not_closed": 4960,
+   "no_leg_record": 1187,
+   "no_net_r": 148,
+   "backtest": 0
+  },
+  "legs": {
+   "ict_scalp_eth_15m": 45,
+   "ict_scalp_5m": 96,
+   "ict_scalp_avax_5m": 91,
+   "spy_pullback_1h": 18,
+   "trend_donchian_eth": 35,
+   "trend_donchian_1h": 9,
+   "ml_entry": 84,
+   "ict_scalp_xrp_5m": 47,
+   "trend_donchian_xrp_adx25": 4,
+   "trend_donchian_xrp_4h": 26,
+   "trend_donchian_eth_prop": 14,
+   "trend_donchian_avax_4h": 29,
+   "ict_scalp_xrp_15m": 48,
+   "trend_donchian_sol_4h": 27,
+   "qqq_pullback_1h": 24,
+   "ict_scalp_sol_15m": 52,
+   "trend_donchian_sol_prop": 11,
+   "xrp_pullback_2h": 66,
+   "gdx_pullback_1d": 5,
+   "iaum_pullback_1d": 4,
+   "ief_pullback_1d": 6,
+   "tlt_pullback_1d": 11,
+   "ada_pullback_2h": 78,
+   "trend_donchian_eth_4h": 59,
+   "mes_trend_long_1d": 4,
+   "trend_donchian": 45,
+   "trend_donchian_sol": 12,
+   "tqqq_trend_long_1d": 1,
+   "ict_scalp_sol_5m": 67,
+   "squeeze_breakout_4h": 12,
+   "uso_trend_1h": 24,
+   "eth_pullback_2h": 72,
+   "qld_trend_long_1d": 2,
+   "qqq_trend_long_1d": 3,
+   "trend_donchian_ada_4h": 34,
+   "tlt_pullback_1h": 16,
+   "mhg_pullback_1d": 6,
+   "slv_pullback_1d": 5,
+   "sol_pullback_2h": 29,
+   "mgc_trend_1h": 21,
+   "gld_pullback_1d": 2,
+   "gld_pullback_1h": 14,
+   "slv_trend_1h": 27,
+   "scha_trend_long_1d": 2,
+   "htf_pullback_trend_2h": 59,
+   "iwm_trend_long_1d": 5,
+   "spy_trend_long_1d": 1,
+   "mgc_pullback_1d": 1,
+   "avax_pullback_2h": 21,
+   "eth_pullback_prop_2h": 6,
+   "fvg_range_15m": 1,
+   "fade_breakout_4h": 16
+  },
+  "stage0_records": 54,
+  "grades_in": 707
+ },
+ "run": {
+  "kind": "session-local",
+  "by": "ML-PRIMARY-5 session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "registered_commit_before_run": "7696044eff",
+  "inputs": "journal?table=trades (offset 0..7500, limit 500; 7,692 rows, 2026-05-01..2026-11-17) and journal?table=order_packages (offset 0..6000, limit 1000) via scripts/ops/diag_fetch.sh direct, pulled 2026-11-17 10:50-12:10Z; comms/strategy_evidence (54 measured records); comms/claude_judgments/blind_grades.jsonl (707)",
+  "status_audit": "trades by status: rejected 4349, closed+pnl 2571, exchange_rejected 447, closed no pnl 161, orphaned 131, open 24, rejected_too_small 6, error 3"
+ }
+}
