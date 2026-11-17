@@ -1,0 +1,125 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a. Builds row
+# ML-D10-BASSET-BASELINE. Decision rule registered BEFORE any run on real data (the harness was self-tested on synthetic data
+# only). Gates this adds or changes: none.
+id: RQ-20261117-aadc-05
+title: 'D10 Basset BASELINE: does a Page CUSUM on realised net R below each leg''s Stage-0 expectancy anticipate the leg''s next 20 trades
+  going net-negative (leg-clustered AUC > 0.5), and does the blind post-trade grade do any better?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+origin_reason: 'D10 (review & grading) has no model and no baseline: the MECE map marks its harness "(build)". A learned grade (Basset) can
+  only be judged against the decay detector a desk would run anyway; this unit sets that bar. Who pays: a leg that keeps trading after its
+  live edge decays pays in drawdown; the detector that sees it first is worth the difference.'
+levers_declared:
+- name: decay_signal
+  values: [cusum_net_r_vs_stage0, blind_grade_rolling_mean]
+  hypothesised_effect: the CUSUM has AUC > 0.5 for next-20 decay; the blind grade has none (089f-01 rho -0.18, direction fixed below)
+question: 'Over closed live and paper trades (journal, all accounts) on legs with a measured Stage-0 record, per leg in closed_at order: is
+  the AUC of S_i = max(0, S_(i-1) + (mu0 - 0.25 - clip(R_i, -3, 3))) for decay_i = 1[mean net R of trades i+1..i+20 < 0] above 0.5 with a
+  leg-cluster bootstrap CI95 lower bound above 0.5? Comparator on the same points: -(mean blind grade_score of the leg''s last 10 graded
+  trades).'
+why_this_matters: 'The D10 slot table row: "Blocked on a build: the D10 join and CUSUM baseline harness, plus an orientation audit of the
+  negative rho". The audit is done (row note 2026-11-17 11:55Z: the sign is real, not a join defect). This is the harness and the bar. A
+  PASS gives Basset a concrete number to beat; a FAIL says even the simplest detector has no lead at this n, which bounds what any learned
+  grade can add.'
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261116-089f-01
+  verdict_read: fail
+  diagnosis: '089f-01 FAILED: blind grade vs net R rho -0.1834, wider CI [-0.2579, -0.1006], n 707. Orientation audit 2026-11-17 (row
+    ML-D10-BASSET-BASELINE): the scale is right (A=4..F=0, validator-enforced), the sign holds with an outcome that has no R denominator
+    (net USD / notional rho -0.150) and for both sides, and it is within-leg on ict_scalp legs (rho -0.13..-0.36). So the grade is
+    anti-informative, and D10 still has no baseline to measure any grade against.'
+  search: 'first test of the baseline family: one CUSUM configuration fixed in advance (K 0.25, clip 3, H 3, N 20, W 10); no grid'
+  attempt: 1
+  due_by: '2026-11-24'
+evidence_class:
+  holdout: none
+  claim: model_quality
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED. The journal holds ~5,500 trades 2026-05..11 (diag pulls 2026-11-17); legs with a measured Stage-0 record are 54 of 65
+    evidence files; minus the last 20 trades of each leg, ~1,500 labelled points is a guess. The CI is leg-clustered, so the effective n is
+    the leg count (~20-40 legs): an AUC of ~0.60 is needed to clear 0.5 at that clustering. A near-0.5 result is therefore underpowered
+    by construction, and the rule reads it FAIL ("no demonstrated baseline skill"), which is itself the bar Basset must clear.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the live journal through the diag relay as of the run; nothing accrues for this read.
+baseline:
+  definition: 'AUC 0.5 (a detector with no information about the next 20 trades). The comparator is the blind grade on the same points.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-05-D10-BASELINE
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: AUC 0.5
+  statistic: 'scripts/research/d10_basset_baseline.py: per (leg, i) point with 20 later trades on the same leg: S_i (CUSUM through trade i),
+    decay_i; net R = (pnl - taker - maker fee - funding) / (|entry - PACKAGE sl| x qty). Pooled AUC of S_i for decay_i; CI95 by a
+    leg-cluster bootstrap (2000 draws, seed 20261117). Reported, part of the record: the comparator AUC (score = minus the mean
+    grade_score of the leg''s last 10 graded trades, direction fixed now: low grade predicts decay), the alarm view at S >= 3 (alarm share,
+    decay rate alarmed vs not), exclusions by reason.'
+  rule: 'INDETERMINATE iff labelled points < 200 OR legs < 3. PASS iff baseline AUC > 0.5 AND its leg-cluster CI95 lower bound > 0.5 (a
+    working decay detector; its AUC becomes the bar a learned grade must beat on the same points). FAIL otherwise (no demonstrated
+    baseline skill; the bar is then 0.5 plus whatever the CI allows). The comparator never changes the verdict; it is the first entry on
+    the bar. Thresholds and the CUSUM configuration are fixed now and not changed after any result.'
+  pass_action: 'Record the baseline AUC as D10''s bar (MECE map D10, ml-dev-plan line); the next unit is a learned grade (Basset v0) on
+    the same points, required to beat it paired.'
+  fail_action: 'Iteration input: read the alarm view and per-leg counts; if decay is too rare at N 20, the next lever is the horizon N or
+    the Stage-0 band (a CI band instead of the point expectancy), one factor at a time.'
+  what_it_does_not_do: Grades, demotes or retires no leg; edits no config; places no order; adds no gate. In-sample for the blind grade
+    (089f-01 already read these grades), said so.
+  min_n: 200 labelled points on >= 3 legs
+practice_precedent: 'M10 (monitor live performance with a sequential test against the registered band; win/loss or winsorised, because
+  per-trade R is heavy-tailed: scripts/ops/overlay_cusum.py precedent), docs/reference/trading-and-model-practice-principles.md'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: earlier detection of a decaying leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 10
+  why_runner: 'Not a runner job: the inputs are the live journal (trades + order_packages) read through the diag relay, joined
+    session-locally (the cc86-02 pattern).'
+  basis: one pass over ~6,000 trades and ~6,500 packages
+run:
+  workflow: session-local
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --trades
+  - '<pull>/trades_*.json'
+  - --packages
+  - '<pull>/op_*.json'
+  - --out
+  - '{out_dir}'
+  note: 'Run SESSION-LOCAL by the ML lane: pull journal?table=trades and journal?table=order_packages pages (limit 500/1000, every offset)
+    through scripts/ops/diag_fetch.sh into <pull>/, then the command. A VM-side run uses --journal-db with the same rule.'
+  inputs:
+    research_unit: RQ-20261117-aadc-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; this unit sets the baseline a future grading model must beat. No leg''s order changes.'
+related:
+- ML-D10-BASSET-BASELINE
+- RQ-20261116-089f-01
+- scripts/ops/overlay_cusum.py
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
