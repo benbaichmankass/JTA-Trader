@@ -184,7 +184,7 @@ def run_head(h: Dict[str, Optional[str]], out_dir: Path, th: Dict[str, float],
         rec["replay"] = {k: man.get(k) for k in ("labelled", "counts", "volatile_pct", "ts_first", "ts_last",
                                                  "threshold", "head")}
         rec["replay"]["feature_audit_ok"] = (man.get("feature_audit") or {}).get("ok")
-    except Exception as exc:  # noqa: BLE001 -- contained per head, reported, the next head runs
+    except Exception as exc:  # noqa: BLE001  # allow-silent: per-head containment; the failure is recorded as producer_failed with its traceback in verdict.json, never a pass
         rec.update(verdict="not_applicable", read_state="producer_failed",
                    note=f"replay failed: {type(exc).__name__}: {exc}",
                    traceback=traceback.format_exc()[-2000:])
@@ -292,6 +292,7 @@ def _self_test() -> int:
         aud.write_text("\n".join(json.dumps(x) for x in audit) + "\n")
 
         def stub(dataset, symbol, out_path, model_id):
+            assert (str(dataset), symbol, model_id) == ("d", "X", "m")
             out_path.write_text("\n".join(json.dumps(r) for r in labels.values()) + "\n")
             return {"labelled": 300, "counts": {}, "feature_audit": {"ok": True}}
         r = run_head({"symbol": "X", "model_id": "m", "dataset": "d", "audit": str(aud)}, Path(td), th, replay_fn=stub)
