@@ -1,8 +1,8 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "9ee062420",
+ "built_from_commit": "e89a9ed58",
  "built_on": "2026-11-17",
- "slide_count": 16,
+ "slide_count": 15,
  "spec": {
   "audience": "smart non-expert",
   "numbers": "ratios only, no $, each tagged MEASURED or ESTIMATED",
@@ -260,6 +260,141 @@
   },
   {
    "number": 7,
+   "section": "How we find edge",
+   "title": "What our strategies have delivered",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "Real money, all-time: -156.2R — 478 trades · E[R] -0.33 · 47 of 478 confirmed · 4 of 17 strategies net positive",
+    "Demo, all-time: -106.3R — 1111 trades · E[R] -0.10 · 310 of 1111 confirmed · 17 of 54 strategies net positive"
+   ],
+   "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. Honest headline first: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The table shows the production strategies with a positive actual record, and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
+   "numbers": [
+    {
+     "label": "live real money ΣR: tlt_pullback_1h",
+     "value": 1.29,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ada_pullback_2h",
+     "value": 10.35,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ict_scalp_mgc_15m",
+     "value": 8.24,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: mgc_trend_1h",
+     "value": 1.07,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "rule strategies, real money all-time ΣR",
+     "value": -156.2,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "rule strategies, demo all-time ΣR",
+     "value": -106.3,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    }
+   ],
+   "sources": [],
+   "stages": [
+    3
+   ],
+   "table": {
+    "header": [
+     "Strategy",
+     "Book",
+     "Actual ΣR",
+     "n · E[R]",
+     "Confirmed",
+     "Backtest (net R · n · folds +)",
+     "Status"
+    ],
+    "rows": [
+     [
+      "Long-bond-ETF pullback (hourly bars)",
+      "Real money",
+      "+1.29R",
+      "n 1 · E[R] +1.29",
+      "0 of 1",
+      "+8.2R · n 75 · 3/4",
+      "production"
+     ],
+     [
+      "Cardano pullback (2-hour bars)",
+      "Paper",
+      "+10.35R",
+      "n 52 · E[R] +0.20",
+      "13 of 52",
+      "+27.1R · n 67 · 4/4",
+      "production"
+     ],
+     [
+      "ICT scalp · MGC 15m",
+      "Paper (IB)",
+      "+8.24R",
+      "n 22 · E[R] +0.37",
+      "15 of 22",
+      "no record",
+      "testing"
+     ],
+     [
+      "Trend · MGC 1h",
+      "Paper (IB)",
+      "+1.07R",
+      "n 4 · E[R] +0.27",
+      "1 of 4",
+      "+25.6R · n 118 · 2/4",
+      "testing"
+     ]
+    ]
+   },
+   "track_record": {
+    "aggregate": {
+     "rm": {
+      "n": 478,
+      "sr": -156.2,
+      "er": -0.32677824267782424,
+      "conf": 47,
+      "legs": 17,
+      "pos": 4
+     },
+     "paper": {
+      "n": 1111,
+      "sr": -106.33,
+      "er": -0.0957065706570657,
+      "conf": 310,
+      "legs": 54,
+      "pos": 17
+     }
+    },
+    "as_of": "2026-11-17",
+    "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)"
+   },
+   "footnote": "Live results are real but small samples; edge is established offline, live checks it holds. MEASURED, journal all-time to 2026-11-17 (pipeline-map per-leg table); backtests comms/strategy_evidence/. ML legs and the AI desk excluded.",
+   "live_refreshable": true
+  },
+  {
+   "number": 8,
    "section": "The ML families",
    "title": "The model families, placed on the map",
    "kicker": null,
@@ -355,7 +490,7 @@
    "live_refreshable": false
   },
   {
-   "number": 8,
+   "number": 9,
    "section": "The ML families",
    "title": "Model card · Foxhound, the entry model (step 3)",
    "kicker": null,
@@ -459,7 +594,7 @@
    "live_refreshable": false
   },
   {
-   "number": 9,
+   "number": 10,
    "section": "The ML families",
    "title": "Model card · Beagle, the signal filter (step 4)",
    "kicker": null,
@@ -547,7 +682,7 @@
    "live_refreshable": false
   },
   {
-   "number": 10,
+   "number": 11,
    "section": "The ML families",
    "title": "Model card · Labrador, the in-trade manager (steps 7 and 9)",
    "kicker": null,
@@ -634,221 +769,6 @@
     ]
    },
    "live_refreshable": false
-  },
-  {
-   "number": 11,
-   "section": "What the R&D has produced",
-   "title": "What our strategies have delivered",
-   "kicker": null,
-   "provenance": [
-    "MEASURED"
-   ],
-   "bullets": [
-    "Real money, all-time: -156.2R — 478 trades · E[R] -0.33 · 47 of 478 confirmed · 4 of 17 strategies net positive",
-    "Demo, all-time: -106.3R — 1111 trades · E[R] -0.10 · 310 of 1111 confirmed · 17 of 54 strategies net positive"
-   ],
-   "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. Honest headline first: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The strategies below are the ones whose actual results are net positive, real money first, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
-   "numbers": [
-    {
-     "label": "live real money ΣR: trend_donchian",
-     "value": 7.64,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live real money ΣR: ict_scalp_5m",
-     "value": 4.94,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live real money ΣR: trend_donchian_eth_4h",
-     "value": 4.66,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live real money ΣR: tlt_pullback_1h",
-     "value": 1.29,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live demo ΣR: trend_donchian",
-     "value": 23.71,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live demo ΣR: uso_trend_1h",
-     "value": 11.77,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live demo ΣR: trend_donchian_ada_4h",
-     "value": 10.74,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live demo ΣR: ada_pullback_2h",
-     "value": 10.35,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "live demo ΣR: ict_scalp_sol_15m",
-     "value": 9.32,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "rule strategies, real money all-time ΣR",
-     "value": -156.2,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    },
-    {
-     "label": "rule strategies, demo all-time ΣR",
-     "value": -106.3,
-     "provenance": "MEASURED",
-     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
-     "live_endpoint_candidate": "/api/bot/performance?window=all"
-    }
-   ],
-   "sources": [],
-   "stages": [
-    3
-   ],
-   "table": {
-    "header": [
-     "Strategy",
-     "Book",
-     "Actual ΣR",
-     "n · E[R]",
-     "Confirmed",
-     "Backtest (net R · n · folds +)",
-     "Status"
-    ],
-    "rows": [
-     [
-      "Trend breakout · BTC 1h",
-      "Real money",
-      "+7.64R",
-      "n 15 · E[R] +0.51",
-      "5 of 15",
-      "-16.2R · n 71 · 1/4",
-      "testing"
-     ],
-     [
-      "ICT scalp · BTC 5m",
-      "Real money",
-      "+4.94R",
-      "n 35 · E[R] +0.14",
-      "6 of 35",
-      "-42.5R · n 146 · 0/4",
-      "testing"
-     ],
-     [
-      "Ether trend breakout (4-hour bars)",
-      "Real money",
-      "+4.66R",
-      "n 19 · E[R] +0.24",
-      "6 of 19",
-      "+30.9R · n 135 · 3/4",
-      "testing"
-     ],
-     [
-      "Long-bond-ETF pullback (hourly bars)",
-      "Real money",
-      "+1.29R",
-      "n 1 · E[R] +1.29",
-      "0 of 1",
-      "+8.2R · n 75 · 3/4",
-      "production"
-     ],
-     [
-      "Trend breakout · BTC 1h",
-      "Demo",
-      "+23.71R",
-      "n 29 · E[R] +0.82",
-      "4 of 29",
-      "-16.2R · n 71 · 1/4",
-      "testing"
-     ],
-     [
-      "Trend · USO 1h",
-      "Demo",
-      "+11.77R",
-      "n 24 · E[R] +0.49",
-      "12 of 24",
-      "+18.9R · n 58 · 4/4",
-      "testing"
-     ],
-     [
-      "Trend breakout · ADA 4h",
-      "Demo",
-      "+10.74R",
-      "n 25 · E[R] +0.43",
-      "5 of 25",
-      "-3.4R · n 55 · 2/4",
-      "testing"
-     ],
-     [
-      "Cardano pullback (2-hour bars)",
-      "Demo",
-      "+10.35R",
-      "n 52 · E[R] +0.20",
-      "13 of 52",
-      "+27.1R · n 67 · 4/4",
-      "production"
-     ],
-     [
-      "ICT scalp · SOL 15m",
-      "Demo",
-      "+9.32R",
-      "n 51 · E[R] +0.18",
-      "9 of 51",
-      "-12.5R · n 87 · 1/4",
-      "testing"
-     ]
-    ]
-   },
-   "track_record": {
-    "aggregate": {
-     "rm": {
-      "n": 478,
-      "sr": -156.2,
-      "er": -0.32677824267782424,
-      "conf": 47,
-      "legs": 17,
-      "pos": 4
-     },
-     "paper": {
-      "n": 1111,
-      "sr": -106.33,
-      "er": -0.0957065706570657,
-      "conf": 310,
-      "legs": 54,
-      "pos": 17
-     }
-    },
-    "as_of": "2026-11-17",
-    "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)"
-   },
-   "footnote": "Live results are real but small samples; edge is established offline, live checks it holds. MEASURED, journal all-time to 2026-11-17 (pipeline-map per-leg table); backtests comms/strategy_evidence/. ML legs and the AI desk excluded.",
-   "live_refreshable": true
   },
   {
    "number": 12,
@@ -993,7 +913,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 9ee062420.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit e89a9ed58.",
    "live_refreshable": true
   },
   {
@@ -1108,26 +1028,6 @@
     ]
    },
    "footnote": "Source: ROADMAP.md live block (docs/roadmap/milestones.yaml, goal G4) and the ML plan's slot questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).",
-   "live_refreshable": false
-  },
-  {
-   "number": 16,
-   "section": "Appendix",
-   "title": "Appendix — reading the numbers, and where they come from",
-   "kicker": null,
-   "provenance": [],
-   "bullets": [
-    "R = one unit of risk: what a trade loses if its stop is hit. Expectancy = average R per trade after costs.",
-    "MEASURED = read from a committed file or result. ESTIMATED = rests on an assumption (e.g. a slippage allowance).",
-    "Held-out = data never used for tuning; the real-money pass is judged on it. Fold = one separate time slice.",
-    "Built 2026-11-17 from commit 9ee062420 by docs/pitch/build_deck.py.",
-    "Sources: config/strategies.yaml + accounts.yaml (via scripts/ops/strategy_status.py), comms/strategy_evidence/, research/queue/, ml/served/SERVED_MODELS.yaml and model artifacts, comms/ml_consolidation/, scripts/ci/check_tp_doctrine.py, comms/live_review/reviews.jsonl, config/mandates.yaml.",
-    "Plans: docs/reference/trading-pipeline-map.skeleton.md, docs/plans/ML-ROADMAP-MECE-2026-11.md, docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
-    "Left out on purpose: live and paper profit figures (a live book never establishes edge) and every dollar amount, balance, account id and server address."
-   ],
-   "notes": "How to read the numbers and where each one came from. The deck is generated by a script that reads these files directly, so re-running it refreshes every number; slides.json lists each number with its provenance and source.",
-   "numbers": [],
-   "sources": [],
    "live_refreshable": false
   }
  ]

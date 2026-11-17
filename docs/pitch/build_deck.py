@@ -202,7 +202,7 @@ def load_facts() -> dict:
             if leg.startswith("ml_") or leg.endswith("_ml") or leg == "claude_desk":
                 continue
             bt = _re.search(r"([+-][0-9.]+)", cells[4])
-            track.append(dict(leg=leg, status=cells[1], bt=float(bt.group(1)) if bt else None,
+            track.append(dict(leg=leg, status=cells[1], books=cells[2], bt=float(bt.group(1)) if bt else None,
                               bt_n=cells[5], bt_folds=cells[6], rm=_lv(cells[10]), paper=_lv(cells[11])))
     f["track"] = track
     for line in md.splitlines():
@@ -751,6 +751,56 @@ def build():
                y=H - Inches(1.05))
     d.end_md()
 
+    # ---------------------------------------------------------------- 10 strategies track record
+    tr = f["track"]
+    agg = {}
+    for book in ("rm", "paper"):
+        xs = [t[book] for t in tr if t[book]]
+        n = sum(x["n"] for x in xs)
+        sr = sum(x["sr"] for x in xs)
+        agg[book] = dict(n=n, sr=sr, er=(sr / n if n else None), conf=sum(x["conf"] for x in xs),
+                         legs=len(xs), pos=sum(1 for x in xs if x["sr"] > 0))
+    # Operator comment 2026-11-17 16:54Z: only PRODUCTION strategies with a positive record, or IB-paper strategies
+    # with a positive record.
+    pos_rm = sorted([t for t in tr if t["status"] == "production" and t["rm"] and t["rm"]["sr"] > 0],
+                    key=lambda t: -t["rm"]["sr"])
+    pos_pp = sorted([t for t in tr if t["paper"] and t["paper"]["sr"] > 0
+                     and (t["status"] == "production" or "ib_paper" in t["books"])], key=lambda t: -t["paper"]["sr"])
+    ra, pa = agg["rm"], agg["paper"]
+    s = d.new_at((3,), "What our strategies have delivered",
+              "The track record of the rule-based strategies, the part of the system that has run long enough to "
+              "have one; the ML models are too new and are judged on their offline evidence. Honest headline first: "
+              f"across all {len(tr)} rule strategies, all-time realized results are negative, "
+              f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
+              "That total includes strategies that have since failed their backtests and been taken off real money, "
+              "which is the ladder working. The table shows the production strategies with a positive actual record, "
+              "and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result "
+              "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
+    d.cards(s, [
+        (f"Real money, all-time: {ra['sr']:+.1f}R", [f"{ra['n']} trades · E[R] {ra['er']:+.2f} · {ra['conf']} of "
+                                                     f"{ra['n']} confirmed · {ra['pos']} of {ra['legs']} strategies net positive"]),
+        (f"Demo, all-time: {pa['sr']:+.1f}R", [f"{pa['n']} trades · E[R] {pa['er']:+.2f} · {pa['conf']} of {pa['n']} "
+                                               f"confirmed · {pa['pos']} of {pa['legs']} strategies net positive"]),
+    ], y=Inches(1.7), h=Inches(0.95), cols=2, size=12, head=15)
+    rows = []
+    for book, lst in (("Real money", pos_rm), ("Demo", pos_pp)):
+        for t in lst:
+            x = t["rm"] if book == "Real money" else t["paper"]
+            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']}" if t["bt"] is not None else "no record")
+            bk = book if book == "Real money" else ("Paper (IB)" if t["status"] != "production" else "Paper")
+            rows.append([plain_leg(t["leg"]), bk, f"{x['sr']:+.2f}R", f"n {x['n']} · E[R] {x['er']:+.2f}",
+                         f"{x['conf']} of {x['n']}", bt, t["status"]])
+            d.num(f"live {book.lower()} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.table(s, ["Strategy", "Book", "Actual ΣR", "n · E[R]", "Confirmed", "Backtest (net R · n · folds +)", "Status"],
+            rows, y=Inches(2.9), col_w=[3.4, 1.3, 1.2, 1.7, 1.2, 2.6, 1.1], size=12, h_row=Inches(0.45))
+    d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
+    d.footnote(s, f"Live results are real but small samples; edge is established offline, live checks it holds. "
+                  f"MEASURED, journal all-time to {f['date']} (pipeline-map per-leg table); backtests "
+                  "comms/strategy_evidence/. ML legs and the AI desk excluded.", y=H - Inches(0.85))
+    d.end_md()
+
     # ---------------------------------------------------------------- 6 ML families on the map
     d.section = "The ML families"
     s = d.new_at((3, 4, 6, 7, 9), "The model families, placed on the map",
@@ -881,53 +931,8 @@ def build():
     ])
     d.end_md()
 
-    # ---------------------------------------------------------------- 10 strategies track record
-    d.section = "What the R&D has produced"
-    tr = f["track"]
-    agg = {}
-    for book in ("rm", "paper"):
-        xs = [t[book] for t in tr if t[book]]
-        n = sum(x["n"] for x in xs)
-        sr = sum(x["sr"] for x in xs)
-        agg[book] = dict(n=n, sr=sr, er=(sr / n if n else None), conf=sum(x["conf"] for x in xs),
-                         legs=len(xs), pos=sum(1 for x in xs if x["sr"] > 0))
-    pos_rm = sorted([t for t in tr if t["rm"] and t["rm"]["sr"] > 0], key=lambda t: -t["rm"]["sr"])[:4]
-    pos_pp = sorted([t for t in tr if t["paper"] and t["paper"]["sr"] > 0], key=lambda t: -t["paper"]["sr"])[:5]
-    ra, pa = agg["rm"], agg["paper"]
-    s = d.new_at((3,), "What our strategies have delivered",
-              "The track record of the rule-based strategies, the part of the system that has run long enough to "
-              "have one; the ML models are too new and are judged on their offline evidence. Honest headline first: "
-              f"across all {len(tr)} rule strategies, all-time realized results are negative, "
-              f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
-              "That total includes strategies that have since failed their backtests and been taken off real money, "
-              "which is the ladder working. The strategies below are the ones whose actual results are net positive, "
-              "real money first, with their backtest beside them. Only a minority of live trades have their result "
-              "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
-    d.cards(s, [
-        (f"Real money, all-time: {ra['sr']:+.1f}R", [f"{ra['n']} trades · E[R] {ra['er']:+.2f} · {ra['conf']} of "
-                                                     f"{ra['n']} confirmed · {ra['pos']} of {ra['legs']} strategies net positive"]),
-        (f"Demo, all-time: {pa['sr']:+.1f}R", [f"{pa['n']} trades · E[R] {pa['er']:+.2f} · {pa['conf']} of {pa['n']} "
-                                               f"confirmed · {pa['pos']} of {pa['legs']} strategies net positive"]),
-    ], y=Inches(1.7), h=Inches(0.95), cols=2, size=12, head=15)
-    rows = []
-    for book, lst in (("Real money", pos_rm), ("Demo", pos_pp)):
-        for t in lst:
-            x = t["rm"] if book == "Real money" else t["paper"]
-            bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']}" if t["bt"] is not None else "no record")
-            rows.append([plain_leg(t["leg"]), book, f"{x['sr']:+.2f}R", f"n {x['n']} · E[R] {x['er']:+.2f}",
-                         f"{x['conf']} of {x['n']}", bt, t["status"]])
-            d.num(f"live {book.lower()} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.table(s, ["Strategy", "Book", "Actual ΣR", "n · E[R]", "Confirmed", "Backtest (net R · n · folds +)", "Status"],
-            rows, y=Inches(2.85), col_w=[3.4, 1.3, 1.2, 1.7, 1.2, 2.6, 1.1], size=11, h_row=Inches(0.36))
-    d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
-    d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
-    d.footnote(s, f"Live results are real but small samples; edge is established offline, live checks it holds. "
-                  f"MEASURED, journal all-time to {f['date']} (pipeline-map per-leg table); backtests "
-                  "comms/strategy_evidence/. ML legs and the AI desk excluded.", y=H - Inches(0.85))
-    d.end_md()
-
     # ---------------------------------------------------------------- 11 Basset card
+    d.section = "What the R&D has produced"
     s = d.new_at((11,), "Model card · Basset, the early-warning light (step 11)",
               "The newest family, and an honest one to show. Basset's job is to spot a strategy that is starting to "
               "fade before the losses pile up. The first baseline is a classic statistical alarm, a CUSUM: it adds up "
@@ -1036,27 +1041,6 @@ def build():
            "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2–3", "docs/plans/ML-CONSOLIDATION-2026-11-11.md")
     d.footnote(s, "Source: ROADMAP.md live block (docs/roadmap/milestones.yaml, goal G4) and the ML plan's slot "
                   "questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).", y=H - Inches(1.1))
-    d.end_md()
-
-    # ---------------------------------------------------------------- 15 appendix
-    d.section = "Appendix"
-    s = d.new("Appendix — reading the numbers, and where they come from",
-              "How to read the numbers and where each one came from. The deck is generated by a script that reads "
-              "these files directly, so re-running it refreshes every number; slides.json lists each number with its "
-              "provenance and source.")
-    d.bullets(s, [
-        "R = one unit of risk: what a trade loses if its stop is hit. Expectancy = average R per trade after costs.",
-        "MEASURED = read from a committed file or result. ESTIMATED = rests on an assumption (e.g. a slippage allowance).",
-        "Held-out = data never used for tuning; the real-money pass is judged on it. Fold = one separate time slice.",
-        f"Built {f['date']} from commit {f['sha']} by docs/pitch/build_deck.py.",
-        "Sources: config/strategies.yaml + accounts.yaml (via scripts/ops/strategy_status.py), comms/strategy_evidence/, "
-        "research/queue/, ml/served/SERVED_MODELS.yaml and model artifacts, comms/ml_consolidation/, "
-        "scripts/ci/check_tp_doctrine.py, comms/live_review/reviews.jsonl, config/mandates.yaml.",
-        "Plans: docs/reference/trading-pipeline-map.skeleton.md, docs/plans/ML-ROADMAP-MECE-2026-11.md, "
-        "docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
-        "Left out on purpose: live and paper profit figures (a live book never establishes edge) and every dollar "
-        "amount, balance, account id and server address.",
-    ], size=15, gap=6)
     d.end_md()
 
     d.p.save(OUT_PPTX)
