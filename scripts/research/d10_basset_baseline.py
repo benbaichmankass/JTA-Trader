@@ -237,7 +237,7 @@ ACTION_RULE_ID = "RULE-RQ20261117-aadc-06-D10-ALARM-ACTION"
 MIN_ALARMED = 50
 
 
-def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = BOOT, seed: int = SEED) -> dict:
+def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = BOOT, seed: int = SEED, h: float = H) -> dict:
     """Policy DEMOTE-ON-ALARM: trade i of a leg is NOT taken on the real-money book when the leg's CUSUM through trade i-1 is
     >= H (the alarm is known before trade i is entered). The leg keeps trading on the demo floor, so the CUSUM keeps updating on
     every trade (alarmed ones included) and the alarm clears when S falls below H. added_r = -(sum net R of the skipped trades).
@@ -245,12 +245,20 @@ def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = 
     whose added_r >= actual (+1 smoothing). Per-leg added_r reported."""
     rng = np.random.default_rng(seed)
     skipped_r, per_leg, legs_r = [], {}, []
+    split = {"onset_cum_negative": [], "onset_cum_nonnegative": []}   # RQ-20261117-aadc-07 (b): no lookahead
     for leg, seq in by.items():
         rs = np.array([x["r"] for x in seq], float)
         S = cusum_path(list(rs), mu[leg])
-        alarmed = np.array([i > 0 and S[i - 1] >= H for i in range(len(rs))])
+        alarmed = np.array([i > 0 and S[i - 1] >= h for i in range(len(rs))])
         k = int(alarmed.sum())
         legs_r.append((rs, k))
+        cum = np.concatenate([[0.0], np.cumsum(rs)])        # cum[i] = leg net R of trades < i (known before trade i)
+        onset_cum = None
+        for i in range(len(rs)):
+            if alarmed[i]:
+                if i == 0 or not alarmed[i - 1]:
+                    onset_cum = cum[i]
+                split["onset_cum_negative" if onset_cum < 0 else "onset_cum_nonnegative"].append(float(rs[i]))
         if k:
             per_leg[leg] = {"n": len(rs), "skipped": k, "added_r": round(float(-rs[alarmed].sum()), 3)}
             skipped_r.extend(rs[alarmed].tolist())
@@ -266,7 +274,32 @@ def action_replay(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int = 
     return {"n_alarmed": len(skipped_r), "legs_with_alarm": len(per_leg), "added_r": round(actual, 3),
             "mean_r_skipped": round(float(np.mean(skipped_r)), 4) if skipped_r else None,
             "control_mean_added_r": round(float(ctrl.mean()), 3), "control_p95_added_r": round(float(np.percentile(ctrl, 95)), 3),
-            "control_p": round(p, 4), "legs_positive": sum(1 for v in per_leg.values() if v["added_r"] > 0), "per_leg": per_leg}
+            "control_p": round(p, 4), "legs_positive": sum(1 for v in per_leg.values() if v["added_r"] > 0), "h": h,
+            "split_by_onset_cum_sign": {k2: {"n": len(v2), "added_r": round(float(-np.sum(v2)), 3),
+                                             "mean_r": round(float(np.mean(v2)), 4) if v2 else None} for k2, v2 in split.items()},
+            "per_leg": per_leg}
+
+
+# ── alarm-level sweep (RQ-20261117-aadc-07) ──────────────────────────────────────────────────────────────────────────
+SWEEP_UNIT = "RQ-20261117-aadc-07"
+SWEEP_RULE_ID = "RULE-RQ20261117-aadc-07-D10-ALARM-H-SWEEP"
+SWEEP_H = (2.0, 4.0, 6.0)
+
+
+def sweep_verdict(arms: List[dict]) -> tuple[str, str, Optional[float]]:
+    """Per arm PASS iff skipped >= MIN_ALARMED AND added_r > 0 AND control_p <= 0.05 / len(arms) (Bonferroni, every arm
+    counted). UNIT PASS iff any arm passes (chosen = the passing arm with the highest added_r); FAIL iff every arm has
+    >= MIN_ALARMED skipped trades and none passes; INDETERMINATE otherwise."""
+    bar = 0.05 / len(arms)
+    measured = [a for a in arms if a["n_alarmed"] >= MIN_ALARMED]
+    win = [a for a in measured if a["added_r"] > 0 and a["control_p"] <= bar]
+    if win:
+        best = max(win, key=lambda a: a["added_r"])
+        return "pass", f"H {best['h']} adds {best['added_r']:+.2f} R, control_p {best['control_p']} <= {bar:.4f}", best["h"]
+    if len(measured) == len(arms):
+        return "fail", "no arm: " + "; ".join(f"H {a['h']} {a['added_r']:+.1f} R p {a['control_p']}" for a in arms) + \
+            f" (bar {bar:.4f})", None
+    return "indeterminate", "an arm has < %d skipped trades" % MIN_ALARMED, None
 
 
 def action_verdict(r: dict) -> tuple[str, str]:
@@ -289,6 +322,18 @@ def run(a) -> int:
             if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
                 grades[r["trade_id"]] = r["grade_score"]
     by, ex = leg_series(trades, mu)
+    if a.alarm_h_sweep:
+        arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
+        v, why, chosen = sweep_verdict(arms)
+        res = {"verdict": v, "read_state": "measured", "n": max(x["n_alarmed"] for x in arms),
+               "population": (f"closed live/paper journal trades on {len(by)} legs with a measured Stage-0 record (as aadc-05/-06); "
+                              f"demote-on-alarm at H in {list(SWEEP_H)}, within-leg matched-random control per arm"),
+               "note": why, "measurement": {"rule": SWEEP_RULE_ID, "chosen_h": chosen, "bonferroni_bar": 0.05 / len(SWEEP_H),
+                                            "arms": [{k2: v2 for k2, v2 in x.items() if k2 != "per_leg"} for x in arms],
+                                            "params": {"K": K, "CLIP": CLIP}, "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
     if a.action_replay:
         ar = action_replay(by, mu)
         v, why = action_verdict(ar)
@@ -365,6 +410,15 @@ def _self_test() -> int:
     # the alarm uses S through trade i-1 only: a single huge loss at the last trade is never itself skipped
     one = {"L": [{"trade_id": 0, "closed_at": "a", "r": 0.3}, {"trade_id": 1, "closed_at": "b", "r": -3.0}]}
     assert action_replay(one, {"L": 0.2}, draws=10)["n_alarmed"] == 0
+    arms = [action_replay(by, mu, draws=200, h=hh) for hh in SWEEP_H]
+    assert [x["h"] for x in arms] == list(SWEEP_H) and all("split_by_onset_cum_sign" in x for x in arms)
+    sp = arms[0]["split_by_onset_cum_sign"]
+    assert sp["onset_cum_negative"]["n"] + sp["onset_cum_nonnegative"]["n"] == arms[0]["n_alarmed"]
+    assert sweep_verdict([{"h": 2, "n_alarmed": 80, "added_r": 5, "control_p": 0.02},
+                          {"h": 4, "n_alarmed": 80, "added_r": 5, "control_p": 0.01},
+                          {"h": 6, "n_alarmed": 80, "added_r": 1, "control_p": 0.5}])[2] == 4
+    assert sweep_verdict([{"h": 2, "n_alarmed": 80, "added_r": 5, "control_p": 0.02}] * 3)[0] == "fail"
+    assert sweep_verdict([{"h": 2, "n_alarmed": 10, "added_r": 5, "control_p": 0.5}] * 3)[0] == "indeterminate"
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -378,6 +432,7 @@ def main(argv=None) -> int:
     ap.add_argument("--judgments", default=str(REPO / "comms" / "claude_judgments" / "blind_grades.jsonl"))
     ap.add_argument("--out")
     ap.add_argument("--action-replay", action="store_true", help="RQ-20261117-aadc-06: demote-on-alarm replay instead of the AUC read")
+    ap.add_argument("--alarm-h-sweep", action="store_true", help="RQ-20261117-aadc-07: demote-on-alarm at H in SWEEP_H, Bonferroni")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
