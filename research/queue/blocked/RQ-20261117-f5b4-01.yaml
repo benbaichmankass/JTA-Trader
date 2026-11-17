@@ -104,8 +104,18 @@ ml_consumer:
   book: money
 intervention_controls:
   hold_to_bracket: true
-  note: pivot 5 (the live exit) is the control; the fixed 3 ATR bracket and the pre-structure extend-only exit are reported by the same harness (fixed_3atr_mean_net_r, arm A) as reference arms, not gating;
-    no matched-random SL control is computed (stated, not claimed).
+  matched_random:
+    draws: 200
+    note: random-pivot / random-time SL placements at the served side mix, reported not gating; the current driver does not compute them, so producing them is part of clearing ML-ENTRY-STRUCT-LEDGER (the unit stays blocked until it does).
+  best_static:
+    grid:
+    - fixed 2/3 ATR bracket (pre-structure exit)
+    - pivot 3
+    - pivot 5
+    - pivot 8
+    excludes_test_folds: true
+  bootstrap_group: trade
+  note: pivot 5 (the live exit) is the control; the fixed 3 ATR bracket and the pre-structure extend-only exit are reported as reference arms, not gating.
 lands:
   store: research/results/
   assert_field: read_state
