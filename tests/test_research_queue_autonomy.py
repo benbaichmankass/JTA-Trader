@@ -250,7 +250,10 @@ def test_the_dispatcher_alarm_refills_a_fillable_gap_and_pages_the_rest():
     assert "send-ping" not in refill_branch
     from scripts.ci import check_research_queue_health as hc
     assert hc.EXIT_REFILL == 3
-    assert hc._exit_code(["H1-REFILL x"]) == 3 and hc._exit_code(["H1 x"]) == 1 and hc._exit_code(["H1-REFILL x", "H2 y"]) == 1
+    # STOP-GENERATED-AUTHORING (operator popup 2026-11-01; research-ops SKILL section B): every H1 is a diagnostic (no refill, no page);
+    # H2 (units due now, nothing fired) still pages, alone or beside an H1. The workflow branches above stay for a future exit 3.
+    assert hc._exit_code(["H1-REFILL x"]) == 0 and hc._exit_code(["H1 x"]) == 0
+    assert hc._exit_code(["H2 y"]) == 1 and hc._exit_code(["H1-REFILL x", "H2 y"]) == 1
 
 
 def test_generated_ids_never_enter_the_hand_band():
