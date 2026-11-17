@@ -108,13 +108,14 @@ routing:
   needs_trainer_resident_data: true
   needs_gpu: false
   peak_memory_gb: 4.0
-  est_minutes: 450
+  est_minutes: 120
   why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in
     the trainer venv.
-  basis: 'ESTIMATE: aadc-11 ran 3 legs x 2 arms; 10 legs x 2 arms here, plus 10 candle resolutions; about 3x.'
+  basis: 'MEASURED basis: aadc-11 (3 legs x 2 arms, same corpus) took ~34 min dispatch to result (13:59:56Z -> 14:33:46Z); 10 legs here,
+    ~3.3x, so ~115 min; the 330-min cap (the dispatcher preflight maximum) leaves room for candle resolution.'
 run:
   workflow: research-script-run-trainer.yml
-  timeout_minutes: 600
+  timeout_minutes: 330
   command:
   - python3
   - scripts/research/exit_head_label_bakeoff.py
