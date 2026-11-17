@@ -1,7 +1,7 @@
 id: RQ-20261117-b3aa-08
 title: 'slv_pullback_1d: single-vs-combo read of the confirmed momentum-stale stop (8 bars / ADX < 20) against the LIVE exit (trail_decay 6 / 2.0, passed as raw flags), 2018-03..2026-11, net of the full
   cost stack (closes or packets P1-Q6-slv1d-declare)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -131,3 +131,16 @@ iteration:
 follow_up: PASS -> research-ops writes the Tier-3 packet (exact config diff, both reads) for the manager and closes node P1-Q6-slv1d-declare; FAIL -> node P1-Q6-slv1d-declare closes as superseded by the
   live trail_decay, with this record.
 last_dispatched_at: '2026-11-17T13:59:49+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-08-SINGLE-VS-COMBO
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-08-SINGLE-VS-COMBO
+  evidence:
+  - research/results/RQ-20261117-b3aa-08/44090495211.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
