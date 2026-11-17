@@ -91,14 +91,17 @@ def tick_of(d: pd.DataFrame) -> float:
 
 
 # ------------------------------------------------------------------------------------------------ the policy-F delta on 1m bars
-def delta_f(d: pd.DataFrame, T: int, direction: int, tick: float) -> dict | None:
-    """delta_F (bps) for a decision at epoch second T (on a minute boundary) on one symbol-day of 1m bars."""
+def delta_f(d: pd.DataFrame, T: int, direction: int, tick: float, w_min: int | None = None) -> dict | None:
+    """delta_F (bps) for a decision at epoch second T (on a minute boundary) on one symbol-day of 1m bars.
+
+    w_min: the market-fallback window in minutes (default the a3f1-01 primary W_MIN; the calibration arm always uses it)."""
+    w = int(w_min or W_MIN)
     t = d["t"].to_numpy()
     i0 = int(np.searchsorted(t, T - 60))          # the minute ending at T starts at T - 60
     if i0 >= len(t) or t[i0] != T - 60:
         return None
-    iW = int(np.searchsorted(t, T + 60 * (W_MIN - 1)))
-    if iW >= len(t) or t[iW] != T + 60 * (W_MIN - 1):
+    iW = int(np.searchsorted(t, T + 60 * (w - 1)))
+    if iW >= len(t) or t[iW] != T + 60 * (w - 1):
         return None
     p = float(d["close"].iat[i0])
     bid, ask, mid = p - tick / 2.0, p + tick / 2.0, p
@@ -340,8 +343,8 @@ def run_exit(a) -> int:
             except ValueError:   # a flat (single-price) symbol-day: no tick, so this exit is UNMEASURED and counted, never a crash
                 no_tick_days.add((r.symbol, datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat()))
         if tk is not None:
-            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
-            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
+            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk, a.exit_w_min)
+            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk, a.exit_w_min)
         atr = getattr(r, "atr", np.nan)
         mid = (res or {}).get("mid", np.nan)
         rows.append({"symbol": r.symbol, "day": datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat(),
@@ -361,7 +364,7 @@ def run_exit(a) -> int:
         mean = lo = hi = mb = lob = hib = None
     v, why = exit_verdict(bool(cal["calibrated"]), n, ns, mean, lo)
     fl = ok.filled.astype(bool) if n else pd.Series(dtype=bool)
-    res = {"unit": a.unit, "rule": EXIT_RULE_ID, "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
+    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
            "n_time_stop_exits": len(ts_exit), "n_measured": n, "n_symbols": ns, "mean_delta_r": mean,
            "deflated_ci_delta_r": [lo, hi], "ci_lo_percentile": lo_pct, "mean_delta_bps": mb, "deflated_ci_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()) if n else None,
@@ -419,6 +422,12 @@ def _self_test() -> None:
     d5.loc[d5.t == T0 + 120, "high"] = 100.03
     r = delta_f(d5, int(T0), -1, tick)
     assert r["filled"] and abs(r["delta_bps"] - (0.01 / 100 * 1e4 + 3.5)) < 1e-6, r
+    # W = 1: only the first minute (T, T+1m] counts; the pop at T+2m is outside it -> unfilled, market at T+1m
+    r1 = delta_f(d5, int(T0), -1, tick, 1)
+    assert r1 is not None and r1["filled"] is False, r1
+    d5b = d.copy()
+    d5b.loc[d5b.t == T0, "high"] = 100.03
+    assert delta_f(d5b, int(T0), -1, tick, 1)["filled"] is True
     # exit epoch = decision bar open + 25 h
     assert exit_epoch(pd.Timestamp("2025-10-01 03:00", tz="UTC"), 24) == int(pd.Timestamp("2025-10-02 04:00", tz="UTC").timestamp())
     # 00:00Z exit stitches the previous day's last minute
@@ -462,6 +471,9 @@ def main(argv=None) -> int:
     ap.add_argument("--kcache", default="/tmp/ml_decision_klines")
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--ledger", default=str(HL.LEDGER))
+    ap.add_argument("--exit-rule", default=EXIT_RULE_ID, help="exit mode: the registered rule id the result names")
+    ap.add_argument("--exit-w-min", type=int, default=W_MIN,
+                    help="exit mode: market-fallback window W in minutes for the closing order (calibration stays at W_MIN)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

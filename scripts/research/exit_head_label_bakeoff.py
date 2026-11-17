@@ -49,7 +49,10 @@ CHAMPION = "holding_pays"
 TARGETS = {
     "holding_pays_0": ("future_r_delta", lambda v: 1 if float(v) >= 0.0 else 0),
     "more_mfe": ("peak_is_in", lambda v: 1 - int(v)),
+    # RQ-20261117-aadc-10: the margin lever continued past 0 (holding pays unless the trail will cost > 0.25 R)
+    "holding_pays_neg25": ("future_r_delta", lambda v: 1 if float(v) >= -0.25 else 0),
 }
+DEFAULT_ARMS = ("holding_pays_0", "more_mfe")   # aadc-04's registered arms
 N_OOS_MIN = 300
 PASS_DR = 0.01
 Z_DEFLATED = 2.241   # two-sided Bonferroni over the 2 label arms (alpha 0.05 / 2 -> z 2.241)
@@ -179,6 +182,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--candles-dir", default=None, help="local override: <dir>/<SYM>_<tf>.csv instead of the trainer resolver")
+    ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}")
+    ap.add_argument("--unit", default=UNIT)
+    ap.add_argument("--rule-id", default=RULE_ID)
     ap.add_argument("--json", dest="json_out", required=False)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -198,9 +204,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     rows_path = Path(a.rows) if os.path.isabs(a.rows) else Path(_REPO_ROOT) / a.rows
     rows = teh.load_rows(rows_path)
-    arms = [CHAMPION] + list(TARGETS)
+    label_arms = [x for x in a.arms.split(",") if x]
+    unknown = [x for x in label_arms if x not in TARGETS]
+    if unknown:
+        ap.error(f"unknown arm(s) {unknown}; known {sorted(TARGETS)}")
+    arms = [CHAMPION] + label_arms
     coverage = {arm: (sum(1 for r in rows if r.get(TARGETS[arm][0]) is not None) / len(rows) if rows else 0.0)
-                for arm in TARGETS}
+                for arm in label_arms}
     conf = yaml.safe_load(open(os.path.join(_REPO_ROOT, "config/strategies.yaml"), encoding="utf-8"))
     legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
     out_legs, cost = [], {}
@@ -209,19 +219,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         cost[symbol] = _apply_venue_cost_policy(harness, symbol)
         out_legs.append(run_leg(strategy, symbol, rows, arms, a, harness, conf))
     recs = [r for lg in out_legs for r in lg.get("records", [])]
-    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in TARGETS}
+    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms}
     j = judge(arm_d)
     context = {arm: paired([r[f"r_{arm}"] - r["baseline_r"] for r in recs if f"r_{arm}" in r]) for arm in arms}
     fired = {arm: sum(1 for r in recs if r.get(f"fired_{arm}")) for arm in arms}
     measured = bool(recs)
     n = max((s["n"] for s in j["arms"].values()), default=0)
-    row = {"schema_version": 1, "research_unit": UNIT,
+    row = {"schema_version": 1, "research_unit": a.unit,
            "read_state": "measured" if measured else "producer_failed",
            "verdict": j["verdict"] if measured else "not_applicable", "note": j["why"], "n": n,
            "population": (f"OOS harness trades of {[leg for leg, _ in legs]} ({a.timeframe}), {a.num_folds}-fold sequential "
                           f"walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n {len(rows)}) "
                           f"bar_t <= fold start - {a.embargo_days} d; paired per-trade replayed R vs the holding_pays champion"),
-           "decision_rule": {"id": RULE_ID, "registered_at": "2026-11-17", "registered_before_run": True},
+           "decision_rule": {"id": a.rule_id, "registered_at": "2026-11-17", "registered_before_run": True},
            "measurement": {"judge": j, "arm_dr_vs_hold_context": context, "fired": fired, "target_coverage": coverage,
                            "cost_basis": cost, "lookback": a.lookback,
                            "legs": [{k: v for k, v in lg.items() if k != "records"} for lg in out_legs]},
@@ -236,6 +246,8 @@ def _self_test() -> int:
     rows = [{"bar_t": i, "holding_pays": i % 2, "future_r_delta": (0.3 if i % 3 else -0.1), "peak_is_in": i % 4 == 0}
             for i in range(12)]
     assert with_target(rows, CHAMPION) is rows
+    hn = with_target(rows, "holding_pays_neg25")
+    assert all(r["holding_pays"] == 1 for r in hn), "every future_r_delta here is >= -0.25"
     h0 = with_target(rows, "holding_pays_0")
     assert [r["holding_pays"] for r in h0] == [0 if i % 3 == 0 else 1 for i in range(12)]
     assert rows[0]["holding_pays"] == 0 and rows[1]["holding_pays"] == 1, "the source rows must not be mutated"
