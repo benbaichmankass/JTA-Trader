@@ -1,0 +1,192 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 556,
+ "population": "closed live/paper journal trades on 52 legs with a measured Stage-0 record, net R on the package initial stop, in closed_at order; skipped = trades entered while the leg's CUSUM through the previous trade was >= 3.0",
+ "note": "demote-on-alarm added_r +1275.17 R, control_p 0.2474 (needs > 0 and <= 0.05)",
+ "measurement": {
+  "rule": "RULE-RQ20261117-aadc-06-D10-ALARM-ACTION",
+  "replay": {
+   "n_alarmed": 556,
+   "legs_with_alarm": 30,
+   "added_r": 1275.171,
+   "mean_r_skipped": -2.2935,
+   "control_mean_added_r": 2315.618,
+   "control_p95_added_r": 14707.331,
+   "control_p": 0.2474,
+   "legs_positive": 14,
+   "per_leg": {
+    "ict_scalp_5m": {
+     "n": 96,
+     "skipped": 31,
+     "added_r": -8.805
+    },
+    "ict_scalp_avax_5m": {
+     "n": 91,
+     "skipped": 8,
+     "added_r": -19.667
+    },
+    "spy_pullback_1h": {
+     "n": 18,
+     "skipped": 5,
+     "added_r": -5.276
+    },
+    "trend_donchian_eth": {
+     "n": 35,
+     "skipped": 9,
+     "added_r": -9.65
+    },
+    "ml_entry": {
+     "n": 84,
+     "skipped": 58,
+     "added_r": 9.9
+    },
+    "ict_scalp_xrp_5m": {
+     "n": 47,
+     "skipped": 21,
+     "added_r": -3.365
+    },
+    "trend_donchian_xrp_4h": {
+     "n": 26,
+     "skipped": 9,
+     "added_r": 2.834
+    },
+    "trend_donchian_eth_prop": {
+     "n": 14,
+     "skipped": 8,
+     "added_r": -4.919
+    },
+    "ict_scalp_xrp_15m": {
+     "n": 48,
+     "skipped": 20,
+     "added_r": -93.144
+    },
+    "qqq_pullback_1h": {
+     "n": 24,
+     "skipped": 22,
+     "added_r": 17.84
+    },
+    "ict_scalp_sol_15m": {
+     "n": 52,
+     "skipped": 4,
+     "added_r": -16.672
+    },
+    "trend_donchian_sol_prop": {
+     "n": 11,
+     "skipped": 7,
+     "added_r": 7.919
+    },
+    "xrp_pullback_2h": {
+     "n": 66,
+     "skipped": 43,
+     "added_r": -4.218
+    },
+    "iaum_pullback_1d": {
+     "n": 4,
+     "skipped": 2,
+     "added_r": -2.111
+    },
+    "ada_pullback_2h": {
+     "n": 78,
+     "skipped": 65,
+     "added_r": -150.396
+    },
+    "trend_donchian_eth_4h": {
+     "n": 59,
+     "skipped": 36,
+     "added_r": 12.455
+    },
+    "mes_trend_long_1d": {
+     "n": 4,
+     "skipped": 2,
+     "added_r": 6.109
+    },
+    "trend_donchian": {
+     "n": 45,
+     "skipped": 14,
+     "added_r": 0.406
+    },
+    "trend_donchian_sol": {
+     "n": 12,
+     "skipped": 2,
+     "added_r": -5.027
+    },
+    "ict_scalp_sol_5m": {
+     "n": 67,
+     "skipped": 4,
+     "added_r": -17.273
+    },
+    "uso_trend_1h": {
+     "n": 24,
+     "skipped": 9,
+     "added_r": 3.376
+    },
+    "eth_pullback_2h": {
+     "n": 72,
+     "skipped": 42,
+     "added_r": -32.434
+    },
+    "tlt_pullback_1h": {
+     "n": 16,
+     "skipped": 13,
+     "added_r": 23.006
+    },
+    "mhg_pullback_1d": {
+     "n": 6,
+     "skipped": 5,
+     "added_r": -1052.194
+    },
+    "slv_pullback_1d": {
+     "n": 5,
+     "skipped": 2,
+     "added_r": 2.012
+    },
+    "sol_pullback_2h": {
+     "n": 29,
+     "skipped": 15,
+     "added_r": -2.208
+    },
+    "mgc_trend_1h": {
+     "n": 21,
+     "skipped": 18,
+     "added_r": 2549.823
+    },
+    "gld_pullback_1h": {
+     "n": 14,
+     "skipped": 11,
+     "added_r": 23.179
+    },
+    "slv_trend_1h": {
+     "n": 27,
+     "skipped": 22,
+     "added_r": 15.301
+    },
+    "htf_pullback_trend_2h": {
+     "n": 59,
+     "skipped": 49,
+     "added_r": 28.371
+    }
+   }
+  },
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "H": 3.0
+  },
+  "trades_in": 7692,
+  "excluded": {
+   "not_closed": 4960,
+   "no_leg_record": 1187,
+   "no_net_r": 148,
+   "backtest": 0
+  },
+  "stage0_records": 54
+ },
+ "run": {
+  "kind": "session-local",
+  "by": "ML-PRIMARY-5 session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "inputs": "same pull as read1: journal trades (7,692 rows 2026-05-01..2026-11-17) + order_packages via scripts/ops/diag_fetch.sh, ~10:15-10:45Z",
+  "read_status": "DEFECTIVE: superseded by read2 (same defect). Kept for the record.",
+  "registered_commit_before_run": "b3a15ad314"
+ }
+}
