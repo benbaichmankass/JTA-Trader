@@ -642,9 +642,35 @@ def build():
     d.slides[-1]["footnote"] = fn
     d.end_md()
 
+    # ---------------------------------------------------------------- 3a first half of the pipeline (operator comment 2026-11-17)
+    s = d.new_at((1, 2, 3, 4, 5, 6), "From data to a sized order: steps 1–6",
+              "The first half of the map, from market data to an order that is ready to send. Data arrives from every "
+              "venue. Each strategy computes its own inputs. At step 3, rule strategies and ML models propose trades "
+              "side by side. The intent layer combines the proposals, steps aside where a strategy loses in the "
+              "current market regime, and elects one trade per market. Routing decides which accounts carry the "
+              "strategy, behind exactly two switches: account live or dry run, strategy live or shadow. The risk "
+              f"manager then sizes the trade in R and applies the daily drawdown brake. Today {st['production']} "
+              f"strategies trade real money and {st['testing']} trade on the demo floor; {f['accounts_live_mode']} of "
+              f"{f['accounts_total']} accounts send orders.", tags=("MEASURED",))
+    d.flow(s, [
+        ("Data in", ["Candles, feeds and ML features from every venue."]),
+        ("Signal builders", ["Each strategy computes its own inputs."]),
+        ("Strategies + ML", ["Rule strategies and ML models propose trades."]),
+        ("Intent layer", ["Combine; step aside in losing regimes; elect one."]),
+        ("Routing", ["Which accounts; two on/off switches."]),
+        ("Risk + sizing", ["Size in R; daily drawdown brake; exposure."]),
+    ], size=12, h=Inches(1.25))
+    d.num("production legs", st["production"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
+    d.num("testing legs", st["testing"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
+    d.num("accounts sending orders", f["accounts_live_mode"], "MEASURED", "config/accounts.yaml (mode: live)", "/api/bot/config")
+    d.footnote(s, f"MEASURED: {st['production']} production and {st['testing']} testing legs (scripts/ops/strategy_status.py); "
+                  f"{f['accounts_live_mode']} of {f['accounts_total']} accounts live (config/accounts.yaml). Steps from "
+                  "docs/reference/trading-pipeline-map.md.", y=H - Inches(1.3))
+    d.end_md()
+
     # ---------------------------------------------------------------- 3 trade management
     s = d.new_at((7, 8, 9, 10), "Trade management: entry, in-trade, exit",
-              "Steps 7 to 11 in detail, because this is where the trade is actually managed. At entry every order "
+              "The second half of the map, steps 7 to 10, where the trade is actually managed. At entry every order "
               "carries a protective stop, which defines 1R, and a profit target that must be a real prediction, "
               "not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the "
               "position can be part-closed or closed, but only when something in the live market triggers it: "

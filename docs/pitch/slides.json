@@ -1,8 +1,8 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "bf1e3edca",
+ "built_from_commit": "9ee062420",
  "built_on": "2026-11-17",
- "slide_count": 15,
+ "slide_count": 16,
  "spec": {
   "audience": "smart non-expert",
   "numbers": "ratios only, no $, each tagged MEASURED or ESTIMATED",
@@ -59,6 +59,58 @@
   {
    "number": 3,
    "section": "The trade pipeline",
+   "title": "From data to a sized order: steps 1–6",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "1. Data in — Candles, feeds and ML features from every venue.",
+    "2. Signal builders — Each strategy computes its own inputs.",
+    "3. Strategies + ML — Rule strategies and ML models propose trades.",
+    "4. Intent layer — Combine; step aside in losing regimes; elect one.",
+    "5. Routing — Which accounts; two on/off switches.",
+    "6. Risk + sizing — Size in R; daily drawdown brake; exposure."
+   ],
+   "notes": "The first half of the map, from market data to an order that is ready to send. Data arrives from every venue. Each strategy computes its own inputs. At step 3, rule strategies and ML models propose trades side by side. The intent layer combines the proposals, steps aside where a strategy loses in the current market regime, and elects one trade per market. Routing decides which accounts carry the strategy, behind exactly two switches: account live or dry run, strategy live or shadow. The risk manager then sizes the trade in R and applies the daily drawdown brake. Today 8 strategies trade real money and 51 trade on the demo floor; 11 of 14 accounts send orders.",
+   "numbers": [
+    {
+     "label": "production legs",
+     "value": 8,
+     "provenance": "MEASURED",
+     "source": "scripts/ops/strategy_status.py",
+     "live_endpoint_candidate": "/api/bot/strategies"
+    },
+    {
+     "label": "testing legs",
+     "value": 51,
+     "provenance": "MEASURED",
+     "source": "scripts/ops/strategy_status.py",
+     "live_endpoint_candidate": "/api/bot/strategies"
+    },
+    {
+     "label": "accounts sending orders",
+     "value": 11,
+     "provenance": "MEASURED",
+     "source": "config/accounts.yaml (mode: live)",
+     "live_endpoint_candidate": "/api/bot/config"
+    }
+   ],
+   "sources": [],
+   "stages": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "footnote": "MEASURED: 8 production and 51 testing legs (scripts/ops/strategy_status.py); 11 of 14 accounts live (config/accounts.yaml). Steps from docs/reference/trading-pipeline-map.md.",
+   "live_refreshable": true
+  },
+  {
+   "number": 4,
+   "section": "The trade pipeline",
    "title": "Trade management: entry, in-trade, exit",
    "kicker": null,
    "provenance": [
@@ -70,7 +122,7 @@
     "3. Review desk — Every open trade reviewed; options priced from the strategy's own history. 789 reviews on record.",
     "4. Exit + grade — Close reason recorded, trade graded, grade becomes a training label."
    ],
-   "notes": "Steps 7 to 11 in detail, because this is where the trade is actually managed. At entry every order carries a protective stop, which defines 1R, and a profit target that must be a real prediction, not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the position can be part-closed or closed, but only when something in the live market triggers it: structure, volatility, momentum, regime or a scheduled event. Never the profit alone, never the clock alone. A review function looks at every open trade, prices each option from that strategy's own backtest history, and since 14 November its recommended actions are applied automatically through each account's own risk checks, with a ping to the operator. At the exit the close reason is recorded and graded, and the grade feeds research. Honest status on targets: on real money 7 of 8 routings set a real target at entry, but only 1 of 8 revise it during the trade.",
+   "notes": "The second half of the map, steps 7 to 10, where the trade is actually managed. At entry every order carries a protective stop, which defines 1R, and a profit target that must be a real prediction, not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the position can be part-closed or closed, but only when something in the live market triggers it: structure, volatility, momentum, regime or a scheduled event. Never the profit alone, never the clock alone. A review function looks at every open trade, prices each option from that strategy's own backtest history, and since 14 November its recommended actions are applied automatically through each account's own risk checks, with a ping to the operator. At the exit the close reason is recorded and graded, and the grade feeds research. Honest status on targets: on real money 7 of 8 routings set a real target at entry, but only 1 of 8 revise it during the trade.",
    "numbers": [
     {
      "label": "real-money routings with an entry target",
@@ -105,7 +157,7 @@
    "live_refreshable": false
   },
   {
-   "number": 4,
+   "number": 5,
    "section": "How we find edge",
    "title": "The R&D loop: how a model earns, and keeps, its place",
    "kicker": null,
@@ -129,7 +181,7 @@
    "live_refreshable": false
   },
   {
-   "number": 5,
+   "number": 6,
    "section": "How we find edge",
    "title": "One real cycle: the equity entry model, November 2026",
    "kicker": null,
@@ -207,7 +259,7 @@
    "live_refreshable": false
   },
   {
-   "number": 6,
+   "number": 7,
    "section": "The ML families",
    "title": "The model families, placed on the map",
    "kicker": null,
@@ -303,7 +355,7 @@
    "live_refreshable": false
   },
   {
-   "number": 7,
+   "number": 8,
    "section": "The ML families",
    "title": "Model card · Foxhound, the entry model (step 3)",
    "kicker": null,
@@ -407,7 +459,7 @@
    "live_refreshable": false
   },
   {
-   "number": 8,
+   "number": 9,
    "section": "The ML families",
    "title": "Model card · Beagle, the signal filter (step 4)",
    "kicker": null,
@@ -495,7 +547,7 @@
    "live_refreshable": false
   },
   {
-   "number": 9,
+   "number": 10,
    "section": "The ML families",
    "title": "Model card · Labrador, the in-trade manager (steps 7 and 9)",
    "kicker": null,
@@ -584,7 +636,7 @@
    "live_refreshable": false
   },
   {
-   "number": 10,
+   "number": 11,
    "section": "What the R&D has produced",
    "title": "What our strategies have delivered",
    "kicker": null,
@@ -799,7 +851,7 @@
    "live_refreshable": true
   },
   {
-   "number": 11,
+   "number": 12,
    "section": "What the R&D has produced",
    "title": "Model card · Basset, the early-warning light (step 11)",
    "kicker": null,
@@ -887,7 +939,7 @@
    "live_refreshable": false
   },
   {
-   "number": 12,
+   "number": 13,
    "section": "What the R&D has produced",
    "title": "Produced so far 2 — research throughput, and how much fails",
    "kicker": null,
@@ -941,11 +993,11 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit bf1e3edca.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 9ee062420.",
    "live_refreshable": true
   },
   {
-   "number": 13,
+   "number": 14,
    "section": "How it runs",
    "title": "How it runs automatically, in one slide",
    "kicker": null,
@@ -993,7 +1045,7 @@
    "live_refreshable": true
   },
   {
-   "number": 14,
+   "number": 15,
    "section": "Where it goes next",
    "title": "Roadmap: the next ML milestone at each decision",
    "kicker": null,
@@ -1059,7 +1111,7 @@
    "live_refreshable": false
   },
   {
-   "number": 15,
+   "number": 16,
    "section": "Appendix",
    "title": "Appendix — reading the numbers, and where they come from",
    "kicker": null,
@@ -1068,7 +1120,7 @@
     "R = one unit of risk: what a trade loses if its stop is hit. Expectancy = average R per trade after costs.",
     "MEASURED = read from a committed file or result. ESTIMATED = rests on an assumption (e.g. a slippage allowance).",
     "Held-out = data never used for tuning; the real-money pass is judged on it. Fold = one separate time slice.",
-    "Built 2026-11-17 from commit bf1e3edca by docs/pitch/build_deck.py.",
+    "Built 2026-11-17 from commit 9ee062420 by docs/pitch/build_deck.py.",
     "Sources: config/strategies.yaml + accounts.yaml (via scripts/ops/strategy_status.py), comms/strategy_evidence/, research/queue/, ml/served/SERVED_MODELS.yaml and model artifacts, comms/ml_consolidation/, scripts/ci/check_tp_doctrine.py, comms/live_review/reviews.jsonl, config/mandates.yaml.",
     "Plans: docs/reference/trading-pipeline-map.skeleton.md, docs/plans/ML-ROADMAP-MECE-2026-11.md, docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
     "Left out on purpose: live and paper profit figures (a live book never establishes edge) and every dollar amount, balance, account id and server address."
