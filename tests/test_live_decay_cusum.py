@@ -65,7 +65,9 @@ def test_live_observations_block_payload_oldest_first_and_no_complete_block_is_n
 
 def test_coverage_lists_prop_legs_and_names_why_a_leg_is_not_monitorable():
     rows = {r["leg"]: r for r in d.coverage(REPO)}
-    assert "prop" in rows["trend_donchian_eth_4h"]["classes"] and not rows["trend_donchian_eth_4h"]["monitorable"]
+    # trend_donchian_eth_4h is rostered on the prop accounts (and, since the 2026-11-17 re-promotion, on the Stage-2
+    # pair too), so the coverage list must carry the prop class; monitorability is checked structurally below.
+    assert "prop" in rows["trend_donchian_eth_4h"]["classes"]
     for r in rows.values():   # structural, not pinned to one leg: a missing series is named and never monitorable
         assert (r["stage0_state"] == "series") == (r["stage0_n"] > 0)
         if r["stage0_state"] == "no_series":
