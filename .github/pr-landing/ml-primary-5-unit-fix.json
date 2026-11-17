@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Fixes two structurally invalid research units this lane landed (main's pytest-run red after #26649): RQ-20261117-aadc-01 lacked `lands.store` (R2) and RQ-20261117-aadc-06 lacked `question`. Adds the missing blocks only; no rule, statistic or threshold is touched. tests/test_research_queue.py: the 2 structural tests and the 3 w4 dispatcher dry-run tests fail on origin/main and pass with this change (run locally). Gates this adds or changes: none. HELD: edits to existing queue units are outside the self-land surface (pr-landing R5); the manager merges."
+}
