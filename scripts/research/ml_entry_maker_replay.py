@@ -329,11 +329,17 @@ def run_exit(a) -> int:
     with cf.ThreadPoolExecutor(24) as ex:
         frames = dict(zip(jobs, ex.map(lambda j: fetch_1m(j[0], j[1], cache), jobs)))
     rows = []
+    no_tick_days: set = set()
     for r in ts_exit.itertuples(index=False):
         d = day_frame(r.symbol, int(r.T), frames)
         res = opp = None
+        tk = None
         if d is not None and len(d) > 100:
-            tk = tick_of(d)
+            try:
+                tk = tick_of(d)
+            except ValueError:   # a flat (single-price) symbol-day: no tick, so this exit is UNMEASURED and counted, never a crash
+                no_tick_days.add((r.symbol, datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat()))
+        if tk is not None:
             res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
             opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
         atr = getattr(r, "atr", np.nan)
@@ -366,7 +372,7 @@ def run_exit(a) -> int:
            "taker_mean_net_r_time_stop": float(ok.net_r_taker.mean()) if n else None,
            "share_of_all_decisions": (len(ts_exit) / n_all) if n_all else None,
            "per_all_decisions_delta_r": (mean * n / n_all) if (n_all and mean is not None) else None,
-           "matched_random_side": matched,
+           "matched_random_side": matched, "unmeasured_flat_symbol_days": sorted(f"{a}:{b}" for a, b in no_tick_days),
            "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "exits.csv.gz", index=False)
@@ -436,6 +442,13 @@ def _self_test() -> None:
     assert mr["draws"] == 200 and abs(mr["mean_of_means"] - 0.01) < 1e-12, mr
     m, lo, hi = block_ci(np.array([1.0, 1.0, 1.0, 1.0]), np.array(["a", "a", "b", "b"]), 2.5)
     assert m == lo == hi == 1.0
+    # a flat symbol-day has no inferable tick: run_exit treats it as unmeasured (tick_of raises ValueError, caught there)
+    flat = pd.DataFrame({"t": t, "open": 100.0, "high": 100.0, "low": 100.0, "close": 100.0})
+    try:
+        tick_of(flat)
+        raise AssertionError("tick_of must refuse a flat day")
+    except ValueError:
+        pass
     print("ml_entry_maker_replay self-test OK")
 
 
