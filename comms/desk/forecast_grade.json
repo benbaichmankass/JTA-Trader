@@ -58,7 +58,7 @@
     "expired": 14,
     "invalidation_first": 5,
     "no_data": 0,
-    "pending": 0,
+    "pending": 1,
     "target_first": 7,
     "tie_unresolved": 0
    },
@@ -66,7 +66,7 @@
     "n": 25,
     "rate": 0.56
    },
-   "n": 26,
+   "n": 27,
    "n_graded": 26,
    "n_packages": 0,
    "n_scored_with_p": 26,
@@ -145,12 +145,12 @@
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-17T14:53:33Z",
+ "computed_at": "2026-11-17T16:18:53Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 198,
-   "records": 224,
-   "with_forecast": 26
+   "records": 225,
+   "with_forecast": 27
   },
   "live_review": {
    "records": 827,
@@ -158,7 +158,15 @@
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
- "pending": [],
+ "pending": [
+  {
+   "fid": "DD-20261117T1602Z-scan-1h-1",
+   "horizon_end": "2026-11-18T04:10:16Z",
+   "source": "desk_entry",
+   "symbol": "XRPUSDT",
+   "time_remaining_s": 42682
+  }
+ ],
  "pooled": {
   "brier_by_class": {
    "expired": {
@@ -217,7 +225,7 @@
    "expired": 155,
    "invalidation_first": 153,
    "no_data": 14,
-   "pending": 0,
+   "pending": 1,
    "target_first": 141,
    "tie_unresolved": 0
   },
@@ -225,19 +233,19 @@
    "n": 434,
    "rate": 0.4724
   },
-  "n": 463,
+  "n": 464,
   "n_graded": 449,
   "n_packages": 136,
   "n_scored_with_p": 449,
   "unresolved_ties": 0
  },
- "population": "463 forecasts: live_review=437, desk_entry=26 (every record carrying target+invalidation+horizon+probability)",
+ "population": "464 forecasts: live_review=437, desk_entry=27 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
-   "branch": 224,
+   "branch": 225,
    "main_decisions": 224,
-   "union": 224
+   "union": 225
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
