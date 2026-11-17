@@ -1,6 +1,6 @@
 {
  "schema": "jta-pitch-slides/v1",
- "built_from_commit": "6cce2b110",
+ "built_from_commit": "19abbd490",
  "built_on": "2026-11-17",
  "slide_count": 15,
  "spec": {
@@ -39,82 +39,21 @@
   {
    "number": 2,
    "section": "The trade pipeline",
-   "title": "The trading pipeline map: eleven steps, ten model decisions",
+   "title": "The trading pipeline",
    "kicker": null,
    "provenance": [],
-   "bullets": [],
-   "notes": "This is the spine of the deck. Every trade passes through the same eleven steps, from market data to grading. The right-hand column shows where a learned model makes, or is being built to make, a decision: the ML plan cuts the life of a trade into ten decisions, D1 to D10, each owned by one family of models. Two feedback loops close the circle: graded results and retrained models flow back into which strategies and models run, and the paper mirror of each real-money book can demote a strategy back to the demo floor. Per-trade risk sizing is deliberately not a model decision; it stays with the rule-based risk manager.",
-   "numbers": [],
-   "sources": [
-    "docs/reference/trading-pipeline-map.skeleton.md",
-    "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2"
+   "bullets": [
+    "Step 3 runs two kinds of decision-makers — Rule strategies: trend breakouts, pullbacks, scalps and others, each with its own backtest evidence. ML models: learned entry models that propose trades too.",
+    "Same path for both — Steps 4–10 treat them alike: intent layer, risk manager, stop and target, execution, live management, reconciliation.",
+    "The loop — Step 11 grades everything. New evidence changes rosters and settings; retrained models re-enter at step 3."
    ],
-   "table": {
-    "header": [
-     "Step",
-     "What happens",
-     "Where a model decides"
-    ],
-    "rows": [
-     [
-      "1 · Data in",
-      "Prices, feeds, features",
-      "—"
-     ],
-     [
-      "2 · Signals",
-      "Each strategy's inputs",
-      "—"
-     ],
-     [
-      "3 · Strategies + ML",
-      "Rules + models propose trades",
-      "D3 Entry · Foxhound"
-     ],
-     [
-      "4 · Intent layer",
-      "Combine; step aside in bad regimes",
-      "D2 Regime · Collie / D4 Filter · Beagle"
-     ],
-     [
-      "5 · Routing",
-      "Which accounts; two switches",
-      "D1 Book · rule"
-     ],
-     [
-      "6 · Risk",
-      "Size in R; daily brake",
-      "D5 Aggregate · Mastiff (research)"
-     ],
-     [
-      "7 · Order + bracket",
-      "Stop + predictive target",
-      "D6 Bracket · Pointer"
-     ],
-     [
-      "8 · Execution",
-      "Orders to the venue",
-      "D9 Execution · Whippet"
-     ],
-     [
-      "9 · Live mgmt",
-      "Move brackets on evidence",
-      "D7/D8 In-trade + exit · Labrador; review desk"
-     ],
-     [
-      "10 · Close",
-      "Venue P&L reconciled",
-      "—"
-     ],
-     [
-      "11 · Grade + R&D",
-      "Grade every trade and test",
-      "D10 Review · Basset; the R&D loop"
-     ]
-    ]
-   },
-   "visual": "pipeline_full",
-   "footnote": "Source: the trading pipeline map (docs/reference/trading-pipeline-map.skeleton.md; live at /api/bot/work/pipeline-map) and the ML plan's ten decision slots (docs/plans/ML-ROADMAP-MECE-2026-11.md). Teal = a model decides here. Family names are internal labels.",
+   "notes": "This is the trading pipeline map we built and use on the Work tab, drawn from the same source. Every trade passes through these eleven steps. At step 3, two kinds of decision-makers run side by side: hand-designed rule strategies, such as trend breakouts, pullbacks in a trend and short-term scalps, each with its own backtest evidence; and machine-learning models that propose trades of their own. Both feed the same intent layer, risk manager, bracket and execution steps, so a model gets no shortcut around the risk controls. Step 11 grades every trade and test, and its two dashed arrows are the loop: new evidence changes which strategies run and with what settings, and retrained, promoted models go back in at step 3.",
+   "numbers": [],
+   "sources": [],
+   "visual": "pipeline_image",
+   "image": "docs/pitch/pipeline_map.png",
+   "mermaid_source": "docs/reference/trading-pipeline-map.md § The flow",
+   "footnote": "The map: docs/reference/trading-pipeline-map.md § The flow (mermaid source rendered verbatim; live at /api/bot/work/pipeline-map).",
    "live_refreshable": false
   },
   {
@@ -647,150 +586,153 @@
   {
    "number": 10,
    "section": "What the R&D has produced",
-   "title": "Produced so far 1 — what trades real money, and why",
+   "title": "Our best performing strategies today",
    "kicker": null,
    "provenance": [
     "MEASURED"
    ],
    "bullets": [],
-   "notes": "Every strategy on real money today, with the held-out backtest result it was promoted on, net of the full cost stack. Two of the nine are machine-learning models. Expectancy is average profit per trade in units of risk. Positive folds counts how many separate time periods came out positive. These are backtest results; live books check mechanics and cost, they do not establish edge.",
+   "notes": "The five real-money strategies with the strongest offline evidence, ranked by total net R on test data they were not tuned on, after the full cost stack. Three are rule strategies and two are ML models. The small line under each is the live real-money record so far; with so few live trades it checks that the mechanics work, it does not measure edge. Two of the five have no live real-money trades yet.",
    "numbers": [
     {
-     "label": "expectancy per trade: ada_pullback_2h",
-     "value": 0.404,
+     "label": "net R OOS: ml_entry_eq_struct",
+     "value": 101.89,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/ada_pullback_2h.json (expectancy_r_oos)",
+     "source": "comms/strategy_evidence/ml_entry_eq_struct.json (net_r_oos)",
      "live_endpoint_candidate": null
     },
     {
-     "label": "expectancy per trade: ml_entry",
-     "value": 0.037,
+     "label": "live real-money E[R]: ml_entry_eq_struct",
+     "value": null,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/ml_entry.json (expectancy_r_oos)",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "net R OOS: slv_trend_1h",
+     "value": 54.52,
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/slv_trend_1h.json (net_r_oos)",
      "live_endpoint_candidate": null
     },
     {
-     "label": "expectancy per trade: ml_entry_eq_struct",
-     "value": 0.492,
+     "label": "live real-money E[R]: slv_trend_1h",
+     "value": null,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/ml_entry_eq_struct.json (expectancy_r_oos)",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "net R OOS: trend_donchian_sol_prop",
+     "value": 49.81,
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/trend_donchian_sol_prop.json (net_r_oos)",
      "live_endpoint_candidate": null
     },
     {
-     "label": "expectancy per trade: slv_trend_1h",
-     "value": 0.593,
+     "label": "live real-money E[R]: trend_donchian_sol_prop",
+     "value": -0.83,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/slv_trend_1h.json (expectancy_r_oos)",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "net R OOS: ml_entry",
+     "value": 33.68,
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/ml_entry.json (net_r_oos)",
      "live_endpoint_candidate": null
     },
     {
-     "label": "expectancy per trade: tlt_pullback_1h",
-     "value": 0.109,
+     "label": "live real-money E[R]: ml_entry",
+     "value": -0.05,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/tlt_pullback_1h.json (expectancy_r_oos)",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "net R OOS: ada_pullback_2h",
+     "value": 27.09,
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/ada_pullback_2h.json (net_r_oos)",
      "live_endpoint_candidate": null
     },
     {
-     "label": "expectancy per trade: tqqq_trend_long_1d",
-     "value": 0.236,
+     "label": "live real-money E[R]: ada_pullback_2h",
+     "value": -0.03,
      "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/tqqq_trend_long_1d.json (expectancy_r_oos)",
-     "live_endpoint_candidate": null
-    },
-    {
-     "label": "expectancy per trade: trend_donchian_sol_prop",
-     "value": 0.093,
-     "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/trend_donchian_sol_prop.json (expectancy_r_oos)",
-     "live_endpoint_candidate": null
-    },
-    {
-     "label": "expectancy per trade: trend_donchian_xrp_4h",
-     "value": 0.076,
-     "provenance": "MEASURED",
-     "source": "comms/strategy_evidence/trend_donchian_xrp_4h.json (expectancy_r_oos)",
-     "live_endpoint_candidate": null
-    },
-    {
-     "label": "production legs",
-     "value": 8,
-     "provenance": "MEASURED",
-     "source": "scripts/ops/strategy_status.py",
-     "live_endpoint_candidate": "/api/bot/strategies"
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
     }
    ],
    "sources": [],
    "stages": [
+    3,
     5
    ],
-   "table": {
-    "header": [
-     "Strategy on real money",
-     "Expectancy / trade",
-     "Test trades",
-     "Positive folds",
-     "Test window"
-    ],
-    "rows": [
-     [
-      "Cardano pullback (2-hour bars)",
-      "+0.40R",
-      "67",
-      "4 of 4",
-      "2025-11 → 2026-10"
-     ],
-     [
-      "ML entry model (5 crypto coins, hourly)",
-      "+0.037R",
-      "907",
-      "1 of 1",
-      "2025-10 → 2026-09"
-     ],
-     [
-      "ML entry model (US funds pool, hourly)",
-      "+0.49R",
-      "207",
-      "held-out",
-      "2025-07 → 2026-10"
-     ],
-     [
-      "Silver-ETF trend breakout (hourly bars)",
-      "+0.59R",
-      "92",
-      "3 of 4",
-      "2025-07 → 2026-11"
-     ],
-     [
-      "Long-bond-ETF pullback (hourly bars)",
-      "+0.11R",
-      "75",
-      "3 of 4",
-      "2025-07 → 2026-11"
-     ],
-     [
-      "Leveraged Nasdaq-ETF trend, long only (daily)",
-      "+0.24R",
-      "54",
-      "5 of 8",
-      "2021-06 → 2026-10"
-     ],
-     [
-      "Solana trend breakout (hourly bars)",
-      "+0.09R",
-      "538",
-      "4 of 4",
-      "2020-11 → 2026-11"
-     ],
-     [
-      "XRP trend breakout (4-hour bars)",
-      "+0.08R",
-      "46",
-      "3 of 4",
-      "2022-11 → 2026-10"
-     ]
-    ]
-   },
-   "footnote": "MEASURED (backtest, out of sample, net of fees + slippage + funding): comms/strategy_evidence/<leg>.json; roster from scripts/ops/strategy_status.py. Fossil-fuel funds are excluded from real money by policy (config/values_exclusions.yaml).",
+   "best": [
+    {
+     "leg": "ml_entry_eq_struct",
+     "name": "ML entry model (US funds pool, hourly)",
+     "kind": "ML model",
+     "market": "US funds",
+     "net_r_oos": 101.89,
+     "n_oos": 207,
+     "folds": "held-out window",
+     "evidence_date": "2026-11-08",
+     "live_n": 0,
+     "live_er": null
+    },
+    {
+     "leg": "slv_trend_1h",
+     "name": "Silver-ETF trend breakout (hourly bars)",
+     "kind": "Rule strategy",
+     "market": "US funds",
+     "net_r_oos": 54.52,
+     "n_oos": 92,
+     "folds": "3/4 folds +",
+     "evidence_date": "2026-11-13",
+     "live_n": 0,
+     "live_er": null
+    },
+    {
+     "leg": "trend_donchian_sol_prop",
+     "name": "Solana trend breakout (hourly bars)",
+     "kind": "Rule strategy",
+     "market": "Crypto",
+     "net_r_oos": 49.81,
+     "n_oos": 538,
+     "folds": "4/4 folds +",
+     "evidence_date": "2026-11-12",
+     "live_n": 4,
+     "live_er": -0.83
+    },
+    {
+     "leg": "ml_entry",
+     "name": "ML entry model (5 crypto coins, hourly)",
+     "kind": "ML model",
+     "market": "Crypto",
+     "net_r_oos": 33.68,
+     "n_oos": 907,
+     "folds": "1/1 folds +",
+     "evidence_date": "2026-11-04",
+     "live_n": 36,
+     "live_er": -0.05
+    },
+    {
+     "leg": "ada_pullback_2h",
+     "name": "Cardano pullback (2-hour bars)",
+     "kind": "Rule strategy",
+     "market": "Crypto",
+     "net_r_oos": 27.09,
+     "n_oos": 67,
+     "folds": "4/4 folds +",
+     "evidence_date": "2026-11-06",
+     "live_n": 19,
+     "live_er": -0.03
+    }
+   ],
+   "footnote": "MEASURED: comms/strategy_evidence/<leg>.json (net R out of sample, full cost); live line: pipeline-map per-leg table, rebuilt at build time.",
    "live_refreshable": true
   },
   {
@@ -890,22 +832,22 @@
     "MEASURED"
    ],
    "bullets": [
-    "1927 questions done — 411 passed · 1086 failed · 267 indeterminate. 27% pass rate on decisive results.",
+    "1930 questions done — 412 passed · 1088 failed · 267 indeterminate. 27% pass rate on decisive results.",
     "54 strategy backtests — 32 passed, 22 failed, after the full cost stack. Scalps: 0 of 7 passed.",
-    "319 questions queued — Each written down with its data, test and pass mark before it runs. A dispatcher runs them on cloud runners."
+    "316 questions queued — Each written down with its data, test and pass mark before it runs. A dispatcher runs them on cloud runners."
    ],
-   "notes": "The volume behind the results. The research queue has 1927 completed questions. Of the graded ones, 411 passed their pre-registered rule and 1086 failed, with 267 indeterminate because the sample was too small to call. That is a pass rate of 27% on decisive results. Strategy evidence tells the same story: of 54 measured backtests, 32 passed. The short-term scalp family passed 0 of its 7 tests and is not on real money. Most ideas fail, and the system is built so that they fail cheaply, offline, before any money is at risk.",
+   "notes": "The volume behind the results. The research queue has 1930 completed questions. Of the graded ones, 412 passed their pre-registered rule and 1088 failed, with 267 indeterminate because the sample was too small to call. That is a pass rate of 27% on decisive results. Strategy evidence tells the same story: of 54 measured backtests, 32 passed. The short-term scalp family passed 0 of its 7 tests and is not on real money. Most ideas fail, and the system is built so that they fail cheaply, offline, before any money is at risk.",
    "numbers": [
     {
      "label": "research questions done",
-     "value": 1927,
+     "value": 1930,
      "provenance": "MEASURED",
      "source": "research/queue/*.yaml (status: done)",
      "live_endpoint_candidate": "/api/bot/research/catalog"
     },
     {
      "label": "graded pass / fail / indeterminate",
-     "value": "411 / 1086 / 267",
+     "value": "412 / 1088 / 267",
      "provenance": "MEASURED",
      "source": "research/queue/*.yaml (grading.verdict, status done)",
      "live_endpoint_candidate": "/api/bot/research/catalog"
@@ -919,7 +861,7 @@
     },
     {
      "label": "questions queued",
-     "value": 319,
+     "value": 316,
      "provenance": "MEASURED",
      "source": "research/queue/*.yaml (status: queued)",
      "live_endpoint_candidate": "/api/bot/research/catalog"
@@ -936,7 +878,7 @@
    "stages": [
     11
    ],
-   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 6cce2b110.",
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 19abbd490.",
    "live_refreshable": true
   },
   {
@@ -1063,7 +1005,7 @@
     "R = one unit of risk: what a trade loses if its stop is hit. Expectancy = average R per trade after costs.",
     "MEASURED = read from a committed file or result. ESTIMATED = rests on an assumption (e.g. a slippage allowance).",
     "Held-out = data never used for tuning; the real-money pass is judged on it. Fold = one separate time slice.",
-    "Built 2026-11-17 from commit 6cce2b110 by docs/pitch/build_deck.py.",
+    "Built 2026-11-17 from commit 19abbd490 by docs/pitch/build_deck.py.",
     "Sources: config/strategies.yaml + accounts.yaml (via scripts/ops/strategy_status.py), comms/strategy_evidence/, research/queue/, ml/served/SERVED_MODELS.yaml and model artifacts, comms/ml_consolidation/, scripts/ci/check_tp_doctrine.py, comms/live_review/reviews.jsonl, config/mandates.yaml.",
     "Plans: docs/reference/trading-pipeline-map.skeleton.md, docs/plans/ML-ROADMAP-MECE-2026-11.md, docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
     "Left out on purpose: live and paper profit figures (a live book never establishes edge) and every dollar amount, balance, account id and server address."

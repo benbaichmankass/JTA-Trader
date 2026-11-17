@@ -176,6 +176,23 @@ def load_facts() -> dict:
     slot_keep = collections.Counter(m["slot"] for m in mc["models"] if str(m.get("proposal", "")).startswith("KEEP (consumer)"))
     f["ml_inv"] = dict(as_of=str(mc.get("as_of"))[:10], total=len(mc["models"]), keep_consumer=slot_keep,
                        proposals=collections.Counter(str(m.get("proposal", "")).split(" ")[0] for m in mc["models"]))
+    # Live real-money R per leg: the pipeline map's generated per-leg table, rebuilt now (journal via the API);
+    # falls back to the committed snapshot docs/reference/trading-pipeline-map.md if the live build fails.
+    md, src = None, "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)"
+    try:
+        md = subprocess.check_output([sys.executable, os.path.join(ROOT, "scripts/ops/pipeline_map_numbers.py"),
+                                      "--stdout"], text=True, cwd=ROOT, timeout=150, stderr=subprocess.DEVNULL)
+    except Exception:
+        md = open(os.path.join(ROOT, "docs/reference/trading-pipeline-map.md")).read()
+        src = "snapshot: docs/reference/trading-pipeline-map.md"
+    live = {}
+    for line in md.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 12 and cells[0].startswith("`") and cells[1] == "production":
+            leg = cells[0].strip("`")
+            m = __import__("re").search(r"n=(\d+).*?E\[R\] ([+-]?[0-9.]+)", cells[10])
+            live[leg] = dict(n=int(m.group(1)), er=float(m.group(2))) if m else dict(n=0, er=None)
+    f["live_rm"], f["live_rm_source"] = live, src
     f["sha"] = _git_sha()
     f["date"] = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
     return f
@@ -218,8 +235,10 @@ FONT = "Calibri"
 W, H = Inches(13.333), Inches(7.5)
 
 # The trading pipeline map's eleven steps (docs/reference/trading-pipeline-map.skeleton.md § The flow): the deck's spine.
-STAGES = ["Data in", "Signals", "Strategies + ML", "Intent layer", "Routing", "Risk", "Order + bracket",
-          "Execution", "Live mgmt", "Close", "Grade + R&D"]
+STAGES = ["Data in", "Signal builders", "Strategy legs and ML heads", "Intent layer", "Per-account routing",
+          "RiskManager and sizing", "Order package + bracket", "Venue execution", "Live management",
+          "Close and reconcile", "Grading, evidence, research"]
+MAP_PNG = os.path.join(ROOT, "docs", "pitch", "pipeline_map.png")
 
 
 class Deck:
@@ -292,17 +311,21 @@ class Deck:
     def strip(self, s, stages, y=Inches(1.2)):
         """The compact pipeline strip: all eleven steps, the current ones highlighted."""
         gap = Inches(0.05)
-        bw = (W - Inches(1.2) - gap * 10) / 11
+        n_on = sum(1 for i in range(11) if (i + 1) in stages)
+        off_w = Inches(0.42)
+        on_w = (W - Inches(1.2) - gap * 10 - off_w * (11 - n_on)) / max(n_on, 1)
+        x = Inches(0.6)
         for i, name in enumerate(STAGES):
             on = (i + 1) in stages
-            b = self._box(s, Inches(0.6) + (bw + gap) * i, y, bw, Inches(0.34), TEAL if on else LIGHT,
-                          shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            bw = on_w if on else off_w
+            b = self._box(s, x, y, bw, Inches(0.34), TEAL if on else LIGHT, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            x += bw + gap
             tf = b.text_frame
             tf.margin_top = tf.margin_bottom = tf.margin_left = tf.margin_right = 0
             para = tf.paragraphs[0]
             para.alignment = PP_ALIGN.CENTER
             r = para.add_run()
-            r.text = f"{i + 1} {name}"
+            r.text = f"{i + 1} · {name}" if on else str(i + 1)
             r.font.size, r.font.bold, r.font.name = Pt(9), on, FONT
             r.font.color.rgb = WHITE if on else GREY
 
@@ -363,15 +386,16 @@ class Deck:
         self.md.append("")
         return tb
 
-    def cards(self, s, cards, y=Inches(1.9), h=Inches(4.25), cols=None, size=15, head=19):
+    def cards(self, s, cards, y=Inches(1.9), h=Inches(4.25), cols=None, size=15, head=19, x0=None):
         cols = cols or len(cards)
         gap = Inches(0.25)
-        cw = (W - Inches(1.2) - gap * (cols - 1)) / cols
+        x0 = x0 if x0 is not None else Inches(0.6)
+        cw = (W - x0 - Inches(0.6) - gap * (cols - 1)) / cols
         for i, (head_txt, body) in enumerate(cards):
             r, c = divmod(i, cols)
             rows = (len(cards) + cols - 1) // cols
             ch = (h - gap * (rows - 1)) / rows
-            x = Inches(0.6) + (cw + gap) * c
+            x = x0 + (cw + gap) * c
             yy = y + (ch + gap) * r
             self._box(s, x, yy, cw, ch, LIGHT)
             self._box(s, x, yy, Inches(0.08), ch, TEAL)
@@ -541,46 +565,35 @@ def build():
 
     # ---------------------------------------------------------------- 2 pipeline map
     d.section = "The trade pipeline"
-    s = d.new("The trading pipeline map: eleven steps, ten model decisions",
-              "This is the spine of the deck. Every trade passes through the same eleven steps, from market data "
-              "to grading. The right-hand column shows where a learned model makes, or is being built to make, a "
-              "decision: the ML plan cuts the life of a trade into ten decisions, D1 to D10, each owned by one "
-              "family of models. Two feedback loops close the circle: graded results and retrained models flow "
-              "back into which strategies and models run, and the paper mirror of each real-money book can demote "
-              "a strategy back to the demo floor. Per-trade risk sizing is deliberately not a model decision; it "
-              "stays with the rule-based risk manager.")
-    slots = ["—", "—", "D3 Entry · Foxhound", "D2 Regime · Collie / D4 Filter · Beagle", "D1 Book · rule",
-             "D5 Aggregate · Mastiff (research)", "D6 Bracket · Pointer", "D9 Execution · Whippet",
-             "D7/D8 In-trade + exit · Labrador; review desk", "—", "D10 Review · Basset; the R&D loop"]
-    what = ["Prices, feeds, features", "Each strategy's inputs", "Rules + models propose trades",
-            "Combine; step aside in bad regimes", "Which accounts; two switches", "Size in R; daily brake",
-            "Stop + predictive target", "Orders to the venue", "Move brackets on evidence", "Venue P&L reconciled",
-            "Grade every trade and test"]
-    bw, bh, gx = Inches(1.9), Inches(1.25), Inches(0.17)
-    for i, name in enumerate(STAGES):
-        row, col = divmod(i, 6)
-        x = Inches(0.6) + (bw + gx) * col
-        y = Inches(1.6) + Inches(2.35) * row
-        ml = slots[i] != "—"
-        b = d._box(s, x, y, bw, bh, TEAL if ml else NAVY, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        d._text(s, x + Inches(0.08), y + Inches(0.06), bw - Inches(0.16), bh - Inches(0.1),
-                [f"{i + 1} · {name}", what[i]], size=11, color=WHITE, bold=False)
-        d._text(s, x, y + bh + Inches(0.05), bw, Inches(0.8), slots[i] if ml else "", size=10, color=TEAL, bold=True)
-    d._text(s, Inches(10.9), Inches(4.0), Inches(1.9), Inches(1.3),
-            ["↺ The loop", "Step 11 feeds evidence and retrained models back into steps 3–9."], size=11, color=NAVY,
-            bold=True)
-    rows = [[f"{i + 1} · {STAGES[i]}", what[i], slots[i]] for i in range(11)]
-    d.md.append("| Step | What happens | Where a model decides |")
-    d.md.append("|---|---|---|")
-    for r in rows:
-        d.md.append("| " + " | ".join(r) + " |")
-    d.md.append("")
-    d.slides[-1]["table"] = {"header": ["Step", "What happens", "Where a model decides"], "rows": rows}
-    d.slides[-1]["visual"] = "pipeline_full"
-    d.cite("docs/reference/trading-pipeline-map.skeleton.md", "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2")
-    d.footnote(s, "Source: the trading pipeline map (docs/reference/trading-pipeline-map.skeleton.md; live at "
-                  "/api/bot/work/pipeline-map) and the ML plan's ten decision slots (docs/plans/ML-ROADMAP-MECE-2026-11.md). "
-                  "Teal = a model decides here. Family names are internal labels.", y=H - Inches(1.0))
+    s = d.new("The trading pipeline",
+              "This is the trading pipeline map we built and use on the Work tab, drawn from the same source. Every "
+              "trade passes through these eleven steps. At step 3, two kinds of decision-makers run side by side: "
+              "hand-designed rule strategies, such as trend breakouts, pullbacks in a trend and short-term scalps, "
+              "each with its own backtest evidence; and machine-learning models that propose trades of their own. "
+              "Both feed the same intent layer, risk manager, bracket and execution steps, so a model gets no "
+              "shortcut around the risk controls. Step 11 grades every trade and test, and its two dashed arrows "
+              "are the loop: new evidence changes which strategies run and with what settings, and retrained, "
+              "promoted models go back in at step 3.")
+    pic_h = H - Inches(1.45)
+    pic = s.shapes.add_picture(MAP_PNG, Inches(0.6), Inches(1.3), height=pic_h)
+    tx = Inches(0.6) + pic.width + Inches(0.5)
+    d.slides[-1]["visual"] = "pipeline_image"
+    d.slides[-1]["image"] = "docs/pitch/pipeline_map.png"
+    d.slides[-1]["mermaid_source"] = "docs/reference/trading-pipeline-map.md § The flow"
+    d.cards(s, [
+        ("Step 3 runs two kinds of decision-makers", ["Rule strategies: trend breakouts, pullbacks, scalps and "
+                                                      "others, each with its own backtest evidence.",
+                                                      "ML models: learned entry models that propose trades too."]),
+        ("Same path for both", ["Steps 4–10 treat them alike: intent layer, risk manager, stop and target, "
+                                "execution, live management, reconciliation."]),
+        ("The loop", ["Step 11 grades everything. New evidence changes rosters and settings; retrained models "
+                      "re-enter at step 3."]),
+    ], y=Inches(1.3), h=Inches(5.4), cols=1, size=14, head=16, x0=tx)
+    fn = ("The map: docs/reference/trading-pipeline-map.md § The flow (mermaid source rendered verbatim; live at "
+          "/api/bot/work/pipeline-map).")
+    d._text(s, tx, H - Inches(0.75), W - tx - Inches(0.6), Inches(0.4), fn, size=11, color=GREY)
+    d.md.append(f"> {fn}\n")
+    d.slides[-1]["footnote"] = fn
     d.end_md()
 
     # ---------------------------------------------------------------- 3 trade management
@@ -793,30 +806,55 @@ def build():
     ])
     d.end_md()
 
-    # ---------------------------------------------------------------- 10 live on real money
+    # ---------------------------------------------------------------- 10 best strategies card
     d.section = "What the R&D has produced"
-    s = d.new_at((5,), "Produced so far 1 — what trades real money, and why",
-              "Every strategy on real money today, with the held-out backtest result it was promoted on, net of the "
-              "full cost stack. Two of the nine are machine-learning models. Expectancy is average profit per trade "
-              "in units of risk. Positive folds counts how many separate time periods came out positive. These are "
-              "backtest results; live books check mechanics and cost, they do not establish edge.",
-              tags=("MEASURED",))
-    rows = []
-    for r in f["prod_rows"]:
-        if r.get("missing"):
-            rows.append([PLAIN.get(r["leg"], r["leg"]), "—", "—", "—", "—"])
-            continue
-        rows.append([PLAIN.get(r["leg"], r["leg"]),
-                     f"{r['exp']:+.2f}R" if abs(r["exp"]) >= 0.05 else f"{r['exp']:+.3f}R", str(r["n"]),
-                     f"{r['folds_pos']} of {r['folds']}" if r["folds"] else "held-out",
-                     f"{r['start']} → {r['end']}" if r["start"] else "—"])
-        d.num(f"expectancy per trade: {r['leg']}", round(r["exp"], 3), "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (expectancy_r_oos)")
-    d.table(s, ["Strategy on real money", "Expectancy / trade", "Test trades", "Positive folds", "Test window"], rows,
-            col_w=[4.6, 1.9, 1.4, 1.7, 2.4], size=12, h_row=Inches(0.4))
-    d.num("production legs", st["production"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
-    d.footnote(s, "MEASURED (backtest, out of sample, net of fees + slippage + funding): comms/strategy_evidence/<leg>.json; "
-                  "roster from scripts/ops/strategy_status.py. Fossil-fuel funds are excluded from real money by policy "
-                  "(config/values_exclusions.yaml).", y=H - Inches(1.2))
+    MARKET = {"bybit": "Crypto", "alpaca": "US funds"}
+    acc = yaml.safe_load(open(os.path.join(ROOT, "config/accounts.yaml")))["accounts"]
+    best = sorted([r for r in f["prod_rows"] if not r.get("missing")], key=lambda r: -r["net"])[:5]
+    s = d.new_at((3, 5), "Our best performing strategies today",
+              "The five real-money strategies with the strongest offline evidence, ranked by total net R on test "
+              "data they were not tuned on, after the full cost stack. Three are rule strategies and two are ML "
+              "models. The small line under each is the live real-money record so far; with so few live trades it "
+              "checks that the mechanics work, it does not measure edge. Two of the five have no live real-money "
+              "trades yet.", tags=("MEASURED",))
+    vmax = max(r["net"] for r in best) or 1
+    rows_out = []
+    for i, r in enumerate(best):
+        y = Inches(1.7) + Inches(0.96) * i
+        venue = next((str(v.get("exchange")) for v in acc.values()
+                      if v.get("account_class") == "real_money" and r["leg"] in (v.get("strategies") or [])), "")
+        kind = "ML model" if r["leg"].startswith("ml_") else "Rule strategy"
+        ev = json.load(open(os.path.join(ROOT, f"comms/strategy_evidence/{r['leg']}.json")))
+        ev_date = str(ev.get("generated_at") or ev.get("as_of") or "")[:10] or "—"
+        lv = f["live_rm"].get(r["leg"], {})
+        live_txt = (f"Live real money: n {lv['n']} · E[R] {lv['er']:+.2f} — live checks mechanics, not edge"
+                    if lv.get("n") else "Live real money: no trades yet")
+        folds = f"{r['folds_pos']}/{r['folds']} folds +" if r["folds"] else "held-out window"
+        d._box(s, Inches(0.6), y, W - Inches(1.2), Inches(0.88), LIGHT)
+        d._text(s, Inches(0.75), y + Inches(0.05), Inches(5.6), Inches(0.45), f"{i + 1}. {PLAIN.get(r['leg'], r['leg'])}",
+                size=15, bold=True, color=NAVY)
+        d._text(s, Inches(0.75), y + Inches(0.47), Inches(5.6), Inches(0.4),
+                f"{kind} · {MARKET.get(venue, venue)} · {live_txt}", size=10, color=GREY)
+        d._text(s, Inches(6.5), y + Inches(0.12), Inches(1.7), Inches(0.6), f"{r['net']:+.1f}R", size=24, bold=True,
+                color=NAVY)
+        d._box(s, Inches(8.25), y + Inches(0.36), int(Inches(2.0) * r["net"] / vmax), Inches(0.14), TEAL)
+        d._text(s, Inches(10.4), y + Inches(0.1), Inches(2.4), Inches(0.75),
+                [f"n {r['n']} test trades · {folds}", f"MEASURED · evidence {ev_date}"], size=10, color=INK)
+        rows_out.append(dict(leg=r["leg"], name=PLAIN.get(r["leg"], r["leg"]), kind=kind,
+                             market=MARKET.get(venue, venue), net_r_oos=round(r["net"], 2), n_oos=r["n"],
+                             folds=folds, evidence_date=ev_date, live_n=lv.get("n", 0), live_er=lv.get("er")))
+        d.num(f"net R OOS: {r['leg']}", round(r["net"], 2), "MEASURED", f"comms/strategy_evidence/{r['leg']}.json (net_r_oos)")
+        d.num(f"live real-money E[R]: {r['leg']}", lv.get("er"), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.slides[-1]["best"] = rows_out
+    d.md.append("| # | Strategy | Kind · market | Net R OOS (full cost) | n OOS · folds | Evidence | Live real money |")
+    d.md.append("|---|---|---|---|---|---|---|")
+    for i, r in enumerate(rows_out):
+        d.md.append(f"| {i + 1} | {r['name']} | {r['kind']} · {r['market']} | {r['net_r_oos']:+.1f}R | {r['n_oos']} · "
+                    f"{r['folds']} | {r['evidence_date']} | " + (f"n {r['live_n']} · E[R] {r['live_er']:+.2f}"
+                                                                  if r['live_n'] else "no trades yet") + " |")
+    d.md.append("")
+    d.footnote(s, "MEASURED: comms/strategy_evidence/<leg>.json (net R out of sample, full cost); live line: pipeline-map "
+                  "per-leg table, rebuilt at build time.", y=H - Inches(0.82))
     d.end_md()
 
     # ---------------------------------------------------------------- 11 Basset card
