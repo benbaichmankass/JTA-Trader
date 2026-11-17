@@ -41,10 +41,10 @@ power:
   effect_units: r_multiple
   sd: 1.2
   design: paired
-  alpha: 0.0167
+  alpha: 0.01
   power: 0.8
   basis: 'INFERRED from aadc-06 read2: H 3 skipped 529 trades; H 2 will skip more (~650, ESTIMATE), H 6 fewer (~250, ESTIMATE). Per-trade
-    winsorised net R sd ~1.2 (ESTIMATE). MDE on the mean skipped R vs the leg mean at n 250 and alpha 0.0167 ~ 2.9 x 1.2 / sqrt(250) ~ 0.22
+    winsorised net R sd ~1.2 (ESTIMATE). alpha here is 0.01 (the calculator takes 0.10/0.05/0.01; 0.01 is conservative vs the rule''s Bonferroni bar 0.0167). MDE on the mean skipped R vs the leg mean at n 250 ~ 3.1 x 1.2 / sqrt(250) ~ 0.24
     R; the within-leg control is correlated, so a near miss is underpowered by construction.'
   feasibility:
     source: none
