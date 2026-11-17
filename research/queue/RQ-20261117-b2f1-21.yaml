@@ -1,0 +1,134 @@
+# Authored 2026-11-17 by lane QUEUE-FILL-LEAN-2-20261117 (Tier 1). Lever-map transfer unit; leg flags/window copied from RQ-20261016-020; rule registered BEFORE any run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ20261117b2f121
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39 (underpowered: no verdict, never FAIL on thin n). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) (materiality:
+    ~2x the cost of one extra exit, 3 bps slippage on a 1-5% stop distance = 0.006-0.03 R) AND folds_ge >= 3 of 4 AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass:
+    the passing candidate with the highest net R is named -> an evidence record for a Tier-3 declare proposal on alpaca_paper (a note on row TP-DOCTRINE); it rides any later
+    promotion of the leg. FAIL IF none passes -> the declared exit stands; vt_hot80_t2 is retired for this leg. Thresholds (the 0.02 R/trade bar, 3/4 folds, the 0.35 drawdown
+    tolerance, the 39 floor) are not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg splg_trend_long_1d --grade replace, the sibling window and folds of RQ-20261016-020 (same leg, same flags) by entry
+    time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared
+    in config/strategies.yaml; candidates MS8/MS12. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: 'Edits no config and places no order: a PASS is an evidence record for a Tier-3 proposal, never a change. Paper leg: no real money moves on any verdict
+    here. dukascopy serves the ETF CFD (same underlying). Overlaps the m20 sweep''s data (same history, longer window), so it is a stability/materiality confirmation, not an
+    independent holdout. Best-of-several candidates is a multiple comparison; the fold majority and the materiality bar are what guard it.'
+evidence_class:
+  claim: edge
+  holdout: in_sample
+generated:
+  family: programme:P1
+  key: programme:P1-Q4-splg-trend-long-1d-soak-confirm
+  params:
+    node: P1-Q4-splg-trend-long-1d-soak-confirm
+  template: research/programmes/01-active-trade-management.yaml
+  template_sha: 205333b0a44f
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-SPLG-TREND-LONG-1D-SOAK-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-020/39113340967.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
+id: RQ-20261117-b2f1-21
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades (the repo''s E35/exit-refinement floor). MEASURED in the lane sandbox 2026-10-16 (dukascopy daily
+    from 2018-01): 39 trades for the declared arm, hence 4 folds. Trade sequences autocorrelate, so the floor is necessary, not sufficient; the calendar-fold majority carries
+    the rest.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 39
+  feasibility:
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+priority: 3
+programme_node:
+  after: []
+  goal: G1
+  node: P1-Q4-splg-trend-long-1d-soak-confirm
+  programme: P1
+question: 'On splg_trend_long_1d, over the same window, folds and bar as the leg''s sibling unit RQ-20261016-020, does any of the arms MS8/MS12 (MOMENTUM-STALE exit (--momentum-stale-bars
+  8/12 with --momentum-stale-adx-below 20)) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/splg_trend_long_1d.yaml
+  (no such family tested on this leg).'
+related:
+- RQ-20261016-020
+- research/levers/splg_trend_long_1d.yaml
+roadmap:
+- L-LADDER
+routing:
+  basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm. MEASURED 2026-10-16 in the lane sandbox: 2 arms on xrp_pullback_2h
+    over 2020-07..2026-10 took 74 s wall incl. the fetch; est_minutes carries headroom for up to 7 arms and runner fetch latency.'
+  est_minutes: 25
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data carries no 2h/4h/1d
+    candles for these legs; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - splg_trend_long_1d
+  - --arm
+  - A=
+  - --arm
+  - MS8=--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - --arm
+  - MS12=--momentum-stale-bars=12;--momentum-stale-adx-below=20
+  - --days
+  - '3180'
+  - --start
+  - '2018-03-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b2f1-21
+  timeout_minutes: 120
+status: queued
+theme: live_strategy
+title: 'MS lever family never tested on splg_trend_long_1d: MOMENTUM-STALE exit (--momentum-stale-bars 8/12 with --momentum-stale-adx-below 20) vs the declared leg, net of
+  cost?'
+value:
+  basis: 'stand-in: Stage-1 paper leg; not a P&L measurement.'
+  bucket: structural
+  confidence: 0.25
+  usd_at_stake_per_month: 60
+why_this_matters: 'Plan node: research/levers/splg_trend_long_1d.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016 CONFIRMED momentum_stale_bars
+  8 / adx_below 20 on slv_pullback_1d (20.73 vs 12.82 R, 3 of 4 folds, 2018-03..2026-10) and the leg-by-leg lever maps carry no momentum_stale family for this leg. One factor,
+  2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+practice_precedent: "M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg"
