@@ -725,31 +725,43 @@ def build():
 
     # ---------------------------------------------------------------- 5 worked example
     ex = sv.get("ml-entry-eq-struct-ens5-v1", {}).get("headline_metric", {})
-    s = d.new_at((3, 11), "One real cycle: the equity entry model, November 2026",
-              "A worked example of the loop on a model trading real money today. The equity entry model, "
-              "internally Foxhound-4, passed its held-out confirmation and was promoted to real money on 8 November. "
-              "Its diagnosis said it trades in clusters during volatile months. So a test was pre-registered: does "
-              "the model really predict direction, or is it ranking trades by how cheap they are to trade relative "
-              "to their risk? The answer, graded on 17 November, was the second: its score tracks cost per unit of "
-              "risk, and once volatility is neutralised it has almost no directional signal. The test's two "
-              "alternative labels did not beat it, so it failed. That failure named the next lever: a cost-neutral "
-              "training target, registered the same day. The live model keeps trading while the challenger is "
-              "tested; nothing waits on a calendar.", tags=("MEASURED",))
-    d.table(s, ["Step", "What happened", "Result"], [
-        ["Promote", "Held-out confirmation, 173-fund pool, long only, net of costs",
-         f"{ex.get('value', 0):+.2f}R per trade, n {ex.get('n', '—')} — pass"],
-        ["Diagnose", "Trades cluster in volatile months; label never tested on this pool", "lever: the training label"],
-        ["Test (207f-03)", "Does the score predict direction, or cost per R?", "fail: score tracks cost per R"],
-        ["Evidence", "Score vs cost per R; direction after removing volatility", "IC −0.53; IC −0.01 (t −0.95)"],
-        ["Next (c21d-06)", "Cost-neutral target vs the live recipe, same trade count", "registered 2026-11-17, queued"],
-    ], col_w=[2.2, 6.3, 3.5], size=13, h_row=Inches(0.55))
-    d.num("held-out expectancy at promotion", round(ex.get("value", 0), 3), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1 (from comms/strategy_evidence/ml_entry_eq_struct.json)")
-    d.num("IC of score vs cost per R", -0.527, "MEASURED", "research/queue/RQ-20261111-207f-03.yaml grading.reason (verdict comms/research/RQ-20261111-207f-03/43551399631/verdict.json)")
-    d.num("volatility-neutral IC of score vs raw return", -0.013, "MEASURED", "research/queue/RQ-20261111-207f-03.yaml grading.reason")
-    d.cite("research/queue/RQ-20261111-207f-03.yaml", "research/queue/RQ-20261117-c21d-06.yaml")
-    d.footnote(s, "MEASURED: research/queue/RQ-20261111-207f-03.yaml (graded fail 2026-11-17) and RQ-20261117-c21d-06.yaml "
-                  "(queued). IC = rank correlation between the model's score and the quantity named, across decisions.",
-               y=H - Inches(1.05))
+    tlt = next((r for r in f["prod_rows"] if r["leg"] == "tlt_pullback_1h" and not r.get("missing")), None)
+    s = d.new_at((3, 11), "Two real cycles: one ML model, one rule strategy",
+              "Two worked examples of the loop from the last three weeks. On the left, the equity entry model: "
+              "promoted on a strong held-out result, then a pre-registered test found its score mostly tracks how "
+              "cheap a trade is relative to its risk, not direction, so the next challenger targets that. On the right, "
+              "a rule strategy, the long-bond fund pullback: its one-year record failed because it traded too often "
+              "for its small edge and costs ate it. Filters that cut trade frequency, chosen on early data and judged "
+              "on held-back data, turned it positive; it was confirmed on older history it had never seen; the operator "
+              "approved a long-only version with a real 3.5R target, and it went to real money on 14 November.",
+              tags=("MEASURED",))
+    d.cards(s, [
+        ("Equity ML model (Foxhound-4)", [
+            f"1 · Promoted: held-out {ex.get('value', 0):+.2f}R per trade, n {ex.get('n', '—')}.",
+            "2 · Diagnosis: trades cluster in volatile months.",
+            "3 · Test: does the score predict direction or cost? → cost (IC −0.53). FAIL.",
+            "4 · Next: a cost-neutral training target, registered 17 Nov.",
+        ]),
+        ("Long-bond pullback (rule strategy)", [
+            "1 · One-year record: −6.7R, n 94. FAIL: costs were 3.5× the gross edge.",
+            "2 · Fix: fewer trades, chosen on early data; held-back read +4.5R, n 111. PASS.",
+            "3 · Confirmed on unseen 2018–2020 history. PASS.",
+            "4 · Long only, 3.5R target → real money 14 Nov" + (f"; record {tlt['net']:+.1f}R, n {tlt['n']}, "
+                                                               f"{tlt['folds_pos']}/{tlt['folds']} folds +." if tlt else "."),
+        ]),
+    ], y=Inches(1.75), h=Inches(4.4), cols=2, size=14, head=17)
+    d.num("Foxhound-4 held-out expectancy at promotion", round(ex.get("value", 0), 3), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1")
+    d.num("Foxhound-4 score IC vs cost per R", -0.527, "MEASURED", "research/queue/RQ-20261111-207f-03.yaml grading.reason")
+    d.num("TLT pullback one-year record (before)", -6.73, "MEASURED", "research/queue/RQ-20261101-78fc-56.yaml iteration.diagnosis")
+    d.num("TLT pullback held-back read after the fix", 4.48, "MEASURED", "research/queue/RQ-20261112-c1b4-02.yaml iteration.diagnosis (from RQ-20261111-203c-02)")
+    if tlt:
+        d.num("TLT pullback promoted record net R", round(tlt["net"], 2), "MEASURED", "comms/strategy_evidence/tlt_pullback_1h.json")
+    d.cite("research/queue/RQ-20261111-207f-03.yaml", "research/queue/RQ-20261117-c21d-06.yaml",
+           "research/queue/RQ-20261101-78fc-56.yaml", "research/queue/RQ-20261111-203c-02.yaml",
+           "research/queue/RQ-20261112-c1b4-02.yaml", "research/queue/RQ-20261114-db1a-14.yaml")
+    d.footnote(s, "MEASURED: graded units 207f-03, c21d-06 (Foxhound-4); 78fc-56, 203c-02, c1b4-02, db1a-14 and "
+                  "comms/strategy_evidence/tlt_pullback_1h.json (long-bond pullback). Every test was registered before "
+                  "it ran, net of the full cost stack.", y=H - Inches(1.05))
     d.end_md()
 
     # ---------------------------------------------------------------- 10 strategies track record
