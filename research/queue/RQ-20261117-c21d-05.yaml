@@ -116,6 +116,7 @@ ml_bakeoff:
         layers: 2
         epochs: 8
         threads: 4
+        device: auto
       feature_blocks: *id001
   rule:
     min_folds: 3
@@ -167,7 +168,7 @@ decision_rule:
     as tested for D2 in the lever map. indeterminate -> reported; no re-run of the same spec.
   what_it_does_not_do: Changes no regime cell, retires no head, serves nothing, places no order. Model quality only.
   min_n: 3 folds per group
-compute: auto
+compute: gpu
 value:
   bucket: frontier
   usd_at_stake_per_month: 100
@@ -179,12 +180,14 @@ practice_precedent: 'M6, M12 (docs/reference/trading-and-model-practice-principl
   15m) and RQ-20261112-ef4c-02 (the yz baseline), frontier-research diversity check, PLANNING § 1 (proper score for a multi-class label).'
 routing:
   needs_trainer_resident_data: false
-  needs_gpu: false
+  needs_gpu: true
   published_data: metis-market-data
   peak_memory_gb: 5.0
-  est_minutes: 300
-  basis: ESTIMATE from the pilot (240 min on the trainer for 2 x 60k rows at 15m with bootstrap); 3 x 40k rows, no bootstrap, 4 threads.
-  why_runner: torch_gru in ml_bakeoff is CPU-only (no device selection), so GPU would not help; published data -> Kaggle CPU.
+  est_minutes: 90
+  basis: 'ESTIMATE: the CPU pilot took 240 min on the trainer for 2 x 60k rows at 15m; a GPU GRU at hidden 32 is several times faster, LightGBM
+    arm on the kernel CPU dominates. Not measured.'
+  why_runner: 'GPU-shaped: torch_gru selects cuda when present (row ML-BAKEOFF-TORCH-DEVICE, same PR); published 1h shards -> Kaggle GPU with
+    metis-market-data mounted. The verdict records measurement.torch_devices so a CPU fallback is visible.'
 lands:
   store: research/results/
   assert_field: read_state
