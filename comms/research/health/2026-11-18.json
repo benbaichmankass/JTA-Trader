@@ -1,11 +1,11 @@
 {
  "schema": 1,
- "as_of": "2026-11-18T03:38:18Z",
+ "as_of": "2026-11-18T03:53:59Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 17,
-  "breach": 3,
+  "ok": 16,
+  "breach": 4,
   "could_not_look": 0
  },
  "latest": [
@@ -311,14 +311,14 @@
   },
   {
    "slo": "runnable_floor",
-   "state": "ok",
-   "value": 70,
+   "state": "breach",
+   "value": 65,
    "op": ">=",
-   "threshold": 66,
+   "threshold": 73,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "diagnostic": true,
    "evidence": {
-    "fired_24h_stamps": 83,
+    "fired_24h_stamps": 91,
     "queued": 342,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -429,14 +429,14 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.24,
+   "value": 1.22,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "diagnostic": true,
    "evidence": {
     "authored_7d": 328,
-    "consumed_7d": 264,
+    "consumed_7d": 269,
     "authored_since_yesterday": 126,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -550,7 +550,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.26,
+   "value": 0.52,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -564,7 +564,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.04,
+   "value": 0.3,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -578,7 +578,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 2.08,
+   "value": 2.34,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -592,7 +592,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "breach",
-   "value": 17.07,
+   "value": 17.33,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -662,6 +662,22 @@
     "could_not_look": 0
    },
    "not_ok": [
+    "undispositioned_24h",
+    "theme_share_min_ratio",
+    "research_ops_age_h"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-18T03:53:59Z",
+   "counts": {
+    "ok": 16,
+    "breach": 4,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
     "undispositioned_24h",
     "theme_share_min_ratio",
     "research_ops_age_h"
