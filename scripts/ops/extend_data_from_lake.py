@@ -104,12 +104,14 @@ def plan_one(csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int
             return "refused_ratio_out_of_range", f"splice ratio {ratio:.4f} outside [0.8, 1.2]", None, None
         splice = {"splice_day": cday, "ratio": ratio, "median_close_diff_before": med,
                   "overlap_bars": len(diffs), "rule": "ratio = file_close/lake_close at the last common date; OHLC scaled, volume unchanged"}
-    sample = rows[-1][0]
+    sample = rows[-1][0].strip().strip('"')
+    date_only = len(sample) == 10  # "YYYY-MM-DD": mirror it, never invent a time or offset
     sep = "T" if "T" in sample else " "
-    tz = "Z" if sample.endswith("Z") else (sample[-6:] if len(sample) > 6 and sample[-6] in "+-" else "")
+    rest = sample[11:]  # the time-of-day part, e.g. "00:00:00+00:00"; empty for date-only
+    tz = "Z" if rest.endswith("Z") else (rest[-6:] if len(rest) > 6 and rest[-6] in "+-" and rest[-3] == ":" else "")
 
     def fmt(day: str) -> str:
-        return f"{day}{sep}00:00:00{tz}"
+        return day if date_only else f"{day}{sep}00:00:00{tz}"
 
     add, add_close = [], []
     for d in sorted(by_day):

@@ -85,3 +85,23 @@ def test_dry_run_default_writes_nothing(tmp_path):
     before = (data / "QQQ_1d.csv").read_text()
     e.main(["--data-dir", str(data), "--lake", str(lake)])
     assert (data / "QQQ_1d.csv").read_text() == before
+
+
+def test_new_rows_mirror_the_file_timestamp_format(tmp_path):
+    """Regression (2026-11-18 trainer apply): a date-only file got rows like
+    '2026-11-16 00:00:00-07-07' because the date's '-MM-DD' tail was read as a UTC offset."""
+    import pandas as pd
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    (data / "GC_F_1d.csv").write_text(HDR + "".join(f"{d},1,1,1,100.0,5\n" for d in _days(25)))
+    (data / "ES_F_1d.csv").write_text(HDR + "".join(f"{d}T00:00:00Z,1,1,1,100.0,5\n" for d in _days(25)))
+    (data / "HG_F_1d.csv").write_text(HDR + "".join(f"{d} 00:00:00-05:00,1,1,1,100.0,5\n" for d in _days(25)))
+    for sym in ("MGC", "MES", "MHG"):
+        _lake(lake / f"{sym}/1d/v002/data.jsonl", _days(28), 100.0)
+    assert e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"]) == 0
+    tails = {f: (data / f).read_text().splitlines()[-1].split(",")[0]
+             for f in ("GC_F_1d.csv", "ES_F_1d.csv", "HG_F_1d.csv")}
+    assert tails == {"GC_F_1d.csv": "2026-01-28", "ES_F_1d.csv": "2026-01-28T00:00:00Z",
+                     "HG_F_1d.csv": "2026-01-28 00:00:00-05:00"}
+    df = pd.read_csv(data / "GC_F_1d.csv")
+    assert pd.to_datetime(df["timestamp"], errors="coerce").notna().all()
