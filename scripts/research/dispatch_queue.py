@@ -1339,10 +1339,14 @@ def fired_run_units(now: datetime, api: Any = _gh_api_json, *, hours: float = 48
 def unit_pending_by_run(entry: Dict[str, Any], run_at: Optional[datetime], result_at: Optional[datetime]) -> bool:
     """True when the unit's newest research run is NEWER than both its stamp on main and its latest landed
     result, i.e. it was fired and neither bookkeeping record has caught up. Once either does, the ordinary
-    cadence/retry logic in `_is_due` owns the unit again, so a failed run is still retried on its terms."""
+    cadence/retry logic in `_is_due` owns the unit again, so a failed run is still retried on its terms.
+
+    An explicit `rearmed_at` at or after the run also clears it (RQ-20261117-aadc-01, 2026-11-18): a run LOST ON
+    COLLECTION lands no row, and the re-arm clears the stamp, so without this the unit read as "already
+    dispatched" for the whole lookback window (48 h) although a session had accounted for that run and re-armed it."""
     if run_at is None:
         return False
-    for ref in (_parse_ts(entry.get("last_dispatched_at")), result_at):
+    for ref in (_parse_ts(entry.get("last_dispatched_at")), result_at, _parse_ts(entry.get("rearmed_at"))):
         if ref is not None and ref >= run_at:
             return False
     return True
