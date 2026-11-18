@@ -1,9 +1,9 @@
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "ops"))
-import report_data_freshness as rdf  # noqa: E402
+import report_data_freshness as rdf
 
 NOW = datetime(2026, 11, 18, 21, 0, tzinfo=timezone.utc)
 
