@@ -21,6 +21,11 @@ WorkingDirectory=/home/ubuntu/ict-trading-bot
 # Worst case: 15 feeds x (20 rate-limit retries x 30s = 10 min) = 150 min, plus paging; a normal day extends ~1 day per feed.
 # 9000s covers that; a timeout loses nothing anyway (atomic write, original untouched).
 TimeoutStartSec=9000
+# Daily ETF/futures 1d files extended from the maintained lake (basis-checked, ratio-spliced with a .splice.json
+# sidecar; extends, never creates) and the Bybit funding files extended forward (PI-20261118-MANAYJZO-0002).
+# They run FIRST with the '-' prefix: each is independent of the crypto refresh and can never fail the unit.
+ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/extend_data_from_lake.py --data-dir data --lake datasets-out/market_raw --apply
+ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_funding_history.py --data-dir data ADAUSDT AVAXUSDT BTCUSDT ETHUSDT SOLUSDT XRPUSDT
 ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15 ADAUSDT:15 AVAXUSDT:15 BNBUSDT:15 LINKUSDT:15 BTCUSDT:15 ADAUSDT:5 AVAXUSDT:5 BNBUSDT:5 LINKUSDT:5 ETHUSDT:5 SOLUSDT:5 XRPUSDT:5
 # Report-only freshness of every data/*.csv (PI-20261118-MANAYJZO-0002); the '-' prefix means it can never fail the unit.
 ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data
