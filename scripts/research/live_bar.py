@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual + the promotion packet / performance review read it; a scheduled feed into the ladder is a follow-up (PI filed with the doctrine PR).
+# wiring: manual-only - run by sessions for the promotion packet and the performance review; the scheduled ladder feed is row LIVE-BAR-LADDER-FEED.
 """The LIVE BAR check (operator, 2026-11-17; OPERATING-PLAN § 2 "Live-performance promotion path").
 
 A leg clears the live bar with >= 20 closed live trades whose R is CONFIRMED, net of real costs (the journal's realized
@@ -87,7 +87,7 @@ def confirmed_r_rows(trades: Iterable[Mapping], packages: Mapping[str, Any]) -> 
         state, _ = classify_r(row)
         try:
             pnl_bucket = classify_pnl(t)[0]
-        except Exception:  # noqa: BLE001 - provenance unreadable -> not measured
+        except Exception:  # noqa: BLE001  # allow-silent: an unreadable pnl provenance counts as NOT measured (the conservative bucket), never as measured
             pnl_bucket = "unverified"
         out.append({"strategy": t.get("strategy_name") or "unknown", "account": t.get("account_id"),
                     "account_class": t.get("account_class"), "r": float(r), "closed_at": t.get("closed_at"),
