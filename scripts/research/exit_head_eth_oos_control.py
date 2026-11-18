@@ -264,11 +264,11 @@ def _self_test() -> int:
     P = {"verdict": "pass", "read_state": "measured", "measurement": {"control_random_truncation": {"head_beats_control_p95": True}}}
     Pn = {"verdict": "pass", "read_state": "measured", "measurement": {"control_random_truncation": {"head_beats_control_p95": False}}}
     F = {"verdict": "fail", "read_state": "measured", "measurement": {}}
-    I = {"verdict": "indeterminate", "read_state": "measured", "measurement": {}}
+    Ind = {"verdict": "indeterminate", "read_state": "measured", "measurement": {}}
     check("one leg passes judge+control -> pass", grade_cells({"a|holding_pays_neg25": P, "b|holding_pays_neg25": F})[0] == "pass")
     check("judge pass without control -> not a pass", grade_cells({"a|holding_pays_neg25": Pn, "b|holding_pays_neg25": F})[0] == "fail")
     check("all measured fail -> fail", grade_cells({"a|holding_pays_neg25": F, "b|holding_pays_neg25": F})[0] == "fail")
-    check("an indeterminate leg, none passing -> indeterminate", grade_cells({"a|holding_pays_neg25": F, "b|holding_pays_neg25": I})[0] == "indeterminate")
+    check("an indeterminate leg, none passing -> indeterminate", grade_cells({"a|holding_pays_neg25": F, "b|holding_pays_neg25": Ind})[0] == "indeterminate")
     check("holding_pays cells never gate", grade_cells({"a|holding_pays": P, "a|holding_pays_neg25": F})[0] == "fail")
     print("exit_head_eth_oos_control self-test " + ("OK" if ok else "FAILED"))
     return 0 if ok else 1
