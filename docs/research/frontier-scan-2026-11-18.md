@@ -1,6 +1,8 @@
 # Frontier scan 2026-11-18 (lane ML-FRONTIER-PREP-20261118)
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-18` · run record `comms/ml-plan/20261118T2000Z-ML-FRONTIER-PREP.json`
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
+Run record: `comms/ml-plan/20261118T2000Z-ML-FRONTIER-PREP.json`.
 
 Gates this adds or changes: none.
 
