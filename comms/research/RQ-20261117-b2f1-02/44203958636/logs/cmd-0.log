@@ -1,0 +1,12 @@
+Fetching IEF D candles 2020-07-02 -> 2026-11-18 (source=dukascopy) …
+  dukascopy: IEF -> INSTRUMENT_ETF_CFD_US_IEF_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-16T00:00:00
+Wrote 1586 rows (2020-07-02 -> 2026-11-16) to /tmp/exit_lever_ablation_zm9gk34l/ief_pullback_1d__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 30 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol IEF --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f1-02/44203958636/arms/A__trades.jsonl --json comms/research/RQ-20261117-b2f1-02/44203958636/arms/A__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3.5 --start 2021-07-01 --end 2026-10-15 23:59
+[DI] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 30 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol IEF --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f1-02/44203958636/arms/DI__trades.jsonl --json comms/research/RQ-20261117-b2f1-02/44203958636/arms/DI__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3.5 --direction-filter di --start 2021-07-01 --end 2026-10-15 23:59
+[DS] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 30 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol IEF --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f1-02/44203958636/arms/DS__trades.jsonl --json comms/research/RQ-20261117-b2f1-02/44203958636/arms/DS__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 2.5 --tp-cap-pct 0.099 --tp-r 3.5 --direction-filter slope --start 2021-07-01 --end 2026-10-15 23:59
+{
+ "verdict": "indeterminate",
+ "label": "underpowered",
+ "why": "incumbent n=33 < n_floor 39"
+}
