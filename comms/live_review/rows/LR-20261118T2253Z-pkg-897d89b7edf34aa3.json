@@ -1,0 +1,198 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261118T2253Z-pkg-897d89b7edf34aa3",
+ "reviewed_at": "2026-11-18T22:58:00Z",
+ "order_package_id": "pkg-897d89b7edf34aa3",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-18T20:00:00+00:00",
+  "l0_snapshot_at": "2026-11-18T22:52:26.251917+00:00"
+ },
+ "info_cutoff_at": "2026-11-18T22:53:26Z",
+ "state": {
+  "atr_now_over_entry": 0.5078,
+  "bars_held": 40,
+  "giveback_r": 0.0,
+  "open_r": 0.5572,
+  "peak_provenance": "estimated",
+  "peak_r": 0.5572,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.15997857,
+  "tp": 0.1379431
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.5078,
+  "bars_since_peak": 15,
+  "giveback_r": 0.0,
+  "open_r": 0.5572,
+  "peak_r": 0.5572,
+  "r_to_stop": 1.5572,
+  "r_to_target": 1.5124
+ },
+ "mechanics": {
+  "evidence": "package sl 0.15997857 / tp 0.1379431 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 154,
+   "mean_r": 1.1349,
+   "sd_r": 2.0745,
+   "worst_r": -1.1996,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.5563,
+   "sd_r": 0.8201,
+   "worst_r": -0.3552,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.5844,
+   "sd_r": 1.0842,
+   "worst_r": -0.4922,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.7654,
+   "sd_r": 1.4349,
+   "worst_r": -0.8255,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.7617,
+   "sd_r": 1.4633,
+   "worst_r": -0.3552,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.6532,
+   "sd_r": 1.1371,
+   "worst_r": -0.3552,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 154,
+   "mean_r": 0.5044,
+   "sd_r": 0.024,
+   "worst_r": 0.3989,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261118T2253Z-pkg-897d89b7edf34aa3.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "Prev forecast (target 0.1491, invalidation 0.1552, 6x2h) is unresolved: the 2h low since was 0.1492 (1 tick short of target), high 0.1531, invalidation untouched, last close 0.1503. Open +0.557R at its peak, giveback 0. Table (n=154, floor 20): hold mean +1.135 sd 2.07 worst -1.20 vs close +0.504, tighten r:0 +0.762 (gap 0.37R = 2.8 SE of 0.135), atr:1.0 +0.556; every option trails hold on mean by >1 SE, so the tail tie-break does not fire. 1d downtrend (ADX 42.6) intact, price pressed on the 0.1491/0.1492 double low; a break opens the 0.1379 TP, a bounce stays under the 0.1552 lower high. The strategy bracket (SL 0.15998, TP 0.13794) already expresses this view; carry forecast, p 0.55."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "book: 13 other open short packages correlated (SOL, AVAX x2, ETH x3, BTC, SLV, GDX, SPY, QQQ, MGC, GLD); same short risk-off bet, no size change; trend_donchian_ada_4h also short ADA at -0.039R",
+  "table: hold n=154 measured mean +1.135 (sd 2.07); no option beats hold on mean",
+  "missing_inputs: regime.vol_now, regime.cell_entry, context.funding, context.news",
+  "regime: atr_now_over_entry 0.51 (calm vs entry); 1d trending ADX 42.6 but 2h trend_now chop ADX 18.8",
+  "calendar: no events next 24h",
+  "live_vs_backtest: realMoney CONSISTENT live_r -0.563 n=19; mirror CONSISTENT n=13",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuKYAMxaQYKfm8EqkbR",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "67a94df974459167ec5697a187ef2e3993dfeaa83cb80a02f58e24c57ccad434",
+ "forecast": {
+  "thesis": "1d downtrend (ADX 42.6) intact and price sits on the 0.1491/0.1492 double low; a clean 2h close below it sweeps 0.1491 toward the TP, while a bounce is capped by the 0.1552 lower high. Previous target missed by one tick, so I carry it with slightly lower p given two failed pokes.",
+  "direction": "with_trade",
+  "target_px": 0.1491,
+  "p_target": 0.55,
+  "invalidation_px": 0.1552,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings lows 0.1492/0.1491, highs 0.1552/0.1565",
+   "chart.htf 1d trending ADX 42.62",
+   "exit_plan sl 0.159979 tp 0.137943",
+   "context.previous_review forecast carried",
+   "table hold n=154 mean 1.1349"
+  ]
+ }
+}
