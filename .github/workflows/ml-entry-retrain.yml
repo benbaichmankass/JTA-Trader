@@ -104,6 +104,26 @@ jobs:
           json.dump({"artifact_dir": sys.argv[1], "note": "The ONE served-ENTRY-model pointer (src/runtime/ml_entry_served.py). Repointed by ml-entry-retrain run " + sys.argv[2] + " after RULE-ENTRY-PROMOTE-20261106 PASSED. Revert = set artifact_dir back to " + str(prev) + "."}, open("ml/served/ENTRY_SERVED.json", "w"), indent=2)
           PY
           mkdir -p "comms/research/ml_entry_grade/${RUN_ID}"; cp out/grade_evidence.json "comms/research/ml_entry_grade/${RUN_ID}/"
+          # Declare the promoted artifact in ml/served/SERVED_MODELS.yaml (stage + MEASURED headline copied from the grade evidence):
+          # /api/bot/ml/registry lists the pointer's sibling, and tests/test_ml_registry_inventory.py requires it declared (#26288 sat red on this).
+          python3 - "$D" "$RUN_ID" <<'PY'
+          import json, sys
+          d, run = sys.argv[1], sys.argv[2]
+          mid = "ml-decision-entry-" + d.split("entry_")[-1]
+          ev = json.load(open(f"comms/research/ml_entry_grade/{run}/grade_evidence.json"))
+          c, s, pl = ev["candidate"]["result"], ev["served"], ev["plan"]
+          p = "ml/served/SERVED_MODELS.yaml"
+          txt = open(p).read()
+          if f"\n  {mid}:\n" not in txt:
+              entry = (f"  {mid}:\n    stage: advisory\n"
+                       f"    stage_basis: \"the artifact ml/served/ENTRY_SERVED.json points at once this ml-entry-retrain run {run} promotion lands; serves every ml_entry consumer\"\n"
+                       f"    headline_metric:\n      name: promotion_grade_mean_net_r_per_trade\n      value: {c['mean_net_r']:.4f}\n      n: {c['n']}\n"
+                       f"      window: \"{pl['window_start']}..{pl['window_end']}\"\n"
+                       f"      population: \"candidate refit vs served {s['model_id']} on the {pl['window_days']}-day grade window (served {s['result']['mean_net_r']:+.4f} R, n {s['result']['n']}), net of the full cost stack\"\n"
+                       f"      verdict: pass\n      rule: {ev['rule_id']}\n      provenance: MEASURED\n      source: comms/research/ml_entry_grade/{run}/grade_evidence.json\n")
+              txt = txt.replace("\nmodels:\n", "\nmodels:\n" + entry, 1)
+              open(p, "w").write(txt)
+          PY
           mkdir -p .github/pr-landing
           printf '{"tier":3,"landing":"hold","hold_reason":"tier_2_3_needs_approval","hold_text":"Real-money ENTRY model replacement (bybit_2, bybit_portfolio): a human merges after reading the grade evidence.","why":"HELD: ml-entry-retrain run %s graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 and proposes repointing the served ENTRY model (real money: bybit_2, bybit_portfolio). A human merges; revert is a one-line pointer edit."}\n' "$RUN_ID" > ".github/pr-landing/${BR//\//-}.json"   # the guard's slug is the FULL branch name with / -> - (bot-ml-entry-promote-...); ${SLUG} alone failed R11 on #26288
           python3 scripts/ops/claim_merge_slot.py --branch-claim --branch "$BR" --held-by "workflow:ml-entry-retrain:${RUN_ID}" --purpose "held ENTRY model promotion" || true
