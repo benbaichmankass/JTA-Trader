@@ -2188,6 +2188,35 @@ def account_position_present(
         return None
 
 
+def account_entry_order_pending(
+    account: Dict[str, Any], order_id: str
+) -> Optional[bool]:
+    """Is the entry order ``order_id`` still working at the venue? Three-valued.
+
+    ``True`` = still pending (the symbol reads flat only because the order has not filled
+    yet), ``False`` = terminal or unknown to the venue, ``None`` = could not tell
+    (dry account, missing creds, read failure, unsupported integration). Only alpaca is
+    wired; callers must treat ``None`` as "no information", never as pending or gone.
+    """
+    if not isinstance(account, dict) or not order_id:
+        return None
+    if str(account.get("exchange") or "").strip().lower() != "alpaca":
+        return None
+    try:
+        if str(account.get("mode") or "live").lower() != "live":
+            return None
+        client = alpaca_client_for(account)
+        if client is None:
+            return None
+        return client.order_pending(str(order_id))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "account_entry_order_pending(%s, %s): %s",
+            account.get("account_id") or "unknown", order_id, exc,
+        )
+        return None
+
+
 # ---------------------------------------------------------------------------
 # BL-20260820-PROTECTION-COVERAGE-IS-PRICE-BLIND, criterion 5.
 #

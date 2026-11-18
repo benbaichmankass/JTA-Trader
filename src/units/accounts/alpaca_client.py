@@ -1241,6 +1241,52 @@ class AlpacaClient:
         )
         return None
 
+    #: Alpaca order statuses after which the order can no longer fill. Anything else
+    #: (new, accepted, pending_new, partially_filled, held, ...) is still working.
+    _ORDER_TERMINAL_STATUSES = frozenset(
+        {"filled", "canceled", "cancelled", "expired", "rejected", "done_for_day", "replaced"}
+    )
+
+    def order_pending(self, order_id: str) -> Optional[bool]:
+        """Is the entry order ``order_id`` still WORKING at the venue (``GET /v2/orders/{id}``)?
+
+        Three-valued, the discriminator the snapshot reconciler needs before it closes a
+        row whose symbol reads flat. A bracket entry placed outside the regular session
+        is accepted and QUEUED until the open, so the position is genuinely absent while
+        the order is NOT gone (2026-11-18: SLV and QQQ re-entered every ~7 min pre-open
+        because the row was closed as flat while its order was still queued):
+
+          * ``True``  - the order exists and has not reached a terminal status.
+          * ``False`` - the order is terminal (filled/canceled/expired/rejected/...) or the
+                        venue has no such order (404).
+          * ``None``  - could NOT tell (no creds, network, non-404 error, unexpected body).
+                        The caller must NOT read this as pending or as gone.
+        """
+        oid = str(order_id or "").strip()
+        if not oid:
+            return None
+        try:
+            self._require_creds("order_pending")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", f"/v2/orders/{oid}")
+        rc = env.get("retCode")
+        if rc == 0:
+            result = env.get("result")
+            if isinstance(result, dict):
+                st = str(result.get("status") or "").strip().lower()
+                if st:
+                    return st not in self._ORDER_TERMINAL_STATUSES
+            return None
+        if rc == 404:
+            return False
+        logger.warning(
+            "alpaca order_pending(%s): unconfirmed (retCode=%s retMsg=%s)",
+            oid, rc, env.get("retMsg"),
+        )
+        return None
+
     def _await_qty_available(self, symbol: str, want_qty: float, deadline: float) -> Optional[float]:
         """Poll until the position's ``qty_available`` reaches ``want_qty``.
 
