@@ -1,0 +1,111 @@
+id: RQ-20261118-abab-56
+title: 'FIDELITY re-test of ict_scalp_eth_15m (live-bar promotion PI-20261117-LSFHBH4A-0007): does the backtest reproduce what the leg did live, and is it net-positive at the cost actually paid?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On ict_scalp_eth_15m, (A) do the live closed trades on bybit_1 since the soak start (2026-07-24) match the harness replay of the same window (same side, entry bar +-1) at a rate >= 0.80 with a
+  mean live-minus-replay gross R gap whose CI contains 0, and (B) is the 365 d Stage-0 record (2025-10-04..2026-10-01) net-positive at the measured realised cost (11.0 bps taker/taker round-trip fee + 0.82
+  bps round-trip slippage)?
+why_this_matters: The leg is on bybit_2 real money by the operator 2026-11-17 live-bar promotion although its Stage-0 records read negative (365 d n=76 -0.0385 R/trade, DSR 0.026; fresh window 8a01-01 n=116
+  -4.88 R; 730 d n=151 +0.43 R, 2/4 folds; every one failed). The committed 365 d sign flips on the fee assumption (+1.318 R at 7.5 bps, negative at 11 bps; COST-STACK-RECOST-SWEEP 2026-10-28). A real-money
+  leg whose offline record fails must have its fidelity and cost basis measured, not assumed (manager spec 2026-11-18). A FAIL goes to the operator as a revert PROPOSAL; this unit never reverts.
+power:
+  expected_n: 46
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'Arm A: 47 live closed trades on bybit_1 (46 with an R basis, MEASURED from /api/bot/trades/closed 2026-11-18); a paired gap with sd near 1-3 R over ~30 matched pairs only excludes gaps of roughly
+    half the CI width, so A_PASS on the gap clause is weak by construction and the match-rate clause does the work (stated, not hidden). Arm B: n = 78 trades at 365 d (MEASURED in the 2026-10-28 record);
+    the bootstrap CI of expectancy there is about +-0.19 R, so B can only be clearly negative if the mean is below about -0.19 R/trade. Below the floors the arm is INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Both arms read data already in hand (closed live trades to 2026-11-18 and a pinned historical window); nothing accrues. bybit_2 has zero live closes of this leg yet, so it adds nothing
+      to arm A.
+evidence_class:
+  holdout: in_sample
+  claim: fidelity
+decision_rule:
+  id: RULE-RQ20261118-ICTSCALP-ETH15M-FIDELITY
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ict_scalp_fidelity.py --leg ict_scalp_eth_15m: arm A joins live closed trades to the harness replay with scripts/research/live_bt_trade_join.join (tolerance 1 bar) and reports
+    match rate, Pearson r of live vs replay gross R, mean gap with a seeded bootstrap CI and the entry/exit/execution components; arm B re-runs the harness (the leg''s live config via regime_debt_matrix.build_harness_cmd)
+    on the committed record window at five cost bases and reports n, net R, expectancy and a bootstrap CI per basis.'
+  rule: 'ARM A (TRADE-MATCH): match rate = live closed trades on bybit_1 (and any bybit_2 fills) that have an R basis and a harness twin on the same side within +-1 native bar, over all live trades with
+    an R basis. A_PASS iff match rate >= 0.80 AND the bootstrap 95% CI (10,000 draws, seed 20261118) of the mean live-minus-replay GROSS R gap on matched pairs contains 0. A_FAIL iff live trades with an
+    R basis >= 30 and not A_PASS, naming the divergence (entry timing, exit path or execution from live_bt_trade_join''s components). A_INDETERMINATE iff fewer than 30 live trades carry an R basis. ARM
+    B (COST): the committed 365 d record window 2025-10-04..2026-10-01 re-run at five cost bases (fee/slippage bps round trip): B1 11.0/3.0 current stack, B2 7.5/3.0 pre-2026-10-28 reading, B3 11.0/0.82
+    taker/taker with the MEASURED slippage (primary), B4 7.5/0.82 maker-entry bound, B5 11.0/1.64 (0.82 read as per-side, sensitivity). B3_CLEAR iff expectancy >= 0; B3_NEGATIVE iff the bootstrap CI upper
+    bound < 0; else B3_AMBIGUOUS; B_INDETERMINATE iff B3 n < 39. UNIT VERDICT: PASS iff A_PASS and B3_CLEAR (the live-bar promotion stands). FAIL iff A_FAIL or B3_NEGATIVE (a revert is PROPOSED to the operator;
+    never done here). INDETERMINATE otherwise (no endorsement, no revert, numbers to the manager). Thresholds, bases and the window are not changed after any result.'
+  what_it_does_not_do: 'Reverts nothing, edits no config and no roster, places no order, is not a promotion case. A fidelity failure caused by the harness being closed-bar while live enters on the forming
+    bar (live_bt_trade_join: live-only entries land a median 4-7 minutes into the bar) says the backtest is not evidence about the live behaviour in either direction; it does not by itself say the live
+    behaviour is bad. Live gross R here is before fees (the route publishes no fee field).'
+  seen_before_registration: 'DEV RUN SEEN BEFORE REGISTRATION (disclosed): scripts/research/ict_scalp_fidelity.py was run end to end on 2026-11-18 (session QUEUE-FILL-W47) to validate the script, AFTER
+    the thresholds above were fixed in the manager spec and before this unit was committed. It read: arm A match 3 of 46 (6.5%), harness took 17 trades in the window vs 47 live, mean gap +0.097 R CI [-0.60,+0.84],
+    live gross R +3.52 over 46 trades (mean +0.077, sd 2.95); arm B n=78, B1 -0.013, B2 +0.017, B3 +0.006 CI [-0.18,+0.20], B4 +0.035, B5 -0.001 R/trade, so unit verdict FAIL (via A). The dispatcher run
+    reproduces it; it is not independent evidence. No threshold, basis or window was changed after seeing it.'
+practice_precedent: 'M6 and R1 (docs/reference/trading-and-model-practice-principles.md): a backtest is only evidence about a live strategy to the extent it reproduces the live decisions (trade-match fidelity)
+  and the realised cost; model-risk practice SR 11-7 outcomes analysis'
+intervention_controls:
+  not_applicable: a replication and cost-basis measurement of a declared leg, not an in-trade action or active-management intervention
+iteration:
+  subject: ict_scalp_eth_15m
+  subject_kind: strategy_leg
+  from_result: RQ-20261027-8a01-01
+  verdict_read: fail
+  diagnosis: Every Stage-0 read of the leg failed (8a01-01 fresh window -4.88 R n=116; 365 d n=76 -0.0385 R; 730 d n=151 +0.43 R 2/4 folds) while the live bybit_1 trades are cited as positive. Either the
+    harness does not reproduce what the leg does live (closed-bar replay vs forming-bar entries) or the cost basis is wrong; the earlier Stage B join on xrp/ada pullback legs found entry timing as the dominant
+    component. This unit measures which.
+  search: Fidelity (trade-match) and cost basis on the leg itself, one factor each; no lever or parameter is varied.
+  attempt: 1
+  due_by: '2026-11-25'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 600
+  confidence: 0.5
+  bucket: own_losses
+  basis: the leg is on bybit_2 real money on a failed Stage-0 record; the answer decides whether a revert is proposed to the operator; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 20
+  why_runner: reads the public live routes (/api/bot/trades/closed, /api/bot/order-packages) and fetches keyless public candles; the Kaggle kernel has no internet; CPU only.
+  basis: the 2026-11-18 dev run (one 45-day live-window harness pass plus five 365 d passes on a session container) finished in under 5 minutes; est 20 allows runner startup and candle fetches.
+run:
+  command:
+  - python3
+  - scripts/research/ict_scalp_fidelity.py
+  - --leg
+  - ict_scalp_eth_15m
+  - --account
+  - bybit_1
+  - --live-start
+  - '2026-07-24'
+  - --cost-start
+  - '2025-10-04'
+  - --cost-end
+  - '2026-10-01'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261118-abab-56
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+- L-ATM
+related:
+- RQ-20261027-8a01-01
+- scripts/research/ict_scalp_fidelity.py
+- scripts/research/live_bt_trade_join.py
+- comms/strategy_evidence/ict_scalp_eth_15m.json
