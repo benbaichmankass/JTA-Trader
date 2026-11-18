@@ -14,10 +14,19 @@ Rules (all enforced, none advisory):
     GC=F/HG=F/ES=F bars (see market_raw_to_csv.py), so they extend
     GC_F/HG_F/ES_F, never ``MGC_1d.csv``.
   * BASIS CHECK before any append: on the overlapping timestamps the lake close
-    must match the file's close (median relative difference <= --tol, default
-    2e-3, at least --min-overlap bars). The lake is rebuilt from yfinance and may
-    be dividend-adjusted, so two different price bases would splice into one
-    series. A failing file is REPORTED and left untouched, never forced.
+    is compared with the file's close (median relative difference, at least
+    --min-overlap bars). At or under --tol (default 2e-3) the lake is the same
+    basis and rows are appended as they are (``extend``). Over it, the lake is a
+    different price basis (it is rebuilt from yfinance and is usually
+    dividend-adjusted), and the appended OHLC are RATIO-SPLICED: scaled by
+    file_close/lake_close at the last common date, volume untouched
+    (``splice``; manager decision 2026-11-18, no special cases per symbol).
+    Every splice (a) writes ``<file>.splice.json`` (date, ratio, lake source and
+    version; appended to on each splice) so a spliced file never looks native,
+    (b) is re-checked: the return across the splice day must sit within
+    --max-sigma standard deviations of the file's own daily returns, else the
+    file is left untouched, and (c) is refused when the ratio is outside
+    [0.8, 1.2] or the file has no common date with the lake.
   * report-only default: ``--apply`` is required to write.
 
     python3 scripts/ops/extend_data_from_lake.py --data-dir data \
@@ -30,6 +39,7 @@ import json
 import os
 import statistics
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # lake symbol -> data/ file stem. Micro symbols map to the proxy's own name.
@@ -61,25 +71,39 @@ def read_csv_rows(path: Path) -> tuple[list[str], list[list[str]]]:
     return lines[0].split(","), [ln.split(",") for ln in lines[1:]]
 
 
-def plan_one(name: str, csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int):
-    """Return (state, detail, new_lines|None). Never raises on a data problem."""
+def _returns(closes: list[float]) -> list[float]:
+    return [closes[i] / closes[i - 1] - 1 for i in range(1, len(closes)) if closes[i - 1]]
+
+
+def plan_one(name: str, csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int,
+             max_sigma: float = 4.0):
+    """Return (state, detail, new_lines|None, splice|None). Never raises on a data problem."""
     header, rows = read_csv_rows(csv_path)
     if header != _BASE:
-        return "refused_columns", f"header {header} is not {_BASE}", None
+        return "refused_columns", f"header {header} is not {_BASE}", None, None
     if not rows:
-        return "refused_empty", "file has no rows", None
+        return "refused_empty", "file has no rows", None, None
     last_day = _day(rows[-1][0])
     by_day = {_day(r["ts"]): r for r in lake_rows}
     diffs = []
+    common = []
     for r in rows[-400:]:
         lr = by_day.get(_day(r[0]))
-        if lr is not None and float(r[4]) != 0:
+        if lr is not None and float(r[4]) != 0 and float(lr["close"]) != 0:
             diffs.append(abs(float(lr["close"]) - float(r[4])) / abs(float(r[4])))
+            common.append((_day(r[0]), float(r[4]), float(lr["close"])))
     if len(diffs) < min_overlap:
-        return "refused_no_overlap", f"{len(diffs)} overlapping bars < {min_overlap}; basis cannot be verified", None
+        return ("refused_no_overlap",
+                f"{len(diffs)} overlapping bars < {min_overlap}; basis cannot be verified", None, None)
     med = statistics.median(diffs)
+    ratio, splice = 1.0, None
     if med > tol:
-        return "refused_basis_mismatch", f"median close diff {med:.5f} > tol {tol} over {len(diffs)} bars", None
+        cday, fclose, lclose = common[-1]
+        ratio = fclose / lclose
+        if not 0.8 <= ratio <= 1.2:
+            return "refused_ratio_out_of_range", f"splice ratio {ratio:.4f} outside [0.8, 1.2]", None, None
+        splice = {"splice_day": cday, "ratio": ratio, "median_close_diff_before": med,
+                  "overlap_bars": len(diffs), "rule": "ratio = file_close/lake_close at the last common date; OHLC scaled, volume unchanged"}
     sample = rows[-1][0]
     sep = "T" if "T" in sample else " "
     tz = "Z" if sample.endswith("Z") else (sample[-6:] if len(sample) > 6 and sample[-6] in "+-" else "")
@@ -87,15 +111,40 @@ def plan_one(name: str, csv_path: Path, lake_rows: list[dict], tol: float, min_o
     def fmt(day: str) -> str:
         return f"{day}{sep}00:00:00{tz}"
 
-    add = []
+    add, add_close = [], []
     for d in sorted(by_day):
         if d > last_day:
             r = by_day[d]
-            add.append(",".join([fmt(d), repr(float(r["open"])), repr(float(r["high"])),
-                                 repr(float(r["low"])), repr(float(r["close"])), repr(float(r["volume"]))]))
+            o, h, lo, c = (repr(float(r[k]) * ratio) for k in ("open", "high", "low", "close"))
+            add.append(",".join([fmt(d), o, h, lo, c, repr(float(r["volume"]))]))
+            add_close.append(float(c))
     if not add:
-        return "current", f"no lake bars after {last_day}", None
-    return "extend", f"{len(add)} bars {last_day} -> {add[-1][:10]}; basis median diff {med:.5f} over {len(diffs)} bars", add
+        return "current", f"no lake bars after {last_day}", None, None
+    if splice:
+        file_closes = [float(r[4]) for r in rows[-400:]]
+        rets = _returns(file_closes)
+        sd = statistics.pstdev(rets) if len(rets) > 1 else 0.0
+        jump = add_close[0] / file_closes[-1] - 1
+        splice.update(splice_return=jump, file_daily_return_sd=sd, max_sigma=max_sigma,
+                      first_appended_day=add[0][:10], last_appended_day=add[-1][:10], bars_appended=len(add))
+        if sd > 0 and abs(jump) > max_sigma * sd:
+            return ("refused_splice_discontinuity",
+                    f"return across splice {jump:+.4f} exceeds {max_sigma} x file sd {sd:.4f}", None, None)
+        detail = (f"{len(add)} bars {last_day} -> {add[-1][:10]}; ratio {ratio:.5f}, splice return {jump:+.4f} "
+                  f"(file sd {sd:.4f}), median diff before {med:.5f} over {len(diffs)} bars")
+        return "splice", detail, add, splice
+    return ("extend", f"{len(add)} bars {last_day} -> {add[-1][:10]}; basis median diff {med:.5f} over {len(diffs)} bars",
+            add, None)
+
+
+def write_sidecar(csv_path: Path, lake_src: Path, version: str, splice: dict) -> None:
+    side = csv_path.with_name(csv_path.name + ".splice.json")
+    hist = json.loads(side.read_text())["splices"] if side.exists() else []
+    hist.append({**splice, "lake_source": str(lake_src), "lake_version": version,
+                 "file": csv_path.name, "spliced_at": datetime.now(timezone.utc).isoformat()})
+    tmp = side.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps({"splices": hist}, indent=2, sort_keys=True) + "\n")
+    os.replace(tmp, side)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -105,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--version", default="v002")
     ap.add_argument("--tol", type=float, default=2e-3)
     ap.add_argument("--min-overlap", type=int, default=20)
+    ap.add_argument("--max-sigma", type=float, default=4.0)
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args(argv)
     rc = 0
@@ -115,13 +165,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{lake_sym}->{csv_path.name}: SKIP lake={src.exists()} csv={csv_path.exists()} (extends, never creates)")
             continue
         try:
-            state, detail, add = plan_one(stem, csv_path, read_lake(src), args.tol, args.min_overlap)
+            state, detail, add, splice = plan_one(stem, csv_path, read_lake(src), args.tol, args.min_overlap, args.max_sigma)
         except Exception as exc:  # noqa: BLE001 - one bad file must not block the others
             print(f"{lake_sym}->{csv_path.name}: FAILED {exc}", file=sys.stderr)
             rc = 1
             continue
         print(f"{lake_sym}->{csv_path.name}: {state}: {detail}")
-        if state == "extend" and args.apply:
+        if state in ("extend", "splice") and args.apply:
             before = csv_path.read_text()
             tmp = csv_path.with_suffix(".csv.tmp")
             tmp.write_text(before if before.endswith("\n") else before + "\n")
@@ -131,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
                 tmp.unlink()
                 raise RuntimeError("refusing a shrinking write")
             os.replace(tmp, csv_path)
+            if splice:
+                write_sidecar(csv_path, src, args.version, splice)
     return rc
 
 

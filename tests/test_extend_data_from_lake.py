@@ -34,11 +34,44 @@ def test_extends_only_new_bars_and_keeps_old_rows(tmp_path):
     assert not (data / "MGC_1d.csv").exists()  # proxy name, never the micro name
 
 
-def test_basis_mismatch_is_refused_and_file_untouched(tmp_path):
+def test_basis_mismatch_is_ratio_spliced_with_sidecar(tmp_path):
     data, lake = tmp_path / "data", tmp_path / "lake"
     data.mkdir()
     _csv(data / "SPY_1d.csv", _days(25), 100.0)
-    _lake(lake / "SPY/1d/v002/data.jsonl", _days(28), 90.0)
+    _lake(lake / "SPY/1d/v002/data.jsonl", _days(28), 90.0)  # adjusted basis, 10% lower
+    e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
+    lines = (data / "SPY_1d.csv").read_text().splitlines()
+    assert len(lines) == 1 + 28
+    assert float(lines[-1].split(",")[4]) == 100.0  # 90 * (100/90): continuous with the file
+    assert lines[-1].split(",")[5] == "5.0"  # volume untouched
+    side = json.loads((data / "SPY_1d.csv.splice.json").read_text())["splices"][0]
+    assert abs(side["ratio"] - 100 / 90) < 1e-9 and side["splice_day"] == "2026-01-25"
+    assert side["lake_version"] == "v002" and abs(side["splice_return"]) < 1e-9
+
+
+def test_splice_refused_when_ratio_out_of_range(tmp_path):
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    _csv(data / "SPY_1d.csv", _days(25), 100.0)
+    _lake(lake / "SPY/1d/v002/data.jsonl", _days(28), 50.0)
+    before = (data / "SPY_1d.csv").read_text()
+    e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
+    assert (data / "SPY_1d.csv").read_text() == before
+    assert not (data / "SPY_1d.csv.splice.json").exists()
+
+
+def test_splice_refused_on_discontinuity(tmp_path):
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    days = _days(25)
+    (data / "SPY_1d.csv").write_text(HDR + "".join(
+        f"{d} 00:00:00+00:00,1,1,1,{100.0 + 0.01 * i},5\n" for i, d in enumerate(days)))
+    rows = [{"ts": f"{d}T00:00:00Z", "open": 1, "high": 1, "low": 1, "close": 90.0 + 0.01 * i, "volume": 5}
+            for i, d in enumerate(days)]
+    rows.append({"ts": "2026-01-26T00:00:00Z", "open": 1, "high": 1, "low": 1, "close": 99.0, "volume": 5})  # +10% gap after rescale
+    p = lake / "SPY/1d/v002/data.jsonl"
+    p.parent.mkdir(parents=True)
+    p.write_text("".join(json.dumps(r) + "\n" for r in rows))
     before = (data / "SPY_1d.csv").read_text()
     e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
     assert (data / "SPY_1d.csv").read_text() == before
