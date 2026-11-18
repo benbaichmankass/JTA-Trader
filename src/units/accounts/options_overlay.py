@@ -255,7 +255,17 @@ def place_options_expression(
     )
     if contracts_env.get("retCode") != 0:
         return OptionsExpressionResult(True, reason=f"contracts_read_failed:{contracts_env.get('retMsg')}")
-    snap_env = data_client.snapshots(underlying, limit=200)
+    # Snapshot the SAME slice the contracts were discovered in (type, expiry window, strike band). Unfiltered, the
+    # first 200 contracts of the whole chain rarely include the 21-60 DTE strikes near the money, so the selector
+    # found < 2 quotable strikes on every SLV signal (37 of 37 rejections, 2026-11-18).
+    snap_env = data_client.snapshots(
+        underlying,
+        limit=1000,
+        contract_type=opt_type,
+        expiration_date_gte=today.isoformat(),
+        expiration_date_lte=(today + _dt.timedelta(days=max_dte)).isoformat(),
+        **_strike_band(entry, opt_type),
+    )
     if snap_env.get("retCode") != 0:
         return OptionsExpressionResult(True, reason=f"snapshot_read_failed:{snap_env.get('retMsg')}")
 
