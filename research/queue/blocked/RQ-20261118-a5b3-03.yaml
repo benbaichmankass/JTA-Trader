@@ -65,6 +65,13 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+blocked:
+  reason: 'no harness input yet: lever row MARKOUT-HARNESS must land first'
+  owner: manager
+  since: '2026-11-18'
+  set_by: PRACTICE-REFRESH-20261118
+  clears_when:
+  - row_state:MARKOUT-HARNESS=done
 blocked_on:
 - MARKOUT-HARNESS
 related:
