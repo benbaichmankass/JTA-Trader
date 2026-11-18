@@ -1,0 +1,211 @@
+{
+ "research_unit": "RQ-20261118-f7c1-08",
+ "rule_id": "RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD",
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 118,
+ "note": "k=2 cap binds on 18 bars < 30",
+ "population": "frozen v1 booster decisions 2026-10-01..2026-11-16 on the bybit_2 symbols (tau 0.1, sequential one-position-per-symbol policy), fixed-bracket outcome",
+ "measurement": {
+  "unit": "RQ-20261118-f7c1-08",
+  "rule_id": "RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD",
+  "window": [
+   "2026-10-01",
+   "2026-11-16"
+  ],
+  "selected_k": 2,
+  "artifact": "comms/research/RQ-20261101-c692-06/41324826751/model",
+  "outcome": "c692-01 label fixed bracket (SL 2xATR14, TP 3xATR14, 24h), net of fee 11 + slip 3 bps + funding 1 bps/8h; DECLARED fidelity gap vs the record's arm F",
+  "holdout_claim": {
+   "model_id": "ENTRY-v1-samebar-cap",
+   "family": "ENTRY-SAMEBAR",
+   "start": "2026-10-01",
+   "end": "2026-11-16",
+   "train_end": "2025-09-30",
+   "unit": "RQ-20261118-f7c1-08",
+   "reader": "ml_entry_samebar_cap.forward",
+   "read_at": "2026-11-18T21:59:37Z",
+   "backfilled": false,
+   "symbols": null,
+   "variants_on_window": 19,
+   "n_tries": 1,
+   "bar": {
+    "n_tries": 1,
+    "alpha_one_sided": 0.025,
+    "ci_level": 0.95,
+    "ci_z": 1.96,
+    "ci_lo_percentile": 2.5,
+    "point_t_min": 0.0,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   },
+   "next_bar": {
+    "n_tries": 2,
+    "alpha_one_sided": 0.012579,
+    "ci_level": 0.974842,
+    "ci_z": 2.239,
+    "ci_lo_percentile": 1.2579,
+    "point_t_min": 0.5198,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   }
+  },
+  "universe": 60,
+  "symbols_with_window_data": 60,
+  "traded_symbols": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "XRPUSDT",
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "window_rows": 13524,
+  "window_last_ts": "2026-11-15 23:00:00+00:00",
+  "fetch_report_days": {
+   "ADAUSDT": 47,
+   "BTCUSDT": 47,
+   "ETHUSDT": 47,
+   "XRPUSDT": 47,
+   "SOLUSDT": 47
+  },
+  "uncapped": {
+   "n": 118,
+   "sum_net_r": -6.903521780549279,
+   "mean_net_r": -0.058504421869061685,
+   "max_dd_r": 17.5537930546583,
+   "mean_net_r_ci95_bar_clustered": [
+    -0.3803685170253772,
+    0.2499041575480482
+   ],
+   "longest_losing_bar_run": 6,
+   "decision_bars": 55,
+   "decisions_per_bar_hist": {
+    "1": 25,
+    "2": 12,
+    "3": 8,
+    "4": 5,
+    "5": 5
+   }
+  },
+  "arms": {
+   "k1": {
+    "n_kept": 55,
+    "n_dropped": 63,
+    "bars_where_cap_binds": 30,
+    "sum_net_r": -3.1113322826480343,
+    "mean_net_r": -0.0565696778663279,
+    "max_dd_r": 9.328522371809063,
+    "dd_ratio_vs_uncapped": 0.531424880238834,
+    "sum_net_r_diff_vs_uncapped": 3.7921894979012447,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -22.200082008190083,
+     29.889427142350833
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.3594166417997195,
+     0.2522053433388648
+    ],
+    "control_median_sum_net_r": -6.274480117075173,
+    "control_median_max_dd_r": 11.658370658018773,
+    "ranked_sum_percentile_in_control": 0.9035,
+    "ranked_dd_percentile_in_control": 0.1235,
+    "dropped_mean_net_r": -0.06019348409367051,
+    "longest_losing_bar_run": 5,
+    "kept_by_side": {
+     "short": 39,
+     "long": 16
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 23,
+     "XRPUSDT": 14,
+     "SOLUSDT": 10,
+     "BTCUSDT": 5,
+     "ETHUSDT": 3
+    },
+    "cond_a_net_r_holds": true,
+    "cond_b_dd_cut_20pct": true,
+    "cond_c_beats_random_drop_median": true,
+    "pass_k": true
+   },
+   "k2": {
+    "n_kept": 85,
+    "n_dropped": 33,
+    "bars_where_cap_binds": 18,
+    "sum_net_r": -12.387496225653877,
+    "mean_net_r": -0.14573524971357502,
+    "max_dd_r": 16.512821888911432,
+    "dd_ratio_vs_uncapped": 0.9406982204640596,
+    "sum_net_r_diff_vs_uncapped": -5.4839744451045975,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -23.64583020727049,
+     11.105441602188975
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.41903661599034797,
+     0.14018417265412972
+    ],
+    "control_median_sum_net_r": -11.608887637584392,
+    "control_median_max_dd_r": 16.522210440619006,
+    "ranked_sum_percentile_in_control": 0.3605,
+    "ranked_dd_percentile_in_control": 0.494,
+    "dropped_mean_net_r": 0.16618104379104862,
+    "longest_losing_bar_run": 6,
+    "kept_by_side": {
+     "short": 59,
+     "long": 26
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 28,
+     "SOLUSDT": 22,
+     "XRPUSDT": 18,
+     "BTCUSDT": 11,
+     "ETHUSDT": 6
+    },
+    "cond_a_net_r_holds": false,
+    "cond_b_dd_cut_20pct": false,
+    "cond_c_beats_random_drop_median": false,
+    "pass_k": false
+   },
+   "k3": {
+    "n_kept": 103,
+    "n_dropped": 15,
+    "bars_where_cap_binds": 10,
+    "sum_net_r": -12.431514680039019,
+    "mean_net_r": -0.12069431728193222,
+    "max_dd_r": 16.860777072332304,
+    "dd_ratio_vs_uncapped": 0.9605204424953564,
+    "sum_net_r_diff_vs_uncapped": -5.52799289948974,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -15.502827607816712,
+     3.405846801857099
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.4011993737900389,
+     0.171682519996937
+    ],
+    "control_median_sum_net_r": -12.320500990027362,
+    "control_median_max_dd_r": 16.760481356763517,
+    "ranked_sum_percentile_in_control": 0.474,
+    "ranked_dd_percentile_in_control": 0.5655,
+    "dropped_mean_net_r": 0.3685328599659831,
+    "longest_losing_bar_run": 6,
+    "kept_by_side": {
+     "short": 71,
+     "long": 32
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 29,
+     "SOLUSDT": 25,
+     "XRPUSDT": 22,
+     "ETHUSDT": 14,
+     "BTCUSDT": 13
+    },
+    "cond_a_net_r_holds": false,
+    "cond_b_dd_cut_20pct": false,
+    "cond_c_beats_random_drop_median": false,
+    "pass_k": false
+   }
+  },
+  "not_modelled": "freed-slot trades after a dropped decision",
+  "git_sha": "4df24117cb3f9b9021371e33885f6d5479800d61",
+  "elapsed_s": 144
+ }
+}

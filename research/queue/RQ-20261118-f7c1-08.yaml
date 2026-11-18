@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-08
 title: 'ml_entry same-bar cap FORWARD check: on decisions AFTER the Stage-0 record (2026-10-01..2026-11-16), does the selected cap k=2
   (survivors by the frozen v1 score) again keep net R, cut max drawdown >= 20% and beat a matched random drop?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -124,4 +124,18 @@ related:
 - RQ-20261118-f7c1-01
 - PI-20261118-PREP1118-0001
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T21:59:37+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD
+  auto: false
+  decision_rule_id: RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD
+  evidence:
+  - research/results/RQ-20261118-f7c1-08/local-20261118T2159Z.jsonl
+  graded_at: '2026-11-18'
+  grader: ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN), rule applied as registered in 4df24117cb
+  reason: 'INDETERMINATE by rule: the k=2 cap binds on 18 decision bars < 30 (118 decisions taken, 55 decision bars, 2026-10-01..2026-11-15).
+    Point estimates (reported, never gating) run AGAINST the cap: k=2 sum net R -12.39 vs uncapped -6.90, max DD 16.51 vs 17.55 R (ratio
+    0.94), ranked net R at the 0.36 percentile of the random-drop control (median -11.61). Per the pass_action the cap stays OFF. The
+    frozen v1 forward read itself: -6.90 R over 118 decisions (-0.058 R/decision) on the fixed bracket (declared fidelity gap vs arm F).'
+  rows: 1
+  verdict: indeterminate

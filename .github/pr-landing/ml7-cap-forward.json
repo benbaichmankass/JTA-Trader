@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "depends_on_unmerged_pr",
+  "hold_text": "must land after #26940 (the same-bar cap harness and RQ-20261118-f7c1-01, which this branch is built on); hand-authored research/queue unit; manager merges after the FULL pytest-run is green",
+  "why": "Tier-1 research: RQ-20261118-f7c1-08, f7c1-01's registered forward-window check (rule 4df24117cb before the run), adds `forward` to scripts/research/ml_entry_samebar_cap.py (self-test extended) and lands its local result: INDETERMINATE (k=2 binds on 18 bars < 30), with point estimates against the cap (net R -12.39 vs -6.90). The cap stays off. Holdout read claimed and appended to comms/research/holdout_reads.jsonl. Edits no config. Gates this adds or changes: none."
+}
