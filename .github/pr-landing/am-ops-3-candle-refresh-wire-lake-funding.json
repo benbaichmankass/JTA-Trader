@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Trainer-only systemd unit (deploy/trainer/ict-candle-refresh.service, research data path, not the money path). Adds two '-'-prefixed ExecStart lines: the lake extender (needs #26978 merged first) and the funding refresher (needs #26967 merged first). Merge after both, then reinstall with scripts/ops/install_trainer_candle_refresh.sh via trainer-vm-diag. Lands under the operator's 'Merge + deploy on green' (2026-11-12). Revert: drop the two lines and reinstall.",
+  "why": "PI-20261118-MANAYJZO-0002 step 1: the daily 1d ETF/futures files and the funding files stop going stale; one timer owns data/ freshness."
+}
