@@ -847,9 +847,10 @@ def _collect_intents(
 
 def _equity_hourly_must_wait(name: str, vcfg: dict, tick_symbol: str, signal: Any, now: float) -> bool:
     """D9 (operator 2026-11-18, popup "Wait for the first full hour of trading (Recommended)"): an actionable signal
-    from an HOURLY US-equity leg is dropped for this tick while it is pre-market or inside the first full regular hour
+    from an HOURLY US-equity leg is dropped for this tick unless it is inside regular trading after the first full hour
+    (10:30 ET to the 16:00 ET close, trading days): pre-market, after-hours, overnight and weekends wait
     (``market_hours.equity_first_full_hour_wait``). The leg re-evaluates every tick, so a signal that still stands is
-    taken when the window ends. Never raises, and fails OPEN (a gate bug must not strand a live leg).
+    taken when the window opens. Never raises, and fails OPEN (a gate bug must not strand a live leg).
     """
     try:
         if str((vcfg or {}).get("timeframe") or "").lower() != "1h":
@@ -867,8 +868,8 @@ def _equity_hourly_must_wait(name: str, vcfg: dict, tick_symbol: str, signal: An
         logger.exception("intent_multiplexer: D9 first-full-hour check failed for '%s'", name)
         return False
     logger.info(
-        "intent_multiplexer: '%s' %s signal on %s held back until the first full regular hour has passed "
-        "(D9, operator 2026-11-18)", name, side, tick_symbol,
+        "intent_multiplexer: '%s' %s signal on %s held back until regular trading after the first full hour "
+        "(10:30-16:00 ET; D9, operator 2026-11-18)", name, side, tick_symbol,
     )
     try:
         from src.utils.signal_audit_logger import log_signal
