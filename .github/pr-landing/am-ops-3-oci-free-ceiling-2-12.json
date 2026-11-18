@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Corrects two stale constants in OCI tooling to Oracle's current Always Free Ampere pool (1,500 OCPU-h + 9,000 GB-h a month for every tenancy = 2 OCPU / 12 GB; docs.oracle.com Always Free Resources, re-read 2026-11-18). provision_training_vm.py ALWAYS_FREE_OCPU_QUOTA 4 -> 2 (its advisory refusal would otherwise allow a billable VM; the operator's M2 rule 2026-11-18: all OCI usage must stay inside Always Free). oci_capacity_report.py FREE_NOTE text. No runtime, config, order path or VM touched; no new gate (an existing advisory number corrected)."
+}

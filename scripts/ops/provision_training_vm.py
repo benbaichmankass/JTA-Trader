@@ -36,7 +36,9 @@ Quota safety:
 - Computes the sum of OCPUs across all RUNNING / PROVISIONING /
   STARTING instances in the compartment + adds the new instance's
   OCPU. If the total exceeds ``ALWAYS_FREE_OCPU_QUOTA`` (default
-  4 OCPU — OCI's Ampere A1 Always Free ceiling) the script refuses
+  2 OCPU — OCI's Ampere A1 Always Free pool: 1,500 OCPU-h/month for every
+  tenancy, "equivalent to 2 OCPUs", docs.oracle.com Always Free Resources,
+  re-read 2026-11-18; it was 4 before 2026-06-15) the script refuses
   with a ``status=quota_would_exceed`` event and exits 0 (advisory,
   not failed — the operator sees the result on the issue comment).
 
@@ -64,7 +66,7 @@ DEFAULT_DISPLAY_NAME = "ict-trainer-vm"
 DEFAULT_SHAPE = "VM.Standard.A1.Flex"
 DEFAULT_OCPUS = 1
 DEFAULT_MEMORY_GB = 6
-ALWAYS_FREE_OCPU_QUOTA = 4  # Ampere A1 free-tier ceiling per tenancy
+ALWAYS_FREE_OCPU_QUOTA = 2  # Ampere A1 Always Free pool per tenancy (1,500 OCPU-h/month; was 4 before 2026-06-15)
 PROVISIONING_TIMEOUT_S = 600
 POLL_INTERVAL_S = 10
 
@@ -118,7 +120,7 @@ def running_ocpu_total(
     the compartment. Conservative — counts PROVISIONING / STARTING /
     STOPPED as 'consuming quota' because they do.
 
-    Only `VM.Standard.A1.Flex` OCPUs count against the 4-OCPU Always-Free
+    Only `VM.Standard.A1.Flex` OCPUs count against the 2-OCPU Always-Free
     Ampere ceiling. x86 shapes (e.g. the live trader's
     `VM.Standard.E2.1.Micro`) draw from a *separate* free allowance, so
     including them here would let a 1-OCPU micro falsely trip the guard and
@@ -261,7 +263,7 @@ def provision(
             quota=ALWAYS_FREE_OCPU_QUOTA,
             display_name=display_name,
             advice=(
-                "Free-tier Ampere A1 quota is 4 OCPU per tenancy. "
+                "Free-tier Ampere A1 pool is 2 OCPU / 12 GB per tenancy (1,500 OCPU-h, 9,000 GB-h a month); above it is billed. "
                 "Terminate an unused VM or request a paid shape."
             ),
         )

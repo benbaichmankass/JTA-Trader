@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). The aadc-01 fail_action (PI-20261118-ZZUFKM1F-0001, ml-week-plan D2 task 1).
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-04a5-03
+title: 'D2 SERVE-PATH DIFF: on bars the live per-bar scorer logged with their full feature rows (2026-11-09..18), do the BTC and SOL
+  fc-pcv-v2 live rows match the trainer v002 rows, and if the labels disagree, which feature block alone flips them?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: regime
+priority: 1
+kind: experiment
+iteration:
+  subject:
+  - btc-regime-15m-lgbm-fc-pcv-v2
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-01
+  verdict_read: fail
+  diagnosis: 'aadc-01 FAILED (BTC fc-pcv-v2 kappa 0.24, agreement 0.937, n 1,111; SOL kappa 0.51, agreement 0.77, n 676; both better at
+    prev_bar). It compared replayed labels to the SIGNAL-AUDIT p_volatile, which logs no feature row, so it cannot say why. The live
+    per-bar scorer (regime_bar_scoring) logs every score WITH its full feature row to shadow_predictions.jsonl (ml/predictors/shadow.py);
+    1,000 per-bar rows per head (2026-11-09..18) are now committed. MEASURED 2026-11-18 on that snapshot: all 6 fc_* columns are present
+    and non-null on BTC (1,000/1,000) and SOL (999/1,000); fc_up_prob is binary on both, which is its definition
+    (ml/datasets/forecast_features.py:186), not a defect. So the fc block is not missing live; whether its VALUES match the offline join,
+    and whether the disagreement is a feature difference or the signal-audit alignment (prev_bar), is what this unit measures.'
+  search: 'none: one diagnostic per head; the block partition (forecast_fc, vol_estimators, returns, calendar, vol_bucket) is fixed in the
+    producer before the run'
+  attempt: 2
+  due_by: '2026-11-22'
+levers:
+- name: label_fidelity
+  values: [feature block swap]
+  hypothesised_effect: one feature block alone reproduces >= 80% of the live-vs-replay label disagreements, or none exist on the per-bar path
+question: 'Per head, over live per-bar rows matched bar-for-bar to the trainer v002 rows: do live and replay labels agree (>= 98%, kappa
+  >= 0.8), and if not, which single feature block, swapped from the replay row into the live row, reproduces >= 80% of the label flips?'
+why_this_matters: 'Every D2 money test so far graded the replay population (bcd2-01, b819-01, population_note). No live D2 change ships
+  until the labels match (operator D6). A named block is the fix target (replay builder or live path); a clean per-bar path moves the
+  defect to the signal-audit alignment, which is a different fix.'
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 1800
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED input size: 1,000 live per-bar rows per head (BTC, SOL) in the committed snapshot; the matched count depends on the
+    trainer v002 dataset reaching 2026-11-18 (reported as dataset_last_matched_bar and n_unmatched). Below 200 matched bars a head is
+    INDETERMINATE, stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the committed live snapshot and the trainer-resident v002 datasets and registry; nothing accrues.
+baseline:
+  definition: 'Exact agreement: the same head scoring the same closed bar should give the same P(volatile) from the live row and the replay
+    row; chance-corrected (Cohen''s kappa) for the imbalanced label.'
+  net_of_cost: false
+decision_rule:
+  id: RULE-RQ20261118-04a5-03-VOL-SERVE-DIFF
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: exact agreement of live and replay rows for the same bar
+  statistic: 'scripts/research/vol_serve_path_diff.py: per head, match each live per-bar row to the v002 row of the same closed bar (bar
+    open = floor(predicted_at, 15m) - 15m, +-1 bar tried, matched on hour_of_day / dayofweek / log_return to 1e-6); score both with the
+    head''s predict_proba (vol_bucket recomputed from the frozen edges, as run_replay does); label at the live threshold. Report agreement,
+    kappa, per-column relative difference, the logged score vs recomputed p, and per block (forecast_fc, vol_estimators, returns,
+    calendar, vol_bucket) the mean |dp| and the label flips reproduced when that block alone is swapped replay -> live.'
+  rule: 'Per head: INDETERMINATE if matched bars < 200 or the head/dataset cannot be loaded; NO_ACTION if agreement >= 0.98 AND kappa >=
+    0.8; PASS (named) if one block alone reproduces >= 80% of the label disagreements; FAIL otherwise. Unit verdict = the worst head in the
+    order FAIL > INDETERMINATE > PASS > NO_ACTION. Thresholds and the block partition are not changed after any result.'
+  pass_action: 'Fix the named block on the side that is wrong (replay builder or live path, read from the column diffs), then re-run
+    aadc-01. A live-path defect is filed as a build row with the evidence; a replay defect is a Tier-1 fix to the builder.'
+  fail_action: 'Disagreement is an interaction of blocks: next iteration swaps pairs of blocks (fixed list) on the same matched bars.'
+  what_it_does_not_do: 'Changes no regime cell, threshold, head or REGIME_ML_VERDICT_MODE; serves nothing; places no order; adds no gate.
+    Reads only the per-bar path; the signal-time path (which aadc-01 compared) is reached only through the alignment note. In-sample
+    caveat of the replay stands.'
+  min_n: 200 matched bars per head
+  no_action_action: 'The per-bar feature path is clean on this window: the aadc-01 disagreement is in the signal-audit alignment or
+    outside 11-09..18. Next: re-run aadc-01 with the signal-time cache age read from the audit stamp (one unit), and record the per-bar
+    path as live-verified for these heads on this window.'
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): diff the served feature row against
+  the offline one on the same bars before grading anything on replayed labels'
+compute: needs_vm_data
+value:
+  bucket: structural
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  basis: 'stand-in: unblocks every D2 cell money test (the BTC trend_vol off-cells act on bybit_1); the value is decision-enabling.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  why_runner: the heads' registry artifacts, the lightgbm venv and the market_features v002 datasets (BTC/SOL 15m) are trainer-resident;
+    the live snapshot is committed under comms/live_parity/vol_serve_rows_20261118/
+  basis: 'ESTIMATE: one streaming pass over each 15m dataset (projected columns only, as run_replay does) plus ~1,000 x 7 predict_proba
+    calls per head.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/vol_serve_path_diff.py
+  - --head
+  - BTCUSDT:btc-regime-15m-lgbm-fc-pcv-v2:datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl:comms/live_parity/vol_serve_rows_20261118/BTCUSDT.jsonl
+  - --head
+  - SOLUSDT:sol-regime-15m-lgbm-fc-pcv-v2:datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl:comms/live_parity/vol_serve_rows_20261118/SOLUSDT.jsonl
+  - --unit
+  - RQ-20261118-04a5-03
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261118-04a5-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261117-aadc-01.yaml
+- scripts/research/ml_vol_label_replay.py
+- scripts/research/vol_label_live_verify.py
+- src/runtime/regime_bar_scoring.py
+last_dispatched_at: null

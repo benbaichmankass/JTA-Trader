@@ -1,0 +1,129 @@
+id: RQ-20261118-abab-64
+title: 'ITERATION 3 of ltr-sl-to-structure (43b6-01 near-miss, R3 3 of 6 folds): action-bounds sweep, pivot window 3 bars (default 5), on the 8 selection legs: does sl_to_structure@new_peak still clear
+  RULE-AM-RISK-ADJUSTED-V1?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On the committed Stage-0 corpora of the 8 selection legs (n = 3,921 priced trades), with the live-review action 'move the stop to the swing extreme' fired at the first new-peak trigger, does pivot
+  window 3 bars (default 5) clear RULE-AM-RISK-ADJUSTED-V1 (R1 r_cost <= 0.05 R/trade, R2 maxDD or weekly-CVaR5 cut >= 15%, R3 >= 4 of 6 calendar folds, R4 beats >= 99.62% of 200 matched random-time books)
+  plus L1 drop-best-leg?
+why_this_matters: 'Live-trade-review class ltr-sl-to-structure is an iteration orphan (research/scripts iteration_orphans.py 2026-11-18): its two results are a PASS on the selection legs (ed2b-03) and a
+  near-miss FAIL on the holdout (43b6-01, fold clause only). The decision it informs is whether the review''s sl_to_structure action is a candidate apply path and, if so, with which action bounds. ed2b-03
+  (sl_to_structure, 8 selection legs, n=3,921 priced trades): sl_to_structure@new_peak PASSED RULE-AM-RISK-ADJUSTED-V1 (r_cost +0.0215 R/trade, weekly CVaR5 cut 13.3%, maxDD cut 19.0%, 4 of 6 folds, 200
+  of 200 random-time controls beaten) at the default action bounds (pivot 5 bars, buffer 0.1 ATR), chosen from 3 triggers. 43b6-01 (the one confirmation, four holdout legs eth_pullback_2h / sol_pullback_2h
+  / trend_donchian_ada_4h / avax_4h, n=1,094): FAIL on R3 only, 3 of 6 folds (R1 r_cost +0.0373, R2, R4 193 of 200 held; L1 drop-best-leg failed). Diagnosis: a near-miss on fold stability, not a null; the
+  trigger family was searched (3 triggers) but the ACTION-BOUNDS family (pivot width, buffer) never was (lever map manifest action_bounds: untested), and a stop that is too tight or too loose relative to
+  structure is the natural cause of a fold-unstable effect. One-factor sweep of the action bounds on the SELECTION legs only; the four holdout legs stay untouched for one read of whichever variant advances.'
+power:
+  expected_n: 3921
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n = 3,921 priced trades on the 8 selection legs is MEASURED (ed2b-03, baseline_book.n). The graded statistic is the harness's own RULE-AM-RISK-ADJUSTED-V1 label with its n_floor of 39 per fold
+    unit; the random-time control (200 draws) is the effect test. Underpowered cases grade indeterminate in the harness, never fail.
+  feasibility:
+    source: none
+    accrual_basis: Offline replay of committed Stage-0 corpora; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261118abab64-LTR-SLSTRUCT-PB3
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ltr_action_trigger_s0.py --action sl_to_structure --triggers new_peak on the 8 committed selection corpora; per candidate: r_cost per baseline trade, maxDD and weekly-CVaR5
+    cut vs hold, folds held of 6, controls beaten of 200, L1 drop-best-leg; cost = the corpus rows'' recorded full-stack net R.'
+  rule: 'PASS iff the harness label for sl_to_structure@new_peak is risk_adjusted_pass: R1 r_cost <= 0.05 R/trade AND R2 (maxDD cut >= 15% OR weekly-CVaR5 cut >= 15%) AND R3 >= 4 of 6 folds hold AND R4
+    beats >= 0.9962 of 200 matched random-time books (the Bonferroni family is 13 = the 9 comparisons already read on this corpus plus these 4 arms; every arm counted) AND L1 holds after dropping the best
+    leg. A PASS is a LEAD: the iteration pass then compares its folds_held with the default''s 4 of 6 and, only if it is >= 5 of 6 with R1, R2, R4 holding, authors ONE read on the four holdout legs (eth_pullback_2h,
+    sol_pullback_2h, trend_donchian_ada_4h, trend_donchian_avax_4h, never used to choose these bounds). FAIL iff the label is any fails_*: this arm is closed on the selection legs and the bounds sweep moves
+    to the remaining arms and then to the untested triggers (giveback, momentum_flip, structure_break). INDETERMINATE iff the harness labels it indeterminate (never_fired / underpowered). Thresholds are
+    not changed after any result. DEV RUN SEEN BEFORE REGISTRATION (disclosed): this exact command was run once on 2026-11-18 (11 s) to time it and prove it executes; it read sl_to_structure@new_peak fails_R4
+    (a random-time control book beat it). The dispatched run reproduces it; it is not independent. The other three arms were NOT run before registration.'
+  what_it_does_not_do: 'Applies no stop move to any live trade, edits no config, is not a promotion or apply case (the live-review apply path is MD-TRADE-DESK and Tier 3 for any new action class). The selection
+    legs'' corpora are closed-bar harness replays whose recorded exits stand for the live exits only to the extent the harness reproduces them (see the ict_scalp fidelity finding, RQ-20261118-abab-56):
+    this is a CLOSED-BAR corpus read, not live-bar evidence.'
+practice_precedent: 'M13 and M4 (docs/reference/trading-and-model-practice-principles.md): one-factor sweep of the untested family against a baseline control, every arm counted in the multiplicity family,
+  a disjoint in-hand holdout read once for the survivor; T1 (action tested against hold and against a random-time action)'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - hold
+    - sl_to_structure@new_peak
+    excludes_test_folds: true
+  bootstrap_group: trade
+iteration:
+  subject: ltr-sl-to-structure
+  subject_kind: ltr_class
+  from_result: RQ-20261117-43b6-01
+  verdict_read: fail
+  diagnosis: 'ed2b-03 (sl_to_structure, 8 selection legs, n=3,921 priced trades): sl_to_structure@new_peak PASSED RULE-AM-RISK-ADJUSTED-V1 (r_cost +0.0215 R/trade, weekly CVaR5 cut 13.3%, maxDD cut 19.0%,
+    4 of 6 folds, 200 of 200 random-time controls beaten) at the default action bounds (pivot 5 bars, buffer 0.1 ATR), chosen from 3 triggers. 43b6-01 (the one confirmation, four holdout legs eth_pullback_2h
+    / sol_pullback_2h / trend_donchian_ada_4h / avax_4h, n=1,094): FAIL on R3 only, 3 of 6 folds (R1 r_cost +0.0373, R2, R4 193 of 200 held; L1 drop-best-leg failed). Diagnosis: a near-miss on fold stability,
+    not a null; the trigger family was searched (3 triggers) but the ACTION-BOUNDS family (pivot width, buffer) never was (lever map manifest action_bounds: untested), and a stop that is too tight or too
+    loose relative to structure is the natural cause of a fold-unstable effect. One-factor sweep of the action bounds on the SELECTION legs only; the four holdout legs stay untouched for one read of whichever
+    variant advances.'
+  search: 'action_bounds family, one factor: pivot window 3 bars (default 5); trigger fixed at new_peak, legs fixed at the 8 selection legs.'
+  levers:
+  - action_bounds
+  map_entries:
+  - research/levers/ltr-sl-to-structure.yaml
+  attempt: 3
+  due_by: '2026-11-25'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: own_losses
+  basis: live-trade-review action class on the real-money book; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 3
+  basis: 'MEASURED: one run of the same command (pivot 3) took 11.2 s wall on a session container on 2026-11-18; est 3 min allows queue/runner startup. The earlier ed2b units'' est of 60 min was an overestimate
+    for this harness.'
+run:
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - sl_to_structure
+  - --triggers
+  - new_peak
+  - --legs
+  - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9962'
+  - --n-comparisons
+  - '13'
+  - --pivot-bars
+  - '3'
+  - --pivot-buffer-atr
+  - '0.1'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261118-abab-64
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-ATM
+related:
+- RQ-20261117-43b6-01
+- RQ-20261113-ed2b-03
+- research/levers/ltr-sl-to-structure.yaml
+- scripts/research/ltr_action_trigger_s0.py

@@ -1,0 +1,95 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). ml-week-plan-2026-11-19 section 4 #2 (D3 Foxhound, stronger-model lever: FT-Transformer).
+# Decision rule registered BEFORE any run. BLOCKED on the same build as RQ-20261118-dbf8-02. Gates this adds or changes: none.
+id: RQ-20261118-f7c1-06
+title: 'Deep tabular learner on a MONEY label (D3 Foxhound): does an FT-Transformer on the same features and raw net-R target, trained on a Kaggle GPU,
+  beat LightGBM on the trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01)'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'https://arxiv.org/abs/2106.11959 (M6) -- Gorishniy, Rubachev, Khrulkov, Babenko, Revisiting Deep Learning Models for Tabular Data,
+  NeurIPS 2021 (PRIMARY, known before this pass, not re-read): FT-Transformer is the strongest general deep tabular baseline and is competitive with
+  GBDT on some datasets, not most. docs/plans/ml-week-plan-2026-11-19.md section 2 lists FT-Transformer as Foxhound''s stronger-model lever (Kaggle GPU).'
+levers:
+- name: learner
+  values:
+  - LightGBM (RAW, baseline)
+  - FT-Transformer regressor per side, raw net-R target, fixed architecture and schedule declared in the arm (FTT, decided)
+  hypothesised_effect: FTT raises held-out net R per decision by >= +0.06 vs RAW
+question: As RQ-20261118-dbf8-01, with an FT-Transformer as the candidate learner, run where a GPU exists (Kaggle).
+why_this_matters: 'No deep or foundation-model learner has been tested on a label that changes an order (ML-PRIMARY-5 correction on ML-WEEK-PLAN-1119,
+  2026-11-18T19:16Z: ridge and LGBM+ridge were, CatBoost only on D2). Foxhound-1 trades bybit_2 (real money). A FAIL here with dbf8-01/-02 tells us the
+  recipe''s ceiling is in its features or label, not its learner.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED): the same windows and sd as RQ-20261118-dbf8-01 / 4654-07.'
+  feasibility:
+    source: none
+    accrual_basis: Replays published Binance history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: 'RAW: the same LightGBM recipe, same origins, rows, tau and cost stack. Net of the full cost stack.'
+  statistic: per 28-day window, mean actual net R per taken decision; d_w = FTT - RAW over windows where both took >= 30 decisions; mean, sd, 95% t-interval.
+  rule: 'PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND FTT pooled n >= 300. FAIL iff >= 10 paired
+    windows AND mean d <= 0 AND the FTT arm trained to its declared schedule on every window. INDETERMINATE otherwise; an unavailable, CPU-fallback or
+    truncated arm is INDETERMINATE, never FAIL. Thresholds are not changed after any result.'
+  pass_action: a Tier-3 proposal note on ML-ENTRY-FINETUNE (candidate manifest; serving is mirror-publish of scores from a GPU host, zero torch on the
+    money box) and a serving-latency unit; a fresh-window confirmation before any promotion.
+  fail_action: record FAIL for exactly FT-Transformer / declared schedule / v1 recipe / raw target in the diversity ledger; the deep-tabular family is NOT
+    retired on one configuration.
+  what_it_does_not_do: Changes no served model or config. No architecture search. A PASS is not a promotion. The window was read before (declared, as dbf8-01).
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled decisions
+blocked_on:
+- what: 'The same route build as RQ-20261118-dbf8-02 (b), widened for this arm: (a) a Kaggle (GPU) route for scripts/research/ml_entry_residual.py.
+    Kaggle kernels have no internet and this harness fetches Binance klines at run time (ml_entry_retrain.fetch_through), so the route needs the
+    60-perp 1h klines published as a private Kaggle dataset (MARKET data, allowed under docs/research/ml-data-classification-2026-10-13.md) and a
+    --cache pointing at the mount; (b) an ftt learner arm (torch, GPU) in ml_entry_residual.py with a default-off flag and a self-test; (c) the learner set
+    observed importable on Kaggle GPU (FRONTIER-LEVER-TABULAR''s PROBE_LEARNERS line). Not cheap tonight; not built by this lane.'
+  ref: FRONTIER-LEVER-TABULAR
+  kind: build
+  clears_when: 'the ml_entry_residual Kaggle GPU route lands with a smoke run (shared with dbf8-02) and the ftt arm lands with its self-test; then git mv
+    to research/queue/, set status queued and fill run.workflow/run.command.'
+  owner: FRONTIER-LEVER-TABULAR (checklist row; same owner as RQ-20261118-dbf8-02)
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.06
+  basis: stand-in, as dbf8-01; not a P&L measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  peak_memory_gb: 16.0
+  est_minutes: 180
+  why_runner: Kaggle GPU (FT-Transformer training on ~1M rows x 13 refits x 2 sides is GPU-bound).
+  basis: 'ESTIMATE (not measured): ~6-8 min per side per refit on a T4 at this row count.'
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) serves FT-Transformer scores (mirror-published) instead of LightGBM; no change from this unit
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261118-dbf8-01
+- RQ-20261118-dbf8-02
+- RQ-20261118-f7c1-05
+- FRONTIER-LEVER-TABULAR
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
+  in 13 x 28-day windows; a recipe comparison, not a promotion read.
+last_dispatched_at: null

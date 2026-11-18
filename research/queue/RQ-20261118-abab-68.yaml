@@ -1,0 +1,124 @@
+id: RQ-20261118-abab-68
+title: 'ITERATION 3 of ltr-close (43b6-02 INDETERMINATE, near_target never fired on tp_r-50 legs): does a FULL close at the first near_target or stall trigger clear RULE-AM-RISK-ADJUSTED-V1 on the 8 selection
+  legs, which include legs with a real TP?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On the committed Stage-0 corpora of the 8 selection legs (n = 3,921 priced trades), does closing the WHOLE position (partial_frac 1.0) at the first near_target or stall trigger clear RULE-AM-RISK-ADJUSTED-V1
+  (R1 r_cost <= 0.05 R/trade, R2 maxDD or weekly-CVaR5 cut >= 15%, R3 >= 4 of 6 folds, R4 beats >= 99.67% of 200 matched random-time full closes) plus L1 drop-best-leg?
+why_this_matters: 'ltr-close is the live-trade-review class behind the audit single positive signal (one window, 4 packages after de-duplication, INDETERMINATE under its own pre-registered rule, row LTR-CLOSE-CLASS-TEST).
+  Its iteration-2 test could not read near_target at all on its population. This is the first full-close test at near_target on legs with a real TP. 43b6-02 (ITERATION 2 of ltr-close, a FULL close at the
+  first near_target or stall trigger, four holdout legs eth_pullback_2h / sol_pullback_2h / trend_donchian_ada_4h / avax_4h, n=1,094) read INDETERMINATE: partial_close@near_target n_fired = 0 (the lever
+  never fired) and @stall fails R1 and R3 with 0 of 200 controls beaten. Cause of n_fired = 0, VERIFIED in config/strategies.yaml 2026-11-18: all four holdout legs declare tp_r 50.0 with tp_intent mode
+  none (the fictional take-profit sentinel), so a NEAR-TARGET trigger, which needs a real TP, can never fire on them. The test design chose a trigger the population cannot produce. ltr-close (the audit''s
+  one positive signal, AUDIT.md section 8, one window, 4 packages after de-duplication) has therefore never been tested at near_target on legs that HAVE a real take-profit. ed2b-01 did test near_target
+  on the 8 selection legs, but as a HALF close (partial_frac 0.5, r_cost -0.0005, 0 of 200 controls beaten), not a full close. This unit runs the full close (--partial-frac 1.0) at near_target and stall
+  on the 8 selection legs, which include the legs with a real TP.'
+power:
+  expected_n: 3921
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n = 3,921 priced trades on the 8 selection legs is MEASURED (ed2b-03 baseline_book.n); how many of them can fire near_target depends on the legs with a real TP (388 fired in ed2b-01 at the same
+    triggers). The graded statistic is the harness RULE-AM-RISK-ADJUSTED-V1 label; underpowered or never-fired cases grade indeterminate in the harness, never fail.
+  feasibility:
+    source: none
+    accrual_basis: Offline replay of committed Stage-0 corpora; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261118abab68-LTR-CLOSE-FULL
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ltr_action_trigger_s0.py --action partial_close --partial-frac 1.0 --triggers near_target,stall on the 8 committed selection corpora; per candidate: r_cost per baseline trade,
+    maxDD and weekly-CVaR5 cut vs hold, folds held of 6, controls beaten of 200, n_fired, L1 drop-best-leg; cost = the corpus rows recorded full-stack net R.'
+  rule: 'PASS iff either candidate (partial_close@near_target, partial_close@stall) has the harness label risk_adjusted_pass: R1 r_cost <= 0.05 R/trade AND R2 (maxDD cut >= 15% OR weekly-CVaR5 cut >= 15%)
+    AND R3 >= 4 of 6 folds hold AND R4 beats >= 0.9967 of 200 matched random-time full closes (Bonferroni family 15 = the 13 comparisons already counted on this corpus plus these 2 arms) AND L1 holds after
+    dropping the best leg. A PASS is a LEAD: ONE read on the four holdout legs follows, restricted to the trigger that passed and, for near_target, only to holdout legs that carry a real TP (none of the
+    four do, so a near_target PASS first needs a holdout population with a real TP, named in the next unit). FAIL iff both labels are fails_*: a full close at these triggers is closed on the selection legs;
+    the class moves to the untested triggers (giveback, adverse_r_0.5, momentum_flip). INDETERMINATE iff a label is indeterminate (never_fired / underpowered). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Closes no live trade, edits no config, is not a promotion or apply case (the apply path is MD-TRADE-DESK, Tier 3 for any new action class). The corpora are closed-bar harness replays:
+    this is a CLOSED-BAR corpus read, not live-bar evidence (see the ict_scalp fidelity finding, RQ-20261118-abab-56). Not run before registration.'
+practice_precedent: 'T1 and M4 (docs/reference/trading-and-model-practice-principles.md): an action tested against hold and against a random-time action, every arm counted in the multiplicity family; the
+  test must be able to fire on its population (n_fired reported)'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - hold
+    - partial_close@near_target
+    - partial_close@stall
+    excludes_test_folds: true
+  bootstrap_group: trade
+iteration:
+  subject: ltr-close
+  subject_kind: ltr_class
+  from_result: RQ-20261117-43b6-02
+  verdict_read: indeterminate
+  diagnosis: '43b6-02 (ITERATION 2 of ltr-close, a FULL close at the first near_target or stall trigger, four holdout legs eth_pullback_2h / sol_pullback_2h / trend_donchian_ada_4h / avax_4h, n=1,094) read
+    INDETERMINATE: partial_close@near_target n_fired = 0 (the lever never fired) and @stall fails R1 and R3 with 0 of 200 controls beaten. Cause of n_fired = 0, VERIFIED in config/strategies.yaml 2026-11-18:
+    all four holdout legs declare tp_r 50.0 with tp_intent mode none (the fictional take-profit sentinel), so a NEAR-TARGET trigger, which needs a real TP, can never fire on them. The test design chose
+    a trigger the population cannot produce. ltr-close (the audit''s one positive signal, AUDIT.md section 8, one window, 4 packages after de-duplication) has therefore never been tested at near_target
+    on legs that HAVE a real take-profit. ed2b-01 did test near_target on the 8 selection legs, but as a HALF close (partial_frac 0.5, r_cost -0.0005, 0 of 200 controls beaten), not a full close. This unit
+    runs the full close (--partial-frac 1.0) at near_target and stall on the 8 selection legs, which include the legs with a real TP.'
+  search: trigger family, near_target and stall at partial_frac 1.0 (a full close) on the 8 selection legs, the legs that carry a real TP.
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-close.yaml
+  attempt: 3
+  due_by: '2026-11-25'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: own_losses
+  basis: live-trade-review action class on the real-money book; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 3
+  basis: MEASURED 11.2 s for the same harness on the same 8 corpora (ltr_action_trigger_s0, one trigger, 2026-11-18); two triggers about double it; est 3 min allows runner startup.
+run:
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - partial_close
+  - --triggers
+  - near_target,stall
+  - --legs
+  - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+  - --partial-frac
+  - '1.0'
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9967'
+  - --n-comparisons
+  - '15'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261118-abab-68
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-ATM
+related:
+- RQ-20261117-43b6-02
+- RQ-20261113-ed2b-01
+- research/levers/ltr-close.yaml
+- scripts/research/ltr_action_trigger_s0.py

@@ -270,14 +270,14 @@ def learned_points(by: Dict[str, List[dict]], mu: Dict[str, float]) -> List[dict
     return pts
 
 
-def learned_oof(pts: List[dict], seed: int = SEED) -> np.ndarray:
+def learned_oof(pts: List[dict], seed: int = SEED, features: Optional[List[str]] = None) -> np.ndarray:
     """Out-of-fold P(decay): legs are split into N_GROUP_FOLDS groups, so no leg's own points train its score."""
     import lightgbm as lgb
     legs = sorted({p["leg"] for p in pts})
     rng = np.random.default_rng(seed)
     order = list(rng.permutation(len(legs)))
     fold_of = {legs[j]: k % N_GROUP_FOLDS for k, j in enumerate(order)}
-    X = np.array([[p[f] for f in LEARNED_FEATURES] for p in pts], float)
+    X = np.array([[p[f] for f in (features or LEARNED_FEATURES)] for p in pts], float)
     y = np.array([p["decay"] for p in pts], int)
     f = np.array([fold_of[p["leg"]] for p in pts])
     oof = np.full(len(pts), np.nan)
@@ -324,6 +324,41 @@ def learned_verdict(learn: dict, base: dict, paired: dict) -> tuple[str, str]:
                         f"{paired['delta']} (leg-cluster CI95 {paired['ci95']})")
     return "fail", (f"learned AUC {learn['auc']} (CI95 {learn['ci95']}) vs CUSUM {base['auc']}: paired delta {paired['delta']} "
                     f"CI95 {paired['ci95']} does not clear 0 with AUC >= {LEARNED_BAR}")
+
+# ── FALSIFIER (RQ-20261118-f7c1-07): is aadc-14's below-chance AUC a leg-identity artifact of leg-grouped CV? ─────────
+FALSIFY_UNIT = "RQ-20261118-f7c1-07"
+FALSIFY_RULE_ID = "RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT"
+LEG_LEVEL = ["n_seen", "mu"]          # leg-constant (mu) or leg-age (n_seen) inputs: under leg-grouped CV they identify the leg
+REPRO_TOL = 0.02
+
+
+def within_leg_auc(pts: List[dict], key: str) -> dict:
+    """Pair-weighted mean of per-leg AUCs (legs with both classes): ranking skill INSIDE a leg, free of between-leg base rates."""
+    num = den = 0.0
+    legs = 0
+    for lg in sorted({p["leg"] for p in pts}):
+        sel = [p for p in pts if p["leg"] == lg and p.get(key) is not None and not np.isnan(p[key])]
+        y = np.array([p["decay"] for p in sel])
+        a = auc(np.array([p[key] for p in sel], float), y) if sel else None
+        if a is None:
+            continue
+        w = float(y.sum() * (len(y) - y.sum()))
+        num, den, legs = num + a * w, den + w, legs + 1
+    return {"auc": round(num / den, 4) if den else None, "legs": legs, "pairs": int(den)}
+
+
+def falsify_verdict(full: dict, drop: dict, wl_full: dict, ref_auc: float) -> tuple[str, str]:
+    if drop["n"] < MIN_POINTS or drop["legs"] < MIN_LEGS or drop["ci95"] is None or full["auc"] is None:
+        return "indeterminate", f"labelled points {drop['n']} / legs {drop['legs']} below {MIN_POINTS} / {MIN_LEGS}"
+    if abs(full["auc"] - ref_auc) > REPRO_TOL:
+        return "indeterminate", f"full-feature arm AUC {full['auc']} does not reproduce aadc-14's {ref_auc} within {REPRO_TOL}"
+    if drop["auc"] >= 0.5 and (wl_full["auc"] or 0) >= 0.5:
+        return "pass", (f"artifact SUPPORTED: without {LEG_LEVEL} pooled AUC {drop['auc']} (CI95 {drop['ci95']}) >= 0.5 and the full "
+                        f"arm's within-leg AUC {wl_full['auc']} >= 0.5 while its pooled AUC is {full['auc']}")
+    if drop["ci95"][1] < 0.5:
+        return "fail", f"artifact REFUTED: without {LEG_LEVEL} pooled AUC {drop['auc']} CI95 {drop['ci95']} is still below 0.5"
+    return "indeterminate", (f"neither: drop-arm AUC {drop['auc']} CI95 {drop['ci95']}, full-arm within-leg AUC {wl_full['auc']}")
+
 
 # ── ACTION replay (RQ-20261117-aadc-06): does acting on the alarm add net R? ─────────────────────────────────────────
 ACTION_UNIT = "RQ-20261117-aadc-06"
@@ -507,6 +542,26 @@ def run(a) -> int:
         out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
         print(json.dumps({"verdict": v, "note": why}, indent=1))
         return 0
+    if a.falsify_legid:
+        lp = learned_points(by, mu)
+        drop_feats = [f for f in LEARNED_FEATURES if f not in LEG_LEVEL]
+        for key, feats in (("learned_full", LEARNED_FEATURES), ("learned_drop", drop_feats)):
+            for p, s_ in zip(lp, learned_oof(lp, features=feats)):
+                p[key] = None if np.isnan(s_) else float(s_)
+        full, drop, base = leg_boot(lp, "learned_full"), leg_boot(lp, "learned_drop"), leg_boot(lp, "cusum")
+        wl = {k: within_leg_auc(lp, k) for k in ("learned_full", "learned_drop", "cusum")}
+        v, why = falsify_verdict(full, drop, wl["learned_full"], 0.4137)
+        res = {"verdict": v, "read_state": "measured", "n": drop["n"],
+               "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 record, "
+                              f"label mean net R of the next {N_NEXT} trades < 0, out of fold by {N_GROUP_FOLDS} leg groups"),
+               "note": why, "measurement": {"rule": FALSIFY_RULE_ID, "learned_full": full, "learned_drop": drop,
+                                            "cusum_same_points": base, "within_leg_auc": wl, "dropped_features": LEG_LEVEL,
+                                            "paired_drop_vs_cusum_reported_not_gating": paired_leg_boot(lp, "learned_drop", "cusum"),
+                                            "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS, "repro_ref": 0.4137},
+                                            "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
     if a.alarm_h_sweep:
         arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
@@ -629,6 +684,15 @@ def _self_test() -> int:
     assert learned_verdict({"n": 400, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "pass"
     assert learned_verdict({"n": 400, "legs": 4, "auc": 0.60, "ci95": [0.5, 0.7]}, {"auc": 0.55}, pr)[0] == "fail"
     assert learned_verdict({"n": 50, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "indeterminate"
+    # FALSIFIER (f7c1-07): within-leg AUC ignores between-leg base rates; verdict branches
+    wpts = ([{"leg": "A", "decay": d, "s": v} for d, v in ((1, 0.9), (0, 0.1), (1, 0.8), (0, 0.2))]
+            + [{"leg": "B", "decay": d, "s": v} for d, v in ((1, 0.4), (0, 0.3))])
+    assert within_leg_auc(wpts, "s")["auc"] == 1.0 and within_leg_auc(wpts, "s")["legs"] == 2
+    good = {"n": 400, "legs": 10, "auc": 0.55, "ci95": [0.45, 0.65]}
+    assert falsify_verdict({"auc": 0.41}, good, {"auc": 0.56}, 0.4137)[0] == "pass"
+    assert falsify_verdict({"auc": 0.41}, {**good, "auc": 0.40, "ci95": [0.30, 0.48]}, {"auc": 0.4}, 0.4137)[0] == "fail"
+    assert falsify_verdict({"auc": 0.50}, good, {"auc": 0.56}, 0.4137)[0] == "indeterminate"      # does not reproduce aadc-14
+    assert falsify_verdict({"auc": 0.41}, {**good, "n": 10}, {"auc": 0.56}, 0.4137)[0] == "indeterminate"
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -645,6 +709,8 @@ def main(argv=None) -> int:
     ap.add_argument("--alarm-h-sweep", action="store_true", help="RQ-20261117-aadc-07: demote-on-alarm at H in SWEEP_H, Bonferroni")
     ap.add_argument("--stage0-confirm", action="store_true", help="RQ-20261117-aadc-09: H 2 on the Stage-0 OOS series before 2026-05-01")
     ap.add_argument("--learned", action="store_true", help="RQ-20261118-aadc-14: learned degradation score vs the CUSUM baseline")
+    ap.add_argument("--falsify-legid", action="store_true",
+                    help="RQ-20261118-f7c1-07: aadc-14 with and without the leg-level inputs (n_seen, mu) + within-leg AUC")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

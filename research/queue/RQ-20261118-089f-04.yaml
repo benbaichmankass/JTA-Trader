@@ -1,0 +1,129 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Row CJ-LABEL-ALTERNATIVE, its registered first step. Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261118-089f-04
+title: 'CJ-4 sensitivity: with trades whose package stop is under 1 ATR excluded (the tier-A risk_atr<1 label artifact), does the blind grade
+  rank-predict realised net R and beat strategy confidence, under 089f-01''s rule unchanged?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- M25
+kind: experiment
+origin: iteration
+practice_precedent: 'none: house-specific; a pre-registered sensitivity read of RQ-20261116-089f-01 under docs/plans/ml-claude-distillation-DESIGN.md
+  section 3.3, no external precedent applies'
+levers:
+- name: label_population
+  values:
+  - all 707 (089f-01, FAIL)
+  - package risk_atr >= 1.0 only (this unit)
+  hypothesised_effect: 'the anti-signal shrinks toward 0 (tier-A REPORT: on 469 risk_atr >= 1 packages grade_score rho +0.067 [-0.024, +0.157]); ML-PRIMARY-5''s
+    orientation audit (net USD / notional, rho -0.150, negative in both sides) predicts it SURVIVES. Prior: FAIL or INDETERMINATE, not PASS.'
+question: 'Same 707 blind grades, same journal join, same pooling, CIs, thresholds and decision rule as RQ-20261116-089f-01, with ONE population change
+  declared before the run: exclude every trade whose package stop distance is under 1.0 ATR, risk_atr = |order_packages.entry - order_packages.sl| /
+  signal_logic.atr (exactly the bracket.risk_atr that scripts/ops/blind_grade.py puts in the packet the grader saw). Does the blind grade_score
+  rank-predict net R, and beat confidence, on the remaining trades?'
+why_this_matters: 'The operator keeps the weekly blind-grade backfill PAUSED, not retired, until an alternative label is in place (2026-11-16, "Paused nit
+  retired, until there''s a replacement"). 089f-01 FAILED (rho -0.183, n 707), but the tier-A diagnostic found 148 of 617 packages with a stop under 1 ATR
+  whose net R sits on a tiny risk basis (win rate 0.858, mean +35.9 R), consistent with the package SL not being the initial stop. If the FAIL is that
+  artifact, the blind source is not yet disproven; if it survives, the alternative must be outcome-based or a re-designed rubric.'
+iteration:
+  subject: claude-judgments-blind-source
+  subject_kind: ml_model
+  from_result: RQ-20261116-089f-01
+  verdict_read: fail
+  diagnosis: '089f-01 FAIL rho -0.1834 (wider CI [-0.2579, -0.1006]), paired diff -0.1740, n 707, excluded {}. The threshold 1.0 ATR was chosen AFTER
+    seeing the tier-A artifact (comms/claude_judgments/backfill/tier-a/REPORT.md), so this read is EXPLORATORY: a PASS here qualifies nothing by itself
+    and needs a fresh-population confirmation before any student targets the source.'
+  search: 'one population filter at one threshold (1.0 ATR, the tier-A split); nothing else changed and nothing chosen on this read'
+  attempt: 2
+  due_by: '2026-11-25'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 520
+  min_detectable_effect: 0.125
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: tier-A had 469 of 617 (76%) at risk_atr >= 1; applied to 707 that is ~540, minus trades with no computable risk_atr, so ~520. SE of
+    Spearman ~1/sqrt(517) = 0.044, 80%-power MDE (1.96 + 0.84) x 0.044 = 0.123 (registered 0.125). The leg-week cluster bootstrap widens it; the PASS test
+    uses the wider CI as in 089f-01.'
+  feasibility:
+    source: none
+    accrual_basis: Nothing accrues; the 707 blind rows and their journal outcomes exist on the trainer.
+decision_rule:
+  id: RULE-RQ20261118-089f-04-BLIND-VALIDATION-RISKATR1
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: Strategy confidence on the SAME trades (as 089f-01).
+  statistic: As RULE-RQ20261116-089f-01-BLIND-VALIDATION, on the population with package risk_atr >= 1.0 (trades with no computable risk_atr excluded and
+    counted as risk_atr_unknown; trades under 1.0 counted as risk_atr_below_min).
+  rule: 'UNCHANGED from 089f-01: PASS iff n distinct trades >= 150 AND rho(grade_score, net R) > 0 with the lower bound of the WIDER of the analytic and
+    cluster-bootstrap 95% CIs > 0 AND the paired difference rho_judgment - rho_confidence has a lower 95% bound > 0. FAIL iff n >= 150 AND (rho <= 0 OR
+    the upper 95% bound of rho < 0.05 OR the paired difference point estimate <= 0). INDETERMINATE otherwise. Thresholds not changed after any result.
+    Because the 1.0 ATR split was chosen after seeing the tier-A artifact, a PASS is EXPLORATORY and qualifies nothing on its own.'
+  pass_action: 'Do NOT write qualified.json. Author a confirmation unit on blind grades of trades closed after 2026-11-18 (a population this read never
+    saw) with the same filter fixed, and bring the manager the result as the first CJ-LABEL-ALTERNATIVE candidate.'
+  fail_action: 'The anti-signal is not the risk_atr<1 artifact: the blind grade is not a usable teacher label as designed. CJ-LABEL-ALTERNATIVE moves to an
+    OUTCOME-BASED alternative (the label is the realised net R itself on a corrected risk basis, PI-20261117-ZZUFKM1F-0001) or a re-designed rubric; the
+    weekly backfill stays paused per the operator until one passes.'
+  what_it_does_not_do: Trains no model, changes no config and no served artifact; writes no qualified.json under any verdict.
+  min_n: 150 distinct closed trades after the journal join and the risk_atr filter
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 50
+  confidence: 0.1
+  basis: 'stand-in, not a P&L measurement: decides whether the blind-grade teacher chain is still alive or the alternative must be outcome-based.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  why_runner: 'the net R join and the order_packages risk basis need trade_journal.db, which only the trainer holds.'
+  basis: 'As 089f-01 (MEASURED self-test 71 MB / 10.8 s); adds one indexed order_packages lookup over ~707 trade ids.'
+run:
+  workflow: research-script-run-trainer.yml
+  command:
+  - python3
+  - scripts/research/cj4_blind_validation.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --db
+  - data/trade_journal.db
+  - --where
+  - trainer-vm
+  - --rule-id
+  - RULE-RQ20261118-089f-04-BLIND-VALIDATION-RISKATR1
+  - --rule-registered-at
+  - '2026-11-18'
+  - --min-risk-atr
+  - '1.0'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261118-089f-04
+  host_note: 'RUN HOST = the TRAINER VM (as 089f-01). Anywhere else the run lands read_state could_not_look and INDETERMINATE, never a number.'
+ml_consumer:
+  consumer: CJ-5-STUDENT-MANIFESTS
+  decision: whether the blind grade survives as a teacher label once the risk_atr<1 label artifact is removed; no change from this unit
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261116-089f-01
+- CJ-LABEL-ALTERNATIVE
+- CJ-4-LABEL-VALIDATION
+- PI-20261117-ZZUFKM1F-0001
+last_dispatched_at: null

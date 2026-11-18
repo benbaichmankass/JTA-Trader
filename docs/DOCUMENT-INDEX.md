@@ -326,6 +326,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/audits/2026-11-06-skills-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-06-workflow-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-12-ui-spec-gap-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
+| `docs/audits/2026-11-19-deep-system-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | Deep system audit (week plan §4): OCI Always Free compliance (4/24 vs 2/12, storage at limits), efficiency, bugs, free resources, operator hypotheses, ranked migration plan. |
 | `docs/audits/M1-comms-audit-2026-05-07-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-followups-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/amend-parity-2026-10-25.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
@@ -1115,6 +1116,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/position-sizing-confidence-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/promotion-gatecheck-and-mes-labeling-2026-06-26.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/promotion-packet-2026-11-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/stale-candles-blast-radius-2026-11-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-account-silence-2026-09-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-apex-vs-breakout-2026-09-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-automation-options-2026-09-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

@@ -90,6 +90,19 @@ def test_every_published_unit_in_the_queue_passes_the_router():
     assert n >= 0   # the queue edit lands after the first verified export (separate PR)
 
 
+def test_routing_published_paths_are_checked_not_trusted():
+    """ML-EXITHEAD-ROWS-KAGGLE: a non-ml_bakeoff unit names its shards in routing.published_paths; an allowlisted path
+    passes and routes to kaggle_cpu, a trainer-only path (exit-head rows.jsonl, which carries journal trades) is refused."""
+    cfg = cr.load_config()
+    ok = {"compute": "cpu_long", "routing": {"published_data": "metis-market-data",
+                                             "published_paths": ["datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl"]}}
+    assert cr.published_problem(ok, cfg) is None
+    assert cr.plan(ok, cfg).backend == "kaggle_cpu"
+    bad = {"compute": "cpu_long", "routing": {"published_data": "metis-market-data",
+                                              "published_paths": ["datasets-out/exit_head/1h/donchian/rows.jsonl"]}}
+    assert "NOT in the published allowlist" in (cr.published_problem(bad, cfg) or "")
+
+
 # ── trainer as its own queue ─────────────────────────────────────────────────────────────────────────────
 
 

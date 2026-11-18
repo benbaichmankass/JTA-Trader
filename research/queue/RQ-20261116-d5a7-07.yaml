@@ -137,6 +137,12 @@ related:
 - scripts/research/exit_head_walkforward_multifold.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
+amendments:
+- at: '2026-11-18'
+  before_any_run: false
+  by: lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)
+  text:
+  - 'HARNESS DEFECT (PI-20261118-MANAYJZO-0001): the replay scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0] = the 0/1 CLASS LABEL into would_exit_for(score < tau 0.10), so it evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED: aadc-12 fired on 16,739 of 18,649 trades). Fixed to predict_proba (branch claude/ml6-exithead-proba-fix, regression test tests/test_exit_head_replay_scores_probability.py). This result is INVALIDATED as evidence about the served (tau 0.10) policy; not re-armed now (the exit-head label/recipe line is re-run through aadc-11/12 and RQ-20261118-04a5-04 first). A later iteration re-runs it on the fixed harness if the line stays open.'
 last_dispatched_at: '2026-11-16T10:32:16+00:00'
 grading:
   attested: RULE-RQ20261116-d5a7-07-LOOKBACK1000
