@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "ML tooling only: adds the holding_pays_neg25 target (1[future_r_delta >= -0.25], derived at matrix time) to scripts/ml/train_exit_head.py and export_exit_head.py --target. Defaults unchanged; no serving artifact, config or order path is touched (the live exit head stays pinned to exit-head-donchian-1h-v1). Step 1 of the manager-approved data-backed retrain (aadc-11 dev PASS + aadc-12 held-out PASS); the config pin switch comes later as a held Tier-3 PR. Tests added; exit-head tests pass. Gates this adds or changes: none."
+}
