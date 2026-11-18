@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-1c4e-01.yaml (ENTRY execution lever: maker entry on ml_entry's own decisions, lane ML-DECISION-MODELS)
+# wiring: research/queue/RQ-20261118-e8a1-02.yaml (`run --entry-w-min 1 --entry-peg mid`: maker ENTRY at 04a5-05's passing exit policy)
 # wiring: research/queue/RQ-20261118-04a5-05.yaml (`exit --exit-peg mid`: D9 mid-peg arm, aadc-10 fail_action)
 # wiring: research/queue/RQ-20261118-e8a1-01.yaml (`exit --exit-peg mid --population dev_oof`: fresh-window confirmation of 04a5-05)
 # wiring: research/queue/RQ-20261117-aadc-02.yaml (`exit`: maker EXIT on v1's 24h time-stop exits, row ML-D9-MAKER-EXIT-HARNESS)
@@ -222,7 +223,12 @@ def run(a) -> int:
     taken = v1_decisions(Path(a.kcache))
     print(f"v1 held-out decisions: {len(taken)} on {taken.symbol.nunique()} symbols", flush=True)
     # the claim comes BEFORE any post-decision 1m outcome is read
-    claim = HL.claim_read(MODEL_ID, E.HOLDOUT_START, E.END, UNIT, a.reader, Path(a.ledger), train_end="2025-09-30", family="EXEC")
+    unit = getattr(a, "unit", UNIT) or UNIT
+    ew, epeg = getattr(a, "entry_w_min", None), getattr(a, "entry_peg", "touch")
+    claim = HL.claim_read(MODEL_ID, E.HOLDOUT_START, E.END, unit, a.reader, Path(a.ledger), train_end="2025-09-30", family="EXEC")
+    # 1c4e-01 (the default unit) graded on the undeflated day-block CI95 (its claim was n_tries 1); every later entry unit is graded
+    # at the DEFLATED lower percentile its own claim returns, as the exit units are
+    deflated = unit != UNIT
     cache = Path(a.cache)
     # epoch seconds via the unit-explicit path: pandas 3 stores datetimes in ms/us, so astype("int64") // 1e9 is wrong (found on the
     # first attempt 2026-11-12, which therefore read no post-decision bar; disclosed in the result)
@@ -239,8 +245,8 @@ def run(a) -> int:
         opp = None
         if d is not None and len(d) > 100:
             tk = tick_of(d)
-            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
-            opp = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
+            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk, ew, epeg)
+            opp = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk, ew, epeg)
         rows.append({"symbol": r.symbol, "day": str(r.day), "side": r.side, "net_r_taker": r.net_r,
                      "delta_bps_opp": (opp or {}).get("delta_bps", np.nan),
                      "per_r": (r.entry / (2.0 * r.atr)) if r.atr and r.atr > 0 else np.nan,
@@ -249,8 +255,13 @@ def run(a) -> int:
     df["delta_r"] = df.delta_bps / 1e4 * df.per_r
     df["delta_r_opp"] = df.delta_bps_opp / 1e4 * df.per_r
     ok = df.dropna(subset=["delta_r", "delta_r_opp"])
-    mean, lo, hi = DMF.day_block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy())
-    mb, lob, hib = DMF.day_block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy())
+    if deflated:
+        lo_pct = float(claim["bar"]["ci_lo_percentile"])
+        mean, lo, hi = block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy(), lo_pct)
+        mb, lob, hib = block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy(), lo_pct)
+    else:
+        mean, lo, hi = DMF.day_block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy())
+        mb, lob, hib = DMF.day_block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy())
     n, ns = len(ok), int(ok.symbol.nunique())
     if not cal["calibrated"]:
         v, why = "indeterminate", f"1m approximation not calibrated: {cal['mean_delta_F_bps']:+.2f} bps vs a3f1 +2.03 (band {CAL_BAND})"
@@ -270,7 +281,10 @@ def run(a) -> int:
     draws = [float(np.where(rng.random(len(ok)) < p_long, long_d, short_d).mean()) for _ in range(200)]
     matched = {"draws": 200, "p_long": p_long, "mean_of_means": float(np.mean(draws)), "p05": float(np.percentile(draws, 5)),
                "p95": float(np.percentile(draws, 95))}
-    res = {"unit": UNIT, "verdict": v, "why": why, "calibration": cal, "n_decisions": len(df), "n_measured": n, "n_symbols": ns,
+    if deflated:
+        why = why.replace("day-block CI95", f"deflated day-block CI at percentile {lo_pct:.4f}")
+    res = {"unit": unit, **({"entry_w_min": int(ew or W_MIN), "entry_peg": epeg, "ci_lo_percentile": lo_pct} if deflated else {}),
+           "verdict": v, "why": why, "calibration": cal, "n_decisions": len(df), "n_measured": n, "n_symbols": ns,
            "mean_delta_r": mean, "ci95_delta_r": [lo, hi], "mean_delta_bps": mb, "ci95_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()), "delta_bps_if_filled": float(ok.delta_bps[fl].mean()) if fl.any() else None,
            "delta_bps_if_unfilled": float(ok.delta_bps[~fl].mean()) if (~fl).any() else None,
@@ -279,9 +293,16 @@ def run(a) -> int:
            "traded5": {"n": int(ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]).sum()),
                        "mean_delta_r": float(ok.delta_r[ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])].mean())},
            "median_tick_bps": float(ok.tick_bps.median()), "matched_random_direction": matched,
-           "disclosure": "a first attempt (2026-11-12 ~20:50Z) made the EXEC ledger claim, then computed every decision time in 1970 (pandas 3 datetime unit), so every 1m fetch 404d and NO post-decision bar was read; it crashed on an empty sample. This run re-claims from the repo ledger; the aborted claim is not counted as a read.", "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
+           **({} if deflated else {"disclosure": "a first attempt (2026-11-12 ~20:50Z) made the EXEC ledger claim, then computed every decision time in 1970 (pandas 3 datetime unit), so every 1m fetch 404d and NO post-decision bar was read; it crashed on an empty sample. This run re-claims from the repo ledger; the aborted claim is not counted as a read."}), "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "decisions.csv.gz", index=False)
+    if deflated:   # the runner collector reads verdict.json (1c4e-01 ran locally and wrote only result.json)
+        verdict = {"verdict": v, "read_state": "measured", "n": n,
+                   "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END}, entry order "
+                                  f"worked post-only at the {epeg} with a {int(ew or W_MIN)}-min market fallback, measured where 1m "
+                                  "Binance-vision klines exist"),
+                   "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock", "disclosure")}}
+        (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
     print(json.dumps({"verdict": v, "why": why}), flush=True)
     return 0
 
@@ -546,6 +567,10 @@ def main(argv=None) -> int:
     ap.add_argument("--kcache", default="/tmp/ml_decision_klines")
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--ledger", default=str(HL.LEDGER))
+    ap.add_argument("--entry-w-min", type=int, default=None,
+                    help="run mode: market-fallback window W for the ENTRY maker order (default W_MIN, reproducing 1c4e-01)")
+    ap.add_argument("--entry-peg", choices=["touch", "mid"], default="touch",
+                    help="run mode: where the entry maker order rests (touch = policy F, 1c4e-01's default; mid = RQ-20261118-e8a1-02)")
     ap.add_argument("--exit-rule", default=EXIT_RULE_ID, help="exit mode: the registered rule id the result names")
     ap.add_argument("--exit-w-min", type=int, default=W_MIN,
                     help="exit mode: market-fallback window W in minutes for the closing order (calibration stays at W_MIN)")
