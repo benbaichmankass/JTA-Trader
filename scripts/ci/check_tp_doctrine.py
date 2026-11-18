@@ -327,8 +327,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
     # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
     # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
-    "bybit_2/ict_scalp_eth_15m": R,
-    "bybit_portfolio/ict_scalp_eth_15m": R,
+    "bybit_1/ict_scalp_eth_15m": R,
     "bybit_1/ict_scalp_xrp_15m": R,
     # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule", relayed by the manager): every non-retired leg trades on its
     # demo floor, so these routings are NEW. Each line is VISIBLE DEBT, not a claim of compliance: `ER` = the leg's entry TP is a sentinel /
