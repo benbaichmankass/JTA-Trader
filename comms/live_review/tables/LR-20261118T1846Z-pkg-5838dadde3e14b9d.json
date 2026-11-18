@@ -1,0 +1,128 @@
+{
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "candles": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261027-8b01-01/40498212318/candles/XRPUSDT_15m_419d.csv",
+  "corpus": "comms/strategy_evidence/runs/2026-10-28/ict_scalp_xrp_15m__trades.jsonl",
+  "leg": "ict_scalp_xrp_15m",
+  "n_floor": 20,
+  "options": [
+    {
+      "action": "hold",
+      "mean_r": -0.5871,
+      "n": 21,
+      "n_floor": 20,
+      "p05_r": -1.1912,
+      "p_giveback_gt_half": 0.9048,
+      "sd_r": 0.6109,
+      "state": "measured",
+      "worst_r": -1.2036
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.1806,
+      "ev_cost_se_r": 0.1226,
+      "mean_r": -0.4066,
+      "n": 21,
+      "n_floor": 20,
+      "p05_r": -0.6246,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.1193,
+      "spec": "atr:1.0",
+      "state": "measured",
+      "stop_at_r_now": -0.3044,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.5685,
+      "worst_r": -0.6351
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.1502,
+      "ev_cost_se_r": 0.1262,
+      "mean_r": -0.437,
+      "n": 21,
+      "n_floor": 20,
+      "p05_r": -0.6246,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.1216,
+      "spec": "atr:1.5",
+      "state": "measured",
+      "stop_at_r_now": -0.4902,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.5685,
+      "worst_r": -0.6351
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.1233,
+      "ev_cost_se_r": 0.1261,
+      "mean_r": -0.4639,
+      "n": 21,
+      "n_floor": 20,
+      "p05_r": -0.7175,
+      "p_giveback_gt_half": 0.9524,
+      "sd_r": 0.1987,
+      "spec": "atr:2.0",
+      "state": "measured",
+      "stop_at_r_now": -0.6761,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.4821,
+      "worst_r": -0.7215
+    },
+    {
+      "action": "close",
+      "ev_cost_r": -0.2803,
+      "ev_cost_se_r": 0.1313,
+      "mean_r": -0.3068,
+      "n": 21,
+      "n_floor": 20,
+      "p05_r": -0.3981,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.0518,
+      "spec": "close",
+      "state": "measured",
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.7982,
+      "worst_r": -0.4054
+    }
+  ],
+  "population": {
+    "beyond_bars_slack": 0,
+    "comparable": 21,
+    "corpus_trades": 74,
+    "mfe_replay_mismatch": 0,
+    "never_reached_peak": 3,
+    "no_candles": 1,
+    "no_pullback_after_peak": 6,
+    "side_excluded": 43,
+    "side_filter": "long",
+    "symbol_excluded": 0,
+    "symbol_filter": null,
+    "symbols": [
+      "XRPUSDT"
+    ]
+  },
+  "read_state": "measured",
+  "state": {
+    "atr_stop_mult": 2.690385,
+    "bars_held": 6,
+    "condition": "pullback",
+    "condition_asked": "state",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null,
+    "open_r": -0.2018,
+    "peak_r": 0.0673,
+    "side": "long"
+  }
+}
