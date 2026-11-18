@@ -80,9 +80,9 @@ Source: `oci-inventory` issue #26981 (run 44411483182) and `oci-capacity-report`
 | # | Finding | State |
 |---|---|---|
 | B1 | Lake extender wrote `YYYY-MM-DD 00:00:00-07-07` into 13 date-only trainer files (pandas reads NaT) | fixed in #26978; trainer repaired and read back (#26972); no reader in the window (#26985) |
-| B2 | `etf_history` backfill skipped series whose history starts years after `--start` (QQQ, TLT, IWM, SLV, IEF have only 2026-10/11 1m data) | fix PR #26990 |
-| B3 | Dispatcher re-arm waits for a second runner; idle heartbeat killed by its own timeout | fix PR #26988 |
-| B4 | `provision_training_vm.py` treated 4 OCPU as free | fix PR #26984 |
+| B2 | `etf_history` backfill skipped series whose history starts years after `--start` (QQQ, TLT, IWM, SLV, IEF have only 2026-10/11 1m data) | fixed: #26990 merged 2026-11-18 23:23Z |
+| B3 | Dispatcher re-arm waits for a second runner; idle heartbeat killed by its own timeout | fixed: #26988 merged 22:39Z. Re-read: dispatch gaps since were 7, 13, 20 and 6 min (4 cycles, 22:57–23:44Z) against a 3–10 min target, with runner queueing in the gaps; observation continues on PI-20261118-JFWRQYOV-0001 |
+| B4 | `provision_training_vm.py` treated 4 OCPU as free | fixed: #26984 merged 22:33Z |
 | B5 | Live tick near budget (journal lock held 37 s of every 60 s) | row `LIVE-TICK-NEAR-BUDGET` (Tier 2) |
 | B6 | IB gross exposure ~1.5× equity from tight-stop futures sizing; the 1.5× cap then bricks the account | row `IB-GROSS-NO-CAP-FIX` (Tier 3, Stage-0 first) |
 | B7 | `oci-inventory` posts tenancy and instance OCIDs on a public issue | *open*: identifiers, not secrets; propose redaction in the report step |
