@@ -2,7 +2,7 @@
 id: RQ-20261117-43b6-01
 title: 'ITERATION 2 of ltr-sl-to-structure (ed2b-03 PASS@new_peak, a discovery chosen from 3 triggers): ONE confirmation of sl_to_structure@new_peak on
   four holdout legs never in the selection population'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -182,3 +182,16 @@ run:
     - --out
     - '{out_dir}'
 last_dispatched_at: '2026-11-18T13:01:45+00:00'
+grading:
+  attested: RULE-RQ-20261117-43b6-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261117-43b6-01
+  evidence:
+  - research/results/RQ-20261117-43b6-01/44309616336.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
