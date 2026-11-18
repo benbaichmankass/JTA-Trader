@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,16 +35,20 @@ def _parse(cell: str) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+_TS = re.compile(r"^\d{4}-\d{2}-\d{2}([T ])\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})?$")
+
+
 def _spelling(sample: str):
-    """f(datetime)->str reproducing the file's own timestamp spelling."""
-    sample = sample.strip()
-    sep = "T" if "T" in sample else " "
-    if sample.endswith("Z"):
-        tz = "Z"
-    elif len(sample) > 6 and sample[-6] in "+-" and sample[-3] == ":":
-        tz = sample[-6:]
-    else:
-        tz = ""
+    """f(datetime)->str reproducing the file's own timestamp spelling; raises on any other spelling.
+
+    Strict on purpose: a guessed spelling writes rows the canonical loaders silently drop
+    (2026-11-18, extend_data_from_lake.py read a date-only '2026-07-07' as a '-07-07' tz suffix).
+    """
+    sample = sample.strip().strip('"')
+    m = _TS.match(sample)
+    if not m:
+        raise ValueError(f"unrecognised timestamp spelling {sample!r}")
+    sep, tz = m.group(1), m.group(2) or ""
     return lambda t: t.strftime(f"%Y-%m-%d{sep}%H:%M:%S") + tz
 
 
