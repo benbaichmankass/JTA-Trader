@@ -142,7 +142,16 @@ class AlpacaOptionsData:
 
     # ---------------------------------------------------------- snapshots
     def snapshots(
-        self, underlying: str, *, limit: int = 100, feed: Optional[str] = None
+        self,
+        underlying: str,
+        *,
+        limit: int = 100,
+        feed: Optional[str] = None,
+        contract_type: Optional[str] = None,   # "call" | "put"
+        expiration_date_gte: Optional[str] = None,
+        expiration_date_lte: Optional[str] = None,
+        strike_price_gte: Optional[float] = None,
+        strike_price_lte: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Per-contract snapshot (latest quote + greeks + IV) for *underlying*'s chain.
 
@@ -153,7 +162,21 @@ class AlpacaOptionsData:
         treat absent as "not provided" (em-dash), never 0.
         """
         self._require_creds("snapshots")
-        params = {"feed": (feed or self.feed), "limit": int(limit)}
+        params: Dict[str, Any] = {"feed": (feed or self.feed), "limit": int(limit)}
+        # The endpoint returns the FIRST ``limit`` contracts of the WHOLE chain (every type and expiry) unless it is
+        # filtered. Pass the same filters the contract discovery used, or the snapshot window and the contract list
+        # barely overlap on a big chain and the selector sees < 2 quotable strikes (alpaca_options_paper placed
+        # nothing, 2026-11-18). Parameter names are Alpaca's documented snapshot filters.
+        if contract_type:
+            params["type"] = str(contract_type).lower()
+        if expiration_date_gte:
+            params["expiration_date_gte"] = expiration_date_gte
+        if expiration_date_lte:
+            params["expiration_date_lte"] = expiration_date_lte
+        if strike_price_gte is not None:
+            params["strike_price_gte"] = strike_price_gte
+        if strike_price_lte is not None:
+            params["strike_price_lte"] = strike_price_lte
         return self._get(
             f"{_DATA_HOST}/v1beta1/options/snapshots/{str(underlying).upper()}", params
         )
