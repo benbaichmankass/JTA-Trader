@@ -19,19 +19,6 @@ decision_rule:
     in config/strategies.yaml; candidates DI/DS. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
   unit_rule_id: RULE-RQ20261105-5E05-15-REVERSE
   what_it_does_not_do: Edits no config or roster, places no order, touches no other leg.
-grading:
-  attested: RULE-STRUCTURE-EXITS-REVERSE-V1
-  auto: true
-  awaiting: more_data
-  decision_rule_id: RULE-STRUCTURE-EXITS-REVERSE-V1
-  evidence:
-  - research/results/RQ-20261105-5e05-15/42098574189.jsonl
-  graded_at: '2026-11-05'
-  grader: scripts/research/queue_grade.py
-  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and NOT a kill'
-  reason: 1 row(s), all measured, all indeterminate
-  rows: 1
-  verdict: indeterminate
 id: RQ-20261117-b2f1-02
 intervention_controls:
   not_applicable: Static exit mechanism chosen at entry (declared vs removed); hold is arm A, the leg as declared.
@@ -115,7 +102,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f1-02
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'DIR lever family never tested on ief_pullback_1d: DIRECTION gate (+DI/-DI sign DI, Donchian-midline slope DS: --direction-filter di/slope) vs the declared leg, net
   of cost?'
@@ -129,3 +116,17 @@ why_this_matters: 'Plan node: research/levers/ief_pullback_1d.yaml (testing leg;
   and the harness flag --direction-filter exists (scripts/backtest_pullback.py, scripts/backtest_trend.py). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint
   window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-17T23:58:25+00:00'
+grading:
+  attested: RULERQ20261117b2f102
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULERQ20261117b2f102
+  evidence:
+  - research/results/RQ-20261117-b2f1-02/44203958636.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
