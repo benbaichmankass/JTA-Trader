@@ -85,3 +85,47 @@ def test_dry_run_default_writes_nothing(tmp_path):
     before = (data / "QQQ_1d.csv").read_text()
     e.main(["--data-dir", str(data), "--lake", str(lake)])
     assert (data / "QQQ_1d.csv").read_text() == before
+
+
+def _csv_spelled(p, days, close, spell):
+    p.write_text(HDR + "".join(f"{spell(d)},1,1,1,{close},5\n" for d in days))
+
+
+def _first_fields(path):
+    return [ln.split(",")[0] for ln in path.read_text().splitlines()[1:]]
+
+
+def test_date_only_files_get_date_only_rows(tmp_path):
+    # 2026-11-18 regression: '2026-07-07' was misread as carrying a '-07-07' timezone.
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    _csv_spelled(data / "GLD_1d.csv", _days(25), 100.0, lambda d: d)
+    _lake(lake / "GLD/1d/v002/data.jsonl", _days(28), 100.0)
+    e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
+    ts = _first_fields(data / "GLD_1d.csv")
+    assert ts[-3:] == ["2026-01-26", "2026-01-27", "2026-01-28"]
+    assert all(len(t) == 10 for t in ts)
+
+
+def test_iso_z_and_offset_spellings_are_reproduced(tmp_path):
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    _csv_spelled(data / "QQQ_1d.csv", _days(25), 100.0, lambda d: f"{d}T00:00:00Z")
+    _csv_spelled(data / "SLV_1d.csv", _days(25), 100.0, lambda d: f"{d} 00:00:00+00:00")
+    _lake(lake / "QQQ/1d/v002/data.jsonl", _days(27), 100.0)
+    _lake(lake / "SLV/1d/v002/data.jsonl", _days(27), 100.0)
+    e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
+    assert _first_fields(data / "QQQ_1d.csv")[-1] == "2026-01-27T00:00:00Z"
+    assert _first_fields(data / "SLV_1d.csv")[-1] == "2026-01-27 00:00:00+00:00"
+
+
+def test_unrecognised_spelling_is_refused_untouched(tmp_path):
+    data, lake = tmp_path / "data", tmp_path / "lake"
+    data.mkdir()
+    _csv_spelled(data / "TLT_1d.csv", _days(25), 100.0, lambda d: d.replace("-", "/"))
+    _lake(lake / "TLT/1d/v002/data.jsonl", _days(27), 100.0)
+    before = (data / "TLT_1d.csv").read_text()
+    e.main(["--data-dir", str(data), "--lake", str(lake), "--apply"])
+    assert (data / "TLT_1d.csv").read_text() == before
+    state = e.plan_one(data / "TLT_1d.csv", e.read_lake(lake / "TLT/1d/v002/data.jsonl"), 2e-3, 20)[0]
+    assert state == "refused_timestamp_spelling"

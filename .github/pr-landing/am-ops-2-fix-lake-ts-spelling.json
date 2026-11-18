@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Fixes a defect in the manual-only tool scripts/ops/extend_data_from_lake.py (merged in #26952): a date-only last timestamp such as 2026-07-07 was read as carrying a '-07-07' timezone, so appended rows were spelled '2026-11-16 00:00:00-07-07'. The trainer apply was rolled back from backup. The tool now reproduces date-only, 'YYYY-MM-DD HH:MM:SS+00:00' and 'YYYY-MM-DDTHH:MM:SSZ' spellings and refuses any other (refused_timestamp_spelling), with regression tests for each. Nothing runs the tool automatically; no runtime, config or serving path touched. Gates this adds or changes: none."
+}

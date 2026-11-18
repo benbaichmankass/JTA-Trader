@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import statistics
 import sys
 from datetime import datetime, timezone
@@ -50,6 +51,28 @@ NAME_MAP = {
     "MGC": "GC_F", "MHG": "HG_F", "MES": "ES_F",
 }
 _BASE = ["timestamp", "open", "high", "low", "close", "volume"]
+
+
+_DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIME_TZ = re.compile(r"^\d{4}-\d{2}-\d{2}([T ])\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})?$")
+
+
+def day_spelling(sample: str):
+    """f(day 'YYYY-MM-DD') -> a timestamp spelled exactly like ``sample`` (the file's last row).
+
+    Handles date-only, 'YYYY-MM-DD HH:MM:SS', 'YYYY-MM-DDTHH:MM:SSZ' and '+HH:MM' spellings.
+    Any other spelling raises: the tool refuses to guess (a wrong guess writes rows the
+    canonical loaders silently drop). 2026-11-18 defect: a date-only sample '2026-07-07'
+    was read as carrying a '-07-07' timezone suffix.
+    """
+    sample = sample.strip().strip('"')
+    if _DATE_ONLY.match(sample):
+        return lambda day: day
+    m = _TIME_TZ.match(sample)
+    if not m:
+        raise ValueError(f"unrecognised timestamp spelling {sample!r}")
+    sep, tz = m.group(1), m.group(2) or ""
+    return lambda day: f"{day}{sep}00:00:00{tz}"
 
 
 def _day(ts: str) -> str:
@@ -83,6 +106,10 @@ def plan_one(csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int
         return "refused_columns", f"header {header} is not {_BASE}", None, None
     if not rows:
         return "refused_empty", "file has no rows", None, None
+    try:
+        fmt = day_spelling(rows[-1][0])
+    except ValueError as exc:
+        return "refused_timestamp_spelling", str(exc), None, None
     last_day = _day(rows[-1][0])
     by_day = {_day(r["ts"]): r for r in lake_rows}
     diffs = []
@@ -104,12 +131,6 @@ def plan_one(csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int
             return "refused_ratio_out_of_range", f"splice ratio {ratio:.4f} outside [0.8, 1.2]", None, None
         splice = {"splice_day": cday, "ratio": ratio, "median_close_diff_before": med,
                   "overlap_bars": len(diffs), "rule": "ratio = file_close/lake_close at the last common date; OHLC scaled, volume unchanged"}
-    sample = rows[-1][0]
-    sep = "T" if "T" in sample else " "
-    tz = "Z" if sample.endswith("Z") else (sample[-6:] if len(sample) > 6 and sample[-6] in "+-" else "")
-
-    def fmt(day: str) -> str:
-        return f"{day}{sep}00:00:00{tz}"
 
     add, add_close = [], []
     for d in sorted(by_day):
