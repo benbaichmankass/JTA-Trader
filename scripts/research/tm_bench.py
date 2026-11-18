@@ -596,7 +596,7 @@ def add_feature_block(ev: List[dict], trades: List[dict], block: Optional[str]) 
 
 
 def lgbm_params_for(quantile: Optional[float]) -> Dict[str, Any]:
-    """RQ-20261118-04a5-06 (D7 label lever): `quantile` None -> the shipped mean regression (LGBM_PARAMS unchanged);
+    """RQ-20261118-04a5-07 (D7 label lever): `quantile` None -> the shipped mean regression (LGBM_PARAMS unchanged);
     a float in (0, 1) -> objective "quantile" at that alpha: each action head predicts a conservative QUANTILE of the per-state
     action value instead of its mean, so the act-margin rule fires only where even that quantile clears the margin."""
     if quantile is None:
@@ -1355,7 +1355,7 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
                 d_ = np.nanmax(np.abs(a_[k_] - b_[k_])) if np.isfinite(a_[k_]).any() else 0.0
                 worst_h = max(worst_h, float(d_) if same_nan else np.inf)
         checks.append(("horizon label == full label when H >= the remaining bars", worst_h <= 1e-12, f"max |diff| {worst_h}"))
-        # 2d. quantile objective (RQ-20261118-04a5-06): the shipped default is the mean regression; alpha 0.3 predicts a
+        # 2d. quantile objective (RQ-20261118-04a5-07): the shipped default is the mean regression; alpha 0.3 predicts a
         # conservative quantile (below the mean head on skewed noise); an alpha outside (0, 1) is refused.
         try:
             _rq = np.random.default_rng(5)
@@ -1538,7 +1538,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--min-train-trades", type=int, default=0,
                     help="indeterminate if any fold's de-duplicated, purged train pool has fewer trades than this")
     ap.add_argument("--lgbm-quantile", type=float, default=None,
-                    help="RQ-20261118-04a5-06: fit lgbm_action_value heads with objective quantile at this alpha (default: mean regression)")
+                    help="RQ-20261118-04a5-07: fit lgbm_action_value heads with objective quantile at this alpha (default: mean regression)")
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
