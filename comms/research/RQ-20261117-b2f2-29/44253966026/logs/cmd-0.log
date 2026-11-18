@@ -1,0 +1,12 @@
+Fetching SPY 60 candles 2018-06-23 -> 2026-11-18 (source=dukascopy) …
+  dukascopy: SPY -> INSTRUMENT_ETF_CFD_US_SPY_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-17T20:00:00
+Wrote 14711 rows (2018-06-25 -> 2026-11-17) to /tmp/exit_lever_ablation__2_g8uwy/spy_pullback_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-29/44253966026/arms/A__trades.jsonl --json comms/research/RQ-20261117-b2f2-29/44253966026/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2021-10-31 23:59
+[TA20] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-29/44253966026/arms/TA20__trades.jsonl --json comms/research/RQ-20261117-b2f2-29/44253966026/arms/TA20__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --trail-adx-below 20 --trail-adx-tight-mult 2.5 --start 2018-06-01 --end 2021-10-31 23:59
+[TA25] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-29/44253966026/arms/TA25__trades.jsonl --json comms/research/RQ-20261117-b2f2-29/44253966026/arms/TA25__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --trail-adx-below 25 --trail-adx-tight-mult 2.5 --start 2018-06-01 --end 2021-10-31 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "TA25 beats the incumbent A (net R 59.4089 vs 34.4087) in >= 3/4 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}
