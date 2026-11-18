@@ -521,7 +521,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
            "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep,
            "parity_basis": parity_basis, "holdout": hold}
     if CPCV_CHALLENGERS["targets"]:  # --cpcv-challenger: target-variant challengers vs Beagle-1 on the same CPCV splits
-        out["cpcv_challengers"] = cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"])
+        out["cpcv_challengers"] = inherit_family_state(cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"]), verdict)
         chosen = out["cpcv_challengers"]["chosen"]
         if chosen and CPCV_CHALLENGERS.get("export_dir") is not None:
             ch = export_model(df, PRIMARY, target=chosen)
@@ -587,6 +587,23 @@ def cpcv_challengers(df: pd.DataFrame, gate_mask: np.ndarray, targets: list[str]
     chosen = max(passing, key=lambda a: a["paired"]["delta_ch_vs_base_mean_r"])["target"] if passing else None
     return {"rule": CPCV_RULE_ID, "n_gate": int(gate_mask.sum()), "min_disagree": MIN_DISAGREE, "arms": arms,
             "n_arms": len(arms), "chosen": chosen, "verdict": "PASS" if chosen else "FAIL"}
+
+
+def inherit_family_state(cc: dict, family_verdict: str) -> dict:
+    """PI-20261117-ZZUFKM1F-0002 (2): the challenger block INHERITS a family INDETERMINATE.
+
+    The registered rule says an INDETERMINATE family (parity < 0.98, a gate leg that failed to build, ...) cannot grade a
+    challenger; before this fix each arm still carried pass/fail and a `chosen` arm could be exported, so the results rows and the
+    mechanical grader read fail/pass where the rule says indeterminate (aadc-03, hand-graded INDETERMINATE in PR #26694). The
+    arms' measurements are kept (reported, never gating); `chosen` is cleared and kept as `chosen_if_determinate`."""
+    if family_verdict != "INDETERMINATE":
+        return cc
+    out = dict(cc)
+    out["chosen_if_determinate"] = cc.get("chosen")
+    out["chosen"] = None
+    out["verdict"] = "INDETERMINATE"
+    out["arms"] = [{**a, "pass_if_determinate": a.get("pass"), "pass": False, "verdict": "INDETERMINATE"} for a in cc.get("arms", [])]
+    return out
 
 
 def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
@@ -918,6 +935,10 @@ def _self_test() -> int:
                                        "legs_gate": ["x"], "legs": {}, "primary_eval": {"n_gate": 250}}], "R", Path("."), None, {})
     assert rf_ok["verdict"] == "pass" and rf_ok["n"] == 250 and rf_ok["families"]["F"]["edge_verdict_context"] == "FAIL"
     assert rf_bad["verdict"] == "fail" and rf_bad["records"][0]["verdict"] == "fail"
+    inh = inherit_family_state({"chosen": "tail1r", "verdict": "PASS", "arms": [{"target": "tail1r", "pass": True}]}, "INDETERMINATE")
+    assert inh["chosen"] is None and inh["verdict"] == "INDETERMINATE" and inh["chosen_if_determinate"] == "tail1r"
+    assert inh["arms"][0]["pass"] is False and inh["arms"][0]["verdict"] == "INDETERMINATE" and inh["arms"][0]["pass_if_determinate"] is True
+    assert inherit_family_state(cpa, "PASS") is cpa and inherit_family_state(cpa, "FAIL") is cpa
     ok = (pa["checks"]["c_beats_random"] and pa["checks"]["d_not_vacuous"] and pa["delta_mean_r"] > pb["delta_mean_r"]
           and not pb["checks"]["c_beats_random"] and a["n_trials"] == len(GRID) and 0.0 <= a["pbo"] <= 1.0
           and np.allclose(pa["reduce_rate"], PRIMARY["q"], atol=0.08)
@@ -1049,7 +1070,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"{a['target']} {'PASS' if a['pass'] else 'FAIL'} (paired {a['paired']['delta_ch_vs_base_mean_r']:+.4f}, "
                 f"disagree {a['disagree_rate_cells']:.3f}, own {'pass' if all(a['own_checks'].values()) else 'fail'})"
                 for a in (c["arms"] if c else [])) for c, r in zip(cc, results)),
-            "records": [{"family": r["family"], "target": a["target"], "verdict": "pass" if a["pass"] else "fail",
+            "records": [{"family": r["family"], "target": a["target"],
+                         "verdict": ("indeterminate" if fam_state[r["family"]] == "INDETERMINATE" else "pass" if a["pass"] else "fail"),
                          "n": c["n_gate"], "population": f"{r['family']} gate legs CPCV OOS trades, arm {a['target']}",
                          "paired": a["paired"], "disagree_rate_cells": a["disagree_rate_cells"], "own_checks": a["own_checks"]}
                         for c, r in zip(cc, results) if c for a in c["arms"]] or verdict["records"],

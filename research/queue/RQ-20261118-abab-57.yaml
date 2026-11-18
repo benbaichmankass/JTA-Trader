@@ -1,0 +1,155 @@
+id: RQ-20261118-abab-57
+title: 'POOLED direction lever (DI) on the xrp_pullback_2h declared config, roster population: does the lever beat the declared baseline by >= 0.13 R/trade pooled over >= 1.5k trades?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On Binance USD-M 2h candles for XRP,ADA,ETH,AVAX,SOL over 2020-06-01..2026-11-17, with the xrp_pullback_2h declared parameters (trend_lookback 40, pullback_lookback 10, pullback_frac 0.5, ATR
+  stop 2.5, trail 6.0, adx_min 25, tp 3.0 R) on every symbol, does the DIRECTION gate (+DI/-DI, --direction-filter=di) lever beat the unmodified baseline B by >= 0.13 R per trade pooled across the population,
+  net of the harness cost stack, with >= 1,500 pooled baseline trades?
+why_this_matters: 'Programme node P3-RG1025-lever-pooled (research/programmes/03-strategy-improvement.yaml): the single-leg lever tests ran at n_B 68-430 against an absolute 1.0 R bar and read ''strip them'';
+  that reading is not adopted (one window, thin n). The node asks for ONE pooled unit per lever, the same lever on all legs that carry it, dR per trade, pooled n >= 1.5k, bar and sd floor registered first.
+  This unit is the roster population: the five pullback_2h roster perps (the population the leads were found on: DISCOVERY read). Lead carried in: 3a84-01 (DI on xrp_pullback_2h, +5.56 R, single-leg, one
+  window) and the 3a84-02..04 sibling reads. A PASS on the roster population is a discovery that the fresh-population unit must confirm; a PASS on the fresh population is the confirming read; a FAIL closes
+  this lever x population only.'
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.13
+  effect_units: r_per_trade
+  sd: 1.88
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED per-trade sd 1.881 R from the committed trade rows of RQ-20261021-7c2b-08 (baseline B = xrp_pullback_2h as declared, 6 cells, n = 1,670; comms/research/RQ-20261021-7c2b-08/*/cells/*trades.jsonl,
+    computed 2026-11-18; RQ-20261021-7c2b-09 read 2.26 on n = 1,968). The node asked for 0.03 R/trade; at sd 1.88 an UNPAIRED two-sample test of 0.03 R needs about 48,600 trades per arm, which no population
+    in hand reaches, so the registered bar is 0.13 R/trade: (1.645+0.842)^2 x 1.88^2 / 0.13^2 = about 1,300 paired trades (the per-trade paired-difference sd is bounded above by the baseline sd, so this
+    is conservative only if the arms share most trades; stated, not measured). expected_n is an ESTIMATE (5-6 cells x ~280 trades). Below pooled n 1,500 the unit grades INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over a pinned in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261118abab57-DI-ROSTER
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: harness_stage0.py --family pullback --timeframe 2h, arms B (declared, tp 3.0) and DI (B + --direction-filter=di); per cell n, net_r, 6 calendar folds (majority 4); pooled across the population's
+    cells on one set of calendar edges; the candidate's pooled net R per trade minus B's, graded by the script's own --baseline/--delta-r-per-trade clause; cost = the harness venue-aware fee + slippage
+    + funding stack from execution_costs.resolve_cost_policy().
+  rule: 'PASS iff the DI arm passes the pooled Stage-0 rule on this population (pooled n >= 1,500, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the powered cells (n >= 39) pass) AND
+    beats B by >= 0.13 R/trade (the candidate-minus-baseline pooled R/trade is also reported against the node''s 0.03 R/trade materiality figure, which this n cannot detect). FAIL iff pooled n_B >= 1,500
+    and the arm fails: the direction lever DI is closed on the roster population for this window; the lever family stays open and the record names the arm''s pooled delta and the n the measured sd needs.
+    INDETERMINATE otherwise (pooled n < 1,500, fewer than 2 powered cells, or under half the cells measured; the floor is never lowered). Regime-robustness clause (set before the run): the pooled candidate-minus-baseline
+    result is positive in at least 3 of 4 calendar years of the window (per-year table reported), no single year carries more than 50% of the total delta, and long-side and short-side deltas are reported
+    separately; a failure downgrades a PASS to INDETERMINATE (reported, never silently dropped). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. The xrp_pullback_2h declared parameters are applied to every symbol (the legs'' own parameters differ: ada
+    uses pullback_frac 0.618 / adx 28 / tp 4), so this is a population read of the lever on one declared config, not a per-leg result. A PASS also needs a live producer and a Tier-3 declare. Candles are
+    Binance USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1). CLOSED-BAR READ: the harness enters on closed bars while the live legs decide on the forming bar
+    (live_bt_trade_join: live entries a median 4-7 min into the bar; RQ-20261113-f251-01 re-measured the forming-decision legs and several closed-bar records fail there, among them the avax pullback legs,
+    and AVAX is in the roster population of this unit where it applies). A result here is a closed-bar read, not live-bar evidence, and is not a promotion input until a forming-bar control of the same arms
+    exists (programme review 2026-11-18 condition).'
+practice_precedent: 'M13 and R1 (docs/reference/trading-and-model-practice-principles.md): pooled population test with the bar and n floor registered before the run; one lever per unit, every arm counted
+  (denominator: this unit has 1 candidate arm; the node has 3 levers x 2 populations = 6 units)'
+intervention_controls:
+  not_applicable: a Stage-0 entry/exit parameter lever on candles, not an in-trade action or active-management intervention
+iteration:
+  subject: xrp_pullback_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261022-3a84-01
+  verdict_read: pass_unconfirmed
+  diagnosis: '3a84-01 (DI on xrp_pullback_2h, +5.56 R, single-leg, one window) and the 3a84-02..04 sibling reads: single-leg reads at n_B 68-430 against an absolute 1.0 R bar, one window; the programme
+    node pools the same lever across the legs that carry it so n reaches >= 1.5k and the bar is per trade.'
+  search: 'One factor (direction: DI) vs the declared baseline B, pooled over the roster population, one window.'
+  levers:
+  - direction
+  map_entries:
+  - research/levers/xrp_pullback_2h.yaml
+  attempt: 2
+  due_by: '2026-11-27'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: the pullback_2h legs on the real-money book (xrp/ada) carry these levers; programme 03 node P3-RG1025-lever-pooled weight 40; an estimate, not a measurement'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 240
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision) for symbols the published candle dataset may not cover; CPU only; not trainer-resident.
+  basis: 7c2b-08 est 150 min for 6 cells x 1 arm (ESTIMATE, scaled); this unit has 2 arms so the estimate is scaled up to fit the 330 min dispatcher cap; the first run replaces it. A timeout would be recorded
+    as producer_failed, not a verdict.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - XRPUSDT,ADAUSDT,ETHUSDT,AVAXUSDT,SOLUSDT
+  - --timeframe
+  - 2h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-17'
+  - --param
+  - trend_lookback=40
+  - --param
+  - pullback_lookback=10
+  - --param
+  - pullback_frac=0.5
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=2.5
+  - --param
+  - trail_mult=6.0
+  - --param
+  - min_confidence=0.0
+  - --param
+  - adx_min=25
+  - --arm
+  - B=--tp-r=3.0
+  - --arm
+  - DI=--tp-r=3.0;--direction-filter=di
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.13'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '1500'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261118abab57-DI-ROSTER
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261118-abab-57
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- RQ-20261022-3a84-01
+- RQ-20261021-7c2b-08
+- scripts/research/harness_stage0.py
+- research/programmes/03-strategy-improvement.yaml
