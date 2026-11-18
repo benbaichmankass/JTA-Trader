@@ -100,7 +100,8 @@ jobs:
           cp -r "out/promote/$D" "ml/served/$D"
           python3 - "$D" "$RUN_ID" <<'PY'
           import json, sys
-          json.dump({"artifact_dir": sys.argv[1], "note": "The ONE served-ENTRY-model pointer (src/runtime/ml_entry_served.py). Repointed by ml-entry-retrain run " + sys.argv[2] + " after RULE-ENTRY-PROMOTE-20261106 PASSED. Revert = set artifact_dir back to ml_decision_entry_v1."}, open("ml/served/ENTRY_SERVED.json", "w"), indent=2)
+          prev = json.load(open("ml/served/ENTRY_SERVED.json")).get("artifact_dir")  # the artifact served BEFORE this repoint = the real revert target
+          json.dump({"artifact_dir": sys.argv[1], "note": "The ONE served-ENTRY-model pointer (src/runtime/ml_entry_served.py). Repointed by ml-entry-retrain run " + sys.argv[2] + " after RULE-ENTRY-PROMOTE-20261106 PASSED. Revert = set artifact_dir back to " + str(prev) + "."}, open("ml/served/ENTRY_SERVED.json", "w"), indent=2)
           PY
           mkdir -p "comms/research/ml_entry_grade/${RUN_ID}"; cp out/grade_evidence.json "comms/research/ml_entry_grade/${RUN_ID}/"
           mkdir -p .github/pr-landing
