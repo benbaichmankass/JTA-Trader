@@ -131,6 +131,11 @@ kaggle_first:
 limits:
   max_total_inflight: 8        # OPERATOR 2026-11-03 D5-A: runner 4 + runner_data 1 + trainer 1 + kaggle 1 + kaggle_cpu 1. Was 15: runner 10 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1 (RESEARCH-FLOW 2026-11-03; was 11 at runner 6)
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
+  # REPO-QUEUED EXEMPT BACKENDS (QUEUE-FILL-W47, manager 2026-11-18): the repo-queued cap above is about the hosted-runner pool.
+  # These backends do their work off it (a polled Kaggle kernel; the trainer VM over SSH), each capped at max_concurrent 1, so
+  # the cap does not defer them. MEASURED 2026-11-18: the cap deferred every fire at 21:55Z (19 fresh queued, mostly CI) and
+  # the starvation floor let ONE fire per ~45 min through; kaggle_cpu had 42 due units and no run since 20:48Z. Infra yield stays.
+  repo_queued_exempt_backends: [kaggle_cpu, trainer]
   starvation_hours: 0.75       # nothing dispatched this long -> the repo-queued block is lifted for ONE fire/cycle (dispatch_queue.starvation_override)
   # YIELD TO INFRA (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15): while any fresh run of one of these
   # workflows (gh `workflowName`, i.e. the file's `name:`) is QUEUED, the dispatcher fires nothing -- every

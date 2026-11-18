@@ -642,3 +642,56 @@ def test_the_research_stuck_window_is_configured_and_read():
     cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
     assert float(cfg["limits"]["research_stuck_hours"]) == dq.RESEARCH_STUCK_HOURS == 1.0
     assert '"research_stuck_hours"' in (REPO / "scripts/research/dispatch_queue.py").read_text()
+
+
+# ── repo-queued exempt backends (lane QUEUE-FILL-STANDING-W47, manager 2026-11-18 22:52Z) ──
+
+def _saturated_cycle(tmp_path, monkeypatch, units, exempt):
+    """12 fresh queued CI runs (over the cap of 10), floor off, committed config with `exempt` for the limit. Returns fired cmds."""
+    from scripts.research import compute_router as cr
+    real = cr.load_config()
+    cfg = dict(real, limits=dict(real["limits"], repo_queued_exempt_backends=list(exempt)))
+    monkeypatch.setattr(cr, "load_config", lambda path=None: cfg)
+    q = tmp_path / "queue"
+    q.mkdir()
+    for uid, wf in units:
+        (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
+    fired = []
+
+    def fake_run(cmd, *a, **k):
+        class P:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        if cmd[:3] == ["gh", "workflow", "run"]:
+            fired.append(cmd)
+        return P()
+
+    queued = _evruns([("pytest-run", "pull_request")] * 12)
+    monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: queued if status == "queued" else [])
+    monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: {"research_unit", "power_state"})
+    from scripts.research import script_run
+    monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
+    monkeypatch.setattr(dq.subprocess, "run", fake_run)
+    assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0"]) == 0
+    return fired
+
+
+def test_a_saturated_repo_queue_still_fires_an_exempt_backend_and_defers_the_runner(tmp_path, monkeypatch):
+    """MEASURED 2026-11-18 21:58Z: 19 fresh queued runs deferred all 84 due units incl. 44 bound for kaggle_cpu/trainer. Those
+    backends' own capacity is not the hosted pool, so the cap no longer defers them; github_runner units still defer."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"])
+    assert _fired_workflows(fired) == ["research-script-run-kaggle-cpu.yml"], _fired_workflows(fired)
+
+
+def test_without_the_exemption_a_saturated_repo_queue_fires_nothing(tmp_path, monkeypatch):
+    """The pre-fix behaviour, reproduced: empty exempt list -> every fire is deferred."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    assert _saturated_cycle(tmp_path, monkeypatch, units, []) == []
+
+
+def test_the_committed_config_exempts_kaggle_cpu_and_trainer_only():
+    from scripts.research import compute_router as cr
+    assert cr.load_config()["limits"]["repo_queued_exempt_backends"] == ["kaggle_cpu", "trainer"]
