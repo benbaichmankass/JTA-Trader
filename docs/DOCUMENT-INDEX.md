@@ -326,6 +326,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/audits/2026-11-06-skills-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-06-workflow-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-12-ui-spec-gap-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
+| `docs/audits/2026-11-19-deep-system-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | Deep system audit (week plan §4): OCI Always Free compliance (4/24 vs 2/12, storage at limits), efficiency, bugs, free resources, operator hypotheses, ranked migration plan. |
 | `docs/audits/M1-comms-audit-2026-05-07-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-followups-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/amend-parity-2026-10-25.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
