@@ -218,7 +218,12 @@ strategies:
     # whose target_deployment_stage == "shadow" on this strategy's
     # signals. Set `shadow_model_ids: []` to opt out entirely or provide
     # an explicit list to pin specific models.
-    exit_head_model: exit-head-donchian-1h-v1
+    # v2-neg25 PIN (2026-11-18, Tier-3 data-backed, manager GO under the standing rule, lane ML-PRIMARY-6):
+    # holding_pays_neg25 target beat the holding_pays champion: aadc-11 dev PASS (+0.0134 R/trade) and aadc-12
+    # five held-out perps PASS (+0.0160 R/trade, deflated CI LB +0.0063, n 18,649; research/results/
+    # RQ-20261117-aadc-12/44170813134.jsonl). exit_head_action stays `annotate` (scored + logged, no close):
+    # this pin changes what is logged, not any order. Revert: exit-head-donchian-1h-v1.
+    exit_head_model: exit-head-donchian-1h-v2-neg25
     exit_head_threshold: 0.10
     # ANNOTATE (2026-10-29, Tier-3 data-backed de-risk, lane ML-AM-NEXT-LIVE):
     # the head is still scored and logged every closed bar (exit_head_shadow),
@@ -1196,7 +1201,12 @@ strategies:
     # SOLUSDT signals auto-wire the symbol-agnostic decision/meta models (no
     # SOL-specific head exists; the symbol filter keeps BTC/MES heads off).
     # Observe-only — feeds the cross-symbol decision models with alt data.
-    exit_head_model: exit-head-donchian-1h-v1
+    # v2-neg25 PIN (2026-11-18, Tier-3 data-backed, manager GO under the standing rule, lane ML-PRIMARY-6):
+    # holding_pays_neg25 target beat the holding_pays champion: aadc-11 dev PASS (+0.0134 R/trade) and aadc-12
+    # five held-out perps PASS (+0.0160 R/trade, deflated CI LB +0.0063, n 18,649; research/results/
+    # RQ-20261117-aadc-12/44170813134.jsonl). exit_head_action stays `annotate` (scored + logged, no close):
+    # this pin changes what is logged, not any order. Revert: exit-head-donchian-1h-v1.
+    exit_head_model: exit-head-donchian-1h-v2-neg25
     exit_head_threshold: 0.10
     # ANNOTATE (2026-10-29, Tier-3 data-backed de-risk, lane ML-AM-NEXT-LIVE):
     # scored + logged every closed bar, `close` not applied. FAILS the B4 KEEP rule
@@ -1282,7 +1292,12 @@ strategies:
     # shadow_model_ids OMITTED 2026-06-18 (soak-everything, symbol-aware auto-wire):
     # ETHUSDT signals auto-wire the symbol-agnostic decision/meta models (the
     # symbol filter keeps BTC/MES regime heads off). Observe-only.
-    exit_head_model: exit-head-donchian-1h-v1
+    # v2-neg25 PIN (2026-11-18, Tier-3 data-backed, manager GO under the standing rule, lane ML-PRIMARY-6):
+    # holding_pays_neg25 target beat the holding_pays champion: aadc-11 dev PASS (+0.0134 R/trade) and aadc-12
+    # five held-out perps PASS (+0.0160 R/trade, deflated CI LB +0.0063, n 18,649; research/results/
+    # RQ-20261117-aadc-12/44170813134.jsonl). exit_head_action stays `annotate` (scored + logged, no close):
+    # this pin changes what is logged, not any order. Revert: exit-head-donchian-1h-v1.
+    exit_head_model: exit-head-donchian-1h-v2-neg25
     exit_head_threshold: 0.10
     # ANNOTATE (2026-11-12, Tier-3 data-backed de-risk, RQ-20261101-78fc-03 FAIL, row
     # ETH-EXITHEAD-CONTROL-TEST, HOLD for the manager): scored + logged every closed bar,
