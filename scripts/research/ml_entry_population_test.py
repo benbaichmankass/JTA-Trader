@@ -340,7 +340,7 @@ def _quantile_relabel(tab_all: pd.DataFrame, tab: pd.DataFrame, feats: list, q: 
     pred = {}
     for side in ("long", "short"):
         t = tr.dropna(subset=[f"mfe_{side}"])
-        info["train_rows"][side] = int(len(t))
+        info["train_rows"][side] = len(t)
         m = fit_quantile(t[feats], t[f"mfe_{side}"].to_numpy(float), q)
         # provenance: predict — LGBMRegressor.predict is the q-quantile of forward MFE-before-stop in ATR, not a probability
         raw = m.predict(tab[feats])

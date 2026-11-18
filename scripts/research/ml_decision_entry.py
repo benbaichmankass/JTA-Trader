@@ -193,7 +193,7 @@ def mfe_before_sl(o, h, lo, entry, atr, side, sl_atr=SL_ATR):
     """Max favourable excursion in ATR units over the H bars, counted only on bars BEFORE the stop's first passage
     (same SL rule as ``bracket_outcome``: a bar that touches the stop is the stop's bar, and a TP touched on it loses
     the tie, so its high/low never counts). So ``mfe >= k`` iff a TP at k ATR fills under ``bracket_outcome``. >= 0."""
-    n, H = o.shape
+    H = o.shape[1]
     sl = entry - side * sl_atr * atr
     hit_sl = (lo <= sl[:, None]) if side > 0 else (h >= sl[:, None])
     j_sl = np.where(hit_sl.any(1), hit_sl.argmax(1), H)
