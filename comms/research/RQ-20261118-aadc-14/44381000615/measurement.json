@@ -1,0 +1,60 @@
+{
+  "rule": "RULE-RQ20261118-aadc-14-D10-LEARNED",
+  "learned": {
+    "n": 670,
+    "legs": 24,
+    "decay_rate": 0.6045,
+    "auc": 0.4137,
+    "ci95": [
+      0.3029,
+      0.5163
+    ]
+  },
+  "cusum_same_points": {
+    "n": 670,
+    "legs": 24,
+    "decay_rate": 0.6045,
+    "auc": 0.6554,
+    "ci95": [
+      0.551,
+      0.7502
+    ]
+  },
+  "paired_delta_auc": {
+    "n": 670,
+    "legs": 24,
+    "delta": -0.2418,
+    "ci95": [
+      -0.3531,
+      -0.1399
+    ]
+  },
+  "bar": 0.654,
+  "features": [
+    "cusum",
+    "mean5",
+    "mean10",
+    "mean20",
+    "std10",
+    "win10",
+    "dd",
+    "gap_mu",
+    "n_seen",
+    "mu"
+  ],
+  "params": {
+    "K": 0.25,
+    "CLIP": 3.0,
+    "N_NEXT": 20,
+    "folds": 5
+  },
+  "trades_in": 7746,
+  "excluded": {
+    "not_closed": 4994,
+    "no_leg_record": 1195,
+    "no_contract_multiplier": 52,
+    "degenerate_risk_basis": 47,
+    "no_net_r": 141,
+    "backtest": 0
+  }
+}
