@@ -1,0 +1,141 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV): RQ-20261118-f7c1-01's pass_action forward-window check. Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch; a PASS is the evidence for a Tier-3 proposal).
+id: RQ-20261118-f7c1-08
+title: 'ml_entry same-bar cap FORWARD check: on decisions AFTER the Stage-0 record (2026-10-01..2026-11-16), does the selected cap k=2
+  (survivors by the frozen v1 score) again keep net R, cut max drawdown >= 20% and beat a matched random drop?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series portfolio practice (docs/reference/trading-and-model-practice-principles.md): a selection rule found on
+  one window is confirmed on a window it never saw before it changes real-money orders; the random-drop control is repeated so the
+  ranking, not the dropping, has to carry it.'
+question: 'The frozen v1 ENTRY booster (comms/research/RQ-20261101-c692-06/41324826751/model, the artifact that produced the 907-trade
+  record) scores every post-record decision bar 2026-10-01..2026-11-16 on the 5 bybit_2 symbols (sequential one-position-per-symbol
+  policy, tau 0.10, Binance Vision 1h klines, the c692-01 table recipe). Apply the SELECTED cap from f7c1-01, k = 2 same-direction
+  decisions per decision bar, survivors by score. Does it hold up?'
+why_this_matters: 'f7c1-01 PASSED at k=2 on the record, but its net-R gain is inside noise (bar-clustered CI [-21.3, +61.2] R) and the
+  drawdown cut is mostly the dropping (random-drop median DD 42.41 vs ranked 41.07). Shipping a per-bar selection limit on the real-money
+  leg needs a window the record never saw. A PASS is the evidence for a data-backed Tier-3 change (manager 2026-11-18: ship on PASS);
+  anything else leaves it off. It is SIGNAL SELECTION by model score, not the gross-exposure cap the operator rejected on 2026-11-18.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261118-f7c1-01
+  verdict_read: pass
+  diagnosis: 'f7c1-01 PASS k=2 on the 907-trade record (net R +54.09 vs +33.68, max DD 41.07 vs 62.81 R, beats random-drop median
+    +34.58); caveats: net-R gain inside noise, DD cut mostly from dropping, freed-slot trades not modelled.'
+  search: 'none: k = 2 fixed by f7c1-01''s rule (largest passing k); k = 1 and 3 reported, never gating'
+  attempt: 2
+  due_by: '2026-11-25'
+levers:
+- name: same_bar_same_direction_cap
+  values: [uncapped, k2]
+  hypothesised_effect: max drawdown falls >= 20% while net R holds and the ranked arm beats the random-drop median, as on the record
+data_and_approximation: 'FIDELITY GAP, declared before the run: the forward outcome is the c692-01 label harness''s fixed bracket
+  (SL 2 x ATR14, TP 3 x ATR14, 24h time stop, net of fee 11 + slippage 3 bps + funding 1 bps per 8h), NOT the record''s arm F (structure
+  SL + extend-only TP), because arm F''s replay needs a 1m-tie forward build that does not exist. The record''s own fixed-TP reference
+  (net R +23.84, n 907) shows the same direction as arm F. Freed-slot trades are again not modelled. Decisions whose 24h outcome window
+  passes the last fetched bar are dropped by the table build (counted).'
+decision_rule:
+  id: RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_samebar_cap.py forward: on the post-record decisions, for k = 2 the same three conditions as
+    RULE-RQ20261118-f7c1-01-SAMEBAR-CAP (sum net R, max drawdown in R booked per decision bar in decision order, matched random-drop
+    control with 2000 draws), with the bar-clustered bootstrap CI of the net-R difference. k = 1 and 3 reported, never gating. The read is
+    claimed in the holdout ledger (comms/research/holdout_reads.jsonl copy in the run dir) before any outcome is computed.'
+  rule: 'INDETERMINATE IF fewer than 60 decisions are taken in the window OR the k = 2 cap binds on fewer than 30 decision bars. PASS IF
+    k = 2 has (a) capped sum net R >= uncapped sum net R AND (b) capped max drawdown <= 0.8 x uncapped AND (c) capped sum net R >= the
+    random-drop median. FAIL otherwise. Thresholds fixed now and not changed after any result.'
+  pass_action: 'Data-backed Tier-3 change (manager decides and notifies): ml_entry keeps at most 2 same-direction decisions per decision
+    bar on its real-money accounts, survivors by score; the proposal states it is signal selection, not the rejected exposure cap; revert
+    = remove the limit; first-decision health check after deploy.'
+  fail_action: 'The cap stays off. Record it on PI-20261118-PREP1118-0001: the record PASS did not survive a fresh window. Next lever (if
+    any) is basket-level sizing (1/sqrt(n) per same-bar trade), its own unit.'
+  what_it_does_not_do: No config change, no order, no sizing change; a PASS is evidence for a Tier-3 change the manager ships.
+  min_n: 60 taken decisions and >= 30 bars where the k = 2 cap binds
+power:
+  expected_n: 115
+  min_detectable_effect: 0.2
+  effect_units: fraction_of_max_drawdown
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the record took 907 decisions in 364 days, ~2.5 per day; 47 days -> ~115 decisions, of which ~15% sit on bars with
+    > 2 same-side decisions (139 of 437 record bars bind at k=2) -> ~20-30 binding bars, at the INDETERMINATE floor. INDETERMINATE is the
+    likely verdict, stated before the run; in that case the cap stays off.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public klines; the window grows with time, a re-run later has more power.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every kept decision keeps its fixed-bracket outcome; only which decisions are kept differs
+  matched_random:
+    draws: 2000
+    note: same per-bar per-side drop counts as the ranked arm; GATING via condition (c)
+  best_static:
+    grid:
+    - uncapped
+    - k2
+    excludes_test_folds: true
+    note: k = 2 was fixed by f7c1-01 on the record window; nothing is chosen on this window
+  bootstrap_group: decision_bar
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: a 20% drawdown cut on the real-money ml_entry leg at unchanged net R; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 20
+  why_runner: needs_internet (keyless public Binance Vision monthly + daily 1h klines); scores a committed booster (no fit).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_samebar_cap.py
+  - forward
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261118-f7c1-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether ml_entry's real-money accounts keep at most 2 same-direction decisions per decision bar (survivors by score)
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261118-f7c1-01
+- PI-20261118-PREP1118-0001
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-18T21:59:37+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD
+  auto: false
+  decision_rule_id: RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD
+  evidence:
+  - research/results/RQ-20261118-f7c1-08/local-20261118T2159Z.jsonl
+  graded_at: '2026-11-18'
+  grader: ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN), rule applied as registered in 4df24117cb
+  reason: 'INDETERMINATE by rule: the k=2 cap binds on 18 decision bars < 30 (118 decisions taken, 55 decision bars, 2026-10-01..2026-11-15).
+    Point estimates (reported, never gating) run AGAINST the cap: k=2 sum net R -12.39 vs uncapped -6.90, max DD 16.51 vs 17.55 R (ratio
+    0.94), ranked net R at the 0.36 percentile of the random-drop control (median -11.61). Per the pass_action the cap stays OFF. The
+    frozen v1 forward read itself: -6.90 R over 118 decisions (-0.058 R/decision) on the fixed bracket (declared fidelity gap vs arm F).'
+  rows: 1
+  verdict: indeterminate

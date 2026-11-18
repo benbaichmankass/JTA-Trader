@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261118-f7c1-01.yaml (ml_entry same-bar basket cap, walkthrough 2026-11-18 D1, PI-20261118-PREP1118-0001)
+# wiring: research/queue/RQ-20261118-f7c1-08.yaml (`forward`: the selected k=2 on post-record decisions 2026-10-01..2026-11-16)
 """ml_entry SAME-BAR BASKET CAP on the committed Stage-0 record (Tier-1 research; no order, no config).
 
 Question (RQ-20261118-f7c1-01, rule RULE-RQ20261118-f7c1-01-SAMEBAR-CAP, registered before this ran): at each decision bar keep at
@@ -17,7 +18,12 @@ NOT MODELLED (stated beside the result): a dropped decision would free its symbo
 decision on that symbol that the record does not contain.
 
     python3 scripts/research/ml_entry_samebar_cap.py --unit RQ-20261118-f7c1-01 --out O [--cache C] [--scores S.csv]
+    python3 scripts/research/ml_entry_samebar_cap.py forward --unit RQ-20261118-f7c1-08 --out O [--cache C]
     python3 scripts/research/ml_entry_samebar_cap.py --self-test
+
+FORWARD (RQ-20261118-f7c1-08): the frozen v1 booster scores post-record decision bars FWD_START..FWD_END on the bybit_2 symbols
+(ml_decision_entry.policy, tau 0.10, outcome = the c692-01 label's fixed bracket, a DECLARED fidelity gap vs arm F), the read is claimed
+in the holdout ledger first, then the selected k=2 is graded by the same three conditions (k=1, 3 reported).
 """
 from __future__ import annotations
 
@@ -44,6 +50,12 @@ SCORE_COVERAGE_MIN = 0.95
 BIND_BARS_MIN = 30
 REPS = 2000
 SEED = 20261118
+FWD_UNIT = "RQ-20261118-f7c1-08"
+FWD_RULE_ID = "RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD"
+FWD_START, FWD_END = "2026-10-01", "2026-11-16"
+FWD_K = 2
+FWD_MIN_N = 60
+TAU = 0.10
 
 
 # ------------------------------------------------------------------------------------------------ inputs
@@ -221,6 +233,81 @@ def run(a) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------------------------ forward (f7c1-08)
+def forward_decisions(cache: Path, out: Path) -> tuple[pd.DataFrame, dict]:
+    """Post-record decisions of the frozen v1 booster on the bybit_2 symbols, with score and fixed-bracket net R."""
+    import lightgbm as lgb
+    import ml_decision_entry as E
+    import ml_entry_tp_revision as TPR
+    syms = E.universe()
+    E.fetch(cache, syms, end=E.END)
+    TPR.FWD_START, TPR.FWD_END = FWD_START, FWD_END
+    fwd = out / "fwd_cache"
+    rep = TPR.forward_cache(cache, fwd, syms)
+    have = [x for x in syms if (fwd / f"{x}.pkl").exists()]
+    tab = E.build_table(fwd, have)
+    lo, hi = pd.Timestamp(FWD_START, tz="UTC"), pd.Timestamp(FWD_END, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= lo) & (tab.ts < hi)].reset_index(drop=True)
+    # provenance: Booster — regression booster file: predicts net R per decision, not a class probability
+    pl, ps = (lgb.Booster(model_file=str(ART / f"entry_{side}.txt")).predict(test[E.FEATURES]) for side in ("long", "short"))
+    taken = E.policy(test, pl, ps, TAU)
+    traded = E.traded_symbols()
+    taken = taken[taken.symbol.isin(traded)].reset_index(drop=True)
+    rec = pd.DataFrame({"symbol": taken.symbol, "side": taken.side, "decision_ts": pd.to_datetime(taken.ts, utc=True),
+                        "net_r": taken.net_r.astype(float), "score": taken.pred.astype(float)})
+    meta = {"universe": len(syms), "symbols_with_window_data": len(have), "traded_symbols": traded,
+            "window_rows": len(test), "window_last_ts": str(test.ts.max()) if len(test) else None,
+            "fetch_report_days": {k: v.get("oct_days") for k, v in rep.items() if k in traded}}
+    return rec, meta
+
+
+def claim_forward_read(out: Path) -> dict:
+    import shutil
+
+    import holdout_lock as HL
+    led = out / "holdout_reads.jsonl"
+    if not led.exists() and HL.LEDGER.exists():
+        shutil.copy(HL.LEDGER, led)
+    return HL.claim_read(model_id="ENTRY-v1-samebar-cap", start=FWD_START, end=FWD_END, unit=FWD_UNIT,
+                         reader="ml_entry_samebar_cap.forward", ledger=led, train_end="2025-09-30", family="ENTRY-SAMEBAR")
+
+
+def forward_verdict(ev: dict) -> tuple[str, str]:
+    n, a = ev["uncapped"]["n"], ev["arms"].get(f"k{FWD_K}")
+    if n < FWD_MIN_N:
+        return "indeterminate", f"{n} decisions taken in the window < {FWD_MIN_N}"
+    if a["bars_where_cap_binds"] < BIND_BARS_MIN:
+        return "indeterminate", f"k={FWD_K} cap binds on {a['bars_where_cap_binds']} bars < {BIND_BARS_MIN}"
+    why = (f"k={FWD_K}: sum net R {a['sum_net_r']:+.2f} vs {ev['uncapped']['sum_net_r']:+.2f}, max DD {a['max_dd_r']:.2f} vs "
+           f"{ev['uncapped']['max_dd_r']:.2f} R, random-drop median {a['control_median_sum_net_r']:+.2f}")
+    return ("pass", why) if a["pass_k"] else ("fail", why + f" (a={a['cond_a_net_r_holds']} b={a['cond_b_dd_cut_20pct']} "
+                                                         f"c={a['cond_c_beats_random_drop_median']})")
+
+
+def run_forward(a) -> int:
+    t0 = time.time()
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    claim = claim_forward_read(out)          # BEFORE any forward outcome is computed
+    rec, meta = forward_decisions(Path(a.cache), out)
+    rec.to_csv(out / "forward_decisions.csv.gz", index=False)
+    ev = evaluate(rec) if len(rec) else {"uncapped": {"n": 0}, "arms": {f"k{FWD_K}": {"bars_where_cap_binds": 0}}}
+    v, why = forward_verdict(ev)
+    meas = {"unit": FWD_UNIT, "rule_id": FWD_RULE_ID, "window": [FWD_START, FWD_END], "selected_k": FWD_K, "artifact": str(ART.relative_to(REPO)),
+            "outcome": "c692-01 label fixed bracket (SL 2xATR14, TP 3xATR14, 24h), net of fee 11 + slip 3 bps + funding 1 bps/8h; "
+                       "DECLARED fidelity gap vs the record's arm F", "holdout_claim": claim, **meta, **ev,
+            "not_modelled": "freed-slot trades after a dropped decision", "git_sha": _git_sha(), "elapsed_s": round(time.time() - t0)}
+    (out / "measurement.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
+    vj = {"research_unit": FWD_UNIT, "rule_id": FWD_RULE_ID, "verdict": v, "read_state": "measured", "n": int(ev["uncapped"]["n"]),
+          "note": why, "population": (f"frozen v1 booster decisions {FWD_START}..{FWD_END} on the bybit_2 symbols (tau {TAU}, sequential "
+                                      "one-position-per-symbol policy), fixed-bracket outcome"), "measurement": meas}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    shutil_rmtree = __import__("shutil").rmtree
+    shutil_rmtree(out / "fwd_cache", ignore_errors=True)
+    print(json.dumps({"verdict": v, "why": why}), flush=True)
+    return 0
+
+
 def _self_test() -> None:
     ts = pd.to_datetime(["2025-10-01 03:00", "2025-10-01 03:00", "2025-10-01 03:00", "2025-10-01 07:00", "2025-10-01 11:00"], utc=True)
     rec = pd.DataFrame({"symbol": ["A", "B", "C", "A", "B"], "side": ["long", "long", "short", "long", "long"], "decision_ts": ts,
@@ -237,10 +324,23 @@ def _self_test() -> None:
     assert longest_losing_run(np.array([0, 1, 2]), np.array([-1.0, -1.0, 1.0]), 3) == 2
     ev = evaluate(rec, reps=50)
     assert ev["arms"]["k1"]["n_dropped"] == 1 and ev["arms"]["k1"]["sum_net_r"] == -2.0
+    # forward verdict branches (f7c1-08)
+    arm = {"bars_where_cap_binds": 40, "sum_net_r": 5.0, "max_dd_r": 1.0, "control_median_sum_net_r": 1.0, "pass_k": True,
+           "cond_a_net_r_holds": True, "cond_b_dd_cut_20pct": True, "cond_c_beats_random_drop_median": True}
+    base = {"n": 120, "sum_net_r": 4.0, "max_dd_r": 2.0}
+    assert forward_verdict({"uncapped": base, "arms": {"k2": arm}})[0] == "pass"
+    assert forward_verdict({"uncapped": base, "arms": {"k2": {**arm, "pass_k": False}}})[0] == "fail"
+    assert forward_verdict({"uncapped": {**base, "n": 59}, "arms": {"k2": arm}})[0] == "indeterminate"
+    assert forward_verdict({"uncapped": base, "arms": {"k2": {**arm, "bars_where_cap_binds": 29}}})[0] == "indeterminate"
     print("self-test ok")
 
 
 def main(argv=None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    forward = bool(argv) and argv[0] == "forward"
+    if forward:
+        argv = argv[1:]
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--unit", default=UNIT)
     p.add_argument("--out", default="out/samebar_cap")
@@ -251,6 +351,10 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
+    if forward:
+        if a.unit != FWD_UNIT:
+            raise SystemExit(f"`forward` answers {FWD_UNIT} only, got {a.unit}")
+        return run_forward(a)
     if a.unit != UNIT:
         raise SystemExit(f"this harness answers {UNIT} only, got {a.unit}")
     return run(a)
