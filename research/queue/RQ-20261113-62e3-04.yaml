@@ -2,7 +2,7 @@
 id: RQ-20261113-62e3-04
 title: 'ITERATION 3 of movement-capture (fail): is there post-touch DRIFT to capture at all? Same entries, no target and no stop, exit at the
   day''s last close, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -149,3 +149,17 @@ related:
 - scripts/research/edge_iteration_verdict.py
 - vol-premium-proxy
 what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
+last_dispatched_at: '2026-11-16T03:49:49+00:00'
+grading:
+  attested: RULE-RQ-20261113-62e3-04
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-62e3-04
+  evidence:
+  - research/results/RQ-20261113-62e3-04/43800476250.jsonl
+  graded_at: '2026-11-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

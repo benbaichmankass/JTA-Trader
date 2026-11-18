@@ -1,0 +1,283 @@
+{
+ "lane": "CROSS-MODEL-LEARNING",
+ "date": "2026-11-16",
+ "main_sha": "ae5f43427",
+ "audit_branch": "lane/ltr-close-audit-20261116 @ 448bc9d13",
+ "layers": [
+  {
+   "layer": "ml_entry (Foxhound-1/2)",
+   "trains_on": "kline triple-barrier brackets SL2/TP3 ATR, 24h, decision every 4h, 60-perp universe, 20 features",
+   "cite": [
+    "scripts/research/ml_decision_entry.py:59-61",
+    "scripts/research/ml_decision_entry.py:267",
+    "src/runtime/ml_decision_features.py:19",
+    "scripts/research/ml_entry_retrain.py"
+   ],
+   "consumes": [],
+   "does_not_consume": [
+    "live trades",
+    "LTR reviews/outcomes",
+    "claude_judgments",
+    "regime/overlay outputs"
+   ],
+   "verified_by": "grep live_review|outcomes.jsonl|claude_judgments over ml_entry_retrain.py, ml_entry.py, ml_entry_v2.py, tp_revision.py returned nothing; positive control: same grep finds them in ml/datasets/families/claude_judgments.py"
+  },
+  {
+   "layer": "TP-revision re-score (Labrador-1b)",
+   "trains_on": "same bar-level first-passage labels as ml_entry",
+   "cite": [
+    "src/units/strategies/ml_entry.py:226",
+    "src/units/strategies/ml_entry.py:362",
+    "src/runtime/tp_revision.py:146"
+   ],
+   "consumes": [
+    "entry recipe features and first-passage target, re-scored at each 4h check-in"
+   ],
+   "does_not_consume": [
+    "LTR calls"
+   ]
+  },
+  {
+   "layer": "Beagle-1 overlay (overlay-td-v1)",
+   "trains_on": "TD-family backtest trades; artifact ml/overlay/overlay_td.json",
+   "cite": [
+    "config/overlay_policy.yaml:1-25",
+    "docs/reference/model_names.yaml:74"
+   ],
+   "consumes": [
+    "mirror-book trades for CUSUM demotion alarm only"
+   ],
+   "does_not_consume": [
+    "LTR",
+    "entry score"
+   ]
+  },
+  {
+   "layer": "Regime heads (Collie)",
+   "trains_on": "market_features bars",
+   "cite": [
+    "ml/configs/btc-regime-15m-lgbm-v2.yaml",
+    "scripts/ops/run_training_cycle.sh"
+   ],
+   "consumes": [],
+   "does_not_consume": [
+    "entry outcomes",
+    "LTR"
+   ],
+   "note": "D2 consumer test RQ-20261112-bcd2-01 FAILED"
+  },
+  {
+   "layer": "Conviction-meta (Mastiff)",
+   "trains_on": "closed non-backtest order packages, label from realised P&L",
+   "cite": [
+    "ml/datasets/families/conviction_meta.py:1-22",
+    "ml/configs/conviction-meta-v1.yaml:67"
+   ],
+   "consumes": [
+    "realised closed-trade outcomes"
+   ],
+   "does_not_consume": [
+    "LTR reviews/counterfactuals"
+   ]
+  },
+  {
+   "layer": "Exit-policy (Labrador-1)",
+   "trains_on": "in-trade bar rows, ETHUSDT 5m",
+   "cite": [
+    "ml/datasets/families/exit_candidates.py:1-22",
+    "ml/configs/exit-policy-v1.yaml:101"
+   ],
+   "consumes": [
+    "own in-trade state"
+   ],
+   "does_not_consume": [
+    "LTR close/tighten outcomes"
+   ]
+  },
+  {
+   "layer": "Setup metalabel",
+   "trains_on": "CUSUM events + triple-barrier labels from bars (synthetic)",
+   "cite": [
+    "ml/datasets/families/setup_candidates.py:1-22",
+    "ml/configs/setup-candidates-metalabel-p2pool-v2.yaml:76"
+   ],
+   "consumes": [],
+   "does_not_consume": [
+    "live outcomes",
+    "LTR"
+   ]
+  },
+  {
+   "layer": "LTR reviewer (Claude)",
+   "trains_on": "not trained; decides on 7-key in-trade state + Stage-0 option pricing",
+   "cite": [
+    "scripts/ops/live_review_packet.py:1163-1173",
+    "scripts/research/live_review_outcomes.py"
+   ],
+   "consumes": [
+    "leg backtest history (priced options)",
+    "prior row forecast"
+   ],
+   "does_not_consume": [
+    "ml_entry entry score",
+    "regime/overlay/conviction"
+   ],
+   "measured": "features_at_review keys over 784 rows: open_r, peak_r, giveback_r, atr_now_over_entry (784), bars_since_peak, r_to_stop, r_to_target (783)"
+  },
+  {
+   "layer": "claude_judgments chain (CJ-2/3/4/5, DESK-11/19)",
+   "trains_on": "Claude calls joined to realised net R",
+   "cite": [
+    "ml/datasets/families/claude_judgments.py:1-60",
+    "ml/datasets/families/claude_judgments.py:616-700",
+    "ml/datasets/families/claude_judgments.py:750",
+    "scripts/ops/build_trainer_datasets.sh:481"
+   ],
+   "consumes": [
+    "LTR 784, desk 218, blind 707, revealed 707"
+   ],
+   "does_not_consume": [
+    "any decision model: no ml/configs manifest targets the family (only ml/configs/baseline-post-trade-review.yaml.disabled:2)"
+   ]
+  }
+ ],
+ "counts": {
+  "reviews.jsonl": {
+   "rows": 784,
+   "provenance": "MEASURED",
+   "recommendation": {
+    "hold": 584,
+    "flag_mechanics": 73,
+    "no_recommendation": 59,
+    "close": 41,
+    "tighten_sl": 25,
+    "partial_close": 2
+   },
+   "applied_false": 784
+  },
+  "outcomes.jsonl": {
+   "rows": 668,
+   "distinct_trade_ids": 148,
+   "cf_method": {
+    "no_path_change": 630,
+    "paired_replay_v1:close": 27,
+    "replay_v1:stop_first+trail": 10,
+    "paired_replay_v1:partial_close": 1
+   },
+   "applied_true": 5,
+   "provenance": "MEASURED"
+  },
+  "blind_grades.jsonl": {
+   "rows": 707,
+   "distinct_trades": 707,
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "run_ids": 16,
+   "distinct_prompt_sha": 14,
+   "prompt_sha_sizes": [
+    128,
+    48,
+    48,
+    48,
+    47,
+    47,
+    47,
+    47,
+    47,
+    47,
+    47,
+    47,
+    47,
+    12
+   ],
+   "pre_cutoff_null": 707,
+   "decision_ts": [
+    "2026-07-01",
+    "2026-11-11"
+   ],
+   "provenance": "MEASURED"
+  },
+  "revealed_grades.jsonl": {
+   "rows": 707,
+   "distinct_trades": 707,
+   "provenance": "MEASURED"
+  },
+  "blind_trades_with_committed_net_r": {
+   "n": 51,
+   "of": 707,
+   "note": "join to outcomes.jsonl by trade id; remainder need the journal",
+   "provenance": "MEASURED"
+  },
+  "desk": {
+   "decisions": 218,
+   "outcomes": 217,
+   "emitted_to_dataset": 17,
+   "provenance": "MEASURED"
+  },
+  "claude_judgments_population_local_no_journal": {
+   "source_rows": 2416,
+   "emitted": 650,
+   "emitted_by_kind": {
+    "ltr_review": 633,
+    "desk_entry_generation": 17
+   },
+   "blind_grade_emitted": 0,
+   "excluded": {
+    "outcome_unjoined_no_journal": 1454,
+    "outcome_not_computable": 197,
+    "no_trade_id": 104,
+    "t1_outcome_visible": 7,
+    "never_train:mechanics_probe": 3,
+    "outcome_pending": 1
+   },
+   "read_state": "journal absent: could_not_look for blind rows, not evidence about the trainer",
+   "provenance": "MEASURED"
+  },
+  "ltr_close_audit": {
+   "packages": 13,
+   "priced": 11,
+   "real_money_delta_r": -0.15,
+   "resolved_holds_delta_r": 1.08,
+   "open_holds_delta_r": -1.22,
+   "provenance": "MEASURED close R; ESTIMATED open-hold marks"
+  }
+ },
+ "cj_chain": {
+  "CJ-2": "landed_unproven",
+  "CJ-3": "landed_unproven",
+  "CJ-7": "landed_unproven (blocked on CJ-3)",
+  "CJ-4": "queued (blocked on CJ-3)",
+  "CJ-5": "queued (blocked on CJ-4)",
+  "DESK-11": "blocked (DESK-0 done, CJ-2 landed_unproven)",
+  "DESK-19": "blocked (DESK-11, CJ-4)",
+  "closing_observation": "trainer cycle claude_judgments_population line (claude_judgments.py:750) with emitted_by_kind.blind_grade > 0 and journal != absent; NOT read by this lane",
+  "cj4_runnable_now": "data yes (n 707 >= 150), job no (no instrument; journal host required)",
+  "defects": [
+   "source key includes prompt_sha: 14 shas, max 128 rows, literal reading cannot reach n>=150",
+   "pre_cutoff null on all 707"
+  ]
+ },
+ "units": [
+  "RQ-20261116-089f-01",
+  "RQ-20261116-089f-02",
+  "RQ-20261116-089f-03"
+ ],
+ "not_worth_feeding": [
+  "LTR hold rows",
+  "LTR realised closes as training rows (n too small)",
+  "Claude output as live entry feature (operator Q2)",
+  "revealed T1 grades as features",
+  "regime-head outputs into entry/LTR (bcd2-01 FAIL)",
+  "ML re-score as LTR manage signal (c692-03/13/14, 0be0-01)",
+  "paper/mirror book P&L as edge signal",
+  "prop closes (no journal R)",
+  "entry score into Beagle-1/conviction-meta"
+ ],
+ "commands": [
+  "python3 -m ml.datasets.families.claude_judgments",
+  "python3 scripts/ops/ml_learning_ledger.py",
+  "python3 scripts/ops/work.py get CJ-3-BLIND-GRADE-PILOT",
+  "python3 scripts/ops/work.py get CJ-4-LABEL-VALIDATION"
+ ]
+}

@@ -391,6 +391,14 @@ def reprice(slip_by_venue: Dict[str, Optional[float]]) -> List[dict]:
         srp = REPO / sr
         if sr and srp.exists():
             trs = [json.loads(line) for line in open(srp) if line.strip()]
+            n_no_net_r = sum(1 for r in trs if r.get("net_r") is None)
+            if not trs or n_no_net_r:
+                # A summary-line source_run (e.g. an ML harness result) has no per-trade
+                # net_r: say so on the leg instead of crashing the whole analyze.
+                rec["method"] = (f"not_repriced: source_run has {n_no_net_r} of {len(trs)} rows "
+                                 "without per-trade net_r")
+                out.append(rec)
+                continue
             ctrl = round(sum(float(r["net_r"]) for r in trs), 4)
             rec["positive_control"] = {"sum_net_r_at_recorded_bps": ctrl,
                                        "record_net_r_oos": d["net_r_oos"],

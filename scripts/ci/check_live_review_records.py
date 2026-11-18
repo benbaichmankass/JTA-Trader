@@ -37,7 +37,12 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
 Canonical source: trade_journal.db order_packages / trades, joined on `order_package_id`.
 Files are append-only and start empty; a leading {"_meta": ...} line is skipped.
 
-Exit: 0 clean / 1 refused.   Usage: check_live_review_records.py [--self-test]
+Exit: 0 clean / 1 refused.   Usage: check_live_review_records.py [--self-test] [--only-new[=REF]]
+
+``--only-new[=REF]`` (LTR-ROWS-BRANCH-STALE-VALIDATOR, manager 2026-11-16): validate only the rows a reviewer ADDS. Rows
+whose review_id is already in ``REF:comms/live_review/reviews.jsonl`` (default ``origin/live-review/rows``, the pushed tip of
+the append-only rows branch) are skipped, so an old off-schema row nobody here wrote cannot block a new row. If REF cannot be
+read, EVERYTHING is validated (never a silent pass) and the line says so. CI and the manager keep using the full check.
 """
 from __future__ import annotations
 
@@ -393,7 +398,35 @@ def _rows(path: Path):
         yield n, r, None
 
 
-def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Path = SCHEMA) -> list[str]:
+DEFAULT_BASE_REF = "origin/live-review/rows"
+
+
+def base_review_ids(ref: str = DEFAULT_BASE_REF) -> "set[str] | None":
+    """review_ids already in ``ref:comms/live_review/reviews.jsonl``, or None when the ref/file cannot be read."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", str(REPO), "show", f"{ref}:comms/live_review/reviews.jsonl"],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    ids: set[str] = set()
+    for line in r.stdout.splitlines():
+        try:
+            rid = json.loads(line).get("review_id")
+        except (ValueError, AttributeError):
+            continue
+        if rid:
+            ids.add(str(rid))
+    return ids
+
+
+def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Path = SCHEMA,
+             skip_ids: "set[str] | None" = None) -> list[str]:
+    """``skip_ids``: review_ids whose rows (and outcomes) are not validated (``--only-new``); they still count for
+    duplicate detection, so a NEW row reusing an old id is flagged."""
+    skip_ids = skip_ids or set()
     schema = json.loads(schema_path.read_text())
     out: list[str] = []
     ids: set[str] = set()
@@ -406,9 +439,12 @@ def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Pa
             if err or not isinstance(r, dict):
                 out.append(f"{tag}: {err or 'not an object'}")
                 continue
-            out += [f"{tag}: {m}" for m in row_problems(r, kind, schema)]
+            skipped = r.get("review_id") in skip_ids
+            if not skipped:
+                out += [f"{tag}: {m}" for m in row_problems(r, kind, schema)]
             if kind == "reviews":
-                out += [f"{tag}: {m}" for m in packet_problems(r, PACKETS)]
+                if not skipped:
+                    out += [f"{tag}: {m}" for m in packet_problems(r, PACKETS)]
                 if r.get("review_id") in ids:
                     out.append(f"{tag}: duplicate review_id {r.get('review_id')}")
                 ids.add(r.get("review_id"))
@@ -625,7 +661,17 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if "--self-test" in argv:
         return _self_test()
-    f = findings()
+    skip: "set[str] | None" = None
+    for a in argv:
+        if a == "--only-new" or a.startswith("--only-new="):
+            ref = a.split("=", 1)[1] if "=" in a else DEFAULT_BASE_REF
+            skip = base_review_ids(ref)
+            if skip is None:
+                print(f"live-review-records-guard: --only-new: could not read {ref}:comms/live_review/reviews.jsonl; "
+                      "validating EVERY row.")
+            else:
+                print(f"live-review-records-guard: --only-new: skipping {len(skip)} row(s) already in {ref}.")
+    f = findings(skip_ids=skip)
     if f:
         print("::error::comms/live_review records fail comms/schema/live_review.schema.json:")
         for x in f:

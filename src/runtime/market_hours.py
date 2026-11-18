@@ -122,6 +122,31 @@ def us_equity_session(ts: datetime | None = None) -> str:
     return "closed"
 
 
+def equity_first_full_hour_wait(ts: datetime | None = None, *, wait_minutes: int = 60) -> bool:
+    """True while an HOURLY US-equity signal must WAIT (operator D9, 2026-11-18; scope widened by the manager 2026-11-18).
+
+    Operator popup 2026-11-18, verbatim: "Wait for the first full hour of trading (Recommended)". The option the operator
+    chose read: hourly stock and ETF signals fire only on hours inside regular trading (backtests used regular-session
+    bars). So a 1h equity entry is allowed ONLY from the end of the first full regular hour (09:30 + ``wait_minutes`` =
+    10:30 ET) to the 16:00 ET close, on trading days. Pre-market, after-hours, overnight and weekends all WAIT. The leg
+    re-evaluates every tick, so a signal that still stands is taken when the window opens.
+
+    Why: a bracket entry sent outside the regular session is accepted and QUEUED, the position does not exist until the
+    open, and 2026-11-18 SLV re-entered 7 times and QQQ 4 times before it (PI-20261118-JFWRQYOV-0004); QQQ 2026-11-17
+    21:01Z (after the close) is the same failure class.
+
+    ET comes from the same DST-month table as ``us_equity_session`` (March and November read as standard time); US
+    holidays are not modeled (a holiday weekday reads as open here; the venue answers). Pure, never raises.
+    """
+    ts = _utc(ts or datetime.now(timezone.utc))
+    et = ts - timedelta(hours=(4 if ts.month in _FULL_DST_MONTHS else 5))
+    if et.weekday() >= 5:
+        return True
+    t_min = et.hour * 60 + et.minute
+    window_open = 9 * 60 + 30 + int(wait_minutes)
+    return not (window_open <= t_min < 16 * 60)
+
+
 def asset_class_for_exchange(exchange: str) -> str:
     """Map an exchange name to the asset class its symbols trade as."""
     e = str(exchange or "").strip().lower()

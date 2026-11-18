@@ -1,0 +1,164 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (orphan
+# ml-exit-head-donchian-1h, PI-20261117-ZFRREVN5-0003). Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-aadc-04
+title: 'ml-exit-head-donchian-1h ITERATION (LABEL family): does training the head on holding_pays_0 (future R >= 0) or more_mfe (new
+  favourable excursion still ahead) instead of holding_pays (future R >= +0.25) improve its out-of-sample replayed R per trade, net of cost?'
+status: done
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261116-d5a7-06
+  verdict_read: fail
+  diagnosis: 'Every graded iteration changed a family that is now flat: FEATURES (volume composition at lookback 500 (0bc8-02) and 250
+    (d5a7-06): comp - champion -0.0016 R/trade, CI95 [-0.0036, +0.0004], n 11,160; champion, vol and comp all -0.0135 R vs hold, CI95
+    [-0.042, +0.015]), UNIVERSE (BTC -0.0141 OOS n 1,041; SOL -0.0246 IS; ETH +0.0215 IS: sign flips), POOLING (a474-03, donchian-4h
+    family: FAIL, AUC 0.613 but no arm beats B net of cost). Three feature sets giving the SAME replayed R says the head''s decisions are
+    insensitive to inputs; the shared element is the TARGET. holding_pays = 1[final_r - open_r(t) >= +0.25] is read off a tail the
+    chandelier trail shapes, so it labels "the trail will leave me 0.25 R better off", which the features cannot see. The lever map marks
+    labels and recipe untested.'
+  search: 'one factor, the label family: champion holding_pays (+0.25 R margin) vs holding_pays_0 (margin removed) vs more_mfe = 1 -
+    peak_is_in (a truncation observable independent of the trail). Features, hyper-parameters, shape (below_half_r, tau 0.10), action,
+    folds, embargo and lookback fixed at the champion''s.'
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#manifest.labels
+  attempt: 3
+  due_by: '2026-11-24'
+question: 'Same rows.jsonl, legs (trend_donchian BTC, trend_donchian_eth, trend_donchian_sol, 1h), 5 sequential folds, 7-day embargo, live
+  predicate and cost stack as 0bc8-02 / d5a7-06 (lookback 500); ONE LEVER CHANGED: the training target. For each label arm, does the paired
+  per-trade replayed R vs the holding_pays champion reach +0.01 R/trade with a deflated CI lower bound > 0?'
+why_this_matters: 'The head still closes trades on the demo floor (trend_donchian_eth, bybit_1) and its D8 slot has no other model in
+  iteration. It is a research orphan (no live iteration unit). If no target moves it either, the inputs, the universe AND the label are all
+  flat at power, and the subject goes to a family-review record instead of more trainer time; that is a decision either way.'
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.01
+  effect_units: r_multiple
+  sd: 0.11
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED basis from d5a7-06 (same rows, legs, folds): n_oos 11,160 and paired comp - champion SE 0.0010, so sd ~0.11 R per trade.
+    At n ~11,000 the SE is ~0.0010; at the deflated z 2.241 the half-width is ~0.0024, so a +0.01 R lift is detectable with room, and a
+    FAIL (CI upper < +0.01) is decisive. A label change moves MORE trades than a feature add (the firing set changes), so the paired sd may
+    rise; the first run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the existing trainer corpus (rows.jsonl) and resident 1h candles; nothing accrues.
+baseline:
+  definition: 'The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME
+    fold training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no
+    head) is reported as context.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-04-EXITHEAD-LABEL
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py: pooled over legs and folds, per OOS trade d_arm = replayed_r(arm) -
+    replayed_r(champion) on identical trades, replay and cost; per arm mean, SE (one trade = one cluster) and CI at z 2.241 (Bonferroni over
+    the 2 label arms). Reported: each arm and the champion vs hold, firing counts per arm, target coverage in rows.jsonl.'
+  rule: 'PASS iff some label arm has n_oos >= 300, mean d >= +0.01 R/trade AND deflated CI lower bound > 0 (chosen = the higher mean).
+    FAIL iff both arms have n_oos >= 300 and both deflated CI upper bounds < +0.01. INDETERMINATE otherwise (an arm below n, or between the
+    bars). An arm whose source column (future_r_delta / peak_is_in) is absent from rows.jsonl is could_not_look and makes the unit
+    INDETERMINATE, never FAIL. Thresholds, legs, folds (5), embargo (7 d), lookback (500), shape and arms are not changed after any result.'
+  pass_action: 'ONE confirmation on a held-out symbol (RESEARCH-NO-WAIT order 2: a donchian 1h leg not in the three, claimed in
+    holdout_lock), then a data-backed Tier-3 proposal to retrain exit-head-donchian-1h on the winning target.'
+  fail_action: 'Labels join features, universe and pooling as flat at power. File a family-review record for ml-exit-head-donchian-1h
+    (research/family_reviews/, family_retirement_policy.yaml, six protocol items); the manager takes the retire/keep call to the operator.
+    The head keeps its demo-floor data collection either way (off the trade path is not off the data path).'
+  min_n: 300 pooled OOS trades per arm; per fold MIN_FOLD_TEST_N test trades and the multifold training floor
+  what_it_does_not_do: 'Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result
+    under the head''s own judge, then a confirmation, then a Tier-3 proposal. Places no order; adds no gate.'
+practice_precedent: 'M1 (label what the decision is paid on; a trail-shaped label conflates the exit rule with the forecast), one-factor
+  ablation against a baseline control (docs/reference/trading-and-model-practice-principles.md)'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'every arm keeps the leg''s own entry, stop and trail; only the head''s close decision differs, replayed by the live
+    predicate'
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as
+      context only: hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_0
+    - more_mfe
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: one demo-floor leg acts on the head; the value is mainly the decision to retire or keep spending trainer time.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in
+    the trainer venv.
+  basis: 'ESTIMATE from d5a7-06 (3 arms, same corpus, ran in ~90 min on the trainer); 3 arms again, no kline fetch.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian/rows.jsonl
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261117-aadc-04
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: close or annotate on trend_donchian, trend_donchian_eth and trend_donchian_sol (exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261116-d5a7-06.yaml
+- research/queue/RQ-20261112-0bc8-02.yaml
+- research/queue/RQ-20261115-a474-03.yaml
+- scripts/research/volcomp_exit_head_bakeoff.py
+- scripts/ml/train_exit_head.py
+- scripts/ml/exit_head_replay.py
+last_dispatched_at: '2026-11-17T12:07:49+00:00'
+grading:
+  auto: false
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261117-aadc-04-EXITHEAD-LABEL
+  evidence:
+  - research/results/RQ-20261117-aadc-04/44070631985.jsonl
+  - comms/research/RQ-20261117-aadc-04/44070631985/measurement.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured (run 44070631985) -> INDETERMINATE by the registered rule: holding_pays_0 vs the champion +0.00687 R/trade, deflated CI [+0.00269, +0.01105], n 11,160 pooled OOS trades: the lower bound clears 0 but the mean is below the +0.01 pass bar (and the upper bound is above it, so not a fail). more_mfe is could_not_look: peak_is_in is absent from rows.jsonl (target_coverage 0.0, fired 0), which the rule makes INDETERMINATE, never FAIL. Context (z 1.96, not gating): vs HOLD the champion is -0.0135 R/trade [-0.042, +0.015] and holding_pays_0 -0.0067, so the exit head as labelled does not beat holding; the label change recovers about half the champion''s give-up. Iteration input: (1) more_mfe needs peak_is_in emitted by the exit-head row builder before it can be read; (2) holding_pays_0 is a real but sub-bar improvement over the champion while neither beats hold.'
+  rows: 1
+  verdict: indeterminate

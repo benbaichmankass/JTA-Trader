@@ -398,8 +398,33 @@ def _kind(tok: str) -> str:
     return ""
 
 
-def _tech_elements(cell: str) -> list[dict[str, Any]]:
+_VM_ONLY = ("runtime_logs/",)
+
+
+def _tech_state(root: Path | None, kind: str, tok: str, path: str, closure: set | None) -> tuple[str | None, str | None]:
+    """``(state, source)`` for a technical element where a real source exists, else ``(None, None)``
+    (rendered "—"). A module/config path is looked up on disk (and a module in the trader's import
+    closure, ``config/trader_import_closure.txt``); a service is looked up as a unit file under
+    ``deploy/``. ``missing`` is a real finding (the skeleton cites a path that is gone). Routes, stores,
+    bare names and VM-only paths have no repo source, so they stay null."""
+    if root is None:
+        return None, None
+    if kind in ("module", "config") and "/" in path and not path.startswith(_VM_ONLY) and (root / path.split("/")[0]).is_dir():
+        if not (root / path).exists():
+            return "missing", "repo tree"
+        if kind == "module" and closure is not None and not path.endswith("/"):
+            return ("in trader" if path in closure else "off trader"), "config/trader_import_closure.txt"
+        return "present", "repo tree"
+    if kind == "service":
+        name = tok if tok.endswith(".service") else tok + ".service"
+        found = (root / "deploy" / name).is_file() or (root / "deploy" / "trainer" / name).is_file()
+        return ("unit in repo" if found else "no unit file"), "deploy/*.service"
+    return None, None
+
+
+def _tech_elements(cell: str, root: Path | None = None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
+    closure = _closure(root) if root is not None else None
     seen: set = set()
     cur_dir = ""
     for m in _TICK.finditer(cell):
@@ -419,10 +444,11 @@ def _tech_elements(cell: str) -> list[dict[str, Any]]:
         if len(ctx) > 260:
             ctx = "…" + ctx[max(0, i - lo - 110): i - lo + 150].strip() + "…"
         path = tok.split("::")[0]
-        out.append({"id": f"t:{tok}", "kind": kind, "label": (path.rstrip("/").rsplit("/", 1)[-1] + ("/" if path.endswith("/") else "")) if kind == "module" else tok,
+        state, state_src = _tech_state(root, kind, tok, path, closure)
+        out.append({"id": f"t:{tok}", "kind": kind, "state": state, "label": (path.rstrip("/").rsplit("/", 1)[-1] + ("/" if path.endswith("/") else "")) if kind == "module" else tok,
                     "sub": tok if kind == "module" else None,
                     "path": path if kind in ("module", "config") and "/" in path else None,
-                    "text": ctx, "details": {}})
+                    "text": ctx, "details": {"state source": state_src} if state_src else {}})
     return out
 
 
@@ -432,7 +458,7 @@ def _rule_elements(cell: str) -> list[dict[str, Any]]:
     for i in range(1, len(parts) - 1, 2):
         text = re.sub(r"<!--.*?-->", "", parts[i + 1]).strip().rstrip(".")
         out.append({"id": f"r:{parts[i]}", "kind": "rule", "label": parts[i].strip(": "),
-                    "sub": None, "text": text, "details": {}})
+                    "sub": None, "state": None, "text": text, "details": {}})
     return out
 
 
@@ -501,13 +527,111 @@ def _mandate_elements(root: Path) -> list[dict[str, Any]]:
     for m in granted or []:
         if isinstance(m, dict):
             out.append({"id": f"mandate:{m.get('id')}", "kind": "mandate", "label": str(m.get("id")),
-                        "sub": m.get("kind"), "state": None, "text": m.get("grants"),
+                        "sub": m.get("kind"), "state": "auto-land" if m.get("autoland") else "granted",
+                        "text": m.get("grants"),
                         "details": {"kind": m.get("kind"), "granted": str(m.get("granted_at") or "")[:10] or None,
                                     "auto-land": "yes" if m.get("autoland") else None}})
     return out
 
 
-def parse_skeleton(skel: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _scope_ids(step: dict[str, Any]) -> None:
+    """Make every element id unique across the payload: ``step-N/<local id>`` (the local ids repeat across
+    steps, e.g. ``r:note``), with ``~2``, ``~3`` on a repeat inside one step. The id is opaque to the UI."""
+    seen: dict[str, int] = {}
+    for el in step["technical"] + step["trading"]:
+        base = f"{step['id']}/{el['id']}"
+        seen[base] = seen.get(base, 0) + 1
+        el["id"] = base if seen[base] == 1 else f"{base}~{seen[base]}"
+
+
+GROUP_SPLIT_OVER = 10   # a bucket larger than this is split one path segment deeper
+GROUP_MIN = 2           # a path bucket smaller than this folds into "other <kind>"
+
+
+def _bucket(el: dict[str, Any], technical: bool, depth: int = 2) -> str:
+    kind = el.get("kind") or "other"
+    if technical:
+        path = el.get("path") or ""
+        if kind in ("module", "config") and path:
+            return f"{kind}:" + "/".join(path.rstrip("/").split("/")[:depth])
+        return kind
+    if kind in ("leg", "account", "model", "mandate"):
+        return f"{kind}:{el.get('state') if el.get('state') is not None else DASH}"
+    return f"rule:{el['id']}"
+
+
+def group_elements(els: list[dict[str, Any]], *, technical: bool) -> list[dict[str, Any]]:
+    """Group one side of a step into a few labelled buckets (WORK-REORDER-ROUTE / PIPELINE-MAP-V2).
+
+    Technical: by kind; modules/configs by repo directory (2 path segments, one deeper where a bucket
+    exceeds ``GROUP_SPLIT_OVER``; a lone directory folds into ``other <kind>``). Trading: legs/accounts/
+    models/mandates by their state (status, mode, stage, mandate kind); rules stay singletons.
+    Each group: ``{id, label, kind, count, state_counts, element_ids}``; ``count`` is exact (the members
+    are never dropped), ``state_counts`` keys null as "—"."""
+    def split(items: list[dict[str, Any]], depth: int) -> dict[str, list[dict[str, Any]]]:
+        b: dict[str, list[dict[str, Any]]] = {}
+        for el in items:
+            b.setdefault(_bucket(el, technical, depth), []).append(el)
+        return b
+    buckets = split(els, 2)
+    if technical:
+        for key in [k for k, v in buckets.items() if len(v) > GROUP_SPLIT_OVER and ":" in k]:
+            members = buckets[key]
+            sub = split(members, 3)
+            if not any(len(v) >= GROUP_MIN for v in sub.values()):
+                continue   # a deeper split would only shatter it into single files
+            del buckets[key]
+            for k2, v2 in sub.items():
+                buckets.setdefault(k2, []).extend(v2)
+        for key in [k for k, v in buckets.items() if ":" in k and len(v) < GROUP_MIN]:
+            kind = key.split(":", 1)[0]
+            buckets.setdefault(f"{kind}:other", []).extend(buckets.pop(key))
+    out = []
+    for key, members in buckets.items():
+        kind = members[0].get("kind") or "other"
+        tail = key.split(":", 1)[1] if ":" in key else ""
+        if technical:
+            label = f"{kind}s · {tail}" if tail and tail != "other" else (f"other {kind}s" if tail == "other" else f"{kind}s")
+        elif kind == "rule":
+            label = members[0].get("label") or "rule"
+        else:
+            label = f"{kind}s · {tail}"
+        sc: dict[str, int] = {}
+        for el in members:
+            k = el.get("state") if el.get("state") is not None else DASH
+            sc[k] = sc.get(k, 0) + 1
+        out.append({"id": f"{members[0]['id'].split('/', 1)[0]}/grp:{'t' if technical else 'r'}:{key}", "label": label,
+                    "kind": kind, "count": len(members), "state_counts": sc,
+                    "element_ids": [m["id"] for m in members]})
+    return out
+
+
+def collapse_groups(structured: dict[str, Any]) -> dict[str, Any]:
+    """The deployed UI's shape with each multi-member group collapsed into ONE ``kind: "group"`` element
+    (members listed in ``details``, null states shown "—"); singletons pass through unchanged. Pure."""
+    steps = []
+    for st in structured.get("steps") or []:
+        new = dict(st)
+        for side in ("technical", "trading"):
+            by_id = {e["id"]: e for e in st[side]}
+            els: list[dict[str, Any]] = []
+            for g in st.get(f"{side}_groups") or []:
+                if g["count"] == 1:
+                    els.append(by_id[g["element_ids"][0]])
+                    continue
+                members = [by_id[i] for i in g["element_ids"]]
+                states = {m.get("state") for m in members}
+                els.append({"id": g["id"], "kind": "group", "label": g["label"], "sub": f"{g['count']} × {g['kind']}",
+                            "state": next(iter(states)) if len(states) == 1 else None, "text": None,
+                            "details": {m["label"]: (m.get("state") if m.get("state") is not None else DASH)
+                                        for m in members},
+                            "state_counts": g["state_counts"], "count": g["count"]})
+            new[side] = els
+        steps.append(new)
+    return {**structured, "steps": steps, "grouped": True}
+
+
+def parse_skeleton(skel: str, root: Path | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """(steps, loops) from the skeleton: ``## N · Title`` sections holding a TECHNICAL | TRADING row, and the
     dashed edges of the mermaid flow (a node label ``N · Name`` ties a letter to a step number)."""
     nodes: dict[str, int] = {}
@@ -528,17 +652,17 @@ def parse_skeleton(skel: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]
         if len(cells) < 2:
             continue
         n = int(h.group(1))
-        rules = _rule_elements(cells[1]) or [{"id": "r:note", "kind": "rule", "label": "How it works here", "sub": None,
+        rules = _rule_elements(cells[1]) or [{"id": "r:note", "kind": "rule", "label": "How it works here", "sub": None, "state": None,
                                               "text": re.sub(r"<!--.*?-->", "", cells[1]).strip(), "details": {}}]
         steps.append({"id": f"step-{n}", "n": n, "name": h.group(2).split(":")[0].strip(), "title": h.group(2).strip(),
-                      "technical": _tech_elements(cells[0]), "trading": rules,
+                      "technical": _tech_elements(cells[0], root), "trading": rules,
                       "technical_text": cells[0].strip(), "trading_text": cells[1].replace("\\|", "|").strip()})
     return steps, loops
 
 
 def build_structured(root: Path = REPO, *, live: dict[str, Any] | None = None, live_state: str = "not read") -> dict[str, Any]:
     """The map as data: ordered steps (technical left, trading right) plus side loops. A bad source reads "—"."""
-    steps, loops = parse_skeleton((root / SKELETON_REL).read_text(encoding="utf-8"))
+    steps, loops = parse_skeleton((root / SKELETON_REL).read_text(encoding="utf-8"), root)
     ctx: dict[str, Any] = {"live": live, "live_state": live_state}
     makers: dict[str, Callable[[], list[dict[str, Any]]]] = {
         "legs": lambda: _leg_elements(root, ctx), "ml": lambda: _ml_elements(root),
@@ -552,4 +676,7 @@ def build_structured(root: Path = REPO, *, live: dict[str, Any] | None = None, l
             except Exception as e:  # noqa: BLE001  # allow-silent: not silent -- the step's read_state names the failure
                 els, st["read_state"][src] = [], f"unreadable ({type(e).__name__})"
             st["trading"] += els
+        _scope_ids(st)
+        st["technical_groups"] = group_elements(st["technical"], technical=True)
+        st["trading_groups"] = group_elements(st["trading"], technical=False)
     return {"steps": steps, "loops": loops, "live_state": live_state}

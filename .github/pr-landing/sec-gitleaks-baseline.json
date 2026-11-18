@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "changes what a security detector reports: .gitleaks.toml allowlists rule generic-api-key ONLY for comms/research/ and research/results/ (every vendor rule still scans them) and .gitleaks-baseline.json gains 7 reviewed fingerprints; also edits .github/workflows/pytest-run.yml (adds .gitleaks.toml to its trigger filter, test_pytest_run_filter demanded it). Manager approved both changes 2026-11-16; the manager merges.",
+  "why": "SEC-GITLEAKS-BASELINE-1116: gitleaks-history-weekly was red every Monday since 2026-11-02 on 387 generic-api-key findings (384 research-artifact *_sha256 hashes/ids, 3 hash/test-constant/prose rows), 0 vendor-rule hits. Triage, population and the proof that a planted vendor token under comms/research/ is still caught are in docs/security/gitleaks-baseline.md and tests/test_gitleaks_baseline.py."
+}

@@ -6,6 +6,24 @@ Machine tree: [`research/programmes/08-alpaca-live-book.yaml`](../../../research
 
 **Gates this adds or changes: none.** Nothing here changes what trades. Foxhound-4 stays live until a challenger clears § 5.
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — MODEL / TRADING (real money)
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P8 in the window:** 5 units with rows (2 fail, 3 producer_failed).
+
+**What was learned:** almost nothing, and the reason is a defect. The live-book baseline (207f-01) and the challenger screen (207f-04) never produced a verdict: alpaca_live_book.py's verdict.json had no top-level `n`, so every run since 2026-11-13 was recorded producer_failed. 207f-02/-03 were graded by hand, which hid the defect. The one belief from 207f-03 stands: the net-R model ranks **cost per R, not direction** (IC vs long cost -0.527; ATR-neutral IC vs raw return -0.013, t -0.95).
+
+**Act:** producer fixed (self-test 0 failures); 207f-01, 207f-04 and c21d-06 (the ATR-neutral target P8-Q3-fail asked for) re-armed. P8-Q3-fail is closed as authored. P8-Q5-features and P8-Q8-horizon are blocked until 207f-01 grades and c21d-06 says whether the label changes.
+
+**Next 3–4 weeks**
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | 207f-01 baseline (re-armed) | the bar every P8 candidate must beat | Q4-h2h / Q5 / Q8 authorable | Foxhound-4's edge does not survive the account, so the challenger screen comes first | runner ~3 h | a second producer defect (only the self-test ran here) |
+| 2 | 207f-04 challenger screen (re-armed) | which rostered equity legs earn on the cash book | P8-Q4-h2h | no challenger qualifies | runner ~3 h | n_taken < 30 per leg on one slot |
+| 3 | c21d-06 ATR-neutral target | Foxhound-4's training label | features / horizon on the new label | this target configuration closed (FAIL); the label lever stays open | runner ~4 h | no direction edge on the pool |
+| 4 | P8-Q7-rotation | a challenger built for a one-slot cash book | Stage-0 then head-to-head | — | harness build (new-strategy lane) | dual momentum on a small list is a known, crowded bet |
+
 ## 0. The ask
 
 Operator, 2026-11-11 ~22:40Z, verbatim: *"what's the research and iteration plan for that Alpaca Live strategy so that we can try and get something that's going to work better on that account? Like, it's good that we have this live, and we should keep it that way until we find something better, but we need to make sure we have a plan for finding something better."*

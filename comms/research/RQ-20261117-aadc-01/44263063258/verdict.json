@@ -1,0 +1,366 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1111,
+ "population": "distinct bars where the live regime_ml_vol_shadow row of the head's own model_id carried a calm/volatile label and matched a replayed bar within 2 bars; primary BTCUSDT",
+ "note": "BTCUSDT btc-regime-15m-lgbm-fc-pcv-v2: fail (bars 1111, alignment None); SOLUSDT sol-regime-15m-lgbm-fc-pcv-v2: fail (bars 676, alignment None); MES mes-regime-5m-lgbm-v2: indeterminate (bars 23, alignment None); ETHUSDT eth-regime-1h-lgbm-xasset-v1: not_applicable",
+ "thresholds": {
+  "min_bars": 100,
+  "min_agreement": 0.9,
+  "min_kappa": 0.6,
+  "max_median_dp": 0.1
+ },
+ "measurement": {
+  "heads": [
+   {
+    "symbol": "BTCUSDT",
+    "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+    "dataset": "datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl",
+    "audit": "comms/live_parity/vol_label_audit_20261117/BTCUSDT.jsonl",
+    "replay": {
+     "labelled": 175272,
+     "counts": {
+      "calm": 161626,
+      "volatile": 13646,
+      "unknown": 0
+     },
+     "volatile_pct": 7.79,
+     "ts_first": "2021-11-18T04:45:00Z",
+     "ts_last": "2026-11-17T22:30:00Z",
+     "threshold": 0.5,
+     "head": {
+      "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+      "symbol": "BTCUSDT",
+      "timeframe": "15m",
+      "stage": "advisory",
+      "resolution": "explicit_model_id"
+     },
+     "feature_audit_ok": true
+    },
+    "verdict": "fail",
+    "read_state": "measured",
+    "alignment_used": null,
+    "alignments": {
+     "asof": {
+      "alignment": "asof",
+      "bar_seconds": 900.0,
+      "counts": {
+       "audit_rows": 2619,
+       "other_model": 405,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 0,
+       "replayed_unknown": 0,
+       "matched_rows": 2214
+      },
+      "live_label_conflicts_within_bar": 61,
+      "bars": 1111,
+      "confusion": {
+       "live_vol_replay_vol": 11,
+       "live_calm_replay_calm": 1029,
+       "live_calm_replay_vol": 45,
+       "live_vol_replay_calm": 26
+      },
+      "live_volatile_share": 0.0333,
+      "replay_volatile_share": 0.0504,
+      "agreement": 0.9361,
+      "kappa": 0.2047,
+      "median_dp": 0.013427,
+      "p90_dp": 0.252188,
+      "dp_n": 1111
+     },
+     "prev_bar": {
+      "alignment": "prev_bar",
+      "bar_seconds": 900.0,
+      "counts": {
+       "audit_rows": 2619,
+       "other_model": 405,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 0,
+       "replayed_unknown": 0,
+       "matched_rows": 2214
+      },
+      "live_label_conflicts_within_bar": 61,
+      "bars": 1111,
+      "confusion": {
+       "live_vol_replay_vol": 13,
+       "live_calm_replay_calm": 1028,
+       "live_calm_replay_vol": 46,
+       "live_vol_replay_calm": 24
+      },
+      "live_volatile_share": 0.0333,
+      "replay_volatile_share": 0.0531,
+      "agreement": 0.937,
+      "kappa": 0.2397,
+      "median_dp": 0.01205,
+      "p90_dp": 0.27173,
+      "dp_n": 1111
+     }
+    },
+    "n": 1111
+   },
+   {
+    "symbol": "SOLUSDT",
+    "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+    "dataset": "datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl",
+    "audit": "comms/live_parity/vol_label_audit_20261117/SOLUSDT.jsonl",
+    "replay": {
+     "labelled": 175272,
+     "counts": {
+      "calm": 91329,
+      "volatile": 83943,
+      "unknown": 0
+     },
+     "volatile_pct": 47.89,
+     "ts_first": "2021-11-18T04:45:00Z",
+     "ts_last": "2026-11-17T22:30:00Z",
+     "threshold": 0.5,
+     "head": {
+      "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+      "symbol": "SOLUSDT",
+      "timeframe": "15m",
+      "stage": "advisory",
+      "resolution": "explicit_model_id"
+     },
+     "feature_audit_ok": true
+    },
+    "verdict": "fail",
+    "read_state": "measured",
+    "alignment_used": null,
+    "alignments": {
+     "asof": {
+      "alignment": "asof",
+      "bar_seconds": 900.0,
+      "counts": {
+       "audit_rows": 1737,
+       "other_model": 196,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 0,
+       "replayed_unknown": 0,
+       "matched_rows": 1541
+      },
+      "live_label_conflicts_within_bar": 69,
+      "bars": 676,
+      "confusion": {
+       "live_vol_replay_vol": 155,
+       "live_calm_replay_calm": 341,
+       "live_calm_replay_vol": 62,
+       "live_vol_replay_calm": 118
+      },
+      "live_volatile_share": 0.4038,
+      "replay_volatile_share": 0.321,
+      "agreement": 0.7337,
+      "kappa": 0.4281,
+      "median_dp": 0.129353,
+      "p90_dp": 0.472847,
+      "dp_n": 676
+     },
+     "prev_bar": {
+      "alignment": "prev_bar",
+      "bar_seconds": 900.0,
+      "counts": {
+       "audit_rows": 1737,
+       "other_model": 196,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 0,
+       "replayed_unknown": 0,
+       "matched_rows": 1541
+      },
+      "live_label_conflicts_within_bar": 69,
+      "bars": 676,
+      "confusion": {
+       "live_vol_replay_vol": 172,
+       "live_calm_replay_calm": 349,
+       "live_calm_replay_vol": 54,
+       "live_vol_replay_calm": 101
+      },
+      "live_volatile_share": 0.4038,
+      "replay_volatile_share": 0.3343,
+      "agreement": 0.7707,
+      "kappa": 0.5102,
+      "median_dp": 0.118625,
+      "p90_dp": 0.456986,
+      "dp_n": 676
+     }
+    },
+    "n": 676
+   },
+   {
+    "symbol": "MES",
+    "model_id": "mes-regime-5m-lgbm-v2",
+    "dataset": "datasets-out/market_features/MES/5m/v002/data.jsonl",
+    "audit": "comms/live_parity/vol_label_audit_20261117/MES.jsonl",
+    "replay": {
+     "labelled": 52239,
+     "counts": {
+      "calm": 42219,
+      "volatile": 10020,
+      "unknown": 0
+     },
+     "volatile_pct": 19.18,
+     "ts_first": "2025-11-17T21:10:00Z",
+     "ts_last": "2026-11-16T23:30:00Z",
+     "threshold": 0.5,
+     "head": {
+      "model_id": "mes-regime-5m-lgbm-v2",
+      "symbol": "MES",
+      "timeframe": "5m",
+      "stage": "advisory",
+      "resolution": "explicit_model_id"
+     },
+     "feature_audit_ok": true
+    },
+    "verdict": "indeterminate",
+    "read_state": "measured",
+    "alignment_used": null,
+    "alignments": {
+     "asof": {
+      "alignment": "asof",
+      "bar_seconds": 300.0,
+      "counts": {
+       "audit_rows": 24,
+       "other_model": 1,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 0,
+       "replayed_unknown": 0,
+       "matched_rows": 23
+      },
+      "live_label_conflicts_within_bar": 0,
+      "bars": 23,
+      "confusion": {
+       "live_vol_replay_vol": 4,
+       "live_calm_replay_calm": 12,
+       "live_calm_replay_vol": 3,
+       "live_vol_replay_calm": 4
+      },
+      "live_volatile_share": 0.3478,
+      "replay_volatile_share": 0.3043,
+      "agreement": 0.6957,
+      "kappa": 0.309,
+      "median_dp": 0.187258,
+      "p90_dp": 0.284667,
+      "dp_n": 23
+     },
+     "prev_bar": {
+      "alignment": "prev_bar",
+      "bar_seconds": 300.0,
+      "counts": {
+       "audit_rows": 24,
+       "other_model": 1,
+       "no_live_label": 0,
+       "no_bar": 0,
+       "after_labels_end": 0,
+       "stale": 1,
+       "replayed_unknown": 0,
+       "matched_rows": 22
+      },
+      "live_label_conflicts_within_bar": 0,
+      "bars": 22,
+      "confusion": {
+       "live_vol_replay_vol": 5,
+       "live_calm_replay_calm": 12,
+       "live_calm_replay_vol": 2,
+       "live_vol_replay_calm": 3
+      },
+      "live_volatile_share": 0.3636,
+      "replay_volatile_share": 0.3182,
+      "agreement": 0.7727,
+      "kappa": 0.4954,
+      "median_dp": 0.123744,
+      "p90_dp": 0.284667,
+      "dp_n": 22
+     }
+    },
+    "n": 23
+   },
+   {
+    "symbol": "ETHUSDT",
+    "model_id": "eth-regime-1h-lgbm-xasset-v1",
+    "dataset": "datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl",
+    "audit": null,
+    "replay": {
+     "labelled": 43800,
+     "counts": {
+      "calm": 13576,
+      "volatile": 30224,
+      "unknown": 0
+     },
+     "volatile_pct": 69.0,
+     "ts_first": "2021-11-18T19:00:00Z",
+     "ts_last": "2026-11-17T18:00:00Z",
+     "threshold": 0.5,
+     "head": {
+      "model_id": "eth-regime-1h-lgbm-xasset-v1",
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "stage": "shadow",
+      "resolution": "explicit_model_id"
+     },
+     "feature_audit_ok": true
+    },
+    "verdict": "not_applicable",
+    "read_state": "no_data",
+    "n": null,
+    "note": "replay only: no live labelled audit rows exist for this head (shadow stage), so nothing to verify against"
+   }
+  ],
+  "thresholds": {
+   "min_bars": 100,
+   "min_agreement": 0.9,
+   "min_kappa": 0.6,
+   "max_median_dp": 0.1
+  }
+ },
+ "records": [
+  {
+   "verdict": "fail",
+   "read_state": "measured",
+   "population": "BTCUSDT btc-regime-15m-lgbm-fc-pcv-v2 live-vs-replay bars",
+   "n": 1111,
+   "note": "alignment None",
+   "symbol": "BTCUSDT",
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2"
+  },
+  {
+   "verdict": "fail",
+   "read_state": "measured",
+   "population": "SOLUSDT sol-regime-15m-lgbm-fc-pcv-v2 live-vs-replay bars",
+   "n": 676,
+   "note": "alignment None",
+   "symbol": "SOLUSDT",
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v2"
+  },
+  {
+   "verdict": "indeterminate",
+   "read_state": "measured",
+   "population": "MES mes-regime-5m-lgbm-v2 live-vs-replay bars",
+   "n": 23,
+   "note": "alignment None",
+   "symbol": "MES",
+   "model_id": "mes-regime-5m-lgbm-v2"
+  },
+  {
+   "verdict": "not_applicable",
+   "read_state": "no_data",
+   "population": "ETHUSDT eth-regime-1h-lgbm-xasset-v1 live-vs-replay bars",
+   "n": null,
+   "note": "replay only: no live labelled audit rows exist for this head (shadow stage), so nothing to verify against",
+   "symbol": "ETHUSDT",
+   "model_id": "eth-regime-1h-lgbm-xasset-v1"
+  }
+ ],
+ "data_inputs": [
+  "comms/live_parity/vol_label_audit_20261117/BTCUSDT.jsonl",
+  "comms/live_parity/vol_label_audit_20261117/SOLUSDT.jsonl",
+  "comms/live_parity/vol_label_audit_20261117/MES.jsonl"
+ ]
+}

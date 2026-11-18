@@ -47,6 +47,10 @@ _RATE_LIMIT_MAX_RETRIES = 20  # x 30s = 10 min ceiling per fetch, then raise
 # USDT-margined perps; prices track within a few bps — fine as a discovery
 # substrate). See BL-20260727-BYBIT-USGEOBLOCK-GHRUNNER.
 _BINANCE_VISION_BASE = "https://data.binance.vision/data/futures/um"
+#: Binance-vision archive roots by market. "um" (USD-M perps, the default every live leg trades) starts
+#: 2019-12; "spot" reaches back to 2017 and is a PROXY for the perp (same symbol, no funding in price),
+#: used only where a caller labels it so (PI-20261029-XME2GXW7-0003, RQ-20261029-5785-05).
+_BINANCE_VISION_BASES = {"um": _BINANCE_VISION_BASE, "spot": "https://data.binance.vision/data/spot"}
 # Bybit interval code (what this script + the workflow speak) -> Binance label.
 _BYBIT_TO_BINANCE_INTERVAL = {
     "1": "1m", "3": "3m", "5": "5m", "15": "15m", "30": "30m",
@@ -272,8 +276,12 @@ def fetch_klines_binance_vision(
     interval: str,
     start_ms: int,
     end_ms: int,
+    market: str = "um",
 ) -> list[dict]:
     """Fetch klines from Binance's public data archive (globally reachable).
+
+    ``market`` picks the archive: "um" (USD-M perps, default) or "spot" (a perp proxy, see
+    ``_BINANCE_VISION_BASES``).
 
     Prefers monthly aggregate zips; falls back to per-day zips for any month
     the monthly file doesn't cover yet (the current, still-accumulating month).
@@ -282,15 +290,27 @@ def fetch_klines_binance_vision(
     binterval = _BYBIT_TO_BINANCE_INTERVAL.get(interval)
     if binterval is None:
         raise RuntimeError(f"no Binance-vision interval mapping for {interval!r}")
+    base = _BINANCE_VISION_BASES.get(market)
+    if base is None:
+        raise ValueError(f"unknown Binance-vision market {market!r}; expected one of {sorted(_BINANCE_VISION_BASES)}")
 
     start_dt = datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc)
     end_dt = datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc)
     rows: list[dict] = []
     seen_ms: set[int] = set()
 
+    # Spot only: the 2017-2018 spot archive carries bars stamped off the interval grid (ETHUSDT 1h on 2018-02-09
+    # opens at :28:14.800 for 43 bars, an exchange-outage artefact). They break the harness's bar alignment and mixed
+    # the CSV's timestamp format (RQ-20261029-5785-05 run 43758915452). Drop them and say how many. Perps are untouched.
+    grid_ms = _interval_ms(interval) if market == "spot" and not interval.strip().upper().endswith(("D", "W")) else None
+    off_grid: list[int] = []
+
     def _absorb(batch: list[dict]) -> None:
         for r in batch:
             ms = r["_ts_ms"]
+            if grid_ms and ms % grid_ms:
+                off_grid.append(ms)
+                continue
             if start_ms <= ms < end_ms and ms not in seen_ms:
                 seen_ms.add(ms)
                 rows.append(r)
@@ -298,7 +318,7 @@ def fetch_klines_binance_vision(
     for year, month in _months_in_range(start_dt, end_dt):
         ym = f"{year:04d}-{month:02d}"
         monthly = (
-            f"{_BINANCE_VISION_BASE}/monthly/klines/{symbol}/{binterval}/"
+            f"{base}/monthly/klines/{symbol}/{binterval}/"
             f"{symbol}-{binterval}-{ym}.zip"
         )
         batch = _download_vision_zip(monthly)
@@ -313,7 +333,7 @@ def fetch_klines_binance_vision(
         while day.month == month and day <= end_dt:
             ds = day.strftime("%Y-%m-%d")
             daily = (
-                f"{_BINANCE_VISION_BASE}/daily/klines/{symbol}/{binterval}/"
+                f"{base}/daily/klines/{symbol}/{binterval}/"
                 f"{symbol}-{binterval}-{ds}.zip"
             )
             dbatch = _download_vision_zip(daily)
@@ -325,6 +345,9 @@ def fetch_klines_binance_vision(
             print(f"  vision daily {ym}: {len(rows)} bars kept so far",
                   file=sys.stderr)
 
+    if off_grid:
+        print(f"  vision {market}: dropped {len(off_grid)} off-grid bar(s) (first "
+              f"{datetime.fromtimestamp(min(off_grid) / 1000, tz=timezone.utc).isoformat()})", file=sys.stderr)
     rows.sort(key=lambda r: r["_ts_ms"])
     for r in rows:
         r.pop("_ts_ms", None)
@@ -750,6 +773,13 @@ def main(argv: list[str]) -> int:
         help="Output CSV path (default: data/backtest_candles.csv or BACKTEST_DATA_PATH)",
     )
     parser.add_argument(
+        "--vision-market",
+        choices=sorted(_BINANCE_VISION_BASES),
+        default="um",
+        help="Binance-vision archive: 'um' (USD-M perps, default) or 'spot' (perp PROXY back to 2017; "
+             "only with --source binance_vision, so it can never ride the auto chain silently).",
+    )
+    parser.add_argument(
         "--source",
         choices=["auto", "bybit", "binance_vision", "yfinance", "dukascopy"],
         default=os.environ.get("BACKTEST_FEED_SOURCE", "auto"),
@@ -769,6 +799,8 @@ def main(argv: list[str]) -> int:
         ),
     )
     args = parser.parse_args(argv[1:])
+    if args.vision_market != "um" and args.source != "binance_vision":
+        parser.error("--vision-market spot needs --source binance_vision")
 
     now_utc = datetime.now(tz=timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -862,7 +894,7 @@ def main(argv: list[str]) -> int:
     if not rows and args.source in ("auto", "binance_vision"):
         try:
             rows = fetch_klines_binance_vision(
-                args.symbol, args.interval, start_ms, end_ms
+                args.symbol, args.interval, start_ms, end_ms, market=args.vision_market
             )
         except Exception as exc:
             sys.stderr.write(f"Binance-vision fetch failed: {exc}\n")

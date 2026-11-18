@@ -1477,8 +1477,11 @@ strategies:
     # known open item, NOT a sanctioned pattern: owner row ML-UNIVERSE-RULE. Removing it is a Tier-3 FIELD change; do
     # not extend it on precedent. (Comment added 2026-11-12, lane DEMOTION-NOT-BAN; no field changed.)
     account_symbols:
-      bybit_2: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
-      bybit_portfolio: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
+      # 2026-11-12 ML-ENTRY-POPULATION-TEST (Tier 3): bybit_2 / bybit_portfolio are NO LONGER on this map. They trade the
+      # population record comms/ml_universe/ml_entry.json on venue bybit (src/config/ml_universe.py): the c692-06 pooled pass
+      # (BTC/ETH/XRP/ADA/SOL, unchanged). The registered population test RQ-20261112-2e3b-01 (51 Bybit USDT perps, each its own
+      # costs, filter fixed pre-run) FAILED: pooled -0.0680 R/decision, n=12,746 (research/results/RQ-20261112-2e3b-01/), so
+      # nothing widens (canonical rule point 4). Still on this map: the prop books (prop superset gate) and alpaca_paper.
       # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books trade the ETH+SOL slice (the population comms/prop_survival/ml_entry.json scored; the venue routing
       # files also list BTC/ADA/XRP for some firms, unconfirmed in-terminal). Other symbols drop with the named exclusion leg_account_scope. Widening = one line.
       # breakout_2 removed 2026-11-12: account ON ICE (operator), roster emptied in accounts.yaml.
@@ -1570,14 +1573,22 @@ strategies:
     pool_exclude:
       TQQQ: "tqqq_trend_long_1d owns TQQQ's net position on alpaca_live + its mirror; no slice support (same-symbol-allocation-guard)"
       GLD: "the operator-kept zombie OCO (PI-20261025-ALQWWPXT-0001), as ml_entry / ml_entry_eq"
+      USO: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      UCO: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      UNG: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      XLE: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      XOP: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      OIH: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      GUSH: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      AMLP: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
+      NFX: "fossil fuels not traded with real money (operator 2026-11-17 \"In general, I ask that we not trade fossil fuels.\", standing rule 2026-08-29; config/values_exclusions.yaml fossil_fuels). Paper keeps it for data."
     symbols: [
-      AAXJ, ACWI, ACWX, AGG, AMLP, ASHR, BIL, BIV, BKLN, BND, BNDX, BSV, DGRO, DIA, DUST, DVY, EEM, EFA, EFAV, EMB, EMLC, EWC, EWG, EWH, EWJ, EWT,
-      EWU, EWW, EWY, EWZ, EZU, FAS, FB, FDN, FEZ, FLOT, FXI, GDX, GDXJ, GOVT, GUSH, HYG, IAU, IBB, IEF, IEFA, IEI, IEMG, IGIB, IGSB, IGV, IJH, IJR,
+      AAXJ, ACWI, ACWX, AGG, ASHR, BIL, BIV, BKLN, BND, BNDX, BSV, DGRO, DIA, DUST, DVY, EEM, EFA, EFAV, EMB, EMLC, EWC, EWG, EWH, EWJ, EWT,
+      EWU, EWW, EWY, EWZ, EZU, FAS, FB, FDN, FEZ, FLOT, FXI, GDX, GDXJ, GOVT, HYG, IAU, IBB, IEF, IEFA, IEI, IEMG, IGIB, IGSB, IGV, IJH, IJR,
       INDA, INFO, ITB, ITOT, IVE, IVV, IVW, IWB, IWD, IWF, IWM, IWN, IWO, IWR, IXUS, IYR, JDST, JNK, JNUG, JPST, KBE, KRE, KWEB, LABU, LQD, MBB,
-      MCHI, MDY, MINT, MTUM, MUB, NFX, NUGT, OIH, PFF, PSQ, QID, QLD, QQQ, QUAL, RSP, SCHB, SCHD, SCHF, SCHX, SCZ, SDOW, SDS, SDY, SH, SHV, SHY, SIX,
-      SJNK, SLV, SMH, SOXL, SOXS, SOXX, SPLV, SPXL, SPXS, SPXU, SPY, SPYG, SQQQ, SSO, SVXY, TECL, TIP, TLT, TNA, TZA, UCO, UDOW, ULTI, UN, UNG, UPRO,
-      USMV, USO, UVXY, VB, VCIT, VCSH, VEA, VEU, VGK, VGSH, VGT, VIG, VIXY, VNQ, VO, VOO, VT, VTI, VTV, VUG, VWO, VXUS, VYM, XBI, XHB, XLB, XLC, XLE,
-      XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, XME, XOP, XRT]
+      MCHI, MDY, MINT, MTUM, MUB, NUGT, PFF, PSQ, QID, QLD, QQQ, QUAL, RSP, SCHB, SCHD, SCHF, SCHX, SCZ, SDOW, SDS, SDY, SH, SHV, SHY, SIX,
+      SJNK, SLV, SMH, SOXL, SOXS, SOXX, SPLV, SPXL, SPXS, SPXU, SPY, SPYG, SQQQ, SSO, SVXY, TECL, TIP, TLT, TNA, TZA, UDOW, ULTI, UN, UPRO,
+      USMV, UVXY, VB, VCIT, VCSH, VEA, VEU, VGK, VGSH, VGT, VIG, VIXY, VNQ, VO, VOO, VT, VTI, VTV, VUG, VWO, VXUS, VYM, XBI, XHB, XLB, XLC, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, XME, XRT]
     atr_period: 14
     atr_stop_mult: 2.0
     tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored
@@ -1633,16 +1644,20 @@ strategies:
     tp_revision:
       rule: donchian_measured_move
       width_mult: 0.5
-    tp_r: 50.0
+    # tp_r 50.0 sentinel -> 4.0 (Tier-3, lane ETH4H-TP4-PROP, row RM-AM-ETH4H-ENTRYTP; TP doctrine clause 1).
+    #   Entry TP only: the declared tp_revision (measured move) above is KEPT and still moves the TP after entry;
+    #   open positions carry their own package meta and are unaffected. Applies to every account rostering the leg.
+    #   Evidence: RQ-20261114-db1a-08 PASS (rule RULE-ETH4H-TP4-NONINF-20261114, closed bar, record + prior year).
+    #   Prop superset RQ-20261114-db1a-09 (seeds 1-5; breakout_2/tradeify_1/velotrade_1) and -13 (seeds 6-10;
+    #   tradeify_1/velotrade_1): EV higher in every cell, but the p_breach non-inferiority clause FAILED narrowly
+    #   (db1a-09 breakout_2 0.5166 vs 0.5016; db1a-13 one firm 0.255 vs 0.251). ACCEPTED by the operator.
+    #   decision: 2026-11-15 operator-chat "We can go with the higher reward, higher risk option on that."
+    #   ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none, reason: trail_is_the_profit_exit, ...}` (git history).
+    tp_r: 4.0
     tp_intent:
-      mode: none
-      # DELIBERATE: the trail is the sole profit-exit. Stated in the unit docstring
-      # (trend_donchian.py:25 / htf_pullback_trend_2h.py "NOT a tight target"), never
-      # in config — which is why 50.0 read as an omission rather than as a decision.
-      # The 50R value is retained ONLY so the venue rests an exchange-valid order at
-      # 9.9%; it is NOT a prediction and must never be read as one.
-      reason: trail_is_the_profit_exit
-      evidence: no_gate_passing_timeout_free_tp_cell   # e35 corpus, leg's latest sweep
+      mode: r_multiple
+      basis: RQ-20261114-db1a-08_noninferior_4R_closed_bar
+      calibrated: false          # non-inferiority vs the sentinel, not a calibrated reach curve; revisit with a tp_prediction_derive pool
     min_confidence: 0.60
     # shadow_model_ids OMITTED (soak-everything, symbol-aware auto-wire): ETHUSDT
     # signals auto-wire the symbol-agnostic decision/meta models; the symbol

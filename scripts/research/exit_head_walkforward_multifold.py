@@ -195,16 +195,15 @@ def main(argv: List[str]) -> int:
         booster = teh.train_model(train_rows)
         artifact = {"features": teh.FEATURES, "shape": SHAPE}
 
-        # This BINARY LightGBM booster (train_model() above trains on the
-        # binary target `holding_pays` via lgb.LGBMClassifier) exports a raw
-        # lgb.Booster; on a binary objective, Booster.predict() returns the
-        # positive-class probability, never a class label or a multiclass
-        # max — there is no multiclass head in this family. Interpreted by
-        # would_exit_for per SHAPE, matching exit_head_replay.py's own
-        # identical closure.
+        # CORRECTED 2026-11-18 (lane ML-PRIMARY-6): train_model() returns an
+        # sklearn LGBMClassifier, NOT a raw lgb.Booster, so the former
+        # `.predict(vec)[0]` here was the CLASS LABEL (0/1). Against the live
+        # tau 0.10 that fired whenever P < 0.5 -- a different policy from the
+        # served artifact. Scores now use predict_proba(vec)[0][1]
+        # (P(class=1)), interpreted by would_exit_for per SHAPE as live does.
         def predict(vec, _booster=booster):
-            # provenance: predict — the head's RAW score, P(class=1) for this binary booster (see above)
-            return float(_booster.predict(vec)[0])
+            # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) for this binary booster (see above)
+            return float(_booster.predict_proba(vec)[0][1])  # P(class=1); .predict would be the 0/1 class label
 
         records = [replay_trade(df, t, artifact, predict, ACTION) for t in test_trades]
         baseline_r = sum(r["baseline_r"] for r in records)

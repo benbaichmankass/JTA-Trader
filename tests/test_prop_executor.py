@@ -3124,6 +3124,19 @@ def test_close_modal_and_row_fact_helpers_are_pure():
     assert _close_modal_mismatch({"ok": False, "why": "no modal"}, "SOLUSD", "long", 0.01) == ["no modal"]
     # without the caller's size, the input must still equal the caption's total
     assert _close_modal_mismatch({**ok, "lots": "0.005"}, "SOLUSD", "long", None) == ["lots-to-close 0.005 != the position size 0.01"]
+    # PROP-CLOSE-MODAL-SLASH (2026-11-15): the live heading names the pair with a slash. tradeify_1 SOLUSD 14.13
+    # was refused on every tick ("heading 'Close SOL/USD Buy Position' does not name SOLUSD") and stayed open.
+    live = {**ok, "heading": "Close SOL/USD Buy Position", "lots": "14.13", "caption": ["14.13", "14.13"]}
+    assert _close_modal_mismatch(live, "SOLUSD", "long", 14.13) == []
+    assert _close_modal_mismatch({**live, "heading": "Close ETH/USD Sell Position"}, "ETHUSD", "short", 14.13) == []
+    # still refused: another pair, or our pair on the wrong side
+    assert _close_modal_mismatch({**live, "heading": "Close ETH/USD Buy Position"}, "SOLUSD", "long", 14.13) == [
+        "heading 'Close ETH/USD Buy Position' does not name SOLUSD"]
+    assert _close_modal_mismatch(live, "SOLUSD", "short", 14.13) == [
+        "heading 'Close SOL/USD Buy Position' does not name our side (sell)"]
+    # only "/" is dropped: words never run together ("SOL USD" is not SOLUSD)
+    assert _close_modal_mismatch({**live, "heading": "Close SOL USD Buy Position"}, "SOLUSD", "long", 14.13) == [
+        "heading 'Close SOL USD Buy Position' does not name SOLUSD"]
     facts = {"side": "Buy", "size": "0.01", "fill": "118.94"}
     assert _row_facts_mismatch(facts, "long", 0.01, 118.94) == []
     assert _row_facts_mismatch(facts, None, None, None) == []

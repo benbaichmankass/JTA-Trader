@@ -5,7 +5,7 @@ id: RQ-20261115-a474-03
 title: 'Exit head VARIANT, pooled donchian-4h family: selected on the POOLED discovery span of trend_donchian_eth/sol/xrp/ada/avax_4h
   (each at its own declared exit), does the head beat trend_donchian_eth_4h''s CURRENT declared exit on its held-out span, net of the
   full cost stack, and beat a matched random truncation?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -146,3 +146,16 @@ related:
 - MLP-D8-LABRADOR-2
 follow_up: 'ML-PRIMARY-2 grades on landing, updates MLP-D8-LABRADOR-2 and closes PI-20261104-NHN7JV7U-0001, reports to the manager.'
 last_dispatched_at: '2026-11-15T09:20:24+00:00'
+grading:
+  attested: RULE-RQ20261115-a474-03-POOLED-EXITHEAD
+  auto: true
+  decision_rule_id: RULE-RQ20261115-a474-03-POOLED-EXITHEAD
+  evidence:
+  - research/results/RQ-20261115-a474-03/43698788477.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

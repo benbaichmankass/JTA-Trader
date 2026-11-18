@@ -374,7 +374,14 @@ lines:
     - {lever: 'market-residual training target (move minus beta x BTC), 13 monthly refits vs RAW target + shuffled-market placebo', ref: RQ-20261112-4654-01 (FRONTIER-Q-RESID-ENTRY), verdict: 'fail (graded 11-14): paired resid-raw -0.0662 over k 13 windows, CI95 [-0.196, +0.064]; placebo-raw -0.0009; pooled n raw/resid/placebo 10,888/15,092/19,454 (research/results/RQ-20261112-4654-01/43483024281.jsonl). Residual target closes for crypto entry.'}
     - {lever: 'selectivity (score cap, tau, regime abstention on BTC ret24 / vol24 terciles, side drop), dev folds, 3 seeds', ref: RQ-20261101-b602-01, verdict: 'pass, ONE dev candidate (hand-graded 11-15 by ML-PRIMARY-2 from b602_result.json, identical in 3 runs): C_vol24_abstain_t0 (skip the lowest vol24 tercile) +0.0133 R/decision over base (threshold 0.0117), 6/8 folds, 4/4 years, min fold n 2,098; all other arms no_win. Candidate only, for the ONE combined held-out read (ML-BAR-ONE-READ) with cost gate 0.06 (b606-01 PASS, hand-graded 11-15); bracket 2/4 is NOT a candidate (b601-01 FAIL). The held-out year may be re-read on the deflated bar with n_tries recorded (HOLDOUT-DEFLATED-REUSE, operator 2026-11-05).'}
     - {lever: 'ridge vs LightGBM, same features + target (ML-F32)', ref: RQ-20261112-4654-09, verdict: 'fail (paired ridge-raw -0.1001, CI95 [-0.254, +0.053], k 10, n 851; research/results/RQ-20261112-4654-09/43462223910.jsonl)'}
+    - {lever: 'ML-BAR-ONE-READ: frozen v1 + both dev candidates (vol24 low-tercile abstention + cost gate 0.06) on the held-out year, deflated bar (read 12)', ref: RQ-20261115-a474-04, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-04/43703425338.jsonl): VG -0.0386 R/decision (n 5,324, se 0.0143) vs v1 as served +0.0073 (n 11,240); V alone -0.0110 (n 6,985), G alone -0.0336 (n 5,636). The filters abstained far more on the held-out year than on dev (V 51 percent vs a 33 percent dev tercile, G 64 percent): the held-out year is lower-vol than dev, and the abstained rows were the profitable ones. Both dev candidates close for v1.'}
   levers_ahead:
+    - lever: 'decomposed score: LightGBM on GROSS R minus the known pre-trade cost per R (k / (SL_ATR x atr_pct)), vs the net-R target, 13 monthly refits'
+      ref: 'RQ-20261115-7e18-02 (ML-PRIMARY-3 2026-11-15; RULE-RQ20261115-7e18-02-GROSS-DECOMP; diagnosis cd01-01 R3: IC net 0.497 vs gross 0.003)'
+      baseline: RAW, the served recipe on the net-R target, same origins / rows / tau / cost stack
+      pass: candidate in ML-LEVER-PLAN's ONE combined held-out read (frozen-v1 baseline, deflated ENTRY bar)
+      fail: the target family closes for crypto ENTRY (RESID + GROSS FAIL); the next lever must add information (features / data)
+      graded: "INDETERMINATE by rule 2026-11-15 (research/results/RQ-20261115-7e18-02/43724367585.jsonl): paired gross-raw +0.0097 R/decision, CI95 [-0.0286, +0.0480], k 13; pooled gross +0.0159 (n 10,788) vs raw +0.0106. Below the +0.06 bar; no candidate for the combined read; the target family does not close. Next lever adds information."
     - lever: diagnose the served -0.13 R window (drift vs regime vs cost)
       ref: CRYPTO-ENTRY-RETRAIN-UNIT
       baseline: the frozen v1 held-out record on the same cost stack
@@ -395,15 +402,15 @@ lines:
       baseline: frozen v1 held-out record
       pass: refit served through the retrain workflow's candidate rule (ML-ENTRY-RETRAIN-CADENCE)
       fail: v1 stays served; lever list re-ranked from the dev-fold ablations
-    - lever: population test over the venue-tradable population with a filter fixed before the run
+    - lever: "re-run the population test on the SERVED refit v1r20261106 (train_end 2026-10-14) once its out-of-time window is powered (the frozen-v1 test RQ-20261112-2e3b-01 already FAILED; this would be the 2nd population read of the lineage, on the deflated bar)"
       ref: ML-ENTRY-POPULATION-TEST
       baseline: the 5-coin read on the same window, net of each symbol's own costs
       pass: Tier-3 widening packet (a real-money widening needs its own population test - operator 2026-11-04)
-      fail: per-account symbol map is replaced by the recorded result; bybit_2 keeps the tested 5
+      fail: the c692-06 five coins stay the population (record in comms/ml_universe/ml_entry.json, PR #25535)
   next_weeks:
-    W47: 'RESID-ENTRY graded FAIL (4654-01); b602-01 hand-graded PASS with one dev candidate (vol24 low-tercile abstention); regime-as-feature dropped (btc_ret24 / btc_vol24 / breadth_up24 are already ENTRY features); b606-01 PASS (gate_0.06), b601-01 FAIL (no bracket cell); next: register ML-BAR-ONE-READ (vol24-abstain t0 + cost gate 0.06 on frozen v1) on the held-out year, deflated bar with n_tries, rule first'
+    W47: 'RESID-ENTRY FAIL (4654-01); b602/b606 dev candidates PASS but the combined held-out read a474-04 FAIL (11-15, VG -0.039 vs base +0.007); every ranked ENTRY lever tried so far has failed its held-out read; next: population test (filter registered first) and the weekly forward grade as the demotion read'
     W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
-    W49: 'population test (filter registered first)'
+    W49: 'population test done (2e3b-01 FAIL on frozen v1); served-refit re-test not powered before ~2027-03 (n ~4,900 needed for +0.037 R at t=2)'
     W50: 'review the forward grade series as the demotion read'
   exhaustion: >-
     the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD § "Declared demotion signals": mean < 0 at
@@ -665,13 +672,32 @@ lines:
       baseline: overlay-td-v1 on the same rows; take-all; same-rate random reduce
       pass: Tier-3 artifact swap
       fail: v1 stays
-    - lever: the demotion CUSUM's live join (overlay_shadow.jsonl x outcomes)
+      graded: "RQ-20261115-7e18-03 (runner nested reproduction of 5785-04, RULE-RQ20261115-7e18-03-NESTED-REPRO, graded 2026-11-15 by ML-PRIMARY-4): NOT REPRODUCED -> the shipped C0.1/q0.2 stays, no V3 proposal. TD main window PASSES (a)-(e) (n_gate 1588, delta -0.0028, LB95 -0.0144, random p 0.026) but the verdict is INDETERMINATE because the holdout was never built ('no holdout corpus': --refine hard-coded build False; fixed in the same PR). Modal config C1.0/q0.1 (5 of 15, share 0.333) vs the local run's C1.0/q0.2 (4 of 15, 0.267); shipped C0.1/q0.2 picked 1 of 15. Two runs, two different modals, both shares at or below 0.33 = selection instability, so no grid config has a reproducible claim over the shipped primary. Population: TD gate legs eth_4h, xrp_4h, eth_prop, sol_prop, 2020-07..2026-10 (runner corpus n_gate 1588 vs local 1830, a corpus difference filed on ML-LINE-S3-GATE)."
+    - lever: spot-proxy larger holdout (diagnosis)
+      ref: RQ-20261029-5785-05
+      baseline: take-all on the same trades
+      pass: supporting evidence
+      fail: iteration input (operator 2026-11-16)
+      graded: 'FAIL as DIAGNOSIS, 2026-11-16 (run 43777436598): TD spot holdout 2017-09..2019-11 n 424, dR -0.0214, LB95 -0.052, random p 0.307; the reduced trades average +0.21 R vs +0.31 take-all (it halves profitable trades). Caveat: refit, not the shipped artifact. Operator ~06:30Z: live models stay trading; this seeds the challenger below.'
+    - lever: CHALLENGER, EV-thresholded reduce (cut only where predicted net R < 0)
+      ref: RQ-20261116-cc86-01
+      baseline: the live shipped overlay_td.json, paired on the same holdout trades (spot 2017-09..2020-06 + perp 2019-12..2020-06)
+      pass: 'Tier-3 swap proposal: overlay_td v2 replaces Beagle-1'
+      fail: iteration input; Beagle-1 keeps trading
+      graded: 'NOT A WIN -> iteration input, 2026-11-16 (run 43849787455): spot A n 541, paired ch-base +0.0241 R/trade, LB95 +0.0053, deflated LB -0.0002 (bar > 0); vs take-all ch +0.0136, base -0.0105; perp B n 95 printed no paired block (harness gap, fixed in #26512). Every pre-2020-07 window is now read 3x, so the next test is forward.'
+    - lever: CHALLENGER FORWARD read (EV rule shadow-logged beside Beagle-1 on live TD packages)
+      ref: RQ-20261116-cc86-02 (artifact ml/overlay/challengers/overlay_td_ev.json, shadow only)
+      baseline: the live overlay_td.json, paired per order package, net_R realised
+      pass: 'Tier-3 swap proposal (read once at n = 60 disagreement packages, ~2.5 years at ~2/month; ESTIMATE)'
+      fail: iteration input; Beagle-1 keeps trading
+    - lever: the CUSUM's live join (overlay_shadow.jsonl x outcomes), an iteration read
       ref: PI-20261029-XME2GXW7-0001
       baseline: n/a (instrument)
-      pass: the declared demotion read becomes computable
+      pass: the weekly iteration read becomes computable (an alarm seeds a challenger)
       fail: a defect row
-  next_weeks: {W47: 'fix the 5785-03/-04 run.command (PI-20261030-0261030B-0001) and run', W48: grade, W49: CUSUM join, W50: 'first decision-level observation'}
-  exhaustion: its demotion read fires (CUSUM on the reduce legs' mirror net R) and no refine passes; then reduce -> annotate (Tier 3) and it iterates.
+      graded: "BUILT (#25549, scripts/ops/overlay_cusum_join.py, weekly /ml-review check C11). FIRST READ 2026-11-15 (comms/ml-review/c11/c11-2026-11-15.json): 116 shadow rows x 501 closed trades, 23 joined, 0 ambiguous; n_reduced 1 on each real-money account (bybit_portfolio, bybit_2), S 0.0 vs H 2.0, state ok, no alarm. n=1 is no evidence; the demotion read is now computable and recurs weekly."
+  next_weeks: {W47: 'nested repro graded (7e18-03 not reproduced; shipped stays)', W48: 'weekly C11 CUSUM read', W49: CUSUM join, W50: 'first decision-level observation'}
+  exhaustion: 'none while live (operator 2026-11-16, drift-remediation § "A live model is the baseline"): Beagle-1 is the LIVE BASELINE and trades until a challenger beats it on a registered paired test. A CUSUM alarm or a holdout FAIL is an iteration input that seeds the next challenger, never a demotion.'
   owner: AM-ML
   plan_items: [ML-M4]
 
@@ -795,6 +821,7 @@ lines:
       - {record: docs/plans/ML-ROADMAP-MECE-2026-11.md § 4, provenance: QUOTED}
   levers_tried:
     - {lever: VOI census (Stage-0 solo streams, 5 crypto real-money/prop pairs, two windows), ref: RQ-20261114-82fd-02, verdict: 'PASS (research/results/RQ-20261114-82fd-02/43661153472.jsonl): material concurrency on ALL 5 pairs in both windows -- share of trades overlapping another leg 27-54 percent (ADA 54/51, SOL-bybit_2 33/33, XRP 27/37, ETH-prop 27/31, SOL-prop 42/41 percent prior/record), many opposite-direction overlaps (ADA 35+66 prior). The aggregator ceiling is NOT small: build AGG-HARNESS + the A0..A4 rule arms.'}
+    - {lever: 'AGG-HARNESS rule arms A0 today''s rule vs A1 1/N, A2 best-single, A3 forecast combination, A4 matched random (5 census pairs, two windows)', ref: RQ-20261115-a474-02, verdict: 'FAIL by rule (research/results/RQ-20261115-a474-02/43692033044.jsonl): no arm beats A0 in both windows. Prior year net R A0 16.4 / A1 15.5 / A2 37.3 / A3 31.6 (A4 p95 56.4); record year A0 38.9 / A1 26.3 / A2 30.4 / A3 30.7 (A4 p95 68.3). Disclosed: A0 gives the XRP pair''s whole budget to the first leg by name on a same-bar tie (the equal-split fix did not land in #26237); bound <= ~1 R on one pair vs A0''s 8.2 R record-year lead, verdict unchanged. D5 stays the slices/election rule; no learned aggregator.'}
   levers_ahead:
     - lever: VOI census (Stage-0 concurrent same-symbol trades on the 5 crypto real-money pairs, two windows)
       ref: 'RQ-20261114-82fd-02 (ML-PRIMARY; RULE-RQ20261114-82fd-02-D5-VOI; folds PI-20261104-BCZDXJNR-0002 TODO 1)'
@@ -811,7 +838,7 @@ lines:
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: '82fd-02 PASS (11-15) -> AGG-HARNESS built (scripts/research/d5_aggregator_arms.py) + RQ-20261115-a474-02 registered (11-15); grade on landing', W48: 'a474-02 PASS -> register learned arm A5 vs the passing rule arm; FAIL -> rule-exhausted', W49: none, W50: none}
+  next_weeks: {W47: 'a474-02 FAIL (11-15): no rule arm beats today''s slices/election rule in both windows; the learned aggregator is not built', W48: none, W49: none, W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
@@ -879,6 +906,7 @@ lines:
       baseline: the fixed TP on the same trades, net of cost
       pass: keeps serving with a computable demotion read
       fail: Tier-3 proposal to stop the TP move on ml_entry; the line iterates on features
+      graded: "FAIL by rule 2026-11-15 as RQ-20261101-383f-02 (research/results/RQ-20261101-383f-02/43724363250.jsonl; TP recipe refit, dev cut 2025-10-01): extend-only vs fixed 3 ATR on 2025-10..2026-09, mean delta -0.0029 R/trade, se 0.0053, n 11,240, 53 symbols, 7,686 moved; TPREV N=1, claim landed through the ledger. No edge, no measurable harm. Tier-3 evidence record to the manager (stop vs keep the TP move; keeping it holds TP-doctrine clause 2); not applied."
     - lever: path-signature features as the state
       ref: FRONTIER-Q-SIGNATURE-INTRADE
       baseline: tp-revision-v1 on the same check-ins
@@ -912,6 +940,12 @@ lines:
     - {lever: path-state block, ref: RQ-20261101-78fc-04, verdict: fail}
     - {lever: short-horizon label (12 bars), ref: RQ-20261112-3144-01, verdict: fail}
   levers_ahead:
+    - lever: 'STAGE B on the Stage-A passers (close, partial_close_50): inner-fold act margin, net of cost vs B0 hold, B1 best static, B2 distance logit, B4 matched random'
+      ref: 'RQ-20261115-7e18-01 (ML-PRIMARY-3 2026-11-15; RULE-RQ-20261115-7e18-01-STAGE-B; tm_bench --rule s_offline; 3144-02 PASSED Stage A on exactly these two classes)'
+      baseline: B0 hold to the leg's own rules and max(B0, B1), same trades, net of the full cost stack
+      pass: pass_pending_fresh_window -> a fresh-window confirmation unit (holdout_lock family TMAV); a PASS there opens a Tier-3 advice-only in-trade proposal
+      fail: iteration 3 closes for these classes; next unit from a new diagnosis (another decision class from ML-EXIT-ACTIONGRID-LABELS, or a model class)
+      graded: "FAIL by rule 2026-11-15 (research/results/RQ-20261115-7e18-01/43724365456.jsonl): lgbm +0.0033 R/trade vs B0 hold, CI95 [-0.0070, +0.0131], acts on 141 of 2,627 trades, 3 of 6 folds; beats B1 (-0.0315) and B2 (-0.0163) but misses the +0.03 gain bar. Iteration 3 closes for close/partial_close_50; next from a new diagnosis. Post-reset in-trade path: LTR-LOCAL-STUDENT."
     - lever: train on corpus v2 (bp2-f4271084b120)
       ref: 'RQ-20261112-3144-02 (PR #25250) + build row TMBENCH-V2-TRAIN-INPUT'
       baseline: within-trade shuffled control (Stage-A rank calibration), then B0-B6 net of cost
@@ -935,7 +969,7 @@ lines:
   kind: model
   subject: exit-head-donchian-1h-v1 (Labrador-2)
   consumer: {class: none, note: 'exit_head_action annotate on all 3 legs (MEASURED config/strategies.yaml); changes no order'}
-  stage: iterating
+  stage: stuck
   row: ML-EXITHEAD-VALUE
   state:
     summary: Fails out of the leg family it was trained on, and the volume-composition feature add failed today.
@@ -964,8 +998,9 @@ lines:
       baseline: as above
       pass: as above
       fail: as above
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); only the desk-label variant (PI-20261029-IHFQDB3W-0004) is left', W48: 'desk-label variant: author or retire', W49: none, W50: none}
-  exhaustion: the eth_4h variant and the desk-label variant FAIL; with today's FAILs the head's feature set then has no lever left.
+      parked: "PARKED ON POWER, not authored (ML-PRIMARY-3, 2026-11-15). Population MEASURED from comms/research/desk_lifecycle/full-c4e: 12,500 check-in labels on 507 pairs / 1,040 entries (520 claude-judged, 520 random), 6 symbols, 32 weeks; folds 1/2/3/4 = 320/632/70/18 entries, so at most 720 OOS trades walk-forward. Per-trade hold-vs-close delta sd ~0.85 R (backed out of 1ae8-01: CI95 half-width ~0.015 at n 13,243). SE ~0.032, MDE ~0.08 R at 80 percent power, against every exit-head effect seen so far within +/-0.06 R (a474-03, 1ae8-01, 0bc8-02, 78fc-03): INDETERMINATE by construction. Growing n needs more LLM-judged walks (plan capacity per label). RE-ENTRY TEST: desk labels on >= ~5,000 OOS trades (MDE <= 0.03 R), or a cheap mechanical label source of that size."
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); desk-label variant PARKED on power (n <= 720 OOS trades, MDE ~0.08 R)', W48: 'none (re-entry test on the desk-label lever)', W49: none, W50: none}
+  exhaustion: 'the eth_4h variant and the desk-label variant FAIL; with today''s FAILs the head''s feature set then has no lever left. 2026-11-15: eth_4h variant FAILED (a474-03); desk-label variant parked on power, so the line waits on that re-entry test (and on MLP-D7-ACTION-VALUE for the D8 question).'
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
 
@@ -1090,14 +1125,15 @@ lines:
   state:
     summary: Instrument landed_unproven; not yet run on a money model.
     evidence: []
-  levers_tried: []
+  levers_tried:
+    - {lever: "Foxhound-1 served-window split (regime vs selection vs cost)", ref: RQ-20261112-cd01-01, verdict: "superseded the run-on-Foxhound-1 lever (manager 15a, 2026-11-15). Indeterminate by rule: gap -0.211 R = regime -0.200 (t -1.13) + selection -0.011, cost +0.003; frozen v1 -0.324 on the same 14 days (REGIME-SHARED), n 375; research/results/RQ-20261112-cd01-01/local-20261112T1500Z.jsonl. No demotion case."}
   levers_ahead:
-    - lever: run on Foxhound-1's forward series
+    - lever: run drift_regime_mix.py itself once (SOL KS ~0.230 reproduced) so the instrument closes
       ref: ML-DRIFT-SPLIT-INSTRUMENT
       baseline: n/a (instrument)
       pass: the split appears in /ml-review C7 for the money models
       fail: defect row
-  next_weeks: {W47: run on Foxhound-1, W48: none, W49: none, W50: none}
+  next_weeks: {W47: "Foxhound-1 lever superseded by cd01-01", W48: none, W49: none, W50: none}
   exhaustion: instrument; closes when it runs in C7.
   owner: AM-ML
   plan_items: [ML-N5, ML-V4]

@@ -1,0 +1,27 @@
+# gitleaks config for the weekly full-history scan (.github/workflows/gitleaks-history-weekly.yml).
+# gitleaks reads this file from the scan source root automatically (no --config flag needed).
+#
+# SEC-GITLEAKS-BASELINE-1116 (manager approval 2026-11-16): the research pipeline writes machine-made result
+# files every day (comms/research/RQ-*/..., research/results/RQ-*.jsonl, comms/research/broad_paths/...). They carry
+# content hashes under keys such as `trade_key_sha256`, and the default `generic-api-key` rule matches them on the
+# key NAME ("key") plus entropy. 383 of the 387 findings that made the scan red every Monday since 2026-11-02 were these
+# hashes; 0 of 387 came from a vendor rule. See docs/security/gitleaks-baseline.md.
+#
+# SCOPE IS DELIBERATELY TIGHT: the `generic-api-key` rule ONLY, the two research paths ONLY. Every vendor rule
+# (github-pat, aws, telegram-bot-api-token, private-key, ...) still scans those paths, and `generic-api-key` still
+# scans everything else. tests/test_gitleaks_baseline.py pins the scope and, when a gitleaks binary is present,
+# proves a planted vendor token under comms/research/ is still caught.
+title = "JTA Trader gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "machine-written research artifacts: *_sha256 content hashes and ids (SEC-GITLEAKS-BASELINE-1116)"
+paths = [
+  '''^comms/research/''',
+  '''^research/results/''',
+]

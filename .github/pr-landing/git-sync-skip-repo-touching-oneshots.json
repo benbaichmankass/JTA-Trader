@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits scripts/deploy_pull_restart.sh (the deploy path run by ict-git-sync every ~5 min; trader_import_closure decide says SKIP, no trader restart). Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\"; manager orders 2026-11-16 21:57Z and 21:58Z. The manager merges.",
+  "why": "GIT-SYNC-PRUNE-STUCK follow-up to #26569 (--no-block oneshot restarts). MEASURED 2026-11-16: ict-trainer-git-sync runs `git fetch` and `git checkout --force -B main origin/main` in the same repo (scripts/ops/trainer_git_sync.sh); restarted --no-block it overlapped the next ict-git-sync run and the sync died at the hard-reset on .git/index.lock (21:53:11Z, exit 128, OnFailure). ict-web-api-watchdog restarted --no-block probed the web-api mid-restart (21:52:29Z) and fired a false wedge alert. Both are owned by their own timers (15 min and 2 min), so both join DEFAULT_SKIP, the same shape as work-digest/work-report. Manager order 21:58Z extends it: both scripts take one shared flock on .git/jta-sync.lock (deploy 600 s wait, trainer 300 s; on timeout log and exit 0, never a halt), and the restart loop skips EVERY Type=oneshot unit (their timers run them on the new code) instead of restarting them --no-block."
+}

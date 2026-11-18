@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits src/units/accounts/alpaca_client.py (order path, trader RESTART per trader_import_closure). Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\". The manager merges.",
+  "why": "ALPACA-PAPER-BRACKETS-GONE-1116: a slow paper fill of our own flatten (USO sl_cross, 14:32Z) timed out the 6s confirm, _escalate_not_flat counted our own just-placed DAY market sell as an accepted-not-flat wedge holder, and rung 3 (PAPER account reset) cancelled every order and closed every position on alpaca_paper. Fix: the close attempt's own order id and resting market orders are never wedge holders; genuine old OCO limit/stop holders (GLD 2026-11-06/09) still escalate; LIVE never close-all unchanged."
+}

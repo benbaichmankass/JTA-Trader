@@ -153,14 +153,17 @@ practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-princip
 follow_up: On the verdict a session reports to the manager per account; a PASS lets the lane draft the HELD Tier-3 tp_r 4 PR disclosing BOTH runs (db1a-09 FAIL as registered + this unit), which the manager takes to the operator.
 last_dispatched_at: '2026-11-14T16:45:05+00:00'
 grading:
-  attested: RULE-ETH4H-TP4-PROPEV-NONINF-ROSTERED-20261114
-  auto: true
+  auto: false
+  graded_at: '2026-11-15'
+  grader: session RESEARCH-OPS-20261115-1447 (triage)
+  verdict: fail
+  note: 'Rule applied verbatim, no margin: one of two accounts fails the breach clause (ev_B 98.1 > ev_A
+    79.6 but p_breach 0.255 > 0.251), the other passes (ev 151.4 vs 105.2, p_breach 0.3268 < 0.329); UNIT
+    FAIL iff any account fails, so FAIL. EV is higher on both firms; the miss is breach probability by
+    0.004 on one. A rule change after seeing this is not allowed; any waiver of the prop non-inferiority
+    for the tp_r 4 compliance change is a Tier-3 call for the manager/operator with both runs (db1a-09,
+    -13) disclosed.'
   decision_rule_id: RULE-ETH4H-TP4-PROPEV-NONINF-ROSTERED-20261114
   evidence:
   - research/results/RQ-20261114-db1a-13/43617327314.jsonl
-  graded_at: '2026-11-14'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
   rows: 2
-  verdict: null

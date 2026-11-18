@@ -1,0 +1,188 @@
+{
+  "run": "RESEARCH-OPS-20261115-2247",
+  "finished_at": "2026-11-15T23:20:00Z",
+  "by": "session_01AFoLuJwPafcNpXD9N1gEZz (dispatched lane)",
+  "floor": 58,
+  "floor_basis": "computed_floor(fired_24h 73); manager's operating floor 25",
+  "throughput": {
+    "runnable_before": 20,
+    "runnable_after": 25,
+    "queued": 277,
+    "fired_24h": 73,
+    "results_landed_24h": 76,
+    "hours_since_last_dispatch": 2.4,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (2.4 h since last dispatch)",
+    "collector": "ok (2026-11-15 results landing)",
+    "stranded_stamp_prs": "not_checked",
+    "incident": "grade run 43689172680 step 'Land the dispositions on main' failed after 82 min (flagged to manager)",
+    "read_state": "tree_plus_actions_jobs"
+  },
+  "results_read": {
+    "pass": 5,
+    "fail": 6,
+    "units": [
+      "RQ-20261115-bf1b-03 pass",
+      "bf1b-04 pass",
+      "bf1b-07 pass",
+      "bf1b-10 pass",
+      "bf1b-18 pass (queued, ungraded)",
+      "bf1b-02/05/08/09/12/13 fail"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [
+    "RQ-20261115-2411-01",
+    "RQ-20261115-2411-02",
+    "RQ-20261115-2411-03",
+    "RQ-20261115-2411-04",
+    "RQ-20261115-2411-05"
+  ],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "no plan-node authoring; units authored are iteration units from the loop"
+  },
+  "loss_detector": {
+    "C_expiring_unlanded_artifacts": "dispositioned: docs/research/loss-disposition-research-store-bundle-43689172680.md + RESEARCH-LOSS-DISPOSITIONS.json; trainer-store ship job succeeded, grades re-derived, not landed into repo on purpose"
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 5,
+      "of": 5
+    },
+    "map_entries_added": 0,
+    "next_tests_from_map": 5,
+    "orphans_before": {
+      "strategy_leg": 9,
+      "ml_model": 3,
+      "ltr_class": 5
+    },
+    "orphans_after": {
+      "strategy_leg": 7,
+      "ml_model": 3,
+      "ltr_class": 5
+    },
+    "results_iterated": [
+      {
+        "result": "RQ-20261115-bf1b-03",
+        "verdict": "pass",
+        "subject": "qqq_pullback_1h",
+        "next": "RQ-20261115-2411-01",
+        "attempt": 3
+      },
+      {
+        "result": "RQ-20261115-bf1b-04",
+        "verdict": "pass",
+        "subject": "qqq_pullback_1h",
+        "next": "RQ-20261115-2411-02",
+        "attempt": 3
+      },
+      {
+        "result": "RQ-20261115-bf1b-07",
+        "verdict": "pass",
+        "subject": "spy_pullback_1h",
+        "next": "RQ-20261115-2411-03",
+        "attempt": 3
+      },
+      {
+        "result": "RQ-20261115-bf1b-10",
+        "verdict": "pass",
+        "subject": "mgc_trend_1h",
+        "next": "RQ-20261115-2411-05",
+        "attempt": 2
+      },
+      {
+        "result": "RQ-20261114-db1a-04",
+        "verdict": "fail",
+        "subject": "htf_pullback_trend_2h",
+        "next": "RQ-20261115-2411-04",
+        "attempt": 2
+      }
+    ],
+    "advanced": 5,
+    "survivors": [],
+    "overdue": [
+      "ml_model 3 (ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit): ML-PRIMARY-4's"
+    ],
+    "note": "orphan counts 9->7 is the expected effect once 2411-01/-02/-03 are queued (iteration_orphans.py counts live units); not re-run after authoring."
+  },
+  "analysis": {
+    "trading": {
+      "meaning": [
+        "qqq_pullback_1h/spy_pullback_1h entry levers pass (trend_lookback 75 +10.6 R, pullback_lookback 15 +4.4 R, spy trend_lookback 45 +5.4 R; each 3/4 folds, chosen from 2 arms vs control) while exit levers (atr_stop, trail) fail on both legs, so the response is entry-side; the prior side-filter confirmation of qqq FAILed on pre-dev, so these are discoveries until 2411-01..03 read.",
+        "mgc_trend_1h trail_mult 5.0 +13.9 R vs 3.0 at -24.0 R is a steep monotone response on one lever, which is the shape that fits a real exit-capture effect or an overfit point; the pre-dev confirmation separates them."
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261115-2411-01..03,-05",
+          "decision_changed": "whether a testing leg gets a Tier-3 lever proposal",
+          "on_pass": "Tier-3 proposal NOTE for the manager",
+          "on_fail": "lever recorded window-specific; next untested family",
+          "premortem": "pre-dev window may be sparse (dukascopy MGC/QQQ 1h) so n<25 gives INDETERMINATE"
+        },
+        {
+          "id_or_node": "RQ-20261115-2411-04",
+          "decision_changed": "SMA200 gate: per-leg Tier-3 path vs regime-router question",
+          "on_pass": "per-leg proposal path opens",
+          "on_fail": "gate is a regime hedge, move to the regime router",
+          "premortem": "legs younger than 2022-11 grade indeterminate; <12 legs gives INDETERMINATE"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [],
+      "next_tests": []
+    },
+    "cross_track": [],
+    "surprises": [
+      "research-store-bundle detector finding is a structural false positive: its question cannot see the trainer-store landing"
+    ]
+  },
+  "checks": {
+    "packet_as_of": "2026-11-15T22:59:05Z",
+    "runnable_by_track": {
+      "TRADING": 19,
+      "MODEL": 1,
+      "INFRA": 0
+    },
+    "fails_without_next": 6,
+    "needs_review": 105,
+    "could_not_look": [
+      "stranded stamp PRs not checked",
+      "pytest full suite not run"
+    ]
+  },
+  "calls": [
+    {
+      "call": "At least 3 of the 5 2411 confirmation/third-window units grade pass or indeterminate (not fail)",
+      "p": 0.3,
+      "check": {
+        "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+        "rule": "2411-* verdicts",
+        "resolves_when": "2026-11-22"
+      }
+    }
+  ],
+  "not_run": [
+    "D: ML overdue iterations left to ML-PRIMARY-4",
+    "E plan nodes: none authored"
+  ],
+  "limits": [
+    "lever_map backfill run then reverted: research/levers are rewritten by the desk mirror automation",
+    "full-suite pytest not run",
+    "stranded stamp PRs not checked"
+  ],
+  "handoff": [
+    "MANAGER: grade run 43689172680 commit-to-main step hung 82 min and failed; the loss detector Question C cannot see trainer-store landings and will re-flag each grade run (a detector fix is Tier-1 tooling, not done here)",
+    "Unread: 6 failing bf1b units (02,05,08,09,12,13) have no next test: exit family flat on qqq/spy 1h and uso/mgc atr_stop; next pass picks untested families from the map",
+    "Orphans left: claude_desk, e4_oi_shock_1h, ml_entry_eq, turtle_soup, tsmom-crypto, xsec-crypto, tsmom-etf (strategy_leg); ltr_class 5; ml_model 3 (ML-PRIMARY-4)",
+    "Ungraded: RQ-20261112-3c8f-01/-02, cd01-01, 1449-01, e44a-01"
+  ]
+}

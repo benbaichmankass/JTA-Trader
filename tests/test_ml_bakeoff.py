@@ -527,3 +527,23 @@ def test_row_bootstrap_null_case_spans_zero_and_unknown_stat_raises():
     assert d["ci95"][0] < 0 < d["ci95"][1]
     with pytest.raises(ValueError):
         mb._clause_value({"stat": "bogus"}, {"mean": 0.1})
+
+
+def test_torch_gru_device_auto_falls_back_to_cpu_and_is_recorded():
+    """ML-BAKEOFF-TORCH-DEVICE: auto picks cuda only when available; on a CPU box it runs on cpu, logs it, and the
+    explicit cpu device gives the same seeded output. Requesting cuda without a GPU is an `unavailable` arm."""
+    torch = pytest.importorskip("torch")
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(600, 3))
+    y = (X[:, 0] > 0).astype(int)
+    params = {"window_bars": 4, "hidden": 8, "layers": 1, "epochs": 2, "seed": 0}
+    mb.TORCH_DEVICES_USED.clear()
+    a = mb.LEARNERS["torch_gru"][0](X[:400], y[:400], X[400:], 2, params)
+    want = "cuda" if torch.cuda.is_available() else "cpu"
+    assert mb.TORCH_DEVICES_USED == [want]
+    if want == "cpu":
+        b = mb.LEARNERS["torch_gru"][0](X[:400], y[:400], X[400:], 2, dict(params, device="cpu"))
+        assert np.allclose(a, b, atol=1e-6)
+        assert "cuda" in (mb.probe_learner("torch_gru", {"device": "cuda"}) or "")
+    assert mb.probe_learner("torch_gru", {"device": "tpu"})
+    assert mb.probe_learner("torch_gru", {"device": "auto"}) is None

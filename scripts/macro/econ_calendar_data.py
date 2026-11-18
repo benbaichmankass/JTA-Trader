@@ -137,7 +137,9 @@ def impact_to_float(label: Any, *, kind: Optional[str] = None) -> Optional[float
     """Map an ``HIGH``/``MEDIUM``/``LOW``/``NONE`` impact label to a ``[0,1]``
     weight; ``fomc`` events get ``1.0`` (the widest-moving scheduled catalyst).
     ``None`` for an unknown label (honest-null, never a fabricated 0)."""
-    if kind == "fomc":
+    if kind in ("fomc", "fomc_minutes"):
+        # The minutes keep the weight they have today (1.0) until RQ-20261118-a5b3-02 supplies an evidenced one;
+        # only their kind label changes, so studies and the config can tell them apart from a decision.
         return 1.0
     if label is None:
         return None
@@ -168,6 +170,9 @@ _KIND_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"natural gas (?:storage|stocks)", re.I), "eia_natgas_storage"),
     (re.compile(r"(?:eia )?crude oil (?:stocks|inventories)", re.I), "eia_crude_stocks"),
     (re.compile(r"api weekly crude", re.I), "api_crude_stocks"),
+    # CALENDAR-FOMC-RELEASE-SPLIT (2026-11-18): the minutes are a different release from the decision (S80 Rosa 2013, S81 Nechio
+    # & Wilson 2016-37 find them less market-moving). Matched BEFORE the fomc pattern, which also matches "FOMC Minutes".
+    (re.compile(r"(?:fomc|fed(?:eral reserve)?)\b.*\bminutes\b|minutes of the (?:fomc|federal open market)", re.I), "fomc_minutes"),
     (re.compile(r"fed interest rate|fomc|monetary policy statement|interest rate decision", re.I), "fomc"),
     (re.compile(r"core personal consumption.*price index.*mom", re.I), "core_pce_mom"),
     (re.compile(r"core personal consumption.*price index.*yoy", re.I), "core_pce_yoy"),
@@ -202,6 +207,7 @@ _KIND_PATTERNS: list[tuple[re.Pattern, str]] = [
 # written into the news config; the full snapshot keeps every event regardless.
 KIND_TO_NEWS_CLASS: dict[str, str] = {
     "fomc": "fomc",
+    "fomc_minutes": "fomc",   # same live weight as today; a Tier-3 reweight waits on RQ-20261118-a5b3-02
     "cpi_mom": "cpi", "cpi_yoy": "cpi",
     "core_cpi_mom": "cpi", "core_cpi_yoy": "cpi",
     "nfp": "nfp",

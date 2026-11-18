@@ -1,0 +1,161 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1), dispatched by Manager Session 2026-11-15a. Builds row ML-VOL-LABEL-LIVE-VERIFY. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-aadc-01
+title: 'ML-VOL-LABEL-LIVE-VERIFY: do the trainer-replayed vol labels of the live D2 heads (BTC and SOL fc-pcv-v2, MES v2) reproduce the
+  label the LIVE gate recorded on the same bars (regime_ml_vol_shadow), chance-corrected?'
+status: done
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: 'For each live D2 head, over the distinct bars where the live regime_ml_vol_shadow row of THAT head (model_id match) carried a
+  calm/volatile label: does the label replayed offline by scripts/research/ml_vol_label_replay.py from the trainer''s market_features v002
+  dataset agree with the live label (agreement >= 0.90 AND Cohen''s kappa >= 0.60 AND median |live p - replayed p| <= 0.10) under one of the
+  two declared bar alignments?'
+why_this_matters: 'Every D2 money test grades (trend, vol) cells on REPLAYED labels and carries the caveat "not verified against the live
+  gate" (RQ-20261112-bcd2-01, RQ-20261113-b819-01). RQ-20261112-0f87-01 (D2 consumer cells for the SOL / MES / ETH heads) is blocked on
+  exactly this verification. Until it runs, a D2 cell verdict may be grading a population the live gate never sees. It is also the
+  trainer-shaped build that frees the D2 slot''s next unit.'
+iteration:
+  subject:
+  - ml-btc-router-cells
+  - btc-regime-15m-lgbm-fc-pcv-v2
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  - mes-regime-5m-lgbm-v2
+  - eth-regime-1h-lgbm-xasset-v1
+  subject_kind: ml_model
+  from_result: RQ-20261113-b819-01
+  verdict_read: fail
+  diagnosis: 'b819-01 FAILED by money on labels it could not verify (its what_it_does_not_do: "NOT verified against the live gate (no
+    regime_ml_vol_shadow rows on the trainer)"). The failure has two readings that need opposite responses: the cells carve no money-losing
+    slice, OR the replayed labels are not the live labels (serve-path difference: live builds the row from live candles and the live
+    forecast row; the replay reads the offline builder). This unit separates them. MEASURED 2026-11-17 via /api/diag/audit_query
+    (event=regime_ml_vol_shadow, all rows 2026-06-27..2026-11-17): BTCUSDT 2,619 rows, 2,214 of them from btc-regime-15m-lgbm-fc-pcv-v2
+    (166 volatile); SOLUSDT 1,737 rows, 1,541 from sol-regime-15m-lgbm-fc-pcv-v2 (854 volatile); MES 24 rows, 23 from mes-regime-5m-lgbm-v2
+    (last 2026-10-06); ETHUSDT 2,610 rows, ALL ml_source unavailable / label unknown, so no ETH head has ever served a live label.'
+  search: 'one lever, label fidelity (replay vs live), per head, under two declared alignments (as-of bar; previous closed bar)'
+  attempt: 1
+  due_by: '2026-11-20'
+levers:
+- name: label_fidelity
+  values: [alignment asof, alignment prev_bar]
+  hypothesised_effect: one alignment reproduces the live label at kappa >= 0.6 for BTC and SOL; MES is too thin to read
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 1400
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE. expected_n = distinct 15m bars carrying a BTC fc-pcv-v2 live label; the 2,214 rows include several strategies logging the
+    same bar, so distinct bars are fewer (the run reports both). A kappa read at n ~ 1,000 bars has a standard error near 0.03 at the
+    observed volatile shares, so the 0.60 bar is read with room. MES (23 rows) is below the 100-bar floor by construction and is expected
+    INDETERMINATE; stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the trainer-resident v002 datasets and reads a committed snapshot of live audit rows; nothing accrues.
+baseline:
+  definition: 'Chance agreement: Cohen''s kappa corrects observed agreement for the agreement expected from the two marginal volatile shares
+    (an always-calm replay scores kappa 0 however high its raw agreement).'
+  net_of_cost: false
+decision_rule:
+  id: RULE-RQ-20261117-aadc-01-VOL-LABEL-VERIFY
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: chance agreement (kappa 0)
+  statistic: 'scripts/research/vol_label_live_verify.py: per head, replay the labels (ml_vol_label_replay.run_replay, live threshold, feature
+    pre-flight on); keep the audit rows whose model_id is that head and whose vol_regime_ml is calm/volatile; match each to a replayed bar
+    under alignment asof (the bar at/just before the audit stamp) and prev_bar (one bar earlier), dropping a match more than 2 bars stale or
+    past the labels end; one comparison per distinct bar (first row wins; within-bar live label conflicts are counted and reported). On the
+    distinct bars: agreement, Cohen''s kappa, median and p90 |live p_volatile - replayed p_volatile|.'
+  rule: 'Per head and alignment: INDETERMINATE iff bars < 100; PASS iff bars >= 100 AND agreement >= 0.90 AND kappa >= 0.60 AND median
+    |dp| <= 0.10; else FAIL. Per head: PASS iff either alignment PASSES (the higher-kappa passing alignment is the one consumers must use);
+    FAIL iff any alignment has >= 100 bars and none passes; else INDETERMINATE. A head whose replay raises is PRODUCER_FAILED for that head
+    only. UNIT verdict = the BTCUSDT head''s verdict (the row''s named head); SOL, MES and ETH are fanned-out records. The ETH head is replay
+    only (no live label exists to verify against) and is recorded not_applicable with its volatile share. Thresholds fixed now.'
+  pass_action: 'Per passing head: stamp live_verified with the alignment on the label files'' consumers. For SOL: git-mv
+    RQ-20261112-0f87-01 to research/queue/ for the SOL head (rule unchanged; MES and ETH parts re-scoped, see fail_action). Close the
+    verification half of ML-VOL-LABEL-LIVE-VERIFY. If the passing alignment is prev_bar, file a harness change so every replay consumer
+    applies it (one row).'
+  fail_action: 'Per failing head: the replayed labels are NOT the live labels. Every cell verdict graded on them (bcd2-01, b819-01) is
+    re-labelled "replay population, not live" in its disposition, and the next iteration is the serve-path diff (which feature differs: read
+    from the p delta by feature block, fc_* first). ETH: no live label exists, so 0f87-01''s ETH part needs a serving head first, a
+    finding for the D2 slot owner, not a verify FAIL.'
+  what_it_does_not_do: 'Edits no config/regime_policy.yaml cell; flips no REGIME_ML_VERDICT_MODE; retrains, re-stages or serves nothing;
+    places no order; adds no gate. It verifies LABELS, not edge: a PASS says the replay is the live population, not that any cell makes
+    money. In-sample caveat stands (the heads are fit through their dataset end). The audit snapshot ends 2026-11-17 ~10:20Z.'
+  min_n: 100 distinct bars per head
+amendments:
+- at: '2026-11-17'
+  before_any_run: false
+  by: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)
+  text:
+  - 'Run 44080314119 was LOST on collection, not graded: research_result.py --emit refused record 4 (the replay-only ETH head):
+    read_state measured with population.n null, and measured with verdict not_applicable. Fix in scripts/research/vol_label_live_verify.py:
+    a replay-only head (no live labels to verify against) is read_state no_data / verdict not_applicable / n null, and every measured
+    record carries an integer n (record_n; self-test extended; checked end to end through research_result.py --emit). The rule, statistic
+    and thresholds are NOT edited; the outputs of the lost run were not read by this lane.'
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify an offline feature/label path
+  against the served one before grading anything on it; chance-corrected agreement for an imbalanced label'
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  why_runner: The replay needs the trainer registry artifacts of the four heads, the trainer's lightgbm venv and the trainer-resident
+    market_features v002 datasets (BTC/SOL 15m, MES 5m, ETH 1h). The audit snapshot is committed under comms/live_parity/.
+  basis: 'ESTIMATE: b819-01''s BTC replay (175,272 bars, batched) was one command of a 150-min unit; four replays, two of them 15m over
+    ~5 years, plus a light match.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 120
+  commands:
+  - - python3
+    - scripts/research/vol_label_live_verify.py
+    - --head
+    - BTCUSDT:btc-regime-15m-lgbm-fc-pcv-v2:datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl:comms/live_parity/vol_label_audit_20261117/BTCUSDT.jsonl
+    - --head
+    - SOLUSDT:sol-regime-15m-lgbm-fc-pcv-v2:datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl:comms/live_parity/vol_label_audit_20261117/SOLUSDT.jsonl
+    - --head
+    - MES:mes-regime-5m-lgbm-v2:datasets-out/market_features/MES/5m/v002/data.jsonl:comms/live_parity/vol_label_audit_20261117/MES.jsonl
+    - --head
+    - ETHUSDT:eth-regime-1h-lgbm-xasset-v1:datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+    - --primary
+    - BTCUSDT
+    - --out-dir
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-aadc-01
+  note: 'Dataset paths are each head manifest''s dataset block (ml/configs/<model_id>.yaml: market_features / <symbol> / <tf> / v002) under
+    the trainer checkout''s datasets-out/, the layout b819-01 read successfully on 2026-11-13 (BTC). A missing dataset is producer_failed
+    for that head only.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: whether replayed vol labels may grade the trend_vol OFF-cells that drop BTC bybit_1 intents (and future SOL/MES cells); no change
+    from this unit
+  legs: [trend_donchian, squeeze_breakout_4h, ict_scalp_5m]
+  book: demo_floor
+last_dispatched_at: '2026-11-18T07:58:12+00:00'
+rearmed_at: '2026-11-17T12:46:10+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261117-aadc-01-VOL-LABEL-VERIFY
+  evidence:
+  - research/results/RQ-20261117-aadc-01/44263063258.jsonl
+  - comms/research/RQ-20261117-aadc-01/44263063258/measurement.json
+  graded_at: '2026-11-18'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'rows measured (run 44263063258) -> FAIL by the registered rule (unit verdict = the BTCUSDT head). BTC btc-regime-15m-lgbm-fc-pcv-v2, 1,111 distinct bars: asof agreement 0.936 / kappa 0.205 / median |dp| 0.013; prev_bar 0.937 / 0.240 / 0.012 -> agreement and median |dp| pass, kappa fails (live volatile share 3.3% vs replay 5.3%: the rare volatile bars mostly disagree). SOL sol-regime-15m-lgbm-fc-pcv-v2, 676 bars: asof 0.734 / 0.428 / 0.129; prev_bar 0.771 / 0.510 / 0.119 -> all three bars fail (live 40.4% vs replay 33.4% volatile). MES mes-regime-5m-lgbm-v2: 23 bars < 100 -> INDETERMINATE, as stated before the run. ETH eth-regime-1h-lgbm-xasset-v1: not_applicable, no live label ever served. prev_bar is the better alignment on both heads (as a one-bar lag would predict) but neither reaches the bar. fail_action applied: bcd2-01 and b819-01 grading blocks carry population_note ''replay population, not live''. aadc-08 graded the yz head, which this unit did not verify (no live yz labels exist); its not-live-verified caveat stands. Next iteration (filed, a build): the serve-path diff, the live row vs the replayed row per bar on the disagreeing bars, p delta by feature block, fc_* first. ETH: 0f87-01''s ETH part needs a serving head first; a finding for the D2 slot owner, not a verify FAIL. 0f87-01 stays parked (SOL did not pass).'
+  rows: 4
+  verdict: fail

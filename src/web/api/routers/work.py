@@ -1276,7 +1276,15 @@ def get_work_checklist(source: str = "default") -> dict[str, Any]:
 #
 #   closedRecent    last 5 rows in a terminal state (done | dropped), newest
 #                   `updated_at` first.
-#   openNow         every in_flight row (a lane is on it now).
+#   openNow         every in_flight row. Each carries ``quiet`` / ``quietHours``: a row
+#                   with no write for more than _SNAPSHOT_QUIET_AFTER_H hours is flagged
+#                   quiet, and ``openNowCounts`` splits the total into active and quiet,
+#                   so the card shows rows with recent activity, not every row
+#                   an archived lane left in_flight (WORK-INFLIGHT-STALE-OWNERS,
+#                   2026-11-15: 21 of 65 in_flight rows had archived or finished owners).
+#                   The VM cannot see Claude session status, so this is ROW
+#                   ACTIVITY, not owner liveness. A missing or unparseable
+#                   updated_at reads ``quiet: null`` (unknown), never false.
 #   next            the first 5 rows of the RANKED RUNNABLE QUEUE
 #                   (`checklist_store.queue`: queued, nothing in blocked_on, by
 #                   `priority_rank`, unranked last in `_seq` order) -- the order
@@ -1290,6 +1298,7 @@ def get_work_checklist(source: str = "default") -> dict[str, Any]:
 # as closed — it is not `done` (CLAUDE.md § Every session, step 5).
 
 _SNAPSHOT_CLOSED = ("done", "dropped")
+_SNAPSHOT_QUIET_AFTER_H = 48.0
 _SNAPSHOT_OPERATOR_KINDS = ("operator_decision", "operator")
 _SNAPSHOT_CACHE_TTL_S = 20.0
 _snapshot_cache: tuple[float, dict[str, Any]] | None = None
@@ -1304,8 +1313,52 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
         "lane": row.get("lane"),
         "tier": row.get("tier"),
         "priorityRank": row.get("priority_rank"),
+        "queuePos": row.get("queue_pos"),
         "updatedAt": row.get("updated_at"),
     }
+
+
+def _rank_sorted(rows, key_of=lambda r: r) -> list[dict[str, Any]]:
+    """Rows in the ONE display order (``work_reorder.display_key``): priority rank ascending, unranked
+    last, then ``queue_pos`` (else register order), then id. ``key_of`` maps a row to its checklist shape."""
+    from src.web.api.work_reorder import display_key
+    # [:3] drops the id tiebreak: sorted() is stable, so rows with equal (rank, position) keep the
+    # register's own list order, exactly as before for rows that carry no ``_seq``.
+    return sorted(rows, key=lambda r: display_key(key_of(r))[:3])
+
+
+def _quiet_hours(row: dict[str, Any], now: datetime) -> float | None:
+    """Hours since the row's last write, or None when its updated_at is missing or unparseable."""
+    raw = str(row.get("updated_at") or "").strip()
+    if not raw:
+        return None
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return max(0.0, (now - ts).total_seconds() / 3600.0)
+
+
+def _open_now(rows: list[dict[str, Any]], now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        if r.get("state") != "in_flight":
+            continue
+        h = _quiet_hours(r, now)
+        out.append({**_snapshot_row(r),
+                    "quietHours": None if h is None else round(h, 1),
+                    "quiet": None if h is None else h > _SNAPSHOT_QUIET_AFTER_H})
+    counts = {
+        "total": len(out),
+        "active": sum(1 for r in out if r["quiet"] is False),
+        "quiet": sum(1 for r in out if r["quiet"] is True),
+        "unknown": sum(1 for r in out if r["quiet"] is None),
+        "quietAfterHours": _SNAPSHOT_QUIET_AFTER_H,
+        "basis": "row activity (hours since updated_at), not owner-session liveness",
+    }
+    return out, counts
 
 
 def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1327,8 +1380,9 @@ def _work_snapshot_payload() -> dict[str, Any]:
         counts[key] = counts.get(key, 0) + 1
     closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
                     key=lambda r: str(r.get("updated_at") or ""), reverse=True)
+    open_now, open_now_counts = _open_now(_rank_sorted(rows), datetime.now(timezone.utc))
     waiting = []
-    for r in rows:
+    for r in _rank_sorted(rows):
         if r.get("state") in _SNAPSHOT_CLOSED:
             continue
         edges = _operator_edges(r)
@@ -1342,8 +1396,9 @@ def _work_snapshot_payload() -> dict[str, Any]:
         "total": len(rows),
         "counts": counts,
         "closedRecent": [_snapshot_row(r) for r in closed[:5]],
-        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
-        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
+        "openNow": open_now,
+        "openNowCounts": open_now_counts,
+        "next": [_snapshot_row(r) for r in _rank_sorted(checklist_store.queue({"items": rows}))[:5]],
         "waitingOnOperator": waiting,
     }
 
@@ -1369,6 +1424,86 @@ def get_work_snapshot() -> dict[str, Any]:
                 "next": [], "waitingOnOperator": []}
     _snapshot_cache = (now, payload)
     return payload
+
+
+# ── POST /reorder — the Overview work queue's up/down control (WORK-REORDER-ROUTE) ──
+#
+# **Tier 2, operator write.** The SPA cannot call ``POST /work/items/{id}/set`` (it needs ``If-Match``,
+# which the CORS allow-list refuses), so this route takes only ``{"id", "direction": "up"|"down", "over"?}``
+# and does the read-modify-write server-side (``src/web/api/work_reorder.py``: contract, order key and
+# write count are documented there). It writes ONLY the moved row (``priority_rank`` is a shared priority
+# class, never renumbered): rank := over's rank, ``extra.queue_pos`` := between over and its neighbour.
+# ``over`` (optional): the card's visible neighbour -- the cards are FILTERED views, so the row is placed
+# directly beside ``over`` instead of swapping with an unseen neighbour; without it, the row's own list.
+# Auth: ``require_session`` -- the operator's signed-in session, exactly as ``/decision/session``
+# and ``/plan-edits``. Recorded actor: ``operator-spa`` (never the email). Adds no gate; CORS unchanged.
+
+def _reorder_error(status_code: int, error: str, detail: str, **extra: Any):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=status_code,
+                        content={"accepted": False, "error": error, "detail": detail, **extra})
+
+
+@router.post("/reorder")
+async def post_work_reorder(
+    request: Request,
+    _session: dict = Depends(require_session),  # noqa: B008
+) -> Any:
+    """Move one work row up or down. 200 ``{accepted, item, changed, renumbered, population, order}``;
+    400 bad body / direction; 404 unknown id; 409 ``at_top``/``at_bottom``/``version_conflict``;
+    422 finished row; 503 store absent or write failed. Every refusal is JSON with ``error`` + ``detail``."""
+    from fastapi.concurrency import run_in_threadpool
+    try:
+        body = await request.json()
+    except (ValueError, TypeError):
+        return _reorder_error(400, "bad_body", "body is not JSON")
+    if not isinstance(body, dict):
+        return _reorder_error(400, "bad_body", "body must be a JSON object")
+    item_id, direction = body.get("id"), body.get("direction")
+    if not isinstance(item_id, str) or not item_id.strip():
+        return _reorder_error(400, "bad_body", "id is required (a work row id)")
+    if direction not in ("up", "down"):
+        return _reorder_error(400, "bad_direction", "direction must be 'up' or 'down'")
+    over = body.get("over")
+    if over is not None:
+        if not isinstance(over, str) or not over.strip():
+            return _reorder_error(400, "bad_body", "over, when given, must be a row id")
+        if over.strip() == item_id.strip():
+            return _reorder_error(400, "same_id", "over must be a different row than id")
+        over = over.strip()
+    version = body.get("version")
+    if version is not None and (isinstance(version, bool) or not isinstance(version, int)):
+        return _reorder_error(400, "bad_body", "version, when given, must be an integer")
+
+    def _move():
+        from src.runtime import work_read
+        from src.web.api import work_reorder
+        from src.web.api.auth import SESSION_ACTOR
+        store = work_read.local_store()
+        if store is None:
+            raise FileNotFoundError("work store is absent on this host")
+        return work_reorder.reorder(store, item_id.strip(), direction, by=SESSION_ACTOR, over=over,
+                                    expected_version=version)
+
+    from src.runtime import work_store as ws
+    from src.web.api.work_reorder import ReorderError
+    try:
+        res = await run_in_threadpool(_move)
+    except ReorderError as exc:
+        return _reorder_error(exc.status, exc.code, exc.detail, **exc.extra)
+    except ws.ConflictError as exc:
+        return _reorder_error(409, "version_conflict", str(exc))
+    except ws.NotFoundError as exc:
+        return _reorder_error(404, "unknown_id", str(exc))
+    except ws.WorkStoreValidationError as exc:
+        return _reorder_error(422, "refused", str(exc)[:300])
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged at ERROR and returned as 503 -- a move the operator thinks landed and did not is refused loudly.
+        logger.error("work reorder did not persist: %s", exc, exc_info=True)
+        return _reorder_error(503, "store_unavailable", f"reorder did not persist: {str(exc)[:200]}")
+    global _snapshot_cache, _checklist_cache
+    _snapshot_cache = None   # the next Overview read must show the move, not a 20 s-old list
+    _checklist_cache = None
+    return {"accepted": True, "read_back": "/api/bot/work/snapshot", **res}
 
 
 #: Operator-facing wording per answer state. PRESENTATION for this surface; the

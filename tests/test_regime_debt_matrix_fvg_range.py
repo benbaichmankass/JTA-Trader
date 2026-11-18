@@ -177,6 +177,16 @@ class TestFidelityIsHonest:
         _, faithful, omitted = _build(LIVE_FVG)
         assert faithful and omitted == []
 
+    def test_live_target_is_the_opposite_boundary_not_the_midline(self):
+        """FVG-EXIT-STYLE-FIDELITY (2026-11-17): the live strategy sets tp to the
+        OPPOSITE boundary; the harness defaults to `--exit-style mid`. A config with
+        no exit_style must replay `far`, and a declared exit_style must win."""
+        argv, faithful, _ = _build(LIVE_FVG)
+        assert argv[argv.index("--exit-style") + 1] == "far" and faithful
+        argv2, _, _ = _build(dict(LIVE_FVG, exit_style="mid"))
+        assert argv2.count("--exit-style") == 1
+        assert argv2[argv2.index("--exit-style") + 1] == "mid"
+
     def test_adx_max_is_modelled_but_adx_min_is_not(self):
         """backtest_fvg_range.py declares --adx-max and no --adx-min. Claiming
         faithful on an adx_min-carrying leg would assert a floor the harness never

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "RQ-20261029-5785-05 (Beagle-1 spot holdout) failed on the runner (run 43758915452). ETHUSDT 1h SPOT 2018-02-09 has 43 bars stamped off the hour grid (:28:14.800, an exchange-outage artefact); they mixed the CSV timestamp format and load_leg's to_datetime raised. Fix: spot-only off-grid bar drop in fetch_klines_binance_vision (perp path untouched), with a count to stderr, plus a test. Re-arm: last_dispatched_at -> rearmed_at 23:20Z (the failed row predates the fix).",
+  "hold_text": "Re-arms research/queue/RQ-20261029-5785-05.yaml (stamp fields only; rule unchanged). Manager merges; no auto-merge file. trader_import_closure decide = SKIP. Revert: git revert."
+}

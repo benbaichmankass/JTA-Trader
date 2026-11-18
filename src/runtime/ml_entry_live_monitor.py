@@ -124,6 +124,10 @@ def flags_for(mean: Optional[float], se: Optional[float]) -> List[str]:
 
 
 def _is_entry(row: Mapping[str, Any]) -> bool:
+    # A partial-close child row (setup_type 'partial_close', PARTIAL-CLOSE-PNL-NOT-JOURNALED) books
+    # part of the SAME decision's realised P&L; counting it would add a second R for one entry.
+    if str(row.get("setup_type") or "") == "partial_close":
+        return False
     return str(row.get("strategy_name") or row.get("strategy") or "") == STRATEGY_NAME
 
 

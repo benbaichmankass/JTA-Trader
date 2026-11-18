@@ -252,6 +252,78 @@ def test_tests_never_reach_the_live_api(monkeypatch, tmp_path):
         wr.get_row("ANY")
 
 
+# ── last_review lives in the store (WSD-S4-READERS-FLIP, manager decision 2026-11-12) ────────────
+
+LR = {"report_id": "WR-1", "reviewed_at": "2026-11-12T05:58:00Z", "by": "mgr"}
+
+
+def _header_bytes(repo):
+    return (repo / cs.STORE / cs.HEADER).read_bytes()
+
+
+def test_meta_roundtrip_versioned(env):
+    _, store = env
+    assert store.meta_get("last_review") is None
+    a = store.meta_set("last_review", LR, by="s")
+    b = store.meta_set("last_review", {**LR, "report_id": "WR-2"}, by="s")
+    assert (a["version"], b["version"]) == (1, 2)
+    assert store.meta_get("last_review")["value"]["report_id"] == "WR-2"
+    with pytest.raises(ws.WorkStoreValidationError):
+        store.meta_set("items", {}, by="s")
+
+
+def test_frozen_header_write_goes_to_store_not_file(env, monkeypatch):
+    repo, store = env
+    _freeze(repo)
+    before = _header_bytes(repo)
+    cs.write_header("last_review", LR, repo, by="session_x")
+    assert _header_bytes(repo) == before                      # the register folder is untouched
+    assert store.meta_get("last_review")["value"] == LR
+    assert cs.load(repo)["last_review"] == LR                 # readers see the store's value
+
+
+def test_file_value_is_fallback_when_store_lacks_the_key(env):
+    repo, _ = env
+    _freeze(repo)
+    hp = repo / cs.STORE / cs.HEADER
+    h = json.loads(hp.read_text())
+    h["last_review"] = {"report_id": "OLD"}
+    hp.write_text(json.dumps(h))
+    assert cs.load(repo)["last_review"] == {"report_id": "OLD"}
+
+
+def test_unfrozen_header_write_still_writes_file(env):
+    repo, store = env
+    cs.write_header("last_review", LR, repo)
+    assert json.loads(_header_bytes(repo))["last_review"] == LR
+    assert store.meta_get("last_review") is None
+
+
+def test_other_header_keys_still_write_the_file(env):
+    repo, store = env
+    _freeze(repo)
+    cs.write_header("updated_by", "x", repo)
+    assert json.loads(_header_bytes(repo))["updated_by"] == "x"
+
+
+def test_cli_op_meta_shape_and_outbox_roundtrip():
+    o = work_cli.make_op("meta", "last_review", {"value": LR}, "s", "op1")
+    parsed = work_cli.parse_outbox_comment(work_cli.outbox_comment(o))
+    assert parsed == o
+
+
+def test_export_writes_header_keys_back(env, tmp_path):
+    repo, store = env
+    store.meta_set("last_review", LR, by="s")
+    root = tmp_path / "exp"
+    (root / cs.STORE).mkdir(parents=True)
+    (root / cs.STORE / cs.HEADER).write_text(json.dumps({"schema_version": 2}))
+    out = work_cli.export_to_files(root, store.list_items(limit=10 ** 6),
+                                   header_meta=work_cli._header_meta(store.path))
+    assert out["header_keys_written"] == ["last_review"]
+    assert json.loads((root / cs.STORE / cs.HEADER).read_text())["last_review"] == LR
+
+
 # ── HEALTH-20261111-EXPORT-READS-STALE: off the VM, bulk reads come from the LIVE store ─────
 
 
@@ -261,6 +333,7 @@ class _FakeAPI:
     def __init__(self, store, fail=False, torn_times=0):
         self.store, self.fail, self.torn_times, self.calls = store, fail, torn_times, 0
         self.API = work_cli.API
+        self.META_API = work_cli.META_API
         self.WorkError = work_cli.WorkError
 
     def http(self, method, path, body=None, timeout=20.0, **_):
@@ -268,6 +341,9 @@ class _FakeAPI:
         self.calls += 1
         if self.fail:
             raise work_cli.Unreachable("store not reached: test")
+        if urlparse(path).path.startswith(self.META_API + "/"):   # GET /work/meta/<key> (WSD-S4-READERS-FLIP)
+            m = self.store.meta_get(urlparse(path).path.rsplit("/", 1)[1])
+            return (200, {"meta": m}, {}) if m else (404, {"detail": "no meta key"}, {})
         q = {k: v[0] for k, v in parse_qs(urlparse(path).query).items()}
         items = self.store.list_items(kind=q.get("kind"), due=q.get("due") == "true",
                                       limit=int(q["limit"]), offset=int(q["offset"]))
@@ -298,6 +374,17 @@ def test_off_vm_reads_the_live_store_not_the_export(remote):
     assert rows[0]["title"] == "edited today"              # positive control: today's write is seen
     assert _files_rows(repo)[0]["title"] == "open row"      # the export still holds the stale value
     assert wr.read_state()["checklist"]["source"] == "work_store_api"
+
+
+def test_off_vm_header_reads_last_review_from_the_store(remote):
+    """WSD-S4-READERS-FLIP x HEALTH-20261111-EXPORT-READS-STALE: off the VM, last_review comes from the store's
+    meta route, and a store without the key leaves the header file's value showing through."""
+    repo, store, _ = remote
+    before = cs.load(repo).get("last_review")
+    assert before != LR                                    # positive control: not yet in the store
+    store.meta_set("last_review", LR, by="s")
+    wr.RemoteStore._cache.clear()
+    assert cs.load(repo)["last_review"] == LR
 
 
 def test_off_vm_unreachable_is_could_not_look_never_the_export(remote):

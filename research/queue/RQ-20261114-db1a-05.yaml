@@ -1356,14 +1356,15 @@ follow_up: 'On the verdict a session reports to the manager: pooled X-A for each
   ruling on their censuses.'
 last_dispatched_at: '2026-11-14T11:21:51+00:00'
 grading:
-  attested: RULE-PROFIT-LOCK-CONDITIONAL-20261114
-  auto: true
+  auto: false
+  graded_at: '2026-11-15'
+  grader: session RESEARCH-OPS-20261115-1447 (triage)
+  verdict: fail
+  note: 'Rule applied verbatim: UNIT verdict is the PRIMARY arm L2. d_rec -30.25R, d_pre -18.93R (both
+    negative vs config-exact), so FAIL; L25 / L2T rows and the under-floor legs are indeterminate and
+    never change the unit verdict. Configuration closed: conditional profit lock k=2 (lock 1R) on 18 crypto
+    legs; family exit/profit-lock stays open (k=2.5 and the TP-near-gated arm are disclosed in the rows).'
   decision_rule_id: RULE-PROFIT-LOCK-CONDITIONAL-20261114
   evidence:
   - research/results/RQ-20261114-db1a-05/43589684532.jsonl
-  graded_at: '2026-11-14'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'']'
   rows: 42
-  verdict: null

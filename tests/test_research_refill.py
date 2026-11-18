@@ -70,6 +70,10 @@ def test_a_stamp_or_result_at_or_after_the_run_hands_the_unit_back_to_its_cadenc
     assert not dq.unit_pending_by_run({"last_dispatched_at": (run + timedelta(seconds=1)).isoformat()}, run, None)
     assert not dq.unit_pending_by_run({"last_dispatched_at": None}, run, run)
     assert not dq.unit_pending_by_run({"last_dispatched_at": None}, None, None)
+    # a re-arm after the run (a run lost on collection: no row, stamp cleared) clears the pending read
+    assert not dq.unit_pending_by_run({"last_dispatched_at": None, "rearmed_at": (run + timedelta(minutes=38)).isoformat()}, run, None)
+    # a re-arm BEFORE the newest run does not (that run is the re-armed unit's own fire)
+    assert dq.unit_pending_by_run({"last_dispatched_at": None, "rearmed_at": (run - timedelta(minutes=5)).isoformat()}, run, None)
 
 
 def test_workflow_run_trigger_lists_only_the_research_run_family():

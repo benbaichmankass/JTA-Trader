@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Beagle-1 EV challenger FORWARD read (manager 2026-11-16 on the cc86-01 grade; operator 2026-11-16 live-baseline/challenger rule). overlay_shadow scores committed challengers (ml/overlay/challengers/) beside the live artifact and logs them under `challengers` in the same shadow record: LOG ONLY, apply_overlay_reduce reads only the live record (test). Adds the challenger artifact (exported on the training window, reproduces the graded cc86-01 challenger: tau 0.3201, n_train 2434), the paired forward statistic in overlay_cusum_join.py, and the pre-registered unit RQ-20261116-cc86-02 (n = 60 disagreement packages, read once).",
+  "hold_text": "Tier 2: src/runtime/overlay_shadow.py and ml/overlay/challengers/ are trader-loaded; trader_import_closure = RESTART, so batch into the manager's sync window. No order effect (test_challenger_is_logged_beside_the_live_record_and_never_sizes; the coordinator AST test is unchanged and passing). Post-deploy check: an overlay_shadow.jsonl row for a TD gate leg carries challengers[0].artifact == overlay_td_ev.json, and no overlay_reduce journal line differs from the live record's multiplier. Revert: git revert (or delete ml/overlay/challengers/overlay_td_ev.json)."
+}

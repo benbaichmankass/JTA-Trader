@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "WORK-REORDER-ROUTE: new POST /api/bot/work/reorder behind require_session (Tier 2, SPA write path): writes only the moved row (rank := over rank, extra.queue_pos between over and its neighbour) via the store versioned set, helper src/web/api/work_reorder.py, work_store.py untouched. Also GET /work/snapshot openNow/waitingOnOperator sort by rank (nulls last), and PIPELINE-MAP-V2 backend fixes (unique element ids, filled states, additive groups + ?grouped=true). No order path, no new gate, CORS unchanged. trader_import_closure decide = SKIP (nothing loaded by the trader).",
+  "hold_text": "Tier 2 operator-write route on ict-web-api; needs one operator OK . After deploy: a signed-in SPA POST /api/bot/work/reorder {id, direction} returns 200 and GET /api/bot/work/snapshot shows the new order; an OPTIONS preflight with authorization,content-type is 200."
+}

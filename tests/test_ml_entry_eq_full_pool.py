@@ -43,9 +43,12 @@ def test_symbols_are_the_artifact_pool_minus_the_declared_exclusions():
     leg = _strategies()["ml_entry_eq_struct"]
     pool = json.loads(ART.read_text())["pool_symbols"]
     excl = leg.get("pool_exclude") or {}
-    assert set(excl) == {"TQQQ", "GLD"} and all(str(v).strip() for v in excl.values())
+    # 2026-11-17 (operator "In general, I ask that we not trade fossil fuels."): the nine reachable oil/gas names left the real-money
+    # population (config/values_exclusions.yaml fossil_fuels); 173 - 2 - 9 = 162.
+    fossil = {"USO", "UCO", "UNG", "XLE", "XOP", "OIH", "GUSH", "AMLP", "NFX"}
+    assert set(excl) == {"TQQQ", "GLD"} | fossil and all(str(v).strip() for v in excl.values())
     assert leg["symbols"] == [s for s in pool if s not in excl]
-    assert len(leg["symbols"]) == 171 and leg["pool_scored"] is True
+    assert len(leg["symbols"]) == 162 and leg["pool_scored"] is True
     assert pool == json.loads((REPO / "ml" / "candidates" / "ml_entry_eq_v1" / "model.json").read_text())["pool_symbols"]  # the refresher's pool
 
 

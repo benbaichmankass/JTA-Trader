@@ -312,7 +312,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_portfolio/trend_donchian_xrp_4h": R,
     "bybit_2/trend_donchian_sol_prop": ER,
     "bybit_portfolio/trend_donchian_sol_prop": ER,
-    "bybit_1/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
+    # 2026-11-15 ETH4H-TP4-PROP: bybit_1/tradeify_1/velotrade_1 trend_donchian_eth_4h left the baseline (tp_r 4.0 declared, reach 0.216; fully compliant).
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
@@ -320,12 +320,15 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-11-11 THURSDAY-PLANNING b2 (operator "Promote to real money"): the leg moves bybit_1 -> bybit_2 + mirror with
     # the SAME debt (entry TP tp_r 3 declared; tp_revision undeclared), as trend_donchian_xrp_4h carries above.
     # Not new debt, a moved line. Row TPX-XRP-ADX25-REVISION owns declaring the revision producer.
-    "bybit_2/trend_donchian_xrp_adx25": R,
-    "bybit_portfolio/trend_donchian_xrp_adx25": R,
+    # 2026-11-17 XRP-DOUBLE-EXPOSURE (Tier-3, operator popup "Follow the rule: demote adx25 (Recommended)"): trend_donchian_xrp_adx25 leaves
+    # bybit_2 + bybit_portfolio for the bybit_1 demo floor (paired exit re-test RQ-20261117-ea57-01 = TIE, keep xrp_4h). Its debt is
+    # RELOCATED, not added: the same dimension on the same leg (2 real-money/mirror lines -> 1 demo line, net -1).
+    "bybit_1/trend_donchian_xrp_adx25": R,
     # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
     # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
     # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
-    "bybit_1/ict_scalp_eth_15m": R,
+    "bybit_2/ict_scalp_eth_15m": R,
+    "bybit_portfolio/ict_scalp_eth_15m": R,
     "bybit_1/ict_scalp_xrp_15m": R,
     # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule", relayed by the manager): every non-retired leg trades on its
     # demo floor, so these routings are NEW. Each line is VISIBLE DEBT, not a claim of compliance: `ER` = the leg's entry TP is a sentinel /
@@ -387,9 +390,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # extend your baseline exception to sol_4h's approximate evidence."). The ETH/SOL 4h trend legs exit by
     # trail; on breakout_2/tradeify_1 the prop ticket path has no TP-revision plumbing (path=absent), on
     # velotrade_1 it is plumbed. Same exit recipe as bybit_2/eth_4h (E) and bybit_1/sol_4h (ER). Record: ML-PROP-ITERATE.
-    "tradeify_1/trend_donchian_eth_4h": E,    # ER -> E 2026-11-12: TP revision plumbed (CAP-TRADEIFY-TP-AMEND)
     "tradeify_1/trend_donchian_sol_4h": ER,
-    "velotrade_1/trend_donchian_eth_4h": E,
     "velotrade_1/trend_donchian_sol_4h": ER,
 }
 

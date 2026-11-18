@@ -1,0 +1,343 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_1h: 173 trades in the baseline arm 'A' on BTCUSDT 1h candles 2022-11-13T00:00:00 .. 2023-11-12T23:00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'H']",
+  "n": 173,
+  "measurement": {
+    "leg": "trend_donchian_1h",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "A",
+      "net_r": -2.7677,
+      "n": 173,
+      "max_drawdown_r": 16.928,
+      "folds_positive": 2,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 1,
+      "control": null,
+      "why": "net_r=-2.7677 with 2/4 positive folds (needs > 0 and >= 3)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0405,
+        "n": 173,
+        "net_r": -2.7677,
+        "net_r_fee_only": 7.3207,
+        "max_drawdown_r": 16.928,
+        "by_outcome": {
+          "stop": 86,
+          "trail_stop": 74,
+          "timeout": 3,
+          "take_profit": 10
+        },
+        "mean_bars_held": 35.277,
+        "net_r_per_capital_day": -0.0109,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2022-11-13 00:00:00+00:00",
+        "data_end": "2023-11-12 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-11-13 00:00:00+00:00",
+            "end": "2023-02-12 05:45:00+00:00",
+            "trades": 38,
+            "net_r": -2.3218
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-12 05:45:00+00:00",
+            "end": "2023-05-14 11:30:00+00:00",
+            "trades": 53,
+            "net_r": 4.6314
+          },
+          {
+            "fold": 3,
+            "start": "2023-05-14 11:30:00+00:00",
+            "end": "2023-08-13 17:15:00+00:00",
+            "trades": 39,
+            "net_r": 1.2795
+          },
+          {
+            "fold": 4,
+            "start": "2023-08-13 17:15:00+00:00",
+            "end": "2023-11-12 23:00:00+00:00",
+            "trades": 43,
+            "net_r": -6.357
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_1h",
+          "--start",
+          "2022-11-13T00:00:00",
+          "--end",
+          "2023-11-12T23:00:00"
+        ]
+      },
+      "H": {
+        "reach_ge_6r": 0.0373,
+        "n": 161,
+        "net_r": -26.699,
+        "net_r_fee_only": -17.5757,
+        "max_drawdown_r": 28.2087,
+        "by_outcome": {
+          "stop": 84,
+          "trail_stop": 67,
+          "timeout": 2,
+          "take_profit": 8
+        },
+        "mean_bars_held": 33.398,
+        "net_r_per_capital_day": -0.1192,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "htf_long_sma_days": 200
+        },
+        "data_start": "2022-11-13 00:00:00+00:00",
+        "data_end": "2023-11-12 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-11-13 00:00:00+00:00",
+            "end": "2023-02-12 05:45:00+00:00",
+            "trades": 33,
+            "net_r": -13.5187
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-12 05:45:00+00:00",
+            "end": "2023-05-14 11:30:00+00:00",
+            "trades": 53,
+            "net_r": 4.6314
+          },
+          {
+            "fold": 3,
+            "start": "2023-05-14 11:30:00+00:00",
+            "end": "2023-08-13 17:15:00+00:00",
+            "trades": 39,
+            "net_r": 1.2795
+          },
+          {
+            "fold": 4,
+            "start": "2023-08-13 17:15:00+00:00",
+            "end": "2023-11-12 23:00:00+00:00",
+            "trades": 36,
+            "net_r": -19.0911
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/H__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/H__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_1h",
+          "--htf-long-sma-days",
+          "200",
+          "--start",
+          "2022-11-13T00:00:00",
+          "--end",
+          "2023-11-12T23:00:00"
+        ]
+      }
+    },
+    "window": {
+      "start": "2022-11-13T00:00:00",
+      "end": "2023-11-12T23:00:00",
+      "fetch_days": 1700,
+      "feed": {
+        "source": "binance",
+        "ticker": "BTCUSDT",
+        "interval": "60",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2022-11-13 00:00:00+00:00",
+        "2023-02-12 05:45:00+00:00",
+        "2023-05-14 11:30:00+00:00",
+        "2023-08-13 17:15:00+00:00",
+        "2023-11-12 23:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_1h",
+          "--start",
+          "2022-11-13T00:00:00",
+          "--end",
+          "2023-11-12T23:00:00"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      },
+      "H": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/H__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261115-2411-04/43780283246/pre_trend_donchian_1h/arms/H__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--decision-bar",
+          "forming",
+          "--minutes-1m-csv",
+          "<minutes_1m>",
+          "--strategy-name",
+          "trend_donchian_1h",
+          "--htf-long-sma-days",
+          "200",
+          "--start",
+          "2022-11-13T00:00:00",
+          "--end",
+          "2023-11-12T23:00:00"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--htf-long-sma-days",
+          "200"
+        ],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-2.7677 with 2/4 positive folds (needs > 0 and >= 3)"
+}

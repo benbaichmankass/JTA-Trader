@@ -33,12 +33,13 @@ def test_declared_rule_and_width_resolve_exactly_as_tested():
     assert leg["atr_stop_mult"] == 1.5 and leg["trail_mult"] == 6.0 and leg["donchian"] == 20
 
 
-def test_leg_on_general_paper_off_live_and_mirror_and_pair_stays_equal():
+def test_leg_on_live_and_mirror_off_general_paper_and_pair_stays_equal():
     # STRATEGY-STATUS-MODEL (2026-10-28): a leg is on real money + mirror OR on general paper, never both.
-    # 2026-11-06 PROD-LEGS-DSR-DECISION (operator popup "Re-measure, then move (Rec.)"): trend_donchian_eth_4h failed
-    # DSR > 0.95 AND BHY-haircut > 0 (docs/research/prod-legs-dsr-2026-11-06.md) and moved to bybit_1 (testing).
+    # 2026-11-06 PROD-LEGS-DSR-DECISION moved trend_donchian_eth_4h to bybit_1 (DSR/BHY fail). 2026-11-17 the operator
+    # PROMOTED it back (popup "ETH 4h breakout (Recommended)"; Stage-0 net R OOS +30.91, n 135, 3/4 folds; PR #26718):
+    # it is now on the live/mirror pair and off general paper.
     a = _accounts()
     for acct in ("bybit_2", "bybit_portfolio"):
-        assert LEG not in a[acct]["strategies"]
-    assert LEG in a["bybit_1"]["strategies"]
+        assert LEG in a[acct]["strategies"]
+    assert LEG not in a["bybit_1"]["strategies"]
     assert a["bybit_2"]["strategies"] == a["bybit_portfolio"]["strategies"]

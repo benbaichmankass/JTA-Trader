@@ -1,0 +1,129 @@
+id: RQ-20261117-b3aa-02
+title: 'turtle_soup: extend the sweep_lookback_15m response (entry family) to 120 and 180 bars, the direction the 40/60/90 sweep points, 1830 d net of the full cost stack (iteration from RQ-20261116-d5a7-08)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+programme: P1
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): one-factor sensitivity, extend a monotone response before declaring it flat.'
+question: 'turtle_soup: does a longer liquidity-sweep lookback (sweep_lookback_15m 120 or 180 vs the configured 60) improve net R over the same 1830-day BTCUSDT 15m window as d5a7-08, versus the config-exact
+  control, in >= 3 of 4 folds, net of the full cost stack?'
+why_this_matters: 'ITERATION (research-ops 2026-11-17 1006Z). DIAGNOSIS from the rows of RQ-20261116-d5a7-08 (FAIL): sweep_lookback 40 -> -104.84 R vs A (1/4 folds), 90 -> +15.81 R (2/4 folds, maxDD -15.7
+  R), i.e. a MONOTONE response in the lookback (40 < 60 < 90) that the 3-arm grid stopped short of. The control has no gross edge (fee-only -118.2 R on 708 trades), so the entry family is where an absolute
+  edge must come from: a longer lookback means sweeps of more significant (older, more widely watched) levels, the turtle-soup mechanism (stop-runs above obvious highs/lows get faded). Fewer, higher-quality
+  trades also cut the cost drag (cost share: net -175 R vs fee-only -118 R). On PASS: a holdout confirmation on pre-dev history (b3aa-01''s window) before any Tier-3 note; on FAIL with 120 and 180 both
+  <= 90''s response the entry lookback response is peaked/flat and the next entry lever is min_body_to_range (untested). Arm denominator 3 incl. control; cumulative arms on this lever 5 (40, 90 in d5a7-08).'
+power:
+  expected_n: 400
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: control n 708 on this window (d5a7-08, MEASURED); arms with a longer lookback trade less (estimate 300-600). n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-02-TS-LOOKBACK-EXT
+  statistic: 'exit_lever_ablation.py --grade sweep: per arm, delta net R vs control A, delta maxDD, and folds (of 4) in which it beats A, net of the full cost stack; the same 1830-day window as d5a7-08
+    (a re-read of the discovery window, disclosed; M13 cumulative arm count 5 on this lever).'
+  rule: 'PASS (a LEAD for a holdout read, never a setting change here) IF some arm beats control A by >= 4.0 R with maxDD no worse and >= 3 of 4 folds at A n >= 39; Regime-robustness clause (set before
+    the run): the result reports the per-fold table; the arm is net positive in at least 3 of 4 folds with no single fold above 50% of its total net R; long and short net reported separately (both >= 0
+    where the leg is two-sided, else reported as a LEAD with that caveat). FAIL IF none does at n >= 39 (the configuration closes; the entry family stays open). INDETERMINATE IF A n < 39 or the producer
+    failed. Arm denominator = 3.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path; a PASS is a lead for a pre-registered holdout read, not a promotion case.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: entry family is the only route to an absolute edge on a no-gross-edge leg; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, control + 2 arms, 1830 d of 15m candles; same shape as d5a7-08.
+  why_runner: Fetches keyless public Binance candles for a pinned window and runs the committed harness; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - turtle_soup
+  - --arm
+  - A=
+  - --arm
+  - sweep_lookback_15m_120=sweep_lookback_15m=120
+  - --arm
+  - sweep_lookback_15m_180=sweep_lookback_15m=180
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-b3aa-02
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-02
+ml_consumer:
+  not_applicable: 'Not an ML unit: a one-factor lever sweep on a rule-based leg.'
+intervention_controls:
+  not_applicable: entry-lever sweep against the declared config (A/B arms), not an active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261116-d5a7-08.yaml
+- research/levers/turtle_soup.yaml
+iteration:
+  subject: turtle_soup
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261116-d5a7-08
+  verdict_read: fail
+  diagnosis: 'd5a7-08 FAIL but monotone: lookback 40 -104.84 R (1/4), 90 +15.81 R (2/4); grid stopped short of the direction of improvement. Control fee-only -118.2 R: no gross edge, entry is the binding
+    family.'
+  search: entry family, sweep_lookback_15m extended to 120 and 180
+  levers:
+  - entry
+  map_entries:
+  - research/levers/turtle_soup.yaml#levers.entry
+  attempt: 4
+  due_by: '2026-11-24'
+follow_up: A PASS goes to a pre-dev confirmation; a FAIL moves the entry search to min_body_to_range.
+last_dispatched_at: '2026-11-18T11:35:39+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-02-TS-LOOKBACK-EXT
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-02-TS-LOOKBACK-EXT
+  evidence:
+  - research/results/RQ-20261117-b3aa-02/44296141589.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

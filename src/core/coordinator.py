@@ -202,7 +202,7 @@ def _is_ib_stk(symbol: str) -> bool:
         return False
 
 
-_LEG_SCOPE_CACHE: Optional[tuple] = None  # (strategies.yaml mtime, {leg: {account: [symbols]}})
+_LEG_SCOPE_CACHE: Optional[tuple] = None  # ((strategies.yaml mtime, population-record mtimes), {leg: {account: [symbols]}})
 
 
 def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]]:
@@ -221,16 +221,23 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
     if not strategy:
         return None
     try:
-        from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols
+        from src.config import ml_universe as _mu
+        from src.config.symbol_sets import (
+            ACCOUNT_SYMBOLS_KEY,
+            leg_symbols,
+            scoped_leg_accounts,
+        )
         from src.units.strategies import _DEFAULT_STRATEGIES_YAML, load_strategy_config
-        mtime = os.path.getmtime(_DEFAULT_STRATEGIES_YAML)
+        # the population records (comms/ml_universe/*.json) change a scoped ML leg's per-account set too
+        mtime = (os.path.getmtime(_DEFAULT_STRATEGIES_YAML),
+                 tuple((p.name, p.stat().st_mtime) for p in sorted(_mu.RECORD_DIR.glob("*.json"))))
         if _LEG_SCOPE_CACHE is None or _LEG_SCOPE_CACHE[0] != mtime:
             # strategies.yaml is ~150 ms to parse: re-read only when it changes.
             scopes: Dict[str, Dict[str, List[str]]] = {}
             for name, scfg in (load_strategy_config() or {}).items():
                 sc = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
                 if isinstance(sc, dict):
-                    scopes[str(name)] = {str(a): leg_symbols(scfg, str(a), leg=str(name)) for a in sc}
+                    scopes[str(name)] = {a: leg_symbols(scfg, a, leg=str(name)) for a in scoped_leg_accounts(str(name), sc)}
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
@@ -1554,6 +1561,23 @@ class Coordinator:
                     "error": str(_mreason),
                 })
                 continue
+            if _mv == _mirror_pairs.INDEPENDENT:
+                # Alpaca superset rule (operator 2026-11-01): the mirror is not starved by the real-money
+                # account's cash constraint. It dispatches on its OWN sizing; named INFO reason, no skip.
+                logger.info(
+                    "[coordinator] mirror independent: %s dispatching %s/%s on its own sizing — %s",
+                    account.name, pkg.strategy, pkg.symbol, _mreason,
+                )
+                try:
+                    from src.runtime.outcomes import Level, report
+                    report(
+                        "mirror_gate", "mirror_independent_primary_not_placed",
+                        level=Level.INFO, reason=str(_mreason),
+                        account_id=str(account.name),
+                        strategy=pkg.strategy, symbol=pkg.symbol,
+                    )
+                except Exception:  # noqa: BLE001 — observability never blocks
+                    logger.debug("mirror independent outcome report failed", exc_info=True)
             if _mv == _mirror_pairs.UNOBSERVED:
                 logger.warning(
                     "[coordinator] mirror gate: %s dispatching %s/%s with its "
@@ -2485,6 +2509,8 @@ class Coordinator:
                     market_type=str(
                         getattr(account, "market_type", "spot") or "spot"
                     ).lower(),
+                    entry_price=getattr(pkg, "entry", None),
+                    symbol=getattr(pkg, "symbol", None),
                 )
                 # An effective-dry account (shelved ``mode: dry_run``,
                 # execution:shadow strategy, or process-level override)
@@ -3511,6 +3537,12 @@ class Coordinator:
                 # refused on purpose, with its own journal row — a declared
                 # policy refusal, not a dispatch failure (2026-09-28).
                 or err == "broker_shorting_disabled"
+                # The account's per-slice risk budget is used up, so the risk
+                # layer declined the order on purpose (positions.slice_qty).
+                # A declared risk refusal, not a dispatch failure (operator
+                # 2026-11-15: "I don't need to keep getting these alerts for
+                # this reason"). The rejection is still journalled.
+                or "slice_budget_exhausted" in err
             )
 
         # MIRROR-QTY-DIVERGE: the direction the mirror gate cannot prevent —
@@ -4584,6 +4616,8 @@ def _explain_zero_sized_qty(
     risk_manager: Any,
     direction: str,
     market_type: str,
+    entry_price: Optional[float] = None,
+    symbol: Optional[str] = None,
 ) -> str:
     """Synthesise an operator-actionable reason string for a
     ``sized_qty <= 0`` outcome.
@@ -4602,6 +4636,12 @@ def _explain_zero_sized_qty(
         (non-positive balance). There is NO arbitrary minimum-balance
         floor anymore — ``min_balance_usd`` was removed 2026-06-24;
         the only floor is physics (you can't risk a fraction of zero).
+      * ``exposure_ceiling:`` — the gross-exposure headroom clamp
+        (``RiskManager.position_size`` -> ``exposure_headroom_usd``) left
+        less than ONE unit's notional, so the size floored to 0. Carries
+        notional / cap / headroom / unit notional (ZERO-QTY-EXPOSURE-EXPLAIN,
+        PI-20261104-KKPOFDJQ-0004: four ib_paper MGC refusals read as the
+        generic catch-all below while this clamp was the cause).
       * ``risk_refused:`` — generic catch-all (daily-loss budget or
         any other RiskManager rule). Includes balance +
         total_account_usd so the operator can reproduce.
@@ -4621,7 +4661,21 @@ def _explain_zero_sized_qty(
             f"(no funds available to size against)"
         )
 
-    # 2. Generic refusal — daily-loss budget or any future
+    # 2. Gross-exposure ceiling. Named only when the clamp is MEASURED to
+    #    bind: a headroom exists (CLAMP/REFUSE verdict; ``None`` means no
+    #    ceiling or unmeasurable, and is never read as zero) and it is below
+    #    one unit's notional. Read-only and best-effort: any failure falls
+    #    through to the generic reason, never raises into the order path.
+    try:
+        exposure_token = _exposure_ceiling_reason(
+            risk_manager, entry_price=entry_price, symbol=symbol,
+        )
+    except Exception:  # noqa: BLE001 -- explanation only, never blocks
+        exposure_token = None
+    if exposure_token:
+        return exposure_token
+
+    # 3. Generic refusal — daily-loss budget or any future
     #    RiskManager rule. Surface the inputs the operator needs
     #    to reproduce.
     avail_str = (
@@ -4636,6 +4690,60 @@ def _explain_zero_sized_qty(
         f"direction={direction} "
         f"market_type={market_type} — check daily-loss budget / "
         f"liquidation buffer / max_borrow"
+    )
+
+
+def _exposure_ceiling_reason(
+    risk_manager: Any, *, entry_price: Optional[float], symbol: Optional[str],
+) -> Optional[str]:
+    """``exposure_ceiling: ...`` when the gross-exposure headroom is below one
+    unit's notional, else ``None``. Pure read of the RiskManager's own
+    exposure surfaces (the same ``exposure_headroom_usd`` the sizer clamps
+    on); never consults or changes policy."""
+    headroom_fn = getattr(risk_manager, "exposure_headroom_usd", None)
+    if not callable(headroom_fn):
+        return None
+    headroom = headroom_fn()
+    if headroom is None:
+        return None
+    headroom = float(headroom)
+    unit_notional: Optional[float] = None
+    if entry_price:
+        from src.units.accounts.risk import contract_value_usd_for
+        unit_notional = abs(float(entry_price)) * float(
+            contract_value_usd_for(symbol or "") or 1.0
+        )
+        if headroom >= unit_notional:
+            return None  # the clamp leaves room for a unit; not the cause
+    elif headroom > 0:
+        return None  # no entry to price a unit: only a zero headroom is proof
+    notional = equity = None
+    try:
+        obs = risk_manager.observe_exposure()
+        if getattr(obs, "notional", None) is not None:
+            notional = float(obs.notional)
+        if getattr(obs, "equity", None) is not None:
+            equity = float(obs.equity)
+    except Exception:  # noqa: BLE001
+        pass
+    cap_mult = None
+    try:
+        cap_mult = risk_manager.exposure_policy()
+    except Exception:  # noqa: BLE001
+        pass
+    cap_usd = (
+        float(cap_mult) * equity
+        if cap_mult is not None and equity is not None else None
+    )
+
+    def _f(v: Optional[float]) -> str:
+        return f"{v:.2f}" if v is not None else "n/a"
+
+    return (
+        f"exposure_ceiling: sized_qty=0 -- gross notional={_f(notional)} USD "
+        f"cap={_f(cap_usd)} USD (max_gross_exposure_pct="
+        f"{cap_mult if cap_mult is not None else 'n/a'} x equity={_f(equity)}) "
+        f"headroom={_f(headroom)} USD < one unit={_f(unit_notional)} USD"
     )
 
 

@@ -1,0 +1,20 @@
+Failed to get ticker 'ES=F' reason: Failed to perform, curl: (28) Resolving timed out after 30002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+
+1 Failed download:
+['ES=F']: Timeout('Failed to perform, curl: (28) Resolving timed out after 30002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.')
+Failed to get ticker 'SPY' reason: Failed to perform, curl: (28) Resolving timed out after 30002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+
+1 Failed download:
+['SPY']: Timeout('Failed to perform, curl: (28) Resolving timed out after 30002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.')
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1462, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1069, in main
+    feed = fetch_candles(a.leg, {**base, "timeframe": native_tf}, a.days, csv, non_crypto_source=a.non_crypto_source)
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 315, in fetch_candles
+    rdm._fetch_csv(feed, days, csv)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/tmp/repo/scripts/research/regime_debt_matrix.py", line 830, in _fetch_csv
+    raise RuntimeError(_yahoo_empty_reason(feed["ticker"], yf, feed["interval"]))
+RuntimeError: yfinance returned no rows for ES=F (yfinance==0.2.66); venue_state=refusing_us -- the SPY control is ALSO empty, so this is not about ES=F. Yahoo answers a plain-requests User-Agent with HTTP 429 and serves the same request with a browser UA; the 0.2.x line is requests-backed and the 1.x line impersonates via curl_cffi. Check the installed version against requirements (yfinance>=1.7.0).

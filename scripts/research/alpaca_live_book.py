@@ -400,6 +400,56 @@ def section_label(tab_dev: pd.DataFrame, o_base: pd.DataFrame, sizer, log=print)
             "variants": out, "bar": bar}
 
 
+def atr_neutral_target(tab: pd.DataFrame, y: str = "net_long", q: int = 5) -> pd.Series:
+    """RQ-20261117-c21d-06 arm A1: the net-R target with its (decision close x atr_pct quintile) mean removed. RQ-20261111-207f-03
+    diagnosed that the net-R model ranks COST PER R (IC pred vs cost_long -0.527) rather than direction; cost per R moves with
+    ATR/price, so removing each ATR bucket's mean at each close leaves the within-bucket, direction-driven part. Computed on the
+    target only (no feature change); NaN where the bucket has < 2 rows."""
+    b = np.floor(tab.groupby("ts")["atr_pct"].rank(pct=True).mul(q).clip(upper=q - 1e-9).fillna(-1).to_numpy(float)).astype(int)
+    g = tab[y].groupby([tab["ts"], b])
+    cnt = g.transform("count")
+    out = tab[y] - g.transform("mean")
+    return out.where(cnt >= 2)
+
+
+def section_neutral(tab_dev: pd.DataFrame, o_base: pd.DataFrame, sizer, log=print) -> Dict[str, Any]:
+    """RQ-20261117-c21d-06: two one-factor target arms against the live Foxhound-4 net-R recipe at TAU_LIVE, count-matched,
+    graded on the realised net_long of the taken trades (the same comparison and bar as section_label / 207f-03).
+      A1_atr_neutral_net   target = atr_neutral_target(net_long); score = prediction
+      A2_gross_minus_cost  target = gross_long (direction head); score = prediction - cost_long (the pre-trade cost per R)"""
+    import holdout_lock as HL
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    base_tk = take(o_base, o_base["pred"].to_numpy(), TAU_LIVE)
+    n_above = int((o_base["pred"] > TAU_LIVE).sum())
+    out = {"baseline": {"trades": trade_stats(base_tk), "book": replay(_trades(base_tk), CASH0, **kw), "n_rows_above_tau": n_above}}
+    t1 = tab_dev.assign(_a1=atr_neutral_target(tab_dev))
+    arms = {"A1_atr_neutral_net": (t1, "_a1", False), "A2_gross_minus_cost": (tab_dev, "gross_long", True)}
+    for name, (tb, target, minus_cost) in arms.items():
+        o = dev_oof(tb, target=target, log=log)
+        score = o["pred"].to_numpy(float) - (o["cost_long"].to_numpy(float) if minus_cost else 0.0)
+        thr = float(np.sort(score)[::-1][min(max(n_above, 1), len(o)) - 1])   # count-matched threshold (declared)
+        tk = take(o, score, thr - 1e-12)
+        out[name] = {"count_matched_tau": thr, "trades": trade_stats(tk), "book": replay(_trades(tk), CASH0, **kw)}
+    bar = HL.bar_for(2)
+    b = out["baseline"]["trades"]
+    win = []
+    for name in arms:
+        t = out[name]["trades"]
+        if t["n"] >= 30 and b["n"] >= 30 and t["se"] and b["se"]:
+            d = t["mean_net_r"] - b["mean_net_r"]
+            tt = d / math.sqrt(t["se"] ** 2 + b["se"] ** 2)
+            out[name]["vs_baseline"] = {"diff_net_r": d, "t": tt}
+            if d >= 0.03 and tt >= bar["point_t_min"] and t["folds_positive"] >= 3:
+                win.append(name)
+    if b["n"] < 30:
+        v, why = "indeterminate", f"baseline n {b['n']} < 30"
+    elif win:
+        v, why = "pass", f"target arm(s) {win} beat the live net-R recipe by >= 0.03 R (t >= {bar['point_t_min']}, >= 3/5 folds)"
+    else:
+        v, why = "fail", "neither the ATR-neutral target nor gross-minus-cost beats the live net-R recipe at matched trade count"
+    return {"verdict": v, "note": why, "variants": out, "bar": bar}
+
+
 def main_foxhound(a) -> Dict[str, Any]:
     import ml_entry_equity as M
     import ml_entry_alpaca_score as S
@@ -419,8 +469,13 @@ def main_foxhound(a) -> Dict[str, Any]:
         r = section_book(o, sizer)
     elif a.section == "calib":
         r = section_calib(o, sizer)
+    elif a.section == "neutral":
+        r = section_neutral(tab, o, sizer)
     else:
         r = section_label(tab, o, sizer)
+    # n = the DEV OOF decisions the section read (script_run --derive-record requires a top-level n; without it every
+    # P8 run landed producer_failed: 207f-01/-04 and c21d-06, PROGRAMME-REVIEW-20261118).
+    r.setdefault("n", len(o))
     r.update({"sizer": sizer, "cash0_source": CASH0_SOURCE, "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
               "n_pool": len(pool), "pool": {k: v for k, v in prep.items() if k != "excluded"}, "train_end": M.TRAIN_END,
               "structure_exit": M.STRUCT_SPEC, "ensemble_seeds": ENS_SEEDS, "alpaca_calls": client.calls,
@@ -470,7 +525,8 @@ def main_legs(a) -> Dict[str, Any]:
         v, why = "pass", f"legs that qualify for a head-to-head with Foxhound-4: {qual}"
     else:
         v, why = "fail", "no leg reaches n_taken >= 30 with book mean net R > 0 and month-clustered t >= 1.0"
-    return {"verdict": v, "note": why, "per_leg": per, "combined_one_slot": combined, "harness_runs": runs, "sizer": sizer,
+    return {"verdict": v, "note": why, "n": int(combined.get("n_candidates") or 0), "per_leg": per, "combined_one_slot": combined,
+            "harness_runs": runs, "sizer": sizer,
             "cash0_source": CASH0_SOURCE, "days": a.days,
             "population": f"Stage-0 trade lists of {len(a.strategy)} rostered equity legs (build_strategy_evidence, last {a.days} days, "
                           f"config-exact harness, net of its cost stack) replayed through the alpaca_live cash book"}
@@ -530,6 +586,15 @@ def _self_test() -> int:
     check("tau policy passes preds through", tt == 0.15 and np.allclose(pt, o.pred))
     pa, _ = policy_pred(o, "adaptive_q995_30d")
     check("adaptive threshold is causal (first close has no prior window)", not np.isfinite(pa[:30]).any())
+    # c21d-06 A1: the ATR-neutral target removes each (close, atr quintile) mean, so it is uncorrelated with an ATR-only signal
+    nts = pd.date_range("2024-01-02 16:00", periods=20, freq="4h", tz="UTC").repeat(50)
+    atr = rng.uniform(0.005, 0.05, len(nts))
+    tabn = pd.DataFrame({"ts": nts, "atr_pct": atr, "net_long": -10 * atr + rng.normal(0, 0.01, len(nts))})
+    an = atr_neutral_target(tabn)
+    gm = an.groupby([tabn.ts, tabn.groupby("ts")["atr_pct"].rank(pct=True).mul(5).clip(upper=4.999).astype(int)]).mean()
+    check("ATR-neutral target has zero mean in every (close, quintile) bucket", float(gm.abs().max()) < 1e-12)
+    check("ATR-neutral target strips most of an ATR-driven target",
+          abs(np.corrcoef(an.dropna(), atr[an.notna().to_numpy()])[0, 1]) < abs(np.corrcoef(tabn.net_long, atr)[0, 1]) / 2)
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0
 
@@ -547,7 +612,7 @@ def main(argv=None) -> int:
         p.add_argument("--registered-at", required=True)
         if name == "foxhound":
             p.add_argument("--cache", required=True)
-            p.add_argument("--section", required=True, choices=["book", "calib", "label"])
+            p.add_argument("--section", required=True, choices=["book", "calib", "label", "neutral"])
         else:
             p.add_argument("--strategy", action="append", required=True)
             p.add_argument("--days", type=int, default=700)
@@ -561,7 +626,7 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     r = main_foxhound(a) if a.cmd == "foxhound" else main_legs(a)
     row = {"schema_version": 1, "schema": SCHEMA, "research_unit": a.unit, "read_state": "measured", "verdict": r["verdict"],
-           "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+           "n": r.get("n"), "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
            "population": r.get("population"), "measurement": {**r, "runtime_s": round(time.time() - t0, 1)},
            "produced_by": {"tool": f"python3 scripts/research/alpaca_live_book.py {a.cmd}", "where": a.where}}

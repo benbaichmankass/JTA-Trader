@@ -57,6 +57,8 @@ TRAIN_FRAC = 0.10
 FWD_START, FWD_END = "2026-10-01", "2026-10-31"
 DEV_END = "2026-10-01"                                 # exclusive; the forward window starts here
 TP_FOLDS = ["2022-01-01", "2023-01-01", "2024-01-01", "2025-01-01", "2025-10-01", "2026-10-01"]
+EXTEND_ONLY = False                                    # run-extend-only-year: dev margin choice + forward policy refuse pull-ins
+FWD_FROM_DEV_CACHE = False                             # run-extend-only-year: the forward window is inside the dev cache (no daily fetch)
 N_FLOOR, SYMBOL_FLOOR, MOVED_FLOOR = 300, 10, 30
 CLOSE = -1                                             # chooser sentinel: close the position at this check-in (D8)
 RANDOM_DRAWS = 200
@@ -658,13 +660,36 @@ def summarize_delta(trades: pd.DataFrame, base: list, pol: list, rng) -> dict:
     return res
 
 
-def verdict(h: dict) -> tuple[str, str]:
+def verdict(h: dict, bar: dict | None = None) -> tuple[str, str]:
+    """``bar`` = the holdout ledger's deflated bar for this read (HOLDOUT-DEFLATED-REUSE, operator 2026-11-05). On the 1st read
+    of the family on the window it is exactly the original rule (mean delta >= 0); the N-th read needs mean delta >=
+    point_t_min x SE, with SE taken from the reported bootstrap CI95 (width / 3.92)."""
+    import holdout_lock as HL
     n, ns, nm, d = h["n"], h["n_symbols"], h["n_trades_moved"], h["mean_delta_per_trade"]
     if n < N_FLOOR or ns < SYMBOL_FLOOR or nm < MOVED_FLOOR:
         return "indeterminate", f"held-out trades={n} (floor {N_FLOOR}) symbols={ns} (floor {SYMBOL_FLOOR}) moved={nm} (floor {MOVED_FLOOR})"
-    if d >= 0:
-        return "pass", f"held-out mean delta net R per trade {d:+.4f} >= 0 at n={n}, {ns} symbols, {nm} moved"
-    return "fail", f"held-out mean delta net R per trade {d:+.4f} < 0 at n={n}, {ns} symbols, {nm} moved"
+    ci = h.get("bootstrap_ci95_delta_by_trade_reported") or [None, None]
+    se = (ci[1] - ci[0]) / 3.92 if None not in ci else None
+    t_min = (bar or HL.bar_for(1))["point_t_min"]
+    if HL.point_ok(d, se, bar):
+        return "pass", f"held-out mean delta net R per trade {d:+.4f} clears the deflated point bar (t_min {t_min}) at n={n}, {ns} symbols, {nm} moved"
+    return "fail", f"held-out mean delta net R per trade {d:+.4f} misses the deflated point bar (t_min {t_min}, se {se}) at n={n}, {ns} symbols, {nm} moved"
+
+
+def claim_read(out: Path, unit: str, reader: str) -> dict:
+    """Record this read of the forward window in the holdout ledger BEFORE any forward outcome is touched and return its
+    deflated bar (HOLDOUT-DEFLATED-REUSE; replaces the old one-read marker). The runner does not carry the repo ledger back, so
+    the claim is made against a COPY inside ``out`` (it lands with the result); the lane appends that line to
+    comms/research/holdout_reads.jsonl (the ml_decision_manage.claim_read pattern)."""
+    import shutil
+
+    import holdout_lock as HL
+    led = out / "holdout_reads.jsonl"
+    if not led.exists() and HL.LEDGER.exists():
+        shutil.copy(HL.LEDGER, led)
+    train_end = str((pd.Timestamp(FWD_START) - pd.Timedelta(days=1)).date())   # the TP model fits on dev rows before FWD_START
+    return HL.claim_read(model_id=f"TPREV-{unit}", start=FWD_START, end=FWD_END, unit=unit, reader=reader, ledger=led,
+                         train_end=train_end, family="TPREV")
 
 
 # ------------------------------------------------------------------------------------------------ run
@@ -689,7 +714,8 @@ def dev_stage(cache: Path) -> dict:
     print(f"dev table rows={len(tab)} panel parity max|diff|={worst:.2e} t={time.time()-t0:.0f}s", flush=True)
     tau = float(art["tau"])
     wf = entry_trades_wf(tab, tau)
-    sv = served_trades(tab, E.HOLDOUT_START, DEV_END, art)
+    # run-extend-only-year moves DEV_END back to HOLDOUT_START: no served-model rows remain inside dev
+    sv = served_trades(tab, E.HOLDOUT_START, DEV_END, art) if E.HOLDOUT_START < DEV_END else wf.iloc[0:0]
     trades = pd.concat([wf, sv], ignore_index=True)
     # walker parity: the fixed 3 ATR walk reproduces the c692-01 label net R on every dev trade
     sc0 = Scorer(trades, bars, {}, np.zeros(N_CLASS))
@@ -723,7 +749,7 @@ def dev_stage(cache: Path) -> dict:
             ks = [k for k, v in probs.items() if v[1] is fm]
             sub = trades.loc[ks]
             sc = Scorer(sub, bars, {kk: probs[k][0] for kk, k in zip(range(len(ks)), ks)}, fm)
-            res += [(a0[0] - b0, len(a0[2]) > 0) for a0, b0 in zip(sc.policy(m), sub.net_r.to_numpy())]
+            res += [(a0[0] - b0, len(a0[2]) > 0) for a0, b0 in zip(sc.policy(m, extend_only=EXTEND_ONLY), sub.net_r.to_numpy())]
         d = np.array([x[0] for x in res])
         by_margin[str(m)] = {"n": len(d), "mean_delta": float(d.mean()), "n_moved": int(sum(x[1] for x in res))}
         print("margin", m, by_margin[str(m)], f"t={time.time()-t0:.0f}s", flush=True)
@@ -746,9 +772,12 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     t0 = time.time()
     art = json.loads(SERVED.read_text())
     syms = E.universe()
-    fwd = out / "fwd_klines"
-    rep = forward_cache(cache, fwd, syms)
-    have = [s for s in syms if rep[s].get("oct_days")]
+    if FWD_FROM_DEV_CACHE:                      # run-extend-only-year: the window is already in the dev cache
+        fwd, have = cache, [s for s in syms if (cache / f"{s}.pkl").exists()]
+    else:
+        fwd = out / "fwd_klines"
+        rep = forward_cache(cache, fwd, syms)
+        have = [s for s in syms if rep[s].get("oct_days")]
     # dev rows for the final TP fit come from the DEV cache (bars < 2026-10-01); forward rows from the forward cache
     tab_dev = E.build_table(cache, syms)
     bars_dev = load_bars(cache, syms)
@@ -760,7 +789,7 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     # cross-sectional context needs every universe symbol present at a ts: symbols without October simply drop out of it,
     # exactly as a delisted symbol drops out of the live reference set
     for s in syms:
-        if s not in have:
+        if s not in have and not FWD_FROM_DEV_CACHE:
             (fwd / f"{s}.pkl").write_bytes((cache / f"{s}.pkl").read_bytes())
     tab = E.build_table(fwd, syms)
     bars = load_bars(fwd, syms)
@@ -793,7 +822,7 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
         return r
     walk = _spy
     try:
-        pol = sc.policy(dev["margin_star"], log)
+        pol = sc.policy(dev["margin_star"], log, extend_only=EXTEND_ONLY)
     finally:
         walk = _walk0
     try:
@@ -830,6 +859,27 @@ def forward_stage(cache: Path, out: Path, dev: dict) -> dict:
     return h
 
 
+YEAR_WINDOW = ("2025-10-01", "2026-09-30")   # ENTRY v1's held-out year; the refit TP recipe trains strictly before it
+
+
+def configure_extend_only_year() -> None:
+    """RQ-20261101-383f-02 as amended 2026-11-15 (ML-PRIMARY-3): the TP RECIPE refit with its dev cut at 2025-10-01, the margin
+    re-chosen on pre-2025-10 dev with the EXTEND-ONLY chooser, read once per claim on 2025-10-01..2026-09-30. The served
+    ml_entry_tp_revision_v1 artifact was fit on rows up to 2026-09-30, so this window can only be read by a refit (holdout_lock
+    refuses a window that overlaps training). Module globals only; every other subcommand keeps the October defaults."""
+    global FWD_START, FWD_END, DEV_END, TP_FOLDS, EXTEND_ONLY, FWD_FROM_DEV_CACHE
+    FWD_START, FWD_END = YEAR_WINDOW
+    DEV_END = E.HOLDOUT_START
+    TP_FOLDS = [f for f in TP_FOLDS if f <= DEV_END]
+    EXTEND_ONLY = FWD_FROM_DEV_CACHE = True
+    assert FWD_END <= E.END and TP_FOLDS[-1] == DEV_END == FWD_START
+
+
+def run_extend_only_year(args) -> int:
+    configure_extend_only_year()
+    return run(args)
+
+
 def run(args) -> int:
     cache, out = Path(args.cache), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -843,14 +893,13 @@ def run(args) -> int:
     print(json.dumps({k: dev[k] for k in ("dev_by_margin", "margin_star", "best_static_level")}), flush=True)
     if args.dev_only:
         return 0
-    marker = out / "FORWARD_READ"
-    if marker.exists():
-        raise SystemExit("the forward window has already been read once (ML-BAR-ONE-READ); refusing a second read")
-    marker.write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + "\n")
+    claim = claim_read(out, args.unit or UNIT, getattr(args, "reader", None) or "research-script-run")
+    (out / "holdout_claim.json").write_text(json.dumps(claim, indent=1) + "\n")
     h = forward_stage(cache, out, dev)
-    v, why = verdict(h)
+    v, why = verdict(h, claim["bar"])
     summary = {"schema": SCHEMA, "unit": args.unit or UNIT, "verdict": v, "why": why, "git_sha": E._git_sha(),
-               "variants_read_on_window": 1, "config": {k: globals()[k] for k in (
+               "variants_read_on_window": claim["variants_on_window"], "n_tries": claim["n_tries"],
+               "holdout_bar": claim["bar"], "config": {k: globals()[k] for k in (
                    "GRID", "BASE_TP", "CHECKINS", "MIN_GAP_ATR", "VENUE_CAP_PCT", "MARGINS", "TRAIN_FRAC", "TRAIN_MAX_ROWS",
                    "FWD_START", "FWD_END", "TP_FOLDS", "N_FLOOR", "SYMBOL_FLOOR", "MOVED_FLOOR", "RANDOM_DRAWS", "SEED",
                    "TP_LGB", "TP_FEATURES")}, "dev": dev, "heldout": h, "elapsed_s": round(time.time() - t0)}
@@ -945,6 +994,36 @@ def _self_test() -> None:
     p[8] = 1.0                                                                          # reach all 8 levels, no stop
     assert pv0_choose(p, np.zeros(N_CLASS), 1, 100.0, 1.0, 100.0, 0.0) == len(GRID) - 1
     assert pv0_choose(p, np.zeros(N_CLASS), 1, 100.0, 1.0, 100.0, 10.0) == GRID.index(3.0)
+    # holdout ledger (HOLDOUT-DEFLATED-REUSE): the 1st read is exactly the original rule, the N-th is deflated; claims go to a copy
+    import tempfile
+
+    import holdout_lock as HL
+    hv = {"n": 1000, "n_symbols": 20, "n_trades_moved": 100, "mean_delta_per_trade": 0.01,
+          "bootstrap_ci95_delta_by_trade_reported": [-0.0096, 0.0296]}       # se = 0.01
+    assert verdict(hv, HL.bar_for(1))[0] == "pass"
+    assert verdict(hv, HL.bar_for(12))[0] == "fail"                           # 0.01 < 1.66 x 0.01
+    assert verdict({**hv, "mean_delta_per_trade": -0.001}, HL.bar_for(1))[0] == "fail"
+    assert verdict({**hv, "n": 10}, HL.bar_for(1))[0] == "indeterminate"
+    with tempfile.TemporaryDirectory() as td:
+        before = HL.LEDGER.read_text() if HL.LEDGER.exists() else None
+        c1 = claim_read(Path(td), "RQ-SELFTEST", "self-test")
+        c2 = claim_read(Path(td), "RQ-SELFTEST", "self-test")
+        assert c2["n_tries"] == c1["n_tries"] + 1 and c1["family"] == "TPREV"
+        assert (HL.LEDGER.read_text() if HL.LEDGER.exists() else None) == before   # the repo ledger is never written
+    # run-extend-only-year (383f-02 amended 2026-11-15): the refit window is claimable (no overlap with the refit's training)
+    g0 = (FWD_START, FWD_END, DEV_END, list(TP_FOLDS), EXTEND_ONLY, FWD_FROM_DEV_CACHE)
+    configure_extend_only_year()
+    try:
+        assert (FWD_START, FWD_END, DEV_END) == ("2025-10-01", "2026-09-30", "2025-10-01") and EXTEND_ONLY and FWD_FROM_DEV_CACHE
+        assert TP_FOLDS[-1] == "2025-10-01" and all(f <= DEV_END for f in TP_FOLDS)
+        HL.check_window_disjoint(str((pd.Timestamp(FWD_START) - pd.Timedelta(days=1)).date()), FWD_START)
+        try:
+            HL.check_window_disjoint("2026-09-30", "2025-10-01")    # the served v1 artifact's training end: refused
+            raise AssertionError("an overlapping window must be refused")
+        except HL.WindowOverlapsTraining:
+            pass
+    finally:
+        globals().update(dict(zip(("FWD_START", "FWD_END", "DEV_END", "TP_FOLDS", "EXTEND_ONLY", "FWD_FROM_DEV_CACHE"), g0)))
     print("self-test ok")
 
 
@@ -1480,10 +1559,12 @@ def exit_now_v0(args) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "export", "entry-forward", "evidence-extend-only", "pointer-v0", "exit-now-v0"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "run-extend-only-year", "export", "entry-forward", "evidence-extend-only",
+                                                                     "pointer-v0", "exit-now-v0"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_tp_revision_out")
     ap.add_argument("--unit", default=UNIT)
+    ap.add_argument("--reader", default="research-script-run (claimed on the runner before any forward outcome)")
     ap.add_argument("--dev-only", action="store_true", help="stop before the one read of the forward window")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--dev-json", default="comms/research/RQ-20261101-383f-01/local-20261101T1030Z/dev.json")
@@ -1497,6 +1578,8 @@ def main(argv=None) -> int:
     if a.self_test:
         _self_test()
         return 0
+    if a.cmd == "run-extend-only-year":
+        return run_extend_only_year(a)
     if a.cmd == "evidence-extend-only":
         return evidence_extend_only(a)
     if a.cmd == "entry-forward":

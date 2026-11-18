@@ -5,7 +5,7 @@ id: RQ-20261115-a474-01
 title: 'D6 Pointer v0 DEFECT-CORRECTED RE-RUN of 82fd-01: does an entry-time TP chosen by the first-passage ML model (the TP-revision recipe extended with the
   decision bar) beat or match the fixed 3 ATR TP on ml_entry''s own trades, net of the full cost stack, on the record year
   AND the year before?'
-status: queued
+status: done
 not_before: '2026-11-15T07:00:00+00:00'   # a manager veto window: this is a disclosed second look at 82fd-01
 cadence: once
 theme: ml_health
@@ -129,3 +129,16 @@ lands:
   assert_field: read_state
   min_rows: 1
 last_dispatched_at: '2026-11-15T07:02:26+00:00'
+grading:
+  attested: RULE-RQ20261115-a474-01-POINTER-V0-DEFECT-RERUN
+  auto: true
+  decision_rule_id: RULE-RQ20261115-a474-01-POINTER-V0-DEFECT-RERUN
+  evidence:
+  - research/results/RQ-20261115-a474-01/43688146403.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

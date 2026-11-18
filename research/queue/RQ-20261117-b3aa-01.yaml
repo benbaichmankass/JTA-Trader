@@ -1,0 +1,135 @@
+id: RQ-20261117-b3aa-01
+title: CONFIRMATION on pre-development history (2020-01..2021-11) of the sweep-selected atr_stop_mult_0.5 arm of turtle_soup vs the config-exact control, net of the full cost stack (iteration from RQ-20261116-d5a7-09)
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+programme: P1
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span; operator 2026-11-05 RESEARCH-NO-WAIT order 1 (pre-dev history).'
+question: 'turtle_soup: does atr_stop_mult 0.5 (selected in RQ-20261116-d5a7-09 on BTCUSDT 15m 2021-11-12..2026-11-15) still beat the config-exact control A (0.3) net of the full cost stack on the disjoint
+  pre-development window 2020-01-01..2021-11-11 that no selection step saw?'
+why_this_matters: 'ITERATION (research-ops 2026-11-17 1006Z). RQ-20261116-d5a7-09 PASS (a discovery, arm denominator 3 incl. control): atr_stop_mult 0.5 +62.34 R vs A over 708 control trades, maxDD -56.7
+  R, 3/4 folds; sibling 0.2 +115.4 R but only 2/4 folds AND its trade count collapses to 2 and 0 in folds 3-4 (the tighter stop starves entries, a degenerate arm, not a lead). ATTRIBUTION read from the
+  rows: the control loses -175.1 R net (-0.25 R/trade) and -118.2 R fee-only, so the leg has NO gross edge on this window; sl 342 vs tp 365 outcomes. The 0.5 arm is still -112.8 R net: a PASS here reduces
+  demo-floor losses, it does not make the leg pass Stage 0. On PASS: a Tier-3 proposal NOTE for the manager (stop 0.3 -> 0.5 on a demo-floor leg; own-losses bucket); the entry family (b3aa-02) stays the
+  route to an absolute edge. On FAIL: the stop response is window-specific in research/levers/turtle_soup.yaml and only the entry family is pursued. The two branches change different decisions (declare
+  the stop or not).'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~1.9 years of 15m BTCUSDT at the discovery window's ~142 trades/year (708 over 5 y) -> ~270 control trades (an ESTIMATE); n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public Binance candles for a pinned window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-01-TS-STOP05-PREDEV
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on turtle_soup, arms A (config-exact) and atr_stop_mult_0.5, window 2020-01-01 .. 2021-11-11 23:59 (entirely before the discovery window
+    start 2021-11-12), one continuous harness pass, net of fee + slippage + funding (the harness's venue-aware stack), 4 equal calendar folds; --dd-tol-frac 0.10. Arm fixed now, nothing re-selected.
+  rule: 'PASS iff net_r(atr_stop_mult_0.5) > net_r(A) AND folds where it is >= A (ties count) >= 3 of 4 AND maxDD(0.5) <= 1.10 x maxDD(A) AND n(A) >= 39 (the grade the harness computes); the per-fold table
+    is reported. INDETERMINATE iff n(A) < 39 or the producer failed. FAIL otherwise (closes THIS configuration on THIS window, never the exit family). This is a RELATIVE (lever) confirmation on a leg whose
+    control loses; the absolute Stage-0 regime-robustness clause is not applicable to the arm''s sign and is reported only. A PASS is a LEAD for a Tier-3 proposal NOTE, never a config edit. Thresholds not
+    changed after any result. M13: this window was not read for this lever before (first read).'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: 'Edits no config, roster or record and places no order. One arm, one confirmation window; not a promotion case: the leg stays net-negative either way.'
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: demo-floor leg losing -0.25 R/trade in Stage-0 replay; stop change trims losses only; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, control + 1 arm on ~1.9 y of 15m candles; same shape as d5a7-09 (~45 min, estimate).
+  why_runner: Fetches keyless public Binance candles for a pinned window and runs the committed harness; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - turtle_soup
+  - --arm
+  - A=
+  - --arm
+  - atr_stop_mult_0.5=atr_stop_mult=0.5
+  - --days
+  - '2520'
+  - --start
+  - '2020-01-01'
+  - --end
+  - 2021-11-11 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --dd-tol-frac
+  - '0.10'
+  - --research-unit
+  - RQ-20261117-b3aa-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-01
+ml_consumer:
+  not_applicable: 'Not an ML unit: a lever confirmation on a rule-based leg.'
+intervention_controls:
+  not_applicable: lever confirmation against the declared config on the same replayed trades (A/B arms), not an active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261116-d5a7-09.yaml
+- research/levers/turtle_soup.yaml
+- scripts/research/exit_lever_ablation.py
+iteration:
+  subject: turtle_soup
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261116-d5a7-09
+  verdict_read: pass_unconfirmed
+  diagnosis: 'd5a7-09: atr_stop_mult 0.5 +62.34 R vs A (3/4 folds, maxDD better); 0.2 +115.4 R but degenerate (entries 2 and 0 in folds 3-4). Control -175.1 R net, -118.2 R fee-only: no gross edge; the
+    stop lever trims loss size, it cannot create an edge. A pass on one window is a discovery.'
+  search: ONE confirmation of the selected stop arm on pre-development history; no new arms
+  levers:
+  - exit
+  map_entries:
+  - research/levers/turtle_soup.yaml#levers.exit
+  attempt: 2
+  due_by: '2026-11-24'
+follow_up: Grader applies the rule mechanically; a PASS goes to the manager as a Tier-3 note (stop 0.3 -> 0.5, demo floor); a FAIL records the stop response as window-specific.
+last_dispatched_at: '2026-11-18T07:58:12+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-01-TS-STOP05-PREDEV
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-01-TS-STOP05-PREDEV
+  evidence:
+  - research/results/RQ-20261117-b3aa-01/44263055914.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

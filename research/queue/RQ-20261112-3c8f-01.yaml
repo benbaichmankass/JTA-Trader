@@ -105,7 +105,15 @@ run:
   inputs:
     research_unit: RQ-20261112-3c8f-01
 grading:
-  auto: true
+  auto: false
+  decision_rule_id: RULE-RQ202611123c8f01
+  evidence:
+  - research/results/RQ-20261112-3c8f-01/local-20261112T0648Z.jsonl
+  graded_at: '2026-11-16'
+  grader: session RESEARCH-OPS-20261116-0715 (triage)
+  note: "Rule applied verbatim: arm L pooled n 2031, net +117.53 R (0.0579 R/trade), 5 folds positive, 6 powered cells pass (need 5), but its edge over control C is 0.0446 R/trade < the 0.05 bar (not lowered). FAIL. Joint reading declared in the rule needs BOTH 3c8f-01 and -02 to PASS, so IBS arm L is not a lead. Configuration closed: frozen IBS arm L on 9 sector SPDRs 1d 2020-06..2026-11; family (static-market mean reversion) stays open; the margin over C is 0.0446 R/trade on the recent symbol-disjoint window and 0.0064 on the earlier 2010-2020 window (3c8f-02): positive in both, below the bar in both; next test = a threshold lever on the IBS arm chosen from the lever map."
+  rows: 1
+  verdict: fail
 related:
 - RQ-20261112-a7e8-01
 - RQ-20261112-3c8f-02

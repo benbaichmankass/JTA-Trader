@@ -117,3 +117,25 @@ def test_connector_replies_stay_small_for_the_pages_calls(monkeypatch):
         assert len(json.dumps(out, default=str)) <= s.REPLY_BUDGET and "oversize" not in out, name
     wr = s.call_tool("work_rows", {"view": "in_flight", "limit": 3})["closed_this_week"]
     assert len(wr["rows"]) <= 15 and wr["population"]["closed_rows"] >= len(wr["rows"]) and wr["counts_by_week_lane"] is not None
+
+
+# LTR-PAPER-PORTFOLIO-WAKE-SUPPRESSED (operator popup 2026-11-16 ~18:35Z: "Follow real money (Recommended)")
+def test_paper_portfolio_mirror_follows_real_money_while_testing_paper_stays_on_ltr_paper():
+    st = {"toggles": wt._defaults()}
+    assert st["toggles"]["ltr_paper"] is False and st["toggles"]["ltr_real_money"] is True
+    f = lambda e: wt.ltr_entry_on(e, st, CLS)  # noqa: E731
+    assert f({"accounts": ["alpaca_portfolio"]})            # the mirror posts with ltr_paper off
+    assert not f({"accounts": ["bybit_1"]})                 # a paper TESTING account is still suppressed
+    assert wt.ltr_keys_for_accounts(["alpaca_portfolio"], CLS) == ["ltr_real_money"]
+    st["toggles"]["ltr_real_money"] = False                 # real-money switch off silences the mirror too
+    assert not f({"accounts": ["alpaca_portfolio"]})
+    st["toggles"]["ltr_paper"] = True                       # the paper switch does not wake the mirror
+    assert not f({"accounts": ["alpaca_portfolio"]}) and f({"accounts": ["bybit_1"]})
+
+
+def test_the_real_config_classifies_both_mirrors_as_portfolio_and_routes_them_to_real_money():
+    from src.runtime.telegram_policy import account_class
+    for acct in ("alpaca_portfolio", "bybit_portfolio"):
+        assert account_class(acct) == "paper_portfolio"
+        assert wt.ltr_keys_for_accounts([acct]) == ["ltr_real_money"]
+    assert wt.ltr_keys_for_accounts(["bybit_1"]) == ["ltr_paper"]

@@ -1,0 +1,181 @@
+# Hand-authored 2026-11-15 by lane ML-PRIMARY-3 (session_01AFoLuMkZYvbttnmb2gtVcA, Tier 1), dispatched by Manager Session 2026-11-15a
+# (ML design pass, operator ~13:36Z). The Stage-B unit RQ-20261112-3144-02's PASS branch names. Rule registered BEFORE any run. Gates: none.
+id: RQ-20261115-7e18-01
+title: 'ml-tm-action-value STAGE B: on the money legs, does acting on the corpus-v2-trained per-action value (only the Stage-A passers close and
+  partial_close_50, inner-fold act margin) beat hold-to-rules, the best static rule, the distance logit and a matched random intervention,
+  net of the full cost stack?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+programme: P2
+kind: experiment
+question: 'Same test rows, training rows, features, label and learner as RQ-20261112-3144-02 (TM-BENCH v1 tmb-73f5c3660014, the six money legs
+  as traded, 6 purged calendar folds by entry; train = v1 train trades + a seed-11 trade-grouped sample of corpus v2 bp2-f4271084b120 at 4x the
+  fold''s v1 train-trade count, cross-symbol purge; R1 + path_state features; 12-bar per-action label; lgbm_action_value). 3144-02 PASSED Stage A
+  on exactly two classes (close 4/6 folds, partial_close_50 4/6; research/results/RQ-20261112-3144-02/). STAGE B: the lgbm policy may take only
+  those two actions (fixed now: --actions close,partial_close_50), acting when the best predicted dR exceeds a margin chosen per outer fold on 3
+  inner out-of-fold folds of the outer TRAIN set from the registered grid {0, 0.02, 0.05, 0.1, 0.2, 0.3} R. Scored per trade on the v1 test rows
+  at the engine replay, net of the full cost stack, against B0 (hold to the leg''s own rules), B1 (the best static rule), B2 (the distance
+  logit) and B4 (matched random intervention at the arm''s own action rate).'
+why_this_matters: 'D7 / D8 in-trade decisions for the real-money legs have no live learned policy: seven earlier action-value negatives, the
+  hindsight ceiling says 0.86 R/trade exists, and iteration 3 (4x data) is the first to resolve per-action value out of fold. This read decides
+  whether the action-value model goes to a fresh-window confirmation (then a Tier-3 in-trade advice proposal) or iteration 3 closes and the next
+  unit is authored from a new diagnosis.'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261112-3144-02
+  verdict_read: pass
+  diagnosis: 'Stage A pass on close / partial_close_50 only (tighten_sl_atr1 1/6, the rest 0/6). Predictability is necessary, not sufficient: a
+    rank-calibrated head can still lose net of cost to hold or to a static rule. The registered next step is the policy-value read on the
+    passing classes.'
+  hypothesis: acting on the two passing classes at an inner-chosen margin adds >= 0.03 R/trade over max(B0, B1) net of cost on >= 5 of 6 folds
+  attempt: 4
+  due_by: '2026-11-22'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'test n MEASURED (v1, 2,627 trades, 3144-02); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE ~0.0088 R, MDE at
+    80 percent one-sided ~0.022 R, inside the registered 0.03 R gain.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261115-7e18-01-STAGE-B
+  registered_at: '2026-11-15'
+  registered_before_run: true
+  baseline: B0 hold to the leg's own rules (the live behaviour), B1 the best static rule, B2 the distance logit, B4 matched random at the arm's
+    own action rate; same trades, same engine replay, same cost stack.
+  statistic: 'tm_bench score --rule s_offline on the one lgbm arm: delta vs B0 per trade, trade-clustered bootstrap CI95, folds positive of 6,
+    per-leg max drawdown vs B0, net R per capital-day vs B0, delta vs B2, B4 margin CI, Holm-adjusted p over the arm family (tm_bench.s_offline).'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for the lgbm arm: gain >= 0.03 R/trade over
+    max(B0, B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2, beats its own matched random B4
+    (margin CI lower > 0), Holm p < 0.05. FAIL iff its CI95 upper < max(B0, B1) + 0.03. INDETERMINATE otherwise, or if the test corpus is not
+    tmb-73f5c3660014, the train corpus is not bp2-f4271084b120 with >= 10,000 de-duplicated trades after purge, or the selfcheck fails.
+    Thresholds, the action list and the margin grid are fixed now and not changed after any result.'
+  pass_action: 'a fresh-window confirmation unit (forward money-leg trades after the TM-BENCH v1 window, claimed through holdout_lock family
+    TMAV) is authored; only a PASS there opens a Tier-3 in-trade advice proposal (advice-only per ARCHITECTURE-CANONICAL "Active management").'
+  fail_action: iteration 3 closes for close / partial_close_50 on these legs; the next unit is authored from a new diagnosis (a different
+    decision class from ML-EXIT-ACTIONGRID-LABELS, or a model class), never a re-run of this configuration.
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order. The purged folds are walk-forward slices of the
+    test corpus, read before by 3144-02 at Stage A; a PASS is explicitly pending a fresh window, which is the claimed held-out read.
+  min_n: 2,000 test trades; >= 200 check-ins per fold
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and action mix as the lgbm policy on each test fold, random eligible check-ins, sequential'
+  best_static:
+    grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20]   # tm_bench.B1_GRID ids
+    excludes_test_folds: true
+    how: 'tm_bench B1: the one static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md): an in-trade intervention judged against hold-to-bracket, a
+  best static rule and a matched random intervention, purged walk-forward grouped by trade, margin chosen on inner folds only.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 90
+  basis: 'ESTIMATE: 3144-02 (Stage A, same data) was registered at 60 min; Stage B adds the policy walk, B1/B2/B4 arms and 3 inner fits per fold.'
+  why_runner: corpus v2 is an Actions artifact / regenerable on a runner (the workflow's corpus_v2 step); CPU only.
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight carried from RQ-20261112-3144-02 (an estimate, not a measurement); confidence raised a notch on the Stage-A pass.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --actions
+  - close,partial_close_50
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261115-7e18-01
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: whether ml-tm-action-value proceeds to a fresh-window confirmation for close / partial_close_50 on the money legs
+  legs:
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-3144-02
+- MLP-D7-ACTION-VALUE
+- ML-AM-NEXT-LIVE
+population: TM-BENCH v1 (tmb-73f5c3660014), the six money legs as traded, 2,627 test trades in 6 purged calendar folds by entry.
+last_dispatched_at: '2026-11-15T14:26:12+00:00'
+grading:
+  attested: RULE-RQ-20261115-7e18-01-STAGE-B
+  auto: true
+  decision_rule_id: RULE-RQ-20261115-7e18-01-STAGE-B
+  evidence:
+  - research/results/RQ-20261115-7e18-01/43724365456.jsonl
+  graded_at: '2026-11-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

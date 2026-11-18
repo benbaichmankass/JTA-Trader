@@ -1,0 +1,84 @@
+{
+  "unit": "RQ-20261115-001",
+  "run_id": "43800478411",
+  "commit_sha": "c345e6466f6dc1e68bd5dc28172dd0b7a0cdd8a8",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/43800478411",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1019-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.196.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "avax_pullback_2h",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.010",
+        "--arm",
+        "C-bal005=--sizing balance --risk-pct 0.005",
+        "--arm",
+        "C-bal015=--sizing balance --risk-pct 0.015",
+        "--arm",
+        "C-room033=--sizing room --risk-pct 0.015 --room-frac 0.33",
+        "--arm",
+        "C-room050=--sizing room --risk-pct 0.015 --room-frac 0.50",
+        "--common",
+        "--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model dxtrade",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "arms_pass_bar",
+        "--p-floor",
+        "0.70",
+        "--n-floor",
+        "88",
+        "--out",
+        "comms/research/RQ-20261115-001/43800478411",
+        "--jobs",
+        "4"
+      ],
+      "log": "comms/research/RQ-20261115-001/43800478411/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1190.0
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

@@ -1,0 +1,130 @@
+id: RQ-20261118-abab-03
+title: 'Symbol holdout for the sol_4h as-declared transfer lead: does trend_donchian_sol_4h clear Stage 0 on DASH/ONT/NEO/SNX/MANA/SAND (disjoint from baskets A and B)?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: On Binance USD-M 4h candles for DASH/ONT/NEO/SNX/MANA/SAND over 2020-06-01..2026-11-17, with every lever fixed at trend_donchian_sol_4h as declared (donchian 20, ATR stop 1.5, trail 5.0, min_confidence
+  0.6, tp 50, trail-decay arm 5.57 / tight 2.5), does it pass the pooled Stage-0 rule net of the full cost stack?
+why_this_matters: '1b57-08''s PASS on basket B is a discovery with a weak recent fold; this is the one disjoint-population confirmation the programme node P1-ATM-sol4h-b-overlap asks for, before any overlap
+  read or prop EV gate. 1b57-08 (sol_4h as declared, basket B, 2020-06..2026-10) PASS: pooled n 1,375, net +111.77 R, 4 of 6 folds, 3 of 6 powered cells; the last fold was -24.6 R and the pooled one-sided
+  p was 0.10. Diagnosis: a discovery with a weak recent fold, chosen from a single basket; the programme node asks for ONE disjoint-window confirmation, and a symbol holdout is the in-hand form (no month
+  to wait for).'
+power:
+  expected_n: 800
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.3 at alpha 0.05 / power 0.8 needs ~88 pooled trades (the repo's standing floor for this unit family). expected_n is an ESTIMATE scaled from the parent record's per-cell counts by symbol-years
+    in the window, not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over a pinned in-hand window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261118-ABAB-03-SOL4H-HOLDOUT
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 4h: per cell n, net_r, max_drawdown_r, 6 calendar folds (majority 4), net_r_per_capital_day; pooled across the basket''s cells; cost = the harness''s
+    own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy() (never a zero default).'
+  rule: 'PASS iff B passes the pooled Stage-0 rule: pooled n >= 88, pooled net_r > 0, >= 4 of 6 calendar folds net positive, and >= half of the powered cells (n >= 39) pass; a PASS names the passing CELLS
+    (not the pool) as candidates for the same-book overlap read and the prop EV/survival gate. FAIL iff B fails with pooled n >= 88 (the as-declared configuration is a symbol fit; configuration closed,
+    family stays open; next test = a cell-specific variant). INDETERMINATE otherwise (pooled n < 88, fewer than 2 powered cells, or under half the cells measured). Regime-robustness clause (set before the
+    run): the pooled result is net positive in at least 3 of 4 calendar years of the window (per-year table reported), no single year carries more than 50% of total net R, long-side and short-side net are
+    reported separately and both >= 0, and at least 2 non-overlapping sub-periods are each net positive; a failure of this clause downgrades a PASS to INDETERMINATE (reported, never silently dropped). Thresholds
+    are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case, does not tune beyond the declared arms, and does not pool with any committed record. Candles are Binance
+    USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1); a symbol listed after the window start contributes only its own history. PROP SUPERSET BAR: this unit supplies
+    Stage 0 only; the prop EV/survival gate, a mechanical Stage-1 soak and Gate 2 all still apply and no roster is edited here.'
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand window registered before the run (here a symbol holdout, correlated evidence,
+  said so); R1 look-before-you-re-test: the parent''s population is disjoint from this basket (grep of research/queue for these symbols 2026-11-18: DASH/ONT/NEO/SNX/MANA/SAND = 0 units).'
+intervention_controls:
+  not_applicable: a Stage-0 entry/exit configuration backtest on candles, not an in-trade action or active-management intervention
+iteration:
+  subject: trend_donchian_sol_4h
+  subject_kind: strategy_leg
+  from_result: RQ-20261026-1b57-08
+  verdict_read: pass_unconfirmed
+  diagnosis: '1b57-08 (sol_4h as declared, basket B, 2020-06..2026-10) PASS: pooled n 1,375, net +111.77 R, 4 of 6 folds, 3 of 6 powered cells; the last fold was -24.6 R and the pooled one-sided p was 0.10.
+    Diagnosis: a discovery with a weak recent fold, chosen from a single basket; the programme node asks for ONE disjoint-window confirmation, and a symbol holdout is the in-hand form (no month to wait
+    for).'
+  search: 'One factor: the as-declared sol_4h configuration (single arm B) on basket C, symbols disjoint from baskets A and B and from every roster symbol.'
+  attempt: 1
+  due_by: '2026-11-25'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: new symbols for sol_4h on the prop/real-money book (programme node P1-ATM-sol4h-b-overlap weight 30 x the real-money multiplier); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision) and runs the repo harness; these symbols are not in the metis-market-data allowlist and nothing is trainer-resident; CPU only.
+  basis: Estimate from the parent unit's run scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - DASHUSDT,ONTUSDT,NEOUSDT,SNXUSDT,MANAUSDT,SANDUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-17'
+  - --param
+  - donchian=20
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=1.5
+  - --param
+  - trail_mult=5.0
+  - --param
+  - min_confidence=0.6
+  - --arm
+  - B=--tp-r=50.0;--trail-decay-arm-r=5.57;--trail-decay-tight-mult=2.5
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261118-ABAB-03-SOL4H-HOLDOUT
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261118-abab-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-LADDER
+- M18
+related:
+- RQ-20261026-1b57-08
+- scripts/research/harness_stage0.py
+last_dispatched_at: '2026-11-18T19:28:47+00:00'

@@ -4,8 +4,7 @@ subject: trend_donchian_xrp_adx25
 kind: strategy_leg
 status: testing
 books:
-- bybit_2
-- bybit_portfolio
+- bybit_1
 baseline:
   record: comms/strategy_evidence/trend_donchian_xrp_adx25.json
   net_r: 9.7183
@@ -94,6 +93,20 @@ levers:
         baseline_value: '20'
         arm: donchian_hi
         unit: RQ-20261106-034
+        window: 2021-11-12..2026-11-14
+        n: 51
+        net_r: 13.2373
+        baseline_n: 61
+        baseline_net_r: 14.3615
+        delta_net_r: -1.1242
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 5.017
+        verdict: fail
+        joint_change: false
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-034
         window: 2021-11-03..2026-11-05
         n: 50
         net_r: 12.3869
@@ -102,6 +115,20 @@ levers:
         delta_net_r: -1.1241
         folds_ge_baseline: 2/4
         max_drawdown_r: 5.017
+        verdict: fail
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-034
+        window: 2021-11-12..2026-11-14
+        n: 70
+        net_r: 17.5041
+        baseline_n: 61
+        baseline_net_r: 14.3615
+        delta_net_r: 3.1426
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 5.6308
         verdict: fail
         joint_change: false
       - value: '15'
@@ -118,13 +145,27 @@ levers:
         max_drawdown_r: 5.6308
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 2
+      shape: peaked
+      points: 4
       best_delta_r_per_trade: 0.0524
       fold_stability: 0.375
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     min_confidence:
       tests:
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-034
+        window: 2021-11-12..2026-11-14
+        n: 46
+        net_r: 18.1366
+        baseline_n: 61
+        baseline_net_r: 14.3615
+        delta_net_r: 3.7751
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.8361
+        verdict: fail
+        joint_change: false
       - value: '1.0'
         baseline_value: '0.8'
         arm: min_confidence_hi
@@ -143,6 +184,20 @@ levers:
         baseline_value: '0.8'
         arm: min_confidence_lo
         unit: RQ-20261106-034
+        window: 2021-11-12..2026-11-14
+        n: 85
+        net_r: 10.4197
+        baseline_n: 61
+        baseline_net_r: 14.3615
+        delta_net_r: -3.9418
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.1185
+        verdict: fail
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-034
         window: 2021-11-03..2026-11-05
         n: 84
         net_r: 9.5692
@@ -154,10 +209,12 @@ levers:
         verdict: fail
         joint_change: false
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.0629
       fold_stability: 0.625
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+units:
+- RQ-20261114-db1a-05
 levers_tested:
 - family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
   varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
@@ -216,5 +273,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-units:
-- RQ-20261114-db1a-05

@@ -62,9 +62,13 @@ Key = Tuple[str, str]  # (account, symbol)
 GRANDFATHERED: Dict[str, Dict[str, Any]] = {
     "bybit_1/ETHUSDT": {"legs": ["trend_donchian_eth_4h", "trend_donchian_eth_prop"],
                         "unit": "RQ-20261015-1631-01", "due": "2026-10-29"},
-    # 2026-10-22 OPERATOR-DECISIONS-1022: bybit_1 runs the soak alias trend_donchian_xrp_adx25 (an exact copy
+    # 2026-10-22 OPERATOR-DECISIONS-1022: bybit_1 runs the soak alias trend_donchian_xrp_adx25 (a copy
     # of trend_donchian_xrp_4h plus the declared ADX trail) in place of the incumbent: SAME pair, SAME unit and
     # due date, one leg renamed. bybit_2 / bybit_portfolio keep the incumbent (entries below).
+    # 2026-11-17 NOT an exact copy any more: the incumbent was re-promoted 2026-11-06 on its holdout-confirmed exits
+    # (atr_stop_mult 1.5, trail_mult 4.0); the alias keeps 2.0 / 5.0 plus the ADX trail. The entry rule is identical, and since
+    # 2026-11-11 both legs are on bybit_2 / bybit_portfolio (position_model: slices, so this guard skips those accounts and
+    # they hold one slice each). Paired exit re-test: RQ-20261117-ea57-01, row XRP-DOUBLE-EXPOSURE.
     "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_adx25", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
     # bybit_2 / bybit_portfolio XRPUSDT: grandfather REMOVED 2026-10-30; covered by comms/same_symbol_allocation/xrpusdt-bybit_2-bybit_portfolio.json.
@@ -104,7 +108,7 @@ def groups(accounts_text: str, strategies_text: str) -> Dict[Key, List[str]]:
                 continue
             if leg in EXCLUSIVE_HOLD_LEGS and name not in SLICE_SUPPORT_ACCOUNTS:
                 continue
-            for sym in leg_symbols(strat.get(leg), name):
+            for sym in leg_symbols(strat.get(leg), name, leg=str(leg)):
                 out[(name, str(sym))].append(leg)
     return {k: sorted(set(v)) for k, v in sorted(out.items()) if len(set(v)) >= 2}
 

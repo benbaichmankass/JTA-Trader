@@ -1,0 +1,143 @@
+# Authored 2026-11-17 by lane QUEUE-FILL-LEAN-2-20261117 (Tier 1). Lever-map transfer unit; leg flags/window copied from RQ-20261117-b3aa-03; rule registered BEFORE any run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_light
+decision_rule:
+  baseline: control arm A = the leg config-exact, same run.
+  id: RULERQ20261117b2f206
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  rule: 'Per arm C: PASS iff net_r(C) > net_r(A) AND folds where C >= A (ties count) >= 3 of 4 AND maxDD(C) <= 1.10 x maxDD(A) AND n(A) >= 25 (these clauses are the harness
+    replace grade) AND, read from the same measurement.json fold rows, C is net positive in >= 3 of 4 folds with no single fold above 50% of C''s total net R. The unit PASSES
+    iff some arm passes all clauses (the grader''s pass on the harness clauses with a failed fold clause is graded FAIL by the reading session). INDETERMINATE iff n(A) < 25
+    or the producer failed. FAIL otherwise. M13: this window has been read once before for each arm (2411-0x); deflation = the disclosed cumulative arm count on the lever (qqq
+    trend 3, pullback 2; spy trend 3). Thresholds fixed now.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg qqq_pullback_1h --grade replace, the sibling window and folds of RQ-20261117-b3aa-03 (same leg, same flags) by entry
+    time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared
+    in config/strategies.yaml; candidates SE8/SE12. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: Edits no config, roster or record; places no order. A PASS is a lead for a Tier-3 NOTE with both reads disclosed, not a promotion.
+evidence_class:
+  claim: edge
+  holdout: holdout_window
+follow_up: The reading session applies the fold clause from measurement.json; PASS -> Tier-3 note to the manager; FAIL -> lever recorded window-specific.
+id: RQ-20261117-b2f2-06
+intervention_controls:
+  not_applicable: lever sweep against the declared config (A/B arms), not an active-management action.
+iteration:
+  attempt: 4
+  diagnosis: '2411-01 PASS: trend75 46.97 R vs A 35.56 R, n 101, both folds, maxDD 4.82 vs 8.22; 2411-02 FAIL: pb15 43.07 vs 35.56, n 96, both folds won, maxDD 9.03 vs 8.22
+    (+0.81 R); pb15 failed ONLY on the harness sweep grade''s maxDD(C) <= maxDD(A) clause, which is NOT in 2411-02''s registered rule; year clause never computed (2 folds,
+    no per-year table). Harness design defect, not the idea.'
+  due_by: '2026-11-24'
+  from_result: research/results/RQ-20261115-2411-01
+  levers:
+  - entry
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.entry
+  search: re-read the already-selected entry arms with 4 folds and a grade equal to the registered rule; no new arms
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  verdict_read: pass_unconfirmed
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+ml_consumer:
+  not_applicable: 'Not an ML unit: a lever re-read on a rule-based leg.'
+power:
+  alpha: 0.05
+  basis: 'control n MEASURED on this exact window: 101 (qqq) / 134 (spy) in 2411-0x; per fold ~25-35; n < 25 grades INDETERMINATE.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 100
+  feasibility:
+    accrual_basis: Replays history on freshly fetched dukascopy candles for a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.3
+  power: 0.8
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): a holdout re-read is allowed, recorded and graded on a stricter deflated bar; T1 regime-robustness
+  per sub-period.'
+priority: 1
+programme: P1
+question: 'On qqq_pullback_1h, over the same window, folds and bar as the leg''s sibling unit RQ-20261117-b3aa-03, does any of the arms SE8/SE12 (STALE-EXIT (--stale-exit-bars,
+  peer-tested grid for this bar size)) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/qqq_pullback_1h.yaml (no such
+  family tested on this leg).'
+related:
+- RQ-20261117-b3aa-03
+- research/levers/qqq_pullback_1h.yaml
+roadmap:
+- L-LADDER
+routing:
+  basis: same shape as RQ-20261115-2411-01 (one dukascopy fetch + harness passes).
+  est_minutes: 60
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless dukascopy candles for a pinned window (research-script-run.yml installs the lane); Kaggle CPU has no internet.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - SE8=--stale-exit-bars=8
+  - --arm
+  - SE12=--stale-exit-bars=12
+  - --days
+  - '3070'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2021-10-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --dd-tol-frac
+  - '0.10'
+  - --research-unit
+  - RQ-20261117-b3aa-03
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b2f2-06
+  timeout_minutes: 90
+  workflow: research-script-run.yml
+status: done
+theme: live_strategy
+title: 'SE lever family never tested on qqq_pullback_1h: STALE-EXIT (--stale-exit-bars, peer-tested grid for this bar size) vs the declared leg, net of cost?'
+value:
+  basis: testing equity leg with a lever confirmed on 2 windows if it passes; an estimate, not a measurement.
+  bucket: own_losses
+  confidence: 0.25
+  usd_at_stake_per_month: 300
+why_this_matters: 'Plan node: research/levers/qqq_pullback_1h.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016-era stale_exit_bars reads PASS
+  on peer legs (slv_pullback_1d 3/6 bars, eth_pullback_2h 8/12/20 bars) and the lever map for this leg carries no stale_exit_bars family. One factor, 2 arms; a PASS is a lead
+  for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-18T05:30:15+00:00'
+grading:
+  attested: RULERQ20261117b2f206
+  auto: true
+  decision_rule_id: RULERQ20261117b2f206
+  evidence:
+  - research/results/RQ-20261117-b2f2-06/44244733227.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

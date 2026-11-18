@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/queue/blocked/RQ-20261112-4654-02.yaml (tau arm) + RQ-20261112-4654-03.yaml (bracket arm); rows ML-LEVER-PLAN, ML-TIMEFRAME
+# wiring: research/queue/blocked/RQ-20261112-4654-02.yaml (tau arm) + RQ-20261112-4654-03.yaml (bracket arm) + RQ-20261116-089f-03 (bracket_cond); rows ML-LEVER-PLAN, ML-TIMEFRAME
 """ENTRY cost levers under the PER-SYMBOL cost stack (rows ML-LEVER-PLAN / ML-TIMEFRAME; AM-ML overnight queue item 3, 2026-11-12).
 
 WHY. RQ-20261112-2e3b-01 scored the frozen ml_entry on its 51-symbol Bybit population with each symbol's own cost stack and read a mean
@@ -27,7 +27,12 @@ RULE (registered in each unit before any run; constants below are copied from th
              and  arm fold mean net R > base fold mean net R in >= MIN_FOLDS_BETTER of the folds
   INDETERMINATE iff a floor is not met; LOSS otherwise. A unit PASSes iff at least one of its arms WINS.
 
-    python3 scripts/research/ml_entry_cost_levers.py run --lever tau|bracket --cache DIR --out DIR --unit RQ-... [--rule-id ..]
+  bracket_cond  RQ-20261116-089f-03: HOLD the base (2/3, tau 0.10) taken decisions fixed and choose, per entry-time cell (side x atr_pct tercile,
+            edges fixed on fold 1), which of {2/3, 3/4.5, 4/6} ATR to trade it at, using ONLY the folds before the graded fold (expanding window,
+            >= COND_MIN_CELL prior decisions in the cell else 2/3). Fold 1 is burn-in. Graded vs static 2/3 and vs best-static-on-prior-folds.
+            No refit: the alternative brackets are looked up on the same (symbol, ts, side) decision in the relabelled dev table.
+
+    python3 scripts/research/ml_entry_cost_levers.py run --lever tau|bracket|bracket_cond --cache DIR --out DIR --unit RQ-... [--rule-id ..]
     python3 scripts/research/ml_entry_cost_levers.py --self-test
 """
 from __future__ import annotations
@@ -153,6 +158,138 @@ def unit_verdict(calls: dict) -> str:
     return "indeterminate"
 
 
+# ----------------------------------------------------------------------------------------------- bracket_cond (RQ-20261116-089f-03)
+COND_BRACKETS = ((2.0, 3.0), (3.0, 4.5), (4.0, 6.0))     # static 2/3 first: it is the fallback and the baseline
+COND_MIN_CELL = 400            # prior decisions required in a cell before it may leave 2/3
+COND_MIN_FOLDS_ELIGIBLE = 5    # gradeable folds in which EVERY cell has >= COND_MIN_CELL prior decisions, else INDETERMINATE
+COND_DELTA_R, COND_WINS_PASS, COND_WINS_FAIL = 0.03, 5, 3
+COND_BOOT_DRAWS, COND_RANDOM_DRAWS, COND_SEED = 2000, 200, 20261116
+
+
+def bkey(sl: float, tp: float) -> str:
+    return f"{sl:g}/{tp:g}"
+
+
+def cell_edges(atr_pct_burn_in) -> tuple[float, float]:
+    """Tercile edges of atr_pct, fixed once on the burn-in fold's taken decisions and never refreshed."""
+    v = np.asarray(atr_pct_burn_in, float)
+    v = v[np.isfinite(v)]
+    return float(np.quantile(v, 1 / 3)), float(np.quantile(v, 2 / 3))
+
+
+def assign_cells(side, atr_pct, edges) -> np.ndarray:
+    t = np.where(np.asarray(atr_pct, float) <= edges[0], 0, np.where(np.asarray(atr_pct, float) <= edges[1], 1, 2))
+    return np.array([f"{s}|T{k}" for s, k in zip(side, t)])
+
+
+def cond_core(dec: pd.DataFrame, keys: list[str], static: str, min_cell: int = COND_MIN_CELL) -> dict:
+    """dec: one row per held-fixed decision with columns fold (0-based, 0 = burn-in), cell, and net_<key> for every bracket key.
+    Walk-forward: the choice for fold f uses folds < f only. Returns per-fold arrays for the verdict."""
+    folds = sorted(dec.fold.unique())
+    cells = sorted(dec.cell.unique())
+    rows, choices = [], {}
+    for f in folds[1:]:
+        prior, cur = dec[dec.fold < f], dec[dec.fold == f]
+        ch, eligible = {}, True
+        for c in cells:
+            pc = prior[prior.cell == c]
+            if len(pc) < min_cell:
+                ch[c], eligible = static, False
+                continue
+            means = {k: float(pc[f"net_{k}"].mean()) for k in keys}
+            ch[c] = max(keys, key=lambda k: (means[k], k == static))     # ties keep static
+        choices[int(f)] = {"choice": ch, "eligible": eligible, "n_prior_by_cell": {c: int((prior.cell == c).sum()) for c in cells}}
+        net_cond = np.array([cur.iloc[i][f"net_{ch[c]}"] for i, c in enumerate(cur.cell)]) if len(cur) else np.array([])
+        bs = {k: float(prior[f"net_{k}"].mean()) for k in keys}
+        best_static = max(keys, key=lambda k: (bs[k], k == static))
+        rows.append({"fold": int(f), "n": int(len(cur)), "eligible": eligible, "best_static": best_static,
+                     "sum_cond": float(net_cond.sum()), "sum_static": float(cur[f"net_{static}"].sum()),
+                     "sum_best": float(cur[f"net_{best_static}"].sum())})
+    return {"per_fold": rows, "choices": choices}
+
+
+def cond_verdict(core: dict, draws: int = COND_BOOT_DRAWS, seed: int = COND_SEED) -> dict:
+    pf = core["per_fold"]
+    n = np.array([r["n"] for r in pf], float)
+    sc, ss, sb = (np.array([r[k] for r in pf], float) for k in ("sum_cond", "sum_static", "sum_best"))
+    mean = lambda a, w=None: float(a.sum() / n.sum()) if w is None else float(a[w].sum() / n[w].sum())  # noqa: E731
+    n_elig = sum(1 for r in pf if r["eligible"])
+    d_static, d_best = mean(sc) - mean(ss), mean(sc) - mean(sb)
+    fold_d = [(r["sum_cond"] - r["sum_static"]) / r["n"] if r["n"] else None for r in pf]
+    wins = sum(1 for x in fold_d if x is not None and x > 0)
+    rng = np.random.default_rng(seed)
+    bs = []
+    for _ in range(draws):
+        ix = rng.integers(0, len(pf), len(pf))
+        if n[ix].sum() > 0:
+            bs.append((sc[ix].sum() - ss[ix].sum()) / n[ix].sum())
+    lo, hi = (float(np.quantile(bs, 0.025)), float(np.quantile(bs, 0.975))) if bs else (None, None)
+    if n_elig < COND_MIN_FOLDS_ELIGIBLE or not len(pf):
+        call, why = "INDETERMINATE", f"only {n_elig} gradeable folds have >= {COND_MIN_CELL} prior decisions in every cell (floor {COND_MIN_FOLDS_ELIGIBLE})"
+    elif d_static < COND_DELTA_R or wins < COND_WINS_FAIL:
+        call, why = "FAIL", f"delta vs static {d_static:+.4f} (bar +{COND_DELTA_R}), wins {wins}/{len(pf)} (fail below {COND_WINS_FAIL})"
+    elif d_best > 0 and wins >= COND_WINS_PASS and lo is not None and lo > 0:
+        call, why = "PASS", f"delta {d_static:+.4f}, vs best-static {d_best:+.4f}, wins {wins}/{len(pf)}, CI lo {lo:+.4f}"
+    else:
+        call, why = "INDETERMINATE", f"delta {d_static:+.4f}, vs best-static {d_best:+.4f}, wins {wins}/{len(pf)}, CI [{lo}, {hi}]"
+    return {"call": call, "why": why, "n_graded_decisions": int(n.sum()), "n_gradeable_folds": len(pf), "n_eligible_folds": n_elig,
+            "mean_net_r": {"cond": mean(sc), "static": mean(ss), "best_static": mean(sb)},
+            "delta_vs_static": d_static, "delta_vs_best_static": d_best, "fold_delta_vs_static": fold_d, "wins_vs_static": wins,
+            "delta_ci95_fold_block": [lo, hi]}
+
+
+def cond_random_control(dec: pd.DataFrame, keys: list[str], static: str, draws: int = COND_RANDOM_DRAWS, seed: int = COND_SEED) -> dict:
+    """Reported, not gating: the same graded decisions, each at a uniformly random bracket from the same set."""
+    g = dec[dec.fold >= 1]
+    rng = np.random.default_rng(seed + 1)
+    mat = np.column_stack([g[f"net_{k}"].to_numpy() for k in keys])
+    base = float(g[f"net_{static}"].mean())
+    d = [float(mat[np.arange(len(g)), rng.integers(0, len(keys), len(g))].mean() - base) for _ in range(draws)]
+    return {"draws": draws, "mean_delta_vs_static": float(np.mean(d)), "p95_delta": float(np.quantile(d, 0.95))}
+
+
+def cond_decisions(base_preds, tables: dict[str, pd.DataFrame], keys: list[str], static: str) -> tuple[pd.DataFrame, dict]:
+    """Held-fixed decision set = the base (static, tau 0.10) policy's taken decisions per fold, looked up in each bracket's table."""
+    base_tab = tables[static]
+    taken = []
+    for fi, (name, test, pl, ps) in enumerate(base_preds):
+        if not (len(test) and len(pl)):
+            continue
+        tk = E.policy(test, pl, ps, BASE_TAU)
+        tk["fold"] = fi
+        taken.append(tk)
+    t = pd.concat(taken, ignore_index=True)
+    n0 = len(t)
+    t = t.merge(base_tab[["symbol", "ts", "atr_pct"]], on=["symbol", "ts"], how="left")
+    t = t.rename(columns={"net_r": f"net_{static}"})
+    for k in keys:
+        if k == static:
+            continue
+        tab = tables[k]
+        side_net = tab[["symbol", "ts", "net_long", "net_short"]]
+        t = t.merge(side_net, on=["symbol", "ts"], how="left")
+        t[f"net_{k}"] = np.where(t.side == "long", t.net_long, t.net_short)
+        t = t.drop(columns=["net_long", "net_short"])
+    need = [f"net_{k}" for k in keys] + ["atr_pct"]
+    dropped = int(t[need].isna().any(axis=1).sum())
+    t = t.dropna(subset=need).reset_index(drop=True)
+    edges = cell_edges(t.loc[t.fold == t.fold.min(), "atr_pct"])
+    t["cell"] = assign_cells(t.side, t.atr_pct, edges)
+    return t, {"n_taken_base": n0, "n_dropped_missing_in_alt_table": dropped, "atr_pct_edges": list(edges)}
+
+
+def run_bracket_cond(cache, pop_ok, ref_ok, costs, base_sc, base_preds) -> dict:
+    keys = [bkey(*b) for b in COND_BRACKETS]
+    static = keys[0]
+    tables = {static: base_sc}
+    for (sl, tp), k in zip(COND_BRACKETS[1:], keys[1:]):
+        tables[k] = dev_table(cache, pop_ok, ref_ok, costs, sl, tp)
+    dec, meta = cond_decisions(base_preds, tables, keys, static)
+    core = cond_core(dec, keys, static)
+    v = cond_verdict(core)
+    return {"keys": keys, "decision_meta": meta, "core": core, "verdict": v, "random_control": cond_random_control(dec, keys, static)}
+
+
 # ----------------------------------------------------------------------------------------------- run
 def run(a) -> int:
     out, cache = Path(a.out), Path(a.cache)
@@ -173,6 +310,23 @@ def run(a) -> int:
     base_sc = dev_table(cache, pop_ok, ref_ok, costs, *BASE_BRACKET)
     base_preds = fold_predictions(base_sc)
     base = score(base_preds, BASE_TAU)
+    if a.lever == "bracket_cond":
+        bc = run_bracket_cond(cache, pop_ok, ref_ok, costs, base_sc, base_preds)
+        v = bc["verdict"]
+        verdict = {"PASS": "pass", "FAIL": "fail"}.get(v["call"], "indeterminate")
+        note = f"bracket_cond: {v['call']} | {v['why']} | mean net R cond {v['mean_net_r']['cond']:.4f} static {v['mean_net_r']['static']:.4f} " \
+               f"best-static {v['mean_net_r']['best_static']:.4f} (graded n {v['n_graded_decisions']}) | dropped {bc['decision_meta']['n_dropped_missing_in_alt_table']}"
+        row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": verdict,
+               "population": (f"base c692-01 taken decisions (tau {BASE_TAU}) held fixed on {len(pop_ok)} scorable symbols of the frozen 2e3b-01 population, "
+                              f"dev folds only (held-out never read), per-symbol cost stack; bracket chosen per (side x atr_pct tercile) cell on prior folds"),
+               "note": note, "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+               "measurement": {**bc, "base": base, "elapsed_s": round(time.time() - t0)}, "n": v["n_graded_decisions"],
+               "produced_by": {"tool": "python3 scripts/research/ml_entry_cost_levers.py run --lever bracket_cond", "where": a.where}}
+        (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str))
+        (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
+        print(note, flush=True)
+        return 0
     arms, calls = {}, {}
     if a.lever == "tau":
         for t in TAUS:
@@ -227,15 +381,55 @@ def self_test() -> int:
     assert unit_verdict({"x": {"call": "WIN"}, "y": {"call": "LOSS"}}) == "pass"
     assert unit_verdict({"x": {"call": "LOSS"}, "y": {"call": "LOSS"}}) == "fail"
     assert unit_verdict({"x": {"call": "LOSS"}, "y": {"call": "INDETERMINATE"}}) == "indeterminate"
+    _self_test_cond()
     print("self-test ok")
     return 0
+
+
+def _self_test_cond() -> None:
+    keys = [bkey(*b) for b in COND_BRACKETS]
+    st = keys[0]
+    rng = np.random.default_rng(1)
+
+    def mk(n_per_fold, effect, folds=8):
+        rows = []
+        for f in range(folds):
+            for _ in range(n_per_fold):
+                c = rng.choice(["long|T0", "long|T1", "long|T2", "short|T0", "short|T1", "short|T2"])
+                base = rng.normal(-0.05, 1.0)
+                # cell A (long|T2) is better at 4/6 by +effect, cell B (short|T0) worse at 4/6; wide arm equal elsewhere
+                shift = effect if c == "long|T2" else (-effect if c == "short|T0" else 0.0)
+                rows.append({"fold": f, "cell": c, f"net_{keys[0]}": base, f"net_{keys[1]}": base + shift / 2, f"net_{keys[2]}": base + shift})
+        return pd.DataFrame(rows)
+
+    # planted positive: state dependence (cell-wise sign flip) with a big effect -> PASS; the static wide bracket alone cannot get it
+    pos = mk(1600, 0.6)
+    v = cond_verdict(cond_core(pos, keys, st))
+    assert v["call"] == "PASS" and v["delta_vs_static"] >= COND_DELTA_R and v["delta_vs_best_static"] > 0, v
+    # planted null: all brackets identical in every cell -> delta exactly 0 -> FAIL
+    null = mk(1600, 0.0)
+    v = cond_verdict(cond_core(null, keys, st))
+    assert v["call"] == "FAIL" and abs(v["delta_vs_static"]) < 1e-9, v
+    # thin: cells never reach COND_MIN_CELL prior decisions in >= 5 folds -> INDETERMINATE
+    v = cond_verdict(cond_core(mk(80, 0.6), keys, st))
+    assert v["call"] == "INDETERMINATE" and v["n_eligible_folds"] < COND_MIN_FOLDS_ELIGIBLE, v
+    # no look-ahead: corrupting the graded fold's own labels must not change the choices made for that fold
+    c1 = cond_core(pos, keys, st)["choices"]
+    bad = pos.copy()
+    bad.loc[bad.fold == 7, f"net_{keys[1]}"] += 100.0
+    assert cond_core(bad, keys, st)["choices"][7] == c1[7]
+    # fold 0 is burn-in: never graded
+    assert all(r["fold"] >= 1 for r in cond_core(pos, keys, st)["per_fold"])
+    e = cell_edges(np.arange(300))
+    assert 98 < e[0] < 101 and 198 < e[1] < 201
+    assert cond_random_control(pos, keys, st)["draws"] == COND_RANDOM_DRAWS
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("cmd", nargs="?", choices=["run"])
-    ap.add_argument("--lever", choices=["tau", "bracket"])
+    ap.add_argument("--lever", choices=["tau", "bracket", "bracket_cond"])
     ap.add_argument("--cache", default="/tmp/ml_entry_cost_klines")
     ap.add_argument("--out", default="/tmp/ml_entry_cost_levers_out")
     ap.add_argument("--population", default=str(P.POPULATION))
@@ -247,7 +441,7 @@ def main(argv=None) -> int:
     if a.self_test:
         return self_test()
     if a.cmd != "run" or not a.unit or not a.lever:
-        ap.error("run --lever tau|bracket --unit RQ-... (or --self-test)")
+        ap.error("run --lever tau|bracket|bracket_cond --unit RQ-... (or --self-test)")
     return run(a)
 
 

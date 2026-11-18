@@ -104,6 +104,20 @@ levers:
         max_drawdown_r: 7.6634
         verdict: pass
         joint_change: false
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-033
+        window: 2021-11-12..2026-11-14
+        n: 51
+        net_r: 10.6685
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: -0.4219
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6634
+        verdict: pass
+        joint_change: false
       - value: '15'
         baseline_value: '20'
         arm: donchian_lo
@@ -118,8 +132,22 @@ levers:
         max_drawdown_r: 6.2779
         verdict: pass
         joint_change: false
-      shape: monotone
-      points: 2
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-033
+        window: 2021-11-12..2026-11-14
+        n: 70
+        net_r: 17.6073
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 6.5169
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.2779
+        verdict: pass
+        joint_change: false
+      shape: peaked
+      points: 4
       best_delta_r_per_trade: 0.1086
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
@@ -181,6 +209,20 @@ levers:
         max_drawdown_r: 5.0971
         verdict: pass
         joint_change: false
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-033
+        window: 2021-11-12..2026-11-14
+        n: 46
+        net_r: 15.6961
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 4.6057
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 5.1968
+        verdict: pass
+        joint_change: false
       - value: '0.6'
         baseline_value: '0.8'
         arm: min_confidence_lo
@@ -195,10 +237,24 @@ levers:
         max_drawdown_r: 7.6686
         verdict: pass
         joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-033
+        window: 2021-11-12..2026-11-14
+        n: 86
+        net_r: 8.4649
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: -2.6255
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6686
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 5
+      points: 7
       best_delta_r_per_trade: 0.0768
-      fold_stability: 0.65
+      fold_stability: 0.643
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_target_r:
@@ -2625,10 +2681,24 @@ levers:
         max_drawdown_r: 4.1466
         verdict: pass
         joint_change: true
+      - value: '25'
+        baseline_value: 'off'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 4
-      best_delta_r_per_trade: 0.0408
-      fold_stability: 1.0
+      points: 5
+      best_delta_r_per_trade: 0.0536
+      fold_stability: 0.9
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     trail_adx_tight_mult:
       tests:
@@ -2688,10 +2758,24 @@ levers:
         max_drawdown_r: 4.1466
         verdict: pass
         joint_change: true
+      - value: '2.5'
+        baseline_value: 'off'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 4
-      best_delta_r_per_trade: 0.0408
-      fold_stability: 1.0
+      points: 5
+      best_delta_r_per_trade: 0.0536
+      fold_stability: 0.9
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     atr_stop_mult:
       tests:
@@ -2779,10 +2863,24 @@ levers:
         max_drawdown_r: 4.7347
         verdict: pass
         joint_change: true
+      - value: '2.0'
+        baseline_value: '1.5'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: noisy
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0561
-      fold_stability: 0.25
+      fold_stability: 0.286
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_mult:
       tests:
@@ -2870,10 +2968,24 @@ levers:
         max_drawdown_r: 4.7347
         verdict: pass
         joint_change: true
+      - value: '5.0'
+        baseline_value: '4.0'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: peaked
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0561
-      fold_stability: 0.417
+      fold_stability: 0.429
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_decay_stall_bars:
       tests:
@@ -3403,6 +3515,8 @@ levers:
       best_delta_r_per_trade: 0.1247
       fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+units:
+- RQ-20261114-db1a-05
 levers_tested:
 - family: 'exit (conditional profit lock: stop to entry + (k-1)R once MFE >= kR)'
   varied: arm A config-exact vs L2 (k 2), L25 (k 2.5), L2T (k 2 armed only with the TP within 0.5R), record 2025-11-13..2026-11-12 + year before,
@@ -3461,5 +3575,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-units:
-- RQ-20261114-db1a-05

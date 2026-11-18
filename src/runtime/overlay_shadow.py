@@ -25,8 +25,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "ml" / "overlay"
+# CHALLENGERS (operator 2026-11-16: a live model trades until a challenger beats it). Each committed artifact here
+# is scored beside the live one and logged under "challengers" in the same shadow record. LOG ONLY: nothing in
+# this module or in apply_overlay_reduce reads a challenger's multiplier, so a challenger can never touch an order.
+CHALLENGER_DIR = ARTIFACT_DIR / "challengers"
 _CANDLE_LIMIT = 450  # overlay_features reads a 400-bar window; MIN_BARS is 201
 _ARTIFACTS: dict[str, dict] | None = None
+_CHALLENGERS: dict[str, list[dict]] | None = None
 
 
 def _load_artifacts(directory: Path = ARTIFACT_DIR) -> dict[str, dict]:
@@ -56,6 +61,45 @@ def artifacts() -> dict[str, dict]:
     if _ARTIFACTS is None:
         _ARTIFACTS = _load_artifacts()
     return _ARTIFACTS
+
+
+def _load_challengers(directory: Path = CHALLENGER_DIR) -> dict[str, list[dict]]:
+    """{gate_leg: [challenger artifact, ...]} from ``ml/overlay/challengers/overlay_*.json``. Unreadable files are
+    skipped with a warning; a missing directory means no challengers."""
+    out: dict[str, list[dict]] = {}
+    if not directory.is_dir():
+        return out
+    for p in sorted(directory.glob("overlay_*.json")):
+        try:
+            art = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            logger.warning("overlay_shadow: unreadable challenger %s: %s", p.name, exc)
+            continue
+        art["_file"] = p.name
+        for leg in art.get("legs_gate") or []:
+            out.setdefault(leg, []).append(art)
+    return out
+
+
+def challengers() -> dict[str, list[dict]]:
+    global _CHALLENGERS
+    if _CHALLENGERS is None:
+        _CHALLENGERS = _load_challengers()
+    return _CHALLENGERS
+
+
+def _score_challengers(strategy: str, row: dict) -> list[dict]:
+    """Shadow-only challenger scores for one decision row. Each entry is self-contained and never raises."""
+    from src.runtime.overlay_features import overlay_multiplier, score_overlay
+    scored = []
+    for ch in challengers().get(strategy, []):
+        try:
+            scored.append({"artifact": ch.get("_file"), "tau": ch.get("tau"), "tau_rule": ch.get("tau_rule"),
+                           "p_win": round(score_overlay(ch, row), 6),
+                           "would_be_multiplier": overlay_multiplier(ch, row)})
+        except Exception as exc:  # noqa: BLE001 — a challenger can never break the tick or the live record
+            scored.append({"artifact": ch.get("_file"), "error": str(exc)[:200]})
+    return scored
 
 
 def _leg_bars(strategy: str, symbol: str) -> tuple[dict | None, str, Any]:
@@ -100,6 +144,9 @@ def score_package(pkg: Any) -> dict | None:
             return rec
         rec.update(action="annotate", p_win=round(score_overlay(art, row), 6),
                    would_be_multiplier=overlay_multiplier(art, row), features=row)
+        ch = _score_challengers(strategy, row)
+        if ch:
+            rec["challengers"] = ch
         if entry and bars:
             rec["entry_vs_bar_close_bps"] = round(1e4 * (entry - bars["close"][-1]) / bars["close"][-1], 2)
         return rec

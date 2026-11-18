@@ -393,6 +393,21 @@ def run_files(state: dict, now: float, host: str,
     return s, alerts
 
 
+#: Operator 2026-11-15: "the alerts for security breaches should be a little louder (emoji, etc)".
+#: Sent text only; the detector's own alert strings (and their tests) are unchanged.
+LOUD_PREFIX = "\U0001F6A8\U0001F510 SECURITY ALERT \U0001F6A8\n"
+
+
+def loud(text: str) -> str:
+    """The operator-facing form of a security alert: a siren header line, then the alert.
+
+    Only a ``[RED FLAG]`` gets the siren; an ``[INFO]`` line (a baseline recorded) is sent as is, so a
+    routine message never reads as a breach (2026-11-15 14:44Z: two INFO baseline lines arrived with the siren)."""
+    if text.startswith(LOUD_PREFIX) or "[RED FLAG]" not in text:
+        return text
+    return LOUD_PREFIX + text
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--dry-run", action="store_true", help="print alerts; send nothing, write nothing")
@@ -428,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             try:
                 from src.runtime import telegram_channels
-                telegram_channels.send("alert", text)
+                telegram_channels.send("alert", loud(text))
             except Exception as exc:  # noqa: BLE001
                 print(f"security_watch: send failed: {type(exc).__name__}", file=sys.stderr)
         if not args.dry_run:

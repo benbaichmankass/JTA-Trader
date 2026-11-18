@@ -571,6 +571,7 @@ nodes:
     verdict: pass
   after:
   - {unit: RQ-20261021-7c2b-12, verdict: any}
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on a prop-sizing decision -- 7c2b-12 INDETERMINATE; per the node, 0.35% is the default proposal'
   needs_authoring: >-
     Programme review 2026-10-21 authored rung 2 as RQ-20261021-7c2b-12 (A = flat 0.35%, the rung-1 winner; C0030, C0040,
     CROOM35; same ledgers, 5 seeds). On its verdict: the dominating arm, or 0.35% if none, is the breakout_2 sizing
@@ -1229,6 +1230,7 @@ nodes:
     verdict: any
   - unit: RQ-20261026-f679-03
     verdict: any
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on a trading-lane harness read -- pooled paired read over f679-02 / -03 / 4b82-05'
   needs_authoring: 'AUTHORED 2026-10-26 as the 1h and 4h legs RQ-20261026-f679-02 and -03 (the 2h leg is 4b82-05, identical arms and symbols; harness_stage0 grades one bar per run). NEXT on their verdicts: the pooled paired read across the three legs (n_B >= 18k is the node target; report the realised n_B and the n the measured sd needs), then the original ask below. Trend-Donchian prop-pace candidates read UNDERPOWERED, not dead: 4b82-01/-02/-05/-06/-07 and 7c2b-02/-03 failed or passed
     a 0.05 R/trade (0.10 for the daily cells) materiality bar at a pooled n_B below the floor computed from the MEASURED per-trade sd
     (1.25-2.3 R: 4.7k-17.7k per arm; realised 0.3k-8.9k). 4b82-05 D55 (+0.0698 vs B +0.0269 R/trade at 2h, 3 of 6 cells) is the nearest lead.
@@ -1269,7 +1271,8 @@ nodes:
     verdict: any
   - unit: RQ-20261026-f679-01
     verdict: any
-  needs_authoring: 'AUTHORED 2026-10-26 as RQ-20261026-f679-01 (fade range gate at 4h, six perps). NEXT on its verdict: PASS -> one disjoint-symbol confirmation; FAIL -> close the fade 4h range-gate configuration (not the family). Original ask: Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): kill -- f679-01 FAIL closes the fade 4h range-gate configuration (not the family)'
+  authoring_closed_ask: 'AUTHORED 2026-10-26 as RQ-20261026-f679-01 (fade range gate at 4h, six perps). NEXT on its verdict: PASS -> one disjoint-symbol confirmation; FAIL -> close the fade 4h range-gate configuration (not the family). Original ask: Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
     show NO baseline edge at 1h on these six perps; the lever variants cannot lift a baseline that is not positive. Diagnosis: entry edge absent at the
     1h bar, not a management problem. Author ONE unit that asks the entry question only: the fade harness range-only gate (ADX <= 20) on the 4h bar,
     where the squeeze and pullback harnesses were the only ones to show a positive 4h baseline (326f-11 PASS, net 89R). Close the 1h management variants of both without further units.'
@@ -2234,6 +2237,7 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.1
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on a passing ML-ENTRY-DYNAMIC-SL arm -- a standing node; c692-11..15 all FAIL, so nothing to gate'
   needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): for EACH ML-ENTRY-DYNAMIC-SL arm unit (break-even, trailing, time-decay tightening, ML SL revision, structure SL; checklist row ML-ENTRY-DYNAMIC-SL,
     authored after the 2026-11-04 18:00Z reset) whose Stage-0 result PASSES, add one node of the same shape as P5-MLV-GATE-MOVINGTP: `after: [{unit: <arm unit>, verdict: pass}]`, command `ml_variant_prop_gate.py
     --variant mlv-dynsl-<arm> --from-unit <arm unit>`, rule RULE-P5-MLV-GATE-DYNSL-<arm> = RULE-P5-GATE-BRK-PER-LEG-V3 unchanged. MISSING PIECE the arm units must supply: emit ledger_ethsol.jsonl (gross_r
@@ -2246,6 +2250,7 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.1
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on a passing structure-exit arm -- a standing node'
   needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): structure-exit arms on ml_entry (swing-based SL, structure-aware exits; lever maps research/levers/ltr-sl-to-structure.yaml and ml-entry.yaml) -
     each arm unit that PASSES Stage 0 gets a gate node of the P5-MLV-GATE-MOVINGTP shape, authored in the same PR as the arm unit. MISSING PIECE: a structure-exit arm unit on ml_entry does not exist yet
     (author it from the lever map first), and it must emit ledger_ethsol.jsonl.'
@@ -2257,6 +2262,7 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.1
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `unit_result:RQ-20261117-c21d-01` -- a standing node; fires on an ENTRY variant PASS'
   needs_authoring: 'STANDING ITERATION (ML-PROP-ITERATE): every future ML-ENTRY variant (recipe fixes such as the b601 bracket-geometry, b602 selectivity, b604 calibration and b606 cost-gate levers, a retrained
     ml_entry_v2, any new ENTRY recipe) whose own Stage-0 unit PASSES gets a gate node of the P5-MLV-GATE-MOVINGTP shape in the SAME PR that authors the variant, per the programme-review iteration audit;
     nothing is tuned to pass and the rule is RULE-P5-GATE-BRK-PER-LEG-V3 unchanged. The line closes only when a variant passes on a firm (-> held Tier-3 roster PR) or the programme review retires it with
@@ -2269,7 +2275,8 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.1
-  needs_authoring: 'AUTHORED 2026-11-05 as research/queue/RQ-20261105-d256-01.yaml (lane PROP-BASELINE-AND-ML, Manager Session 2026-11-05b; operator direction "Prop-specific model", 2026-11-05): the two-symbol firm-cost-label arm (design arm C) already ran as RQ-20261105-fd68-01..06 with every forward held-out span spent, so d256-01 grades it on the one unread time-disjoint span (BACKWARD, 2020-07..2021-12, discovery 2022+). Do NOT re-author; arms A (re-threshold v1) and B (pooled prop-cost label) stay open below. ORIGINAL TEXT: PRE-REGISTERED DESIGN, runnable once the three diagnostics land (P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; full text docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md): a PROP-SPECIFIC
+  authoring_closed: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): already authored: close node -- RQ-20261105-d256-01; arm C = fd68-01'
+  authoring_closed_ask: 'AUTHORED 2026-11-05 as research/queue/RQ-20261105-d256-01.yaml (lane PROP-BASELINE-AND-ML, Manager Session 2026-11-05b; operator direction "Prop-specific model", 2026-11-05): the two-symbol firm-cost-label arm (design arm C) already ran as RQ-20261105-fd68-01..06 with every forward held-out span spent, so d256-01 grades it on the one unread time-disjoint span (BACKWARD, 2020-07..2021-12, discovery 2022+). Do NOT re-author; arms A (re-threshold v1) and B (pooled prop-cost label) stay open below. ORIGINAL TEXT: PRE-REGISTERED DESIGN, runnable once the three diagnostics land (P5-MLDIAG-DECOMP / -RISKCURVE / -MINEDGE; full text docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md): a PROP-SPECIFIC
     ENTRY candidate - the pooled ENTRY model re-thresholded / re-trained on ETHUSDT+SOLUSDT only with the firm cost stack inside the label and a firm-DD-aware selection objective, graded by RULE-P5-GATE-BRK-PER-LEG-V3
     through ml_variant_prop_gate.py on dev-OOS folds then ONE forward read on November+ data. MISSING PIECES (harness change, so needs_authoring): (1) a trainer entry point in scripts/research/ml_decision_entry.py
     that accepts --symbols ETHUSDT,SOLUSDT and a label built with the venue cost arm (prop_gate.SIM[acct].ven) instead of the flat cost; (2) a dev-fold tau/objective selector that calls prop_ev_sim on dev-OOS

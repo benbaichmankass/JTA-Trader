@@ -175,3 +175,30 @@ def test_split_groups_per_strategy_account_label_and_unlabelled_is_null():
     assert un["missing_reasons"] == {"unlabelled": 1, "no_candles": 1}
     assert out["n_closed"] == 6 and out["n_labelled"] == 4
     assert split(rows, "LEG")["n_labelled"] == 5
+
+
+def test_non_daily_leg_fetches_no_d1_on_the_path_and_stamps_d1_off_path():
+    # TREND-ALIGN-D1-LATENCY-TEST (pre-registered rule tripped 2026-11-15): no 1d venue fetch on the order path.
+    calls = []
+
+    class _Venue:
+        def __getattr__(self, name):
+            calls.append(name)
+            raise AssertionError("no 1d fetch on the order path for a non-daily leg")
+
+    sig = _sig("buy")
+    before = copy.deepcopy(sig)
+    ssb._stamp_trend_align_on_signal(sig, _frame(), symbol="ETHUSDT", timeframe="1h", exchange=_Venue())
+    node = sig["meta"]["trend_align"]
+    assert not calls
+    assert node["LEG"]["label"] in ta.LABELS                     # the LEG label is kept
+    assert node["D1"]["label"] is None and node["D1"]["missing_reason"] == ta.D1_OFF_PATH_REASON
+    assert node["agreement"] == "other"
+    assert _without_label(sig) == before                          # still label-only
+
+
+def test_daily_leg_keeps_d1_from_its_own_frame():
+    sig = _sig("sell")
+    ssb._stamp_trend_align_on_signal(sig, _frame(n=80, step_h=24, start="2026-07-01"), symbol="GLD", timeframe="1d",
+                                     exchange=None)
+    assert sig["meta"]["trend_align"]["D1"]["missing_reason"] != ta.D1_OFF_PATH_REASON

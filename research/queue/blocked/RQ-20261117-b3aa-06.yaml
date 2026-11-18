@@ -1,0 +1,96 @@
+id: RQ-20261117-b3aa-06
+title: 'e4_oi_shock_1h: exit family one-factor sweep (TP 2.0 / 1.5 ATR, time stop 12 bars) on the frozen OI-shock entries, held-out window, net of the full cost stack (iteration; orphan; BLOCKED on E4-EXIT-LEVER-DRIVER)'
+status: blocked
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+programme: P1
+practice_precedent: 'R5 + M2 (docs/reference/trading-and-model-practice-principles.md): one lever chosen from the leg''s own diagnosis; one-factor sweep against the frozen control.'
+question: 'e4_oi_shock_1h: with the frozen OI-shock entries unchanged, does a nearer take-profit (2.0 or 1.5 ATR14 instead of 3.0) or a shorter time stop (12 bars instead of 24) turn the held-out 2024-11-01..2025-10-25
+  mean net R positive with a 95% weekly-cluster CI above 0, net of the full cost stack?'
+why_this_matters: 'ITERATION (research-ops 2026-11-17 1006Z; e4_oi_shock_1h is an ORPHAN with no lever ever tested). DIAGNOSIS from its two committed reads: RELATIVE entry edge PASS (RQ-20261030-e18g-02:
+  +0.184 R vs a same-model random entry, 95% CI +0.092..+0.274) but ABSOLUTE Stage 0 FAIL (e18g-03, comms/strategy_evidence/e4_oi_shock.json: mean net +0.022 R, CI -0.072..+0.110, n 856, 3 of 5 quarterly
+  folds positive). The entry carries information that the frozen bracket does not convert: the 3.0-ATR TP is far for a 1h continuation impulse, and the lever map''s attribution (n 1619, MFE mean 1.30 R,
+  52% of trades reach 1 R MFE, 847 losers reached 1 R) says winners are given back. NOTE: the same map shows net_r 0.0 / cost_r 0.0 on all 1619 rows, a read defect (filed), so those MFE counts are indicative
+  only. The exit family is the diagnosis-pointed lever. On PASS: a confirmation on the dev window (pre-holdout, RESEARCH-NO-WAIT) before any Tier-3 note; on FAIL: the exit configurations close and the next
+  family is the filter (oi_z threshold).'
+power:
+  expected_n: 856
+  min_detectable_effect: 0.1
+  effect_units: R
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n 856 MEASURED on the held-out window (e18g-03); per-trade sd ~1.3 R implies the CI half-width ~0.09 R seen there.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand held-out window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-06-E4-EXIT-SWEEP
+  statistic: 'desk_event_entry_replay.py (with the E4-EXIT-LEVER-DRIVER arm flags) on the frozen e18g entries, held-out window 2024-11-01..2025-10-25, six USDT perps, net of the full cost stack: per arm
+    mean net R/trade and its 95% weekly-cluster CI, quarterly folds.'
+  rule: 'PASS iff some arm''s mean net R > 0 with the 95% weekly-cluster CI lower bound > 0 AND >= 4 of 5 quarterly folds positive AND n >= 300, AND it exceeds the frozen control''s mean net R; long and
+    short net reported separately (both >= 0 for this two-sided rule); per-fold table reported, no fold above 50% of total net. INDETERMINATE iff n < 300 or the producer failed. FAIL otherwise (the configurations
+    close; the exit family stays open). Arm denominator 4 incl. control (TP 2.0 ATR, TP 1.5 ATR, horizon 12 bars). M13: the held-out window was read once (e18g-03); deflated bar = the arm count.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config or order path; the leg stays a bybit_1 mechanics demo leg; a PASS is a lead, not a promotion case.
+  baseline: control = the frozen rule (SL 1.5 / TP 3.0 ATR14, 24-bar time stop), same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: demo-floor leg with a measured relative entry edge; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  basis: same fetch + replay as RQ-20261030-e18g-03 with 4 arms (estimate).
+  why_runner: Fetches public Binance Vision OI + candles; Kaggle CPU has no internet.
+run:
+  workflow: null
+  note: 'Null on purpose: the replay has no arm flags yet (see blocked_on). Promote with git mv to research/queue/ and fill run.workflow/run.command when E4-EXIT-LEVER-DRIVER closes.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: an exit-lever sweep on a rule-based leg.'
+intervention_controls:
+  not_applicable: bracket-at-entry sweep against the frozen rule on the same entries, not an in-trade active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/blocked/RQ-20261030-e18g-02.yaml
+- research/queue/blocked/RQ-20261030-e18g-03.yaml
+- comms/strategy_evidence/e4_oi_shock.json
+- scripts/research/desk_event_entry_replay.py
+iteration:
+  subject: e4_oi_shock_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/e4_oi_shock.json
+  verdict_read: fail
+  diagnosis: 'Relative entry edge PASS (+0.184 R vs random, CI > 0) but absolute Stage 0 FAIL (+0.022 R, CI spans 0, n 856): the frozen far TP / 24-bar hold does not convert the entry; exit family untested.'
+  search: 'exit family: TP 2.0 / 1.5 ATR14, time stop 12 bars, one factor each vs the frozen control'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/e4_oi_shock_1h.yaml#attribution
+  - research/levers/e4_oi_shock_1h.yaml#baseline
+  attempt: 1
+  due_by: '2026-12-01'
+blocked_on:
+- what: 'Driver gap: scripts/research/desk_event_entry_replay.py accepts only {fetch,run,confirm} --root --out --window; no arm or exit-parameter flags, and exit_lever_ablation.py does not cover this leg.'
+  ref: scripts/research/desk_event_entry_replay.py
+  kind: build
+  clears_when: 'E4-EXIT-LEVER-DRIVER closes: the replay accepts --sl-atr / --tp-atr / --horizon-bars (defaults = the frozen rule, byte-identical) with a self-test; then git mv to research/queue/ and fill
+    run.command.'
+  owner: E4-EXIT-LEVER-DRIVER (checklist row, filed once by RESEARCH-OPS-20261117-1006)
+follow_up: On unblock the dispatcher runs it; a PASS goes to a dev-window confirmation.
+last_dispatched_at: null

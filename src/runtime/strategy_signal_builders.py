@@ -113,13 +113,21 @@ def _stamp_trend_align_on_signal(sig: Dict[str, Any], candles_df: Any, *, symbol
         side = str(sig.get("side") or "").strip().lower()
         if side not in ("buy", "sell"):
             return sig
-        fetch_d1 = None
-        if exchange is not None and str(timeframe) != "1d":
-            def fetch_d1() -> Any:
-                from src.runtime.market_data import fetch_candles as _fc
-                return _fc(candle_symbol or symbol, "1d", exchange_client=exchange, limit=200)
-        _stamp_trend_align_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe,
-                                   direction=side, fetch_d1=fetch_d1)
+        # TREND-ALIGN-D1-LATENCY-TEST (pre-registered rule TRIPPED 2026-11-15 16:21Z): no 1d fetch on the order path.
+        # A daily leg labels D1 from its own frame (unchanged); a non-daily leg gets D1 null with reason d1_off_path and
+        # the ESTIMATED backfill labeller computes it off-path. The LEG label is unchanged.
+        meta = sig.setdefault("meta", {})
+        pre_stamped = "trend_align" in meta
+        _stamp_trend_align_on_meta(meta, candles_df, symbol=symbol, timeframe=timeframe, direction=side, fetch_d1=None)
+        ta_node = meta.get("trend_align")
+        if str(timeframe) != "1d" and isinstance(ta_node, dict) and not pre_stamped:
+            from src.runtime.trend_alignment import D1_OFF_PATH_REASON, agreement as _agreement
+            ta_node["D1"] = {"label": None, "missing_reason": D1_OFF_PATH_REASON, "adx": None, "pdi": None, "mdi": None,
+                             "regime_label": None, "bar_close_used": None, "n_bars_used": None}
+            try:
+                ta_node["agreement"] = _agreement(ta_node.get("LEG") or {}, ta_node["D1"])
+            except Exception:  # noqa: BLE001 -- observability-only
+                ta_node["agreement"] = "other"
     except Exception:  # noqa: BLE001 -- observability-only, never break a tick
         logger.debug("trend_align stamp failed for %s", symbol, exc_info=True)
     return sig

@@ -98,6 +98,15 @@ case "$1" in
     ;;
   diff) cat "{diff_files}" ;;
   prune) echo "$*" >> "{prune_log}"; exit "$(cat "{prune_rc}")" ;;
+  prune-packed) echo "$*" >> "{prune_log}"; exit "$(cat "{prune_rc}")" ;;
+  config)
+    # GIT-SYNC-PRUNE-STUCK: FAKE_PROMISOR=1 -> a partial clone; every other key stays empty (exit 0) as before.
+    case "$*" in
+      *remote.origin.promisor*) [ "${{FAKE_PROMISOR:-}}" = "1" ] && echo true ;;
+      *extensions.partialclone*) [ "${{FAKE_PARTIALCLONE:-}}" = "1" ] && echo origin ;;
+      *core.sparseCheckout*) [ "${{FAKE_SPARSE:-}}" = "1" ] && echo true ;;
+    esac
+    exit 0 ;;
   fetch|reset) exit 0 ;;
   *) exit 0 ;;
 esac
@@ -120,7 +129,18 @@ case "$1" in
     pattern="${{*: -1}}"
     if [[ "$pattern" == "ict-*.service" ]]; then cat "{units_file}"; fi
     exit 0 ;;
-  restart) echo "$2" >> "{restart_log}"; exit 0 ;;
+  restart)
+    shift; flags=""
+    while [[ "$1" == --* ]]; do flags="$flags $1"; shift; done
+    echo "$1" >> "{restart_log}"
+    [ -n "$flags" ] && echo "$1$flags" >> "{restart_log}.flags"
+    exit 0 ;;
+  show)
+    # GIT-SYNC-PRUNE-STUCK: `show -p Type --value <unit>`; FAKE_ONESHOT lists the oneshot units, every other unit
+    # prints nothing (an unreadable type keeps the blocking restart).
+    unit="${{*: -1}}"
+    case " ${{FAKE_ONESHOT:-}} " in *" $unit "*) echo oneshot ;; esac
+    exit 0 ;;
   status|start) exit 0 ;;
   is-active) echo "active"; exit 0 ;;
   *) exit 0 ;;
@@ -145,7 +165,8 @@ esac
 
 
 def _run(fake, env_extra=None):
-    env = {**os.environ, "PATH": f"{fake['bindir']}:/usr/bin:/bin"}
+    env = {**os.environ, "PATH": f"{fake['bindir']}:/usr/bin:/bin",
+           "SPARSE_APPLIED_MARKER": str(fake["repo"] / ".sparse-applied")}
     if env_extra:
         env.update(env_extra)
     return subprocess.run(
@@ -365,6 +386,101 @@ def test_failed_prune_never_blocks_the_pull_and_keeps_gc_log(fake_repo):
     assert gc_log.exists()  # retried on the next tick
     assert "git prune failed" in res.stdout
     assert "ict-trader-live.service" in _restarted(fake_repo)  # the deploy still ran
+
+
+@pytest.mark.parametrize("env", [{"FAKE_PROMISOR": "1"}, {"FAKE_PARTIALCLONE": "1"}])
+def test_partial_clone_skips_every_prune_leaves_gc_log_and_still_deploys(fake_repo, env):
+    """GIT-SYNC-PRUNE-STUCK: on a promisor/partial clone neither `git prune` (never finished inside its 300 s cap there;
+    WHY is unproven, a local partial-clone test did not show it fetching) nor
+    `git prune-packed` (burned its 120 s cap on 4755 packs) runs; gc.log stays (keeps auto-gc off); the deploy proceeds."""
+    gc_log = _seed_gc_log(fake_repo)
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, env)
+    assert res.returncode == 0, res.stderr
+    assert not fake_repo["prune_log"].exists()           # no prune, no prune-packed
+    assert gc_log.exists()
+    assert "partial (promisor) clone: skipping 'git prune'" in res.stdout
+    assert "removed .git/gc.log" not in res.stdout
+    assert "ict-trader-live.service" in _restarted(fake_repo)
+
+
+def test_partial_clone_without_gc_log_runs_nothing(fake_repo):
+    fake_repo["diff_files"].write_text("docs/x.md\n")
+    res = _run(fake_repo, {"FAKE_PROMISOR": "1"})
+    assert res.returncode == 0, res.stderr
+    assert not fake_repo["prune_log"].exists()
+
+
+def test_oneshot_units_are_skipped_and_other_types_keep_the_blocking_restart(fake_repo):
+    """GIT-SYNC-PRUNE-STUCK (manager order 2026-11-16 21:58Z): a Type=oneshot unit is not restarted inside the deploy
+    loop (its timer runs it on the new code); a unit whose type is simple/unreadable restarts as before, blocking."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, {"FAKE_ONESHOT": "ict-telegram-bot.service"})
+    assert res.returncode == 0, res.stderr
+    restarted = _restarted(fake_repo)
+    assert "ict-telegram-bot.service" not in restarted               # oneshot: left to its timer
+    assert "ict-web-api.service" in restarted and "ict-trader-live.service" in restarted
+    assert ">>>   skip ict-telegram-bot.service (Type=oneshot" in res.stdout
+    assert ">>>   restarted ict-web-api.service\n" in res.stdout      # blocking restart
+    assert not Path(str(fake_repo["restart_log"]) + ".flags").exists()   # nothing is ever --no-block now
+
+
+def test_shared_sync_lock_is_acquired_and_logged(fake_repo):
+    fake_repo["diff_files"].write_text("docs/x.md\n")
+    lock = fake_repo["repo"] / "jta-sync.lock"
+    res = _run(fake_repo, {"SYNC_LOCK_FILE": str(lock), "SYNC_LOCK_WAIT_S": "5"})
+    assert res.returncode == 0, res.stderr
+    assert "[timing] shared git sync lock acquired" in res.stdout
+    assert lock.exists()
+
+
+def test_shared_sync_lock_held_by_another_writer_waits_then_exits_zero(fake_repo):
+    """A held lock never makes the run die on index.lock: it waits, and on timeout logs and exits 0 (no halt, the next
+    tick retries) without touching git."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    lock = fake_repo["repo"] / "jta-sync.lock"
+    holder = subprocess.Popen(["flock", str(lock), "sleep", "20"])
+    try:
+        import time
+        time.sleep(0.5)
+        res = _run(fake_repo, {"SYNC_LOCK_FILE": str(lock), "SYNC_LOCK_WAIT_S": "1"})
+    finally:
+        holder.kill()
+        holder.wait()
+    assert res.returncode == 0, res.stderr
+    assert "shared git sync lock still held after 1s" in res.stdout
+    assert "Hard-resetting" not in res.stdout
+    assert _restarted(fake_repo) == []
+
+
+def test_sparse_reapply_is_bracketed_by_timing_lines(fake_repo):
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo, {"FAKE_SPARSE": "1"})
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    assert out.index("[timing] hard-reset done") < out.index("[timing] sparse re-apply (git read-tree -mu HEAD) start") \
+        < out.index("[timing] sparse re-apply done") < out.index("Post-sync HEAD")
+
+
+def test_no_oneshot_means_no_no_block_flag(fake_repo):
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo)
+    assert res.returncode == 0, res.stderr
+    assert not Path(str(fake_repo["restart_log"]) + ".flags").exists()
+
+
+def test_timing_lines_bracket_the_gate_steps(fake_repo):
+    """GIT-SYNC-PRUNE-STUCK (c): journald stamps every line, so these markers bound the formerly silent stretches."""
+    fake_repo["diff_files"].write_text("src/main.py\n")
+    res = _run(fake_repo)
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    for marker in (">>> [timing] hard-reset done", ">>> [timing] runtime gate", ">>> [timing] runtime gate git diff done",
+                   ">>> [timing] trader restart gate (import closure) start", ">>> [timing] trader restart gate done"):
+        assert marker in out, marker
+    assert out.index("[timing] runtime gate (git diff") < out.index("[timing] runtime gate git diff done") \
+        < out.index("[timing] trader restart gate (import closure) start") < out.index("[timing] trader restart gate done") \
+        < out.index("Restarting services")
 
 
 def test_no_gc_log_means_no_prune(fake_repo):

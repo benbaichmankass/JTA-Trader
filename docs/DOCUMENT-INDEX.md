@@ -622,9 +622,13 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/UI-SPA-HANDOFF-2026-11-12.md` | history | historical | — | 2026-11-12 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/build-spec-audit-2026-11-18.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/ltr-desk-local-student-SPEC-2026-11-15.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/manager-runbooks.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
 | `docs/plans/ml-live-promotion-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Short path to put 3-5 ML models into live decision loops by 2026-11-02 on existing consumers: pre-registered gates, day-by-day build steps, Tier map, 8 MODEL infra rows. |
+| `docs/plans/week-plan-2026-11-19.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Week plan for 11-19..25 (operator away Thu-Sun): two-lane format, ML priorities, ranked general-lane list, deep system audit scope, the 2026-11-18 operator decisions, autonomy checklist. |
+| `docs/plans/ml-week-plan-2026-11-19.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML week plan for the operator's Thu-Sun 11-19..22 absence: per-slot D1-D10 live state, tasks, dependencies and owners; per-family label/feature/model-family iteration; frontier scans; units to author per backend; operator-blocking list. |
 | `docs/plans/ml-pipeline-design-2026-10-29.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | The ML assembly line from the money roster backward: six stations (dataset, CPCV, gate, shadow, canary, CUSUM/retrain) with owner, cadence and own quality metric; measured gap per station; ranked build rows; ML intake rule. |
 | `docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/OCI-STATE-CHECK-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
@@ -808,6 +812,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/frontier-scan-2026-10-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | First frontier scan: ranked model/strategy shortlist behind RQ-20261011-9da8-01..07. |
 | `docs/research/frontier-scan-2026-11-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Weekly frontier scan 2026-11-11 (ML-FRONTIER-PREP-20261111): triage, K1 market-residual ENTRY proposal, M41 verdict, lever-row dispositions. |
 | `docs/research/frontier-scan-2026-11-12-surge.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Frontier surge pass 1 (lane FRONTIER-RESEARCH, 2026-11-12): the FRONTIER-Q sub-queue, sources, triage (RESID-ENTRY unit, SIGNATURE sequenced, METALABEL dropped on power). |
+| `docs/research/frontier-scan-2026-11-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Weekly frontier scan 2026-11-18 (ML-FRONTIER-PREP-20261118): family evidence is all on regime/direction labels; ranked stronger families; D3 money-label units dbf8-01/-02. |
 | `docs/research/frontier-static-markets-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | FRONTIER-STATIC-MARKETS first pass: range/mean-reversion triage after the M22 retirement; units RQ-20261112-a7e8-01/-02. |
 | `docs/research/idea-family-review-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Lane IDEA-REVIEW-1016: family-level A/B/C review of ideas closed since 2026-09-22 with outside sources; units RQ-20261016-1fa6-01..10; proposed negative-result protocol. |
 | `docs/research/R5-REMAINING-CORPUS-COST-STACK-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | R7 lane: regrades the 40 of 52 evidence records that carried no `cost_stack`. Answers both live operator questions and carries proposals P1-P5, applied by nobody. `unknown` is correct and deliberate — the author wrote it, nobody else has read it. |
@@ -1065,6 +1070,9 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-p1-costnet-rebuild-2026-10-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-feature-inventory-2026-11-01.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Every feature source (symbols, depth read from files, PIT, live?, backfill cost), ranked pooled feature-store plan and gap rows; answers why ENTRY has 20 features. |
+| `docs/research/authoring-queue-triage-2026-11-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-slot-iteration-2026-11-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/regime-tier3-packets-2026-11-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-prop-iterate-2026-11-02/PROP-ML-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1083,6 +1091,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pairs-sleeve-PROPOSAL-2026-07-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-sleeve-real-money-readiness-2026-07-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-stocktake-2026-10-07.md` | evidence | live | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/practice-review-2026-11-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/programmes/02-AI-TRADER.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for G4; re-measured by the weekly roadmap pass |
 | `docs/research/programmes/04-MACRO-SLEEVE.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass |
@@ -1105,6 +1114,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pnl-optimal-conflict-resolution-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/position-sizing-confidence-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/research/promotion-gatecheck-and-mes-labeling-2026-06-26.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/promotion-packet-2026-11-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-account-silence-2026-09-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-apex-vs-breakout-2026-09-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-automation-options-2026-09-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1122,6 +1132,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
 | `docs/research/research-ops-redesign-2026-10-28.md` | evidence | unknown | — | 2026-10-28 | `dir:research-is-measurement / read:SKILL-DESIGN-RESEARCH-lane-authored-and-measured-it-2026-10-28` | Diagnosis of the research-ops passes 2026-10-27..28 and the 2026-10-21 programme review, practice sources, and the two-layer (CHECKS + ANALYSIS) redesign of research-ops and the programme review (lane SKILL-DESIGN-RESEARCH). |
+| `docs/research/loss-disposition-research-store-bundle-43689172680.md` | evidence | unknown | — | 2026-11-15 | `dir:research-is-measurement / read:RESEARCH-OPS-20261115-2247-authored-and-checked-job-outcomes` | Disposition of the expiring research-store-bundle of grade run 43689172680 (shipped to the trainer store; grades re-derived; commit step failure flagged). |
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
 | `docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md` | evidence | live | — | 2026-11-06 | `dir:research-is-measurement / read:SOAK-BACKLOG-REVIEW-lane-measured-it-2026-11-06` | sol_4h prop book sim: keep on velotrade_1 (p(pass) 0.138 vs 0.076 at $10/leg); goes historical on the manager's merge |
 | `docs/research/restart-gap-exit-first-2026-11-05.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1232,6 +1243,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-28-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-11-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/reviews/2026-11-18-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-weekly-planning-preread.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-followthrough-triage.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -1246,6 +1258,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-12-trader-restart-accounting.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-12-w9-gate-breakdown.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-12-weekly-walkthrough.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-18-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/reviews/2026-11-18-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

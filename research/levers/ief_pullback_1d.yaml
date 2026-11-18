@@ -261,6 +261,20 @@ levers:
         baseline_value: '2.5'
         arm: atr_stop_mult_hi
         unit: RQ-20261105-036
+        window: 2019-08-06..2026-11-13
+        n: 38
+        net_r: 9.9108
+        baseline_n: 41
+        baseline_net_r: 11.0166
+        delta_net_r: -1.1058
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 3.4396
+        verdict: fail
+        joint_change: false
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-036
         window: 2019-07-29..2026-11-05
         n: 46
         net_r: 15.3084
@@ -269,6 +283,20 @@ levers:
         delta_net_r: -2.8759
         folds_ge_baseline: 2/4
         max_drawdown_r: 4.0061
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-036
+        window: 2019-08-06..2026-11-13
+        n: 51
+        net_r: -1.0026
+        baseline_n: 41
+        baseline_net_r: 11.0166
+        delta_net_r: -12.0192
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 10.9435
         verdict: fail
         joint_change: false
       - value: '1.875'
@@ -286,12 +314,26 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 8
+      points: 10
       best_delta_r_per_trade: 0.5526
-      fold_stability: 0.438
+      fold_stability: 0.425
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_r:
       tests:
+      - value: '4.375'
+        baseline_value: '3.5'
+        arm: tp_r_hi
+        unit: RQ-20261105-036
+        window: 2019-08-06..2026-11-13
+        n: 39
+        net_r: 11.2622
+        baseline_n: 41
+        baseline_net_r: 11.0166
+        delta_net_r: 0.2456
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.7995
+        verdict: fail
+        joint_change: false
       - value: '4.375'
         baseline_value: '3.5'
         arm: tp_r_hi
@@ -310,6 +352,20 @@ levers:
         baseline_value: '3.5'
         arm: tp_r_lo
         unit: RQ-20261105-036
+        window: 2019-08-06..2026-11-13
+        n: 42
+        net_r: 10.9233
+        baseline_n: 41
+        baseline_net_r: 11.0166
+        delta_net_r: -0.0933
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 3.7995
+        verdict: fail
+        joint_change: false
+      - value: '2.625'
+        baseline_value: '3.5'
+        arm: tp_r_lo
+        unit: RQ-20261105-036
         window: 2019-07-29..2026-11-05
         n: 47
         net_r: 18.1843
@@ -321,9 +377,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: flat
-      points: 2
-      best_delta_r_per_trade: 0.0
-      fold_stability: 1.0
+      points: 4
+      best_delta_r_per_trade: 0.006
+      fold_stability: 0.75
       reading: no response at the tested values
     giveback_min_mfe_r:
       tests:
@@ -887,6 +943,41 @@ levers:
       best_delta_r_per_trade: -0.2644
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+    direction_filter:
+      tests:
+      - value: di
+        baseline_value: 'off'
+        arm: DI
+        unit: RQ-20261117-b2f1-02
+        window: 2021-07-01..2026-10-15
+        n: 27
+        net_r: 1.1642
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -4.044
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 5.3765
+        verdict: indeterminate
+        joint_change: false
+      - value: slope
+        baseline_value: 'off'
+        arm: DS
+        unit: RQ-20261117-b2f1-02
+        window: 2021-07-01..2026-10-15
+        n: 23
+        net_r: -6.1064
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -11.3146
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 7.5214
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.1225
+      fold_stability: 0.417
+      reading: every tested value is worse than the baseline
     structure_exit:
       tests:
       - value: 'off'
@@ -909,6 +1000,7 @@ levers:
       fold_stability: 0.667
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
 manifest_notes:
-  inert_arms_2026_11_14: 'RQ-20261110-73de-02 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit pivot=5, and scripts/backtest_pullback.py
-    discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed in #25887). The generated levers.exit.be_floor_r entry ("no
-    response at the tested values", delta 0.0R) therefore means UNTESTED, not flat. Read be_floor_r on this leg as untested until a run on the fixed harness.'
+  inert_arms_2026_11_14: 'RQ-20261110-73de-02 arm C1 (be_floor_r 1.0, closed bar) is INERT, not a lever reading: it ran with --structure-exit
+    pivot=5, and scripts/backtest_pullback.py discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed
+    in #25887). The generated levers.exit.be_floor_r entry ("no response at the tested values", delta 0.0R) therefore means UNTESTED, not flat.
+    Read be_floor_r on this leg as untested until a run on the fixed harness.'

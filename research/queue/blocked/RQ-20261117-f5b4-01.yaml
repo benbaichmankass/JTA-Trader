@@ -1,0 +1,159 @@
+id: RQ-20261117-f5b4-01
+title: ml_entry structure-SL pivot sweep (3 / 5-live / 8) on the served held-out trades, each arm emitting ledger_ethsol.jsonl for the P5 prop gate, net of the full cost stack (P5-MLV-GATE-STRUCT arm unit;
+  BLOCKED on ML-ENTRY-STRUCT-LEDGER)
+status: blocked
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+programme: P5
+practice_precedent: 'M2 + M4 + M13 (docs/reference/trading-and-model-practice-principles.md): one-factor sweep around the live setting against the live arm as control; a re-read of the held-out window recorded
+  with its true N.'
+question: 'ml_entry (bybit_2 real money + mirror): on the served ENTRY trades 2025-10-01..2026-09-30, does a structure stop on pivot 3 or pivot 8 swings (sl_only, extend-only ml_first_passage TP unchanged)
+  beat the LIVE pivot 5 stop on mean net R/decision net of the full cost stack, and what ETH+SOL ledger does each arm hand the P5 prop gate?'
+why_this_matters: 'NODE P5-MLV-GATE-STRUCT (manager ask 2026-11-17 via RESEARCH-OPS-20261117-1006: authoring work, not a block). READ FROM THE ROWS: the live ml_entry exit since 2026-11-04 is arm F of RQ-20261103-5e04-01
+  (structure_exit ''pivot=5;sl_only'' + extend-only TP): Stage-0 PASS, +0.0371 R/decision vs +0.0271 for the pre-structure exit (n 907; ETH +0.0023, SOL +0.0393). The ONLY prop-gate read of ml_entry (comms/prop_survival/ml_entry.json,
+  RQ-20261102-5e1a-01, FAIL on all three firms, edge CI low ~-0.10 R) used the PRE-structure exit, so the gate has never seen the exit the leg trades. Lever maps: research/levers/ml-entry.yaml records no
+  exit-family test at all (features/recipe/labels only) and ltr-sl-to-structure.yaml has no graded lever; the only structure value ever read on ml_entry is pivot 5 (a single point, shape unknown). So the
+  next test from the map is the one-factor pivot sweep around the live 5, and every arm must emit ledger_ethsol.jsonl (the node''s MISSING PIECE). Decisions it changes: (1) a Tier-3 proposal to change ml_entry''s
+  live pivot (real money) if 3 or 8 wins; (2) the P5 gate node of the P5-MLV-GATE-MOVINGTP shape is authored for the arm(s) that pass Stage 0, reading that arm''s ledger. VOI caveat (stated, premortem):
+  the prior gate failed by a wide margin, so a gate PASS is unlikely; the live-pivot decision carries most of the value.'
+power:
+  expected_n: 907
+  min_detectable_effect: 0.05
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n 907 served held-out decisions MEASURED in 5e04-01; sd 1.0 R assumed as there; ETH+SOL subset ~381.
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand held-out window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-f5b4-01-ML-STRUCT-PIVOT
+  statistic: 'ml_entry_tp_revision.py evidence-extend-only --structure-sl pivot=N for N in {3, 5, 8}: arm F mean net R/decision on the served ENTRY trades 2025-10-01..2026-09-30 (5 traded symbols), net
+    of the full cost stack, per-symbol and exit-reason tables; each arm''s arm-A reproduction check; each arm''s ledger_ethsol.jsonl (ETH+SOL) with its ledger_state.'
+  rule: 'Per arm (Stage 0, the parent rule RULE-RQ20261103-5E04-01-ML-SLONLY): PASS iff mean net R/decision >= 0 at n >= 100 with arm A reproducing the committed record within 0.005 R. Sweep: pivot 3 or
+    8 BEATS the live pivot 5 iff its mean net R/decision exceeds pivot 5''s by >= 0.01 R AND it is >= pivot 5 on at least 3 of the 5 traded symbols AND net positive on both long and short sides where both
+    trade; the per-quarter table is reported (4 quarters of the window: the winning arm net positive in >= 3 of 4, no quarter above 50% of its total). UNIT PASS iff some arm beats pivot 5 under all clauses
+    (-> Tier-3 pivot proposal + gate node); UNIT FAIL iff none does at n >= 100 (the live pivot 5 stands; the gate node is still authored for pivot 5''s ledger since it passed Stage 0 in 5e04-01); INDETERMINATE
+    iff n < 100, arm A does not reproduce, a ledger is not emitted, or the producer failed. M13: this held-out window has been read for ml_entry before (c692-06, 5e04-01, 5e1a-01); the read is recorded
+    with its true N and the 0.01 R margin is the stated bar. Arm denominator 3.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster or order path. A sweep win is a Tier-3 proposal for the manager (real money); a ledger is input to a separate gate node, never a roster change by itself.
+  baseline: pivot 5 = the LIVE ml_entry exit (5e04-01 arm F), same run.
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: real-money leg exit lever + the P5 prop line (node value 100); an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 240
+  basis: three evidence-extend-only passes; 5e04-01 used a 240-minute timeout for one (estimate).
+  why_runner: 'Fetches the public Binance kline cache on a fresh runner (fixed by #22796); no trainer data, no secrets; Kaggle CPU has no internet.'
+run:
+  workflow: null
+  note: 'Null on purpose: the structure-SL arm path does not emit ledger_ethsol.jsonl yet (see blocked_on). On unblock set run.workflow research-script-run.yml, timeout_minutes 600, and run.commands = the
+    three commands in planned_commands.'
+  inputs:
+    research_unit: RQ-20261117-f5b4-01
+  planned_commands:
+  - - python3
+    - scripts/research/ml_entry_tp_revision.py
+    - evidence-extend-only
+    - --cache
+    - /tmp/ml_decision_klines
+    - --structure-sl
+    - pivot=3
+    - --out
+    - '{out_dir}/pivot3'
+  - - python3
+    - scripts/research/ml_entry_tp_revision.py
+    - evidence-extend-only
+    - --cache
+    - /tmp/ml_decision_klines
+    - --structure-sl
+    - pivot=5
+    - --out
+    - '{out_dir}/pivot5'
+  - - python3
+    - scripts/research/ml_entry_tp_revision.py
+    - evidence-extend-only
+    - --cache
+    - /tmp/ml_decision_klines
+    - --structure-sl
+    - pivot=8
+    - --out
+    - '{out_dir}/pivot8'
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: the structure_exit pivot of the live ml_entry stop (bybit_2 + bybit_portfolio), and which arm ledger the P5 prop gate reads for a prop-roster decision
+  legs:
+  - ml_entry
+  book: money
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    note: random-pivot / random-time SL placements at the served side mix, reported not gating; the current driver does not compute them, so producing them is part of clearing ML-ENTRY-STRUCT-LEDGER (the unit stays blocked until it does).
+  best_static:
+    grid:
+    - fixed 2/3 ATR bracket (pre-structure exit)
+    - pivot 3
+    - pivot 5
+    - pivot 8
+    excludes_test_folds: true
+  bootstrap_group: trade
+  note: pivot 5 (the live exit) is the control; the fixed 3 ATR bracket and the pre-structure extend-only exit are reported as reference arms, not gating.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261103-5e04-01.yaml
+- research/queue/RQ-20261102-5e1a-01.yaml
+- comms/prop_survival/ml_entry.json
+- scripts/research/ml_variant_ledger.py
+- scripts/research/ml_variant_prop_gate.py
+- research/levers/ml-entry.yaml
+- research/levers/ltr-sl-to-structure.yaml
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261103-5e04-01
+  verdict_read: pass_unconfirmed
+  diagnosis: Live exit (pivot 5 structure SL) passed Stage 0 at +0.0371 R/decision (+0.010 vs pre-structure) but is a single point on the pivot lever; the prop gate was only ever run on the pre-structure
+    exit; ml-entry's map has no exit-family entry.
+  search: 'exit family: structure-SL pivot 3 / 5 / 8, one factor, each emitting the ETH+SOL prop ledger'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/ml-entry.yaml#levers
+  - research/levers/ltr-sl-to-structure.yaml#levers
+  attempt: 1
+  due_by: '2026-12-01'
+programme_node:
+  programme: P5
+  node: P5-MLV-GATE-STRUCT
+  goal: G2
+blocked_on:
+- what: 'Driver gap: scripts/research/ml_entry_tp_revision.py evidence-extend-only --structure-sl writes verdict.json and --trades-jsonl rows but no ledger_ethsol.jsonl (the run path emits one via the walk()
+    spy + ml_variant_ledger.ledger_from_walks, ~L815-830); the P5 gate (ml_variant_prop_gate.py) returns INDETERMINATE without it.'
+  ref: scripts/research/ml_entry_tp_revision.py
+  kind: build
+  clears_when: 'row ML-ENTRY-STRUCT-LEDGER closes: the structure-SL arm path emits <out>/ledger_ethsol.jsonl (ledger_state reported, verdict byte-identical), --self-test passing; then git mv to research/queue/,
+    set status queued and fill run.workflow/run.commands from run.planned_commands.'
+  owner: ML-ENTRY-STRUCT-LEDGER (checklist row, filed once by RESEARCH-OPS-20261117-1006)
+follow_up: Arms passing Stage 0 get a P5-MLV-GATE-MOVINGTP-shaped gate node in the same PR that unblocks this unit; a pivot win goes to the manager as a Tier-3 note.
+last_dispatched_at: null

@@ -1,0 +1,232 @@
+{
+ "run": "RESEARCH-OPS-20261115-1447",
+ "finished_at": "2026-11-15T15:40:00Z",
+ "by": "session_01AFoLuHbhd9wFuGJfWRqyoV (dispatched lane)",
+ "floor": 56,
+ "floor_basis": "computed_floor(fired_24h 70)",
+ "authoring_queue_depth": null,
+ "needs_review_triaged": 7,
+ "needs_review_left": 103,
+ "throughput": {
+  "runnable_before": 38,
+  "runnable_after": 38,
+  "queued": 289,
+  "fired_24h": 70,
+  "results_landed_24h": 72,
+  "hours_since_last_dispatch": 0.4,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (hours_since_last_dispatch 0.4, receipts #26334 landed)",
+  "collector": "ok (#26333 batch-landed 4 results)",
+  "stranded_stamp_prs": "not_checked (github MCP actions/PR lists not queried this throttled pass; tree read only)",
+  "incident": null,
+  "read_state": "tree_only"
+ },
+ "results_read": {
+  "pass": 11,
+  "fail": null,
+  "indeterminate": null,
+  "units": [
+   "RQ-20261114-db1a-02",
+   "RQ-20261114-db1a-04",
+   "RQ-20261114-db1a-05",
+   "RQ-20261114-db1a-09",
+   "RQ-20261114-db1a-13 (rows opened, rule applied verbatim, all FAIL)",
+   "RQ-20261114-db1a-08/-10/-11/-14 (PASS, manager-owned tlt/qqq/eth_4h promotion evidence, not re-read for a decision)",
+   "RQ-20261106-011, RQ-20261105-024 (sweep PASS, discovery unconfirmed, confirm_unit already set by the grader)"
+  ],
+  "note": "checks packet since 2026-11-14T14:57Z: 68 units with rows (pass 20, fail 32, indeterminate 9, ungraded 3), by track TRADING 25 fail / 6 pass, MODEL 6 fail / 5 pass, INFRA 9 pass / 1 fail. Rows opened for 5 units (db1a-02/-04/-05/-09/-13); the 6 other PASS units were read by their grading block and verdict only, not row by row."
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "Foxhound-4 diagnose producer writes verdict.json without n (RQ-20261111-207f-03)",
+   "ref": "PI-20261115-JFWRQYOV-0001"
+  }
+ ],
+ "units_authored": [],
+ "followups_filed": [
+  "PI-20261115-JFWRQYOV-0001"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "capacity throttled to 2026-11-18 18:00Z, runner runway ~47 of 314 h; manager said no filler. No diagnosis-led unit was authored this pass: the one with value (db1a-04 SMA200 gate on a third disjoint window) is a handoff, see below."
+ },
+ "checks": {
+  "packet_as_of": "2026-11-15T14:49:44Z",
+  "since": "2026-11-14T14:57:00Z",
+  "runnable_by_track": {
+   "TRADING": 33,
+   "MODEL": 5,
+   "INFRA": 0
+  },
+  "fails_without_next": 29,
+  "followups": {},
+  "needs_review": 110,
+  "ungraded": 4,
+  "unowned_needs_review_before": 6,
+  "blocked_over_age_slo": 0,
+  "blocked_total": 68,
+  "blocked_oldest_days": 19,
+  "could_not_look": [
+   "stranded stamp PRs / workflow runs (MCP not queried)",
+   "e35 unread dispositions (hundreds, power label accruing)"
+  ]
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 5,
+   "of": 68,
+   "note": "5 db1a units attributed at row level; the rest by verdict only"
+  },
+  "map_entries_added": "lever_map.py --backfill ran, output NOT committed (research/levers is outside Tier-1); count not measured",
+  "next_tests_from_map": 0,
+  "lever_coverage": {
+   "strategy_leg": "iteration_orphans --levers run; 50 of 57 subjects covered, not re-counted by family"
+  },
+  "orphans_before": {
+   "strategy_leg": 7,
+   "ml_model": 2,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 7,
+   "ml_model": 2,
+   "ltr_class": 5
+  },
+  "orphans_named_left": [
+   "claude_desk",
+   "e4_oi_shock_1h",
+   "ml_entry_eq",
+   "turtle_soup (orphan list per iteration_orphans.py)",
+   "ml-exit-head-donchian-1h",
+   "ml-btc-router-cells",
+   "ltr-tighten-sl",
+   "ltr-close",
+   "ltr-partial-close",
+   "ltr-sl-to-structure",
+   "ltr-tp-pull-in"
+  ],
+  "results_iterated": [],
+  "advanced": 0,
+  "survivors": [],
+  "overdue": [
+   "3 ML subjects (iteration_orphans: ml_model overdue 3)"
+  ],
+  "retired_by_review": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261114-db1a-02",
+   "RQ-20261114-db1a-04",
+   "RQ-20261114-db1a-05",
+   "RQ-20261114-db1a-09",
+   "RQ-20261114-db1a-13"
+  ],
+  "trading": {
+   "meaning": [
+    "eth_4h tp_r 4 prop non-inferiority (db1a-09, -13): T4 EV is higher in every cell (+9% to +44%) but breach probability is higher by 0.004-0.015 on breakout_2 and one of the two re-registered firms, so the registered no-margin rule FAILs twice (3 of 5 account cells pass). So the TP-doctrine compliance change cannot ship under the registered prop superset without a Tier-3 waiver of the breach clause.",
+    "SMA200 long gate inside the harness (db1a-04): pooled H-A +85.3R on the record year but -0.63R on the year before, no leg passes. So the gate removes a down-trend year's losses and does nothing in the other year: regime-conditional drag removal, not edge; it cannot be adopted on two windows that disagree.",
+    "Conditional profit lock k=2 (db1a-05): -30.2R record, -18.9R prior vs config-exact, both windows negative. So locking at +1R after +2R open costs R on crypto pullback/trend; only the primary arm L2 decides the unit; whether the lever is wrong-signed across k is not shown by one arm (L25/L2T rows not read here).",
+    "ADX-bucket cell (db1a-02): common loss is real (12/15 legs negative, pooled -142R) but the worst cell (chop/long) is +25.6R on the prior window. So the record-year loss is a year effect common to the legs, not a chop-regime effect; this points to a trend-direction (HTF) condition, the same finding db1a-04 supports on one window only."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "db1a regime/lock family on 15 crypto demo-floor legs",
+     "hypotheses": [
+      "noise",
+      "window/regime (record year was a down-trend)",
+      "test design (gate evaluated on two windows only)"
+     ],
+     "test": "same fixed SMA200 long gate on a THIRD disjoint in-hand window (pre-dev history before 2024-11)",
+     "survivor": "regime",
+     "next": "handoff to manager (needs authoring; not authored under throttle)"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "htf-sma200-gate third window (not authored)",
+     "decision_changed": "whether the demo-floor crypto legs get the daily-SMA200 long gate (Tier-3 proposal) or stay config-exact",
+     "on_pass": "Tier-3 proposal to the operator with three-window pooled H-A",
+     "on_fail": "gate closed as configuration; regime_gating family stays open for trend-direction variants",
+     "premortem": "pre-dev crypto history may be one-regime too (bull 2023), so a pass would be as uninformative as db1a-03"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "record-year loss is a trend-direction year effect, not a volatility cell",
+    "feeds": "labels for ml_entry heads: add HTF trend sign as a feature/negative-class slice (no unit authored)"
+   }
+  ],
+  "surprises": [
+   "db1a-13 failed on a 0.004 breach-probability margin with higher EV on both firms; the no-margin rule makes a trade stream that is better on EV a FAIL on noise-sized breach differences. Not changed (rules are not edited after a result)."
+  ]
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "tlt_pullback_1h and qqq_pullback_1h each have a manager-owned promotion proposal or retirement note within 7 days",
+   "p": 0.5,
+   "check_rerun": "python3 scripts/research/iteration_orphans.py | grep -E '(qqq|tlt)_pullback_1h'",
+   "outcome": "unresolved",
+   "action_happened": true,
+   "note": "neither is an orphan now (qqq has bf1b-01..04 units; no tlt line); db1a-10/-11/-14 faithful-record PASSes landed; the proposal itself is the manager's and resolves by 2026-11-21"
+  },
+  {
+   "call": "PI-20261114-7CNK7FHN-0001 cleared (e4 driver plus iteration-3 unit) within 7 days",
+   "p": 0.4,
+   "check_rerun": "python3 scripts/research/iteration_orphans.py | grep e4_oi_shock_1h",
+   "outcome": "unresolved",
+   "action_happened": false,
+   "note": "e4_oi_shock_1h is still an orphan (verdict fail, no live unit) as of 2026-11-15"
+  }
+ ],
+ "calls": [
+  {
+   "call": "RQ-20261105-8821-01 and RQ-20261115-71fb-01 (confirm units of the gld and sol sweep PASSes) do not both PASS",
+   "p": 0.7,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "each unit's own graded verdict",
+    "resolves_when": "2026-11-22"
+   }
+  },
+  {
+   "call": "a Tier-3 decision on the eth_4h tp_r 4 prop breach waiver is recorded on a checklist row, not left implicit",
+   "p": 0.5,
+   "check": {
+    "command": "python3 scripts/ops/work.py get RESEARCH-OPS-20261115-1447",
+    "rule": "manager note names the decision",
+    "resolves_when": "2026-11-21"
+   }
+  }
+ ],
+ "not_run": [
+  "D e35 unread dispositions: hundreds of recurring e35 rows (power accruing) not individually read",
+  "E authoring: zero units, on purpose (throttle, no filler)"
+ ],
+ "limits": [
+  "github MCP actions/PR lists not queried: stranded stamp PRs and workflow-run success not verified, tree read only",
+  "lever_map backfill output discarded (outside Tier-1)",
+  "full-suite pytest not run in this lane's window; run_guards only"
+ ],
+ "handoff": [
+  "MANAGER: eth_4h tp_r 4 prop non-inferiority FAILed twice (db1a-09 breakout_2; db1a-13 one of two firms) on breach probability 0.004-0.015 with higher EV; a Tier-3 call whether the TP-doctrine compliance change needs a waiver.",
+  "MANAGER: db1a-04 SMA200 gate pooled +85.3R record / -0.63R prior, no leg passes: one third-window unit would decide it; not authored here (throttle). Authoring lane or next pass.",
+  "Orphans not iterated: strategy_leg 7 (claude_desk, e4_oi_shock_1h, ml_entry_eq, turtle_soup and 3 more per iteration_orphans.py), ml_model 2 (+3 overdue), ltr_class 5 (ltr-tighten-sl, ltr-close, ltr-partial-close, ltr-sl-to-structure, ltr-tp-pull-in); orphans are a cost-of-authoring problem under the throttle, none carries a diagnosis I could write a unit from this pass.",
+  "Ungraded still: RQ-20261112-3c8f-02, RQ-20261112-cd01-01, RQ-20261113-1449-01, RQ-20261113-e44a-01. The 6 units result_disposition_check listed as unowned (RQ-20261111-207f-03, RQ-20261114-db1a-02/-04/-05/-09/-13) plus RQ-20261031-020 were dispositioned this pass; re-run result_disposition_check --list after merge to confirm.",
+  "blocked_over_age SLO reads 0 (68 blocked, oldest 19 d of 21): no UNBLOCK-OR-RETIRE was due; research/queue/blocked/ holds 124 files, 56 more than the SLO's status:blocked population, population mismatch not investigated.",
+  "Checklist STALE_BLOCK/UNPROVEN_OVERDUE rows from blocker_watch (dozens) are the manager's.",
+  "pipeline --due not re-routed (manager owns routing); pipeline --check reports pre-existing terminal_reason errors on unrelated items (PI-SOAK-20261115-bybit_1-xrp_pullback_2h, PRB-20260720-OPTIONS-PORTFOLIO-GRADUATION), not touched."
+ ]
+}

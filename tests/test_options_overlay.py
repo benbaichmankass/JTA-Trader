@@ -62,6 +62,7 @@ class _FakeData:
         return {"retCode": 0, "result": self._contracts}
 
     def snapshots(self, underlying, **kw):
+        self.calls.append(("snapshots", underlying, kw))
         return {"retCode": 0, "result": self._snapshots}
 
 
@@ -192,3 +193,49 @@ def test_options_structure_dict_degrades_without_vertical():
     assert d["contracts"] == 1
     assert d["legs"] == []
     assert "expiration" not in d  # no vertical → no geometry fields
+
+
+def test_snapshot_request_carries_the_same_filters_as_contract_discovery():
+    """2026-11-18: an unfiltered snapshot window (first 200 contracts of the whole chain) barely overlapped the
+    21-60 DTE strikes near the money, so every SLV signal was refused with fewer_than_two_quotable_strikes."""
+    import datetime as dt
+    from types import SimpleNamespace
+
+    from src.units.accounts.options_overlay import place_options_expression
+
+    data = _FakeData(*_gdx_chain())
+    pkg = SimpleNamespace(symbol="SLV", direction="short", entry=40.0)
+    place_options_expression(
+        pkg, {"target_dte": 35, "min_dte": 21, "max_dte": 60, "max_loss_per_trade_usd": 60.0},
+        exchange_client=SimpleNamespace(api_key="k", api_secret="s"),
+        data_client=data, exec_client=_FakeExec(), is_dry=True, today=dt.date(2026, 11, 18),
+    )
+    c = next(kw for name, _u, kw in data.calls if name == "contracts")
+    s = next(kw for name, _u, kw in data.calls if name == "snapshots")
+    assert s["contract_type"] == "put"
+    assert s["expiration_date_gte"] == c["expiration_date_gte"] == "2026-11-18"
+    assert s["expiration_date_lte"] == c["expiration_date_lte"] == "2027-01-17"
+    assert s["strike_price_gte"] == c["strike_price_gte"] and s["strike_price_lte"] == c["strike_price_lte"]
+    assert s["limit"] == 1000
+
+
+def test_alpaca_snapshots_sends_the_filters(monkeypatch):
+    from src.units.accounts.alpaca_options_data import AlpacaOptionsData
+
+    cli = AlpacaOptionsData(api_key="k", api_secret="s")
+    seen = {}
+
+    def fake_get(url, params=None):
+        seen["url"], seen["params"] = url, dict(params or {})
+        return {"retCode": 0, "result": {"snapshots": {}}}
+
+    monkeypatch.setattr(cli, "_get", fake_get)
+    cli.snapshots("SLV", limit=1000, contract_type="PUT", expiration_date_gte="2026-11-18",
+                  expiration_date_lte="2027-01-17", strike_price_gte=35.2, strike_price_lte=44.8)
+    p = seen["params"]
+    assert p["type"] == "put" and p["limit"] == 1000
+    assert p["expiration_date_gte"] == "2026-11-18" and p["expiration_date_lte"] == "2027-01-17"
+    assert p["strike_price_gte"] == 35.2 and p["strike_price_lte"] == 44.8
+    # unfiltered call keeps the old two-parameter shape
+    cli.snapshots("SLV", limit=50)
+    assert set(seen["params"]) == {"feed", "limit"}

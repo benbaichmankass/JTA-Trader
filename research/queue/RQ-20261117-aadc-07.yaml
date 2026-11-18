@@ -1,0 +1,147 @@
+# Hand-authored 2026-11-17 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (manager 11:33Z: "author
+# (a) H in {2, 4, 6} with the Bonferroni bar at control_p <= 0.0167, and (b) the non-gating split by cumulative net R at alarm onset").
+# Decision rule registered and pushed BEFORE any run of the sweep. Gates this adds or changes: none.
+id: RQ-20261117-aadc-07
+title: 'D10 ITERATION 3: is demote-on-alarm a near miss at H 3 only, or does some alarm level H in {2, 4, 6} add net R beyond a matched
+  within-leg random skip at a Bonferroni bar (control_p <= 0.0167)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'On the aadc-05/-06 population (closed live/paper journal trades 2026-05-01..2026-11-17 on legs with a measured Stage-0 record,
+  net R on the package initial stop, multiplier and degenerate-basis exclusions, winsorised at +-3), for each alarm level H in {2, 4, 6}
+  with the demote action: is added_r > 0 and control_p <= 0.05 / 3?'
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-06
+  verdict_read: fail
+  diagnosis: 'aadc-06 read2 FAILED narrowly: demote-on-alarm at H 3 added +149.47 R over 529 skipped trades, control_p 0.0545; matched
+    within-leg random skips average +116.4 R because the legs are net-negative over the window, so the alarm''s timing adds ~33 R. The
+    within-leg control already removes leg selection (it tests whether alarmed trades are worse than the SAME leg''s other trades). The
+    one untested parameter of the policy is the alarm level: H 3 skips 529 trades; a higher H skips fewer, later-in-decay trades (more
+    selective timing), a lower H acts earlier. Halving size instead of demoting is not a lever: it scales added_r and every control draw
+    by 0.5, so control_p cannot move (manager agreed 11:33Z).'
+  search: 'one factor, the alarm level H in {2, 4, 6} (H 3 already read; every arm counted, Bonferroni over 3); K 0.25 and clip 3 fixed'
+  attempt: 3
+  due_by: '2026-11-24'
+levers:
+- name: alarm_level_h
+  values: [2.0, 4.0, 6.0]
+  hypothesised_effect: a higher H is more selective and beats the within-leg random skip; a lower H acts on noise and does not
+evidence_class:
+  holdout: none
+  claim: edge
+power:
+  expected_n: 400
+  min_detectable_effect: 0.2
+  effect_units: r_multiple
+  sd: 1.2
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED from aadc-06 read2: H 3 skipped 529 trades; H 2 will skip more (~650, ESTIMATE), H 6 fewer (~250, ESTIMATE). Per-trade
+    winsorised net R sd ~1.2 (ESTIMATE). alpha here is 0.01 (the calculator takes 0.10/0.05/0.01; 0.01 is conservative vs the rule''s Bonferroni bar 0.0167). MDE on the mean skipped R vs the leg mean at n 250 ~ 3.1 x 1.2 / sqrt(250) ~ 0.24
+    R; the within-leg control is correlated, so a near miss is underpowered by construction.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the same journal pull as aadc-05/-06 (or a fresh pull through the diag relay); nothing accrues.
+baseline:
+  definition: 'No action; per arm, a within-leg matched random skip of the same count (2000 draws, seed 20261117).'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-07-D10-ALARM-H-SWEEP
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: no action; within-leg matched random skip per arm
+  statistic: 'scripts/research/d10_basset_baseline.py --alarm-h-sweep (function sweep_verdict over action_replay(h=...)): per arm, trade i
+    of a leg is skipped iff the CUSUM through trade i-1 is >= H; added_r = -(sum net R of skipped trades); control_p = (#within-leg random
+    draws with added_r >= actual + 1) / (2000 + 1). Reported per arm, NON-GATING: the split of skipped trades by the sign of the leg''s
+    cumulative net R before the alarm episode''s first trade (information available at onset, no lookahead).'
+  rule: 'Per arm: PASS iff skipped >= 50 AND added_r > 0 AND control_p <= 0.0167 (0.05 / 3; every arm counted). UNIT: PASS iff any arm
+    passes (chosen = the passing arm with the highest added_r); FAIL iff every arm has >= 50 skipped trades and none passes; INDETERMINATE
+    otherwise. The onset split never changes the verdict. Fixed now.'
+  disclosure: 'This is the SECOND family read (alarm-action family) on the window 2026-05-01..2026-11-17, after aadc-06 (H 3); the
+    baseline read aadc-05 used the same window. Counting aadc-06, the family has 4 arms on this window; the Bonferroni bar here covers
+    the 3 new arms only, and aadc-06''s FAIL stands.'
+  fresh_window_confirmation: 'A PASS is NOT evidence for a desk action by itself. Its confirmation needs a window disjoint from
+    2026-05-01..2026-11-17, read once at the chosen H with the rule unchanged (added_r > 0, control_p <= 0.05, >= 50 skipped), in this
+    order (RESEARCH-NO-WAIT): (1) the legs'' own Stage-0 per-trade OOS series (comms/strategy_evidence/<leg>.json source_run; in hand;
+    cost stack per the harness, said so), with the CUSUM run against the expectancy of the folds BEFORE each trade; (2) journal closes
+    after 2026-11-17T10:45Z (the pull cutoff), read once at >= 50 newly skipped trades.'
+  pass_action: 'Author the fresh-window confirmation (order 1 above) at the chosen H. Only a confirmed PASS goes to the manager as a
+    data-backed Tier-3 desk-action proposal (demote-on-alarm as a standing policy).'
+  fail_action: 'The alarm-action family is flat at this n on this window: record it on the lever map; next D10 work is a learned grade
+    that must beat the aadc-05 baseline AUC 0.654 on decay, not another action variant on this window.'
+  what_it_does_not_do: Demotes, sizes or retires no leg; edits no config; places no order; adds no gate.
+  min_n: 50 skipped trades per arm
+practice_precedent: 'M10 sequential monitoring, M6 matched-random intervention control, M4/M5 every arm counted with a multiplicity bar
+  (docs/reference/trading-and-model-practice-principles.md)'
+intervention_controls:
+  matched_random:
+    draws: 2000
+    note: per arm, per leg, skip the same number of trades at uniformly random positions
+  hold_to_bracket: true
+  hold_to_bracket_note: skipped trades are removed whole; kept trades keep their own entry, bracket and exit
+  best_static:
+    grid:
+    - h_2
+    - h_4
+    - h_6
+    excludes_test_folds: true
+    note: no fold structure; all arms are counted and the bar is Bonferroni over them; nothing is tuned on a sub-sample
+  bootstrap_group: leg
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: real-money trades avoided while a leg is in measured decay; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 15
+  why_runner: 'Not a runner job: the live journal is read through the diag relay and joined session-locally (cc86-02 pattern).'
+  basis: three replays of aadc-06
+run:
+  workflow: session-local
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --alarm-h-sweep
+  - --trades
+  - '<pull>/trades_*.json'
+  - --packages
+  - '<pull>/op_*.json'
+  - --out
+  - '{out_dir}'
+  note: 'Run SESSION-LOCAL by the ML lane on the aadc-05/-06 pull (journal trades + order_packages via scripts/ops/diag_fetch.sh,
+    ~10:15-10:45Z 2026-11-17).'
+  inputs:
+    research_unit: RQ-20261117-aadc-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; a confirmed PASS leads to a Tier-3 desk-action proposal. No order changes.'
+related:
+- RQ-20261117-aadc-05
+- RQ-20261117-aadc-06
+- ML-D10-BASSET-BASELINE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-07-D10-ALARM-H-SWEEP
+  evidence:
+  - research/results/RQ-20261117-aadc-07/local-20261117T1139Z.jsonl
+  - comms/research/RQ-20261117-aadc-07/local-20261117T1139Z/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'row measured: H 2 PASS (added_r +172.93 R over 654 skipped, within-leg random mean +122.12, control_p 0.0115 <= 0.0167); H 4 FAIL (p 0.1044); H 6 FAIL (p 0.2859) -> unit PASS by the registered rule, chosen H 2. Family-wise: 4 alarm-level arms read on this window (aadc-06 H 3 FAIL + these 3); Bonferroni over 4 = 0.0125, and H 2 p 0.0115 also clears it. Second family read on 2026-05-01..2026-11-17: per the unit, a PASS goes to the fresh-window confirmation at H 2 (Stage-0 OOS per-trade series first, then journal closes after 2026-11-17T10:45Z), never to a proposal directly. The power-block alpha was changed 0.0167 -> 0.01 after registration and before the run (calculator values only); the rule bar was not changed.'
+  rows: 1
+  verdict: pass

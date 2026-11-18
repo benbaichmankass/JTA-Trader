@@ -1,0 +1,102 @@
+# Hand-authored 2026-11-17 by AM-OPS-2 (row XRP-DOUBLE-EXPOSURE, Tier 3 question, Tier-1 unit). Decision rule registered before the run.
+id: RQ-20261117-ea57-01
+title: 'XRP donchian paired exit re-test: trend_donchian_xrp_4h exits (atr 1.5 / trail 4.0) vs trend_donchian_xrp_adx25 exits (atr 2.0 / trail 5.0 + ADX<25 -> 2.5) on the SAME entries, paired per-trade dR, net of the full cost stack'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on fresh data against a rule registered before the run; a paired comparison on identical entries isolates the exit.'
+question: Both legs sit on bybit_2 and bybit_portfolio and take the SAME XRP short (2026-11-15 00:03:20 and 00:03:29, 40.4 XRP on one signal). Their entry rules are identical (donchian 20, short, min_confidence 0.80, skip_hours 0, vol_skip_above_pctl 0.9); only the exits differ. On the same candles and entries, does the adx25 exit set (atr_stop_mult 2.0, trail_mult 5.0, trail_adx_below 25 with tight mult 2.5) beat the xrp_4h exit set (atr_stop_mult 1.5, trail_mult 4.0) per trade, net of the full cost stack?
+why_this_matters: 'Operator popup 2026-11-17 ~11:00Z, verbatim "Paired re-test, then keep winner (Recommended)". The two committed Stage-0 records read +3.48 R (xrp_4h) vs +9.72 R (adx25) on n=46 each, but they are different windows and each reads against its own fold edges, so they are not a paired comparison. This unit runs both exit sets over ONE window and ONE entry set. On PASS the candidate (adx25) is the winner and xrp_4h is the leg that leaves bybit_2 + bybit_portfolio for the demo floor; on a TIE or an incumbent win, xrp_4h is kept and adx25 is demoted (it is the newer leg and its header says bybit_1 only). Either way the verdict drafts a Tier-3 roster packet for the operator; nothing here changes a roster.'
+power:
+  expected_n: 46
+  min_detectable_effect: 0.25
+  effect_units: metric
+  sd: 0.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'PAIRED one-sample test on per-trade dR (R, net). expected_n 46 = the n of both committed records (same entry rule). sd 0.6 R per paired trade is INFERRED, not measured (no paired per-trade series exists yet; the two records'' net R differ by 6.24 R over 46 trades = mean 0.136 R/trade). At n=46, alpha 0.05, power 0.8 the minimum detectable mean dR is about 2.8 x 0.6 / sqrt(46) = 0.25 R/trade, so a true gap of 0.136 R/trade is BELOW this unit''s power: a TIE is the expected outcome unless the exits differ by about twice the records'' gap, and a TIE keeps the incumbent by the registered rule. Stated up front so the verdict is not over-read in either direction.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand 1830-day window replayed offline; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-ea57-01-XRP-PAIRED-EXIT
+  statistic: 'exit_lever_ablation.py --grade paired: arm A = trend_donchian_xrp_4h exactly as configured (incumbent), arm B = the same leg config with atr_stop_mult 2.0, trail_mult 5.0, trail_adx_below 25, trail_adx_tight_mult 2.5 (= the trend_donchian_xrp_adx25 config as live today; the only other differing keys are signal_prefixes). Trades pair by entry_time + direction; dR_i = net_r_B,i - net_r_A,i net of the full cost stack (execution_costs.resolve_cost_policy). Reported: mean dR, sd, t, n paired, match share, window delta net R, and fold net R / fold wins over 4 disjoint calendar folds.'
+  rule: 'CANDIDATE (B = adx25 exits) WINS = PASS IF mean dR > 0 AND t >= 2.0 AND B out-earns A in >= 3 of 4 calendar folds, at n >= 39 per arm and >= 80% of the smaller arm''s trades pairing by entry time. INCUMBENT (A = xrp_4h exits) WINS = FAIL/incumbent_beats_candidate IF mean dR < 0 AND t <= -2.0 AND A out-earns B in >= 3 of 4 folds. EVERYTHING ELSE = TIE = FAIL/tie_keep_incumbent: keep xrp_4h, demote adx25 to the demo floor. INDETERMINATE IF either arm n < 39, fewer than 80% of trades pair (the arms no longer share entries), or the producer failed.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no config, roster, risk or order path. It does not decide the demotion; the verdict feeds a Tier-3 roster packet that goes to the operator first. It does not read any holdout window.
+  baseline: arm A = trend_donchian_xrp_4h config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: removes a same-signal double position on real money; an estimate, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, two arms through the committed-record argv builder on a GitHub runner (the d5a7-13 shape).
+  why_runner: Fetches keyless public candles for a pinned window and runs the committed harness; no trainer data, no secrets; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_xrp_4h
+  - --arm
+  - A=
+  - --arm
+  - B=atr_stop_mult=2.0;trail_mult=5.0;trail_adx_below=25;trail_adx_tight_mult=2.5
+  - --days
+  - '1830'
+  - --grade
+  - paired
+  - --baseline
+  - A
+  - --candidate
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-ea57-01
+ml_consumer:
+  not_applicable: 'Not an ML unit: a paired exit comparison on a rule-based leg.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+follow_up: On the verdict AM-OPS-2 (row XRP-DOUBLE-EXPOSURE) drafts the Tier-3 packet with the exact roster diff and hands it to the manager; it is never applied by a lane.
+last_dispatched_at: '2026-11-17T13:12:34+00:00'
+grading:
+  attested: RULE-RQ20261117-ea57-01-XRP-PAIRED-EXIT
+  auto: true
+  decision_rule_id: RULE-RQ20261117-ea57-01-XRP-PAIRED-EXIT
+  evidence:
+  - research/results/RQ-20261117-ea57-01/44089514640.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

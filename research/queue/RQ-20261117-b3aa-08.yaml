@@ -1,0 +1,146 @@
+id: RQ-20261117-b3aa-08
+title: 'slv_pullback_1d: single-vs-combo read of the confirmed momentum-stale stop (8 bars / ADX < 20) against the LIVE exit (trail_decay 6 / 2.0, passed as raw flags), 2018-03..2026-11, net of the full
+  cost stack (closes or packets P1-Q6-slv1d-declare)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ATM
+programme: P1
+practice_precedent: 'M2 + M4 (docs/reference/trading-and-model-practice-principles.md): one lever per cell; a second lever on a leg that already carries one needs a single-vs-combo read against the CURRENT
+  incumbent before any declare.'
+question: 'slv_pullback_1d: against the leg''s CURRENT live exit (trail 4.0 + trail_decay 6 / 2.0), does the momentum-stale time stop (momentum_stale_bars 8, adx_below 20) improve net R as a REPLACEMENT
+  for trail_decay or ADDED to it, net of the full cost stack, under the same replace grade that confirmed it?'
+why_this_matters: 'NODE P1-Q6-slv1d-declare (manager ask, research-ops 2026-11-17). RQ-20261016-016 CONFIRMED momentum_stale 8/20: 20.73 R vs 12.82 R (n 89 vs 69, 3/4 folds, DD 6.36 vs 7.02, 2018-03..2026-10)
+  -- but its control A carried NO trail_decay: the pullback argv builder omits --trail-decay-* (exit_lever_ablation.py docstring and self-test; read in the result''s A argv), while the live leg has run
+  trail_decay 6/2.0 since the M20 P4.1 sweep (PR #6251, 2026-07). So the Oct-18 confirmation was against a baseline that is NOT the live exit, and the live trail_decay was never compared with momentum_stale:
+  NOT superseded, and NOT packet-ready. The producer block is gone (MOMENTUM-LEVERS-LIVE done; src/runtime/momentum_levers.momentum_stale_verdict is wired). The baseline here passes the live decay as raw
+  flags so A_live IS the live exit. On PASS: a Tier-3 packet for alpaca_live + alpaca_portfolio; on FAIL: the node closes as superseded by the live trail_decay.'
+power:
+  expected_n: 75
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: control n 69 on 2018-03..2026-10 in RQ-20261016-016 (MEASURED, without decay); n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-08-SINGLE-VS-COMBO
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on slv_pullback_1d, arms A_live (config-exact + the live trail_decay 6/2.0 as raw flags, since the pullback builder omits them), M_replace
+    (momentum-stale, no decay), M_combo (both), SLV 1d dukascopy 2018-03-01..2026-11-15, net of the full cost stack, 4 calendar folds; same grade parameters as RQ-20261016-016. Window overlaps 016's (re-read,
+    disclosed; arm count on this family 4 incl. 016's M1).
+  rule: 'Per candidate C (harness replace grade): PASS iff net_r(C) > net_r(A_live) AND net_r(C) - net_r(A_live) >= 0.02 x n(A_live) AND folds where C >= A_live >= 3 of 4 AND maxDD(C) <= 1.35 x maxDD(A_live)
+    AND n(A_live) >= 39. Several pass -> highest net R names the packet arm. Per-fold table reported; the winning arm must be net positive in >= 3 of 4 folds with no fold above 50% of its total (read by
+    the session; a harness pass failing it is graded FAIL). Long and short net reported (long-only leg: short n/a). INDETERMINATE iff n(A_live) < 39 or the producer failed. FAIL otherwise: the live trail_decay
+    stands and the node closes as superseded. Arm denominator 3.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Edits no config and places no order. A PASS is the evidence for a Tier-3 packet to the manager (real-money leg); it is not itself a declare.
+  baseline: arm A_live = the leg's CURRENT live exit, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: node P1-Q6-slv1d-declare value block; real-money leg exit lever; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: same shape as RQ-20261016-016 (one fetch + 3 harness passes).
+  why_runner: Fetches keyless public candles for a pinned window; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_pullback_1d
+  - --arm
+  - A_live=--trail-decay-stall-bars=6;--trail-decay-tight-mult=2.0
+  - --arm
+  - M_replace=--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - --arm
+  - M_combo=--trail-decay-stall-bars=6;--trail-decay-tight-mult=2.0;--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - --days
+  - '3180'
+  - --start
+  - '2018-03-01'
+  - --end
+  - 2026-11-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A_live
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-b3aa-08
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-08
+ml_consumer:
+  not_applicable: 'Not an ML unit: an exit-lever single-vs-combo read on a rule-based leg.'
+intervention_controls:
+  not_applicable: mechanical exit-rule arms replayed on the same entries; arm A_live (the live exit) is the hold-to-current-rule control.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/slv_pullback_1d.yaml
+- research/queue/RQ-20261016-016.yaml
+- src/runtime/momentum_levers.py
+- src/runtime/trail_decay.py
+iteration:
+  subject: slv_pullback_1d
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261016-016
+  verdict_read: pass_unconfirmed
+  diagnosis: 016 M1 +7.9 R vs a control without the live trail_decay (the pullback builder omits it); the live leg carries trail_decay 6/2.0; no read compares them or their combo.
+  search: 'exit family: the confirmed momentum lever as a REPLACEMENT of and as a COMBO with the live trail_decay, vs the live exit'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/slv_pullback_1d.yaml#levers.exit
+  attempt: 1
+  due_by: '2026-11-24'
+follow_up: PASS -> research-ops writes the Tier-3 packet (exact config diff, both reads) for the manager and closes node P1-Q6-slv1d-declare; FAIL -> node P1-Q6-slv1d-declare closes as superseded by the
+  live trail_decay, with this record.
+last_dispatched_at: '2026-11-17T13:59:49+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-08-SINGLE-VS-COMBO
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-08-SINGLE-VS-COMBO
+  evidence:
+  - research/results/RQ-20261117-b3aa-08/44090495211.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

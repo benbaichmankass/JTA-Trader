@@ -1,0 +1,300 @@
+{
+  "run": "RESEARCH-OPS-20261116-1448",
+  "finished_at": "2026-11-16T15:20:00Z",
+  "by": "lane RESEARCH-OPS-20261116-1448 (dispatched by session_01AFoLuHbhd9wFuGJfWRqyoV)",
+  "floor": 55,
+  "floor_basis": "computed_floor(fired_24h 69)",
+  "authoring_queue_depth": 51,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 109,
+  "throughput": {
+    "runnable_before": 9,
+    "runnable_after": 9,
+    "queued": 277,
+    "fired_24h": 69,
+    "results_landed_24h": 88,
+    "hours_since_last_dispatch": 0.5,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 0.5 h before the pass; receipt/stamp commits #26519/#26520 on main)",
+    "collector": "ok (batch-land #26518)",
+    "stranded_stamp_prs": [],
+    "incident": "producer defect: ltr_timestop_s0.py wrote a verdict.json the collector rejects (fixed this pass)"
+  },
+  "results_read": {
+    "pass": 0,
+    "fail": 11,
+    "indeterminate": 1,
+    "producer_failed": 3,
+    "units": [
+      "RQ-20261116-089f-01 fail",
+      "RQ-20261116-089f-03 fail",
+      "RQ-20261116-7c1a-01 producer_failed (arm table read: ts:4/8/12 FAIL, 5 arms INDETERMINATE, no PASS)",
+      "RQ-20261116-7c1a-02 producer_failed (arm table read: all 4 arms INDETERMINATE, n<100)",
+      "RQ-20261116-d5a7-01..05 fail",
+      "RQ-20261116-d5a7-06/07 fail",
+      "RQ-20261116-d5a7-12 producer_failed"
+    ],
+    "config_closed": [
+      "089f-01: configuration closed: CJ-4 blind grade (claude-sonnet-5-5, mask-v1) vs net R, n 707; family cross-model-learning label stays open; next test = operator decision on the $3 backfill cap (fail_action), then a different label source if any",
+      "089f-03: configuration closed: state-conditional bracket by (side x atr_pct tercile), 3 candidates; family LTR->entry structure stays open; next test = 089f-02 once its harness exists",
+      "7c1a-01: configuration closed: ts:4/8/12 time stops; families time-stop / stall stay open; next test = the same arms on a corpus wider than 263 packages (see handoff)"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "blocked_moved": [
+    {
+      "unit": "RQ-20261116-d5a7-11",
+      "reason": "driver gap: exit_lever_ablation.py has no fvg_range branch (d5a7-12 raised ValueError, run 43859133629); lever filed as FVG-RANGE-ABLATION-DRIVER"
+    },
+    {
+      "unit": "RQ-20261116-d5a7-12",
+      "reason": "same driver gap, producer_failed"
+    }
+  ],
+  "rearmed": [
+    {
+      "unit": "RQ-20261116-7c1a-01",
+      "rearmed_at": "2026-11-16T15:10:00+00:00",
+      "why": "producer wrote no top-level verdict/n/population; script fixed in this PR"
+    },
+    {
+      "unit": "RQ-20261116-7c1a-02",
+      "rearmed_at": "2026-11-16T15:10:00+00:00",
+      "why": "same"
+    }
+  ],
+  "levers_filed": [
+    {
+      "lever": "fvg_range driver for exit_lever_ablation.py",
+      "ref": "FVG-RANGE-ABLATION-DRIVER"
+    }
+  ],
+  "units_authored": [],
+  "followups_filed": [
+    "FVG-RANGE-ABLATION-DRIVER"
+  ],
+  "authoring": {
+    "queue_depth": 51,
+    "nodes_drafted": 0,
+    "skipped_on_purpose": true,
+    "reason": "Pass budget went to grading the manager's named units, the producer defect and the driver gap; the 51 ready nodes were spot-read in the 0715Z pass (gated on build rows or operator scoping) and nothing changed since."
+  },
+  "iteration": {
+    "results_attributed": {
+      "count": 6,
+      "of": 6
+    },
+    "map_entries_added": 0,
+    "next_tests_from_map": 0,
+    "lever_map_backfill": "ran; research/levers/*.yaml regenerated from committed results (derived files)",
+    "orphans_before": {
+      "strategy_leg": 9,
+      "ml_model": 3,
+      "ltr_class": 5
+    },
+    "orphans_after": {
+      "strategy_leg": 9,
+      "ml_model": 3,
+      "ltr_class": 5
+    },
+    "orphan_names": [
+      "claude_desk",
+      "e4_oi_shock_1h",
+      "ml_entry_eq",
+      "qqq_pullback_1h",
+      "spy_pullback_1h",
+      "tsmom-crypto",
+      "xsec-crypto",
+      "tsmom-etf",
+      "movement-capture",
+      "ml-exit-head-donchian-1h",
+      "ml-tm-action-value",
+      "ml-btc-router-cells",
+      "ltr-tighten-sl",
+      "ltr-close",
+      "ltr-partial-close",
+      "ltr-sl-to-structure",
+      "ltr-tp-pull-in"
+    ],
+    "results_iterated": [
+      {
+        "result": "RQ-20261116-d5a7-01..05",
+        "verdict": "fail",
+        "subject": "ml-tm-action-value",
+        "next": "none authored: five one-factor arms all FAIL on S-OFFLINE, consistent with the 0715Z reading that the gain sits inside noise; the next family is actions / learner",
+        "attempt": 5
+      }
+    ],
+    "advanced": 0,
+    "survivors": [],
+    "overdue": [
+      "RQ-20261101-78fc-34",
+      "RQ-20261101-78fc-20",
+      "RQ-20261101-78fc-52",
+      "RQ-20261101-78fc-53"
+    ],
+    "orphan_note": "MEASURED with iteration_orphans.py --levers at 15:1xZ (17 orphans). The 0715Z record's 6/1/5 shows a different count; ml-exit-head-donchian-1h and ml-tm-action-value are listed orphans although d5a7 units exist, so the script reads them as not iterating from a diagnosis; not reconciled this pass."
+  },
+  "checks": {
+    "packet_as_of": "2026-11-16T14:51:39Z",
+    "runnable_by_track": "see scratch packet (not copied)",
+    "needs_review": 109,
+    "blocked_over_age_slo": "0 (<= 10, ok)",
+    "blocker_watch": "STALE_BLOCK 14 \u00b7 NOT_RUNNING 6 \u00b7 UNPROVEN_OVERDUE 241 (checklist rows, listed by count in handoff)",
+    "result_disposition": "graded 1904, needs_review owned 89 / UNOWNED 4, UNGRADED 0",
+    "could_not_look": [
+      "fails_without_next and followups blocks of the packet not opened",
+      "action runs not listed via MCP (tree-only read of receipts)"
+    ]
+  },
+  "analysis": {
+    "rows_opened": [
+      "RQ-20261116-089f-01",
+      "RQ-20261116-089f-03",
+      "RQ-20261116-7c1a-01",
+      "RQ-20261116-7c1a-02",
+      "RQ-20261116-d5a7-12"
+    ],
+    "trading": {
+      "meaning": [
+        "7c1a-01 time stops: every arm's mean delta vs hold is negative (-0.17 to -0.34 R; ts:4 -0.252, ts:8 -0.231, ts:12 -0.173) on 263 packages since 2026-09, and the matched random-time close also loses vs hold in 7 of 8 arms (stall:12:0.5 +0.038 the exception), though the informed arm loses more than random in 7 of 8 (ts:48 the exception), so on this corpus holding to the bracket beats closing early, and the 'does not lose money vs hold' bar is not met by any arm. Only ts:4/8/12 reach n>=100 and FAIL; the other five are INDETERMINATE on n, which the 263-package corpus cannot fix.",
+        "7c1a-02 weak-leg close: all 4 arms INDETERMINATE (n 18 to 74, below the 100 floor), point deltas -0.04 to -0.37 R; nothing here supports a weak-leg close, nothing refutes it either.",
+        "089f-03: a bracket chosen per (side x atr_pct tercile) from prior folds gains +0.0094 R vs static 2/3 (bar +0.03), wins 3 of 7 folds, mean net R cond -0.0264 vs static -0.0358, so entry-time state does not pick a better bracket than the fixed one and the structure half of LTR->entry is closed for ml_entry."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "LTR time/stall/weak closes",
+          "hypotheses": [
+            "noise",
+            "power (n<100 on 5+4 arms)",
+            "idea is wrong (hold beats early close in 2026-09..11 crypto)",
+            "corpus window (one regime)"
+          ],
+          "test": "re-run after producer fix; widen the corpus",
+          "survivor": "idea is wrong on ts:4/8/12; power for the rest",
+          "next": "handoff"
+        },
+        {
+          "cluster": "089f-03 bracket_cond",
+          "hypotheses": [
+            "noise",
+            "cell too coarse",
+            "idea is wrong"
+          ],
+          "test": "none: pre-registered fail_action closes the lever",
+          "survivor": "idea",
+          "next": "089f-02 (blocked)"
+        }
+      ],
+      "next_tests": [
+        {
+          "id_or_node": "RQ-20261116-089f-02",
+          "decision_changed": "whether ml_entry is refit on managed-policy net R",
+          "on_pass": "promote and run",
+          "on_fail": "close the target-choice lever",
+          "premortem": "7c1a-01 shows early-close policies lose vs hold by 0.17-0.34 R/package, so the VoI gate (|M - hold| >= 0.05) is met for a time-stop M, but the unit's M is the codified management policy, which no unit has replayed yet; stays blocked on CML-HARNESS ml_entry_managed_target.py (absent on main)"
+        }
+      ]
+    },
+    "model": {
+      "meaning": [
+        "089f-01 CJ-4: the blind Sonnet grade is anti-correlated with realised net R (rho -0.183, wider CI [-0.258, -0.101], n 707 trades in 267 clusters), and the confidence-only control is ~0 (rho -0.009), so the judgment adds negative information, not zero. This is not an inverse signal until tested: the paired difference is -0.174 and the FAIL rule is met on three separate clauses.",
+        "d5a7-01..05 (tm Stage B one-factor arms, S-OFFLINE) and d5a7-06/07 (donchian exit head, composition window; CI upper bound +0.0004 < +0.01) all FAIL: the levers tested so far are flat or negative vs hold, so the next family is actions/learner, not another one-factor of the same three."
+      ],
+      "fail_diagnoses": [
+        {
+          "cluster": "CJ-4 blind label",
+          "hypotheses": [
+            "noise (CI excludes 0)",
+            "mask-v1 leaks nothing useful and the judge reads momentum as quality",
+            "label construction (net R basis)",
+            "prompt strata heterogeneity (one stratum rho -0.38, n 47)"
+          ],
+          "test": "rho by prompt_sha stratum and by side",
+          "survivor": "idea (this label as a training signal)",
+          "next": "operator spend question per registered fail_action"
+        }
+      ],
+      "next_tests": []
+    },
+    "cross_track": [
+      {
+        "from": "MODEL",
+        "finding": "LTR reviews stay a decision aid, not a training signal (registered fail_action of 089f-01)",
+        "feeds": "CJ-5 / DESK-19 student work (retire per rule) and the weekly $3 backfill cap question"
+      },
+      {
+        "from": "TRADING",
+        "finding": "early-close policies lose vs hold on 263 recent packages",
+        "feeds": "RQ-20261116-089f-02 premortem, live-trade-review class priors"
+      }
+    ],
+    "surprises": [
+      "the blind grade is significantly negative, not merely null",
+      "weak:12:0.0 (random +0.199 vs arm -0.0375) and weak:12:0.25 (random +0.116 vs arm -0.150): selecting weak legs is worse than a random close on this corpus (n<100, so not a verdict)"
+    ]
+  },
+  "calls": [
+    {
+      "call": "7c1a-01 re-run grades fail (ts:4/8/12 FAIL, none PASS)",
+      "p": 0.95,
+      "check": {
+        "command": "python3 scripts/research/queue_grade.py --health",
+        "rule": "result row for RQ-20261116-7c1a-01 has read_state measured and verdict fail",
+        "resolves_when": "2026-11-17"
+      }
+    },
+    {
+      "call": "7c1a-02 re-run grades indeterminate",
+      "p": 0.9,
+      "check": {
+        "command": "ls research/results/RQ-20261116-7c1a-02",
+        "rule": "latest row verdict indeterminate",
+        "resolves_when": "2026-11-17"
+      }
+    },
+    {
+      "call": "d5a7-08/09/10/11-replaced/13/14 dispatch within 24 h (11 excepted: blocked)",
+      "p": 0.8,
+      "check": {
+        "command": "python3 scripts/ci/check_research_queue_throughput.py --json",
+        "rule": "results exist for d5a7-08,09,10,13,14",
+        "resolves_when": "2026-11-17"
+      }
+    }
+  ],
+  "prior_calls_scorecard": [
+    {
+      "call": "0715Z pass: previous record's calls",
+      "outcome": "unresolved",
+      "note": "not graded this pass: the 0715Z record carries no machine-readable calls block I opened",
+      "action_happened": false
+    }
+  ],
+  "not_run": [
+    "E authoring of plan nodes (budget)"
+  ],
+  "limits": [
+    "github actions MCP not queried; receipts and results read from the tree",
+    "pytest not run beyond run_guards"
+  ],
+  "handoff": [
+    "OPERATOR/MANAGER: 089f-01 FAIL registered fail_action = retire CJ-5/DESK-19 blind-label student work and bring the operator the weekly $3 backfill cap as a spend question.",
+    "7c1a-01/-02 need a corpus wider than 263 packages for 5 of 8 and 4 of 4 arms (n floor 100); decide a wider replay source before re-asking.",
+    "RQ-20261116-089f-02 stays blocked: first blocker (7c1a verdict) is now stated, second (CML-HARNESS ml_entry_managed_target.py) is absent on main.",
+    "d5a7-08/09/10/13/14 are due and would_dispatch; the hourly dispatcher fires them. d5a7-11/-12 blocked on FVG-RANGE-ABLATION-DRIVER.",
+    "Overdue iterations RQ-20261101-78fc-20/-34/-52/-53 still overdue (from the 0715Z record).",
+    "blocker_watch: STALE_BLOCK 14 checklist rows with no resolvable edge, UNPROVEN_OVERDUE 241 (manager).",
+    "20 unread e35 results, 4 UNOWNED needs_review: not triaged this pass.",
+    "17 orphans (9 strategy_leg, 3 ml_model, 5 ltr_class) by iteration_orphans.py --levers, named in iteration.orphan_names: none iterated this pass."
+  ]
+}

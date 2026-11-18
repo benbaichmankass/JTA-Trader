@@ -82,6 +82,20 @@ levers:
         baseline_value: '0.618'
         arm: pullback_frac_hi
         unit: RQ-20261105-023
+        window: 2019-08-06..2026-11-13
+        n: 82
+        net_r: 8.5812
+        baseline_n: 69
+        baseline_net_r: 17.7837
+        delta_net_r: -9.2025
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 8.4192
+        verdict: fail
+        joint_change: false
+      - value: '0.7725'
+        baseline_value: '0.618'
+        arm: pullback_frac_hi
+        unit: RQ-20261105-023
         window: 2019-07-29..2026-11-05
         n: 72
         net_r: -7.7542
@@ -110,6 +124,20 @@ levers:
         baseline_value: '0.618'
         arm: pullback_frac_lo
         unit: RQ-20261105-023
+        window: 2019-08-06..2026-11-13
+        n: 50
+        net_r: 18.5596
+        baseline_n: 69
+        baseline_net_r: 17.7837
+        delta_net_r: 0.7759
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.6549
+        verdict: fail
+        joint_change: false
+      - value: '0.4635'
+        baseline_value: '0.618'
+        arm: pullback_frac_lo
+        unit: RQ-20261105-023
         window: 2019-07-29..2026-11-05
         n: 46
         net_r: -1.6853
@@ -134,10 +162,10 @@ levers:
         max_drawdown_r: 6.5645
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 4
+      shape: peaked
+      points: 6
       best_delta_r_per_trade: 0.0427
-      fold_stability: 0.25
+      fold_stability: 0.333
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     trail_adx_below:
@@ -632,6 +660,41 @@ levers:
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
   other:
+    direction_filter:
+      tests:
+      - value: di
+        baseline_value: 'off'
+        arm: DI
+        unit: RQ-20261117-b2f1-01
+        window: 2021-07-01..2026-10-15
+        n: 39
+        net_r: 2.0067
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: -6.7945
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 9.6042
+        verdict: fail
+        joint_change: false
+      - value: slope
+        baseline_value: 'off'
+        arm: DS
+        unit: RQ-20261117-b2f1-01
+        window: 2021-07-01..2026-10-15
+        n: 34
+        net_r: 7.3159
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: -1.4853
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 4.3438
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0323
+      fold_stability: 0.5
+      reading: every tested value is worse than the baseline
     structure_exit:
       tests:
       - value: 'off'

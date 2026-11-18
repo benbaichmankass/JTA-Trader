@@ -23,7 +23,7 @@ _ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 __all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "RANK", "REPO", "SEQ", "STORE",
-           "HISTORY_PATHS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "awaits_operator", "observation_owed_tier3", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
+           "HISTORY_PATHS", "STORE_HEADER_KEYS", "TERMINAL", "UNMAPPED", "DEFAULT_OWNER", "filing_problems", "fill_defaults", "effective_due", "is_overdue", "awaits_operator", "observation_owed_tier3", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
 
 
 class ChecklistError(ValueError):
@@ -189,15 +189,25 @@ def rank_problem(value) -> str | None:
 
 def queue(data: dict) -> list[dict]:
     """The runnable queue in dispatch order: ``queued`` rows with nothing in ``blocked_on``,
-    by ``priority_rank`` (unranked last), then register order. ``data`` is ``load()``'s shape."""
+    by ``priority_rank`` (unranked last), then ``queue_pos`` (the operator's reorder; else ``_seq``),
+    then register order. ``data`` is ``load()``'s shape."""
     rows = [r for r in (data.get("items") or [])
             if isinstance(r, dict) and r.get("state") == "queued" and not r.get("blocked_on")]
     order = {id(r): n for n, r in enumerate(rows)}
 
+    def num(v):
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
     def key(r):
+        # (rank class, position within the class, register order): the SAME key as the Overview's
+        # ``src/web/api/work_reorder.display_key``. ``queue_pos`` is the operator's reorder (set by
+        # POST /api/bot/work/reorder); a row never moved falls back to its register order ``_seq``.
         rank = r.get(RANK)
         ranked = rank_problem(rank) is None and rank is not None
-        return (0 if ranked else 1, rank if ranked else 0, order[id(r)])
+        q, seq = num(r.get("queue_pos")), num(r.get("_seq"))
+        pos = q if q is not None else seq
+        return (0 if ranked else 1, rank if ranked else 0, pos if pos is not None else float("inf"),
+                order[id(r)])
     return sorted(rows, key=key)
 
 
@@ -281,8 +291,18 @@ def load_path(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+STORE_HEADER_KEYS = ("last_review",)
+"""Header keys held in work_store.db after the freeze (WSD-S4-READERS-FLIP): writing one never
+touches the register folder. The key left in ``_header.json`` is read-only history, shadowed by the
+store's value wherever the store is readable."""
+
+
 def _load_dir(base: Path) -> dict:
     header = json.loads((base / HEADER).read_text(encoding="utf-8"))
+    from src.runtime import work_read
+    ws = work_read._store_for_read(REPO, work_read.CHECKLIST_STORE, base)
+    if ws is not None:
+        header.update(work_read.header_overlay(ws, STORE_HEADER_KEYS))
     rows = [{k: v for k, v in r.items() if k != SEQ} for r in _rows_for_read(base)]
     return {k: (rows if k == "items" else v) for k, v in header.items()}
 
@@ -373,11 +393,15 @@ def write_row(row: dict, repo: Path = REPO, store: Path = STORE) -> Path:
     return path
 
 
-def write_header(key: str, value, repo: Path = REPO, store: Path = STORE) -> Path:
+def write_header(key: str, value, repo: Path = REPO, store: Path = STORE, by: str | None = None) -> Path:
     """Set one top-level (non-row) key in the header. Rare; this file is shared."""
     if key == "items":
         raise ChecklistError("'items' is the row list; use write_row")
     path = repo / store / HEADER
+    if key in STORE_HEADER_KEYS and _frozen_canonical(repo / store):
+        from src.runtime import work_read
+        work_read.put_header(key, value, by)  # WSD-S4: into work_store.db; the file is not written
+        return path
     header = json.loads(path.read_text(encoding="utf-8"))
     header[key] = value
     _atomic_write(path, _dump(header))

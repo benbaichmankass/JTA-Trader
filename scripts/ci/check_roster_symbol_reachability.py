@@ -260,7 +260,7 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any],
             # A leg with a per-account scope (`account_symbols`, DESK-PAPER-ACCOUNTS)
             # needs only ITS slice here; a rostering account the map gives nothing
             # would roster a leg that can never trade on it.
-            syms = leg_symbols(scfg, name)
+            syms = leg_symbols(scfg, name, leg=str(strat))   # the runtime view: a population record (src/config/ml_universe.py) counts
             if not syms:
                 out.append({
                     "kind": "strategy_unknown", "account": name,
@@ -294,7 +294,7 @@ def orphan_pulls(accounts: Dict[str, Any],
             continue
         implied = set()
         for strat in (cfg.get("strategies") or []):
-            for sym in leg_symbols(strategies.get(strat), name):
+            for sym in leg_symbols(strategies.get(strat), name, leg=str(strat)):
                 implied.add(_norm(sym))
         for sym in (cfg.get("symbols") or []):
             if _norm(sym) not in implied:

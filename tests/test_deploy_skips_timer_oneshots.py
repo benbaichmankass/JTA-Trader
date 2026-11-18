@@ -27,3 +27,13 @@ def test_long_running_money_units_are_not_skipped():
     skip = _default_skip()
     for unit in ("ict-trader-live.service", "ict-web-api.service", "ict-telegram-bot.service"):
         assert unit not in skip
+
+
+def test_repo_touching_and_probe_oneshots_are_skipped_by_default():
+    """GIT-SYNC-PRUNE-STUCK follow-up (#26569 regression, MEASURED 2026-11-16 21:52-21:53Z): a --no-block restart of
+    ict-trainer-git-sync (git fetch + checkout --force in the same repo) overlapped the next ict-git-sync run and
+    collided on .git/index.lock; a --no-block restart of ict-web-api-watchdog probed the API mid-restart and fired a
+    false wedge alert. Both are owned by their own timers."""
+    skip = _default_skip()
+    for unit in ("ict-trainer-git-sync.service", "ict-web-api-watchdog.service"):
+        assert unit in skip, f"{unit} must be left to its timer"

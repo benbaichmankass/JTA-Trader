@@ -4,6 +4,16 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P7 in the window:** 2 programmed units, 2 pass.
+
+**What was learned:** the daily long-only Donchian-20 confirmed on six disjoint perps it was not chosen on (RQ-20261117-001), so it is a breadth result rather than a symbol fit (correlated evidence, said so: alts co-move). The twelve weekly long-only ETF cells are at least 3 independent bets (RQ-20261117-002, N_eff >= 3.0). Any re-entry case may carry at most floor(N_eff) weekly legs, one per same-bet cluster.
+
+**Answered:** P7-Q5-confirm, P7-Q6-weekly-etf. **Next:** the P7-Q6-daily-donchian overlap read uses the LONG arm; forming-bar decision-bar results (f251) bind every P7 bar-size question.
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

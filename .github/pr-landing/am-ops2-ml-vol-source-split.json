@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "edits src/runtime/regime/ml_vol_verdict.py (runtime, imported by the trader through src/runtime/intents.py): a label-only split of the ml_source 'unavailable' value. Tier 2 decision: 2026-11-12 operator-popup \"Merge + deploy on green\"; manager order 2026-11-17 10:38Z (ML-VOL-SHADOW-SOURCE-COLLAPSE). The manager merges.",
+  "why": "ML-VOL-SHADOW-SOURCE-COLLAPSE (found by ML-PRIMARY-5; collapsed-states rule). regime_ml_vol_shadow logged ml_source='unavailable' for four different states: missing symbol/timeframe, no advisory head, uncomputable P(volatile) (nothing to score), and a scoring error (cache/scorer/registry raised). Now unavailable:no_symbol_or_timeframe / unavailable:no_advisory_head / unavailable:p_volatile_uncomputable / unavailable:scoring_error. The 'unavailable' prefix is kept, vol_regime stays unknown, p_volatile None, model_id None, every path fail-permissive: NO behaviour change beyond the label. Only the module's own tests pinned the old literal (one updated, six added incl. a negative control that a good verdict is not unavailable)."
+}

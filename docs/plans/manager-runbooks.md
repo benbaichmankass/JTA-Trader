@@ -41,6 +41,13 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
+  **Getting the brief to the reviewer** (2026-11-16: the SLV reviewer's bare `git fetch origin main` hung and timed out, so it wrote its row
+  without REVIEWER-BRIEF.md): the reviewer's checkout is `live-review/rows` only (no brief on it), so put the brief text in the dispatch prompt, or
+  tell the reviewer to read it with a bounded shallow fetch, **never a bare `git fetch origin main`** (this repo is too large for it):
+  `timeout 120 git fetch --depth=1 --filter=blob:none origin main && git show FETCH_HEAD:.claude/skills/live-trade-review/REVIEWER-BRIEF.md`,
+  or the GitHub MCP `get_file_contents` for that path at `ref: refs/heads/main`. A row written without the brief is still valid if
+  `check_live_review_records.py` passes, but say so in the report. (Runbook recipe only; the REVIEWER-BRIEF contract text is unchanged, so no
+  AMENDMENTS entry.)
   **Event `mandate_cadence`** (a per-package auto-apply mandate, `kind: ltr_auto_apply` in `config/mandates.yaml`, first MD-LTR-ADA-AUTO,
   operator 2026-10-29): the VM emits it for the scoped open package once per `review_cadence_minutes` slot after the bar boundary, with
   the packet committed first; dispatch the reviewer exactly as above, packet inline, and the VM applies its `recommended` row within the
@@ -77,7 +84,7 @@ python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # v
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
 python3 scripts/ops/checklist.py archive-lane A3                              # lane -> lane_history, lane = null
 python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
-python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
+python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # writes the work store (not _header.json); read: work.py --via direct header get last_review
 ```
 
 ⚠️ **Process, not gates (operator, 2026-11-01, binding; lane `CHECKLIST-OWNER-DUE`).** The manager owns every row and does not assign owners
@@ -135,7 +142,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
    ONE disposition this run: the next research-ops slot is told to author it first (name the subjects in its prompt), a topic lane is
    dispatched for it, or the family-review path is opened (`research/family_reviews/`). Put the counts per kind in the brief's
    "what is running"; an orphan carried past two reviews is a dispatch failure of the manager, not of research-ops.
-5. **Record the review**: `checklist.py header last_review '{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}'`, push.
+5. **Record the review**: `checklist.py header last_review '{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}'` (writes the work store; read back with `work.py --via direct header get last_review`), push.
 6. **Roadmap hook**: `roadmap_map.py --report`, work its findings (§ "The roadmap loop").
 
 **Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding)** — the daily-review prep happens whether or not the

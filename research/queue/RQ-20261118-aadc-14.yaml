@@ -1,0 +1,132 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (week plan
+# docs/plans/ml-week-plan-2026-11-19.md section 4 #6). Lean spec, one factor (the scoring model). Decision rule registered BEFORE any run
+# on real data (the harness was self-tested and run end-to-end on synthetic data only). Gates this adds or changes: none.
+id: RQ-20261118-aadc-14
+title: 'D10 Basset LEARNED score: does a LightGBM on past-only leg statistics, out of fold by leg group, anticipate a leg''s next 20 trades
+  going net-negative better than the CUSUM baseline on the same points (AUC >= 0.654 and paired delta > 0)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'On aadc-05''s population and label (closed live/paper journal trades on legs with a measured Stage-0 record; decay_i = 1[mean net R
+  of the leg''s trades i+1..i+20 < 0]): is the out-of-fold AUC of a LightGBM P(decay) on ten past-only features at least 0.654 AND above the
+  CUSUM AUC on the same points, with the paired leg-cluster bootstrap CI95 of the AUC difference above 0?'
+why_this_matters: 'D10 has a working baseline detector (aadc-05 PASS, AUC 0.654) but no model, and the alarm ACTION on it did not replicate
+  on a fresh window (aadc-09 FAIL). A learned score that beats the baseline is the first D10 model, and the input a better action rule
+  needs; a FAIL says the CUSUM already carries what these statistics carry, so the next lever is new information (regime, cost drift), not
+  a stronger learner.'
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-09
+  verdict_read: fail
+  diagnosis: 'aadc-05 PASSED (CUSUM AUC 0.6541, CI95 [0.5498, 0.7498], n 664, 24 legs); aadc-06/07 tested acting on the alarm and aadc-09
+    showed that action does not replicate on the fresh Stage-0 window (-19.55 R, p 0.994). The detector ranks decay; the single-threshold
+    action does not monetise it. The CUSUM is one statistic of the recent path; a model over several (recent means, volatility, win rate,
+    drawdown, gap to Stage-0 expectancy) is the untested lever on the score itself.'
+  search: 'one factor, the scoring model (LightGBM over 10 fixed past-only features vs the CUSUM alone), on aadc-05''s population and
+    label; hyper-parameters fixed in the harness, nothing tuned on the read'
+  attempt: 1
+  due_by: '2026-11-25'
+levers:
+- name: decay_score_model
+  values: [cusum_baseline, lightgbm_past_only_features]
+  hypothesised_effect: the learned score ranks next-20 decay better than the CUSUM (higher AUC on the same points)
+evidence_class:
+  holdout: none
+  claim: model_quality
+power:
+  expected_n: 700
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from aadc-05 (n 664 points, 24 legs). The CI is leg-clustered, so the effective n is the leg count: a paired AUC gain of
+    ~0.05 is about the smallest that can clear 0 at ~24 legs. A smaller true gain reads FAIL here, stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the trainer-synced trade_journal.db as of the run; nothing accrues for this read.
+baseline:
+  definition: 'The aadc-05 Page CUSUM (K 0.25, clip 3) on the SAME labelled points (paired), and the standing bar AUC 0.654 (aadc-05).'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261118-aadc-14-D10-LEARNED
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: CUSUM on the same points (paired) and AUC 0.654
+  statistic: 'scripts/research/d10_basset_baseline.py --learned: points as aadc-05 (net R on the package initial stop, winsorised +-3,
+    degenerate risk bases and contracts without a multiplier excluded); features cusum, mean5, mean10, mean20, std10, win10, drawdown from
+    the running peak, mean20 minus the Stage-0 expectancy, trades seen, Stage-0 expectancy, all from trades 0..i; LightGBM P(decay) out of
+    fold over 5 leg groups (no leg trains its own score); AUC with a leg-cluster bootstrap (2000 draws); paired AUC(learned) - AUC(cusum)
+    on the same points with the same bootstrap.'
+  rule: 'INDETERMINATE iff points < 200 OR legs < 3. PASS iff learned AUC >= 0.654 AND paired delta > 0 AND its CI95 lower bound > 0.
+    FAIL otherwise. Features, model, folds and thresholds are fixed now and not changed after any result.'
+  pass_action: 'The learned score becomes the D10 detector. Next: re-test the alarm ACTION (skip new entries while the score is high) with
+    the learned score, on the fresh Stage-0 window first (aadc-09''s design), before any desk proposal.'
+  fail_action: 'The recent-path statistics add nothing over the CUSUM at this n. The next lever is new information (regime at entry, cost
+    drift, signal-quality drift), not a stronger learner; record the score-model lever as flat at power.'
+  what_it_does_not_do: Demotes, pauses or resizes no leg; changes no config; places no order; adds no gate. A PASS is a better detector,
+    not an action.
+  min_n: 200 labelled points on >= 3 legs
+practice_precedent: 'M4/M5 (paired against the incumbent on identical points, grouped out-of-fold so a group never scores itself),
+  docs/reference/trading-and-model-practice-principles.md'
+intervention_controls:
+  matched_random:
+    draws: 2000
+    note: 'not an intervention unit; the leg-cluster bootstrap (2000 draws) is the uncertainty control, as aadc-05'
+  best_static:
+    grid:
+    - cusum_k0.25_clip3 (aadc-05, fixed)
+    - lightgbm_10_features_fixed_hparams
+    excludes_test_folds: true
+    note: out of fold by leg group; nothing is tuned on any score
+  bootstrap_group: leg
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no trade is changed; the score is read against outcomes of trades held to their own brackets'
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: an earlier, better decay signal across the roster; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: 'Needs the trade journal (account data, never committed), which the trainer syncs to data/trade_journal.db; lightgbm is in
+    the trainer venv. The Stage-0 evidence and blind grades are committed.'
+  basis: 'ESTIMATE: a few thousand rows, 5 small fits, 2,000 bootstrap draws twice.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --learned
+  - --journal-db
+  - data/trade_journal.db
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261118-aadc-14
+  note: 'The trainer journal is the sync of the live DB (scripts/ops/sync_trainer_data.sh), so the population can differ slightly from
+    aadc-05''s 2026-11-17 diag pull; both points counts are reported. A missing DB is producer_failed.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; a PASS feeds a later action unit (re-tested on the fresh window) before any desk rule exists.
+    No leg''s order changes.'
+related:
+- RQ-20261117-aadc-05
+- RQ-20261117-aadc-09
+- ML-D10-BASSET-BASELINE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+last_dispatched_at: '2026-11-18T19:28:47+00:00'

@@ -1,0 +1,142 @@
+id: RQ-20261117-b3aa-07
+title: 'trend_donchian_eth_4h: single-vs-combo read of the confirmed ADX-tightened trail (trail_adx 20 / 2.5) against the LIVE exit (trail_decay 10 / 1.8), 2020-07..2026-11, net of the full cost stack (closes
+  or packets P1-Q6-eth4h-stop-declare)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ATM
+programme: P1
+practice_precedent: 'M2 + M4 (docs/reference/trading-and-model-practice-principles.md): one lever per cell; a second lever on a leg that already carries one needs a single-vs-combo read against the CURRENT
+  incumbent before any declare.'
+question: 'trend_donchian_eth_4h: against the leg''s CURRENT live exit (atr 1.5 / trail 6.0 + trail_decay 10 / 1.8), does the ADX-tightened trail (trail_adx_below 20, tight 2.5) improve net R either as
+  a REPLACEMENT for trail_decay or ADDED to it, net of the full cost stack, under the same replace grade that confirmed it?'
+why_this_matters: 'NODE P1-Q6-eth4h-stop-declare (manager ask, research-ops 2026-11-17). RQ-20261016-005 CONFIRMED M1 trail_adx 20/2.5: 111.37 R vs 88.27 R (n 270 vs 262, 5/6 folds, maxDD 16.12 vs 18.06)
+  -- but its control A had NO trail_decay (read from the result''s A argv); the leg later shipped trail_decay 10/1.8 (RQ-20261016-006 arm D: 70.03 vs 61.08 R on 2022-10..2026-10, its own control also without
+  the ADX lever). Each lever was confirmed against an incumbent without the other, so NEITHER supersedes the other on the evidence, and the node itself requires a single-vs-combo read if both ship. The
+  producer block is gone (row MOMENTUM-LEVERS-LIVE done 2026-11-15: momentum_trail fired live on bybit_1). So the question now is data, not a preference: this unit. On PASS: a Tier-3 packet (exact config
+  diff for the winning arm) to the manager for bybit_2 + mirrors; on FAIL: the node closes as superseded by the live trail_decay, with this record as the evidence.'
+power:
+  expected_n: 270
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: control n 262 on 2020-07..2026-10 in RQ-20261016-005 (MEASURED); +1 month adds ~4. n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-07-SINGLE-VS-COMBO
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_eth_4h, arms A (config-exact = the live exit incl. trail_decay 10/1.8), M_replace (trail_decay removed, ADX trail added),
+    M_combo (ADX trail added on top), ETHUSDT 4h 2020-07-01..2026-11-15, net of fee + slippage + funding, 6 calendar folds; the same grade parameters as RQ-20261016-005 (delta-r-per-trade 0.02, fold majority
+    5, dd tol 0.35). The window overlaps 005's (a re-read, disclosed; arm count on this lever family 5 incl. 005's M1-M3).
+  rule: 'Per candidate C (harness replace grade): PASS iff net_r(C) > net_r(A) AND net_r(C) - net_r(A) >= 0.02 x n(A) AND folds where C >= A >= 5 of 6 AND maxDD(C) <= 1.35 x maxDD(A) AND n(A) >= 39. Several
+    pass -> the highest net R names the packet arm. Per-fold table reported; the winning arm must be net positive in >= 4 of 6 folds with no fold above 50% of its total (read from the same rows by the reading
+    session; a harness pass failing this is graded FAIL). INDETERMINATE iff n(A) < 39 or the producer failed. FAIL otherwise: the live trail_decay stands and the node closes as superseded. Arm denominator
+    3.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Edits no config and places no order. A PASS is the evidence for a Tier-3 packet to the manager (real-money leg); it is not itself a declare.
+  baseline: arm A = the leg's CURRENT live exit, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: node P1-Q6-eth4h-stop-declare value block; real-money leg exit lever; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: same shape as RQ-20261016-005 (one fetch + 3 harness passes).
+  why_runner: Fetches keyless public candles for a pinned window; Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - A=
+  - --arm
+  - M_replace=-trail_decay_stall_bars;-trail_decay_tight_mult;--trail-adx-below=20;--trail-adx-tight-mult=2.5
+  - --arm
+  - M_combo=--trail-adx-below=20;--trail-adx-tight-mult=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-11-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261117-b3aa-07
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-07
+ml_consumer:
+  not_applicable: 'Not an ML unit: an exit-lever single-vs-combo read on a rule-based leg.'
+intervention_controls:
+  not_applicable: mechanical exit-rule arms replayed on the same entries; arm A (the live exit) is the hold-to-current-rule control.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/trend_donchian_eth_4h.yaml
+- research/queue/RQ-20261016-005.yaml
+- src/runtime/momentum_levers.py
+- src/runtime/trail_decay.py
+iteration:
+  subject: trend_donchian_eth_4h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261016-005
+  verdict_read: pass_unconfirmed
+  diagnosis: 005 M1 +23.1 R vs a no-decay control; 006 D +8.95 R vs a no-ADX control; the live leg carries D; no read compares the two levers or their combo.
+  search: 'exit family: the confirmed momentum lever as a REPLACEMENT of and as a COMBO with the live trail_decay, vs the live exit'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/trend_donchian_eth_4h.yaml#levers.exit
+  attempt: 1
+  due_by: '2026-11-24'
+follow_up: PASS -> research-ops writes the Tier-3 packet (exact config diff, both reads) for the manager and closes node P1-Q6-eth4h-stop-declare; FAIL -> node P1-Q6-eth4h-stop-declare closes as superseded
+  by the live trail_decay, with this record.
+last_dispatched_at: '2026-11-17T12:07:54+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-07-SINGLE-VS-COMBO
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-07-SINGLE-VS-COMBO
+  evidence:
+  - research/results/RQ-20261117-b3aa-07/44080309612.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

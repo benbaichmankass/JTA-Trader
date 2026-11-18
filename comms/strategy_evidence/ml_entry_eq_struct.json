@@ -3,7 +3,7 @@
  "strategy": "ml_entry_eq_struct",
  "symbol": "173-ETF Alpaca liquidity pool (113 symbols traded in the window); the leg trades the whole pool minus pool_exclude (TQQQ, GLD) since row ML-ENTRY-EQ-STRUCT-FULL-POOL",
  "timeframe": "1h (decision at every 4th closed RTH bar)",
- "config_fingerprint": "sha256:e71a718bef0e064a85a24c89174224b8",
+ "config_fingerprint": "sha256:8254a2f0f9e9d5dadd6f0d295ead86d6",
  "basis": "heldout_window",
  "coverage_state": "measured",
  "fidelity": "faithful",
@@ -55,10 +55,17 @@
  },
  "error": null,
  "fingerprint_restamped": {
-  "at": "2026-11-11",
-  "from": "sha256:070b60e4e25102e0e4c5f2798150f39f",
-  "to": "sha256:e71a718bef0e064a85a24c89174224b8",
-  "row": "ML-ENTRY-EQ-STRUCT-FULL-POOL",
-  "why": "universe-only change: symbols widened from the 9-ETF rollout stage to the artifact's pool_symbols minus pool_exclude, plus the pool_scored dispatch key. Model, tau, bracket and structure_exit are unchanged, and the evidence population IS this pool (RQ-20261107-98e3-06, pooled over the 173-ETF POOL_RULE). Operator 2026-11-11 ~09:20Z: \"we want it to be trading everything it was trained on.\""
+  "at": "2026-11-17",
+  "from": "sha256:e71a718bef0e064a85a24c89174224b8",
+  "to": "sha256:8254a2f0f9e9d5dadd6f0d295ead86d6",
+  "row": "FOSSIL-FUEL-EXCLUSION (PR claude/fossil-fuel-exclusion; operator 2026-11-17)",
+  "why": "universe NARROWING only: nine oil/gas names (USO, UCO, UNG, XLE, XOP, OIH, GUSH, AMLP, NFX) left the leg's symbols list (171 -> 162) and joined pool_exclude. Model, tau, bracket, structure_exit and pool_scored are unchanged. The evidence population (RQ-20261107-98e3-06, the 173-ETF pool) still CONTAINS those names, and this record's numbers were NOT re-run on the narrowed set: a narrowing of a filter fixed before the run needs no new population test, and per-symbol results never gate. Operator 2026-11-17 ~07:15Z: \"In general, I ask that we not trade fossil fuels.\"",
+  "previous": {
+   "at": "2026-11-11",
+   "from": "sha256:070b60e4e25102e0e4c5f2798150f39f",
+   "to": "sha256:e71a718bef0e064a85a24c89174224b8",
+   "row": "ML-ENTRY-EQ-STRUCT-FULL-POOL",
+   "why": "universe-only change: symbols widened from the 9-ETF rollout stage to the artifact's pool_symbols minus pool_exclude, plus the pool_scored dispatch key. Model, tau, bracket and structure_exit are unchanged, and the evidence population IS this pool (RQ-20261107-98e3-06, pooled over the 173-ETF POOL_RULE). Operator 2026-11-11 ~09:20Z: \"we want it to be trading everything it was trained on.\""
+  }
  }
 }

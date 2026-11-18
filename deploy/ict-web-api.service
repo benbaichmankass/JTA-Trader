@@ -53,7 +53,14 @@ EnvironmentFile=/etc/ict-trader/web-api.env
 # views in sync — flip DATA_DIR in .env, both services follow.
 # Leading `-` so a missing .env doesn't fail the start.
 EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
-ExecStart=/usr/bin/python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001
+# WEB-API-STOP-SIGKILL-90S (2026-11-15): --timeout-graceful-shutdown 5. On stop,
+# uvicorn otherwise waits for every open connection to close; long-lived ones
+# (SSE /api/bot/stream, /ws/market) never do, so a stop sat out systemd's 90 s
+# default, was SIGKILLed, and every route returned 502 for ~93 s (5 of 45 stops
+# 11-12..11-15). With the cap, open streams are closed after 5 s and the clients
+# reconnect. scripts/install_systemd_units.sh adds the same flag to a drop-in
+# ExecStart (venv.conf), because a drop-in ExecStart wins over this line.
+ExecStart=/usr/bin/python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001 --timeout-graceful-shutdown 5
 Restart=always
 RestartSec=5
 StandardOutput=journal

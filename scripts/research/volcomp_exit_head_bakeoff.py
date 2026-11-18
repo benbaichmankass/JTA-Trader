@@ -220,8 +220,8 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], look, a, harness, conf
                 art = {"features": feats, "shape": SHAPE}
 
                 def predict(vec, _b=booster):
-                    # provenance: predict — P(class=1) of the binary holding_pays booster (as exit_head_eth_oos_control.py)
-                    return float(_b.predict(vec)[0])
+                    # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) of the binary holding_pays booster (as exit_head_eth_oos_control.py)
+                    return float(_b.predict_proba(vec)[0][1])  # P(class=1); .predict would be the 0/1 class label
                 per_arm[arm] = [replay_trade(df, t, art, predict, ACTION, lookback=a.lookback) for t in test]
             for i, t in enumerate(test):
                 recs_all.append({"leg": strategy, "fold": fd["index"], "baseline_r": float(t.r_multiple),

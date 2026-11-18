@@ -1,0 +1,160 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1, research-ops fork A), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-43b6-04
+title: 'ITERATION 2 of ltr-tp-pull-in (ed2b-05 FAIL: the risk cut was the act, not the timing): does a TP pull-in at an INFORMATIVE trigger (near_target,
+  new_peak, structure_break) beat a random-time pull-in under RULE-AM-RISK-ADJUSTED-V1?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: Over the committed Stage-0 per-trade corpora (8 legs; legs with a fictional TP, tp_r >= 10, excluded and named by the harness), does tp_pull_in
+  (TP replaced at the next bar by a limit keeping 50% of the open-to-TP distance) at the first near_target, new_peak or structure_break trigger cut maxDD
+  or weekly CVaR5 by >= 15% at <= 0.05 R/trade net of the full cost stack, hold in >= 4 of 6 folds, and beat the same pull-in at a random bar?
+why_this_matters: 'ltr-tp-pull-in is an orphan (iteration_orphans.py 2026-11-17): iteration 1 (RQ-20261113-ed2b-05) FAILED and nothing iterated from it.
+  On PASS: a discovery, then ONE confirmation on a holdout population with real TPs (the holdout legs of 43b6-01 declare tp_r 50 and cannot serve; the confirmation
+  needs a real-TP holdout corpus, filed with the result). On FAIL: tp_pull_in has been read on 6 of 10 triggers with no informative timing; with R4 failing
+  on timing twice, the class goes to a lever-exhaustion family review rather than another trigger sweep.'
+iteration:
+  subject: ltr-tp-pull-in
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261113-ed2b-05/43492527084.jsonl
+  verdict_read: fail
+  diagnosis: 'RQ-20261113-ed2b-05 (3,527 priced trades): momentum_flip passed R1 (cost 0.0071 R/trade), R2 (maxDD cut 15.3%) and R3 (4 of 6 folds) but FAILED
+    R4: 0 of 200 random-time pull-ins beaten, edge vs random -0.042 R (Bonferroni CI [-0.065, -0.018]). giveback (edge -0.044) and stall failed R2/R3. So
+    the risk cut comes from pulling the TP in at ALL, not from when: the tested triggers are state-of-weakness triggers whose timing carries negative information
+    (a random time does better). The untested triggers that carry positive timing information in sibling classes are near_target (partial_close@near_target
+    edge vs random +0.34 R, CI95 [+0.31, +0.38], ed2b-01) and new_peak (sl_to_structure@new_peak beat 200 of 200 random books, ed2b-03); structure_break
+    is the remaining untested state trigger. The tp_keep bound (0.5) is held fixed: R4 compares the same keep at a random time, so changing keep cannot
+    fix a timing failure.'
+  search: trigger family, the 3 untested triggers with positive timing evidence in sibling classes, at the fixed tp_keep 0.5 of iteration 1; arm denominator
+    3 (+ hold); cumulative 6 triggers for this class
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-tp-pull-in.yaml
+  - research/levers/ltr-partial-close.yaml
+  - research/levers/ltr-sl-to-structure.yaml
+  attempt: 2
+  due_by: '2026-11-24'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window,
+    as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 3527
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED, not measured: ed2b-05 priced 3,527 trades after excluding fictional-TP legs; near_target is the rarest trigger (fired on ~10% of trades
+    in ed2b-01, ~350 here). At sd 0.5 and alpha 0.01, ~350 fired trades detect ~0.08 R/trade and ~1,500 (new_peak) detect ~0.04 R/trade; V1''s n_floor 39
+    governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261117-43b6-04
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (legs with tp_r >= 10 excluded and named), per pre-registered
+    trigger T in {near_target, new_peak, structure_break}: the book with the TP replaced at bar j0+1 by a limit keeping 50% of the distance from that bar''s
+    open to the declared TP (a closer limit fills before the recorded exit or not at all; SL-first on the recorded exit bar), vs the HOLD book, against
+    200 matched random-time pull-ins on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.9833), plus L1: a pass must
+    keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static rule (hold +
+    the registered trigger arms, chosen leave-one-fold-out) and each candidate''s margin over it. Three pre-registered candidates (n_comparisons 3, Bonferroni
+    1 - 0.05/3), so R4 uses 0.9833 and the reported edge CI is at 0.9833; the 3 triggers of ed2b-05 are disclosed as prior reads (cumulative 6). PASS: at
+    least one trigger clears R1-R4 and L1 (a discovery). It is a SCREEN pass (per-trade R books, graduation_eligible false until BOOK-SIM-REAL-SIZER): a
+    Tier-3 proposal input for the class''s status, never an apply. FAIL: every candidate fails a read necessary clause (R1, R2 or R3) or is beaten by its
+    random control (R4). INDETERMINATE: anything else, i.e. the best candidate is under the n floor, never fired, carried by one leg (L1 fails), or no trade
+    could be priced (read_state no_data). Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control
+  in the same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; a pull-in limit fills at its level, SL-first on the recorded exit bar
+- triggers are evaluated on bar closes, live on telemetry passes
+- legs declaring a fictional TP (tp_r >= 10) are excluded and named, so the population is smaller than 4,076
+- the same corpus was read by ed2b-05 for this class (3 other triggers)
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tp_pull_in@near_target
+    - tp_pull_in@new_peak
+    - tp_pull_in@structure_break
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261117-43b6-04
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - tp_pull_in
+  - --tp-keep
+  - '0.5'
+  - --max-real-tp-r
+  - '10.0'
+  - --triggers
+  - near_target,new_peak,structure_break
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9833'
+  - --n-comparisons
+  - '3'
+  - --out
+  - '{out_dir}'
+last_dispatched_at: '2026-11-18T13:57:35+00:00'
+grading:
+  attested: RULE-RQ-20261117-43b6-04
+  auto: true
+  decision_rule_id: RULE-RQ-20261117-43b6-04
+  evidence:
+  - research/results/RQ-20261117-43b6-04/44319125088.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

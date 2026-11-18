@@ -155,6 +155,50 @@ def claim_read(model_id: str, start: str, end: str, unit: str, reader: str, ledg
     return {**rec, "next_bar": bar_for(n + 1)}
 
 
+def claim_key(row: dict) -> tuple:
+    """One claim's identity for de-duplication across ledger copies (row HOLDOUT-LEDGER-RUNNER-CLAIMS): model id, unit and
+    window END. The start is deliberately NOT in the key: hand backfills recorded the same claim with an approximate start
+    (c692-13/-14: 2020-07-01 by hand vs 2020-10-20 in the run copy). The end IS: one unit may claim one model on two windows
+    (8d20-01 and cd01-01 do), and those differ in end."""
+    return (row.get("model_id"), row.get("unit"), row.get("end"))
+
+
+def merge_claims(sources, ledger: Path = LEDGER) -> list[dict]:
+    """Append to ``ledger`` every claim row found in ``sources`` (jsonl files: a runner's holdout_claims.jsonl, or a reader's
+    out-dir COPY of the ledger) that the ledger does not already hold, keyed on ``claim_key``. Returns the rows added.
+
+    Why (row HOLDOUT-LEDGER-RUNNER-CLAIMS, 2026-11-15): a runner job claims into ITS checkout's ledger, and only
+    comms/research/<unit>/<run_id>/ comes back as the artifact, so the claim never reached main and n_tries undercounted.
+    The collector calls this on every landed run so a runner claim lands in the same batch commit."""
+    have = {claim_key(r) for r in _rows(ledger)}
+    added: list[dict] = []
+    for src in sources:
+        try:
+            lines = Path(src).read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(row, dict) or not row.get("model_id") or not row.get("start") or not row.get("end"):
+                continue
+            k = claim_key(row)
+            if k in have:
+                continue
+            have.add(k)
+            added.append(row)
+    if added:
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        with open(ledger, "a") as f:
+            for row in added:
+                f.write(json.dumps(row) + "\n")
+    return added
+
+
 def families(ledger: Path = LEDGER) -> list[dict]:
     """n_tries so far per (family, window, symbol scope), from the ledger; rows before 2026-11-05 are counted by family_of."""
     out: dict[tuple, dict] = {}

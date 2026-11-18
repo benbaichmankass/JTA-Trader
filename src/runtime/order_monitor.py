@@ -678,6 +678,25 @@ def _apply_partial_close(
         summary.errors.append(f"{pkg_id}: partial-close trade-write failed")
         return
 
+    # PARTIAL-CLOSE-PNL-NOT-JOURNALED: the closed part gets its own closed child
+    # row. Priced only from the venue fill read back above; a verdict-projected
+    # price is not a fill, so that child is written pending and settled from the
+    # fills store by the close order id. Never blocks the partial close.
+    try:
+        from src.runtime.partial_close_journal import book_partial_close
+        book_partial_close(
+            db, parent_trade_id=int(linked_trade_id), qty=actual_filled_qty,
+            fill_price=(actual_exit_price if exit_price_source == "exchange" else None),
+            filled_at=now, close_order_id=ex_result.get("exchange_order_id"),
+            source="monitor_verdict_partial", reason=str(reason or "partial_close"),
+            shrink_parent=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "order_monitor: partial-close child row failed pkg=%s trade=%s: %s",
+            pkg_id, linked_trade_id, exc,
+        )
+
     # Roll the package's tp forward when the verdict supplied next_tp
     # (e.g. turtle_soup emits next_tp=meta.tp2 alongside a TP1 partial).
     # Failure here is non-fatal — the partial close has already landed
@@ -690,6 +709,15 @@ def _apply_partial_close(
                 "order_monitor: partial-close next_tp write failed pkg=%s: %s",
                 pkg_id, exc,
             )
+
+    # ORDER-PATH-RESIDUE-2 (BL-20260825-CLOSE-SIDE-LEG-CANCEL-IS-WIRED-AT-1-
+    # OF-10-CALL-SITES, the "needs an AMEND, not a cancel" site): the position
+    # is still open, so its own tracked legs must be amended DOWN to the
+    # remainder -- cancelling would leave it naked, leaving them over-covers it.
+    # Runs only after the venue reduce AND the journal write landed (a dry-run
+    # short-circuit reduced nothing at the venue, so there is nothing to amend).
+    if not ex_result.get("skipped"):
+        _resize_legs_after_partial_close(trade, new_position_size)
 
     logger.info(
         "order_monitor: partial close pkg=%s trade=%s "
@@ -2405,6 +2433,58 @@ def _cancel_closed_row_protection(row: Any, db: Any = None) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: _cancel_closed_row_protection raised: %s", exc)
 
+def _resize_legs_after_partial_close(
+    trade: Dict[str, Any], new_position_size: float,
+) -> Optional[Dict[str, Any]]:
+    """Amend *trade*'s OWN tracked protective legs to *new_position_size*
+    after a strategy-verdict partial close (``_apply_partial_close``).
+
+    The same per-row seam the two other partial paths already use
+    (``execute.resize_tracked_protective_legs``: the trading desk's reduce in
+    ``scripts/ops/live_review_apply.py`` and the intent-reduce allocator). It
+    touches ONLY the ids on this row, never a sibling's, never cancels, and is
+    a recorded no-op off Bybit Partial-tpsl mode. Returns the seam's per-leg
+    result (``None`` when no client could be built). Never raises: the venue
+    reduce and the journal write have already landed, so a failure here leaves
+    the legs exactly as oversized as they were before this existed.
+    """
+    try:
+        if new_position_size <= 0:
+            return None
+        if not (trade.get("sl_order_id") or trade.get("tp_order_id")):
+            return None
+        from src.units.accounts.execute import resize_tracked_protective_legs
+        client, cfg = _build_account_client(trade.get("account_id"))
+        if client is None or cfg is None:
+            logger.warning(
+                "order_monitor: partial-close leg resize skipped for trade %s "
+                "(%s/%s): no client -- legs still sized to the pre-reduce qty",
+                trade.get("id"), trade.get("account_id"), trade.get("symbol"),
+            )
+            return None
+        legs = resize_tracked_protective_legs(
+            client, cfg, symbol=str(trade.get("symbol") or ""),
+            new_qty=float(new_position_size),
+            sl_order_id=trade.get("sl_order_id"),
+            tp_order_id=trade.get("tp_order_id"),
+            trade_id=trade.get("id"),
+        )
+        states = {k: (v or {}).get("state") for k, v in (legs or {}).items()}
+        failed = any(s in ("failed", "not_attempted") for s in states.values())
+        (logger.warning if failed else logger.info)(
+            "order_monitor: partial-close leg resize trade=%s %s/%s new_qty=%s "
+            "-> %s", trade.get("id"), trade.get("account_id"),
+            trade.get("symbol"), new_position_size, states,
+        )
+        return legs
+    except Exception as exc:  # noqa: BLE001 -- never crash the order path
+        logger.warning(
+            "order_monitor: partial-close leg resize raised for trade %s: %s",
+            trade.get("id"), exc,
+        )
+        return None
+
+
 def _send_partial_close_to_exchange(
     matched_trade: Dict[str, Any], qty: float,
 ) -> Dict[str, Any]:
@@ -3830,6 +3910,37 @@ def _send_reset_alert(msg: str, *, caller: str) -> None:
         logger.debug("%s: fcm WARNING publish failed: %s", caller, exc)
 
 
+_REARM_RESTORE_ALERT_AT: Dict[Tuple[str, str, Any], float] = {}
+#: One alert per (account, symbol, trade) per this many seconds: the sweep retries every tick and a
+#: persistent failure must not flood the channel.
+_REARM_RESTORE_ALERT_EVERY_S = 6 * 3600
+
+
+def _alert_rearm_restore_failed(account_id: str, symbol: str, trade_id: Any,
+                                restored: Dict[str, Any]) -> None:
+    """Money-path ERROR alert: a refused Alpaca re-arm AND the restore of the cancelled legs failed.
+
+    PI-20261027-KYYBSZXS-0001. Raised through the same path as the naked-position alert
+    (``execution_diagnostics.enqueue_rearm_restore_failed``): account / symbol / trade_id, "position
+    may be unprotected". Latched per (account, symbol, trade) so the per-tick retry cannot flood.
+    Best-effort: never raises into the sweep; the next tick's repair path re-arms."""
+    try:
+        key = (str(account_id), str(symbol), trade_id)
+        now = time.time()
+        if now - _REARM_RESTORE_ALERT_AT.get(key, 0.0) < _REARM_RESTORE_ALERT_EVERY_S:
+            return
+        _REARM_RESTORE_ALERT_AT[key] = now
+        detail = "; ".join(str(x) for x in (restored.get("failed") or [])[:3])
+        logger.error(
+            "ALPACA RE-ARM REFUSED AND RESTORE FAILED: account=%s symbol=%s trade_id=%s: position may be "
+            "unprotected (%s)", account_id, symbol, trade_id, detail)
+        from src.runtime.execution_diagnostics import enqueue_rearm_restore_failed
+        enqueue_rearm_restore_failed(account=str(account_id), symbol=str(symbol),
+                                     trade_id=trade_id, detail=detail)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_alert_rearm_restore_failed: %s", exc)
+
+
 def _alert_account_reset(account_id: str, symbols: List[str]) -> None:
     """One consolidated 'account reset SUSPECTED' alert (Telegram + WARNING FCM).
 
@@ -4347,6 +4458,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         return summary
 
     from src.units.accounts.clients import (
+        account_entry_order_pending,
         account_open_positions,
         account_position_present,
         account_supports_management,
@@ -4389,7 +4501,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 open_rows = conn.execute(
                     "SELECT id, symbol, direction, strategy_name, account_id, "
                     "       position_size, entry_price, notes, order_package_id, "
-                    "       timestamp, created_at "
+                    "       timestamp, created_at, broker_order_id "
                     "FROM trades "
                     "WHERE status='open' AND COALESCE(is_backtest,0)=0 "
                     "  AND account_id=?",
@@ -4762,6 +4874,34 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                             "a broker-confirmed flat closes). RISK-1 guard against "
                             "a partial-LIST false-close.",
                             tid_int, aid, sym, canonical, present,
+                        )
+                        continue
+                # PENDING ENTRY ORDER (2026-11-18, PI-20261118-JFWRQYOV-0004). A flat
+                # per-symbol read is a 404 and says nothing about an order that has not
+                # filled yet: a bracket entry sent outside the regular session is accepted
+                # and QUEUED until the open. The fresh-fill grace above is only 300 s, so
+                # past it this pass closed the row as exchange_flat_reconciled while the
+                # order was still queued, the monocle gate freed, and the SAME 1h signal
+                # re-fired every ~7 min (SLV x7 on alpaca_portfolio, QQQ x4 on
+                # alpaca_paper), every queued order filling at the open. Where the
+                # integration can say so, an entry order that is still working is NOT
+                # flat. ``None`` (cannot tell) keeps the prior behaviour; only a
+                # positive "still pending" holds the row open.
+                _entry_oid = (
+                    r["broker_order_id"] if "broker_order_id" in r.keys() else None
+                )
+                if _entry_oid and not str(_entry_oid).startswith("rejected-"):
+                    if account_entry_order_pending(cfg, str(_entry_oid)) is True:
+                        summary["snapshot_order_pending"] = (
+                            summary.get("snapshot_order_pending", 0) + 1
+                        )
+                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                        logger.info(
+                            "_reconcile_orphan_exchange_positions: NOT closing "
+                            "trade_id=%s account=%s symbol=%s side=%s — flat at the "
+                            "venue but its entry order %s is still pending (queued "
+                            "for the open / not yet filled).",
+                            tid_int, aid, sym, canonical, _entry_oid,
                         )
                         continue
                 # Defer the close: collect it and decide reset-vs-single AFTER
@@ -10235,6 +10375,12 @@ def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
                 "_attempt_naked_autoprotect: place_protective refused for "
                 "trade_id=%s: %r", row["id"], (resp or {}).get("retMsg"),
             )
+            # PI-20261027-KYYBSZXS-0001: the client put back the legs it cancelled; if THAT also
+            # failed the position may have no bracket, so say so once. The next tick's sweep retries
+            # the re-arm (no halt, no gate).
+            _restored = (resp or {}).get("restored")
+            if isinstance(_restored, dict) and _restored.get("failed"):
+                _alert_rearm_restore_failed(account_id, symbol, row["id"], _restored)
             return False
         _stamp_repair(db, row, "naked_rearm")
         return True
@@ -14842,6 +14988,58 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _own_leg_exit_for_demo_row(
+    db, cfg: Optional[Dict[str, Any]], row: Dict[str, Any], opened_at_ms: Optional[int],
+) -> Optional[Dict[str, Any]]:
+    """The exit of a DEMO Bybit row priced from its OWN stop/target order's fills.
+
+    DEMO-EXIT-FIRST-FILL-ATTRIBUTION. Returns a record shaped like
+    ``account_closed_pnl_for_trade``'s (``avg_exit_price``, ``fees``,
+    ``closed_pnl=None``, ``source='exchange_fill'``) only when the row's own
+    ``sl_order_id``/``tp_order_id`` filled the whole position inside
+    ``[open, close + 60 s]`` (``fills_pnl.exit_from_one_order_fills``,
+    ``match == own_bracket_order``); else ``None`` and the caller keeps its
+    existing read. Real-money accounts are untouched: their record comes from
+    the venue's closed-pnl endpoint, not from fills. Local read; never raises.
+    """
+    try:
+        if not isinstance(cfg, dict):
+            return None
+        if str(cfg.get("exchange") or "").lower() != "bybit":
+            return None
+        if str(cfg.get("demo", "false")).strip().lower() not in ("true", "1", "yes"):
+            return None
+        # The sweep's scan does not select these columns; read them for the
+        # demo rows only (an older schema without them simply returns None).
+        conn = db.connect()
+        try:
+            got = conn.execute(
+                "SELECT sl_order_id, tp_order_id, closed_at FROM trades WHERE id = ?",
+                (int(row["id"]),)).fetchone()
+        finally:
+            conn.close()
+        if not got:
+            return None
+        own = tuple(o for o in (got[0], got[1]) if o)
+        closed_ms = _isoformat_to_ms(got[2])
+        if not own or opened_at_ms is None or closed_ms is None:
+            return None
+        from src.runtime.fills_pnl import exit_from_one_order_fills
+        rec = exit_from_one_order_fills(
+            account_id=str(row.get("account_id") or ""),
+            symbol=str(row.get("symbol") or ""),
+            direction=str(row.get("direction") or ""),
+            opened_at_ms=int(opened_at_ms), closed_at_ms=closed_ms + 60_000,
+            qty=_safe_float(row.get("position_size")), own_order_ids=own,
+        )
+        if not rec or rec.get("match") != "own_bracket_order":
+            return None
+        return rec
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("_own_leg_exit_for_demo_row: row %s: %s", row.get("id"), exc)
+        return None
+
+
 def _own_leg_ids(db, trade_id: Any) -> tuple:
     """The row's own bracket legs (``sl_order_id``, ``tp_order_id``), read on their own so a journal without the
     columns (or a failed read) only loses the exact key, never the sweep. ``()`` when none."""
@@ -14924,6 +15122,9 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 " WHERE status = 'closed' "
                 "   AND COALESCE(is_backtest, 0) = 0 "
                 "   AND pnl IS NULL "
+                # PARTIAL-CLOSE-PNL-NOT-JOURNALED: a partial-close child is priced
+                # by partial_close_journal only (its own close order's fill).
+                "   AND COALESCE(setup_type, '') != 'partial_close' "
                 # E62: keyed on the CLOSE, like the local sweep since MI-128.
                 # Keyed on the open, a position held > 7 days was outside the
                 # window the moment it closed, and its broker truth was never
@@ -15000,15 +15201,24 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
             own_ids = _own_leg_ids(db, row.get("id"))
             own_kw: Dict[str, Any] = {"own_order_ids": own_ids} if own_ids else {}   # a row with no legs: call unchanged
             try:
-                rec = account_closed_pnl_for_trade(
-                    cfg,
-                    symbol=str(row.get("symbol") or ""),
-                    direction=str(row.get("direction") or ""),
-                    opened_at_ms=opened_at_ms,
-                    qty=_safe_float(row.get("position_size")),
-                    entry_price=journal_entry,
-                    **own_kw,
-                )
+                # DEMO-EXIT-FIRST-FILL-ATTRIBUTION: on a DEMO account the record
+                # below is built from the FIRST close-side fills whose qty
+                # matches, over a window open to now, so a partial close's fill
+                # (bybit_portfolio 6983: 9178f2b1 @ 1.0836) was taken for the
+                # row's own stop (bd8d3a72 @ 1.0629). The row's OWN bracket
+                # order, bounded by its close, is asked first; only when that
+                # finds nothing does the old read run.
+                rec = _own_leg_exit_for_demo_row(db, cfg, row, opened_at_ms)
+                if rec is None:
+                    rec = account_closed_pnl_for_trade(
+                        cfg,
+                        symbol=str(row.get("symbol") or ""),
+                        direction=str(row.get("direction") or ""),
+                        opened_at_ms=opened_at_ms,
+                        qty=_safe_float(row.get("position_size")),
+                        entry_price=journal_entry,
+                        **own_kw,
+                    )
                 # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
                 # taught the reconciler and the watchdog to match the venue's
                 # record against the venue's entry FILL (`_venue_entry_price`)
@@ -15503,6 +15713,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                 # NULL. Keep this predicate in lockstep with the canonical
                 # src.web.api._clean_trades.exclude_reduce_leg_predicate.
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(setup_type, '') != 'partial_close' "
                 "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
                 # NO-HALT (2026-10-09): a RESET-SUSPECT row auto-resolved as
                 # exchange_reset_flat is DECLARED unmeasured at close — the venue
@@ -18170,6 +18381,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
+        )
+
+    # PARTIAL-CLOSE-PNL-NOT-JOURNALED: price partial-close child rows whose fill
+    # was not readable at apply time, from the fills store by close order id.
+    try:
+        with _phase("settle_partial_close_children"):
+            from src.runtime.partial_close_journal import settle_pending_children
+            pc_settle = settle_pending_children(db)
+        if pc_settle.get("settled") or pc_settle.get("errors"):
+            summaries["__partial_close_children__"] = pc_settle
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: partial-close child settle raised: %s", exc,
         )
 
     # PNL-GROSS-VS-VENUE-6817 (operator w11): the venue's net closed P&L becomes

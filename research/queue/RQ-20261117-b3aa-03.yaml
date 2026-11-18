@@ -1,0 +1,142 @@
+id: RQ-20261117-b3aa-03
+title: 'RE-READ with the registered year clause measured: qqq_pullback_1h pre-development window 2018-06..2021-10, trend_lookback 75 vs config-exact control, 4 folds, net of the full cost stack (iteration
+  from RQ-20261115-2411-01/-02)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ATM
+programme: P1
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): a holdout re-read is allowed, recorded and graded on a stricter deflated bar; T1 regime-robustness per sub-period.'
+question: 'qqq_pullback_1h: on the pre-development window 2018-06-01..2021-10-31, do trend_lookback 75 (bf1b-03 discovery, 2411-01 confirmation PASS) and pullback_lookback 15 (2411-02) beat the config-exact
+  control net of the full cost stack in >= 3 of 4 folds, net positive in >= 3 of 4 folds, with no fold above 50% of the arm''s net, under a grade whose clauses equal the registered rule?'
+why_this_matters: 'ITERATION (research-ops 2026-11-17 1006Z). RULE/HARNESS MISMATCH found reading the rows: 2411-01 PASS: trend75 46.97 R vs A 35.56 R, n 101, both folds, maxDD 4.82 vs 8.22; 2411-02 FAIL:
+  pb15 43.07 vs 35.56, n 96, both folds won, maxDD 9.03 vs 8.22 (+0.81 R). pb15 failed ONLY on the harness sweep grade''s maxDD(C) <= maxDD(A) clause, which is NOT in 2411-02''s registered rule; the registered
+  rules'' regime-robustness clause (net positive in >= 3 calendar years, no year > 50%) was never computed because the harness emits only 2 folds and no per-year table (comms/research/<unit>/<run>/measurement.json
+  has no by_year). So the mechanical verdicts on these confirmations do not equal their registered rules in either direction. This unit re-reads the same arms on the same window with 4 folds (roughly calendar-year
+  sub-periods: 2018-06..2019-04, ..-2020-01, ..-2020-09, ..-2021-10) and a grade whose clauses are exactly the rule below (replace grade, dd tolerance 10%). On PASS: the leg''s lever change goes to the
+  manager as a Tier-3 proposal with BOTH reads disclosed (discovery 1830 d + pre-dev). On FAIL: the lever stays a window-specific response in the map. M13 re-read: deflated bar via the arm count disclosed.'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'control n MEASURED on this exact window: 101 (qqq) / 134 (spy) in 2411-0x; per fold ~25-35; n < 25 grades INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched dukascopy candles for a pinned window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-b3aa-03-PREDEV-REREAD-4F
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on qqq_pullback_1h, arms A, trend_lookback_75, pullback_lookback_15, window 2018-06-01 .. 2021-10-31 23:59, dukascopy lane, one continuous
+    harness pass, net of the full cost stack the harness resolves for the venue, 4 equal calendar folds, --dd-tol-frac 0.10; per-fold net R of every arm reported in measurement.json. Arms fixed now (all
+    previously selected), nothing re-selected.
+  rule: 'Per arm C: PASS iff net_r(C) > net_r(A) AND folds where C >= A (ties count) >= 3 of 4 AND maxDD(C) <= 1.10 x maxDD(A) AND n(A) >= 25 (these clauses are the harness replace grade) AND, read from
+    the same measurement.json fold rows, C is net positive in >= 3 of 4 folds with no single fold above 50% of C''s total net R. The unit PASSES iff some arm passes all clauses (the grader''s pass on the
+    harness clauses with a failed fold clause is graded FAIL by the reading session). INDETERMINATE iff n(A) < 25 or the producer failed. FAIL otherwise. M13: this window has been read once before for each
+    arm (2411-0x); deflation = the disclosed cumulative arm count on the lever (qqq trend 3, pullback 2; spy trend 3). Thresholds fixed now.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Edits no config, roster or record; places no order. A PASS is a lead for a Tier-3 NOTE with both reads disclosed, not a promotion.
+  baseline: control arm A = the leg config-exact, same run.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  basis: testing equity leg with a lever confirmed on 2 windows if it passes; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: same shape as RQ-20261115-2411-01 (one dukascopy fetch + harness passes).
+  why_runner: Fetches keyless dukascopy candles for a pinned window (research-script-run.yml installs the lane); Kaggle CPU has no internet.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - trend_lookback_75=trend_lookback=75
+  - --arm
+  - pullback_lookback_15=pullback_lookback=15
+  - --days
+  - '3070'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2021-10-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --dd-tol-frac
+  - '0.10'
+  - --research-unit
+  - RQ-20261117-b3aa-03
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b3aa-03
+ml_consumer:
+  not_applicable: 'Not an ML unit: a lever re-read on a rule-based leg.'
+intervention_controls:
+  not_applicable: lever sweep against the declared config (A/B arms), not an active-management action.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/qqq_pullback_1h.yaml
+- scripts/research/exit_lever_ablation.py
+- research/queue/RQ-20261115-2411-01.yaml
+- research/queue/RQ-20261115-2411-02.yaml
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261115-2411-01
+  verdict_read: pass_unconfirmed
+  diagnosis: '2411-01 PASS: trend75 46.97 R vs A 35.56 R, n 101, both folds, maxDD 4.82 vs 8.22; 2411-02 FAIL: pb15 43.07 vs 35.56, n 96, both folds won, maxDD 9.03 vs 8.22 (+0.81 R); pb15 failed ONLY on
+    the harness sweep grade''s maxDD(C) <= maxDD(A) clause, which is NOT in 2411-02''s registered rule; year clause never computed (2 folds, no per-year table). Harness design defect, not the idea.'
+  search: re-read the already-selected entry arms with 4 folds and a grade equal to the registered rule; no new arms
+  levers:
+  - entry
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.entry
+  attempt: 4
+  due_by: '2026-11-24'
+follow_up: The reading session applies the fold clause from measurement.json; PASS -> Tier-3 note to the manager; FAIL -> lever recorded window-specific.
+last_dispatched_at: '2026-11-17T13:59:47+00:00'
+grading:
+  attested: RULE-RQ20261117-b3aa-03-PREDEV-REREAD-4F
+  auto: true
+  decision_rule_id: RULE-RQ20261117-b3aa-03-PREDEV-REREAD-4F
+  evidence:
+  - research/results/RQ-20261117-b3aa-03/44090485872.jsonl
+  graded_at: '2026-11-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

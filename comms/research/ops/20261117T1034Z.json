@@ -1,0 +1,371 @@
+{
+ "run": "RESEARCH-OPS-2026-11-17-1006",
+ "finished_at": "2026-11-17T10:34:00Z",
+ "by": "session_01AFoLuMNJLaELyLniVCjP7T (lane RESEARCH-OPS-20261117-1006, dispatched by session_01AFoLuHbhd9wFuGJfWRqyoV)",
+ "floor": 25,
+ "floor_basis": "computed_floor(fired_24h 28)",
+ "authoring_queue_depth": 51,
+ "idle_backends": [
+  "github_runner",
+  "github_runner_data",
+  "kaggle",
+  "kaggle_cpu",
+  "trainer"
+ ],
+ "needs_review_triaged": 4,
+ "needs_review_left": "108 owned / 0 UNOWNED (result_disposition_check.py --list)",
+ "throughput": {
+  "runnable_before": 12,
+  "runnable_after": "12 + 13 new runnable units on this branch (would_dispatch 13 in the dry run incl. f5b3-01)",
+  "queued": 268,
+  "fired_24h": 28,
+  "results_landed_24h": 36,
+  "hours_since_last_dispatch": 9.7,
+  "idle_alarm": false,
+  "would_dispatch_before": 0,
+  "would_dispatch_after_this_pass": 13,
+  "note": "would_dispatch from dispatch_queue.py --json dry run on this branch; refill lane PR #26634 adds 6 more (runner 4, kaggle_cpu 1, kaggle GPU 1)"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok: research-queue-dispatch.yml hourly, success through run 44062448407 (10:11Z); H2 'last dispatch 10 h' is SUPPLY starvation (would_dispatch 0), not a mechanism fault",
+  "collector": "collector_age_h 6.95 BREACH -- downstream of no dispatches since 00:24Z",
+  "stranded_stamp_prs": "not listed this pass (limit)",
+  "incident": null
+ },
+ "slo_not_ok": {
+  "runnable_floor": "22 < 25 BREACH -> 12 new runnable units",
+  "theme_share_min_ratio": "0 BREACH (diagnostic; no floor-filler)",
+  "collector_age_h": "6.95 BREACH (supply)",
+  "research_ops_age_h": "19.07 BREACH -> this record",
+  "blocked_over_age": "0 ok (nothing to unblock-or-retire by age)"
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 5,
+  "indeterminate": 0,
+  "needs_review_resolved": 4,
+  "units": [
+   {
+    "unit": "RQ-20261116-d5a7-08",
+    "verdict": "fail",
+    "line": "configuration closed: turtle_soup sweep_lookback 40/90; entry family stays open; monotone response (40 -104.8, 90 +15.8 R) -> next test = RQ-20261117-b3aa-02 (120/180)"
+   },
+   {
+    "unit": "RQ-20261116-d5a7-09",
+    "verdict": "pass",
+    "line": "discovery: atr_stop_mult 0.5 +62.3 R, 3/4 folds (batch d5a7 1 of 3; 0.2 arm degenerate: 0 trades in folds 3-4); control -175.1 R net / -118.2 fee-only = no gross edge -> confirmation RQ-20261117-b3aa-01 (pre-dev)"
+   },
+   {
+    "unit": "RQ-20261116-d5a7-10",
+    "verdict": "fail",
+    "line": "NOT a lever reading: tp2_at_r deltas exactly 0.0 -- backtest_system venue TP fills the whole position at TP1 before monitor() can scale out; PI-20261117-NIVCJP7T-0001"
+   },
+   {
+    "unit": "RQ-20261116-d5a7-13/-14",
+    "verdict": "producer_failed",
+    "line": "driver gap (exit_lever_ablation refused harness fade), not the Alpaca throttle; fade support landed in #26638 during this pass -> re-queued with last_dispatched_at null (owner RESEARCH-OPS-20261117-1006)"
+   },
+   {
+    "unit": "RQ-20261116-d5a7-12",
+    "verdict": "producer_failed",
+    "line": "driver gap fvg_range; fixed by #26638 and re-queued by #26643 (AM-OPS-2) during this pass; this branch takes main's version"
+   },
+   {
+    "unit": "RQ-20261115-2411-04",
+    "verdict": "fail",
+    "line": "session grade: pooled H-A -27.9 R (W3) / -121.9 R (W4) -> UNIT FAIL; per-leg PASS trend_donchian_eth_prop = Tier-3 note to manager (prop superset gate first)"
+   },
+   {
+    "unit": "RQ-20261115-2411-01",
+    "verdict": "pass",
+    "line": "qqq trend_lookback 75 confirmed on pre-dev on the harness clauses (46.97 vs 35.56 R, both folds, DD 4.82 vs 8.22) but the registered year clause was never computed -> re-read RQ-20261117-b3aa-03 before any Tier-3 note"
+   },
+   {
+    "unit": "RQ-20261115-2411-02/-03",
+    "verdict": "fail",
+    "line": "failed ONLY on the harness sweep grade's maxDD clause (+0.81 / +0.31 R), not in the registered rule; arms won both folds -> re-reads RQ-20261117-b3aa-03/-04; PI-20261117-NIVCJP7T-0003"
+   },
+   {
+    "unit": "RQ-20261116-7c1a-01/-02",
+    "verdict": "fail/indeterminate",
+    "line": "as called by the 1520Z record (hit); corpus-width decision stays with the manager (handoff)"
+   },
+   {
+    "unit": "RQ-20261025-005/-006/-007, RQ-20261027-b376-02, RQ-20261101-e5b1-17/-18",
+    "verdict": "5 pass / 1 fail (MODEL/INFRA)",
+    "line": "mechanically graded tooling/infra checks; not iteration subjects; no action, because they carry no lever or leg"
+   }
+  ]
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20261101-d1f3-03",
+   "reason": "waited only on live broker-cost accrual = monitoring under RESEARCH-NO-WAIT; replaced by RQ-20261117-617c-01"
+  }
+ ],
+ "levers_filed": [
+  {
+   "lever": "E4 exit-arm flags in desk_event_entry_replay",
+   "ref": "E4-EXIT-LEVER-DRIVER"
+  },
+  {
+   "lever": "tighten_be action in ltr_action_trigger_s0",
+   "ref": "LTR-ACTION-TIGHTEN-BE"
+  },
+  {
+   "lever": "edge holdout read mode",
+   "ref": "EDGE-HOLDOUT-READ-MODE"
+  },
+  {
+   "lever": "ml_entry_eq cost-neutral arm",
+   "ref": "ML-ENTRY-EQ-NEUTRAL-ARM"
+  },
+  {
+   "lever": "ledger_ethsol emission in ml_entry_tp_revision evidence-extend-only",
+   "ref": "ML-ENTRY-STRUCT-LEDGER"
+  },
+  {
+   "lever": "fade branch in exit_lever_ablation",
+   "ref": "FADE-ABLATION-DRIVER (filed 10:2xZ, closed: already delivered by #26638)"
+  }
+ ],
+ "units_authored": {
+  "runnable": [
+   "RQ-20261117-b3aa-01",
+   "-b3aa-02",
+   "-b3aa-03",
+   "-b3aa-04",
+   "-b3aa-05",
+   "-b3aa-07",
+   "-b3aa-08",
+   "-43b6-01",
+   "-43b6-02",
+   "-43b6-03",
+   "-43b6-04",
+   "-617c-01",
+   "-f5b3-01"
+  ],
+  "blocked_with_owner": {
+   "RQ-20261117-b3aa-06": "E4-EXIT-LEVER-DRIVER",
+   "RQ-20261117-43b6-05": "LTR-ACTION-TIGHTEN-BE",
+   "RQ-20261117-617c-02": "EDGE-HOLDOUT-READ-MODE",
+   "RQ-20261117-617c-03": "EDGE-HOLDOUT-READ-MODE",
+   "RQ-20261117-617c-04": "ML-ENTRY-EQ-NEUTRAL-ARM + c21d-06 result",
+   "RQ-20261117-f5b4-01": "ML-ENTRY-STRUCT-LEDGER"
+  },
+  "programme_nodes": [
+   "P3-Q8-new-symbols",
+   "P7-Q5-confirm",
+   "P7-Q6-weekly-etf"
+  ],
+  "re_dated": {
+   "RQ-20261101-d1f3-07": "2026-12-01, blocker re-pointed to EDGE-HOLDOUT-READ-MODE"
+  }
+ },
+ "followups_filed": [
+  "PI-20261117-NIVCJP7T-0001 (turtle_soup tp2 dead in harness)",
+  "PI-20261117-NIVCJP7T-0002 (lever_map attribution net 0.0 collapsed state, e4)",
+  "PI-20261117-NIVCJP7T-0003 (sweep grade vs registered rule; by_year table)",
+  "PI-20261117-NIVCJP7T-0004 (xsec-crypto parked, due 2026-11-19)",
+  "PI-20261117-NIVCJP7T-0005 (movement-capture parked, due 2026-11-19)",
+  "PI-20261117-NIVCJP7T-0006 (claude_desk Claude-judging lane after the 11-18 reset)"
+ ],
+ "authoring": {
+  "queue_depth": 51,
+  "nodes_drafted": 3,
+  "nodes": [
+   "P3-Q8-new-symbols",
+   "P7-Q5-confirm",
+   "P7-Q6-weekly-etf"
+  ],
+  "dispositions_proposed": {
+   "P3-Q1-live-bt-stage-b": "kill: answered (PR #18870 live join; 2a10-01 NO_LEG_CLEARS_CLOSED_WINS)",
+   "P5-RG1025-trend-pooled": "blocked: pool_arm_diff.py cannot read harness_stage0 cells/",
+   "P4-Q2-ppi-rty-econ": "blocked: lever MACRO-EVENT-RANKTILT-ARM dropped 2026-10-29",
+   "P8-Q7-rotation": "no harness, no mechanism",
+   "P3-RG1025-lever-pooled": "#26637 block reason stale (pool_arm_diff.py exists); ready body held in lane scratch, not authored to avoid colliding with #26637",
+   "P1-Q15-c2/c3/c5": "routed to LTR units ed2b-02 / 43b6-01 / 43b6-04",
+   "P1-Q6-eth4h-stop-declare": "NOT superseded -> RQ-20261117-b3aa-07",
+   "P1-Q6-slv1d-declare": "NOT superseded -> RQ-20261117-b3aa-08"
+  }
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 9,
+   "of": 9
+  },
+  "map_entries_added": 0,
+  "map_note": "lever_map.py --backfill ran (86 maps, no diff); readings written into units and this record",
+  "next_tests_from_map": 19,
+  "orphans_before": {
+   "strategy_leg": 10,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 3,
+   "ml_model": 2,
+   "ltr_class": 0,
+   "names": {
+    "claude_desk": "operator: 'Run it after the reset (Recommended)' -> PI-20261117-NIVCJP7T-0006",
+    "xsec-crypto": "operator: 'Park until after the reset' -> PI-20261117-NIVCJP7T-0004",
+    "movement-capture": "operator: 'Park until after the reset' -> PI-20261117-NIVCJP7T-0005",
+    "ml-exit-head-donchian-1h": "handed to ML-PRIMARY-5 by the manager",
+    "ml-btc-router-cells": "handed to ML-PRIMARY-5 by the manager"
+   }
+  },
+  "advanced": 16,
+  "survivors": [],
+  "overdue": [
+   "ml-setup-metalabel-p2pool (78fc-02) and ml-holdbias-exit (78fc-05): refill lane names their blocking rows (ML-P1-COSTNET-REBUILD, ML-EXIT-ACTIONGRID-LABELS)"
+  ]
+ },
+ "ml_slots": {
+  "source": "docs/research/ml-slot-iteration-2026-11-17.md (PR #26634 branch)",
+  "covered": "10/10 by the brief's definition",
+  "by_unit": [
+   "D2 c21d-03/-05",
+   "D3 c21d-01/-06",
+   "D4 cc86-02 (live forward read)",
+   "D6 c21d-02",
+   "D7 c21d-04",
+   "D8 c21d-04"
+  ],
+  "by_named_block": [
+   "D1 ML-LINE-S1-CORPUS",
+   "D5 PI-20261117-ZFRREVN5-0001",
+   "D9 ML-D9-MAKER-EXIT-HARNESS",
+   "D10 ML-D10-BASSET-BASELINE"
+  ],
+  "caveat": "the 6 unit-covered slots depend on #26634 merging"
+ },
+ "backend_hours": {
+  "github_runner": "~12.2 h queued units from this pass (13 units) + ~0.8 h from 3 programme nodes on the next replenish; refill PR #26634 adds ~7.5 h",
+  "kaggle_cpu": "0 from this pass (+0.5 h c21d-03 via #26634)",
+  "kaggle_gpu": "0 from this pass (+1.5 h c21d-05 via #26634)",
+  "trainer": "0 from any lane -> finding raised to manager"
+ },
+ "alarms": [
+  "xsec-crypto: no next test; family review recommended",
+  "movement-capture: no next test; family review recommended",
+  "claude_desk: needs a manager-dispatched Claude-judging lane",
+  "ml-exit-head-donchian-1h / ml-btc-router-cells still orphan (ML lanes)",
+  "trainer idle, nothing due in 24 h"
+ ],
+ "not_run": [],
+ "limits": [
+  "pytest not installed: tests/test_research_queue.py not run",
+  "stranded automation/research-queue-* PRs not listed",
+  "needs_review owned items (108) not re-triaged; only UNOWNED driven to 0"
+ ],
+ "handoff": [
+  "Merge order: refill PR #26634 (c21d) and #26637 (24 node closures) before/alongside this PR; P3-Q8/P7-Q5/P7-Q6 edits merge cleanly with #26637 (checked by fork C).",
+  "Trainer idle with nothing due (manager + ML-PRIMARY-5); Kaggle CPU/GPU only get c21d-03/-05 from #26634.",
+  "Driver rows unowned: E4-EXIT-LEVER-DRIVER, LTR-ACTION-TIGHTEN-BE, EDGE-HOLDOUT-READ-MODE, ML-ENTRY-EQ-NEUTRAL-ARM, ML-ENTRY-STRUCT-LEDGER -> 6 blocked units wait on them.",
+  "#26637 marks P3-RG1025-lever-pooled blocked with a stale reason (pool_arm_diff.py exists); a ready body is in this lane's notes for whoever owns that PR.",
+  "P3-Q1-live-bt-stage-b: propose kill (answered by PR #18870 + 2a10-01); P4-Q2-ppi-rty-econ: lever MACRO-EVENT-RANKTILT-ARM dropped 2026-10-29 -> reopen or kill.",
+  "RQ-20261112-c1a5-01 waits on not_before 2026-12-01 with no iteration block: classify under RESEARCH-NO-WAIT.",
+  "Overdue RQ-20261101-78fc-20/-34/-52/-53 still overdue; 7c1a corpus-width decision still the manager's; 089f-01 fail_action (retire CJ-5/DESK-19 student work, $3 backfill cap) still with manager/operator.",
+  "blocker_watch: STALE_BLOCK 14, NOT_RUNNING 11, UNPROVEN_OVERDUE 242 (manager)."
+ ],
+ "operator_answers": {
+  "source": "manager relay 2026-11-17 ~10:30Z, popup verbatim",
+  "xsec-crypto": "Park until after the reset",
+  "movement-capture": "Park until after the reset",
+  "claude_desk": "Run it after the reset (Recommended)"
+ },
+ "manager_asks": {
+  "PI-20261117-ZFRREVN5-0005": "docs/research/regime-tier3-packets-2026-11-17.md: trend_donchian_sol READY (vol_skip_above_pctl 0.9, a strategies.yaml line, not a regime_policy.yaml cell); eth_pullback_2h NOT READY pending RQ-20261117-f5b3-01",
+  "eth4h trail_adx / slv1d momentum_stale": "NOT superseded: both confirmations' controls lacked trail_decay; single-vs-combo reads RQ-20261117-b3aa-07/-08; packet on PASS, close-as-superseded on FAIL",
+  "P5-MLV-GATE-STRUCT": "authored RQ-20261117-f5b4-01 (blocked on ML-ENTRY-STRUCT-LEDGER)",
+  "tier3_notes": [
+   "trend_donchian_eth_prop per-leg PASS on the SMA200 HTF gate (2411-04)"
+  ]
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "7c1a-01 re-run grades fail",
+   "p": 0.95,
+   "outcome": "hit"
+  },
+  {
+   "call": "7c1a-02 re-run grades indeterminate",
+   "p": 0.9,
+   "outcome": "hit"
+  },
+  {
+   "call": "d5a7-08/09/10/13/14 dispatch within 24 h",
+   "p": 0.8,
+   "outcome": "hit (13/14 landed producer_failed: driver gap)"
+  }
+ ],
+ "calls": [
+  {
+   "call": "RQ-20261117-b3aa-01 (turtle_soup stop 0.5 pre-dev) PASSes",
+   "p": 0.35,
+   "check": {
+    "command": "ls research/results/RQ-20261117-b3aa-01",
+    "rule": "latest row verdict pass",
+    "resolves_when": "2026-11-19"
+   }
+  },
+  {
+   "call": "RQ-20261117-b3aa-03 qqq trend_lookback_75 passes all clauses incl. the fold clause",
+   "p": 0.5,
+   "check": {
+    "command": "ls research/results/RQ-20261117-b3aa-03",
+    "rule": "trend_lookback_75 passes replace grade and is net positive in >=3/4 folds, no fold >50%",
+    "resolves_when": "2026-11-19"
+   }
+  },
+  {
+   "call": "RQ-20261117-b3aa-08 slv: no momentum arm beats the live trail_decay by the 0.02 R/trade bar",
+   "p": 0.6,
+   "check": {
+    "command": "ls research/results/RQ-20261117-b3aa-08",
+    "rule": "verdict fail",
+    "resolves_when": "2026-11-19"
+   }
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-17T10:07Z",
+  "since": "2026-11-16T15:20Z",
+  "runnable_by_track": {
+   "TRADING": 0,
+   "MODEL": 2,
+   "INFRA": 10
+  },
+  "fails_without_next": 3,
+  "needs_review": 109,
+  "could_not_look": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261116-d5a7-08",
+   "-09",
+   "-10",
+   "-12",
+   "-13",
+   "-14",
+   "RQ-20261115-2411-01",
+   "-02",
+   "-03",
+   "-04",
+   "RQ-20261016-005",
+   "-016"
+  ],
+  "trading": {
+   "meaning": [
+    "turtle_soup has no gross edge (fee-only -118 R/708), so the stop PASS only trims losses; the entry lookback response is monotone, so the route to an edge is entry, b3aa-02.",
+    "qqq/spy pullback lookback levers beat control on pre-dev in both folds; two mechanical FAILs were artefacts of a DD clause outside the registered rule, so the levers are live candidates pending b3aa-03/-04.",
+    "spy_pullback_1h decayed (pre-dev +34 R vs 2024-26 -26 R), so its next lever is regime gating, b3aa-05."
+   ],
+   "surprises": [
+    "backtest_system never lets turtle_soup scale out at TP1 (tp2 dead)",
+    "both Oct-18 momentum confirmations were measured against controls without the live trail_decay"
+   ]
+  }
+ }
+}

@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research authoring plus one research-harness fidelity fix. Adds 5 new queue units, each with one factor, a rule registered before the run and the full cost stack: RQ-20261117-dc44-01/-02/-03 (D2 Collie: yz+HAR additivity, CatBoost on yz, and yz at the live 15m cadence; ml_bakeoff on published shards, routing to Kaggle CPU) and dc44-04/-05 (fade_breakout_4h donchian-30 + adx_max gate; fvg_range_15m live far target vs midline; exit_lever_ablation on the runner). Fix FVG-EXIT-STYLE-FIDELITY in scripts/research/regime_debt_matrix.py: the fvg_range argv builder pins --exit-style far when the config is silent, which is what the live strategy targets; until now every replay ran the harness's midline default and was still declared faithful. A regression test is in tests/test_regime_debt_matrix_fvg_range.py. No config, src/, order path or roster change. tests/test_research_queue.py 92 passed; tests/test_regime_debt_matrix_fvg_range.py 26 passed; exit_lever_ablation --self-test PASS. Gates this adds or changes: none."
+}

@@ -93,6 +93,11 @@
 #                        entry (#15350) — two clicks, nothing else; refused
 #                        unless one-click reads OFF; a no-op when a watchlist
 #                        is already present; verified click-free.
+#     select-workspace — ONE CLICK (PROP-TRADEIFY-WORKSPACE-SWITCHED,
+#                        2026-11-15): re-select the "My Trading Account" tab by
+#                        its name span; refused unless one-click reads OFF and
+#                        exactly one such tab exists; no-op when current;
+#                        verified by the watchlist reading back. Tradeify-only.
 #     order-surface-dump — READ-ONLY (TRADEIFY-GOLIVE, tradeify-only; ONE
 #                          symbol): the symbol's watchlist row cells (header,
 #                          tid, class, title/aria, children, elementFromPoint)
@@ -245,7 +250,7 @@ case ",${APPLY}," in *",emit-status,"*) WANT_EMIT=1 ;; *) WANT_EMIT=0 ;; esac
 case ",${APPLY}," in *",reset-feed,"*) WANT_RESET=1 ;; *) WANT_RESET=0 ;; esac
 case ",${APPLY}," in *",dump-tables,"*) WANT_TABLES=1 ;; *) WANT_TABLES=0 ;; esac
 EXEC_MODE=""
-for m in probe-ticket instrument-probe instrument-search-dump instrument-info-dry instrument-info-probe symbol-switch-dry quote-spread link-state-dump page-status edit-dialog-dry edit-dialog-probe edit-surface-probe widget-menu-probe add-watchlist-widget watchlist-submenu-probe instrument-page-dump order-surface-dump probe-ticket-ask add-watchlist-symbol-dry add-watchlist-symbol executor-dry-run watched-click round-trip-dry round-trip-live \
+for m in probe-ticket instrument-probe instrument-search-dump instrument-info-dry instrument-info-probe symbol-switch-dry quote-spread link-state-dump page-status edit-dialog-dry edit-dialog-probe edit-surface-probe widget-menu-probe add-watchlist-widget select-workspace watchlist-submenu-probe instrument-page-dump order-surface-dump probe-ticket-ask add-watchlist-symbol-dry add-watchlist-symbol executor-dry-run watched-click round-trip-dry round-trip-live \
          close-position close-position-live \
          executor-enable-timer executor-disable-timer executor-clear-halt executor-clear-rollout \
          feed-enable-timer feed-disable-timer; do
@@ -366,6 +371,7 @@ if [ "${EXEC_MODE}" = "probe-ticket" ] && [ -n "${ACTION_SYMBOLS// /}" ]; then
     PROBE_SYMBOL="${ACTION_SYMBOLS// /}"
 fi
 if { [ "${EXEC_MODE}" = "add-watchlist-widget" ] || [ "${EXEC_MODE}" = "watchlist-submenu-probe" ] \
+     || [ "${EXEC_MODE}" = "select-workspace" ] \
      || [ "${EXEC_MODE}" = "instrument-page-dump" ] \
      || [ "${EXEC_MODE}" = "order-surface-dump" ] || [ "${EXEC_MODE}" = "probe-ticket-ask" ] \
      || [ "${EXEC_MODE}" = "add-watchlist-symbol-dry" ] || [ "${EXEC_MODE}" = "add-watchlist-symbol" ]; } \
@@ -604,6 +610,7 @@ if [ -n "${EXEC_MODE}" ]; then
             EARGS+=(--"${EXEC_MODE}" "${ACTION_SYMBOLS// /}") ;;
         widget-menu-probe)   EARGS+=(--widget-menu-probe) ;;
         add-watchlist-widget) EARGS+=(--add-watchlist-widget) ;;
+        select-workspace)    EARGS+=(--select-workspace) ;;
         watchlist-submenu-probe) EARGS+=(--watchlist-submenu-probe) ;;
         add-watchlist-symbol-dry|add-watchlist-symbol)
             case "${ACTION_SYMBOLS// /}" in ""|*,*) log "${EXEC_MODE}: refused — exactly one symbol"; exit 1 ;; esac

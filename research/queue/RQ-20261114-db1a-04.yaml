@@ -1012,14 +1012,18 @@ follow_up: 'On the verdict a session reports to the manager: pooled H-A on both 
   and the per-leg Tier-3 proposals. Then the censuses for trend_donchian_1h / trend_donchian_eth_prop.'
 last_dispatched_at: '2026-11-14T08:27:38+00:00'
 grading:
-  attested: RULE-DFR-HTF-NATIVE-20261114
-  auto: true
+  auto: false
+  graded_at: '2026-11-15'
+  grader: session RESEARCH-OPS-20261115-1447 (triage)
+  verdict: fail
+  note: 'Rule applied verbatim: UNIT PASS iff pooled H-A > 0 on record AND prior. Pooled H-A record +85.3R,
+    prior -0.63R, so FAIL; per-leg passes none (13 fail, 3 indeterminate under the n floor 30). Reading:
+    the SMA200 long gate removes record-year losses (down-trend year) and is neutral-to-slightly-negative
+    on the year before, a drag-removal filter whose value depends on the regime of the window, not shown
+    as edge. Configuration closed: harness-native daily-SMA200 long gate; family regime_gating stays open;
+    next test = same fixed filter on a third disjoint in-hand window (pre-dev history, 2023-2024) if the
+    manager wants the gate decided (handoff, see run record).'
   decision_rule_id: RULE-DFR-HTF-NATIVE-20261114
   evidence:
   - research/results/RQ-20261114-db1a-04/43575944709.jsonl
-  graded_at: '2026-11-14'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'']'
   rows: 16
-  verdict: null

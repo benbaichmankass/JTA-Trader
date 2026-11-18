@@ -216,6 +216,7 @@ nodes:
     programme: P4
     related: [RQ-20261016-7769-02, research/programmes/04-macro-sleeve.yaml]
 - id: P4-Q2-ppi-rty-econ
+  authoring_blocked: '2026-11-18 PROGRAMME-REVIEW-20261118: the economic rung needs the rank-tilt arm (lever row MACRO-EVENT-RANKTILT-ARM, state dropped in the 2026-10-29 bulk reset; blocked/RQ-20261016-7769-20 retired with it). The -early half read INDETERMINATE (RQ-20261020-001) and the ES=F sibling PASSED (a1f3-17), so the node is not a pooled artifact by its own test. Re-open the lever row (Tier-1 tooling, macro_event_study_run.py) before authoring; handed to the manager in the review record.'
   goal: G6
   roadmap: [M28]
   value: {usd_at_stake_per_month: 80, confidence: 0.2}
@@ -3298,6 +3299,7 @@ nodes:
   value: {usd_at_stake_per_month: 60, confidence: 0.2}
   after:
   - {unit: RQ-20261009-903, verdict: fail}
+  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `data_n` (PM collector paired n) -- n-bound by its own text'
   needs_authoring: NOT BEFORE 2026-11-07 (the PM collector's quality read). G2 read FAIL at paired n=68 (floor 49). Re-test PM-implied vs consensus surprise
     only once the paired n can move the interval (state the n the collector has reached); until then the answer is 'n-bound, not yet' and this node stays
     unauthored. G4 (forecasts as a sleeve feature) stays operator-gated behind a G2 PASS.

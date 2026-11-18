@@ -225,3 +225,62 @@ class TestExplainZeroSizedQty:
         assert msg.startswith("risk_refused:")
         assert "spot-margin" in msg
         assert "short" in msg
+
+
+# ── ZERO-QTY-EXPOSURE-EXPLAIN (PI-20261104-KKPOFDJQ-0004) ───────────────────
+# The 2026-11-04 ib_paper MGC refusals were the gross-exposure headroom clamp
+# but read as the generic "check daily-loss budget / ..." catch-all.
+
+class _Obs:
+    def __init__(self, notional, equity):
+        self.notional, self.equity = notional, equity
+
+
+class _RM:
+    def __init__(self, headroom, notional=1_553_956.0, equity=1_032_858.32,
+                 cap=1.5):
+        self._h, self._n, self._e, self._c = headroom, notional, equity, cap
+
+    def exposure_headroom_usd(self):
+        return self._h
+
+    def observe_exposure(self):
+        return _Obs(self._n, self._e)
+
+    def exposure_policy(self):
+        return self._c
+
+
+def _explain(rm, entry=4180.9, symbol="MGC"):
+    return _explain_zero_sized_qty(
+        balance=1_032_858.32, available_usd=None, total_account_usd=1_032_858.32,
+        risk_manager=rm, direction="long", market_type="futures",
+        entry_price=entry, symbol=symbol,
+    )
+
+
+class TestExposureCeilingToken:
+    def test_headroom_below_one_unit_names_the_ceiling(self):
+        msg = _explain(_RM(headroom=0.0))
+        assert msg.startswith("exposure_ceiling:")
+        assert "headroom=0.00" in msg
+        assert "cap=1549287.48" in msg            # 1.5 x 1,032,858.32
+        assert "notional=1553956.00" in msg
+
+    def test_headroom_covering_a_unit_keeps_the_generic_reason(self):
+        # 10M headroom >> any one contract's notional, so the clamp did not bind.
+        msg = _explain(_RM(headroom=10_000_000.0))
+        assert msg.startswith("risk_refused:")
+
+    def test_no_ceiling_or_unmeasurable_is_never_read_as_zero(self):
+        assert _explain(_RM(headroom=None)).startswith("risk_refused:")
+
+    def test_without_an_entry_only_a_zero_headroom_is_named(self):
+        assert _explain(_RM(headroom=0.0), entry=None).startswith("exposure_ceiling:")
+        assert _explain(_RM(headroom=50.0), entry=None).startswith("risk_refused:")
+
+    def test_a_raising_risk_manager_falls_back_to_the_generic_reason(self):
+        class _Boom:
+            def exposure_headroom_usd(self):
+                raise RuntimeError("journal unreadable")
+        assert _explain(_Boom()).startswith("risk_refused:")

@@ -3,7 +3,7 @@
 id: RQ-20261111-207f-02
 title: 'ALPACA-LIVE BOOK / Foxhound-4 DIAGNOSE + ITERATE (P8-Q2): is tau 0.25 calibrated to the score distribution, and does a registered selection policy (tau 0.15/0.20/0.30,
   top-1 or top-3 per close, a causal adaptive tau) earn more per month on the live book?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -126,17 +126,13 @@ iteration:
   due_by: '2026-11-18'
 last_dispatched_at: '2026-11-13T16:23:01+00:00'
 grading:
-  attested: RULE-RQ20261111-207f-02-CALIB-POLICY
-  auto: true
   decision_rule_id: RULE-RQ20261111-207f-02-CALIB-POLICY
   evidence:
   - research/results/RQ-20261111-207f-02/43462219253.jsonl
-  graded_at: '2026-11-14'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261113-SX5INCOP-0001
-  owner_reason: 'producer_failed: verdict.json malformed (n must be present, null when not measured);
-    same producer-verdict-contract class as PI-20261113-SX5INCOP-0001'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  - comms/research/RQ-20261111-207f-02/43462219253/verdict.json
+  graded_at: '2026-11-17'
+  grader: lane ML-PRIMARY-4 (session_01AFoLuJazEnEQNP6MeVfuv3), hand-graded from the committed measurement
+  needs_review: false
+  reason: 'Hand-graded by lane ML-PRIMARY-4 under RULE-RQ20261111-207f-02-CALIB-POLICY from the producer''s own measurement (read_state measured, verdict fail). The only defect was verdict.json missing the top-level n field (producer contract, PI-20261113-SX5INCOP-0001), not the measurement. RESULT: no registered alternative tau (0.15/0.20/0.30) or selection policy beats tau 0.25 on the live book by the registered bar (t >= 1.3001, >= +0.25 %/month, n >= 30, >= 3/5 folds). Population: DEV walk-forward OOF restricted-LONG decisions of the Foxhound-4 recipe on the 172-ETF pool, folds 2023-01..2025-06. FAIL -> iteration input: tau 0.25 stays; the threshold is not the lever.'
   rows: 1
-  verdict: null
+  verdict: fail

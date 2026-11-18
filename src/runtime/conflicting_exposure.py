@@ -7,9 +7,12 @@ one side of that trade."*
 
 What this does, and nothing more:
 
-* **Detects.** Every open leg on every book: the trade journal's open ``trades`` rows (real money, paper, the
-  mirrors, Alpaca, IB; one row per account) plus the prop journal's filled ``prop_tickets`` (one per prop
-  account). A symbol with at least one open LONG package and at least one open SHORT package is a conflict.
+* **Detects.** Every open leg on the MONEY books: the trade journal's open ``trades`` rows on real-money
+  accounts and on the Stage-2 paper-portfolio mirrors (``MIRROR_PAIRS``), plus the prop journal's filled
+  ``prop_tickets`` (one per prop account). **Paper-testing books are out of scope** (operator 2026-11-16,
+  verbatim: *"This alert should consider positions held by paper testing account, just real money, prop, or
+  paper portfolio accounts"*, read as "should NOT consider ... paper testing"): a testing leg (bybit_1,
+  alpaca_paper, ib_paper, ...) never makes or joins a conflict. A symbol with at least one open LONG package and at least one open SHORT package is a conflict.
   The per-account opposite-direction guard (``src/prop/breakout_executor.py``, #24402) already stops ONE account
   holding both sides; this sees ACROSS accounts and strategies, which nothing did.
 * **Alerts once.** One Telegram alert per distinct conflict (symbol + the set of packages on each side), through
@@ -137,6 +140,24 @@ def _initial_risks(conn: sqlite3.Connection, pkg_ids: Iterable[str]) -> dict[str
     return out
 
 
+IN_SCOPE_CLASSES = frozenset({"real_money", "prop"})
+
+
+def _mirror_accounts() -> frozenset[str]:
+    """The Stage-2 paper-portfolio mirrors (the one src-side pairing constant)."""
+    try:
+        from src.runtime.mirror_pairs import MIRROR_PAIRS
+        return frozenset(str(k) for k in MIRROR_PAIRS)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: mirrors drop out; logged
+        logger.warning("conflicting_exposure: MIRROR_PAIRS unreadable, mirrors out of scope: %s", exc)
+        return frozenset()
+
+
+def in_scope(account_id: Any, account_class: Any, mirrors: Iterable[str]) -> bool:
+    """Real money, prop, or a paper-portfolio mirror. Paper-testing accounts are not. Pure."""
+    return str(account_class or "") in IN_SCOPE_CLASSES or str(account_id) in set(mirrors)
+
+
 def read_open_legs(db_path: str | None = None,
                    mark_fn: Callable[[Any], float | None] | None = None,
                    strategies_path: str | None = None) -> dict[str, Any]:
@@ -178,12 +199,17 @@ def read_open_legs(db_path: str | None = None,
             risks = _initial_risks(conn, {str(r["order_package_id"]) for r in list(rows) + list(prop_rows)})
         finally:
             conn.close()
-        books["journal"] = {"state": "read", "rows": len(rows)}
+        books["journal"] = {"state": "read", "rows": len(rows)}  # out-of-scope count added below
         books["prop"] = {"state": "read" if has_prop else "table_absent", "rows": len(prop_rows)}
     except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
         return {"state": "could_not_look", "reason": f"journal_unreadable: {type(exc).__name__}: {exc}",
                 "books": books, "legs": []}
+    mirrors = _mirror_accounts()
+    skipped = 0
     for r in rows:
+        if not in_scope(r["account_id"], r["account_class"], mirrors):
+            skipped += 1
+            continue
         d = _pkg(str(r["order_package_id"]), r["strategy_name"], r["symbol"], r["direction"],
                  r["entry_price"], r["stop_loss"])
         aid = str(r["account_id"])
@@ -196,6 +222,7 @@ def read_open_legs(db_path: str | None = None,
         if aid not in d["accounts"]:
             d["accounts"].append(aid)
             d["account_classes"][aid] = "prop"
+    books["journal"]["paper_testing_rows_skipped"] = skipped
     for pid, d in pkgs.items():
         d["risk"] = risks.get(pid)
         d["open_r_basis"] = "initial_risk" if d["risk"] is not None else "current_stop"

@@ -5044,7 +5044,11 @@ def _close_modal_mismatch(modal: Mapping[str, Any], symbol: str, side: Optional[
     if not modal.get("ok"):
         return [str(modal.get("why") or "modal not read")]
     head = str(modal.get("heading") or "")
-    if symbol.upper() not in head.upper():
+    # The live terminal writes the pair with a slash: "Close SOL/USD Buy Position" (PROP-CLOSE-MODAL-SLASH,
+    # 2026-11-15: tradeify_1's SOLUSD close was refused on every tick from 11:44Z and the position stayed open).
+    # Accept the heading as written or with only its "/" removed; no other separator is dropped, so words never
+    # run together into a false match.
+    if symbol.upper() not in head.upper() and symbol.upper() not in head.upper().replace("/", ""):
         bad.append(f"heading {head!r} does not name {symbol}")
     if side is not None:
         want = "buy" if side == "long" else "sell"
@@ -5433,6 +5437,39 @@ class DXtradeAdapter(PropPlatformAdapter):
         # SL / TP took the same call. Default "fill", so breakout_1's fill
         # path is unchanged.
         self.limit_price_fill = "fill"
+        # PROP-TRADEIFY-WORKSPACE-RECUR (manager order 2026-11-16, after the 11-15 13:18Z and 11-16 ~08:50Z recurrences): when the
+        # Positions / Orders table is missing because the terminal fell back to another workspace tab (a page-load
+        # timeout reloads the default "Trading Dashboard"; 11-15 13:18Z and 11-16 ~08:50Z left the tradeify_1 executor
+        # blind for hours with an open position), a read re-selects "My Trading Account" ONCE per adapter (= once per
+        # tick; the 5-minute cadence is the backoff) through the SAME click-only guarded step as select-workspace, then
+        # re-reads. ``workspace_events`` records each attempt for the tick to emit; a failed re-select leaves the
+        # original LookupError, so the existing failure streak, single red flag and RECOVERED line apply unchanged.
+        self.auto_reselect_workspace = True
+        self.workspace_events: List[Dict[str, Any]] = []
+        self._reselect_tried = False
+
+    def recover_workspace(self, page: Any, trigger: str) -> bool:
+        """One guarded re-select of the workspace tab after a table read came back missing. Returns True only when a
+        click landed and the tab now reads current (so a re-read is worth making). Never raises; at most once per
+        adapter instance; no halt and no new gate (the guards are ``select_workspace``'s own: one-click OFF, exactly
+        one tab of that name, never a close control)."""
+        if not self.auto_reselect_workspace or self._reselect_tried:
+            return False
+        self._reselect_tried = True
+        try:
+            got = self.select_workspace(page)
+        except Exception as exc:  # noqa: BLE001
+            got = {"selected": False, "refused": f"{type(exc).__name__}: {exc}"}
+        self.workspace_events.append({
+            "what": "workspace_reselect", "trigger": trigger, "selected": bool(got.get("selected")),
+            "already_current": bool(got.get("already_current")), "refused": got.get("refused"),
+            "clicks": got.get("clicks") or [], "watchlist_ok": got.get("watchlist_ok"),
+            "workspaces_before": got.get("workspaces_before")})
+        return bool(got.get("selected"))
+
+    def pop_workspace_events(self) -> List[Dict[str, Any]]:
+        out, self.workspace_events = self.workspace_events, []
+        return out
 
     # ---- page probes ---------------------------------------------------
     @staticmethod
@@ -5664,6 +5701,9 @@ class DXtradeAdapter(PropPlatformAdapter):
     def read_positions(self, page: Any) -> List[Position]:
         self._show_tab(page, "tab_positions")
         got = positions_from_tables(self._tables(page))
+        if got is None and self.recover_workspace(page, "positions table not found"):
+            self._show_tab(page, "tab_positions")
+            got = positions_from_tables(self._tables(page))
         if got is None:
             raise LookupError("no positions table found on the page (selector drift or unmeasured layout)")
         return got
@@ -5671,6 +5711,9 @@ class DXtradeAdapter(PropPlatformAdapter):
     def read_orders(self, page: Any) -> List[WorkingOrder]:
         self._show_tab(page, "tab_orders")
         got = orders_from_tables(self._tables(page))
+        if got is None and self.recover_workspace(page, "orders table not found"):
+            self._show_tab(page, "tab_orders")
+            got = orders_from_tables(self._tables(page))
         if got is None:
             raise LookupError("no orders table found on the page (selector drift or unmeasured layout)")
         return got
@@ -6813,6 +6856,42 @@ class DXtradeAdapter(PropPlatformAdapter):
                               " e.removeAttribute('data-metis-wsub'); }); delete window.__metisWmPre; }")
             except Exception:
                 pass
+        return out
+
+    def select_workspace(self, page: Any, *, name: str = "My Trading Account") -> Dict[str, Any]:
+        """Re-select the workspace tab ``name`` (PROP-TRADEIFY-WORKSPACE-SWITCHED, 2026-11-15:
+        after a 45 s page-load timeout the tradeify_1 terminal came back on "Trading Dashboard",
+        so the watchlist and the positions table -- both on "My Trading Account" -- read missing
+        and every executor read failed with LookupError).
+
+        ONE click on the tab's NAME span (``_switch_workspace``), never its close / delete control.
+        Refused unless one-click reads OFF and exactly one tab carries ``name``; a no-op when it is
+        already current. Verified click-free: the tab reads current AND the watchlist reads back."""
+        out: Dict[str, Any] = {"selected": False, "already_current": False, "refused": None, "clicks": []}
+        oc = self.read_one_click(page)
+        out["one_click"] = {k: oc.get(k) for k in ("state", "via")}
+        if oc.get("state") != "off":
+            out["refused"] = f"one-click not confirmed OFF ({oc.get('state')})"
+            return out
+        tabs = self._workspaces(page)
+        out["workspaces_before"] = [{"name": t.get("name"), "current": bool(t.get("current"))} for t in tabs]
+        matches = [t for t in tabs if t.get("name") == name]
+        if len(matches) != 1:
+            out["refused"] = f"{len(matches)} workspace tabs named {name!r} (need exactly 1)"
+            return out
+        if matches[0].get("current"):
+            out["already_current"] = True
+        else:
+            if not self._switch_workspace(page, matches[0]["index"]):
+                out["refused"] = "the workspace tab click did not land"
+                return out
+            out["clicks"].append(f"workspace:{name}")
+            after = self._workspaces(page)
+            out["workspaces_after"] = [{"name": t.get("name"), "current": bool(t.get("current"))} for t in after]
+            out["selected"] = any(t.get("name") == name and t.get("current") for t in after)
+        wl = self.watchlist_symbols(page)
+        out["watchlist_after"] = wl
+        out["watchlist_ok"] = bool(wl.get("readable"))
         return out
 
     def add_watchlist_widget(self, page: Any, *, expect_workspace: str = "My Trading Account",

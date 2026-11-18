@@ -386,3 +386,16 @@ def test_week_lane_accepts_after_reset_and_keeps_standing(store, lane):
     it = store.create(_build(), by="t", today=TODAY)["item"]
     out = store.set("WSD-TEST-1", {"week_lane": lane}, by="t", expected_version=it["version"], today=TODAY)["item"]
     assert out["extra"]["week_lane"] == lane
+
+
+def test_api_meta_set_get_needs_token(client, monkeypatch):
+    """WSD-S4-READERS-FLIP: the register header's last_review lives in the store."""
+    monkeypatch.setenv("WORK_STORE_TOKEN", "secret")
+    assert client.get("/api/bot/work/meta/last_review").status_code == 404
+    assert client.post("/api/bot/work/meta/last_review", json={"value": {"a": 1}, "by": "x"}).status_code == 401
+    h = {"X-Work-Store-Token": "secret"}
+    r = client.post("/api/bot/work/meta/last_review", json={"value": {"a": 1}, "by": "x"}, headers=h)
+    assert r.status_code == 200 and r.json()["meta"]["version"] == 1, r.text
+    r = client.get("/api/bot/work/meta/last_review")
+    assert r.json()["meta"]["value"] == {"a": 1}
+    assert client.post("/api/bot/work/meta/items", json={"value": 1, "by": "x"}, headers=h).status_code == 422

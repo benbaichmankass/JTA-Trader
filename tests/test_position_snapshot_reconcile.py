@@ -1242,3 +1242,107 @@ def test_restart_never_routes_suspect_rows_to_individual_close(tmp_db, monkeypat
     assert by_sym["MES"]["status"] == "open" and by_sym["MGC"]["status"] == "open"
     for s in ("MHG", "SPY"):
         assert by_sym[s]["exit_reason"] == "exchange_reset_flat", by_sym[s]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PI-20261118-JFWRQYOV-0004: a flat per-symbol read must not close a row whose
+# ENTRY ORDER is still pending (a bracket sent outside the regular session is
+# queued until the open). Measured 2026-11-18: SLV x7 on alpaca_portfolio and QQQ
+# x4 on alpaca_paper, each row closed ~7 min after open while its order was queued.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _insert_alpaca_open_trade(db, broker_order_id):
+    db.insert_trade({
+        "timestamp": "2026-06-16T07:00:00+00:00",
+        "symbol": "SLV",
+        "direction": "short",
+        "entry_price": 41.0,
+        "position_size": 10.0,
+        "setup_type": "slv_trend_1h",
+        "status": "open",
+        "is_backtest": 0,
+        "strategy_name": "slv_trend_1h",
+        "account_id": "alpaca_live",
+        "notes": "{}",
+        "broker_order_id": broker_order_id,
+    })
+
+
+def _run_two_passes(db, pending):
+    with patch(
+        "src.units.accounts.clients.account_open_positions", return_value=[],
+    ), patch(
+        "src.units.accounts.clients.account_position_present", return_value=False,
+    ), patch(
+        "src.units.accounts.clients.account_entry_order_pending", return_value=pending,
+    ) as m:
+        _reconcile_orphan_exchange_positions(db)            # arms
+        summary = _reconcile_orphan_exchange_positions(db)  # would close
+    return summary, m
+
+
+def _alpaca_row_status(db):
+    conn = db.connect()
+    try:
+        return conn.execute(
+            "SELECT status FROM trades WHERE account_id='alpaca_live'"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def test_flat_symbol_but_entry_order_pending_is_not_closed(tmp_db):
+    _insert_alpaca_open_trade(tmp_db, "ord-queued-1")
+    summary, m = _run_two_passes(tmp_db, True)
+    assert summary["snapshot_closed"] == 0
+    assert summary["snapshot_order_pending"] >= 1
+    assert _alpaca_row_status(tmp_db) == "open"
+    assert m.call_args.args[1] == "ord-queued-1"
+
+
+def test_flat_symbol_and_entry_order_terminal_still_closes(tmp_db):
+    _insert_alpaca_open_trade(tmp_db, "ord-filled-then-stopped")
+    summary, _ = _run_two_passes(tmp_db, False)
+    assert summary["snapshot_closed"] == 1
+    assert _alpaca_row_status(tmp_db) == "closed"
+
+
+def test_order_status_unreadable_keeps_prior_close_behaviour(tmp_db):
+    """None = cannot tell: only a positive 'still pending' holds a row open."""
+    _insert_alpaca_open_trade(tmp_db, "ord-unknown")
+    summary, _ = _run_two_passes(tmp_db, None)
+    assert summary["snapshot_closed"] == 1
+
+
+def test_rejected_placeholder_order_id_is_never_looked_up(tmp_db):
+    _insert_alpaca_open_trade(tmp_db, "rejected-abc123")
+    summary, m = _run_two_passes(tmp_db, True)
+    m.assert_not_called()
+    assert summary["snapshot_closed"] == 1
+
+
+def test_alpaca_client_order_pending_three_valued(monkeypatch):
+    from src.units.accounts.alpaca_client import AlpacaClient
+
+    cli = AlpacaClient(api_key="k", api_secret="s")
+
+    def env(rc, status=None):
+        return lambda method, path, json_body=None: (
+            {"retCode": rc, "result": {"status": status}} if rc == 0
+            else {"retCode": rc, "retMsg": "x"}
+        )
+
+    for status, want in (("new", True), ("accepted", True), ("pending_new", True),
+                         ("partially_filled", True), ("held", True),
+                         ("filled", False), ("canceled", False), ("expired", False),
+                         ("rejected", False)):
+        monkeypatch.setattr(cli, "_request", env(0, status))
+        assert cli.order_pending("o1") is want, status
+    monkeypatch.setattr(cli, "_request", env(404))
+    assert cli.order_pending("o1") is False
+    monkeypatch.setattr(cli, "_request", env(500))
+    assert cli.order_pending("o1") is None
+    monkeypatch.setattr(cli, "_request", env(-1))
+    assert cli.order_pending("o1") is None
+    assert cli.order_pending("") is None

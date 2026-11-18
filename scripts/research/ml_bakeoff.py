@@ -493,8 +493,12 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
 
     Windows are built INSIDE each block (train rows only see earlier train rows; test rows only see earlier rows of
     the test block, the first ``window_bars - 1`` rows of a block being edge-padded), so no test information reaches
-    training and no row looks forward. CPU, seeded, fixed epochs, standardised on train statistics; the newest
-    ``max_train_windows`` train rows are used so the cost stays bounded. ``Unavailable`` without torch."""
+    training and no row looks forward. Seeded, fixed epochs, standardised on train statistics; the newest
+    ``max_train_windows`` train rows are used so the cost stays bounded. ``Unavailable`` without torch.
+
+    DEVICE (row ML-BAKEOFF-TORCH-DEVICE, 2026-11-17): ``params.device`` = ``auto`` (default: cuda when
+    ``torch.cuda.is_available()``, else cpu) | ``cpu`` | ``cuda`` (``Unavailable`` if no GPU). The device used is
+    logged to stderr and recorded in ``TORCH_DEVICES_USED`` so a GPU-routed unit can show it ran on the GPU."""
     try:
         import torch
         from torch import nn
@@ -519,6 +523,9 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
         Xw, yt = Xw[-cap:], yt[-cap:]
     torch.manual_seed(seed)
     torch.set_num_threads(max(1, int(params.get("threads", 1))))
+    dev = _torch_device(torch, params.get("device", "auto"))
+    if dev.type == "cuda":
+        torch.cuda.manual_seed_all(seed)
 
     class Net(nn.Module):
         def __init__(self):
@@ -530,7 +537,7 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
             o, _ = self.rnn(x)
             return self.head(o[:, -1])
 
-    net = Net()
+    net = Net().to(dev)
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     lossf = nn.CrossEntropyLoss()
     g = torch.Generator().manual_seed(seed)
@@ -540,21 +547,43 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
         for a in range(0, len(perm), batch):
             b = perm[a:a + batch]
             opt.zero_grad()
-            lossf(net(Xw[b]), yt[b]).backward()
+            lossf(net(Xw[b].to(dev)), yt[b].to(dev)).backward()
             opt.step()
     net.eval()
     Tw, outs = windows(Xte), []
     with torch.no_grad():
         for a in range(0, len(Tw), 2048):
-            outs.append(torch.softmax(net(Tw[a:a + 2048]), dim=1).numpy())
+            outs.append(torch.softmax(net(Tw[a:a + 2048].to(dev)), dim=1).cpu().numpy())
     return np.vstack(outs) if outs else np.zeros((0, k))
+
+
+TORCH_DEVICES_USED: List[str] = []
+
+
+def _torch_device(torch, want: Any = "auto"):
+    """cuda -> cpu selection for the torch arms; logs and records the choice (never silent)."""
+    want = str(want or "auto").lower()
+    if want not in ("auto", "cpu", "cuda"):
+        raise Unavailable(f"torch device {want!r} not in auto|cpu|cuda")
+    has_cuda = bool(torch.cuda.is_available())
+    if want == "cuda" and not has_cuda:
+        raise Unavailable("torch device 'cuda' requested but torch.cuda.is_available() is False")
+    name = "cuda" if (want == "cuda" or (want == "auto" and has_cuda)) else "cpu"
+    TORCH_DEVICES_USED.append(name)
+    print(f"ml_bakeoff torch device={name} (requested {want}, cuda_available={has_cuda})", file=sys.stderr, flush=True)
+    return torch.device(name)
 
 
 def _probe_torch_gru(_p):
     try:
-        import torch  # noqa: F401  # imported only to prove it is importable
+        import torch
     except ImportError as e:
         raise Unavailable(f"torch not importable: {e}")
+    want = str((_p or {}).get("device", "auto")).lower()
+    if want not in ("auto", "cpu", "cuda"):
+        raise Unavailable(f"torch device {want!r} not in auto|cpu|cuda")
+    if want == "cuda" and not torch.cuda.is_available():
+        raise Unavailable("torch device 'cuda' requested but torch.cuda.is_available() is False")
 
 
 # kind -> (fit_predict, licence, research_only)
@@ -1007,6 +1036,7 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
                    "metric_caveats": caveats,
                    "delta_sign": "positive = learner better than reference", "baseline": baseline,
                    "controls": controls, "candidates": candidates, "arm_status": arm_status,
+                   "torch_devices": sorted(set(TORCH_DEVICES_USED)),
                    "groups": groups, "deltas": deltas, "rule_evaluation": graded,
                    "headline_checks": headline_checks(rule, deltas, baseline),
                    "licences": licences, "n_folds_cv_min_over_groups": folds_seen,

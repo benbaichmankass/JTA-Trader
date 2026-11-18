@@ -1,0 +1,121 @@
+# Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1), dispatched by Manager Session session_01AFoLuHbhd9wFuGJfWRqyoV. ITERATION unit (blocked on a sibling result + a named build). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261117-617c-04
+title: 'ml_entry_eq ITERATION 2: does a COST-NEUTRAL target (ATR-neutral net-R, or gross-R minus known cost) lift the equity-native ENTRY model (config B, tau 0.20,
+  fixed SL2/TP3) over its live net-R recipe at matched trade count on the dev walk-forward, net of the full cost stack?'
+status: blocked
+cadence: once
+kind: experiment
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P8
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): one-factor ablation of the training target against the incumbent recipe at matched
+  trade count; every arm counted.'
+question: On the dev walk-forward (<= 2025-06-30, purged), does training ml_entry_eq's config-B model on an ATR-neutral net-R target (A1) or on gross R with the known
+  per-trade cost subtracted at decision time (A2) beat the live net-R target at the same number of taken trades, by >= 0.03 R per trade, net of cost?
+why_this_matters: 'ITERATION (research-ops 2026-11-17, fork B). ml_entry_eq''s graded record RQ-20261105-e9a1-02 PASS (+0.0392 R, n 858) is gross 0.0899 minus cost
+  0.0507: cost is 56% of gross and the iid t is 0.93. Iteration 1 (RQ-20261113-6d44-02) capped entries to the top 3 scores per bar and the mean fell from +0.129 to
+  -0.058: the HIGHEST scores are the WORST trades. The sibling recipe''s diagnostic (RQ-20261111-207f-03, ml-entry-eq-struct) found the model ranks cost per R (IC vs
+  cost -0.527). Same features, same symptom: the target, not the threshold, is the lever. RQ-20261117-c21d-06 (lane ML-ITERATION-REFILL-20261117, PR #26634) tests
+  this lever on the struct sibling; this unit carries it to the testing leg once that harness exists for this recipe. On PASS: one confirmation on the 2025-07+ window
+  then a candidate-manifest note (Tier 3); on FAIL: the cost lever is closed for this recipe and the next family is the universe (a price / ATR floor on the pool).'
+power:
+  expected_n: 3900
+  min_detectable_effect: 0.045
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'dev OOF decisions at tau 0.20 numbered 3,896 in RQ-20261105-e9a1-01; matched-count arms are paired on the same dates. d=0.045 at n=3900 (alpha 0.05, power 0.8).
+    Day-clustered t is the reported statistic; it is weaker than iid.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand dev walk-forward on cached Alpaca bars; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261117-617c-04-EQ-NEUTRAL-TARGET
+  statistic: 'alpaca_live_book.py section_neutral (parameterized for config B, fixed SL 2 / TP 3 ATR14 bracket labels, 24-bar stop, tau 0.20 baseline): per arm the
+    mean net R per taken trade at a count-matched threshold vs the live net-R recipe, day-clustered t, folds won of 5 dev folds, net of the per-symbol cost stack.'
+  rule: 'PASS iff an arm beats the baseline by >= 0.03 R per trade AND day-clustered t >= holdout_lock.bar_for(2)["point_t_min"] (two arms) AND it wins >= 3 of 5 folds
+    AND its yearly table is net positive in >= 2 of the 3 dev years with no year above 50% of its net (long-only leg: the sides clause is n/a). FAIL iff neither arm does
+    at baseline n >= 300. INDETERMINATE iff baseline n < 300 or the producer failed. Arm denominator = 3 (baseline + A1 + A2). Thresholds not changed after any result.'
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  what_it_does_not_do: Changes no model artifact, config, roster or order path; a PASS earns one confirmation read, not a serve proposal.
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  basis: 'stand-in: a demo-floor ML leg whose net edge is cost-limited; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 240
+  basis: same shape as RQ-20261117-c21d-06 (estimate).
+  why_runner: reads Alpaca bars with the runner's read keys (needs_secrets); Kaggle has no secrets.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --section
+  - neutral
+  - --recipe
+  - ml_entry_eq
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-617c-04
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether ml_entry_eq's next model candidate is trained on a cost-neutral target; no change from this unit
+  legs:
+  - ml_entry_eq
+  book: demo_floor
+intervention_controls:
+  not_applicable: an offline training-target ablation, not an in-trade action
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261113-6d44-02.yaml
+- research/queue/RQ-20261111-207f-03.yaml
+- scripts/research/ml_entry_equity.py
+iteration:
+  subject: ml_entry_eq
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261113-6d44-02
+  verdict_read: fail
+  diagnosis: 'e9a1-02: cost 0.0507 of gross 0.0899 (56%), t 0.93. 6d44-02 cap-3 FAIL: top-3 scores per bar -0.058 vs +0.129 uncapped, so score rank is inversely related
+    to trade quality at the top. 207f-03 on the sibling recipe: IC vs cost -0.527 (the model ranks cost per R). Survivor hypothesis: the net-R target teaches the model
+    to pick high-ATR / low-price names whose R is cost-dominated; the target is the lever.'
+  search: labels family (training target), A1 ATR-neutral net-R, A2 gross-minus-known-cost, vs the live net-R target at matched count
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml_entry_eq.yaml
+  attempt: 2
+  due_by: '2026-12-05'
+blocked_on:
+- what: 'the sibling test RQ-20261117-c21d-06 (ATR-neutral / gross-minus-cost targets on the struct recipe, PR #26634) has not landed or run; its result decides whether
+    the lever is worth carrying here.'
+  ref: RQ-20261117-c21d-06
+  kind: unit_result
+  clears_when: c21d-06 has a measured result row (any verdict; on FAIL this unit is still run because the fixed-bracket label differs from the structure-exit label,
+    unless the result shows the cost ranking absent in config B)
+  owner: lane ML-ITERATION-REFILL-20261117 (c21d-06 author)
+- what: 'alpaca_live_book.py section_neutral is hard-wired to the Foxhound-4 recipe (structure exit pivot=5;sl_only, 5-seed ensemble, tau 0.25); it needs a --recipe
+    ml_entry_eq path (config B, fixed SL2/TP3 ATR labels, single model, tau 0.20).'
+  ref: ML-ENTRY-EQ-NEUTRAL-ARM
+  kind: build
+  clears_when: the --recipe path lands with a self-test; then git mv this file to research/queue/ with status queued (run.command adjusted to the landed flags, the rule
+    unchanged)
+  owner: checklist row ML-ENTRY-EQ-NEUTRAL-ARM (filed by RESEARCH-OPS-20261117-1006)

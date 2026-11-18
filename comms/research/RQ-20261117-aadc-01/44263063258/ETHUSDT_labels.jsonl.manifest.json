@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-11-18T08:00:46.541186+00:00",
+  "tool": "scripts/research/ml_vol_label_replay.py",
+  "dataset": "datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl",
+  "symbol": "ETHUSDT",
+  "head": {
+    "model_id": "eth-regime-1h-lgbm-xasset-v1",
+    "symbol": "ETHUSDT",
+    "timeframe": "1h",
+    "stage": "shadow",
+    "resolution": "explicit_model_id"
+  },
+  "threshold": 0.5,
+  "threshold_source": "ML_VOL_VERDICT_THRESHOLD (live resolver)",
+  "rows_in": 43800,
+  "rows_missing_ts": 0,
+  "labelled": 43800,
+  "counts": {
+    "calm": 13576,
+    "volatile": 30224,
+    "unknown": 0
+  },
+  "volatile_pct": 69.0,
+  "ts_first": "2021-11-18T19:00:00Z",
+  "ts_last": "2026-11-17T18:00:00Z",
+  "scoring": {
+    "path": "batched",
+    "batch_verified": true,
+    "batch_check_rows": 33,
+    "batch_max_abs_delta": 0.0
+  },
+  "feature_audit": {
+    "ok": true,
+    "rows_total": 43800,
+    "rows_checked": 5475,
+    "sample_stride": 8,
+    "feature_columns": [
+      "vol_bucket",
+      "rolling_log_return_vol",
+      "log_return",
+      "log_return_lag_1",
+      "log_return_lag_2",
+      "hour_of_day",
+      "dayofweek",
+      "xa_peer1_ret",
+      "xa_peer1_ret_lag1",
+      "xa_peer1_vol",
+      "xa_peer1_rel_strength",
+      "xa_peer1_beta",
+      "xa_peer1_beta_residual",
+      "xa_peer2_ret",
+      "xa_peer2_ret_lag1",
+      "xa_peer2_vol",
+      "xa_peer2_rel_strength",
+      "xa_peer2_beta",
+      "xa_peer2_beta_residual",
+      "xa_breadth_up"
+    ],
+    "missing_or_null_by_column": {},
+    "unseen_categorical_values": {},
+    "vol_bucket_parity": {
+      "status": "checked",
+      "compared": 5475,
+      "mismatches": 0,
+      "mismatch_pct": 0.0,
+      "vol_feature_column": "rolling_log_return_vol",
+      "frozen_edges": [
+        0.004267022407508024,
+        0.0066383414182727375
+      ],
+      "frozen_labels": [
+        "vol_b0",
+        "vol_b1",
+        "vol_b2"
+      ],
+      "examples": []
+    },
+    "ran": true
+  },
+  "vol_bucket": {
+    "mode": "live",
+    "recomputed_from_frozen_edges": true,
+    "rows": 43800,
+    "differed_from_dataset_value": 1,
+    "differed_pct": 0.002,
+    "uncomputable": 0,
+    "note": "vol_bucket was DERIVED from the head's frozen edges via the live bucket_for_vol, exactly as feature_row_for_predictor does. A non-zero 'differed' count means this dataset build's stored vol_bucket used different quantile edges than the head froze \u2014 which is why trusting the stored column would have mis-scored."
+  },
+  "p_volatile_distribution": {
+    "n": 43800,
+    "min": 0.01447,
+    "p05": 0.121654,
+    "p25": 0.434088,
+    "median": 0.665211,
+    "p75": 0.841755,
+    "p95": 0.947169,
+    "max": 0.992858,
+    "mean": 0.617938,
+    "distinct_values": 42645
+  },
+  "fidelity": {
+    "in_sample": true,
+    "in_sample_note": "The production artifact is fit on the full history, so labels for bars inside its training window come from a model that saw them. Weaker than in-sample backtest bias (this is a market-state label, not a performance prediction) but real.",
+    "serve_path_note": "Live builds the feature row from live candles via feature_row_for_predictor; this reads the offline builder's row. Designed to agree (S-MLOPT-S17) but not the same code path \u2014 run `verify` against live audit rows before grading.",
+    "live_verified": false
+  }
+}

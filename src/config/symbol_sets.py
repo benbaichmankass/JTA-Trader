@@ -147,6 +147,27 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
     return _mu.apply(out, rec, _mu.account_venue(account_id))
 
 
+def scoped_leg_accounts(leg: str | None, scope: Mapping[str, Any] | None) -> list[str]:
+    """The accounts a leg declaring ``account_symbols`` is evaluated on: the map's own accounts, then every account whose
+    ``strategies:`` roster names the leg (accounts.yaml order). An account the map does not name resolves through
+    :func:`leg_symbols` to ``[]`` plus the leg's passed population on its venue (``src/config/ml_universe.py``), so for a leg
+    with no population record this list changes nothing (each extra account still trades ``[]``). Without it, an account
+    whose map entry was REPLACED by a population record (ML-ENTRY-POPULATION-TEST, 2026-11-12) would be dropped by the
+    coordinator's ``leg_account_scope`` and the profile resolver. Unreadable accounts.yaml: the map's accounts only."""
+    out = [str(a) for a in (scope or {})]
+    if not leg:
+        return out
+    try:
+        from src.config.accounts_loader import load_accounts_dict
+        accts = load_accounts_dict() or {}
+    except Exception:  # noqa: BLE001  # allow-silent: falls back to the map's own accounts (the pre-2026-11-12 behaviour)
+        accts = {}
+    for a, acct in accts.items():
+        if isinstance(acct, Mapping) and str(leg) in [str(x) for x in (acct.get("strategies") or [])] and str(a) not in out:
+            out.append(str(a))
+    return out
+
+
 #: A leg declaring ``pool_scored: true`` (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) has its population scored ONCE per
 #: decision close from a pool snapshot its own refresher fetches; its symbols are NOT part of the STATIC per-tick fetch set (a 171-symbol population
 #: would otherwise add ~171 pipeline passes to every tick). The tick adds back only the symbols that hold a package. Not a gate.

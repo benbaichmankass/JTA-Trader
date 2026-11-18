@@ -72,3 +72,13 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261113e44a01-ETH4H-TP4-PROP-V3
+  evidence:
+  - research/results/RQ-20261113-e44a-01/local-20261113-fidelity.jsonl
+  graded_at: '2026-11-16'
+  grader: session RESEARCH-OPS-20261116-0715 (triage)
+  note: "Two rows: the unit's first row PASSED V3 on the a7c3-04 run ledger (edge CI lo +0.038), but its own note shows the paired A arm passes identically and the standing prop ledger FAILS the v3 edge clause on all three accounts (edge CI lo -0.049 R, paired P arm -0.061). The manager-ordered LEDGER-FIDELITY re-run (local-20261113-fidelity.jsonl, 2026-11-13 08:55Z) is the row on the ledger the prop record stands on and supersedes the first row for any promotion use: FAIL_EDGE on breakout_2, tradeify_1, velotrade_1. tp_r 4 is near-inert on this leg (measured-move revision sets the target first). Configuration closed: eth_4h tp_r 4 prop superset; no eth_4h tp_r 4 prop PR is supported; TP-geometry family stays open."
+  rows: 2
+  verdict: fail

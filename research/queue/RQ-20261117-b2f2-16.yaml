@@ -1,0 +1,137 @@
+# Authored 2026-11-17 by lane QUEUE-FILL-LEAN-2-20261117 (Tier 1). Lever-map transfer unit; leg flags/window copied from RQ-20261104-7a3e-01; rule registered BEFORE any run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_long
+decision_rule:
+  id: RULERQ20261117b2f216
+  min_n: 39
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  rule: 'Registered 2026-11-04 before any run. Candidates SW5T15, SW5T20, SW5T30 (tight-mult 1.5 / 2.0 / 3.0; pivot_k 5; multiplicity 3, plus the 3 arms already read on this
+    window in 5e02-07 = 6 tries on this leg and window). One factor: the tightening multiple. A candidate PASSES when the harness''s replace verdict passes with the unchanged
+    parameters (delta-r-per-trade 0.02, fold-majority 4 of 6, dd-tol-frac 0.35, n-floor 39). FAIL if none passes. INDETERMINATE if n < 39 or no arm fires the level. HONEST
+    WINDOW: second read of the same 2020-07-01..2026-10-15 window, so a PASS is a DISCOVERY with an optimistic bias: it needs one confirmation on post-window data (forward
+    trades from 2026-10-16, not consumed here) before any Tier-3 per-leg apply PR. Thresholds, arms, grid, window not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_eth_prop --grade replace, the sibling window and folds of RQ-20261104-7a3e-01 (same leg, same flags)
+    by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the
+    leg as declared in config/strategies.yaml; candidates SE8/SE12. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: Edits no config or roster, places no order, does not test a ratcheting SL or structure TP, does not touch other legs.
+id: RQ-20261117-b2f2-16
+intervention_controls:
+  not_applicable: Static exit geometry chosen at entry by an existing harness flag (--trail-level-tight-mult), not a triggered in-trade action; hold is arm A (the leg as declared).
+    Same shape as the parent 5e02-07.
+iteration:
+  attempt: 2
+  diagnosis: SW3/SW5/FVG all beat A by +14.0..+17.9 R (n=1085) but below the registered +21.7 R bar; 4/4 folds for SW5 and FVG; lower DD than A. Tighten-to 1.0 ATR is the untested
+    parameter.
+  due_by: '2026-11-18'
+  from_result: RQ-20261101-5e02-07
+  levers:
+  - exit
+  search: 'trail_geometry family: tight_mult in {1.5, 2.0, 3.0} at pivot_k=5 (the best arm), 3 candidates.'
+  subject: trend_donchian_eth_prop
+  subject_kind: strategy_leg
+  verdict_read: fail
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: ESTIMATE as parent 5e02-07; n=1085 measured there, so the +0.02 R/trade bar is 21.7 R.
+  design: one_sample
+  effect_units: R
+  expected_n: 400
+  feasibility:
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The detector and harness arms are the blockers, not the data.
+    source: none
+  min_detectable_effect: 0.1
+  power: 0.8
+  sd: 1.2
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): intervention judged against hold AND a matched random intervention, per leg,
+  entries fixed, net of cost.'
+priority: 1
+programme: P1
+question: 'On trend_donchian_eth_prop, over the same window, folds and bar as the leg''s sibling unit RQ-20261104-7a3e-01, does any of the arms SE8/SE12 (STALE-EXIT (--stale-exit-bars,
+  peer-tested grid for this bar size)) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/trend_donchian_eth_prop.yaml
+  (no such family tested on this leg).'
+related:
+- RQ-20261104-7a3e-01
+- research/levers/trend_donchian_eth_prop.yaml
+roadmap:
+- L-LADDER
+routing:
+  basis: 'Estimate: 4 arms x one leg over the pinned window; one 2h-leg arm took about 20 s on the runner (ed1c-17 / 9a7e-01 logs). The first run replaces it.'
+  est_minutes: 90
+  needs_gpu: false
+  needs_internet: 'STRUCTURE-EXITS-DEFAULT 2026-11-05: pinned to github_runner. Every kaggle_cpu run of this unit was producer_failed: the kernel did not serve the candle feed
+    from the mounted dataset (IsADirectoryError, or no serve attempt at all = dataset not mounted) and then could not reach data.binance.vision (no internet). Re-run on research-script-run.yml
+    2026-11-05 ~18:30Z.'
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: 'Operator rule (row COMPUTE-PREFER-KAGGLE, not present in this clone, cited from the dispatch): compute on Kaggle first. Keyless public candles, CPU only; route
+    to research-script-run-kaggle.yml if the router allows a CPU class there, else the runner. The harness must run on both.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - A=
+  - --arm
+  - SE8=--stale-exit-bars=8
+  - --arm
+  - SE12=--stale-exit-bars=12
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261117-b2f2-16
+  timeout_minutes: 150
+status: done
+theme: live_strategy
+title: 'SE lever family never tested on trend_donchian_eth_prop: STALE-EXIT (--stale-exit-bars, peer-tested grid for this bar size) vs the declared leg, net of cost?'
+value:
+  basis: 'stand-in estimate: governs the default exit of a leg that trades real money; not a measurement.'
+  bucket: own_losses
+  confidence: 0.25
+  usd_at_stake_per_month: 400
+why_this_matters: 'Plan node: research/levers/trend_donchian_eth_prop.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016-era stale_exit_bars
+  reads PASS on peer legs (slv_pullback_1d 3/6 bars, eth_pullback_2h 8/12/20 bars) and the lever map for this leg carries no stale_exit_bars family. One factor, 2 arms; a PASS
+  is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-18T05:30:15+00:00'
+grading:
+  attested: RULERQ20261117b2f216
+  auto: true
+  decision_rule_id: RULERQ20261117b2f216
+  evidence:
+  - research/results/RQ-20261117-b2f2-16/44244723119.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
