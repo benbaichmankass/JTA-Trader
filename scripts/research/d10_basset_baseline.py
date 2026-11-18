@@ -240,6 +240,91 @@ def verdict(base: dict) -> tuple[str, str]:
     return "fail", f"CUSUM baseline AUC {base['auc']} (CI95 {base['ci95']}) does not clear 0.5: no baseline skill"
 
 
+
+# ── LEARNED degradation score (RQ-20261118-aadc-14): does a GBM on past-only leg stats beat the CUSUM baseline? ──────
+LEARNED_UNIT = "RQ-20261118-aadc-14"
+LEARNED_RULE_ID = "RULE-RQ20261118-aadc-14-D10-LEARNED"
+LEARNED_BAR = 0.654          # aadc-05's CUSUM AUC, the standing bar (manager / week plan 2026-11-18)
+LEARNED_FEATURES = ["cusum", "mean5", "mean10", "mean20", "std10", "win10", "dd", "gap_mu", "n_seen", "mu"]
+N_GROUP_FOLDS = 5
+
+
+def learned_points(by: Dict[str, List[dict]], mu: Dict[str, float]) -> List[dict]:
+    """One point per (leg, trade i) with N_NEXT later trades, as points(): every feature uses trades 0..i only."""
+    pts = []
+    for leg, seq in by.items():
+        rs = [x["r"] for x in seq]
+        S = cusum_path(rs, mu[leg])
+        cum = np.cumsum(rs)
+        peak = np.maximum.accumulate(cum)
+        for i in range(len(seq)):
+            if i + N_NEXT >= len(seq):
+                continue
+            past = np.array(rs[:i + 1], float)
+            def m(k):
+                return float(past[-k:].mean())
+            pts.append({"leg": leg, "i": i, "cusum": S[i], "mean5": m(5), "mean10": m(10), "mean20": m(20),
+                        "std10": float(past[-10:].std()) if len(past) > 1 else 0.0, "win10": float((past[-10:] > 0).mean()),
+                        "dd": float(peak[i] - cum[i]), "gap_mu": float(m(20) - mu[leg]), "n_seen": float(i + 1),
+                        "mu": float(mu[leg]), "decay": int(float(np.mean(rs[i + 1:i + 1 + N_NEXT])) < 0)})
+    return pts
+
+
+def learned_oof(pts: List[dict], seed: int = SEED) -> np.ndarray:
+    """Out-of-fold P(decay): legs are split into N_GROUP_FOLDS groups, so no leg's own points train its score."""
+    import lightgbm as lgb
+    legs = sorted({p["leg"] for p in pts})
+    rng = np.random.default_rng(seed)
+    order = list(rng.permutation(len(legs)))
+    fold_of = {legs[j]: k % N_GROUP_FOLDS for k, j in enumerate(order)}
+    X = np.array([[p[f] for f in LEARNED_FEATURES] for p in pts], float)
+    y = np.array([p["decay"] for p in pts], int)
+    f = np.array([fold_of[p["leg"]] for p in pts])
+    oof = np.full(len(pts), np.nan)
+    for k in range(N_GROUP_FOLDS):
+        tr, te = f != k, f == k
+        if te.sum() == 0 or len(set(y[tr].tolist())) < 2:
+            continue
+        clf = lgb.LGBMClassifier(n_estimators=200, learning_rate=0.05, num_leaves=15, min_child_samples=40,
+                                 subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0,
+                                 random_state=seed, verbose=-1)
+        clf.fit(X[tr], y[tr])
+        # provenance: predict — P(decay) = P(mean net R of the leg's next N_NEXT trades < 0), out of fold by leg group
+        oof[te] = clf.predict_proba(X[te])[:, 1]
+    return oof
+
+
+def paired_leg_boot(pts: List[dict], a_key: str, b_key: str) -> dict:
+    """AUC(a) - AUC(b) on the SAME points, leg-cluster bootstrap (BOOT draws)."""
+    sel = [p for p in pts if p.get(a_key) is not None and p.get(b_key) is not None and not np.isnan(p[a_key])]
+    legs = sorted({p["leg"] for p in sel})
+    if not sel:
+        return {"n": 0, "legs": 0, "delta": None, "ci95": None}
+    a = np.array([p[a_key] for p in sel], float)
+    b = np.array([p[b_key] for p in sel], float)
+    y = np.array([p["decay"] for p in sel])
+    by = {lg: [k for k, p in enumerate(sel) if p["leg"] == lg] for lg in legs}
+    d0 = (auc(a, y) or np.nan) - (auc(b, y) or np.nan)
+    rng = np.random.default_rng(SEED)
+    bs = []
+    for _ in range(BOOT):
+        idx = np.concatenate([by[legs[j]] for j in rng.integers(0, len(legs), len(legs))])
+        va, vb = auc(a[idx], y[idx]), auc(b[idx], y[idx])
+        if va is not None and vb is not None:
+            bs.append(va - vb)
+    ci = [round(float(np.percentile(bs, 2.5)), 4), round(float(np.percentile(bs, 97.5)), 4)] if bs else None
+    return {"n": len(sel), "legs": len(legs), "delta": None if np.isnan(d0) else round(float(d0), 4), "ci95": ci}
+
+
+def learned_verdict(learn: dict, base: dict, paired: dict) -> tuple[str, str]:
+    if learn["n"] < MIN_POINTS or learn["legs"] < MIN_LEGS or paired["ci95"] is None or learn["auc"] is None:
+        return "indeterminate", f"labelled points {learn['n']} / legs {learn['legs']} below {MIN_POINTS} / {MIN_LEGS}"
+    if learn["auc"] >= LEARNED_BAR and paired["delta"] > 0 and paired["ci95"][0] > 0:
+        return "pass", (f"learned AUC {learn['auc']} >= bar {LEARNED_BAR} and beats CUSUM {base['auc']} on the same points by "
+                        f"{paired['delta']} (leg-cluster CI95 {paired['ci95']})")
+    return "fail", (f"learned AUC {learn['auc']} (CI95 {learn['ci95']}) vs CUSUM {base['auc']}: paired delta {paired['delta']} "
+                    f"CI95 {paired['ci95']} does not clear 0 with AUC >= {LEARNED_BAR}")
+
 # ── ACTION replay (RQ-20261117-aadc-06): does acting on the alarm add net R? ─────────────────────────────────────────
 ACTION_UNIT = "RQ-20261117-aadc-06"
 ACTION_RULE_ID = "RULE-RQ20261117-aadc-06-D10-ALARM-ACTION"
@@ -395,6 +480,33 @@ def run(a) -> int:
             if isinstance(r.get("trade_id"), int) and isinstance(r.get("grade_score"), int):
                 grades[r["trade_id"]] = r["grade_score"]
     by, ex = leg_series(trades, mu)
+    if a.learned:
+        # the learned mode FITS LightGBM on the trainer (needs_vm_data), so it takes the trainer heavy queue like every fitting job
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        try:
+            from scripts.ml._heavy_queue import take_heavy_queue
+            _lock = take_heavy_queue("d10-basset-learned")   # noqa: F841 - held for the process lifetime
+        except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
+            print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
+        lp = learned_points(by, mu)
+        oof = learned_oof(lp)
+        for p, s_ in zip(lp, oof):
+            p["learned"] = None if np.isnan(s_) else float(s_)
+        learn, base = leg_boot(lp, "learned"), leg_boot(lp, "cusum")
+        paired = paired_leg_boot(lp, "learned", "cusum")
+        v, why = learned_verdict(learn, base, paired)
+        res = {"verdict": v, "read_state": "measured", "n": learn["n"],
+               "population": (f"(leg, trade) points of closed live/paper trades on {len(by)} legs with a measured Stage-0 record "
+                              f"(aadc-05's population and label: mean net R of the next {N_NEXT} trades < 0); learned score out of "
+                              f"fold by {N_GROUP_FOLDS} leg groups"),
+               "note": why, "measurement": {"rule": LEARNED_RULE_ID, "learned": learn, "cusum_same_points": base,
+                                            "paired_delta_auc": paired, "bar": LEARNED_BAR, "features": LEARNED_FEATURES,
+                                            "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS},
+                                            "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
     if a.alarm_h_sweep:
         arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
@@ -505,6 +617,18 @@ def _self_test() -> int:
         sb, si = stage0_series(ev, "2026-05-01")
         assert si["trades_after_cutoff"] == 1 and si["trades_no_prior_fold"] == 1 and si["trades_used"] == 2, si
         assert sb["L"][0]["mu"] == 1.0 and sb["L"][1]["mu"] == 0.0, sb
+    # LEARNED (aadc-14): features read only trades 0..i; the paired delta is learned minus cusum on the same points
+    seq = [{"trade_id": k, "closed_at": f"t{k:03d}", "r": (1.0 if k < 30 else -1.0)} for k in range(60)]
+    lp = learned_points({"A": seq}, {"A": 0.2})
+    assert len(lp) == 60 - N_NEXT and lp[0]["n_seen"] == 1.0 and lp[0]["mean5"] == 1.0, lp[0]
+    p29 = [q for q in lp if q["i"] == 29][0]
+    assert p29["mean20"] == 1.0 and p29["dd"] == 0.0, p29     # trade 30 (the first loser) is not visible at i = 29
+    pts2 = [{"leg": f"L{j % 4}", "decay": j % 2, "a": float(j % 2) + 0.1, "b": 0.5} for j in range(400)]
+    pr = paired_leg_boot(pts2, "a", "b")
+    assert pr["delta"] == 0.5 and pr["ci95"][0] > 0, pr
+    assert learned_verdict({"n": 400, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "pass"
+    assert learned_verdict({"n": 400, "legs": 4, "auc": 0.60, "ci95": [0.5, 0.7]}, {"auc": 0.55}, pr)[0] == "fail"
+    assert learned_verdict({"n": 50, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "indeterminate"
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -520,6 +644,7 @@ def main(argv=None) -> int:
     ap.add_argument("--action-replay", action="store_true", help="RQ-20261117-aadc-06: demote-on-alarm replay instead of the AUC read")
     ap.add_argument("--alarm-h-sweep", action="store_true", help="RQ-20261117-aadc-07: demote-on-alarm at H in SWEEP_H, Bonferroni")
     ap.add_argument("--stage0-confirm", action="store_true", help="RQ-20261117-aadc-09: H 2 on the Stage-0 OOS series before 2026-05-01")
+    ap.add_argument("--learned", action="store_true", help="RQ-20261118-aadc-14: learned degradation score vs the CUSUM baseline")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
