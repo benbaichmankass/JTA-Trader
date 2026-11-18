@@ -473,6 +473,9 @@ def main_foxhound(a) -> Dict[str, Any]:
         r = section_neutral(tab, o, sizer)
     else:
         r = section_label(tab, o, sizer)
+    # n = the DEV OOF decisions the section read (script_run --derive-record requires a top-level n; without it every
+    # P8 run landed producer_failed: 207f-01/-04 and c21d-06, PROGRAMME-REVIEW-20261118).
+    r.setdefault("n", len(o))
     r.update({"sizer": sizer, "cash0_source": CASH0_SOURCE, "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
               "n_pool": len(pool), "pool": {k: v for k, v in prep.items() if k != "excluded"}, "train_end": M.TRAIN_END,
               "structure_exit": M.STRUCT_SPEC, "ensemble_seeds": ENS_SEEDS, "alpaca_calls": client.calls,
@@ -522,7 +525,8 @@ def main_legs(a) -> Dict[str, Any]:
         v, why = "pass", f"legs that qualify for a head-to-head with Foxhound-4: {qual}"
     else:
         v, why = "fail", "no leg reaches n_taken >= 30 with book mean net R > 0 and month-clustered t >= 1.0"
-    return {"verdict": v, "note": why, "per_leg": per, "combined_one_slot": combined, "harness_runs": runs, "sizer": sizer,
+    return {"verdict": v, "note": why, "n": int(combined.get("n_candidates") or 0), "per_leg": per, "combined_one_slot": combined,
+            "harness_runs": runs, "sizer": sizer,
             "cash0_source": CASH0_SOURCE, "days": a.days,
             "population": f"Stage-0 trade lists of {len(a.strategy)} rostered equity legs (build_strategy_evidence, last {a.days} days, "
                           f"config-exact harness, net of its cost stack) replayed through the alpaca_live cash book"}
@@ -622,7 +626,7 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     r = main_foxhound(a) if a.cmd == "foxhound" else main_legs(a)
     row = {"schema_version": 1, "schema": SCHEMA, "research_unit": a.unit, "read_state": "measured", "verdict": r["verdict"],
-           "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+           "n": r.get("n"), "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
            "population": r.get("population"), "measurement": {**r, "runtime_s": round(time.time() - t0, 1)},
            "produced_by": {"tool": f"python3 scripts/research/alpaca_live_book.py {a.cmd}", "where": a.where}}

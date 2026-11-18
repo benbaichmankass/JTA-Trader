@@ -6,6 +6,16 @@
 
 ---
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — INFRA / MODEL plumbing
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P6 in the window:** 10 programmed units (5 pass, 5 fail).
+
+**What was learned**
+- **The producer-contract defect class recurred.** `scripts/research/alpaca_live_book.py` wrote verdict.json without a top-level `n`, so `script_run --derive-record` recorded every P8 run as producer_failed (207f-01, 207f-04, c21d-06 twice) from 2026-11-13. alpaca_baseline_affordability.py hit the same defect on 2026-11-04. It is fixed in this PR and the three units are re-armed. A shared verdict writer would end the class; handed off, not added as a gate.
+- **Data placement limits the research backends.** At 2026-11-18T18:13Z the runnable queue was github_runner 25 units / 17.2 h, kaggle_cpu 0, Kaggle GPU 0 and trainer 0, against ~102 wall hours to Sunday night. Exit-head corpora are trainer-only. Row **ML-EXITHEAD-ROWS-KAGGLE** filed.
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — INFRA / MODEL plumbing
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
