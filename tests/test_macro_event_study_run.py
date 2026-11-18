@@ -142,3 +142,42 @@ def test_end_to_end_trade_and_placebo_arms(tmp_path):
     assert m.main(base + ["--release-start", "2021-06-01", "--out", str(tmp_path / "w")]) == 0
     w = json.loads((tmp_path / "w" / "verdict.json").read_text())
     assert w["measurement"]["releases_after_window"] < 150
+
+
+def test_rank_tilt_z_uses_only_prior_releases():
+    """A future-leak fixture: appending a later extreme release must not change any earlier weight/excess."""
+    ev = [{"date": f"2020-01-{i + 1:02d}", "surprise": float((i * 7) % 11)} for i in range(30)]
+    fwd = lambda d, h: 0.01  # noqa: E731
+    base = m.rank_tilt(ev, fwd, horizon=1, cost_frac=0.0, expected_sign="negative", warmup=5)
+    leak = ev + [{"date": "2020-02-15", "surprise": 1e9}]
+    later = m.rank_tilt(leak, fwd, horizon=1, cost_frac=0.0, expected_sign="negative", warmup=5)
+    assert base["tilt_excess_net"]["n"] == 25 and later["tilt_excess_net"]["n"] == 26
+    # the first 25 contributions are unchanged; the leaked release ranks above all 30 priors -> z = 1, w = 0,
+    # excess = (0 - 1) * 0.01 = -0.01, so the sums differ by exactly that one term
+    assert abs(later["tilt_excess_net"]["mean"] * 26 - base["tilt_excess_net"]["mean"] * 25 - (-0.01)) < 1e-6
+
+
+def test_rank_tilt_weights_average_about_one_and_sign_direction():
+    import random
+    rnd = random.Random(3)
+    ev = [{"date": f"2020-{1 + i // 28:02d}-{1 + i % 28:02d}", "surprise": rnd.gauss(0, 1)} for i in range(300)]
+    # hot print -> price falls: a negative-sign tilt should earn a positive excess before cost
+    vals = {e["date"]: e["surprise"] for e in ev}
+    fwd = lambda d, h: -0.01 * vals[d]  # noqa: E731
+    rt = m.rank_tilt(ev, fwd, horizon=3, cost_frac=0.0, expected_sign="negative", warmup=24)
+    assert abs(rt["mean_weight"] - 1.0) < 0.1
+    assert rt["tilt_excess_net"]["mean"] > 0 and rt["tilt_excess_net"]["t"] > 2
+    wrong = m.rank_tilt(ev, fwd, horizon=3, cost_frac=0.0, expected_sign="positive", warmup=24)
+    assert wrong["tilt_excess_net"]["mean"] < 0
+    costly = m.rank_tilt(ev, fwd, horizon=3, cost_frac=0.002, expected_sign="negative", warmup=24)
+    assert costly["tilt_excess_net"]["mean"] < rt["tilt_excess_net"]["mean"]
+
+
+def test_grade_tilt_rule():
+    def rt(n, mean, t):
+        return {"tilt_excess_net": {"n": n, "mean": mean, "t": t}}
+    assert m.grade_tilt(rt(100, 0.001, 2.5), min_n=60, t_bar=2.0)["verdict"] == "pass"
+    assert m.grade_tilt(rt(100, 0.001, 1.5), min_n=60, t_bar=2.0)["verdict"] == "fail"
+    assert m.grade_tilt(rt(100, -0.001, 3.0), min_n=60, t_bar=2.0)["verdict"] == "fail"
+    assert m.grade_tilt(rt(30, 0.001, 3.0), min_n=60, t_bar=2.0)["verdict"] == "indeterminate"
+    assert m.grade_tilt(rt(0, None, None), min_n=60, t_bar=2.0)["read_state"] == "no_data"
