@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Alert delivery fix (observability): scripts/check_web_api.py's WARN alert embedded the probe error text ('<urlopen error timed out>'); send_telegram_direct uses parse_mode=HTML, so Telegram answered HTTP 400 and the wedge WARN never arrived (watchdog journal 2026-11-18 22:30:08Z). The message is now html-escaped. Regression test added. No order path, no config. The watchdog unit picks the script up on its next 2-min run after git sync."
+}
