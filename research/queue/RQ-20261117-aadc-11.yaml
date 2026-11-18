@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-11
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future R >= -0.25),
   improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
-status: done
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -155,7 +155,14 @@ related:
 - scripts/research/volcomp_exit_head_bakeoff.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
-last_dispatched_at: '2026-11-17T13:59:56+00:00'
+amendments:
+- at: '2026-11-18'
+  before_any_run: false
+  by: lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)
+  text:
+  - 'HARNESS DEFECT (PI-20261118-MANAYJZO-0001): the replay scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0] = the 0/1 CLASS LABEL into would_exit_for(score < tau 0.10), so it evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED: aadc-12 fired on 16,739 of 18,649 trades). Fixed to predict_proba (branch claude/ml6-exithead-proba-fix, regression test tests/test_exit_head_replay_scores_probability.py). RE-ARMED once on the fixed harness: the earlier result predates the fix and measured a different policy; rule, arms, folds, thresholds and cost stack unchanged. For a held-out read this is a SECOND look at the same held-out symbols and is counted as a new try in the holdout ledger / deflation. The v2-neg25 pin (#26906) cites the pre-fix result; this re-run is its evidence of record.'
+last_dispatched_at: null
+rearmed_at: '2026-11-18T20:30:00+00:00'
 grading:
   auto: false
   decision_rule_id: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
