@@ -22,17 +22,6 @@ decision_rule:
 evidence_class:
   claim: edge
   holdout: in_sample
-grading:
-  attested: RULE-STRUCTURE-EXITS-REVERSE-V1
-  auto: true
-  decision_rule_id: RULE-STRUCTURE-EXITS-REVERSE-V1
-  evidence:
-  - research/results/RQ-20261105-5e05-04/42090558663.jsonl
-  graded_at: '2026-11-05'
-  grader: scripts/research/queue_grade.py
-  reason: 1 row(s), all measured, all pass
-  rows: 1
-  verdict: pass
 id: RQ-20261117-b2f2-35
 intervention_controls:
   not_applicable: Static exit mechanism chosen at entry (declared vs removed); hold is arm A, the leg as declared.
@@ -113,7 +102,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-35
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'TA lever family never tested on trend_donchian_sol: ADX-below trail tighten (--trail-adx-below 20/25 with --trail-adx-tight-mult 2.5) vs the declared leg, net of cost?'
 value:
@@ -125,3 +114,16 @@ why_this_matters: 'Plan node: research/levers/trend_donchian_sol.yaml (testing l
   20 / tight 2.5 on trend_donchian_eth_4h (111.37 vs 88.27 R, 5 of 6 folds) and the lever map for this leg carries no trail_adx_below family. One factor, 2 arms; a PASS is
   a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-18T04:22:50+00:00'
+grading:
+  attested: RULERQ20261117b2f235
+  auto: true
+  decision_rule_id: RULERQ20261117b2f235
+  evidence:
+  - research/results/RQ-20261117-b2f2-35/44236934790.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

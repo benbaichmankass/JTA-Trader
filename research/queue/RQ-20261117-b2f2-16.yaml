@@ -15,21 +15,6 @@ decision_rule:
     by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the
     leg as declared in config/strategies.yaml; candidates SE8/SE12. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
   what_it_does_not_do: Edits no config or roster, places no order, does not test a ratcheting SL or structure TP, does not touch other legs.
-grading:
-  attested: RULE-RQ20261104-7A3E-01-TIGHT-MULT
-  auto: true
-  decision_rule_id: RULE-RQ20261104-7A3E-01-TIGHT-MULT
-  evidence:
-  - research/results/RQ-20261104-7a3e-01/41912001068.jsonl
-  - research/results/RQ-20261104-7a3e-01/41929980235.jsonl
-  - research/results/RQ-20261104-7a3e-01/41951794879.jsonl
-  - research/results/RQ-20261104-7a3e-01/42084896217.jsonl
-  graded_at: '2026-11-05'
-  grader: scripts/research/queue_grade.py
-  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template confirmatory re-run)'
-  reason: 2 row(s), all measured, all fail (3 earlier producer_failed / re-graded wiring_only row(s) superseded)
-  rows: 2
-  verdict: fail
 id: RQ-20261117-b2f2-16
 intervention_controls:
   not_applicable: Static exit geometry chosen at entry by an existing harness flag (--trail-level-tight-mult), not a triggered in-trade action; hold is arm A (the leg as declared).
@@ -125,7 +110,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-16
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'SE lever family never tested on trend_donchian_eth_prop: STALE-EXIT (--stale-exit-bars, peer-tested grid for this bar size) vs the declared leg, net of cost?'
 value:
@@ -137,3 +122,16 @@ why_this_matters: 'Plan node: research/levers/trend_donchian_eth_prop.yaml (test
   reads PASS on peer legs (slv_pullback_1d 3/6 bars, eth_pullback_2h 8/12/20 bars) and the lever map for this leg carries no stale_exit_bars family. One factor, 2 arms; a PASS
   is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-18T05:30:15+00:00'
+grading:
+  attested: RULERQ20261117b2f216
+  auto: true
+  decision_rule_id: RULERQ20261117b2f216
+  evidence:
+  - research/results/RQ-20261117-b2f2-16/44244723119.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
