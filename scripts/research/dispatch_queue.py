@@ -1608,6 +1608,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire
         if pressure["block"]:
             print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
+    # REPO-QUEUED EXEMPT BACKENDS (lane QUEUE-FILL-STANDING-W47, manager 2026-11-18 22:52Z): the repo-queued cap protects
+    # the hosted-runner pool from github_runner load. A backend whose own capacity is not that pool (max_concurrent 1,
+    # its runner job only polls a remote kernel / VM) is not deferred by THAT cap. Infra yield, an unreadable gh and
+    # the in-flight caps are untouched. Empty (the default) = the original behaviour.
+    _exempt_be = frozenset(str(b) for b in ((cfg or {}).get("limits", {}).get("repo_queued_exempt_backends") or []))
+    soft_block = bool(args.fire and pressure.get("block") and pressure.get("block_kind") == "repo_queued" and _exempt_be)
     inflight = int(pressure.get("inflight_research") or 0)
     # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
     state = cr.BackendState(total_inflight=inflight, now=now)
@@ -1634,7 +1640,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # direction where a stamp PR can exist and leaves a context with no GitHub
     # at all on the stamp alone, which is what it had before.
     pending: Optional[Dict[str, str]] = {}
-    if args.fire and args.check_open_stamp_prs and not pressure["block"]:
+    if args.fire and args.check_open_stamp_prs and (not pressure["block"] or soft_block):
         # Not under a backpressure block: every fire is deferred then anyway,
         # and gh must not be called at all under pressure (planted test).
         pending = pending_stamp_units()
@@ -1691,7 +1697,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print("pending stamps (open stamp PRs, treated as dispatched): "
                       + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
     # REFILL 2026-11-03: units fired by a recent cycle whose stamp PR / result row does not exist yet (see fired_run_units).
-    if args.fire and args.check_open_stamp_prs and not pressure["block"] and pending is not None:
+    if args.fire and args.check_open_stamp_prs and (not pressure["block"] or soft_block) and pending is not None:
         _runs = fired_run_units(now)
         if _runs is None:
             print("::warning::research-queue-dispatch could not list recent research runs via gh -- "
@@ -1850,7 +1856,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                                if res is not None and res.ok else f"route={route.state} (dry run)"))
             decisions.append(row)
             continue
-        if pressure["block"]:
+        if pressure["block"] and not (soft_block and res is not None and res.ok and res.backend in _exempt_be):
             row.update(outcome=DEFERRED, reason=pressure["block"])
             decisions.append(row)
             continue
