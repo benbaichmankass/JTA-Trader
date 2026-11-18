@@ -622,6 +622,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ML-ROADMAP-MECE-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | MECE map of ML model families onto the ten trade-lifecycle decisions (D1-D10): per-slot question/baseline/label/harness, position aggregator (Mastiff) design, research dependency graph, compute demand, ranked proposals for Thursday planning. Propose-only. |
 | `docs/plans/UI-SPA-HANDOFF-2026-11-12.md` | history | historical | — | 2026-11-12 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/WATCHDOG-CONSOLIDATION-DESIGN-2026-11-06.md` | plan | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/build-spec-audit-2026-11-18.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ltr-desk-local-student-SPEC-2026-11-15.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/manager-runbooks.md` | instruction | live | — | 2026-11-06 | `name:policy-prescribes / not-assessed` | — |
