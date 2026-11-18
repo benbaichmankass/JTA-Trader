@@ -5,10 +5,12 @@ It receives a batch of SignalPackages and returns a list of sized OrderPackages.
 
 PassthroughAllocator is the default (S1-S4) — it replicates the current
 per-strategy risk.py sizing formula exactly so that when it is wired in S4
-it produces identical results with CENTRALIZED_ALLOCATOR=true.
+it produced identical results.
 
-Feature flag: CENTRALIZED_ALLOCATOR (default false).
-The allocator is NOT wired into the live pipeline until S4 after Tier-2 review.
+NOT wired into the live pipeline. The default-off CENTRALIZED_ALLOCATOR flag and the typed
+dispatch branch it guarded were removed 2026-11-19 (manager decision M1, "no third gate"):
+the flag was unset on the live trader, so live dispatch did not change. Wiring this module in
+again is a normal Tier-2 change to the one dispatch path, never a flag.
 """
 from __future__ import annotations
 

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "Removes the default-off CENTRALIZED_ALLOCATOR flag (manager decision M1, week plan 2026-11-19 §5, under the binding 'no third gate' rule) and the dead typed-dispatch branch it guarded in src/runtime/pipeline.py. Live get-env (#26979, 2026-11-18) reads CENTRALIZED_ALLOCATOR unset on ict-trader-live, so the branch never ran: live dispatch is unchanged. Trader import closure: needs a restart (can ride the next one). Revert: this commit.",
+  "why": "M1: a default-off *_FLAG over a capability is the forbidden third gate. 824 pipeline/allocator/E35 tests pass; the flag's own unit tests (S5) and the S7 test that re-implemented the removed block are deleted with the code they tested; the allocator module and multi_account_execute_typed stay (S6/S7 coordinator tests pass)."
+}
