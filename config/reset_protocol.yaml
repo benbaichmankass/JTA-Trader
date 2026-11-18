@@ -23,6 +23,10 @@
 #   quarterly the first reset of Jan / Apr / Jul / Oct
 # supersedes: when this job is due, the named job is NOT dispatched that reset (one deep audit replaces
 #   the single rotating pass, it does not stack on top of it).
+# paused: true (+ paused_reason, required) skips the job at every reset: reset_protocol.py --plan lists it as
+#   "(not dispatched) <name>: PAUSED: <reason>", and a paused job supersedes nothing. Pausing is an operator act
+#   recorded here; delete the two keys (or set paused: false) to resume. Adds no gate: it only decides whether the
+#   protocol DISPATCHES a lane, as every other field here does.
 # dedupe_tag: the lane tag the manager checks (list_sessions, created in the last dedupe_hours) before
 #   dispatching, so a second trigger or a re-run never double-dispatches.
 # ceiling_usd: API-equivalent dollars, the per-lane comparison unit (NOT the plan-allowance meter).
@@ -119,6 +123,8 @@ jobs:
     dedupe_hours: 24
     brief_trigger: trig_01EmjDpGzpc1GnRJQfToXCW2   # DISABLED legacy routine; its stored prompt IS the lane brief (get_trigger)
     note: Blind-then-reveal grading, $3 cap. Routine trig_01EmjDpGzpc1GnRJQfToXCW2.
+    paused: true
+    paused_reason: 'operator 2026-11-16: "Paused nit retired, until there''s a replacement" -- paused until a replacement exists (CJ-7 row note; set paused: false to resume)'
 
   # ---- monthly: first reset of the calendar month. Caps are PROPOSALS (operator did not name them). ----
   - name: deep-audit
