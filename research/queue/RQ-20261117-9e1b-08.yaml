@@ -103,7 +103,7 @@ run:
   inputs:
     research_unit: RQ-20261117-9e1b-08
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'REGIME lever family never tested on tlt_pullback_1h: cold-vol entry skip VL20/VL30 (--vol-skip-below-pctl 0.2/0.3) vs the declared leg, net of cost?'
 value:
@@ -114,3 +114,16 @@ value:
 why_this_matters: research/levers/tlt_pullback_1h.yaml lists no vol-skip-below (regime) family for this TESTING leg; sibling legs carry the same arms (RQ-20261017-ae17 / RQ-20261031-7b6f
   families). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
 last_dispatched_at: '2026-11-18T15:10:52+00:00'
+grading:
+  attested: RULERQ202611179e1b08
+  auto: true
+  decision_rule_id: RULERQ202611179e1b08
+  evidence:
+  - research/results/RQ-20261117-9e1b-08/44332667728.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
