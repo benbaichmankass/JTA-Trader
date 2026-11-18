@@ -21,7 +21,7 @@ Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-
 |---|---|---|---|---|---|---|
 | 1 | 207f-01 baseline (re-armed) | the bar every P8 candidate must beat | Q4-h2h / Q5 / Q8 authorable | Foxhound-4's edge does not survive the account, so the challenger screen comes first | runner ~3 h | a second producer defect (only the self-test ran here) |
 | 2 | 207f-04 challenger screen (re-armed) | which rostered equity legs earn on the cash book | P8-Q4-h2h | no challenger qualifies | runner ~3 h | n_taken < 30 per leg on one slot |
-| 3 | c21d-06 ATR-neutral target | Foxhound-4's training label | features / horizon on the new label | label family closed | runner ~4 h | no direction edge on the pool |
+| 3 | c21d-06 ATR-neutral target | Foxhound-4's training label | features / horizon on the new label | this target configuration closed (FAIL); the label lever stays open | runner ~4 h | no direction edge on the pool |
 | 4 | P8-Q7-rotation | a challenger built for a one-slot cash book | Stage-0 then head-to-head | — | harness build (new-strategy lane) | dual momentum on a small list is a known, crowded bet |
 
 ## 0. The ask

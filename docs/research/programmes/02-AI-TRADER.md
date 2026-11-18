@@ -46,7 +46,7 @@ Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-
 | # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
 |---|---|---|---|---|---|---|
 | 1 | D10 demote-on-alarm H2: Tier-3 packet | whether a measured decay alarm demotes a leg | proposal | — | 0 | gain concentrated in a few legs |
-| 2 | RQ-20261117-c21d-06 ATR-neutral target (re-armed; P8) | whether Foxhound-4's label is replaced | P8-Q5/Q8 authored on the new label | label family closed for P8 | runner ~4 h | the net-R edge is purely a cost ranking |
+| 2 | RQ-20261117-c21d-06 ATR-neutral target (re-armed; P8) | whether Foxhound-4's label is replaced | P8-Q5/Q8 authored on the new label | this target configuration closed (FAIL); the label lever stays open (cost-neutral or direction head next) | runner ~4 h | the net-R edge is purely a cost ranking |
 | 3 | D2 yz-label consumer test on the TD family | whether the yz head replaces v2 as the regime label | Tier-3 proposal | features recorded as model-quality only | Kaggle CPU | a better label that changes no trades |
 | 4 | ml-tm-action-value action-set lever | whether the TM line has any decision value | confirmation | family-review record | trainer | the line has no edge to find |
 
