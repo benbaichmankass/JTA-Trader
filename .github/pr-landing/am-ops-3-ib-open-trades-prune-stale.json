@@ -1,7 +1,0 @@
-{
-  "tier": 2,
-  "landing": "hold",
-  "hold_reason": "tier2_order_path",
-  "hold_text": "IB order path (src/units/accounts/ib_client.py, trader import closure): the account-wide open-order read now prunes ib_insync's grow-only Trade cache to the reqAllOpenOrders response, so an order cancelled by another client no longer reads as resting coverage. Needs a trader + web-api restart after merge. Lands under the operator's 'Merge + deploy on green' (2026-11-12). Revert: this commit (one function).",
-  "why": "BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW, re-measured 2026-11-18 (70 resting MGC stop lots reported vs one real STP+LMT pair on two fresh reads). The same list feeds has_protective_orders / protection_coverage / list_open_orders, so a dead leg could read as coverage (unsafe) or as over-cover (week plan item 5, PI-20261117-LSFHBH4A-0006)."
-}
