@@ -43,16 +43,20 @@ evidence_class:
   holdout: walk_forward
   claim: model_quality
 power:
-  expected_n: 3000
+  expected_n: 960
   min_detectable_effect: 0.0134
   effect_units: r_multiple
   sd: 0.535
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'sd MEASURED from aadc-11 (~0.535 R per trade). expected_n is an ESTIMATE that depends on the published shards'' span, which this
-    lane could not read (no Kaggle token in the authoring session): aadc-11 reached n 11,160 on the trainer candles; a shorter published
-    window gives fewer OOS trades. Below 3000 the rule returns INDETERMINATE, never a pass.'
+  basis: 'MEASURED on a local end-to-end smoke of this driver (2026-11-18, NOT this unit''s run: Binance Vision 1h klines
+    2020-07-01..2026-09-30 written in the market_raw shape as a stand-in for the published shard, whose span this lane could not read):
+    1,511 harness trades (BTC 438, ETH 716, SOL 357), 54,517 harness-only rows, pooled OOS n 960 (SOL''s folds are under the bake-off''s
+    MIN_FOLD_TEST_N at 59 test trades). sd ~0.535 R per trade from aadc-11. At n ~960 the rule''s 3000 floor is not reached, so the
+    EXPECTED VERDICT IS INDETERMINATE ON POWER, stated before the run; the rule is unchanged. The unit''s job is the route: the row''s
+    done-condition (ML-EXITHEAD-ROWS-KAGGLE) is a MEASURED row from kaggle_cpu, which an indeterminate verdict satisfies. aadc-11''s
+    n 11,160 on the trainer corpus is much larger than this window yields; that gap is unexplained here and is not assumed away.'
   feasibility:
     source: none
     accrual_basis: Replays published market history; nothing accrues.
