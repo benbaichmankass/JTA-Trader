@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Trainer systemd unit ExecStart extended from 3 to 12 crypto feeds (ADA/AVAX/BNB/LINK/BTC 15m; ADA/AVAX/BNB/LINK/ETH/SOL/XRP 5m) so the extend-only refresher owns freshness of every crypto feed the sweeps read. decision: 2026-11-12 operator-popup \"Merge + deploy on green\". Manager merges + installs via scripts/ops/install_trainer_candle_refresh.sh. Revert: git revert.",
+  "why": "PI-20261118-MANAYJZO-0002 step 2: trainer data/ candles stale since 2026-06/07 for 9 of 12 crypto feeds; the daily refresh covered only SOL/XRP/ETH 15m. Extend-only, atomic, no shrink, refuses extra columns. Disk: ~60 B/row; 15m ~2.9k rows/month, 5m ~8.6k rows/month per feed, so the whole 12-feed set grows well under 10 MB/month and the one-time 5-month backfill is a few tens of MB; trainer disk (~84%) stays far below 90%. Gates this adds or changes: none."
+}
