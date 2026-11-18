@@ -184,6 +184,7 @@ jobs:
       payload: ${{ steps.bundle.outputs.payload }}
       dispatched: ${{ steps.flag.outputs.dispatched }}
       deferred: ${{ steps.flag.outputs.deferred }}
+      rearmed: ${{ steps.rearm_inline.outputs.rearmed }}
     env:
       # THE ONE FIRE DECISION. Both consumers below read THIS, never `inputs`
       # directly — see the header. A scheduled run fires; a hand dispatch fires
@@ -468,6 +469,30 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # PI-20261118-JFWRQYOV-0001 (2026-11-18, MEASURED): with work left, the separate `rearm` job waited 6-13 min for a
+      # hosted runner before its 150 s sleep (run 21:16Z: rearm queued 21:21:55Z, started 21:34:39Z), so cycles ran 19-21 min
+      # apart instead of 3-10. With work left, re-arm HERE on the runner this job already holds; the `rearm` job then
+      # only carries the idle (1800 s) heartbeat and the backstop for a cycle that died before this step.
+      - name: Re-arm the next cycle inline (work left)
+        id: rearm_inline
+        if: always() && steps.flag.outputs.fire == 'true' && (steps.flag.outputs.dispatched != '0' || steps.flag.outputs.deferred != '0')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          sleep 60
+          other=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=20" \
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null || echo 0)
+          echo "other dispatch runs waiting to start: ${other}"
+          if [ "${other}" != "0" ]; then echo "another cycle is already pending; not re-arming"; echo "rearmed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if gh workflow run research-queue-dispatch.yml --ref main; then
+            echo "rearmed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::inline re-arm failed; the rearm job is the backstop"
+          fi
+
       # Re-asserts the failure "Grade and dispatch" swallowed via `continue-
       # on-error`, now that the receipt and any real stamps have had their
       # chance to land. The job must still read red on a real problem — this
@@ -506,9 +531,9 @@ jobs:
   # the cron stay as the backstop that restarts the chain if it ever dies. Adds no gate.
   rearm:
     needs: [dispatch]
-    if: ${{ always() && needs.dispatch.result != 'skipped' && needs.dispatch.result != 'cancelled' }}
+    if: ${{ always() && needs.dispatch.result != 'skipped' && needs.dispatch.result != 'cancelled' && needs.dispatch.outputs.rearmed != 'true' }}
     runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       actions: write
       contents: read
