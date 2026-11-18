@@ -1,7 +1,7 @@
 id: RQ-20261016-7769-20
 title: 'P4-Q2 refinement of the 4a4c-06 FAIL: does a MAGNITUDE-weighted, exposure-matched long TILT on ES=F (overweight after cool PPI prints, underweight
   after hot, weight from the surprise''s rank among PRIOR releases) beat the all-long floor net of the MES cost stack? (blocked: rank-tilt arm)'
-status: retired
+status: queued
 cadence: once
 theme: macro
 priority: 1
@@ -110,21 +110,16 @@ related:
 - research/programmes/04-macro-sleeve.yaml
 - scripts/research/macro_event_study_run.py
 - .claude/skills/macro-research/SKILL.md
+practice_precedent: 'T3 + T11 (docs/reference/trading-and-model-practice-principles.md): judge the tilt net of the full cost stack and size by the signal''s rank, not its sign; exposure-matched against the all-long floor (parent record RQ-20261014-4a4c-06).'
 last_dispatched_at: null
 blocked_on:
 - what: 'macro_event_study_run.py has no --book rank_tilt / --rank-warmup arm (MEASURED: its argparse has --trade-horizon/--cost-symbol/--trade-t-bar only,
     2026-10-16); the command above would exit on an unknown argument.'
   ref: checklist MACRO-EVENT-RANKTILT-ARM (Tier-1 research tooling)
   clears_when: the arm lands with a test asserting z uses PRIOR releases only, then git mv this file back to research/queue/ with status queued
-grading:
-  auto: false
-  graded_at: '2026-11-01'
-  grader: session RESEARCH-OPS-20261101-0940 (blocked/ audit)
-  note: 'owner/lever gone: the work item it waited on (MACRO-EVENT-RANKTILT-ARM=dropped) was dropped or
-    killed (bulk reset 2026-10-29 / owner closure) and the lever was never built. Moot as carried; re-file
-    only as a hypothesis-led unit with a stated mechanism (STOP-GENERATED-AUTHORING).'
-  verdict: null
-retired_reason: '2026-11-01 RESEARCH-OPS-20261101-0940 blocked/ audit: owner/lever gone: the work item
-  it waited on (MACRO-EVENT-RANKTILT-ARM=dropped) was dropped or killed (bulk reset 2026-10-29 / owner
-  closure) and the lever was never built. Moot as carried; re-file only as a hypothesis-led unit with
-  a stated mechanism (STOP-GENERATED-AUTHORING).'
+amendments:
+- at: '2026-11-18'
+  before_any_run: true
+  by: AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)
+  text:
+  - 'RE-QUEUED per operator decision D7 (week plan 2026-11-19 section 5, popup "Reopen it (Recommended)"): the row MACRO-EVENT-RANKTILT-ARM was reopened and its lever built (macro_event_study_run.py --book rank_tilt / --rank-warmup, with tests that z uses PRIOR releases only). The 2026-11-01 retirement was "owner/lever gone", not a result; the unit carries its mechanism (rank IC t -3.43 vs sign hit rate 54%) and its rule was registered 2026-10-16 before any rank-tilt number existed. Rule, command and thresholds unchanged; blocked_on is cleared by this landing.'
