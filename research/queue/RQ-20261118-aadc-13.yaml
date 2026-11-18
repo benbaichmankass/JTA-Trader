@@ -166,4 +166,11 @@ related:
 - scripts/research/volcomp_exit_head_bakeoff.py
 - scripts/ml/train_exit_head.py
 - scripts/ml/exit_head_replay.py
+amendments:
+- at: '2026-11-18'
+  before_any_run: false
+  by: lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN)
+  text:
+  - 'PRE-FIX HARNESS (PI-20261118-MANAYJZO-0001): the 2026-11-18T19:04Z dispatch ran before the exit-head replay predict_proba fix (#26911, deployed 20:10Z), so its row research/results/RQ-20261118-aadc-13/44376672320.jsonl (generated 19:38:31Z, PASS: holding_pays_neg25 - champion +0.0203 R/trade, deflated LB +0.0120) scored a P < 0.5 class-label policy, not the served P < 0.10 head, and is INVALIDATED as evidence about the served head (ML-PRIMARY-6 graded it INVALID). RE-ARMED once after #26915 (the aadc-11/12 re-arm) merged, on the fixed replay; rule, arms, folds, thresholds and cost stack unchanged. Counted as a new try in the holdout ledger if it reads held-out symbols.'
 last_dispatched_at: null
+rearmed_at: '2026-11-18T22:05:00+00:00'

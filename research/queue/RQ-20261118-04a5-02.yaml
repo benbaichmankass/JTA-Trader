@@ -1,0 +1,154 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV); docs/plans/ml-week-plan-2026-11-19.md section 1 D6 task 1 / section 4 #3. Slot D6 (Pointer).
+# One factor. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-04a5-02
+title: 'D6 distributional TP head: on the SAME frozen Foxhound-1 held-out decisions, does a per-decision TP at the predicted 60th
+  percentile of forward MFE (LightGBM quantile, SL 2 ATR unchanged) beat the live fixed 3 ATR TP by +0.02 R/decision, paired, net of
+  each symbol''s own cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261117-c21d-02
+  verdict_read: fail
+  diagnosis: 'Every D6 arm so far is a FIXED or cell-chosen TP. Pointer v0 (RQ-20261114-82fd-01 / RQ-20261115-a474-01) and
+    bracket-by-cell (RQ-20261116-089f-03) FAILED: they move ~11.5k trades for a delta near 0. c21d-02 (static TP 4 ATR on the frozen
+    Foxhound-1 held-out decisions, per-symbol cost) FAILED: pooled mean net R -0.0585 (se 0.0110), n 12,088 on 51 symbols. c692-02''s
+    learned per-decision bracket regressed net R over a 24-cell grid and its argmax tracked the best static cell. None of them predicted
+    WHERE THE MOVE RUNS OUT on each decision. A quantile model of forward MFE-before-stop gives the TP as a direct, calibratable
+    prediction (TP doctrine: the TP is a prediction), which is a different information path from regressing net R per cell.'
+  search: 'lever family bracket, mechanism: TP 3 ATR fixed -> TP = clip(q0.60 MFE-before-stop prediction, 1, 6) ATR per decision;
+    SL 2 ATR, decisions, tau, horizon and cost stack fixed; q fixed at 0.60 before the run (no q search)'
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  attempt: 3
+  due_by: '2026-11-22'
+question: 'Holding the frozen Foxhound-1 decisions fixed (tau 0.10), relabel each taken decision with TP at the LightGBM q=0.60
+  quantile of its forward MFE-before-stop (fit on rows whose label ends before the held-out window, embargo 25 h), SL 2 ATR unchanged.
+  Is the paired per-decision net R difference vs the same decision at TP 3 ATR >= +0.02 R with a CI lower bound > 0?'
+why_this_matters: 'D6 has no live model; ml_entry rests a fixed 3 ATR TP. A pass is the first learned TP that pays on the held-out
+  year and the evidence for a data-backed Tier-3 bracket proposal for ml_entry; a fail closes the quantile-TP mechanism on this entry
+  model and leaves D6 waiting for a positive-net entry model (D3).'
+power:
+  expected_n: 12000
+  min_detectable_effect: 0.02
+  effect_units: R_per_decision
+  sd: 0.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: same decisions as 2e3b-01 / c21d-02 (n 12,746 / 12,088). sd of the PAIRED difference is unmeasured; a TP change
+    alters only the trades whose path crosses one TP and not the other, so it is well below the per-trade sd (~0.9 R). At sd 0.5 and n
+    12,000 the z 1.96 half-width is ~0.009 R, so +0.02 is resolvable; if the paired sd is ~0.9 the half-width is ~0.016 R and a
+    +0.02 mean is still a PASS only with CI lower > 0.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines + fundingRate; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: 'where ml_entry places its take-profit at entry (fixed 3 ATR today)'
+  legs: [ml_entry]
+  book: money
+baseline:
+  definition: 'The live bracket on the SAME taken decisions: SL 2 ATR / TP 3 ATR / 24 h time stop, frozen Foxhound-1 boosters, tau
+    0.10, per-symbol cost stack (fee 11 + max(3, spread + sqrt impact) + own |funding| per 8 h) - i.e. the 2e3b-01 read.'
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_population_test.py
+  - run
+  - --tp-model
+  - quantile
+  - --tp-q
+  - '0.60'
+  - --rule-id
+  - RULE-RQ20261118-04a5-02-QUANTILE-MFE-TP
+  - --cache
+  - /tmp/ml_entry_population_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261118-04a5-02
+decision_rule:
+  id: RULE-RQ20261118-04a5-02-QUANTILE-MFE-TP
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: the same taken decisions at the fixed 3 ATR TP (2e3b-01 harness)
+  statistic: 'scripts/research/ml_entry_population_test.py run --tp-model quantile --tp-q 0.60: the 2e3b-01 population, window
+    2025-10-01..2026-10-31, frozen boosters, tau from model.json. Per side, a LightGBM quantile regressor (alpha 0.60, LGB_PARAMS,
+    label = MFE-before-stop in ATR over 24 h winsorised at 10, features = the frozen ENTRY features) fit on rows whose 24 h label ends
+    before 2025-10-01 (embargo HORIZON_H + 1 = 25 h). Each window decision is relabelled through ml_decision_entry.label_symbol with
+    TP = clip(prediction, 1, 6) ATR (same first passage, tie to SL, gap fill) and re-costed per symbol. d = net R (quantile TP) - net
+    R (TP 3) on each decision TAKEN by the TP-3 policy; mean, se (one decision = one cluster), CI at z 1.96. Reported: TP reach rate
+    both arms, predicted-TP quantiles, calibration (share of window rows with realised MFE >= predicted q, target 0.40), the arm''s
+    own sequential-policy summary (context, never gating). Read claimed in the holdout ledger before any summary.'
+  rule: 'PASS iff paired n >= 300 (harness N_MIN) AND mean d >= +0.02 R/decision AND CI lower bound > 0. FAIL iff n >= 300 AND CI upper
+    bound < +0.02. INDETERMINATE otherwise. q (0.60), clip [1, 6] ATR, MFE cap, embargo, window and features are fixed now, never
+    changed after any result.'
+  pass_action: 'A fresh-window confirmation unit first (the first months after 2026-10-31 at the same rule), then a data-backed Tier-3
+    proposal: ml_entry TP placed by the quantile head at entry (a TP-doctrine record: tp_intent = predicted q0.60 MFE), with this
+    record and the confirmation.'
+  fail_action: 'The quantile-TP mechanism is closed on Foxhound-1 for q 0.60; record it on research/levers/ml-brackets.yaml. Next D6
+    lever only after a positive-net entry model (D3); a distributional head of MAE for the SL is a separate unit, not a re-run.'
+  proposal_mapping: 'pass -> confirmation then Tier-3 bracket proposal; fail -> mechanism closed; indeterminate -> state why (n or
+    between bars) and stop, no re-run at another q.'
+  what_it_does_not_do: 'Changes no SL, no tau, no entry decision; moves no TP in-trade (Labrador-1b, D7); serves nothing; no order, no
+    config; adds no gate. Ignores the occupancy change a different exit would cause (paired on the TP-3 policy''s decisions), said so;
+    the arm''s own sequential policy is reported as context.'
+  min_n: 300
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry is the real-money learned leg; a TP that pays is material, but every prior D6 arm was ~0.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'the control is the live 2/3 bracket on the identical decisions (paired); only the TP level differs'
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; a TP rule applied to FIXED decisions selects no trades, so the paired TP-3 arm is the control.
+      The harness reports its own matched-random ENTRY baseline (50 draws) as context.'
+  best_static:
+    grid:
+    - TP 3 ATR (live, fixed)
+    - TP 4 ATR (c21d-02, FAIL)
+    excludes_test_folds: true
+    note: the quantile head is fit only on rows whose label ends before the held-out window; nothing is tuned on the window
+  bootstrap_group: trade
+practice_precedent: 'brackets as predictions (TP doctrine; tp_prediction_derive.py reach calibration), RQ-20261112-2e3b-01 harness and
+  cost stack, RQ-20261117-c21d-02 baseline; docs/plans/ML-ROADMAP-MECE-2026-11.md § 3 D6; M6, M13 in
+  docs/reference/trading-and-model-practice-principles.md.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 90
+  why_runner: 'Keyless public Binance Vision data; frozen boosters and two LightGBM quantile fits on CPU.'
+  basis: 'MEASURED shape from 2e3b-01 / c21d-02 (~60 min); ESTIMATE +30 min for the second labelling pass and two quantile fits
+    (subsampled to <= 400k rows per side).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261117-c21d-02.yaml
+- research/queue/RQ-20261112-2e3b-01.yaml
+- research/queue/blocked/RQ-20261101-c692-02.yaml
+- scripts/research/ml_decision_entry.py
+last_dispatched_at: null

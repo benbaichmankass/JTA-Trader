@@ -4,6 +4,30 @@
 
 Numbers marked MEASURED were measured in this lane on 2026-10-14 from the file or command named beside them. Re-run the command rather than quoting the figure. Seeds: [`.claude/skills/perf-followup/SKILL.md`](../../../.claude/skills/perf-followup/SKILL.md) (the four tracks), `comms/reviews/performance-review-20261010-191000.json` and its follow-up record `comms/perf_followup/perf-followup-20261010-191000.json`, `research/THEMES.yaml`, `research/queue/PLANNING.md`, `docs/roadmap/milestones.yaml`.
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P3 in the window:** 42 programmed units (10 pass, 10 fail, 22 ungraded, mostly the weekly generated sweeps) plus the forming-bar re-measures (f251), assigned here.
+
+**What was learned**
+- **Two iteration-3 holdouts confirmed and one failed.** htf_pullback_trend_2h adx_min 30 confirmed on the closed bar (112-001). spy_pullback_1h's discovery-selected filter confirmed (112-003). trend_donchian_1h's declared config failed its holdout (112-002).
+- **The closed-bar evidence of some legs does not hold on the forming bar.** In f251-01, htf_pullback_trend_2h and trend_donchian_1h both **fail** RULE-D1 on the bar live trades. htf therefore passed one holdout and failed the live-bar read in the same week: no promotion proposal until its arm is re-read on the forming bar. Survivors on the forming bar: trend_donchian_eth_4h, sol_4h, sol_prop, eth_pullback_2h, sol_pullback_2h. Equities (f251-02): 5 pass, 1 fail, 5 indeterminate (n<10 on 1d legs), 2 not attempted.
+- **New-symbol 4h Donchian cells are an independent bet.** P3-Q8 Stage B (RQ-20261117-003) gives N_eff >= 3.0 of 8, so a pooled population-widening case for trend_donchian_eth_4h can go to the manager.
+
+**Failed tests: diagnosis.** htf closed-bar PASS vs forming-bar FAIL is *harness / decision bar* (the edge depends on reading the closed bar), with *noise* as the rival. The variant is 112-001's arm on the forming-bar harness. trend_donchian_1h fails both reads, so its declared config is closed; the leg returns to entry diagnosis (session and regime_gating are untested).
+
+**Answered:** P3-Q8-new-symbols, P3-ITER3 ×3. **Retired:** none. **Orphan authored:** `P3-ITER-qqq-pullback-1h-session-holdout` (session skip, select-then-confirm; spy declares skip 19,20).
+
+**Next 3–4 weeks**
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | P3-Q1-live-bt-stage-b (blocked on LIVE-BT-STAGE-B, queued since 2026-10-16, no PR) | why real-money xrp/ada pullback run below backtest | fix the named gap | — | build | highest-money node, still waiting on a build nobody owns |
+| 2 | htf_pullback_trend_2h AD30 on the forming bar | whether htf goes to a promotion proposal | proposal | the leg returns to diagnosis | runner | the forming-bar harness lacks the structure-exit removal |
+| 3 | P3-ITER-qqq-pullback-1h-session-holdout | session lever in the qqq packet | Tier-3 declare | session family tested | runner 1 h | too few bars skipped to matter |
+| 4 | trend_donchian_eth_4h pooled widening (N_eff PASS) | population widening on real money | Tier-3 case with its own population test | — | — | the six alts co-move with the live legs in drawdowns |
+| 5 | Entry / filter / direction cells from the spec list | next untested family per leg | confirmation | tested at power | kaggle_cpu | see P1 |
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

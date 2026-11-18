@@ -117,7 +117,7 @@ def main(argv):
                          "exit (operator promotion gate - E3)")
     # P4.2/P4.3 — export the retargeted peak-is-in head (extended features).
     ap.add_argument("--target", default="holding_pays",
-                    choices=["holding_pays", "peak_is_in"])
+                    choices=["holding_pays", "peak_is_in", "holding_pays_neg25"])
     ap.add_argument("--features", default="base", choices=["base", "extended"])
     ap.add_argument("--policy", default="below_half_r",
                     choices=["below_half_r", "peak_full", "peak_winner"],

@@ -595,9 +595,26 @@ def add_feature_block(ev: List[dict], trades: List[dict], block: Optional[str]) 
             e["X1"] = np.c_[(e["X1"], *[f(t) for f in fns])]
 
 
-def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int):
+def lgbm_params_for(quantile: Optional[float]) -> Dict[str, Any]:
+    """RQ-20261118-04a5-07 (D7 label lever): `quantile` None -> the shipped mean regression (LGBM_PARAMS unchanged);
+    a float in (0, 1) -> objective "quantile" at that alpha: each action head predicts a conservative QUANTILE of the per-state
+    action value instead of its mean, so the act-margin rule fires only where even that quantile clears the margin."""
+    if quantile is None:
+        return dict(LGBM_PARAMS)
+    if not 0.0 < float(quantile) < 1.0:
+        raise ValueError(f"lgbm quantile alpha must be in (0, 1), got {quantile!r}")
+    return dict(LGBM_PARAMS, objective="quantile", alpha=float(quantile))
+
+
+#: set once from --lgbm-quantile in main(); None reproduces every earlier unit byte for byte
+LGBM_QUANTILE: Optional[float] = None
+
+
+def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int, quantile: Optional[float] = None):
     import lightgbm as lgb   # native API: the runner installs lightgbm without scikit-learn on some paths
-    return lgb.train(dict(LGBM_PARAMS, seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
+    q = LGBM_QUANTILE if quantile is None else quantile
+    # provenance: lgb.train regression/quantile -> Booster.predict is the predicted action value (R), not a probability
+    return lgb.train(dict(lgbm_params_for(q), seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
 
 
 def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -> Dict[str, Any]:
@@ -1338,6 +1355,24 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
                 d_ = np.nanmax(np.abs(a_[k_] - b_[k_])) if np.isfinite(a_[k_]).any() else 0.0
                 worst_h = max(worst_h, float(d_) if same_nan else np.inf)
         checks.append(("horizon label == full label when H >= the remaining bars", worst_h <= 1e-12, f"max |diff| {worst_h}"))
+        # 2d. quantile objective (RQ-20261118-04a5-07): the shipped default is the mean regression; alpha 0.3 predicts a
+        # conservative quantile (below the mean head on skewed noise); an alpha outside (0, 1) is refused.
+        try:
+            _rq = np.random.default_rng(5)
+            _Xq = _rq.normal(size=(1500, 3))
+            _yq = 0.3 * _Xq[:, 0] + _rq.exponential(1.0, 1500) - 1.0
+            _pm = _fit_lgbm(_Xq, _yq, 3, quantile=None).predict(_Xq)
+            _pq = _fit_lgbm(_Xq, _yq, 3, quantile=0.3).predict(_Xq)
+            try:
+                lgbm_params_for(1.5)
+                _refused = False
+            except ValueError:
+                _refused = True
+            checks.append(("lgbm quantile 0.3 head sits below the mean head; default objective is regression; bad alpha refused",
+                           bool(np.mean(_pq) < np.mean(_pm)) and lgbm_params_for(None)["objective"] == "regression" and _refused,
+                           f"mean q30 {np.mean(_pq):.3f} vs mean {np.mean(_pm):.3f}"))
+        except ImportError as exc:  # allow-silent: lightgbm absent -> the check is recorded as not passing, never skipped as clean
+            checks.append(("lgbm quantile objective check", False, f"lightgbm unavailable: {exc!r}"))
         short = [t for t in TT[:60] if t["bars"] > 6]
         moved = sum(int(np.nanmax(np.abs(label_trade(t, cost_, horizon=2)["labels"]["close"] -
                                          label_trade(t, cost_)["labels"]["close"])) > 1e-9) for t in short)
@@ -1502,11 +1537,20 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="the bp2-... corpus_id the train corpus directory must carry, manifest trade_key hash matching (else indeterminate)")
     ap.add_argument("--min-train-trades", type=int, default=0,
                     help="indeterminate if any fold's de-duplicated, purged train pool has fewer trades than this")
+    ap.add_argument("--lgbm-quantile", type=float, default=None,
+                    help="RQ-20261118-04a5-07: fit lgbm_action_value heads with objective quantile at this alpha (default: mean regression)")
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
     if a.label == "horizon" and not (a.horizon and a.horizon > 0):
         ap.error("--label horizon needs --horizon N > 0")
+    global LGBM_QUANTILE
+    if a.lgbm_quantile is not None:
+        try:
+            lgbm_params_for(a.lgbm_quantile)
+        except ValueError as exc:
+            ap.error(str(exc))
+    LGBM_QUANTILE = a.lgbm_quantile
     if a.train_sample_mult is not None and not (a.train_sample_mult > 0 and a.train_corpus):
         ap.error("--train-sample-mult needs K > 0 and --train-corpus")
     if a.cmd == "selfcheck":
@@ -1532,7 +1576,8 @@ def main(argv: Optional[List[str]] = None) -> int:
            f"{sum(r['state'] == 'included' for r in test['legs'])} legs passing the peak_r==mfe_r parity control; "
            + (f"train corpus {train['corpus_id']} ({train['source']}), {len(train['trades'])} trades, cross-symbol purged; "
               if train else "") + f"as traded (harness paths), full cost stack, {a.folds} purged calendar folds by entry")
-    meas: Dict[str, Any] = {"schema": SCHEMA, "selfcheck": sc, "test_corpus": {k: test[k] for k in
+    meas: Dict[str, Any] = {"schema": SCHEMA, "selfcheck": sc, "lgbm_objective": lgbm_params_for(LGBM_QUANTILE)["objective"],
+                            "lgbm_quantile_alpha": LGBM_QUANTILE, "test_corpus": {k: test[k] for k in
                             ("corpus_id", "source", "legs", "failed", "runs", "parity_ok")}}
     if train:
         meas["train_corpus"] = {k: train[k] for k in ("corpus_id", "source", "legs", "failed", "parity_ok", "materialise")}

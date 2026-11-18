@@ -157,6 +157,29 @@ Common to every rung:
 
 A FAIL is written with its number and closes only the line its rule names. It never closes the family ("first test failed → variants queued", exit-refinement § "Reading a FAIL").
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P1 in the window:** 62 programmed units (22 pass, 35 fail, 1 ind, 4 ungraded), most of them lever-transfer cells (b2f1/b2f2) and the qqq/tlt/spy 1h exit iterations.
+
+**What was learned**
+- **Exit levers transfer across the 1h equity pullback legs, one at a time.** On qqq_pullback_1h the trail-mult 4.0 arm (f090-02), the ADX-below tighten (b2f2-25) and trend_lookback 75 (2411-01, re-read on 2018-06..2021-10 pre-development history in b3aa-03) each passed on data the selection did not see; on spy_pullback_1h the stale exit and ADX tighten passed (b2f2-10/-29). Denominator: the b2f2 batch passed 6 of 22 cells. At ~3 arms per cell that is not far above what noise produces, so every one of these is a discovery that needs its own confirmation.
+- **The forming-bar re-measure changes which exit results count.** f251-01 re-ran 14 crypto legs on the bar live actually trades: 5 still pass RULE-D1, 6 fail, 3 are indeterminate. htf_pullback_trend_2h, trend_donchian_1h, ada/avax 4h and eth_pullback_prop_2h fail there. An exit lever that only helps a leg whose edge does not hold on the forming bar improves nothing.
+
+**Failed tests: diagnosis.** The lever-transfer fails (28 of 38 cells in b2f1/b2f2) look like *idea / transfer*, with *noise* as the competing explanation: a lever that passed on a peer meets a different exit geometry. The variant is to grid each lever by the leg's own bar size and ATR horizon, not the peer's. That rule is written into the queue-fill spec list.
+
+**Answered:** P1-Q4-qqq-trend-long-1d-soak-confirm (b2f2-26). **Retired:** none.
+
+**Next 3–4 weeks (value-ranked)**
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | Exit / session cells from `comms/research/programme_review/20261118-unit-specs.json` (queue-fill lane) | which untested family each testing leg tries next; the evidence any retirement case needs | one disjoint-window confirmation, then a Tier-3 declare proposal | family marked tested at power for that leg | kaggle_cpu, ~0.7 h each | a peer grid that does not fit the leg's bar size |
+| 2 | Forming-bar control for exit levers on htf_pullback_trend_2h / trend_donchian_1h | whether those legs' exit results are real on the live bar | lever reads stand | the leg goes back to entry diagnosis | runner | the forming-bar harness may not model the trail |
+| 3 | D10 demote-on-alarm (P2 → P1 feed) | demotion rule for live legs | Tier-3 proposal | — | 0 | the gain may sit in a few legs: the proposal shows the per-leg spread |
+
+**Feeds:** P2 → P1: D10 decay alarm (aadc-05/-07) is a demotion-rule candidate. P3 → P1: forming-bar survivors decide which exit work counts.
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

@@ -1,0 +1,136 @@
+id: RQ-20261118-abab-71
+title: 'Symbol holdout for the trend_donchian_1h LONG-only lead (abab-48): does the side filter ''long'' beat both sides on XRPUSDT 1h, with the leg''s config-exact twin?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On XRPUSDT 1h (the leg trend_donchian_1h's config applied to XRPUSDT via --symbol, a config-exact twin), 2020-07-01..2026-10-15, does the LONG-only arm beat the both-sides incumbent A by the registered
+  replace rule (net R above A and by >= 0.02 R x n, >= 4 of 6 folds, maxDD <= A x 1.35, n >= 39), net of the harness cost stack?
+why_this_matters: 'abab-48 passed on BTCUSDT only. A PASS on one window and one symbol is a discovery, not a confirmation (research-ops step D); this is its symbol holdout, the in-hand form of a disjoint
+  window (research-ops, RESEARCH ITERATES ON IN-HAND DATA). abab-48 (trend_donchian_1h on BTCUSDT 1h, 2020-07-01..2026-10-15, n=986 both-sides baseline A): the LONG-only arm PASSED the registered replace
+  rule: net R +47.6 vs A +16.1 (delta +31.5 R), 5 of 6 folds at or above the incumbent, max drawdown 40.8 R inside the 45.2 R cap; the SHORT arm lost -91.3 R and was below the incumbent in 5 of 6 folds.
+  A closed-bar read. Diagnosis: a one-window discovery (best of 2 arms) on one symbol with a strong asymmetry: the short side loses in every fold but the last. Over this window crypto drifted up, so long-biased
+  filters can win by market beta alone; the cheapest in-hand test of ''long side beats both sides for this rule'' is the SAME rule on other symbols the leg was never selected on. Correlated evidence (all
+  perps share the market factor), said so.'
+power:
+  expected_n: 80
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n=80 is an ESTIMATE from the sibling unit RQ-20261117-b2f2-14 on this leg, NOT a measurement; below 39
+    the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar is a materiality bar, not a powered effect: a PASS is a discovery lead and a FAIL closes the configuration only.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on a pinned in-hand window; nothing accrues.
+decision_rule:
+  id: RULERQ20261118abab71
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_1h --grade replace, the sibling window and folds of RQ-20261117-b2f2-14 (same leg, same flags) by entry time, net of the full cost
+    stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared in config/strategies.yaml; candidates LONG, SHORT.
+    Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'CONFIRMATION of abab-48 on XRPUSDT: INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >=
+    0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 2 candidate arm(s) here) and the
+    follow-up is ONE confirmation unit on a disjoint in-hand window, then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes with
+    n(A) >= 39: THIS arm grid is closed on trend_donchian_1h for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved closest.
+    Thresholds and the arm grid are not changed after any result. Unit-level verdict only; the iteration pass reads the four symbol holdouts (ETH, SOL, XRP, BNB) together: the lead is CONFIRMED as a population
+    read iff >= 3 of the 4 PASS, and it is then still correlated evidence (one market factor), never a promotion case. A FAIL here closes the LONG-only filter on XRPUSDT for this window; the family stays
+    open.'
+  what_it_does_not_do: 'Edits no config and no roster, is not a promotion case. The trend_donchian_1h family is a CLOSED-BAR read (the leg''s closed-bar record fails when re-measured on the forming bar,
+    RQ-20261113-f251-01); this is not live-bar evidence. A long-only filter is also a beta bet in a rising market: a PASS does not separate edge from drift. Not run before registration.'
+practice_precedent: 'M13 and R1 (docs/reference/trading-and-model-practice-principles.md): confirm a one-window discovery on untouched in-hand data registered before the run (a symbol holdout, correlated
+  evidence, said so); the discovery denominator is 2 arms (LONG, SHORT) on one symbol'
+intervention_controls:
+  not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+iteration:
+  subject: trend_donchian_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261118-abab-48
+  verdict_read: pass_unconfirmed
+  diagnosis: 'abab-48 (trend_donchian_1h on BTCUSDT 1h, 2020-07-01..2026-10-15, n=986 both-sides baseline A): the LONG-only arm PASSED the registered replace rule: net R +47.6 vs A +16.1 (delta +31.5 R),
+    5 of 6 folds at or above the incumbent, max drawdown 40.8 R inside the 45.2 R cap; the SHORT arm lost -91.3 R and was below the incumbent in 5 of 6 folds. A closed-bar read. Diagnosis: a one-window
+    discovery (best of 2 arms) on one symbol with a strong asymmetry: the short side loses in every fold but the last. Over this window crypto drifted up, so long-biased filters can win by market beta alone;
+    the cheapest in-hand test of ''long side beats both sides for this rule'' is the SAME rule on other symbols the leg was never selected on. Correlated evidence (all perps share the market factor), said
+    so.'
+  search: 'One factor: the side filter ''long'' vs both sides on XRPUSDT, same window, folds and rule as abab-48.'
+  levers:
+  - direction
+  map_entries:
+  - research/levers/trend_donchian_1h.yaml
+  attempt: 2
+  due_by: '2026-11-25'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: structural
+  basis: 'stand-in: the real-money trend legs'' direction lever; an estimate, not a measurement'
+routing:
+  basis: 'MEASURED runtime of this harness: abab-20 1.5 min and abab-38 7.5 min wall (1 cell, 3 arms, GitHub runner incl. ~1 min setup); a 1h, 2330-day window is the heavier end; est 12 min. est_minutes
+    overstates runtime ~8x elsewhere (PI-20261118-EFILLW47-0002).'
+  est_minutes: 12
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: '2330-day window: longer than the published candle dataset''s days_built for 1h feeds, and ETH/SOL/XRP/BNB feeds are fetched from Binance Vision; the Kaggle kernel has no internet (see PI-20261118-EFILLW47-0003).
+    CPU only.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_1h
+  - --symbol
+  - XRPUSDT
+  - --arm
+  - A=
+  - --arm
+  - LONG=--side-filter=long
+  - --arm
+  - SHORT=--side-filter=short
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --research-unit
+  - RQ-20261118-abab-71
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261118-abab-71
+  timeout_minutes: 150
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- RQ-20261118-abab-48
+- RQ-20261117-b2f2-14
+- research/levers/trend_donchian_1h.yaml
+evidence_class:
+  holdout: holdout_window
+  claim: edge

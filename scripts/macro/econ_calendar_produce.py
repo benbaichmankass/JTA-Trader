@@ -160,13 +160,17 @@ def rows_from_captures(captures_dir: Path) -> tuple[list[dict], list[dict]]:
 
 
 def _latest_upcoming(pit_rows: list[dict]) -> list[dict]:
-    """The newest-observed forward (``scheduled``) events per (country, event_id) —
-    the current forward calendar, for the observe-only ``upcoming.json``."""
+    """The newest-observed forward (``scheduled``) release per (country, event_id, event_name) —
+    the current forward calendar, for the observe-only ``upcoming.json`` and the news config."""
     latest: dict[tuple, dict] = {}
     for r in pit_rows:
         if r.get("status") != "scheduled":
             continue
-        key = (r.get("country"), r.get("event_id"))
+        # One entry per RELEASE, not per event_id: a decision day carries several releases under one event_id
+        # (2026-12-09: rate decision 19:00Z, statement 19:00Z, projections 19:00Z, press conference 19:30Z) and keying on the
+        # id alone kept only the last-observed one, so the config lost the 19:00Z decision (CALENDAR-FOMC-RELEASE-SPLIT).
+        # A rescheduled release keeps its name, so the newest observation still replaces the old time.
+        key = (r.get("country"), r.get("event_id"), r.get("event_name"))
         prev = latest.get(key)
         if prev is None or str(r.get("observed_at", "")) >= str(prev.get("observed_at", "")):
             latest[key] = r

@@ -1,0 +1,1076 @@
+{
+ "generated": "2026-11-18 PROGRAMME-REVIEW-20261118",
+ "population": "lever_coverage of 76 subjects (iteration_orphans via research_ops_checks); 53 legs with a prior exit_lever_ablation unit",
+ "skipped": {
+  "family_not_flag_runnable:entry": 27,
+  "family_not_flag_runnable:symbol_set": 41,
+  "no_harness_unit": 31,
+  "family_not_flag_runnable:timeframe": 39,
+  "family_not_flag_runnable:sizing_vs_cost": 32,
+  "family_not_flag_runnable:regime_gating": 28,
+  "family_not_flag_runnable:session": 18
+ },
+ "specs": [
+  {
+   "subject": "fade_breakout_4h",
+   "family": "exit",
+   "arms": {
+    "SE6": "--stale-exit-bars=6",
+    "SE12": "--stale-exit-bars=12",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-04",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 133,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for fade_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fade_breakout_4h",
+   "family": "filter",
+   "arms": {
+    "VH90": "--vol-skip-above-pctl=0.9",
+    "VL20": "--vol-skip-below-pctl=0.2",
+    "AX40": "--adx-max=40"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-04",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 112,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family filter marked tested at power for fade_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fade_breakout_4h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-04",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 91,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for fade_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fade_breakout_4h",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-04",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 91,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for fade_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fvg_range_15m",
+   "family": "filter",
+   "arms": {
+    "VH90": "--vol-skip-above-pctl=0.9",
+    "VL20": "--vol-skip-below-pctl=0.2",
+    "AX40": "--adx-max=40"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-05",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 80,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family filter marked tested at power for fvg_range_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fvg_range_15m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-05",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 65,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for fvg_range_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "fvg_range_15m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-dc44-05",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 65,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for fvg_range_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "gdx_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2021-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f1-01",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for gdx_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "gld_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3180",
+    "start": "2018-03-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261110-73de-05",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for gld_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "htf_pullback_trend_2h",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-20",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for htf_pullback_trend_2h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "iaum_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3180",
+    "start": "2018-03-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261111-203c-06",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for iaum_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_5m",
+   "family": "exit",
+   "arms": {
+    "SE8": "--stale-exit-bars=8",
+    "SE12": "--stale-exit-bars=12",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-028",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 114,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for ict_scalp_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_5m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-028",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_5m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-028",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_avax_5m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "760",
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-10",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_avax_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_avax_5m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "760",
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-10",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_avax_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_mgc_15m",
+   "family": "exit",
+   "arms": {
+    "SE8": "--stale-exit-bars=8",
+    "SE12": "--stale-exit-bars=12",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "2900",
+    "start": "2019-01-01",
+    "end": "2026-10-31 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-12",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 76,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for ict_scalp_mgc_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_mgc_15m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2900",
+    "start": "2019-01-01",
+    "end": "2026-10-31 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-12",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_mgc_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_mgc_15m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "2900",
+    "start": "2019-01-01",
+    "end": "2026-10-31 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-12",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_mgc_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_sol_15m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-032",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_sol_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_sol_15m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-032",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_sol_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_sol_5m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "760",
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-13",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_sol_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_sol_5m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "760",
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-9e1c-13",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_sol_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_xrp_15m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-034",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_xrp_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_xrp_15m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-034",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_xrp_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_xrp_5m",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-035",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ict_scalp_xrp_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ict_scalp_xrp_5m",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261105-035",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for ict_scalp_xrp_5m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "ief_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2021-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f1-02",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for ief_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "iwm_trend_long_1d",
+   "family": "exit",
+   "arms": {
+    "SE3": "--stale-exit-bars=3",
+    "SE6": "--stale-exit-bars=6",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-021",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 114,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for iwm_trend_long_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "mgc_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3090",
+    "start": "2018-06-01",
+    "end": "2026-11-12 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-22",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for mgc_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "mgc_trend_1h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3080",
+    "start": "2018-06-01",
+    "end": "2026-10-26 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f2-23",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for mgc_trend_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "mgc_trend_1h",
+   "family": "session",
+   "arms": {
+    "S_OPEN": "--skip-hours=13,14",
+    "S_CLOSE": "--skip-hours=19,20"
+   },
+   "window": {
+    "days": "3080",
+    "start": "2018-06-01",
+    "end": "2026-10-26 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f2-23",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for mgc_trend_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "mhg_pullback_1d",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3090",
+    "start": "2018-06-01",
+    "end": "2026-11-12 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-24",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for mhg_pullback_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "qld_trend_long_1d",
+   "family": "exit",
+   "arms": {
+    "SE3": "--stale-exit-bars=3",
+    "SE6": "--stale-exit-bars=6",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-006",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 114,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for qld_trend_long_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "qld_trend_long_1d",
+   "family": "filter",
+   "arms": {
+    "VH90": "--vol-skip-above-pctl=0.9",
+    "VL20": "--vol-skip-below-pctl=0.2",
+    "AX40": "--adx-max=40"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-006",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 96,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family filter marked tested at power for qld_trend_long_1d (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "sol_pullback_2h",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261115-bf1b-18",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for sol_pullback_2h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "spy_pullback_1h",
+   "family": "session",
+   "arms": {
+    "S_OPEN": "--skip-hours=13,14",
+    "S_CLOSE": "--skip-hours=19,20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b3aa-05",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for spy_pullback_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "squeeze_breakout_4h",
+   "family": "exit",
+   "arms": {
+    "SE6": "--stale-exit-bars=6",
+    "SE12": "--stale-exit-bars=12",
+    "BE1": "--be-floor-r=1.0",
+    "TA20": "--trail-adx-below=20"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-014",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 114,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family exit marked tested at power for squeeze_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "squeeze_breakout_4h",
+   "family": "filter",
+   "arms": {
+    "VH90": "--vol-skip-above-pctl=0.9",
+    "VL20": "--vol-skip-below-pctl=0.2",
+    "AX40": "--adx-max=40"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-014",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 96,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family filter marked tested at power for squeeze_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "squeeze_breakout_4h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-014",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for squeeze_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "squeeze_breakout_4h",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261106-014",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for squeeze_breakout_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-32",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_1h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-14",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_1h",
+   "family": "session",
+   "arms": {
+    "S_LATE": "--skip-hours=20,21,22,23",
+    "S_ASIA": "--skip-hours=0,1,2,3,4,5,6,7"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-14",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for trend_donchian_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_eth",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-34",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_eth (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_eth_prop",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-16",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 117,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_eth_prop (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_sol",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-35",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 30,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_sol (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_sol_4h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261115-bf1b-24",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 78,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_sol_4h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "trend_donchian_xrp_adx25",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "2330",
+    "start": "2020-07-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b2f2-36",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for trend_donchian_xrp_adx25 (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "turtle_soup",
+   "family": "filter",
+   "arms": {
+    "VH90": "--vol-skip-above-pctl=0.9",
+    "VL20": "--vol-skip-below-pctl=0.2",
+    "AX40": "--adx-max=40"
+   },
+   "window": {
+    "days": "1830",
+    "start": null,
+    "end": null,
+    "non_crypto_source": null
+   },
+   "window_copied_from": "RQ-20261117-b3aa-02",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 96,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family filter marked tested at power for turtle_soup (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "uso_trend_1h",
+   "family": "direction",
+   "arms": {
+    "LONG": "--side-filter=long",
+    "SHORT": "--side-filter=short"
+   },
+   "window": {
+    "days": "3060",
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f2-37",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for uso_trend_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  },
+  {
+   "subject": "uso_trend_1h",
+   "family": "session",
+   "arms": {
+    "S_OPEN": "--skip-hours=13,14",
+    "S_CLOSE": "--skip-hours=19,20"
+   },
+   "window": {
+    "days": "3060",
+    "start": "2018-06-01",
+    "end": "2026-10-15 23:59",
+    "non_crypto_source": "dukascopy"
+   },
+   "window_copied_from": "RQ-20261117-b2f2-37",
+   "grade": "replace",
+   "rule": "--delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39 (the QUEUE-FILL-LEAN-2 b2f2 shape)",
+   "est_minutes": 52,
+   "backend": "kaggle_cpu",
+   "decision": "PASS -> a disjoint-window/holdout confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for uso_trend_1h (lever map), next pass moves to the next untested family; contributes to lever-exhaustion for any retirement case"
+  }
+ ],
+ "dropped": {
+  "already_live_unit": 5,
+  "long_only_by_design": 8
+ }
+}

@@ -2,6 +2,16 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P5 in the window:** 9 programmed units (7 fail, 1 no-action, 1 ungraded). No prop survivor this week.
+
+**What was learned:** the forming-bar re-measure (f251-01) is the prop-relevant read. trend_donchian_sol_prop and trend_donchian_sol_4h still clear RULE-D1 on the forming bar. eth_pullback_prop_2h fails there, so its iteration units (78fc-20, 105-020, 106-019) are reading a leg whose live-bar record does not hold. The prop superset gate (EV/survival) is unchanged.
+
+**Next 3–4 weeks:** the standing P5 nodes stay blocked on their named rows and results (P5-MLV-GATE-*, P5-Q2-SIZING-BRK-pass, P5-RG1025-trend-pooled; see `docs/research/authoring-queue-triage-2026-11-17.md`). The spec list carries direction and session cells for the prop legs on the demo floor.
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

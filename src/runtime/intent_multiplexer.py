@@ -820,6 +820,8 @@ def _collect_intents(
         if tf_s and not defer_record:
             forming_seen[leg_key] = {"bar_open": (now // tf_s) * tf_s, "at": now,
                                      "tf_s": float(tf_s)}
+        if _equity_hourly_must_wait(name, vcfg, tick_symbol, signal, now):
+            continue
         intent = intent_from_signal(
             signal,
             strategy=name,
@@ -841,6 +843,40 @@ def _collect_intents(
         intents.append(intent)
     _record_forming_evaluations(forming_seen)
     return intents
+
+
+def _equity_hourly_must_wait(name: str, vcfg: dict, tick_symbol: str, signal: Any, now: float) -> bool:
+    """D9 (operator 2026-11-18, popup "Wait for the first full hour of trading (Recommended)"): an actionable signal
+    from an HOURLY US-equity leg is dropped for this tick unless it is inside regular trading after the first full hour
+    (10:30 ET to the 16:00 ET close, trading days): pre-market, after-hours, overnight and weekends wait
+    (``market_hours.equity_first_full_hour_wait``). The leg re-evaluates every tick, so a signal that still stands is
+    taken when the window opens. Never raises, and fails OPEN (a gate bug must not strand a live leg).
+    """
+    try:
+        if str((vcfg or {}).get("timeframe") or "").lower() != "1h":
+            return False
+        side = signal.get("side") if isinstance(signal, dict) else getattr(signal, "side", None)
+        if side not in ("buy", "sell", "long", "short"):
+            return False
+        from datetime import datetime, timezone
+        from src.runtime.market_hours import asset_class_for_symbol, equity_first_full_hour_wait
+        if asset_class_for_symbol(tick_symbol) != "us_equity":
+            return False
+        if not equity_first_full_hour_wait(datetime.fromtimestamp(now, timezone.utc)):
+            return False
+    except Exception:  # noqa: BLE001 - fail open
+        logger.exception("intent_multiplexer: D9 first-full-hour check failed for '%s'", name)
+        return False
+    logger.info(
+        "intent_multiplexer: '%s' %s signal on %s held back until regular trading after the first full hour "
+        "(10:30-16:00 ET; D9, operator 2026-11-18)", name, side, tick_symbol,
+    )
+    try:
+        from src.utils.signal_audit_logger import log_signal
+        log_signal({"event": "equity_first_full_hour_wait", "strategy": name, "symbol": tick_symbol, "side": side})
+    except Exception:  # noqa: BLE001 - an audit failure never changes the decision
+        logger.debug("intent_multiplexer: D9 audit emit failed", exc_info=True)
+    return True
 
 
 def _record_forming_evaluations(seen: Dict[str, dict]) -> None:

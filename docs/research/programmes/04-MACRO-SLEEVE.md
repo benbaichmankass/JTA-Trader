@@ -4,6 +4,20 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P4 in the window:** no programmed unit graded.
+
+**What was learned:** nothing new was graded. The PPI→RTY lead keeps its standing: the placebo is clean, the ES=F sibling passed (a1f3-17) and the early half is indeterminate (RQ-20261020-001), so its own test does not make it a pooled artifact. Its economic rung (an exposure-matched rank tilt) needs lever **MACRO-EVENT-RANKTILT-ARM**, which was dropped in the 2026-10-29 bulk reset. Node `P4-Q2-ppi-rty-econ` now carries `authoring_blocked` naming that row. The manager re-opens the row or kills the node with that reason.
+
+**Next 3–4 weeks**
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | P4-Q2-ppi-rty-econ (after the rank-tilt arm) | whether the PPI lead becomes a tradable tilt | the axis replay re-opens | the lead stays recorded as IC only | tooling first | a rank tilt on an index rarely beats long-only after cost |
+| 2 | P4-Q4-g2-rerun | WEPE G2 | — | — | — | n-bound by the PM collector's paired n (blocked) |
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — TRADING track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

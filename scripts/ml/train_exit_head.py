@@ -64,6 +64,10 @@ FEATURES_EXH = [
 # peak_is_in (predict the favourable extreme is already behind us; acts on
 # HIGH probability, so its policy arms use TAUS_HI). Set from --target.
 TARGET = "holding_pays"
+# RQ-20261117-aadc-11 (dev PASS) / -aadc-12 (held-out-symbol PASS): the label-margin lever. holding_pays_neg25 =
+# 1[future_r_delta >= -0.25] ("close only when holding will cost more than a quarter R"), DERIVED from future_r_delta
+# at matrix time (rows carry no such column). Same features, hyper-parameters and below_half_r shape as holding_pays.
+DERIVED_TARGETS = {"holding_pays_neg25": ("future_r_delta", -0.25)}
 EMBARGO_S = 7 * 86400
 
 # Minimum TRAINING rows for a fold to be usable. Named rather than inlined as a
@@ -102,7 +106,11 @@ def group_trades(rows: List[dict]) -> Dict[str, List[dict]]:
 def matrix(rows: List[dict]):
     X = np.array([[float(r.get(f) if r.get(f) is not None else np.nan)
                    for f in FEATURES] for r in rows], dtype=float)
-    y = np.array([int(r[TARGET]) for r in rows], dtype=int)
+    if TARGET in DERIVED_TARGETS:
+        src, margin = DERIVED_TARGETS[TARGET]
+        y = np.array([1 if float(r[src]) >= margin else 0 for r in rows], dtype=int)
+    else:
+        y = np.array([int(r[TARGET]) for r in rows], dtype=int)
     return X, y
 
 
@@ -691,7 +699,7 @@ def main(argv: List[str]) -> int:
                          "low-frequency leg is gradeable; `years` is the legacy "
                          "per-calendar-year cut, kept ONLY to reproduce "
                          "pre-2026-08-13 results. See fold_blocks().")
-    ap.add_argument("--target", choices=["holding_pays", "peak_is_in"],
+    ap.add_argument("--target", choices=["holding_pays", "peak_is_in", "holding_pays_neg25"],
                     default="holding_pays",
                     help="M20 P4.2: classification target. peak_is_in needs a "
                          "post-P4 dataset (rows carry the label).")
@@ -709,6 +717,9 @@ def main(argv: List[str]) -> int:
 
     fam_dir = Path(a.family_dir)
     rows = load_rows(fam_dir / "rows.jsonl")
+    if TARGET in DERIVED_TARGETS and rows and DERIVED_TARGETS[TARGET][0] not in rows[0]:
+        print(f"dataset rows carry no {DERIVED_TARGETS[TARGET][0]} column — cannot derive {TARGET}", file=sys.stderr)
+        return 2
     if TARGET == "peak_is_in" and rows and "peak_is_in" not in rows[0]:
         print("dataset predates the peak_is_in label — rebuild with the "
               "post-P4 builder first", file=sys.stderr)

@@ -1,0 +1,482 @@
+{
+ "run": "ML-FRONTIER-PREP-20261118 (session_01AFoLuMhxGuKUegEUWZzMdp)",
+ "finished_at": "2026-11-18T20:00:00Z",
+ "plan_items": 85,
+ "open": 32,
+ "flags": [
+  "CONCENTRATION gbdt 14/19",
+  "UNMAPPED-TRAINER 8",
+  "REGISTRY-STAGES-CHANGED",
+  "TRAINING-STALENESS 2/2",
+  "SILENT(UNTRACKED) x3",
+  "CLOSED-OPEN ML-F29, ML-V5, ML-V6",
+  "STALE ML-F25, ML-R8, ML-L2"
+ ],
+ "plumbing_findings": [
+  "PI-20261118-EUWZZMDP-0002 (D2 consumers missing from the feed)",
+  "PI-20261118-EUWZZMDP-0003 (drift instruments disagree)",
+  "PI-20261118-EUWZZMDP-0004 (3 silent shadow heads; stage counts)"
+ ],
+ "results_read": [
+  {
+   "unit": "RQ-20261117-dc44-02",
+   "verdict": "PASS",
+   "plan_item": "families.gbdt"
+  },
+  {
+   "unit": "RQ-20261117-c21d-05",
+   "verdict": "FAIL",
+   "plan_item": "families.deep_sequence"
+  },
+  {
+   "unit": "RQ-20261112-4654-01",
+   "verdict": "FAIL",
+   "plan_item": "K1"
+  },
+  {
+   "unit": "RQ-20261117-aadc-12",
+   "verdict": "PASS",
+   "plan_item": "D8 exit head"
+  },
+  {
+   "unit": "RQ-20261117-aadc-01",
+   "verdict": "FAIL",
+   "plan_item": "ML-VOL-LABEL-LIVE-VERIFY"
+  }
+ ],
+ "ideas": [
+  {
+   "id": "RQ-20261118-dbf8-01",
+   "source": "frontier-scan-2026-11-18 #1",
+   "rule_registered": true,
+   "power_unit": "paired 28-day windows (k=13)"
+  },
+  {
+   "id": "RQ-20261118-dbf8-02",
+   "source": "frontier-scan-2026-11-18 #2",
+   "rule_registered": true,
+   "power_unit": "paired 28-day windows (k=13)",
+   "blocked_on": "FRONTIER-LEVER-TABULAR"
+  }
+ ],
+ "frontier": {
+  "run": "ML-FRONTIER-PREP-20261118 (session_01AFoLuMhxGuKUegEUWZzMdp)",
+  "finished_at": "2026-11-18T20:00:00Z",
+  "previous_scan_read": [
+   {
+    "unit": "RQ-20261112-4654-01",
+    "verdict": "FAIL",
+    "family": "gbdt (target)"
+   },
+   {
+    "unit": "FRONTIER-Q-SIGNATURE-INTRADE",
+    "verdict": "not-run",
+    "family": "ssl_representation"
+   }
+  ],
+  "diversity": {
+   "command": "ml_plan_status.py --diversity",
+   "findings": [
+    "CONCENTRATION gbdt 14/19 open items",
+    "MANIFEST-CONCENTRATION gbdt 79/108",
+    "UNMAPPED-TRAINER 8 served models",
+    "27/27 non-tree learner units on regime/direction labels"
+   ]
+  },
+  "sources_checked": [
+   {
+    "source": "hf-hub model cards + licences (10 repos) + paper search",
+    "date": "2026-11-18",
+    "state": "checked"
+   },
+   {
+    "source": "arXiv 2602.11139, 2607.05291, 2606.27100, 2511.18578, 2606.00060",
+    "date": "2026-11-18",
+    "state": "checked"
+   },
+   {
+    "source": "lab releases (Chronos-2, TimesFM-2.5, Moirai-2.0, TiRex, Toto, TTM-r2, TabPFN, Kronos, Mitra)",
+    "date": "2026-11-18",
+    "state": "checked"
+   },
+   {
+    "source": "quant practitioner literature (TabArena state, offline RL exits)",
+    "date": "2026-11-18",
+    "state": "checked"
+   },
+   {
+    "source": "github/competitions",
+    "date": "2026-11-18",
+    "state": "could-not-look",
+    "note": "every-other-week row; checked 2026-11-11"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "CatBoost on D3 money label",
+    "family": "gbdt",
+    "licence": "Apache-2.0 (primary)",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "RQ-20261118-dbf8-01",
+    "baseline": "LightGBM same recipe, net of cost",
+    "kill": "FAIL at >= 10 paired windows",
+    "business_question": "does Foxhound-1 serve CatBoost",
+    "power": {
+     "unit": "folds",
+     "n": 13,
+     "mde": 0.06,
+     "ok": true
+    },
+    "p_pass": 0.3
+   },
+   {
+    "name": "TabICLv2 full n on D3",
+    "family": "tabular_foundation_model",
+    "licence": "BSD-3-Clause (primary, Hub card)",
+    "gate_failed": "none (compute lever)",
+    "kept": true,
+    "unit_or_row": "RQ-20261118-dbf8-02 (blocked) / FRONTIER-LEVER-TABULAR",
+    "baseline": "LightGBM same recipe",
+    "kill": "FAIL at full n on every window",
+    "business_question": "does Foxhound-1 serve TabICL scores (mirror-publish)",
+    "power": {
+     "unit": "folds",
+     "n": 13,
+     "mde": 0.06,
+     "ok": true
+    },
+    "p_pass": 0.2
+   },
+   {
+    "name": "Heterogeneous stack",
+    "family": "ensemble_stack",
+    "licence": "-",
+    "gate_failed": "none",
+    "kept": false,
+    "unit_or_row": "dbf8-01 ens3 (reported)",
+    "p_pass": 0.25
+   },
+   {
+    "name": "Mitra tabular FM",
+    "family": "tabular_foundation_model",
+    "licence": "Apache-2.0 (primary)",
+    "gate_failed": "compute (no learner kind yet)",
+    "kept": false,
+    "unit_or_row": "idea FRONTIER-Q-MITRA-ENTRY",
+    "p_pass": 0.15
+   },
+   {
+    "name": "Distributional first-passage head for D6/D7",
+    "family": "conformal_calibration",
+    "licence": "Apache/MIT",
+    "gate_failed": "none",
+    "kept": false,
+    "unit_or_row": "idea FRONTIER-Q-DIST-POINTER (D6 iteration next lever)",
+    "p_pass": 0.15
+   },
+   {
+    "name": "TTM-r2 / Chronos-2 features for D2 vol",
+    "family": "ts_foundation_model",
+    "licence": "Apache-2.0 (primary)",
+    "gate_failed": "data (D2 label parity broken)",
+    "kept": false,
+    "unit_or_row": "after PI-20261118-ZZUFKM1F-0001",
+    "p_pass": 0.15
+   },
+   {
+    "name": "Kronos fine-tune",
+    "family": "ts_foundation_model",
+    "licence": "MIT (primary)",
+    "gate_failed": "compute/cost (deferred)",
+    "kept": false,
+    "unit_or_row": "re-rank after dbf8-01/02",
+    "p_pass": 0.08
+   },
+   {
+    "name": "Offline RL / CQL exits",
+    "family": "rl_bandit",
+    "licence": "-",
+    "gate_failed": "power (no powered design over 5 action-value FAILs)",
+    "kept": false,
+    "unit_or_row": "dropped",
+    "p_pass": 0.05
+   },
+   {
+    "name": "Moirai-2.0",
+    "family": "ts_foundation_model",
+    "licence": "cc-by-nc-4.0 (primary)",
+    "gate_failed": "licence",
+    "kept": false,
+    "unit_or_row": "dropped"
+   },
+   {
+    "name": "TabPFN-2.5/3 serving",
+    "family": "tabular_foundation_model",
+    "licence": "other (primary)",
+    "gate_failed": "licence",
+    "kept": false,
+    "unit_or_row": "research arm only"
+   }
+  ],
+  "grades": [
+   {
+    "candidate": "K1 market-residual target",
+    "call": "kept",
+    "grade": "hit",
+    "evidence": "4654-01 ran: informative FAIL"
+   },
+   {
+    "candidate": "FRONTIER-LEVER-TABULAR/TSFM",
+    "call": "dropped",
+    "grade": "unresolved",
+    "evidence": "both still queued; raised to manager"
+   },
+   {
+    "candidate": "path-signature in-trade",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "still blocked"
+   },
+   {
+    "candidate": "regime/direction learner variants",
+    "call": "dropped",
+    "grade": "hit",
+    "evidence": "18/18 bake-offs still on those labels; no decision value added"
+   }
+  ],
+  "strategy_ideas": [],
+  "none_because": null
+ },
+ "practice": {
+  "run": "ML-FRONTIER-PREP-20261118 (session_01AFoLuMhxGuKUegEUWZzMdp)",
+  "finished_at": "2026-11-18T20:00:00Z",
+  "previous_refresh_read": [],
+  "trading": {
+   "sources_checked": [],
+   "deltas": [],
+   "gaps_filed": [],
+   "none_because": "time-box spent on the operator-named family question; carried to next week"
+  },
+  "model": {
+   "sources_checked": [
+    {
+     "url": "https://arxiv.org/abs/2606.00060",
+     "tag": "ACAD",
+     "read": "summary"
+    },
+    {
+     "url": "https://arxiv.org/abs/2606.27100",
+     "tag": "ACAD",
+     "read": "abstract"
+    },
+    {
+     "url": "https://arxiv.org/abs/2607.05291",
+     "tag": "ACAD",
+     "read": "abstract"
+    },
+    {
+     "url": "https://arxiv.org/abs/2511.18578",
+     "tag": "ACAD",
+     "read": "abstract"
+    }
+   ],
+   "deltas": [
+    "cost-aware conversion matters more than learner choice (strengthens M6)",
+    "TSFMs as priors/features beside HAR, not return engines"
+   ],
+   "gaps_filed": [],
+   "none_because": null
+  },
+  "principles_revised": []
+ },
+ "drift": {
+  "scan_rc": 0,
+  "heads_scanned": 19,
+  "drifted": [],
+  "api_drifted": [
+   "btc-regime-15m-lgbm-fc-pcv-v2",
+   "sol-regime-15m-lgbm-fc-pcv-v2"
+  ],
+  "persistent": [
+   "btc-regime-15m-lgbm-fc-pcv-v2"
+  ],
+  "watch": [
+   "sol-regime-15m-lgbm-fc-pcv-v2"
+  ],
+  "rows_filed": [
+   "DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2",
+   "PI-20261118-EUWZZMDP-0003"
+  ],
+  "could_not_look": [
+   "labelled decay (no LIVE-DECAY-MONITOR)"
+  ]
+ },
+ "checks": {
+  "C1": "finding",
+  "C2": "finding",
+  "C3": "finding",
+  "C4": "finding",
+  "C5": "finding",
+  "C6": "could_not_look",
+  "C7": "finding",
+  "C8": "finding",
+  "C9": "ok",
+  "C10": "finding",
+  "C11": "could_not_look"
+ },
+ "calls": [
+  {
+   "id": "ML-20261118-1",
+   "call": "RQ-20261118-dbf8-01 (CatBoost vs LightGBM on the D3 ENTRY recipe, raw net R) PASSES at its registered design.",
+   "p": 0.3,
+   "tier": 1,
+   "check": {
+    "command": "research/results/RQ-20261118-dbf8-01/*.jsonl verdict",
+    "rule": "hit if pass; miss if fail or indeterminate",
+    "resolves_when": "unit graded; void if not run by 2026-12-02"
+   },
+   "ending": "research unit RQ-20261118-dbf8-01"
+  },
+  {
+   "id": "ML-20261118-2",
+   "call": "FRONTIER-LEVER-TABULAR is still queued at the 2026-11-25 scan (no Kaggle PROBE_LEARNERS line with tabicl ok).",
+   "p": 0.55,
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/work.py get FRONTIER-LEVER-TABULAR (state)",
+    "rule": "hit if queued; miss if in_flight/done",
+    "resolves_when": "2026-11-25 frontier scan"
+   },
+   "ending": "handoff to manager (blocker raised)"
+  },
+  {
+   "id": "ML-20261118-3",
+   "call": "Of the ml_bakeoff results generated 2026-11-18T20Z..11-25T20Z, >= 70% still target regime_label or direction_label.",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "research/results/*/*.jsonl generated_at in window whose unit has ml_bakeoff; share whose ml_bakeoff block names regime_label or direction_label",
+    "rule": "hit if >= 0.70; miss if < 0.50; unresolved between",
+    "resolves_when": "2026-11-25 ml-review"
+   },
+   "ending": "no action, because: it measures whether this scan re-pointed capacity"
+  },
+  {
+   "id": "ML-20261118-4",
+   "call": "The live D2 head btc-regime-15m-lgbm-fc-pcv-v2 still reads significant score drift (KS >= 0.20) on /shadow/drift at the 2026-11-25 read.",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2 (ks)",
+    "rule": "hit if ks >= 0.20; miss if < 0.20",
+    "resolves_when": "2026-11-25 ml-review"
+   },
+   "ending": "checklist row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2 (due 2026-11-25)"
+  },
+  {
+   "id": "ML-20261118-5",
+   "call": "The serve-path diff for PI-20261118-ZZUFKM1F-0001 attributes the BTC fc-pcv-v2 live-vs-replay label disagreement first to the fc_* forecast feature block (not candle-derived features).",
+   "p": 0.5,
+   "tier": 1,
+   "check": {
+    "command": "the committed serve-path diff record closing PI-20261118-ZZUFKM1F-0001",
+    "rule": "hit if the first-named block is fc_*; miss if another block",
+    "resolves_when": "the diff lands; void if not by 2026-12-02"
+   },
+   "ending": "pipeline PI-20261118-ZZUFKM1F-0001 (owner ML-PRIMARY-5)"
+  },
+  {
+   "id": "ML-20261118-6",
+   "call": "A D8 candidate built on the aadc-12 holding_pays_neg25 label reaches a committed net-of-cost downstream read (pass or fail) by 2026-12-02.",
+   "p": 0.35,
+   "tier": 1,
+   "check": {
+    "command": "research/results for a unit whose title names holding_pays_neg25 and a downstream/promotion-design read, generated <= 2026-12-02",
+    "rule": "hit if such a record exists; miss if not",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "handoff: next_by_value_per_cost #3 (manager dispatches)"
+  },
+  {
+   "id": "ML-20261104-4-carry",
+   "call": "Live ENTRY (ml_entry, bybit_2) mean realised pnl% per closed trade is <= 0 once n >= 30.",
+   "p": 0.55,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00 pattern==ml_entry; mean realizedPnlPct",
+    "rule": "hit if mean <= 0 at n >= 30; miss if > 0",
+    "resolves_when": "n >= 30"
+   },
+   "ending": "carried"
+  }
+ ],
+ "writebacks": [
+  "docs/plans/ml-plan-items.yaml: ML-F33, ML-F34 added; families.gbdt += PASS (dc44-02), families.deep_sequence += FAIL (c21d-05)",
+  "pipeline redates: GNVUF1ES-0002, TX7TX2ZN-0002, GERETIRE-0001; routed_to repairs TX7TX2ZN-0001/-0002/-0004"
+ ],
+ "rows_filed": [
+  "ML-REVIEW-20261118",
+  "DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2"
+ ],
+ "units_filed": [
+  "RQ-20261118-dbf8-01",
+  "RQ-20261118-dbf8-02 (blocked)"
+ ],
+ "pipeline_filed": [
+  "PI-20261118-EUWZZMDP-0001",
+  "PI-20261118-EUWZZMDP-0002",
+  "PI-20261118-EUWZZMDP-0003",
+  "PI-20261118-EUWZZMDP-0004"
+ ],
+ "next_by_value_per_cost": [
+  {
+   "rank": 1,
+   "what": "RQ-20261118-dbf8-01 CatBoost (+3-learner blend) vs LightGBM on the D3 money label",
+   "cost": "free runner ~2.5 h",
+   "p": 0.3,
+   "consumer": "ml_entry (bybit_2 real money + prop)"
+  },
+  {
+   "rank": 2,
+   "what": "Serve-path diff for the live D2 labels (PI-20261118-ZZUFKM1F-0001) -- unblocks every D2 read and the drift diagnosis",
+   "cost": "1 lane, ~half day",
+   "p": 0.8,
+   "consumer": "regime_policy trend_vol gate"
+  },
+  {
+   "rank": 3,
+   "what": "D8: candidate manifest + net-of-cost downstream read on the aadc-12 holding_pays_neg25 exit-head label (nearest path to a live ML in a testing slot)",
+   "cost": "1 unit, runner",
+   "p": 0.35,
+   "consumer": "exit_head_action on TD legs"
+  },
+  {
+   "rank": 4,
+   "what": "Close FRONTIER-LEVER-TABULAR (Kaggle GPU learner probe) then run RQ-20261118-dbf8-02 TabICLv2 full-n on D3",
+   "cost": "lever build + Kaggle GPU",
+   "p": 0.2,
+   "consumer": "ml_entry"
+  },
+  {
+   "rank": 5,
+   "what": "D6 Pointer next lever: distributional first-passage head (quantile GBDT/NGBoost + conformal) instead of point TP",
+   "cost": "1 unit, TM-BENCH",
+   "p": 0.15,
+   "consumer": "bracket at entry (D6, empty slot)"
+  },
+  {
+   "rank": 6,
+   "what": "TTM-r2 + Log-HAR feature/quantile arm for D2 vol, after the label parity fix",
+   "cost": "trainer CPU",
+   "p": 0.15,
+   "consumer": "D2 gate"
+  }
+ ],
+ "handoff": [
+  "BLOCKER to manager: FRONTIER-LEVER-TABULAR queued since 2026-10-23 (4+ scans); it gates the first foundation-model money-label test (dbf8-02). Cost to clear: one Kaggle probe run + a tabicl arm in ml_entry_residual.py (~1 lane-hour)",
+  "FRONTIER-LEVER-TSFM-TIMESTRAL queued since 2026-10-25: raise or kill",
+  "3 ml_model iteration orphans (ml-exit-head-donchian-1h, ml-tm-action-value, ml-btc-router-cells) not authored this run; PI-20261117-ZFRREVN5-0003 already names two; aadc-11/-12 are de facto exit-head iterations not tagged to the subject",
+  "C11 overlay CUSUM not run"
+ ]
+}

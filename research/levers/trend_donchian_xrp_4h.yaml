@@ -2681,10 +2681,24 @@ levers:
         max_drawdown_r: 4.1466
         verdict: pass
         joint_change: true
+      - value: '25'
+        baseline_value: 'off'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 4
-      best_delta_r_per_trade: 0.0408
-      fold_stability: 1.0
+      points: 5
+      best_delta_r_per_trade: 0.0536
+      fold_stability: 0.9
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     trail_adx_tight_mult:
       tests:
@@ -2744,10 +2758,24 @@ levers:
         max_drawdown_r: 4.1466
         verdict: pass
         joint_change: true
+      - value: '2.5'
+        baseline_value: 'off'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 4
-      best_delta_r_per_trade: 0.0408
-      fold_stability: 1.0
+      points: 5
+      best_delta_r_per_trade: 0.0536
+      fold_stability: 0.9
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     atr_stop_mult:
       tests:
@@ -2835,10 +2863,24 @@ levers:
         max_drawdown_r: 4.7347
         verdict: pass
         joint_change: true
+      - value: '2.0'
+        baseline_value: '1.5'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: noisy
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0561
-      fold_stability: 0.25
+      fold_stability: 0.286
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_mult:
       tests:
@@ -2926,10 +2968,24 @@ levers:
         max_drawdown_r: 4.7347
         verdict: pass
         joint_change: true
+      - value: '5.0'
+        baseline_value: '4.0'
+        arm: B
+        unit: RQ-20261117-ea57-01
+        window: 2021-11-13..2026-11-16
+        n: 61
+        net_r: 14.3615
+        baseline_n: 61
+        baseline_net_r: 11.0904
+        delta_net_r: 3.2711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.2007
+        verdict: fail
+        joint_change: true
       shape: peaked
-      points: 6
+      points: 7
       best_delta_r_per_trade: 0.0561
-      fold_stability: 0.417
+      fold_stability: 0.429
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_decay_stall_bars:
       tests:

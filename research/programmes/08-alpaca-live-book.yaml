@@ -80,12 +80,13 @@ nodes:
       (ledger read N=4, deflated bar) and its forward read on bars after 2026-10-31 once >= 3 months exist.
       The live artifact is not retrained by any unit; the swap is a Tier-3 proposal after (c).
   - id: P8-Q3-fail
+    authoring_closed: '2026-11-18 PROGRAMME-REVIEW-20261118: authored as RQ-20261117-c21d-06 (alpaca_live_book.py --section neutral, the ATR-neutral target the 207f-03 diagnostic reads_cost_per_r=true named). It landed producer_failed twice on a verdict.json without top-level n; the producer is fixed and the unit re-armed in the same PR.'
     goal: G1
     roadmap: [L-ML-LIVE]
     value: {usd_at_stake_per_month: 50, confidence: 0.3}
     after:
     - {unit: RQ-20261111-207f-03, verdict: fail}
-    needs_authoring: >-
+    authoring_closed_ask: >-
       207f-03 FAILED. Branch on its registered diagnostic. reads_cost_per_r = true: the label is the diagnosis but L1/L2 did not fix it;
       author ONE cost-neutral target (net return per unit of NOTIONAL, i.e. net_long x 2 ATR / entry, which removes the stop-width
       tilt while keeping costs) on the same harness, count-matched, same bar. reads_cost_per_r = false or null: the label is not the
@@ -107,6 +108,7 @@ nodes:
       replayed trades (from 207f-01's artifact) and the legs' trades share one replay; add it in the unit's PR (Tier 1).
   # ── Q5 -- features (after the label is settled) ─────────────────────────────────────────────────────────────────────
   - id: P8-Q5-features
+    authoring_blocked: '2026-11-18 PROGRAMME-REVIEW-20261118: every P8 arm is scored against the Foxhound-4 live-book baseline RQ-20261111-207f-01, which never produced a verdict (producer_failed 2026-11-13: verdict.json without top-level n). Fixed and re-armed in this PR; author this node after 207f-01 grades, and only after c21d-06 says whether the label changes (a feature or horizon arm on a label that is about to change is wasted). alpaca_live_book.py also has no features / horizon section yet: the authoring unit adds it (Tier 1) in its own PR.'
     goal: G1
     roadmap: [L-ML-LIVE]
     value: {usd_at_stake_per_month: 40, confidence: 0.25}
@@ -144,6 +146,7 @@ nodes:
       the same book; Stage 0 on 2010-2023, confirm 2024-2026 once. Ready now; owner research-ops / the next lane the manager assigns.
   # ── Q8 -- horizon and exit plan ─────────────────────────────────────────────────────────────────────────────────────
   - id: P8-Q8-horizon
+    authoring_blocked: '2026-11-18 PROGRAMME-REVIEW-20261118: every P8 arm is scored against the Foxhound-4 live-book baseline RQ-20261111-207f-01, which never produced a verdict (producer_failed 2026-11-13: verdict.json without top-level n). Fixed and re-armed in this PR; author this node after 207f-01 grades, and only after c21d-06 says whether the label changes (a feature or horizon arm on a label that is about to change is wasted). alpaca_live_book.py also has no features / horizon section yet: the authoring unit adds it (Tier 1) in its own PR.'
     goal: G1
     roadmap: [L-ML-LIVE]
     value: {usd_at_stake_per_month: 40, confidence: 0.25}

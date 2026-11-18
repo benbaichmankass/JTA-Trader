@@ -188,6 +188,12 @@ related:
   - RQ-20260927-001 (the single-split unit this one extends to multiple folds)
   - RQ-20260922-007 (the original, uncontrolled full-window attribution)
   - PI-20260926-96NDZSOD-0001 (independent precondition, unaffected by this unit's verdict)
+amendments:
+- at: '2026-11-18'
+  before_any_run: false
+  by: lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)
+  text:
+  - 'HARNESS DEFECT (PI-20261118-MANAYJZO-0001): the replay scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0] = the 0/1 CLASS LABEL into would_exit_for(score < tau 0.10), so it evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED: aadc-12 fired on 16,739 of 18,649 trades). Fixed to predict_proba (branch claude/ml6-exithead-proba-fix, regression test tests/test_exit_head_replay_scores_probability.py). This result is INVALIDATED as evidence about the served head and is SUPERSEDED by RQ-20261118-04a5-04 (the same per-leg walk-forward + matched random-truncation control on the fixed replay, BTC/ETH/SOL, both targets). The annotate de-risk it supported is NOT reversed: the served policy was never evaluated in either direction; 04a5-04 decides.'
 last_dispatched_at: '2026-09-27T07:18:00Z'
 
 result: >-
