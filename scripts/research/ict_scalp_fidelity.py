@@ -156,7 +156,7 @@ def unit_verdict(a: dict, b: dict) -> str:
     return "indeterminate"
 
 
-def _fetch_and_emit(leg: str, cfg: dict, csv: str, start: str, end: str, tag: str, wd: str, extra: list) -> list:
+def _fetch_and_emit(leg: str, cfg: dict, csv: str, tag: str, wd: str, extra: list) -> list:
     import regime_debt_matrix as rdm  # noqa: PLC0415
     from live_bt_trade_join import load_bt  # noqa: PLC0415
     emit = os.path.join(wd, f"{leg}__{tag}__trades.jsonl")
@@ -192,7 +192,7 @@ def run(leg: str, account: str, live_start: str, cost_start: str, cost_end: str,
     warm = (ls - timedelta(days=45)).strftime("%Y-%m-%d")
     csv_a = _candles(leg, cfg, warm, live_end, wd, "live")
     slip_now, _ = resolve_cost_policy(sym)
-    bt = _fetch_and_emit(leg, cfg, csv_a, warm, live_end, "live", wd, ["--slippage-bps-roundtrip", str(slip_now), "--funding-bps-per-window", str(fund)])
+    bt = _fetch_and_emit(leg, cfg, csv_a, "live", wd, ["--slippage-bps-roundtrip", str(slip_now), "--funding-bps-per-window", str(fund)])
     closed = [t for t in lbj.fetch_closed(account) if t.get("pattern") == leg and str(t.get("openedAt")) >= live_start]
     live = lbj._strip(closed)
     pk = lbj.fetch_packages(leg, live_start)
@@ -203,7 +203,7 @@ def run(leg: str, account: str, live_start: str, cost_start: str, cost_end: str,
     csv_b = _candles(leg, cfg, cost_start, cost_end, wd, "cost")
     by = {}
     for name, (fee, slip) in COST_BASES.items():
-        tr = _fetch_and_emit(leg, cfg, csv_b, cost_start, cost_end, name, wd,
+        tr = _fetch_and_emit(leg, cfg, csv_b, name, wd,
                              ["--fee-bps-roundtrip", str(fee), "--slippage-bps-roundtrip", str(slip), "--funding-bps-per-window", str(fund)])
         by[name] = arm_b_basis(tr)
     b = arm_b(by)
