@@ -521,7 +521,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
            "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep,
            "parity_basis": parity_basis, "holdout": hold}
     if CPCV_CHALLENGERS["targets"]:  # --cpcv-challenger: target-variant challengers vs Beagle-1 on the same CPCV splits
-        out["cpcv_challengers"] = cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"])
+        out["cpcv_challengers"] = inherit_family_state(cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"]), verdict)
         chosen = out["cpcv_challengers"]["chosen"]
         if chosen and CPCV_CHALLENGERS.get("export_dir") is not None:
             ch = export_model(df, PRIMARY, target=chosen)
@@ -587,6 +587,23 @@ def cpcv_challengers(df: pd.DataFrame, gate_mask: np.ndarray, targets: list[str]
     chosen = max(passing, key=lambda a: a["paired"]["delta_ch_vs_base_mean_r"])["target"] if passing else None
     return {"rule": CPCV_RULE_ID, "n_gate": int(gate_mask.sum()), "min_disagree": MIN_DISAGREE, "arms": arms,
             "n_arms": len(arms), "chosen": chosen, "verdict": "PASS" if chosen else "FAIL"}
+
+
+def inherit_family_state(cc: dict, family_verdict: str) -> dict:
+    """PI-20261117-ZZUFKM1F-0002 (2): the challenger block INHERITS a family INDETERMINATE.
+
+    The registered rule says an INDETERMINATE family (parity < 0.98, a gate leg that failed to build, ...) cannot grade a
+    challenger; before this fix each arm still carried pass/fail and a `chosen` arm could be exported, so the results rows and the
+    mechanical grader read fail/pass where the rule says indeterminate (aadc-03, hand-graded INDETERMINATE in PR #26694). The
+    arms' measurements are kept (reported, never gating); `chosen` is cleared and kept as `chosen_if_determinate`."""
+    if family_verdict != "INDETERMINATE":
+        return cc
+    out = dict(cc)
+    out["chosen_if_determinate"] = cc.get("chosen")
+    out["chosen"] = None
+    out["verdict"] = "INDETERMINATE"
+    out["arms"] = [{**a, "pass_if_determinate": a.get("pass"), "pass": False, "verdict": "INDETERMINATE"} for a in cc.get("arms", [])]
+    return out
 
 
 def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
@@ -839,6 +856,33 @@ def run_refine(mode: str, name: str, legs: list[str], gate: list[str], corpus_di
 
 
 # ----------------------------------------------------------------------------------------------- self-test
+def repin_fidelity_verdict(results: list[dict], rule_id: str, corpus: Path, old_ref: Path | None, edge: dict) -> dict:
+    """RULE-RQ20261118-04a5-06 (PI-20261117-ZZUFKM1F-0002 part 1). With no --reference-corpus, run_family's reasons are exactly the
+    FIDELITY failures (gate leg not built, trades not aligned to a decision bar, n_gate < N_GATE_MIN), so a family PASSES fidelity iff
+    it has no reasons. The edge verdict (Beagle-1's recipe on the re-pinned population) and trade parity vs the old reference are
+    REPORTED, never gating."""
+    fams = {}
+    for r in results:
+        gate = r.get("legs_gate") or [k for k, v in (r.get("legs") or {}).items() if isinstance(v, dict) and v.get("gate_leg")]
+        par = {leg: _trade_parity(leg, old_ref, corpus) for leg in gate} if old_ref is not None else None
+        fams[r["family"]] = {"fidelity": "pass" if not r["reasons"] else "fail", "reasons": r["reasons"],
+                             "edge_verdict_context": r["verdict"], "n_gate": (r.get("primary_eval") or {}).get("n_gate"),
+                             "legs": {k: {kk: v.get(kk) for kk in ("state", "n_trades", "n_aligned", "gate_leg")} if isinstance(v, dict) else v
+                                      for k, v in (r.get("legs") or {}).items()},
+                             "parity_vs_old_reference": par}
+    vs = [f["fidelity"] for f in fams.values()]
+    top = "pass" if vs and all(v == "pass" for v in vs) else "fail"
+    return {"rule": rule_id, "read_state": "measured", "verdict": top, "window": edge.get("window"),
+            "population": "re-pinned TD corpus at current config: " + "; ".join(
+                f"{k} n_gate={f['n_gate']} fidelity {f['fidelity']}" for k, f in fams.items()),
+            "n": sum(int(f["n_gate"] or 0) for f in fams.values()) or None,
+            "note": "fidelity per family: " + ", ".join(f"{k} {f['fidelity']} {f['reasons'] or ''}" for k, f in fams.items())
+                    + "; edge verdict (context, not gating): " + str(edge.get("verdict")),
+            "families": fams, "corpus_dir": str(corpus), "edge_verdict_context": edge,
+            "records": [{"family": k, "verdict": f["fidelity"], "n": f["n_gate"],
+                         "population": f"{k} gate legs, re-pinned corpus"} for k, f in fams.items()]}
+
+
 def _self_test() -> int:
     """Synthetic: an informative feature must PASS non-inferiority and beat random; noise must not beat random."""
     import tempfile
@@ -885,6 +929,16 @@ def _self_test() -> int:
     assert np.allclose(c1, c2) and abs(b1 - b2) < 1e-9
     assert cpa["n_arms"] == 2 and all(0.0 <= x["disagree_rate_cells"] <= 1.0 for x in cpa["arms"]), cpa
     assert {x["target"] for x in cpa["arms"]} == {"tail1r", "evweight"} and cpa["verdict"] in ("PASS", "FAIL")
+    rf_ok = repin_fidelity_verdict([{"family": "F", "reasons": [], "verdict": "FAIL", "legs_gate": ["x"], "legs": {},
+                                      "primary_eval": {"n_gate": 250}}], "R", Path("."), None, {"verdict": "fail"})
+    rf_bad = repin_fidelity_verdict([{"family": "F", "reasons": ["x: 3 trades not aligned to a decision bar"], "verdict": "INDETERMINATE",
+                                       "legs_gate": ["x"], "legs": {}, "primary_eval": {"n_gate": 250}}], "R", Path("."), None, {})
+    assert rf_ok["verdict"] == "pass" and rf_ok["n"] == 250 and rf_ok["families"]["F"]["edge_verdict_context"] == "FAIL"
+    assert rf_bad["verdict"] == "fail" and rf_bad["records"][0]["verdict"] == "fail"
+    inh = inherit_family_state({"chosen": "tail1r", "verdict": "PASS", "arms": [{"target": "tail1r", "pass": True}]}, "INDETERMINATE")
+    assert inh["chosen"] is None and inh["verdict"] == "INDETERMINATE" and inh["chosen_if_determinate"] == "tail1r"
+    assert inh["arms"][0]["pass"] is False and inh["arms"][0]["verdict"] == "INDETERMINATE" and inh["arms"][0]["pass_if_determinate"] is True
+    assert inherit_family_state(cpa, "PASS") is cpa and inherit_family_state(cpa, "FAIL") is cpa
     ok = (pa["checks"]["c_beats_random"] and pa["checks"]["d_not_vacuous"] and pa["delta_mean_r"] > pb["delta_mean_r"]
           and not pb["checks"]["c_beats_random"] and a["n_trials"] == len(GRID) and 0.0 <= a["pbo"] <= 1.0
           and np.allclose(pa["reduce_rate"], PRIMARY["q"], atol=0.08)
@@ -907,6 +961,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--end", required=True)
     ap.add_argument("--days", type=int, required=True)
     ap.add_argument("--reference-corpus", default=None)
+    ap.add_argument("--repin-fidelity", default=None, metavar="RULE_ID",
+                    help="RQ-20261118-04a5-06: grade the run by the FIDELITY rule (every gate leg built, all trades aligned, n_gate >= N_GATE_MIN) instead of the edge rule; the edge verdict is reported as context. Use with no --reference-corpus.")
+    ap.add_argument("--report-parity-against", default=None,
+                    help="report-only trade parity of the built corpus vs this (old) reference corpus, per gate leg; never gating")
     ap.add_argument("--corpus-dir", default=None, help="reuse an already-built corpus dir instead of running the harness")
     ap.add_argument("--export-dir", default=None)
     ap.add_argument("--parity-basis", choices=("net_r", "trade"), default="net_r",
@@ -1012,11 +1070,15 @@ def main(argv: list[str] | None = None) -> int:
                 f"{a['target']} {'PASS' if a['pass'] else 'FAIL'} (paired {a['paired']['delta_ch_vs_base_mean_r']:+.4f}, "
                 f"disagree {a['disagree_rate_cells']:.3f}, own {'pass' if all(a['own_checks'].values()) else 'fail'})"
                 for a in (c["arms"] if c else [])) for c, r in zip(cc, results)),
-            "records": [{"family": r["family"], "target": a["target"], "verdict": "pass" if a["pass"] else "fail",
+            "records": [{"family": r["family"], "target": a["target"],
+                         "verdict": ("indeterminate" if fam_state[r["family"]] == "INDETERMINATE" else "pass" if a["pass"] else "fail"),
                          "n": c["n_gate"], "population": f"{r['family']} gate legs CPCV OOS trades, arm {a['target']}",
                          "paired": a["paired"], "disagree_rate_cells": a["disagree_rate_cells"], "own_checks": a["own_checks"]}
                         for c, r in zip(cc, results) if c for a in c["arms"]] or verdict["records"],
         })
+    if a.repin_fidelity:
+        old_ref = Path(a.report_parity_against) if a.report_parity_against else None
+        verdict = repin_fidelity_verdict(results, a.repin_fidelity, corpus, old_ref, verdict)
     (out / "measurement.json").write_text(json.dumps({"runs": runs, "families": results}, indent=1, default=str) + "\n")
     (out / "verdict.json").write_text(json.dumps(verdict, indent=1) + "\n")
     print(json.dumps(verdict, indent=1))

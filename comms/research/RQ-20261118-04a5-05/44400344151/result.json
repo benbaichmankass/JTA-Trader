@@ -1,0 +1,101 @@
+{
+ "unit": "RQ-20261118-04a5-05",
+ "rule": "RULE-RQ20261118-04a5-05-MAKER-EXIT-MIDPEG",
+ "exit_w_min": 1,
+ "exit_peg": "mid",
+ "verdict": "pass",
+ "why": "maker exit delta +0.0060 R/decision, deflated lower bound +0.0034 > 0, n=2786",
+ "calibration": {
+  "n": 10560,
+  "days": 40,
+  "mean_delta_F_bps": 1.7266631886448531,
+  "ci95": [
+   1.3707302290537104,
+   2.058441727138725
+  ],
+  "fill_rate": 0.8697916666666666,
+  "a3f1_print_based_mean_bps": 2.03,
+  "band": [
+   1.0,
+   3.0
+  ],
+  "calibrated": true
+ },
+ "n_decisions_all": 11240,
+ "n_time_stop_exits": 2788,
+ "n_measured": 2786,
+ "n_symbols": 53,
+ "mean_delta_r": 0.00602716493034507,
+ "deflated_ci_delta_r": [
+  0.0033543099077454302,
+  0.008689248511289887
+ ],
+ "ci_lo_percentile": 0.6309,
+ "mean_delta_bps": 1.6159953290322238,
+ "deflated_ci_delta_bps": [
+  0.7934572431346125,
+  2.4212322134040862
+ ],
+ "fill_rate": 0.7537688442211056,
+ "delta_bps_if_filled": 5.777109878979479,
+ "delta_bps_if_unfilled": -11.12211043611243,
+ "by_side": {
+  "long": {
+   "n": 873,
+   "mean_delta_r": 0.006900299677968422
+  },
+  "short": {
+   "n": 1913,
+   "mean_delta_r": 0.0056287087700339425
+  }
+ },
+ "taker_mean_net_r_time_stop": 0.1701436959615853,
+ "share_of_all_decisions": 0.24804270462633451,
+ "per_all_decisions_delta_r": 0.0014939218412759222,
+ "matched_random_side": {
+  "draws": 200,
+  "p_long": 0.3133524766690596,
+  "own_mean": 0.00602716493034507,
+  "mean_of_means": 0.005901206454749393,
+  "p05": 0.005138023098358723,
+  "p95": 0.006627088145327613
+ },
+ "unmeasured_flat_symbol_days": [
+  "FLMUSDT:2025-11-22",
+  "STORJUSDT:2026-08-27"
+ ],
+ "holdout_lock": {
+  "model_id": "EXEC-maker-exit-ml_entry_v1",
+  "family": "EXEC",
+  "start": "2025-10-01",
+  "end": "2026-09-30",
+  "train_end": "2025-09-30",
+  "unit": "RQ-20261118-04a5-05",
+  "reader": "research-script-run",
+  "read_at": "2026-11-18T21:31:37Z",
+  "backfilled": false,
+  "symbols": null,
+  "variants_on_window": 31,
+  "n_tries": 4,
+  "bar": {
+   "n_tries": 4,
+   "alpha_one_sided": 0.006309,
+   "ci_level": 0.987381,
+   "ci_z": 2.4943,
+   "ci_lo_percentile": 0.6309,
+   "point_t_min": 1.0521,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "next_bar": {
+   "n_tries": 5,
+   "alpha_one_sided": 0.005051,
+   "ci_level": 0.989898,
+   "ci_z": 2.5723,
+   "ci_lo_percentile": 0.5051,
+   "point_t_min": 1.1926,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  }
+ },
+ "git_sha": "c8a7378c8f691419abb8f4d89144d4bbdb36332b",
+ "elapsed_s": 210
+}

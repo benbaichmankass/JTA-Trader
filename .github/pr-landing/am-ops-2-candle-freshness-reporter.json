@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Trainer systemd unit: adds a report-only ExecStartPost (never fails the unit, exit 0 always) and raises TimeoutStartSec 2400 to 9000 for the 15-feed ExecStart merged in 79a70a11. decision: 2026-11-12 operator-popup \"Merge + deploy on green\". Manager merges, then I reinstall on the trainer. Revert: git revert.",
+  "why": "PI-20261118-MANAYJZO-0002 steps 3-4 (these commits were pushed to the already-merged branch of #26930 and never reached main) plus the manager's timeout gap: worst case 15 feeds x 10 min rate-limit retries = 150 min exceeds 2400 s. Atomic per file, so a timeout only costs the later feeds a day. Adds scripts/ops/report_data_freshness.py (+ test) and docs/research/stale-candles-blast-radius-2026-11-18.md. Gates this adds or changes: none."
+}

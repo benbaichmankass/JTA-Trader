@@ -115,6 +115,10 @@ DECLARED_LIGHT = {
         "ML-DECISION-MODELS ENTRY harness: fits LightGBM on public Binance Vision 1h klines in a lane container or a "
         "GitHub runner. Its queue units (RQ-20261101-c692-01/-04/-06) declare compute cpu_long (backend github_runner), "
         "never needs_vm_data, so it is never routed to the 6 GB trainer.",
+    "scripts/research/ml_entry_population_test.py":
+        "ML-ENTRY population harness (2e3b-01, c21d-02) and its D6 quantile-TP arm (RQ-20261118-04a5-02, --tp-model quantile): "
+        "fits two LightGBM quantile heads on the public Binance Vision table of ml_decision_entry.py on a GitHub runner (compute "
+        "cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_decision_brackets.py":
         "ML-DECISION-MODELS BRACKETS harness: same data and route as ml_decision_entry.py (unit RQ-20261101-c692-02, "
         "compute cpu_long, github_runner); never routed to the trainer.",

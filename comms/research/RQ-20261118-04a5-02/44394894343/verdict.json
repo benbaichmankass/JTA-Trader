@@ -1,0 +1,359 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 12746,
+ "note": "paired mean d -0.0052 R/decision (se 0.0048, CI [-0.0145, +0.0041]) at n=12746 vs bar +0.02",
+ "population": "PAIRED on the same taken decisions: frozen ml_decision_entry_v1 (tau 0.1, SL 2.0 / TP 3.0 ATR) decisions 2025-10-01..2026-10-31 on the 51 scorable symbols of the 51-symbol frozen Bybit USDT-perp population (F1-F5), each re-costed with its own fee 11 + max(3, quoted spread + sqrt impact Q 5000) + its own |funding| per 8h; arm = per-decision TP at the q0.60 LightGBM quantile of forward MFE-before-stop, clip [1.0, 6.0] ATR",
+ "measurement": {
+  "pooled": {
+   "n": 12746,
+   "mean_net_r": -0.06797924346358022,
+   "sum_net_r": -866.4634371867935,
+   "se_net_r": 0.009783660507391339,
+   "mean_gross_r": 0.0709053410532003,
+   "mean_cost_r": 0.1388845845167805,
+   "n_symbols": 51,
+   "by_side": {
+    "long": {
+     "n": 3731,
+     "mean_net_r": -0.044904297487929894
+    },
+    "short": {
+     "n": 9015,
+     "mean_net_r": -0.07752917396110118
+    }
+   },
+   "exit_reason_counts": {
+    "sl": 5757,
+    "tp": 3953,
+    "time": 3036
+   },
+   "ex_max_symbol": {
+    "symbol": "QNTUSDT",
+    "n": 12500,
+    "mean_net_r": -0.06293186327842178
+   },
+   "by_month": {
+    "2025-10": {
+     "n": 1232,
+     "mean_net_r": -0.1432
+    },
+    "2025-11": {
+     "n": 1008,
+     "mean_net_r": 0.0281
+    },
+    "2025-12": {
+     "n": 922,
+     "mean_net_r": -0.2111
+    },
+    "2026-01": {
+     "n": 1171,
+     "mean_net_r": 0.0562
+    },
+    "2026-02": {
+     "n": 1095,
+     "mean_net_r": 0.0316
+    },
+    "2026-03": {
+     "n": 914,
+     "mean_net_r": -0.0546
+    },
+    "2026-04": {
+     "n": 794,
+     "mean_net_r": -0.2064
+    },
+    "2026-05": {
+     "n": 842,
+     "mean_net_r": -0.2194
+    },
+    "2026-06": {
+     "n": 1192,
+     "mean_net_r": -0.1854
+    },
+    "2026-07": {
+     "n": 763,
+     "mean_net_r": -0.1322
+    },
+    "2026-08": {
+     "n": 908,
+     "mean_net_r": 0.0035
+    },
+    "2026-09": {
+     "n": 919,
+     "mean_net_r": 0.1852
+    },
+    "2026-10": {
+     "n": 986,
+     "mean_net_r": -0.0783
+    }
+   },
+   "bootstrap_ci95_mean_net_r_reported_not_gating": [
+    -0.08781665410961427,
+    -0.04852183306204082
+   ]
+  },
+  "holdout_claim": {
+   "model_id": "ENTRY-v1-population-2e3b",
+   "family": "ENTRY",
+   "start": "2025-10-01",
+   "end": "2026-10-31",
+   "train_end": "2025-09-22",
+   "unit": "RQ-20261118-04a5-02",
+   "reader": "research-script-run",
+   "read_at": "2026-11-18T20:53:11Z",
+   "backfilled": false,
+   "symbols": [
+    "1000PEPEUSDT",
+    "AAVEUSDT",
+    "ADAUSDT",
+    "AEROUSDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "ATOMUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "DASHUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "ENAUSDT",
+    "ETHUSDT",
+    "FARTCOINUSDT",
+    "FILUSDT",
+    "GRASSUSDT",
+    "HBARUSDT",
+    "HUSDT",
+    "HYPEUSDT",
+    "ICPUSDT",
+    "INITUSDT",
+    "INJUSDT",
+    "JUPUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "ONDOUSDT",
+    "OPUSDT",
+    "PAXGUSDT",
+    "QNTUSDT",
+    "RENDERUSDT",
+    "SOLUSDT",
+    "STRKUSDT",
+    "STXUSDT",
+    "SUIUSDT",
+    "TAOUSDT",
+    "TIAUSDT",
+    "TRUMPUSDT",
+    "UNIUSDT",
+    "VIRTUALUSDT",
+    "VVVUSDT",
+    "WIFUSDT",
+    "WLDUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZROUSDT"
+   ],
+   "variants_on_window": 31,
+   "n_tries": 22,
+   "bar": {
+    "n_tries": 22,
+    "alpha_one_sided": 0.00115,
+    "ci_level": 0.9977,
+    "ci_z": 3.0484,
+    "ci_lo_percentile": 0.115,
+    "point_t_min": 1.9423,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   },
+   "next_bar": {
+    "n_tries": 23,
+    "alpha_one_sided": 0.0011,
+    "ci_level": 0.9978,
+    "ci_z": 3.0618,
+    "ci_lo_percentile": 0.11,
+    "point_t_min": 1.9615,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+   }
+  },
+  "cost_missing_share": 0.0,
+  "fresh_symbols_mean_net_r": -0.0758414904046271,
+  "tp_model": {
+   "tp_model": "quantile",
+   "q": 0.6,
+   "verdict": "fail",
+   "why": "paired mean d -0.0052 R/decision (se 0.0048, CI [-0.0145, +0.0041]) at n=12746 vs bar +0.02",
+   "paired": {
+    "n": 12746,
+    "mean_d": -0.00522,
+    "se_d": 0.00475,
+    "ci": [
+     -0.01454,
+     0.00409
+    ],
+    "bar": 0.02
+   },
+   "head": {
+    "q": 0.6,
+    "train_cut_exclusive": "2025-09-29 23:00:00+00:00",
+    "embargo_h": 25,
+    "clip_atr": [
+     1.0,
+     6.0
+    ],
+    "mfe_cap_atr": 10.0,
+    "features": [
+     "ret_1",
+     "ret_4",
+     "ret_12",
+     "ret_24",
+     "ret_72",
+     "ret_168",
+     "vol24",
+     "vol_ratio",
+     "atr_pct",
+     "range_pos_24",
+     "range_pos_168",
+     "vol_z",
+     "rsi14",
+     "hour",
+     "dow",
+     "xs_rank_ret24",
+     "btc_ret24",
+     "btc_vol24",
+     "breadth_up24",
+     "rel_vol"
+    ],
+    "train_rows": {
+     "long": 16167,
+     "short": 16167
+    },
+    "pred_tp_quantiles": {
+     "long": {
+      "0.1": 1.183,
+      "0.25": 1.583,
+      "0.5": 2.063,
+      "0.75": 2.631,
+      "0.9": 3.264
+     },
+     "short": {
+      "0.1": 1.101,
+      "0.25": 1.616,
+      "0.5": 2.354,
+      "0.75": 3.127,
+      "0.9": 3.809
+     }
+    },
+    "calibration": {
+     "long": {
+      "share_mfe_ge_pred": 0.4212,
+      "target": 0.4,
+      "n": 120819
+     },
+     "short": {
+      "share_mfe_ge_pred": 0.4013,
+      "target": 0.4,
+      "n": 120819
+     }
+    },
+    "window_rows_unmatched": 0
+   },
+   "decisions_unmatched": 0,
+   "tp_reach_rate": {
+    "fixed_tp": 0.3101,
+    "quantile_tp": 0.407
+   },
+   "mean_net_r_same_decisions": {
+    "fixed_tp": -0.06797924346358022,
+    "quantile_tp": -0.0732
+   },
+   "context_own_sequential_policy_not_gating": {
+    "n": 13761,
+    "mean_net_r": -0.06972844284597977,
+    "sum_net_r": -959.5331020035276,
+    "se_net_r": 0.008674058688934852,
+    "mean_gross_r": 0.0679078869356209,
+    "mean_cost_r": 0.13763632978160067,
+    "n_symbols": 51,
+    "by_side": {
+     "long": {
+      "n": 4118,
+      "mean_net_r": -0.06545447077784623
+     },
+     "short": {
+      "n": 9643,
+      "mean_net_r": -0.071553623492726
+     }
+    },
+    "exit_reason_counts": {
+     "sl": 5728,
+     "tp": 5712,
+     "time": 2321
+    },
+    "ex_max_symbol": {
+     "symbol": "QNTUSDT",
+     "n": 13499,
+     "mean_net_r": -0.0628769959699394
+    },
+    "by_month": {
+     "2025-10": {
+      "n": 1291,
+      "mean_net_r": -0.1173
+     },
+     "2025-11": {
+      "n": 1078,
+      "mean_net_r": 0.0136
+     },
+     "2025-12": {
+      "n": 1006,
+      "mean_net_r": -0.1941
+     },
+     "2026-01": {
+      "n": 1214,
+      "mean_net_r": 0.0325
+     },
+     "2026-02": {
+      "n": 1278,
+      "mean_net_r": 0.0058
+     },
+     "2026-03": {
+      "n": 1022,
+      "mean_net_r": -0.0032
+     },
+     "2026-04": {
+      "n": 838,
+      "mean_net_r": -0.1713
+     },
+     "2026-05": {
+      "n": 888,
+      "mean_net_r": -0.2312
+     },
+     "2026-06": {
+      "n": 1273,
+      "mean_net_r": -0.1699
+     },
+     "2026-07": {
+      "n": 825,
+      "mean_net_r": -0.1489
+     },
+     "2026-08": {
+      "n": 979,
+      "mean_net_r": -0.0822
+     },
+     "2026-09": {
+      "n": 985,
+      "mean_net_r": 0.1594
+     },
+     "2026-10": {
+      "n": 1084,
+      "mean_net_r": -0.055
+     }
+    },
+    "bootstrap_ci95_mean_net_r_reported_not_gating": [
+     -0.08666223273185768,
+     -0.053858350201684085
+    ]
+   }
+  }
+ }
+}
