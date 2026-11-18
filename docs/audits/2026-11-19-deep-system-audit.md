@@ -4,7 +4,7 @@
 >
 > **Gates this adds or changes:** none. This is a measured record and a ranked proposal. It authorizes nothing. Every live-infra move below is Tier 2 and waits for the operator (week plan § 5, M2: *"all OCI usage must stay inside the Always Free tier"*).
 
-**Status: DRAFT 1** (written 2026-11-18 ~23:00Z, before the Thu–Sun audit window). Sections marked *open* are still being measured; later drafts replace them in place.
+**Status: DRAFT 2 in progress** (Draft 1 2026-11-18 ~23:00Z by AM-OPS-3; Draft 2 by AM-OPS-4 from 2026-11-18 23:55Z). Sections marked *open* are still being measured; later drafts replace them in place.
 
 ## 0. Top line
 
@@ -67,9 +67,10 @@ Source: `oci-inventory` issue #26981 (run 44411483182) and `oci-capacity-report`
 | Trainer memory | daily p95 33–85% of 6 GB | ledger | bursty |
 | Trainer disk | 82 / 97 GB (84%): `data` 27 GB (etf_history 23 GB, journal mirror 2.9 GB), `datasets-out` 12 GB, `ml` 9.8 GB | #26982 | |
 | Gateway | CPU p95 44–64% of 1 OCPU; memory p95 20–25% of 6 GB (~1.2–1.5 GB); disk 20–24% of 47 GB | ledger | |
-| GitHub Actions | public repo, so standard-runner minutes are free; **404 runs queued** at 22:50Z; 3 runs stuck "queued" with 0 jobs since 2026-11-11 20:30Z | Actions API | concurrency, not minutes, is the limit |
+| GitHub Actions | public repo, so standard-runner minutes are free; **404 runs queued** at 22:50Z. Re-read 2026-11-18 23:41Z: **423 queued**, of which 358 were created 2026-11-11 (sampled: 0 jobs each), 23 on 2026-05-15, 13 in Sep/Oct, and 23 on 11-18; 21 in progress | Actions API | concurrency, not minutes, is the limit; the 11-11 block is ghosts (0 jobs) that clutter the queue but hold no runner |
 | Research dispatcher | cycles 19–21 min apart vs a 3–10 min target; the `rearm` job waited 6–13 min for a runner; its 1800 s idle sleep exceeded its 20-min timeout | Actions API | fixed in PR #26988 |
-| Kaggle | weekly GPU quota read by the dispatcher (`scripts/research/research_compute.yaml`, floor 3 h) | *open*: not read this pass | |
+| Kaggle GPU | **29.84 of 30 h left this week (0.16 h used)**, refresh 2026-11-21 00:00Z | `comms/research/utilization/44416449619.json` (dispatcher, 2026-11-18 23:02Z) | **almost entirely unused**: ~30 free GPU-h/week |
+| Research backends | github_runner capacity 4, all busy, **41 due waiting**; kaggle_cpu capacity 1, busy, **41 waiting**; trainer capacity 1, 5 waiting; kaggle (GPU) 0 due; runpod 0 due, $0 of $10 month-to-date | same record | the CPU lanes are the bottleneck while the GPU lane is idle. Lever: route GPU-eligible units to Kaggle GPU and check whether Kaggle allows more than 1 concurrent CPU session (*open*: verify the account's concurrent-session limit) |
 | Hugging Face | account `bentzbk`; manager decision M6: no paid GPU | — | *open* |
 | RunPod | $10 / month budget (operator-approved 2026-07-02), ledger `comms/gpu_spend_ledger.json` | | the only paid compute besides a possible OCI overage |
 | Timers | trainer: 27 timers (11 ict-*), 0 failed units; live: 30 timers (`/api/diag/timers`, 30 read, 0 could_not_look) | #26982, diag | *open*: per-timer CPU on live |
@@ -85,7 +86,9 @@ Source: `oci-inventory` issue #26981 (run 44411483182) and `oci-capacity-report`
 | B5 | Live tick near budget (journal lock held 37 s of every 60 s) | row `LIVE-TICK-NEAR-BUDGET` (Tier 2) |
 | B6 | IB gross exposure ~1.5× equity from tight-stop futures sizing; the 1.5× cap then bricks the account | row `IB-GROSS-NO-CAP-FIX` (Tier 3, Stage-0 first) |
 | B7 | `oci-inventory` posts tenancy and instance OCIDs on a public issue | *open*: identifiers, not secrets; propose redaction in the report step |
-| B8 | 3 ghost `send-ping` runs stuck queued since 2026-11-11 (0 jobs) | *open*: cancel them, then check that the pings were delivered by another path |
+| B8 | Ghost runs: re-measured 23:41Z as **358 queued runs from 2026-11-11, sampled 0 jobs each** (plus 36 older), not 3 | *open*: a bulk cancel was refused by this session's tool classifier; routed to the manager |
+| B9 | #26996 (IB open-trade cache prune) read `permId` off the `reqAllOpenOrders` response. The real ib_insync 0.9.86 response is `List[Trade]`, so every acknowledged leg was pruned on ib_paper and the naked sweep cancelled and re-armed 3 positions every ~6 min (23:29–23:47Z). A fresh-client read at ~23:44Z found **0** resting orders. Paper only | reverted by #27014 (deployed 23:49:29Z, first sweep covered=3 naked=0); re-land against the real response shape in #27023 (held); root cause on PI-20261117-LSFHBH4A-0006 |
+| B10 | `/api/health` is a sync handler on the AnyIO threadpool shared with 67 sync diag routes, so one watchdog probe can queue past 10 s under CPU saturation (WEBAPI-WEDGE-RECURRING: 9 single failed probes in 68 h) | fix #27020 (held Tier 2) |
 
 ## 4. Free resources not yet used (d)
 
