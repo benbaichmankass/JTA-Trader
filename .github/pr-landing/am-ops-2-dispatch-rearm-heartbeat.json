@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI/tooling only: adds a `rearm` job to research-queue-dispatch.yml so the research dispatcher re-dispatches itself (150 s with work left, 600 s idle). The workflow_run refill never fires for runs the bot starts and schedule-keeper only runs on a push, so cycles were hours apart (PI-20261118-JFWRQYOV-0001). No caps, gates or order path change. Gates this adds or changes: none."
+}
