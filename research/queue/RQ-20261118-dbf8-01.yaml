@@ -1,0 +1,127 @@
+id: RQ-20261118-dbf8-01
+title: 'Tree-family diversity on a MONEY label (D3 Foxhound): does CatBoost on the same features and raw net-R target beat LightGBM on the trades each
+  would take at actual net R? (13 monthly refits over 2025-10..2026-09; the three-learner blend LightGBM+CatBoost+ridge reported)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: new_hypothesis
+practice_precedent: 'Our own D2 result RQ-20261117-dc44-02 (PASS: CatBoost beat LightGBM on the range-vol feature set, MEASURED, research/results/RQ-20261117-dc44-02/).
+  Prokhorenkova et al., CatBoost: unbiased boosting with categorical features, NeurIPS 2018 (PRIMARY, known before this pass, not re-read): ordered boosting
+  reduces prediction shift on small, noisy targets. Bysik and Slepaczuk 2026, arXiv 2606.00060 (abstract read): on hourly BTC in a 27-fold walk-forward,
+  boosted trees were at least as good as LSTM/iTransformer, and a cost threshold mattered more than the learner.'
+levers:
+- name: learner
+  values:
+  - LightGBM (RAW, baseline)
+  - CatBoost (CB, decided)
+  - (LightGBM + CatBoost + ridge) / 3 (ENS3, reported only)
+  hypothesised_effect: CB raises held-out net R per decision by >= +0.06 vs RAW; ENS3 is reported to show whether a blend adds beyond the learner swap
+- name: catboost_params
+  values:
+  - iterations 600, depth 6, learning_rate 0.05, l2_leaf_reg 3, seed 0 (scripts/research/ml_entry_residual.py CB_PARAMS)
+  hypothesised_effect: fixed, not swept (declared)
+question: Refit the SAME recipe (ml_decision_entry FEATURES, E.purge_train, served tau, raw net-R target) at each of 13 monthly origins over the frozen
+  v1's held-out year with three learners -- RAW (LightGBM), CB (CatBoost) and ENS3 (equal-weight average of LightGBM, CatBoost and ridge, reported) --
+  and grade each on the decisions it takes at the ACTUAL net R of an outright bracket trade (canonical cost stack). Does CB beat RAW?
+why_this_matters: 'Every non-tree and alternative-tree test in the queue so far (27 units with a tabicl / tabpfn / torch_gru / sklearn_mlp arm; 18 of
+  18 ml_bakeoff results this week) targeted regime_label or direction_label. None tested a learner on a label that changes an order. Foxhound-1 (D3 ml_entry)
+  trades bybit_2 (real money), its mirror and two prop books on one LightGBM (ml_order_changers.py: mean net R +0.0371, n 907, t 1.03). A CatBoost
+  PASS is a cheap serving change (a CPU booster, no torch); a FAIL closes the cheapest tree-diversity lever for this recipe. ML-FRONTIER-PREP-20261118
+  frontier rank #1.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED, not re-derived): RQ-20261112-4654-07 and -01 use the same 13 x 28-day windows; frontier-scan-2026-11-11 K1 gives a paired
+    window sd of 0.074 R/decision for two refits of this recipe, se 0.0205, 80%-power MDE at alpha 0.05 two-sided ~0.063 R. The measured ENS-RAW paired
+    spread in 4654-07 (CI half-width 0.12 over k=13) was wider, so this design may land INDETERMINATE on a true +0.06 effect (declared). Fewer than 10
+    windows with n >= 30 per arm is INDETERMINATE. The window sd is re-measured (paired_extra_vs_raw.cb.sd).'
+  feasibility:
+    source: none
+    accrual_basis: Replays Binance USD-M 1h history 2021..2026-09 already published; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261118-dbf8-01-CATBOOST-ENTRY
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: 'RAW: the same LightGBM recipe on the raw net-R target at the same origins, same rows (BTCUSDT excluded), same tau, same cost stack. Net of
+    the full cost stack.'
+  statistic: 'scripts/research/ml_entry_residual.py run --arms raw,cb,ens3: per 28-day window, mean actual net R per taken decision for each arm (E.policy,
+    served tau); d_w = CB - RAW over windows where both took >= 30 decisions; mean, sd and 95% t-interval of d_w (paired_extra_vs_raw.cb); ENS3 - RAW
+    reported the same way, not decided; pooled means and n.'
+  rule: 'decide_vs_raw on CB (the first extra arm): PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND
+    CB pooled n >= 300. FAIL iff >= 10 paired windows AND mean d <= 0. INDETERMINATE otherwise. ENS3 is reported only and cannot change the verdict.
+    Net of the full cost stack (fee + slippage + funding via ml_decision_entry._cost_r). Thresholds are not changed after any result.'
+  pass_action: 'a Tier-3 proposal note on row ML-ENTRY-FINETUNE: candidate manifest for a CatBoost ENTRY model, plus the promotion-design unit on the
+    full held-out year with the prop survival gate; tag the result gbdt (catboost) in the diversity ledger with this exact configuration.'
+  fail_action: record FAIL for this exact configuration (CB_PARAMS as declared, the v1 recipe, raw target, served tau) in families.gbdt.history; close
+    FRONTIER-Q-CATBOOST-ENTRY; if ENS3 beat RAW say so and file it as a separate question.
+  what_it_does_not_do: Changes no served model, tau, roster or config. No CatBoost hyperparameter search. One seed per refit. BTCUSDT excluded. The window
+    was read before by 98e3-26, 4654-01 and 4654-07 (declared). A PASS is not a promotion. Runs on the free runner, which installs the ml_bakeoff learner
+    set (catboost) because this unit names ml_bakeoff here; the harness is ml_entry_residual.py, not ml_bakeoff.py.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled CB decisions
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in, as 4654-07: Foxhound-1 trades bybit_2 + prop books; a +0.06 R/decision lift at ~40 decisions/month on bybit_2 is the scale; not
+    a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: Binance public klines plus 13 refits x 3 learners x 2 sides; no trainer-resident data.
+  basis: 'ESTIMATE: RQ-20261112-4654-07 (raw,ens,ridge) ran on research-script-run; CatBoost at 600 iterations is ~3-5x a LightGBM fit on 4 vCPU.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,cb,ens3
+  - --cache
+  - /tmp/ml_entry_klines
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --run-date
+  - '2026-11-18'
+  - --rule-id
+  - RULE-RQ20261118-dbf8-01-CATBOOST-ENTRY
+  - --registered-at
+  - '2026-11-18'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261118-dbf8-01
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether Foxhound-1 (ml_decision_entry) serves a CatBoost booster instead of LightGBM; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261112-4654-07
+- RQ-20261117-dc44-02
+- FRONTIER-Q-CATBOOST-ENTRY
+- ML-ENTRY-FINETUNE
+population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
+  in 13 x 28-day windows; a recipe comparison, not a promotion read.

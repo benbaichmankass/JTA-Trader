@@ -52,7 +52,7 @@ PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
 #: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
 #: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
-EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross")
+EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross", "cb", "ens3")
 # gross (ML-PRIMARY-3, 2026-11-15; diagnosis cd01-01 R3: the net-R label is cost-driven, IC net 0.497 vs gross 0.003): the
 # DECOMPOSED score. LightGBM learns GROSS R per side; the decision score subtracts the KNOWN pre-trade cost per R,
 # c_hat = k_side / (SL_ATR x atr_pct), where k_side = sum(cost) / sum(1 / (SL_ATR x atr_pct)) on the refit's OWN training rows.
@@ -61,6 +61,12 @@ EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross")
 # average of the LightGBM and ridge predictions (a heterogeneous ensemble). They change the learner, not the target.
 LEARNER_ARMS = {"ens": "raw", "ridge": "raw"}
 RIDGE_ALPHA = 10.0
+# cb / ens3 (FRONTIER-Q-CATBOOST-ENTRY, ML-FRONTIER-PREP-20261118): the RAW target with CatBoost (ordered boosting, a
+# different tree family from LightGBM; it beat LightGBM on the D2 yz features in RQ-20261117-dc44-02), and the
+# equal-weight average of LightGBM, CatBoost and ridge. They change the learner, not the target. Params are fixed, not swept.
+LEARNER_ARMS.update({"cb": "raw", "ens3": "raw"})
+CB_PARAMS = {"iterations": 600, "depth": 6, "learning_rate": 0.05, "loss_function": "RMSE", "l2_leaf_reg": 3.0,
+             "random_seed": 0, "verbose": 0, "allow_writing_files": False}
 # conf (FRONTIER-Q-CONFORMAL-ENTRY): uncertainty-normalised selection at MATCHED COVERAGE. Inside each refit's training
 # rows (time order): PROPER (first 70%) fits mu_p; CAL-A (next 15%) fits sigma = E|y - mu_p|; CAL-B (last 15%) picks the
 # score threshold s* so E.policy on (mu_p / sigma) takes as many decisions there as E.policy on mu_p at tau. A 25-hour gap
@@ -140,9 +146,17 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
         if arm == "ridge":
             out[side] = ridge
             continue
+        cb = None
+        if arm in ("cb", "ens3"):
+            from catboost import CatBoostRegressor
+            cb = CatBoostRegressor(**CB_PARAMS)
+            cb.fit(train[E.FEATURES], y)
+        if arm == "cb":
+            out[side] = cb
+            continue
         m = lgb.LGBMRegressor(**E.LGB_PARAMS)
         m.fit(train[E.FEATURES], y)
-        out[side] = _Blend(m, ridge) if arm == "ens" else m
+        out[side] = _Blend(m, ridge) if arm == "ens" else (_Blend3(m, cb, ridge) if arm == "ens3" else m)
     return out
 
 
@@ -245,6 +259,17 @@ class _Blend:
     def predict(self, x):
         # provenance: predict -- mean of the LightGBM and ridge regressed net R, not a probability
         return 0.5 * (self.a.predict(x) + self.b.predict(x))
+
+
+class _Blend3:
+    """Equal-weight average of three fitted regressors' predictions (all in net-R units of the same target)."""
+
+    def __init__(self, a, b, c):
+        self.a, self.b, self.c = a, b, c
+
+    def predict(self, x):
+        # provenance: predict -- mean of the LightGBM, CatBoost and ridge regressed net R, not a probability
+        return (self.a.predict(x) + self.b.predict(x) + self.c.predict(x)) / 3.0
 
 
 # ----------------------------------------------------------------------------------------------- statistics

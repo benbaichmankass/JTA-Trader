@@ -1,0 +1,671 @@
+{
+ "request_id": "ML-REVIEW-20261118",
+ "reviewed_at": "2026-11-18T20:00:00Z",
+ "reviewer": "ML-FRONTIER-PREP-20261118 (session_01AFoLuMhxGuKUegEUWZzMdp)",
+ "window_start": "2026-11-11T20:00:00Z",
+ "window_end": "2026-11-18T20:00:00Z",
+ "overall_assessment": "investigate",
+ "overall_assessment_reason": "C6 could_not_look for every served order-changing model; C5 live-vs-replay label parity FAILs on the live D2 heads; C11 not run",
+ "headline": "MODEL track -- /ml-review 2026-11-18 -- No stronger model family has yet been tested on a decision that changes an order (27/27 non-tree learner units and 18/18 bake-offs this week were regime/direction labels), and the live D2 heads are graded on replayed labels that fail live parity (BTC kappa 0.24).",
+ "scoreboard": {
+  "source": "GET /api/bot/performance (lifetime; the route ignores account_id/account/book params and since=, so per-book and 90d/30d/7d are could_not_look this run)",
+  "all_accounts_default_book": {
+   "n": 516,
+   "net_pnl_measured_usd": -159.59,
+   "net_r": -158.69,
+   "exp_r": -0.3075,
+   "pf": 0.6303,
+   "max_dd_usd": -168.79,
+   "journal_trust": "bybit_2 known divergent; alpaca_live unrecorded"
+  },
+  "real_money": "\u2014",
+  "mirror": "\u2014",
+  "paper": "\u2014",
+  "sceptical_quant": {
+   "Foxhound-1 (ml_entry, real money bybit_2)": "no: held-out +0.0371 R/decision, n 907, t 1.03 (ml_order_changers.py); tau 0.30 lever FAIL -0.2107 R (c21d-01); DSR not_computed",
+   "Foxhound-4 (ml_entry_eq_struct, alpaca_live)": "not yet: +0.4922 R, n 207, t 2.06 naive, clustered se 0.239 (t ~2.06); no live iteration unit (dsr_probation)",
+   "Beagle-1 (TD overlay, D4)": "partly: non-inferiority PASS on the pooled TD family (n 1,830); its challenger cc86-01 INDETERMINATE",
+   "Labrador-1b (TP extend, D7)": "no: +0.0081 R/trade, n 868 -- below any confirmable effect",
+   "D2 Collie heads": "no record of decision value (the gate value is a regime_policy cell question); live labels unverified (aadc-01 FAIL)"
+  }
+ },
+ "prior_calls_scorecard": {
+  "grades": [
+   {
+    "call": "ML-20261111-1",
+    "grade": "miss",
+    "evidence": "K1 RQ-20261112-4654-01 FAIL: paired resid-raw -0.0662 R over k=13, CI95 [-0.196, +0.064] (research/results/RQ-20261112-4654-01/43483024281.jsonl); action happened (unit ran)"
+   },
+   {
+    "call": "ML-20261111-2",
+    "grade": "hit",
+    "evidence": "served-ENTRY replay grades after 11-11 read <= 0: RQ-20261112-cd01-01 (mean_net_V -0.324) and RQ-20261117-c21d-01 (tau 0.30: pooled -0.2107 R, n 1230, 51 symbols)"
+   },
+   {
+    "call": "ML-20261111-3",
+    "grade": "hit",
+    "evidence": "18/18 ml_bakeoff units with a result generated 2026-11-11T20Z..11-18T20Z target regime_label or direction_label (100% >= 70%)"
+   },
+   {
+    "call": "ML-20261111-4",
+    "grade": "miss",
+    "evidence": "/api/bot/shadow/drift btc-regime-15m-lgbm-fc-pcv-v2 KS 0.552 >= 0.20 (macro_f1 0.585 >= 0.57 held, but the rule needs both)"
+   },
+   {
+    "call": "ML-20261111-5",
+    "grade": "hit",
+    "evidence": "work.py get FRONTIER-LEVER-TABULAR state queued (updated 10-23); FRONTIER-LEVER-TSFM-TIMESTRAL queued (updated 10-25)"
+   },
+   {
+    "call": "ML-20261111-6",
+    "grade": "miss",
+    "evidence": "iteration_orphans.py: ml_model 13 subjects -- covered 7, overdue 3, ORPHAN 3 (overdue 3 <= 5)"
+   },
+   {
+    "call": "ML-20261111-7",
+    "grade": "miss",
+    "evidence": "trainer stage-guard summary.demote = [btc-regime-15m-lgbm-fc-pcv-v2, sol-regime-15m-lgbm-fc-pcv-v2] (#26859)"
+   },
+   {
+    "call": "ML-20261104-4-carry",
+    "grade": "unresolved",
+    "evidence": "not re-read this run (per-account closed-trade read not taken; /api/bot/performance ignores account params); carried"
+   }
+  ],
+  "footer": "8 prior calls: hit 3, miss 4, unresolved 1; Brier INDETERMINATE (< 10 resolved in series)"
+ },
+ "checks": {
+  "C1": {
+   "state": "finding",
+   "population": "trainer registry (100 rows on the trainer; 108 on the API incl. 8 served consumer rows); last cycles 11-17..11-18",
+   "reading": "trainer-vm-diag #26859 (run 44366899391): timer active (service inactive between runs, normal); last cycle_end 2026-11-18T08:04Z rc 0 (01:34Z cycle trained 2, skipped 3; 11-17 01:20Z trained 22); 0 manifest_oom_red_flag; dataset builds rc 0; exit-policy-v1 and setup-candidates-metalabel-paper-v1 0 runs for 114 d (dataset absent/empty), mes-execution-quality awaiting source by design; stage-guard 98 hold / 2 DEMOTE (btc + sol fc-pcv-v2); REGISTRY-STAGES-CHANGED (shadow 16 vs plan 21) with no recorded decision -> PI-20261118-EUWZZMDP-0004; disk 84% (16 GB free)"
+  },
+  "C2": {
+   "state": "finding",
+   "population": "5 manifests scanned by training_staleness; every model with a consumer",
+   "reading": "TRAINING-STALENESS stale 2 / never_trained 2 of 5; gate-check labels_accruing 0.93 (MES-5m), 0.99 (BTC/SOL fc-pcv-v2); Foxhound-1 served refit r20261106 is 12 d old against the weekly cadence (ML-ENTRY-RETRAIN-CADENCE) -- red"
+  },
+  "C3": {
+   "state": "finding",
+   "population": "8 models with a consumer (feed inventory_read_state ok); rostered legs not re-counted this run",
+   "reading": "ml_order_changers.py: order_effect=yes on 7 of 8 (Labrador-2 exit head order_effect=no). Real-money legs with ML input: ml_entry (bybit_2, Foxhound-1 + Labrador-1b), ml_entry_eq_struct (alpaca_live, Foxhound-4), TD legs via Beagle-1 overlay on bybit_2. The consumer feed omits the 3 live D2 heads (by_slot consuming_strategies=[]) although regime_policy trend_vol cells consume them -> PI-20261118-EUWZZMDP-0002. Headline: legs_changed/rostered = could_not_look (D2 consumers missing from the feed); slots with a live ML = D2, D3, D4, D7 (4 of 10)",
+   "order_changer_lines": [
+    "# models with a consumer: 8 (population: feed rows with consumers[]; real money first; feed inventory_count=8, rows=108)",
+    "Foxhound-1 [ml-decision-entry-v1] slot=D3 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0371 n=907 sd=1.09 se=0.0362 t=1.03 cse=\u2014 trades_to_confirm(t=2)=3453 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=same lineage as ml-decision-entry-v1r20261106 (one served pointer)",
+    "Foxhound-1 (refit r20261106) [ml-decision-entry-v1r20261106] slot=D3 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0371 n=907 sd=1.09 se=0.0362 t=1.03 cse=\u2014 trades_to_confirm(t=2)=3453 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=mirror net-of-cost mean net R over the trailing window the mirror reports < 0 with day-clustered t <= -2 at n >= 100 AND the refit is not better on the same replay (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)",
+    "Foxhound-4 [ml-entry-eq-struct-ens5-v1] slot=D3 order_effect=yes books=alpaca_live(real_money),alpaca_portfolio(paper) | mean_net_r=0.4922 n=207 sd=1.09 se=0.0758 t=2.06 cse=0.239 trades_to_confirm(t=2)=196 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=RQ-20261112-ef4c-09 FAIL, or mirror net-of-cost mean net R < 0 at day-clustered t <= -2 at n >= 100 (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)",
+    "Labrador-1b [ml-entry-tp-revision-v1] slot=D7 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0081 n=868 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D7 baseline=the original TP held (no revision) on the same trades | demotion_signal(label, report-only)=mirror: mean delta net R (revised minus held TP) over the trailing mirror window < 0 at day-clustered t <= -2 and n >= 100 (declared by lane ML-SLOT-MAP 2026-11-12, same form as the D3 reads)",
+    "Beagle-1 [overlay-td-v1] slot=D4 order_effect=yes books=bybit_1(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=\u2014 n=1830 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D4 baseline=the unreduced book (multiplier 1.0) on the same trades | demotion_signal(label, report-only)=mirror: reduced trades' mean net R > take-all mean over the trailing mirror window at n_reduced >= 30, i.e. the overlay is reducing winners (declared by lane ML-SLOT-MAP 2026-11-12; the V2 rule's check (d) turned into a live read)",
+    "Labrador-2 [exit-head-donchian-1h-v1] slot=D8 order_effect=no books=bybit_1(paper) | mean_net_r=-0.0141 n=1041 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D8 baseline=the leg's declared exit with no head (ML-EXITHEAD-VALUE) | demotion_signal(label, report-only)=changes no order today (annotate); acts only on ETH bybit_1. Declared read: ETH out-of-sample delta net R < 0 at n >= 30 -> annotate. No ETH OOS read exists yet (UNVERIFIED)",
+    "Foxhound-2 [ml-decision-entry-v2] slot=D3 order_effect=yes books=bybit_1(paper) | mean_net_r=-0.1161 n=320 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=already FAILED W1 (-0.1161 vs frozen v1 -0.0405, RQ-20261101-b609-01); stays at the demo floor for the b610 forward read; retire on a b610 FAIL",
+    "Foxhound-3 [ml-entry-eq-v1] slot=D3 order_effect=yes books=alpaca_paper(paper) | mean_net_r=0.0392 n=858 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=RQ-20261112-ef4c-09 shows struct beats it (v1 retires unless its v1-only arm has mean net R > 0 at n >= 30)",
+    "rc=0"
+   ]
+  },
+  "C4": {
+   "state": "finding",
+   "population": "4 sources, window 2026-11-11T18:15Z..11-18T18:15Z",
+   "reading": "ml_learning_ledger.py: desk H1 42 / H2 10 / H3 0 (first broken hop: desk H2->H3, recorded-but-never-learned); live_review H3 could_not_look (no consumed-ids ledger); trade_closes and paths_corpus H1-H3 could_not_look; H5 scored 101, H6 promoted 0* (ESTIMATED), H7 order-changing legs 6* (real-money/prop 3*)",
+   "first_broken_hop": "desk H3 (labelled 10, in a dataset 0)"
+  },
+  "C5": {
+   "state": "finding",
+   "population": "live D2 heads (BTC/SOL fc-pcv-v2, MES-5m v2, ETH xasset); the 8 served consumer models",
+   "reading": "RQ-20261117-aadc-01 FAIL: live vs trainer-replayed vol labels disagree -- BTC fc-pcv-v2 kappa 0.24 (n 1,111 bars; live 3.3% vs replay 5.3% volatile), SOL kappa 0.51 (n 676); MES indeterminate (n 23); ETH xasset not_applicable. Every D2 read on replayed labels (stage-guard demote, gate-check oos_edge) is a replay-population read, not live. Owner PI-20261118-ZZUFKM1F-0001. gate-check live_parity 0.0 pass (MES, BTC); SOL insufficient_data (16). Served models: parity rows could_not_look via gate-check (no registry entry)."
+  },
+  "C6": {
+   "state": "could_not_look",
+   "population": "8 served order-changing models",
+   "reading": "trainer gate-check returns no registry entry for all 8 served models (#26859), so no cost_gate.json exists for any model that changes an order; chased: re-fired as part of the single batched pull; alternate route = research/results champion-challenger records (dc44-03 yz vs v2 PASS at live cadence; c21d-03 PASS population read; 4654-07 INDETERMINATE) -- these used one fold file and one cost stack per unit. Filed: PI-20261028-GNVUF1ES-0002 (re-dated)"
+  },
+  "C7": {
+   "state": "finding",
+   "population": "live D2 heads",
+   "reading": "(a) /shadow/drift: BTC fc-pcv-v2 significant (KS 0.552, PSI 0.871; ref n 3322 vs cur n 741), SOL fc-pcv-v2 significant (KS 0.246, PSI 0.310), MES-5m minor (KS 0.073). BTC drifted on 11-11 too -> PERSISTENT -> row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2. Trainer plan-only scan rc 0, 19 rows, 0 dispatch/skip_no_manifest -- disagrees with the API -> PI-20261118-EUWZZMDP-0003. (b) labelled decay: could_not_look: no instrument (LIVE-DECAY-MONITOR); BTC macro-F1 0.585 on the trainer latest run (>= 0.57)."
+  },
+  "C8": {
+   "state": "finding",
+   "population": "registry 108 rows; 19 open family-tagged plan items (after this run)",
+   "reading": "CONCENTRATION gbdt 14/19 open items (13/17 before this run; ML-F33 CatBoost adds one gbdt item, ML-F34 TabICL adds one non-gbdt); MANIFEST-CONCENTRATION gbdt 79/108; UNMAPPED-TRAINER 8 served models -> PI-20261118-EUWZZMDP-0001; 27/27 non-tree learner units on regime/direction labels"
+  },
+  "C9": {
+   "state": "ok",
+   "population": "research/results records generated 2026-11-11T20Z..11-18T20Z: 532 (fail 233, pass 175, n/a 51, indeterminate 46, wiring_only 22, no_action 5); ML-titled subset 115",
+   "reading": "every read result carries a graded verdict from research-ops (queue_grade.py); key ML results: dc44-02 PASS (CatBoost > LGBM, D2), dc44-03 PASS (yz > v2 at live cadence), c21d-05 FAIL (GRU, D2, powered), aadc-12 PASS (exit-head label, held-out symbols), 4654-01 FAIL (K1 residual), c21d-01 FAIL (Foxhound tau 0.30), a474-01 FAIL (D6 Pointer v0 corrected), aadc-01 FAIL (label parity)"
+  },
+  "C10": {
+   "state": "finding",
+   "population": "10 production legs",
+   "reading": "dsr_probation.py: 8 on probation (DSR <= 0.95), 2 unread; ml_entry not_computed (unit RQ-20261105-025), ml_entry_eq_struct not_computed and NO LIVE UNIT -> could_not_look for both ML legs"
+  },
+  "C11": {
+   "state": "could_not_look",
+   "population": "overlay_policy mode: reduce legs",
+   "reading": "not run this lane (time-boxed to the operator's family focus); overlay_shadow + journal pages not pulled. Owner PI-20261029-XME2GXW7-0001 (live CUSUM join)."
+  }
+ },
+ "weekly_progress_lines": {
+  "data_coverage": "could_not_look (feature-family present share per symbol not computed this run)",
+  "feature_count_in_use": "could_not_look",
+  "retrain_freshness": "Foxhound-1 served refit r20261106: 12 d since refit (ESTIMATED from the model id; data-through not re-read) > 8 d -- RED",
+  "live_vs_heldout": "Foxhound-1 held-out +0.0371 R/decision (n 907, t 1.03); live week mean could_not_look (per-account closed read not taken)"
+ },
+ "analysis": {
+  "questions": [
+   {
+    "q": "Is the family monoculture a fact about families or about the question asked?",
+    "hypotheses": [
+     "H1 trees are genuinely best for our data (noise)",
+     "H2 non-tree families were only ever asked D2/direction questions, where trees win, and never a money label",
+     "H3 non-tree arms were never run at full power (CPU caps/timeouts)"
+    ],
+    "test": "join of 27 non-tree learner units to their targets and arm_status",
+    "result": "H2 and H3 supported (27/27 regime/direction; 7 tabular-FM arms capped/unavailable/timed out); H1 not tested on money labels except ridge (FAIL) -> file D3 money-label family tests (dbf8-01, dbf8-02)",
+    "status": "MEASURED"
+   },
+   {
+    "q": "Is the BTC fc-pcv-v2 drift regime-mix or a serve defect?",
+    "hypotheses": [
+     "H1 regime-mix: calmer market lowers p(volatile)",
+     "H2 serve-path defect: live features differ from replay (aadc-01 kappa 0.24)",
+     "H3 instrument artefact: drift scan disagrees with /shadow/drift"
+    ],
+    "test": "serve-path diff (PI-20261118-ZZUFKM1F-0001) + drift-instrument reconciliation (EUWZZMDP-0003)",
+    "result": "open; labelled macro-F1 holding (0.585) weakly favours H1/H2 over capability decay; no demotion (drift-remediation: a live model is the baseline)",
+    "status": "INFERRED"
+   },
+   {
+    "q": "Where is the next live ML in an empty slot (operator focus 1)?",
+    "hypotheses": [
+     "D8 via aadc-12 label",
+     "D6 via Pointer",
+     "D9/D10/D5"
+    ],
+    "test": "this week results per slot",
+    "result": "D8 is closest: aadc-12 PASS +0.0160 R/trade deflated CI LB +0.0063 on held-out symbols; D6 Pointer v0 FAIL x2; D10 CJ-4 FAIL (089f-01); D5 Mastiff FAIL (a474-02); D9 baseline only; D1 rule by design",
+    "status": "MEASURED"
+   }
+  ],
+  "surprises": [
+   "The trainer drift scan reports 0 drifted heads while /shadow/drift reads significant on two live heads",
+   "The registry consumer feed lists no consumers for the live D2 heads"
+  ]
+ },
+ "calls": [
+  {
+   "id": "ML-20261118-1",
+   "call": "RQ-20261118-dbf8-01 (CatBoost vs LightGBM on the D3 ENTRY recipe, raw net R) PASSES at its registered design.",
+   "p": 0.3,
+   "tier": 1,
+   "check": {
+    "command": "research/results/RQ-20261118-dbf8-01/*.jsonl verdict",
+    "rule": "hit if pass; miss if fail or indeterminate",
+    "resolves_when": "unit graded; void if not run by 2026-12-02"
+   },
+   "ending": "research unit RQ-20261118-dbf8-01"
+  },
+  {
+   "id": "ML-20261118-2",
+   "call": "FRONTIER-LEVER-TABULAR is still queued at the 2026-11-25 scan (no Kaggle PROBE_LEARNERS line with tabicl ok).",
+   "p": 0.55,
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/work.py get FRONTIER-LEVER-TABULAR (state)",
+    "rule": "hit if queued; miss if in_flight/done",
+    "resolves_when": "2026-11-25 frontier scan"
+   },
+   "ending": "handoff to manager (blocker raised)"
+  },
+  {
+   "id": "ML-20261118-3",
+   "call": "Of the ml_bakeoff results generated 2026-11-18T20Z..11-25T20Z, >= 70% still target regime_label or direction_label.",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "research/results/*/*.jsonl generated_at in window whose unit has ml_bakeoff; share whose ml_bakeoff block names regime_label or direction_label",
+    "rule": "hit if >= 0.70; miss if < 0.50; unresolved between",
+    "resolves_when": "2026-11-25 ml-review"
+   },
+   "ending": "no action, because: it measures whether this scan re-pointed capacity"
+  },
+  {
+   "id": "ML-20261118-4",
+   "call": "The live D2 head btc-regime-15m-lgbm-fc-pcv-v2 still reads significant score drift (KS >= 0.20) on /shadow/drift at the 2026-11-25 read.",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2 (ks)",
+    "rule": "hit if ks >= 0.20; miss if < 0.20",
+    "resolves_when": "2026-11-25 ml-review"
+   },
+   "ending": "checklist row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2 (due 2026-11-25)"
+  },
+  {
+   "id": "ML-20261118-5",
+   "call": "The serve-path diff for PI-20261118-ZZUFKM1F-0001 attributes the BTC fc-pcv-v2 live-vs-replay label disagreement first to the fc_* forecast feature block (not candle-derived features).",
+   "p": 0.5,
+   "tier": 1,
+   "check": {
+    "command": "the committed serve-path diff record closing PI-20261118-ZZUFKM1F-0001",
+    "rule": "hit if the first-named block is fc_*; miss if another block",
+    "resolves_when": "the diff lands; void if not by 2026-12-02"
+   },
+   "ending": "pipeline PI-20261118-ZZUFKM1F-0001 (owner ML-PRIMARY-5)"
+  },
+  {
+   "id": "ML-20261118-6",
+   "call": "A D8 candidate built on the aadc-12 holding_pays_neg25 label reaches a committed net-of-cost downstream read (pass or fail) by 2026-12-02.",
+   "p": 0.35,
+   "tier": 1,
+   "check": {
+    "command": "research/results for a unit whose title names holding_pays_neg25 and a downstream/promotion-design read, generated <= 2026-12-02",
+    "rule": "hit if such a record exists; miss if not",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "handoff: next_by_value_per_cost #3 (manager dispatches)"
+  },
+  {
+   "id": "ML-20261104-4-carry",
+   "call": "Live ENTRY (ml_entry, bybit_2) mean realised pnl% per closed trade is <= 0 once n >= 30.",
+   "p": 0.55,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/trades/closed?account_id=bybit_2&since=2026-11-01T00:00:00 pattern==ml_entry; mean realizedPnlPct",
+    "rule": "hit if mean <= 0 at n >= 30; miss if > 0",
+    "resolves_when": "n >= 30"
+   },
+   "ending": "carried"
+  }
+ ],
+ "trainer_findings": [
+  "0 OOM red flags",
+  "2 manifests never trained for 114 d (dataset absent): exit-policy-v1, setup-candidates-metalabel-paper-v1 (PI-20260929-UAOAYGBB-0001)",
+  "stage-guard demotes btc+sol fc-pcv-v2 (iteration input, not demotion)",
+  "gate-check cannot see served models"
+ ],
+ "model_status": [
+  {
+   "line": "Foxhound-1 [ml-decision-entry-v1] slot=D3 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0371 n=907 sd=1.09 se=0.0362 t=1.03 cse=\u2014 trades_to_confirm(t=2)=3453 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=same lineage as ml-decision-entry-v1r20261106 (one served pointer)"
+  },
+  {
+   "line": "Foxhound-1 (refit r20261106) [ml-decision-entry-v1r20261106] slot=D3 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0371 n=907 sd=1.09 se=0.0362 t=1.03 cse=\u2014 trades_to_confirm(t=2)=3453 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=mirror net-of-cost mean net R over the trailing window the mirror reports < 0 with day-clustered t <= -2 at n >= 100 AND the refit is not better on the same replay (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
+  },
+  {
+   "line": "Foxhound-4 [ml-entry-eq-struct-ens5-v1] slot=D3 order_effect=yes books=alpaca_live(real_money),alpaca_portfolio(paper) | mean_net_r=0.4922 n=207 sd=1.09 se=0.0758 t=2.06 cse=0.239 trades_to_confirm(t=2)=196 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=RQ-20261112-ef4c-09 FAIL, or mirror net-of-cost mean net R < 0 at day-clustered t <= -2 at n >= 100 (docs/plans/ML-D3-HEAD-TO-HEAD-2026-11-12.md)"
+  },
+  {
+   "line": "Labrador-1b [ml-entry-tp-revision-v1] slot=D7 order_effect=yes books=alpaca_paper(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=0.0081 n=868 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D7 baseline=the original TP held (no revision) on the same trades | demotion_signal(label, report-only)=mirror: mean delta net R (revised minus held TP) over the trailing mirror window < 0 at day-clustered t <= -2 and n >= 100 (declared by lane ML-SLOT-MAP 2026-11-12, same form as the D3 reads)"
+  },
+  {
+   "line": "Beagle-1 [overlay-td-v1] slot=D4 order_effect=yes books=bybit_1(paper),bybit_2(real_money),bybit_portfolio(paper),tradeify_1(prop),velotrade_1(prop) | mean_net_r=\u2014 n=1830 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D4 baseline=the unreduced book (multiplier 1.0) on the same trades | demotion_signal(label, report-only)=mirror: reduced trades' mean net R > take-all mean over the trailing mirror window at n_reduced >= 30, i.e. the overlay is reducing winners (declared by lane ML-SLOT-MAP 2026-11-12; the V2 rule's check (d) turned into a live read)"
+  },
+  {
+   "line": "Labrador-2 [exit-head-donchian-1h-v1] slot=D8 order_effect=no books=bybit_1(paper) | mean_net_r=-0.0141 n=1041 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D8 baseline=the leg's declared exit with no head (ML-EXITHEAD-VALUE) | demotion_signal(label, report-only)=changes no order today (annotate); acts only on ETH bybit_1. Declared read: ETH out-of-sample delta net R < 0 at n >= 30 -> annotate. No ETH OOS read exists yet (UNVERIFIED)"
+  },
+  {
+   "line": "Foxhound-2 [ml-decision-entry-v2] slot=D3 order_effect=yes books=bybit_1(paper) | mean_net_r=-0.1161 n=320 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=already FAILED W1 (-0.1161 vs frozen v1 -0.0405, RQ-20261101-b609-01); stays at the demo floor for the b610 forward read; retire on a b610 FAIL"
+  },
+  {
+   "line": "Foxhound-3 [ml-entry-eq-v1] slot=D3 order_effect=yes books=alpaca_paper(paper) | mean_net_r=0.0392 n=858 sd=\u2014 se=\u2014 t=\u2014 cse=\u2014 trades_to_confirm(t=2)=\u2014 | slot=D3 baseline=(a) take-nothing: mean net R >= 0 on the held-out window; (b) the incumbent on the same rows (frozen v1 for crypto; ml_entry_eq v1 for equity) | demotion_signal(label, report-only)=RQ-20261112-ef4c-09 shows struct beats it (v1 retires unless its v1-only arm has mean net R > 0 at n >= 30)"
+  }
+ ],
+ "model_status_summary": "8 models with a consumer (7 order-changing); D2 live heads 3 (consumer feed misses them); 100 trainer registry rows: advisory 3, shadow 16, candidate 80, research_only 1; candidate-only families: gbdt (classification_lightgbm 68 + regression_lightgbm 11), baselines 14, hmm 5, tcn 1, ssl 1",
+ "promotion_recommendations": [
+  {
+   "model": "none",
+   "why": "no model has a committed offline evidence record clearing its gates this week; D8 aadc-12 label PASS earns a candidate manifest + downstream net-of-cost read first (call ML-20261118-6), not a promotion"
+  }
+ ],
+ "experiments_proposed": [
+  {
+   "unit": "RQ-20261118-dbf8-01",
+   "slot": "D3",
+   "family": "gbdt (catboost)",
+   "p": 0.3,
+   "state": "queued"
+  },
+  {
+   "unit": "RQ-20261118-dbf8-02",
+   "slot": "D3",
+   "family": "tabular_foundation_model",
+   "p": 0.2,
+   "state": "blocked on FRONTIER-LEVER-TABULAR"
+  }
+ ],
+ "next_by_value_per_cost": [
+  {
+   "rank": 1,
+   "what": "RQ-20261118-dbf8-01 CatBoost (+3-learner blend) vs LightGBM on the D3 money label",
+   "cost": "free runner ~2.5 h",
+   "p": 0.3,
+   "consumer": "ml_entry (bybit_2 real money + prop)"
+  },
+  {
+   "rank": 2,
+   "what": "Serve-path diff for the live D2 labels (PI-20261118-ZZUFKM1F-0001) -- unblocks every D2 read and the drift diagnosis",
+   "cost": "1 lane, ~half day",
+   "p": 0.8,
+   "consumer": "regime_policy trend_vol gate"
+  },
+  {
+   "rank": 3,
+   "what": "D8: candidate manifest + net-of-cost downstream read on the aadc-12 holding_pays_neg25 exit-head label (nearest path to a live ML in a testing slot)",
+   "cost": "1 unit, runner",
+   "p": 0.35,
+   "consumer": "exit_head_action on TD legs"
+  },
+  {
+   "rank": 4,
+   "what": "Close FRONTIER-LEVER-TABULAR (Kaggle GPU learner probe) then run RQ-20261118-dbf8-02 TabICLv2 full-n on D3",
+   "cost": "lever build + Kaggle GPU",
+   "p": 0.2,
+   "consumer": "ml_entry"
+  },
+  {
+   "rank": 5,
+   "what": "D6 Pointer next lever: distributional first-passage head (quantile GBDT/NGBoost + conformal) instead of point TP",
+   "cost": "1 unit, TM-BENCH",
+   "p": 0.15,
+   "consumer": "bracket at entry (D6, empty slot)"
+  },
+  {
+   "rank": 6,
+   "what": "TTM-r2 + Log-HAR feature/quantile arm for D2 vol, after the label parity fix",
+   "cost": "trainer CPU",
+   "p": 0.15,
+   "consumer": "D2 gate"
+  }
+ ],
+ "backlog_drain": [
+  {
+   "id": "BL-20260813-E1E2-LIVE-ARM-NO-MINIMUM-N",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "BL-20260823-REGISTRY-STATUS-AXIS-IS-VESTIGIAL",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE-SO-ITS-30-DAY-REFERENCE-WINDOW-COVERS-28-DAYS-AND-71-PERCENT-OF-THE-FLEET-IS-BLOCKED-ON-AN-UNTRUSTWORTHY-VERDICT",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "MB-20260712-SHADOW-LOG-HISTORY",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "MB-20260719-PROMOREADY-OOSEDGE-OOM",
+   "disposition": "kept_open",
+   "reread": "re-read: 0 manifest_oom_red_flag in the cycle log (#26859); item concerns the promotion-readiness sweep, not re-measured"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0004",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0005",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20260929-UAOAYGBB-0001",
+   "disposition": "kept_open",
+   "reread": "re-read: exit-policy-v1 and setup-candidates-metalabel-paper-v1 still 0 runs, 114 d (cycle log #26859)"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261009-01FXMMUG-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261013-CAZHXZNE-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261014-MVBJLVJ3-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261015-SBAQDDVQ-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0002",
+   "disposition": "kept_open",
+   "reread": "redated 2026-11-18: gate-check no registry entry for all 8 served models (#26859)"
+  },
+  {
+   "id": "PI-20261029-MLP1-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261029-Q17QWHDZ-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0003",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261030-0261030B-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261031-TD4QC5GP-0005",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261031-YEIYJWC5-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261102-LRP-A66D9AD4",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0003",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261104-ELSFP54S-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261105-GEXSLEAK-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261105-WSKQN47K-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261106-5A1BGFHC-0004",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261106-5A1BGFHC-0005",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261106-QH1QSHD8-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261106-UE1PFQZX-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261109-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261110-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261111-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0001",
+   "disposition": "kept_open",
+   "reread": "routed_to fixed (was null while routed) -> ML-ENTRY-EQ-STRUCT-LIVE"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0002",
+   "disposition": "kept_open",
+   "reread": "redated + routed_to fixed: stage-guard still demotes BTC (and now SOL) fc-pcv-v2; -> DRIFT-REMEDIATE row"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0003",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0004",
+   "disposition": "kept_open",
+   "reread": "routed_to fixed (was null while routed) -> ML-HYGIENE; serve_parity job not re-read this run (could_not_look: not in the batched pull)"
+  },
+  {
+   "id": "PI-20261112-GERETIRE-0001",
+   "disposition": "kept_open",
+   "reread": "redated: drift persists >48h (KS 0.552); escalated to DRIFT-REMEDIATE row"
+  },
+  {
+   "id": "PI-20261112-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261114-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261115-LRP-A038E248",
+   "disposition": "kept_open",
+   "reread": "kept_open: one of 7 daily could_not_check parity rows for ml_entry_eq_struct (same check, consecutive windows) -- duplicate series; owner ML-LIVE-PARITY-ML-LEGS / ML-EQ-NOPKG-AUDIT should fold them; not closed here (not this review's rows)"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0003",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0004",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0005",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261117-ZZUFKM1F-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261117-ZZUFKM1F-0002",
+   "disposition": "kept_open",
+   "reread": "kept_open: no check this run changes its state; owner as routed"
+  },
+  {
+   "id": "PI-20261118-ZZUFKM1F-0001",
+   "disposition": "kept_open",
+   "reread": "kept_open: today's aadc-01 FAIL follow-up; it is this review's C5 finding; owner ML-PRIMARY-5"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 52,
+  "triaged": 52,
+  "resolved": 0,
+  "fixed_now": 3,
+  "closed_stale": 0,
+  "kept_open": 52,
+  "count_untriaged": 0,
+  "note": "fixed_now = 3 routed_to repairs (TX7TX2ZN-0001/-0002/-0004 were routed with routed_to null); 4 new items filed (EUWZZMDP-0001..0004) are not in open_at_start"
+ },
+ "anomalies": [
+  "/api/bot/performance ignores account filters (per-book scoreboard could_not_look); PI-20261111-TX7TX2ZN-0003 covers since=",
+  "3 pipeline items were state routed with routed_to null (fixed this run)",
+  "registry API rows report status None/candidate for heads the trainer lists as advisory/shadow (BL-20260823-REGISTRY-STATUS-AXIS-IS-VESTIGIAL)"
+ ],
+ "recommended_action": "Dispatch the D2 serve-path diff and the D8 downstream read; let dbf8-01 run; clear FRONTIER-LEVER-TABULAR so the first foundation-model money-label test can run.",
+ "operator_attention_required": false,
+ "claude_channel_ping": "/ml-review -- live ML in 4/10 slots (D2,D3,D4,D7); chain: desk H3 broken; 0 proposals; calls hit/miss 3/4; trainer=ok rc0; D2 label parity FAIL.",
+ "sources": [
+  "trainer-vm-diag issue #26859",
+  "GET /api/bot/ml/{registry,status}",
+  "GET /api/bot/shadow/drift",
+  "scripts/ops/ml_order_changers.py",
+  "scripts/ops/ml_learning_ledger.py",
+  "scripts/ops/ml_plan_status.py --plumbing/--diversity",
+  "scripts/research/iteration_orphans.py",
+  "scripts/research/dsr_probation.py",
+  "docs/research/frontier-scan-2026-11-18.md",
+  "comms/ml-plan/20261118T2000Z-ML-FRONTIER-PREP.json"
+ ]
+}
