@@ -1,12 +1,12 @@
 id: RQ-20261118-abab-60
-title: 'POOLED direction lever (DI) on the xrp_pullback_2h declared config, fresh population: does the lever beat the declared baseline by >= 0.03 R/trade pooled over >= 1.5k trades?'
+title: 'POOLED direction lever (DI) on the xrp_pullback_2h declared config, fresh population: does the lever beat the declared baseline by >= 0.13 R/trade pooled over >= 1.5k trades?'
 status: queued
 cadence: once
 theme: live_strategy
 priority: 2
 kind: experiment
 question: On Binance USD-M 2h candles for BNB,DOGE,LINK,LTC,BCH,DOT over 2020-06-01..2026-11-17, with the xrp_pullback_2h declared parameters (trend_lookback 40, pullback_lookback 10, pullback_frac 0.5,
-  ATR stop 2.5, trail 6.0, adx_min 25, tp 3.0 R) on every symbol, does the DIRECTION gate (+DI/-DI, --direction-filter=di) lever beat the unmodified baseline B by >= 0.03 R per trade pooled across the population,
+  ATR stop 2.5, trail 6.0, adx_min 25, tp 3.0 R) on every symbol, does the DIRECTION gate (+DI/-DI, --direction-filter=di) lever beat the unmodified baseline B by >= 0.13 R per trade pooled across the population,
   net of the harness cost stack, with >= 1,500 pooled baseline trades?
 why_this_matters: 'Programme node P3-RG1025-lever-pooled (research/programmes/03-strategy-improvement.yaml): the single-leg lever tests ran at n_B 68-430 against an absolute 1.0 R bar and read ''strip them'';
   that reading is not adopted (one window, thin n). The node asks for ONE pooled unit per lever, the same lever on all legs that carry it, dR per trade, pooled n >= 1.5k, bar and sd floor registered first.
@@ -15,15 +15,16 @@ why_this_matters: 'Programme node P3-RG1025-lever-pooled (research/programmes/03
   on the fresh population is the confirming read; a FAIL closes this lever x population only.'
 power:
   expected_n: 1500
-  min_detectable_effect: 0.03
+  min_detectable_effect: 0.13
   effect_units: r_per_trade
-  design: two_sample
+  sd: 1.88
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'The materiality bar is 0.03 R/trade. 7c2b-08 (xrp_pullback_2h as declared on basket A, MEASURED) pooled n_B 1,670 with net -0.0125 R/trade; its per-trade sd was not recorded, so the n the bar
-    needs from the measured sd is an ESTIMATE: at a per-trade sd near 1.3 R (the 4b82-0x measured range for trend legs is 1.25-2.3 R, pullback sd unmeasured here) a paired-difference test of 0.03 R needs
-    roughly 1.5k-6k trades depending on the baseline/candidate overlap. The unit therefore reports the realised n_B and the n the measured sd needs, and grades INDETERMINATE (never FAIL) below pooled n
-    1,500. expected_n 1500 is an estimate (5-6 cells x ~280 trades), not a measurement.'
+  basis: 'MEASURED per-trade sd 1.881 R from the committed trade rows of RQ-20261021-7c2b-08 (baseline B = xrp_pullback_2h as declared, 6 cells, n = 1,670; comms/research/RQ-20261021-7c2b-08/*/cells/*trades.jsonl,
+    computed 2026-11-18; RQ-20261021-7c2b-09 read 2.26 on n = 1,968). The node asked for 0.03 R/trade; at sd 1.88 an UNPAIRED two-sample test of 0.03 R needs about 48,600 trades per arm, which no population
+    in hand reaches, so the registered bar is 0.13 R/trade: (1.645+0.842)^2 x 1.88^2 / 0.13^2 = about 1,300 paired trades (the per-trade paired-difference sd is bounded above by the baseline sd, so this
+    is conservative only if the arms share most trades; stated, not measured). expected_n is an ESTIMATE (5-6 cells x ~280 trades). Below pooled n 1,500 the unit grades INDETERMINATE, never FAIL.'
   feasibility:
     source: none
     accrual_basis: Re-measurement on public candles over a pinned in-hand window; nothing accrues.
@@ -38,10 +39,11 @@ decision_rule:
     cells on one set of calendar edges; the candidate's pooled net R per trade minus B's, graded by the script's own --baseline/--delta-r-per-trade clause; cost = the harness venue-aware fee + slippage
     + funding stack from execution_costs.resolve_cost_policy().
   rule: 'PASS iff the DI arm passes the pooled Stage-0 rule on this population (pooled n >= 1,500, pooled net_r > 0, >= 4 of 6 calendar folds net positive, >= half of the powered cells (n >= 39) pass) AND
-    beats B by >= 0.03 R/trade. FAIL iff pooled n_B >= 1,500 and the arm fails: the direction lever DI is closed on the fresh population for this window; the lever family stays open and the record names
-    the arm''s pooled delta and the n the measured sd needs. INDETERMINATE otherwise (pooled n < 1,500, fewer than 2 powered cells, or under half the cells measured; the floor is never lowered). Regime-robustness
-    clause (set before the run): the pooled candidate-minus-baseline result is positive in at least 3 of 4 calendar years of the window (per-year table reported), no single year carries more than 50% of
-    the total delta, and long-side and short-side deltas are reported separately; a failure downgrades a PASS to INDETERMINATE (reported, never silently dropped). Thresholds are not changed after any result.'
+    beats B by >= 0.13 R/trade (the candidate-minus-baseline pooled R/trade is also reported against the node''s 0.03 R/trade materiality figure, which this n cannot detect). FAIL iff pooled n_B >= 1,500
+    and the arm fails: the direction lever DI is closed on the fresh population for this window; the lever family stays open and the record names the arm''s pooled delta and the n the measured sd needs.
+    INDETERMINATE otherwise (pooled n < 1,500, fewer than 2 powered cells, or under half the cells measured; the floor is never lowered). Regime-robustness clause (set before the run): the pooled candidate-minus-baseline
+    result is positive in at least 3 of 4 calendar years of the window (per-year table reported), no single year carries more than 50% of the total delta, and long-side and short-side deltas are reported
+    separately; a failure downgrades a PASS to INDETERMINATE (reported, never silently dropped). Thresholds are not changed after any result.'
   what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. The xrp_pullback_2h declared parameters are applied to every symbol (the legs'' own parameters differ: ada
     uses pullback_frac 0.618 / adx 28 / tp 4), so this is a population read of the lever on one declared config, not a per-leg result. A PASS also needs a live producer and a Tier-3 declare. Candles are
     Binance USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1).'
@@ -116,7 +118,7 @@ run:
   - --baseline
   - B
   - --delta-r-per-trade
-  - '0.03'
+  - '0.13'
   - --folds
   - '6'
   - --fold-majority
