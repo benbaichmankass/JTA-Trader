@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Data-pipeline fix (research data, runner job): fetch_etf_history.py backfill skipped any series whose LAST bar was fresh, even when its stored history began years after --start. Measured on the trainer store (trainer-diag #26983): QQQ, TLT, IWM, SLV, IEF hold only 2026-10/11 1m partitions while SPY/GLD reach 2016-01, and the last backfill run counted them skipped_fresh. Backfill now refetches a series whose first bar is > 31 d after --start unless a full backfill from <= --start is recorded (backfill_start, for symbols listed later). No runtime, config, order path or VM. Regression test added; 16 tests pass with pyarrow."
+}
