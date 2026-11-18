@@ -97,6 +97,7 @@ Source: `oci-inventory` issue #26981 (run 44411483182) and `oci-capacity-report`
 - **OCI Object Storage Infrequent Access + Archive tiers** (10 GB each, free on a paid account): the weekly journal backups and cold research data (`etf_history` history years) without touching the 200 GB boot limit. No sign-up; it is a bucket setting.
 - **OCI Always Free Autonomous Database** (2 instances, 20 GB each): *assess only*. It could host the read-mostly trainer store off the VMs. No sign-up; console only.
 - **Two AMD `VM.Standard.E2.1.Micro` instances** (1/8 OCPU, 1 GB each, free): too small for the IB Gateway (Java; measured ~1.2–1.5 GB in use), but enough for small always-on jobs (git-sync, freshness probes). They draw from the 200 GB boot total (~47 GB each), and that total is full.
+- **Kaggle GPU, already signed up, ~99% unused** (MEASURED 2026-11-18 23:02Z: 29.84 of 30 h left this week). It unlocks GPU training for the ML lane's model-family work (the free-weights path, manager decision M6) and GPU-eligible research units, at $0. No sign-up; the lever is routing (`compute: gpu` units, `scripts/research/compute_router.py`). Currently 0 GPU units are due while 41 CPU units wait on each CPU lane.
 - **GitHub-hosted runners**: already the research default; the constraint is concurrency (queue depth 404), so the real gain is moving work OFF the VMs, not adding runners.
 
 ## 5. Operator hypotheses (e), with numbers
