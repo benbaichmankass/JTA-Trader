@@ -342,6 +342,7 @@ def _quantile_relabel(tab_all: pd.DataFrame, tab: pd.DataFrame, feats: list, q: 
         t = tr.dropna(subset=[f"mfe_{side}"])
         info["train_rows"][side] = int(len(t))
         m = fit_quantile(t[feats], t[f"mfe_{side}"].to_numpy(float), q)
+        # provenance: predict — LGBMRegressor.predict is the q-quantile of forward MFE-before-stop in ATR, not a probability
         raw = m.predict(tab[feats])
         pred[side] = clip_tp(raw)
         info["pred_tp_quantiles"][side] = {str(k): round(float(np.quantile(pred[side], k)), 3) for k in (0.1, 0.25, 0.5, 0.75, 0.9)}
@@ -442,6 +443,7 @@ def run(args) -> int:
         net_q = np.where(j.side == "long", j.net_long, j.net_short).astype(float)
         rsn_q = np.where(j.side == "long", j.reason_long, j.reason_short).astype(float)
         pv, pwhy, pst = paired_rule(net_q - j.net_r.to_numpy(float), N_MIN)
+        # provenance: predict — Booster.predict is the regressed net R of that side (same frozen boosters as above), not a probability
         own = mde.policy(sc2, models["long"].predict(sc2[feats]), models["short"].predict(sc2[feats]), tau)
         qres = {"tp_model": "quantile", "q": q, "verdict": pv, "why": pwhy, "paired": pst, "head": qinfo,
                 "decisions_unmatched": int(np.isnan(net_q).sum()),
@@ -557,6 +559,7 @@ def _self_test() -> None:
     X = pd.DataFrame({"x": rng.uniform(0, 1, 20000)})
     y = rng.exponential(1.0 + 2.0 * X.x.to_numpy())          # q-quantile of Exp(scale) = -scale*ln(1-q)
     mq = fit_quantile(X, y, 0.6)
+    # provenance: predict — LGBMRegressor.predict is the fitted 0.6-quantile of a synthetic label, not a probability
     p = mq.predict(pd.DataFrame({"x": [0.1, 0.9]}))
     true = -(1.0 + 2.0 * np.array([0.1, 0.9])) * np.log(0.4)
     assert np.all(np.abs(p - true) < 0.25 * true), (p, true)
