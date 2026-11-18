@@ -134,4 +134,16 @@ Source: `oci-inventory` issue #26981 (run 44411483182) and `oci-capacity-report`
 5. **Tier 2, operator OK:** move the gateway into a CPU-capped container on the live VM, then retire the gateway VM. Free-tier result after steps 4–5: 2 OCPU / 12 GB if the trainer is also retired; otherwise 3 / 18, still billable.
 6. **Tier 2, operator OK:** move the always-on producers to the live VM, then retire the trainer. Result: 2 / 12 and 53 GB boot. **Inside Always Free.**
 
-*Each step's measured pre-state, rollback and acceptance check will be filled in Draft 2.*
+#### 5.4 Per step: pre-state, rollback, acceptance (Draft 2)
+
+| Step | Measured pre-state | Rollback | Acceptance check (population stated) |
+|---|---|---|---|
+| 1 Tier-1 fixes | B2 #26990, B3 #26988, B4 #26984 open/merged as listed in § 3; B8 358 ghost runs | `git revert` per PR | each PR's own test; B8: queued-runs count older than 24 h = 0 on the Actions API |
+| 2a Archive tier for weekly journal backups | bucket 10.62 GB Standard, 76 objects (#26980) | lifecycle rule removed; objects restore from Archive in ~1 h | Standard-tier bytes ≤ 10 GB on the next `oci-capacity-report`; one weekly object restored and its sha256 matched |
+| 2b $1 budget alert | none | delete the budget | operator sees the budget listed; no runtime change |
+| 3 LIVE-TICK-NEAR-BUDGET (#27013) | tick mean 55.3 s / `journal_sync.wait` 23.8 s (136 ticks, 20:10–22:30Z); 58.7 s / 19.7 s (12 ticks, 23:29–23:41Z, a churning process) | `git revert` + restart | ≥ 100 ticks on `/api/diag/tick_cost`: wait mean < 5 s, tick mean < 40 s; then live CPU p95 re-read from the OCI ledger over ≥ 3 full days |
+| 4 Runner dataset 404, then training/refresh off the trainer | trainer ~3.5 CPU-h/day, 82/97 GB disk | re-enable the trainer timers (units stay installed until step 6) | 3 consecutive nightly cycles complete on runners/Kaggle with the same artifacts registered; trainer `ict-trainer.service` idle |
+| 5 Gateway into a CPU-capped container on the live VM | gateway VM CPU p95 44–64% of 1 OCPU, RAM ~1.2–1.5 GB | restart the gateway VM (kept stopped, not terminated, until acceptance) | 7 days: IB reads `read_state=ok` ≥ 99% of sweeps; trader tick mean unchanged ± 5%; live CPU p95 < 90% |
+| 6 Always-on producers to the live VM, retire the trainer | forecast every 15 min, publish every 2 min, order-flow capture, console connector | restart the trainer VM from its stopped state; boot volume kept 30 days | 7 days of each producer's freshness check green from the live VM; then the 2 OCPU / 12 GB / ≤ 200 GB total is read on the next `oci-inventory` |
+
+**Order matters.** Steps 5 and 6 add load to the live VM, which is the host with no CPU headroom, so neither starts before step 3's acceptance holds. Each step is reversible until its VM is TERMINATED. Termination is the last act, and it needs the operator's OK.
