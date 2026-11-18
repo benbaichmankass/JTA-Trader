@@ -99,6 +99,12 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--json", dest="json_out", required=True)
+    # 2026-11-18 (ML-PRIMARY-6, RQ-20261118-04a5-04): one-factor overrides; the defaults reproduce RQ-20261101-78fc-03.
+    ap.add_argument("--target", default="holding_pays", choices=["holding_pays", "holding_pays_neg25"],
+                    help="label the per-fold head trains on (train_exit_head.TARGET); holding_pays = the v1 recipe")
+    ap.add_argument("--unit", default="RQ-20261101-78fc-03")
+    ap.add_argument("--rule-id", default=RULE_ID)
+    ap.add_argument("--registered-at", default="2026-11-01")
     a = ap.parse_args(argv[1:])
 
     from pathlib import Path
@@ -134,6 +140,7 @@ def main(argv: list[str]) -> int:
     fold_defs, block_n = MF._fold_boundaries(epochs, a.num_folds)
     rows_path = Path(a.rows) if os.path.isabs(a.rows) else Path(_REPO_ROOT) / a.rows
     rows = teh.load_rows(rows_path)
+    teh.TARGET = a.target   # matrix() reads the module global at call time (DERIVED_TARGETS handles holding_pays_neg25)
     emb = a.embargo_days * 86400
 
     folds, deltas, fold_trades, k_fired = [], [], [], []
@@ -174,12 +181,12 @@ def main(argv: list[str]) -> int:
                    "p95": round(ctl[int(0.95 * len(ctl)) - 1], 4), "head_recovered_r": head_sum,
                    "head_beats_control_p95": head_sum > ctl[int(0.95 * len(ctl)) - 1],
                    "head_pct_rank": round(sum(1 for c in ctl if c < head_sum) / len(ctl), 4), "gating": False}
-    row = {"schema_version": 1, "research_unit": "RQ-20261101-78fc-03", "read_state": "measured" if deltas else "producer_failed",
+    row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured" if deltas else "producer_failed",
            "verdict": j["verdict"] if deltas else "not_applicable", "note": j["why"], "n": j.get("n_oos"),
            "population": {"n": j.get("n_oos"), "description": (
-               f"{a.strategy} {a.symbol} {a.timeframe} harness trades, {a.num_folds}-fold sequential walk-forward (block_n {block_n}), "
+               f"{a.strategy} {a.symbol} {a.timeframe} harness trades, target {a.target}, {a.num_folds}-fold sequential walk-forward (block_n {block_n}), "
                f"head retrained per fold on pooled rows.jsonl bar_t <= fold start - {a.embargo_days} d; paired dR per OOS trade")},
-           "decision_rule": {"id": RULE_ID, "registered_at": "2026-11-01", "registered_before_run": True},
+           "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}, "target": a.target,
            "measurement": {"judge": j, "folds": folds, "control_random_truncation": control, "cost_basis": cost_basis,
                            "baseline_net_total_r": baseline.get("net_total_r"), "n_total_trades": len(ordered),
                            "data_start": str(df["timestamp"].iloc[0]) if len(df) else None,
@@ -194,5 +201,82 @@ def main(argv: list[str]) -> int:
     return 0 if deltas else 2
 
 
+def grade_cells(cells: dict) -> tuple[str, str]:
+    """RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL (registered before the run). A cell (leg x target) PASSES iff its judge passes
+    (n_oos >= N_OOS_MIN, dR/trade >= 0, 95% LB > LB_BAR) AND the head's pooled recovered R beats the matched random-truncation p95.
+    Unit: pass iff the holding_pays_neg25 cell passes on >= 1 leg; fail iff every leg's neg25 cell is measured and fails;
+    else indeterminate. holding_pays cells re-grade the defective-harness de-risks and are reported, never gating."""
+    neg = {k: v for k, v in cells.items() if k.endswith("|holding_pays_neg25")}
+    def ok(v):
+        m = v.get("measurement") or {}
+        ctl = m.get("control_random_truncation") or {}
+        return v.get("verdict") == "pass" and bool(ctl.get("head_beats_control_p95"))
+    passing = sorted(k.split("|")[0] for k, v in neg.items() if ok(v))
+    measured = [k for k, v in neg.items() if v.get("read_state") == "measured" and v.get("verdict") in ("pass", "fail")]
+    if passing:
+        return "pass", f"neg25 passes judge + control on {passing}"
+    if neg and len(measured) == len(neg):
+        return "fail", f"neg25 measured on {len(neg)} legs, none passes judge + control"
+    return "indeterminate", f"neg25 measured on {len(measured)}/{len(neg)} legs, none passing"
+
+
+def main_multi(argv: list[str]) -> int:
+    """--legs strategy:SYMBOL,... --targets t1,t2 : run every (leg, target) cell through main() and roll up one verdict.json."""
+    import tempfile
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--legs", required=True)
+    ap.add_argument("--targets", default="holding_pays,holding_pays_neg25")
+    ap.add_argument("--unit", required=True)
+    ap.add_argument("--rule-id", required=True)
+    ap.add_argument("--registered-at", required=True)
+    ap.add_argument("--json", dest="json_out", required=True)
+    a, rest = ap.parse_known_args(argv[1:])
+    cells: dict = {}
+    for leg in [x for x in a.legs.split(",") if x]:
+        strat, sym = leg.split(":")
+        for tgt in [t for t in a.targets.split(",") if t]:
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as fh:
+                tmp = fh.name
+            try:
+                main(["x", "--strategy", strat, "--symbol", sym, "--target", tgt, "--unit", a.unit, "--rule-id", a.rule_id,
+                      "--registered-at", a.registered_at, "--json", tmp, *rest])
+                cells[f"{strat}|{tgt}"] = json.load(open(tmp, encoding="utf-8"))
+            except Exception as e:  # noqa: BLE001  # allow-silent: recorded per cell as producer_failed, the roll-up reads it
+                cells[f"{strat}|{tgt}"] = {"read_state": "producer_failed", "verdict": "not_applicable", "note": f"{type(e).__name__}: {e}"}
+    v, why = grade_cells(cells)
+    n = sum(int(c.get("n") or 0) for k, c in cells.items() if k.endswith("|holding_pays_neg25"))
+    row = {"schema_version": 1, "research_unit": a.unit, "rule_id": a.rule_id, "verdict": v,
+           "read_state": "measured" if any(c.get("read_state") == "measured" for c in cells.values()) else "producer_failed",
+           "note": why + "; " + "; ".join(f"{k}: {c.get('verdict')} ({str(c.get('note'))[:90]})" for k, c in cells.items()),
+           "population": f"exit-head per-leg OOS walk-forward, legs {a.legs}, targets {a.targets}; n = neg25 OOS trades pooled over legs",
+           "n": n, "measurement": {"cells": cells}}
+    open(a.json_out, "w", encoding="utf-8").write(json.dumps(row, indent=1, default=str) + "\n")
+    print(row["note"])
+    return 0
+
+
+def _self_test() -> int:
+    ok = True
+    def check(msg, cond):
+        nonlocal ok
+        print(("ok   " if cond else "FAIL ") + msg)
+        ok = ok and bool(cond)
+    P = {"verdict": "pass", "read_state": "measured", "measurement": {"control_random_truncation": {"head_beats_control_p95": True}}}
+    Pn = {"verdict": "pass", "read_state": "measured", "measurement": {"control_random_truncation": {"head_beats_control_p95": False}}}
+    F = {"verdict": "fail", "read_state": "measured", "measurement": {}}
+    I = {"verdict": "indeterminate", "read_state": "measured", "measurement": {}}
+    check("one leg passes judge+control -> pass", grade_cells({"a|holding_pays_neg25": P, "b|holding_pays_neg25": F})[0] == "pass")
+    check("judge pass without control -> not a pass", grade_cells({"a|holding_pays_neg25": Pn, "b|holding_pays_neg25": F})[0] == "fail")
+    check("all measured fail -> fail", grade_cells({"a|holding_pays_neg25": F, "b|holding_pays_neg25": F})[0] == "fail")
+    check("an indeterminate leg, none passing -> indeterminate", grade_cells({"a|holding_pays_neg25": F, "b|holding_pays_neg25": I})[0] == "indeterminate")
+    check("holding_pays cells never gate", grade_cells({"a|holding_pays": P, "a|holding_pays_neg25": F})[0] == "fail")
+    print("exit_head_eth_oos_control self-test " + ("OK" if ok else "FAILED"))
+    return 0 if ok else 1
+
+
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        sys.exit(_self_test())
+    if "--legs" in sys.argv:
+        sys.exit(main_multi(sys.argv))
     sys.exit(main(sys.argv))
