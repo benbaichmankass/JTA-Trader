@@ -75,7 +75,7 @@ def _returns(closes: list[float]) -> list[float]:
     return [closes[i] / closes[i - 1] - 1 for i in range(1, len(closes)) if closes[i - 1]]
 
 
-def plan_one(name: str, csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int,
+def plan_one(csv_path: Path, lake_rows: list[dict], tol: float, min_overlap: int,
              max_sigma: float = 4.0):
     """Return (state, detail, new_lines|None, splice|None). Never raises on a data problem."""
     header, rows = read_csv_rows(csv_path)
@@ -165,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{lake_sym}->{csv_path.name}: SKIP lake={src.exists()} csv={csv_path.exists()} (extends, never creates)")
             continue
         try:
-            state, detail, add, splice = plan_one(stem, csv_path, read_lake(src), args.tol, args.min_overlap, args.max_sigma)
+            state, detail, add, splice = plan_one(csv_path, read_lake(src), args.tol, args.min_overlap, args.max_sigma)
         except Exception as exc:  # noqa: BLE001 - one bad file must not block the others
             print(f"{lake_sym}->{csv_path.name}: FAILED {exc}", file=sys.stderr)
             rc = 1
