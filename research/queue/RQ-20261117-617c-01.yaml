@@ -2,7 +2,7 @@
 id: RQ-20261117-617c-01
 title: 'cost-levers-live-legs ITERATION 2: does a signal-strength threshold (min_confidence 0.5 / 0.75) on the real-money leg xrp_pullback_2h cut losing, cost-heavy
   entries on PRE-DEVELOPMENT history (2019-01..2021-11), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -135,3 +135,16 @@ iteration:
 follow_up: The grader applies the rule mechanically; a PASS goes to one read on the 1830 d record window and then a Tier-3 proposal note; a FAIL moves the next iteration
   to symbol pruning on the pooled pullback family.
 last_dispatched_at: '2026-11-18T07:58:12+00:00'
+grading:
+  attested: RULE-RQ20261117-617c-01-MINCONF-PREDEV
+  auto: true
+  decision_rule_id: RULE-RQ20261117-617c-01-MINCONF-PREDEV
+  evidence:
+  - research/results/RQ-20261117-617c-01/44263060129.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
