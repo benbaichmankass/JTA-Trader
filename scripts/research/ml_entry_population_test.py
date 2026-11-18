@@ -274,6 +274,107 @@ def _tp_bracket(tp_atr: float):
         mde.bracket_outcome = orig
 
 
+@contextlib.contextmanager
+def _mfe_labels():
+    """Add mfe_long / mfe_short to the table (label_symbol(mfe=True)); every other column is unchanged."""
+    orig = mde.label_symbol
+    mde.label_symbol = functools.partial(orig, mfe=True)
+    try:
+        yield
+    finally:
+        mde.label_symbol = orig
+
+
+# ----------------------------------------------------------------------------------------------- D6 quantile TP head
+# RQ-20261118-04a5-02 (rule RULE-RQ20261118-04a5-02-QUANTILE-MFE-TP, registered before any run). One factor vs the fixed TP:
+# per decision TP = clip(q-quantile of forward MFE-before-stop, TP_CLIP) ATR; SL, entry decisions, cost stack unchanged.
+TP_CLIP = (1.0, 6.0)
+MFE_CAP = 10.0                       # label winsorised at 10 ATR before the quantile fit
+Q_TRAIN_MAX_ROWS = 400_000           # deterministic stride subsample cap per side (memory on the runner)
+PAIRED_BAR_R, PAIRED_Z = 0.02, 1.96
+
+
+def clip_tp(pred) -> np.ndarray:
+    return np.clip(np.asarray(pred, float), *TP_CLIP)
+
+
+def fit_quantile(X: pd.DataFrame, y: np.ndarray, q: float):
+    """LightGBM objective='quantile' at alpha=q on the ENTRY recipe's parameters (LGB_PARAMS), label winsorised to [0, MFE_CAP]."""
+    import lightgbm as lgb
+    if len(X) > Q_TRAIN_MAX_ROWS:
+        step = int(np.ceil(len(X) / Q_TRAIN_MAX_ROWS))
+        X, y = X.iloc[::step], y[::step]
+    m = lgb.LGBMRegressor(**{**mde.LGB_PARAMS, "objective": "quantile", "alpha": q})
+    m.fit(X, np.clip(y, 0.0, MFE_CAP))
+    return m
+
+
+def paired_rule(d, n_min: int) -> tuple[str, str, dict]:
+    """PASS iff n >= n_min AND mean d >= +0.02 R/decision AND CI lower > 0; FAIL iff n >= n_min AND CI upper < +0.02; else
+    INDETERMINATE. d = net R (quantile TP) - net R (fixed TP) on the SAME taken decisions; one decision = one cluster."""
+    d = np.asarray(d, float)
+    d = d[np.isfinite(d)]
+    n = len(d)
+    if n < 2:
+        return "indeterminate", f"paired n={n}", {"n": n}
+    mean, se = float(d.mean()), float(d.std(ddof=1) / np.sqrt(n))
+    lo, hi = mean - PAIRED_Z * se, mean + PAIRED_Z * se
+    st = {"n": n, "mean_d": round(mean, 5), "se_d": round(se, 5), "ci": [round(lo, 5), round(hi, 5)], "bar": PAIRED_BAR_R}
+    why = f"paired mean d {mean:+.4f} R/decision (se {se:.4f}, CI [{lo:+.4f}, {hi:+.4f}]) at n={n} vs bar +{PAIRED_BAR_R}"
+    if n < n_min:
+        return "indeterminate", why + f" (n below floor {n_min})", st
+    if mean >= PAIRED_BAR_R and lo > 0:
+        return "pass", why, st
+    if hi < PAIRED_BAR_R:
+        return "fail", why, st
+    return "indeterminate", why, st
+
+
+def _quantile_relabel(tab_all: pd.DataFrame, tab: pd.DataFrame, feats: list, q: float, cache: Path, syms: list):
+    """Fit per-side quantile heads on rows whose 24 h label ends before WIN_START (embargo HORIZON_H + 1 h), predict the window
+    rows, and relabel them through ml_decision_entry.label_symbol(tp_rows=...) -- the SAME first passage, tie and gap rules."""
+    cut = pd.Timestamp(WIN_START, tz="UTC") - pd.Timedelta(hours=mde.HORIZON_H + 1)
+    tr = tab_all[pd.to_datetime(tab_all.ts, utc=True) < cut]
+    info = {"q": q, "train_cut_exclusive": str(cut), "embargo_h": mde.HORIZON_H + 1, "clip_atr": list(TP_CLIP),
+            "mfe_cap_atr": MFE_CAP, "features": list(feats), "train_rows": {}, "pred_tp_quantiles": {}, "calibration": {}}
+    pred = {}
+    for side in ("long", "short"):
+        t = tr.dropna(subset=[f"mfe_{side}"])
+        info["train_rows"][side] = int(len(t))
+        m = fit_quantile(t[feats], t[f"mfe_{side}"].to_numpy(float), q)
+        raw = m.predict(tab[feats])
+        pred[side] = clip_tp(raw)
+        info["pred_tp_quantiles"][side] = {str(k): round(float(np.quantile(pred[side], k)), 3) for k in (0.1, 0.25, 0.5, 0.75, 0.9)}
+        mf = tab[f"mfe_{side}"].to_numpy(float)
+        ok = np.isfinite(mf)
+        # calibration on the window: share of rows whose realised MFE reaches the (unclipped) predicted quantile; target 1 - q
+        info["calibration"][side] = {"share_mfe_ge_pred": round(float((mf[ok] >= raw[ok]).mean()), 4) if ok.any() else None,
+                                     "target": round(1.0 - q, 4), "n": int(ok.sum())}
+    ts_all = pd.DatetimeIndex(pd.to_datetime(tab.ts, utc=True))
+    look = {(sym, side): pd.Series(pred[side][idx], index=ts_all[idx])
+            for sym, idx in tab.groupby("symbol").indices.items() for side in ("long", "short")}
+    rows = []
+    for sym in syms:
+        df = mde.regrid_hourly(pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True))
+
+        def tp_rows(ts, name, _sym=sym):
+            s = look.get((_sym, name))
+            key = pd.to_datetime(ts, utc=True)
+            v = s.reindex(key).to_numpy(float) if s is not None else np.full(len(ts), np.nan)
+            # rows outside the window carry the fixed TP; they are dropped by the merge below
+            return np.where(np.isfinite(v), v, mde.TP_ATR)
+        lab = mde.label_symbol(df, recost_inputs=True, tp_rows=tp_rows)
+        lab["symbol"] = sym
+        rows.append(lab)
+    lab = pd.concat(rows, ignore_index=True)
+    lab["ts"] = pd.to_datetime(lab.ts, utc=True)
+    cols = [c for c in lab.columns if c.split("_")[0] in ("gross", "net", "cost", "reason", "bars", "per", "nwin")]
+    base = tab.drop(columns=[c for c in cols if c in tab.columns]).assign(ts=pd.to_datetime(tab.ts, utc=True))
+    out = base.merge(lab[["symbol", "ts", *cols]], on=["symbol", "ts"], how="left")
+    info["window_rows_unmatched"] = int(out["gross_long"].isna().sum())
+    return out.dropna(subset=["gross_long", "gross_short"]).reset_index(drop=True), info
+
+
 # ----------------------------------------------------------------------------------------------- run
 def run(args) -> int:
     import holdout_lock
@@ -300,9 +401,13 @@ def run(args) -> int:
     with cf.ThreadPoolExecutor(8) as ex:
         fund = dict(zip(pop_ok, ex.map(fetch_funding, pop_ok)))
     print(f"fetched: population {len(pop_ok)}/{len(pop)} reference {len(ref_ok)}/{len(ref)} t={time.time()-t0:.0f}s", flush=True)
-    with _tp_bracket(tp_atr):
+    quant = (getattr(args, "tp_model", None) or "fixed") == "quantile"
+    if quant and tp_atr != mde.TP_ATR:
+        raise SystemExit("--tp-model quantile is one factor vs the fixed TP; do not combine it with --tp-atr")
+    with _tp_bracket(tp_atr), (_mfe_labels() if quant else contextlib.nullcontext()):
         tab = mde.build_table(cache, sorted(set(pop_ok) | set(ref_ok)), xs_symbols=ref_ok, recost_inputs=True)
     tab = tab[tab.symbol.isin(pop_ok)]
+    tab_all = tab if quant else None
     ws, we = pd.Timestamp(WIN_START, tz="UTC"), pd.Timestamp(WIN_END, tz="UTC") + pd.Timedelta(days=1)
     # a decision is in the window iff its 24h outcome also ends inside it
     tab = tab[(tab.ts >= ws) & (tab.ts < we - pd.Timedelta(hours=mde.HORIZON_H + 1))].reset_index(drop=True)
@@ -325,6 +430,27 @@ def run(args) -> int:
     tk = mde.policy(sc, pl, ps, tau)
     m = mde.summarize(tk)
     v, why = verdict(m, len(pop_ok), len(ref_ok), missing, claim["bar"])
+    qres = None
+    if quant:
+        q = float(getattr(args, "tp_q", 0.60))
+        win2, qinfo = _quantile_relabel(tab_all, tab.reset_index(drop=True), feats, q, cache, pop_ok)
+        sc2 = recost(win2, costs)
+        sc2 = sc2[sc2.cost_ok].reset_index(drop=True)
+        key = ["symbol", "ts"]
+        j = tk.assign(ts=pd.to_datetime(tk.ts, utc=True)).merge(
+            sc2[key + ["net_long", "net_short", "reason_long", "reason_short"]], on=key, how="left")
+        net_q = np.where(j.side == "long", j.net_long, j.net_short).astype(float)
+        rsn_q = np.where(j.side == "long", j.reason_long, j.reason_short).astype(float)
+        pv, pwhy, pst = paired_rule(net_q - j.net_r.to_numpy(float), N_MIN)
+        own = mde.policy(sc2, models["long"].predict(sc2[feats]), models["short"].predict(sc2[feats]), tau)
+        qres = {"tp_model": "quantile", "q": q, "verdict": pv, "why": pwhy, "paired": pst, "head": qinfo,
+                "decisions_unmatched": int(np.isnan(net_q).sum()),
+                "tp_reach_rate": {"fixed_tp": round(float((tk.reason == 2).mean()), 4) if len(tk) else None,
+                                  "quantile_tp": round(float(np.nanmean(rsn_q == 2)), 4) if len(tk) else None},
+                "mean_net_r_same_decisions": {"fixed_tp": m.get("mean_net_r"),
+                                              "quantile_tp": round(float(np.nanmean(net_q)), 5) if len(tk) else None},
+                "context_own_sequential_policy_not_gating": mde.summarize(own)}
+        v, why = pv, pwhy
     refset = set(ref)
     flat = sc.copy()
     for side in ("long", "short"):
@@ -356,17 +482,24 @@ def run(args) -> int:
            "window": [WIN_START, WIN_END], "population_frozen": len(pop), "population_scored": len(pop_ok),
            "population_unscorable": sorted(set(pop) - set(pop_ok)), "xs_reference_used": len(ref_ok),
            "cost_missing_share": missing, "pooled": m, "reported": reported, "holdout_claim": claim,
-           "git_sha": mde._git_sha(), "elapsed_s": round(time.time() - t0)}
+           "tp_model": qres, "git_sha": mde._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     tk.to_csv(out / "decisions.csv.gz", index=False)
-    vj = {"verdict": v, "read_state": "measured", "n": m.get("n"), "note": why,
+    vj = {"verdict": v, "read_state": "measured", "n": (qres["paired"]["n"] if qres else m.get("n")), "note": why,
           "population": (f"frozen ml_decision_entry_v1 (tau {tau}, SL {mde.SL_ATR} / TP {tp_atr} ATR) decisions {WIN_START}..{WIN_END} on the {len(pop_ok)} scorable symbols of the "
                          f"{len(pop)}-symbol frozen Bybit USDT-perp population (F1-F5), each re-costed with its own fee 11 + max(3, quoted spread "
                          f"+ sqrt impact Q {Q_USD:.0f}) + its own |funding| per 8h"),
           "measurement": {"pooled": m, "holdout_claim": claim, "cost_missing_share": missing,
-                          "fresh_symbols_mean_net_r": reported["fresh_symbols_never_in_training"].get("mean_net_r")}}
+                          "fresh_symbols_mean_net_r": reported["fresh_symbols_never_in_training"].get("mean_net_r"),
+                          "tp_model": qres}}
+    if qres:
+        vj["population"] = ("PAIRED on the same taken decisions: " + vj["population"]
+                            + f"; arm = per-decision TP at the q{qres['q']:.2f} LightGBM quantile of forward MFE-before-stop, clip {list(TP_CLIP)} ATR")
     (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     # the population record (src/config/ml_universe.py, the only writer): written into the output dir, seeded from the committed record
+    if qres:   # a TP-head read says nothing about the entry population, so the population record is not written
+        print(json.dumps({"verdict": v, "why": why}), flush=True)
+        return 0
     from src.config import ml_universe
     ml_universe.write_population("ml_entry", {"unit": unit, "rule_id": rule_id, "verdict": v,
                                               "result": f"research/results/{unit}/",
@@ -416,6 +549,33 @@ def _self_test() -> None:
     assert verdict({"n": 999, "n_symbols": 50, "mean_net_r": 0.0, "se_net_r": 0.01}, 100, 50, 0.0, b1)[0] == "pass"
     assert verdict({"n": 999, "n_symbols": 50, "mean_net_r": -0.001, "se_net_r": 0.01}, 100, 50, 0.0, b1)[0] == "fail"
     assert verdict({"n": 999, "n_symbols": 50, "mean_net_r": 0.01, "se_net_r": 0.01}, 100, 50, 0.0, HL.bar_for(20))[0] == "fail"
+    # D6 quantile TP head (04a5-02)
+    assert list(clip_tp([0.2, 3.0, 9.0])) == [1.0, 3.0, 6.0]
+    a = argparse.Namespace(tp_atr=None)
+    assert (float(a.tp_atr) if getattr(a, "tp_atr", None) is not None else mde.TP_ATR) == mde.TP_ATR == 3.0
+    rng = np.random.default_rng(7)
+    X = pd.DataFrame({"x": rng.uniform(0, 1, 20000)})
+    y = rng.exponential(1.0 + 2.0 * X.x.to_numpy())          # q-quantile of Exp(scale) = -scale*ln(1-q)
+    mq = fit_quantile(X, y, 0.6)
+    p = mq.predict(pd.DataFrame({"x": [0.1, 0.9]}))
+    true = -(1.0 + 2.0 * np.array([0.1, 0.9])) * np.log(0.4)
+    assert np.all(np.abs(p - true) < 0.25 * true), (p, true)
+    assert abs(float((y >= mq.predict(X)).mean()) - 0.4) < 0.03
+    assert paired_rule(np.r_[np.full(500, 0.05), np.full(500, 0.04)], 300)[0] == "pass"
+    assert paired_rule(np.full(1000, -0.01) + rng.normal(0, 0.01, 1000), 300)[0] == "fail"
+    assert paired_rule(rng.normal(0.02, 1.0, 1000), 300)[0] == "indeterminate"
+    assert paired_rule(np.full(100, 0.5), 300)[0] == "indeterminate"
+    # mfe_before_sl <-> bracket_outcome: a TP at k ATR fills iff mfe >= k (long and short, ties to SL)
+    n, H = 400, 24
+    for side in (1, -1):
+        c = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, (n, H)), 1))
+        o = np.c_[np.full(n, 100.0), c[:, :-1]]
+        h, lo = np.maximum(o, c) * (1 + rng.uniform(0, 0.01, (n, H))), np.minimum(o, c) * (1 - rng.uniform(0, 0.01, (n, H)))
+        entry, atr = o[:, 0], np.full(n, 1.0)
+        mf = mde.mfe_before_sl(o, h, lo, entry, atr, side)
+        for k in (1.0, 2.5, 4.0):
+            _, _, reason = mde.bracket_outcome(o, h, lo, c, entry, atr, side, tp_atr=np.full(n, k))
+            assert np.array_equal(reason == 2, mf >= k), (side, k)
     print("self-test ok")
 
 
@@ -433,6 +593,9 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="override the frozen artifact's tau (same boosters); default = model.json tau")
     ap.add_argument("--tp-atr", dest="tp_atr", type=float, default=None, help="relabel the same decisions at this TP (ATR); SL unchanged")
     ap.add_argument("--rule-id", dest="rule_id", default="", help="the calling unit's registered rule id (default: 2e3b-01's)")
+    ap.add_argument("--tp-model", dest="tp_model", choices=["fixed", "quantile"], default="fixed",
+                    help="fixed (default, byte-identical) or quantile: per-decision TP from a LightGBM quantile head of forward MFE (D6, 04a5-02)")
+    ap.add_argument("--tp-q", dest="tp_q", type=float, default=0.60, help="quantile for --tp-model quantile")
     a = ap.parse_args(argv)
     if a.cmd == "self-test":
         _self_test()
