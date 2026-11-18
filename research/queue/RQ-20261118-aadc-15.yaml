@@ -1,0 +1,132 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (week plan
+# docs/plans/ml-week-plan-2026-11-19.md section 2/4, D3 learner; ML-FRONTIER-PREP-20261118 ranked CatBoost on the money labels first).
+# Lean spec, one factor (the learner). Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-aadc-15
+title: 'D3 Foxhound LEARNER: on the Foxhound-1 recipe''s development walk-forward, does CatBoost (de02-01 params) beat LightGBM by +0.01
+  R per decision at the live tau, in at least 5 of 8 folds?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: 'Foxhound-1 recipe (scripts/research/ml_decision_entry.py: 60-perp universe, 4h decisions, per-side net-R regressors, SL 2 / TP 3
+  ATR, 24h time stop, fee 11 bps): on the 8 development folds 2022-01..2025-09 (purged, 7-day embargo; the sealed held-out window is NOT
+  read), with decisions taken at the live tau 0.10, is the pooled mean net R per decision of CatBoost at least +0.01 above LightGBM''s,
+  and is CatBoost better in at least 5 of the 8 folds?'
+why_this_matters: 'D3 is a real-money slot (Foxhound-1 on bybit_2, bybit_portfolio, tradeify_1, velotrade_1, alpaca_paper) and every model
+  family on it is LightGBM. ML-FRONTIER-PREP-20261118 measured that no non-tree or alternative-GBDT family has ever been tested on a money
+  label (all 27 such units targeted regime or direction labels), so "trees win" is not established for D3, and "LightGBM is the best tree"
+  is not either. CatBoost passed against LightGBM on D2 (de02-01, dc44-02). It is the cheapest diversity step on the slot that pays.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261112-2e3b-01
+  verdict_read: fail
+  diagnosis: '2e3b-01 FAILED: the frozen v1 booster loses at per-symbol cost (-0.068 R/decision, n 12,746, 51 symbols). The open D3 levers
+    are the label (c21d-06: ATR-neutral and gross-minus-cost targets) and the threshold (c21d-01: tau 0.30). The learner has never been
+    varied on this recipe; a learner that ranks better on the same label would show here on the dev folds first. This unit varies only the
+    learner, so its answer is separable from the label units.'
+  search: 'one factor, the learner (lightgbm LGB_PARAMS vs catboost iterations 300 / lr 0.05 / depth 6, the D2-passing params); features,
+    label, folds, tau and cost fixed; nothing tuned on any fold'
+  attempt: 1
+  due_by: '2026-11-25'
+levers:
+- name: entry_learner
+  values: [lightgbm, catboost]
+  hypothesised_effect: catboost's ordered boosting ranks net R better on the noisy per-side label, raising pooled dev net R per decision
+evidence_class:
+  holdout: none
+  claim: model_quality
+power:
+  expected_n: 9000
+  min_detectable_effect: 0.01
+  effect_units: r_multiple
+  sd: 0.9
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED from c692-01''s dev walk-forward (several thousand decisions per arm at tau 0.10; per-decision net R sd ~0.9 R). The two
+    arms take overlapping but not identical decisions, so the rule uses a fixed margin plus fold consistency rather than a CI: this is a DEV
+    SCREEN, and a PASS buys a held-out read (claimed in the ledger), not a promotion. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines; nothing accrues.
+baseline:
+  definition: 'The Foxhound-1 LightGBM recipe (LGB_PARAMS) on the SAME folds, rows, features, label, tau and cost.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261118-aadc-15-D3-CATBOOST-DEV
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: LightGBM Foxhound-1 recipe on identical dev folds
+  statistic: 'scripts/research/ml_decision_entry.py learner-dev: walk_forward twice (learner lightgbm, catboost), decisions at tau 0.10
+    per fold under the one-position-per-symbol policy; pooled mean net R per decision per arm (sum over folds / decisions); per-fold
+    means; folds where catboost > lightgbm.'
+  rule: 'INDETERMINATE iff either arm has < 1000 dev decisions. PASS iff catboost pooled mean - lightgbm pooled mean >= +0.01 R AND
+    catboost is better in >= 5 of 8 folds. FAIL otherwise. Params, folds, tau and thresholds are fixed now and not changed after any
+    result.'
+  pass_action: 'Author ONE held-out read of the CatBoost recipe on the sealed ENTRY window (claimed in holdout_lock, family ENTRY, the
+    deflated bar for the next try), per-symbol cost, the 2e3b-01 rule shape; a pass there is a data-backed Tier-3 proposal for D3.'
+  fail_action: 'The learner is flat on this label; record the learner lever for ml-entry as flat at this margin, and keep D3 effort on the
+    label (c21d-06) and cost-aware decision layer.'
+  what_it_does_not_do: 'Reads no held-out data; registers, serves or promotes nothing; changes no config; places no order; adds no gate.'
+  min_n: 1000 dev decisions per arm
+practice_precedent: 'M4 (one factor, every arm on identical splits and cost), docs/reference/trading-and-model-practice-principles.md; Bysik
+  and Slepaczuk 2026 (gradient boosting variants compared on identical walk-forward folds)'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: both arms take entries under the identical SL 2 / TP 3 ATR bracket and 24h time stop; only the learner differs
+  matched_random:
+    draws: 200
+    note: 'not recomputed here; the c692-01 random-side baseline under identical mechanics is the reference the held-out read will repeat'
+  best_static:
+    grid:
+    - lightgbm (LGB_PARAMS, fixed)
+    - catboost (iterations 300, lr 0.05, depth 6, fixed)
+    excludes_test_folds: true
+    note: nothing is tuned; each fold trains on purged earlier data only
+  bootstrap_group: fold
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: a better-ranking learner on the real-money D3 slot; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: needs_internet (keyless public Binance Vision klines, as c692-01); the learners step installs catboost for a learner-dev unit.
+  basis: 'ESTIMATE: c692-01''s dev walk-forward plus the same again with CatBoost (slower per fit than LightGBM).'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - learner-dev
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261118-aadc-15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether a CatBoost Foxhound recipe earns a held-out read (and later a Tier-3 proposal) for the D3 entry model
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261112-2e3b-01
+- RQ-20261101-c692-01
+- RQ-20261117-c21d-06
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+last_dispatched_at: null

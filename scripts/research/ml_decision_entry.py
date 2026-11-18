@@ -332,10 +332,23 @@ def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = 
 
 
 # ----------------------------------------------------------------------------------------------- model + policy
+CATBOOST_PARAMS = {"iterations": 300, "learning_rate": 0.05, "depth": 6, "loss_function": "RMSE", "random_seed": SEED,
+                   "verbose": 0, "allow_writing_files": False}   # de02-01 / dc44-02's CatBoost params (the D2 learner arm that passed), unchanged
+
+
 def fit_predict(train: pd.DataFrame, test: pd.DataFrame, features: list[str] | None = None,
-                n_jobs: int | None = None) -> tuple[np.ndarray, np.ndarray]:
-    import lightgbm as lgb
+                n_jobs: int | None = None, learner: str = "lightgbm") -> tuple[np.ndarray, np.ndarray]:
     feats = FEATURES if features is None else features
+    if learner == "catboost":
+        from catboost import CatBoostRegressor
+        preds = []
+        for side in ("long", "short"):
+            m = CatBoostRegressor(**CATBOOST_PARAMS, thread_count=n_jobs or -1)
+            m.fit(train[feats], train[f"net_{side}"])
+            # provenance: predict — CatBoostRegressor.predict is the regressed net R of that side, not a probability
+            preds.append(m.predict(test[feats]))
+        return preds[0], preds[1]
+    import lightgbm as lgb
     params = LGB_PARAMS if n_jobs is None else {**LGB_PARAMS, "n_jobs": n_jobs}
     preds = []
     for side in ("long", "short"):
@@ -414,7 +427,7 @@ def purge_train(tab: pd.DataFrame, test_start: pd.Timestamp) -> pd.DataFrame:
 
 
 def walk_forward(tab: pd.DataFrame, features: list[str] | None = None, dev_folds: list[str] | None = None,
-                 dev_end: str | None = None, n_jobs: int | None = None) -> dict:
+                 dev_end: str | None = None, n_jobs: int | None = None, learner: str = "lightgbm") -> dict:
     """Defaults reproduce c692-01 exactly (FEATURES, DEV_FOLDS, HOLDOUT_START); the optional arguments serve the v2 units."""
     end = dev_end or HOLDOUT_START
     dev = tab[tab.ts < pd.Timestamp(end, tz="UTC")]
@@ -425,7 +438,7 @@ def walk_forward(tab: pd.DataFrame, features: list[str] | None = None, dev_folds
         # the fold's test rows must also stop H bars before b so no label reads past the fold
         test = test[test.ts < b - pd.Timedelta(hours=HORIZON_H + 1)]
         train = purge_train(dev, a)
-        pl, ps = fit_predict(train, test, features, n_jobs)
+        pl, ps = fit_predict(train, test, features, n_jobs, learner)
         rec = {"test_start": str(a.date()), "test_end": str(b.date()), "n_train": len(train), "n_test_rows": len(test)}
         for tau in TAU_GRID:
             tk = policy(test, pl, ps, tau)
@@ -499,6 +512,52 @@ def _git_sha() -> str:
         return subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
     except Exception:  # noqa: BLE001  # allow-silent: provenance only; an empty sha is recorded, not hidden
         return ""
+
+
+LEARNER_TAU = 0.10            # the live Foxhound-1 tau; the comparison is at the served threshold, not a re-chosen one
+LEARNER_BAR_R = 0.01          # catboost must beat lightgbm's pooled dev mean net R per decision by this much
+LEARNER_MIN_FOLDS = 5         # ... and in at least this many of the 8 dev folds
+LEARNER_MIN_N = 1000          # decisions per arm
+
+
+def learner_verdict(lg: dict, cb: dict) -> tuple[str, str]:
+    if lg["n"] < LEARNER_MIN_N or cb["n"] < LEARNER_MIN_N or lg["mean"] is None or cb["mean"] is None:
+        return "indeterminate", f"dev decisions lightgbm {lg['n']} / catboost {cb['n']} below {LEARNER_MIN_N}"
+    d = cb["mean"] - lg["mean"]
+    if d >= LEARNER_BAR_R and cb["folds_better"] >= LEARNER_MIN_FOLDS:
+        return "pass", f"catboost dev mean {cb['mean']:+.4f} vs lightgbm {lg['mean']:+.4f} R/decision (+{d:.4f}), better in {cb['folds_better']} of {cb['folds']} folds"
+    return "fail", f"catboost dev mean {cb['mean']:+.4f} vs lightgbm {lg['mean']:+.4f} R/decision ({d:+.4f}), better in {cb['folds_better']} of {cb['folds']} folds"
+
+
+def learner_dev(args) -> int:
+    """RQ-20261118-aadc-15: the Foxhound-1 recipe on the DEVELOPMENT walk-forward only (never the sealed held-out), LightGBM vs
+    CatBoost on identical folds, rows and cost, both at the live tau. One factor: the learner."""
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    syms = universe()
+    fetch(cache, syms)
+    tab = build_table(cache, syms)
+    arms = {}
+    for learner in ("lightgbm", "catboost"):
+        wf = walk_forward(tab, learner=learner)
+        arms[learner] = wf
+    def pooled(wf):
+        f = [x[f"tau_{LEARNER_TAU}"] for x in wf["folds"]]
+        n = sum(x["n"] for x in f)
+        s_ = sum(x["sum_net_r"] for x in f)
+        return {"n": n, "mean": (s_ / n) if n else None, "per_fold": [x["mean_net_r"] for x in f], "folds": len(f)}
+    lg, cb = pooled(arms["lightgbm"]), pooled(arms["catboost"])
+    cb["folds_better"] = sum(1 for a, b in zip(cb["per_fold"], lg["per_fold"]) if a is not None and b is not None and a > b)
+    v, why = learner_verdict(lg, cb)
+    res = {"verdict": v, "read_state": "measured", "n": min(lg["n"], cb["n"]),
+           "population": (f"Foxhound-1 recipe (ml_decision_entry, 60-perp universe) DEVELOPMENT walk-forward {DEV_FOLDS[0]}..{HOLDOUT_START} "
+                          f"(8 folds, purged + {EMBARGO_DAYS}-day embargo), decisions taken at tau {LEARNER_TAU}; the sealed held-out window is not read"),
+           "note": why, "measurement": {"lightgbm": lg, "catboost": cb, "tau": LEARNER_TAU, "bar_r": LEARNER_BAR_R,
+                                        "min_folds": LEARNER_MIN_FOLDS, "catboost_params": CATBOOST_PARAMS,
+                                        "lgb_params": LGB_PARAMS, "git_sha": _git_sha()}}
+    (out / "verdict.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "note": why}), flush=True)
+    return 0
 
 
 def run(args) -> int:
@@ -1048,12 +1107,18 @@ def _self_test() -> None:
     t = traded_symbols()
     assert t and all(x.endswith("USDT") for x in t), t
     _self_test_universe_costed()
+    # learner-dev verdict mapping (RQ-20261118-aadc-15)
+    lg = {"n": 2000, "mean": 0.010, "per_fold": [0.0] * 8, "folds": 8}
+    assert learner_verdict(lg, {"n": 2000, "mean": 0.025, "folds_better": 6, "folds": 8})[0] == "pass"
+    assert learner_verdict(lg, {"n": 2000, "mean": 0.025, "folds_better": 4, "folds": 8})[0] == "fail"
+    assert learner_verdict(lg, {"n": 2000, "mean": 0.015, "folds_better": 7, "folds": 8})[0] == "fail"
+    assert learner_verdict(lg, {"n": 500, "mean": 0.05, "folds_better": 8, "folds": 8})[0] == "indeterminate"
     print("self-test ok")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "learner-dev"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
@@ -1077,6 +1142,8 @@ def main(argv=None) -> int:
         return traded_subset(a)
     if a.cmd == "universe-costed":
         return universe_costed(a)
+    if a.cmd == "learner-dev":
+        return learner_dev(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
