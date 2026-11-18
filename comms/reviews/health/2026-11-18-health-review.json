@@ -1,0 +1,526 @@
+{
+  "request_id": "HEALTH-REVIEW-20261118",
+  "reviewed_at": "2026-11-18T19:00:00+00:00",
+  "reviewer": "session_01AFoLuK2LjVstJhrbRyYqmu",
+  "lane": "HEALTH-REVIEW-20261118",
+  "window_start": "2026-11-11T20:00:00+00:00",
+  "window_end": "2026-11-18T18:20:00+00:00",
+  "window": "this review 11-11 20:00Z..11-18 18:20Z; medium 10-28..11-18; disk/SLO series lifetime where present",
+  "overall_assessment": "investigate",
+  "operator_attention_required": false,
+  "scoreboard": {
+    "source": "/api/bot/performance?window=7d (since 2026-11-11T18:10:58Z); journalTrust carried",
+    "real_money_7d": {
+      "n": 30,
+      "net_usd": -15.44,
+      "net_r": -6.61,
+      "pf": 0.61,
+      "pnl_coverage": 1.0,
+      "journal_trust": "bybit_2 knownDivergent; alpaca_live unrecorded",
+      "by_strategy": "ml_entry 25 trades -6.63R; 5 others 1 trade each"
+    },
+    "mirror_7d": {
+      "n": 34,
+      "net_usd": 99.81,
+      "net_r": -3.91,
+      "pf": 1.01
+    },
+    "paper_7d": {
+      "n": 128,
+      "net_usd": 56206.06,
+      "net_r": 35.85,
+      "pf": 1.47,
+      "pnl_coverage": 0.906,
+      "note": "mgc_pullback_1d one trade +45,529 (R contaminated); 11 exchange_flat_reconciled false closes unpriced and excluded"
+    },
+    "pct_per_book": "\u2014",
+    "sceptical_quant": "ml_entry (25 of 30 real-money closes, -6.63R this week): offline record expR +0.0271 n=907 with CI [-0.042,+0.099] quoted from PI-20261104-PREP1104-0001, not re-run; the interval spans zero, so no."
+  },
+  "prior_calls_scorecard": {
+    "source_record": "comms/reviews/health/2026-11-11-health-review.json",
+    "n_calls": 7,
+    "hit": 4,
+    "miss": 2,
+    "unresolved": 0,
+    "void": 1,
+    "brier": "INDETERMINATE (n<10)",
+    "followthrough": "review_followthrough.py --source health-review --window-days 7: cohort 4 filed / 2 done / 2 open (50%); backlog 75 open, 95% >14 d, 2 no-owner",
+    "calls": [
+      {
+        "id": "HR-20261111-C1",
+        "result": "miss",
+        "action_state": "closed+detector",
+        "note": "rule met: free 32.3% >= 20 (prune ran); the predicted 85% crossing did not happen. Row set done."
+      },
+      {
+        "id": "HR-20261111-C2",
+        "result": "hit",
+        "action_state": "closed-no-detector",
+        "note": "pipeline.py --stats now reads source work_store_api (2,856 items)."
+      },
+      {
+        "id": "HR-20261111-C3",
+        "result": "miss",
+        "action_state": "moving",
+        "note": "breaches 4 on 11-18 (claim >=8). AUD-20261019-RESEARCH-SLO-RED landed_unproven, AUD-20261111-RESEARCH-OPS-NO-RECORD blocked."
+      },
+      {
+        "id": "HR-20261111-C4",
+        "result": "miss",
+        "action_state": "closed-no-detector",
+        "note": "registry 100 rows (claim: stays 98)."
+      },
+      {
+        "id": "HR-20261111-C5",
+        "result": "hit",
+        "action_state": "closed+detector",
+        "note": "0 unmasked DU ids in today's ib_open_orders reply."
+      },
+      {
+        "id": "HR-20261111-C6",
+        "result": "hit",
+        "action_state": "closed-no-detector",
+        "note": "04:05Z boot: 0 symbol invalid; row set done."
+      },
+      {
+        "id": "HR-20261111-C7",
+        "result": "hit",
+        "action_state": "stalled",
+        "note": "exchange_flat_reconciled continued (11 rows on 11-18); PAPER-MECHANICS-20261104 was closed done 11-15 but the class recurred with a new cause (C1 of this review)."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "H1",
+      "status": "watch",
+      "value": "all canonical units active (ib-gateway-watchdog.timer inactive by design); heartbeat 1-20 s; 778 snapshots/168 h: 762 ok, 16 watch (all git_drift), 0 concern; max gap 15.4 min. Trader restarted 7x on 11-17 (deploys); ict-web-api wedged 11-17 11:02Z and 14:25Z (recovered in 2 min)",
+      "population": "diag services + _CANONICAL_UNITS; health/history 168 h",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "console system_health 18:12Z; api/bot/health/history?hours=168; alerts ledger",
+      "prior": [
+        "watch 11-11",
+        "ok 11-04"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H2",
+      "status": "ok",
+      "value": "trader runs e0c1a0905b (started 04:05Z), web-api e66d3b333b = origin/main; 0 src/config files differ e0c1a09..origin/main; restart_pending false",
+      "population": "files under src/+config/ since the running SHA",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "diag version; git diff --name-only e0c1a0905b..origin/main -- src config",
+      "prior": [
+        "ok",
+        "ok"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H3",
+      "status": "ok",
+      "value": "9/9 broker-API accounts api_ok (alpaca x4, bybit x3, ib_paper, oanda_practice); exchange_positions read_state ok for all; prop accounts breakout_2/tradeify_1/velotrade_1 have no API probe here (could_not_look by this route)",
+      "population": "accounts with a balances probe in accounts.yaml",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "api/bot/accounts/balances 18:00Z; diag exchange_positions 18:10Z",
+      "prior": [
+        "ok",
+        "ok"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H4",
+      "status": "concern",
+      "value": "system_invariants 12 invariants: 2 FAIL, 3 NOT-MEASURED, 7 pass. FAIL INV-PROTECT-OVERCOVER ib_paper/MGC 27 short vs 70 resting stop (4 OCA groups). FAIL INV-JOURNAL-EXCHANGE alpaca_paper/QQQ journal 2 vs venue 1981; alpaca_portfolio/SLV 6 vs 877 (venue brackets do cover 1981/877). NOT-MEASURED: prop positions/stops (no payload), flatten-intent",
+      "population": "IB open positions n=3; (account,symbol) pairs n=17; tracked legs n=10; exit intervals n=1683",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "python3 scripts/ops/system_invariants.py --payloads <dir> (stems pulled 18:10Z; journal limit 1000)",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H5",
+      "status": "concern",
+      "value": "signal->package->order flows (134 chains in parity window). Defect: out-of-hours 1h equity signals placed market brackets that rested unfilled; reconciler closed each row exchange_flat_reconciled after ~6.5 min; strategy re-entered 7x (SLV) and 4x (QQQ) on 11-18, plus QQQ 7712 on 11-17 21:01Z",
+      "population": "actionable signals on 1h equity legs 11-17..11-18; journal 1000 rows ids 6962-7961",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "diag journal trades/order_packages; alpaca_order_history; journalctl 13:03-13:11Z",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H6",
+      "status": "watch",
+      "value": "real money 30 closes: sl 15, live_review_close 10, tp 3, max_hold 2 (clean). Mirror 34: sl 16, live_review_close 10, max_hold 5, tp 3. Paper 128 priced + 4 stuck_strategy_watchdog; 11 exchange_flat_reconciled false closes on 11-18 (unpriced, excluded by perf). Orphan: MGC 7735 adopted 07:42Z, closed exit_coverage_no_strategy 07:45Z",
+      "population": "closed rows 7d by book",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "api/bot/performance?window=7d; journal trades",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H7",
+      "status": "watch",
+      "value": "DB integrity hourly: INV-3 ALERT recent=1 (7735, adopted orphan with no package), total 76; INV-2 total 123 (recent 0); INV-5 total 1; others 0",
+      "population": "rows written in the 48 h window",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "journalctl ict-db-integrity.service 17:08Z and 18:08Z runs",
+      "prior": [
+        "ok",
+        "ok"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H8",
+      "status": "watch",
+      "value": "5/5 producers fresh; news_decisions could_not_look (4th week, AUD-20261104-PRODUCER-OK-OVER-CNL)",
+      "population": "consumer-side ledgers in check_producer_liveness",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "python3 scripts/macro/check_producer_liveness.py",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H9",
+      "status": "watch",
+      "value": "alert ledger read (3,140 rows/7d). DB-integrity and restart alerts reached telegram_ok. ib_stop_over_cover CRITICAL (11-17 15:52Z, 11-18 03:58Z) was suppressed_by_policy (paper_alert_to_manager), and the stray long followed 3.7 h later",
+      "population": "urgent rows in 168 h",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "console alerts urgent=true since 168h",
+      "prior": [
+        "ok",
+        "ok"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H10",
+      "status": "watch",
+      "value": "9 days of research health; breaches/day (last run): 9,5,3,3,4,2,3,2,4 for 11-10..11-18, down from 9. Dispatcher cadence ~hourly with gaps (01:03-03:20Z, 08:07-10:32Z on 11-18); PI-20261118-JFWRQYOV-0001 owns throughput",
+      "population": "days x SLOs; dispatch runs 11-17 11:01Z..11-18 17:31Z (30 runs)",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "comms/research/health/*.json; research-queue-dispatch.yml runs",
+      "prior": [
+        "concern",
+        "concern"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H11",
+      "status": "watch",
+      "value": "trainer timer alive: 2 cycles/24 h, rc 0, 61 dataset builds ok; last cycle trained 0 (5 already done, 3 refusals); registry 100 rows (98 on 11-11)",
+      "population": "cycles 24 h; registry rows",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "api/bot/ml/status trainer mirror (age 66 s)",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H12",
+      "status": "watch",
+      "value": "live disk 32.3% free (16.5 GB), up from 24.0% after the prune; trainer 83.6% used (81.8% on 11-11, +1.8 pts/wk, projects 90% about 2026-12-13); trainer CPU 100% at read; live mem 19%",
+      "population": "both VMs",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "health/latest; console system_health vm_resources",
+      "prior": [
+        "concern",
+        "concern"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H13",
+      "status": "watch",
+      "value": "repo collaborators not re-read this run; run_secret_scanning could_not_look (GHAS not enabled, as 11-11); ssh_auth_sweep not run (budget); 0 DU account ids in the ib_open_orders reply (masking holds)",
+      "population": "sources swept: relay output only",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "grep DU ids in diag ib_open_orders",
+      "prior": [
+        "watch",
+        "watch"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H14",
+      "status": "ok",
+      "value": "204 of 1,661 commits touched Tier-2/3 paths; all 20 config/accounts|strategies commits carry HOLD/operator or data-backed records; no new default-off *_ENABLED",
+      "population": "commits since 11-11 20:00Z",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "git log origin/main --since -- config/ src/runtime/ ...",
+      "prior": [
+        "ok",
+        "ok"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H15",
+      "status": "concern",
+      "value": "gate 261 (due 730, excluded 469); health-review backlog 75 open, 95% older than 14 d, 2 no-owner; oldest BL-20260525-005 (177 d)",
+      "population": "gate set from the store (work_store_api)",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "pipeline.py --gate; review_followthrough.py --source health-review",
+      "prior": [
+        "concern",
+        "concern"
+      ],
+      "coverage": "full"
+    },
+    {
+      "id": "H16",
+      "status": "could_not_look",
+      "value": "soak state lives in PI-SOAK-* store items; not graded this run (budget)",
+      "population": "soaks in flight",
+      "window": "2026-11-11T20:00Z..2026-11-18T18:20Z",
+      "evidence": "\u2014",
+      "prior": [
+        "could_not_look",
+        "could_not_look"
+      ],
+      "coverage": "none"
+    }
+  ],
+  "analysis": {
+    "trend": [
+      "live disk recovered 24.0 -> 32.3% free",
+      "research SLO breaches/day fell 9 -> 2-4",
+      "real-money exits clean 4 reviews running",
+      "IB over-cover recurring: TLT (11-04), MGC 6/16 (11-17), MGC 27/70 (11-18)",
+      "trainer disk +1.8 pts/week"
+    ],
+    "questions": [
+      {
+        "q": "Why did 1h equity legs open the same signal 4-7 times?",
+        "hypotheses": [
+          "intra-bar re-fire, no per-bar dedupe",
+          "partial-fill top-up",
+          "restore-on-refusal (#26611) re-send",
+          "the row was closed while the order was pending, so the monocle saw no open package"
+        ],
+        "test": "alpaca_order_history submitted vs filled; journal closed_at; journalctl 13:03-13:11Z",
+        "eliminated": "re-fire (13:05-13:09Z ticks were skipped open_package_exists until the close); partial fill (filled_qty = qty); restore-on-refusal (no refusal on those orders)",
+        "survivor": "out-of-hours market bracket + snapshot false-flat close at 6.5 min",
+        "p": 0.85
+      },
+      {
+        "q": "Where did the stray 5-lot MGC long come from?",
+        "hypotheses": [
+          "over-cover stop fill flipped the short",
+          "manual/venue action",
+          "noise"
+        ],
+        "test": "alerts ledger + system_invariants",
+        "survivor": "over-cover: 6 short vs 16 stop alerted 03:58Z, 5 long adopted 07:42Z; now 27 vs 70",
+        "p": 0.75
+      },
+      {
+        "q": "Is the manager 71h alarm real?",
+        "hypotheses": [
+          "no manager writes for 71 h",
+          "probe reads frozen git paths"
+        ],
+        "test": "probe against the store",
+        "survivor": "probe defect (0 h on store rows)",
+        "p": 0.95
+      },
+      {
+        "q": "Is tick latency a risk?",
+        "hypotheses": [
+          "expected with ~40 legs",
+          "journal-lock contention from the reconciliation loop"
+        ],
+        "test": "tick_cost hooks",
+        "survivor": "lock contention: journal_sync.wait 36% of tick time; reconciliation holds 40.7 s mean",
+        "p": 0.6
+      }
+    ],
+    "correlations": [
+      "One mechanism (a row closed while its broker order is still pending) explains the QQQ and SLV stacks, the INV-JOURNAL-EXCHANGE fails and the 11 unpriced paper closes: one structural call (C1)",
+      "Over-cover (C2) and the INV-3 alert are one chain: over-cover -> stray fill -> adopted orphan with no package"
+    ],
+    "hunt": "Looked for a surface reporting ok that nothing could falsify: the attention_watch manager probe (found C4). Also read the tick_cost hooks no check covers (found C6).",
+    "surprises": "The trader restarted 7 times on 11-17; each restart drops the reconciler's in-memory confirm state (_PENDING_SNAPSHOT_DISAPPEAR_CONFIRM). Not tested further; handed to the audit row."
+  },
+  "calls": [
+    {
+      "id": "HR-20261118-C1",
+      "claim": "Until the snapshot reconciler treats a resting entry order as not-flat, every out-of-hours 1h equity signal on Alpaca stacks a position the journal does not track (one more stack before 11-25)",
+      "evidence": "PI-20261118-JFWRQYOV-0004 note: SLV 794+53+2+19+2+2+5=877 and QQQ 1182+735+55+7+2=1981 equal the venue",
+      "population": "Alpaca accounts x 1h equity legs",
+      "trend": "new 11-17/11-18",
+      "cause": "src/runtime/order_monitor.py _reconcile_orphan_exchange_positions: 300 s fresh-fill grace, then 404 closes an unfilled market bracket; strategy_monocle re-enters",
+      "p": "0.85 INFERRED",
+      "blast_radius": "paper + mirror now; alpaca_live on any pre-market long",
+      "tier": 2,
+      "check": {
+        "command": "system_invariants INV-JOURNAL-EXCHANGE on alpaca_*; journal exchange_flat_reconciled rows with closed_at-opened_at < 15 min",
+        "rule": "0 such rows and INV-JOURNAL-EXCHANGE pass",
+        "resolves_when": "2026-11-25"
+      },
+      "ending": "row HEALTH-20261118-OOH-FALSE-FLAT due 2026-11-20 (item PI-20261118-JFWRQYOV-0004)"
+    },
+    {
+      "id": "HR-20261118-C2",
+      "claim": "ib_paper MGC stays over-covered (resting stop > position) until the excess OCA groups are cancelled; a stop fill flips it long unprotected",
+      "evidence": "system_invariants INV-PROTECT-OVERCOVER 27 vs 70; prior 6 vs 16 -> stray long 7735",
+      "population": "IB open positions n=3",
+      "trend": "6/16 (11-17) -> 27/70 (11-18)",
+      "cause": "old OCA groups survive a new entry / flip (unconfirmed)",
+      "p": "0.9 MEASURED",
+      "blast_radius": "demo floor ib_paper",
+      "tier": 2,
+      "check": {
+        "command": "system_invariants.py --payloads (ib_open_orders, exchange_positions)",
+        "rule": "INV-PROTECT-OVERCOVER pass two reads running",
+        "resolves_when": "2026-11-19"
+      },
+      "ending": "row HEALTH-20261118-MGC-OVERCOVER-STRAY due 2026-11-19 (item PI-20261117-LSFHBH4A-0006)"
+    },
+    {
+      "id": "HR-20261118-C3",
+      "claim": "A paper over-cover CRITICAL never reaches a human while the policy routes it to the manager only; the 03:58Z alert preceded a stray position by 3.7 h",
+      "evidence": "alerts ledger: ib_stop_over_cover delivered suppressed_by_policy x2",
+      "population": "urgent alerts 168 h",
+      "trend": "\u2014",
+      "cause": "alert policy paper_alert_to_manager",
+      "p": "0.7",
+      "blast_radius": "demo floor",
+      "tier": 1,
+      "check": {
+        "command": "console alerts kind ib_stop_over_cover",
+        "rule": "each alert acted on by a manager within 2 h, or the policy changed",
+        "resolves_when": "2026-11-25"
+      },
+      "ending": "no new row: carried on HEALTH-20261118-MGC-OVERCOVER-STRAY (the manager is the routed recipient; the decision to page the operator on paper is the operator's preference, not data)"
+    },
+    {
+      "id": "HR-20261118-C4",
+      "claim": "The 'manager' attention alarm reads the frozen checklist's git history, so it reports the register silent (71 h) while the store is written hourly",
+      "evidence": "probe_manager returned 0h over 1941 rows after the fix vs 71 h before",
+      "population": "attention_watch probes",
+      "trend": "since WSD-S4 freeze",
+      "cause": "scripts/ops/attention_watch.py probe_manager used _last_commit_time on HISTORY_PATHS",
+      "p": "0.95 MEASURED",
+      "blast_radius": "observability",
+      "tier": 1,
+      "check": {
+        "command": "python3 scripts/ops/attention_watch.py (manager probe)",
+        "rule": "detail names row updated_at and age < 30 h",
+        "resolves_when": "2026-11-19"
+      },
+      "ending": "fixed in this PR (merged \u2260 deployed: attention_watch runs from the repo checkout on the next fire)"
+    },
+    {
+      "id": "HR-20261118-C5",
+      "claim": "ict_scalp_eth_15m trades real money with no live-vs-replay parity check",
+      "evidence": "comms/live_parity/latest.json: could_not_check, unit 'ict_scalp' not supported",
+      "population": "10 real-money legs",
+      "trend": "since promotion 11-17 18:12Z",
+      "cause": "scripts/ops/live_replay_parity.py has no ict_scalp unit",
+      "p": "0.95 MEASURED",
+      "blast_radius": "real money bybit_2",
+      "tier": 1,
+      "check": {
+        "command": "comms/live_parity/latest.json totals.real_money_legs_could_not_check",
+        "rule": "[]",
+        "resolves_when": "2026-11-25"
+      },
+      "ending": "pipeline PI-20261118-LRP-40FCC9DD (note added)"
+    },
+    {
+      "id": "HR-20261118-C6",
+      "claim": "Trader tick time (mean 55.5 s) is dominated by the reconciliation loop holding journal_sync (40.7 s mean)",
+      "evidence": "diag tick_cost 18:08Z",
+      "population": "819 ticks since 04:05Z",
+      "trend": "first measured here",
+      "cause": "reconcile_open_trades / naked-position checks run under the journal lock",
+      "p": "0.6 INFERRED",
+      "blast_radius": "all books (signal latency)",
+      "tier": 1,
+      "check": {
+        "command": "diag tick_cost mean_ms",
+        "rule": "audit names the cause and target",
+        "resolves_when": "2026-11-22"
+      },
+      "ending": "row HEALTH-20261118-RECONCILE-LOCK-TICK due 2026-11-22 (Thu-Sun system audit)"
+    },
+    {
+      "id": "HR-20261118-C7",
+      "claim": "Research dispatch keeps leaving runners idle while units are runnable",
+      "evidence": "30 dispatch runs 11-17 11:01Z..11-18 17:31Z, ~hourly with 2 h gaps",
+      "population": "research-queue-dispatch runs",
+      "trend": "breaches/day down 9 -> 2-4",
+      "cause": "one batch per cycle (PI item)",
+      "p": "0.7",
+      "blast_radius": "research liveness",
+      "tier": 1,
+      "check": {
+        "command": "PI-20261118-JFWRQYOV-0001 clears_when",
+        "rule": "<30 min idle/h over 6 h while would_dispatch>0",
+        "resolves_when": "2026-11-20"
+      },
+      "ending": "pipeline PI-20261118-JFWRQYOV-0001 (existing, due 11-20)"
+    },
+    {
+      "id": "HR-20261118-C8",
+      "claim": "Trainer disk crosses 90% used around 2026-12-13 at +1.8 pts/week",
+      "evidence": "ml/status disk 83.6% (81.8% on 11-11)",
+      "population": "trainer VM",
+      "trend": "+1.8/wk",
+      "cause": "dataset builds (unconfirmed)",
+      "p": "0.5",
+      "blast_radius": "learning pipeline",
+      "tier": 1,
+      "check": {
+        "command": "api/bot/ml/status .status.disk.used_pct",
+        "rule": "< 86 on 2026-11-25",
+        "resolves_when": "2026-11-25"
+      },
+      "ending": "no action, because ict-trainer-disk-alarm.timer is active and is the detector; re-graded next week"
+    }
+  ],
+  "backlog_coverage": {
+    "open_at_start": 261,
+    "due_total": 730,
+    "excluded": 469,
+    "sources": [
+      "pipeline.py --gate (work_store_api)"
+    ],
+    "count_untriaged": 261,
+    "note": "open-set walk (3c) not run: budget spent on C1 root cause; 0 of 261 re-validated"
+  },
+  "security_check": {
+    "secret_scanning": "could_not_look (GHAS not enabled)",
+    "ssh_sweep": "not run",
+    "acct_id_masking": "0 DU ids in relay reply"
+  },
+  "new_work_compliance": {
+    "tier23_commits": 204,
+    "total_commits": 1661,
+    "config_roster_commits_with_record": "20/20",
+    "new_default_off_gates": 0
+  },
+  "soak_decisions_due": [],
+  "recommended_action": "Order path first (general lane, Tier 2): HEALTH-20261118-OOH-FALSE-FLAT, then cancel the MGC excess stop groups (HEALTH-20261118-MGC-OVERCOVER-STRAY).",
+  "claude_channel_ping": "/health-review \u2014 investigate: 3 concerns, 9 watches, 1 stalled; top: out-of-hours Alpaca brackets false-closed and re-entered (HEALTH-20261118-OOH-FALSE-FLAT)"
+}
