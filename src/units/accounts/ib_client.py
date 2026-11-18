@@ -3933,7 +3933,6 @@ class IBClient:
         req_async = getattr(ib, "reqAllOpenOrdersAsync", None)
         loop = self._loop
         used_async = False
-        response: Any = None
         if req_async is not None and loop is not None and not loop.is_closed():
             try:
                 running = loop.is_running()
@@ -3947,7 +3946,7 @@ class IBClient:
                     else _IB_PROBE_TIMEOUT_S if _IB_PROBE_TIMEOUT_S > 0
                     else 8.0
                 )
-                response = loop.run_until_complete(
+                loop.run_until_complete(
                     asyncio.wait_for(req_async(), timeout=timeout)
                 )
                 used_async = True
@@ -3955,56 +3954,8 @@ class IBClient:
             # Sync fallback (test stubs, or no usable owned loop). ib_insync's
             # reqAllOpenOrders blocks until openOrderEnd; the connect breaker +
             # IB_FETCH_TIMEOUT_S bound the surrounding lifecycle. Last resort.
-            response = ib.reqAllOpenOrders()
-        return self._prune_to_response(self._open_trades(ib), response)
-
-    @staticmethod
-    def _prune_to_response(trades: list, response: Any) -> list:
-        """Drop cached trades the account-wide response says are no longer open.
-
-        BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW
-        (re-measured 2026-11-18, AM-OPS-2 / AM-OPS-3): ib_insync's ``Trade``
-        cache only GROWS -- ``reqAllOpenOrders`` adds what it sees and nothing
-        removes an order another client (or TWS, or a previous trader process)
-        cancelled, so ``openTrades()`` kept serving it as resting. On 11-18 the
-        diag route showed 70 resting MGC stop lots across 4 OCA groups while two
-        fresh-client reads saw one STP+LMT pair. The same list feeds
-        ``has_protective_orders`` / ``protection_coverage``, where a dead leg
-        reads as COVERAGE (the unsafe direction) or as over-cover.
-
-        The response of ``reqAllOpenOrders`` IS the account's open-order book at
-        ``openOrderEnd``, so a cached trade whose non-zero ``permId`` is absent
-        from it is not open. Kept on purpose: a trade with no ``permId`` yet (just
-        placed, not acknowledged -- dropping it would read a fresh bracket as
-        naked and invite a duplicate re-arm), and everything when the response is
-        not a list (a stub or an SDK that returned nothing readable: unknown is
-        not 'none open')."""
-        if not isinstance(response, (list, tuple)):
-            return trades
-        live_perm = set()
-        live_key = set()
-        for o in response:
-            try:
-                pid = int(getattr(o, "permId", 0) or 0)
-            except (TypeError, ValueError):
-                pid = 0
-            if pid:
-                live_perm.add(pid)
-            live_key.add((getattr(o, "clientId", None), getattr(o, "orderId", None)))
-        kept = []
-        for t in trades:
-            order = getattr(t, "order", None)
-            try:
-                pid = int(getattr(order, "permId", 0) or 0)
-            except (TypeError, ValueError):
-                pid = 0
-            if (not pid or pid in live_perm
-                    or (getattr(order, "clientId", None), getattr(order, "orderId", None)) in live_key):
-                kept.append(t)
-        if len(kept) != len(trades):
-            logger.info("IB open-trade cache: pruned %d trade(s) absent from the account-wide "
-                        "open-order response (kept %d)", len(trades) - len(kept), len(kept))
-        return kept
+            ib.reqAllOpenOrders()
+        return self._open_trades(ib)
 
     @staticmethod
     def _protective_leg_qty(order: Any):
