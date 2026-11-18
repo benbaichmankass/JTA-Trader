@@ -122,6 +122,28 @@ def us_equity_session(ts: datetime | None = None) -> str:
     return "closed"
 
 
+def equity_first_full_hour_wait(ts: datetime | None = None, *, wait_minutes: int = 60) -> bool:
+    """True while an HOURLY US-equity signal must WAIT (operator D9, 2026-11-18).
+
+    Operator popup 2026-11-18, verbatim: "Wait for the first full hour of trading (Recommended)". A 1h equity signal
+    that arrives in the pre-market (04:00-09:30 ET) or in the first ``wait_minutes`` of the regular session
+    (09:30 + 60 min = 10:30 ET) is held back; the leg re-evaluates every tick, so the same signal is taken once the
+    window ends if it still stands. Why: a bracket entry sent before the open is accepted and QUEUED, the position
+    does not exist until the open, and 2026-11-18 SLV re-entered 7 times and QQQ 4 times before it (PI-20261118-JFWRQYOV-0004).
+
+    Scope is exactly what D9 names: weekdays, 04:00 ET up to the end of the first full regular hour. After-hours,
+    overnight and weekends are NOT touched here. ET comes from the same DST-month table as ``us_equity_session``
+    (March and November read as standard time); US holidays are not modeled. Pure, never raises.
+    """
+    ts = _utc(ts or datetime.now(timezone.utc))
+    et = ts - timedelta(hours=(4 if ts.month in _FULL_DST_MONTHS else 5))
+    if et.weekday() >= 5:
+        return False
+    open_minutes = 9 * 60 + 30
+    t_min = et.hour * 60 + et.minute
+    return 4 * 60 <= t_min < open_minutes + int(wait_minutes)
+
+
 def asset_class_for_exchange(exchange: str) -> str:
     """Map an exchange name to the asset class its symbols trade as."""
     e = str(exchange or "").strip().lower()
