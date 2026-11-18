@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI-workflow bug fix: ml-entry-retrain.yml wrote its HELD promotion PR's landing declaration as .github/pr-landing/ml-entry-promote-<tag>-<run>.json, but the branch is bot/ml-entry-promote-..., so pr-landing-guard R11 wants bot-ml-entry-promote-...json; #26288 (a PASSing real-money ENTRY refit) sat red for 3 days on this. Now the filename is the full branch slug. The promotion PR itself stays a HELD Tier-3 that a human merges; nothing about the hold changes. Gates this adds or changes: none."
+}
