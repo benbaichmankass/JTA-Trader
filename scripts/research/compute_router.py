@@ -141,6 +141,11 @@ def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
     man = (entry.get("train_parity") or {}).get("manifest")
     if man:
         out.append(manifest_dataset_path(str(man)))
+    # ML-EXITHEAD-ROWS-KAGGLE (2026-11-18): a non-ml_bakeoff unit that reads published shards names them in
+    # routing.published_paths; they are checked against the same allowlist (published_problem), never trusted.
+    extra = (entry.get("routing") or {}).get("published_paths")
+    if isinstance(extra, list):
+        out.extend(str(p) for p in extra if p)
     return out
 
 
