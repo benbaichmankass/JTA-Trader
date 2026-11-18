@@ -198,6 +198,7 @@ def run(a) -> int:
         sc["decision_ts"] = pd.to_datetime(sc["decision_ts"], utc=True)
         rec = rec.merge(sc[["symbol", "decision_ts", "side", "score"]], on=["symbol", "decision_ts", "side"], how="left")
     else:
+        # provenance: score_record — the frozen v1 regression booster's predicted net R for the row's side (not a probability)
         rec["score"] = score_record(rec, Path(a.cache))
     rec[["symbol", "side", "decision_ts", "score", "net_r"]].to_csv(out / "scored_record.csv.gz", index=False)
     coverage = float(rec.score.notna().mean())
