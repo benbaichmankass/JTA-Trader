@@ -18,9 +18,11 @@ Wants=network-online.target
 Type=oneshot
 User=ubuntu
 WorkingDirectory=/home/ubuntu/ict-trading-bot
-# Worst case: 3 symbols x (20 rate-limit retries x 30s = 10 min) = 30 min, plus paging.
-# 2400s covers that; a timeout loses nothing anyway (atomic write, original untouched).
-TimeoutStartSec=2400
+# Worst case: 15 feeds x (20 rate-limit retries x 30s = 10 min) = 150 min, plus paging; a normal day extends ~1 day per feed.
+# 9000s covers that; a timeout loses nothing anyway (atomic write, original untouched).
+TimeoutStartSec=9000
 ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15 ADAUSDT:15 AVAXUSDT:15 BNBUSDT:15 LINKUSDT:15 BTCUSDT:15 ADAUSDT:5 AVAXUSDT:5 BNBUSDT:5 LINKUSDT:5 ETHUSDT:5 SOLUSDT:5 XRPUSDT:5
+# Report-only freshness of every data/*.csv (PI-20261118-MANAYJZO-0002); the '-' prefix means it can never fail the unit.
+ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data
 StandardOutput=journal
 StandardError=journal
