@@ -379,6 +379,29 @@ def probe_manager(now: datetime) -> dict:
     # and the alarm grew without bound. Newest commit over BOTH paths
     # (checklist_store.HISTORY_PATHS) so either layout counts as a write.
     from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    if _checklist_frozen():
+        # WSD-S4 FREEZE: a register write goes to work_store.db and the checklist files are never committed
+        # again, so their last commit dates every write to the freeze. HEALTH-REVIEW-20261118 measured the alarm
+        # reading "checklist last written 71h ago" on 2026-11-18 while the store had rows written that day.
+        # After the freeze the newest row updated_at (set by every store write) is the activity -- the same
+        # switch probe_inflight made in #25664.
+        try:
+            rows = _ck.load_path(CHECKLIST).get("items", [])
+        except (OSError, ValueError) as exc:
+            return {"status": UNKNOWN, "detail": f"checklist store unreadable ({type(exc).__name__}): could not look"}
+        stamps = []
+        for r in rows:
+            try:
+                ts = datetime.fromisoformat(str(r.get("updated_at")).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            stamps.append(ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc))
+        if not stamps:
+            return {"status": UNKNOWN, "detail": f"no readable row updated_at in {len(rows)} rows: could not look"}
+        hours = (now - max(stamps)).total_seconds() / 3600
+        st = BREACHED if hours > MANAGER_SILENT_HOURS else OK
+        return {"status": st, "detail": f"checklist last written {hours:.0f}h ago (newest row updated_at over "
+                                        f"{len(rows)} rows; checklist frozen; bound {MANAGER_SILENT_HOURS}h)"}
     times = [t for t in (_last_commit_time(p) for p in _ck.HISTORY_PATHS) if t]
     t = max(times) if times else None
     if t is None:

@@ -182,6 +182,8 @@ jobs:
       fire: ${{ steps.flag.outputs.fire }}
       collect_count: ${{ steps.collect.outputs.count }}
       payload: ${{ steps.bundle.outputs.payload }}
+      dispatched: ${{ steps.flag.outputs.dispatched }}
+      deferred: ${{ steps.flag.outputs.deferred }}
     env:
       # THE ONE FIRE DECISION. Both consumers below read THIS, never `inputs`
       # directly — see the header. A scheduled run fires; a hand dispatch fires
@@ -350,7 +352,14 @@ jobs:
       - name: Record the fire flag for the land job
         id: flag
         if: always()
-        run: echo "fire=${FIRE}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "fire=${FIRE}" >> "$GITHUB_OUTPUT"
+          # REARM (PI-20261118-JFWRQYOV-0001): the dispatcher's own summary line
+          # ("deferred=26 · dispatched=5 · not_due=...") tells the `rearm` job whether work remains.
+          d=$(grep -o 'dispatched=[0-9]*' /tmp/dispatch.txt 2>/dev/null | tail -1 | cut -d= -f2 || true)
+          f=$(grep -o 'deferred=[0-9]*' /tmp/dispatch.txt 2>/dev/null | tail -1 | cut -d= -f2 || true)
+          echo "dispatched=${d:-0}" >> "$GITHUB_OUTPUT"
+          echo "deferred=${f:-0}" >> "$GITHUB_OUTPUT"
 
       - name: Bundle the landing payload
         id: bundle
@@ -478,6 +487,54 @@ jobs:
   # WSD-S6D-RESEARCH-RESULTS shadow: ship the dispatch job's research-store bundle to the trainer. The ONLY
   # job here holding VM_SSH_KEY, and it runs no unit code (sparse checkout of the ship action only). It never
   # reds the run: a missed write shows up in research-store-admin's parity, not as a dispatcher failure.
+  # REARM (2026-11-18, PI-20261118-JFWRQYOV-0001, lane AM-OPS-2). Two measured defects, one cause: this workflow's cycle
+  # cadence depended on events that do not arrive.
+  #   * The `workflow_run` REFILL above (2026-11-03) NEVER fires for the runs this dispatcher starts: every research-script-run
+  #     is created by github-actions[bot] through GITHUB_TOKEN, and GitHub does not raise workflow_run for those. MEASURED
+  #     2026-11-18: 0 workflow_run dispatch runs all day against dozens of completed research-script-run runs (the 73 ever
+  #     seen came from runs a human started, last one 2026-11-17 13:09Z). So a cycle ran only on the hourly cron (GitHub drops
+  #     most slots), or when schedule-keeper dispatched one on a push to main: gaps of 2h38m (07:54Z-10:32Z) and 1h18m
+  #     (16:13Z-17:31Z), ~5 units per cycle, each unit finishing in ~2 min.
+  #   * schedule-keeper only runs on a push to main and on its own cron, which GitHub also drops, so it cannot be the heartbeat.
+  # The dispatcher now re-arms ITSELF: when a cycle ends it dispatches the next one (workflow_dispatch by the bot, which
+  # already means FIRE). With work left (deferred or dispatched > 0) the wait is 150 s, enough for the just-fired short
+  # units to clear the in-flight caps; with nothing left it is 600 s, a heartbeat that depends on no push and no cron.
+  # Nothing a cycle may fire changes: the in-flight caps, the repo-queued cap, the GPU cap and the ledger cap all bind each
+  # cycle exactly as before, and the `research-queue-dispatch` concurrency group still serialises cycles. Brakes here: never
+  # re-arm while another dispatch run is already waiting to start (so the keeper, the cron and this chain collapse into one), and a
+  # failed cycle re-arms too (a broken cycle must not stop the heartbeat; it still turns the run red). schedule-keeper and
+  # the cron stay as the backstop that restarts the chain if it ever dies. Adds no gate.
+  rearm:
+    needs: [dispatch]
+    if: ${{ always() && needs.dispatch.result != 'skipped' && needs.dispatch.result != 'cancelled' }}
+    runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Wait, then ask for the next cycle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+          DISPATCHED: ${{ needs.dispatch.outputs.dispatched }}
+          DEFERRED: ${{ needs.dispatch.outputs.deferred }}
+        run: |
+          set -uo pipefail
+          if [ "${DISPATCHED:-0}" != "0" ] || [ "${DEFERRED:-0}" != "0" ]; then wait_s=150; else wait_s=600; fi
+          echo "dispatched=${DISPATCHED:-0} deferred=${DEFERRED:-0} -> re-arming in ${wait_s}s"
+          sleep "${wait_s}"
+          # Another cycle already WAITING to start (keeper, cron, a human): that one is the next cycle. An in_progress run is
+          # NOT counted: the previous cycle's `land` / `research-store` jobs keep its run open for minutes after its
+          # `dispatch` job ended, and counting it would end the chain after one hop.
+          other=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=20" \
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null || echo 0)
+          echo "other dispatch runs waiting to start: ${other}"
+          if [ "${other}" != "0" ]; then echo "another cycle is already pending; not re-arming"; exit 0; fi
+          gh workflow run research-queue-dispatch.yml --ref main \
+            || echo "::error::could not re-arm research-queue-dispatch -- schedule-keeper / the cron are the backstop"
+
   research-store:
     needs: dispatch
     if: "!cancelled() && (needs.dispatch.result == 'success' || needs.dispatch.result == 'failure')"
