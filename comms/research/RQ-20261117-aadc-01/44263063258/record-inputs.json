@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261117-aadc-01/44263063258/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261117-aadc-01/44263063258",
+  "data_fingerprint": "{\"files\": [{\"bytes\": 687690, \"path\": \"comms/live_parity/vol_label_audit_20261117/BTCUSDT.jsonl\", \"sha256\": \"016d2eddcc94fac1bc0acae798532e3b280903b8855e8210945b54d8124bcbf9\"}, {\"bytes\": 5796, \"path\": \"comms/live_parity/vol_label_audit_20261117/MES.jsonl\", \"sha256\": \"e4d2b087abecbae9856bec0ac8597a2b6d38269e06f3bc72af6463988b7cb67a\"}, {\"bytes\": 447276, \"path\": \"comms/live_parity/vol_label_audit_20261117/SOLUSDT.jsonl\", \"sha256\": \"1939dbe8244e1d4e89909fd94f649a7cd7e7be91ad6596fb44fc9bc4772d97ad\"}], \"n_files\": 3, \"sha256\": \"d84bfdf98548a4058239b9d00500b9fa76607d006847b4bdb91f6563446c15d9\", \"state\": \"fingerprinted\", \"truncated\": false, \"window\": null}",
+  "decision_rule_id": "RULE-RQ-20261117-aadc-01-VOL-LABEL-VERIFY",
+  "decision_rule_registered_at": "2026-11-17",
+  "measurement_file": "comms/research/RQ-20261117-aadc-01/44263063258/measurement.json",
+  "min_rows": "4",
+  "n": "1111",
+  "note": "BTCUSDT btc-regime-15m-lgbm-fc-pcv-v2: fail (bars 1111, alignment None); SOLUSDT sol-regime-15m-lgbm-fc-pcv-v2: fail (bars 676, alignment None); MES mes-regime-5m-lgbm-v2: indeterminate (bars 23, alignment None); ETHUSDT eth-regime-1h-lgbm-xasset-v1: not_applicable",
+  "population": "distinct bars where the live regime_ml_vol_shadow row of the head's own model_id carried a calm/volatile label and matched a replayed bar within 2 bars; primary BTCUSDT",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "comms/research/RQ-20261117-aadc-01/44263063258/records.jsonl",
+  "research_unit": "RQ-20261117-aadc-01",
+  "tool": "python3 scripts/research/vol_label_live_verify.py",
+  "verdict": "fail"
+}
