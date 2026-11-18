@@ -475,7 +475,7 @@ def main_foxhound(a) -> Dict[str, Any]:
         r = section_label(tab, o, sizer)
     # n = the DEV OOF decisions the section read (script_run --derive-record requires a top-level n; without it every
     # P8 run landed producer_failed: 207f-01/-04 and c21d-06, PROGRAMME-REVIEW-20261118).
-    r.setdefault("n", int(len(o)))
+    r.setdefault("n", len(o))
     r.update({"sizer": sizer, "cash0_source": CASH0_SOURCE, "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS},
               "n_pool": len(pool), "pool": {k: v for k, v in prep.items() if k != "excluded"}, "train_end": M.TRAIN_END,
               "structure_exit": M.STRUCT_SPEC, "ensemble_seeds": ENS_SEEDS, "alpaca_calls": client.calls,
