@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue units of programme P8 (research/programmes/08-alpaca-live-book.yaml; lane ALPACA-LIVE-BOOK-PLAN, 2026-11-11)
+# wiring: research/queue/blocked/RQ-20261118-f7c1-03.yaml (--section features, P8-Q5) and RQ-20261118-f7c1-04.yaml (--section horizon, P8-Q8)
 """THE ALPACA_LIVE BOOK, AS THE ACCOUNT CAN ACTUALLY TRADE IT (programme P8, docs/research/programmes/08-ALPACA-LIVE-BOOK.md).
 
 Operator, 2026-11-11 ~22:40Z (relayed by Manager Session 2026-11-11a): "we need to make sure we have a plan for finding something
@@ -23,6 +24,10 @@ Subcommands (each writes <out>/<unit>.json + <out>/verdict.json with read_state,
                                         NO confirming-window row is loaded: the 2025-07-15.. window has been read three times
                                         (holdout ledger family ENTRY-EQ), so every diagnosis here runs where iteration is free
                                         (principles M13).
+  foxhound --section features           P8-Q5: config B + ONE named feature family per arm (ml_entry_equity.FAMILY_FEATURES), plus the
+                                        9-pure-noise-column control; each arm re-fit with the same recipe, scored on the live book.
+  foxhound --section horizon            P8-Q8: the label/exit time stop (24 -> 48 / 72 bars) and a DAILY decision bar, each arm
+                                        re-labelled and re-fit, scored on the live book.
   legs --strategy <leg> ...             each rostered leg's Stage-0 trade list (scripts/ops/build_strategy_evidence.py, the
                                         config-exact harness that writes comms/strategy_evidence/) through the same book, one
                                         leg at a time and all legs competing for the one slot.
@@ -204,17 +209,19 @@ def attach_prices(tab: pd.DataFrame, bars: Dict[str, pd.DataFrame]) -> pd.DataFr
     return pd.concat(parts)
 
 
-def dev_oof(tab: pd.DataFrame, target: str = "net_long", log=print) -> pd.DataFrame:
+def dev_oof(tab: pd.DataFrame, target: str = "net_long", log=print, feats=None, purge_days=None) -> pd.DataFrame:
     """Foxhound-4's recipe on the dev walk-forward: config B features, 5-seed pinned ensemble, purge, folds DEV_FOLDS.
-    Rows <= TRAIN_END only; returns the out-of-fold rows with `pred` and `fold`, session-gated as the harness does."""
+    Rows <= TRAIN_END only; returns the out-of-fold rows with `pred` and `fold`, session-gated as the harness does.
+    ``feats`` (P8-Q5) / ``purge_days`` (P8-Q8) override config B's features / the purge; None = the live recipe, unchanged."""
     import ml_entry_equity as M
     te = pd.Timestamp(M.TRAIN_END, tz="UTC") + pd.Timedelta(days=1)
     dev = tab[tab.ts < te].dropna(subset=["net_long", target])
-    feats = M.CONFIGS["B"]["features"]
+    feats = list(feats) if feats is not None else M.CONFIGS["B"]["features"]
+    pdays = M.PURGE_DAYS if purge_days is None else int(purge_days)
     bounds = [pd.Timestamp(x, tz="UTC") for x in M.DEV_FOLDS] + [te]
     oof = []
     for k in range(len(M.DEV_FOLDS)):
-        tr = M.purge(dev[dev.ts < bounds[k]], bounds[k]).dropna(subset=feats)
+        tr = M.purge(dev[dev.ts < bounds[k]], bounds[k], pdays).dropna(subset=feats)
         ts_ = dev[(dev.ts >= bounds[k]) & (dev.ts < bounds[k + 1])].dropna(subset=feats)
         if len(tr) < 1000 or len(ts_) == 0:
             continue
@@ -450,6 +457,96 @@ def section_neutral(tab_dev: pd.DataFrame, o_base: pd.DataFrame, sizer, log=prin
     return {"verdict": v, "note": why, "variants": out, "bar": bar}
 
 
+# ------------------------------------------------------------------------------------------------ P8-Q5 / P8-Q8 arms
+FEATURE_FAMILIES = ["volregime", "familyrs"]   # built families (ml_entry_equity.FAMILY_FEATURES); FOMC/CPI not built (no PIT calendar)
+HORIZON_ARMS = {"h48": {"hold": 48, "daily": False}, "h72": {"hold": 72, "daily": False}, "daily_h24": {"hold": 24, "daily": True}}
+MATERIAL_PCT_MONTH = 0.25
+
+
+def _arm_vs_base(arm: Dict[str, Any], base: Dict[str, Any], bar: Dict[str, Any]) -> Dict[str, Any]:
+    """The P8 live-book comparison (section_calib's): paired monthly return % vs the baseline book, n_taken >= 30,
+    mean diff >= +0.25 %/month, t >= the deflated point bar, >= 3 of 5 dev folds with positive mean net R."""
+    pm = paired_monthly(arm["book"], base["book"])
+    ok = (arm["book"]["n_taken"] >= 30 and pm["mean_diff_pct"] is not None and pm["mean_diff_pct"] >= MATERIAL_PCT_MONTH
+          and (pm["t"] or 0) >= bar["point_t_min"] and arm["trades"].get("folds_positive", 0) >= 3)
+    return {**pm, "clears": bool(ok)}
+
+
+def section_features(tab_dev: pd.DataFrame, o_base: pd.DataFrame, sizer, families=None, log=print) -> Dict[str, Any]:
+    """P8-Q5 (RQ-20261118-f7c1-03): config B + each family, config B + all families, and config B + 9 pure-noise columns, every arm
+    re-fit with the live recipe (5-seed pinned ensemble, same folds / purge), taken at TAU_LIVE, replayed through the cash book.
+    LOFO = (all families) minus each family; with the two built families LOFO equals the single-family arms, so it adds no draw
+    (declared). Draws for the bar = number of families + 1 (all). NOISE GATE: if the noise arm itself clears the bar, the recipe
+    gains from noise and the section is INDETERMINATE; a family clears only if it also beats the noise arm's monthly mean diff."""
+    import holdout_lock as HL
+    import ml_entry_equity as M
+    fams = list(families or FEATURE_FAMILIES)
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    base_feats = M.CONFIGS["B"]["features"]
+    base_tk = take(o_base, o_base["pred"].to_numpy(), TAU_LIVE)
+    out = {"baseline": {"features": base_feats, "trades": trade_stats(base_tk), "book": replay(_trades(base_tk), CASH0, **kw)}}
+    arms = {f"B+{f}": [f] for f in fams}
+    if len(fams) > 1:
+        arms["B+all"] = fams
+    arms["B+noise9"] = ["noise9"]
+    for name, add in arms.items():
+        extra = [c for f in add for c in M.FAMILY_FEATURES[f]]
+        o = dev_oof(tab_dev, log=log, feats=base_feats + extra)
+        tk = take(o, o["pred"].to_numpy(), TAU_LIVE)
+        out[name] = {"features_added": extra, "trades": trade_stats(tk), "book": replay(_trades(tk), CASH0, **kw)}
+    draws = [k for k in arms if k != "B+noise9"]
+    bar = HL.bar_for(len(draws))
+    cmp = {k: _arm_vs_base(out[k], out["baseline"], bar) for k in arms}
+    noise_diff = cmp["B+noise9"]["mean_diff_pct"]
+    winners = [k for k in draws if cmp[k]["clears"] and (noise_diff is None or cmp[k]["mean_diff_pct"] > noise_diff)]
+    b = out["baseline"]["book"]["n_taken"]
+    if cmp["B+noise9"]["clears"]:
+        v, why = "indeterminate", "the 9-pure-noise-column arm itself clears the bar: the recipe gains from noise (overfitting), no family read"
+    elif b < 30 and not winners:
+        v, why = "indeterminate", f"baseline book n_taken {b} < 30 and no family arm clears"
+    elif winners:
+        best = max(winners, key=lambda k: cmp[k]["mean_diff_pct"])
+        v, why = "pass", f"{best} beats config B on the live book by {cmp[best]['mean_diff_pct']:+.3f} %/month (t {cmp[best]['t']:.2f} >= {bar['point_t_min']}), above the noise arm"
+    else:
+        v, why = "fail", f"no feature family beats config B on the live book (bar t >= {bar['point_t_min']}, >= +{MATERIAL_PCT_MONTH} %/month, n >= 30, >= 3/5 folds, > noise arm)"
+    return {"verdict": v, "note": why, "families_built": fams, "families_not_built": {"events": "no point-in-time FOMC/CPI calendar in the repo"},
+            "lofo_note": "with 2 families, all-minus-one == the single-family arms", "variants": out, "vs_baseline": cmp, "bar": bar, "n_draws": len(draws)}
+
+
+def section_horizon(bars, pool, slip, fee, o_base: pd.DataFrame, sizer, arms=None, log=print) -> Dict[str, Any]:
+    """P8-Q8 (RQ-20261118-f7c1-04): each arm re-labels the table (ml_entry_equity.build_table hold= / daily=; the structure exit stays
+    SL-only with the 3-ATR TP, TP doctrine), re-fits the live recipe with the purge scaled to the label (purge_days_for), takes at
+    TAU_LIVE (the regressed net R is in R units at every horizon) and replays through the cash book. The session gate stays the live
+    one (declared: one factor, the label/exit). Draws for the bar = number of arms."""
+    import holdout_lock as HL
+    import ml_entry_equity as M
+    names = list(arms or HORIZON_ARMS)
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    base_tk = take(o_base, o_base["pred"].to_numpy(), TAU_LIVE)
+    out = {"baseline": {"hold": M.H, "daily": False, "trades": trade_stats(base_tk), "book": replay(_trades(base_tk), CASH0, **kw)}}
+    te = pd.Timestamp(M.TRAIN_END, tz="UTC") + pd.Timedelta(days=1)
+    for name in names:
+        cfg = HORIZON_ARMS[name]
+        t = attach_prices(M.build_table(bars, pool, slip, fee, struct=M.STRUCT_SPEC, hold=cfg["hold"], daily=cfg["daily"]), bars)
+        t = t[t.ts < te]
+        o = dev_oof(t, log=log, purge_days=M.purge_days_for(cfg["hold"]))
+        tk = take(o, o["pred"].to_numpy(), TAU_LIVE)
+        out[name] = {**cfg, "purge_days": M.purge_days_for(cfg["hold"]), "dev_rows": int(len(t)), "trades": trade_stats(tk),
+                     "book": replay(_trades(tk), CASH0, **kw)}
+    bar = HL.bar_for(len(names))
+    cmp = {k: _arm_vs_base(out[k], out["baseline"], bar) for k in names}
+    winners = [k for k in names if cmp[k]["clears"]]
+    b = out["baseline"]["book"]["n_taken"]
+    if b < 30 and not winners:
+        v, why = "indeterminate", f"baseline book n_taken {b} < 30 and no horizon arm clears"
+    elif winners:
+        best = max(winners, key=lambda k: cmp[k]["mean_diff_pct"])
+        v, why = "pass", f"{best} beats the 24-bar 4h-cadence recipe on the live book by {cmp[best]['mean_diff_pct']:+.3f} %/month (t {cmp[best]['t']:.2f} >= {bar['point_t_min']})"
+    else:
+        v, why = "fail", f"no horizon / daily arm beats the live recipe on the live book (bar t >= {bar['point_t_min']}, >= +{MATERIAL_PCT_MONTH} %/month, n >= 30, >= 3/5 folds)"
+    return {"verdict": v, "note": why, "variants": out, "vs_baseline": cmp, "bar": bar, "n_draws": len(names)}
+
+
 def main_foxhound(a) -> Dict[str, Any]:
     import ml_entry_equity as M
     import ml_entry_alpaca_score as S
@@ -459,6 +556,8 @@ def main_foxhound(a) -> Dict[str, Any]:
     fee = resolve_fee_bps_roundtrip("SPY")
     pool, prep, bars, client = M._pool_and_bars(a, M.TRAIN_END)          # bars END at TRAIN_END: the confirm window is never fetched
     tab = M.build_table(bars, pool, slip, fee, struct=M.STRUCT_SPEC)
+    if a.section == "features":
+        tab = M.add_feature_families(tab, bars, list(dict.fromkeys((a.families.split(",") if a.families else FEATURE_FAMILIES) + ["noise9"])))
     tab = attach_prices(tab, bars)
     te = pd.Timestamp(M.TRAIN_END, tz="UTC") + pd.Timedelta(days=1)
     if (tab.ts >= te).any():
@@ -471,6 +570,10 @@ def main_foxhound(a) -> Dict[str, Any]:
         r = section_calib(o, sizer)
     elif a.section == "neutral":
         r = section_neutral(tab, o, sizer)
+    elif a.section == "features":
+        r = section_features(tab, o, sizer, families=a.families.split(",") if a.families else None)
+    elif a.section == "horizon":
+        r = section_horizon(bars, pool, slip, fee, o, sizer, arms=a.horizon_arms.split(",") if a.horizon_arms else None)
     else:
         r = section_label(tab, o, sizer)
     # n = the DEV OOF decisions the section read (script_run --derive-record requires a top-level n; without it every
@@ -595,6 +698,20 @@ def _self_test() -> int:
     check("ATR-neutral target has zero mean in every (close, quintile) bucket", float(gm.abs().max()) < 1e-12)
     check("ATR-neutral target strips most of an ATR-driven target",
           abs(np.corrcoef(an.dropna(), atr[an.notna().to_numpy()])[0, 1]) < abs(np.corrcoef(tabn.net_long, atr)[0, 1]) / 2)
+    # P8-Q5 / Q8 arm comparison and registered arm sets
+    bar = {"point_t_min": 2.0}
+    mk = lambda months, n, fp: {"book": {"n_taken": n, "monthly_return_pct": months}, "trades": {"folds_positive": fp}}  # noqa: E731
+    basem = mk({"2024-01": 0.0, "2024-02": 0.0, "2024-03": 0.0, "2024-04": 0.0}, 40, 3)
+    good = mk({"2024-01": 1.0, "2024-02": 1.1, "2024-03": 0.9, "2024-04": 1.0}, 40, 4)
+    check("arm clears with +1 %/month, t high, n 40, 4 folds", _arm_vs_base(good, basem, bar)["clears"])
+    check("arm refused under n 30", not _arm_vs_base(mk(good["book"]["monthly_return_pct"], 29, 4), basem, bar)["clears"])
+    check("arm refused under 3 positive folds", not _arm_vs_base(mk(good["book"]["monthly_return_pct"], 40, 2), basem, bar)["clears"])
+    small = mk({"2024-01": 0.2, "2024-02": 0.21, "2024-03": 0.19, "2024-04": 0.2}, 40, 4)
+    check("arm refused below +0.25 %/month materiality", not _arm_vs_base(small, basem, bar)["clears"])
+    check("registered horizon arms: 48, 72 bars and daily at 24", HORIZON_ARMS == {"h48": {"hold": 48, "daily": False},
+          "h72": {"hold": 72, "daily": False}, "daily_h24": {"hold": 24, "daily": True}})
+    import ml_entry_equity as M
+    check("built feature families exist in the equity module", all(f in M.FAMILY_FEATURES for f in FEATURE_FAMILIES + ["noise9"]))
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0
 
@@ -612,7 +729,9 @@ def main(argv=None) -> int:
         p.add_argument("--registered-at", required=True)
         if name == "foxhound":
             p.add_argument("--cache", required=True)
-            p.add_argument("--section", required=True, choices=["book", "calib", "label", "neutral"])
+            p.add_argument("--section", required=True, choices=["book", "calib", "label", "neutral", "features", "horizon"])
+            p.add_argument("--families", default="", help="features: comma list of ml_entry_equity.FAMILY_FEATURES keys (default all built)")
+            p.add_argument("--horizon-arms", default="", help="horizon: comma list of HORIZON_ARMS keys (default all)")
         else:
             p.add_argument("--strategy", action="append", required=True)
             p.add_argument("--days", type=int, default=700)
