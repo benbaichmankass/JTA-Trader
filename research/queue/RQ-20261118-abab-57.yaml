@@ -46,7 +46,10 @@ decision_rule:
     separately; a failure downgrades a PASS to INDETERMINATE (reported, never silently dropped). Thresholds are not changed after any result.'
   what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. The xrp_pullback_2h declared parameters are applied to every symbol (the legs'' own parameters differ: ada
     uses pullback_frac 0.618 / adx 28 / tp 4), so this is a population read of the lever on one declared config, not a per-leg result. A PASS also needs a live producer and a Tier-3 declare. Candles are
-    Binance USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1).'
+    Binance USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1). CLOSED-BAR READ: the harness enters on closed bars while the live legs decide on the forming bar
+    (live_bt_trade_join: live entries a median 4-7 min into the bar; RQ-20261113-f251-01 re-measured the forming-decision legs and several closed-bar records fail there, among them the avax pullback legs,
+    and AVAX is in the roster population of this unit where it applies). A result here is a closed-bar read, not live-bar evidence, and is not a promotion input until a forming-bar control of the same arms
+    exists (programme review 2026-11-18 condition).'
 practice_precedent: 'M13 and R1 (docs/reference/trading-and-model-practice-principles.md): pooled population test with the bar and n floor registered before the run; one lever per unit, every arm counted
   (denominator: this unit has 1 candidate arm; the node has 3 levers x 2 populations = 6 units)'
 intervention_controls:
