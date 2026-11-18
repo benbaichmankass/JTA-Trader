@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling fix (dispatcher bookkeeping, no runtime/order path): unit_pending_by_run now also clears on an explicit rearmed_at at/after the newest run. A run LOST ON COLLECTION lands no row and the re-arm clears the stamp, so the unit read as 'already dispatched' for the whole 48 h lookback (RQ-20261117-aadc-01, re-armed 2026-11-17 12:46Z, never fired; the dispatcher reported the trainer idle with nothing due). Tests pin both directions. tests/test_research_refill.py + dispatch tests pass. Gates this adds or changes: none."
+}
