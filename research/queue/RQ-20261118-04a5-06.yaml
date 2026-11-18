@@ -1,0 +1,150 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). PI-20261117-ZZUFKM1F-0002 part (1): re-pin the TD overlay reference corpus at CURRENT
+# config. A FIDELITY unit, not an edge test. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-04a5-06
+title: 'D4 TD reference-corpus RE-PIN: at current config, does the TD family Stage-0 corpus (2020-07-01..2026-10-15) build cleanly on
+  every real-money gate leg (all trades aligned to a decision bar, n_gate >= 200), so it can replace the 10-24 reference every TD
+  overlay read is INDETERMINATE against?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: 'Run ml_overlay_noninferior.py for the TD family (the aadc-03 family spec and window) WITHOUT --reference-corpus, graded by the
+  fidelity rule (--repin-fidelity): does every gate leg build, with every trade aligned to a decision bar and n_gate >= 200? The built
+  corpus (each leg''s __trades.jsonl, <= 1 MB, landed by the collector under comms/research/RQ-20261118-04a5-06/<run>/corpus/) becomes
+  the new reference.'
+why_this_matters: 'Every TD overlay read since 10-24 is INDETERMINATE on trade parity (cc86-01, aadc-03: eth_4h 0.8473, xrp_4h 0.0882,
+  eth_prop 0.5779, sol_prop 0.4194, all < 0.98), so no D4 challenger (target, feature family, monotone GBM) can be graded. The cause is
+  named and is deliberate: the four gate legs changed config after the reference was built. Re-pinning at current config unblocks D4.'
+iteration:
+  subject: ml-overlay-td-v1
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-03
+  verdict_read: indeterminate
+  diagnosis: 'aadc-03 (and cc86-01) were INDETERMINATE on trade parity vs the 09a6-01 reference corpus built from config at b574c9770
+    (2026-10-24). MEASURED 2026-11-18 by diffing config/strategies.yaml b574c9770 -> main on the four gate legs: trend_donchian_eth_4h
+    tp_r 50 -> 4 + tp_intent r_multiple + decision_bar closed; trend_donchian_xrp_4h atr_stop_mult 2 -> 1.5, trail_mult 5 -> 4;
+    trend_donchian_eth_prop min_confidence 0.6 -> 0.8; trend_donchian_sol_prop trail_mult 3.5 -> 4.5. Harness fidelity fixes landed in
+    the same window (backtest_trend gap-fill #21628, 10-30; trail ratchet #21898, 10-31). So the drift is strategy config + harness
+    fidelity, not data or fetch; the parity drop sizes track the size of each leg''s change. The remedy is a re-pinned reference at
+    current config, with the drift disclosed.'
+  search: 'none: one build of the family at current config, same window and harness as aadc-03; no model arm is chosen'
+  attempt: 2
+  due_by: '2026-11-22'
+  map_entries:
+  - research/levers/ml-overlay-td-v1.yaml
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Not a statistical test: fidelity is a count check (built, aligned, n_gate >= 200). expected_n INFERRED from cc86-01''s gate-leg
+    OOS n 1,587 on the same window; the config changes (eth_prop min_confidence 0.6 -> 0.8) lower it somewhat. Below 200 gate trades the
+    rule FAILS by its own floor, stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles through the Stage-0 harness; nothing accrues.
+baseline:
+  definition: 'The harness''s own fidelity floor (the V1 harness reasons: every gate leg built, every trade aligned to a decision bar,
+    n_gate >= N_GATE_MIN 200). Reported beside it, never gating: trade parity of the new corpus vs the 09a6-01 reference per gate leg
+    (expected low: that is the disclosed drift) and the V1 primary eval of Beagle-1''s recipe on the re-pinned population.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: the V1 harness fidelity floor
+  statistic: 'scripts/research/ml_overlay_noninferior.py --repin-fidelity RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY (function
+    repin_fidelity_verdict): with no --reference-corpus, run_family''s reasons are exactly the fidelity failures; per family, fidelity
+    pass iff it has none. --report-parity-against the 09a6-01 corpus adds per-gate-leg trade parity (report-only).'
+  rule: 'PASS iff the TD family has no fidelity reason: every gate leg (eth_4h, xrp_4h, eth_prop, sol_prop) builds, every trade is aligned
+    to a decision bar, and n_gate >= 200. FAIL otherwise (the harness cannot produce a clean reference; the failing reason names the
+    leg). The edge verdict of Beagle-1''s recipe and the old-reference parity are reported and never gate. Window, legs, harness and
+    floors are not changed after any result.'
+  pass_action: 'Follow-up edits (separate PR, not this one): RQ-20261117-aadc-03 and RQ-20261116-cc86-01 re-runs pass --reference-corpus
+    comms/research/RQ-20261118-04a5-06/<run_id>/corpus (the landed __trades.jsonl files; parity basis trade reads only those). Disclose
+    on every such read that Beagle-1 was fit and validated on the PRE-change (10-24) population, so a re-pinned read measures the
+    challengers on the trades the legs now make, not the trades Beagle-1 was selected on. Close PI-20261117-ZZUFKM1F-0002 part (1).'
+  fail_action: 'File the failing leg''s reason (unbuilt leg or unaligned trades) as a harness defect on PI-20261117-ZZUFKM1F-0002 and
+    fix it before any TD overlay read; D4 stays blocked.'
+  what_it_does_not_do: 'Edits no config, no overlay artifact and no other unit (aadc-03 / cc86-01 are not edited here); trains, serves or
+    swaps nothing; places no order; adds no gate. Not an edge read: the reported Beagle-1 eval is on the dev window Beagle-1 was fit on.'
+  min_n: 200 gate trades (the V1 harness floor)
+practice_precedent: 'M2 train/serve parity and reproducibility (docs/reference/trading-and-model-practice-principles.md): pin the reference
+  population to what is traded now, and disclose the drift from the population a model was selected on'
+intervention_controls:
+  matched_random:
+    draws: 2000
+    note: 'not gating here: the harness still computes the V1 same-rate random reduce for the reported Beagle-1 eval (permutation within
+      calendar groups); the fidelity rule reads no control'
+  best_static:
+    grid:
+    - target_win_c0.1_q0.20 (Beagle-1, fixed; reported only)
+    excludes_test_folds: true
+    note: nothing is tuned; no arm is chosen
+  bootstrap_group: month
+  hold_to_bracket: true
+  hold_to_bracket_note: every leg keeps its own current-config entry, bracket and exit; the corpus is the config-exact harness output
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in: unblocks every D4 challenger read on the real-money TD legs; decision-enabling, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window (needs_internet); reads no trainer data.
+  basis: 'INFERRED from aadc-03 (same corpus build and family, est 40 min), without the challenger arms.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261118-04a5-06
+  commands:
+  - - python3
+    - scripts/research/ml_overlay_noninferior.py
+    - --family
+    - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+    - --start
+    - '2020-07-01'
+    - --end
+    - 2026-10-15 23:59
+    - --days
+    - '2330'
+    - --parity-basis
+    - trade
+    - --repin-fidelity
+    - RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY
+    - --report-parity-against
+    - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+    - --out
+    - '{out_dir}'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/runtime/overlay_shadow.py
+  decision: whether TD overlay challenger reads (aadc-03, cc86-01 re-runs, D4 monotone GBM / feature-family arms) can be graded against a
+    reference that reproduces the trades the legs now make
+  legs: [trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+  book: money
+related:
+- RQ-20261117-aadc-03
+- RQ-20261116-cc86-01
+- RQ-20261024-09a6-01
+- ML-REAL-MONEY-OVERLAY
+last_dispatched_at: null
