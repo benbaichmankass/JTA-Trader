@@ -4458,6 +4458,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         return summary
 
     from src.units.accounts.clients import (
+        account_entry_order_pending,
         account_open_positions,
         account_position_present,
         account_supports_management,
@@ -4500,7 +4501,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 open_rows = conn.execute(
                     "SELECT id, symbol, direction, strategy_name, account_id, "
                     "       position_size, entry_price, notes, order_package_id, "
-                    "       timestamp, created_at "
+                    "       timestamp, created_at, broker_order_id "
                     "FROM trades "
                     "WHERE status='open' AND COALESCE(is_backtest,0)=0 "
                     "  AND account_id=?",
@@ -4873,6 +4874,34 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                             "a broker-confirmed flat closes). RISK-1 guard against "
                             "a partial-LIST false-close.",
                             tid_int, aid, sym, canonical, present,
+                        )
+                        continue
+                # PENDING ENTRY ORDER (2026-11-18, PI-20261118-JFWRQYOV-0004). A flat
+                # per-symbol read is a 404 and says nothing about an order that has not
+                # filled yet: a bracket entry sent outside the regular session is accepted
+                # and QUEUED until the open. The fresh-fill grace above is only 300 s, so
+                # past it this pass closed the row as exchange_flat_reconciled while the
+                # order was still queued, the monocle gate freed, and the SAME 1h signal
+                # re-fired every ~7 min (SLV x7 on alpaca_portfolio, QQQ x4 on
+                # alpaca_paper), every queued order filling at the open. Where the
+                # integration can say so, an entry order that is still working is NOT
+                # flat. ``None`` (cannot tell) keeps the prior behaviour; only a
+                # positive "still pending" holds the row open.
+                _entry_oid = (
+                    r["broker_order_id"] if "broker_order_id" in r.keys() else None
+                )
+                if _entry_oid and not str(_entry_oid).startswith("rejected-"):
+                    if account_entry_order_pending(cfg, str(_entry_oid)) is True:
+                        summary["snapshot_order_pending"] = (
+                            summary.get("snapshot_order_pending", 0) + 1
+                        )
+                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                        logger.info(
+                            "_reconcile_orphan_exchange_positions: NOT closing "
+                            "trade_id=%s account=%s symbol=%s side=%s — flat at the "
+                            "venue but its entry order %s is still pending (queued "
+                            "for the open / not yet filled).",
+                            tid_int, aid, sym, canonical, _entry_oid,
                         )
                         continue
                 # Defer the close: collect it and decide reset-vs-single AFTER
