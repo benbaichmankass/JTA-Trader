@@ -189,9 +189,25 @@ def _cost_r(entry, exit_px, risk, t_entry_s, t_exit_s):
     return fee, slip, fund
 
 
-def label_symbol(df: pd.DataFrame, recost_inputs: bool = False) -> pd.DataFrame:
+def mfe_before_sl(o, h, lo, entry, atr, side, sl_atr=SL_ATR):
+    """Max favourable excursion in ATR units over the H bars, counted only on bars BEFORE the stop's first passage
+    (same SL rule as ``bracket_outcome``: a bar that touches the stop is the stop's bar, and a TP touched on it loses
+    the tie, so its high/low never counts). So ``mfe >= k`` iff a TP at k ATR fills under ``bracket_outcome``. >= 0."""
+    H = o.shape[1]
+    sl = entry - side * sl_atr * atr
+    hit_sl = (lo <= sl[:, None]) if side > 0 else (h >= sl[:, None])
+    j_sl = np.where(hit_sl.any(1), hit_sl.argmax(1), H)
+    fav = (side * ((h if side > 0 else lo) - entry[:, None])) / atr[:, None]
+    fav = np.where(np.arange(H)[None, :] < j_sl[:, None], fav, -np.inf)
+    return np.maximum(fav.max(1), 0.0)
+
+
+def label_symbol(df: pd.DataFrame, recost_inputs: bool = False, tp_rows=None, mfe: bool = False) -> pd.DataFrame:
     """Decision rows for one symbol: every DECISION_EVERY_H-th bar whose close is the decision time. ``recost_inputs``
-    (universe-costed only) adds per_r_* / nwin_*; off by default so every other caller's frame is byte-identical."""
+    (universe-costed only) adds per_r_* / nwin_*; off by default so every other caller's frame is byte-identical.
+    ``tp_rows`` (D6 quantile TP head, RQ-20261118-04a5-02): callable(ts_of_rows, side_name) -> (N,) TP in ATR per row,
+    passed to ``bracket_outcome`` as an array; None (default) = the fixed TP, byte-identical. ``mfe`` adds mfe_long /
+    mfe_short (``mfe_before_sl``); off by default."""
     o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     pc = np.r_[np.nan, c[:-1]]
     tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
@@ -214,7 +230,12 @@ def label_symbol(df: pd.DataFrame, recost_inputs: bool = False) -> pd.DataFrame:
     out = {"i": cand, "ts": ts.to_numpy()[cand], "atr": a, "entry": entry}
     t_entry_s = (t_ns[cand + 1] / 1e9)
     for name, side in (("long", 1), ("short", -1)):
-        px, j, reason = bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side)
+        if tp_rows is None:
+            px, j, reason = bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side)
+        else:
+            px, j, reason = bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side, tp_atr=np.asarray(tp_rows(out["ts"], name), float))
+        if mfe:
+            out[f"mfe_{name}"] = mfe_before_sl(Ob, Hh, Lb, entry, a, side)
         gross = side * (px - entry) / risk
         # exit time: SL/TP fill inside bar j (use that bar's open time + 1h as a conservative upper bound);
         # a time stop exits at bar H's close
