@@ -185,7 +185,7 @@ def inventory_rows(root: Path) -> list[dict]:
             sib = f"ml-decision-entry-{served_ptr.split('entry_')[-1]}"
             if sib in idx and sib not in {r["model_id"] for r in rows}:
                 rows.append(_row(sib, "served", idx[sib][1], cons, slot, breed, name, "entry"))
-                rows[-1]["display_name"] = f"{name} (refit r20261106)" if name else sib
+                rows[-1]["display_name"] = f"{name} (refit {served_ptr.rsplit('_', 1)[-1]})" if name else sib
                 rows[-1]["pointer_sibling"] = True
                 rows[-1]["notes"] = "refit artifact the ENTRY_SERVED.json pointer serves for ml-decision-entry-v1"
         rows.append(row)
