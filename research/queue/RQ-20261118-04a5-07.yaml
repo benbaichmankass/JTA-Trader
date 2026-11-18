@@ -1,0 +1,175 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). ml-week-plan-2026-11-19 D7; frontier ranking (ML-FRONTIER-PREP #26877): labels /
+# distributional heads before offline RL. One factor vs RQ-20261115-7e18-01. Decision rule registered BEFORE any run.
+# Gates this adds or changes: none.
+id: RQ-20261118-04a5-07
+title: 'ml-tm-action-value ITERATION 7 (label = distributional head): Stage B with each action head fit to the 30th PERCENTILE of the
+  per-state action value (LightGBM quantile objective) instead of its mean; does acting on close / partial_close_50 then clear S-OFFLINE?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261117-c21d-04
+  verdict_read: fail
+  diagnosis: 'Six Stage-B passes FAIL S-OFFLINE: 7e18-01 (every_bar, h12) +0.0033 R/trade vs B0, CI [-0.0070, +0.0131], 3/6 folds,
+    action rate 5.4%; d5a7-01..05 (horizon, signature, path_state+signature, train x8) and c21d-04 (check-in cadence) all fail. Stage A
+    (3144-02) PASSES for close and partial_close_50 on 4/6 folds: there is out-of-fold RANK signal, but the policy acts on the first
+    state whose predicted MEAN action value clears a margin, and a weak mean over ~50,926 states makes many marginal acts whose
+    realised value is a coin flip. Every lever so far (horizon, features, train width, cadence, margin grid) kept the MEAN target; the
+    labels lever is untested on the lever map. A low-quantile target makes the act rule fire only where the downside of acting is
+    predicted small, which is the failure the diagnosis names. The harness fits native lgb.train regressors (Booster.predict = action
+    value, not a class label), so the PI-20261118-MANAYJZO-0001 scoring defect does not apply here.'
+  search: 'lever family labels: target functional mean -> quantile alpha 0.30 (one value, fixed now); everything else config-identical to
+    7e18-01 (every_bar, horizon label h12, path_state, corpus_v2 x4, inner-fold margin grid, actions close + partial_close_50)'
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-tm-action-value.yaml
+  attempt: 7
+  due_by: '2026-11-25'
+question: 'With each lgbm action head trained on the 30th percentile of the horizon-12 action value (quantile objective) instead of the
+  mean, and the act margin chosen on inner folds from the same grid, does acting on close / partial_close_50 clear S-OFFLINE on the
+  money-leg test corpus?'
+why_this_matters: 'D7/D8 have one live model (Labrador-1b, TP extend) and every learned close/partial policy has failed on the mean
+  target. PASS -> a fresh-window, full-label net-of-cost confirmation unit; FAIL -> the labels family is recorded as tested (quantile
+  target) and the subject''s next family is the learner class, with offline RL (fitted-Q) only after that per the frontier ranking.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'test n MEASURED (v1, 2,627 trades, 3144-02 / 7e18-01); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE
+    ~0.0088 R, MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. One arm.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: 'whether ml-tm-action-value with a quantile (distributional) target proceeds to a fresh-window confirmation for close /
+    partial_close_50 on the money legs'
+  legs: [ada_pullback_2h, xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+run:
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - lgbm_action_value
+  - --lgbm-quantile
+  - '0.3'
+  - --checkins
+  - every_bar
+  - --actions
+  - close,partial_close_50
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261118-04a5-07
+decision_rule:
+  id: RULE-RQ20261118-04a5-07-TM-QUANTILE-LABEL
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: 'B0 hold to the leg''s own rules, B1 the best static rule chosen on train folds, B2 the distance logit, B4 matched random at
+    the arm''s own action rate; same trades, same engine replay, same cost stack as 7e18-01.'
+  statistic: 'tm_bench score --rule s_offline on the one lgbm arm (quantile alpha 0.3): delta vs B0 per trade, trade-clustered bootstrap
+    CI95, folds positive of 6, per-leg max drawdown vs B0, net R per capital-day vs B0, delta vs B2, B4 margin CI, Holm-adjusted p
+    (tm_bench.s_offline). The 7e18-01 mean-target arm (+0.0033 R/trade) is the incumbent read, reported as context.'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for the lgbm arm: gain >= 0.03 R/trade
+    over max(B0, B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2, beats its own matched
+    random B4 (margin CI lower > 0), Holm p < 0.05. FAIL iff its CI95 upper < max(B0, B1) + 0.03. INDETERMINATE otherwise, or if the
+    measurement does not record lgbm_objective quantile at alpha 0.3, the test corpus is not tmb-73f5c3660014, the train corpus is not
+    bp2-f4271084b120 with >= 10,000 de-duplicated trades after purge, or the selfcheck fails. Thresholds, alpha, actions and margin grid
+    are fixed now and not changed after any result.'
+  pass_action: 'author the fresh-window full-label (net-of-cost policy value) confirmation for the quantile head (holdout_lock family
+    TMAV); a horizon-label arm delta is not itself a net-of-cost policy value (tm_bench label note).'
+  fail_action: 'record the labels family (quantile target) as tested in research/levers/ml-tm-action-value.yaml; next family = learner
+    class (CatBoost / a monotone head), then fitted-Q per the frontier ranking; never a re-run of this configuration.'
+  what_it_does_not_do: 'Changes no live leg, no Labrador-1b setting, no config; places no order; adds no gate. Not a promotion case. The
+    purged folds were read before at Stage A (3144-02); a PASS is explicitly pending a fresh window.'
+  min_n: 2000 test trades; >= 200 check-ins per fold
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.12
+  bucket: ai_trader
+  basis: 'planning weight carried from 7e18-01 / c21d-04; an estimate, not a measurement.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and mix as the lgbm policy on each test fold, random eligible check-ins,
+      sequential'
+  best_static:
+    grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20]
+    excludes_test_folds: true
+    how: 'tm_bench B1: the static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+practice_precedent: 'M6 + T1 (docs/reference/trading-and-model-practice-principles.md); M1 label what the decision is paid on: the act
+  rule pays on the realised value of acting, so the head predicts a conservative quantile of it; RQ-20261115-7e18-01 (config this varies
+  one factor of).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 90
+  basis: 'ESTIMATE carried from 7e18-01 (same data, same arm count); the quantile objective costs about the same per round.'
+  why_runner: 'corpus v2 is an Actions artifact / regenerable on a runner (the workflow''s corpus_v2 step); CPU only.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261115-7e18-01
+- RQ-20261117-c21d-04
+- RQ-20261112-3144-02
+- ML-AM-NEXT-LIVE
+population: TM-BENCH v1 (tmb-73f5c3660014), the six money legs as traded, 2,627 test trades in 6 purged calendar folds by entry.
+last_dispatched_at: null
