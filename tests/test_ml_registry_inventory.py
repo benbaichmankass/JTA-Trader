@@ -23,7 +23,7 @@ def feed(monkeypatch, tmp_path):
 def test_trading_models_overlay_exit_head_present(feed):
     by_id = {r["model_id"]: r for r in feed["rows"]}
     assert TRADING <= set(by_id)
-    assert {"overlay-td-v1", "exit-head-donchian-1h-v1", "ml-entry-tp-revision-v1"} <= set(by_id)
+    assert {"overlay-td-v1", EXIT_HEAD_PIN, "ml-entry-tp-revision-v1"} <= set(by_id)
     assert by_id["ml-entry-eq-struct-ens5-v1"]["source"] == "candidate"
     assert by_id["ml-decision-entry-v1"]["stage_from_config"] == "live"
     assert by_id["ml-entry-eq-struct-ens5-v1"]["consuming_accounts"] == ["alpaca_live", "alpaca_portfolio"]
@@ -57,6 +57,15 @@ def test_guard_passes_and_self_tests():
 # The 8 served/inventory ids the UI-SPA lane found with target_deployment_stage null next to a LIVE/SHADOW bucket.
 SERVED_8 = TRADING | {"ml-decision-entry-v1r20261106", "ml-entry-tp-revision-v1", "overlay-td-v1",
                       "exit-head-donchian-1h-v1"}
+
+
+# The exit head is whatever config/strategies.yaml pins on the donchian legs (it moves on every graded retrain, e.g.
+# #26906: v1 -> v2-neg25), so it is read from the pin, never hard-coded.
+_PINS = {s.get("exit_head_model") for s in __import__("yaml").safe_load((REPO / "config/strategies.yaml").read_text())
+         .get("strategies", {}).values() if isinstance(s, dict) and s.get("exit_head_model")}
+assert len(_PINS) == 1, _PINS
+EXIT_HEAD_PIN = _PINS.pop()
+SERVED_8 = (SERVED_8 - {"exit-head-donchian-1h-v1"}) | {EXIT_HEAD_PIN}
 
 
 def test_served_models_carry_stage_and_headline_metric(feed):
