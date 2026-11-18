@@ -80,8 +80,10 @@ routing:
   peak_memory_gb: 4.0
   est_minutes: 240
   why_runner: harness_stage0.py fetches keyless public candles (Binance Vision) for symbols the published candle dataset may not cover; CPU only; not trainer-resident.
-  basis: 7c2b-08 est 150 min for 6 cells x 1 arm (ESTIMATE, scaled); this unit has 2 arms so the estimate is scaled up to fit the 330 min dispatcher cap; the first run replaces it. A timeout would be recorded
-    as producer_failed, not a verdict.
+  basis: '7c2b-08 est 150 min for 6 cells x 1 arm (ESTIMATE, scaled); this unit has 2 arms so the estimate is scaled up to fit the 330 min dispatcher cap; the first run replaces it. A timeout would be recorded
+    as producer_failed, not a verdict. MEASURED RUNTIME NOTE 2026-11-18: two landed units of this harness family ran far faster than their estimates (abab-01 est 70 min, actual 9.1; abab-02 est 90, actual
+    9.6; 6 cells x 2 arms each, GitHub-runner workflow wall time incl. ~1 min setup; runs 44382443666, 44382447562). Across both families actual/est has a median of ~0.12 (n=4), so est_minutes overstates
+    runtime ~4-20x. est is KEPT unchanged so the routing stands (manager decision 2026-11-18); quote supply in UNITS and fires per day, not est hours. Calibration is tracked in PI-20261118-EFILLW47-0002.'
 run:
   command:
   - python3

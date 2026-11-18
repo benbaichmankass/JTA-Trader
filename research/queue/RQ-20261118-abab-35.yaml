@@ -66,7 +66,10 @@ routing:
   needs_gpu: false
   peak_memory_gb: 2.0
   est_minutes: 78
-  basis: programme-review spec est_minutes 78 (comparable exit_lever_ablation runs, a538-* family); the first run replaces it.
+  basis: 'programme-review spec est_minutes 78 (comparable exit_lever_ablation runs, a538-* family); the first run replaces it. MEASURED RUNTIME NOTE 2026-11-18: two landed units of this harness family
+    ran far faster than their estimates (abab-20 est 30 min, actual 1.5; abab-38 est 30, actual 7.5; GitHub-runner workflow wall time incl. ~1 min setup; runs 44387488936, 44387493913). Across both families
+    actual/est has a median of ~0.12 (n=4), so est_minutes overstates runtime ~4-20x. est is KEPT unchanged so the kaggle_first routing stands (manager decision 2026-11-18); quote supply in UNITS and fires
+    per day, not est hours. Calibration is tracked in PI-20261118-EFILLW47-0002.'
 run:
   command:
   - python3
