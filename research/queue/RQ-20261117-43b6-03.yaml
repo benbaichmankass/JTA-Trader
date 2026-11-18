@@ -2,7 +2,7 @@
 id: RQ-20261117-43b6-03
 title: 'ITERATION 2 of ltr-partial-close (ed2b-01 FAIL, risk cut too small): does banking half at the first ADVERSE-side trigger (adverse 0.5 R / 0.75 R,
   structure break, momentum flip) cut the left tail enough to clear RULE-AM-RISK-ADJUSTED-V1?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -144,3 +144,16 @@ run:
   - --out
   - '{out_dir}'
 last_dispatched_at: '2026-11-18T13:57:35+00:00'
+grading:
+  attested: RULE-RQ-20261117-43b6-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261117-43b6-03
+  evidence:
+  - research/results/RQ-20261117-43b6-03/44319119864.jsonl
+  graded_at: '2026-11-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

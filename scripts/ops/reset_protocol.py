@@ -76,6 +76,10 @@ def validate(cfg: dict) -> None:
             raise ProtocolError(f"job {j['name']}: offset_minutes must be a non-negative int")
         if not isinstance(j["ceiling_usd"], (int, float)) or j["ceiling_usd"] <= 0:
             raise ProtocolError(f"job {j['name']}: ceiling_usd must be positive")
+        if j.get("paused") is not None and not isinstance(j["paused"], bool):
+            raise ProtocolError(f"job {j['name']}: paused must be true or false")
+        if j.get("paused") and not str(j.get("paused_reason") or "").strip():
+            raise ProtocolError(f"job {j['name']}: paused: true needs a paused_reason (who paused it and until when)")
         if j["name"] in names:
             raise ProtocolError(f"duplicate job name {j['name']}")
         names.add(j["name"])
@@ -112,10 +116,15 @@ def is_due(job: dict, reset: datetime) -> bool:
 
 
 def due_jobs(cfg: dict, reset: datetime) -> tuple[list[dict], list[tuple[str, str]]]:
-    due = [j for j in cfg["jobs"] if is_due(j, reset)]
+    due_all = [j for j in cfg["jobs"] if is_due(j, reset)]
+    # A PAUSED job (``paused: true`` + ``paused_reason``) is skipped with its reason shown, and, because it is not
+    # dispatched, it supersedes nothing. Pausing is an operator act recorded in the config, never a deletion.
+    paused = [j for j in due_all if j.get("paused")]
+    due = [j for j in due_all if not j.get("paused")]
     superseded = {j["supersedes"]: j["name"] for j in due if j.get("supersedes")}
     kept = [j for j in due if j["name"] not in superseded]
     skipped = [(n, f"superseded by {by}") for n, by in sorted(superseded.items())]
+    skipped += [(j["name"], f"PAUSED: {' '.join(str(j['paused_reason']).split())}") for j in paused]
     kept.sort(key=lambda j: (j["offset_minutes"], j["order"], j["name"]))
     return kept, skipped
 
@@ -265,12 +274,15 @@ def self_test() -> int:
         kept, sk = due_jobs(cfg, parse_reset(ts, cfg))
         return [j["name"] for j in kept], sk
 
-    wk, _ = names("2026-11-11")  # second Wednesday: weekly only
-    check(len(wk) == 7 and "deep-audit" not in wk, f"2026-11-11 should be the 7 weekly jobs, got {wk}")
+    wk, wsk = names("2026-11-11")  # second Wednesday: weekly only; cj7-weekly is PAUSED (operator 2026-11-16)
+    check(len(wk) == 6 and "deep-audit" not in wk and "cj7-weekly" not in wk,
+          f"2026-11-11 should be the 6 unpaused weekly jobs, got {wk}")
+    check(any(n == "cj7-weekly" and why.startswith("PAUSED: ") for n, why in wsk),
+          f"the paused cj7-weekly must be listed as skipped with its reason: {wsk}")
     nov, sk = names("2026-11-04T18:00Z")  # first Wednesday of the month
     check("deep-audit" in nov and "weekly-audit" not in nov and ("weekly-audit", "superseded by deep-audit") in sk,
           f"2026-11-04 deep-audit must replace weekly-audit: {nov} {sk}")
-    check({"roadmap-rebaseline", "cost-infra-review"} <= set(nov) and len(nov) == 9, f"2026-11-04 job set {nov}")
+    check({"roadmap-rebaseline", "cost-infra-review"} <= set(nov) and len(nov) == 8, f"2026-11-04 job set {nov}")
     check("deep-audit" not in names("2026-12-09")[0] and "deep-audit" in names("2026-12-02")[0], "monthly boundary day 7/8")
     check("deep-audit" in names("2026-12-02")[0] and "deep-audit" not in names("2026-12-09")[0], "monthly Dec")
     probe = {"name": "q", "cadence": "quarterly"}
@@ -286,6 +298,25 @@ def self_test() -> int:
     check(all(offs.get(k) == v for k, v in expect.items()), "seeded Wednesday cascade differs from the routines")
     check(all(j.get("brief_trigger", "").startswith("trig_") for j in cfg["jobs"] if j["cadence"] == "weekly"),
           "every weekly job names its brief_trigger")
+    # paused: skipped with its reason, supersedes nothing, validated
+    import copy
+    pc = copy.deepcopy(cfg)
+    for j in pc["jobs"]:
+        if j["name"] == "deep-audit":
+            j["paused"], j["paused_reason"] = True, "test pause"
+    pn, psk = due_jobs(pc, parse_reset("2026-11-04", pc))
+    check("deep-audit" not in [j["name"] for j in pn] and any(n == "deep-audit" and "PAUSED: test pause" in w for n, w in psk),
+          "a paused monthly job is skipped with its reason")
+    check("weekly-audit" in [j["name"] for j in pn],
+          "a paused job supersedes nothing: weekly-audit runs when deep-audit is paused")
+    for badj in ({"paused": True}, {"paused": "yes", "paused_reason": "x"}):
+        bc = copy.deepcopy(cfg)
+        bc["jobs"][0].update(badj)
+        try:
+            validate(bc)
+            fails.append(f"validate accepted {badj}")
+        except ProtocolError:
+            pass
     for bad in ("garbage", "2026-13-40"):
         try:
             parse_reset(bad, cfg)

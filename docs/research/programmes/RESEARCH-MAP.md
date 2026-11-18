@@ -6,6 +6,35 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118)
+
+Record: [`comms/research/programme_review/20261118.json`](../../../comms/research/programme_review/20261118.json). Population: 2,528 units, 1,044 result rows in the 7-day window, 428 units with rows (256 unprogrammed, assigned in the record). Last week's calls: 3 hit / 3 miss (Brier 0.232).
+
+**The iteration loop.** Orphans before this review: strategy_leg 7, ml_model 3, ltr_class 0. ml_model overdue: 3, down from 8. After this review: qqq_pullback_1h gets a session-lever holdout node. The other orphans are survivors waiting on Tier-3 proposals (spy_pullback_1h, ml-exit-head-donchian-1h), subjects with no harness (claude_desk, turtle_soup's evidence record), or 58e4 families. Of those families, xsec-crypto is proposed for a family-review record because every arm in d1f3 and 62e3 failed; movement-capture and cost-levers each have a named next lever. Each is named in the handoff.
+
+**Two-track summary.**
+- **TRADING:** survivors are being produced faster than they are proposed (spy, qqq, tlt, the eth_pullback_2h skip-hours packet). The forming-bar re-measure (f251) holds 5 of 14 crypto legs and 5 of 16 equity legs on the bar live trades, so every proposal must cite the forming-bar record. htf_pullback_trend_2h passed its closed-bar holdout and failed on the forming bar.
+- **MODEL:** D2 gains come from features, not learners (yz head PASS, GRU FAIL). D8's best label equals holding. D10 decay-alarm demotion is the first real-money-consumer MODEL pass. P8 (the alpaca_live ML book) lost five days to a silent producer defect, now fixed.
+
+**Runway per backend (operator ask 2026-11-17/18), queued units due now, from 2026-11-18T18:13Z to Sunday 24:00Z (101.8 h):**
+| backend | before (units / h) | added by this review (h) | capacity in the week | state |
+|---|---|---|---|---|
+| github_runner | 25 / 17.2 | +8.3 (3 re-armed P8 units, 1 node) | 4 slots, ~407 slot-h | thin |
+| kaggle_cpu | 0 / 0 | +60.1 as **specs** for the queue-fill lane (52 cells) | 1 slot, ~102 h | about 60% once authored |
+| Kaggle GPU | 0 / 0 | 0 | ~27 usable GPU-h | **empty**: no GPU question with a decision behind it; corpora trainer-only |
+| trainer | 0 / 0 | 0 | ~80 h in windows, shared | **empty**: ML subjects are survivors or blocked on three build rows |
+
+The queue is **not full**, and authoring alone cannot fill GPU and trainer: their work is gated by data placement (row ML-EXITHEAD-ROWS-KAGGLE) and by build rows ML-P1-COSTNET-REBUILD and ML-EXIT-ACTIONGRID-LABELS. No floor-filler was authored.
+
+**Feed table (changes this week)**
+| from | to | what | destination | state |
+|---|---|---|---|---|
+| P2 | P1 | D10 demote-on-alarm H2 PASS (aadc-07) | Tier-3 proposal | ready |
+| P3 | P1/P5 | forming-bar survivors decide which exit work counts | queue-fill spec rule | handoff |
+| P3 | P8 | tlt/qqq live-faithful replays PASS | P8-Q4-h2h | waiting on 207f-01 |
+| P6 | P2 | exit-head corpora to Kaggle | ML-EXITHEAD-ROWS-KAGGLE | filed |
+| P7 | P3 | daily long-only Donchian confirmed on disjoint perps | P7-Q6-daily-donchian | next |
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111)
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.

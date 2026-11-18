@@ -1,0 +1,525 @@
+{
+ "request_id": "PERF-REVIEW-PREP-20261118",
+ "reviewed_at": "2026-11-18T19:00:00Z",
+ "reviewer": "claude",
+ "window_start": "2026-11-11T20:00:00Z",
+ "window_end": "2026-11-18T18:45:00Z",
+ "_scope_note": "lane PERF-REVIEW-PREP-20261118 (session_01AFoLuL1XQE6rf3h4PwGcUD), manager session_01AFoLuHbhd9wFuGJfWRqyoV; markdown docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section; reads OBSERVED on the live API + direct diag 2026-11-18 18:10-18:45Z",
+ "overall_assessment": "caution",
+ "prior_calls_scorecard": {
+  "n_calls": 7,
+  "hit": 5,
+  "miss": 0,
+  "unresolved": 2,
+  "void": 0,
+  "brier": "INDETERMINATE",
+  "series": [
+   {
+    "review": "2026-10-28",
+    "n_resolved": 1
+   },
+   {
+    "review": "2026-11-04",
+    "n_resolved": 1
+   },
+   {
+    "review": "2026-11-11",
+    "n_resolved": 2
+   },
+   {
+    "review": "2026-11-18",
+    "n_resolved": 5
+   }
+  ],
+  "grades": {
+   "F1": "hit",
+   "F2": "hit",
+   "F3": "unresolved (rule gap: median 2.2x; killed)",
+   "F4": "unresolved (hit side, +$9,287)",
+   "F5": "hit",
+   "F6": "hit",
+   "F7": "hit"
+  }
+ },
+ "checks": {
+  "C1": {
+   "status": "ok",
+   "population": "/api/bot/performance 7d/30d/all perStrategy; real money 30 closes 7d",
+   "result": "real money 7d -6.61R/30, ml_entry -6.63R/25; 90d could_not_look (no API window)"
+  },
+  "C2": {
+   "status": "ok",
+   "population": "10 real-money legs, config cut applied on a full-history clone",
+   "result": "9 verdicts on post-config closes: INSUFFICIENT_N x5, NO_LIVE_TRADES x4 (real money), NO_BACKTEST ml_entry_eq_struct; shallow clone reads cut=unknown"
+  },
+  "C3": {
+   "status": "ok",
+   "population": "interim",
+   "result": "expR 7d -0.22, 30d -0.12, lifetime -0.31; no band at n<=4"
+  },
+  "C4": {
+   "status": "ok",
+   "population": "journal real-money closes since 11-11T20Z, n=29 (script route 401)",
+   "result": "sl 15, live_review_close 10, tp 3, max_hold 1"
+  },
+  "C5": {
+   "status": "ok",
+   "population": "4448 fills (realized_slippage.py, fixed this PR)",
+   "result": "bybit_2 0.82 bps (CI -1.97..3.44); alpaca_paper 26.1 (5.1..52.7), alpaca_portfolio 33.9 vs 5 bps policy; no Stage-0 flip at real-money mean"
+  },
+  "C6": {
+   "status": "ok",
+   "population": "live review 155 reviews/61 packages; desk 42 decisions",
+   "result": "applied close n=7 mean dR +0.35; desk 10 priced +0.05R INDETERMINATE; hold_vs_close mean 91.47 = unit bug"
+  },
+  "C6b": {
+   "status": "ok",
+   "population": "14 applied closes",
+   "result": "1 ungraded >24h (pkg-bba44210885c4180); 7714 not yet priced"
+  },
+  "C7": {
+   "status": "ok",
+   "population": "86 routings / 59 legs",
+   "result": "real money compliant 2/10"
+  },
+  "C8": {
+   "status": "ok",
+   "population": "373 30d journal closes",
+   "result": "A 279 / B 19 (17 orphan_or_flap) / C 75"
+  },
+  "C9": {
+   "status": "ok",
+   "population": "762 graded trades joined to journal 09-20..11-17",
+   "result": "B 36.6% n=265 vs C 46.9% n=456: grade_drift"
+  },
+  "C10": {
+   "status": "ok",
+   "population": "research_disposition",
+   "result": "unread 20 (all e35)"
+  },
+  "C11": {
+   "status": "ok",
+   "population": "bybit_1 1653 rows -> cohort 221",
+   "result": "book +$11,551, recent 30d +$9,287, decay ok; benchmark not computable"
+  },
+  "C12": {
+   "status": "ok",
+   "population": "27 open (17 pipeline + 10 checklist)",
+   "result": "count_untriaged 0; 13 kept open, 4 done"
+  },
+  "C13": {
+   "status": "ok",
+   "population": "10 production legs",
+   "result": "8 probation; orphans tlt_pullback_1h, ml_entry_eq_struct"
+  }
+ },
+ "analysis": {
+  "questions": [
+   {
+    "question": "Why did real money lose 6.6R?",
+    "money_at_stake": "-6.63R ml_entry 7d",
+    "hypotheses": [
+     {
+      "name": "noise",
+      "predicts": "loss within band at effective n",
+      "test": "cluster count (9 entry bars) + live_vs_backtest uncut pct 33.6",
+      "result": "survived"
+     },
+     {
+      "name": "regime",
+      "predicts": "losers are longs into a falling tape",
+      "test": "13/13 SL are longs; TPs are shorts",
+      "result": "untested"
+     },
+     {
+      "name": "execution/cost",
+      "predicts": "slippage or non-strategy exits",
+      "test": "bybit_2 0.82 bps; 0 non-strategy exits",
+      "result": "eliminated"
+     }
+    ],
+    "conclusion": "same-bar baskets: 3 baskets = -$34.98 vs leg -$19.74",
+    "p": 0.8
+   },
+   {
+    "question": "Is slv_trend_1h on alpaca_portfolio BELOW_BACKTEST?",
+    "money_at_stake": "one real-money leg",
+    "hypotheses": [
+     {
+      "name": "below",
+      "predicts": "BELOW on cut read",
+      "test": "live_vs_backtest --leg slv_trend_1h full clone",
+      "result": "eliminated"
+     },
+     {
+      "name": "source is tlt shallow line",
+      "predicts": "BELOW appears only uncut for tlt",
+      "test": "shallow run",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "INSUFFICIENT_N n=1 +2.40R (cut), CONSISTENT pct 9.6 (uncut); no demotion proposal",
+    "p": 0.8
+   },
+   {
+    "question": "Do alpaca_live legs survive real cost?",
+    "money_at_stake": "4 real-money legs' edge",
+    "hypotheses": [
+     {
+      "name": "simulator",
+      "predicts": "live fills near 5 bps",
+      "test": "alpaca_live n=4/2",
+      "result": "untested"
+     },
+     {
+      "name": "real 25-35 bps",
+      "predicts": "edge shrinks 0.09-0.12R/trade",
+      "test": "reprice unit",
+      "result": "untested"
+     }
+    ],
+    "conclusion": "unit D2",
+    "p": 0.5
+   },
+   {
+    "question": "Does the repeated-entry defect distort per-leg R?",
+    "money_at_stake": "measurement validity",
+    "hypotheses": [
+     {
+      "name": "distorts R",
+      "predicts": "phantom rows in perStrategy",
+      "test": "perf 24h has no slv/qqq rows; classifier B",
+      "result": "eliminated"
+     },
+     {
+      "name": "distorts size/counts",
+      "predicts": "stub positions, inflated close counts",
+      "test": "7784 6sh vs 794; 15/376 rows",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "R not distorted; size and counts are; 4 legs affected",
+    "p": 0.9
+   },
+   {
+    "question": "Is tonight's same-direction book a portfolio finding?",
+    "money_at_stake": "paper books; real money 1 position",
+    "hypotheses": [
+     {
+      "name": "one bet",
+      "predicts": "all legs same macro side",
+      "test": "15 short + 3 bond long + mixed metals",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "perf-followup Track 4 unit D4",
+    "p": 0.55
+   }
+  ],
+  "surprises": [
+   "10/29 real-money closes were Claude live-review closes (applied close mean dR +0.35, n=7)",
+   "shallow clone makes live_vs_backtest silently uncut",
+   "hold_vs_close mean dR 91.47",
+   "ict_scalp_eth_15m on real money with a failing Stage-0 record; owed re-test not filed",
+   "ml_entry_eq_struct executed 1/21 on alpaca_live (sized_qty=0)",
+   "paper +35.9R vs real -6.6R; paper ml_entry -5.58R same sign"
+  ]
+ },
+ "calls": [
+  {
+   "id": "G1",
+   "claim": "ml_entry real-money losses come from same-bar same-direction baskets; a per-bar cap would cut drawdown without cutting net R",
+   "p": 0.6,
+   "money_at_stake": "3 long baskets, 13/13 SL = -$34.98 (~-11.7R at $2.98/R) this week; leg 7d -6.63R; ~100 real-money closes/month",
+   "decision": "research unit on the 907-row Stage-0 record (any cap = Tier-3 proposal)",
+   "tier": 1,
+   "check": {
+    "command": "the unit's harness over comms/strategy_evidence ml_entry per-trade rows grouped by entry bar",
+    "rule": "cap k in {1,2,3} PASSES iff net R >= uncapped AND max DD <= 0.8x uncapped, net of full cost",
+    "resolves_when": "unit graded (due 2026-11-25)"
+   },
+   "ending": "PI-20261118-PREP1118-0001"
+  },
+  {
+   "id": "G2",
+   "claim": "at the measured Alpaca cost (26 bps round trip) at least one of the 4 alpaca_live Stage-0 records goes to <= 0 net expectancy",
+   "p": 0.5,
+   "money_at_stake": "4 real-money legs' edge (tlt_pullback_1h record +0.109 R/trade vs ~0.09 R extra cost)",
+   "decision": "reprice at 26/53 bps; Tier-3 demotion proposal with diagnosis if it flips",
+   "tier": 1,
+   "check": {
+    "command": "reprice unit per PI-20261118-PREP1118-0003",
+    "rule": "leg net expectancy <= 0 at 26 bps = hit",
+    "resolves_when": "2026-11-25"
+   },
+   "ending": "PI-20261118-PREP1118-0003"
+  },
+  {
+   "id": "G3",
+   "claim": "live_vs_backtest i.i.d. band is too narrow for clustered legs and mixes touched with untouched closes",
+   "p": 0.8,
+   "money_at_stake": "the demotion signal on ml_entry (largest real-money leg)",
+   "decision": "tooling",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg ml_entry --json",
+    "rule": "prints n_entry_bars and n_touched = hit",
+    "resolves_when": "2026-11-25"
+   },
+   "ending": "PI-20261118-PREP1118-0004"
+  },
+  {
+   "id": "G4",
+   "claim": "cross-book same-direction concentration predicts drawdown clustering",
+   "p": 0.55,
+   "money_at_stake": "paper books carry 15 shorts + 3 bond longs into FOMC; real money 1 position",
+   "decision": "perf-followup Track 4 unit; no gate",
+   "tier": 1,
+   "check": {
+    "command": "Track-4 unit over >=90d journal",
+    "rule": "rank correlation of co-direction count vs next-24h book R with CI excluding 0 = hit",
+    "resolves_when": "unit graded"
+   },
+   "ending": "PI-20261118-PREP1118-0002"
+  },
+  {
+   "id": "G5",
+   "claim": "live_vs_backtest on a shallow clone gives verdicts on pre-config closes silently",
+   "p": 0.9,
+   "money_at_stake": "wrong demotion-shaped verdicts (tlt BELOW_BACKTEST on old config)",
+   "decision": "tooling",
+   "tier": 1,
+   "check": {
+    "command": "git clone --depth 50 ...; live_vs_backtest.py --leg tlt_pullback_1h",
+    "rule": "non-verdict or auto-deepen = hit",
+    "resolves_when": "next review"
+   },
+   "ending": "PI-20261118-PREP1118-0005"
+  },
+  {
+   "id": "G6",
+   "claim": "live_review_grade hold_vs_close has a denominator bug",
+   "p": 0.85,
+   "money_at_stake": "hold calibration verdicts",
+   "decision": "tooling",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/live_review_grade.py --live --since 2026-11-11T20:00:00Z --json",
+    "rule": "all hold means |dR|<5 = fixed; still >5 = open",
+    "resolves_when": "next review"
+   },
+   "ending": "PI-20261118-PREP1118-0006"
+  },
+  {
+   "id": "G7",
+   "claim": "slv_trend_1h is not below its backtest on any config-cut read",
+   "p": 0.8,
+   "money_at_stake": "one real-money leg's demotion",
+   "decision": "no action (Step 0: INSUFFICIENT_N / CONSISTENT)",
+   "tier": null,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg slv_trend_1h (full-history clone)",
+    "rule": "CONSISTENT or INSUFFICIENT_N = hit; BELOW_BACKTEST = miss",
+    "resolves_when": "n>=5 post-config mirror closes"
+   },
+   "ending": "none (check only)"
+  }
+ ],
+ "strategy_performance": [],
+ "_strategy_performance_note": "per-leg tables in the markdown section 1 C1 (source /api/bot/performance)",
+ "trade_decision_grades": [],
+ "_trade_decision_grades_note": "daily grade-closed-trades cron is fresh (C9); not hand-graded",
+ "insights_review": [],
+ "_insights_note": "M13 cross-check not run",
+ "proposed_tweaks": [],
+ "backlog_drain": [
+  {
+   "id": "SRQ-20260715-REALMONEY-ALLOC-BENCHMARK",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PB-20260822-AVAX-SCALP-SIZED-OFF-MARGIN-NOT-RISK",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "BL-20260908-THE-GLD-COMPAT-MATRIX-GRADES-RISK-PCT-NOT-THE-ACCOUNT-SO-ITS-11-UNREAD-UNITS-CANNOT-BE-TERMINALLY-DISPOSITIONED",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "BL-20260911-LOSING-STREAK-SIZE-GATE-IS-A-FLEET-WIDE-ABSOLUTE-SO-IT-UNDER-SERVES-A-SMALL-REAL-MONEY-ACCOUNT",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "BL-20260913-EVERY-PROFITABLE-LEG-IS-SIZED-SMALLER-PER-UNIT-OF-RISK-THAN-EVERY-LOSING-ONE-ON-REAL-MONEY",
+   "disposition": "resolved"
+  },
+  {
+   "id": "BL-20260913-NETTING-ATTRIBUTION-REWRITES-POSITION-SIZE-ON-A-ROW-THAT-STAYS-OPEN-SO-THE-EXIT-REASON-FILTER-EVERY-ANALYSIS-USES-CANNOT-SEE-IT",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0001",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0002",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0006",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0001",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0003",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0002",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261104-PREP1104-0001",
+   "disposition": "kept_open (narrowed: ml_entry resolved)"
+  },
+  {
+   "id": "PI-20261104-PREP1104-0003",
+   "disposition": "kept_open"
+  },
+  {
+   "id": "PI-20261104-PREP1104-0004",
+   "disposition": "fixed_now"
+  },
+  {
+   "id": "PI-20261111-PREP1111-0001",
+   "disposition": "resolved"
+  },
+  {
+   "id": "PI-20261111-PREP1111-0002",
+   "disposition": "resolved"
+  },
+  {
+   "id": "CJ-6-REVIEW-HOOKS",
+   "disposition": "read (checklist, manager's register)"
+  },
+  {
+   "id": "CLAUDE-GRADE-LOOP",
+   "disposition": "read"
+  },
+  {
+   "id": "CF-D4-PERFREVIEW-TABLE",
+   "disposition": "read"
+  },
+  {
+   "id": "SIGNAL-CATALOG",
+   "disposition": "read"
+  },
+  {
+   "id": "REVIEW-COUNT-BY-DECISION",
+   "disposition": "read"
+  },
+  {
+   "id": "RISK-OBJECTIVE-AUDIT",
+   "disposition": "read"
+  },
+  {
+   "id": "INSIGHTS-LEDGER",
+   "disposition": "read"
+  },
+  {
+   "id": "RISK-OBJECTIVE-P5-PERF-REPORTING",
+   "disposition": "read"
+  },
+  {
+   "id": "LTR-GRADE-ALWAYS-ON",
+   "disposition": "read"
+  },
+  {
+   "id": "UI-SPA-BACKEND-ROUTES",
+   "disposition": "read"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 27,
+  "triaged": 27,
+  "resolved": 3,
+  "fixed_now": 1,
+  "closed_stale": 0,
+  "kept_open": 13,
+  "read_only_checklist": 10,
+  "count_untriaged": 0
+ },
+ "new_items": [
+  "PI-20261118-PREP1118-0001",
+  "PI-20261118-PREP1118-0002",
+  "PI-20261118-PREP1118-0003",
+  "PI-20261118-PREP1118-0004",
+  "PI-20261118-PREP1118-0005",
+  "PI-20261118-PREP1118-0006",
+  "PI-20261118-PREP1118-0007",
+  "PI-20261118-PREP1118-0008",
+  "PI-20261118-PREP1118-0009"
+ ],
+ "paper_book_tracker": {
+  "n": 221,
+  "net_usd": 11550.77,
+  "win_rate": 40.7,
+  "recent_30d": {
+   "n": 37,
+   "net_usd": 9286.77
+  },
+  "prior": {
+   "n": 184,
+   "net_usd": 2264.0
+  },
+  "families": {
+   "trend": 17155.41,
+   "pullback": -5604.64
+  },
+  "delta_since_2026-11-11": {
+   "trades": 11,
+   "net_usd": 8686.01
+  },
+  "decay_flag": false,
+  "assessment": "healthy; decay flag cleared after three snapshots"
+ },
+ "real_money_allocation_benchmark": null,
+ "live_review": {
+  "population": "155 reviews on 61 packages; 14 altering; 9 priced; 5 could_not_price",
+  "close_applied": {
+   "n": 7,
+   "mean_dR": 0.3485,
+   "worst": -0.0505,
+   "hit": 0.857
+  },
+  "q1": "INDETERMINATE",
+  "use_rule_close": "HOLD_SCOPE (n_packages 9<20), per-package CI95 [0.0597,0.6134]",
+  "alarm": "no (net dR +2.44 over 7)",
+  "anomaly": "hold_vs_close mean dR 91.47 (PI-20261118-PREP1118-0006)"
+ },
+ "desk": {
+  "decisions": 42,
+  "priced": 10,
+  "mean_r": 0.0462,
+  "ci95": [
+   -0.7183,
+   0.8107
+  ],
+  "vs_random": -0.4931,
+  "vs_system": -0.3711,
+  "verdict": "INDETERMINATE",
+  "gate": "NOT_YET"
+ },
+ "anomalies": [
+  "real_money_allocation_benchmark null: alpaca_live has 1 close",
+  "real_money_close_attribution.py route /api/bot/db/table returns 401",
+  "live_vs_backtest.py cut=unknown on shallow clones (PI-20261118-PREP1118-0005)",
+  "repeated-entry rows: 15 null-PnL closes across 4 legs in 30d"
+ ],
+ "recommended_action": "perf-followup on D1/D2/D4; tooling D3/D5/D6; manager authors D7 and routes D8 to health",
+ "operator_attention_required": false,
+ "claude_channel_ping": null
+}

@@ -943,6 +943,41 @@ levers:
       best_delta_r_per_trade: -0.2644
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+    direction_filter:
+      tests:
+      - value: di
+        baseline_value: 'off'
+        arm: DI
+        unit: RQ-20261117-b2f1-02
+        window: 2021-07-01..2026-10-15
+        n: 27
+        net_r: 1.1642
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -4.044
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 5.3765
+        verdict: indeterminate
+        joint_change: false
+      - value: slope
+        baseline_value: 'off'
+        arm: DS
+        unit: RQ-20261117-b2f1-02
+        window: 2021-07-01..2026-10-15
+        n: 23
+        net_r: -6.1064
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -11.3146
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 7.5214
+        verdict: indeterminate
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.1225
+      fold_stability: 0.417
+      reading: every tested value is worse than the baseline
     structure_exit:
       tests:
       - value: 'off'

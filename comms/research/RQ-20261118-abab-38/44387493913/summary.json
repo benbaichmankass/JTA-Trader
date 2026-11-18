@@ -1,0 +1,389 @@
+{
+  "leg": "ief_pullback_1d",
+  "grade": {
+    "verdict": "indeterminate",
+    "label": "underpowered",
+    "baseline": "A",
+    "candidates": {},
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 0.66,
+    "why": "incumbent n=33 < n_floor 39"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 33,
+      "net_r": 5.2082,
+      "net_r_fee_only": 6.5045,
+      "max_drawdown_r": 4.6469,
+      "by_outcome": {
+        "take_profit": 4,
+        "stop": 14,
+        "trail_stop": 14,
+        "timeout": 1
+      },
+      "mean_bars_held": 18.333,
+      "net_r_per_capital_day": 0.0086,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 30,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-15 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-05-19 03:59:50+00:00",
+          "trades": 6,
+          "net_r": 2.8516
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-19 03:59:50+00:00",
+          "end": "2023-04-06 07:59:40+00:00",
+          "trades": 5,
+          "net_r": -3.0304
+        },
+        {
+          "fold": 3,
+          "start": "2023-04-06 07:59:40+00:00",
+          "end": "2024-02-22 11:59:30+00:00",
+          "trades": 5,
+          "net_r": 2.182
+        },
+        {
+          "fold": 4,
+          "start": "2024-02-22 11:59:30+00:00",
+          "end": "2025-01-09 15:59:20+00:00",
+          "trades": 6,
+          "net_r": 4.9701
+        },
+        {
+          "fold": 5,
+          "start": "2025-01-09 15:59:20+00:00",
+          "end": "2025-11-27 19:59:10+00:00",
+          "trades": 4,
+          "net_r": -0.9038
+        },
+        {
+          "fold": 6,
+          "start": "2025-11-27 19:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 7,
+          "net_r": -0.8614
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "30",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IEF",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/A__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--start",
+        "2021-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    },
+    "LONG": {
+      "reach_ge_6r": 0.0,
+      "n": 17,
+      "net_r": -4.9146,
+      "net_r_fee_only": -4.2406,
+      "max_drawdown_r": 6.2005,
+      "by_outcome": {
+        "trail_stop": 7,
+        "stop": 9,
+        "take_profit": 1
+      },
+      "mean_bars_held": 15.824,
+      "net_r_per_capital_day": -0.0183,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 30,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-15 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-05-19 03:59:50+00:00",
+          "trades": 2,
+          "net_r": -0.8446
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-19 03:59:50+00:00",
+          "end": "2023-04-06 07:59:40+00:00",
+          "trades": 3,
+          "net_r": -0.9897
+        },
+        {
+          "fold": 3,
+          "start": "2023-04-06 07:59:40+00:00",
+          "end": "2024-02-22 11:59:30+00:00",
+          "trades": 2,
+          "net_r": -2.0693
+        },
+        {
+          "fold": 4,
+          "start": "2024-02-22 11:59:30+00:00",
+          "end": "2025-01-09 15:59:20+00:00",
+          "trades": 4,
+          "net_r": 1.9498
+        },
+        {
+          "fold": 5,
+          "start": "2025-01-09 15:59:20+00:00",
+          "end": "2025-11-27 19:59:10+00:00",
+          "trades": 2,
+          "net_r": 1.1934
+        },
+        {
+          "fold": 6,
+          "start": "2025-11-27 19:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 4,
+          "net_r": -4.1542
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "30",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IEF",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/LONG__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/LONG__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--side-filter",
+        "long",
+        "--start",
+        "2021-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    },
+    "SHORT": {
+      "reach_ge_6r": 0.0,
+      "n": 19,
+      "net_r": 6.9934,
+      "net_r_fee_only": 7.7451,
+      "max_drawdown_r": 4.2164,
+      "by_outcome": {
+        "take_profit": 3,
+        "stop": 8,
+        "trail_stop": 7,
+        "timeout": 1
+      },
+      "mean_bars_held": 18.632,
+      "net_r_per_capital_day": 0.0198,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 30,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-15 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-05-19 03:59:50+00:00",
+          "trades": 4,
+          "net_r": 3.6962
+        },
+        {
+          "fold": 2,
+          "start": "2022-05-19 03:59:50+00:00",
+          "end": "2023-04-06 07:59:40+00:00",
+          "trades": 3,
+          "net_r": -3.0694
+        },
+        {
+          "fold": 3,
+          "start": "2023-04-06 07:59:40+00:00",
+          "end": "2024-02-22 11:59:30+00:00",
+          "trades": 3,
+          "net_r": 4.2513
+        },
+        {
+          "fold": 4,
+          "start": "2024-02-22 11:59:30+00:00",
+          "end": "2025-01-09 15:59:20+00:00",
+          "trades": 2,
+          "net_r": 3.0203
+        },
+        {
+          "fold": 5,
+          "start": "2025-01-09 15:59:20+00:00",
+          "end": "2025-11-27 19:59:10+00:00",
+          "trades": 3,
+          "net_r": -3.1473
+        },
+        {
+          "fold": 6,
+          "start": "2025-11-27 19:59:10+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 4,
+          "net_r": 2.2422
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "30",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IEF",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/SHORT__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-38/44387493913/arms/SHORT__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--side-filter",
+        "short",
+        "--start",
+        "2021-07-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2021-07-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 2330,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "IEF",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2021-07-01 00:00:00+00:00",
+      "2022-05-19 03:59:50+00:00",
+      "2023-04-06 07:59:40+00:00",
+      "2024-02-22 11:59:30+00:00",
+      "2025-01-09 15:59:20+00:00",
+      "2025-11-27 19:59:10+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}
