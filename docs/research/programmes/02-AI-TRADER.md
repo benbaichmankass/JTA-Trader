@@ -26,6 +26,32 @@
   family-level AUC can come from leg base rates through the leg one-hots (the M23 P1 trap), so it is not evidence of a
   within-leg confidence signal (9d20-02 found none within leg).
 
+## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — MODEL track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
+
+**P2 in the window:** 42 programmed units (14 pass, 20 fail, 6 ind, 2 ungraded) plus the unprogrammed D10 Basset (aadc-05..09) and exit-head (aadc-04/-11/-12) work, assigned here.
+
+**What was learned**
+- **D2 regime: the gain comes from the features, not the learner.** The range-vol (yz) LightGBM head beats v2 on ETH and SOL 1h and at the live 15m cadence (c21d-03, dc44-03). CatBoost beats LightGBM on the same features (dc44-02). A GRU does not beat LightGBM at power (c21d-05 FAIL on two passes, log-loss, 3 shards). The open question is the consumer test: does the yz label change money on the TD family?
+- **D8 exit head: the best label is worth exactly what holding is worth.** Two label margins were read on the same 11,160 trades. holding_pays_neg25 passed (+0.0134 R/trade vs the champion, deflated CI [+0.0020, +0.0247]) and confirmed on 10 perps the head never saw (aadc-12). Against HOLD, though, it is -0.0002 R [-0.027, +0.027]. The label stops the champion giving trades up; it adds no edge over holding. This needs a Tier-3 call (retrain or take the head off the close path), not more search.
+- **ml-tm-action-value: the horizon and feature-block levers are flat.** Iteration 5 (horizon 6 and 24, signature features) failed 13 of 14 rows (d5a7). The likely cause is label noise per action; the next lever is the action set.
+- **D10 Basset is the month's first MODEL pass whose consumer makes a real-money decision.** A Page CUSUM on realised net R vs Stage-0 expectancy anticipates the next 20 trades going negative: AUC 0.654, leg-cluster CI [0.550, 0.750], n 664. Demote-on-alarm at H 2 adds +172.9 R over a matched within-leg random skip, control_p 0.0115 against a Bonferroni bar of 0.0167 (aadc-07). Tier-3 candidate.
+
+**Failed tests: diagnosis.** d5a7 points to *design* (a noisy per-action advantage target), with *power* as the rival explanation. The variant is close-vs-hold only, or a realised-path label. Handed to the ML lane.
+
+**Answered / closed:** P2-MECE-D2/-D5/-D6 (closed by the 2026-11-17 triage, answered by 82fd/a474/bcd2). **Retired:** none.
+
+**Next 3–4 weeks**
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | D10 demote-on-alarm H2: Tier-3 packet | whether a measured decay alarm demotes a leg | proposal | — | 0 | gain concentrated in a few legs |
+| 2 | RQ-20261117-c21d-06 ATR-neutral target (re-armed; P8) | whether Foxhound-4's label is replaced | P8-Q5/Q8 authored on the new label | label family closed for P8 | runner ~4 h | the net-R edge is purely a cost ranking |
+| 3 | D2 yz-label consumer test on the TD family | whether the yz head replaces v2 as the regime label | Tier-3 proposal | features recorded as model-quality only | Kaggle CPU | a better label that changes no trades |
+| 4 | ml-tm-action-value action-set lever | whether the TM line has any decision value | confirmation | family-review record | trainer | the line has no edge to find |
+
+**Runway note.** Kaggle GPU and trainer carry no runnable MODEL work this week. The reason is data placement, not ideas: the D8/D3 corpora live only on the trainer. Row **ML-EXITHEAD-ROWS-KAGGLE** is filed for it.
+
 ## Programme review 2026-11-11 (lane PROGRAMME-REVIEW-20261111) — MODEL track
 
 Population: units with a result row generated 2026-11-04T19:30Z..2026-11-11T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`; 2,183 units read, 0 unreadable; 455 result rows): **311 units with rows** — 72 pass, 134 fail, 42 indeterminate, 5 no_action_warranted, 1 not_applicable, 57 with no unit verdict yet (28 ungraded). 119 carry a programme field (P1 38, P2 50, P3 14, P4 2, P5 9, P6 6, P7 0); **192 do not** (live_strategy 110, new_strategy_prop 37, ml_health 31, infra 11, timeframes 2, none 1) and are assigned below by what they ask. Every PASS is a discovery until its confirmation passes; batch denominators are from the packet's `batches`.
