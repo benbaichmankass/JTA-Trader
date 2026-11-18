@@ -121,3 +121,13 @@ roadmap:
 related:
 - RQ-20261117-b2f2-14
 - research/levers/trend_donchian_1h.yaml
+amendments:
+- at: '2026-11-18'
+  before_any_run: true
+  by: lane QUEUE-FILL-STANDING-W47 (PROGRAMME-REVIEW-20261118 handoff)
+  text:
+  - 'CLOSED-BAR READ. This leg''s closed-bar Stage-0 evidence record FAILS when re-measured on the bar the live leg decides on (RQ-20261113-f251-01, scripts/research/forming_evidence_regen.py, 14 forming-decision
+    legs, verdicts fail / indeterminate / pass by leg), and the live entries land minutes into the bar (live_bt_trade_join: median 4-7 min). The programme review (2026-11-18, specs_for_queue_fill) requires
+    a cell on such a leg either to wait for a forming-bar control or to state it is a closed-bar read. This unit states it: its result is a closed-bar read and must not be forwarded as live-bar evidence
+    or as a promotion input until a forming-bar control of the same arms exists. No threshold, arm, window, pass clause or baseline changes; the unit has not run (last_dispatched_at null).'
+last_dispatched_at: '2026-11-18T20:24:52+00:00'

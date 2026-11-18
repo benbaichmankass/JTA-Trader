@@ -1,0 +1,141 @@
+id: RQ-20261118-abab-63
+title: 'Second symbol holdout for the D55 prop-pace lead at 4h: does Donchian-55 / trail 6.0 beat Donchian-20 on QTUM/ZRX/BAT/RLC/KNC/CRV (a second population disjoint from the lead and from basket C)?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: On Binance USD-M 4h candles for QTUM/ZRX/BAT/RLC/KNC/CRV over 2020-06-01..2026-11-17, with the cost stack fixed, does D55 (donchian 55, trail 6.0) pass the pooled Stage-0 rule AND beat the D20
+  baseline B by >= 0.05 R/trade, the same rule abab-01 applied to basket C?
+why_this_matters: 'abab-01 (basket C) failed the fold clause while meeting the delta bar, so the 4h D55 lead is neither confirmed nor refuted. A second disjoint symbol holdout decides whether the programme
+  node P5-RG1025-trend-pooled and the prop EV gate should carry D55 forward: if D55 beats B by >= 0.05 R/trade on two fresh populations the lead is two-population (still not a promotion case); if it fails
+  again at a delta near zero it is a symbol fit. abab-01 (D55 vs D20 at 4h on basket C DASH/ONT/NEO/SNX/MANA/SAND, 2020-06..2026-11): pooled n=966, +43.0 R (+0.0446 R/trade), beats B by +0.0601 R/trade
+  (the 0.05 bar is met), 4 of 6 cells pass, but 3 of 6 calendar folds positive (needs 4) and one-sided pooled t p 0.215; B pooled -19.7 R with one -77.1 R fold (2023-08..2024-09); D55 max drawdown 48.8
+  R vs B 100.2 R. f679-03 (the lead, six perps, in sample): +0.1065 R/trade, 5 of 6 folds. Diagnosis: the direction and the drawdown benefit replicate at about half the size on fresh symbols but fold stability
+  does not; one population cannot separate a weak real effect from noise, so a second disjoint population is the cheapest informative next read.'
+power:
+  expected_n: 800
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.3 at alpha 0.05 / power 0.8 needs ~88 pooled trades (the repo's standing floor for this unit family). expected_n is an ESTIMATE scaled from the parent record's per-cell counts by symbol-years
+    in the window, not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles over a pinned in-hand window; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261118-ABAB-63-D55-HOLDOUT2-4H
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 4h: per cell n, net_r, max_drawdown_r, 6 calendar folds (majority 4), net_r_per_capital_day; pooled across the basket''s cells; cost = the harness''s
+    own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy() (never a zero default).'
+  rule: 'PASS iff D55 passes the pooled Stage-0 rule on this basket (pooled n >= 88, pooled net_r > 0, >= 4 of 6 calendar folds positive, >= half of the powered cells (n >= 39) pass) AND beats B by >= 0.05
+    R/trade. FAIL iff D55 fails with pooled n >= 88 (configuration closed on this basket; family stays open; next test = the pooled paired read across the three populations, reported as pooling, not as
+    a confirmation). INDETERMINATE otherwise (pooled n < 88, fewer than 2 powered cells, or under half the cells measured; a symbol that cannot be fetched is recorded per cell and counts against the half-the-cells
+    floor). Regime-robustness clause (set before the run): the pooled result is net positive in at least 3 of 4 calendar years of the window (per-year table reported), no single year carries more than 50%
+    of total net R, long-side and short-side net are reported separately and both >= 0, and at least 2 non-overlapping sub-periods are each net positive; a failure of this clause downgrades a PASS to INDETERMINATE
+    (reported, never silently dropped). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case, does not tune beyond the declared arms, and does not pool with any committed record. Candles are Binance
+    USD-M (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1); a symbol listed after the window start contributes only its own history. PROP SUPERSET BAR: this unit supplies
+    Stage 0 only; the prop EV/survival gate, a mechanical Stage-1 soak and Gate 2 all still apply and no roster is edited here.'
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): confirm a discovery on an untouched in-hand window registered before the run (here a second symbol holdout, correlated
+  evidence, said so); R1 look-before-you-re-test: grep of research/queue for these symbols 2026-11-18: QTUM/ZRX/BAT/RLC/KNC/CRV = 0 units, and the basket is disjoint from the lead''s six perps and from
+  basket C (abab-01/-02).'
+intervention_controls:
+  not_applicable: a Stage-0 entry/exit configuration backtest on candles, not an in-trade action or active-management intervention
+iteration:
+  subject: trend_donchian_prop_candidate_D55
+  subject_kind: strategy_leg
+  from_result: RQ-20261118-abab-01
+  verdict_read: fail
+  diagnosis: 'abab-01 (D55 vs D20 at 4h on basket C DASH/ONT/NEO/SNX/MANA/SAND, 2020-06..2026-11): pooled n=966, +43.0 R (+0.0446 R/trade), beats B by +0.0601 R/trade (the 0.05 bar is met), 4 of 6 cells
+    pass, but 3 of 6 calendar folds positive (needs 4) and one-sided pooled t p 0.215; B pooled -19.7 R with one -77.1 R fold (2023-08..2024-09); D55 max drawdown 48.8 R vs B 100.2 R. f679-03 (the lead,
+    six perps, in sample): +0.1065 R/trade, 5 of 6 folds. Diagnosis: the direction and the drawdown benefit replicate at about half the size on fresh symbols but fold stability does not; one population
+    cannot separate a weak real effect from noise, so a second disjoint population is the cheapest informative next read.'
+  search: 'One factor: D55/trail 6.0 vs the as-traded D20 baseline B at 4h on basket D (symbols never in the lead''s selection or in basket C), same window and rule as abab-01.'
+  attempt: 1
+  due_by: '2026-11-25'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: the nearest prop-pace lead (programme 05 node P5-RG1025-trend-pooled weight 50 x the real-money multiplier); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 70
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision) and runs the repo harness; these symbols are not in the metis-market-data allowlist and nothing is trainer-resident; CPU only.
+  basis: 'Estimate from the parent unit''s run scaled by cells x arms x bars; the first run replaces it. MEASURED RUNTIME NOTE 2026-11-18: two landed units of this harness family ran far faster than their
+    estimates (abab-01 est 70 min, actual 9.1; abab-02 est 90, actual 9.6; 6 cells x 2 arms each, GitHub-runner workflow wall time incl. ~1 min setup; runs 44382443666, 44382447562). Across both families
+    actual/est has a median of ~0.12 (n=4), so est_minutes overstates runtime ~4-20x. est is KEPT unchanged so the routing stands (manager decision 2026-11-18); quote supply in UNITS and fires per day,
+    not est hours. Calibration is tracked in PI-20261118-EFILLW47-0002.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - QTUMUSDT,ZRXUSDT,BATUSDT,RLCUSDT,KNCUSDT,CRVUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-11-17'
+  - --param
+  - donchian=20
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=2.5
+  - --param
+  - trail_mult=6.0
+  - --param
+  - min_confidence=0.0
+  - --arm
+  - B=
+  - --arm
+  - D55=--donchian=55;--trail-mult=6.0
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261118-ABAB-63-D55-HOLDOUT2-4H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261118-abab-63
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+roadmap:
+- L-LADDER
+related:
+- RQ-20261118-abab-01
+- scripts/research/harness_stage0.py

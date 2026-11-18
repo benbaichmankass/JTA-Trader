@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261116-089f-01.yaml (run.workflow research-script-run-trainer.yml); row CML-HARNESS; design docs/plans/ml-claude-distillation-DESIGN.md 3.3
+# wiring: research/queue/RQ-20261118-089f-04.yaml (`--min-risk-atr 1.0`: the risk_atr<1-excluded sensitivity read, row CJ-LABEL-ALTERNATIVE)
 """CJ-4 blind-source label validation (RQ-20261116-089f-01).
 
 Does the blind post-trade grade (comms/claude_judgments/blind_grades.jsonl, mask-v1) rank-predict realised NET R on the journal-joined closed
@@ -22,6 +23,10 @@ NEXT K_NEXT same-leg graded trades (ordered by decision_ts; declared: the contro
 
     python3 scripts/research/cj4_blind_validation.py --unit RQ-... --out DIR [--db data/trade_journal.db] [--comms comms]
     python3 scripts/research/cj4_blind_validation.py --self-test
+
+--min-risk-atr X (RQ-20261118-089f-04, row CJ-LABEL-ALTERNATIVE): additionally exclude every trade whose package stop distance is under X ATR,
+risk_atr = |order_packages.entry - order_packages.sl| / signal_logic.atr -- the SAME quantity scripts/ops/blind_grade.py puts in the packet's
+bracket.risk_atr. A trade whose risk_atr cannot be computed is excluded and counted (risk_atr_unknown). Default None = 089f-01 unchanged.
 """
 from __future__ import annotations
 
@@ -184,7 +189,40 @@ def load_journal(db: Path, trade_ids: set[int]) -> tuple[dict[int, dict] | None,
     return out, conf
 
 
-def build_frame(blind: list[dict], journal: dict[int, dict] | None, conf: dict[int, float]) -> tuple[pd.DataFrame, dict]:
+def load_risk_atr(db: Path, trade_ids: set[int]) -> dict[int, float]:
+    """risk_atr by trade id = |package entry - package sl| / signal_logic.atr (blind_grade.build_blind_packet's bracket.risk_atr)."""
+    out: dict[int, float] = {}
+    if not db.is_file():
+        return out
+    conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    try:
+        ids = sorted(trade_ids)
+        for i in range(0, len(ids), 500):
+            chunk = ids[i:i + 500]
+            q = (f"SELECT t.id, op.entry, op.sl, op.signal_logic FROM trades t LEFT JOIN order_packages op "
+                 f"ON op.order_package_id = t.order_package_id WHERE t.id IN ({','.join('?' * len(chunk))})")
+            for tid, entry, sl, logic in conn.execute(q, chunk):
+                v = risk_atr_of(entry, sl, logic)
+                if v is not None:
+                    out[int(tid)] = v
+    finally:
+        conn.close()
+    return out
+
+
+def risk_atr_of(entry, sl, logic) -> float | None:
+    try:
+        d = json.loads(logic) if isinstance(logic, str) else dict(logic or {})
+        e, s, atr = float(entry), float(sl), float(d.get("atr"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if not (math.isfinite(e) and math.isfinite(s) and math.isfinite(atr)) or atr <= 0 or e == s:
+        return None
+    return abs(e - s) / atr
+
+
+def build_frame(blind: list[dict], journal: dict[int, dict] | None, conf: dict[int, float],
+                risk_atr: dict[int, float] | None = None, min_risk_atr: float | None = None) -> tuple[pd.DataFrame, dict]:
     """The registered population, with every exclusion counted so n_in == n_out + sum(excluded)."""
     ex: dict[str, int] = {}
 
@@ -227,6 +265,14 @@ def build_frame(blind: list[dict], journal: dict[int, dict] | None, conf: dict[i
         if closed is not None and info is not None and not info < closed:
             bump("blind_grade_not_t0")
             continue
+        if min_risk_atr is not None:
+            ra = (risk_atr or {}).get(tid)
+            if ra is None:
+                bump("risk_atr_unknown")
+                continue
+            if ra < min_risk_atr:
+                bump("risk_atr_below_min")
+                continue
         wk = dts.isocalendar()
         rows.append({"trade_id": tid, "leg": r.get("leg"), "decision_ts": dts, "net_r": float(jr["net_r"]), "grade_score": gs,
                      "expected_r": r.get("expected_r"), "confidence": conf.get(tid), "prompt_sha": r.get("prompt_sha"),
@@ -273,7 +319,9 @@ def run(a) -> int:
     revealed = _read_jsonl(comms / "claude_judgments" / "revealed_grades.jsonl")
     tids = {r["trade_id"] for r in blind + revealed if isinstance(r.get("trade_id"), int)}
     journal, conf = load_journal(db, tids)
-    df, pop = build_frame(blind, journal, conf)
+    ratr = load_risk_atr(db, tids) if a.min_risk_atr is not None else None
+    df, pop = build_frame(blind, journal, conf, ratr, a.min_risk_atr)
+    pop["min_risk_atr"] = a.min_risk_atr
     pop["journal"] = "absent" if journal is None else "present"
     pop["n_with_confidence"] = int(df.confidence.notna().sum()) if len(df) else 0
     pools = {}
@@ -292,11 +340,12 @@ def run(a) -> int:
     note = f"cj4 blind validation: {verdict.upper()} | {why} | n {head['n'] if head else 0} | excluded {pop['excluded_by_reason']}"
     row = {"verdict": verdict, "read_state": read_state, "n": head["n"] if head else 0,
            "population": (f"distinct closed crypto trades with a mask-v1 blind grade and a journal net R (package initial stop, full cost stack), "
-                          f"decision_ts > {DATE_RULE_AFTER}, pooled within (author_kind, model_id, mask_version) = {head_key}; "
+                          f"decision_ts > {DATE_RULE_AFTER}"
+                          f"{'' if a.min_risk_atr is None else f', package risk_atr >= {a.min_risk_atr}'}, pooled within (author_kind, model_id, mask_version) = {head_key}; "
                           f"{pop['n_source_rows']} blind rows read, journal {pop['journal']}"),
            "note": note, "generated_at": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "population_report": pop, "pools": pools, "headline_pool": head_key,
            "t1_control_next_k": t1_control(revealed, df) if len(df) else None,
-           "decision_rule": {"id": a.rule_id, "registered_at": "2026-11-16", "registered_before_run": True},
+           "decision_rule": {"id": a.rule_id, "registered_at": a.rule_registered_at, "registered_before_run": True},
            "thresholds": {"min_n": MIN_N, "date_rule_after": DATE_RULE_AFTER, "fail_upper": FAIL_UPPER, "paired_half_width_max": PAIRED_HALF_WIDTH_MAX,
                           "boot_draws": BOOT_DRAWS, "seed": SEED},
            "produced_by": {"tool": "python3 scripts/research/cj4_blind_validation.py", "where": a.where}}
@@ -356,6 +405,14 @@ def self_test() -> int:
     assert pop["excluded_by_reason"] == {"outcome_pending": 1, "blind_grade_not_t0": 1, "outcome_unjoined_trade_not_in_journal": 1,
                                          "date_rule_pre_cutoff": 2}, pop
     assert build_frame(blind, None, {})[1]["excluded_by_reason"].get("outcome_unjoined_no_journal") == 8
+    # --min-risk-atr (089f-04): of the 5 included, one below the floor, one with no risk_atr; partition still exact
+    ra = {0: 2.0, 4: 0.6, 5: 1.0, 6: 1.5}
+    df2, pop2 = build_frame(blind, journal, {}, ra, 1.0)
+    assert pop2["partition_ok"] and len(df2) == 3 and pop2["excluded_by_reason"]["risk_atr_below_min"] == 1, pop2
+    assert pop2["excluded_by_reason"]["risk_atr_unknown"] == 1, pop2          # trade 7 has no risk_atr
+    assert len(build_frame(blind, journal, {}, ra, None)[0]) == 5            # default: 089f-01 unchanged
+    assert abs(risk_atr_of(100.0, 98.0, '{"atr": 4.0}') - 0.5) < 1e-12 and risk_atr_of(100.0, 100.0, '{"atr": 1}') is None
+    assert risk_atr_of(100.0, 98.0, "{}") is None and risk_atr_of(None, 98.0, '{"atr": 1}') is None
     # T1 control needs k later same-leg trades
     d = pd.DataFrame({"trade_id": range(20), "leg": "L", "decision_ts": pd.date_range("2026-08-01", periods=20, tz="UTC"), "net_r": np.arange(20.0)})
     tc = t1_control([{"trade_id": i, "revised_grade_score": i} for i in range(20)], d)
@@ -373,6 +430,9 @@ def main(argv=None) -> int:
     ap.add_argument("--comms", default="comms")
     ap.add_argument("--where", default="trainer")
     ap.add_argument("--rule-id", dest="rule_id", default="RULE-RQ20261116-089f-01-BLIND-VALIDATION")
+    ap.add_argument("--rule-registered-at", dest="rule_registered_at", default="2026-11-16")
+    ap.add_argument("--min-risk-atr", dest="min_risk_atr", type=float, default=None,
+                    help="exclude trades whose package stop distance is under this many ATR (RQ-20261118-089f-04)")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()

@@ -1,0 +1,151 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). aadc-10's registered fail_action (the order PRICE lever), ml-week-plan D9 task 1.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261118-04a5-05
+title: 'D9 Whippet, EXIT order PRICE: does a post-only maker time-stop exit resting at the MID (half a tick inside the touch) with the
+  1-minute market fallback improve R per exit over the market exit on v1''s held-out time-stop exits, where the touch at W 1 (aadc-10) and
+  W 5 (aadc-02) did not?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series execution practice (docs/reference/trading-and-model-practice-principles.md): when a resting order''s
+  unfilled leg carries the adverse selection, shorten its exposure before abandoning the passive leg; W 1 is in a3f1-01''s registered
+  window grid (desk_maker_fills.WINDOWS_MIN = 1, 5, 15). After the window, the resting PRICE is the next one-factor lever (aadc-10
+  fail_action): a mid peg trades half a tick of spread capture for a higher fill probability.'
+question: 'Same decisions, data, approximation, exit epoch, calibration arm and fallback window as RQ-20261117-aadc-10 (frozen v1 booster,
+  60-perp pool, tau 0.10, held-out 2025-10-01..2026-09-30, 24h time-stop exits, W 1). ONE FACTOR CHANGED: the closing order rests at the
+  modelled MID (the close of the minute ending at T) instead of the near touch (bid for a buy, ask for a sell, k 0). Is the paired delta,
+  maker minus market closing order, positive in R per exit at the deflated level?'
+why_this_matters: 'aadc-10 FAILED with the legs moved as predicted but the net flat: fill rate 0.72 -> 0.54, unfilled -18.19 -> -6.87 bps,
+  filled +7.18 -> +6.41 bps, net +0.0019 -> +0.0018 R per exit. The unfilled leg is now small, so the binding term is the fill rate; resting
+  at the mid raises it at the cost of half a tick per filled exit. Execution stays the binding constraint on the real-money D3 model (cost
+  ~90% of v1''s gross, RQ-20261112-a7e8-03). A PASS is a Tier-3 packet, never a self-merge.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-10
+  verdict_read: fail
+  diagnosis: 'aadc-10 (run 44098400127) FAILED: maker exit at W 1 +0.0018 R per exit, deflated CI [-0.0013, +0.0049], n 2,786 on 53
+    symbols. The window lever did what was predicted on each leg (unfilled -18.19 -> -6.87 bps, fill rate 0.72 -> 0.54, filled +7.18 ->
+    +6.41 bps) and v1''s own mean moved inside the matched-random-side band, so the extra adverse selection at W 5 is gone; but the net did
+    not move. The trade-off is now fill rate vs unfilled loss with the unfilled loss small: half of the exits are unfilled. The registered
+    fail_action names the next lever: the order price (a mid peg). In this 1m approximation the touch is a one-tick spread around the
+    last close, so the mid peg rests half a tick inside the touch and fills on a one-tick move through the mid instead of a one-tick move
+    through the touch.'
+  search: 'one lever (resting price of the closing order) at one value, the mid; W 1 (the better of aadc-02/aadc-10 by deflated lower
+    bound, -0.0013 vs -0.0026), k 0 for the touch reference and every other choice fixed at aadc-10''s; nothing chosen on the test window'
+  attempt: 3
+  due_by: '2026-11-25'
+levers:
+- name: exit_order_price
+  values: [market_exit, post_only_mid_w1]
+  hypothesised_effect: the fill rate rises above aadc-10''s 0.54 while the filled gain falls by about half a tick, and the net delta turns
+    positive
+data_and_approximation: 'Unchanged from RQ-20261117-aadc-02 (Binance Vision daily 1m futures klines; touch at T with a one-tick spread;
+  STRICT fill iff some 1m high (sell) / low (buy) in (T, T+W] trades a tick through the limit; else market at the T+W close +- half a
+  tick). W = 1 means only the minute starting at T counts. The MID arm rests at p (the close of the minute ending at T), half a
+  tick inside the touch; the strict fill rule is unchanged (a 1m high / low one tick THROUGH the mid). The calibration arm stays at a3f1-01''s W 5 (band [+1.0, +3.0] bps).'
+decision_rule:
+  id: RULE-RQ20261118-04a5-05-MAKER-EXIT-MIDPEG
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_maker_replay.py exit --exit-w-min 1 --exit-peg mid: pooled mean paired delta_R (maker minus market closing order)
+    per time-stop exit over the measured v1 held-out decisions, with a day-block bootstrap CI (2000 reps) at the DEFLATED lower percentile
+    holdout_lock.claim_read returns for this read (family EXEC, model EXEC-maker-exit-ml_entry_v1: n_tries now counts 1c4e-01, both
+    aadc-02 runs, aadc-10 and this one). Reported, never gating: delta in bps, fill rate, delta if filled / unfilled, by side, matched random side,
+    the delta per ALL decisions, the calibration arm.'
+  rule: 'INDETERMINATE IF the calibration arm (W 5) is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured time-stop exits
+    < 1000 OR distinct symbols < 10. PASS IF mean delta_R > 0 AND the deflated lower bound > 0. FAIL otherwise. The holdout ledger is
+    claimed BEFORE any post-exit 1m bar is read. Thresholds fixed now and not changed after any result.'
+  pass_action: 'Tier-3 PROPOSAL to the manager: a post-only time-stop exit for ml_entry resting at the mid (W 1, market fallback),
+    demo/paper first, with the exact change and this record; a fresh-window confirmation first.'
+  fail_action: 'The resting-price lever is flat at the mid as well: the passive closing order does not pay on v1''s time-stop exits under
+    this approximation. Next: the learned step D9 lacks, a fill-probability model (post maker only when P(fill) x filled gain exceeds
+    (1 - P(fill)) x unfilled cost), on this same replay. D9 stays in iteration.'
+  what_it_does_not_do: No sizing, no config change, no order; SL/TP exits untouched. A PASS is a Tier-3 PROPOSAL, not a change.
+  min_n: 1000 measured time-stop exits on >= 10 symbols
+family_note: 'Ledger family EXEC (as 1c4e-01 and aadc-02): the decision set is fixed and this unit selects nothing; the factor is the
+  execution of a fixed exit, paired.'
+power:
+  expected_n: 2786
+  min_detectable_effect: 0.008
+  effect_units: metric
+  sd: 0.08
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED basis from aadc-02 / aadc-10 (same exits, n 2,786 both): n 2,786 measured; its deflated CI half-width was ~0.0044 R at percentile 0.84, so an
+    effect near +0.008 R is detectable. sd 0.08 R per order (1c4e-01 basis). A smaller window shrinks both legs, so the paired sd falls;
+    the run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms hold the identical v1 entry and bracket; only the price and fee of the time-stop closing order differ'
+  matched_random:
+    draws: 200
+    note: 'same exit moments, closing-order side drawn at random (p_long = v1''s long share). Reported, never gating.'
+  best_static:
+    grid:
+    - market_exit
+    - post_only_touch_w1_k0 (aadc-10, fixed)
+    - post_only_mid_w1 (this arm, fixed)
+    excludes_test_folds: true
+    note: nothing is chosen on the test window; the mid is the price named by aadc-10's fail_action, fixed before this run
+  bootstrap_group: day
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: +0.008 R on ~25% of ml_entry decisions; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 10
+  why_runner: needs_internet (keyless public Binance Vision klines); scores a committed booster (no fit). Kaggle kernels have no internet.
+  basis: 'MEASURED: aadc-02 ran in 275 s on the same decisions and klines; aadc-10 the same.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - exit
+  - --unit
+  - '{unit}'
+  - --exit-rule
+  - RULE-RQ20261118-04a5-05-MAKER-EXIT-MIDPEG
+  - --exit-w-min
+  - '1'
+  - --exit-peg
+  - mid
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261118-04a5-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry's 24h time-stop exit should be worked post-only at the mid with a 1-min market fallback (an exit counterpart
+    of the demo/paper-fenced maker entry; none exists today)
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261117-aadc-10
+- RQ-20261117-aadc-02
+- ML-D9-MAKER-EXIT-HARNESS
+- RQ-20261112-1c4e-01
+- RQ-20261027-a3f1-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-18T21:19:33+00:00'
