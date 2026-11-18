@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-1c4e-01.yaml (ENTRY execution lever: maker entry on ml_entry's own decisions, lane ML-DECISION-MODELS)
+# wiring: research/queue/RQ-20261118-04a5-05.yaml (`exit --exit-peg mid`: D9 mid-peg arm, aadc-10 fail_action)
 # wiring: research/queue/RQ-20261117-aadc-02.yaml (`exit`: maker EXIT on v1's 24h time-stop exits, row ML-D9-MAKER-EXIT-HARNESS)
 """Does a post-only MAKER entry (DESK-MAKER-FILLS policy F: join the near touch, 5-min fallback to the market) improve the FROZEN
 ENTRY v1 model's own decisions, net of fees and adverse selection, in R per decision? (Tier-1 research; no order, no config.)
@@ -91,10 +92,13 @@ def tick_of(d: pd.DataFrame) -> float:
 
 
 # ------------------------------------------------------------------------------------------------ the policy-F delta on 1m bars
-def delta_f(d: pd.DataFrame, T: int, direction: int, tick: float, w_min: int | None = None) -> dict | None:
+def delta_f(d: pd.DataFrame, T: int, direction: int, tick: float, w_min: int | None = None, peg: str = "touch") -> dict | None:
     """delta_F (bps) for a decision at epoch second T (on a minute boundary) on one symbol-day of 1m bars.
 
-    w_min: the market-fallback window in minutes (default the a3f1-01 primary W_MIN; the calibration arm always uses it)."""
+    w_min: the market-fallback window in minutes (default the a3f1-01 primary W_MIN; the calibration arm always uses it).
+    peg: "touch" (default, policy F: rest at the near touch -/+ K ticks, i.e. bid for a buy, ask for a sell) or "mid" (D9 mid-peg arm,
+    RQ-20261118-04a5-05: rest AT the modelled mid p, the close of the minute ending at T, half a tick inside the touch). The fill rule is
+    unchanged for both: STRICT, the 1m path must trade one tick THROUGH the resting price within (T, T+W]; unfilled -> market at T+W."""
     w = int(w_min or W_MIN)
     t = d["t"].to_numpy()
     i0 = int(np.searchsorted(t, T - 60))          # the minute ending at T starts at T - 60
@@ -109,11 +113,13 @@ def delta_f(d: pd.DataFrame, T: int, direction: int, tick: float, w_min: int | N
     seg = slice(i0 + 1, iW + 1)                   # minutes starting T .. T+(W-1)m == (T, T+W]
     eps = tick * 1e-6
     long = direction == 1
+    if peg not in ("touch", "mid"):
+        raise ValueError(f"peg must be touch or mid, got {peg!r}")
     if long:
-        L, taker_px, fb_px = bid - K * tick, ask, pw + tick / 2.0
+        L, taker_px, fb_px = (mid if peg == "mid" else bid - K * tick), ask, pw + tick / 2.0
         filled = bool((d["low"].to_numpy()[seg] <= L - tick + eps).any())
     else:
-        L, taker_px, fb_px = ask + K * tick, bid, pw - tick / 2.0
+        L, taker_px, fb_px = (mid if peg == "mid" else ask + K * tick), bid, pw - tick / 2.0
         filled = bool((d["high"].to_numpy()[seg] >= L + tick - eps).any())
     eff = L if filled else fb_px
     delta = direction * (taker_px - eff) / mid * 1e4 + ((TAKER - MAKER) if filled else 0.0)
@@ -343,8 +349,8 @@ def run_exit(a) -> int:
             except ValueError:   # a flat (single-price) symbol-day: no tick, so this exit is UNMEASURED and counted, never a crash
                 no_tick_days.add((r.symbol, datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat()))
         if tk is not None:
-            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk, a.exit_w_min)
-            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk, a.exit_w_min)
+            res = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk, a.exit_w_min, a.exit_peg)
+            opp = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk, a.exit_w_min, a.exit_peg)
         atr = getattr(r, "atr", np.nan)
         mid = (res or {}).get("mid", np.nan)
         rows.append({"symbol": r.symbol, "day": datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat(),
@@ -364,7 +370,7 @@ def run_exit(a) -> int:
         mean = lo = hi = mb = lob = hib = None
     v, why = exit_verdict(bool(cal["calibrated"]), n, ns, mean, lo)
     fl = ok.filled.astype(bool) if n else pd.Series(dtype=bool)
-    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
+    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), **({"exit_peg": a.exit_peg} if a.exit_peg != "touch" else {}), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
            "n_time_stop_exits": len(ts_exit), "n_measured": n, "n_symbols": ns, "mean_delta_r": mean,
            "deflated_ci_delta_r": [lo, hi], "ci_lo_percentile": lo_pct, "mean_delta_bps": mb, "deflated_ci_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()) if n else None,
@@ -428,6 +434,30 @@ def _self_test() -> None:
     d5b = d.copy()
     d5b.loc[d5b.t == T0, "high"] = 100.03
     assert delta_f(d5b, int(T0), -1, tick, 1)["filled"] is True
+    # MID PEG (RQ-20261118-04a5-05): a sell rests AT mid 100.0 (not the ask 100.005); STRICT fill needs a high >= 100.01 in (T, T+W].
+    # A one-tick pop (100.01) fills the mid peg but NOT the touch (needs 100.015): the half-tick-inside trade-off.
+    d6 = pd.DataFrame({"t": t, "open": base, "high": base, "low": base, "close": base})
+    d6.loc[d6.t == T0, "high"] = 100.01
+    rt, rm = delta_f(d6, int(T0), -1, tick, 1), delta_f(d6, int(T0), -1, tick, 1, "mid")
+    assert rt["filled"] is False and rm["filled"] is True, (rt, rm)
+    # filled mid sell vs taker at the bid: (mid - bid)/mid*1e4 = half a tick in bps, plus the 3.5 bps fee saving
+    assert abs(rm["delta_bps"] - (0.005 / 100 * 1e4 + 3.5)) < 1e-6, rm
+    # unfilled mid peg falls back to the market at T+W exactly as the touch arm does (identical delta)
+    dflat = pd.DataFrame({"t": t, "open": base, "high": base, "low": base, "close": base})   # never trades a tick through mid
+    ru_t, ru_m = delta_f(dflat, int(T0), -1, tick, 1), delta_f(dflat, int(T0), -1, tick, 1, "mid")
+    assert ru_m["filled"] is False and abs(ru_m["delta_bps"] - ru_t["delta_bps"]) < 1e-12, (ru_t, ru_m)
+    # buy-side mirror: a one-tick dip fills the mid peg only
+    d7 = pd.DataFrame({"t": t, "open": base, "high": base, "low": base, "close": base})
+    d7.loc[d7.t == T0, "low"] = 99.99
+    assert delta_f(d7, int(T0), 1, tick, 1)["filled"] is False and delta_f(d7, int(T0), 1, tick, 1, "mid")["filled"] is True
+    # defaults unchanged: peg="touch" is byte-identical to the pre-arm call on every fixture above
+    for fx, dr, w in ((d2, 1, None), (d3, 1, None), (d4, -1, None), (d5, -1, 1), (d5b, -1, 1), (d6, -1, 1)):
+        assert delta_f(fx, int(T0), dr, tick, w) == delta_f(fx, int(T0), dr, tick, w, "touch")
+    try:
+        delta_f(d, int(T0), 1, tick, 1, "far")
+        raise AssertionError("an unknown peg must be refused")
+    except ValueError:
+        pass
     # exit epoch = decision bar open + 25 h
     assert exit_epoch(pd.Timestamp("2025-10-01 03:00", tz="UTC"), 24) == int(pd.Timestamp("2025-10-02 04:00", tz="UTC").timestamp())
     # 00:00Z exit stitches the previous day's last minute
@@ -474,6 +504,8 @@ def main(argv=None) -> int:
     ap.add_argument("--exit-rule", default=EXIT_RULE_ID, help="exit mode: the registered rule id the result names")
     ap.add_argument("--exit-w-min", type=int, default=W_MIN,
                     help="exit mode: market-fallback window W in minutes for the closing order (calibration stays at W_MIN)")
+    ap.add_argument("--exit-peg", choices=["touch", "mid"], default="touch",
+                    help="exit mode: where the closing maker order rests (touch = policy F, the default; mid = the D9 mid-peg arm)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
