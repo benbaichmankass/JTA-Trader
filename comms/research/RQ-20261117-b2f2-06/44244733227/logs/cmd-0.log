@@ -1,0 +1,12 @@
+Fetching QQQ 60 candles 2018-06-23 -> 2026-11-18 (source=dukascopy) …
+  dukascopy: QQQ -> INSTRUMENT_ETF_CFD_US_QQQ_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-17T20:00:00
+Wrote 14688 rows (2018-06-25 -> 2026-11-17) to /tmp/exit_lever_ablation_wbigjsmj/qqq_pullback_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-06/44244733227/arms/A__trades.jsonl --json comms/research/RQ-20261117-b2f2-06/44244733227/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2021-10-31 23:59
+[SE8] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-06/44244733227/arms/SE8__trades.jsonl --json comms/research/RQ-20261117-b2f2-06/44244733227/arms/SE8__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --stale-exit-bars 8 --start 2018-06-01 --end 2021-10-31 23:59
+[SE12] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261117-b2f2-06/44244733227/arms/SE12__trades.jsonl --json comms/research/RQ-20261117-b2f2-06/44244733227/arms/SE12__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --stale-exit-bars 12 --start 2018-06-01 --end 2021-10-31 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
