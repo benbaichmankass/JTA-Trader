@@ -119,7 +119,7 @@ The operator added a second promotion path on 2026-11-17 (doctrine PR: OPERATING
 - The bar therefore counts trades whose **R denominator is the signal-time declared risk** (`r_multiple_provenanced` basis `declared_initial`), which no trailing amend can reach. The stop-never-moved subset is shown beside it so the bias stays visible.
 - The **venue-measured-pnl subset** (`classify_pnl` = MEASURED) is shown too. A PASS whose measured subset is short rests partly on estimated pnl for its "net of real costs" half.
 
-**Population:** `python3 scripts/research/live_bar.py --json` over the live diag journal, read 2026-11-18 ~23:55Z: 7,965 trades and 6,748 order packages read; 1,495 closed trades with a declared-initial R. Lifetime, so it includes trades from before a leg's current status. Rows shown: every leg with n ≥ 20 or with any real-money trade.
+**Population:** `python3 scripts/research/live_bar.py --json` over the live diag journal, read 2026-11-18 between ~23:00Z and ~23:10Z (system clock; an earlier draft said ~23:55Z, which was an estimate): 7,965 trades and 6,748 order packages read; 1,495 closed trades with a declared-initial R. Lifetime, so it includes trades from before a leg's current status. Rows shown: every leg with n ≥ 20 or with any real-money trade.
 
 | Leg | Live bar | n (real · paper) | ΣR | mean R | 80% LB | venue-measured-pnl subset | stop-never-moved subset |
 |---|---|---|---|---|---|---|---|
