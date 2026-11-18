@@ -481,6 +481,14 @@ def run(a) -> int:
                 grades[r["trade_id"]] = r["grade_score"]
     by, ex = leg_series(trades, mu)
     if a.learned:
+        # the learned mode FITS LightGBM on the trainer (needs_vm_data), so it takes the trainer heavy queue like every fitting job
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        try:
+            from scripts.ml._heavy_queue import take_heavy_queue
+            _lock = take_heavy_queue("d10-basset-learned")   # noqa: F841 - held for the process lifetime
+        except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
+            print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
         lp = learned_points(by, mu)
         oof = learned_oof(lp)
         for p, s_ in zip(lp, oof):
