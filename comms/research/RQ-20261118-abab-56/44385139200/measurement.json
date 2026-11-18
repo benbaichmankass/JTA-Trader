@@ -1,0 +1,129 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 46,
+  "leg": "ict_scalp_eth_15m",
+  "symbol": "ETHUSDT",
+  "arm_a": {
+    "state": "fail",
+    "live_trades_with_r_basis": 46,
+    "live_trades": 47,
+    "matched": 3,
+    "match_rate": 0.0652,
+    "pearson_r_live_vs_replay_gross_r": 0.5547,
+    "mean_gap_gross_r": 0.097,
+    "gap_ci95_bootstrap": [
+      -0.6006,
+      0.8399
+    ],
+    "gap_ci_contains_0": true,
+    "mde_note": "with the observed spread of the gap the CI-contains-0 clause only excludes a gap larger than half the CI width; a narrow-pass is not proof of zero gap",
+    "components_r": {
+      "entry": 3.8751,
+      "exit": 0.2911,
+      "execution": 0.0
+    },
+    "diverged_because": [
+      "match rate 0.0652 < 0.8: live-only 43 (median 4.8 min into the bar = forming-bar entries), backtest-only 14"
+    ],
+    "close_reason_mix": {
+      "live_only:tp": 7,
+      "live_only:other": 25,
+      "matched:other": 1,
+      "execution_unattributable:other": 1,
+      "live_only:sl": 10,
+      "matched:tp": 2,
+      "live_only:reconciler": 1
+    },
+    "account": "bybit_1",
+    "live_window": {
+      "from": "2026-07-24T08:50:44.342347+00:00",
+      "to": "2026-11-17T16:09:45.144895+00:00",
+      "excluded_spans": [],
+      "excluded_bt": {
+        "n": 0,
+        "net_r": 0
+      }
+    },
+    "harness_trades_in_window": 17
+  },
+  "arm_b": {
+    "state": "clear",
+    "primary_basis": "B3",
+    "bases": {
+      "B1": {
+        "n": 78,
+        "net_r": -1.005,
+        "expectancy_r": -0.0129,
+        "expectancy_ci95_bootstrap": [
+          -0.194,
+          0.1787
+        ]
+      },
+      "B2": {
+        "n": 78,
+        "net_r": 1.3181,
+        "expectancy_r": 0.0169,
+        "expectancy_ci95_bootstrap": [
+          -0.1644,
+          0.2087
+        ]
+      },
+      "B3": {
+        "n": 78,
+        "net_r": 0.4421,
+        "expectancy_r": 0.0057,
+        "expectancy_ci95_bootstrap": [
+          -0.1756,
+          0.197
+        ]
+      },
+      "B4": {
+        "n": 78,
+        "net_r": 2.765,
+        "expectancy_r": 0.0354,
+        "expectancy_ci95_bootstrap": [
+          -0.1457,
+          0.2276
+        ]
+      },
+      "B5": {
+        "n": 78,
+        "net_r": -0.1019,
+        "expectancy_r": -0.0013,
+        "expectancy_ci95_bootstrap": [
+          -0.1827,
+          0.1898
+        ]
+      }
+    },
+    "cost_bases_fee_slip_bps_rt": {
+      "B1": [
+        11.0,
+        3.0
+      ],
+      "B2": [
+        7.5,
+        3.0
+      ],
+      "B3": [
+        11.0,
+        0.82
+      ],
+      "B4": [
+        7.5,
+        0.82
+      ],
+      "B5": [
+        11.0,
+        1.64
+      ]
+    },
+    "window": {
+      "start": "2025-10-04",
+      "end": "2026-10-01"
+    }
+  },
+  "decision_rule_id": "RULE-RQ20261118-ICTSCALP-ETH15M-FIDELITY",
+  "action": "PROPOSE a revert to the operator (a demotion is never done here)"
+}
