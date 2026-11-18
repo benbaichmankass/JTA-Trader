@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-1c4e-01.yaml (ENTRY execution lever: maker entry on ml_entry's own decisions, lane ML-DECISION-MODELS)
 # wiring: research/queue/RQ-20261118-04a5-05.yaml (`exit --exit-peg mid`: D9 mid-peg arm, aadc-10 fail_action)
+# wiring: research/queue/RQ-20261118-e8a1-01.yaml (`exit --exit-peg mid --population dev_oof`: fresh-window confirmation of 04a5-05)
 # wiring: research/queue/RQ-20261117-aadc-02.yaml (`exit`: maker EXIT on v1's 24h time-stop exits, row ML-D9-MAKER-EXIT-HARNESS)
 """Does a post-only MAKER entry (DESK-MAKER-FILLS policy F: join the near touch, 5-min fallback to the market) improve the FROZEN
 ENTRY v1 model's own decisions, net of fees and adverse selection, in R per decision? (Tier-1 research; no order, no config.)
@@ -172,6 +173,44 @@ def v1_decisions(cache: Path) -> pd.DataFrame:
     return taken
 
 
+def dev_oof_decisions(cache: Path, tau: float = 0.10) -> pd.DataFrame:
+    """v1's RECIPE (c692-01: FEATURES, LGB_PARAMS, purge + embargo) scored OUT OF FOLD on the development walk-forward
+    (E.DEV_FOLDS, 2022-01-01..HOLDOUT_START): each fold is fit only on rows before its start, exactly as E.walk_forward does,
+    and the same tau-0.10 sequential policy picks the decisions. A population DISJOINT from the held-out year every maker-exit
+    read so far used (1c4e-01, aadc-02, aadc-10, 04a5-05), so it is the fresh window 04a5-05's pass_action asks for. These are
+    per-fold refits, not the frozen live booster (declared in the population string)."""
+    import itertools
+    syms = E.universe()
+    E.fetch(cache, syms, end=E.END)
+    tab = E.build_table(cache, syms)
+    tab["ts"] = pd.to_datetime(tab["ts"], utc=True)
+    hs = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    dev = tab[tab.ts < hs]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [hs]
+    out = []
+    for lo, hi in itertools.pairwise(bounds):
+        test = dev[(dev.ts >= lo) & (dev.ts < hi - pd.Timedelta(hours=E.HORIZON_H + 1))].reset_index(drop=True)
+        pl, ps = E.fit_predict(E.purge_train(dev, lo), test)
+        tk = E.policy(test, pl, ps, tau)
+        key = test.set_index(["symbol", "ts"])[["atr", "entry"]]
+        got = key.reindex(pd.MultiIndex.from_arrays([tk.symbol, pd.to_datetime(tk.ts, utc=True)]))
+        tk["atr"], tk["entry"] = got["atr"].to_numpy(), got["entry"].to_numpy()
+        out.append(tk)
+        print(json.dumps({"fold": str(lo.date()), "n_taken": len(tk)}), flush=True)
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+
+POPULATIONS = {  # name -> (window start, window end, train_end for the holdout-ledger disjointness check, label)
+    "heldout": (E.HOLDOUT_START, E.END, "2025-09-30",
+                f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END}"),
+    # each fold trains only on rows before its own start; the earliest test row is 2022-01-01, so the ledger's window-level
+    # train_end is the day before it (the EXEC lever itself is not fit at all)
+    "dev_oof": (E.DEV_FOLDS[0], "2025-09-30", "2021-12-31",
+                f"v1's recipe (c692-01) scored out of fold on the dev walk-forward {E.DEV_FOLDS[0]}..2025-09-30 (per-fold "
+                "refits, tau 0.10; disjoint from the held-out year)"),
+}
+
+
 def run(a) -> int:
     import holdout_lock as HL
     out = Path(a.out)
@@ -318,12 +357,14 @@ def run_exit(a) -> int:
     t0 = time.time()
     cal = calibrate(a)
     (out / "calibration.json").write_text(json.dumps(cal, indent=1) + "\n")
-    taken = v1_decisions(Path(a.kcache))
+    pop = getattr(a, "population", "heldout")
+    w_start, w_end, train_end, pop_label = POPULATIONS[pop]
+    taken = v1_decisions(Path(a.kcache)) if pop == "heldout" else dev_oof_decisions(Path(a.kcache))
     n_all = len(taken)
     ts_exit = taken[taken.reason == 0].reset_index(drop=True)
-    print(f"v1 held-out decisions {n_all}; time-stop exits {len(ts_exit)}", flush=True)
+    print(f"{pop} decisions {n_all}; time-stop exits {len(ts_exit)}", flush=True)
     # the claim comes BEFORE any post-exit 1m outcome is read
-    claim = HL.claim_read(EXIT_MODEL_ID, E.HOLDOUT_START, E.END, a.unit, a.reader, Path(a.ledger), train_end="2025-09-30",
+    claim = HL.claim_read(EXIT_MODEL_ID, w_start, w_end, a.unit, a.reader, Path(a.ledger), train_end=train_end,
                           family="EXEC")
     lo_pct = float(claim["bar"]["ci_lo_percentile"])
     cache = Path(a.cache)
@@ -370,7 +411,8 @@ def run_exit(a) -> int:
         mean = lo = hi = mb = lob = hib = None
     v, why = exit_verdict(bool(cal["calibrated"]), n, ns, mean, lo)
     fl = ok.filled.astype(bool) if n else pd.Series(dtype=bool)
-    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), **({"exit_peg": a.exit_peg} if a.exit_peg != "touch" else {}), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
+    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), **({"exit_peg": a.exit_peg} if a.exit_peg != "touch" else {}),
+           **({"population": pop} if pop != "heldout" else {}), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
            "n_time_stop_exits": len(ts_exit), "n_measured": n, "n_symbols": ns, "mean_delta_r": mean,
            "deflated_ci_delta_r": [lo, hi], "ci_lo_percentile": lo_pct, "mean_delta_bps": mb, "deflated_ci_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()) if n else None,
@@ -386,8 +428,7 @@ def run_exit(a) -> int:
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "exits.csv.gz", index=False)
     verdict = {"verdict": v, "read_state": "measured", "n": n,
-               "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END} that exit on "
-                              "the 24h time stop, measured where 1m Binance-vision klines exist"),
+               "population": f"{pop_label} that exit on the 24h time stop, measured where 1m Binance-vision klines exist",
                "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock")}}
     (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
     print(json.dumps({"verdict": v, "why": why}), flush=True)
@@ -396,6 +437,10 @@ def run_exit(a) -> int:
 
 # ------------------------------------------------------------------------------------------------ self-test
 def _self_test() -> None:
+    # fresh-window population (RQ-20261118-e8a1-01): disjoint from the held-out year, and each window starts after its train_end
+    for _name, (w0, w1, tr_end, _lab) in POPULATIONS.items():
+        assert tr_end < w0 <= w1, _name
+    assert POPULATIONS["dev_oof"][1] < POPULATIONS["heldout"][0]
     T0 = 1_700_000_000 - (1_700_000_000 % 3600)
     t = np.arange(T0 - 3600, T0 + 3600, 60)
     base = np.full(len(t), 100.0)
@@ -506,6 +551,9 @@ def main(argv=None) -> int:
                     help="exit mode: market-fallback window W in minutes for the closing order (calibration stays at W_MIN)")
     ap.add_argument("--exit-peg", choices=["touch", "mid"], default="touch",
                     help="exit mode: where the closing maker order rests (touch = policy F, the default; mid = the D9 mid-peg arm)")
+    ap.add_argument("--population", choices=sorted(POPULATIONS), default="heldout",
+                    help="exit mode: heldout = v1's frozen booster on the held-out year (default); dev_oof = v1's recipe out of "
+                         "fold on the dev walk-forward (the fresh-window confirmation, RQ-20261118-e8a1-01)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
