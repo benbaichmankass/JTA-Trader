@@ -42,7 +42,7 @@
   - Real money is clean: SL 15, live-review 10, TP 3, max-hold 2.
   - Paper has 4 `stuck_strategy_watchdog` closes and 11 false-flat closes.
   - Orphan: MGC 7735.
-- **H7 watch.** INV-3 alerts on 7735 (an adopted orphan with no package link). Every other INV reads recent = 0.
+- **H7 watch.** INV-3 alerts on 7735 (an adopted orphan with no package link). Every other alerting INV reads recent = 0 (report-only INV-2b reads recent = 2).
 - **H8 watch.** 5/5 producers are fresh. news_decisions is could_not_look for the 4th week.
 - **H9 watch.** `ib_stop_over_cover` CRITICAL fired twice and was `suppressed_by_policy` both times. The stray long followed 3.7 h later.
 - **H10 watch.** Breaches per day fell from 9 to 2–4. The dispatcher runs about hourly, with 2 h gaps.
