@@ -6,7 +6,7 @@ id: RQ-20261118-f7c1-01
 title: 'ml_entry same-bar basket cap: does keeping at most k same-direction decisions per decision bar (survivors ranked by the
   frozen v1 score) cut max drawdown by >= 20% without cutting net R, on the committed 907-trade Stage-0 record, and beat a matched
   random drop?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -136,4 +136,18 @@ related:
 - RQ-20261103-5e04-01
 - RQ-20261101-c692-06
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T21:12:00+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-01-SAMEBAR-CAP
+  auto: false
+  decision_rule_id: RULE-RQ20261118-f7c1-01-SAMEBAR-CAP
+  evidence:
+  - research/results/RQ-20261118-f7c1-01/local-20261118T2112Z.jsonl
+  graded_at: '2026-11-18'
+  grader: ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN), rule applied as registered in ce21e1c5e3
+  reason: 'k=2 passes (a) sum net R +54.09 >= +33.68, (b) max DD 41.07 <= 0.8 x 62.81 = 50.25 R, (c) +54.09 >= random-drop median
+    +34.58; k=3 fails (b) (DD ratio 0.88); k=1 fails (a) (+17.96). CAVEATS: the net-R gain is inside noise (bar-clustered CI of the
+    difference [-21.3, +61.2] R); the DD cut is mostly the dropping (random-drop median DD 42.41 vs ranked 41.07, ranked percentile
+    0.36), while the ranking carries the net R (percentile 0.997); freed-slot trades not modelled.'
+  rows: 1
+  verdict: pass
