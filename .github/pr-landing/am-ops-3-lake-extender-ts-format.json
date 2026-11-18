@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tooling bug fix only: scripts/ops/extend_data_from_lake.py wrote malformed timestamps ('2026-11-16 00:00:00-07-07') into date-only daily files on the trainer (apply #26966) because the date's '-MM-DD' tail was read as a UTC offset. New rows now mirror the file's own format. Regression test added. No src/, config/, order path or VM runtime; the trainer repair runs through trainer-vm-diag separately."
+}
