@@ -40,7 +40,7 @@ def test_rearm_redispatches_this_workflow_on_main_and_does_not_count_an_open_pre
     jq = next(ln for ln in text.splitlines() if 'select(.status=="queued"' in ln)
     assert "in_progress" not in jq
     # short wait with work left, long heartbeat wait without
-    assert "wait_s=150" in text and "wait_s=600" in text
+    assert "wait_s=150" in text and "wait_s=1800" in text
 
 
 def test_dispatch_job_exports_the_summary_counts_the_rearm_reads():

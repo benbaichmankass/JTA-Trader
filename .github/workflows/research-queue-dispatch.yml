@@ -498,7 +498,7 @@ jobs:
   #   * schedule-keeper only runs on a push to main and on its own cron, which GitHub also drops, so it cannot be the heartbeat.
   # The dispatcher now re-arms ITSELF: when a cycle ends it dispatches the next one (workflow_dispatch by the bot, which
   # already means FIRE). With work left (deferred or dispatched > 0) the wait is 150 s, enough for the just-fired short
-  # units to clear the in-flight caps; with nothing left it is 600 s, a heartbeat that depends on no push and no cron.
+  # units to clear the in-flight caps; with nothing left it is 1800 s, a heartbeat that depends on no push and no cron. (600 s at first; lengthened the same day when the hosted-runner queue was measured saturated: 400+ queued runs, a system-action waiting 10+ min. The idle wait holds one runner slot asleep, so it is kept long; new work arriving is a push to main, which schedule-keeper turns into a cycle.)
   # Nothing a cycle may fire changes: the in-flight caps, the repo-queued cap, the GPU cap and the ledger cap all bind each
   # cycle exactly as before, and the `research-queue-dispatch` concurrency group still serialises cycles. Brakes here: never
   # re-arm while another dispatch run is already waiting to start (so the keeper, the cron and this chain collapse into one), and a
@@ -522,7 +522,7 @@ jobs:
           DEFERRED: ${{ needs.dispatch.outputs.deferred }}
         run: |
           set -uo pipefail
-          if [ "${DISPATCHED:-0}" != "0" ] || [ "${DEFERRED:-0}" != "0" ]; then wait_s=150; else wait_s=600; fi
+          if [ "${DISPATCHED:-0}" != "0" ] || [ "${DEFERRED:-0}" != "0" ]; then wait_s=150; else wait_s=1800; fi
           echo "dispatched=${DISPATCHED:-0} deferred=${DEFERRED:-0} -> re-arming in ${wait_s}s"
           sleep "${wait_s}"
           # Another cycle already WAITING to start (keeper, cron, a human): that one is the next cycle. An in_progress run is
