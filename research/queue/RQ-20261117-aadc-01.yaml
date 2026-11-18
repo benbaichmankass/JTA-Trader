@@ -2,7 +2,7 @@
 id: RQ-20261117-aadc-01
 title: 'ML-VOL-LABEL-LIVE-VERIFY: do the trainer-replayed vol labels of the live D2 heads (BTC and SOL fc-pcv-v2, MES v2) reproduce the
   label the LIVE gate recorded on the same bars (regime_ml_vol_shadow), chance-corrected?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -148,3 +148,14 @@ ml_consumer:
   book: demo_floor
 last_dispatched_at: '2026-11-18T07:58:12+00:00'
 rearmed_at: '2026-11-17T12:46:10+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261117-aadc-01-VOL-LABEL-VERIFY
+  evidence:
+  - research/results/RQ-20261117-aadc-01/44263063258.jsonl
+  - comms/research/RQ-20261117-aadc-01/44263063258/measurement.json
+  graded_at: '2026-11-18'
+  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
+  reason: 'rows measured (run 44263063258) -> FAIL by the registered rule (unit verdict = the BTCUSDT head). BTC btc-regime-15m-lgbm-fc-pcv-v2, 1,111 distinct bars: asof agreement 0.936 / kappa 0.205 / median |dp| 0.013; prev_bar 0.937 / 0.240 / 0.012 -> agreement and median |dp| pass, kappa fails (live volatile share 3.3% vs replay 5.3%: the rare volatile bars mostly disagree). SOL sol-regime-15m-lgbm-fc-pcv-v2, 676 bars: asof 0.734 / 0.428 / 0.129; prev_bar 0.771 / 0.510 / 0.119 -> all three bars fail (live 40.4% vs replay 33.4% volatile). MES mes-regime-5m-lgbm-v2: 23 bars < 100 -> INDETERMINATE, as stated before the run. ETH eth-regime-1h-lgbm-xasset-v1: not_applicable, no live label ever served. prev_bar is the better alignment on both heads (as a one-bar lag would predict) but neither reaches the bar. fail_action applied: bcd2-01 and b819-01 grading blocks carry population_note ''replay population, not live''. aadc-08 graded the yz head, which this unit did not verify (no live yz labels exist); its not-live-verified caveat stands. Next iteration (filed, a build): the serve-path diff, the live row vs the replayed row per bar on the disagreeing bars, p delta by feature block, fc_* first. ETH: 0f87-01''s ETH part needs a serving head first; a finding for the D2 slot owner, not a verify FAIL. 0f87-01 stays parked (SOL did not pass).'
+  rows: 4
+  verdict: fail
