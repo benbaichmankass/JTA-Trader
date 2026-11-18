@@ -1087,6 +1087,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pairs-sleeve-PROPOSAL-2026-07-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-sleeve-real-money-readiness-2026-07-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-stocktake-2026-10-07.md` | evidence | live | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/practice-review-2026-11-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/programmes/02-AI-TRADER.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for G4; re-measured by the weekly roadmap pass |
 | `docs/research/programmes/04-MACRO-SLEEVE.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass |
