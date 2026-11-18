@@ -1,0 +1,153 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Weekly walkthrough 2026-11-18 call D1 -> PI-20261118-PREP1118-0001.
+# Decision rule registered BEFORE any run (this file is committed before the harness reads a score).
+# Gates this adds or changes: none (a research rule, not a runtime switch; a PASS is a Tier-3 PROPOSAL).
+id: RQ-20261118-f7c1-01
+title: 'ml_entry same-bar basket cap: does keeping at most k same-direction decisions per decision bar (survivors ranked by the
+  frozen v1 score) cut max drawdown by >= 20% without cutting net R, on the committed 907-trade Stage-0 record, and beat a matched
+  random drop?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series portfolio practice (docs/reference/trading-and-model-practice-principles.md): correlated positions opened
+  together are one bet, so concentration is budgeted at the basket level, not per trade; a per-bar count cap is the simplest basket
+  budget and is tested against a random drop so the ranking, not the dropping, has to carry it.'
+question: 'On the committed ml_entry Stage-0 per-trade record (comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl, 907
+  trades, 437 distinct decision bars, arm F = the live exit, net of fee 11 + slippage 3 bps round trip + funding 1 bps per 8h), apply a
+  per-decision-bar same-direction cap k in {1, 2, 3}: at each decision bar, of the decisions on one side keep the k with the highest
+  frozen v1 predicted net R for that side (the score the live adapter has at the bar close; causal) and drop the rest. Does a cap cut the
+  record''s max drawdown without cutting its net R, and does score ranking beat dropping the same number at random?'
+why_this_matters: 'Weekly walkthrough 2026-11-18 s2 Q1 / D1: ml_entry''s real-money losses arrive as same-bar baskets (several symbols
+  stopped on one bar), so the record''s trades are not independent and its effective n is well under 907. If a cap keeps net R and cuts
+  drawdown, the real-money leg carries less basket risk for the same edge. A PASS is a Tier-3 sizing/risk PROPOSAL, never a self-merge.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: docs/reviews/2026-11-18-weekly-walkthrough.md (D1)
+  verdict_read: n/a
+  diagnosis: '907 trades on 437 decision bars (MEASURED from the record): on average ~2.1 decisions share a bar, and the walkthrough
+    measured live losses clustered 3+ per bar. A per-bar cap is the one-factor lever on that clustering.'
+  search: 'k grid {1, 2, 3} fixed here, before any score is read; survivor ranking by the frozen v1 score fixed here; nothing chosen on the
+    test window'
+  attempt: 1
+  due_by: '2026-11-25'
+levers:
+- name: same_bar_same_direction_cap
+  values: [uncapped, k1, k2, k3]
+  hypothesised_effect: max drawdown falls >= 20% while net R holds (walkthrough p 0.6)
+data_and_approximation: 'The 907 committed rows carry symbol, side, decision_ts and net_r, not the score. The harness re-scores every
+  (symbol, decision_ts) with the frozen v1 booster that produced them (comms/research/RQ-20261101-c692-06/41324826751/model, as
+  ml_entry_maker_replay.v1_decisions does) on the ml_decision_entry table rebuilt from Binance Vision 1h klines, and joins the side''s
+  prediction. Drawdown: per-bar net R summed, booked at the decision bar, in decision order; max peak-to-trough of the cumulative sum, in
+  R (every trade is sized to the same risk). APPROXIMATION NOT MODELLED: a dropped decision would free its symbol earlier, so the live
+  policy could take a later decision on that symbol that the record does not contain; the capped arm cannot add trades. Direction of
+  that bias is unknown and is stated beside the result.'
+decision_rule:
+  id: RULE-RQ20261118-f7c1-01-SAMEBAR-CAP
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_samebar_cap.py: for each k, sum net R and max drawdown (R) of the score-ranked capped record vs
+    the uncapped record; the paired difference in sum net R with a decision-bar-clustered bootstrap CI (2000 reps, seed 20261118,
+    resampling decision bars); a matched random-drop control (2000 draws: at every bar drop the same number per side at random) giving
+    the control''s median sum net R and median max drawdown and the score-ranked arm''s percentile in each. Reported, never gating: mean
+    net R per trade and its bar-clustered CI, n kept, bars where the cap binds, per-side and per-symbol kept counts, longest losing run.'
+  rule: 'INDETERMINATE IF fewer than 95% of the 907 rows get a score, OR the k=1 cap binds on fewer than 30 decision bars. For each k:
+    PASS_k IF (a) capped sum net R >= uncapped sum net R AND (b) capped max drawdown <= 0.8 x uncapped max drawdown (the walkthrough D1
+    rule, net of cost) AND (c) capped sum net R >= the matched random-drop control''s median sum net R (the ranking, not the dropping,
+    carries it). PASS IF any PASS_k; the selected k is the LARGEST passing k (the least intervention). FAIL otherwise. Thresholds fixed
+    now and not changed after any result.'
+  pass_action: 'Tier-3 PROPOSAL to the manager (risk/sizing): a per-decision-bar same-direction cap of k for ml_entry on its real-money
+    accounts, survivors by score, with this record, the not-modelled freed-slot bias stated, and a forward-window check unit.'
+  fail_action: 'The basket risk is not cheaply removable by a per-bar count cap: record which condition failed. If (a)+(b) pass and only
+    (c) fails, the drawdown cut is from dropping trades, not from ranking: next lever is a basket-level risk budget (size each of n
+    same-bar trades at 1/sqrt(n)), its own unit. If (b) fails, the drawdown is not driven by same-bar baskets: close D1.'
+  what_it_does_not_do: No config change, no order, no sizing change. A PASS is a Tier-3 PROPOSAL, not a change.
+  min_n: 907 committed trades; the cap must bind on >= 30 decision bars
+family_note: 'A re-read of a committed record (the c692-01 held-out window, already read); it reads no new window and fits nothing.
+  Three k values are tested; the rule requires the ranking control and a 20% drawdown cut, not a single noisy delta.'
+power:
+  expected_n: 907
+  min_detectable_effect: 0.2
+  effect_units: fraction_of_max_drawdown
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'The drawdown criterion is a point rule on the full record (no sampling test); the bar-clustered CI on the net-R difference is
+    reported so a reader can see whether (a) is inside noise.'
+  feasibility:
+    source: none
+    accrual_basis: Replays a committed record plus public klines; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every kept trade keeps its committed arm-F outcome; only which trades are kept differs
+  matched_random:
+    draws: 2000
+    note: same per-bar per-side drop counts as the score-ranked arm, survivors drawn at random. GATING via condition (c).
+  best_static:
+    grid:
+    - uncapped
+    - k1
+    - k2
+    - k3
+    excludes_test_folds: true
+    note: the grid is fixed in this file before any score is read; the selected k is fixed by rule (largest passing k), not by best result
+  bootstrap_group: decision_bar
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: a 20% drawdown cut on the real-money ml_entry leg at unchanged net R; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 15
+  why_runner: needs_internet (keyless public Binance Vision klines) to rebuild the scoring table; scores a committed booster (no fit).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_samebar_cap.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261118-f7c1-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether ml_entry's real-money accounts should cap same-direction decisions per decision bar
+  legs:
+  - ml_entry
+  book: money
+related:
+- PI-20261118-PREP1118-0001
+- PI-20261118-PREP1118-0004
+- RQ-20261103-5e04-01
+- RQ-20261101-c692-06
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-18T21:12:00+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-01-SAMEBAR-CAP
+  auto: false
+  decision_rule_id: RULE-RQ20261118-f7c1-01-SAMEBAR-CAP
+  evidence:
+  - research/results/RQ-20261118-f7c1-01/local-20261118T2112Z.jsonl
+  graded_at: '2026-11-18'
+  grader: ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN), rule applied as registered in ce21e1c5e3
+  reason: 'k=2 passes (a) sum net R +54.09 >= +33.68, (b) max DD 41.07 <= 0.8 x 62.81 = 50.25 R, (c) +54.09 >= random-drop median
+    +34.58; k=3 fails (b) (DD ratio 0.88); k=1 fails (a) (+17.96). CAVEATS: the net-R gain is inside noise (bar-clustered CI of the
+    difference [-21.3, +61.2] R); the DD cut is mostly the dropping (random-drop median DD 42.41 vs ranked 41.07, ranked percentile
+    0.36), while the ranking carries the net R (percentile 0.997); freed-slot trades not modelled.'
+  rows: 1
+  verdict: pass

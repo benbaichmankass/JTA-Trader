@@ -75,6 +75,10 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_entry_samebar_cap.py":
+        "ML-PRIMARY-7 same-bar cap (RQ-20261118-f7c1-01 / -08): inference only -- loads the committed frozen ENTRY v1 boosters "
+        "(comms/research/RQ-20261101-c692-06/41324826751/model) and scores public Binance Vision 1h rows (no training); ~25 s of CPU "
+        "locally or on a GitHub runner (compute cpu_light), never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_v1_filters_read.py":
         "ML-BAR-ONE-READ (RQ-20261115-a474-04): inference only -- loads the committed served ENTRY v1 boosters and scores one "
         "held-out year of public Binance Vision 1h rows (no training); minutes of CPU on a GitHub runner, never needs_vm_data, "
