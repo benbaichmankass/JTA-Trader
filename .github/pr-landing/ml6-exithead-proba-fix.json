@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research-harness correctness fix (scripts/research + tests only): four exit-head replays scored train_exit_head.train_model()'s LGBMClassifier with .predict(vec)[0] (the 0/1 CLASS LABEL) and fed it to would_exit_for(score < tau 0.10), so they evaluated a P<0.5 policy instead of the served P<0.10 head. Now predict_proba(vec)[0][1]; regression test added. Touches no config, serving path or order path. Affected results are re-armed in a separate HELD PR. Gates this adds or changes: none."
+}

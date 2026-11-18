@@ -152,8 +152,8 @@ def main(argv: list[str]) -> int:
         art = {"features": teh.FEATURES, "shape": SHAPE}
 
         def predict(vec, _b=booster):
-            # provenance: predict — P(class=1) of the binary holding_pays booster (exit_head_walkforward_multifold.py's closure)
-            return float(_b.predict(vec)[0])
+            # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) of the binary holding_pays booster (exit_head_walkforward_multifold.py's closure)
+            return float(_b.predict_proba(vec)[0][1])  # P(class=1); .predict would be the 0/1 class label
 
         recs = [replay_trade(df, t, art, predict, ACTION, lookback=a.lookback) for t in test]
         d = [float(r["replayed_r"]) - float(r["baseline_r"]) for r in recs]
