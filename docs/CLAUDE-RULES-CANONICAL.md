@@ -1855,7 +1855,7 @@ manager's recorded decision. It does not wait for approval. It reports.
   harness, a stated n, net of the full cost stack, and clearing a rule
   registered before the run. A live or paper book's P&L alone establishes
   edge only when it clears the LIVE BAR (operator, 2026-11-17: >= 20
-  confirmed-R live trades net of real costs, total R > 0, ~80% lower bound
+  live trades with R on the declared signal-time risk, net of real costs, total R > 0, ~80% lower bound
   of the mean > 0; OPERATING-PLAN § 2 "Live-performance promotion path").
 - **A data basis known to be wrong in the favourable direction is not
   "backed by data".** Until D1 lands, the backtest corpus defaults slippage
@@ -2062,7 +2062,8 @@ backtest, not more soak time.
    (computed + reported, non-blocking), mirroring the 2026-07-19 M25 reframe
    (`live_regime_discrimination`) and the 2026-07-26 WS-1 `shadow_soak` demotion.
 4. **Live results that clear the LIVE BAR also promote** (operator, 2026-11-17,
-   binding): >= 20 closed live trades with confirmed R, net of real costs, total
+   binding): >= 20 closed live trades with R on the declared signal-time risk
+   (`declared_initial`; venue-measured P&L where available), net of real costs, total
    R > 0 and the mean's one-sided ~80% lower bound > 0, demo and real-money trades
    of the same leg configuration pooled. A live-bar pass promotes even when the
    offline record failed or is missing (live wins; a fidelity-check unit runs in

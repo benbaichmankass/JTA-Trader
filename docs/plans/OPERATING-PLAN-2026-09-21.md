@@ -137,14 +137,14 @@ Popup answers, 2026-11-17, verbatim:
 - scope: *"Both strategies and MLs (Recommended)"*.
 
 1. **The live bar.**
-   - A leg (strategy or ML) clears it with **≥ 20 closed live trades with CONFIRMED R**, net of real costs.
+   - A leg (strategy or ML) clears it with **≥ 20 closed live trades with R on the declared signal-time risk (`declared_initial`)**, net of real costs, with venue-measured P&L where available.
    - Total R must be positive, AND the mean trade's **one-sided ~80% lower confidence bound** must be above zero (mean − 0.84 × sd/√n > 0).
    - Demo-floor and real-money trades of the SAME leg configuration pool, and the record says so.
-   - Unconfirmed-R trades never count; the n is always stated.
+   - Trades with no declared risk never count; the n is always stated. (The stored-stop `confirmedInitial` grade keeps only trades whose stop never moved and is biased toward losses, measured 2026-11-18, so it is reported but is not the bar.)
 2. **A live-bar pass promotes**, even when Stage 0 failed or is missing.
    - **Conflict rule:** live wins, and a fidelity-check unit runs in parallel to find why the backtest disagreed. That unit is drafted with the promotion, never after it.
    - A real-money roster change is still a Tier-3 act. It promotes on this record under the standing data-backed rule, with the operator notified at once.
-3. **The swap rule.** Operator ~16:30Z, verbatim: *"if, for example, it's a thing where like the ADA was on paper because it was 2 hours and we were keeping the 4 hours, but the 2 hours outperforming the 4 hours, then let the 2 hours take over instead of the 4 hours."*
+3. **The swap rule.** Operator ~16:29Z, verbatim: *"if, for example, it's a thing where like the ADA was on paper because it was 2 hours and we were keeping the 4 hours, but the 2 hours outperforming the 4 hours, then let the 2 hours take over instead of the 4 hours."*
    - When a demo-floor variant on the same symbol clears the live bar and beats the real-money variant on the same bar, the better variant **takes the slot**. It is a swap, not an add: the live one moves to the demo floor.
    - The same-symbol and non-slice rules still apply.
 4. **This is not a soak and never a precondition.**
