@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "URGENT REVERT of #26996 (IB order path). Observed on ib_paper after the 23:2xZ restart: 'IB open-trade cache: pruned 6 trade(s) absent from the account-wide open-order response (kept 0)' at 23:29:59Z, then _check_broker_naked_ib_positions graded all 3 IB positions naked and re-armed them (cancel + new OCA). The reqAllOpenOrders response does not carry the resting orders the way the change assumed, so the prune dropped live protection. Paper only (ib_live is dry_run). Needs a trader + web-api restart.",
+  "why": "Restores the pre-#26996 behaviour exactly (git revert of 32c03c0f8)."
+}
