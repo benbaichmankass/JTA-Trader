@@ -156,8 +156,8 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
             art = {"features": list(teh.FEATURES), "shape": SHAPE}
 
             def predict(vec, _b=booster):
-                # provenance: predict — P(class=1) of the binary booster for this arm's target (holding_pays-shaped)
-                return float(_b.predict(vec)[0])
+                # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) of the binary booster for this arm's target (holding_pays-shaped)
+                return float(_b.predict_proba(vec)[0][1])  # P(class=1); .predict would be the 0/1 class label
             per_arm[arm] = [replay_trade(df, t, art, predict, ACTION, lookback=a.lookback) for t in test]
         if CHAMPION not in per_arm:
             f.update({"read_state": "unestablishable", "reason": "champion did not train"})
