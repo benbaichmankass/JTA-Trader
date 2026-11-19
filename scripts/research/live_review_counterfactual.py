@@ -604,11 +604,63 @@ def append_outcomes(results: List[dict], path: Path = OUTCOMES) -> int:
     return len(new)
 
 
+#: the priced fields a re-price can change; any difference in one of them makes a superseding row.
+PRICED_FIELDS = ("net_r", "cf_r", "cf_r_shadow_0_5", "rec_r", "delta_r", "cf_method", "replay_fidelity")
+
+
+def latest_outcomes(rows: Iterable[dict]) -> Dict[str, dict]:
+    """review_id -> the LATEST row (file order). outcomes.jsonl is append-only: a re-price appends a row carrying
+    ``supersedes`` = the computed_at of the row it replaces (PI-20261118-PREP1118-0006, manager decision 2026-11-19)."""
+    out: Dict[str, dict] = {}
+    for r in rows:
+        out[r["review_id"]] = r
+    return out
+
+
+def _differs(a: dict, b: dict) -> bool:
+    for k in PRICED_FIELDS:
+        x, y = a.get(k), b.get(k)
+        if _num(x) is not None and _num(y) is not None:
+            if abs(float(x) - float(y)) > 1e-6:
+                return True
+        elif x != y:
+            return True
+    return False
+
+
+def supersede_outcomes(results: List[dict], reason: str, path: Path = OUTCOMES, dry_run: bool = False,
+                       only: Optional[set] = None) -> List[dict]:
+    """Append a superseding row for every review whose recomputed outcome differs from its latest recorded row in a
+    priced field. Never edits a line. Reviews with no recorded row are left to ``append_outcomes``. Returns the
+    (old, new) pairs written (or that would be, with ``dry_run``). ``only`` limits it to those review_ids (the set a
+    named fix changed; recompute drift in realised net_r is a separate decision)."""
+    if not reason:
+        raise ValueError("a supersede needs a reason")
+    latest = latest_outcomes(read_jsonl(path))
+    pairs = []
+    for r in results:
+        if only is not None and r["review_id"] not in only:
+            continue
+        o, old = r.get("outcome"), latest.get(r["review_id"])
+        if not o or old is None or not _differs(old, o):
+            continue
+        pairs.append({"old": old, "new": dict(o, supersedes=old["computed_at"], supersede_reason=reason)})
+    if pairs and not dry_run:
+        with path.open("a") as f:
+            for pr in pairs:
+                f.write(json.dumps(pr["new"], sort_keys=True) + "\n")
+    return pairs
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--live", action="store_true", help="read packages/trades via diag_fetch.sh and candles from the public API")
     ap.add_argument("--reviews", default=str(REVIEWS))
     ap.add_argument("--write", action="store_true", help="append computed outcome rows for CLOSED trades (idempotent by review_id)")
+    ap.add_argument("--supersede", metavar="REASON", help="append a superseding row (never an edit) for every recorded "
+                    "outcome whose re-priced value differs; REASON names the fix. Combine with --dry-run to list first.")
+    ap.add_argument("--dry-run", action="store_true", help="with --supersede: print the old -> new diff, write nothing")
+    ap.add_argument("--only-ids", metavar="FILE", help="with --supersede: one review_id per line; supersede only those")
     a = ap.parse_args(argv)
     if not a.live:
         ap.error("only --live is wired on the CLI; tests and the grader call price_all() with their own sources")
@@ -620,6 +672,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                       "by_reason": Counter(r["reason"] for r in res if r["reason"])}, indent=1))
     if a.write:
         print(f"appended {append_outcomes(res)} outcome row(s)")
+    if a.supersede:
+        only = {ln.strip() for ln in Path(a.only_ids).read_text().splitlines() if ln.strip()} if a.only_ids else None
+        pairs = supersede_outcomes(res, a.supersede, dry_run=a.dry_run, only=only)
+        for pr in pairs:
+            print(json.dumps({"review_id": pr["new"]["review_id"], "action": pr["new"].get("action"),
+                              **{k: [pr["old"].get(k), pr["new"].get(k)] for k in PRICED_FIELDS
+                                 if pr["old"].get(k) != pr["new"].get(k)}}, sort_keys=True))
+        print(f"{'would supersede' if a.dry_run else 'superseded'} {len(pairs)} outcome row(s)")
     return 0
 
 

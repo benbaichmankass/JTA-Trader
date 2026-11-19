@@ -449,9 +449,20 @@ def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Pa
                     out.append(f"{tag}: duplicate review_id {r.get('review_id')}")
                 ids.add(r.get("review_id"))
     if outcomes.exists():
+        seen: dict = {}       # review_id -> computed_at values of earlier rows (G6: append-only supersede chain)
         for n, r, err in _rows(outcomes):
-            if isinstance(r, dict) and r.get("review_id") not in ids:
+            if not isinstance(r, dict):
+                continue
+            if r.get("review_id") not in ids:
                 out.append(f"{outcomes.name}:{n}: review_id {r.get('review_id')} has no row in reviews")
+            prior = seen.setdefault(r.get("review_id"), [])
+            if r.get("supersedes") is not None:
+                if not r.get("supersede_reason"):
+                    out.append(f"{outcomes.name}:{n}: supersedes set without a supersede_reason")
+                if r["supersedes"] not in prior:
+                    out.append(f"{outcomes.name}:{n}: supersedes {r['supersedes']!r} names no earlier row for "
+                               f"{r.get('review_id')}")
+            prior.append(r.get("computed_at"))
     return out
 
 
@@ -619,6 +630,19 @@ def _self_test() -> int:
         c = not findings(rv, oc)
         print(f"  {'PASS' if c else 'FAIL'}  a consistent pair passes")
         ok &= c
+        # G6 supersede chain: names an earlier row's computed_at + carries a reason -> pass; else refused.
+        sup = mut(GOOD_OUTCOME, lambda r: r.update(computed_at="2026-11-19T07:00:00Z", net_r=0.5,
+                                                   supersedes=GOOD_OUTCOME["computed_at"], supersede_reason="fix X"))
+        for label, rows, want in (
+                ("a supersede naming an earlier row with a reason passes", [GOOD_OUTCOME, sup], False),
+                ("a supersede with no reason is refused", [GOOD_OUTCOME, dict(sup, supersede_reason=None)], True),
+                ("a supersede naming no earlier row is refused", [dict(sup, supersedes="2026-01-01T00:00:00Z")], True),
+                ("a supersede placed before the row it replaces is refused", [sup, GOOD_OUTCOME], True)):
+            oc.write_text("".join(json.dumps(x) + "\n" for x in rows))
+            c = bool(findings(rv, oc)) == want
+            print(f"  {'PASS' if c else 'FAIL'}  {label}")
+            ok &= c
+        oc.write_text(json.dumps(GOOD_OUTCOME) + "\n")
         pk = Path(d) / "packets"
         pk.mkdir()
         (pk / f"{GOOD_REVIEW['review_id']}.json").write_text(json.dumps({"a": 1}))

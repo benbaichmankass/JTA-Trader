@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -374,3 +377,40 @@ def test_initial_stop_refuses_a_trailed_stop_on_the_profit_side():
     assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 101.0, "meta": {}}) == 101.0   # risk side
     assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 99.0,
                             "meta": {"risk_per_unit": 1.5}}) == 101.5                                   # rpu wins
+
+
+def test_supersede_appends_only_changed_rows_and_never_edits(tmp_path):
+    """G6 (manager 2026-11-19): a re-price appends a superseding row; the stale line stays byte-identical."""
+    old_a = {"review_id": "LR-20261101T0000Z-pkg-a", "computed_at": "2026-11-02T00:00:00Z", "net_r": 91.47,
+             "cf_r": 91.47, "cf_r_shadow_0_5": 91.47, "rec_r": 91.47, "delta_r": 0.0, "cf_method": "no_path_change",
+             "replay_fidelity": None}
+    old_b = dict(old_a, review_id="LR-20261101T0000Z-pkg-b", net_r=1.0, cf_r=1.0, cf_r_shadow_0_5=1.0, rec_r=1.0)
+    p = tmp_path / "outcomes.jsonl"
+    p.write_text(json.dumps(old_a, sort_keys=True) + "\n" + json.dumps(old_b, sort_keys=True) + "\n")
+    before = p.read_text()
+    new_a = dict(old_a, computed_at="2026-11-19T07:00:00Z", net_r=0.27, cf_r=0.27, cf_r_shadow_0_5=0.27, rec_r=0.27)
+    new_b = dict(old_b, computed_at="2026-11-19T07:00:00Z")                  # unchanged price -> no row
+    new_c = dict(old_b, review_id="LR-20261101T0000Z-pkg-c")                 # never recorded -> append_outcomes' job
+    res = [{"review_id": o["review_id"], "outcome": o} for o in (new_a, new_b, new_c)]
+    assert cf.supersede_outcomes(res, "fix", path=p, dry_run=True) and p.read_text() == before
+    pairs = cf.supersede_outcomes(res, "PREP1118-0006 contract multiplier", path=p)
+    assert [pr["new"]["review_id"] for pr in pairs] == [old_a["review_id"]]
+    text = p.read_text()
+    assert text.startswith(before)                                            # nothing edited
+    latest = cf.latest_outcomes(cf.read_jsonl(p))
+    assert latest[old_a["review_id"]]["net_r"] == 0.27
+    assert latest[old_a["review_id"]]["supersedes"] == old_a["computed_at"]
+    assert latest[old_b["review_id"]]["net_r"] == 1.0
+    assert cf.supersede_outcomes(res, "fix", path=p) == []                    # idempotent: latest now matches
+    with pytest.raises(ValueError):
+        cf.supersede_outcomes(res, "", path=p)
+
+
+def test_supersede_only_limits_to_the_named_ids(tmp_path):
+    old = {"review_id": "LR-20261101T0000Z-pkg-a", "computed_at": "2026-11-02T00:00:00Z", "net_r": 1.0}
+    p = tmp_path / "outcomes.jsonl"
+    p.write_text(json.dumps(old) + "\n" + json.dumps(dict(old, review_id="LR-20261101T0000Z-pkg-b")) + "\n")
+    res = [{"review_id": rid, "outcome": dict(old, review_id=rid, net_r=2.0, computed_at="2026-11-19T07:00:00Z")}
+           for rid in ("LR-20261101T0000Z-pkg-a", "LR-20261101T0000Z-pkg-b")]
+    pairs = cf.supersede_outcomes(res, "fix", path=p, only={"LR-20261101T0000Z-pkg-b"})
+    assert [pr["new"]["review_id"] for pr in pairs] == ["LR-20261101T0000Z-pkg-b"]
