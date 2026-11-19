@@ -1,10 +1,13 @@
+# CLOSED 2026-11-19 by ML-PRIMARY-11: run 44383743409 read data ending before its split (BTC 2026-07-10, AVAX 2026-06-18), so its
+# 'measured n=0' was could-not-look (donchian_depth_retest now reports no_data for this). Superseded by the fresh-data re-run
+# RQ-20261119-ef40-03 (same rule). Data now fresh per trainer-vm-diag #27319.
 # Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
 # manager (session_01AFoLuHbhd9wFuGJfWRqyoV) on operator decision D5 (2026-11-18): re-test the Donchian 0.70 depth gate against 0.60.
 # One factor. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261118-04a5-01
 title: 'Donchian depth gate re-test: on the window AFTER PR #6322 chose it (2026-07-14 on), does min_confidence 0.70 still beat 0.60 on net R
   and max drawdown for trend_donchian (BTC 1h) and trend_donchian_avax_4h?'
-status: blocked
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -150,13 +153,3 @@ amendments:
   - 'CORRECTED ~10:00Z: the freeze premise above was wrong (trainer-vm-diag #27238); the block now names the undiagnosed n=0 cause instead.'
 last_dispatched_at: '2026-11-18T20:06:01+00:00'
 rearmed_at: '2026-11-18T22:05:00+00:00'
-blocked_on:
-- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
-    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
-    1h-file clause could never clear. The earlier block reason (frozen 1h/4h files) was WRONG: both legs resolve to fresh files (BTCUSDT_15m,
-    AVAXUSDT_5m), yet run 44383743409 read n=0 trades after the 2026-07-14 split on both legs. The cause is undiagnosed (harness signal path,
-    cache or split logic); re-running unchanged would repeat n=0.'
-  ref: 'PI to be filed: 04a5-01 n=0 diagnosis'
-  kind: build
-  clears_when: the n=0 cause is diagnosed and fixed (a local or trainer run of donchian_depth_retest.py shows incumbent n > 0 after the split
-    on both legs); then git mv this file to research/queue/ and set status queued (rule unchanged).
