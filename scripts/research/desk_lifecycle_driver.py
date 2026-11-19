@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - run by the judging lane (`entries`, `step`, `score`) and by research/queue RQ-20261028-d1f5-01 (`selfcheck`) via research-script-run.yml; no schedule consumes it.
+# wiring: manual-only - run by the judging lane (`entries`, `step`, `score`) and by research/queue RQ-20261028-d1f5-01 (`selfcheck`) via research-script-run.yml; no schedule consumes it. `action-grid` (ML-EXIT-ACTIONGRID-LABELS) writes comms/research/desk_lifecycle/action-grid/, the label source of research/queue RQ-20261101-78fc-05.
 """DESK-LIFECYCLE-S0 -- the desk's FULL-LIFECYCLE factorial replay: every trade runs bar by bar from entry to close.
 
 Operator 2026-10-28 ~06:10Z (paraphrased by the manager, binding for the lane): the desk's edge test must be a FULL RUN of
@@ -45,6 +45,8 @@ MODES
   entries   --out DIR [--pilot-n N] [--fetch]       claude entries (all fills, or a seeded pilot sample) + matched random
   step      --out DIR --entries F [--decisions F]   writes round packets (masked) + their key; prints what is pending
   score     --out DIR --entries F --decisions F     every cell, both main effects, the interaction, B3, verdict labels
+  action-grid --out DIR [--corpus desk|stage0]      ML-EXIT-ACTIONGRID-LABELS: every check-in x the 13-action bracket enum,
+                                                    each priced vs hold (one step; the rest of the path hold-to-bracket)
   selfcheck --out DIR [--fetch]                     unit d1f5-01: hold == simulate, judged-1 reproduction, no-lookahead,
                                                     leak scan + positive control, planted oracle / anti-oracle / null
 
