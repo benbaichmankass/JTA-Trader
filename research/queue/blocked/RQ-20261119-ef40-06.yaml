@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ, Tier 1 research), dispatched by the JTA Trader manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV; 15:22Z: author the ml-brackets iteration from the c21d-02 / 04a5-02 FAILs). Rule registered BEFORE any run.
+# BLOCKED by the predecessors' own fail_actions (D6 waits on a positive-net D3 entry). Gates this adds or changes: none.
+id: RQ-20261119-ef40-06
+title: 'ITERATION of ml-brackets (D6, lever time_stop_horizon_h): on the SAME frozen Foxhound-1 held-out decisions, does time stop 48 h (SL 2 / TP 3 ATR
+  unchanged) reach a pooled mean net R above the deflated bar, net of each symbol''s own cost stack? BLOCKED on a positive-net D3 entry model.'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-02
+  verdict_read: fail
+  diagnosis: 'RQ-20261117-c21d-02 FAIL (static TP 4 ATR: pooled -0.0585 R, se 0.0110, n 12,088, 51 symbols) and RQ-20261118-04a5-02 FAIL (quantile-MFE TP
+    head: paired d -0.0052 R, CI [-0.0145, +0.0041], n 12,746 vs bar +0.02): the TP lever is flat on Foxhound-1 held-out decisions, and those decisions
+    are net negative, so a bracket change cannot reach the absolute bar while the entry is negative. Both registered fail_actions route the next D6 lever
+    behind a positive-net D3 entry model. research/levers/ml-brackets.yaml declares two untested levers, sl_atr {1.5,2,3} and time_stop_horizon_h {12,24,48};
+    this unit registers one of them now, BLOCKED on that D3 gate, so it runs the day the gate clears.'
+  search: one factor, time_stop_horizon_h, at one new value; TP, entry decisions, tau, window and cost stack fixed at 2e3b-01
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-brackets.yaml#declared
+  attempt: 4
+  due_by: '2026-12-31'
+question: Same population, window 2025-10-01..2026-10-31, frozen boosters and tau as 2e3b-01; the SAME decisions relabelled with a longer time stop (48
+  h vs the live 24) at the live SL and TP, re-costed per symbol (more trades reach SL or TP before the clock; funding cost per trade rises with hold time).
+  Pooled mean net R, se, n; the paired difference vs the live 2/3/24 bracket on the same decisions is reported.
+why_this_matters: ml_entry is the real-money learned leg and its bracket (SL 2 / TP 3 ATR / 24 h) is static. The TP side is measured flat (c21d-02, 04a5-02);
+  time_stop_horizon_h is declared in research/levers/ml-brackets.yaml and untested. Registering it now, blocked on the D3 gate, means the read runs the
+  day a positive-net entry exists instead of waiting on authoring. A FAIL closes only this one CONFIG (a 48 h time stop on the frozen Foxhound-1 decisions),
+  not a family.
+power:
+  expected_n: 12000
+  min_detectable_effect: 0.03
+  effect_units: R_per_decision
+  sd: 0.9
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: same decisions as 2e3b-01 (n 12,746, se 0.0098). The gate is on the absolute pooled mean vs the deflated bar (~+0.017 R at n_tries ~13);
+    the paired delta vs 3 ATR is reported.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines + fundingRate; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: TP-PREDICT-HEAD
+  decision: where ml_entry places its take-profit at entry (3 ATR today) and the baseline a D6 Pointer model must beat
+  legs:
+  - ml_entry
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_population_test.py
+  - run
+  - --horizon-h
+  - '48'
+  - --rule-id
+  - RULE-RQ20261119-ef40-06-STATIC-H48-HELDOUT
+  - --cache
+  - /tmp/ml_entry_population_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-ef40-06
+decision_rule:
+  id: RULE-RQ20261119-ef40-06-STATIC-H48-HELDOUT
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_population_test.py run --horizon-h 48: the 2e3b-01 population and window, frozen boosters, tau from model.json;
+    decisions relabelled at time stop 48 h (SL 2 / TP 3 ATR unchanged) and re-costed per symbol (fee 11 + max(3, spread + sqrt impact) + own |funding|).
+    Pooled mean net R, se, n; read claimed in the holdout ledger before any summary.'
+  rule: INDETERMINATE under the 2e3b-01 floors (population < 10, reference < 40, cost missing > 10%, n < 300, < 10 symbols). PASS IF pooled mean net R >=
+    point_t_min x se of the ledger bar at its read count. FAIL otherwise. Fixed now, never changed after any result.
+  proposal_mapping: pass -> data-backed Tier-3 proposal for ml_entry's bracket (time stop 48 h (SL 2 / TP 3 ATR unchanged)) with this record and a revert.
+    fail -> the time_stop_horizon_h lever is closed on Foxhound-1 at this value; record it in research/levers/ml-brackets.yaml. indeterminate -> the starved
+    floor is the next unit.
+  what_it_does_not_do: Moves no bracket in-trade, changes no tau, serves nothing, places no order, edits no config.
+  min_n: 300
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'ESTIMATE: ml_entry is the real-money learned leg; a bracket that changes its sign is material, but the dev prior is weak.'
+intervention_controls:
+  not_applicable: 'a static time_stop_horizon_h on FIXED decisions moves every trade by the same rule; no selection to match at random. Controls: hold-to-bracket
+    (the live 2/3/24 on the same decisions, 2e3b-01) reported paired; the value is from the declared lever range, not chosen on the held-out year.'
+practice_precedent: RQ-20261101-c692-02 (best static cell on dev) and RQ-20261112-2e3b-01 (harness, population, cost stack); docs/plans/ML-ROADMAP-MECE-2026-11.md
+  § 3 D6 (baseline = static per-leg best bracket chosen without the test folds); M6, M13.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision data; frozen boosters on CPU.
+  basis: MEASURED shape from 2e3b-01; relabelling at another TP is the same walk.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+blocked_on:
+- kind: research
+  ref: D3 positive-net entry model (registered fail_actions of RQ-20261117-c21d-02 and RQ-20261118-04a5-02)
+  what: a D3 entry model whose taken decisions are net positive on this held-out window (e.g. a PASS of a dbf8 / 4654-family learner, or ml_decision_entry
+    pooled mean net R > 0)
+  clears_when: a graded D3 unit records pooled mean net R > 0 for its taken decisions on 2025-10-01..2026-10-31 at the 2e3b-01 cost stack; then git mv this
+    file to research/queue/ (rule unchanged) and point --served at that model if it is not the frozen v1
+related:
+- RQ-20261117-c21d-02
+- RQ-20261118-04a5-02
+- RQ-20261112-2e3b-01
+- RQ-20261101-c692-02
+- research/levers/ml-brackets.yaml
+last_dispatched_at: null

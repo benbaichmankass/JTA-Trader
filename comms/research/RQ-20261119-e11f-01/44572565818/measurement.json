@@ -1,0 +1,299 @@
+{
+  "leg": "ict_scalp_eth_15m",
+  "label": "stage0_no_edge",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "FORMING",
+    "net_r": -8.3511,
+    "n": 102,
+    "max_drawdown_r": 19.7823,
+    "folds_positive": 1,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=-8.3511 with 1/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "CLOSED": {
+      "reach_ge_6r": 0.0132,
+      "n": 76,
+      "net_r": -2.9247,
+      "net_r_fee_only": -0.7675,
+      "max_drawdown_r": 13.9885,
+      "by_outcome": {
+        "stale_stop": 39,
+        "tp_hit": 16,
+        "timeout": 9,
+        "sl_hit": 11,
+        "be_stop": 1
+      },
+      "mean_bars_held": 13.737,
+      "net_r_per_capital_day": -0.2689,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-28 00:00:00+00:00",
+      "data_end": "2026-10-27 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-28 00:00:00+00:00",
+          "end": "2026-01-27 05:59:45+00:00",
+          "trades": 19,
+          "net_r": 4.2961
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-27 05:59:45+00:00",
+          "end": "2026-04-28 11:59:30+00:00",
+          "trades": 21,
+          "net_r": 1.4971
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-28 11:59:30+00:00",
+          "end": "2026-07-28 17:59:15+00:00",
+          "trades": 22,
+          "net_r": -8.0666
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-28 17:59:15+00:00",
+          "end": "2026-10-27 23:59:00+00:00",
+          "trades": 14,
+          "net_r": -0.6516
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_eth_15m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/CLOSED__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/CLOSED__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--stale-exit-bars",
+        "12",
+        "--stale-exit-below-r",
+        "0.0",
+        "--sim-breakeven",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--start",
+        "2025-10-28",
+        "--end",
+        "2026-10-27 23:59"
+      ]
+    },
+    "FORMING": {
+      "reach_ge_6r": 0.0,
+      "n": 102,
+      "net_r": -8.3511,
+      "net_r_fee_only": -5.1051,
+      "max_drawdown_r": 19.7823,
+      "by_outcome": {
+        "stale_stop": 47,
+        "tp_hit": 21,
+        "timeout": 14,
+        "sl_hit": 19,
+        "be_stop": 1
+      },
+      "mean_bars_held": 13.431,
+      "net_r_per_capital_day": -0.5852,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-28 00:00:00+00:00",
+      "data_end": "2026-10-27 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-28 00:00:00+00:00",
+          "end": "2026-01-27 05:59:45+00:00",
+          "trades": 23,
+          "net_r": 5.9417
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-27 05:59:45+00:00",
+          "end": "2026-04-28 11:59:30+00:00",
+          "trades": 27,
+          "net_r": -1.4093
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-28 11:59:30+00:00",
+          "end": "2026-07-28 17:59:15+00:00",
+          "trades": 30,
+          "net_r": -6.8319
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-28 17:59:15+00:00",
+          "end": "2026-10-27 23:59:00+00:00",
+          "trades": 22,
+          "net_r": -6.0515
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_eth_15m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/FORMING__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/FORMING__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--stale-exit-bars",
+        "12",
+        "--stale-exit-below-r",
+        "0.0",
+        "--sim-breakeven",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--decision-bar",
+        "forming",
+        "--start",
+        "2025-10-28",
+        "--end",
+        "2026-10-27 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2025-10-28",
+    "end": "2026-10-27 23:59",
+    "fetch_days": 460,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "15",
+      "resample": "15m"
+    },
+    "fold_edges": [
+      "2025-10-28 00:00:00+00:00",
+      "2026-01-27 05:59:45+00:00",
+      "2026-04-28 11:59:30+00:00",
+      "2026-07-28 17:59:15+00:00",
+      "2026-10-27 23:59:00+00:00"
+    ]
+  },
+  "argv": {
+    "CLOSED": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_eth_15m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/CLOSED__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/CLOSED__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--stale-exit-bars",
+        "12",
+        "--stale-exit-below-r",
+        "0.0",
+        "--sim-breakeven",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--start",
+        "2025-10-28",
+        "--end",
+        "2026-10-27 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "FORMING": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_eth_15m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/FORMING__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261119-e11f-01/44572565818/arms/FORMING__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--stale-exit-bars",
+        "12",
+        "--stale-exit-below-r",
+        "0.0",
+        "--sim-breakeven",
+        "--minutes-1m-csv",
+        "<minutes_1m>",
+        "--decision-bar",
+        "forming",
+        "--start",
+        "2025-10-28",
+        "--end",
+        "2026-10-27 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--decision-bar",
+        "forming"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

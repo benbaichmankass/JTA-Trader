@@ -1,0 +1,380 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "mgc_trend_1h: 372 trades in the baseline arm 'A' on SLV 1h candles 2018-06-01 .. 2026-10-26 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'VL30']",
+  "n": 372,
+  "measurement": {
+    "leg": "mgc_trend_1h",
+    "label": "incumbent_stands",
+    "grade": {
+      "verdict": "fail",
+      "label": "incumbent_stands",
+      "baseline": "A",
+      "candidates": {
+        "VL30": {
+          "net_r": 44.1221,
+          "delta_net_r": 2.105,
+          "max_drawdown_r": 17.5034,
+          "max_drawdown_cap": 36.3897,
+          "folds_ge_incumbent": 4,
+          "passes": false,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": 50.0,
+            "reach_ge_6r": 0.03,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        }
+      },
+      "fold_majority": 4,
+      "n_floor": 39,
+      "dd_tol_frac": 0.35,
+      "control": null,
+      "delta_r_per_trade": 0.02,
+      "delta_r_bar": 7.44,
+      "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0323,
+        "n": 372,
+        "net_r": 42.0171,
+        "net_r_fee_only": 54.3488,
+        "max_drawdown_r": 26.9553,
+        "by_outcome": {
+          "trail_stop": 191,
+          "stop": 150,
+          "timeout": 2,
+          "take_profit": 29
+        },
+        "mean_bars_held": 22.774,
+        "net_r_per_capital_day": 0.119,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0,
+          "confirm_bars": 1
+        },
+        "data_start": "2018-06-14 13:00:00+00:00",
+        "data_end": "2026-10-26 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-14 13:00:00+00:00",
+            "end": "2019-11-05 22:49:50+00:00",
+            "trades": 62,
+            "net_r": -13.6417
+          },
+          {
+            "fold": 2,
+            "start": "2019-11-05 22:49:50+00:00",
+            "end": "2021-03-29 08:39:40+00:00",
+            "trades": 67,
+            "net_r": 14.9826
+          },
+          {
+            "fold": 3,
+            "start": "2021-03-29 08:39:40+00:00",
+            "end": "2022-08-20 18:29:30+00:00",
+            "trades": 65,
+            "net_r": 6.8429
+          },
+          {
+            "fold": 4,
+            "start": "2022-08-20 18:29:30+00:00",
+            "end": "2024-01-12 04:19:20+00:00",
+            "trades": 57,
+            "net_r": 7.4625
+          },
+          {
+            "fold": 5,
+            "start": "2024-01-12 04:19:20+00:00",
+            "end": "2025-06-04 14:09:10+00:00",
+            "trades": 59,
+            "net_r": -2.6223
+          },
+          {
+            "fold": 6,
+            "start": "2025-06-04 14:09:10+00:00",
+            "end": "2026-10-26 23:59:00+00:00",
+            "trades": 62,
+            "net_r": 28.9934
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-008/44572575475/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-008/44572575475/arms/A__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-26 23:59"
+        ]
+      },
+      "VL30": {
+        "reach_ge_6r": 0.03,
+        "n": 300,
+        "net_r": 44.1221,
+        "net_r_fee_only": 53.1909,
+        "max_drawdown_r": 17.5034,
+        "by_outcome": {
+          "trail_stop": 163,
+          "stop": 112,
+          "timeout": 2,
+          "take_profit": 23
+        },
+        "mean_bars_held": 25.43,
+        "net_r_per_capital_day": 0.1388,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0,
+          "confirm_bars": 1,
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.3,
+          "vol_pctl_window": 200
+        },
+        "data_start": "2018-06-14 13:00:00+00:00",
+        "data_end": "2026-10-26 19:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2018-06-14 13:00:00+00:00",
+            "end": "2019-11-05 22:49:50+00:00",
+            "trades": 53,
+            "net_r": -10.6646
+          },
+          {
+            "fold": 2,
+            "start": "2019-11-05 22:49:50+00:00",
+            "end": "2021-03-29 08:39:40+00:00",
+            "trades": 52,
+            "net_r": 12.0662
+          },
+          {
+            "fold": 3,
+            "start": "2021-03-29 08:39:40+00:00",
+            "end": "2022-08-20 18:29:30+00:00",
+            "trades": 50,
+            "net_r": 9.2638
+          },
+          {
+            "fold": 4,
+            "start": "2022-08-20 18:29:30+00:00",
+            "end": "2024-01-12 04:19:20+00:00",
+            "trades": 48,
+            "net_r": 11.2952
+          },
+          {
+            "fold": 5,
+            "start": "2024-01-12 04:19:20+00:00",
+            "end": "2025-06-04 14:09:10+00:00",
+            "trades": 47,
+            "net_r": -1.1208
+          },
+          {
+            "fold": 6,
+            "start": "2025-06-04 14:09:10+00:00",
+            "end": "2026-10-26 23:59:00+00:00",
+            "trades": 50,
+            "net_r": 23.2827
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-008/44572575475/arms/VL30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-008/44572575475/arms/VL30__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--vol-skip-below-pctl",
+          "0.3",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-26 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2018-06-01",
+      "end": "2026-10-26 23:59",
+      "fetch_days": 3080,
+      "feed": {
+        "source": "dukascopy",
+        "ticker": "SLV",
+        "interval": "60m",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2018-06-14 13:00:00+00:00",
+        "2019-11-05 22:49:50+00:00",
+        "2021-03-29 08:39:40+00:00",
+        "2022-08-20 18:29:30+00:00",
+        "2024-01-12 04:19:20+00:00",
+        "2025-06-04 14:09:10+00:00",
+        "2026-10-26 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-008/44572575475/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-008/44572575475/arms/A__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-26 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "VL30": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-008/44572575475/arms/VL30__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-008/44572575475/arms/VL30__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--vol-skip-below-pctl",
+          "0.3",
+          "--start",
+          "2018-06-01",
+          "--end",
+          "2026-10-26 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--vol-skip-below-pctl",
+          "0.3"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / incumbent_stands: no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
