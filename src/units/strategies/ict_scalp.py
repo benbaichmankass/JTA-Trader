@@ -296,7 +296,13 @@ def _passes_session_filter(
     if not enabled:
         return True
     try:
-        ts = df.index[-1]
+        # The live ``fetch_candles`` frame and the backtest windows carry the bar time in a ``timestamp`` COLUMN with a plain
+        # integer index (see ``_extract_entry_time``); reading ``df.index[-1]`` there gave epoch-hour 0 and blocked every
+        # signal whenever the filter was on. Prefer the column, fall back to the index (timestamp-indexed fixtures).
+        if "timestamp" in getattr(df, "columns", []):
+            ts = df["timestamp"].iloc[-1]
+        else:
+            ts = df.index[-1]
         ts = pd.Timestamp(ts)
         if ts.tzinfo is None:
             # Assume UTC for naive indices — consistent with the rest of the repo.

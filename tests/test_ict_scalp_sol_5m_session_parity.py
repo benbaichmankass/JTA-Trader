@@ -26,15 +26,25 @@ SKIP = h._parse_skip_hours("0,1,2,3,4,5,6,7")          # the S_ASIA arm, exactly
 CFG = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["ict_scalp_sol_5m"]
 
 
-def _frame_ending_at(hour: int, minute: int = 35, *, tz: str | None = "UTC") -> pd.DataFrame:
+def _live_shape(df: pd.DataFrame) -> pd.DataFrame:
+    """The shape ``fetch_candles`` and the backtest windows really have: bar time in a ``timestamp`` COLUMN, RangeIndex.
+    (Timestamp-indexed fixtures hid a bug: reading ``df.index[-1]`` there gave epoch-hour 0 and blocked every signal.)"""
+    out = df.copy()
+    out.index.name = "timestamp"
+    return out.reset_index()
+
+
+def _frame_ending_at(hour: int, minute: int = 35, *, tz: str | None = "UTC", shape: str = "index") -> pd.DataFrame:
     end = pd.Timestamp(2026, 4, 2, hour, minute, tz=tz)
     idx = pd.date_range(end=end, periods=10, freq="5min")
-    return pd.DataFrame({"close": range(10)}, index=idx)
+    df = pd.DataFrame({"close": range(10)}, index=idx)
+    return _live_shape(df) if shape == "column" else df
 
 
 def _harness_skips(df: pd.DataFrame) -> bool:
     """The harness predicate: skip the SIGNAL bar when its UTC hour is in the skip set (backtest_ict_scalp.py)."""
-    return pd.Timestamp(df.index[-1]).hour in SKIP
+    ts = df["timestamp"].iloc[-1] if "timestamp" in df.columns else df.index[-1]
+    return pd.Timestamp(ts).hour in SKIP
 
 
 def test_the_declared_leg_carries_exactly_the_s_asia_window():
@@ -42,22 +52,32 @@ def test_the_declared_leg_carries_exactly_the_s_asia_window():
     assert (CFG["session_start_hour"], CFG["session_end_hour"]) == (8, 24)
 
 
+@pytest.mark.parametrize("shape", ["index", "column"])
 @pytest.mark.parametrize("minute", [0, 5, 35, 55])
 @pytest.mark.parametrize("tz", ["UTC", None])
-def test_live_filter_matches_the_harness_skip_set_on_all_24_hours(tz, minute):
+def test_live_filter_matches_the_harness_skip_set_on_all_24_hours(tz, minute, shape):
     for hour in range(24):
-        df = _frame_ending_at(hour, minute, tz=tz)
+        df = _frame_ending_at(hour, minute, tz=tz, shape=shape)
         live_passes = _passes_session_filter(
             df, enabled=CFG["session_filter_enabled"], start_hour=CFG["session_start_hour"], end_hour=CFG["session_end_hour"])
         assert live_passes is (not _harness_skips(df)), (hour, minute, tz)
 
 
-def test_end_24_edge_hour_23_passes_and_hour_0_is_dropped():
+@pytest.mark.parametrize("shape", ["index", "column"])
+def test_end_24_edge_hour_23_passes_and_hour_0_is_dropped(shape):
     kw = dict(enabled=True, start_hour=8, end_hour=24)
-    assert _passes_session_filter(_frame_ending_at(23, 55), **kw) is True
-    assert _passes_session_filter(_frame_ending_at(0, 0), **kw) is False
-    assert _passes_session_filter(_frame_ending_at(7, 55), **kw) is False
-    assert _passes_session_filter(_frame_ending_at(8, 0), **kw) is True
+    assert _passes_session_filter(_frame_ending_at(23, 55, shape=shape), **kw) is True
+    assert _passes_session_filter(_frame_ending_at(0, 0, shape=shape), **kw) is False
+    assert _passes_session_filter(_frame_ending_at(7, 55, shape=shape), **kw) is False
+    assert _passes_session_filter(_frame_ending_at(8, 0, shape=shape), **kw) is True
+
+
+def test_a_range_indexed_live_frame_is_not_read_as_epoch_hour_zero():
+    """The regression: with the filter on and start 8, a mid-day bar in the live frame shape must PASS (it used to be
+    blocked because ``df.index[-1]`` is a bare integer -> 1970-01-01 00:00 -> hour 0)."""
+    df = _frame_ending_at(12, 35, shape="column")
+    assert isinstance(df.index, pd.RangeIndex)
+    assert _passes_session_filter(df, enabled=True, start_hour=8, end_hour=24) is True
 
 
 def test_a_non_utc_index_is_judged_in_utc_like_the_harness():
@@ -71,12 +91,15 @@ def test_a_non_utc_index_is_judged_in_utc_like_the_harness():
         assert live is (not _harness_skips(utc_df))
 
 
+@pytest.mark.parametrize("shape", ["index", "column"])
 @pytest.mark.parametrize("shift_hours,expect_signal", [(0, False), (3, True), (17, True), (18, False)])
-def test_order_package_with_the_real_config_block_blocks_exactly_the_skipped_bars(shift_hours, expect_signal):
+def test_order_package_with_the_real_config_block_blocks_exactly_the_skipped_bars(shift_hours, expect_signal, shape):
     """_bullish_scalp_frame ends 06:35 UTC. +0h -> 06:35 (dropped), +3h -> 09:35 (kept), +17h -> 23:35 (edge, kept),
     +18h -> 00:35 (dropped)."""
     df = _bullish_scalp_frame()
     df.index = df.index + pd.Timedelta(hours=shift_hours)
+    if shape == "column":
+        df = _live_shape(df)
     cfg = {"symbol": "SOLUSDT", **CFG}
     if expect_signal:
         assert order_package(cfg, candles_df=df)["direction"] == "long"
