@@ -976,3 +976,38 @@ manifest_notes:
     pivot=5, and scripts/backtest_pullback.py discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed
     in #25887). The generated levers.exit.be_floor_r entry ("no response at the tested values", delta 0.0R) therefore means UNTESTED, not flat.
     Read be_floor_r on this leg as untested until a run on the fixed harness.'
+levers_tested:
+- family: direction (pooled 1d-ETF pullback, LONG/SHORT vs both sides)
+  varied: --side-filter long / short vs both sides at the harness-declared pullback parameters, pooled IEF/TLT/SLV/GLD/GDX 1d, 2021-07-01..2026-10-15,
+    six calendar folds, full cost stack (cell SLV)
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '44589971319'
+    rule: RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+    pooled_grade_note: rule verdict FAIL (both one-sided arms fail the pooled rule); the harness wrote INDETERMINATE (powered-cell breadth, not
+      registered); PI-20261119-FILLW47B-0005
+    baseline:
+      arm: A
+      n: 29
+      net_r: 11.6181
+      folds_positive: 2/6
+    arms:
+    - side_filter: long
+      n: 16
+      net_r: 20.3034
+      folds_positive: 3/6
+      max_drawdown_r: 3.3152
+    - side_filter: short
+      n: 13
+      net_r: -5.5748
+      folds_positive: 1/6
+      max_drawdown_r: 7.6267
+    reading: this is the SLV cell of a POOLED five-cell test (pooled n LONG 68 / SHORT 66 / A 125; pooled folds positive 2/6 in every arm); one-sided
+      cell n 16/13 is below the 20-trade cell floor, so no per-cell verdict; not tested at power
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261119-c5e8-01
+  lever_family: direction
+units:
+- RQ-20261119-c5e8-01
