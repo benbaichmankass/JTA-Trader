@@ -97,6 +97,13 @@ intervention_controls:
   matched_random:
     draws: 200
     same_cell: true
+  best_static:
+    grid:
+    - hold
+    - sl_to_structure@new_peak
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds; REPORTED, never a pass clause
+  bootstrap_group: trade
 run:
   workflow: research-script-run.yml
   inputs:
