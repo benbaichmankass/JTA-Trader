@@ -4,7 +4,7 @@ id: RQ-20261119-f2a4-08
 title: 'Cross-book SAME-DIRECTION concentration on the LIVE journal (perf review 2026-11-18 call G4): does the number of open positions sharing
   one direction at 00:00 UTC predict a worse next-24 h book return, over every closed trade since 2026-09-01 (the population the backtest read
   in #27202 did not touch)?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -98,9 +98,12 @@ related:
 - PROGRAMME-REPLAN-2026-11-19
 - 'PR #27202 (harness + backtest read)'
 - comms/research/codirection/README.md
-blocked_on:
-- kind: harness
-  ref: scripts/research/codirection_drawdown.py
-  owner: 'PERF-FOLLOWUP-2026W47 (PR #27202)'
-  clears_when: 'PR #27202 merged on main (it adds scripts/research/codirection_drawdown.py with --journal); then git-mv this unit to research/queue/
-    with status queued, rule unchanged. If the harness flags are spelled differently, only run.command changes.'
+amendments:
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)
+  text:
+  - 'UNBLOCKED: #27202 merged (35b1b759); scripts/research/codirection_drawdown.py on main takes --journal / --min-snapshots / --min-blocks as
+    run.command spells them. run.command, rule and thresholds unchanged.'
+  - 'MEASURED pre-run (parse only, no outcome read): the harness load_journal reads 1,230 of the 1,231 export rows on 58 legs (one row dropped
+    by its timestamp/net_r NaN filter); its --self-test passes on main.'
