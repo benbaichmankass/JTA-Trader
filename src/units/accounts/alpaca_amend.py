@@ -31,10 +31,24 @@ that path's: ``applied`` / ``apply_failed`` / ``could_not_look`` /
 * ``applied`` — sent, and the venue reads the new level on a resting leg.
 
 What it never does: place an order, cancel an order, close a position, widen a
-stop, or touch a leg that is not this trade's own (legs are scoped by the
-trade's share count, exactly as ``modify_protective`` scopes them, and two
-legs of the same size refuse rather than guess, because Alpaca leg ids are not
-captured at entry).
+stop, or touch a leg that is not this trade's own.
+
+How a leg is known to be this trade's own (ALPACA-AMEND-LEG-IDS, 2026-11-19):
+
+* **By order id first.** The journal keeps the bracket's entry order id
+  (``trades.broker_order_id``). ``GET /v2/orders/{id}?nested=true`` returns that
+  parent with its ``legs``, and a PATCH replacement stays nested under the same
+  parent. MEASURED on alpaca_portfolio 2026-11-19 21:21Z
+  (``/api/diag/alpaca_open_orders``): all 7 resting SLV stop legs carried their
+  entry's id as parent, including the 3 replaced at 21:00Z. So a leg whose id is
+  in that set is this trade's, whatever its size.
+* **By share count only as the fallback**: no entry id on the row, that read
+  failed, or no own leg of that kind rests (e.g. a naked re-arm replaced the
+  bracket with an OCO the journal never saw). This is the prior rule, exactly as
+  ``modify_protective`` scopes legs. Two legs of the same size still refuse
+  rather than guess. Before this change it was the only rule, so three trades of
+  qty=2 on one symbol refused every trail
+  (alpaca_portfolio SLV 7758/7766/7770, 2026-11-19 21:09Z).
 
 Bracket / OCO semantics this relies on (Alpaca Trading API v2):
 
@@ -152,18 +166,43 @@ def _partial_parent_leg_ids(client: Any, symbol: str) -> Optional[set]:
     return out
 
 
+def _entry_leg_ids(client: Any, entry_order_id: Any) -> Optional[set]:
+    """Ids of the legs nested under this trade's entry order, or ``None`` when
+    there is no id or the read fails / carries no ``legs`` (the caller then
+    falls back to share-count scoping, the prior rule). Never raises."""
+    oid = str(entry_order_id or "").strip()
+    if not oid:
+        return None
+    try:
+        env = client._request("GET", f"/v2/orders/{oid}?nested=true")
+    except Exception:  # noqa: BLE001 — a failed read is the fallback, not an error
+        return None
+    if not isinstance(env, dict) or env.get("retCode") != 0:
+        return None
+    parent = env.get("result")
+    if not isinstance(parent, dict) or not isinstance(parent.get("legs"), list):
+        return None
+    return {str(leg["id"]) for leg in parent["legs"]
+            if isinstance(leg, dict) and leg.get("id")}
+
+
 def read_trade_legs(client: Any, *, symbol: str, direction: str,
-                    qty: float) -> Dict[str, Any]:
-    """The venue's view of ONE trade's protection: its stop leg and target leg
-    (scoped by share count), the position and the mark. ``read_state`` is
-    ``resolved`` or ``read_failed``; a resolved read may still carry a
-    ``refuse`` reason (we looked and the shape is unsafe to patch)."""
+                    qty: float, entry_order_id: Any = None,
+                    extra_leg_ids: Any = ()) -> Dict[str, Any]:
+    """The venue's view of ONE trade's protection: its stop leg and target leg,
+    the position and the mark. Legs are this trade's by ORDER ID when
+    *entry_order_id* resolves (its nested legs, plus *extra_leg_ids*, e.g. the
+    id a PATCH just returned), else by share count (``leg_scope`` says which,
+    per kind). ``read_state`` is ``resolved`` or ``read_failed``; a resolved
+    read may still carry a ``refuse`` reason (we looked and the shape is unsafe
+    to patch)."""
     sym = str(symbol).upper()
     out: Dict[str, Any] = {"read_state": "read_failed", "symbol": sym,
                            "direction": direction, "qty": qty,
                            "stop_leg": None, "target_leg": None,
                            "venue_sl": None, "venue_tp": None,
-                           "mark": None, "position_qty": None, "refuse": None}
+                           "mark": None, "position_qty": None, "refuse": None,
+                           "leg_scope": {"stop": "qty", "target": "qty"}}
     pos = client.position_quote(sym)
     if pos.get("state") == "could_not_look":
         out["detail"] = "position read failed"
@@ -190,7 +229,11 @@ def read_trade_legs(client: Any, *, symbol: str, direction: str,
         return out
 
     reducing = _reducing_side(direction)
-    mine: Dict[str, List[Dict[str, Any]]] = {"stop": [], "target": []}
+    own_ids = _entry_leg_ids(client, entry_order_id)
+    if own_ids is not None:
+        own_ids |= {str(x) for x in (extra_leg_ids or ()) if x}
+    by_id: Dict[str, List[Dict[str, Any]]] = {"stop": [], "target": []}
+    by_qty: Dict[str, List[Dict[str, Any]]] = {"stop": [], "target": []}
     for o in legs:
         if not isinstance(o, dict) or not o.get("id"):
             continue
@@ -200,13 +243,34 @@ def read_trade_legs(client: Any, *, symbol: str, direction: str,
         if str(o.get("side") or "").lower() not in ("", reducing):
             continue  # an opening order on the same symbol is not protection
         lq = _f(o.get("qty"))
+        if own_ids is not None and str(o["id"]) in own_ids:
+            by_id[kind].append(o)
         if lq is None or lq <= 0 or abs(lq - qty) > _QTY_EPS:
             continue
-        mine[kind].append(o)
+        by_qty[kind].append(o)
+    mine: Dict[str, List[Dict[str, Any]]] = {}
+    for kind in ("stop", "target"):
+        if by_id[kind]:
+            mine[kind] = by_id[kind]
+            out["leg_scope"][kind] = "entry_order"
+        else:
+            mine[kind] = by_qty[kind]
     if len(mine["stop"]) > 1 or len(mine["target"]) > 1:
         out["refuse"] = (f"ambiguous_legs: {len(mine['stop'])} stop / "
-                         f"{len(mine['target'])} target leg(s) of qty={qty}")
+                         f"{len(mine['target'])} target leg(s) of qty={qty}"
+                         f" (scope stop={out['leg_scope']['stop']}, "
+                         f"target={out['leg_scope']['target']})")
         return out
+    for kind in ("stop", "target"):
+        if out["leg_scope"][kind] != "entry_order" or not mine[kind]:
+            continue
+        lq = _f(mine[kind][0].get("qty"))
+        if lq is None or abs(lq - qty) > _QTY_EPS:
+            # This trade's own leg, sized differently from the journal row: a
+            # resize or partial the row does not reflect. Never patch a guess.
+            out["refuse"] = (f"own_{kind}_leg_qty_{lq}_not_trade_qty_{qty} "
+                             f"(leg {mine[kind][0]['id']})")
+            return out
     stop = mine["stop"][0] if mine["stop"] else None
     target = mine["target"][0] if mine["target"] else None
     out["stop_leg"] = _leg_view(stop)
@@ -286,9 +350,11 @@ def _verify(after: Dict[str, Any], kind: str, level: float, sent: Dict[str, Any]
 
 def tighten(client: Any, *, symbol: str, direction: str, qty: float,
             new_sl: Optional[float] = None, new_tp: Optional[float] = None,
-            apply: bool = False) -> Dict[str, Any]:
+            apply: bool = False, entry_order_id: Any = None) -> Dict[str, Any]:
     """Tighten this trade's stop to *new_sl* and/or move its target to
-    *new_tp*. Dry (``planned``) unless *apply*. Never raises."""
+    *new_tp*. Dry (``planned``) unless *apply*. *entry_order_id*
+    (``trades.broker_order_id``) scopes the legs by order id; without it they
+    are scoped by share count. Never raises."""
     direction = str(direction or "").lower()
     if direction not in ("long", "short"):
         return {"result": X_REFUSED, "detail": f"bad direction {direction!r}"}
@@ -299,7 +365,8 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
     if qty <= 0:
         return {"result": X_REFUSED, "detail": "qty must be positive (it scopes the legs)"}
     try:
-        before = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty)
+        before = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty,
+                                 entry_order_id=entry_order_id)
     except Exception as exc:  # noqa: BLE001 — a raised read is could-not-look
         return {"result": X_COULD_NOT_LOOK, "detail": f"{type(exc).__name__}: {exc}"}
     out: Dict[str, Any] = {"before": before, "oco_leg_ids": {
@@ -363,7 +430,9 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
         waited = 0.0
         while True:
             try:
-                after = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty)
+                after = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty,
+                                        entry_order_id=entry_order_id,
+                                        extra_leg_ids=[sent.get("new_id")])
             except Exception as exc:  # noqa: BLE001
                 after = {"read_state": "read_failed", "detail": str(exc)}
             if not _replace_pending(after, step["kind"], sent, step["leg_id"]) \
@@ -409,7 +478,8 @@ def exec_trade_leg(db: Any, trade: Dict[str, Any], level: float, *, source: str,
             return {"result": X_COULD_NOT_LOOK,
                     "detail": f"no alpaca client for {trade.get('account_id')}"}
     res = tighten(client, symbol=str(trade.get("symbol") or ""), direction=direction,
-                  qty=_f(trade.get("position_size")) or 0.0, new_sl=level, apply=True)
+                  qty=_f(trade.get("position_size")) or 0.0, new_sl=level, apply=True,
+                  entry_order_id=trade.get("broker_order_id"))
     if res.get("result") != X_APPLIED:
         return res
     from src.utils.json_notes import dump_capped
@@ -468,7 +538,8 @@ def dry_run(account_id: str, *, trade_id: Optional[int] = None,
             res = tighten(client, symbol=str(t.get("symbol") or ""),
                           direction=str(t.get("direction") or ""),
                           qty=_f(t.get("position_size")) or 0.0,
-                          new_sl=new_sl, apply=False)
+                          new_sl=new_sl, apply=False,
+                          entry_order_id=t.get("broker_order_id"))
             if new_sl is None and res.get("result") == X_REFUSED and "nothing to amend" in str(res.get("detail")):
                 res["result"], res["detail"] = "read_only", "legs identified; no new_sl given"
             rec.update(res)

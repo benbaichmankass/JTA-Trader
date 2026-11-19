@@ -3232,8 +3232,10 @@ def modify_open_order(
 ) -> dict:
     """Modify SL/TP on an open position on the account's exchange.
 
-    ``entry_order_id`` (IB only; ``trades.broker_order_id``) lets the IB re-arm
-    cancel the trade's own entry-bracket children, not just its keyed group.
+    ``entry_order_id`` (``trades.broker_order_id``) lets the IB re-arm cancel
+    the trade's own entry-bracket children, not just its keyed group, and
+    scopes an Alpaca stop move to the legs nested under that entry order
+    (ALPACA-AMEND-LEG-IDS).
 
     Wired integrations:
       * **bybit** — Unified Trading ``set_trading_stop(category=<resolved>,
@@ -3526,7 +3528,7 @@ def modify_open_order(
                 return _alpaca_modify_with_readback(
                     exchange_client, account_cfg, symbol=symbol,
                     direction=direction, qty=trade_qty, sl=sl, tp=tp,
-                    trade_id=trade_id,
+                    trade_id=trade_id, entry_order_id=entry_order_id,
                 )
             # `qty` (the named trade's own size) scopes the PATCH to that
             # trade's legs. Unscoped, this call rewrites every stop and every
@@ -3620,6 +3622,7 @@ def _alpaca_modify_with_readback(
     sl: float,
     tp: Optional[float] = None,
     trade_id: Any = None,
+    entry_order_id: Any = None,
 ) -> dict:
     """The monitor-trail SL modify on Alpaca, verified at the venue
     (AMEND-PARITY-ALPACA-TRAIL-READBACK).
@@ -3643,8 +3646,12 @@ def _alpaca_modify_with_readback(
     from src.units.accounts import alpaca_amend
 
     acct = account_cfg.get("account_id")
+    # entry_order_id (trades.broker_order_id) scopes the stop to THIS trade's
+    # legs by order id, so same-size sibling trades on one symbol no longer
+    # refuse as ambiguous (ALPACA-AMEND-LEG-IDS, 2026-11-19).
     r = alpaca_amend.tighten(exchange_client, symbol=symbol, direction=direction,
-                             qty=qty, new_sl=sl, apply=True)
+                             qty=qty, new_sl=sl, apply=True,
+                             entry_order_id=entry_order_id)
     result = r.get("result")
     detail = str(r.get("detail") or "")
     venue_sl = (r.get("before") or {}).get("venue_sl")
