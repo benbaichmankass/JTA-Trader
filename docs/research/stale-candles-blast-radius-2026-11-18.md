@@ -157,3 +157,31 @@ Gates this adds or changes: none. Read-only list; changes no result, grade or co
 | RQ-20261118-04a5-01 | script | queued | 2026-11-18 | scripts/research/donchian_depth_retest.py | — | per-script (no data_last_bar recorded) |
 | RQ-20261118-aadc-13 | script | queued | 2026-11-18 | scripts/research/exit_head_label_bakeoff.py | — | per-script (no data_last_bar recorded) |
 | RQ-20261118-aadc-14 | script | queued | 2026-11-18 | scripts/research/d10_basset_baseline.py | — | per-script (no data_last_bar recorded) |
+## Correction and additions (2026-11-19, AM-OPS-7, row `TRAINER-1D-STALE-ROSTERED`)
+
+Measured 2026-11-19 with trainer-vm-diag 44470111874 and a read-only audit of about 210 artifacts. That audit covered 175 research units, 4 Stage-0 records, 13 evidence-run files and about 20 derived records.
+
+- **Correction: the m20 rows do record a window.** The paragraph above says no m20 unit declares a data window. Each m20 result row does carry an OOS `span`, and it confirms the effective end. Examples:
+  - `RQ-20261016-d37f-06` (SCHA): span ends 2026-06-12; run 2026-10-16.
+  - `RQ-20260928-021` (GDX): ends 2026-06-17; run 2026-10-29.
+  - `RQ-20261016-d37f-08` (SPLG): ends 2026-04-14.
+  - `RQ-20261031-019` (USO 1h): ends 2026-06-03.
+- **Missed: three USO 1h Tradeify units.** `RQ-20261015-24ca-05`, `RQ-20261015-ca42-01` and `RQ-20261016-e2db-02` read trainer `data/USO_1h.csv` through `routing.needs_trainer_resident_data: true` with `run.commands` and no `run.workflow`, so the workflow-keyed count above missed them. All three FAIL, and their samples end at 2026-06-03 (2026-03-20 for the squeeze unit). The Tradeify USOIL non-adoption (05-prop programme, `TRADEIFY-INSTR-SPECS`) cites them.
+- **Missed: derived records.**
+  - `docs/research/exit-refinement-coverage.json`: 8 cells cite affected runs and now carry `stale_basis`. They include the GDX vol_trail and USO trail_geometry cells marked `passed_unshipped`. A `conditions_verdicts` caveat has been added.
+  - `docs/research/alpaca-roster-phase2-capital-efficiency-2026-08-29.md` (m20 run 33248507062).
+  - The GDX row of `docs/research/m20-exit-head-rounds.jsonl`.
+- **Missed: decisions citing affected results.**
+  - `PI-20261101-RXABACKP-0002`: the SCHA `vt_hot90_t2` promotion step. It is on HARD HOLD until re-run `RQ-20261119-a7f1-01` lands.
+  - `PI-20260929-YGGMZWK7-0002`: the GDX `vt_hot90_t2` kill, now marked stale-basis.
+- **Root cause of the 1d freeze, refined.** GDX, SCHA, USO, DBC, DBA and UNG were never in the lake's daily build. SPLG was renamed SPYM, so the lake built SPYM while the trainer file is `SPLG_1d.csv`. `report_data_freshness.py` printed `stale: true` to a journal nobody read. Fix and alert: #27214.
+- **Not affected:**
+  - The four Stage-0 records (GDX, SCHA, SPLG, USO), which fetch their own bars.
+  - All 13 evidence-run backtests.
+  - Every ML manifest.
+  - DBC, DBA and UNG consumers.
+  - No real-money leg rests on these files: all four legs are rostered on `alpaca_paper` only.
+- **Re-run units filed, each blocked on data freshness (never on a date):**
+  - `RQ-20261119-a7f1-01` (SCHA), `-02` (GDX), `-03` (USO 1h m20).
+  - `-04`, `-05`, `-06` (the USOIL units; they need `USO_1h` current, which #27214 does not cover).
+- **Still UNKNOWN:** `RQ-20260928-006`, `RQ-20261007-003` and `RQ-20261004-774` record no span. Their corpus rows are on branch `claude/m20-sweep-corpus`.
