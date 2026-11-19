@@ -1,0 +1,118 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "3 passing basket-B cells of sol_4h vs 6 live crypto legs, daily realised-R correlation",
+  "n": 3,
+  "measurement": {
+    "rule": "RULE-RQ20261119E6B2-01-SOL4H-B-OVERLAP",
+    "n_cells": 3,
+    "n_legs": 6,
+    "table": {
+      "AVAXUSDT": {
+        "ada_pullback_2h": {
+          "corr": 0.07966335122772623,
+          "days": 2201,
+          "concurrent_same_dir_share": 0.5
+        },
+        "xrp_pullback_2h": {
+          "corr": 0.02068643686304245,
+          "days": 2204,
+          "concurrent_same_dir_share": 0.5789473684210527
+        },
+        "trend_donchian_eth_4h": {
+          "corr": 0.04780583035744684,
+          "days": 2204,
+          "concurrent_same_dir_share": 0.706140350877193
+        },
+        "trend_donchian_xrp_4h": {
+          "corr": 0.08455236584430474,
+          "days": 2195,
+          "concurrent_same_dir_share": 0.16228070175438597
+        },
+        "trend_donchian_eth_prop": {
+          "corr": 0.03136529208327906,
+          "days": 2204,
+          "concurrent_same_dir_share": 0.8157894736842105
+        },
+        "trend_donchian_sol_prop": {
+          "corr": 0.01378971890722647,
+          "days": 2204,
+          "concurrent_same_dir_share": 0.43859649122807015
+        }
+      },
+      "NEARUSDT": {
+        "ada_pullback_2h": {
+          "corr": 0.06923841497752778,
+          "days": 2174,
+          "concurrent_same_dir_share": 0.5162790697674419
+        },
+        "xrp_pullback_2h": {
+          "corr": 0.031164363187080258,
+          "days": 2174,
+          "concurrent_same_dir_share": 0.627906976744186
+        },
+        "trend_donchian_eth_4h": {
+          "corr": 0.05339052851606532,
+          "days": 2174,
+          "concurrent_same_dir_share": 0.6976744186046512
+        },
+        "trend_donchian_xrp_4h": {
+          "corr": 0.0767465021710874,
+          "days": 2171,
+          "concurrent_same_dir_share": 0.14418604651162792
+        },
+        "trend_donchian_eth_prop": {
+          "corr": -0.015680594777096036,
+          "days": 2174,
+          "concurrent_same_dir_share": 0.7488372093023256
+        },
+        "trend_donchian_sol_prop": {
+          "corr": -0.011971316439476716,
+          "days": 2174,
+          "concurrent_same_dir_share": 0.4372093023255814
+        }
+      },
+      "ETCUSDT": {
+        "ada_pullback_2h": {
+          "corr": -0.0013236865583441696,
+          "days": 2318,
+          "concurrent_same_dir_share": 0.5211267605633803
+        },
+        "xrp_pullback_2h": {
+          "corr": 0.022319106144060324,
+          "days": 2323,
+          "concurrent_same_dir_share": 0.5915492957746479
+        },
+        "trend_donchian_eth_4h": {
+          "corr": 0.08425944210803962,
+          "days": 2323,
+          "concurrent_same_dir_share": 0.755868544600939
+        },
+        "trend_donchian_xrp_4h": {
+          "corr": 0.11743283436674033,
+          "days": 2312,
+          "concurrent_same_dir_share": 0.2112676056338028
+        },
+        "trend_donchian_eth_prop": {
+          "corr": 0.00041350797177514557,
+          "days": 2327,
+          "concurrent_same_dir_share": 0.8215962441314554
+        },
+        "trend_donchian_sol_prop": {
+          "corr": -0.013836110242998583,
+          "days": 2218,
+          "concurrent_same_dir_share": 0.431924882629108
+        }
+      }
+    },
+    "redundant": [],
+    "cells_with_enough_coverage": 3,
+    "verdict": "PASS",
+    "verdict_reason": "no passing cell has |corr| > 0.3 with any live leg on >= 250 common days"
+  },
+  "note": "no passing cell has |corr| > 0.3 with any live leg on >= 250 common days",
+  "data_inputs": [
+    "comms/research/RQ-20261026-1b57-08/40544537821/cells",
+    "comms/strategy_evidence/ltr_corpus"
+  ]
+}
