@@ -1219,6 +1219,7 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         _cooldown_s = _close_retry_cooldown_seconds()
         matched_trade = None
         _retry = None
+        _mk = None
         for _cand in _legs_after_failed(legs, _PACKAGE_CLOSE_SKIP.get(pkg_id)):
             _cand_key = (
                 str(_cand.get("account_id") or ""),
@@ -1307,8 +1308,22 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             # close sends nothing, and marking it blinded the re-arm sweep to a
             # position no close was touching (PI-20260930-ZPDIPMDA-0001). (The
             # cooldown `continue` above already preceded the mark.)
+            #
+            # D9-MAKER-EXIT-BUILD: a fenced-in time-stop close is worked post-only
+            # at the mid first (src/units/accounts/maker_exit.py). While its limit
+            # rests (or a stop flattened it during the window) this leg sends
+            # nothing and the next leg is tried; the pass that PLACES the limit
+            # is this package's one venue action for the tick. Every other close
+            # gets `market`, i.e. the code below unchanged.
+            _cand_mk = _maker_exit_step(db, _cand, reason, open_pkg)
+            if _cand_mk.action in ("wait", "venue_flat"):
+                continue
+            if _cand_mk.action == "placed":
+                summary.no_change_count += 1
+                return
             mark_active_close(_cand.get("account_id"), _cand.get("symbol"))
             matched_trade, _retry, _close_key = _cand, _cand_retry, _cand_key
+            _mk = _cand_mk
             break
 
         if matched_trade is None:
@@ -1325,7 +1340,21 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             )
 
         # Exchange-first: attempt the live close BEFORE any DB write.
-        ex_result = _send_close_to_exchange(matched_trade)
+        if _mk.action == "maker_filled":
+            # The resting limit flattened the leg: no Market order. Its own fill
+            # price is read below through the limit's order id.
+            ex_result = _mk.ex_result()
+            _maker_exit_cancel_legs(matched_trade)
+        elif _mk.action == "fallback":
+            # The 1-minute window expired (or the post-only was refused): the
+            # Market close for the unfilled REMAINDER only.
+            if (_mk.qty or 0.0) > 1e-12:
+                ex_result = _send_close_to_exchange(
+                    {**matched_trade, "position_size": _mk.qty})
+            else:
+                ex_result = _mk.ex_result()
+        else:
+            ex_result = _send_close_to_exchange(matched_trade)
         logger.info(
             "order_monitor: exchange close for pkg=%s account=%s → %s",
             pkg_id, matched_trade.get("account_id"), ex_result,
@@ -1522,6 +1551,20 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                 float(verdict_exit_price) if verdict_exit_price is not None else None
             )
             exit_price_source = "verdict"
+        if _mk.action == "fallback" and _mk.filled_qty > 0:
+            # Part of the leg filled at the maker limit before the Market
+            # remainder: the row's exit is the qty-weighted blend of the two
+            # (None when either part is unpriced -> the verdict branch above).
+            from src.units.accounts.maker_exit import blended_exit_price
+            _blend = blended_exit_price(
+                _mk.filled_qty, _mk.filled_avg, float(_mk.qty or 0.0),
+                actual_exit_price if exit_price_source == "exchange" else None)
+            if _blend is not None:
+                actual_exit_price, exit_price_source = _blend, "exchange"
+            else:
+                _vx = (verdict or {}).get("exit_price")
+                actual_exit_price = float(_vx) if _vx is not None else None
+                exit_price_source = "verdict"
 
         # DB writes. The historical order was package-close → trade-close;
         # since 2026-08-18 the trade closes FIRST so the remaining-leg check
@@ -2156,6 +2199,83 @@ def _build_account_client(account_id):
             account_id, exc,
         )
         return None, None
+
+
+def _maker_exit_position_open(cfg: Dict[str, Any], symbol: str, direction: str) -> Optional[bool]:
+    """Is (symbol, direction) still open on the venue? ``None`` = could not look (never read as flat)."""
+    try:
+        from src.units.accounts.clients import account_open_positions
+        pos = account_open_positions(cfg)
+        if pos is None:
+            return None
+        if symbol in frozenset(getattr(pos, "unreadable_symbols", ()) or ()):
+            return None
+        return (symbol, str(direction or "").lower()) in _exchange_position_set(pos)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: maker-exit position read failed for %s: %s", symbol, exc)
+        return None
+
+
+def _maker_exit_step(db, cand: Dict[str, Any], reason: Optional[str], open_pkg: Dict[str, Any]):
+    """D9-MAKER-EXIT-BUILD: the maker-exit decision for one leg's close this pass.
+
+    Returns a ``maker_exit.Step``. ``market`` (today's path) for every close that is not a fenced-in time stop,
+    and on any error. A changed ``notes.maker_exit`` block is written to the trade row at once (so a failed
+    Market fallback still remembers what filled) and folded into ``cand["notes"]`` so the close write keeps it.
+    """
+    from src.units.accounts import maker_exit as mx
+    try:
+        if reason not in mx.TIME_STOP_REASONS and not mx.block_of(cand.get("notes")):
+            return mx.Step(mx.A_MARKET, why="not_time_stop")
+        from src.units.accounts.clients import account_order_status
+        client, cfg = _build_account_client(cand.get("account_id"))
+        step = mx.exit_step(
+            cand, reason,
+            strategy=cand.get("strategy_name") or open_pkg.get("strategy_name"),
+            client=client, cfg=cfg, order_status=account_order_status,
+            position_open=_maker_exit_position_open,
+        )
+    except Exception as exc:  # noqa: BLE001 -- a maker-exit fault is a Market close, never a stuck exit
+        logger.warning("order_monitor: maker-exit step failed for trade %s: %s", cand.get("id"), exc)
+        return mx.Step(mx.A_MARKET, why="error")
+    if step.block is not None:
+        notes = mx.decode_notes(cand.get("notes"))
+        notes[mx.NOTES_KEY] = step.block
+        raw = json.dumps(notes)
+        cand["notes"] = raw
+        try:
+            if cand.get("id") is not None:
+                db.update_trade(int(cand["id"]), {"notes": raw})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("order_monitor: maker-exit notes write failed for trade %s: %s", cand.get("id"), exc)
+            if step.action == mx.A_PLACED:
+                # A resting limit the journal does not know about must not be left behind: cancel it and
+                # close at Market this pass instead.
+                try:
+                    from src.units.accounts.execute import _bybit_category
+                    mx.cancel_limit(client, _bybit_category(cfg), str(cand.get("symbol") or ""),
+                                    str(step.order_id or ""))
+                except Exception:  # noqa: BLE001  # allow-silent: reduce-only; the sweep cannot see it, logged above
+                    pass
+                return mx.Step(mx.A_MARKET, why="notes_write_failed")
+    logger.info("order_monitor: maker-exit trade=%s account=%s symbol=%s -> %s (%s)",
+                cand.get("id"), cand.get("account_id"), cand.get("symbol"), step.action, step.why)
+    return step
+
+
+def _maker_exit_cancel_legs(matched_trade: Dict[str, Any]) -> None:
+    """After a maker fill flattened the leg: cancel its tracked SL/TP legs (``close_open_position`` does this
+    after a Market close). Best effort; never raises."""
+    try:
+        from src.units.accounts import maker_exit as mx
+        from src.units.accounts.execute import _bybit_category
+        client, cfg = _build_account_client(matched_trade.get("account_id"))
+        if client is None or cfg is None:
+            return
+        mx.cancel_own_legs(client, _bybit_category(cfg), str(matched_trade.get("symbol") or ""),
+                           matched_trade.get("sl_order_id"), matched_trade.get("tp_order_id"))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: maker-exit leg cancel failed: %s", exc)
 
 
 def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
@@ -6096,6 +6216,20 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
         unreadable_syms: frozenset = frozenset()
 
         for row in trade_rows:
+            # D9-MAKER-EXIT-BUILD: a time-stop exit RESTING as a maker limit is
+            # owned by the exit pass, which closes it at the limit's own fill
+            # price and `max_hold` label. Reading its flat here would close it
+            # as `reconciler_filled`. Bounded: maker_exit.ABANDON_S, after which
+            # the sweep cancels the limit and this reconciler owns the row again.
+            # A stop that fills during the window releases the block
+            # (`released_venue_flat`), so the stop's close is still made here.
+            try:
+                from src.units.accounts.maker_exit import reconciler_defers
+                if reconciler_defers(row.get("notes"), now):
+                    _note_reconciler_seen(row.get("id"), "maker_exit_resting")
+                    continue
+            except Exception:  # noqa: BLE001  # allow-silent: an import fault reconciles the row as before
+                pass
             trade_id_str = _extract_trade_id_from_notes(row.get("notes"))
             if trade_id_str is None or not _is_real_order_id(trade_id_str):
                 # Synthetic id (``rejected-…``, ``exchange_rejected-…``,
@@ -13220,6 +13354,33 @@ def _bybit_top_up_partial_sl(acc: dict, symbol: str, row, uncovered_qty, sl) -> 
         client = bybit_client_for(acc)
         if client is None:
             return False
+        # TP DOCTRINE + BRACKETS-ALWAYS item 5 (2026-11-19, manager decision): the top-up qty gets the row's
+        # OWN declared take-profit in the SAME Partial add-a-leg call, so it is never TP-naked. This supersedes
+        # the "TP deliberately omitted" note above. If the venue refuses the pair (e.g. a TP that is now on the
+        # wrong side of the market), the SL-only top-up is sent at once: the stop is never lost for the TP's sake.
+        tp = None
+        from src.units.accounts.execute import _bybit_tpsl_mode
+        try:
+            # Partial mode ONLY: under Full mode a TP on this call would be a POSITION-level TP over the whole
+            # netted position, overriding sibling trades' own targets.
+            if _bybit_tpsl_mode() != "partial":
+                raise ValueError("not partial mode")
+            _tp = row["take_profit_1"]
+            tp = float(_tp) if _tp not in (None, "") and float(_tp) > 0 else None
+        except (KeyError, IndexError, TypeError, ValueError):
+            tp = None
+        if tp is not None:
+            resp = modify_open_order(
+                client, acc, symbol=symbol, sl=float(sl), tp=tp, qty=qty,
+                sl_order_id=None, tp_order_id=None,
+            )
+            if bool((resp or {}).get("ok")):
+                return True
+            logger.warning(
+                "_bybit_top_up_partial_sl: SL+TP top-up refused for %s/%s uncovered=%s (tp=%s): %r -- "
+                "sending the SL-only top-up; this qty stays TP-NAKED (TP doctrine)",
+                acc.get("account_id"), symbol, qty, tp, (resp or {}).get("error"),
+            )
         resp = modify_open_order(
             client, acc, symbol=symbol, sl=float(sl), tp=None, qty=qty,
             sl_order_id=None, tp_order_id=None,
@@ -18315,6 +18476,22 @@ def run_reconciliation_tick(
             summaries["__maker_entries__"] = maker
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: maker-entry sweep raised: %s", exc)
+
+    # D9-MAKER-EXIT-BUILD: cancel a maker time-stop limit left resting on a row
+    # that closed (a stop, a desk close), and abandon a block nobody resolved
+    # within maker_exit.ABANDON_S. BEFORE the forward reconciler, which stops
+    # deferring an abandoned row. Selects only rows carrying notes.maker_exit.
+    try:
+        with _recon_phase("sweep_maker_exits"):
+            from src.units.accounts.clients import account_order_status as _mx_status
+            from src.units.accounts.maker_exit import sweep_maker_exits
+            mkx = sweep_maker_exits(
+                db, build_client=_build_account_client, order_status=_mx_status,
+            )
+        if mkx.get("resolved") or mkx.get("errors"):
+            summaries["__maker_exits__"] = mkx
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: maker-exit sweep raised: %s", exc)
 
     # BUG-042: write-back reconciler. Runs unconditionally every tick
     # (the MONITOR_RECONCILE_ENABLED gate was removed 2026-06-15,

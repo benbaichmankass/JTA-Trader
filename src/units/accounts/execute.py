@@ -3690,6 +3690,68 @@ def _alpaca_modify_with_readback(
             "exchange_response": response, "error": None}
 
 
+def _ib_sibling_open_rows(
+    account_id: Optional[str], symbol: Optional[str],
+    exclude_trade_id: Optional[Any], direction: Optional[str],
+) -> list:
+    """The OTHER open same-direction journal rows on *symbol* (the rows ``_ib_sibling_open_qty`` sums), with the
+    fields a re-arm needs. Best-effort: any DB error returns ``[]`` (never raises) -- BRACKETS-ALWAYS item 3."""
+    if not account_id or not symbol or not direction:
+        return []
+    try:
+        from src.units.db.database import Database
+        from src.utils.paths import trade_journal_db_path
+
+        db = Database(db_path=trade_journal_db_path())
+        rows = db.get_trades(filters={
+            "account_id": account_id, "symbol": symbol, "status": "open", "is_backtest": 0,
+            "direction": str(direction).lower(),
+        }) or []
+        return [r for r in rows if exclude_trade_id is None or r.get("id") != exclude_trade_id]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_ib_sibling_open_rows: journal read failed for %s/%s: %s", account_id, symbol, exc)
+        return []
+
+
+def _ib_rearm_siblings_after_close(exchange_client: Any, account_cfg: dict, symbol: str, direction: str,
+                                   trade_id: Any) -> list:
+    """Re-arm each same-direction sibling's OWN bracket after an IB close (BRACKETS-ALWAYS item 3, option B).
+
+    ``IBClient.close`` cancels every resting leg on the symbol before it flattens THIS trade's lots (so no leftover
+    bracket can fill into a reverse position). On a contract a sibling trade also holds, that strips the sibling's
+    stop and target until the naked sweep (~5 min). This re-places each sibling's bracket at once, at the sibling
+    row's own journal levels and qty, keyed by its own trade id (so a sweep re-arm reuses the same group name and
+    cannot stack a second bracket). Best-effort and never raises: a failure is logged and the sweep remains the net.
+    """
+    out: list = []
+    for row in _ib_sibling_open_rows(account_cfg.get("account_id"), symbol, trade_id, direction):
+        rid = row.get("id")
+        try:
+            qty = float(row.get("position_size") or 0.0)
+            sl = row.get("stop_loss")
+            tp = row.get("take_profit_1")
+            if qty < 1 or (not sl and not tp):
+                out.append({"trade_id": rid, "rearmed": False, "why": "no qty or no levels"})
+                continue
+            order = {"symbol": symbol, "direction": direction, "qty": qty,
+                     "sl": float(sl) if sl else None, "tp": float(tp) if tp else None,
+                     "oca_key": str(rid), "account_id": account_cfg.get("account_id")}
+            if row.get("broker_order_id"):
+                order["entry_order_id"] = str(row.get("broker_order_id"))
+            resp = exchange_client.place_protective(order) or {}
+            ok = resp.get("retCode") in (0, "0")
+            out.append({"trade_id": rid, "rearmed": ok, "ret_msg": resp.get("retMsg")})
+            (logger.info if ok else logger.error)(
+                "close_open_position: IB sibling re-arm after close account=%s symbol=%s sibling=%s qty=%s "
+                "sl=%s tp=%s -> %s", account_cfg.get("account_id"), symbol, rid, qty, sl, tp,
+                "OK" if ok else resp.get("retMsg"))
+        except Exception as exc:  # noqa: BLE001
+            logger.error("close_open_position: IB sibling re-arm raised for %s/%s sibling=%s: %s",
+                         account_cfg.get("account_id"), symbol, rid, exc)
+            out.append({"trade_id": rid, "rearmed": False, "why": f"{type(exc).__name__}: {exc}"})
+    return out
+
+
 def _ib_sibling_open_qty(
     account_id: Optional[str], symbol: Optional[str],
     exclude_trade_id: Optional[Any],
@@ -4050,8 +4112,36 @@ def close_open_position(
                 # position is flat — cancel them so they can't linger and
                 # count toward the symbol's 20-leg cap. Best-effort; a
                 # cancel failure never turns a successful close into one.
+                #
+                # BRACKETS-ALWAYS item 5 (2026-11-19): only once the close is
+                # CONFIRMED FILLED. An ACCEPTED market order that has not
+                # (yet) filled -- a halt, a partial, an unreadable status --
+                # used to lose its SL/TP here while the position stayed open.
+                # The legs are reduce-only, so leaving them over a flat
+                # position can never open one; the stale-leg sweep (or the
+                # next close) cleans them.
+                legs_cancel = "not_needed"
+                if sl_order_id or tp_order_id:
+                    try:
+                        _fill = read_reduce_fill(
+                            exchange_client, account_cfg, symbol=symbol,
+                            order_id=order_id, requested_qty=float(snap_qty_str),
+                        )
+                    except Exception as fill_exc:  # noqa: BLE001 -- never break a placed close
+                        _fill = {"state": "unknown", "reason": str(fill_exc)}
+                    if _fill.get("state") == "filled":
+                        legs_cancel = "confirmed_filled"
+                    else:
+                        legs_cancel = f"skipped_{_fill.get('state')}"
+                        logger.warning(
+                            "close_open_position: account=%s symbol=%s close %s "
+                            "not confirmed filled (%s: %s) -- KEEPING the "
+                            "trade's SL/TP legs (BRACKETS-ALWAYS)",
+                            account_cfg.get("account_id"), symbol, order_id,
+                            _fill.get("state"), _fill.get("reason"),
+                        )
                 for leg_id in (sl_order_id, tp_order_id):
-                    if not leg_id:
+                    if not leg_id or legs_cancel != "confirmed_filled":
                         continue
                     try:
                         cancel_resp = exchange_client.cancel_order(
@@ -4072,7 +4162,8 @@ def close_open_position(
                             leg_id, symbol, leg_exc,
                         )
                 return {"ok": True, "exchange_response": resp,
-                        "exchange_order_id": order_id, "error": None}
+                        "exchange_order_id": order_id, "error": None,
+                        "legs_cancel": legs_cancel}
             err = str(resp.get("retMsg") or f"retCode={ret_code}")
             return {"ok": False, "exchange_response": resp,
                     "exchange_order_id": None, "error": err}
@@ -4128,8 +4219,14 @@ def close_open_position(
                     account_cfg.get("account_id"), symbol, close_side, qty,
                     order_id,
                 )
+                # BRACKETS-ALWAYS item 3 (option B, manager 2026-11-19): the close cancelled EVERY leg on the
+                # symbol; re-arm each same-direction sibling's own bracket now instead of leaving it to the sweep.
+                siblings = (_ib_rearm_siblings_after_close(
+                    exchange_client, account_cfg, symbol, direction, trade_id)
+                    if sibling_qty > 0 else [])
                 return {"ok": True, "exchange_response": resp,
-                        "exchange_order_id": order_id, "error": None}
+                        "exchange_order_id": order_id, "error": None,
+                        "siblings_rearmed": siblings}
             err = str(resp.get("retMsg") or f"retCode={ret_code}")
             return {"ok": False, "exchange_response": resp,
                     "exchange_order_id": None, "error": err}

@@ -375,6 +375,26 @@ def falsify_verdict(full: dict, drop: dict, wl_full: dict, ref_auc: float) -> tu
 # mean; only the order is destroyed), points and scores are rebuilt, and the read is observed minus the null mean, with
 # p = share of null draws >= observed. A learned score refits on every null draw.
 NULL_DRAWS_CUSUM, NULL_DRAWS_LEARNED = 200, 40
+NULL_UNIT = "RQ-20261119-b9d0-01"
+NULL_RULE_ID = "RULE-RQ20261119-b9d0-01-D10-ORDER-NULL"
+NULL_MIN_LEARNED_DRAWS = 30
+
+
+def null_verdict(cal: dict, n: int, legs: int) -> tuple[str, str]:
+    """RULE-RQ20261119-b9d0-01-D10-ORDER-NULL, as registered: INDETERMINATE if points < 200 OR legs < 3 OR fewer than 30 learned
+    null draws scored; PASS if learned pooled excess > 0 AND its p < 0.05 AND it exceeds the CUSUM's pooled excess; FAIL if
+    the learned pooled p >= 0.20; INDETERMINATE otherwise. Emits only result-contract verdicts (script_run.VERDICTS): the
+    collector treats any other token as producer_failed and retries the run (the b9d0-01 double dispatch, 2026-11-19)."""
+    lp, cp = cal["learned"]["pooled"], cal["cusum"]["pooled"]
+    if n < MIN_POINTS or legs < MIN_LEGS or (lp.get("draws") or 0) < NULL_MIN_LEARNED_DRAWS or lp.get("p_one_sided") is None:
+        return "indeterminate", f"points {n} / legs {legs} / learned null draws {lp.get('draws')} below {MIN_POINTS} / {MIN_LEGS} / {NULL_MIN_LEARNED_DRAWS}"
+    ex, p, cex = lp["excess"], lp["p_one_sided"], cp.get("excess")
+    txt = f"learned pooled excess {ex:+.4f} (p {p}) vs CUSUM {cex:+.4f} (p {cp.get('p_one_sided')})"
+    if ex > 0 and p < 0.05 and cex is not None and ex > cex:
+        return "pass", txt + ": the learned score ranks decay beyond the order null and beyond the CUSUM"
+    if p >= 0.20:
+        return "fail", txt + ": no learned skill over the order null"
+    return "indeterminate", txt + ": between the bars"
 
 
 def _shuffle_legs(by: Dict[str, List[dict]], rng: np.random.Generator) -> Dict[str, List[dict]]:
@@ -629,8 +649,8 @@ def run(a) -> int:
         print(json.dumps({"verdict": v, "note": why}, indent=1))
         return 0
     if a.null_calibrate:
-        # REPORT mode (no verdict rule of its own): the order-null calibration of the CUSUM baseline and the learned score on
-        # the same points, for a registered unit to grade. The learned refits on every draw, so it takes the heavy queue.
+        # RQ-20261119-b9d0-01: the order-null calibration of the CUSUM baseline and the learned score on the same points, graded
+        # by that unit's registered rule (null_verdict). The learned refits on every draw, so it takes the heavy queue.
         if str(REPO) not in sys.path:
             sys.path.insert(0, str(REPO))
         try:
@@ -640,17 +660,19 @@ def run(a) -> int:
             print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
         cal = {"cusum": order_null(by, mu, "cusum", a.null_draws_cusum),
                "learned": order_null(by, mu, "learned", a.null_draws_learned)}
-        res = {"verdict": "report", "read_state": "measured", "n": len(learned_points(by, mu)),
+        n_pts = len(learned_points(by, mu))
+        v, why = null_verdict(cal, n_pts, len(by))
+        res = {"verdict": v, "read_state": "measured", "n": n_pts,
                "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 "
                               f"record, label mean net R of the next {N_NEXT} trades < 0; null = each leg's trades shuffled"),
-               "note": (f"order-null excess AUC (pooled / within-leg): cusum {cal['cusum']['pooled']['excess']} / "
+               "note": (f"{why}; order-null excess AUC (pooled / within-leg): cusum {cal['cusum']['pooled']['excess']} / "
                         f"{cal['cusum']['within_leg']['excess']}, learned {cal['learned']['pooled']['excess']} / "
                         f"{cal['learned']['within_leg']['excess']}"),
-               "measurement": {"calibration": cal, "features": LEARNED_FEATURES,
+               "measurement": {"rule": NULL_RULE_ID, "calibration": cal, "features": LEARNED_FEATURES,
                                "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS},
                                "trades_in": len(trades), "excluded": ex}}
         out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
-        print(json.dumps({"verdict": "report", "note": res["note"]}, indent=1))
+        print(json.dumps({"verdict": v, "note": res["note"]}, indent=1))
         return 0
     if a.alarm_h_sweep:
         arms =[action_replay(by, mu, h=hh) for hh in SWEEP_H]
@@ -796,6 +818,17 @@ def _self_test() -> int:
     on = order_null(nby, nmu, "cusum", draws=60)
     assert abs(on["within_leg"]["excess"]) < 0.06 and on["within_leg"]["null_mean"] < 0.45, on
     assert on["pooled"]["p_one_sided"] > 0.05, on
+    # null_verdict emits only result-contract verdicts, and maps the registered branches
+    def _cal(ex, p, d, cex=0.1):
+        return {"learned": {"pooled": {"excess": ex, "p_one_sided": p, "draws": d}}, "cusum": {"pooled": {"excess": cex, "p_one_sided": 0.005}}}
+    assert null_verdict(_cal(0.2, 0.01, 40), 675, 24)[0] == "pass"
+    assert null_verdict(_cal(0.05, 0.01, 40), 675, 24)[0] == "indeterminate"     # beats the null but not the CUSUM, p < 0.20
+    assert null_verdict(_cal(-0.0107, 0.5122, 40), 675, 24)[0] == "fail"         # the b9d0-01 live read
+    assert null_verdict(_cal(0.02, 0.10, 40), 675, 24)[0] == "indeterminate"
+    assert null_verdict(_cal(-0.01, 0.5, 20), 675, 24)[0] == "indeterminate"     # too few learned draws
+    assert null_verdict(_cal(-0.01, 0.5, 40), 150, 24)[0] == "indeterminate"     # too few points
+    assert {null_verdict(_cal(*a), 675, 24)[0] for a in ((0.2, 0.01, 40), (-0.01, 0.5, 40), (0.02, 0.1, 40))} <= {
+        "pass", "fail", "no_action_warranted", "indeterminate", "not_applicable"}
     # the shuffle keeps each leg's trade set and length, and changes only the order
     sh = _shuffle_legs(nby, np.random.default_rng(0))
     assert all(sorted(x["r"] for x in sh[lg]) == sorted(x["r"] for x in nby[lg]) for lg in nby)

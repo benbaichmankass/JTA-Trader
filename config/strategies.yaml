@@ -1514,6 +1514,15 @@ strategies:
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
     structure_exit: "pivot=5"
     decision_bar: closed
+    # MAKER TIME-STOP EXIT, DEMO-FLOOR MECHANICS CHECK (row D9-MAKER-EXIT-BUILD, data-backed Tier 3 under the standing
+    # rule; manager 2026-11-19 "keep the ml_entry_v2 line"): the 24h max_hold close is worked post-only at the passive mid
+    # with a 1-minute Market fallback (src/units/accounts/maker_exit.py). Evidence: RQ-20261118-04a5-05 PASS + fresh-window
+    # RQ-20261118-e8a1-01 PASS, both measured on ml_entry's exits. ml_entry trades no demo-floor Bybit account (bybit_1
+    # rosters THIS leg), so the 1-2 clean mechanical exits are observed here; maker_exit.account_admitted limits the path to
+    # the demo floor (bybit_1). ml_entry is NOT declared yet: its line changes its config_fingerprint and would leave its
+    # committed evidence record comms/strategy_evidence/ml_entry.json STALE, so it lands with the real-money widening
+    # (PR 2), where re-vouching that record is part of the decision. ROLLBACK: delete this line (taker Market exit).
+    time_stop_exit_order: post_only_mid
     symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
     atr_period: 14
     atr_stop_mult: 2.0

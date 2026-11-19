@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "Bybit order path (bybit_2 is real money). (a) close_open_position cancels the trade's tracked Partial SL/TP legs only after read_reduce_fill confirms the close FILLED (unfilled/partial/unreadable: the legs stay; they are reduce-only). (b) _bybit_top_up_partial_sl adds the row's own TP in the same Partial add-a-leg call, Partial mode only, with an SL-only fallback if the venue refuses the pair. The trader restarts on deploy. Manager merges. Revert: git revert + deploy.",
+  "why": "BRACKETS-ALWAYS item 5 (manager decision 04:00Z): legs were cancelled on close ACCEPT, not fill; the SL-only top-up left its qty TP-naked against the TP doctrine. Tests on pybit V5 response shapes; the failure paths fail on the old code. Gates this adds or changes: none."
+}
