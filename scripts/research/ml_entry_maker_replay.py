@@ -470,6 +470,8 @@ GATE_FEATURES = ["dir", "hour", "tick_bps", "ret1", "ret5", "ret15", "ret60", "r
 GATE_LGB = {"n_estimators": 200, "learning_rate": 0.05, "num_leaves": 15, "min_child_samples": 200, "subsample": 0.8,
             "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": 20261119, "verbose": -1, "n_jobs": 4}
 GATE_MIN_SKIP = 0.01   # a gate that skips < 1% of exits is inert: INDETERMINATE, not a FAIL on d == 0
+GATE_RANDOM_DRAWS = 1000   # matched-random control: skip the SAME number of held-out exits chosen at random
+GATE_RANDOM_P = 0.05
 
 
 def pre_features(d: pd.DataFrame, T: int, direction: int, tick: float) -> dict | None:
@@ -552,8 +554,19 @@ def auc_score(score: np.ndarray, y: np.ndarray) -> float | None:
     return float((r[:len(pos)].sum() - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg)))
 
 
+def matched_random_skip(delta_r: np.ndarray, n_skip: int, mean_d: float, draws: int = GATE_RANDOM_DRAWS,
+                        seed: int = 20261119) -> dict:
+    """GATING control: skip the SAME number of exits, chosen uniformly at random, `draws` times. The gate's choice must beat it, so
+    the result is about WHICH exits the model skips, not about skipping as such. p = (1 + #draws with mean d >= the gate's) / (1 + draws)."""
+    n = len(delta_r)
+    rng = np.random.default_rng(seed)
+    means = np.array([-delta_r[rng.choice(n, n_skip, replace=False)].sum() / n for _ in range(draws)]) if n_skip and n else np.zeros(draws)
+    return {"draws": draws, "n_skip": int(n_skip), "mean_of_means": float(means.mean()), "p95": float(np.percentile(means, 95)),
+            "p_value": float((1 + (means >= mean_d).sum()) / (1 + draws))}
+
+
 def gate_verdict(cal_ok: bool, n_dev: int, n_held: int, ns_held: int, skip_share: float | None, mean_d: float | None,
-                 lo_d: float | None, gated_mean: float | None) -> tuple[str, str]:
+                 lo_d: float | None, gated_mean: float | None, p_random: float | None = None) -> tuple[str, str]:
     if not cal_ok:
         return "indeterminate", "1m approximation not calibrated against a3f1-01"
     if n_dev < EXIT_N_FLOOR or n_held < EXIT_N_FLOOR or ns_held < EXIT_SYM_FLOOR:
@@ -561,8 +574,8 @@ def gate_verdict(cal_ok: bool, n_dev: int, n_held: int, ns_held: int, skip_share
     if skip_share is None or skip_share < GATE_MIN_SKIP:
         return "indeterminate", f"gate inert: skips {skip_share} of held-out exits (< {GATE_MIN_SKIP})"
     txt = (f"gated - always-post {mean_d:+.5f} R/exit, deflated lower bound {lo_d:+.5f}; gated vs taker {gated_mean:+.5f} R/exit; "
-           f"skips {skip_share:.3f}, n={n_held}")
-    if mean_d > 0 and lo_d > 0 and gated_mean > 0:
+           f"skips {skip_share:.3f}, matched-random p {p_random}, n={n_held}")
+    if mean_d > 0 and lo_d > 0 and gated_mean > 0 and p_random is not None and p_random < GATE_RANDOM_P:
         return "pass", txt
     return "fail", txt
 
@@ -592,7 +605,7 @@ def run_exit_gate(a) -> int:
            "features": GATE_FEATURES, "lgb_params": GATE_LGB, "n_dev_time_stop": dev.attrs.get("n_time_stop"), "n_dev_exits": n_dev,
            "n_held_time_stop": held.attrs.get("n_time_stop"), "n_held_exits": n_held, "n_held_symbols": ns_held,
            "u_hat_bps_dev": u_hat, "dev_fill_rate": float(dev.filled.mean()) if n_dev else None}
-    mean_d = lo_d = gated_mean = skip = None
+    mean_d = lo_d = gated_mean = skip = p_random = None
     if n_held and clf is not None:
         # provenance: predict_proba — column 1 of the binary LGBMClassifier fit on dev is P(filled) for the order resting at the mid
         pf = clf.predict_proba(held[GATE_FEATURES])[:, 1]
@@ -604,8 +617,16 @@ def run_exit_gate(a) -> int:
         gated_mean, g_lo, g_hi = block_ci(gated, days, lo_pct)
         always_mean, a_lo, a_hi = block_ci(held.delta_r.to_numpy(), days, lo_pct)
         skip = float(1.0 - post.mean())
+        mr = matched_random_skip(held.delta_r.to_numpy(), int((~post).sum()), mean_d)
+        p_random = mr["p_value"]
+        # reported, never gating: the SAME decision rule with P fixed at the dev base rate. The filled gain is known at T, so a gate
+        # can beat random skips by tick size alone; the gap between the model gate and this one is what P(fill) itself adds.
+        post0 = gate_decide(np.full(n_held, float(dev.filled.mean())), held.filled_gain_bps.to_numpy(), u_hat)
+        d0 = np.where(post0, 0.0, -held.delta_r.to_numpy())
+        base_rate_gate = {"skip_share": float(1.0 - post0.mean()), "mean_d_r": float(d0.mean()),
+                          "model_minus_base_rate_d_r": float(np.mean(d) - d0.mean())}
         y = held.filled.astype(int).to_numpy()
-        res.update({"skip_share": skip, "mean_d_r": mean_d, "deflated_ci_d_r": [lo_d, hi_d], "ci_lo_percentile": lo_pct,
+        res.update({"skip_share": skip, "matched_random_skip": mr, "base_rate_gate_reported": base_rate_gate, "mean_d_r": mean_d, "deflated_ci_d_r": [lo_d, hi_d], "ci_lo_percentile": lo_pct,
                     "gated_mean_r": gated_mean, "deflated_ci_gated_r": [g_lo, g_hi], "always_post_mean_r": always_mean,
                     "deflated_ci_always_r": [a_lo, a_hi], "held_fill_rate": float(y.mean()),
                     "held_fill_rate_posted": float(y[post].mean()) if post.any() else None,
@@ -615,7 +636,7 @@ def run_exit_gate(a) -> int:
                     "mean_d_bps": float(np.where(post, 0.0, -held.delta_bps.to_numpy()).mean()),
                     "by_side": {s: {"n": int((held.side == s).sum()), "mean_d_r": float(d[(held.side == s).to_numpy()].mean())}
                                 for s in ("long", "short") if (held.side == s).any()}})
-    v, why = gate_verdict(bool(cal["calibrated"]), n_dev, n_held, ns_held, skip, mean_d, lo_d, gated_mean)
+    v, why = gate_verdict(bool(cal["calibrated"]), n_dev, n_held, ns_held, skip, mean_d, lo_d, gated_mean, p_random)
     res.update({"verdict": v, "why": why, "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)})
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     verdict = {"verdict": v, "read_state": "measured", "n": n_held,
@@ -740,9 +761,17 @@ def _self_test() -> None:
     g = gate_decide(np.array([0.9, 0.1, 0.5]), np.array([4.0, 4.0, 4.0]), -12.0)
     assert g.tolist() == [True, False, False], g                      # 0.9*4-0.1*12>0; 0.1*4-0.9*12<0; 0.5*4-0.5*12<0
     assert auc_score(np.array([0.1, 0.2, 0.8, 0.9]), np.array([0, 0, 1, 1])) == 1.0
-    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006)[0] == "pass"
-    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, -0.0002, 0.006)[0] == "fail"
-    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, -0.001)[0] == "fail"
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, 0.01)[0] == "pass"
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, 0.20)[0] == "fail"     # random skips do as well
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, None)[0] == "fail"     # no control, no pass
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, -0.0002, 0.006, 0.01)[0] == "fail"
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, -0.001, 0.01)[0] == "fail"
+    # matched random: skipping exactly the losing exits beats random skips of the same count; skipping winners does not
+    dr = np.array([0.01] * 90 + [-0.05] * 10)
+    good = -dr[90:].sum() / 100
+    assert matched_random_skip(dr, 10, good, draws=300)["p_value"] < 0.01
+    bad = -dr[:10].sum() / 100
+    assert matched_random_skip(dr, 10, bad, draws=300)["p_value"] > 0.5
     assert gate_verdict(True, 5000, 3000, 40, 0.005, 0.001, 0.0002, 0.006)[0] == "indeterminate"
     assert gate_verdict(True, 900, 3000, 40, 0.1, 0.001, 0.0002, 0.006)[0] == "indeterminate"
     assert gate_verdict(False, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006)[0] == "indeterminate"

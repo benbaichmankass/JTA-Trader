@@ -60,10 +60,12 @@ decision_rule:
     DEFLATED lower percentile holdout_lock.claim_read returns for this read (family EXEC, model EXEC-maker-exit-fillgate-ml_entry_v1,
     window 2025-10-01..2026-09-30). Also the gated policy vs the market exit (mean delta_R, same CI). Reported, never gating: skip
     share, fill rate overall / posted / skipped, AUC and Brier of P(fill) on held-out vs the dev base rate, d in bps, by side, the
-    always-post mean (reproduces 04a5-05''s population).'
+    always-post mean (reproduces 04a5-05''s population), and the BASE-RATE gate (the same rule with P fixed at the dev fill rate): the filled
+    gain is known at T, so a gate can beat random skips by tick size alone, and model-minus-base-rate d is what P(fill) itself adds.'
   rule: 'INDETERMINATE IF the calibration arm (W 5) is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured exits < 1000 on
     dev or on held-out, OR held-out symbols < 10, OR the gate skips < 1% of held-out exits (inert). PASS IF mean d > 0 AND the deflated
-    lower bound of d > 0 AND the gated policy''s mean delta_R vs the market exit > 0. FAIL otherwise. The holdout ledger is claimed BEFORE
+    lower bound of d > 0 AND the gated policy''s mean delta_R vs the market exit > 0 AND the matched-random control (the same number of
+    skips chosen at random, 1000 draws) gives one-sided p < 0.05 for the gate''s mean d. FAIL otherwise. The holdout ledger is claimed BEFORE
     any held-out post-exit 1m bar is read. Thresholds fixed now and not changed after any result.'
   pass_action: 'Refine the static mid-peg exit proposal (e8a1-01) into a GATED one: a Tier-3 PROPOSAL to the manager to ship the gate with
     the exit (P(fill) model exported from the dev fit, features computed at the exit moment from the live 1m feed), on the demo floor /
@@ -94,6 +96,11 @@ power:
     accrual_basis: Replays public history; nothing accrues.
 intervention_controls:
   hold_to_bracket: true
+  matched_random:
+    draws: 1000
+    note: 'GATING: skip the SAME number of held-out exits as the gate, chosen uniformly at random, 1000 times (seed 20261119); the gate''s
+      mean d must beat them at one-sided p < 0.05, so a PASS is about WHICH exits the model skips, not about skipping as such
+      (ml_entry_maker_replay.matched_random_skip, self-tested).'
   best_static:
     grid:
     - market_exit
