@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T16:45:00Z",
- "bar_close": "2026-11-19T16:50:00Z",
- "built_at": "2026-11-19T16:52:03Z",
+ "bar": "2026-11-19T16:50:00Z",
+ "bar_close": "2026-11-19T16:55:00Z",
+ "built_at": "2026-11-19T16:57:20Z",
  "closed": false,
  "order_package_id": "pkg-9d2f6321f7a84dd8",
  "packet": {
@@ -16,10 +16,10 @@
      "tighten",
      "widen_sl"
     ],
-    "evidence": "bybit_orders: SL 64067.7 / TP 62018.2, position True, matched by order_id, 1 sibling package(s) on BTCUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "evidence": "bybit_orders: SL 64067.7 / TP 62018.2, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
     "mechanics": {
      "by_design": null,
-     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-02f983c111aa4de2); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": null,
      "verdict": "match"
     },
     "own_position": true,
@@ -140,16 +140,10 @@
   "context_v3": {
    "book": [
     [
-     "BTCUSDT",
-     "long",
-     "trend_donchian_1h",
-     -0.661
-    ],
-    [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.185
+     -0.137
     ],
     [
      "SLV",
@@ -161,13 +155,13 @@
      "SLV",
      "short",
      "slv_trend_1h",
-     -0.31
+     -0.181
     ],
     [
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.212
+     0.294
     ],
     [
      "SLV",
@@ -203,25 +197,25 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.59
+     0.622
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.0693
+     0.163
     ],
     [
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.277
+     0.287
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.454
+     -0.387
     ],
     [
      "SLV",
@@ -233,13 +227,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.18
+     2.15
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     0.0418
+     0.0836
     ],
     [
      "SLV",
@@ -251,7 +245,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.363
+     0.387
     ],
     [
      "XRPUSDT",
@@ -263,19 +257,19 @@
      "GLD",
      "short",
      "gld_pullback_1d",
-     2.37
+     2.38
     ],
     [
      "IEF",
      "long",
      "ief_pullback_1d",
-     0.0585
+     0.134
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     0.207
+     0.303
     ],
     [
      "ETHUSDT",
@@ -287,7 +281,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.355
+     0.379
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -656,14 +650,14 @@
    "head": "2dcd198ec2",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T16:52:15Z",
+  "info_cutoff_at": "2026-11-19T16:57:34Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-02f983c111aa4de2); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+   "evidence": "package sl 64067.7 / tp 62018.2 agree with every readable account",
    "per_account": {
     "bybit_1": {
      "by_design": null,
-     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-02f983c111aa4de2); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": null,
      "verdict": "match"
     }
    },
@@ -727,25 +721,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261119T1652Z-pkg-9d2f6321f7a84dd8",
+  "review_id": "LR-20261119T1657Z-pkg-9d2f6321f7a84dd8",
   "short_hold": {
-   "atr": 180.18571428571522,
-   "bar": "2026-11-19T16:45:00Z",
-   "bar_close": "2026-11-19T16:50:00Z",
+   "atr": 199.95000000000073,
+   "bar": "2026-11-19T16:50:00Z",
+   "bar_close": "2026-11-19T16:55:00Z",
    "entry": 63070.7,
-   "mark": 63113.7,
-   "minutes_held": 31.7,
-   "open_r_at_mark": -0.0431,
+   "mark": 62883.4,
+   "minutes_held": 37.0,
+   "open_r_at_mark": 0.1879,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 62973.1,
-     "high": 62997.0,
-     "low": 62808.1,
-     "open": 62826.4,
-     "t": "2026-11-19T15:50:00Z"
-    },
     {
      "close": 63070.7,
      "high": 63162.8,
@@ -822,6 +809,13 @@
      "low": 63059.5,
      "open": 63162.0,
      "t": "2026-11-19T16:45:00Z"
+    },
+    {
+     "close": 62883.4,
+     "high": 63116.8,
+     "low": 62580.0,
+     "open": 63113.7,
+     "t": "2026-11-19T16:50:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -840,25 +834,18 @@
    "tp": 62018.2
   }
  },
- "packet_sha": "2ad9ae08b24bc0f9994d4cf2f29e2eabd0716f438dd632f92175542fb7a8abc8",
+ "packet_sha": "60a524a8ddf3c0a3d199de41d8e1643041027cbb4f6deb9b753331c9d81984d4",
  "short_hold": {
-  "atr": 180.18571428571522,
-  "bar": "2026-11-19T16:45:00Z",
-  "bar_close": "2026-11-19T16:50:00Z",
+  "atr": 199.95000000000073,
+  "bar": "2026-11-19T16:50:00Z",
+  "bar_close": "2026-11-19T16:55:00Z",
   "entry": 63070.7,
-  "mark": 63113.7,
-  "minutes_held": 31.7,
-  "open_r_at_mark": -0.0431,
+  "mark": 62883.4,
+  "minutes_held": 37.0,
+  "open_r_at_mark": 0.1879,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 62973.1,
-    "high": 62997.0,
-    "low": 62808.1,
-    "open": 62826.4,
-    "t": "2026-11-19T15:50:00Z"
-   },
    {
     "close": 63070.7,
     "high": 63162.8,
@@ -935,6 +922,13 @@
     "low": 63059.5,
     "open": 63162.0,
     "t": "2026-11-19T16:45:00Z"
+   },
+   {
+    "close": 62883.4,
+    "high": 63116.8,
+    "low": 62580.0,
+    "open": 63113.7,
+    "t": "2026-11-19T16:50:00Z"
    }
   ],
   "risk_per_unit": null,
