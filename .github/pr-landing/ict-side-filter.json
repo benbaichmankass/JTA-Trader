@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits scripts/backtest_ict_scalp.py (evidence harness; the manager schedules the merge and asks AM-OPS-5 to run trader_import_closure decide) and moves 7 units out of research/queue/blocked/; manager merges after the FULL pytest-run is green",
+  "why": "PI-20261119-OFUCR5NF-0003 (manager GO 2026-11-19 04:35Z): adds --side-filter long|short|both to backtest_ict_scalp.py using the shared live gate _side_filter_suppresses (imported, not copied). Default both is byte-identical, proved by a golden generated from the untouched origin/main script on a committed 15m MGC candle file. Unblocks the 7 ict_scalp DIRECTION units (abab-24/26/28/30/32/34/36); abab-26 is re-armed (stamp cleared, rearmed_at set) because its only landed row is a producer_failed from the missing flag. Note: the live ict_scalp builder reads no side_filter today, so a PASS still needs a live producer. Gates this adds or changes: none."
+}

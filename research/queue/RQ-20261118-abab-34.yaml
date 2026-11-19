@@ -1,7 +1,7 @@
 id: RQ-20261118-abab-34
 title: 'DIRECTION lever family on ict_scalp_xrp_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost
   stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -114,10 +114,3 @@ roadmap:
 related:
 - RQ-20261105-034
 - research/levers/ict_scalp_xrp_15m.yaml
-blocked_on:
-- kind: harness
-  ref: scripts/backtest_ict_scalp.py
-  owner: PI-20261119-OFUCR5NF-0003
-  what: 'scripts/backtest_ict_scalp.py has no --side-filter (exit_lever_ablation passes it); abab-26 run 44443932727 failed deterministically with "unrecognized arguments: --side-filter long" after the candle feed was served'
-  clears_when: 'backtest_ict_scalp.py accepts --side-filter long|short|both (default both, byte-identical when absent) with a parity test against the live ict_scalp side filter, merged on main (PI-20261119-OFUCR5NF-0003); then git-mv this file back to research/queue/ with status queued, rule unchanged'
-  due_by: '2026-11-26'
