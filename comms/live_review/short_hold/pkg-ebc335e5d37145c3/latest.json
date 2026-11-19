@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T17:15:00Z",
- "bar_close": "2026-11-19T17:20:00Z",
- "built_at": "2026-11-19T17:20:49Z",
+ "bar": "2026-11-19T17:20:00Z",
+ "bar_close": "2026-11-19T17:25:00Z",
+ "built_at": "2026-11-19T17:25:59Z",
  "closed": false,
  "order_package_id": "pkg-ebc335e5d37145c3",
  "packet": {
@@ -138,7 +138,7 @@
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.0312
+     -0.199
     ],
     [
      "SLV",
@@ -150,13 +150,13 @@
      "SLV",
      "short",
      "slv_trend_1h",
-     0.469
+     -0.0303
     ],
     [
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.396
+     0.256
     ],
     [
      "SLV",
@@ -186,25 +186,25 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.743
+     0.572
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.444
+     0.163
     ],
     [
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.346
+     0.308
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.29
+     -0.406
     ],
     [
      "SLV",
@@ -216,13 +216,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.64
+     2.44
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     0.251
+     0.0418
     ],
     [
      "BTCUSDT",
@@ -240,7 +240,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.564
+     0.402
     ],
     [
      "XRPUSDT",
@@ -252,31 +252,31 @@
      "SOLUSDT",
      "short",
      "e4_oi_shock_1h",
-     0.252
+     -0.342
     ],
     [
      "GLD",
      "short",
      "gld_pullback_1d",
-     2.48
+     2.38
     ],
     [
      "IEF",
      "long",
      "ief_pullback_1d",
-     0.213
+     0.175
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     0.92
+     0.555
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.555
+     0.395
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -607,17 +607,17 @@
   "features_at_review": {
    "atr_now_over_entry": 1.2555,
    "bars_since_peak": 0,
-   "giveback_r": 0.0749,
-   "open_r": 0.2717,
+   "giveback_r": 0.3993,
+   "open_r": -0.0527,
    "peak_r": 0.3466,
-   "r_to_stop": 1.2717,
-   "r_to_target": 1.0795
+   "r_to_stop": 0.9473,
+   "r_to_target": 1.4039
   },
   "generator": {
-   "head": "adf77f8420",
+   "head": "7107042e08",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T17:21:00Z",
+  "info_cutoff_at": "2026-11-19T17:26:29Z",
   "leg": "ict_scalp_eth_15m",
   "mechanics": {
    "evidence": "bybit_1: ETHUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-a29e677a8dc24525, pkg-fcc9b168ca3f4878); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
@@ -646,8 +646,20 @@
   ],
   "order_package_id": "pkg-ebc335e5d37145c3",
   "packet_health": {
-   "defects": [],
-   "status": "ok"
+   "defects": [
+    {
+     "count": 2,
+     "denominator": 2,
+     "field": "priced_options.options",
+     "reason": "all_options_unpriced:insufficient_n"
+    }
+   ],
+   "inapplicable_options": {
+    "count": 2,
+    "denominator": 4,
+    "reason": "stop_level_not_below_price"
+   },
+   "status": "degraded"
   },
   "packet_version": 3,
   "priced_options": {
@@ -665,131 +677,95 @@
    "options": [
     {
      "action": "hold",
-     "mean_r": 0.0381,
-     "n": 21,
+     "mean_r": null,
+     "n": 10,
      "n_floor": 20,
-     "p05_r": -0.9458,
-     "p_giveback_gt_half": 0.6667,
-     "sd_r": 0.9015,
-     "state": "measured",
-     "worst_r": -1.1274
+     "p05_r": null,
+     "p_giveback_gt_half": null,
+     "sd_r": null,
+     "state": "insufficient_n",
+     "worst_r": null
     },
     {
      "action": "tighten",
-     "ev_cost_r": 0.0972,
-     "ev_cost_se_r": 0.1857,
-     "mean_r": -0.0592,
-     "n": 21,
-     "n_floor": 20,
-     "p05_r": -0.6279,
-     "p_giveback_gt_half": 0.9048,
-     "sd_r": 0.27,
+     "ev_cost_r": null,
+     "ev_cost_se_r": null,
+     "mean_r": null,
+     "n": 10,
+     "p05_r": null,
+     "p_giveback_gt_half": null,
+     "reason": "stop_level_not_below_price",
+     "sd_r": null,
      "spec": "atr:1.0",
-     "state": "measured",
+     "state": "invalid_level",
      "stop_at_r_now": 0.1264,
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.3491,
-     "worst_r": -0.7783
+     "within_auto_bound": null,
+     "within_shadow_bound": null,
+     "worst_case_gain_r": null,
+     "worst_r": null
     },
     {
      "action": "tighten",
-     "ev_cost_r": 0.1112,
-     "ev_cost_se_r": 0.1867,
-     "mean_r": -0.0731,
-     "n": 21,
-     "n_floor": 20,
-     "p05_r": -0.6279,
-     "p_giveback_gt_half": 0.9048,
-     "sd_r": 0.2648,
+     "ev_cost_r": null,
+     "ev_cost_se_r": null,
+     "mean_r": null,
+     "n": 10,
+     "p05_r": null,
+     "p_giveback_gt_half": null,
+     "reason": "stop_level_not_below_price",
+     "sd_r": null,
      "spec": "atr:1.5",
-     "state": "measured",
+     "state": "invalid_level",
      "stop_at_r_now": 0.0164,
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.3491,
-     "worst_r": -0.7783
+     "within_auto_bound": null,
+     "within_shadow_bound": null,
+     "worst_case_gain_r": null,
+     "worst_r": null
     },
     {
      "action": "tighten",
-     "ev_cost_r": 0.0862,
-     "ev_cost_se_r": 0.1841,
-     "mean_r": -0.0481,
-     "n": 21,
+     "ev_cost_r": null,
+     "ev_cost_se_r": null,
+     "mean_r": null,
+     "n": 10,
      "n_floor": 20,
-     "p05_r": -0.6279,
-     "p_giveback_gt_half": 0.9048,
-     "sd_r": 0.3572,
+     "p05_r": null,
+     "p_giveback_gt_half": null,
+     "sd_r": null,
      "spec": "atr:2.0",
-     "state": "measured",
+     "state": "insufficient_n",
      "stop_at_r_now": -0.0937,
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.3491,
-     "worst_r": -0.7783
-    },
-    {
-     "action": "tighten",
-     "ev_cost_r": 0.0989,
-     "ev_cost_se_r": 0.1647,
-     "mean_r": -0.0608,
-     "n": 21,
-     "n_floor": 20,
-     "p05_r": -0.6279,
-     "p_giveback_gt_half": 0.9048,
-     "sd_r": 0.4985,
-     "spec": "r:0",
-     "state": "measured",
-     "stop_at_r_now": 0.0,
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.3491,
-     "worst_r": -0.7783
-    },
-    {
-     "action": "tighten",
-     "ev_cost_r": 0.1347,
-     "ev_cost_se_r": 0.1829,
-     "mean_r": -0.0966,
-     "n": 21,
-     "n_floor": 20,
-     "p05_r": -0.6279,
-     "p_giveback_gt_half": 1.0,
-     "sd_r": 0.2434,
-     "spec": "r:0.14",
-     "state": "measured",
-     "stop_at_r_now": 0.14,
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.3491,
-     "worst_r": -0.7783
+     "within_auto_bound": null,
+     "within_shadow_bound": null,
+     "worst_case_gain_r": null,
+     "worst_r": null
     },
     {
      "action": "close",
-     "ev_cost_r": -0.0966,
-     "ev_cost_se_r": 0.1929,
-     "mean_r": 0.1347,
-     "n": 21,
+     "ev_cost_r": null,
+     "ev_cost_se_r": null,
+     "mean_r": null,
+     "n": 10,
      "n_floor": 20,
-     "p05_r": -0.0966,
-     "p_giveback_gt_half": 0.619,
-     "sd_r": 0.1027,
+     "p05_r": null,
+     "p_giveback_gt_half": null,
+     "sd_r": null,
      "spec": "close",
-     "state": "measured",
-     "within_auto_bound": true,
-     "within_shadow_bound": true,
-     "worst_case_gain_r": 0.9451,
-     "worst_r": -0.1823
+     "state": "insufficient_n",
+     "within_auto_bound": null,
+     "within_shadow_bound": null,
+     "worst_case_gain_r": null,
+     "worst_r": null
     }
    ],
    "population": {
     "beyond_bars_slack": 0,
-    "comparable": 21,
+    "comparable": 10,
     "corpus_trades": 76,
     "mfe_replay_mismatch": 0,
     "never_reached_peak": 14,
     "no_candles": 0,
-    "no_pullback_after_peak": 5,
+    "no_pullback_after_peak": 16,
     "side_excluded": 36,
     "side_filter": "short",
     "symbol_excluded": 0,
@@ -798,8 +774,8 @@
      "ETHUSDT"
     ]
    },
-   "read_state": "measured",
-   "source": "comms/live_review/tables/LR-20261119T1720Z-pkg-ebc335e5d37145c3.json"
+   "read_state": "insufficient_n",
+   "source": "comms/live_review/tables/LR-20261119T1725Z-pkg-ebc335e5d37145c3.json"
   },
   "priced_options_state": "priced",
   "regime": {
@@ -809,25 +785,18 @@
    "cell_now": null,
    "trend_now": "transitional"
   },
-  "review_id": "LR-20261119T1720Z-pkg-ebc335e5d37145c3",
+  "review_id": "LR-20261119T1725Z-pkg-ebc335e5d37145c3",
   "short_hold": {
-   "atr": 8.223571428571436,
-   "bar": "2026-11-19T17:15:00Z",
-   "bar_close": "2026-11-19T17:20:00Z",
+   "atr": 9.287142857142872,
+   "bar": "2026-11-19T17:20:00Z",
+   "bar_close": "2026-11-19T17:25:00Z",
    "entry": 1770.47,
-   "mark": 1753.18,
-   "minutes_held": 101.7,
-   "open_r_at_mark": 0.3365,
+   "mark": 1775.36,
+   "minutes_held": 106.8,
+   "open_r_at_mark": -0.0952,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1778.34,
-     "high": 1779.71,
-     "low": 1774.36,
-     "open": 1776.37,
-     "t": "2026-11-19T16:20:00Z"
-    },
     {
      "close": 1778.23,
      "high": 1778.72,
@@ -904,6 +873,13 @@
      "low": 1749.6,
      "open": 1754.68,
      "t": "2026-11-19T17:15:00Z"
+    },
+    {
+     "close": 1775.36,
+     "high": 1775.88,
+     "low": 1752.81,
+     "open": 1753.18,
+     "t": "2026-11-19T17:20:00Z"
     }
    ],
    "risk_per_unit": 51.388,
@@ -912,8 +888,8 @@
   "state": {
    "atr_now_over_entry": 1.2555,
    "bars_held": 8,
-   "giveback_r": 0.0749,
-   "open_r": 0.2717,
+   "giveback_r": 0.3993,
+   "open_r": -0.0527,
    "peak_provenance": "estimated",
    "peak_r": 0.3466,
    "regime_cell_entry": "transitional/volatile",
@@ -922,25 +898,18 @@
    "tp": 1697.978
   }
  },
- "packet_sha": "c78d48f3b3b0cade0e7c4b19a19231127744cde3283ef2be2fbf876ac2837680",
+ "packet_sha": "bae1bd52f9df34b4837c48c5e068be9db9fd973551288d47c4d2d725c916e92b",
  "short_hold": {
-  "atr": 8.223571428571436,
-  "bar": "2026-11-19T17:15:00Z",
-  "bar_close": "2026-11-19T17:20:00Z",
+  "atr": 9.287142857142872,
+  "bar": "2026-11-19T17:20:00Z",
+  "bar_close": "2026-11-19T17:25:00Z",
   "entry": 1770.47,
-  "mark": 1753.18,
-  "minutes_held": 101.7,
-  "open_r_at_mark": 0.3365,
+  "mark": 1775.36,
+  "minutes_held": 106.8,
+  "open_r_at_mark": -0.0952,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1778.34,
-    "high": 1779.71,
-    "low": 1774.36,
-    "open": 1776.37,
-    "t": "2026-11-19T16:20:00Z"
-   },
    {
     "close": 1778.23,
     "high": 1778.72,
@@ -1017,6 +986,13 @@
     "low": 1749.6,
     "open": 1754.68,
     "t": "2026-11-19T17:15:00Z"
+   },
+   {
+    "close": 1775.36,
+    "high": 1775.88,
+    "low": 1752.81,
+    "open": 1753.18,
+    "t": "2026-11-19T17:20:00Z"
    }
   ],
   "risk_per_unit": 51.388,
@@ -1040,131 +1016,95 @@
   "options": [
    {
     "action": "hold",
-    "mean_r": 0.0381,
-    "n": 21,
+    "mean_r": null,
+    "n": 10,
     "n_floor": 20,
-    "p05_r": -0.9458,
-    "p_giveback_gt_half": 0.6667,
-    "sd_r": 0.9015,
-    "state": "measured",
-    "worst_r": -1.1274
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "state": "insufficient_n",
+    "worst_r": null
    },
    {
     "action": "tighten",
-    "ev_cost_r": 0.0972,
-    "ev_cost_se_r": 0.1857,
-    "mean_r": -0.0592,
-    "n": 21,
-    "n_floor": 20,
-    "p05_r": -0.6279,
-    "p_giveback_gt_half": 0.9048,
-    "sd_r": 0.27,
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 10,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "stop_level_not_below_price",
+    "sd_r": null,
     "spec": "atr:1.0",
-    "state": "measured",
+    "state": "invalid_level",
     "stop_at_r_now": 0.1264,
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.3491,
-    "worst_r": -0.7783
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
    },
    {
     "action": "tighten",
-    "ev_cost_r": 0.1112,
-    "ev_cost_se_r": 0.1867,
-    "mean_r": -0.0731,
-    "n": 21,
-    "n_floor": 20,
-    "p05_r": -0.6279,
-    "p_giveback_gt_half": 0.9048,
-    "sd_r": 0.2648,
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 10,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "stop_level_not_below_price",
+    "sd_r": null,
     "spec": "atr:1.5",
-    "state": "measured",
+    "state": "invalid_level",
     "stop_at_r_now": 0.0164,
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.3491,
-    "worst_r": -0.7783
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
    },
    {
     "action": "tighten",
-    "ev_cost_r": 0.0862,
-    "ev_cost_se_r": 0.1841,
-    "mean_r": -0.0481,
-    "n": 21,
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 10,
     "n_floor": 20,
-    "p05_r": -0.6279,
-    "p_giveback_gt_half": 0.9048,
-    "sd_r": 0.3572,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
     "spec": "atr:2.0",
-    "state": "measured",
+    "state": "insufficient_n",
     "stop_at_r_now": -0.0937,
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.3491,
-    "worst_r": -0.7783
-   },
-   {
-    "action": "tighten",
-    "ev_cost_r": 0.0989,
-    "ev_cost_se_r": 0.1647,
-    "mean_r": -0.0608,
-    "n": 21,
-    "n_floor": 20,
-    "p05_r": -0.6279,
-    "p_giveback_gt_half": 0.9048,
-    "sd_r": 0.4985,
-    "spec": "r:0",
-    "state": "measured",
-    "stop_at_r_now": 0.0,
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.3491,
-    "worst_r": -0.7783
-   },
-   {
-    "action": "tighten",
-    "ev_cost_r": 0.1347,
-    "ev_cost_se_r": 0.1829,
-    "mean_r": -0.0966,
-    "n": 21,
-    "n_floor": 20,
-    "p05_r": -0.6279,
-    "p_giveback_gt_half": 1.0,
-    "sd_r": 0.2434,
-    "spec": "r:0.14",
-    "state": "measured",
-    "stop_at_r_now": 0.14,
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.3491,
-    "worst_r": -0.7783
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
    },
    {
     "action": "close",
-    "ev_cost_r": -0.0966,
-    "ev_cost_se_r": 0.1929,
-    "mean_r": 0.1347,
-    "n": 21,
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 10,
     "n_floor": 20,
-    "p05_r": -0.0966,
-    "p_giveback_gt_half": 0.619,
-    "sd_r": 0.1027,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
     "spec": "close",
-    "state": "measured",
-    "within_auto_bound": true,
-    "within_shadow_bound": true,
-    "worst_case_gain_r": 0.9451,
-    "worst_r": -0.1823
+    "state": "insufficient_n",
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
    }
   ],
   "population": {
    "beyond_bars_slack": 0,
-   "comparable": 21,
+   "comparable": 10,
    "corpus_trades": 76,
    "mfe_replay_mismatch": 0,
    "never_reached_peak": 14,
    "no_candles": 0,
-   "no_pullback_after_peak": 5,
+   "no_pullback_after_peak": 16,
    "side_excluded": 36,
    "side_filter": "short",
    "symbol_excluded": 0,
@@ -1173,7 +1113,7 @@
     "ETHUSDT"
    ]
   },
-  "read_state": "measured",
+  "read_state": "insufficient_n",
   "state": {
    "atr_stop_mult": 4.542105,
    "bars_held": 8,
@@ -1181,10 +1121,10 @@
    "condition_asked": "state",
    "dist_to_stop_atr": null,
    "dist_to_target_atr": null,
-   "open_r": 0.2717,
+   "open_r": -0.0527,
    "peak_r": 0.3466,
    "side": "short"
   }
  },
- "table_path": "comms/live_review/tables/LR-20261119T1720Z-pkg-ebc335e5d37145c3.json"
+ "table_path": "comms/live_review/tables/LR-20261119T1725Z-pkg-ebc335e5d37145c3.json"
 }
