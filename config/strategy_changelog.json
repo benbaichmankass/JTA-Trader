@@ -75,6 +75,11 @@
    "date": "2026-07-21",
    "ref": "M27 Batch-1 promotion (S-M27-ALTCOIN-PROMOTION-2026-07-21) — Tier-3, operator-approved",
    "summary": "New leg wired execution: live on bybit_1 (DEMO/paper) only. Ports the ict_scalp_5m setup to SOLUSDT 5m per the M27 Batch-1 crypto transfer study (config-exact params; the study tested the same setup logic across symbols, not a re-tune). SOL passes the net k-fold gate UNGATED (no off_cells filter). Built via the shared _ict_scalp_variant_builder. NOT routed to real-money bybit_2 / bybit_portfolio — that is a separate later Tier-3 gate contingent on the live paper soak matching the backtest (PB-20260721-ICTSCALP-ALTCOIN-PAPER-SOAK-CHECK). Regime coverage: exempt (strategy-local gate; no registry regime head)."
+  },
+  {
+   "date": "2026-11-19",
+   "ref": "PROPOSAL (HELD, Tier-3, manager GO 17:45Z): session lever S_ASIA from RQ-20261118-abab-33 + confirmation RQ-20261119-8260-01",
+   "summary": "Enable the live session filter for ict_scalp_sol_5m: session_filter_enabled true, session_start_hour 8, session_end_hour 24 (signal bar UTC hour in [8,24) == skip hours 0-7, the harness S_ASIA arm). Evidence: abab-33 (n 384, 2024-10-05..2026-10-04) S_ASIA net R -44.69 vs declared leg -56.38, 4/6 folds; 8260-01 (n 337, 2022-10-05..2024-10-04, disjoint) S_ASIA -24.64 vs -51.53, 6/6 folds; both net of fee+slippage+funding. The leg STILL LOSES NET on both windows: this cuts losses, it is not an edge. Demo floor only (bybit_1); no roster or real-money change. Parity: tests/test_ict_scalp_sol_5m_session_parity.py. ROLLBACK: session_filter_enabled false (start 7, end 17 are the unused defaults)."
   }
  ],
  "ict_scalp_xrp_5m": [

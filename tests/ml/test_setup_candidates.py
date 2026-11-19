@@ -1106,3 +1106,82 @@ def test_package_meta_joins_by_linked_trade_id_when_order_package_id_is_null(tmp
     assert len(live) == 1
     assert live[0]["r_multiple_source"] == "initial_risk_signal"
     assert math.isclose(live[0]["r_multiple"], 2.0, rel_tol=1e-9)
+
+
+# -----------------------------------------------------------------------------
+# strategy on live / live_paper rows (RQ-20261119-3e98-01 population filter)
+# -----------------------------------------------------------------------------
+
+def test_live_and_paper_rows_carry_strategy_synthetic_rows_do_not(tmp_path: Path):
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "trade_journal.db"
+    _seed_trades_funding(db, [
+        ((base + timedelta(hours=40)).isoformat(), "buy", 10.0, 0, "real_money"),
+        ((base + timedelta(hours=80)).isoformat(), "buy", 20.0, 1, "paper"),
+        ((base + timedelta(hours=120)).isoformat(), "buy", 30.0, 1, "paper"),
+    ])
+    conn = sqlite3.connect(str(db))
+    conn.execute("ALTER TABLE trades ADD COLUMN strategy_name TEXT")
+    conn.execute("UPDATE trades SET strategy_name='vwap' WHERE id=0")
+    conn.execute("UPDATE trades SET strategy_name='trend_donchian' WHERE id=1")
+    conn.execute("UPDATE trades SET strategy_name=NULL WHERE id=2")
+    conn.commit()
+    conn.close()
+    builder = SetupCandidatesBuilder()
+    rows = list(builder.iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8,
+        cusum_threshold_mult=0.5, live_trades_db=db, include_paper=True,
+    ))
+    allowed = set(builder.schema)
+    for r in rows:  # every row passes the builder's schema check
+        builder._validate_row(r, allowed)
+    real = [r for r in rows if r["event_source"] == "live"]
+    paper = sorted((r for r in rows if r["event_source"] == "live_paper"), key=lambda r: r["ts"])
+    assert [r.get("strategy") for r in real] == ["vwap"]
+    assert paper[0].get("strategy") == "trend_donchian"
+    assert "strategy" not in paper[1]  # NULL strategy_name -> no field (excluded by a filter)
+    assert all("strategy" not in r for r in rows if r["event_source"] not in ("live", "live_paper"))
+
+
+def test_journal_without_strategy_name_emits_no_strategy(tmp_path: Path):
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "trade_journal.db"
+    _seed_trades(db, [((base + timedelta(hours=61)).isoformat(), "buy", 5.0)])
+    rows = list(SetupCandidatesBuilder().iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8,
+        include_synthetic=False, live_trades_db=db,
+    ))
+    assert rows and all("strategy" not in r for r in rows)
+
+
+
+def test_live_rows_carry_pnl_provenance_and_untrusted_are_dropped(tmp_path: Path):
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "trade_journal.db"
+    _seed_trades_funding(db, [
+        ((base + timedelta(hours=40)).isoformat(), "buy", 10.0, 1, "paper"),
+        ((base + timedelta(hours=80)).isoformat(), "buy", 20.0, 1, "paper"),
+        ((base + timedelta(hours=120)).isoformat(), "buy", 30.0, 1, "paper"),
+    ])
+    conn = sqlite3.connect(str(db))
+    conn.execute("ALTER TABLE trades ADD COLUMN notes TEXT")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "bybit_closed_pnl"}' WHERE id=0""")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "candle_at_close"}' WHERE id=1""")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "local_markprice"}' WHERE id=2""")
+    conn.commit()
+    conn.close()
+    builder = SetupCandidatesBuilder()
+    rows = list(builder.iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8,
+        include_synthetic=False, live_trades_db=db, include_paper=True,
+    ))
+    for r in rows:
+        builder._validate_row(r, set(builder.schema))
+    paper = sorted((r for r in rows if r["event_source"] == "live_paper"), key=lambda r: r["ts"])
+    assert [r.get("pnl_provenance") for r in paper] == ["measured", "estimated"]  # untrusted dropped
