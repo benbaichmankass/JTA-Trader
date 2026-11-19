@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Trainer systemd: a new notify template plus OnFailure drop-ins on the timer-driven oneshots. No ExecStart changes, nothing restarted. Manager merges; AM-OPS-4 then runs scripts/ops/install_trainer_onfailure.sh on the trainer via trainer-vm-diag and reads the coverage block. Rollback: rm the drop-ins + template, daemon-reload; or git revert.",
+  "why": "PI-20261004-GCFA5DOR-0010 (a), confirmed by trainer-diag #27026: 13 of 14 trainer units had no OnFailure, and the 14th named an uninstalled template, so trainer failures alerted nowhere. Gates this adds or changes: none."
+}
