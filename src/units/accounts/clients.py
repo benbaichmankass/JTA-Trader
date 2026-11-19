@@ -2188,6 +2188,22 @@ def account_position_present(
         return None
 
 
+def supports_entry_order_state(account: Optional[Dict[str, Any]]) -> bool:
+    """True when :func:`account_entry_order_pending` can answer for *account*.
+
+    Separates "this integration cannot say" (False here; callers keep their
+    prior behaviour) from "it can say, but this read failed" (``None`` from
+    :func:`account_entry_order_pending` on a supported account). Callers that must
+    never close a row while its entry order may still be working treat the second
+    case as "could not look", never as "gone". Pure, never raises.
+    """
+    if not isinstance(account, dict):
+        return False
+    if str(account.get("exchange") or "").strip().lower() != "alpaca":
+        return False
+    return str(account.get("mode") or "live").strip().lower() == "live"
+
+
 def account_entry_order_pending(
     account: Dict[str, Any], order_id: str
 ) -> Optional[bool]:

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path_restart",
+  "hold_text": "Order path (reconciler + stuck-strategy watchdog), in the trader import closure: RESTART on merge. Manager merges on green, then the trader restart. Revert: git revert (restores #26862 behaviour).",
+  "why": "PI-20261118-JFWRQYOV-0004 root cause. A journal row is never closed while its entry order is still working at the venue: pending OR unreadable holds it, on all three flat-close paths for Alpaca rows (snapshot close, reset-suspect re-verify, stuck-strategy watchdog). #26862 held only the snapshot path and only on a positive pending; on current main the QQQ 7712 / 7780 replays are closed by the watchdog. Gates this adds or changes: none."
+}
