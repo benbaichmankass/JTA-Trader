@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Touches research/programmes/04-macro-sleeve.yaml (a programme plan that queue_replenish templates from; no live path); the manager merges.",
+  "why": "WHY: replenish PR #27424 (RQ-20261119-013..032, the replacement for the stale replenish PRs #27229/#27257/#27312/#27339) is red on research-queue-design-fields-guard because units RQ-20261119-031 and -032 copy a practice_precedent that names a skill and sibling units but no source the guard accepts (principle id T#/M#/R#, an [S#] tag, a URL or a docs path). The text comes from two practice_precedent nodes in research/programmes/04-macro-sleeve.yaml (P4-Q2-ppi-rty-econ and its sibling). Generated yaml is not hand-edited, so the fix goes in the source. WHAT: both nodes now cite M3, M6 (docs/reference/trading-and-model-practice-principles.md) ahead of the existing macro-research skill invariants text. precedent_errors() returns [] for the new text and an error for the old. The YAML parses. run_guards (programme-coverage, family-retirement-guard, research-queue-design-fields-guard, research-queue-ml-consumer-guard; base main): PASS 4 / FAIL 0. NEXT: once merged, a fresh research-queue-replenish run regenerates 031/032 at the new programme sha and replaces #27424. Gates this adds or changes: none."
+}
