@@ -1,0 +1,109 @@
+{
+ "read_state": "measured",
+ "primary_family": "pullback",
+ "verdict": "miss",
+ "why": "rho(sum_r) -0.021 CI [-0.13852603068923897, 0.09536901364336889]; rho(mean_r) 0.047 CI [-0.11746378921736025, 0.20992590343052167]; placebo p05 -0.143",
+ "families": {
+  "trend": {
+   "read_state": "measured",
+   "legs": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop",
+    "trend_donchian_xrp_4h"
+   ],
+   "n_trades": 2291,
+   "window": [
+    "2020-10-10",
+    "2026-10-09"
+   ],
+   "params": {
+    "min_legs": 4,
+    "min_cohort": 3,
+    "boot": 2000,
+    "seed": 20261119
+   },
+   "result": {
+    "sum_r": {
+     "rho": -0.040111410749272464,
+     "ci95": [
+      -0.1838369837665309,
+      0.11583744495485573
+     ],
+     "n_snapshots": 117,
+     "n_week_blocks": 100
+    },
+    "mean_r": {
+     "rho": -0.01874216369292919,
+     "ci95": [
+      -0.15879540220361527,
+      0.12526180291131106
+     ],
+     "n_snapshots": 110,
+     "n_week_blocks": 100
+    },
+    "placebo_mean_r": {
+     "p05": -0.1546705170366998,
+     "median": 0.003292748041884586,
+     "draws": 2000
+    }
+   },
+   "verdict": "indeterminate",
+   "why": "snapshots 117 < 200 or week blocks 100 < 30"
+  },
+  "pullback": {
+   "read_state": "measured",
+   "legs": [
+    "ada_pullback_2h",
+    "iaum_pullback_1d",
+    "xrp_pullback_2h"
+   ],
+   "n_trades": 878,
+   "window": [
+    "2020-06-13",
+    "2026-09-20"
+   ],
+   "params": {
+    "min_legs": 3,
+    "min_cohort": 3,
+    "boot": 2000,
+    "seed": 20261119
+   },
+   "result": {
+    "sum_r": {
+     "rho": -0.021441354801992225,
+     "ci95": [
+      -0.13852603068923897,
+      0.09536901364336889
+     ],
+     "n_snapshots": 285,
+     "n_week_blocks": 126
+    },
+    "mean_r": {
+     "rho": 0.04664411246968821,
+     "ci95": [
+      -0.11746378921736025,
+      0.20992590343052167
+     ],
+     "n_snapshots": 137,
+     "n_week_blocks": 105
+    },
+    "placebo_mean_r": {
+     "p05": -0.14304534284242243,
+     "median": -0.000993190666067561,
+     "draws": 2000
+    }
+   },
+   "verdict": "miss",
+   "why": "rho(sum_r) -0.021 CI [-0.13852603068923897, 0.09536901364336889]; rho(mean_r) 0.047 CI [-0.11746378921736025, 0.20992590343052167]; placebo p05 -0.143"
+  },
+  "ml": {
+   "read_state": "could_not_look",
+   "legs": [
+    "ml_entry"
+   ],
+   "why": "fewer than 2 legs with a corpus"
+  }
+ },
+ "research_unit": null
+}
