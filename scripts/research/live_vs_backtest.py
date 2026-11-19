@@ -82,6 +82,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -330,6 +331,30 @@ def _fetch(url: str) -> Dict[str, Any]:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _is_shallow_repo() -> bool:
+    try:
+        out = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--is-shallow-repository"],
+                             capture_output=True, text=True, timeout=10, check=False).stdout.strip()
+        return out == "true"
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def shallow_cut_warning(cuts: Dict[str, Dict[str, Any]], shallow: bool) -> str:
+    """A LOUD line when a shallow clone left a leg's config cut ``unknown`` (2026-11-19, AM-OPS-4).
+
+    On a shallow clone the git walk stops at the boundary, the cut reads ``unknown``, and every such leg
+    is read UNCUT, i.e. banded on closes made under an OLD config. In a session that read flagged
+    tlt_pullback_1h BELOW_BACKTEST; with the history deepened it was 0 closes under the current config.
+    The verdicts are still printed (unknown is stated, never guessed); this says why and how to fix it."""
+    unknown = sorted(leg for leg, c in (cuts or {}).items() if not c.get("since"))
+    if not (shallow and unknown):
+        return ""
+    return (f"WARNING: this clone is SHALLOW, so {len(unknown)} leg(s) have an unknown config cut and are read "
+            f"UNCUT (banded on closes under older configs): {', '.join(unknown)}. Deepen first, e.g. "
+            "`git fetch --shallow-since=<a date before the oldest config change> origin main`, then re-run.")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--recent-json", type=Path, help="saved /performance/recent?n=200 payload")
@@ -367,6 +392,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             leg, _, iso = ov.partition("=")
             if leg in cuts and iso:
                 cuts[leg].update(since=iso, state="override", source="--since", why=None)
+        warn = shallow_cut_warning(cuts, _is_shallow_repo())
+        if warn:
+            print(warn, file=sys.stderr)
         saved = dict(x.split("=", 1) for x in a.cut_json)
         cut_payloads = {}
         for iso in sorted({c["since"] for c in cuts.values() if c["since"]}):
