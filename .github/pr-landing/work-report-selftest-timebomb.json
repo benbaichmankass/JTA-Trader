@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "one self-test fixture in scripts/ops/work_report.py (dates made relative to now); no behaviour change; merge with the other W47b PRs",
+  "why": "attention-watch's work_report.py --self-test hardcodes 2026-10-05 for digest-log entries while append_digest_log prunes entries older than KEEP=45 days, so the fixture expired on 2026-11-19 and the guard is red on origin/main and on any PR that touches its globs. Fixture dates are now relative to now. Gates this adds or changes: none."
+}

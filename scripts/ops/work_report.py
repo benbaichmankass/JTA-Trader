@@ -53,7 +53,7 @@ import argparse
 import json
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -418,9 +418,12 @@ def _self_test() -> int:
         check("garbage latest reads 'unreadable', not absent", read_latest(dd)[0] == "unreadable")
         lg = dd / "log.jsonl"
         check("absent digest log reads 'absent'", read_digest_log(None, lg)[0] == "absent")
-        append_digest_log({"at": "2026-10-05T05:00:00+00:00", "new": ["a"]}, lg)
-        append_digest_log({"at": "2026-10-05T06:00:00+00:00", "new": ["b"]}, lg)
-        st, ent = read_digest_log("2026-10-05T05:30:00+00:00", lg)
+        # Dates are RELATIVE TO NOW: append_digest_log prunes entries older than KEEP days, so the fixed 2026-10-05
+        # fixture this used to carry expired on 2026-11-19 (45 days) and turned attention-watch red on every PR touching it.
+        _t0 = datetime.now(timezone.utc) - timedelta(hours=3)
+        append_digest_log({"at": _t0.isoformat(), "new": ["a"]}, lg)
+        append_digest_log({"at": (_t0 + timedelta(hours=1)).isoformat(), "new": ["b"]}, lg)
+        st, ent = read_digest_log((_t0 + timedelta(minutes=30)).isoformat(), lg)
         check("digest log since filters by time", st == "read" and [e["new"] for e in ent] == [["b"]], ent)
         check("bad since is refused, not read as 'all'", read_digest_log("garbage", lg)[0] == "bad_since")
     print("work-report self-test:", "PASS" if ok else "FAIL")
