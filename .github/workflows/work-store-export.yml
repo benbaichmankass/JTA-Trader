@@ -1,0 +1,86 @@
+# work-store-export -- the daily EXPORT of the work store into the checklist / pipeline files (AM-OPS-9).
+#
+# Gates this adds or changes: none added; narrows roadmap-map, soak-contract and claim-basis to skip
+# rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
+#
+# Since the WSD-S4 freeze (2026-11-12) checklist rows and pipeline items live in work_store.db on the
+# live VM; docs/claude/work/checklist/ and docs/claude/work/pipeline/ are an EXPORT that CI guards read.
+# Nothing ran the export, so the files went stale. Once a day this runs
+#   python3 scripts/ops/work.py export --to-files      (no --db: pages GET /api/bot/work/items)
+# and, when files changed, lands them through .github/actions/commit-to-main (a PAT-opened bot branch
+# PR declaring `.github/pr-landing/<slug>.json` tier 1, landing "self", armed for auto-merge; GitHub
+# merges it only on green).
+#
+# THE PRE-CHECK (scripts/ops/work.py export_precheck): before writing, each CHANGED row / record goes
+# through the same per-row predicates the guards use -- roadmap_map.row_problems,
+# check_soak_contracts.row_findings / pipeline_item_findings, check_claim_basis.new_row_failure. A
+# failing one stays in the store, is LEFT OUT of this export, and is filed ONCE as an observation
+# titled "EXPORT HELD BACK [<id>] ..." (WORK_STORE_TOKEN; no second filing while one is open; a failed
+# filing is printed, never aborts). The next run re-checks it. Every other row lands, so one bad row
+# can no longer redden the whole export PR.
+#
+# CUTOVER: rows/records whose store updated_at <= _header.json `export_base_at` are pre-cutover debt
+# (STORE-EXPORT-BACKFILL-258): they land even when they fail, and the three guards skip them in their
+# diff-scoped checks, identified through docs/claude/work/EXPORT-STAMPS.json (store updated_at + sha256
+# of every file the last export wrote; a hand-edited file is never exempt).
+#
+# NO HALTING: a failed run (store unreachable, PR not merged) goes red -- the ONE flag -- and the next
+# day's run tries again from the current main.
+name: work-store-export
+
+on:
+  schedule:
+    - cron: "37 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: work-store-export
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    # >= the commit-to-main merge wait (80m, .github/actions/commit-to-main) + 5m slack:
+    # tests/test_commit_to_main_callers.py enforces it.
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          # The PAT: a GITHUB_TOKEN PR gets no required checks (PI-20260928-TURC5MJC-0004).
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -q pyyaml
+
+      - name: Export the work store into the files (pre-checked)
+        id: export
+        env:
+          # Writes (the held-back filings) need the token; reads are open (scripts/ops/work.py http()).
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ops/work.py export --to-files \
+            --run-ref "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            > export.json 2> summary.txt || { cat summary.txt; exit 1; }
+          cat summary.txt
+          { echo "### work-store-export"; echo; echo '```'; cat summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Land the changed export files (self-landing Tier-1 data PR)
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: docs/claude/work/checklist docs/claude/work/pipeline docs/claude/work/EXPORT-STAMPS.json
+          message: "work-store export: checklist + pipeline files (run ${{ github.run_id }})"
+          pr-title: "work-store export: checklist + pipeline files (run ${{ github.run_id }})"
+          pr-body: "Automated (auto-merge): the daily export of work_store.db into docs/claude/work/checklist and docs/claude/work/pipeline (scripts/ops/work.py export --to-files), pre-checked with the guards' own row checks; held-back rows are filed in the store as EXPORT HELD BACK observations. Register data only. Gates this adds or changes: none."
+          # Without this the step exits 0 the moment the PR OPENS, so an export that never merges reads as success.
+          verify-merged: "true"
