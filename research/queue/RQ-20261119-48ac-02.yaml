@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-19 by lane RESEARCH-OPS-20261119-1448 (Tier 1). ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261119-48ac-02
 title: 'ITERATION 3 of ltr-sl-to-structure (43b6-01 holdout FAIL on R3 only): one-factor pivot_bars 8 vs the registered 5 at new_peak, on the SELECTION corpora'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -128,3 +128,17 @@ run:
   - '0.1'
   - --out
   - '{out_dir}'
+last_dispatched_at: '2026-11-19T17:12:15+00:00'
+grading:
+  attested: RULE-RQ-20261119-48ac-02
+  auto: true
+  decision_rule_id: RULE-RQ-20261119-48ac-02
+  evidence:
+  - research/results/RQ-20261119-48ac-02/44569543329.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

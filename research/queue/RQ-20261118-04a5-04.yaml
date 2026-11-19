@@ -8,7 +8,7 @@
 id: RQ-20261118-04a5-04
 title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the head (holding_pays_neg25,
   and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -147,7 +147,7 @@ related:
 - research/queue/RQ-20260927-002.yaml
 - research/queue/RQ-20261117-aadc-12.yaml
 - scripts/research/exit_head_eth_oos_control.py
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T18:20:35+00:00'
 amendments:
 - at: '2026-11-19'
   before_any_run: true
@@ -156,3 +156,16 @@ amendments:
   - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
+grading:
+  attested: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
+  auto: true
+  decision_rule_id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
+  evidence:
+  - research/results/RQ-20261118-04a5-04/44572560928.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

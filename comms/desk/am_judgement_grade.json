@@ -10,7 +10,7 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 342
+   "n_rows": 344
   },
   "partial_close": {
    "mean_d_hold": 0.9042,
@@ -21,7 +21,7 @@
    "n_rows": 3
   }
  },
- "computed_at": "2026-11-19T16:25:26Z",
+ "computed_at": "2026-11-19T19:30:06Z",
  "forecast": {
   "brier": 0.2111,
   "brier_ref_constant_0_5": 0.25,
@@ -5037,12 +5037,12 @@
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
    "forecast_outcome": "miss",
    "order_package_id": "pkg-4072f8c16bb743b4",
    "p_target": 0.35,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261119T0624Z-pkg-4072f8c16bb743b4",
    "trigger": "r_milestone"
@@ -5054,7 +5054,7 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-6216eeb9d4f84954",
    "p_target": 0.45,
-   "price_reason": "hold_replay_unresolved_before_close",
+   "price_reason": "replay_mismatch",
    "price_state": "could_not_price",
    "review_id": "LR-20261119T0624Z-pkg-6216eeb9d4f84954",
    "trigger": "structure_break"
@@ -5162,19 +5162,19 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-4072f8c16bb743b4",
    "p_target": 0.55,
-   "price_reason": "realised_net_r_uncomputable",
+   "price_reason": "hold_replay_unresolved",
    "price_state": "could_not_price",
    "review_id": "LR-20261119T0922Z-pkg-4072f8c16bb743b4",
    "trigger": "vol_regime"
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.0,
    "forecast_outcome": "miss",
    "order_package_id": "pkg-2b1d7f5ebfa5445d",
    "p_target": 0.4,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d",
    "trigger": "daily_floor"
@@ -5183,14 +5183,14 @@
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
  "verdict": {
   "ci95_d_hold": [
-   0.0142,
-   0.0637
+   0.0139,
+   0.063
   ],
-  "mean_d_hold": 0.0363,
-  "mean_d_mech": 0.0095,
+  "mean_d_hold": 0.0358,
+  "mean_d_mech": 0.0093,
   "min_packages": 30,
-  "n_packages": 126,
-  "n_packages_mech": 111,
+  "n_packages": 128,
+  "n_packages_mech": 113,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "pass"
  }

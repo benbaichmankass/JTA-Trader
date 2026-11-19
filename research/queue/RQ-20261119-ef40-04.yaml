@@ -10,7 +10,7 @@
 id: RQ-20261119-ef40-04
 title: 'FRESH-ROWS RE-RUN: ml-exit-head-donchian-1h POPULATION WIDENING (4h legs): does the holding_pays_neg25 target, trained on the 1h BTC/ETH/SOL rows, beat the
   holding_pays champion by +0.01 R/trade on the five live 4h donchian legs, each replayed with its own parameters?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -190,3 +190,24 @@ amendments:
     only because the 2026-11-18 pre-fix run (44376672320) exists and was already graded INVALID; no valid outcome of this unit has been read.'
 last_dispatched_at: '2026-11-19T16:03:36+00:00'
 rearmed_at: '2026-11-18T22:05:00+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261118-aadc-13-EXITHEAD-NEG25-4H
+  evidence:
+  - comms/research/RQ-20261119-ef40-04/44561839459/verdict.json
+  - research/results/RQ-20261119-ef40-04/44561839459.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
+  rows: 1
+  verdict: indeterminate
+  reason: 'run 44561839459 (trainer, 16:07-16:54Z, success; landed in a batch on main). read_state measured, all five 4h legs measured
+    (ETH, SOL, XRP, ADA, AVAX; 48,355 harness trades, 40,285 OOS over 5 folds). holding_pays_neg25 vs the holding_pays champion, paired
+    per OOS trade: n 40,285 (>= 1000), mean d +0.00672 R/trade, SE 0.00477, CI z 1.96 [-0.00263, +0.01606] (check: 0.00672 +/- 1.96 x
+    0.00477). Mean below the +0.01 pass bar and LB not > 0, so not PASS; UB not < +0.01, so not FAIL: INDETERMINATE by the registered
+    rule. Context, not graded: vs hold both arms are positive (champion +0.01405 [+0.00071, +0.02739]; neg25 +0.02076 [+0.01076,
+    +0.03076]); neg25 fires on 12,207 trades vs 26,676 for the champion. The head is trained on 1h rows (BTC/ETH/SOL, n 45,372) and
+    replayed on 4h paths. Per-trade paired sd ~0.96 R (SE x sqrt n), so n cannot be extended (every in-hand OOS trade is read). WHAT IT
+    SETTLES: the 1h-trained neg25 label neither carries a +0.01 R lift to the 4h legs nor is ruled out at that size. INDETERMINATE action
+    (redesign, one line): the registered fail_action names the next lever, a head trained on 4h rows with the neg25 label (a474-03 used
+    the champion label); it needs 4h exit-head rows, filed as PI-20261119-RIMARY12-0002. No config change; the 4h legs keep their current
+    exits.'

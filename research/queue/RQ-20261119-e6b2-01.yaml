@@ -3,7 +3,7 @@
 id: RQ-20261119-e6b2-01
 title: 'P1-ATM-sol4h-b-overlap: are the three PASSING basket-B cells of sol_4h (AVAX, NEAR, ETC; RQ-20261026-1b57-08) the same bet as a live crypto
   leg (daily realised-R correlation over the committed per-trade rows)?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -86,4 +86,15 @@ related:
 - scripts/research/cell_overlap_read.py
 population: the three passing basket-B cells of sol_4h (AVAXUSDT, NEARUSDT, ETCUSDT) vs six live crypto legs, committed per-trade rows.
 programme: P1
-last_dispatched_at: '2026-11-19T16:03:27+00:00'
+last_dispatched_at: '2026-11-19T16:44:09+00:00'
+grading:
+  attested: RULE-RQ20261119E6B2-01-SOL4H-B-OVERLAP
+  auto: true
+  decision_rule_id: RULE-RQ20261119E6B2-01-SOL4H-B-OVERLAP
+  evidence:
+  - research/results/RQ-20261119-e6b2-01/44551256374.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 3 row(s), all measured, all pass
+  rows: 3
+  verdict: pass

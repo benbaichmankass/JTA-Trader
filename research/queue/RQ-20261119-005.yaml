@@ -5,7 +5,7 @@ id: RQ-20261119-005
 title: 'SYMBOL HOLDOUT (SOLUSDT) for the trend_donchian_1h slope-direction gate DS (b2f1-10 PASS, +78
   R): where a FIXED side split 1 LONG / 1 SHORT / 2 none across the four twins (abab-69..72), does the
   STATE-conditioned side hold?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -159,4 +159,16 @@ generated:
   key: programme:P3-RP1119-trend-donchian-1h-ds-sol
   params:
     node: P3-RP1119-trend-donchian-1h-ds-sol
-last_dispatched_at: '2026-11-19T16:03:36+00:00'
+last_dispatched_at: '2026-11-19T16:44:16+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RP1119-trend-donchian-1h-ds-sol
+  evidence:
+  - research/results/RQ-20261119-005/44561862399.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

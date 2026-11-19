@@ -61,6 +61,15 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   package: same branch, same REVIEWER-BRIEF, with every entry and every inline packet block verbatim. The reviewer reads any
   `omitted_too_large` packet from the branch (REVIEWER-BRIEF § 2b) and writes one row per package. A marker that mixes in trigger events
   is dispatched per package as above.
+  **Batched review lanes refresh stale packets first** (manager 2026-11-19, row `LTR-PACKET-READ-REACH`; no gate). The wake poster builds a
+  packet ONCE per newly-due package|event|level inside a 120-min package|event cooldown, so a later review of a repeating due event finds the
+  packet built when the event FIRST fired (2026-11-19 18:20Z paper lane: all 10 packets 45-140 min old; VM receipt `already_posted`). Before
+  reviewing, a lane that batches several due packages (a) rebuilds any due packet older than ~30 min:
+  `python3 scripts/ops/live_review_packet.py <order_package_id> --write` on its `live-review/rows` checkout (pure diag reads, ~1 min;
+  `--bundle` previews and writes nothing), commits the generator's `comms/live_review/packets/<review_id>.json` (+ table) UNEDITED, and
+  reviews against that packet, so its row's `packet_sha` resolves on the branch. These are the generator's bytes, not a packet typed from
+  comment text, which stays forbidden above. (b) For 5m/15m legs (short-hold lane) it reads `comms/live_review/short_hold/<order_package_id>/latest.json`,
+  refreshed every 5 min: those packages are never in `comms/live_review/packets/` (2026-11-19: 8033 ict_scalp_eth_15m read as "no packet").
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do
   not read the packet. `could_not_commit` http 403 → tell the operator.

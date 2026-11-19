@@ -2,7 +2,7 @@
 id: RQ-20261119-48ac-03
 title: 'ITERATION 3 of ltr-partial-close (43b6-03 FAIL: adverse triggers lose to random): one-factor partial_frac 0.75 at the positive-timing triggers near_target
   and new_peak, SELECTION corpora'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -129,3 +129,17 @@ run:
   - '2'
   - --out
   - '{out_dir}'
+last_dispatched_at: '2026-11-19T17:12:16+00:00'
+grading:
+  attested: RULE-RQ-20261119-48ac-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261119-48ac-03
+  evidence:
+  - research/results/RQ-20261119-48ac-03/44569548267.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

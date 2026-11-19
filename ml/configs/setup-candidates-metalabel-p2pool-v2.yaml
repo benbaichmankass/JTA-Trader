@@ -28,7 +28,7 @@
 
 manifest_version: v1
 model_id: setup-candidates-metalabel-p2pool-v2
-description: "ML-P1 cost-net rebuild of the M23 P2 pooled meta-label (won target), trained on setup_candidates v022 (v020 build params, current cost-net builder, eval R on initial risk). M23 P2 label-volume leg (won target): the pooled backtest-train + real live_holdout eval expanded from BTC-only to BTC+ETH+SOL — 3-strategy harness roster replayed per symbol on the train side, each symbol's real closed trades appended on the eval side, with `symbol` as a categorical feature (xsym lesson). Re-runs the population-matched fair test at ~3× label volume."
+description: "ML-P1 cost-net rebuild of the M23 P2 pooled meta-label (won target), trained on setup_candidates v023 (v020 build params, current cost-net builder, eval R on entry-time risk incl. the signal-time meta stop). M23 P2 label-volume leg (won target): the pooled backtest-train + real live_holdout eval expanded from BTC-only to BTC+ETH+SOL — 3-strategy harness roster replayed per symbol on the train side, each symbol's real closed trades appended on the eval side, with `symbol` as a categorical feature (xsym lesson). Re-runs the population-matched fair test at ~3× label volume."
 model_family: regression_lightgbm
 trainer: ml.trainers.lightgbm_regression.LightGBMRegressionTrainer
 trainer_config:
@@ -77,7 +77,7 @@ dataset:
   family: setup_candidates
   symbol_scope: all
   timeframe: all
-  version: v022
+  version: v023
 evaluator: ml.evaluators.classification.ClassificationEvaluator
 evaluator_config:
   target_column: won
@@ -99,3 +99,7 @@ notes: |
   params + the current cost-net builder + live_r_basis=initial_only (eval R on the
   entry-time initial risk, PI-20261014-MVBJLVJ3-0001). Graded by
   scripts/ml/p1_costnet_grade.py against the P1 rule registered before the run.
+  v023 (2026-11-19, PI-20261029-MLP1-0001, unit RQ-20261101-78fc-02): same params as
+  v022 plus the signal-time meta stop read (`initial_risk_signal`: packages with no
+  `risk_per_unit` whose builder wrote `stop_loss`/`entry_price` or `sl_distance` into
+  meta, the vwap BTC book). v022 stays immutable. Recipe and features unchanged.

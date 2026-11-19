@@ -3,7 +3,7 @@
 id: RQ-20261119-e6b3-01
 title: 'Symbol-disjoint confirmation of the sol_4h breadth transfer: does sol_4h as declared clear Stage 0 on basket C (UNI/ICP/GRT/THETA/RUNE/ZEC),
   a basket neither it nor the prior baskets ever touched?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -128,5 +128,16 @@ related:
 - RQ-20261026-1b57-08
 - P1-ATM-sol4h-b-overlap
 - RQ-20261119-e6b2-01
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T18:20:41+00:00'
 practice_precedent: 'docs/research/authoring-queue-triage-2026-11-17.md (the node this confirms); RQ-20261026-1b57-08 (same declared arm and cost stack, re-run on a symbol-disjoint population).'
+grading:
+  attested: RULE-RQ20261119E6B3-01-CONFIRM-SOL-4H-C
+  auto: true
+  decision_rule_id: RULE-RQ20261119E6B3-01-CONFIRM-SOL-4H-C
+  evidence:
+  - research/results/RQ-20261119-e6b3-01/44576888483.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
