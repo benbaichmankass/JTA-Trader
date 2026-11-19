@@ -5,7 +5,7 @@ id: RQ-20261119-e8a1-04
 title: 'ml_entry_eq_struct per-trade Stage-0 rows from the FROZEN served artifact (no refit): scored on its own pinned 173 pool_symbols,
   does it reproduce the graded RQ-20261107-98e3-06 confirm population (n 207, mean +0.492207 R) so the r4 demotion gate can read the
   real-money leg?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -138,3 +138,14 @@ related:
 population: The frozen served artifact's own 173 pool_symbols (pinned; the live POOL_RULE rebuild is skipped), confirm window 2025-07-15..2026-10-31, restricted-LONG decisions at tau 0.25, net of the Alpaca cost stack (slippage 5 bps provisional, regulatory 0.5 bps).
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-19T04:47:10+00:00'
+grading:
+  attested: RULE-RQ20261119-e8a1-04-FROZEN-REPRO
+  auto: true
+  decision_rule_id: RULE-RQ20261119-e8a1-04-FROZEN-REPRO
+  evidence:
+  - research/results/RQ-20261119-e8a1-04/44439340946.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
