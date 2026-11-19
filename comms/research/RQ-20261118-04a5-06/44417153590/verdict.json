@@ -1,0 +1,187 @@
+{
+ "rule": "RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY",
+ "read_state": "measured",
+ "verdict": "pass",
+ "window": [
+  "2020-07-01",
+  "2026-10-15 23:59"
+ ],
+ "population": "re-pinned TD corpus at current config: TD n_gate=1587 fidelity pass",
+ "n": 1587,
+ "note": "fidelity per family: TD pass ; edge verdict (context, not gating): pass",
+ "families": {
+  "TD": {
+   "fidelity": "pass",
+   "reasons": [],
+   "edge_verdict_context": "PASS",
+   "n_gate": 1587,
+   "legs": {
+    "trend_donchian_eth_4h": {
+     "state": null,
+     "n_trades": 275,
+     "n_aligned": 275,
+     "gate_leg": true
+    },
+    "trend_donchian_xrp_4h": {
+     "state": null,
+     "n_trades": 68,
+     "n_aligned": 68,
+     "gate_leg": true
+    },
+    "trend_donchian_eth_prop": {
+     "state": null,
+     "n_trades": 864,
+     "n_aligned": 864,
+     "gate_leg": true
+    },
+    "trend_donchian_sol_prop": {
+     "state": null,
+     "n_trades": 388,
+     "n_aligned": 388,
+     "gate_leg": true
+    },
+    "trend_donchian_sol_4h": {
+     "state": null,
+     "n_trades": 267,
+     "n_aligned": 267,
+     "gate_leg": false
+    },
+    "trend_donchian_ada_4h": {
+     "state": null,
+     "n_trades": 258,
+     "n_aligned": 258,
+     "gate_leg": false
+    },
+    "trend_donchian_avax_4h": {
+     "state": null,
+     "n_trades": 263,
+     "n_aligned": 263,
+     "gate_leg": false
+    },
+    "trend_donchian_xrp_adx25": {
+     "state": null,
+     "n_trades": 68,
+     "n_aligned": 68,
+     "gate_leg": false
+    }
+   },
+   "parity_vs_old_reference": {
+    "trend_donchian_eth_4h": {
+     "state": "checked",
+     "basis": "trade",
+     "n_ref": 275,
+     "n_ours_in_ref_span": 275,
+     "n_same_trade": 233,
+     "parity_share": 0.8473,
+     "cost_stack_net_r_shift_mean": -0.01333
+    },
+    "trend_donchian_xrp_4h": {
+     "state": "checked",
+     "basis": "trade",
+     "n_ref": 68,
+     "n_ours_in_ref_span": 68,
+     "n_same_trade": 6,
+     "parity_share": 0.0882,
+     "cost_stack_net_r_shift_mean": -0.02595
+    },
+    "trend_donchian_eth_prop": {
+     "state": "checked",
+     "basis": "trade",
+     "n_ref": 1085,
+     "n_ours_in_ref_span": 864,
+     "n_same_trade": 627,
+     "parity_share": 0.5779,
+     "cost_stack_net_r_shift_mean": -0.01707
+    },
+    "trend_donchian_sol_prop": {
+     "state": "checked",
+     "basis": "trade",
+     "n_ref": 403,
+     "n_ours_in_ref_span": 388,
+     "n_same_trade": 169,
+     "parity_share": 0.4194,
+     "cost_stack_net_r_shift_mean": -0.01049
+    }
+   }
+  }
+ },
+ "corpus_dir": "comms/research/RQ-20261118-04a5-06/44417153590/corpus",
+ "edge_verdict_context": {
+  "rule": "RULE-ML-OVERLAY-NONINFERIOR-V2",
+  "window": [
+   "2020-07-01",
+   "2026-10-15 23:59"
+  ],
+  "multiplier": 0.5,
+  "primary": {
+   "C": 0.1,
+   "q": 0.2
+  },
+  "grid": [
+   {
+    "C": 0.1,
+    "q": 0.1
+   },
+   {
+    "C": 0.1,
+    "q": 0.2
+   },
+   {
+    "C": 0.1,
+    "q": 0.3
+   },
+   {
+    "C": 1.0,
+    "q": 0.1
+   },
+   {
+    "C": 1.0,
+    "q": 0.2
+   },
+   {
+    "C": 1.0,
+    "q": 0.3
+   }
+  ],
+  "cpcv": {
+   "n_groups": 6,
+   "k_test": 2,
+   "embargo_days": 7.0
+  },
+  "families": {
+   "TD": {
+    "verdict": "PASS",
+    "reasons": []
+   }
+  },
+  "read_state": "measured",
+  "verdict": "pass",
+  "population": "real-money gate legs' CPCV out-of-sample Stage-0 trades, per family: TD n_gate=1587 (trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop)",
+  "n": 1587,
+  "note": "per family: TD PASS. Top-level pass = at least one family passed; only a PASS family ships.",
+  "records": [
+   {
+    "family": "TD",
+    "verdict": "pass",
+    "n": 1587,
+    "population": "TD gate legs trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop",
+    "checks": {
+     "a_noninferior": true,
+     "b_risk": true,
+     "c_beats_random": true,
+     "d_not_vacuous": true,
+     "e_folds": true
+    },
+    "reasons": []
+   }
+  ]
+ },
+ "records": [
+  {
+   "family": "TD",
+   "verdict": "pass",
+   "n": 1587,
+   "population": "TD gate legs, re-pinned corpus"
+  }
+ ]
+}

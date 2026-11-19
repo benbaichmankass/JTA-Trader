@@ -1,0 +1,86 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 670,
+ "population": "aadc-14's (leg, trade) points: closed live/paper trades on 49 legs with a measured Stage-0 record, label mean net R of the next 20 trades < 0, out of fold by 5 leg groups",
+ "note": "artifact REFUTED: without ['n_seen', 'mu'] pooled AUC 0.4188 CI95 [0.3327, 0.4902] is still below 0.5",
+ "measurement": {
+  "rule": "RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT",
+  "learned_full": {
+   "n": 670,
+   "legs": 24,
+   "decay_rate": 0.6045,
+   "auc": 0.4137,
+   "ci95": [
+    0.3029,
+    0.5163
+   ]
+  },
+  "learned_drop": {
+   "n": 670,
+   "legs": 24,
+   "decay_rate": 0.6045,
+   "auc": 0.4188,
+   "ci95": [
+    0.3327,
+    0.4902
+   ]
+  },
+  "cusum_same_points": {
+   "n": 670,
+   "legs": 24,
+   "decay_rate": 0.6045,
+   "auc": 0.6554,
+   "ci95": [
+    0.551,
+    0.7502
+   ]
+  },
+  "within_leg_auc": {
+   "learned_full": {
+    "auc": 0.285,
+    "legs": 12,
+    "pairs": 5239
+   },
+   "learned_drop": {
+    "auc": 0.3808,
+    "legs": 12,
+    "pairs": 5239
+   },
+   "cusum": {
+    "auc": 0.5487,
+    "legs": 12,
+    "pairs": 5239
+   }
+  },
+  "dropped_features": [
+   "n_seen",
+   "mu"
+  ],
+  "paired_drop_vs_cusum_reported_not_gating": {
+   "n": 670,
+   "legs": 24,
+   "delta": -0.2366,
+   "ci95": [
+    -0.3235,
+    -0.1596
+   ]
+  },
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "N_NEXT": 20,
+   "folds": 5,
+   "repro_ref": 0.4137
+  },
+  "trades_in": 7746,
+  "excluded": {
+   "not_closed": 4994,
+   "no_leg_record": 1195,
+   "no_contract_multiplier": 52,
+   "degenerate_risk_basis": 47,
+   "no_net_r": 141,
+   "backtest": 0
+  }
+ }
+}

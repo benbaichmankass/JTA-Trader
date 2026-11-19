@@ -107,3 +107,67 @@ python3 scripts/ops/pipeline_map_numbers.py --stdout
 python3 scripts/ops/mandate_resolver.py --leg <leg> --from S1 --to S2 --account <bybit_2|alpaca_live|ib_live> --json
 curl -sS 'https://ict-bot.duckdns.org/api/bot/performance?window=all'   # perStrategy and paper.perStrategy
 ```
+
+## 8 · Addendum 2026-11-18: the LIVE BAR column (operator 2026-11-17; AM-OPS-3)
+
+The operator added a second promotion path on 2026-11-17 (doctrine PR: OPERATING-PLAN § 2 "Live-performance promotion path"). A leg clears the **live bar** with **≥ 20 closed live trades with confirmed R, net of real costs, ΣR > 0 and a one-sided ~80% lower bound of the mean > 0**. Demo and real-money trades of the same leg pool. A live-bar PASS is category **(a)** even where Stage 0 failed or is missing, and each one carries a fidelity-check unit (category (b)) run in parallel. **Real-money roster changes stay drafted, not merged, until the manager brings this packet to the operator.**
+
+**Which R is "confirmed": a correction that changes the answer.**
+- The § 3 table's `conf` column counts `confirmedInitial`, which grades the STORED stop against the declared initial risk. A trade whose stop moved (trailed, or set to breakeven) can never be `confirmedInitial`.
+- Measured on the same journal: the stop-never-moved subset is negative for nearly every leg, because it keeps mostly the trades that hit their original stop. Example: `ada_pullback_2h` is −0.86 R on that subset and +0.13 R on all its declared-risk trades.
+- Using it as the live bar would fail almost everything by construction.
+- The bar therefore counts trades whose **R denominator is the signal-time declared risk** (`r_multiple_provenanced` basis `declared_initial`), which no trailing amend can reach. The stop-never-moved subset is shown beside it so the bias stays visible.
+- The **venue-measured-pnl subset** (`classify_pnl` = MEASURED) is shown too. A PASS whose measured subset is short rests partly on estimated pnl for its "net of real costs" half.
+
+**Population:** `python3 scripts/research/live_bar.py --json` over the live diag journal, read 2026-11-18 between ~23:00Z and ~23:10Z (system clock; an earlier draft said ~23:55Z, which was an estimate): 7,965 trades and 6,748 order packages read; 1,495 closed trades with a declared-initial R. Lifetime, so it includes trades from before a leg's current status. Rows shown: every leg with n ≥ 20 or with any real-money trade.
+
+| Leg | Live bar | n (real · paper) | ΣR | mean R | 80% LB | venue-measured-pnl subset | stop-never-moved subset |
+|---|---|---|---|---|---|---|---|
+| `trend_donchian` | **PASS** | 45 (14 · 31) | +41.26 | +0.917 | 0.5351 | pass n29 mean 0.4077 | n9 mean -0.0012 |
+| `trend_donchian_ada_4h` | **PASS** | 34 (0 · 34) | +13.94 | +0.410 | 0.2531 | n_short n12 mean 0.5322 | n5 mean -0.1814 |
+| `trend_donchian_avax_4h` | **PASS** | 29 (0 · 29) | +8.48 | +0.292 | 0.063 | n_short n8 mean 0.5032 | n6 mean 0.0265 |
+| `trend_donchian_sol_4h` | **PASS** | 27 (0 · 27) | +10.60 | +0.393 | 0.1543 | n_short n11 mean 0.2952 | n5 mean -0.755 |
+| `ict_scalp_5m` | **FAIL** | 99 (33 · 66) | -8.50 | -0.086 | -0.1927 | fail n60 mean -0.0604 | n13 mean -0.6049 |
+| `ict_scalp_avax_5m` | **FAIL** | 92 (0 · 92) | -8.55 | -0.093 | -0.2603 | fail n62 mean 0.1556 | n21 mean -0.7699 |
+| `ml_entry` | **FAIL** | 81 (35 · 46) | -5.22 | -0.064 | -0.1572 | fail n81 mean -0.0644 | n27 mean -0.4862 |
+| `ada_pullback_2h` | **FAIL** | 78 (19 · 59) | +10.49 | +0.135 | -0.0063 | pass n55 mean 0.1844 | n20 mean -0.8591 |
+| `eth_pullback_2h` | **FAIL** | 72 (19 · 53) | -3.29 | -0.046 | -0.1521 | fail n44 mean 0.0197 | n7 mean -0.414 |
+| `ict_scalp_sol_5m` | **FAIL** | 67 (0 · 67) | +4.88 | +0.073 | -0.1278 | fail n30 mean -0.1404 | n21 mean -0.9901 |
+| `xrp_pullback_2h` | **FAIL** | 66 (20 · 46) | -15.43 | -0.234 | -0.349 | fail n37 mean -0.2395 | n15 mean -0.6021 |
+| `htf_pullback_trend_2h` | **FAIL** | 59 (8 · 51) | -129.38 | -2.193 | -3.6354 | fail n21 mean -0.0082 | n3 mean -0.7144 |
+| `trend_donchian_eth_4h` | **FAIL** | 59 (20 · 39) | -0.52 | -0.009 | -0.1841 | fail n29 mean -0.2257 | n16 mean -0.528 |
+| `ict_scalp_sol_15m` | **FAIL** | 52 (0 · 52) | +7.68 | +0.148 | -0.0471 | fail n21 mean 0.1395 | n9 mean -0.5035 |
+| `ict_scalp_xrp_15m` | **FAIL** | 49 (0 · 49) | -8.55 | -0.174 | -0.3469 | fail n25 mean -0.0868 | n12 mean -0.3776 |
+| `ict_scalp_xrp_5m` | **FAIL** | 48 (0 · 48) | -39.16 | -0.816 | -1.3183 | fail n29 mean -1.0124 | n7 mean -1.0099 |
+| `ict_scalp_eth_15m` | **FAIL** | 47 (0 · 47) | +10.71 | +0.228 | -0.14 | fail n27 mean -0.0234 | n26 mean -0.1848 |
+| `trend_donchian_eth` | **FAIL** | 37 (0 · 37) | -1.45 | -0.039 | -0.1928 | fail n24 mean -0.0595 | n9 mean -0.1807 |
+| `e4_oi_shock_1h` | **FAIL** | 33 (0 · 33) | +6.74 | +0.204 | -0.0058 | pass n29 mean 0.2529 | n18 mean 0.4938 |
+| `sol_pullback_2h` | **FAIL** | 29 (0 · 29) | -3.32 | -0.115 | -0.2367 | n_short n14 mean 0.0531 | n2 mean 0.0551 |
+| `slv_trend_1h` | **FAIL** | 28 (0 · 28) | -3.40 | -0.121 | -0.4079 | n_short n11 mean -0.0888 | n19 mean -0.7466 |
+| `trend_donchian_xrp_4h` | **FAIL** | 26 (10 · 16) | +1.15 | +0.044 | -0.1333 | n_short n14 mean 0.2381 | n12 mean -0.4078 |
+| `qqq_pullback_1h` | **FAIL** | 24 (0 · 24) | -24.60 | -1.025 | -1.3033 | n_short n11 mean -0.3624 | n12 mean -1.1433 |
+| `uso_trend_1h` | **FAIL** | 24 (0 · 24) | +11.77 | +0.490 | -0.0048 | n_short n11 mean 0.6114 | n12 mean 0.0165 |
+| `ict_scalp_mgc_15m` | **FAIL** | 22 (0 · 22) | +8.24 | +0.374 | -0.1728 | no_data n0 mean — | n15 mean -0.3851 |
+| `avax_pullback_2h` | **FAIL** | 21 (0 · 21) | -7.05 | -0.336 | -0.4385 | n_short n11 mean -0.4047 | n0 mean — |
+| `mgc_trend_1h` | **FAIL** | 21 (0 · 21) | -2.48 | -0.118 | -0.182 | no_data n0 mean — | n1 mean 0.0491 |
+| `fade_breakout_4h` | **n-short** | 16 (9 · 7) | -2.26 | -0.141 | -0.3043 | n_short n14 mean -0.1754 | n1 mean -1.0163 |
+| `tlt_pullback_1h` | **n-short** | 16 (1 · 15) | -5.87 | -0.367 | -0.6666 | n_short n7 mean -0.2417 | n9 mean -1.2545 |
+| `trend_donchian_sol_prop` | **n-short** | 13 (5 · 8) | -10.79 | -0.830 | -0.8825 | n_short n13 mean -0.8297 | n4 mean -1.0329 |
+| `squeeze_breakout_4h` | **n-short** | 12 (1 · 11) | -4.05 | -0.337 | -0.468 | n_short n2 mean -1.0787 | n1 mean -1.0455 |
+| `ief_pullback_1d` | **n-short** | 6 (1 · 5) | +4.95 | +0.825 | 0.0914 | n_short n4 mean 1.4133 | n3 mean -0.568 |
+| `ml_entry_eq_struct` | **n-short** | 5 (1 · 4) | -0.04 | -0.008 | -0.1383 | n_short n5 mean -0.0083 | n0 mean — |
+| `slv_pullback_1d` | **n-short** | 5 (1 · 4) | -5.24 | -1.048 | -1.0797 | n_short n3 mean -1.0124 | n5 mean -1.0478 |
+| `iaum_pullback_1d` | **n-short** | 4 (1 · 3) | -0.13 | -0.033 | -0.5015 | n_short n4 mean -0.0325 | n1 mean -1.4705 |
+| `trend_donchian_xrp_adx25` | **n-short** | 4 (1 · 3) | -2.34 | -0.585 | -0.807 | n_short n4 mean -0.585 | n0 mean — |
+
+**What the column says, as category changes (drafted; nothing merged):**
+- **`trend_donchian`: live bar PASS** (n 45 = 14 real + 31 paper, mean +0.92 R, 80% LB +0.54; the venue-measured subset also PASSES, n 29, LB +0.035). § 3 had it in **(b)** on a Stage-0 fail with an approximate record. Under the new path it is **(a)**. Fidelity unit: the faithful Stage-0 re-run with the exit-head levers (this packet's § 4 unit for `trend_donchian`) becomes its parallel fidelity check.
+- **`trend_donchian_ada_4h`, `trend_donchian_avax_4h`, `trend_donchian_sol_4h`: live bar PASS on paper** (n 34 / 29 / 27). Each venue-measured subset is n-short (12 / 8 / 11). These are **(a)-pending-measured-cost**: the pnl on most of their trades is estimated, so the "net of real costs" half is not yet venue-confirmed.
+- **Swap rule (ADA):** the demo `trend_donchian_ada_4h` clears the bar; the real-money `ada_pullback_2h` FAILS it, narrowly (n 78, mean +0.13 R, LB −0.006). The measured subset of the 2h passes (n 55, LB +0.010). This is the operator's swap case in reverse: on the bar as written, the 4h would take the 2h's slot. **The 4h's measured-cost half is n-short, so this is drafted for the operator, not proposed as a swap today.**
+- **Legs on a real-money roster today** (re-parsed from `config/accounts.yaml` 2026-11-18: `bybit_2` = trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop, ml_entry, ict_scalp_eth_15m, trend_donchian_eth_4h; `alpaca_live` = tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h). Their live-bar state is an input to the demotion signal, row PERF-F1-DEMOTION-SIGNAL:
+  - **FAIL:** `ml_entry` (n 81, every trade venue-measured, mean −0.06 R; the refit #26288 is pending); `trend_donchian_eth_4h` (n 59, mean −0.01 R); `ict_scalp_eth_15m` (n 47, mean +0.23 R, LB −0.14); `ada_pullback_2h` (above); `slv_trend_1h` (n 28, mean −0.12 R); `trend_donchian_xrp_4h` (n 26, mean +0.04 R).
+  - **n-short:** `trend_donchian_sol_prop` (n 13, mean −0.83 R); `tlt_pullback_1h` (n 16, mean −0.37 R); `ml_entry_eq_struct` (n 5). `tqqq_trend_long_1d` (n 1).
+  - Other legs with lifetime real-money trades that FAIL but are not on a real-money roster today: `xrp_pullback_2h`, `eth_pullback_2h`, `ict_scalp_5m`, `htf_pullback_trend_2h`.
+  **Demotions wait for the operator** (week plan § 1) unless money is at risk. These are reported, not acted on.
+
+Reproduce: `python3 scripts/research/live_bar.py` (tests: `tests/test_live_bar.py`).

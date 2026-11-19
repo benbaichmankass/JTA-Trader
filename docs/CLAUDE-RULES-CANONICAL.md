@@ -1853,8 +1853,10 @@ manager's recorded decision. It does not wait for approval. It reports.
   additionally need the evidence standard in § "Promotion evidence — offline
   edge, live mechanics". That means a committed evidence record, a named
   harness, a stated n, net of the full cost stack, and clearing a rule
-  registered before the run. A live or paper book's P&L alone never
-  establishes edge.
+  registered before the run. A live or paper book's P&L alone establishes
+  edge only when it clears the LIVE BAR (operator, 2026-11-17: >= 20
+  live trades with R on the declared signal-time risk, net of real costs, total R > 0, ~80% lower bound
+  of the mean > 0; OPERATING-PLAN § 2 "Live-performance promotion path").
 - **A data basis known to be wrong in the favourable direction is not
   "backed by data".** Until D1 lands, the backtest corpus defaults slippage
   and funding to 0.0. So a real-money PROMOTION on that corpus stays blocked,
@@ -2059,6 +2061,15 @@ backtest, not more soak time.
    all pass, the model is promotable. Such a gate is demoted to advisory
    (computed + reported, non-blocking), mirroring the 2026-07-19 M25 reframe
    (`live_regime_discrimination`) and the 2026-07-26 WS-1 `shadow_soak` demotion.
+4. **Live results that clear the LIVE BAR also promote** (operator, 2026-11-17,
+   binding): >= 20 closed live trades with R on the declared signal-time risk
+   (`declared_initial`; venue-measured P&L where available), net of real costs, total
+   R > 0 and the mean's one-sided ~80% lower bound > 0, demo and real-money trades
+   of the same leg configuration pooled. A live-bar pass promotes even when the
+   offline record failed or is missing (live wins; a fidelity-check unit runs in
+   parallel). This is a second WAY UP, never a precondition: it adds no wait to
+   the offline path in item 1. Stated once in [`OPERATING-PLAN` § 2
+   "Live-performance promotion path"](plans/OPERATING-PLAN-2026-09-21.md).
 
 This is **mechanically guarded**: `tests/ml/test_gates.py` asserts that no
 required gate under the regime-classifier profile is a calendar-time edge gate
