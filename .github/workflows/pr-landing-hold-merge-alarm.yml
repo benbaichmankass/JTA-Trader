@@ -14,9 +14,8 @@
 # call to make separately (see JC-CA-04 §6.3 in the audit), not this
 # workflow's to assume.
 #
-# WHAT IT DOES: on every push to main, find the PR(s) associated with the
-# pushed commit(s) (a direct push with no PR is a no-op — nothing here to
-# check), read each merged PR's .github/pr-landing/<slug>.json (already in the
+# WHAT IT DOES: on every push to main, select every in-scope PR merged in the
+# last 6 h not yet labelled hold-merge-graded (see the concurrency note), read each merged PR's .github/pr-landing/<slug>.json (already in the
 # tree at this push, the same file check_pr_landing.py required pre-merge)
 # and its GitHub reviews, and hand both to the pure decision logic in
 # scripts/ops/pr_landing_hold_alarm.py. On ALARM (tier 2/3, landing: "hold",
@@ -38,13 +37,19 @@ on:
   push:
     branches: [main]
 
+# ONE group, no cancel (ACTIONS-QUEUE-BACKLOG alarm dedupe, manager-approved 2026-11-19). The old
+# per-sha group queued one run per push to main. With one group GitHub keeps a single pending run and
+# DROPS older pending ones, so a run no longer grades "its" push: it grades every in-scope PR merged in
+# the last 6 h that does not carry the `hold-merge-graded` label (pr_landing_hold_alarm.py --select-from),
+# then labels each PR it graded to a final state. A dropped push's PR is graded by the next run; a PR is
+# never graded, or paged, twice.
 concurrency:
-  group: pr-landing-hold-merge-alarm-${{ github.sha }}
+  group: pr-landing-hold-merge-alarm
   cancel-in-progress: false
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write   # the hold-merge-graded dedupe label (2026-11-19)
   issues: write
 
 jobs:
@@ -79,29 +84,17 @@ jobs:
           # already use for the work store). The ping goes there first; a system-actions issue is the fallback.
           WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
           REPO: ${{ github.repository }}
-          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
         run: |
           set -euo pipefail
 
-          shas=$(python3 -c "import json, os; print('\n'.join(c['id'] for c in json.loads(os.environ['COMMITS_JSON'])))")
-          if [ -z "$shas" ]; then
-            shas="${{ github.sha }}"
+          closed=/tmp/closed-prs.json
+          if ! gh api "repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=100" > "$closed" 2>/dev/null; then
+            echo "::warning::could not list recently closed PRs -- this run could not look (not clean)"
+            exit 1
           fi
-
-          # PRs associated with any commit in this push, deduped, merged only.
-          prs=""
-          for sha in $shas; do
-            page=$(gh api "repos/${REPO}/commits/${sha}/pulls" \
-              --jq '.[] | select(.merged_at != null) | "\(.number)\t\(.title)\t\(.head.ref)"' \
-              2>/dev/null || echo "")
-            if [ -n "$page" ]; then
-              prs="${prs}"$'\n'"${page}"
-            fi
-          done
-          prs=$(echo "$prs" | sed '/^$/d' | sort -u -t$'\t' -k1,1)
-
+          prs=$(python3 scripts/ops/pr_landing_hold_alarm.py --select-from "$closed")
           if [ -z "$prs" ]; then
-            echo "no merged PR associated with this push — nothing to grade (direct push, or the API had nothing to say)"
+            echo "no in-scope PR merged in the last 6 h without the hold-merge-graded label -- nothing to grade"
             exit 0
           fi
 
@@ -153,6 +146,13 @@ jobs:
             set -e
             echo "$out"
             echo "::endgroup::"
+
+            # The dedupe marker: a PR graded to a FINAL state (clean or alarm) is labelled so no later
+            # run grades or pages it again. UNREADABLE (rc 3) is not final and stays unlabelled for a retry.
+            if [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then
+              gh api -X POST "repos/${REPO}/issues/${pr_number}/labels" -f "labels[]=hold-merge-graded" >/dev/null 2>&1 \
+                || echo "::warning::could not label PR #${pr_number} hold-merge-graded; a later run may grade it again"
+            fi
 
             if [ "$rc" -eq 2 ]; then
               ping_msg=$(echo "$out" | tail -n1)

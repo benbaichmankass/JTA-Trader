@@ -410,3 +410,15 @@ def test_api_list_canonical_reads_the_freeze_key(client, monkeypatch):
     monkeypatch.setattr(work_read, "frozen", lambda repo=None: False)
     got = client.get("/api/bot/work/items").json()
     assert got["canonical"] is False and "pre-freeze" in got["note"]
+
+
+def test_a_write_clears_the_written_key_from_extra_absent(store):
+    """EXPORT-ABSENT-DROP (2026-11-19): close sets terminal_reason, so it is no longer an import-time absent key."""
+    v = store.create(_obs(extra={"_source": "pipeline", "_absent": ["terminal_reason", "severity"]}),
+                     by="t", today=TODAY)["item"]["version"]
+    out = store.close("PI-TEST-1", state="dropped", reason="superseded", by="t", expected_version=v,
+                      today=TODAY)["item"]
+    assert out["terminal_reason"] == "superseded"
+    assert out["extra"]["_absent"] == ["severity"]
+    from src.runtime import work_store_import as wi
+    assert wi.to_pipeline_item(out)["terminal_reason"] == "superseded"
