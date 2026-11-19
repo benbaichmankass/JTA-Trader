@@ -44,3 +44,16 @@ def test_session_bound_unit_is_not_a_dispatch_failure(tmp_path, capsys):
     assert row["outcome"] == "not_due" and "session-bound" in row["reason"] and rc == 0
     assert subprocess.run([sys.executable, str(REPO / "scripts/ci/check_research_queue_throughput.py"), "--self-test"],
                           cwd=REPO).returncode == 0
+
+
+def test_runs_as_a_script_from_outside_the_repo(tmp_path):
+    """PI-20261112-ZZU98A5J-0001: `python3 scripts/research/queue_throughput.py` crashed on import
+    (ModuleNotFoundError: scripts) unless PYTHONPATH=. was set."""
+    import os
+    import sys
+    from pathlib import Path
+    script = Path(__file__).resolve().parents[1] / "scripts" / "research" / "queue_throughput.py"
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    r = subprocess.run([sys.executable, str(script)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120)
+    assert "ModuleNotFoundError" not in r.stderr, r.stderr[-500:]
+    assert r.returncode == 0, r.stderr[-500:]
