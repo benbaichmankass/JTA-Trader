@@ -104,10 +104,12 @@ def test_report_route_since_returns_sent_digest_blocks(tmp_path, monkeypatch):
     log = tmp_path / "digest_log.jsonl"
     monkeypatch.setattr(work_report, "DIGEST_LOG", log)
     monkeypatch.setattr(work_report.read_latest, "__defaults__", (tmp_path,))
-    out = work.get_work_report(since="2026-10-05T00:00:00+00:00")
+    # dates relative to now: append_digest_log keeps only the last KEEP days, so a fixed date ages out (#27203)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    out = work.get_work_report(since=(now - timedelta(hours=3)).isoformat())
     assert out["digestLogState"] == "absent" and out["digestLog"] == []
-    work_report.append_digest_log({"at": "2026-10-05T07:00:00+00:00", "new": ["🔕 x"]}, log)
-    out = work.get_work_report(since="2026-10-05T06:00:00+00:00")
+    work_report.append_digest_log({"at": (now - timedelta(hours=1)).isoformat(), "new": ["🔕 x"]}, log)
+    out = work.get_work_report(since=(now - timedelta(hours=2)).isoformat())
     assert out["digestLogState"] == "read" and out["digestLog"][0]["new"] == ["🔕 x"]
     assert "digestLog" not in work.get_work_report()
 

@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Test-only fix, the sibling of #27203: tests/test_attention_watch.py::test_report_route_since_returns_sent_digest_blocks appended a digest-log entry dated 2026-10-05; on 2026-11-19 it aged past work_report KEEP=45 days and append_digest_log pruned it before the read (IndexError), so pytest-run is red on main and every PR (seen on #27169 run 44481457844: 2 failed, one of them this). The test now dates its entries relative to now. No runtime path changes. Gates this adds or changes: none."
+}
