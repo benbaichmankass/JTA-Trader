@@ -58,6 +58,7 @@ REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 PRICE_TOL = 5e-4  # relative: a venue trigger is rounded to the tick; 0.05% separates a tick from a real move
 CLASS_ORDER = {"real_money": 0, "prop": 1, "paper": 2}
 TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400}
+_LEG_TF_RE = re.compile(r"_(\d+[mhd])$")  # leg-name timeframe suffix, as live_review_due.timeframe_seconds
 
 
 # ----------------------------------------------------------------------------- reads
@@ -1286,7 +1287,15 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     provenance = tel.get("peak_provenance") or pos_r.get("peakProvenance") or "unverified"
 
     # --- candles: ATR now / trend now
+    # The leg timeframe: the package's own meta first; else the leg-name suffix (`trend_donchian_avax_4h` -> 4h),
+    # the rule live_review_due.timeframe_seconds already uses. Without the fallback a package whose meta carries
+    # no timeframe got no chart, no htf and no ATR/trend-now (21:20Z 2026-11-19: the avax_4h and ada_4h packets).
     tf = meta.get("timeframe")
+    tf_source = "meta" if tf else None
+    if tf not in TF_SECONDS:
+        m = _LEG_TF_RE.search(str(leg or ""))
+        if m and m.group(1) in TF_SECONDS:
+            tf, tf_source = m.group(1), "leg_suffix"
     atr_ratio = trend = adx = a_now = None
     bars: List[dict] = []
     if symbol and tf in TF_SECONDS:
@@ -1404,7 +1413,8 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "packet_version": PACKET_VERSION,
         "priced_options": priced,
         "priced_options_state": priced_state(priced, why, bool(price and direction)),
-        "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend},
+        "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend,
+                   "timeframe": tf, "timeframe_source": tf_source},
         "review_id": review_id,
         # LTR-PACKET-READ-REACH (2026-11-19): the 20:10Z lane matched journal trade 8031 to pkg-d0743cad43c9449b by
         # inference. Every journal row of the package is named here: one per account the package reached.
