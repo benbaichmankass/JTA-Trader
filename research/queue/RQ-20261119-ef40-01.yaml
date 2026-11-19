@@ -84,6 +84,14 @@ run:
   - '{out_dir}'
   inputs:
     research_unit: RQ-20261119-ef40-01
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: none directly; supplies the fresh corpus that a10d-07 / a10d-08 read to decide the held #26906 exit-head neg25 pin (close or annotate on the three donchian 1h legs, exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
 lands:
   store: research/results/
   assert_field: read_state
