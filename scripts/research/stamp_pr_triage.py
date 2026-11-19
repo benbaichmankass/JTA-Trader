@@ -148,7 +148,7 @@ def decide_pr(files: List[dict], main_reader: Callable[[str], Optional[str]],
     return {"action": action, "why": why, "units": units}
 
 
-def comment_body(pr: int, decision: Dict[str, Any], did: str) -> str:
+def comment_body(decision: Dict[str, Any], did: str) -> str:
     lines = [f"Stamp-PR triage (PI-20261118-EFILLW47-0005): {did}. This PR was conflicting with main and could not merge.", ""]
     for u in decision["units"]:
         lines.append(f"- `{u['unit']}`: **{u['kind']}** (stamp {u['stamp']}, main {u['main']}): {u['reason']}")
@@ -250,7 +250,7 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
         for u in d["units"]:
             out(f"    {u['unit']:28s} stamp={u['stamp']} main={u['main']} -> {u['kind']}")
         if live and d["action"] == "close":
-            if _gh(["pr", "comment", str(n), "--repo", repo_slug, "--body-file", "-"], comment_body(n, d, "closing as superseded")) is not None \
+            if _gh(["pr", "comment", str(n), "--repo", repo_slug, "--body-file", "-"], comment_body(d, "closing as superseded")) is not None \
                     and _gh(["pr", "close", str(n), "--repo", repo_slug]) is not None:
                 row["done"] = "closed"
         elif live and d["action"] == "land" and land and token:
@@ -258,7 +258,7 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
             row["done"] = "landed" if ok else f"land_failed: {why}"
             if ok:
                 _gh(["pr", "comment", str(n), "--repo", repo_slug, "--body-file", "-"],
-                    comment_body(n, d, "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run"))
+                    comment_body(d, "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run"))
         out(f"    -> {row['done'] or ('dry run: nothing done' if not live else 'reported only')}")
         results.append(row)
     return results
