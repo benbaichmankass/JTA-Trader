@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits 11 evidence harnesses (a decorator on each entry point that assigns module globals); merge after the full pytest-run is green; ict_scalp is covered by #27175 and excluded here",
+  "why": "PI-20261119-FILLW47B-0001 sibling sweep (manager 2026-11-19): every other scripts/backtest_*.py main() that assigns module-level cost knobs now restores them in finally via src/backtest/module_globals.restores_globals, so an in-process run cannot leak one run's cost stack into the next (#27149: net_total_r -14.7793 -> -17.1766 on identical trades). CLI behaviour unchanged. A test locks that every `global` assigned in these entry points is restored and that a new harness joins the list. Gates this adds or changes: none."
+}
