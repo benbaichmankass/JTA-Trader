@@ -461,3 +461,36 @@ def test_backend_idle_clock_is_capped_by_minutes_since_due():
     far = (NOW - timedelta(minutes=lim + 100)).isoformat()
     v = w.check_backend("trainer", 4, old_start, NOW, TH, due_since=far)
     assert v["state"] == w.BAD and f"{lim + 100:.0f} min" in v["detail"]                # reports time since due, not 462
+
+
+# ── the idle clock starts when the slot became FREE, not when the last run started (kaggle_cpu false alarm 2026-11-19) ──
+def _ended(created_min_ago, ended_min_ago, i=1):
+    r = run(i, created_min_ago)
+    r["updated_at"] = ago(ended_min_ago)
+    return r
+
+
+def test_a_long_run_that_just_finished_is_not_an_idle_backend():
+    """RQ-20261118-abab-37: created 83 min ago, held the one kaggle_cpu slot 73 min, ended 1 min ago. The dispatcher's
+    next cycle has not run yet; counted from the START this read 'idle 83 min' and escalated."""
+    lim = float(TH["backend_idle_minutes"])
+    assert 83 > lim > 1
+    v = w.check_backend("kaggle_cpu", 6, [_ended(83, 1)], NOW, TH)
+    assert v["state"] == w.OK and "slot free for 1 min" in v["detail"], v
+    assert v["evidence"]["minutes_since_slot_free"] == 1.0 and v["evidence"]["minutes_since_last_start"] == 83.0
+
+
+def test_the_slot_free_for_longer_than_the_limit_with_runnable_units_is_still_bad():
+    lim = float(TH["backend_idle_minutes"])
+    v = w.check_backend("kaggle_cpu", 6, [_ended(200, lim + 10)], NOW, TH)
+    assert v["state"] == w.BAD and "the slot has been free for" in v["detail"] and "idle with 6 runnable" in v["detail"], v
+
+
+def test_a_run_with_no_updated_at_is_read_from_its_start_as_before():
+    assert w.check_backend("kaggle_cpu", 6, [run(1, 400)], NOW, TH)["state"] == w.BAD
+    assert w.check_backend("kaggle_cpu", 6, [run(1, 30)], NOW, TH)["state"] == w.OK
+
+
+def test_a_running_run_is_always_busy_whatever_its_age():
+    v = w.check_backend("kaggle_cpu", 6, [run(1, 120, "in_progress")], NOW, TH)
+    assert v["state"] == w.OK and "queued/in progress" in v["detail"]
