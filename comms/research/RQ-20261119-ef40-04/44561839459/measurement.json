@@ -1,0 +1,488 @@
+{
+  "judge": {
+    "verdict": "indeterminate",
+    "chosen": null,
+    "why": "an arm is below n_oos or between the pass bar and the fail floor",
+    "arms": {
+      "holding_pays_neg25": {
+        "n": 40285,
+        "mean": 0.00672,
+        "se": 0.00477,
+        "ci": [
+          -0.00263,
+          0.01606
+        ],
+        "z": 1.96
+      }
+    }
+  },
+  "arm_dr_vs_hold_context": {
+    "holding_pays": {
+      "n": 40285,
+      "mean": 0.01405,
+      "se": 0.00681,
+      "ci": [
+        0.00071,
+        0.02739
+      ],
+      "z": 1.96
+    },
+    "holding_pays_neg25": {
+      "n": 40285,
+      "mean": 0.02076,
+      "se": 0.0051,
+      "ci": [
+        0.01076,
+        0.03076
+      ],
+      "z": 1.96
+    }
+  },
+  "fired": {
+    "holding_pays": 26676,
+    "holding_pays_neg25": 12207
+  },
+  "target_coverage": {
+    "holding_pays_neg25": 1.0
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+    "ETHUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "SOLUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "XRPUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "ADAUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "AVAXUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+    "BTCUSDT": 12217,
+    "ETHUSDT": 23605,
+    "SOLUSDT": 9550
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 45372,
+  "z": 1.96,
+  "pass_dr": 0.01,
+  "legs": [
+    {
+      "leg": "trend_donchian_eth_4h",
+      "symbol": "ETHUSDT",
+      "read_state": "measured",
+      "n_total_trades": 10578,
+      "block_n": 1763,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 1763,
+          "train_rows_n": 5072,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1194,
+            "holding_pays_neg25": 724
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 1763,
+          "train_rows_n": 11989,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1041,
+            "holding_pays_neg25": 542
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 1763,
+          "train_rows_n": 18009,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1122,
+            "holding_pays_neg25": 463
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 1763,
+          "train_rows_n": 26420,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1159,
+            "holding_pays_neg25": 441
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 1763,
+          "train_rows_n": 34877,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1120,
+            "holding_pays_neg25": 453
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_sol_4h",
+      "symbol": "SOLUSDT",
+      "read_state": "measured",
+      "n_total_trades": 9279,
+      "block_n": 1546,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 1546,
+          "train_rows_n": 8608,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1061,
+            "holding_pays_neg25": 522
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 1546,
+          "train_rows_n": 14836,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1096,
+            "holding_pays_neg25": 490
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 1546,
+          "train_rows_n": 21814,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1019,
+            "holding_pays_neg25": 457
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 1546,
+          "train_rows_n": 29205,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 971,
+            "holding_pays_neg25": 319
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 1546,
+          "train_rows_n": 36346,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 997,
+            "holding_pays_neg25": 387
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_xrp_4h",
+      "symbol": "XRPUSDT",
+      "read_state": "measured",
+      "n_total_trades": 9157,
+      "block_n": 1526,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 1526,
+          "train_rows_n": 5141,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 978,
+            "holding_pays_neg25": 574
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 1526,
+          "train_rows_n": 11101,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 960,
+            "holding_pays_neg25": 483
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 1526,
+          "train_rows_n": 18156,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 927,
+            "holding_pays_neg25": 413
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 1526,
+          "train_rows_n": 26745,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 921,
+            "holding_pays_neg25": 339
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 1526,
+          "train_rows_n": 35458,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 922,
+            "holding_pays_neg25": 328
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_ada_4h",
+      "symbol": "ADAUSDT",
+      "read_state": "measured",
+      "n_total_trades": 10228,
+      "block_n": 1704,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 1704,
+          "train_rows_n": 4342,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1318,
+            "holding_pays_neg25": 934
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 1704,
+          "train_rows_n": 10496,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1337,
+            "holding_pays_neg25": 781
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 1704,
+          "train_rows_n": 17496,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1305,
+            "holding_pays_neg25": 670
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 1704,
+          "train_rows_n": 26094,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1289,
+            "holding_pays_neg25": 505
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 1704,
+          "train_rows_n": 34430,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 1236,
+            "holding_pays_neg25": 455
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_avax_4h",
+      "symbol": "AVAXUSDT",
+      "read_state": "measured",
+      "n_total_trades": 9113,
+      "block_n": 1518,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 1518,
+          "train_rows_n": 8455,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 990,
+            "holding_pays_neg25": 492
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 1518,
+          "train_rows_n": 14609,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 957,
+            "holding_pays_neg25": 426
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 1518,
+          "train_rows_n": 21924,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 980,
+            "holding_pays_neg25": 382
+          }
+        },
+        {
+          "fold_index": 4,
+          "n_test_trades": 1518,
+          "train_rows_n": 29318,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 889,
+            "holding_pays_neg25": 286
+          }
+        },
+        {
+          "fold_index": 5,
+          "n_test_trades": 1518,
+          "train_rows_n": 36547,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "holding_pays_neg25"
+          ],
+          "n_fired": {
+            "holding_pays": 887,
+            "holding_pays_neg25": 341
+          }
+        }
+      ]
+    }
+  ]
+}

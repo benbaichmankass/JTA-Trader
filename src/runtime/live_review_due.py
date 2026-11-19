@@ -170,6 +170,12 @@ def package_novelty(prior: Dict[str, Any], ctx: Optional[Dict[str, Any]], min_mo
     before = [p for p in pts if p[0] <= last]
     if not before:
         return True, "move unreadable (no history bar at or before the last review): reviewing"
+    if pts[-1][0] <= last:
+        # LTR-PACKET-READ-REACH (2026-11-19, alpaca_portfolio SLV pkg-2616d7fbc5134e2e): with ONE history bar, from
+        # before the last review, "now" and "at the last review" were the same point, so the move read 0.00 ATR and
+        # the 16:00Z slot was skipped as measured-quiet while the price had moved 40.63 -> 41.29 (1.6 ATR). No bar
+        # after the last review means the move since then is unmeasured, not zero.
+        return True, "move unreadable (no history bar after the last review): reviewing"
     atr = next((a for _, _, a in reversed(pts) if a and a > 0), None)
     if atr is None:
         return True, "move unreadable (no ATR in path history): reviewing"

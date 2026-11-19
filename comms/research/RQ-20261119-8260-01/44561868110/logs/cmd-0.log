@@ -1,0 +1,8 @@
+candle dataset: served binance__SOLUSDT__5 (434881 rows, last 2026-11-17 23:55:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol SOLUSDT --timeframe 5m --strategy-name ict_scalp_sol_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261119-8260-01/44561868110/arms/A__trades.jsonl --json comms/research/RQ-20261119-8260-01/44561868110/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --start 2022-10-05 --end 2024-10-04 23:59
+[S_ASIA] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol SOLUSDT --timeframe 5m --strategy-name ict_scalp_sol_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261119-8260-01/44561868110/arms/S_ASIA__trades.jsonl --json comms/research/RQ-20261119-8260-01/44561868110/arms/S_ASIA__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --skip-hours 0,1,2,3,4,5,6,7 --start 2022-10-05 --end 2024-10-04 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "S_ASIA beats the incumbent A (net R -24.6381 vs -51.5278) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}
