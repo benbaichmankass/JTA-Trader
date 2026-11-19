@@ -32,7 +32,8 @@ iteration:
   from_result: RQ-20261118-04a5-07
   verdict_read: indeterminate
   diagnosis: '04a5-07 (run 44404069465) INDETERMINATE by its selfcheck clause: the quantile-of-each-action label is confounded by
-    per-action variance (it selects low-variance actions even on the driftless null), so that label family is closed as tested. Its
+    per-action variance (it selects low-variance actions even on the driftless null), so that CONFIG (per-action quantile heads at
+    alpha 0.3) is not re-run. Its
     lgbm arm read +0.0010 R/trade vs B0 (CI95 [-0.0002, +0.0025]), 2 of 6 folds positive; the 7e18-01 mean-target lgbm arm read
     +0.0033 R/trade. The harness works (selfcheck planted / null controls pass for lgbm and now for catboost); the open question is
     whether a stronger learner extracts more from the same states. fail_action ordering: learner class first, then fitted-Q.'
@@ -168,11 +169,17 @@ lands:
   assert_field: read_state
   min_rows: 1
 ml_consumer:
-  consumer: src/runtime/trade_management (Labrador family; no learned management arm is live)
-  decision: whether a CatBoost action-value policy is worth a fresh-window confirmation for in-trade management
+  consumer: ML-AM-NEXT-LIVE
+  decision: whether ml-tm-action-value with CatBoost heads proceeds to a fresh-window confirmation for close / partial_close_50 on the
+    money legs
   legs:
-  - ml_entry
-  book: research
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
 related:
 - RQ-20261118-04a5-07
 - RQ-20261117-c21d-04
