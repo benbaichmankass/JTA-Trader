@@ -1,0 +1,89 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research. Programme node P1-ATM-sol4h-b-overlap;
+# manager approval 2026-11-19 04:42Z ('YES. Author the overlap read plus one disjoint-window confirmation, both registered before any run'). Gates this adds or changes: none.
+id: RQ-20261119-e6b2-01
+title: 'P1-ATM-sol4h-b-overlap: are the three PASSING basket-B cells of sol_4h (AVAX, NEAR, ETC; RQ-20261026-1b57-08) the same bet as a live crypto
+  leg (daily realised-R correlation over the committed per-trade rows)?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+kind: experiment
+question: Over the calendar window each pair covers, is the Pearson correlation of the daily realised net R of any passing 1b57-08 cell (AVAXUSDT
+  228 trades, NEARUSDT 215, ETCUSDT 213, as declared, run 40544537821) with any of the six live crypto legs (ada_pullback_2h, xrp_pullback_2h,
+  trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop; committed corpora) above 0.30 in absolute value
+  on at least 250 common days?
+why_this_matters: 1b57-08 PASSED Stage 0 on basket B but is weak (pooled one-sided p 0.10, last fold -24.6 R, 3 of 6 cells pass). Before the prop
+  EV/survival gate and a re-entry case, the passing cells must be shown to be a different bet from the live book; a cell that moves with ada_pullback_2h
+  or the trend legs adds no diversification. PASS -> the prop EV/survival gate and a re-entry case under MD-PROMOTE-S0-S1 for the non-redundant
+  cells (never a roster act). FAIL -> the named redundant cells are dropped from the candidate list.
+power:
+  expected_n: 3
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'Deterministic read of committed per-trade rows: 3 cells x 6 legs = 18 correlations, each over about 2,000 calendar days (MEASURED when
+    the run lands). The power table is a PROXY: a correlation of 0.30 over 250 days has a standard error near 0.06, so the 0.30 bar is about 5
+    SE from 0; INDETERMINATE below 250 common days or fewer than 2 cells with 4 legs.'
+  feasibility:
+    source: none
+    accrual_basis: Reads committed files; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: overlap
+decision_rule:
+  id: RULE-RQ20261119E6B2-01-SOL4H-B-OVERLAP
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'No baseline arm: a pairwise correlation read of each passing cell against each live leg; |corr| <= 0.30 reads as a different bet.'
+  statistic: 'Per (cell, leg): Pearson correlation of the daily realised net R (a trade booked on its exit date, 0 on days without an exit) over
+    the calendar window both cover, with the day count; also reported, not graded: the share of the cell''s trades overlapping an open same-direction
+    trade of the leg.'
+  rule: A cell is REDUNDANT with a leg iff |corr| > 0.30 on >= 250 common days. PASS iff no passing cell is redundant with any live leg. FAIL
+    iff at least one cell is redundant with at least one leg (named in the result). INDETERMINATE iff fewer than 2 of the 3 cells have >= 250
+    common days with at least 4 of the 6 legs. Thresholds, cells and legs are fixed now and not changed after any result.
+  pass_action: register the prop EV/survival gate (prop_ev_grid) for the cells and a re-entry case under MD-PROMOTE-S0-S1 as a new evidence record;
+    never a roster act.
+  fail_action: drop the redundant cells from the candidate list and say so on the programme node; carry the others forward.
+  what_it_does_not_do: Changes no config or roster, places no order, adds no gate. Daily-R correlation says nothing about drawdown overlap or
+    the prop survival gate. ml_entry and the non-crypto legs are not read.
+  min_n: 250 common days per pair; >= 2 cells with >= 4 legs
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'planning stand-in, not a measurement: programme node P1-ATM-sol4h-b-overlap.'
+practice_precedent: RQ-20261026-1b57-08 (the PASS this reads); docs/research/authoring-queue-triage-2026-11-17.md (the node's authoring_blocked
+  note, cleared by the manager 2026-11-19 04:42Z).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 2
+  basis: 'ESTIMATE: 18 pairwise correlations over about 2,000 daily points of committed jsonl; no network, no candles.'
+run:
+  command:
+  - python3
+  - scripts/research/cell_overlap_read.py
+  - run
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261119-e6b2-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-1b57-08
+- P1-ATM-sol4h-b-overlap
+- scripts/research/cell_overlap_read.py
+population: the three passing basket-B cells of sol_4h (AVAXUSDT, NEARUSDT, ETCUSDT) vs six live crypto legs, committed per-trade rows.
+programme: P1
+last_dispatched_at: null

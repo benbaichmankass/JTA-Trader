@@ -682,7 +682,10 @@ def run_backtest(
     tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
     adx_max: Optional[float] = None,
     session_flat_et: Optional[str] = None,
+    side_filter: str = "both",
 ) -> Dict[str, Any]:
+    if side_filter not in ("long", "short", "both"):
+        raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
     tp_geom = tp_geometry or _tpg.TPGeometrySpec()
     _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
     if _refused:
@@ -758,6 +761,15 @@ def run_backtest(
         except ValueError:
             continue
         direction = pkg["direction"]
+        # DIRECTION GATE (PI-20261119-OFUCR5NF-0003): the shared live gate, imported not copied --
+        # src.runtime.strategy_signal_builders._side_filter_suppresses is what the trend/pullback live builders call
+        # (`long` suppresses shorts, `short` suppresses longs, `both` never). The live ict_scalp builder does NOT read a
+        # side_filter today (no ict_scalp leg configures one), so a PASS from this arm still needs a live producer.
+        # Default "both" = no gate and no import = byte-identical to before (tests/data/ict_scalp_side_filter_golden.json).
+        if side_filter != "both":
+            from src.runtime.strategy_signal_builders import _side_filter_suppresses
+            if _side_filter_suppresses(direction, side_filter):
+                continue
         # Confidence is computed by the live order_package() itself, so this
         # gate is an exact mirror of a live min_confidence floor.
         confidence = float(pkg.get("confidence") or 0.0)
@@ -1471,6 +1483,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Ignore config/strategies.yaml; use unit defaults only.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live order_package() confidence is below this.")
+    p.add_argument("--side-filter", choices=["long", "short", "both"], default="both",
+                   help="Directional gate, the shared live _side_filter_suppresses: long skips shorts, short skips longs, "
+                        "both (default) = no gate, byte-identical. exit_lever_ablation passes it for the DIRECTION arms.")
     p.add_argument("--adx-max", type=float, default=None, metavar="X",
                    help="Skip signals whose decision-time ADX-14 (live detect_regime, trailing 200 bars) is >= X. "
                         "Default off (no gate).")
@@ -1623,6 +1638,24 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+def _restores_cost_globals(fn):
+    """main() applies the cost stack through module globals (the harness reads them while it runs); restore the caller's
+    values on exit so an in-process call (a test, a driver) cannot leak venue-aware slippage/funding or a per-contract
+    arm into the next in-process run (PR #27149: net_total_r -14.7793 -> -17.1766 with identical trades)."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        saved = {n: globals()[n] for n in ("FEE_BPS_ROUNDTRIP", "SLIPPAGE_BPS_ROUNDTRIP", "FUNDING_BPS_PER_WINDOW",
+                                           "FUNDING_WINDOW_HOURS", "CONTRACT_COST")}
+        try:
+            return fn(*a, **k)
+        finally:
+            globals().update(saved)
+    return wrapper
+
+
+@_restores_cost_globals
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     global CONTRACT_COST
@@ -1736,6 +1769,7 @@ def main(argv: List[str]) -> int:
         htf_ema_period=int(args.htf_ema_period),
         vol_spec=vol_spec,
         adx_max=(float(args.adx_max) if args.adx_max is not None else None),
+        side_filter=str(args.side_filter),
         stamp_regime=bool(args.stamp_regime),
         sim_breakeven=bool(args.sim_breakeven),
         be_arm_on_touch=bool(args.be_arm_on_touch),
