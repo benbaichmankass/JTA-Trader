@@ -195,3 +195,73 @@ def test_written_artifact_as_of_is_prior_closed_bar(tmp_path):
         tmp_path, "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(),
     )
     assert json.loads(path.read_text())["as_of_ts"] == candles[-2]["timestamp"]
+
+
+# --- PI-20261119-K7ZSW5Z7-0005: the window stamp ------------------------------
+
+
+def test_artifact_stamps_the_window_the_forecast_saw():
+    candles = _open_last_bar_candles(80)
+    art = producer.build_forecast_artifact(
+        "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(), context_len=64,
+    )
+    closed = candles[:-1]  # the forming bar is dropped
+    win = closed[-64:]
+    assert art["window_end_ts"] == art["as_of_ts"] == closed[-1]["timestamp"]
+    assert art["window_start_ts"] == win[0]["timestamp"]
+    assert art["window_n"] == 64
+    assert art["window_gaps"] == 0
+    assert art["window_unreadable_ts"] == 0
+    assert art["window_closes"] == [float(c["close"]) for c in win]
+    assert art["window_closes_sha256"] == producer.window_closes_hash(
+        [float(c["close"]) for c in win]
+    )
+    assert art["fetched_n"] == 80
+    assert art["forming_dropped"] == 1
+
+
+def test_window_last_close_is_the_forecast_anchor():
+    """fc_ret_med = ln(q50/last_close); the stub's q50 is last*1.002, so the
+    stamped window's last close must be the close the forecast anchored on."""
+    import math
+
+    candles = _open_last_bar_candles(80)
+    art = producer.build_forecast_artifact(
+        "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(), context_len=64,
+    )
+    assert math.isclose(art["fc_row"]["fc_ret_med"], math.log(1.002), rel_tol=1e-9)
+    assert art["window_closes"][-1] == float(candles[-2]["close"])
+
+
+def test_window_counts_a_gap_and_hash_changes():
+    candles = _open_last_bar_candles(80)
+    gapped = candles[:40] + candles[41:]  # one bar missing inside the window
+    a = producer.build_forecast_artifact(
+        "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(), context_len=64,
+    )
+    b = producer.build_forecast_artifact(
+        "BTCUSDT", "15m", gapped, forecast_fn=_stub_forecast(), context_len=64,
+    )
+    assert a["window_gaps"] == 0
+    assert b["window_gaps"] == 1
+    assert a["window_closes_sha256"] != b["window_closes_sha256"]
+
+
+def test_history_is_opt_in_and_appends_one_line_per_publish(tmp_path):
+    candles = _open_last_bar_candles(80)
+    out, hist = tmp_path / "fc", tmp_path / "hist"
+    producer.write_forecast_artifact(
+        out, "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(),
+    )
+    assert not hist.exists()
+    for _ in range(2):
+        producer.write_forecast_artifact(
+            out, "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(),
+            history_dir=hist,
+        )
+    files = list(hist.glob("*.jsonl"))
+    assert len(files) == 1
+    lines = [json.loads(x) for x in files[0].read_text().splitlines()]
+    assert len(lines) == 2
+    assert lines[0]["window_closes_sha256"] == lines[1]["window_closes_sha256"]
+    assert lines[0]["symbol"] == "BTCUSDT"
