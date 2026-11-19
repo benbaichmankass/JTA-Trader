@@ -4,7 +4,7 @@
 id: RQ-20261119-001
 title: CONFIRMATION on the 2021-11..2026-10 window of the two exits that passed on spy_pullback_1h's pre-development
   window (stale-exit SE8 b2f2-10, ADX-below trail tighten TA25 b2f2-29), single and combined
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -158,3 +158,15 @@ generated:
   params:
     node: P1-RP1119-spy-pullback-1h-se8-ta25-dev
 last_dispatched_at: '2026-11-19T10:59:54+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-spy-pullback-1h-se8-ta25-dev
+  evidence:
+  - research/results/RQ-20261119-001/44493120594.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

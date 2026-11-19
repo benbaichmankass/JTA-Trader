@@ -4,7 +4,7 @@ id: RQ-20261119-f2a4-04
 title: 'P8-Q7 NEW FAMILY, Stage 0 on the alpaca_live cash book: does monthly dual-momentum ETF rotation (best 126-session total return
   of SPYM / SCHA / IEF / TLT / GLD if it beats BIL, else cash) beat buy-and-hold SPYM on drawdown without giving up most of the return,
   on 2010-2023, confirmed once on 2024-2026?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -106,3 +106,17 @@ related:
 - scripts/research/etf_rotation_stage0.py
 - scripts/research/alpaca_live_book.py
 last_dispatched_at: '2026-11-19T18:20:40+00:00'
+grading:
+  attested: RULE-RQ20261119f2a404-P8-ROTATION-S0
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261119f2a404-P8-ROTATION-S0
+  evidence:
+  - research/results/RQ-20261119-f2a4-04/44576875020.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

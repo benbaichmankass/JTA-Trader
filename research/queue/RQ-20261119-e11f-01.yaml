@@ -3,7 +3,7 @@
 # the window is pinned by --start/--end; 460 is f1a7-01's value so both units fetch the same history and covers the pinned start until 2027-02); requires_result on f1a7-01 PASS.
 id: RQ-20261119-e11f-01
 title: 'AS-TRADED Stage 0 for ict_scalp_eth_15m (real money, bybit_2 + bybit_portfolio): scored on the FORMING 15m bar the leg actually enters on, does its trade set clear Stage 0 net of the full cost stack, where the committed closed-bar record fails (net_r_oos -2.93, n 76)?'
-status: queued
+status: done
 requires_result: {unit: RQ-20261119-f1a7-01, verdict: pass}
 cadence: once
 theme: live_strategy
@@ -107,3 +107,16 @@ related:
 - RQ-20261117-9e1c-11
 - research/levers/ict_scalp_eth_15m.yaml
 last_dispatched_at: '2026-11-19T17:24:01+00:00'
+grading:
+  attested: RULE-RQ20261119-E11F-01-ICT-SCALP-ETH15M-ASTRADED
+  auto: true
+  decision_rule_id: RULE-RQ20261119-E11F-01-ICT-SCALP-ETH15M-ASTRADED
+  evidence:
+  - research/results/RQ-20261119-e11f-01/44572565818.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
