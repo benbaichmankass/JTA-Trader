@@ -68,6 +68,25 @@ sys.path.insert(0, str(REPO))
 from src.runtime.execution_costs import DEFAULT_FEE_BPS_ROUNDTRIP, resolve_cost_policy  # noqa: E402
 from src.runtime.net_r_label import net_r_for_trade  # noqa: E402
 
+
+def _r_label(trade: dict, sl0: Optional[float]) -> Optional[dict]:
+    """net_r_for_trade on the INITIAL-stop basis, with the symbol's contract multiplier filled in when the journal row
+    does not carry one. PI-20261118-PREP1118-0006: net_r_label defaults a missing multiplier to 1.0, so a futures
+    row divided its dollar pnl by an unscaled risk (MHG trade 5886 read 4937 R = 2500 x ~1.97 R; MGC 6673 39.27 R =
+    10 x ~3.93 R) and poisoned the hold-vs-close mean (n=109, mean dR 91.47)."""
+    if not trade or sl0 is None:
+        return None
+    basis = dict(trade, stop_loss=sl0)
+    if not any(_num(basis.get(k)) for k in ("contract_value_usd", "contract_value")):
+        try:
+            from src.runtime.local_pnl import contract_value_usd_for  # noqa: PLC0415
+            cv = contract_value_usd_for(str(basis.get("symbol") or ""))
+        except Exception:  # noqa: BLE001
+            cv = None
+        if cv:
+            basis["contract_value_usd"] = cv
+    return net_r_for_trade(basis)
+
 REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 OUTCOMES = REPO / "comms" / "live_review" / "outcomes.jsonl"
 FIDELITY_TOL_R = 0.15
@@ -209,7 +228,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     action = rec.get("action")
     if action in NO_PATH_CHANGE:
         sl0 = initial_stop(pkg) if pkg else None
-        lab = net_r_for_trade(dict(trade, stop_loss=sl0)) if (trade and sl0 is not None) else None
+        lab = _r_label(trade, sl0)
         out = _outcome_row(review, trade, delta=0.0, rec_r=None, cf_r=None, cf_shadow=None,
                            method="no_path_change", fidelity=None, stack=None, computed_at=computed_at,
                            net_r=lab["net_R"] if lab else None)
@@ -263,8 +282,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
         to_date = {"hold_exit": hold, "rec_exit": recp,
                    "note": "trade still open: delta needs the realised exit; this is a replay to the last candle"}
         return _result(review, state="could_not_price", reason="trade_open", to_date=to_date)
-    basis = dict(trade, stop_loss=sl0)                                   # R basis = the package's INITIAL stop
-    lab = net_r_for_trade(basis)
+    lab = _r_label(trade, sl0)                                           # R basis = the package's INITIAL stop
     if lab is None:
         return _result(review, state="could_not_price", reason="realised_net_r_uncomputable")
     net_r = lab["net_R"]
@@ -365,7 +383,7 @@ def _price_paired(review: dict, rec: dict, action: str, pkg: dict, trade: dict, 
         return _result(review, state="could_not_price", reason="trade_open",
                        to_date={"hold_exit": hold, "action_exit": act, "close_at_open": shut,
                                 "note": "trade still open: delta needs the realised exit; this is a replay to the last candle"})
-    lab = net_r_for_trade(dict(trade, stop_loss=sl0))
+    lab = _r_label(trade, sl0)
     if lab is None:
         return _result(review, state="could_not_price", reason="realised_net_r_uncomputable")
     net_r = lab["net_R"]
@@ -435,7 +453,14 @@ def initial_stop(pkg: dict) -> Optional[float]:
     side = str(pkg.get("direction") or "").lower()
     if entry is not None and rpu and side in ("long", "short"):
         return entry - rpu if side == "long" else entry + rpu
-    return _num(pkg.get("sl"))
+    sl = _num(pkg.get("sl"))
+    # The CURRENT stop is only a stand-in for the initial one while it is still on the RISK side of entry. A stop
+    # trailed past entry (MGC pkg-011a7bf8 short: entry 4180.9, sl 4116.03) is not an initial stop: R on it is
+    # wrong in size, so say "cannot price" instead (PI-20261118-PREP1118-0006).
+    if sl is not None and entry is not None and side in ("long", "short"):
+        if (side == "long" and sl >= entry) or (side == "short" and sl <= entry):
+            return None
+    return sl
 
 
 #: seconds after ``reviewed_at`` within which a ``live_review_close`` exit is attributed to that review's close

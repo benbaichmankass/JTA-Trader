@@ -350,3 +350,27 @@ def test_candles_that_start_after_the_review_are_refused_not_shifted():
     assert r["state"] == "could_not_price" and r["reason"] == "candles_start_after_review"
     ok = [dict(b, time=b["time"] + H) for b in bars((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))]
     assert cf.price_review(review(), pkg(), trade(realised(4.0)), ok)["reason"] != "candles_start_after_review"
+
+
+# ---- PI-20261118-PREP1118-0006: futures R used an unscaled multiplier; a trailed stop stood in for the initial ----
+
+def test_futures_net_r_uses_the_symbol_contract_multiplier():
+    """MHG (2500 lb): trade 5886 read net_r 4937 because the journal row carries no contract value and net_r_label
+    defaulted it to 1.0. With the symbol multiplier the same row is an ordinary R."""
+    t = {"id": 5886, "symbol": "MHG", "direction": "short", "entry_price": 6.6195, "position_size": 1.0,
+         "pnl": 2500.0 * 0.29, "status": "closed", "fee_taker_usd": 0.0, "fee_maker_usd": 0.0,
+         "funding_paid_usd": 0.0, "cost_source": "broker"}
+    lab = cf._r_label(t, 6.7645)                     # initial stop 0.145 above entry -> 1 R = 0.145 x 2500
+    assert lab is not None and abs(lab["net_R"] - 2.0) < 0.01, lab
+    raw = cf.net_r_for_trade(dict(t, stop_loss=6.7645))
+    assert raw["net_R"] > 1000                       # the old, unscaled reading (control)
+    assert abs(cf._r_label(dict(t, contract_value_usd=2500.0), 6.7645)["net_R"] - 2.0) < 0.01  # row value wins
+
+
+def test_initial_stop_refuses_a_trailed_stop_on_the_profit_side():
+    """MGC pkg-011a7bf8 short: entry 4180.9, sl 4116.03 (trailed past entry, no exit_plan, no risk_per_unit)."""
+    assert cf.initial_stop({"direction": "short", "entry": 4180.9, "sl": 4116.03, "meta": {}}) is None
+    assert cf.initial_stop({"direction": "long", "entry": 100.0, "sl": 101.0, "meta": {}}) is None
+    assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 101.0, "meta": {}}) == 101.0   # risk side
+    assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 99.0,
+                            "meta": {"risk_per_unit": 1.5}}) == 101.5                                   # rpu wins
