@@ -126,10 +126,10 @@ def decisions(cache: Path, out: Path, end: str, art: dict) -> tuple[pd.DataFrame
     feats = art.get("features") or E.FEATURES
     traded = E.traded_symbols()
     res = []
-    # provenance: Booster — regression boosters predicting net R per side (the quantity policy() thresholds at tau), not a probability
     served = {s: lgb.Booster(model_str=art["booster_txt"][s]) for s in ("long", "short")}
     frozen = {s: lgb.Booster(model_file=str(FROZEN_V1 / f"entry_{s}.txt")) for s in ("long", "short")}
     for name, bst, fl, tau in (("served", served, feats, float(art["tau"])), ("frozen_v1", frozen, E.FEATURES, 0.10)):
+        # provenance: predict — each regression booster's predicted net R for that side (what policy() thresholds at tau), not a probability
         taken = E.policy(test, bst["long"].predict(test[fl]), bst["short"].predict(test[fl]), tau)
         taken = taken[taken.symbol.isin(traded)].reset_index(drop=True)
         d = pd.DataFrame({"model": name, "symbol": taken.symbol, "side": taken.side,
