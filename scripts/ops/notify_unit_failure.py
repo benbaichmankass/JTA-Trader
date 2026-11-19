@@ -119,7 +119,9 @@ def forward_to_live(ping: Path, logs: Path, run=subprocess.run) -> str:
     detail: dict = {}
     if ip:
         user = os.environ.get("LIVE_VM_USER", "ubuntu")
-        key = os.environ.get("VM_SSH_KEY", str(Path.home() / ".ssh" / "id_ed25519"))
+        # Default = the trainer->trader key the 2026-11-15 rotation installed (host_security_change.sh
+        # TRAINER_KEYFILE); ~/.ssh/id_ed25519 never existed on the trainer.
+        key = os.environ.get("VM_SSH_KEY", str(Path.home() / ".ssh" / "ict-bot-ovm-private.key"))
         remote_dir = os.environ.get("LIVE_VM_PENDING_PINGS", "/data/bot-data/runtime_logs/pending_pings")
         opts = ["-i", key, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=15", "-o", "BatchMode=yes"]
         try:

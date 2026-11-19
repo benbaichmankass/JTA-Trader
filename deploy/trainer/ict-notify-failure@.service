@@ -10,8 +10,11 @@
 #
 # Installed by scripts/ops/install_trainer_onfailure.sh, together with the
 # deploy/dropins/onfailure.conf drop-in on every timer-driven trainer oneshot.
-# It never restarts anything. The SSH key and live host are the ones
-# ict-promotion-readiness.service already uses.
+# It never restarts anything. The live host is the one
+# ict-promotion-readiness.service declares. The key is the trainer->trader key the
+# 2026-11-15 rotation installed (scripts/ops/host_security_change.sh TRAINER_KEYFILE,
+# ~/.ssh/ict-bot-ovm-private.key): ~/.ssh/id_ed25519 does not exist on the trainer, so
+# every forward failed 'Permission denied (publickey)' (trainer-diag 44464412958).
 # ============================================
 
 [Unit]
@@ -23,5 +26,5 @@ User=ubuntu
 WorkingDirectory=/home/ubuntu/ict-trading-bot
 Environment=UNIT_FAILURE_FORWARD=live
 Environment=UNIT_FAILURE_HOST_LABEL=trainer
-Environment=VM_SSH_KEY=/home/ubuntu/.ssh/id_ed25519
+Environment=VM_SSH_KEY=/home/ubuntu/.ssh/ict-bot-ovm-private.key
 ExecStart=/usr/bin/python3 -u scripts/ops/notify_unit_failure.py %i
