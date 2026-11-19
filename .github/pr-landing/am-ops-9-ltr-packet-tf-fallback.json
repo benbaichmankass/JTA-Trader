@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "why": "LTR-PACKET-FIXES: the live-review packet builder (scripts/ops/live_review_packet.py, read path, not trader-loaded: trader_import_closure decide = SKIP) falls back to the leg-name timeframe suffix when package meta carries no timeframe, so 4h packets get chart/htf/ATR-now/trend-now again (avax_4h and ada_4h packets, 2026-11-19 21:20Z). regime.timeframe_source records meta vs leg_suffix. Adds no gate.",
+  "hold_text": "Lane PRs are opened held per the AM-OPS brief; the manager merges on green. No restart: the packet builder runs from the live-review wake, not inside ict-trader-live."
+}
