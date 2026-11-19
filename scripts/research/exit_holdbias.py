@@ -201,7 +201,46 @@ def grade(n_trades: int, lb: float, advice_rate: float, leg_means: Dict[str, flo
     return ("pass" if all(c["ok"] for c in clauses.values()) else "fail"), clauses
 
 
-def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDOM_DRAWS) -> Dict[str, Any]:
+def select_tau_inner(M: Dict[str, Any], outer_mask: np.ndarray, outer_fold: int, grid: Sequence[float],
+                     seed: int) -> Dict[str, Any]:
+    """PI-20261119-RIMARY12-0005 (iteration of 78fc-05, the MARGIN lever): choose the act margin tau INSIDE the outer
+    fold's training data only. Inner leave-one-fold-out over the other folds; each inner train set is the outer
+    train mask AND the inner fold's own purged mask (so neither the outer test fold nor trades near either test window
+    are ever fit or scored). Pooled inner-OOF advice rate and mean dR per grid tau; SELECTED = the highest inner mean dR
+    among taus with inner advice rate <= ADVICE_RATE_MAX; a tie goes to the LARGER tau (more hold-biased). If no tau
+    meets the cap, the largest grid tau is used and flagged (``cap_unreachable``). The outer test fold is not read."""
+    inner_folds = sorted({int(f) for f in M["fold"][outer_mask].tolist()} - {int(outer_fold)})
+    pooled = {t: {"checkins": 0, "advice": 0, "dR": []} for t in grid}
+    for g in inner_folds:
+        in_mask, _p = purged_train_mask(M, g)
+        fit_mask = outer_mask & in_mask
+        idx = np.where(outer_mask & (M["fold"] == g))[0]
+        if not len(idx) or not fit_mask.any():
+            continue
+        heads = fit_heads(M["X"], M["V"], fit_mask, seed)
+        best, pv = decide(heads, M["X"][idx], M["V"][idx], tau=-np.inf)   # tau -inf: the best feasible head everywhere
+        for t in grid:
+            act = np.where(pv >= t, best, -1)
+            pooled[t]["checkins"] += len(idx)
+            pooled[t]["advice"] += int((act >= 0).sum())
+            pooled[t]["dR"] += [v for v, _a in as_if_applied(M, idx, act).values()]
+    table = []
+    for t in grid:
+        c = pooled[t]
+        table.append({"tau": t, "advice_rate": (c["advice"] / c["checkins"]) if c["checkins"] else None,
+                      "mean_dR": float(np.mean(c["dR"])) if c["dR"] else None, "trades": len(c["dR"])})
+    ok = [r for r in table if r["advice_rate"] is not None and r["mean_dR"] is not None and r["advice_rate"] <= ADVICE_RATE_MAX]
+    if ok:
+        best_v = max(r["mean_dR"] for r in ok)
+        sel = max((r for r in ok if abs(r["mean_dR"] - best_v) <= 1e-12), key=lambda r: r["tau"])
+        return {"selected_tau": sel["tau"], "cap_unreachable": False, "inner_folds": inner_folds, "table": table}
+    return {"selected_tau": max(grid), "cap_unreachable": True, "inner_folds": inner_folds, "table": table}
+
+
+def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDOM_DRAWS,
+        tau_grid: Optional[Sequence[float]] = None) -> Dict[str, Any]:
+    """``tau_grid`` None = the registered fixed TAU_R (78fc-05, byte-identical); a grid = tau chosen per outer fold by
+    ``select_tau_inner`` on that fold's training data only."""
     rows = read_labels(labels)
     M = build_matrix(rows)
     folds = sorted(set(M["fold"].tolist()))
@@ -212,9 +251,10 @@ def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDO
     rand_w: List[int] = []
     for f in folds:
         tr_mask, purge = purged_train_mask(M, f)
+        tau_sel = select_tau_inner(M, tr_mask, f, tau_grid, seed) if tau_grid else None
         heads = fit_heads(M["X"], M["V"], tr_mask, seed)
         idx = np.where(M["fold"] == f)[0]
-        act, _pv = decide(heads, M["X"][idx], M["V"][idx])
+        act, _pv = decide(heads, M["X"][idx], M["V"][idx], tau=tau_sel["selected_tau"] if tau_sel else TAU_R)
         n_checkins += len(idx)
         n_advice += int((act >= 0).sum())
         p = as_if_applied(M, idx, act)
@@ -226,7 +266,8 @@ def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDO
         per_fold[str(f)] = {"trades": len(p), "checkins": int(len(idx)), "advice_rate": float((act >= 0).mean()),
                             "acted_trades": sum(1 for _v, a in p.values() if a is not None),
                             "mean_dR": float(d.mean()) if len(d) else None, "matched_random_mean_dR": float(rnd.mean()),
-                            "heads_fit": sum(h is not None for h in heads), "purge": purge}
+                            "heads_fit": sum(h is not None for h in heads), "purge": purge,
+                            **({"tau_selection": tau_sel} if tau_sel else {})}
     dR = np.array([v for v, _a in pol.values()])
     leg_of = {str(tr): str(lg) for tr, lg in zip(M["trade"], M["leg"])}
     by_leg: Dict[str, List[float]] = defaultdict(list)
@@ -246,7 +287,8 @@ def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDO
         "verdict": verdict, "read_state": "measured" if len(dR) else "no_data", "n": int(len(dR)) if len(dR) else None,
         "population": f"{len(dR)} held-out trades ({n_checkins} check-ins) over {len(folds)} calendar folds, legs "
                       f"{sorted(by_leg)}; labels {labels.name} sha256 {sha[:16]}",
-        "rule": "RULE-RQ-20261101-78fc-05 (plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a sanity rule), unchanged",
+        "rule": ("RULE-RQ-20261101-78fc-05 (plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a sanity rule), unchanged"
+                 if not tau_grid else "the 78fc-05 clauses (a)-(c), unchanged, with tau selected per fold on training data (--tau-grid)"),
         "clauses": clauses,
         "measurement": {"mean_dR_per_trade": float(dR.mean()) if len(dR) else None, "lb95": lb, "ub95": ub,
                         "advice_rate": advice_rate, "acted_trades": sum(1 for _v, a in pol.values() if a is not None),
@@ -255,7 +297,8 @@ def run(labels: Path, seed: int = SEED, n_boot: int = N_BOOT, draws: int = RANDO
                         "matched_random": {"draws": draws, "mean_dR": float(rnd_pooled.mean()),
                                            "p_random_ge_model": float((rnd_pooled >= (dR.mean() if len(dR) else 0)).mean()),
                                            "graded": False}},
-        "config": {"tau_r": TAU_R, "lgbm": LGBM_PARAMS, "seed": seed, "n_boot": n_boot, "features": M["feature_names"],
+        "config": {"tau_r": TAU_R if not tau_grid else "per-fold inner selection (see per_fold.tau_selection)",
+                   "tau_grid": list(tau_grid) if tau_grid else None, "lgbm": LGBM_PARAMS, "seed": seed, "n_boot": n_boot, "features": M["feature_names"],
                    "actions": M["actions"], "labels": str(labels), "labels_sha256": sha},
         "stated_limits": ["one intervention per trade: after the first action the path is hold-to-bracket (one-step labels)",
                           "corpus B = harness Stage-0 trades on their INITIAL bracket on 1h candles, not live paths and not "
@@ -273,11 +316,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--n-boot", type=int, default=N_BOOT)
     ap.add_argument("--draws", type=int, default=RANDOM_DRAWS)
+    ap.add_argument("--tau-grid", default=None,
+                    help="comma list: choose tau per outer fold on its training data only (default off = fixed TAU_R)")
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     try:
-        v = run(Path(a.labels), a.seed, a.n_boot, a.draws)
+        grid = [float(x) for x in a.tau_grid.split(",") if x.strip()] if a.tau_grid else None
+        v = run(Path(a.labels), a.seed, a.n_boot, a.draws, tau_grid=grid)
     except Exception as exc:  # noqa: BLE001  # allow-silent: written as a producer_failed record with the error, never a pass
         v = {"verdict": "indeterminate", "read_state": "producer_failed", "n": None, "error": repr(exc)[:600],
              "population": None}
