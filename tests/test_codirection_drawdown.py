@@ -1,5 +1,4 @@
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -7,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import codirection_drawdown as cd  # noqa: E402
+import codirection_drawdown as cd
 
 
 def _journal(tmp_path, n_legs=5, n_days=260, seed=3):

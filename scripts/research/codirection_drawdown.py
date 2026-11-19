@@ -29,8 +29,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -39,7 +40,7 @@ REPO = Path(__file__).resolve().parents[2]
 CORPUS_DIR = "comms/strategy_evidence/ltr_corpus"
 
 
-def load_journal(path: Path) -> Dict[str, pd.DataFrame]:
+def load_journal(path: Path) -> dict[str, pd.DataFrame]:
     """A pulled journal slice: JSONL with leg, entry_time, exit_time, direction, net_r (rows without them are dropped)."""
     rows = [json.loads(ln) for ln in path.read_text().splitlines() if ln.strip()]
     df = pd.DataFrame(rows)
@@ -53,8 +54,8 @@ def load_journal(path: Path) -> Dict[str, pd.DataFrame]:
     return {k: g.reset_index(drop=True) for k, g in df.groupby("leg")}
 
 
-def load_corpora(repo: Path = REPO) -> Dict[str, pd.DataFrame]:
-    out: Dict[str, pd.DataFrame] = {}
+def load_corpora(repo: Path = REPO) -> dict[str, pd.DataFrame]:
+    out: dict[str, pd.DataFrame] = {}
     for p in sorted((repo / CORPUS_DIR).glob("*__trades.jsonl")):
         rows = [json.loads(ln) for ln in p.read_text().splitlines() if ln.strip()]
         if not rows:
@@ -71,11 +72,11 @@ def load_corpora(repo: Path = REPO) -> Dict[str, pd.DataFrame]:
     return out
 
 
-def snapshots(trades: pd.DataFrame, spans: Dict[str, tuple], min_legs: int, min_cohort: int) -> pd.DataFrame:
+def snapshots(trades: pd.DataFrame, spans: dict[str, tuple], min_legs: int, min_cohort: int) -> pd.DataFrame:
     """One row per qualifying day: cohort size, direction counts, realised R of the cohort inside the next 24 h."""
     t0 = min(s[0] for s in spans.values()).normalize()
     t1 = max(s[1] for s in spans.values()).normalize()
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     ent = trades["entry_time"].values
     ext = trades["exit_time"].values
     d = (trades["direction"].str.lower() == "long").values
@@ -107,7 +108,7 @@ def _rho(x: np.ndarray, y: np.ndarray) -> float:
     return float(pd.Series(x[m]).rank().corr(pd.Series(y[m]).rank()))
 
 
-def block_bootstrap(snap: pd.DataFrame, col: str, boot: int, seed: int) -> Dict[str, Any]:
+def block_bootstrap(snap: pd.DataFrame, col: str, boot: int, seed: int) -> dict[str, Any]:
     wk = snap["t"].dt.strftime("%G-%V").values
     groups = {w: np.where(wk == w)[0] for w in np.unique(wk)}
     keys = list(groups)
@@ -123,16 +124,15 @@ def block_bootstrap(snap: pd.DataFrame, col: str, boot: int, seed: int) -> Dict[
         if not np.isnan(r):
             draws.append(r)
     lo, hi = (float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))) if draws else (float("nan"),) * 2
-    return {"rho": pt, "ci95": [lo, hi], "n_snapshots": int(len(snap)), "n_week_blocks": len(keys)}
+    return {"rho": pt, "ci95": [lo, hi], "n_snapshots": len(snap), "n_week_blocks": len(keys)}
 
 
-def placebo(trades: pd.DataFrame, snap: pd.DataFrame, boot: int, seed: int) -> Dict[str, Any]:
+def placebo(trades: pd.DataFrame, snap: pd.DataFrame, boot: int, seed: int) -> dict[str, Any]:
     """Shuffle direction labels within each snapshot cohort; recompute rho(cdir, mean_r)."""
     rng = np.random.default_rng(seed + 1)
     ent = trades["entry_time"].values
     ext = trades["exit_time"].values
-    nr = trades["net_r"].values.astype(float)
-    rho_draws: List[float] = []
+    rho_draws: list[float] = []
     cohorts = []
     for t in snap["t"]:
         tv = np.datetime64(t.tz_convert(None))
@@ -153,14 +153,13 @@ def placebo(trades: pd.DataFrame, snap: pd.DataFrame, boot: int, seed: int) -> D
             "median": float(np.median(rho_draws)) if rho_draws else float("nan"), "draws": len(rho_draws)}
 
 
-def grade(res: Dict[str, Any], min_snapshots: int, min_blocks: int) -> Dict[str, Any]:
+def grade(res: dict[str, Any], min_snapshots: int, min_blocks: int) -> dict[str, Any]:
     s, m, pl = res["sum_r"], res["mean_r"], res["placebo_mean_r"]
     if s["n_snapshots"] < min_snapshots or s["n_week_blocks"] < min_blocks:
         return {"verdict": "indeterminate", "why": f"snapshots {s['n_snapshots']} < {min_snapshots} or week blocks "
                                                    f"{s['n_week_blocks']} < {min_blocks}"}
     hit = s["ci95"][1] < 0 and m["ci95"][1] < 0 and m["rho"] < pl["p05"]
-    miss = s["ci95"][0] <= 0 <= s["ci95"][1] or m["ci95"][0] <= 0 <= m["ci95"][1] or s["ci95"][0] > 0
-    return {"verdict": "hit" if hit else ("miss" if miss else "miss"),
+    return {"verdict": "hit" if hit else "miss",
             "why": f"rho(sum_r) {s['rho']:.3f} CI {s['ci95']}; rho(mean_r) {m['rho']:.3f} CI {m['ci95']}; "
                    f"placebo p05 {pl['p05']:.3f}"}
 
@@ -170,7 +169,7 @@ FAMILIES = {"trend": lambda n: n.startswith("trend_donchian"), "pullback": lambd
 
 
 def run(repo: Path, min_legs: int, min_cohort: int, boot: int, seed: int, min_snapshots: int, min_blocks: int,
-        legs: Sequence[str] | None = None, journal: Path | None = None) -> Dict[str, Any]:
+        legs: Sequence[str] | None = None, journal: Path | None = None) -> dict[str, Any]:
     cor = load_journal(journal) if journal else load_corpora(repo)
     if legs is not None:
         cor = {k: v for k, v in cor.items() if k in set(legs)}
@@ -185,17 +184,17 @@ def run(repo: Path, min_legs: int, min_cohort: int, boot: int, seed: int, min_sn
            "mean_r": block_bootstrap(snap.dropna(subset=["mean_r"]), "mean_r", boot, seed),
            "placebo_mean_r": placebo(trades, snap.dropna(subset=["mean_r"]), boot, seed)}
     g = grade(res, min_snapshots, min_blocks)
-    return {"read_state": "measured", "legs": sorted(cor), "n_trades": int(len(trades)),
+    return {"read_state": "measured", "legs": sorted(cor), "n_trades": len(trades),
             "window": [str(snap["t"].min().date()), str(snap["t"].max().date())],
             "params": {"min_legs": min_legs, "min_cohort": min_cohort, "boot": boot, "seed": seed},
             "result": res, **g}
 
 
 def run_by_family(repo: Path, min_cohort: int, boot: int, seed: int, min_snapshots: int, min_blocks: int,
-                  primary: str = "pullback") -> Dict[str, Any]:
+                  primary: str = "pullback") -> dict[str, Any]:
     """The same statistic inside each leg family; the PRIMARY family's grade is the unit verdict, the others are reported."""
     names = sorted(load_corpora(repo))
-    fam: Dict[str, Any] = {}
+    fam: dict[str, Any] = {}
     for f, pred in FAMILIES.items():
         legs = [n for n in names if pred(n)]
         if len(legs) < 2:
