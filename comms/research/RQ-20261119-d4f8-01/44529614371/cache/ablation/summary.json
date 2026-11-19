@@ -1,0 +1,111 @@
+{
+  "leg": "ict_scalp_mgc_15m",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": -93.1563,
+    "n": 245,
+    "max_drawdown_r": 94.4629,
+    "folds_positive": 0,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 20,
+    "control": null,
+    "why": "net_r=-93.1563 with 0/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0082,
+      "n": 245,
+      "net_r": -93.1563,
+      "net_r_fee_only": -58.2041,
+      "max_drawdown_r": 94.4629,
+      "by_outcome": {
+        "tp_hit": 32,
+        "be_stop": 13,
+        "timeout": 122,
+        "sl_hit": 78
+      },
+      "mean_bars_held": 18.024,
+      "net_r_per_capital_day": -2.0251,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": null,
+      "data_start": "2023-11-15 00:00:00",
+      "data_end": "2026-11-19 12:45:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2023-11-15 00:00:00+00:00",
+          "end": "2024-08-16 03:11:15+00:00",
+          "trades": 45,
+          "net_r": -29.4186
+        },
+        {
+          "fold": 2,
+          "start": "2024-08-16 03:11:15+00:00",
+          "end": "2025-05-18 06:22:30+00:00",
+          "trades": 57,
+          "net_r": -15.9728
+        },
+        {
+          "fold": 3,
+          "start": "2025-05-18 06:22:30+00:00",
+          "end": "2026-02-17 09:33:45+00:00",
+          "trades": 67,
+          "net_r": -26.5522
+        },
+        {
+          "fold": 4,
+          "start": "2026-02-17 09:33:45+00:00",
+          "end": "2026-11-19 12:45:00+00:00",
+          "trades": 76,
+          "net_r": -21.2126
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "MGC",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_mgc_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261119-d4f8-01/44529614371/cache/ablation/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261119-d4f8-01/44529614371/cache/ablation/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 740,
+    "feed": {
+      "resample": "15m",
+      "source": "explicit --data-csv"
+    },
+    "fold_edges": [
+      "2023-11-15 00:00:00+00:00",
+      "2024-08-16 03:11:15+00:00",
+      "2025-05-18 06:22:30+00:00",
+      "2026-02-17 09:33:45+00:00",
+      "2026-11-19 12:45:00+00:00"
+    ]
+  }
+}
