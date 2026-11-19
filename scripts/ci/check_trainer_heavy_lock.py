@@ -79,6 +79,9 @@ DECLARED_LIGHT = {
         "ML-PRIMARY-8 D4 monotone GBM arm (RQ-20261119-e8a1-03, --cpcv-challenger mlgbm): a 200-tree, 7-leaf LGBMClassifier refit "
         "per CPCV split on ~2-3k TD trades of public Binance Vision candles (lightgbm is imported lazily, only for that arm); "
         "seconds per split on a GitHub runner (compute cpu_light), never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_served_forward.py":
+        "ML-PRIMARY-9 forward read of the served ENTRY refit (RQ-20261119-b9d0-02): loads two committed boosters and predicts on a few "
+        "weeks of 1h rows; no fit. Runner-only (research-script-run.yml, public klines), never the trainer.",
     "scripts/research/ml_entry_samebar_cap.py":
         "ML-PRIMARY-7 same-bar cap (RQ-20261118-f7c1-01 / -08): inference only -- loads the committed frozen ENTRY v1 boosters "
         "(comms/research/RQ-20261101-c692-06/41324826751/model) and scores public Binance Vision 1h rows (no training); ~25 s of CPU "
