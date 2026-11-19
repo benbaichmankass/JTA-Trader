@@ -31,8 +31,10 @@ def test_append_read_roundtrip_and_row_shape(tmp_path):
     out = al.read(path=p)
     assert out["read_state"] == "read" and out["total_matching"] == 1
     r = out["rows"][0]
-    assert set(r) == {"ts", "kind", "channel", "priority", "dedup_key", "body", "delivered"}
+    assert set(r) == {"ts", "kind", "channel", "priority", "dedup_key", "body", "delivered",
+                      "body_truncated", "body_len"}
     assert len(r["body"]) == 1024 and r["priority"] == "high"
+    assert r["body_truncated"] is True and r["body_len"] == 3000
     assert out["counts_by_kind"] == {"alert": 1} and out["newest_ts"] == r["ts"]
     assert out["population"]["lines_scanned"] == 1
 
@@ -309,3 +311,24 @@ def _wake_switches_all_on(tmp_path, monkeypatch):
     monkeypatch.delenv("WAKE_TOGGLES_REMOTE", raising=False)
     for _k in _wt.TOGGLES:
         _wt.set_toggle(_k, True, "test")
+
+
+def test_a_whole_body_carries_no_truncation_stamp(tmp_path):
+    p = tmp_path / "l.jsonl"
+    assert al.append("alert", "system", "short body", path=p)
+    r = al.read(path=p)["rows"][0]
+    assert "body_truncated" not in r and "body_len" not in r
+
+
+def test_restart_report_keeps_its_problem_lines_past_1024(tmp_path):
+    """ALERT-LEDGER-BODY-TRUNCATION: the 04:09:13Z restart report's problem line sat past char 1024."""
+    p = tmp_path / "l.jsonl"
+    body = ("❌ Trader restarted — 1 problem(s) need attention\n" + "section line\n" * 120
+            + "qty mismatch: alpaca_paper QQQ short: journal 2 / venue 1981\n")
+    assert 1024 < len(body) < 8192
+    assert al.append("restart", "system", body, path=p)
+    r = al.read(path=p)["rows"][0]
+    assert "journal 2 / venue 1981" in r["body"] and "body_truncated" not in r
+    assert al.append("restart", "system", "x" * 9000, path=p)
+    r = al.read(path=p)["rows"][0] if al.read(path=p)["rows"][0]["body"].startswith("x") else al.read(path=p)["rows"][1]
+    assert len(r["body"]) == 8192 and r["body_truncated"] is True and r["body_len"] == 9000
