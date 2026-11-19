@@ -1,0 +1,11 @@
+Fetching SLV 60 candles 2018-06-14 -> 2026-11-19 (source=dukascopy) …
+  dukascopy: SLV -> INSTRUMENT_ETF_CFD_US_SLV_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-19T16:00:00
+Wrote 14783 rows (2018-06-14 -> 2026-11-19) to /tmp/exit_lever_ablation_hvzjhrdr/mgc_trend_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SLV --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261119-008/44572575475/arms/A__trades.jsonl --json comms/research/RQ-20261119-008/44572575475/arms/A__bt.json --confirm-bars 1 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-10-26 23:59
+[VL30] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SLV --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261119-008/44572575475/arms/VL30__trades.jsonl --json comms/research/RQ-20261119-008/44572575475/arms/VL30__bt.json --confirm-bars 1 --tp-cap-pct 0.099 --tp-r 50.0 --vol-skip-below-pctl 0.3 --start 2018-06-01 --end 2026-10-26 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
