@@ -101,7 +101,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-24
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'TA lever family never tested on mhg_pullback_1d: ADX-below trail tighten (--trail-adx-below 20/25 with --trail-adx-tight-mult 2.5) vs the declared leg, net of cost?'
 value:
@@ -113,3 +113,16 @@ why_this_matters: 'Plan node: research/levers/mhg_pullback_1d.yaml (testing leg;
   20 / tight 2.5 on trend_donchian_eth_4h (111.37 vs 88.27 R, 5 of 6 folds) and the lever map for this leg carries no trail_adx_below family. One factor, 2 arms; a PASS is
   a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-19T02:42:00+00:00'
+grading:
+  attested: RULERQ20261117b2f224
+  auto: true
+  decision_rule_id: RULERQ20261117b2f224
+  evidence:
+  - research/results/RQ-20261117-b2f2-24/44442965828.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

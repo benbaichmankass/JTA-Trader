@@ -28,6 +28,8 @@ Subcommands (each writes <out>/<unit>.json + <out>/verdict.json with read_state,
                                         9-pure-noise-column control; each arm re-fit with the same recipe, scored on the live book.
   foxhound --section horizon            P8-Q8: the label/exit time stop (24 -> 48 / 72 bars) and a DAILY decision bar, each arm
                                         re-labelled and re-fit, scored on the live book.
+  h2h --strategy <leg> [--trades-from]  P8-Q4-h2h: each challenger alone and the combined book (Foxhound-4 picks first, the
+                                        current book leg included) vs Foxhound-4 on their common window, graded by plan s 5.2/5.4.
   legs --strategy <leg> ...             each rostered leg's Stage-0 trade list (scripts/ops/build_strategy_evidence.py, the
                                         config-exact harness that writes comms/strategy_evidence/) through the same book, one
                                         leg at a time and all legs competing for the one slot.
@@ -587,6 +589,93 @@ def main_foxhound(a) -> Dict[str, Any]:
     return r
 
 
+# ------------------------------------------------------------------------------------------------ frozen artifact, live book, confirm window
+# PI-20261119-K7ZSW5Z7-0003 / RQ-20261119-a10d-04: the deciding read for the real-money leg ml_entry_eq_struct. Every earlier book
+# read (207f-01: -0.0576 R n 97) was a DEV-window REFIT on a live-rebuilt pool at synthetic cash; the dev reads disagree with each
+# other (98e3-06 +0.132 n 1691, c21d-06 +0.0845 n 1628, 207f-01 -0.0015 n 1016) because the pool and bar snapshot moved between runs.
+# This read removes both moving parts: the FROZEN served boosters (no refit), the artifact's PINNED pool_symbols, the graded confirm
+# window, and the live cash book. The live balance is never committed and no workflow supplies it, so the book is read on a fixed
+# CASH GRID and the unit verdict needs the grid to agree.
+FROZEN_ARTIFACT = "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json"
+FROZEN_CASH_GRID = [250.0, 1000.0, 5000.0]
+FROZEN_MIN_TAKEN = 30
+FROZEN_FAMILY = "ENTRY-EQ"
+
+
+def frozen_arm_verdict(book: Dict[str, Any], bar: Dict[str, Any]) -> tuple:
+    """Per cash arm (registered): INDETERMINATE if n_taken < 30; PASS if taken mean net R > 0 AND mean >= point_t_min(N) x se;
+    FAIL if the deflated CI upper bound (mean + ci_z(N) x se) < 0; INDETERMINATE otherwise."""
+    n, m, se = book.get("n_taken") or 0, book.get("taken_mean_net_r"), book.get("taken_se_net_r")
+    if n < FROZEN_MIN_TAKEN or m is None or se is None:
+        return "indeterminate", f"n_taken {n} < {FROZEN_MIN_TAKEN}"
+    if m > 0 and m >= bar["point_t_min"] * se:
+        return "pass", f"mean {m:+.4f} R >= {bar['point_t_min']} x se {se:.4f} (n {n})"
+    if m + bar["ci_z"] * se < 0:
+        return "fail", f"mean {m:+.4f} R, deflated CI upper {m + bar['ci_z'] * se:+.4f} < 0 (n {n})"
+    return "indeterminate", f"mean {m:+.4f} R, se {se:.4f}: neither above the deflated point bar nor below 0 at ci_z {bar['ci_z']} (n {n})"
+
+
+def frozen_unit_verdict(arms: Dict[str, str], reproduces: bool) -> tuple:
+    """Unit (registered): INDETERMINATE unless the frozen population reproduces 98e3-06 exactly (n 207, mean 0.4922070639835765);
+    PASS iff every cash arm PASSES; FAIL iff every cash arm FAILS; INDETERMINATE otherwise (the verdict depends on the balance)."""
+    if not reproduces:
+        return "indeterminate", "the frozen population did not reproduce 98e3-06 (n / mean mismatch): the book read is not of the graded population"
+    vs = set(arms.values())
+    if vs == {"pass"}:
+        return "pass", "the edge survives the live cash book at every cash level on the grid"
+    if vs == {"fail"}:
+        return "fail", "the live cash book loses at every cash level on the grid"
+    return "indeterminate", "cash-dependent or unresolved: " + ", ".join(f"{k} {v}" for k, v in arms.items())
+
+
+def main_frozen_book(a) -> Dict[str, Any]:
+    import holdout_lock as HL
+    import ml_entry_equity as M
+    import ml_entry_alpaca_score as S
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    sizer = _live_sizer_constants()
+    slip, _ = resolve_cost_policy("SPY")
+    fee = resolve_fee_bps_roundtrip("SPY")
+    art = json.loads((REPO / a.artifact).read_text())
+    pool = list(art["pool_symbols"])
+    feats, tau, predict, model_id = M._artifact_scorer(a.artifact)
+    claim = HL.claim_read(f"{FROZEN_FAMILY}-{model_id}-LIVEBOOK", a.start, a.end, a.unit, a.where, train_end=M.TRAIN_END,
+                          family=FROZEN_FAMILY)
+    bar = claim["bar"]
+    bars, client = M._pinned_pool_and_bars(a, a.end, pool)
+    tab = M.build_table(bars, pool, slip, fee, struct=art.get("structure_exit") or M.STRUCT_SPEC)
+    rep, tk0 = M.reproduce_frozen(tab, a.artifact, a.start, a.end, int(a.expect_n), float(a.expect_mean), pool, bars.keys())
+    tab = attach_prices(tab, bars)
+    hs, he = pd.Timestamp(a.start, tz="UTC"), pd.Timestamp(a.end, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    test = test[M.session_mask(test.ts)]
+    test = test.assign(fold=pd.to_datetime(test.ts, utc=True).dt.year * 100 + pd.to_datetime(test.ts, utc=True).dt.month)
+    tk = take(test, predict(test), tau)   # provenance: predict -- mean regressed LONG net R of the frozen boosters, not a probability
+    tr = _trades(tk)
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    books = {f"cash_{int(c)}": replay(tr, c, **kw) for c in FROZEN_CASH_GRID}
+    arm_v = {}
+    for k, b in books.items():
+        v_, why_ = frozen_arm_verdict(b, bar)
+        b["verdict"], b["reason"] = v_, why_
+        arm_v[k] = v_
+    reported = {f"cash_{int(c)}_no_t1": replay(tr, c, settle_bdays=0, **kw) for c in FROZEN_CASH_GRID}
+    reported["multi_slot_no_cash_limit"] = replay(tr, 1e9, settle_bdays=0, one_slot=False, **kw)
+    reproduces = bool(rep["reproduction"]["reproduces"]) and len(tk) == len(tk0)
+    v, why = frozen_unit_verdict(arm_v, reproduces)
+    note = (f"{why}; frozen {model_id} on its pinned {len(pool)}-ETF pool, {a.start}..{a.end}: unconstrained n {len(tk)} mean "
+            f"{float(tk.net_r.mean()) if len(tk) else float('nan'):+.4f} R; " + "; ".join(
+                f"{k}: n_taken {b['n_taken']} mean {b.get('taken_mean_net_r')} -> {b['verdict']}" for k, b in books.items())
+            + f"; bar N={bar['n_tries']} (t_min {bar['point_t_min']}, ci_z {bar['ci_z']})")
+    return {"verdict": v, "note": note, "n": int(len(tk)), "books": books, "reported_arms": reported, "reproduction": rep,
+            "holdout_claim": {k: claim[k] for k in ("model_id", "family", "n_tries", "bar", "read_at")},
+            "sizer": sizer, "cash_grid": FROZEN_CASH_GRID, "cash0_source": "grid (the live balance is never committed)",
+            "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS}, "alpaca_calls": client.calls,
+            "population": (f"FROZEN {model_id} (no refit) restricted-LONG decisions on its pinned {len(pool)}-ETF pool_symbols, confirm window "
+                           f"{a.start}..{a.end}, net of the Alpaca cost stack, walked through the alpaca_live one-slot whole-share T+1 cash book "
+                           f"at cash {FROZEN_CASH_GRID}")}
+
+
 # ------------------------------------------------------------------------------------------------ challenger legs
 def leg_trades(name: str, workdir: Path, days: int) -> tuple:
     cmd = [sys.executable, str(REPO / "scripts/ops/build_strategy_evidence.py"), "--strategy", name, "--workdir", str(workdir),
@@ -633,6 +722,127 @@ def main_legs(a) -> Dict[str, Any]:
             "cash0_source": CASH0_SOURCE, "days": a.days,
             "population": f"Stage-0 trade lists of {len(a.strategy)} rostered equity legs (build_strategy_evidence, last {a.days} days, "
                           f"config-exact harness, net of its cost stack) replayed through the alpaca_live cash book"}
+
+
+# ------------------------------------------------------------------------------------------------ head-to-head (P8-Q4-h2h)
+H2H_MATERIALITY_PCT = 0.25      # docs/research/programmes/08-ALPACA-LIVE-BOOK.md s 5.2: >= +0.25 % of the book per month
+H2H_DD_MULT = 1.5               # s 5.2: max drawdown no worse than 1.5x the incumbent's
+H2H_MIN_TAKEN = 30              # s 5.2: n_taken >= 30 for both books
+
+
+def load_trades(path: Path) -> List[Dict[str, Any]]:
+    """A trade list from a .jsonl (one trade per line) or a .json ({"trades": [...]} or a list), in replay()'s shape."""
+    txt = Path(path).read_text()
+    rows = [json.loads(x) for x in txt.splitlines() if x.strip()] if str(path).endswith(".jsonl") else json.loads(txt)
+    if isinstance(rows, dict):
+        rows = rows.get("trades") or []
+    out = []
+    for r in rows:
+        # provenance: picks -- `score` is the regressed net R the live pick order sorts on (ml_pool_scoring.picks), carried through
+        out.append({"symbol": r["symbol"], "entry_time": pd.Timestamp(r["entry_time"]), "exit_time": pd.Timestamp(r["exit_time"]),
+                    "entry": float(r["entry"]), "sl": float(r["sl"]), "net_r": float(r["net_r"]),
+                    "direction": r.get("direction", "long"), "score": float(r.get("score") or 0.0), "leg": r.get("leg")})
+    return out
+
+
+def _utc(ts) -> pd.Timestamp:
+    t = pd.Timestamp(ts)
+    return t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+
+
+def common_window(*lists: List[Dict[str, Any]]) -> tuple:
+    """[latest first entry, earliest last entry] over the non-empty lists: the span every list covers."""
+    spans = [(min(_utc(t["entry_time"]) for t in x), max(_utc(t["entry_time"]) for t in x)) for x in lists if x]
+    if not spans:
+        return None, None
+    return max(s[0] for s in spans), min(s[1] for s in spans)
+
+
+def clip(trades: List[Dict[str, Any]], lo, hi) -> List[Dict[str, Any]]:
+    return [t for t in trades if lo <= _utc(t["entry_time"]) <= hi]
+
+
+def h2h_grade(arm: Dict[str, Any], inc: Dict[str, Any], bar: Dict[str, Any]) -> Dict[str, Any]:
+    """s 5.2 of the P8 plan, every clause reported: paired monthly mean diff >= +0.25 %, paired t >= bar point_t_min,
+    n_taken >= 30 for both, max drawdown <= 1.5x the incumbent's."""
+    pm = paired_monthly(arm, inc)
+    na, ni = int(arm.get("n_taken") or 0), int(inc.get("n_taken") or 0)
+    dda, ddi = float(arm.get("max_drawdown_usd") or 0.0), float(inc.get("max_drawdown_usd") or 0.0)
+    cl = {"materiality": pm["mean_diff_pct"] is not None and pm["mean_diff_pct"] >= H2H_MATERIALITY_PCT,
+          "paired_t": pm["t"] is not None and pm["t"] >= bar["point_t_min"],
+          "n_taken_both": na >= H2H_MIN_TAKEN and ni >= H2H_MIN_TAKEN,
+          "drawdown": dda <= H2H_DD_MULT * ddi if ddi > 0 else dda == 0.0}
+    return {"paired_monthly": pm, "n_taken": na, "n_taken_incumbent": ni, "max_drawdown_usd": dda,
+            "max_drawdown_usd_incumbent": ddi, "clauses": cl, "clears": all(cl.values())}
+
+
+def h2h_verdict(books: Dict[str, Dict[str, Any]], challengers: List[str], bar: Dict[str, Any]) -> Dict[str, Any]:
+    """s 5.4: JOIN iff the combined book clears vs the incumbent; REPLACE iff a challenger alone clears vs the incumbent AND
+    beats the combined book by the same test. INDETERMINATE when the incumbent or the combined book is under n_taken 30."""
+    inc = books["incumbent"]
+    grades = {c: h2h_grade(books[c], inc, bar) for c in challengers}
+    grades["combined"] = h2h_grade(books["combined"], inc, bar)
+    replace = [c for c in challengers if grades[c]["clears"] and h2h_grade(books[c], books["combined"], bar)["clears"]]
+    join = grades["combined"]["clears"]
+    if int(inc.get("n_taken") or 0) < H2H_MIN_TAKEN or int(books["combined"].get("n_taken") or 0) < H2H_MIN_TAKEN:
+        v, why = "indeterminate", f"n_taken under {H2H_MIN_TAKEN} on the incumbent or the combined book"
+    elif replace:
+        v, why = "pass", f"REPLACE: {replace} beat Foxhound-4 alone and the combined book on the alpaca_live book"
+    elif join:
+        v, why = "pass", "JOIN: the combined book (Foxhound-4 picks first) beats Foxhound-4 alone on the alpaca_live book"
+    else:
+        v, why = "fail", "no challenger, alone or combined, clears s 5.2 against Foxhound-4 on the common window"
+    return {"verdict": v, "note": why, "grades": grades, "replace": replace, "join": join, "bar": bar}
+
+
+def _foxhound_dev_trades(a) -> tuple:
+    """Foxhound-4 as configured (tau 0.25) on the purged DEV walk-forward: the same table and OOF as `foxhound --section book`."""
+    import ml_entry_equity as M
+    pool, prep, bars, client = M._pool_and_bars(a, M.TRAIN_END)
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    tab = attach_prices(M.build_table(bars, pool, resolve_cost_policy("SPY")[0], resolve_fee_bps_roundtrip("SPY"), struct=M.STRUCT_SPEC), bars)
+    tab = tab[tab.ts < pd.Timestamp(M.TRAIN_END, tz="UTC") + pd.Timedelta(days=1)]
+    o = dev_oof(tab)
+    return [{**t, "leg": "foxhound4"} for t in _trades(take(o, o["pred"].to_numpy(), TAU_LIVE))], {"n_pool": len(pool), "dev_rows": len(tab)}
+
+
+def main_h2h(a) -> Dict[str, Any]:
+    import holdout_lock
+    sizer = _live_sizer_constants()
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    out = Path(a.out)
+    if a.trades_from:
+        fox, fox_info = load_trades(Path(a.trades_from)), {"trades_from": a.trades_from}
+    else:
+        fox, fox_info = _foxhound_dev_trades(a)
+        (out / "foxhound4_dev_trades.jsonl").write_text("".join(json.dumps(t, default=str) + "\n" for t in fox))
+    work = Path(tempfile.mkdtemp(prefix="alb_h2h_"))
+    legs, runs = {}, {}
+    for name in list(dict.fromkeys(a.strategy + ([a.book_leg] if a.book_leg else []))):
+        legs[name], runs[name] = leg_trades(name, work, a.days)
+    lo, hi = common_window(fox, *[legs[c] for c in a.strategy])
+    if lo is None or lo >= hi:
+        return {"verdict": "indeterminate", "note": "no common window between Foxhound-4 and the challengers", "n": 0, "harness_runs": runs}
+    fox_c = clip(fox, lo, hi)
+    books = {"incumbent": replay(fox_c, CASH0, **kw)}
+    for c in a.strategy:
+        books[c] = replay(clip(legs[c], lo, hi), CASH0, **kw)
+    comb = fox_c + [t for name, tr in legs.items() for t in clip(tr, lo, hi)]     # leg trades carry score 0: Foxhound-4 picks first
+    books["combined"] = replay(comb, CASH0, **kw)
+    bar = holdout_lock.bar_for(len(a.strategy) + 1)
+    r = h2h_verdict(books, a.strategy, bar)
+    overlaps_confirm = hi >= pd.Timestamp("2025-07-15", tz="UTC")
+    r.update({"n": int(books["combined"].get("n_candidates") or 0), "common_window": [str(lo), str(hi)],
+              "overlaps_entry_eq_confirm_window": bool(overlaps_confirm),
+              "books": {k: {kk: v.get(kk) for kk in ("n_candidates", "n_taken", "taken_mean_net_r", "return_pct_per_month",
+                                                       "return_t_month_clustered", "max_drawdown_usd", "refused", "months")}
+                        for k, v in books.items()},
+              "slot_priority": "Foxhound-4 first (score = its regressed net R; leg trades score 0), then symbol",
+              "book_leg": a.book_leg, "foxhound": fox_info, "harness_runs": runs, "sizer": sizer, "cash0_source": CASH0_SOURCE,
+              "population": f"Foxhound-4 DEV OOF trades (tau {TAU_LIVE}) and the Stage-0 trades of {a.strategy} (+ {a.book_leg} in the "
+                            f"combined book), clipped to their common window {str(lo)[:10]}..{str(hi)[:10]}, replayed through the "
+                            f"alpaca_live cash book"})
+    return r
 
 
 # ------------------------------------------------------------------------------------------------ self-test
@@ -712,6 +922,48 @@ def _self_test() -> int:
           "h72": {"hold": 72, "daily": False}, "daily_h24": {"hold": 24, "daily": True}})
     import ml_entry_equity as M
     check("built feature families exist in the equity module", all(f in M.FAMILY_FEATURES for f in FEATURE_FAMILIES + ["noise9"]))
+    # P8-Q4-h2h grading (s 5.2 / 5.4)
+    mo = lambda v, n, dd: {"n_taken": n, "max_drawdown_usd": dd, "n_candidates": n,  # noqa: E731
+                           "monthly_return_pct": {f"2024-{m:02d}": v + (0.05 if m % 2 else -0.05) * (1 + v) for m in range(1, 13)}}
+    b1 = holdout_lock_bar = {"point_t_min": 2.0}
+    inc, ch, cb = mo(0.0, 40, 10.0), mo(1.0, 40, 12.0), mo(0.5, 40, 11.0)
+    check("h2h: +1 %/month, n 40, dd 1.2x clears", h2h_grade(ch, inc, b1)["clears"])
+    check("h2h: drawdown above 1.5x refused", not h2h_grade(mo(1.0, 40, 16.0), inc, b1)["clears"])
+    check("h2h: under +0.25 %/month refused", not h2h_grade(mo(0.2, 40, 10.0), inc, b1)["clears"])
+    check("h2h: n_taken 29 refused", not h2h_grade(mo(1.0, 29, 10.0), inc, b1)["clears"])
+    hv = h2h_verdict({"incumbent": inc, "X": ch, "combined": cb}, ["X"], holdout_lock_bar)
+    check("h2h: a challenger that beats the incumbent AND the combined book REPLACES", hv["verdict"] == "pass" and hv["replace"] == ["X"])
+    hv = h2h_verdict({"incumbent": inc, "X": mo(0.1, 40, 10.0), "combined": cb}, ["X"], holdout_lock_bar)
+    check("h2h: only the combined book clears -> JOIN", hv["verdict"] == "pass" and hv["join"] and not hv["replace"])
+    hv = h2h_verdict({"incumbent": mo(0.0, 20, 10.0), "X": ch, "combined": cb}, ["X"], holdout_lock_bar)
+    check("h2h: thin incumbent -> indeterminate", hv["verdict"] == "indeterminate")
+    tA = [{"entry_time": T("2024-01-01"), "x": 1}, {"entry_time": T("2024-06-01"), "x": 2}]
+    tB = [{"entry_time": T("2024-03-01"), "x": 3}, {"entry_time": T("2024-09-01"), "x": 4}]
+    lo, hi = common_window(tA, tB)
+    check("h2h: common window is [latest start, earliest end] (UTC, naive inputs ok)",
+          (lo, hi) == (T("2024-03-01", tz="UTC"), T("2024-06-01", tz="UTC")) and len(clip(tA, lo, hi)) == 1)
+    lo2, _ = common_window([{"entry_time": T("2024-03-01 00:00Z")}], tA)
+    check("h2h: tz-aware and naive lists mix without error", lo2 == T("2024-03-01", tz="UTC"))
+    with tempfile.TemporaryDirectory() as td:
+        fp = Path(td) / "t.jsonl"
+        fp.write_text(json.dumps({"symbol": "Q", "entry_time": "2024-01-02T15:30:00Z", "exit_time": "2024-01-03T20:00:00Z",
+                                  "entry": 10, "sl": 9.5, "net_r": 0.5, "score": 0.3}) + "\n")
+        lt = load_trades(fp)
+        # provenance: picks -- the round-tripped regressed net R (ml_pool_scoring.picks order key), not a probability
+        check("h2h: --trades-from jsonl loads in replay() shape", len(lt) == 1 and lt[0]["score"] == 0.3 and replay(lt)["n_taken"] == 1)
+    # frozen-book (RQ-20261119-a10d-04): per-arm and unit verdicts, registered
+    b5 = {"n_tries": 5, "point_t_min": 1.1926, "ci_z": 2.5723}
+    check("frozen arm: thin is indeterminate", frozen_arm_verdict({"n_taken": 20, "taken_mean_net_r": 1.0, "taken_se_net_r": 0.1}, b5)[0] == "indeterminate")
+    check("frozen arm: mean 0.30 se 0.10 passes at N=5", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": 0.30, "taken_se_net_r": 0.10}, b5)[0] == "pass")
+    check("frozen arm: mean 0.10 se 0.10 is indeterminate", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": 0.10, "taken_se_net_r": 0.10}, b5)[0] == "indeterminate")
+    check("frozen arm: mean -0.30 se 0.10 fails", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": -0.30, "taken_se_net_r": 0.10}, b5)[0] == "fail")
+    check("frozen unit: all pass", frozen_unit_verdict({"a": "pass", "b": "pass"}, True)[0] == "pass")
+    check("frozen unit: mixed is indeterminate", frozen_unit_verdict({"a": "pass", "b": "fail"}, True)[0] == "indeterminate")
+    check("frozen unit: all fail", frozen_unit_verdict({"a": "fail", "b": "fail"}, True)[0] == "fail")
+    check("frozen unit: no reproduction is indeterminate", frozen_unit_verdict({"a": "pass"}, False)[0] == "indeterminate")
+    import holdout_lock as HL
+    bb = HL.bar_for(5)
+    check("registered N=5 bar matches holdout_lock", bb["point_t_min"] == b5["point_t_min"] and bb["ci_z"] == b5["ci_z"])
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0
 
@@ -720,7 +972,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("foxhound", "legs"):
+    for name in ("foxhound", "legs", "h2h", "frozen-book"):
         p = sub.add_parser(name)
         p.add_argument("--out", required=True)
         p.add_argument("--unit", required=True)
@@ -732,6 +984,19 @@ def main(argv=None) -> int:
             p.add_argument("--section", required=True, choices=["book", "calib", "label", "neutral", "features", "horizon"])
             p.add_argument("--families", default="", help="features: comma list of ml_entry_equity.FAMILY_FEATURES keys (default all built)")
             p.add_argument("--horizon-arms", default="", help="horizon: comma list of HORIZON_ARMS keys (default all)")
+        elif name == "h2h":
+            p.add_argument("--cache", default=None, help="Foxhound-4 refit cache (needed unless --trades-from)")
+            p.add_argument("--trades-from", default=None, help="Foxhound-4 trades (.jsonl / .json) from an earlier h2h run")
+            p.add_argument("--strategy", action="append", required=True, help="challenger leg (repeatable)")
+            p.add_argument("--book-leg", default="tqqq_trend_long_1d", help="the current book's other leg, in the combined replay")
+            p.add_argument("--days", type=int, default=1460)
+        elif name == "frozen-book":
+            p.add_argument("--cache", required=True)
+            p.add_argument("--artifact", default=FROZEN_ARTIFACT)
+            p.add_argument("--start", default="2025-07-15")
+            p.add_argument("--end", default="2026-10-31")
+            p.add_argument("--expect-n", dest="expect_n", default="207")
+            p.add_argument("--expect-mean", dest="expect_mean", default="0.4922070639835765")
         else:
             p.add_argument("--strategy", action="append", required=True)
             p.add_argument("--days", type=int, default=700)
@@ -743,7 +1008,10 @@ def main(argv=None) -> int:
     t0 = time.time()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    r = main_foxhound(a) if a.cmd == "foxhound" else main_legs(a)
+    if a.cmd == "h2h" and not (a.trades_from or a.cache):
+        ap.error("h2h needs --cache (refit Foxhound-4) or --trades-from")
+    r = (main_foxhound(a) if a.cmd == "foxhound" else main_h2h(a) if a.cmd == "h2h"
+         else main_frozen_book(a) if a.cmd == "frozen-book" else main_legs(a))
     row = {"schema_version": 1, "schema": SCHEMA, "research_unit": a.unit, "read_state": "measured", "verdict": r["verdict"],
            "n": r.get("n"), "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},

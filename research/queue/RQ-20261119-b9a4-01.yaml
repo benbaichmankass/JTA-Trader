@@ -3,7 +3,7 @@
 # (work-store event 16958, 2026-11-19 01:17Z) before any harness existed. Gates this adds or changes: none.
 id: RQ-20261119-b9a4-01
 title: 'IB-GROSS-ATR-FLOOR-S0: on the 141 committed Stage-0 trades of the four IB futures legs, does sizing on max(stop, k x ATR14) for k in {0.5, 1.0} hold max concurrent gross notional at or under 1.5x equity without giving up the dollar edge?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -74,4 +74,17 @@ related:
 - scripts/research/ib_gross_atr_floor.py
 - docs/research/mgc-sizing-oversize-2026-10-24.md
 population: the 141 committed Stage-0 per-trade rows of mgc_trend_1h (118), mhg_pullback_1d (10), mgc_pullback_1d (8) and mes_trend_long_1d (5), net of the full cost stack.
-last_dispatched_at: '2026-11-19T03:19:00+00:00'
+last_dispatched_at: '2026-11-19T03:33:06+00:00'
+grading:
+  attested: RULE-IB-GROSS-ATR-FLOOR-S0
+  auto: true
+  decision_rule_id: RULE-IB-GROSS-ATR-FLOOR-S0
+  evidence:
+  - research/results/RQ-20261119-b9a4-01/44450610030.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

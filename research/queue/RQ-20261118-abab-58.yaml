@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-58
 title: 'POOLED vol_skip lever (VW100) on the xrp_pullback_2h declared config, roster population: does the lever beat the declared baseline by >= 0.13 R/trade pooled over >= 1.5k trades?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -155,4 +155,18 @@ related:
 - RQ-20261021-7c2b-08
 - scripts/research/harness_stage0.py
 - research/programmes/03-strategy-improvement.yaml
-last_dispatched_at: '2026-11-19T02:51:04+00:00'
+last_dispatched_at: '2026-11-19T03:09:12+00:00'
+grading:
+  attested: RULE-RQ20261118abab58-VW100-ROSTER
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261118abab58-VW100-ROSTER
+  evidence:
+  - research/results/RQ-20261118-abab-58/44447305204.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

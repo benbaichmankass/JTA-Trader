@@ -1,0 +1,162 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; 08:24Z: re-run RQ-20261117-aadc-11 on fresh data, blocked on the 1h refresh). Rule = RQ-20261117-aadc-11's,
+# registered 2026-11-17 BEFORE its first run, unchanged. Gates this adds or changes: none.
+id: RQ-20261119-a10d-07
+title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future
+  R >= -0.25), improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
+status: blocked
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-11
+  verdict_read: pass
+  diagnosis: 'RQ-20261117-aadc-11 PASSED on data ending ~mid-2026 (rows built 2026-07-12; replay candles frozen ~06-15/18). BTC / ETH / SOL 1h
+    are all in #27214''s refresh list. One factor: the data window (fresh candles and rebuilt rows); legs, folds, embargo, lookback, shape, arm,
+    rule and thresholds are the original''s.'
+  search: one factor, the label margin, at one new value (-0.25 R) against the champion; features, hyper-parameters, shape (below_half_r, tau
+    0.10), action, folds, embargo and lookback fixed at aadc-04's
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#manifest.labels
+  attempt: 5
+  due_by: '2026-11-30'
+question: 'Same rows.jsonl, legs (trend_donchian BTC, trend_donchian_eth, trend_donchian_sol, 1h), 5 sequential folds, 7-day embargo, live predicate
+  and cost stack as aadc-04 (lookback 500); ONE ARM: target holding_pays_neg25 = 1[future_r_delta >= -0.25]. Does the paired per-trade replayed
+  R vs the holding_pays champion reach +0.01 R/trade with a deflated CI lower bound > 0?'
+why_this_matters: 'The head still closes trades on the demo floor and its D8 slot has no other model in iteration. aadc-04 left the label lever
+  open (sub-bar positive). One more value on the same lever settles it: a PASS gives a retrain target; a FAIL with the margin response flattening
+  lets the family review go ahead on a closed label lever rather than an open one.'
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.01
+  effect_units: r_multiple
+  sd: 0.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED basis from aadc-04 (same rows, legs, folds): holding_pays_0 - champion n 11,160, SE 0.00186, so sd ~0.20 R per trade for a
+    label arm. At the deflated z 2.241 the half-width is ~0.0042, so a +0.01 R lift with LB > 0 is detectable, and a FAIL (CI upper < +0.01) needs
+    the mean below ~+0.006. A lower margin moves more trades (the head fires less), so the paired sd may move; the run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the existing trainer corpus (rows.jsonl) and resident 1h candles; nothing accrues.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold
+    training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported
+    as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py: pooled over legs and folds, per OOS trade d_arm = replayed_r(arm) - replayed_r(champion)
+    on identical trades, replay and cost; mean, SE (one trade = one cluster) and CI at z 2.241, kept at aadc-04''s deflated z although one arm
+    is read here (a conservative stand-in for the family-wise count of label arms on these rows). Reported: the arm and the champion vs hold,
+    firing counts, target coverage in rows.jsonl.'
+  rule: PASS iff the holding_pays_neg25 arm has n_oos >= 300, mean d >= +0.01 R/trade AND deflated CI lower bound > 0. FAIL iff n_oos >= 300 and
+    the deflated CI upper bound < +0.01. INDETERMINATE otherwise (below n, or between the bars; or future_r_delta absent, which is could_not_look).
+    Thresholds, legs, folds (5), embargo (7 d), lookback (500), shape and the arm are not changed after any result.
+  pass_action: 'ONE confirmation on a held-out symbol (RESEARCH-NO-WAIT order 2: a donchian 1h leg not in the three, claimed in holdout_lock),
+    then a data-backed Tier-3 proposal to retrain exit-head-donchian-1h on the winning target.'
+  fail_action: 'The margin lever is closed below the bar (two values read: 0 and -0.25). Labels join features, universe and pooling as flat at
+    power (more_mfe stays unread until peak_is_in is emitted; say so in the review). File a family-review record for ml-exit-head-donchian-1h
+    (research/family_reviews/, family_retirement_policy.yaml, six protocol items); the manager takes the retire/keep call to the operator. The
+    head keeps its demo-floor data collection either way (off the trade path is not off the data path).'
+  min_n: 300 pooled OOS trades per arm; per fold MIN_FOLD_TEST_N test trades and the multifold training floor
+  what_it_does_not_do: Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result under
+    the head's own judge, then a confirmation, then a Tier-3 proposal. Places no order; adds no gate.
+  rerun_of: RQ-20261117-aadc-11
+  rerun_note: 'Re-run of RQ-20261117-aadc-11''s registered rule, unchanged, on fresh data; the rule id is the original''s so the two reads are
+    comparable. The original PASS stands as evidence on truncated data; #26906 waits on this read.'
+practice_precedent: M1 (label what the decision is paid on; a trail-shaped label conflates the exit rule with the forecast), one-factor ablation
+  against a baseline control (docs/reference/trading-and-model-practice-principles.md)
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context
+      only: hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_neg25
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: one demo-floor leg acts on the head; the value is mainly the decision to retire or keep spending trainer time.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in the trainer
+    venv.
+  basis: ESTIMATE from aadc-04 (3 arms incl. one untrained, same corpus); 2 arms here, no kline fetch.
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --arms
+  - holding_pays_neg25
+  - --unit
+  - RQ-20261119-a10d-07
+  - --rule-id
+  - RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+  - --registered-at
+  - '2026-11-17'
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261119-a10d-07
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: close or annotate on trend_donchian, trend_donchian_eth and trend_donchian_sol (exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261117-aadc-11.yaml
+- scripts/research/exit_head_label_bakeoff.py
+- scripts/research/m20_exit_head_round.py
+blocked_on:
+- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
+    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
+    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
+    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
+  ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
+  kind: build
+  clears_when: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
+    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).

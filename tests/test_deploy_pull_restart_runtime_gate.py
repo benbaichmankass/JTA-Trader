@@ -296,6 +296,10 @@ def test_empty_diff_fails_safe_to_restart(fake_repo):
     # 2026-11-19); scripts/ops/mandate_resolver.py reads both per call. Without these the daily commits restarted the trader.
     "comms/mandate_evidence/account_snapshot/bybit_2.json",
     "comms/live_bar/latest.json",
+    # DEPLOY-GATE-PERF-FOLLOWUP 2026-11-19: #27202 (perf-followup W47 evidence: README + verdict.json) restarted the
+    # trader at 08:03Z (35b1b75). No src/config/deploy/scripts reader of comms/perf_followup (grep 2026-11-19).
+    "comms/perf_followup/evidence/20261119-codirection/pooled/verdict.json",
+    "comms/perf_followup/perf-followup-20261118-190000.json",
 ])
 def test_widened_non_runtime_paths_skip_restart(fake_repo, path):
     fake_repo["diff_files"].write_text(f"docs/x.md\n{path}\n")

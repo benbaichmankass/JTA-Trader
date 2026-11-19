@@ -445,9 +445,10 @@ jobs:
           HEALTH="$(python3 scripts/ci/check_research_queue_health.py 2>&1)" || HRC=$?
           echo "${HEALTH}"
           if [ "${HRC}" -eq 3 ]; then
-            echo "::notice::research-queue health: runnable below target but fillable — dispatching research-queue-replenish.yml (its concurrency group serialises it with the daily run)."
-            gh workflow run research-queue-replenish.yml \
-              || echo "::error::could not dispatch research-queue-replenish.yml — see the step log above."
+            # REPLENISH-PR-HONEST (manager 2026-11-19): STOP-GENERATED-AUTHORING (operator 2026-11-01) sets the refill
+            # target to 0, so dispatching the replenisher here filled nothing (the 4x/day cron already emits programme
+            # nodes). A fillable floor gap is REPORTED, never filled, and does not page.
+            echo "::notice::research-queue health: runnable below the floor (fillable from templates) -- REPORTED, not filled (STOP-GENERATED-AUTHORING); the 4x/day replenish cron still emits plan-driven programme nodes."
           elif [ "${HRC}" -ne 0 ]; then
             echo "::warning::research-queue health tripped — dispatching send-ping."
             gh workflow run system-actions.yml \

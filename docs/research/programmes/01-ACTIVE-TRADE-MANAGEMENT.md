@@ -157,6 +157,48 @@ Common to every rung:
 
 A FAIL is written with its number and closes only the line its rule names. It never closes the family ("first test failed → variants queued", exit-refinement § "Reading a FAIL").
 
+## Mid-week re-plan 2026-11-19 (lane PROGRAMME-REPLAN-20261119) — TRADING track, iteration loop only
+
+**Population:** the active-management and exit-lever results graded 2026-11-17..19: the b2f1 / b2f2 exit cells (MS, SE, TA on 13
+legs), b3aa-01..08, and the LTR screens 43b6-01..04, abab-64..68 and c9d2-01. Not a full programme review: no calls were graded
+(the 11-25 review grades them), and only results whose next step was unwritten got a node.
+
+**Learned.**
+- *Exits that cut a stalling trade help on two-sided pullback / 1h-trend legs and hurt on long-only daily and BTC trend legs.*
+  Evidence: SE / TA passed on spy_pullback_1h (TA25 +25 R, SE8 +10.5 R, pre-dev window), qqq_pullback_1h (TA25 +9 R),
+  trend_donchian_eth (TA25 +41.7 R 6 of 6, SE8 +37.4 R) and htf_pullback_trend_2h (TA20 +11.4 R). They failed on every long-only
+  1d leg (qqq / spy / splg_trend_long: 0 to 2 of 4 folds) and on trend_donchian and trend_donchian_sol. Denominator: 6 PASS of
+  29 decided exit cells in the b2f1 / b2f2 batches (MS 0 of 9, SE 2 of 11, TA 4 of 9), plus 3 INDETERMINATE (slv_trend_1h).
+  Every pass so far is on ONE symbol or one window, so these remain discoveries.
+- *On trend_donchian_eth_4h the ADX tighten REPLACES the live trail-decay rather than adding to it* (b3aa-07: replace +27.1 R
+  5 of 6, combo +0.9 R). The two exits act on the same trades.
+- *LTR: new_peak is the informative trigger.* tp_pull_in@new_peak passed (5 of 6 folds, dd cut 43%), and sl_to_structure@new_peak
+  reached 4 of 6 at a tighter buffer. In the sl_to_structure buffer sweep, 0.2 failed, 0.1 held 3 of 6 folds and 0.05 held 4 of 6,
+  so the response is monotone and points at a tighter buffer. Near_target is closed on real-TP legs: c9d2-01 measured a 0.0% risk
+  cut, because near_target sits on top of a real TP, and the selection-leg pass (abab-68) came from tp_r-50 sentinel legs.
+
+**Next (nodes authored, all after: [] -> due on the next replenisher runs).**
+
+| node | decision it changes | on PASS | on FAIL | pre-mortem |
+|---|---|---|---|---|
+| P1-RP1119-spy-pullback-1h-se8-ta25-dev | spy survivor's exit packet | best arm into the Tier-3 declare | exits stay declared | SE8 and TA25 are the same effect; the combo shows it |
+| P1-RP1119-qqq-pullback-1h-ta-dev | qqq survivor's exit packet | TA into the declare | pre-dev lead only | 2022 bear regime differs from 2018-21 |
+| P1-RP1119-trend-donchian-eth-exits-ltc | trend_donchian_eth exits | declare with the twin | single-symbol | ETH 2020-26 chop was fitted |
+| P1-RP1119-htf-pullback-trend-2h-ta20-ltc | htf leg exit (closed-bar) | lead for the forming-bar re-read | all exit families closed | LTC 2h is thinner, so it lands INDETERMINATE |
+| P1-RP1119-trend-donchian-eth-4h-mreplace-ltc | real-money exit swap | swap proposal carries the twin | swap not proposed | the replace only helps ETH |
+| P1-RP1119-turtle-soup-atr05-lb180-combo | turtle_soup re-entry | combo to pre-dev confirmation if net >= 0 | levers overlap | the levers add but the entry has no edge |
+| P1-RP1119-ltr-tp-pull-in-newpeak-realtp | orphan class ltr-tp-pull-in | real-TP lead -> BOOK-SIM | fictional-TP artifact | real TPs fill before new_peak matters |
+| P1-RP1119-ltr-sl-to-structure-buf002 / -buf000 | the abab-66 >= 5-of-6 gate for the holdout read | holdout read on the 4 holdout legs | the buffer response peaked at 0.05 | a 0-buffer stop is hit by noise |
+| P1-RP1119-ltr-partial-close-newpeak | orphan class ltr-partial-close | real-TP holdout read | move to action_bounds | a half-bank still cuts too little |
+| P1-RP1119-ltr-close-newpeak | ltr-close trigger family | real-TP holdout read | timing family next | a full close at new_peak gives up the trend |
+
+**Authored (closed node):** P1-RP1119-desk-levelbreak-fade-decluster. The level-break FADE has a small positive edge (lb > 0,
+p 1e-4) below the +0.15 R bar, and half the firings are clustered. The `--decluster-bars` flag landed in desk_trigger_replay.py
+(#27165), and the declustered FADE tests are RQ-20261119-f2a4-01 (level_break_break) and -02 (level_break_sweep).
+
+**Grader fix:** exit_lever_ablation's replace grade now returns INDETERMINATE / lever_never_fired when every arm reproduces A.
+abab-47 was a dead lever graded FAIL.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

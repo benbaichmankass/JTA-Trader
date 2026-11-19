@@ -3,7 +3,7 @@
 id: RQ-20261119-c7e5-01
 title: 'IB-GROSS-CAP-S0: on the 141 committed Stage-0 trades of the four IB futures legs, does a gross-notional cap of G x equity (G 2.5 and 1.5,
   applied at entry as the live cap acts) cost more than 20% of the dollar edge?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -94,3 +94,14 @@ related:
 population: the 141 committed Stage-0 per-trade rows of mgc_trend_1h (118), mhg_pullback_1d (10), mgc_pullback_1d (8) and mes_trend_long_1d (5),
   net of the full cost stack.
 last_dispatched_at: '2026-11-19T06:04:19+00:00'
+grading:
+  attested: RULE-IB-GROSS-CAP-S0
+  auto: true
+  decision_rule_id: RULE-IB-GROSS-CAP-S0
+  evidence:
+  - research/results/RQ-20261119-c7e5-01/44461484496.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
