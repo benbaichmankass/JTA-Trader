@@ -766,6 +766,7 @@ def test_an_empty_or_absent_ignore_list_changes_nothing():
 def test_the_configured_cap_and_ignore_list_are_real():
     """The ignore names must be real workflow `name:` values (a typo would silently ignore nothing), and the cap is the config's."""
     import yaml
+
     from scripts.research import compute_router as cr
     lim = cr.load_config()["limits"]
     assert lim["max_repo_queued"] == 30 and lim["repo_queued_ignore_workflows"]

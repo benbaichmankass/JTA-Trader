@@ -4,6 +4,7 @@
 Latency is the JOB's started_at - created_at (the run-level run_started_at equals created_at and measures nothing).
 Classes: research (workflow name starts with research-script-run or in RESEARCH_NAMES), alarm (the short-job workflows
 listed in research_compute.yaml limits.repo_queued_ignore_workflows), ci (everything else).
+# wiring: manual-only - an operator/lane-run measurement (re-run after dispatcher limit changes); nothing schedules it
 Read-only; needs `gh` auth. Usage: python3 scripts/ops/runner_queue_measure.py --hours 48 [--repo owner/name]
 """
 from __future__ import annotations
@@ -23,7 +24,7 @@ RESEARCH_PREFIXES = ("research-script-run", "e35-bracket-sweep")
 
 
 def _gh(args):
-    r = subprocess.run(["gh", "api", "-X", "GET", *args], capture_output=True, text=True)
+    r = subprocess.run(["gh", "api", "-X", "GET", *args], capture_output=True, text=True, check=False)
     return [l for l in r.stdout.splitlines() if l.strip()]
 
 
@@ -45,7 +46,7 @@ def main(argv=None):
     ap.add_argument("--repo", default=None)
     a = ap.parse_args(argv)
     repo = a.repo or subprocess.run(["git", "config", "--get", "remote.origin.url"], capture_output=True, text=True,
-                                    cwd=REPO_ROOT).stdout.strip().split("github.com/")[-1].split("github.com:")[-1].removesuffix(".git")
+                                    cwd=REPO_ROOT, check=False).stdout.strip().split("github.com/")[-1].split("github.com:")[-1].removesuffix(".git")
     cfg = yaml.safe_load((REPO_ROOT / "scripts/research/research_compute.yaml").read_text())
     alarm = set(cfg.get("limits", {}).get("repo_queued_ignore_workflows") or [])
     now = datetime.now(timezone.utc)
