@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "trader_import_closure_restart",
+  "hold_text": "Read-path/observability only (alerts ledger row shape), but src/runtime/alerts_ledger.py is in the trader import closure, so merging restarts the trader. Manager merges with the next restart. Revert: git revert.",
+  "why": "ALERT-LEDGER-BODY-TRUNCATION: the 04:09:13Z restart report's problem line (alpaca_paper QQQ journal 2 / venue 1981) sat past char 1024 of ~2,900 and the manager could not see it. restart bodies now keep 8192 chars; every cut body carries body_truncated + body_len. Gates this adds or changes: none."
+}

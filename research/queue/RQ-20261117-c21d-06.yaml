@@ -2,7 +2,7 @@
 id: RQ-20261117-c21d-06
 title: 'D3 Foxhound-4 ITERATION 2 (labels, cost-neutral): does an ATR-neutral net-R target, or a gross-R direction head minus the known pre-trade
   cost per R, beat the live net-R recipe at tau 0.25, count-matched, on the 172-ETF pool dev walk-forward?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -118,16 +118,14 @@ lands:
   min_rows: 1
 last_dispatched_at: '2026-11-18T19:53:00+00:00'  # re-armed 2026-11-18 PROGRAMME-REVIEW-20261118: alpaca_live_book.py verdict.json lacked top-level n (fixed same PR)
 grading:
-  attested: RULE-RQ20261117-c21d-06-COSTNEUTRAL
-  auto: true
+  auto: false
   decision_rule_id: RULE-RQ20261117-c21d-06-COSTNEUTRAL
   evidence:
-  - research/results/RQ-20261117-c21d-06/44070628223.jsonl
+  - comms/research/RQ-20261117-c21d-06/44104540897/verdict.json
+  - comms/research/RQ-20261117-c21d-06/44070628223/verdict.json
   - research/results/RQ-20261117-c21d-06/44104540897.jsonl
-  - research/results/RQ-20261117-c21d-06/44385134598.jsonl
   graded_at: '2026-11-19'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  grader: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7), HELD for the manager
+  reason: 'FAIL by the registered rule, graded BY HAND from measured run 44104540897 (and its twin 44070628223, same reads), superseding the auto needs_review INDETERMINATE (it saw only producer_failed rows): those two rows are producer_failed only because that harness version omitted `n` from verdict.json (since fixed); the third run 44385134598 timed out (no timeout_minutes declared; est 240). Baseline (live net-R recipe, tau 0.25) n 1628 >= 30, mean +0.0845 R, folds 3/5 -> not INDETERMINATE. A1 ATR-neutral net: n 1248, mean -0.2482 R (vs baseline -0.3327, t -7.0), 0/5 folds -> fails. A2 gross-minus-cost: n 1640, mean +0.1098 R vs the bar baseline + 0.03 = +0.1145 -> fails the margin (t 0.598 >= point_t_min 0.5198 and 3/5 folds would have passed). No arm passes -> FAIL; the label stays net R. Population: DEV walk-forward OOF restricted-LONG, 172-ETF pool (asset list of 2026-11-17), folds 2023-01..2025-06.'
+  rows: 1
+  verdict: fail

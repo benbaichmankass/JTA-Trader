@@ -16840,3 +16840,1169 @@ nodes:
     - PROGRAMME-REPLAN-2026-11-19
     - research/queue/RQ-20261117-b2f2-25.yaml
     - research/levers/qqq_pullback_1h.yaml
+# --- PROGRAMME-REPLAN-2026-11-19 (lane PROGRAMME-REPLAN-20261119, session_01AFoLuJ2Mx5E1JEVEWziCcb): next pre-registered
+# iterations from results graded 2026-11-17..19; each node names the result and diagnosis that opened it.
+- id: P1-RP1119-trend-donchian-eth-exits-ltc
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.15
+  after: []
+  unit:
+    title: SYMBOL HOLDOUT (LTCUSDT) for the two exit families that passed on trend_donchian_eth (stale-exit SE8 b2f2-15, ADX trail tighten
+      TA25 b2f2-34, 6 of 6 folds), single and combined
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: With trend_donchian_eth's config on LTCUSDT 1h (binance USD-M, --symbol LTCUSDT) over 2020-07-01..2026-10-15, does SE8,
+      TA25 or SE8_TA25 beat the twin's declared baseline A by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: the exit packet of trend_donchian_eth. The discovery used the leg''s full binance USD-M
+      history (pre-2020 ETHUSDT perp history is too short for a pre-dev read), so a disjoint symbol is the in-hand falsifier. PASS ->
+      the best arm is named for a Tier-3 declare with the mirror; FAIL -> the ETH passes are recorded as single-symbol.'
+    iteration:
+      subject: trend_donchian_eth
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-b2f2-34
+      verdict_read: pass_unconfirmed
+      diagnosis: 'On ETH 1h 2020-26 (n(A) 742, A +38.98 R): TA25 +41.71 R (6 of 6), TA20 +24.19 (4 of 6), SE8 +37.44 (4 of 6), SE12
+        +26.15 (4 of 6), MS12 +8.89 (5 of 6, under the bar). Every exit that shortens a stalling trade roughly doubles net R. Either
+        the leg''s declared trail is too loose (a real, transferable finding), or ETH 2020-26 chop is being fitted. A disjoint symbol
+        separates the two, and the combo asks whether the two families are one effect.'
+      search: 'exit (stale-exit, ADX trail tighten): the best arm of each family plus the combination, on a disjoint symbol.'
+      levers:
+      - exit
+      - symbol_set
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/trend_donchian_eth.yaml
+    power:
+      expected_n: 700
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: INFERRED from b2f2-15/-34 (n 742 on ETH 1h, same window). Below 39 INDETERMINATE. Correlated evidence.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-trend-donchian-eth-exits-ltc
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_eth --symbol LTCUSDT --grade replace, 2020-07-01..2026-10-15,
+        6 folds, net of the venue-aware cost stack. Arms fixed now: A, SE8, TA25, SE8_TA25.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 3 candidate arm(s) SE8, TA25, SE8_TA25 pass: the
+        best by net R is named, the denominator is 3. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window;
+        the lever FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute
+        Stage-0 regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported
+        separately) is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Symbol holdout:
+        correlated with ETH, read as such. Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+        the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 300
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian_eth
+      - --arm
+      - A=
+      - --arm
+      - SE8=--stale-exit-bars=8
+      - --arm
+      - TA25=--trail-adx-below=25;--trail-adx-tight-mult=2.5
+      - --arm
+      - SE8_TA25=--stale-exit-bars=8;--trail-adx-below=25;--trail-adx-tight-mult=2.5
+      - --days
+      - '2330'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-15 23:59
+      - --symbol
+      - LTCUSDT
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+      the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b2f2-15.yaml
+    - research/queue/RQ-20261117-b2f2-34.yaml
+    - research/levers/trend_donchian_eth.yaml
+- id: P1-RP1119-htf-pullback-trend-2h-ta20-ltc
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: SYMBOL HOLDOUT (LTCUSDT) for the ADX-below trail tighten TA20 that passed on htf_pullback_trend_2h (b2f2-20), the only exit
+      lever that moved on this leg
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: With htf_pullback_trend_2h's config on LTCUSDT 2h (binance USD-M) over 2020-07-01..2026-10-15, does TA20 beat the twin's
+      declared baseline by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether TA20 enters htf_pullback_trend_2h''s exit packet. CLOSED-BAR READ: this leg''s closed-bar
+      Stage-0 record failed on the forming bar (RQ-20261113-f251-01), so a PASS here is a lever lead for the forming-bar re-read, never
+      live-bar evidence. FAIL -> TA20 is recorded single-symbol and every exit family on the leg is closed at this power (MS, SE, session
+      failed).'
+    iteration:
+      subject: htf_pullback_trend_2h
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-b2f2-20
+      verdict_read: pass_unconfirmed
+      diagnosis: 'On BTC 2h 2020-26 (n(A) 463, A +10.12 R): TA20 +11.43 R (4 of 6) passed, TA25 +5.77 (4 of 6) under the bar; momentum-stale
+        (b2f1-13) -15..-24 R, stale-exit (b2f2-01) -12..-34 R, session (abab-22) flat. Tightening the trail when ADX fades helps, while
+        cutting by time hurts. The leg''s winners are slow and its losers fade.'
+      search: 'exit (ADX trail tighten): the discovered arm on a disjoint symbol.'
+      levers:
+      - exit
+      - symbol_set
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/htf_pullback_trend_2h.yaml
+    power:
+      expected_n: 450
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: INFERRED from b2f2-20 (n 463 on BTC 2h). Below 39 INDETERMINATE. Correlated evidence.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-htf-pullback-trend-2h-ta20-ltc
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg htf_pullback_trend_2h --symbol LTCUSDT --grade replace, 2020-07-01..2026-10-15,
+        6 folds, net of the venue-aware cost stack. Arms fixed now: A, TA20.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 1 candidate arm(s) TA20 pass: the best by net R is
+        named, the denominator is 1. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever FAMILY
+        is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0 regime-robustness
+        clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately) is read from
+        the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Closed-bar read (stated in why_this_matters).
+        Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+        the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - htf_pullback_trend_2h
+      - --arm
+      - A=
+      - --arm
+      - TA20=--trail-adx-below=20;--trail-adx-tight-mult=2.5
+      - --days
+      - '2330'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-15 23:59
+      - --symbol
+      - LTCUSDT
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+      the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b2f2-20.yaml
+    - research/queue/RQ-20261113-f251-01.yaml
+    - research/levers/htf_pullback_trend_2h.yaml
+- id: P1-RP1119-trend-donchian-eth-4h-mreplace-ltc
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 400
+    confidence: 0.15
+  after: []
+  unit:
+    title: SYMBOL HOLDOUT (LTCUSDT) for replacing trend_donchian_eth_4h's LIVE trail-decay exit with the ADX-below tighten (b3aa-07
+      M_replace PASS, +27.1 R, 5 of 6; the combo added nothing)
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: With trend_donchian_eth_4h's config on LTCUSDT 4h (binance USD-M) over 2020-07-01..2026-11-15, does M_replace (trail_decay
+      removed, --trail-adx-below 20 / tight 2.5) beat the twin's declared baseline by the replace grade?
+    why_this_matters: 'Decision it changes: trend_donchian_eth_4h is a real-money leg; b3aa-07 says the ADX tighten should REPLACE the
+      live trail-decay rather than stack on it. That is a Tier-3 exit swap on a money leg, so it needs one read off the discovery symbol
+      first. PASS -> the swap proposal carries the twin; FAIL -> the swap is not proposed and P1-Q6-eth4h-stop-declare (the stacked
+      declare) stays the only exit change on the table.'
+    iteration:
+      subject: trend_donchian_eth_4h
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-b3aa-07
+      verdict_read: pass_unconfirmed
+      diagnosis: 'On ETH 4h 2020-26 (n(A) 282, A +83.03 R): M_replace +27.11 R (5 of 6 folds), M_combo +0.88 (4 of 6). Stacking the
+        ADX tighten on the live trail-decay adds nothing, while replacing it adds +0.10 R/trade, so the two exits act on the same trades
+        and the ADX version is the better one. One symbol and the leg''s full history: the falsifier is a disjoint symbol.'
+      search: 'exit (trail mechanism swap): the discovered replacement on a disjoint symbol.'
+      levers:
+      - exit
+      - symbol_set
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/trend_donchian_eth_4h.yaml
+    power:
+      expected_n: 280
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: INFERRED from b3aa-07 (n 282 on ETH 4h, same window). Below 39 INDETERMINATE. Correlated evidence.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-trend-donchian-eth-4h-mreplace-ltc
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_eth_4h --symbol LTCUSDT --grade replace, 2020-07-01..2026-11-15,
+        6 folds (majority 5, as b3aa-07), net of the venue-aware cost stack. Arms: A, M_replace.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 5 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 1 candidate arm(s) M_replace pass: the best by net
+        R is named, the denominator is 1. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Symbol holdout: correlated
+        with ETH, read as such. Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+        the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 400
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian_eth_4h
+      - --arm
+      - A=
+      - --arm
+      - M_replace=-trail_decay_stall_bars;-trail_decay_tight_mult;--trail-adx-below=20;--trail-adx-tight-mult=2.5
+      - --days
+      - '2330'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-11-15 23:59
+      - --symbol
+      - LTCUSDT
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '5'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is one confirmation read:
+      the next step is a Tier-3 declare PROPOSAL note (the manager''s) with the mirror in the same PR, never a config edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b3aa-07.yaml
+    - research/levers/trend_donchian_eth_4h.yaml
+- id: P1-RP1119-turtle-soup-atr05-lb180-combo
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'turtle_soup single-vs-combo: the confirmed stop atr_stop_mult 0.5 (b3aa-01) and the extended sweep lookback 180 (b3aa-02).
+      Do they add, and does the combination bring the leg to net >= 0?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: Over the 1830-day default window of the d5a7 / b3aa sweeps, does ATR05, LB180 or ATR05_LB180 beat the declared leg A by
+      the replace grade, and is the best arm's net R >= 0, net of the harness cost stack?
+    why_this_matters: 'Decision it changes: turtle_soup loses as declared (A -175 R over 708 trades). Each lever cuts the loss on its
+      own, but neither makes the leg positive. PASS with net >= 0 -> the combo goes to ONE confirmation on pre-dev history, then a re-entry
+      case; a PASS still below zero -> the record says the levers stack but the entry has no edge, and the lever map moves to filter
+      (abab-15, queued); FAIL -> the levers overlap and the single ATR05 record stands.'
+    iteration:
+      subject: turtle_soup
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-b3aa-02
+      verdict_read: pass_unconfirmed
+      diagnosis: 'atr_stop 0.5 vs 0.3: +62.3 R (d5a7-09) and +58.8 R on 2020-21 pre-dev (b3aa-01, 4 of 4). sweep_lookback 120/180: +48.4
+        / +61.9 R (b3aa-02, monotone 40 < 60 < 90 < 120 < 180). tp2 never fired (d5a7-10 byte-identical). The two levers act on different
+        things (a stop that survives noise vs fewer, higher-quality sweeps), so they should add. Even added, they leave the leg about
+        -50 R, which is the information this read supplies.'
+      search: 'exit x entry interaction: the two confirmed one-factor responses and their combination, same window.'
+      levers:
+      - exit
+      - entry
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/turtle_soup.yaml
+    power:
+      expected_n: 500
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: A n 708 on this window; LB180 cuts trades (fewer qualifying sweeps), ~400-600 expected. Below 39 INDETERMINATE.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-turtle-soup-atr05-lb180-combo
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg turtle_soup --grade replace, 1830 days, 4 folds, net of the harness
+        cost stack. Arms fixed now: A, ATR05, LB180, ATR05_LB180. Net R of the best arm reported against 0.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 3 of 4 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 3 candidate arm(s) ATR05, LB180, ATR05_LB180 pass:
+        the best by net R is named, the denominator is 3. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this
+        window; the lever FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the
+        absolute Stage-0 regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short
+        reported separately) is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. The net
+        >= 0 reading is REPORTED and routes the follow-up (why_this_matters); it does not change the grade. Thresholds and arms are
+        not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 100
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - turtle_soup
+      - --arm
+      - A=
+      - --arm
+      - ATR05=atr_stop_mult=0.5
+      - --arm
+      - LB180=sweep_lookback_15m=180
+      - --arm
+      - ATR05_LB180=atr_stop_mult=0.5;sweep_lookback_15m=180
+      - --days
+      - '1830'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '4'
+      - --fold-majority
+      - '3'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b3aa-01.yaml
+    - research/queue/RQ-20261117-b3aa-02.yaml
+    - research/levers/turtle_soup.yaml
+# --- PROGRAMME-REPLAN-2026-11-19 (lane PROGRAMME-REPLAN-20261119, session_01AFoLuJ2Mx5E1JEVEWziCcb): next pre-registered
+# iterations from results graded 2026-11-17..19; each node names the result and diagnosis that opened it.
+- id: P1-RP1119-ltr-tp-pull-in-newpeak-realtp
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'HOLDOUT read of ltr-tp-pull-in@new_peak (43b6-04 PASS: 5 of 6 folds, maxDD cut 43%) on the four REAL-TP legs, where a TP
+      pull-in moves a take-profit that can actually fill'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: 'On the committed real-TP corpora (comms/strategy_evidence/ltr_corpus_realtp: tlt_pullback_1d, tqqq_trend_long_1d, scha_trend_long_1d,
+      slv_trend_1h; none among the 8 selection legs), does pulling the TP in to keep 50% of the open distance at the first new_peak
+      trigger clear RULE-AM-RISK-ADJUSTED-V1?'
+    why_this_matters: 'Decision it changes: ltr-tp-pull-in is an ORPHAN (iteration_orphans 2026-11-19) carrying a screen pass that no
+      one has read off its selection corpus. Most of the 8 selection legs carry the tp_r-50 sentinel (no real TP), so the pass may be
+      a trail-tighten in disguise. PASS -> the class has a real-TP lead and goes to BOOK-SIM-REAL-S0 graduation; FAIL -> the 43b6-04
+      pass is recorded as a fictional-TP artifact (TP doctrine) and the class moves to the timing family.'
+    iteration:
+      subject: ltr-tp-pull-in
+      subject_kind: ltr_class
+      from_result: research/results/RQ-20261117-43b6-04
+      verdict_read: pass_unconfirmed
+      diagnosis: '43b6-04: tp_pull_in@new_peak risk_adjusted_pass (5 of 6 folds, dd cut 43.2%, CVaR5 cut 25.7%); @near_target fails_R2_R3
+        (0 folds); @structure_break fails_R3 (3 folds). c9d2-01 showed on this same real-TP corpus that near_target actions do nothing
+        (dd cut 0.0%) because near_target sits on top of a real TP. new_peak fires earlier in the trade, so the question is whether
+        a pulled-in real TP still cuts risk there.'
+      search: trigger (new_peak, the one trigger that passed) on a disjoint corpus; one arm.
+      levers:
+      - trigger
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/ltr-tp-pull-in.yaml
+    baseline:
+      arm: hold
+      definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack recorded per
+        row by the corpus harness'
+      source: the committed corpus named in --corpus-dir (default comms/strategy_evidence/ltr_corpus)
+    power:
+      expected_n: 361
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED corpus size (committed comms/strategy_evidence corpora); the harness grades INDETERMINATE when the lever fires
+        on fewer than the n_floor trades, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-ltr-tp-pull-in-newpeak-realtp
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: scripts/research/ltr_action_trigger_s0.py on the committed per-trade corpora named in the command, per-trade R books
+        net of the full cost stack the corpus carries; R1-R4 and L1 computed by the harness.
+      rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted): R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
+        15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats >= 0.9917 of 200 matched random-time books (Bonferroni
+        over n_comparisons 6, every arm on this corpus counted); L1 r_cost <= 0.05 R/trade after dropping the leg with the largest favourable
+        contribution; n_floor 39. PASS iff the label for tp_pull_in@new_peak is risk_adjusted_pass. FAIL iff any fails_* label. INDETERMINATE
+        iff lever_never_fired or n below the floor. n_comparisons 6 = the 3 ed2b-05 + 3 43b6-04 reads of this class (cumulative, disclosed).
+        Thresholds are not changed after any result.'
+      what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+        false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 10
+      basis: ltr_action_trigger_s0.py runs of the 43b6 / abab batches finished in 3-60 min; the first run replaces it.
+      why_runner: Reads committed corpora in the checkout only; no data fetch; CPU only. Short, so runner (kaggle_first applies > 30
+        min).
+    run:
+      command:
+      - python3
+      - scripts/research/ltr_action_trigger_s0.py
+      - --corpus-dir
+      - comms/strategy_evidence/ltr_corpus_realtp
+      - --action
+      - tp_pull_in
+      - --tp-keep
+      - '0.5'
+      - --max-real-tp-r
+      - '10.0'
+      - --triggers
+      - new_peak
+      - --legs
+      - scha_trend_long_1d,slv_trend_1h,tlt_pullback_1d,tqqq_trend_long_1d
+      - --draws
+      - '200'
+      - --min-control-beat-frac
+      - '0.9917'
+      - --n-comparisons
+      - '6'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an in-trade action screen on committed per-trade corpora.'
+    intervention_controls:
+      hold_to_bracket: true
+      matched_random:
+        draws: 200
+        same_cell: true
+      bootstrap_group: trade
+    what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+      false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    practice_precedent: M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md); RULE-AM-RISK-ADJUSTED-V1 with matched
+      random-time controls; every arm counted in the Bonferroni family.
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/levers/ltr-tp-pull-in.yaml
+- id: P1-RP1119-ltr-sl-to-structure-buf002
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION 4 of ltr-sl-to-structure: the structure-buffer response is monotone (0.2 FAIL R3, 0.1 near-miss 3 of 6, 0.05 PASS
+      4 of 6). Does buffer 0.02 ATR keep improving the fold count?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the 8 selection legs' committed corpora, does sl_to_structure@new_peak with --pivot-buffer-atr 0.02 (pivot 5 bars,
+      the default) clear RULE-AM-RISK-ADJUSTED-V1, and with how many folds held?
+    why_this_matters: 'Decision it changes: abab-66''s registered follow-up authors the four-holdout-leg read only when folds_held >=
+      5 of 6; 0.05 reached 4. Continuing down the buffer response is the one grid step that can reach 5 or show the response peaked
+      at 0.05. PASS with >= 5 folds -> the holdout read on eth_pullback_2h / sol_pullback_2h / trend_donchian_ada_4h / trend_donchian_avax_4h;
+      PASS with 4 -> 0.05 and this value bracket the peak and the holdout read goes ahead on the better of the two; FAIL -> the response
+      peaked at 0.05.'
+    iteration:
+      subject: ltr-sl-to-structure
+      subject_kind: ltr_class
+      from_result: research/results/RQ-20261118-abab-66
+      verdict_read: pass_unconfirmed
+      diagnosis: 'Action-bounds sweep on sl_to_structure@new_peak (8 legs, 3,921 trades): pivot 3 FAIL R4 (abab-64), pivot 8 FAIL R3
+        (abab-65), buffer 0.2 FAIL R3 (abab-67), default 0.1 R3 3 of 6 (43b6-01), buffer 0.05 PASS 4 of 6 (dd cut 19.3%, CVaR5 14.4%;
+        abab-66). The pivot window is flat to worse either way; the buffer is monotone (tighter is better). A stop placed right at structure,
+        not beyond it, keeps more of the risk cut.'
+      search: action_bounds (pivot buffer) one grid step further in the direction the response points; buffer 0.02.
+      levers:
+      - action_bounds
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/ltr-sl-to-structure.yaml
+    baseline:
+      arm: hold
+      definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack recorded per
+        row by the corpus harness'
+      source: the committed corpus named in --corpus-dir (default comms/strategy_evidence/ltr_corpus)
+    power:
+      expected_n: 3921
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED corpus size (committed comms/strategy_evidence corpora); the harness grades INDETERMINATE when the lever fires
+        on fewer than the n_floor trades, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-ltr-sl-to-structure-buf002
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: scripts/research/ltr_action_trigger_s0.py on the committed per-trade corpora named in the command, per-trade R books
+        net of the full cost stack the corpus carries; R1-R4 and L1 computed by the harness.
+      rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted): R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
+        15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats >= 0.9969 of 200 matched random-time books (Bonferroni
+        over n_comparisons 16, every arm on this corpus counted); L1 r_cost <= 0.05 R/trade after dropping the leg with the largest
+        favourable contribution; n_floor 39. PASS iff the label for sl_to_structure@new_peak is risk_adjusted_pass; folds_held is reported
+        and routes the follow-up (why_this_matters). FAIL iff any fails_* label. INDETERMINATE iff lever_never_fired. n_comparisons
+        16 = the 13 of abab-66 plus abab-66 itself and the two buffer steps of this re-plan. Thresholds are not changed after any result.'
+      what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+        false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 10
+      basis: ltr_action_trigger_s0.py runs of the 43b6 / abab batches finished in 3-60 min; the first run replaces it.
+      why_runner: Reads committed corpora in the checkout only; no data fetch; CPU only. Short, so runner (kaggle_first applies > 30
+        min).
+    run:
+      command:
+      - python3
+      - scripts/research/ltr_action_trigger_s0.py
+      - --action
+      - sl_to_structure
+      - --triggers
+      - new_peak
+      - --legs
+      - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+      - --draws
+      - '200'
+      - --min-control-beat-frac
+      - '0.9969'
+      - --n-comparisons
+      - '16'
+      - --pivot-bars
+      - '5'
+      - --pivot-buffer-atr
+      - '0.02'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an in-trade action screen on committed per-trade corpora.'
+    intervention_controls:
+      hold_to_bracket: true
+      matched_random:
+        draws: 200
+        same_cell: true
+      bootstrap_group: trade
+    what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+      false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    practice_precedent: M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md); RULE-AM-RISK-ADJUSTED-V1 with matched
+      random-time controls; every arm counted in the Bonferroni family.
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/levers/ltr-sl-to-structure.yaml
+- id: P1-RP1119-ltr-sl-to-structure-buf000
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION 4 of ltr-sl-to-structure: the structure-buffer response is monotone (0.2 FAIL R3, 0.1 near-miss 3 of 6, 0.05 PASS
+      4 of 6). Does buffer 0.0 ATR keep improving the fold count?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the 8 selection legs' committed corpora, does sl_to_structure@new_peak with --pivot-buffer-atr 0.0 (pivot 5 bars, the
+      default) clear RULE-AM-RISK-ADJUSTED-V1, and with how many folds held?
+    why_this_matters: 'Decision it changes: abab-66''s registered follow-up authors the four-holdout-leg read only when folds_held >=
+      5 of 6; 0.05 reached 4. Continuing down the buffer response is the one grid step that can reach 5 or show the response peaked
+      at 0.05. PASS with >= 5 folds -> the holdout read on eth_pullback_2h / sol_pullback_2h / trend_donchian_ada_4h / trend_donchian_avax_4h;
+      PASS with 4 -> 0.05 and this value bracket the peak and the holdout read goes ahead on the better of the two; FAIL -> the response
+      peaked at 0.05.'
+    iteration:
+      subject: ltr-sl-to-structure
+      subject_kind: ltr_class
+      from_result: research/results/RQ-20261118-abab-66
+      verdict_read: pass_unconfirmed
+      diagnosis: 'Action-bounds sweep on sl_to_structure@new_peak (8 legs, 3,921 trades): pivot 3 FAIL R4 (abab-64), pivot 8 FAIL R3
+        (abab-65), buffer 0.2 FAIL R3 (abab-67), default 0.1 R3 3 of 6 (43b6-01), buffer 0.05 PASS 4 of 6 (dd cut 19.3%, CVaR5 14.4%;
+        abab-66). The pivot window is flat to worse either way; the buffer is monotone (tighter is better). A stop placed right at structure,
+        not beyond it, keeps more of the risk cut.'
+      search: action_bounds (pivot buffer) one grid step further in the direction the response points; buffer 0.0.
+      levers:
+      - action_bounds
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/ltr-sl-to-structure.yaml
+    baseline:
+      arm: hold
+      definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack recorded per
+        row by the corpus harness'
+      source: the committed corpus named in --corpus-dir (default comms/strategy_evidence/ltr_corpus)
+    power:
+      expected_n: 3921
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED corpus size (committed comms/strategy_evidence corpora); the harness grades INDETERMINATE when the lever fires
+        on fewer than the n_floor trades, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-ltr-sl-to-structure-buf000
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: scripts/research/ltr_action_trigger_s0.py on the committed per-trade corpora named in the command, per-trade R books
+        net of the full cost stack the corpus carries; R1-R4 and L1 computed by the harness.
+      rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted): R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
+        15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats >= 0.9969 of 200 matched random-time books (Bonferroni
+        over n_comparisons 16, every arm on this corpus counted); L1 r_cost <= 0.05 R/trade after dropping the leg with the largest
+        favourable contribution; n_floor 39. PASS iff the label for sl_to_structure@new_peak is risk_adjusted_pass; folds_held is reported
+        and routes the follow-up (why_this_matters). FAIL iff any fails_* label. INDETERMINATE iff lever_never_fired. n_comparisons
+        16 = the 13 of abab-66 plus abab-66 itself and the two buffer steps of this re-plan. Thresholds are not changed after any result.'
+      what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+        false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 10
+      basis: ltr_action_trigger_s0.py runs of the 43b6 / abab batches finished in 3-60 min; the first run replaces it.
+      why_runner: Reads committed corpora in the checkout only; no data fetch; CPU only. Short, so runner (kaggle_first applies > 30
+        min).
+    run:
+      command:
+      - python3
+      - scripts/research/ltr_action_trigger_s0.py
+      - --action
+      - sl_to_structure
+      - --triggers
+      - new_peak
+      - --legs
+      - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+      - --draws
+      - '200'
+      - --min-control-beat-frac
+      - '0.9969'
+      - --n-comparisons
+      - '16'
+      - --pivot-bars
+      - '5'
+      - --pivot-buffer-atr
+      - '0.0'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an in-trade action screen on committed per-trade corpora.'
+    intervention_controls:
+      hold_to_bracket: true
+      matched_random:
+        draws: 200
+        same_cell: true
+      bootstrap_group: trade
+    what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+      false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    practice_precedent: M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md); RULE-AM-RISK-ADJUSTED-V1 with matched
+      random-time controls; every arm counted in the Bonferroni family.
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/levers/ltr-sl-to-structure.yaml
+- id: P1-RP1119-ltr-partial-close-newpeak
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION 3 of ltr-partial-close (orphan): every trigger tried so far failed R2 at frac 0.5 (ed2b-01 r_milestone / near_target
+      / stall; 43b6-03 adverse / structure / momentum_flip). Does banking half at NEW_PEAK, the trigger that passed for the TP class,
+      cut risk?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the 8 selection legs' committed corpora, does partial_close (frac 0.5) at the first new_peak trigger clear RULE-AM-RISK-ADJUSTED-V1?
+    why_this_matters: 'Decision it changes: ltr-partial-close is an ORPHAN. Its two iterations searched 6 triggers, never new_peak.
+      new_peak is the only trigger that cleared R2 and R3 for another action class on this corpus (tp_pull_in, 43% dd cut; sl_to_structure
+      4 of 6). PASS -> holdout read on the real-TP corpus; FAIL -> this configuration (partial_close 0.5 @ new_peak) is closed on this
+      corpus and the next pass moves to action_bounds (frac 0.33 / 0.75) on the least-bad trigger.'
+    iteration:
+      subject: ltr-partial-close
+      subject_kind: ltr_class
+      from_result: research/results/RQ-20261117-43b6-03
+      verdict_read: fail
+      diagnosis: 'ed2b-01 at frac 0.5: r_milestone dd cut 11.2%, near_target 8.3%, stall 10.6% (all R2 fail, 0 folds). 43b6-03 adverse
+        triggers fail R2_R3. The diagnosis ''risk cut too small'' holds on every trigger read so far: banking half on a late or noisy
+        trigger removes too little of the left tail. new_peak marks the trade''s peak exposure to give-back, which is where the TP-pull-in
+        screen found its 43% cut.'
+      search: trigger (new_peak, untested for this class) at the class's default action bound (frac 0.5).
+      levers:
+      - trigger
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/ltr-partial-close.yaml
+    baseline:
+      arm: hold
+      definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack recorded per
+        row by the corpus harness'
+      source: the committed corpus named in --corpus-dir (default comms/strategy_evidence/ltr_corpus)
+    power:
+      expected_n: 3921
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED corpus size (committed comms/strategy_evidence corpora); the harness grades INDETERMINATE when the lever fires
+        on fewer than the n_floor trades, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-ltr-partial-close-newpeak
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: scripts/research/ltr_action_trigger_s0.py on the committed per-trade corpora named in the command, per-trade R books
+        net of the full cost stack the corpus carries; R1-R4 and L1 computed by the harness.
+      rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted): R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
+        15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats >= 0.9955 of 200 matched random-time books (Bonferroni
+        over n_comparisons 11, every arm on this corpus counted); L1 r_cost <= 0.05 R/trade after dropping the leg with the largest
+        favourable contribution; n_floor 39. PASS iff the label for partial_close@new_peak is risk_adjusted_pass. FAIL iff any fails_*
+        label. INDETERMINATE iff lever_never_fired. n_comparisons 11 = the 3 ed2b-01 + 4 43b6-03 + 2 abab-68 + 1 c9d2-01 partial-close
+        reads + this arm. Thresholds are not changed after any result.'
+      what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+        false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 10
+      basis: ltr_action_trigger_s0.py runs of the 43b6 / abab batches finished in 3-60 min; the first run replaces it.
+      why_runner: Reads committed corpora in the checkout only; no data fetch; CPU only. Short, so runner (kaggle_first applies > 30
+        min).
+    run:
+      command:
+      - python3
+      - scripts/research/ltr_action_trigger_s0.py
+      - --action
+      - partial_close
+      - --partial-frac
+      - '0.5'
+      - --triggers
+      - new_peak
+      - --legs
+      - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+      - --draws
+      - '200'
+      - --min-control-beat-frac
+      - '0.9955'
+      - --n-comparisons
+      - '11'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an in-trade action screen on committed per-trade corpora.'
+    intervention_controls:
+      hold_to_bracket: true
+      matched_random:
+        draws: 200
+        same_cell: true
+      bootstrap_group: trade
+    what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+      false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    practice_precedent: M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md); RULE-AM-RISK-ADJUSTED-V1 with matched
+      random-time controls; every arm counted in the Bonferroni family.
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/levers/ltr-partial-close.yaml
+- id: P1-RP1119-ltr-close-newpeak
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION 5 of ltr-close: the near_target full close passed on the selection legs (abab-68) and FAILED on the real-TP holdout
+      with a 0% risk cut (c9d2-01). Does a full close at new_peak, a trigger that sits away from the TP, cut risk?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On the 8 selection legs' committed corpora, does a FULL close (partial_frac 1.0) at the first new_peak trigger clear RULE-AM-RISK-ADJUSTED-V1?
+    why_this_matters: 'Decision it changes: the near_target line of ltr-close is closed by c9d2-01. On real-TP legs, near_target duplicates
+      the TP and cuts nothing, and on tp_r-50 legs it fakes one. new_peak is the remaining informative trigger. PASS -> a holdout read
+      on the real-TP corpus (the c9d2-01 shape); FAIL -> this configuration (full close @ new_peak) is closed on this corpus and the
+      class''s next read is timing (the desk''s wake cadence).'
+    iteration:
+      subject: ltr-close
+      subject_kind: ltr_class
+      from_result: research/results/RQ-20261119-c9d2-01
+      verdict_read: fail
+      diagnosis: abab-68 partial_close(1.0)@near_target risk_adjusted_pass on the selection legs (4 of 6 folds, dd cut 16.7%); c9d2-01
+        the same arm on the real-TP corpus fails_R2_R3 (dd cut 0.0%, CVaR5 0.4%, 0 folds). The selection-leg pass came from legs whose
+        TP is the 50R sentinel, where near_target acts as a synthetic TP. The diagnosis is a fictional-TP artifact, so the next trigger
+        must be one that is not a TP proxy.
+      search: trigger (new_peak, untested for full closes).
+      levers:
+      - trigger
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/ltr-close.yaml
+    baseline:
+      arm: hold
+      definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack recorded per
+        row by the corpus harness'
+      source: the committed corpus named in --corpus-dir (default comms/strategy_evidence/ltr_corpus)
+    power:
+      expected_n: 3921
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED corpus size (committed comms/strategy_evidence corpora); the harness grades INDETERMINATE when the lever fires
+        on fewer than the n_floor trades, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P1-RP1119-ltr-close-newpeak
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: scripts/research/ltr_action_trigger_s0.py on the committed per-trade corpora named in the command, per-trade R books
+        net of the full cost stack the corpus carries; R1-R4 and L1 computed by the harness.
+      rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted): R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >=
+        15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats >= 0.9971 of 200 matched random-time books (Bonferroni
+        over n_comparisons 17, every arm on this corpus counted); L1 r_cost <= 0.05 R/trade after dropping the leg with the largest
+        favourable contribution; n_floor 39. PASS iff the label for partial_close@new_peak (frac 1.0) is risk_adjusted_pass. FAIL iff
+        any fails_* label. INDETERMINATE iff lever_never_fired. n_comparisons 17 = c9d2-01''s 16 + this arm. Thresholds are not changed
+        after any result.'
+      what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+        false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 10
+      basis: ltr_action_trigger_s0.py runs of the 43b6 / abab batches finished in 3-60 min; the first run replaces it.
+      why_runner: Reads committed corpora in the checkout only; no data fetch; CPU only. Short, so runner (kaggle_first applies > 30
+        min).
+    run:
+      command:
+      - python3
+      - scripts/research/ltr_action_trigger_s0.py
+      - --action
+      - partial_close
+      - --partial-frac
+      - '1.0'
+      - --triggers
+      - new_peak
+      - --legs
+      - ada_pullback_2h,iaum_pullback_1d,ml_entry,trend_donchian_eth_4h,trend_donchian_eth_prop,trend_donchian_sol_prop,trend_donchian_xrp_4h,xrp_pullback_2h
+      - --draws
+      - '200'
+      - --min-control-beat-frac
+      - '0.9971'
+      - --n-comparisons
+      - '17'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: an in-trade action screen on committed per-trade corpora.'
+    intervention_controls:
+      hold_to_bracket: true
+      matched_random:
+        draws: 200
+        same_cell: true
+      bootstrap_group: trade
+    what_it_does_not_do: Changes no config, no live-review policy and no order; places nothing. A SCREEN under per-trade R books (graduation_eligible
+      false until BOOK-SIM-REAL-S0). A PASS is a lead for the iteration pass, never an apply.
+    practice_precedent: M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md); RULE-AM-RISK-ADJUSTED-V1 with matched
+      random-time controls; every arm counted in the Bonferroni family.
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/levers/ltr-close.yaml
