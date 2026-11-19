@@ -111,8 +111,27 @@ jobs:
           else what="${np} programme node(s) + ${nt} template unit(s)"; src="research/programmes/*.yaml and research/templates/*.yaml"; fi
           echo "what=${what}" >> "$GITHUB_OUTPUT"
           echo "src=${src}" >> "$GITHUB_OUTPUT"
-      - name: Land the new units on main
+      # VALIDATE BEFORE LANDING (AM-OPS-9, manager 2026-11-19). Producer-side validation; enforces the existing
+      # never-land-red rule; respects the operator's 2026-11-12 PYTEST-RUN-REQUIRED: REPORT-ONLY decision; adds no
+      # merge-side gate. Replenish PR #27507 self-landed while pytest-run was still running and main went red
+      # (RQ-20261119-031 had no power.sd; tests/test_research_queue.py). The tests that read research/queue now run
+      # on the generated tree HERE, before anything is committed. On a FAIL nothing is landed this run, ONE pipeline
+      # item "PRODUCER VALIDATION FAILED [research-queue-replenish]" is filed (deduplicated), and the step still exits
+      # 0: no red run, no halt; the next scheduled run retries. Strict (no --baseline-ref): a new unit that breaks a
+      # test main already fails would be masked by a baseline diff, and a skipped replenish costs nothing.
+      # Reader set: scripts/ci/validate_before_land.py::PROFILES["research-queue"].
+      - name: Install the validation test runner
         if: steps.gen.outputs.count != '0'
+        run: pip install --quiet "pytest>=8.0"
+      - name: Validate the generated tree before landing (producer-side, no merge-side gate)
+        id: validate
+        if: steps.gen.outputs.count != '0'
+        env:
+          # WSD-S4: pipeline.append writes through the work store's API after the freeze (the filing on a FAIL).
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
+        run: python3 scripts/ci/validate_before_land.py --producer research-queue-replenish --profile research-queue
+      - name: Land the new units on main
+        if: steps.gen.outputs.count != '0' && steps.validate.outputs.ok == 'true'
         uses: ./.github/actions/commit-to-main
         with:
           verify-merged: "true"
