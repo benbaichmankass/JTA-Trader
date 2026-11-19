@@ -46,7 +46,8 @@ nodes:
     value: {usd_at_stake_per_month: 80, confidence: 0.4}
     after:
     - {unit: RQ-20261111-207f-01, verdict: fail}
-    needs_authoring: >-
+    authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: kill per this node''s own branch rule. MEASURED 207f-01 live_book refusals over 1,016 candidates: slot_busy 872, unsettled_t1 35, unaffordable_whole_share 7, risk_roundup_refused 5. Slot contention dominates, so the lever is selection, already registered and read as 207f-02 (done, FAIL); no affordable-sub-pool unit is authored. Line for the manager: the evidence record 98e3-06 (+0.49 R/trade) overstates this account''s edge; on the cash book Foxhound-4 reads -0.058 R/trade over n 97 (multi-slot upper bound -0.002 R, n 1,014).'
+    authoring_closed_ask: >-
       207f-01 FAILED: the dev edge does not survive the [balance removed] cash book. Read the refusal mix first. If unaffordable_whole_share
       dominates, author ONE unit: the same recipe re-scored on the AFFORDABLE sub-pool only (ETFs whose 1-share price <= 0.9 x cash at
       each decision, a causal filter) vs the full pool, on the live book. If slot_busy / unsettled_t1 dominate, the lever is selection
@@ -99,7 +100,8 @@ nodes:
     after:
     - {unit: RQ-20261111-207f-04, verdict: pass}
     - {unit: RQ-20261111-207f-01, verdict: any}
-    needs_authoring: >-
+    authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: authored as RQ-20261119-f2a4-03 (alpaca_live_book.py h2h built in the same PR, self-tested). Do not re-author.'
+    authoring_closed_ask: >-
       Challengers qualified on the live book (207f-04 PASS) and Foxhound-4's live-book baseline exists (207f-01). Author THE
       HEAD-TO-HEAD under the P8 promotion rule (08-ALPACA-LIVE-BOOK.md s 5): each qualifying leg and the combined (qualifiers +
       Foxhound-4 competing for the slot, Foxhound-4's picks first) book vs Foxhound-4 alone, on their COMMON window, paired by month,
