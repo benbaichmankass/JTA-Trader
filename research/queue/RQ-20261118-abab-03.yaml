@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-03
 title: 'Symbol holdout for the sol_4h as-declared transfer lead: does trend_donchian_sol_4h clear Stage 0 on DASH/ONT/NEO/SNX/MANA/SAND (disjoint from baskets A and B)?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -128,3 +128,16 @@ related:
 - RQ-20261026-1b57-08
 - scripts/research/harness_stage0.py
 last_dispatched_at: '2026-11-18T19:28:47+00:00'
+grading:
+  attested: RULE-RQ20261118-ABAB-03-SOL4H-HOLDOUT
+  auto: true
+  decision_rule_id: RULE-RQ20261118-ABAB-03-SOL4H-HOLDOUT
+  evidence:
+  - research/results/RQ-20261118-abab-03/44381021221.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

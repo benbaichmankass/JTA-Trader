@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-07
 title: 'D10 Basset falsifier: is aadc-14''s BELOW-chance learned AUC (0.414, CI upper 0.516) an artifact of leg-level inputs (mu, n_seen)
   under leg-grouped CV, or does the learned score really rank decay backwards?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -112,3 +112,16 @@ related:
 - ML-D10-BASSET-BASELINE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
 last_dispatched_at: '2026-11-18T23:02:05+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT
+  auto: true
+  decision_rule_id: RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT
+  evidence:
+  - research/results/RQ-20261118-f7c1-07/44417165432.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
