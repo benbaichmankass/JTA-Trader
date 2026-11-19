@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_by_path",
+  "hold_text": "src/runtime/stale_leg_decision.py and scripts/ops/cancel_stale_tpsl_legs.py: the take-profit side of a stale-leg cancel is now REPORTED (target_qty_kept, target_undercover_after_cancel, a WARNING in the dry-run and apply detail, target_naked_after). No new refusal: the decision state is unchanged. The trader restarts on deploy (src/). The manager merges. Revert: git revert.",
+  "why": "BRACKETS-ALWAYS inventory item 6: the script refuses a stop under-cover but never looked at the target, so cancelling a closed row's TP could leave the open position TP-naked silently. Gates this adds or changes: none (report-only; a refusal would be a gate and is left to the operator)."
+}
