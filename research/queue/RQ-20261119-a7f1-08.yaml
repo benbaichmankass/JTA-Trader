@@ -3,7 +3,7 @@
 id: RQ-20261119-a7f1-08
 title: 'RE-RUN on current data: M20 exit-lever sweep for REAL-MONEY leg trend_donchian_xrp_4h (inputs were frozen
   at ~2026-06-18)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -67,3 +67,31 @@ rerun_of:
   reason: trainer data/XRPUSDT_5m.csv (what resolve_data reads for 4h; no native XRPUSDT_4h.csv) frozen ~2026-06-18 until the 5m refresh added 2026-11-18 (#26930)
   blast_radius: TRAINER-1D-STALE-ROSTERED real-money extension (2026-11-19)
 last_dispatched_at: '2026-11-19T11:47:12+00:00'
+amendments:
+- at: '2026-11-19'
+  before_any_run: false
+  by: AM-OPS-9 (session_01AFoLuMdfKSRmey33cVTNak), manager spec item 1b relayed by AM-OPS-8
+  text:
+  - 'Run 44517905271 (commit ac1fb62c44) swept 0 cells: leg_status split_beyond_holdout. No cell result was seen, because none exists. The holdout
+    from 2025-06-13 left 45 lifetime trades in the discovery span (leg_too_thin), and the split fell back to the fixed 2025-07-01, which is past the
+    last discovery day.'
+  - 'Thin-leg path checked BEFORE any re-dispatch. resolve_split (scripts/research/m20_fleet_exit_sweep.py) derives the boundary from the
+    discovery-span trades (its emit run passes _HOLDOUT.harness_args()). It clamps split_target_oos to lifetime // 2 and falls back with
+    leg_too_thin only when the leg cannot seat MIN_OOS_TRADES = 25 on BOTH sides, i.e. lifetime < 50. 45 < 50, so no SPLIT_MODE / SPLIT_TARGET_OOS
+    keeps the holdout intact and grades this leg. holdout_frac 0 would grade it but consumes the holdout, which the manager excluded. Not re-dispatched.'
+grading:
+  auto: false
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261119-a7f1-08/44517905271.jsonl
+  - docs/research/m20-sweep-corpus.jsonl on branch claude/m20-sweep-corpus (leg_status row, sweep_generated_at 2026-11-19T12:10:14.819068+00:00)
+  graded_at: '2026-11-19'
+  grader: AM-OPS-9 (session_01AFoLuMdfKSRmey33cVTNak), by hand, HELD for the manager
+  rows: 1
+  verdict: indeterminate
+  reason: 'INDETERMINATE (thin leg). The registered rule needs >= 25 base OOS trades; with the holdout intact the leg holds 45 discovery-span
+    trades, below the 50 that seat 25 on each side, so no sanctioned split mode can grade it (see amendments). This is NOT a fail of any lever:
+    the shipped stale_stop + trail_decay on trend_donchian_xrp_4h (bybit_2) are neither confirmed nor refuted on post-freeze data. Nothing changes;
+    no demotion is proposed. What would decide it: more discovery-span trades (time), or a pooled multi-leg donchian test with its own registered
+    rule, which is a new unit, not this one.'
+
