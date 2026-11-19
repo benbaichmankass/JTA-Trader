@@ -1,10 +1,12 @@
+# CLOSED 2026-11-19 by ML-PRIMARY-11: its run 44376672320 read the frozen 2026-07-12 exit-head corpus (graded INVALID, data frozen).
+# Superseded by the fresh-rows re-run RQ-20261119-ef40-04 (same rule).
 # Hand-authored 2026-11-18 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (week plan
 # docs/plans/ml-week-plan-2026-11-19.md section 4 #5). Lean spec, one factor. Decision rule registered BEFORE any run.
 # Gates this adds or changes: none.
 id: RQ-20261118-aadc-13
 title: 'ml-exit-head-donchian-1h POPULATION WIDENING (4h legs): does the holding_pays_neg25 target, trained on the 1h BTC/ETH/SOL rows, beat the
   holding_pays champion by +0.01 R/trade on the five live 4h donchian legs, each replayed with its own parameters?'
-status: blocked
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -181,12 +183,3 @@ amendments:
     only because the 2026-11-18 pre-fix run (44376672320) exists and was already graded INVALID; no valid outcome of this unit has been read.'
 last_dispatched_at: '2026-11-18T19:38:31+00:00'
 rearmed_at: '2026-11-18T22:05:00+00:00'
-blocked_on:
-- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
-    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
-    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
-    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
-  ref: ML-EXITHEAD-ROWS-FRESH-REBUILD
-  kind: build
-  clears_when: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
-    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).

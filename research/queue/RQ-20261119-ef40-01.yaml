@@ -1,10 +1,14 @@
+# DONE 2026-11-19 ~15:15Z (ML-PRIMARY-11): run 44539864523 PASSED and published donchian_fresh/rows.jsonl (verdict.json pass / measured /
+# published true; 45,372 rows; last bar_t BTC 2026-11-08, ETH 2026-11-19, SOL 2026-11-05). The collector filed the run producer_failed only
+# because verdict.json lacked population / n (fixed in exit_head_fresh_rows.py); status done so the non-verdict retry does not
+# rebuild the rows under the units now reading them.
 # Hand-authored 2026-11-19 by lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ, Tier 1 research), dispatched by the JTA Trader
 # manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Row ML-EXITHEAD-ROWS-FRESH-REBUILD: a one-off trainer BUILD of the donchian 1h exit-head rows on
 # fresh candles. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261119-ef40-01
 title: 'BUILD: rebuild the donchian 1h exit-head training rows (trend_donchian BTC, _eth, _sol) on the fresh trainer candles into
   datasets-out/exit_head/1h/donchian_fresh/rows.jsonl, with every symbol''s last bar_t after 2026-11-01'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
