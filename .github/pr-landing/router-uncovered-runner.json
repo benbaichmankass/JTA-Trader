@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Research-compute router (scripts/research/compute_router.py, not imported by the trader): a unit that fetches candles over the network and whose fetch the Kaggle candle dataset does not cover (or that uses the Dukascopy lane) is runner-only without needing a hand-written routing.why_runner. Removes a guaranteed failure (8260-02/03 died on Kaggle with a DNS error). No order path, no strategy config, no runtime service; measured effect on the queue today: 3 units newly pinned, all three already fixed in open PRs."
+}
