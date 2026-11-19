@@ -1,0 +1,136 @@
+{
+ "unit": "RQ-20261119-b9d0-03",
+ "rule": "RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE",
+ "exit_w_min": 1,
+ "exit_peg": "mid",
+ "calibration": {
+  "n": 10560,
+  "days": 40,
+  "mean_delta_F_bps": 1.7266631886448531,
+  "ci95": [
+   1.3707302290537104,
+   2.058441727138725
+  ],
+  "fill_rate": 0.8697916666666666,
+  "a3f1_print_based_mean_bps": 2.03,
+  "band": [
+   1.0,
+   3.0
+  ],
+  "calibrated": true
+ },
+ "features": [
+  "dir",
+  "hour",
+  "tick_bps",
+  "ret1",
+  "ret5",
+  "ret15",
+  "ret60",
+  "rv15",
+  "rng5_ticks",
+  "pos60"
+ ],
+ "lgb_params": {
+  "n_estimators": 200,
+  "learning_rate": 0.05,
+  "num_leaves": 15,
+  "min_child_samples": 200,
+  "subsample": 0.8,
+  "subsample_freq": 1,
+  "colsample_bytree": 0.8,
+  "reg_lambda": 5.0,
+  "random_state": 20261119,
+  "verbose": -1,
+  "n_jobs": 4
+ },
+ "n_dev_time_stop": 16769,
+ "n_dev_exits": 16764,
+ "n_held_time_stop": 2788,
+ "n_held_exits": 2786,
+ "n_held_symbols": 53,
+ "u_hat_bps_dev": -12.053836521845852,
+ "dev_fill_rate": 0.8277857313290384,
+ "skip_share": 0.18521177315147164,
+ "matched_random_skip": {
+  "draws": 1000,
+  "n_skip": 516,
+  "mean_of_means": -0.0011091056684009253,
+  "p95": -0.0006822938947965008,
+  "p_value": 0.000999000999000999
+ },
+ "base_rate_gate_reported": {
+  "skip_share": 0.0,
+  "mean_d_r": 0.0,
+  "model_minus_base_rate_d_r": 0.00047920284012826413
+ },
+ "mean_d_r": 0.00047920284012826413,
+ "deflated_ci_d_r": [
+  -0.0006668310735024901,
+  0.0016877861911845338
+ ],
+ "ci_lo_percentile": 0.4211,
+ "gated_mean_r": 0.006506367770473335,
+ "deflated_ci_gated_r": [
+  0.004301269497995244,
+  0.008661580537228078
+ ],
+ "always_post_mean_r": 0.00602716493034507,
+ "deflated_ci_always_r": [
+  0.0030640043868210196,
+  0.008842672613435968
+ ],
+ "held_fill_rate": 0.7537688442211056,
+ "held_fill_rate_posted": 0.7942731277533039,
+ "held_fill_rate_skipped": 0.5755813953488372,
+ "auc_p_fill_held": 0.7023399972233791,
+ "brier_held": 0.16413943665424013,
+ "brier_const_held": 0.19107987327983283,
+ "mean_d_bps": 0.14482753206616125,
+ "by_side": {
+  "long": {
+   "n": 873,
+   "mean_d_r": -8.20042233402932e-05
+  },
+  "short": {
+   "n": 1913,
+   "mean_d_r": 0.0007353104022861577
+  }
+ },
+ "verdict": "fail",
+ "why": "gated - always-post +0.00048 R/exit, deflated lower bound -0.00067; gated vs taker +0.00651 R/exit; skips 0.185, matched-random p 0.000999000999000999, n=2786",
+ "holdout_lock": {
+  "model_id": "EXEC-maker-exit-fillgate-ml_entry_v1",
+  "family": "EXEC",
+  "start": "2025-10-01",
+  "end": "2026-09-30",
+  "train_end": "2025-09-30",
+  "unit": "RQ-20261119-b9d0-03",
+  "reader": "research-script-run",
+  "read_at": "2026-11-19T04:57:32Z",
+  "backfilled": false,
+  "symbols": null,
+  "variants_on_window": 32,
+  "n_tries": 6,
+  "bar": {
+   "n_tries": 6,
+   "alpha_one_sided": 0.004211,
+   "ci_level": 0.991579,
+   "ci_z": 2.6347,
+   "ci_lo_percentile": 0.4211,
+   "point_t_min": 1.3001,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "next_bar": {
+   "n_tries": 7,
+   "alpha_one_sided": 0.00361,
+   "ci_level": 0.992779,
+   "ci_z": 2.6865,
+   "ci_lo_percentile": 0.361,
+   "point_t_min": 1.3868,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  }
+ },
+ "git_sha": "4ac283e35a5a018bcc9a9a7b894c31a8ca9c494b",
+ "elapsed_s": 439
+}
