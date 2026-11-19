@@ -18006,3 +18006,23 @@ nodes:
     related:
     - PROGRAMME-REPLAN-2026-11-19
     - research/levers/ltr-close.yaml
+- id: P1-RP1119-desk-levelbreak-fade-decluster
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after: []
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: AUTHORED as RQ-20261119-f2a4-01 (level_break_break) and RQ-20261119-f2a4-02
+    (level_break_sweep), declustered FADE via desk_trigger_replay.py --decluster-bars 12 (landed with #27165); this node follows their verdicts.'
+  authoring_closed_ask: 'RESULT 2026-11-19 (re-plan lane PROGRAMME-REPLAN-20261119): the four desk trigger replays (RQ-20261119-d7c3-01..04,
+    30,175 firings each family on 6 crypto symbols 2025-11..2026-09) are NOT_CLEARED against the +0.15 R materiality bar, BUT
+    both level-break families show a FADE edge whose weekly-cluster lower bound is above zero: level_break_break fade S3 +0.088 R
+    (lb +0.051, p 0.0001), level_break_sweep fade +0.057 R (lb +0.026, p 0.0001); atr_burst / momentum_burst continuation
+    +0.044 / +0.056 with lb < 0. Diagnosis: a real but small effect diluted by CLUSTERED firings (atr_burst: 15,407 of 30,175
+    firings fall within 12 bars of the previous same-symbol firing), so the n is overstated and the mean mixes first and repeat
+    firings. Next question, pre-registered when authored: on level_break_break and level_break_sweep, FADE on the FIRST firing per
+    symbol per 12 bars only (declustered) vs all firings, same bracket, same window, same +0.15 R bar and Holm family. A desk
+    wake that only fires on declustered level-break fades is the decision it changes (DESK-ENTRY-REVIEW-REDESIGN).'
