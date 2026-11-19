@@ -4,7 +4,7 @@
 id: RQ-20261119-c8e2-02
 title: 'FRESH-DATA RE-RUN: do the LIVE trend_vol regime OFF-cells (config/regime_policy.yaml, vol-keyed) still remove a money-losing slice on
   post-freeze BTC data, or have they become cosmetic?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -123,4 +123,24 @@ related:
 - docs/research/A-vol-gating-AB-evidence-2026-06-27.md
 - scripts/ml/walkforward_vol_gating.sh
 - .claude/skills/regime-selectivity/SKILL.md
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T19:25:04+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-c8e2-02-TRENDVOL-CELLS-FRESH
+  evidence:
+  - comms/research/RQ-20261119-c8e2-02/44598184518/verdict.json
+  - research/results/RQ-20261119-c8e2-02/44598184518.jsonl
+  graded_at: '2026-11-19'
+  grader: AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN), by hand, HELD for the manager
+  rows: 1
+  verdict: indeterminate
+  reason: 'Trainer run 44598184518 (commit 17b0aee9af) completed all 15 arm runs, but its verdict.json used the script''s own vocabulary
+    (verdict mixed, read_state complete, no n), so script_run landed it as producer_failed / not_applicable. Graded by hand from the raw
+    verdict.json against the registered rule. FRESH FOLD 2026-06-01..2026-11-19: ungated net -221.93, maxdd 5.44%, 34 trades; ML-keyed net
+    -223.50, maxdd 3.75%, 27 trades. Ungated trades 34 >= 30, so not INDETERMINATE on n. ml.net < ungated.net (d -1.57), so not HOLDS;
+    ml.maxdd < ungated.maxdd (d -1.69 pp), so not DOES_NOT_HOLD. RULE OUTCOME MIXED, which maps to indeterminate. Context, not graded: the
+    frozen-keyed arm on the fresh fold is -440.38 (ML keying is +216.88 better); across the four 2026-06-27 year-folds ML beats ungated
+    on net in 2 of 4 and on maxdd in 3 of 4. The rule registers no action for MIXED: nothing changes; the DOES_NOT_HOLD path (a Tier-3
+    retire proposal plus the regime_cell_walkforward 2-D check) is not triggered. The cells cost about 1.6 of net and buy 1.7 pp of drawdown
+    on the fresh fold, so they are not shown to be cosmetic. The producer is fixed in the same PR to emit the contract (holds/does_not_hold/
+    mixed map to pass/fail/indeterminate; read_state measured/no_data; n = fresh-fold ungated trades).'

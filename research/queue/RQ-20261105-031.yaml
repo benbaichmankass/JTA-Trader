@@ -48,6 +48,7 @@ decision_rule:
   registered_at: '2026-11-05'
   registered_before_run: true
 routing:
+  why_runner: fetches the Dukascopy intraday lane (--non-crypto-source dukascopy) over the network; the Kaggle kernel has no internet
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 2.0
@@ -72,6 +73,8 @@ run:
   - min_displacement_body_to_range_lo=min_displacement_body_to_range=0.4125
   - --arm
   - min_displacement_body_to_range_hi=min_displacement_body_to_range=0.6875
+  - --non-crypto-source
+  - dukascopy
   - --days
   - '1830'
   - --grade
