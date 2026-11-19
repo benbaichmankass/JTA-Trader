@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "scripts/ml/p1_costnet_rebuild.sh (manual-only trainer tooling): MANIFEST / REGISTER / GRADE_ARGS / MEASURED_TOO / VERDICT_OUT knobs, defaults = the v023 run byte-for-byte, plus a refusal when the manifest's dataset.version != SC_V_WON. Needed to run RQ-20261119-3e98-01 after #27430. Manager merges.",
+  "why": "The script hard-codes the p2pool-v2 manifest and the default grader args; 3e98-01 trains research/manifests/setup-candidates-metalabel-rostered-paper-v1.yaml on v024 (--no-register) and grades with --eval-source live_paper --strategies-file --lb-pct 0.833, then --measured-only. Not in the trader closure; no restart. Gates this adds or changes: none."
+}
