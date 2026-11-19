@@ -1,0 +1,116 @@
+{
+ "rule": "RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER",
+ "window": [
+  "2020-07-01",
+  "2026-10-15 23:59"
+ ],
+ "multiplier": 0.5,
+ "primary": {
+  "C": 0.1,
+  "q": 0.2
+ },
+ "grid": [
+  {
+   "C": 0.1,
+   "q": 0.1
+  },
+  {
+   "C": 0.1,
+   "q": 0.2
+  },
+  {
+   "C": 0.1,
+   "q": 0.3
+  },
+  {
+   "C": 1.0,
+   "q": 0.1
+  },
+  {
+   "C": 1.0,
+   "q": 0.2
+  },
+  {
+   "C": 1.0,
+   "q": 0.3
+  }
+ ],
+ "cpcv": {
+  "n_groups": 6,
+  "k_test": 2,
+  "embargo_days": 7.0
+ },
+ "families": {
+  "TD": {
+   "verdict": "PASS",
+   "reasons": []
+  }
+ },
+ "read_state": "measured",
+ "verdict": "fail",
+ "population": "real-money gate legs' CPCV out-of-sample Stage-0 trades, per family: TD n_gate=1587 (trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop)",
+ "n": 1587,
+ "note": "TD: chosen None, arms tail1r FAIL (paired -0.0122, disagree 0.216, own fail), evweight FAIL (paired -0.0029, disagree 0.170, own pass)",
+ "records": [
+  {
+   "family": "TD",
+   "target": "tail1r",
+   "verdict": "fail",
+   "n": 1587,
+   "population": "TD gate legs CPCV OOS trades, arm tail1r",
+   "paired": {
+    "n": 1587,
+    "delta_ch_vs_base_mean_r": -0.0122,
+    "delta_ch_vs_base_lb95_r": -0.022,
+    "delta_ch_vs_base_lb_deflated_r": -0.0252,
+    "disagree_rate": 0.4619,
+    "reduce_rate_base": 0.4077,
+    "reduce_rate_ch": 0.4594,
+    "delta_base_vs_take_r": 0.0003,
+    "delta_ch_vs_take_r": -0.0119,
+    "maxdd_base_r": 22.267,
+    "maxdd_ch_r": 21.338,
+    "cvar5_base_r": -1.0889,
+    "cvar5_ch_r": -1.094
+   },
+   "disagree_rate_cells": 0.216,
+   "own_checks": {
+    "a_noninferior": false,
+    "b_risk": true,
+    "c_beats_random": false,
+    "d_not_vacuous": true,
+    "e_folds": false
+   }
+  },
+  {
+   "family": "TD",
+   "target": "evweight",
+   "verdict": "fail",
+   "n": 1587,
+   "population": "TD gate legs CPCV OOS trades, arm evweight",
+   "paired": {
+    "n": 1587,
+    "delta_ch_vs_base_mean_r": -0.0029,
+    "delta_ch_vs_base_lb95_r": -0.0117,
+    "delta_ch_vs_base_lb_deflated_r": -0.0142,
+    "disagree_rate": 0.3522,
+    "reduce_rate_base": 0.4077,
+    "reduce_rate_ch": 0.2741,
+    "delta_base_vs_take_r": 0.0003,
+    "delta_ch_vs_take_r": -0.0026,
+    "maxdd_base_r": 22.267,
+    "maxdd_ch_r": 21.948,
+    "cvar5_base_r": -1.0889,
+    "cvar5_ch_r": -1.1163
+   },
+   "disagree_rate_cells": 0.1704,
+   "own_checks": {
+    "a_noninferior": true,
+    "b_risk": true,
+    "c_beats_random": true,
+    "d_not_vacuous": true,
+    "e_folds": true
+   }
+  }
+ ]
+}
