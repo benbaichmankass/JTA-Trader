@@ -53,7 +53,7 @@ def _journal_basis_counts(journal: Path, symbols: list[str]) -> dict:
 
     out: dict = {}
     for sym in symbols:
-        c = {"initial_risk": 0, "stop_distance": 0, "unit_fallback": 0}
+        c = {"initial_risk": 0, "initial_risk_signal": 0, "stop_distance": 0, "unit_fallback": 0}
         for tr in _load_live_trades(journal, sym):
             won = 1 if (tr["pnl"] is not None and float(tr["pnl"]) > 0) else 0
             c[_live_realized_r(tr, won)[1]] += 1
@@ -115,7 +115,8 @@ def main() -> int:
     pos = [s for s, v in counted.items() if v["value_r"] > 0]
 
     basis = _journal_basis_counts(Path(a.journal), a.symbols.split(","))
-    tot = {k: sum(b[k] for b in basis.values()) for k in ("initial_risk", "stop_distance", "unit_fallback")}
+    tot = {k: sum(b[k] for b in basis.values())
+           for k in ("initial_risk", "initial_risk_signal", "stop_distance", "unit_fallback")}
     pop = sum(tot.values())
     excl = (tot["stop_distance"] + tot["unit_fallback"]) / pop if pop else None
     fallback_share = tot["unit_fallback"] / pop if pop else None
