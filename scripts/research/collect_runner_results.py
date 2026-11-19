@@ -485,6 +485,52 @@ def merge_holdout_claims(root: Path, dest: Path) -> int:
     return len(added)
 
 
+def tracked(root: Path, rel: str) -> bool:
+    """True when ``rel`` is tracked by git at HEAD of this checkout (so it is not ours to prune)."""
+    try:
+        return subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", rel],
+                              capture_output=True, timeout=30, check=False).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return True  # cannot tell -> never delete
+
+
+def prune_pending(root: Path, pending: set) -> List[Dict[str, Any]]:
+    """Drop from the WORKING TREE every collected run whose record now sits in an open results-batch PR.
+
+    WHY (2026-11-19, dispatcher runs 44445526574 / 44447603181 / 44449958883 / 44451836367 -> PRs #27097 #27103 #27111
+    #27119, all closed unmerged): `collect` checks `pending_in_open_batches` at the START of a cycle, but the batch is
+    landed by the `land` job ~12 min later. The previous cycle's batch PR is opened in between (it opened at 02:42:19,
+    this cycle's collect finished 02:42:04), so the check saw nothing and the same runs were re-landed; the second PR
+    went `dirty` once the first merged. Re-asking at LANDING time closes that window. Only files that are not tracked
+    are removed (a tracked file is already on main). Returns [{unit, run_id, removed}]."""
+    out: List[Dict[str, Any]] = []
+    for unit, run_id in sorted(pending):
+        rec = f"research/results/{unit}/{run_id}.jsonl"
+        d = f"comms/research/{unit}/{run_id}"
+        removed: List[str] = []
+        if (root / rec).exists() and not tracked(root, rec):
+            (root / rec).unlink()
+            removed.append(rec)
+        if (root / d).is_dir():
+            for f in sorted((root / d).rglob("*")):
+                if f.is_file() and not tracked(root, str(f.relative_to(root))):
+                    f.unlink()
+                    removed.append(str(f.relative_to(root)))
+        if removed:
+            out.append({"unit": unit, "run_id": run_id, "removed": removed})
+    return out
+
+
+def batch_count(root: Path) -> int:
+    """Number of E5 records still staged in the working tree (untracked or modified) under research/results."""
+    try:
+        r = subprocess.run(["git", "-C", str(root), "ls-files", "-m", "-o", "--exclude-standard", "--",
+                            "research/results"], capture_output=True, text=True, timeout=60, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return -1
+    return sum(1 for ln in r.stdout.splitlines() if _RECORD_PATH_RE.match(ln.strip()))
+
+
 def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] = None,
             artifacts_for=run_artifacts, downloader=download, dry_run: bool = False,
             pending: Optional[set] = None) -> Dict[str, Any]:
@@ -723,6 +769,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="re-emit E5 records for landed artifact dirs that have none; then exit")
     ap.add_argument("--check-staged", default="", metavar="LISTFILE",
                     help="fail-safe: exit 1 if the files listed (relative to the repo) total over 50 MB; then exit")
+    ap.add_argument("--prune-pending", action="store_true",
+                    help="LAND-TIME re-check: drop staged runs whose record is now in an open results-batch PR; "
+                         "writes count=<records still staged> to $GITHUB_OUTPUT; then exit")
     ap.add_argument("--dry-run", action="store_true", help="list what would be collected; write nothing")
     ap.add_argument("--json-out", default="", help="write the batch manifest here (the dispatcher reads it)")
     args = ap.parse_args(argv)
@@ -734,6 +783,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     slug = args.repo or os.environ.get("GITHUB_REPOSITORY") or ""
     if not slug:
         ap.error("--repo or $GITHUB_REPOSITORY is required")
+    if args.prune_pending:
+        pend = pending_in_open_batches(slug)
+        if pend is None:
+            print("::warning::could not list open results-batch PRs at landing time; landing as collected")
+            pend = set()
+        for x in prune_pending(_REPO, pend):
+            print(f"  pruned  {x['unit']:<18} run {x['run_id']}  ({len(x['removed'])} file(s)): in an open results-batch PR")
+        n = batch_count(_REPO)
+        print(f"collect_runner_results: staged records after prune = {n}")
+        gh_out = os.environ.get("GITHUB_OUTPUT")
+        if gh_out:
+            with open(gh_out, "a", encoding="utf-8") as fh:
+                fh.write(f"count={n}\n")
+        return 0
     if args.recollect_orphans:
         for x in recollect_orphans(_REPO, repo_slug=slug):
             print(f"  recollected {x['unit']} run {x['run_id']} -> {x['record']}")
