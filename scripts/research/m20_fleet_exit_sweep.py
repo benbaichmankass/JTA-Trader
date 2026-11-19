@@ -3634,7 +3634,18 @@ def main(argv: list[str]) -> int:
     lines.append("")
     for leg, v in verdicts.items():
         if "levers" not in v:
-            lines.append(f"- **{leg}**: {v.get('status')} ({v.get('error', '')[:80]})")
+            detail = str(v.get("error", ""))[:80]
+            if v.get("status") == "split_beyond_holdout":
+                # The verdict carries the boundary and why it was chosen; the line used to print an empty "()",
+                # so a refused leg could not be diagnosed from the run's own summary (RQ-20261119-a7f1-08,
+                # trend_donchian_xrp_4h, run 44517905271).
+                hp = (v.get("holdout") or {})
+                detail = (f"split {v.get('split')}"
+                          + (f" FELL BACK ({v.get('split_fallback')})" if v.get("split_fallback") else " derived")
+                          + (f", lifetime trades {v.get('split_lifetime_trades')}"
+                             if v.get("split_lifetime_trades") is not None else "")
+                          + f", past the last discovery day {hp.get('last_discovery_day')}")
+            lines.append(f"- **{leg}**: {v.get('status')} ({detail})")
             continue
         passes = [e["cell"] for es in v["levers"].values() for e in es
                   if e.get("verdict") == "PASS"]
