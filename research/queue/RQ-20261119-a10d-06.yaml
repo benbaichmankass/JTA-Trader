@@ -9,7 +9,7 @@ id: RQ-20261119-a10d-06
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL target): does the more_mfe target (1 - peak_is_in: is there still > 0.25 R of new favourable
   excursion ahead), aadc-04s second registered arm that could not be read, improve the heads out-of-sample replayed R per trade over the holding_pays
   champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -173,3 +173,19 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
 last_dispatched_at: '2026-11-19T18:20:42+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
+  evidence:
+  - comms/research/RQ-20261119-a10d-06/44582558646/verdict.json
+  - research/results/RQ-20261119-a10d-06/44582558646.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
+  rows: 1
+  verdict: fail
+  reason: 'run 44582558646 (trainer 17:56-18:18Z, landed on main), fresh rows n 45,372, fixed harness. more_mfe vs the holding_pays champion,
+    paired per OOS trade, trend_donchian / _eth / _sol 1h: n 12,015 >= 300, mean d -0.01897 R/trade, deflated CI z 2.241 [-0.03912,
+    +0.00118]; UB +0.00118 < +0.01 -> FAIL by the registered rule. Configuration closed: the more_mfe (exhaustion) target for the 1h donchian
+    exit head; the label lever is now read at 0, -0.25 (a10d-07 PASS) and more_mfe (this FAIL). REGISTERED FAIL ACTION: record more_mfe as
+    read and closed on the lever map; the D8 next family is the exhaustion feature block (--features extended) or the trade-path sequence
+    model, carried with 04a5-04''s fail action on PI-20261119-RIMARY12-0004.'
