@@ -65,9 +65,18 @@ decision_rule:
     regime_cell_walkforward 2-D check (Rule 2) as the next step. Nothing is flipped by this unit.'
   min_n: 30 ungated trades on the fresh fold
 practice_precedent: confirm a single-window pass on data the decision never saw (weekly audit 2026-11-18 Q3; docs/reference/trading-and-model-practice-principles.md)
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: keep or retire the vol-keyed trend_vol OFF-cells (trending/volatile and chop/volatile, keyed by the ML vol head's verdict) that drop live intents before routing
+  legs:
+  - trend_donchian
+  book: demo_floor
 intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: every arm keeps each strategy's own stop, trail and TP; only the regime router differs
+  matched_random:
+    draws: 200
+    note: not computed by this unit; the ungated arm (router off) on the identical fold is the paired control
   best_static:
     grid:
     - ungated (router off)
