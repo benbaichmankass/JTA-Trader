@@ -237,7 +237,7 @@ def resolve_or_refuse(symbol: Optional[str], timeframe: Optional[str],
                       tried=(str(ddir),))
 
 
-def load_resolved_frame(harness, path: str, resample: "str | None"):
+def load_resolved_frame(harness, path: str, resample: str | None):
     """Load ``path`` with ``harness._load_candles`` AT THE RESOLVED GRAIN: resample to ``resample`` when the
     resolver picked a finer file than the leg's timeframe (``Resolution.resample``), else return the frame as read.
 
