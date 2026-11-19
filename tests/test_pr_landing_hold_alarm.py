@@ -298,3 +298,46 @@ def test_resolver_outside_a_git_repo_never_guesses(tmp_path):
     """No git repo under root: a repo path that is not on disk must NOT resolve (False on any git error)."""
     r = pla.make_resolver(str(tmp_path))
     assert not r("research/queue/RQ-20261113-f251-02.yaml")
+
+
+# --- PR-ALARM-SPARSE-RESOLVER (operator decision "fix_a" on PR-ALARM-RESOLVER-FIX, committed by Manager Session
+# 2026-11-13a): the alarm's checkout is SPARSE + blobless, so a cited research/ or comms/ record exists in the
+# commit but not in the working tree. A cited approval must resolve from the commit's TREE; an uncited hold-merge,
+# or a citation of a path that does not exist in the commit, must still alarm (#25799 paged on the first case).
+def _sparse_repo(tmp_path):
+    import subprocess
+    root = tmp_path / "repo"
+    (root / "research/evidence").mkdir(parents=True)
+    (root / "research/evidence/rec.json").write_text("{}")
+    (root / "docs/claude/work/checklist").mkdir(parents=True)
+    (root / "docs/claude/work/pipeline").mkdir(parents=True)
+    run = lambda *a: subprocess.run(["git", "-C", str(root), *a], check=True, capture_output=True)  # noqa: E731
+    run("init", "-q")
+    run("-c", "user.name=t", "-c", "user.email=t@t", "add", "-A")
+    run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "x")
+    (root / "research/evidence/rec.json").unlink()      # sparse checkout: in the commit, not in the working tree
+    return root
+
+
+def test_sparse_checkout_cited_record_resolves_from_the_commit_tree(tmp_path):
+    root = _sparse_repo(tmp_path)
+    assert not (root / "research/evidence/rec.json").exists()
+    resolve = pla.make_resolver(str(root))
+    assert resolve("research/evidence/rec.json") is True          # in the commit -> resolves
+    assert resolve("research/evidence/made-up.json") is False     # not in the commit -> does not
+    assert resolve("research/evidence") is False                  # a directory is not a record
+
+
+def test_sparse_checkout_cited_approval_clears_and_uncited_or_fake_still_alarms(tmp_path):
+    root = _sparse_repo(tmp_path)
+    resolve = pla.make_resolver(str(root))
+    hold = {"tier": 2, "landing": "hold"}
+
+    def grade(decl):
+        return pla.grade(decl, decl_unreadable=False, reviews=[], reviews_unreadable=False, resolve=resolve).state
+
+    assert grade({**hold, "recorded_decision": {"kind": "operator_decision",
+                                                "ref": "research/evidence/rec.json"}}) == pla.CLEAN
+    assert grade(hold) == pla.ALARM                                                    # uncited
+    assert grade({**hold, "recorded_decision": {"kind": "operator_decision",
+                                                "ref": "research/evidence/made-up.json"}}) == pla.ALARM

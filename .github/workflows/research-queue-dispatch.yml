@@ -716,9 +716,22 @@ jobs:
           if [ -f /tmp/payload/collected.json ]; then cp /tmp/payload/collected.json /tmp/collected.json; fi
           git status --short | head -40
 
+      # LAND-TIME DEDUPE (2026-11-19, #27097/#27103/#27111/#27119): the collect step's open-batch check runs ~12 min
+      # before this job, and the previous cycle's batch PR opens in between -- so the same runs were landed twice and
+      # the second PR went dirty. Ask again NOW, drop runs already in an open batch PR, and land only what is left.
+      # Fails open (could not list -> land as collected). The utilization receipt is not lost when the whole batch is
+      # pruned: "Land the liveness receipt" below lands comms/research/utilization on its own.
+      - name: Drop runs already in an open results-batch PR (land-time re-check)
+        id: prune
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/research/collect_runner_results.py --prune-pending
+
       - name: Land the batch of runner results on main
         id: batch
-        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != '' && steps.prune.outputs.count != '0'
         uses: ./.github/actions/commit-to-main
         with:
           # "false" (B6 / GH-CAPACITY-LAND-VERIFY-OFF-RUNNER, COMPUTE-ALLOCATION-2026-11-03 section 3.3): the in-run wait held a
