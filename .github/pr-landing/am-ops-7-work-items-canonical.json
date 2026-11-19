@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "AUD-20261118-STORE-WRITES-UNGUARDED (owner AM-OPS-7; manager 2026-11-19 10:17Z: 'bundle the work_items.py:317 stale-string fix as its own small Tier-2 PR, I will merge'). GET /api/bot/work/items answered every list with a hardcoded \"canonical\": false and the note 'S1: the checklist + pipeline files stay canonical until S2 parity and the S4 reader flip' -- false since the S4 freeze (docs/claude/work/checklist/_header.json frozen_into_work_store, ~2026-11-12), when the store became the register and the files its export. It misled a session today into calling the export canonical. Fix: the flag and note come from work_read.frozen() (the freeze key itself); an unreadable key reads False and is logged. Module docstring corrected. Test added; tests/test_work_store.py 52 passed. RESTART: trader_import_closure decide says RESTART (work_items.py is in the trader closure via routers/diag.py and live_review_direct.py) -- the manager merges. Read path only: no write, order, or schema change. Gates this adds or changes: none."
+}

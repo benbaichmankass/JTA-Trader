@@ -1,0 +1,69 @@
+# AUTHORED by AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL), manager decision 2026-11-19 07:55Z:
+# re-run of a result whose input was a FROZEN trainer data file (TRAINER-1D-STALE-ROSTERED blast radius).
+id: RQ-20261119-a7f1-01
+title: RE-RUN on current data of RQ-20261016-d37f-06 (SCHA holdout re-run, confirmed vt_hot90_t2)
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 3
+practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg
+  and net of the full cost stack [S4, S5, S6]'
+question: 'Does RQ-20261016-d37f-06''s verdict hold when the same registered rule is run on CURRENT data? The original
+  ran months after trainer data/SCHA_1d.csv froze, so its sample ends 2026-06-12. Original question: HOLDOUT RE-RUN
+  of RQ-20261005-014''s single-window PASS: with the latest ~0.34 of each leg''s history held back BEFORE selection,
+  does a cell still clear the SAME registered gate on the earlier span, and does it hold on the held-back span?
+  Original question: Which hard exit levers (stale_stop, giveback_stop, trail_geometry, trail_decay, vol_trail)
+  clear the exit-refinement P2 gate on scha_trend_long_1d (SCHA 1d) on the data available now -- and does last month''s
+  answer still hold?'
+why_this_matters: PI-20261101-RXABACKP-0002 (SCHA exit cell toward alpaca_live) must not advance until this lands.
+  A verdict on a truncated sample cannot feed a Tier-3 proposal or a kill.
+power:
+  expected_n: 25
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades insufficient_base,
+    not fail. The sweep derives the IS/OOS boundary to target that OOS count (split_mode oos-trades).
+  feasibility:
+    source: none
+    accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-EXIT-REFINEMENT-P2-GATE
+  statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
+  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path B (improves
+    net_r_per_capital_day in BOTH IS and OOS with maxDD not worsening and net_R not falling more than the declared
+    floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is capped at the base book's own D_b.
+    Below the floor grades insufficient_base. No cell is shipped by this unit.
+  registered_at: '2026-10-05'
+  registered_before_run: true
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: one leg per unit; the workflow scp's the leg's frames from the trainer and sweeps on the runner.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: scha_trend_long_1d
+    tp_cap_pct: '0.099'
+    split_mode: oos-trades
+    research_unit: RQ-20261119-a7f1-01
+    holdout_frac: '0.34'
+rerun_of:
+  unit: RQ-20261016-d37f-06
+  reason: input trainer data/SCHA_1d.csv frozen; sample ended 2026-06-12
+  blast_radius: TRAINER-1D-STALE-ROSTERED (2026-11-19)
+last_dispatched_at: '2026-11-19T13:02:42+00:00'

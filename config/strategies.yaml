@@ -637,9 +637,12 @@ strategies:
     atr_sl_buffer_mult: 0.20
     tp_at_r: 1.5
     be_offset_bps: 15
-    session_filter_enabled: false
-    session_start_hour: 7
-    session_end_hour: 17
+    # SESSION LEVER (Tier-3 PROPOSAL, HELD): skip signal bars at UTC hours 0-7 == allowed window [8, 24). Evidence: RQ-20261118-abab-33 (S_ASIA PASS,
+    # net R -44.69 vs -56.38, n 384, 2024-10-05..2026-10-04) and its disjoint-window confirmation RQ-20261119-8260-01 (PASS, -24.64 vs -51.53, n 337,
+    # 2022-10-05..2024-10-04). The leg STILL LOSES NET on both windows: this cuts losses, it is not an edge. Demo floor only (bybit_1). ROLLBACK = false.
+    session_filter_enabled: true
+    session_start_hour: 8
+    session_end_hour: 24
     shadow_model_ids: []          # fresh data-collector — no ML predictors yet
 
   ict_scalp_xrp_5m:
@@ -1529,6 +1532,15 @@ strategies:
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
     structure_exit: "pivot=5"
     decision_bar: closed
+    # MAKER TIME-STOP EXIT, DEMO-FLOOR MECHANICS CHECK (row D9-MAKER-EXIT-BUILD, data-backed Tier 3 under the standing
+    # rule; manager 2026-11-19 "keep the ml_entry_v2 line"): the 24h max_hold close is worked post-only at the passive mid
+    # with a 1-minute Market fallback (src/units/accounts/maker_exit.py). Evidence: RQ-20261118-04a5-05 PASS + fresh-window
+    # RQ-20261118-e8a1-01 PASS, both measured on ml_entry's exits. ml_entry trades no demo-floor Bybit account (bybit_1
+    # rosters THIS leg), so the 1-2 clean mechanical exits are observed here; maker_exit.account_admitted limits the path to
+    # the demo floor (bybit_1). ml_entry is NOT declared yet: its line changes its config_fingerprint and would leave its
+    # committed evidence record comms/strategy_evidence/ml_entry.json STALE, so it lands with the real-money widening
+    # (PR 2), where re-vouching that record is part of the decision. ROLLBACK: delete this line (taker Market exit).
+    time_stop_exit_order: post_only_mid
     symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
     atr_period: 14
     atr_stop_mult: 2.0

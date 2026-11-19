@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI/tooling only (research dispatcher workflow): with work left, re-arm the next cycle inline at the end of the dispatch job instead of in a separate job that waited 6-13 min for a hosted runner (measured: cycles 19-21 min apart vs the 3-10 min target of PI-20261118-JFWRQYOV-0001). The rearm job stays as the idle heartbeat and the backstop; its timeout is raised 20 -> 40 min because its 1800 s idle sleep exceeded the old timeout, so the idle heartbeat could never re-dispatch. No runtime, config, order path or VM. No gate added."
+}

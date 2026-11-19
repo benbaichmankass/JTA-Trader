@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Research compute routing (scripts/research/compute_router.py + research_compute.yaml kaggle_overflow). A cpu_light/cpu_long unit bound for kaggle_cpu goes to the idle Kaggle GPU kernel when kaggle_cpu is full, before github_runner, keeping 12 GPU h back (plus the backend floor) for real GPU units; runner-only units never overflow; an unreadable quota never routes. Manager ask 23:58Z. Revert: delete the kaggle_overflow block (class_backends then no-ops) or git revert.",
+  "why": "Kaggle GPU quota expires unspent while kaggle_cpu and github_runner each hold ~40 units."
+}

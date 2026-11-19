@@ -1,0 +1,169 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; GO 02:03Z). Follows abab-68's registered rule: a near_target PASS first needs a real-TP holdout population. Gates this adds or changes: none.
+id: RQ-20261119-c9d2-01
+title: 'ITERATION 4 of ltr-close (abab-68 near_target PASS needs a real-TP holdout): does a FULL close at the first near_target trigger clear
+  RULE-AM-RISK-ADJUSTED-V1 on four legs that carry a REAL take-profit and were never used to choose the trigger?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On the committed Stage-0 corpora of tlt_pullback_1d, tqqq_trend_long_1d, scha_trend_long_1d and slv_trend_1h (361 trades; each declares
+  a real take-profit and its Stage-0 trades hit it: 24.5%, 55.9%, 37.2% and 17.3% exit by take_profit; none is among the 8 selection legs), does
+  closing the WHOLE position (partial_frac 1.0) at the first near_target trigger clear RULE-AM-RISK-ADJUSTED-V1 (R1 cost, R2 risk cut, R3 folds,
+  R4 random-time controls, L1 drop-best-leg)?'
+why_this_matters: abab-68 read partial_close@near_target risk_adjusted_pass on the 8 selection legs (folds 4 of 6, 200 of 200 controls beaten);
+  its registered rule says a near_target PASS is a lead that first needs a holdout population with a REAL take-profit, named in the next unit,
+  because none of the four legs of 43b6-02 carries one (tp_r 50.0 sentinel, near_target can never fire). This unit names that population. PASS
+  -> one fresh-window confirmation on legs that carry a real TP, then a Tier-3 proposal for the ltr-close near_target class (never a config edit);
+  FAIL -> the near_target full close is closed on this real-TP holdout and the lever map records it.
+power:
+  expected_n: 346
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'trade count 361 (49 + 136 + 78 + 98) is MEASURED from the built corpora; a LOCAL PREVIEW of the FIRST four-leg set (see the preview
+    note in decision_rule.what_it_does_not_do) had near_target fire on 39 of 346 priced trades (11%), so the trigger-conditional n is expected
+    near 40, below the 87 a d=0.3 one-sample test needs: expect the harness label, not a mean test, to decide, and expect INDETERMINATE (underpowered)
+    to be a live outcome. The graded statistic is the harness RULE-AM-RISK-ADJUSTED-V1 label; underpowered or never-fired cases grade indeterminate,
+    never fail.'
+  feasibility:
+    source: none
+    accrual_basis: Offline replay of committed Stage-0 corpora; nothing accrues. The holdout corpora were built 2026-11-19 from committed candle
+      CSVs by build_ltr_corpus.py (mode harness).
+evidence_class:
+  holdout: disjoint_legs
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119C9D2-01-LTR-CLOSE-NEAR-TARGET-REALTP
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/ltr_action_trigger_s0.py --action partial_close --partial-frac 1.0 --triggers near_target on the four committed
+    real-TP holdout corpora (tlt_pullback_1d, tqqq_trend_long_1d, scha_trend_long_1d, slv_trend_1h) (--corpus-dir comms/strategy_evidence/ltr_corpus_realtp);
+    per candidate: r_cost per baseline trade, maxDD and weekly-CVaR5 cut vs hold, folds held of 6, controls beaten of 200, n_fired, L1 drop-best-leg;
+    cost = the corpus rows'' recorded full-stack net R.'
+  rule: 'PASS iff partial_close@near_target has the harness label risk_adjusted_pass: R1 r_cost <= 0.05 R/trade AND R2 (maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%) AND R3 >= 4 of 6 folds hold AND R4 beats >= 0.9969 of 200 matched random-time full closes (Bonferroni family 16 = the 15 comparisons
+    already counted through abab-68 plus this 1 arm) AND L1 holds after dropping the best leg. FAIL iff the label is any fails_*: the near_target
+    full close is closed on this real-TP holdout population. INDETERMINATE iff the label is indeterminate (never_fired / underpowered). The trigger
+    is only near_target because only near_target passed on the selection legs (stall failed R4, 0 of 200). Thresholds, population and trigger
+    are fixed now and not changed after any result. A PASS from this run is NOT actionable on its own: it requires a fresh-window confirmation
+    (data after this run''s window, on legs that carry a real TP) before any Tier-3 proposal, because this population''s windows overlap the history
+    the preview and the screen already touched.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, adds no gate, is not a promotion case. PREVIEW AND POPULATION DISCLOSURE
+    (RULE ONE): PREVIEW RECORD: run date 2026-11-19, 50 draws (the unit uses 200), local machine, first four-leg population, read near_target
+    fails_R2_R3 (n_fired 39 of 346 priced, 0 of 50 controls beaten, folds_held 0 of 6). (1) the first population was tlt_pullback_1d, tqqq_trend_long_1d,
+    tlt_pullback_1h, gld_pullback_1h. Before writing the unit I ran that configuration locally at 50 draws to check that the lever fires and the
+    corpora load; it read near_target fails_R2_R3 (n_fired 39 of 346 priced, 0 of 50 controls beaten, folds_held 0 of 6). (2) The manager then
+    required a TP-reachability screen (drop a leg under about 10% of its Stage-0 trades reaching the declared TP). By exit_reason == take_profit
+    (a lower bound), tlt_pullback_1h reaches 4.7% (3 of 64) and gld_pullback_1h 6.8% (8 of 117), so both were dropped and replaced by the next
+    candidates by count with a real TP, scha_trend_long_1d (37.2%) and slv_trend_1h (17.3%). The swap was made on the reachability rule the manager
+    set, not on the preview, but the preview result was known when it was made; the replacement corpora were NOT scored locally. The rule (abab-68''s
+    thresholds, family 16) and the trigger are unchanged by any of this, and a FAIL remains a live read. The preview is not a result and is not
+    landed.'
+  pass_action: a PASS is NOT actionable without a fresh-window confirmation. Author ONE confirmation unit on a fresh window for the legs whose
+    own cell carries the effect; only after that confirmation passes, a Tier-3 proposal for the ltr-close near_target class with the mirror in
+    the same PR; never a config edit.
+  fail_action: record near_target (full close) as failed on a real-TP holdout in research/levers/ltr-close.yaml; the class moves to the untested
+    triggers (giveback, adverse_r_0.5, momentum_flip) per abab-68's rule.
+  min_n: about 39 fired near_target trades (preview); below the harness floor the label is indeterminate
+practice_precedent: 'T1 and M4 (docs/reference/trading-and-model-practice-principles.md): an action tested against hold and against a random-time
+  action, every arm counted in the multiplicity family; the test must be able to fire on its population (n_fired reported)'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+  best_static:
+    grid:
+    - hold
+    - partial_close@near_target
+    excludes_test_folds: true
+  bootstrap_group: trade
+iteration:
+  subject: ltr-close
+  subject_kind: ltr_class
+  from_result: RQ-20261118-abab-68
+  verdict_read: pass
+  diagnosis: 'abab-68 (full close at near_target / stall on the 8 selection legs, n 3,921) read partial_close@near_target risk_adjusted_pass (folds
+    4 of 6, 200 of 200 controls beaten) and @stall fails_R4 (0 of 200). Its registered rule says a near_target PASS first needs a holdout population
+    with a real TP: none of the four 43b6-02 holdout legs (eth_pullback_2h, sol_pullback_2h, trend_donchian_ada_4h, trend_donchian_avax_4h) has
+    one (tp_r 50.0 sentinel, near_target can never fire). The census (check_tp_doctrine.py + config/strategies.yaml + committed Stage-0 files,
+    2026-11-19) found legs with a declared real TP and committed candles that are not selection legs: tlt_pullback_1d (3.5; 24.5% of its Stage-0
+    trades exit by take_profit), tqqq_trend_long_1d (1.5; 55.9%), scha_trend_long_1d (1.5; 37.2%), slv_trend_1h (6.0; 17.3%); tlt_pullback_1h
+    (4.7%) and gld_pullback_1h (6.8%) were screened out as under 10% reachable. Their corpora are built in comms/strategy_evidence/ltr_corpus_realtp
+    (a separate directory so every default all-corpora run is unchanged).'
+  search: trigger near_target at partial_frac 1.0 on the four real-TP holdout legs, one trigger, family 16.
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-close.yaml
+  attempt: 4
+  due_by: '2026-11-26'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: own_losses
+  basis: live-trade-review action class on the real-money book; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 5
+  basis: 'MEASURED locally 2026-11-19: the harness on these four corpora ran in under a minute at 50 draws; 200 draws estimated at 3 minutes.'
+run:
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --corpus-dir
+  - comms/strategy_evidence/ltr_corpus_realtp
+  - --action
+  - partial_close
+  - --triggers
+  - near_target
+  - --legs
+  - scha_trend_long_1d,slv_trend_1h,tlt_pullback_1d,tqqq_trend_long_1d
+  - --partial-frac
+  - '1.0'
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9969'
+  - --n-comparisons
+  - '16'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261119-c9d2-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-ATM
+related:
+- RQ-20261118-abab-68
+- RQ-20261117-43b6-02
+- RQ-20261113-ed2b-01
+- research/levers/ltr-close.yaml
+- scripts/research/ltr_action_trigger_s0.py
+population: 'committed Stage-0 per-trade corpora of tlt_pullback_1d (49), tqqq_trend_long_1d (136), scha_trend_long_1d (78), slv_trend_1h (98):
+  361 trades, a real TP declared on every leg and reached by 17-56% of its Stage-0 trades.'
+last_dispatched_at: '2026-11-19T02:50:53+00:00'
+grading:
+  attested: RULE-RQ20261119C9D2-01-LTR-CLOSE-NEAR-TARGET-REALTP
+  auto: true
+  decision_rule_id: RULE-RQ20261119C9D2-01-LTR-CLOSE-NEAR-TARGET-REALTP
+  evidence:
+  - research/results/RQ-20261119-c9d2-01/44446265899.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

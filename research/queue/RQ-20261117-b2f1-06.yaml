@@ -102,7 +102,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f1-06
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'DIR lever family never tested on mhg_pullback_1d: DIRECTION gate (+DI/-DI sign DI, Donchian-midline slope DS: --direction-filter di/slope) vs the declared leg, net
   of cost?'
@@ -115,3 +115,17 @@ why_this_matters: 'Plan node: research/levers/mhg_pullback_1d.yaml (testing leg;
   map manifest; the one positive read is a LEAD on a sibling leg (3a84-01, DI on xrp_pullback_2h, +5.56 R, a disjoint-window confirmation still owed, row RESULTS-GRADE-1025),
   and the harness flag --direction-filter exists (scripts/backtest_pullback.py, scripts/backtest_trend.py). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint
   window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-19T01:37:49+00:00'
+grading:
+  attested: RULERQ20261117b2f106
+  auto: true
+  decision_rule_id: RULERQ20261117b2f106
+  evidence:
+  - research/results/RQ-20261117-b2f1-06/44435172280.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

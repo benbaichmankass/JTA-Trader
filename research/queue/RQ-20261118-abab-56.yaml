@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-56
 title: 'FIDELITY re-test of ict_scalp_eth_15m (live-bar promotion PI-20261117-LSFHBH4A-0007): does the backtest reproduce what the leg did live, and is it net-positive at the cost actually paid?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -109,4 +109,17 @@ related:
 - scripts/research/ict_scalp_fidelity.py
 - scripts/research/live_bt_trade_join.py
 - comms/strategy_evidence/ict_scalp_eth_15m.json
-last_dispatched_at: '2026-11-18T19:53:00+00:00'
+last_dispatched_at: '2026-11-18T20:06:02+00:00'
+grading:
+  attested: RULE-RQ20261118-ICTSCALP-ETH15M-FIDELITY
+  auto: true
+  decision_rule_id: RULE-RQ20261118-ICTSCALP-ETH15M-FIDELITY
+  evidence:
+  - research/results/RQ-20261118-abab-56/44385139200.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -141,6 +141,11 @@ def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
     man = (entry.get("train_parity") or {}).get("manifest")
     if man:
         out.append(manifest_dataset_path(str(man)))
+    # ML-EXITHEAD-ROWS-KAGGLE (2026-11-18): a non-ml_bakeoff unit that reads published shards names them in
+    # routing.published_paths; they are checked against the same allowlist (published_problem), never trusted.
+    extra = (entry.get("routing") or {}).get("published_paths")
+    if isinstance(extra, list):
+        out.extend(str(p) for p in extra if p)
     return out
 
 
@@ -268,11 +273,24 @@ def class_backends(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> List
             m = _num((entry.get("routing") or {}).get("est_minutes"))
             if m is not None and m > float(kf.get("min_est_minutes", 30)):
                 bl = [be] + bl
+    ov = cfg.get("kaggle_overflow") or {}
+    ob, after = ov.get("backend"), ov.get("after")
+    if ob and ob in cfg["backends"] and after in bl and cls in (ov.get("classes") or []) and not runner_only_reason(entry):
+        bl.insert(bl.index(after) + 1, ob)      # KAGGLE GPU OVERFLOW: the idle GPU kernel runs CPU units behind the full CPU kernel
     out: List[str] = []
     for b in bl:
         if b not in out:
             out.append(b)
     return out
+
+
+def overflow_keep_hours(be: str, cls: str, cfg: Dict[str, Any]) -> float:
+    """GPU hours the overflow keeps back for real GPU units: a CPU unit overflowed onto `be` must leave this much quota unspent
+    ON TOP of the backend's own floor. 0 for every other (backend, class) pair."""
+    ov = cfg.get("kaggle_overflow") or {}
+    if ov.get("backend") == be and cls in (ov.get("classes") or []):
+        return float(ov.get("keep_gpu_hours", 0.0))
+    return 0.0
 
 
 def class_routing_conflict(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
@@ -424,7 +442,7 @@ def fallback_problem(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], s
     return None
 
 
-def _available(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: BackendState) -> Optional[str]:
+def _available(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: BackendState, keep_extra: float = 0.0) -> Optional[str]:
     """None when `backend` can take one more unit now, else why not."""
     b = cfg["backends"][backend]
     if b.get("auto_route") == "fallback":
@@ -442,7 +460,7 @@ def _available(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: Bac
             return f"{backend} quota unreadable ({st.quota_note}); not routed blind"
         need = est_hours(entry) if _num((entry.get("routing") or {}).get("est_minutes")) is not None \
             else float(q.get("default_unit_hours", 1.0))
-        floor = float(q.get("floor_hours", 0.0))
+        floor = float(q.get("floor_hours", 0.0)) + keep_extra
         if st.quota_hours - need < floor:
             return (f"{backend} {q.get('resource', 'GPU')} quota {st.quota_hours:.2f} h left, unit needs ~{need:.2f} h, "
                     f"floor {floor:g} h (refreshes {st.quota_refresh or 'unknown'})")
@@ -498,7 +516,7 @@ def resolve(entry: Dict[str, Any], cfg: Dict[str, Any], st: Optional[BackendStat
         return base
     why_not: List[str] = []
     for be in (effective_backend(b, entry, cfg) for b in class_backends(base.cls, entry, cfg)):
-        why = _available(be, entry, cfg, st)
+        why = _available(be, entry, cfg, st, overflow_keep_hours(be, base.cls, cfg))
         if why is None:
             return Resolution(True, be, cfg["backends"][be]["workflow"], base.cls, base.source,
                               reason=f"compute: {entry.get('compute')} -> class {base.cls} -> {be}"

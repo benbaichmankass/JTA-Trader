@@ -58,6 +58,8 @@ _DRY_MODES = {"dry", "dry_run", "dry-run", "paper"}
 #: exchanges the trader can read positions + resting orders for
 _READABLE = {"bybit", "alpaca", "interactive_brokers", "ib"}
 NO_READ_PATH = "— (no broker read from the trader)"
+#: journal vs venue size agree when within this fraction (float noise on fractional venues), never a size tolerance
+QTY_REL_TOL = 1e-6
 COULD_NOT_READ = "— (could not read)"
 
 
@@ -151,7 +153,7 @@ def _open_journal_trades(account_id: str, db_path: str) -> Optional[List[Dict[st
         with sqlite3.connect(db_path, timeout=5) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                "SELECT id, symbol, direction, strategy_name FROM trades "
+                "SELECT id, symbol, direction, strategy_name, position_size FROM trades "
                 "WHERE account_id = ? AND status = 'open' "
                 "AND COALESCE(is_backtest, 0) = 0",
                 (account_id,),
@@ -282,6 +284,8 @@ class AccountReport:
     journal_open: Optional[int] = None          # None = could not read
     ghosts: List[str] = field(default_factory=list)
     untracked: List[str] = field(default_factory=list)
+    # BOOT-AUDIT-PER-QTY-TRACKING: a broker position the journal holds for a DIFFERENT size is not "tracked".
+    qty_mismatch: List[str] = field(default_factory=list)
     bracket_read: bool = True
     full_bracket: int = 0
     missing_bracket: List[str] = field(default_factory=list)
@@ -289,7 +293,7 @@ class AccountReport:
 
     @property
     def problems(self) -> int:
-        n = len(self.ghosts) + len(self.untracked) + len(self.missing_bracket)
+        n = len(self.ghosts) + len(self.untracked) + len(self.missing_bracket) + len(self.qty_mismatch)
         if self.readable and self.broker is None:
             n += 1
         if self.journal_open is None:
@@ -333,6 +337,10 @@ def reconcile_account(cfg: Dict[str, Any], db_path: str,
         return rep
     rep.broker = [(str(p.get("symbol") or "").upper(), _side(p.get("side")))
                   for p in positions if float(p.get("size") or 0) > 0]
+    venue_qty: Dict[Tuple[str, Optional[str]], float] = defaultdict(float)
+    for p in positions:
+        if float(p.get("size") or 0) > 0:
+            venue_qty[(str(p.get("symbol") or "").upper(), _side(p.get("side")))] += abs(float(p.get("size") or 0))
     if journal is None:
         return rep
     j_keys = {(str(t.get("symbol") or "").upper(), _side(t.get("direction"))) for t in journal}
@@ -343,11 +351,35 @@ def reconcile_account(cfg: Dict[str, Any], db_path: str,
 
     b_keys = set(rep.broker)
     b_syms = {k[0] for k in b_keys}
+    def _journal_qty(sym: str, side: Optional[str]) -> Optional[float]:
+        """Summed open journal size for the position; None if any matching row's size is unreadable."""
+        total = 0.0
+        for t in journal:
+            if str(t.get("symbol") or "").upper() != sym:
+                continue
+            if side and _side(t.get("direction")) != side:
+                continue
+            try:
+                total += abs(float(t.get("position_size")))
+            except (TypeError, ValueError):
+                return None
+        return total
+
     for sym, side in rep.broker:
-        if _held(sym, side):
-            rep.tracked += 1
+        label = f"{sym} {side or ''}".strip()
+        if not _held(sym, side):
+            rep.untracked.append(label)
+            continue
+        # PER QUANTITY, not per symbol (BOOT-AUDIT-PER-QTY-TRACKING, measured 2026-11-18 23:28:59Z: alpaca_portfolio
+        # SLV read "1/1 tracked" while the venue held 877 short against ONE open journal row of 6).
+        jq, vq = _journal_qty(sym, side), venue_qty.get((sym, side), 0.0)
+        if jq is None:
+            rep.qty_mismatch.append(f"{label}: journal qty {COULD_NOT_READ} / venue {vq:g}")
+        elif abs(jq - vq) > max(1e-9, QTY_REL_TOL * max(jq, vq)):
+            rep.qty_mismatch.append(f"{label}: journal {jq:g} / venue {vq:g}")
+            logger.warning("boot_reconcile: QTY MISMATCH account=%s %s journal=%s venue=%s", aid, label, jq, vq)
         else:
-            rep.untracked.append(f"{sym} {side or ''}".strip())
+            rep.tracked += 1
     for t in journal:
         sym, side = str(t.get("symbol") or "").upper(), _side(t.get("direction"))
         at_broker = (sym, side) in b_keys if side and any(s for _, s in b_keys) else sym in b_syms
@@ -448,6 +480,8 @@ def _section_for(group: str, accts: List[AccountReport]):
             body.append(f"  ❌ ghost: {g} (journal open, broker flat)")
         for u in a.untracked:
             body.append(f"  ❌ untracked: {u} (broker open, no journal row)")
+        for q in a.qty_mismatch:
+            body.append(f"  ❌ qty mismatch: {q} (not counted as tracked)")
         for m in a.missing_bracket:
             body.append(f"  ❌ {m}")
         if a.legs is None:

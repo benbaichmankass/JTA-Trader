@@ -1,0 +1,98 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "141 committed Stage-0 trades over 4 IB futures legs (comms/strategy_evidence/runs/2026-09-24-e55), 141 with a computable ATR14",
+  "n": 141,
+  "measurement": {
+    "rule": "RULE-IB-GROSS-ATR-FLOOR-S0",
+    "n_trades": 141,
+    "n_atr_computable": 141,
+    "per_leg": {
+      "mgc_trend_1h": {
+        "n": 118,
+        "timeframe": "1h",
+        "n_atr": 118,
+        "stop_over_atr_median": 2.522419840798643,
+        "stop_vs_atr_stop_mult_median": 1.0089679363194572
+      },
+      "mhg_pullback_1d": {
+        "n": 10,
+        "timeframe": "2h",
+        "n_atr": 10,
+        "stop_over_atr_median": 5.7372943716749365,
+        "stop_vs_atr_stop_mult_median": 2.8686471858374682
+      },
+      "mgc_pullback_1d": {
+        "n": 8,
+        "timeframe": "2h",
+        "n_atr": 8,
+        "stop_over_atr_median": 4.8655272287913345,
+        "stop_vs_atr_stop_mult_median": 3.2436848191942236
+      },
+      "mes_trend_long_1d": {
+        "n": 5,
+        "timeframe": "1h",
+        "n_atr": 5,
+        "stop_over_atr_median": 15.20112456747406,
+        "stop_vs_atr_stop_mult_median": 6.080449826989625
+      }
+    },
+    "exit_imputed": 0,
+    "A": {
+      "m1_max": 3.5337771501563457,
+      "total_return": 0.5462515955876872,
+      "max_drawdown": 0.21697734684225378,
+      "m3": 2.5175512722294524,
+      "m2": 32.5819
+    },
+    "arms": {
+      "0.5": {
+        "m1_max": 3.5337771501563457,
+        "total_return": 0.5462515955876872,
+        "max_drawdown": 0.21697734684225378,
+        "m3": 2.5175512722294524,
+        "m2": 32.5819,
+        "m2_ratio": 1.0,
+        "reweighted_share": 0.0,
+        "mean_w": 1.0,
+        "ratio_boot": {
+          "lower_80": 1.0,
+          "median": 1.0,
+          "draws_den_not_positive": 634
+        },
+        "a_m1_ok": false,
+        "b_ratio_ok": true,
+        "c_m3_ok": true,
+        "passes": false
+      },
+      "1.0": {
+        "m1_max": 3.5337771501563457,
+        "total_return": 0.5462515955876872,
+        "max_drawdown": 0.21697734684225378,
+        "m3": 2.5175512722294524,
+        "m2": 32.5819,
+        "m2_ratio": 1.0,
+        "reweighted_share": 0.0,
+        "mean_w": 1.0,
+        "ratio_boot": {
+          "lower_80": 1.0,
+          "median": 1.0,
+          "draws_den_not_positive": 634
+        },
+        "a_m1_ok": false,
+        "b_ratio_ok": true,
+        "c_m3_ok": true,
+        "passes": false
+      }
+    },
+    "power_note": "paired design, the same trades in every arm; more than 50% reweighted widens the bound (INDETERMINATE likely); reweighted share k=0.5 0.00, k=1.0 0.00",
+    "verdict": "FAIL",
+    "smallest_passing_k": null,
+    "verdict_reason": "no k passes: k=0.5: M1 3.53 (<=1.5 False), ratio lb80 1.000 (True), M3 ok True; k=1.0: M1 3.53 (<=1.5 False), ratio lb80 1.000 (True), M3 ok True"
+  },
+  "note": "no k passes: k=0.5: M1 3.53 (<=1.5 False), ratio lb80 1.000 (True), M3 ok True; k=1.0: M1 3.53 (<=1.5 False), ratio lb80 1.000 (True), M3 ok True",
+  "data_inputs": [
+    "comms/strategy_evidence/runs/2026-09-24-e55",
+    "yahoo futures candles"
+  ]
+}

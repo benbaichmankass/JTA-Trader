@@ -63,6 +63,9 @@ HEAVY_ENTRYPOINTS = [
     # own definition. Recorded here because it is the direct evidence that a
     # hand-written list needs a completeness pass behind it.
     "scripts/ml/spike_a_pooled_labels.py",
+    # D2 option A (RQ-20261119-a10d-01): a stride-1 Chronos forecast rebuild, a market_features build and two
+    # LightGBM head retrains in one process; it takes the queue once and its `python -m ml` children inherit it.
+    "scripts/research/fc_stride1_rebuild.py",
 ]
 
 # Scripts that import a heavy ML library but are NOT heavy trainer jobs. Each
@@ -75,6 +78,17 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/ml_overlay_noninferior.py":
+        "ML-PRIMARY-8 D4 monotone GBM arm (RQ-20261119-e8a1-03, --cpcv-challenger mlgbm): a 200-tree, 7-leaf LGBMClassifier refit "
+        "per CPCV split on ~2-3k TD trades of public Binance Vision candles (lightgbm is imported lazily, only for that arm); "
+        "seconds per split on a GitHub runner (compute cpu_light), never needs_vm_data, never routed to the trainer.",
+    "scripts/research/ml_entry_served_forward.py":
+        "ML-PRIMARY-9 forward read of the served ENTRY refit (RQ-20261119-b9d0-02): loads two committed boosters and predicts on a few "
+        "weeks of 1h rows; no fit. Runner-only (research-script-run.yml, public klines), never the trainer.",
+    "scripts/research/ml_entry_samebar_cap.py":
+        "ML-PRIMARY-7 same-bar cap (RQ-20261118-f7c1-01 / -08): inference only -- loads the committed frozen ENTRY v1 boosters "
+        "(comms/research/RQ-20261101-c692-06/41324826751/model) and scores public Binance Vision 1h rows (no training); ~25 s of CPU "
+        "locally or on a GitHub runner (compute cpu_light), never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_v1_filters_read.py":
         "ML-BAR-ONE-READ (RQ-20261115-a474-04): inference only -- loads the committed served ENTRY v1 boosters and scores one "
         "held-out year of public Binance Vision 1h rows (no training); minutes of CPU on a GitHub runner, never needs_vm_data, "
@@ -136,8 +150,10 @@ DECLARED_LIGHT = {
         "RQ-20261112-4654-01, compute cpu_long, research-script-run.yml github_runner); fits LightGBM on public Binance Vision "
         "klines, never needs_vm_data, never routed to the trainer.",
     "scripts/research/ml_entry_maker_replay.py":
-        "ML-DECISION-MODELS maker-entry replay: scores the committed frozen ENTRY v1 booster (no fit) on public Binance Vision klines "
-        "(unit RQ-20261112-1c4e-01, compute cpu_long, github_runner or a lane container); never routed to the trainer.",
+        "ML-DECISION-MODELS maker-entry replay: scores the committed frozen ENTRY v1 booster on public Binance Vision klines "
+        "(unit RQ-20261112-1c4e-01, compute cpu_long, github_runner or a lane container); never routed to the trainer. Corrected "
+        "2026-11-19 (ML-PRIMARY-9): it is not fit-free -- `exit --population dev_oof` refits the c692-01 recipe per dev fold (8 small "
+        "LightGBM fits, e8a1-01) and `exit-gate` adds one 200-tree P(fill) classifier (b9d0-03); still runner-only, never the trainer.",
     "scripts/research/ml_entry_cost_levers.py":
         "ML-LEVER-PLAN ENTRY cost levers (units RQ-20261112-4654-02/-03): same data and route as ml_decision_entry.py, LightGBM refits on "
         "public Binance Vision klines on a GitHub runner (compute cpu_long, github_runner); never needs_vm_data, never routed to the trainer.",
@@ -154,6 +170,10 @@ DECLARED_LIGHT = {
         "TM-BENCH trade-management bench: fits LightGBM / logit action-value heads on harness paths replayed from "
         "public Binance Vision candles in a lane container or a GitHub runner. Its queue units declare compute "
         "cpu_long (backend github_runner), never needs_vm_data, so it is never routed to the 6 GB trainer.",
+    "scripts/research/exit_holdbias.py":
+        "ML-HOLDBIAS-EXIT-MODEL exit-holdbias-v1 harness (RQ-20261101-78fc-05): fits 13 LightGBM value heads x 6 "
+        "folds on the committed action-grid labels (~118k check-ins) on a GitHub runner (research-script-run.yml, "
+        "compute cpu_long, needs_trainer_resident_data false); never needs_vm_data, never routed to the trainer.",
     "scripts/ml/export_exit_head.py":
         "reads a trained model and writes an artifact; fits nothing. Its heavy "
         "work happens inside train_exit_head.py, which locks.",

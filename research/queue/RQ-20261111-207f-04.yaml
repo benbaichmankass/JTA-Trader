@@ -3,7 +3,7 @@
 id: RQ-20261111-207f-04
 title: 'ALPACA-LIVE BOOK / CHALLENGERS (P8-Q4): which rostered equity legs earn on the alpaca_live cash book -- [balance removed], long only, whole shares, one slot, T+1, the live sizer
   -- one at a time and all competing for the slot?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -140,12 +140,9 @@ grading:
   decision_rule_id: RULE-RQ20261111-207f-04-CHALLENGER-BOOK
   evidence:
   - research/results/RQ-20261111-207f-04/43412564945.jsonl
-  graded_at: '2026-11-13'
+  - research/results/RQ-20261111-207f-04/44385144579.jsonl
+  graded_at: '2026-11-19'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261113-SX5INCOP-0001
-  owner_reason: 'producer_failed: verdict.json parses (read_state measured, verdict pass, slv_trend_1h
-    qualifies) but lacks population and n required by script_run.py; producer contract fix filed PI-20261113-SX5INCOP-0001'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: pass

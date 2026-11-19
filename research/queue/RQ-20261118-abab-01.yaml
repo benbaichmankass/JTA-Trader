@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-01
 title: 'Symbol holdout for the D55 prop-pace lead at 4h: does Donchian-55 / trail 6.0 beat Donchian-20 on DASH/ONT/NEO/SNX/MANA/SAND (symbols the lead was never selected on)?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -133,4 +133,17 @@ roadmap:
 related:
 - RQ-20261026-f679-03
 - scripts/research/harness_stage0.py
-last_dispatched_at: '2026-11-18T19:52:52+00:00'
+last_dispatched_at: '2026-11-18T20:05:56+00:00'
+grading:
+  attested: RULE-RQ20261118-ABAB-01-D55-HOLDOUT-4H
+  auto: true
+  decision_rule_id: RULE-RQ20261118-ABAB-01-D55-HOLDOUT-4H
+  evidence:
+  - research/results/RQ-20261118-abab-01/44382443666.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

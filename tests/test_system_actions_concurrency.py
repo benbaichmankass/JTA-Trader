@@ -70,6 +70,20 @@ def test_overlap_report_names_other_in_flight_runs_only():
     assert route.overlap_report([], "9") == []
 
 
+def test_overlap_report_summarises_ghost_runs_waiting_over_24h():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 18, 23, 0, tzinfo=timezone.utc)
+    runs = [
+        {"id": 43096446717, "status": "queued", "updated_at": "2026-11-11T20:30:21Z", "display_title": "send-ping"},
+        {"id": 5, "status": "queued", "updated_at": "2026-11-18T22:50:00Z", "display_title": "fresh", "html_url": "u5"},
+        {"id": 6, "status": "in_progress", "updated_at": "2026-11-10T00:00:00Z", "display_title": "long run"},
+    ]
+    lines = route.overlap_report(runs, "9", now=now)
+    assert any("run 5" in ln for ln in lines) and any("run 6" in ln for ln in lines)   # in_progress is never a ghost
+    assert lines[-1] == "ignored 1 ghost run(s) waiting > 24 h with no job: 43096446717"
+    assert not any(ln.startswith("run 43096446717") for ln in lines)
+
+
 def test_route_reports_overlap_and_outcome_comment_carries_it():
     jobs = _wf("system-actions.yml")["jobs"]
     step = next(s for s in jobs["route"]["steps"] if s.get("id") == "ov")

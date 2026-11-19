@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research dispatcher change (scripts/research/dispatch_queue.py is on the web-api in-process list: merging restarts ict-web-api, not the trader); manager merges after CI",
+  "why": "Row RESEARCH-DISPATCH-EXEMPT-FLOOR-1119. The starvation floor's one-fire cap and the infra yield deferred the exempt trainer/kaggle_cpu backends; the trainer had no research run from 03:25Z to 10:42Z on 2026-11-19 (measured in dispatcher run 44492257802). Exempt backends are now bounded by their own max_concurrent and max_total_inflight, never by the floor cap. The pool still gets exactly one floor fire. The backpressure line now states its population (the gh listing is truncated at 200). Gates this adds or changes: none (removes friction)."
+}

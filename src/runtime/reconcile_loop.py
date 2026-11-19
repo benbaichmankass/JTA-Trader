@@ -11,9 +11,12 @@ ms max. Moving it off the tick takes that cost off every signal evaluation.
 
 WHAT DID NOT CHANGE. The same function runs, with the same phases in the same
 order, on a bounded cadence (default 60 s start-to-start; a pass that overruns
-is followed immediately, never queued). It holds `journal_sync` for the whole
-pass, so no entry dispatch is in flight during a pass. That is the invariant
-the single-threaded loop gave for free (see src/runtime/journal_sync.py).
+is followed immediately, never queued). Each PHASE holds `journal_sync`
+(order_monitor._recon_phase, 2026-11-19, row LIVE-TICK-NEAR-BUDGET), so no
+entry dispatch is in flight during a phase and a dispatch completes between
+phases. That is the invariant the single-threaded loop gave for free (see
+src/runtime/journal_sync.py); holding it for the whole pass made every entry
+wait a mean 23.8 s.
 
 NO HALTING (Prime Directive rule 7). A raising pass is logged and the next pass
 runs on schedule. A thread that dies is restarted by the main tick. When
@@ -100,13 +103,11 @@ def _hook():
 
 
 def run_one_pass(run_fn: Callable[[], Any]) -> bool:
-    """One reconciliation pass under journal_sync. Never raises. True on success."""
-    try:
-        from src.runtime.journal_sync import journal_sync
-        sync = journal_sync("reconciliation")
-    except Exception:  # noqa: BLE001 — the pass still runs without the module
-        import contextlib
-        sync = contextlib.nullcontext()
+    """One reconciliation pass (journal_sync is held per phase inside it). Never raises. True on success."""
+    # The lock is held PER PHASE inside run_reconciliation_tick (order_monitor._recon_phase), not for
+    # the whole pass: the whole-pass hold made every entry wait a mean 23.8 s (row LIVE-TICK-NEAR-BUDGET).
+    import contextlib
+    sync = contextlib.nullcontext()
     ok = False
     err: Optional[str] = None
     try:

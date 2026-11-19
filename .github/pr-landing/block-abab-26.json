@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "queue move only: 7 units git-mv'd to research/queue/blocked/ (not a path the self-land guard vouches for); manager merges after the FULL pytest-run is green",
+  "why": "Blocks the 7 DIRECTION units on ict_scalp legs (RQ-20261118-abab-24/26/28/30/32/34/36) because scripts/backtest_ict_scalp.py has no --side-filter and abab-26 failed deterministically (run 44443932727). Manager asked to BLOCK abab-26, not retire; the same defect is in the six siblings, which would burn runs. Blocked on PI-20261119-OFUCR5NF-0003. Revert: git mv the files back to research/queue/ with status queued. Gates this adds or changes: none."
+}

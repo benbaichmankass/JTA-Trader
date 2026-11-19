@@ -101,7 +101,11 @@ class RateGate:
             if per_min and self.declared_per_min is None:
                 self.declared_per_min = per_min
                 self.base_rps = self.rps = min(self.cap_rps, max(self.rps, 0.8 * per_min / 60.0))
-                print(f"[rate] plan declares {per_min} req/min -> pacing at {self.rps:.2f} req/s", flush=True)
+                # stderr, not stdout: live_review_outcomes imports this module and its caller json.loads the
+                # pricer's STDOUT. A status line here broke every equity packet's priced_options on 2026-11-19
+                # (IEF LR-20261119T1437Z: "live_review_outcomes output is not JSON ... stdout starts '[rate] plan'").
+                print(f"[rate] plan declares {per_min} req/min -> pacing at {self.rps:.2f} req/s",
+                      file=sys.stderr, flush=True)
 
     def penalize(self, kind: str) -> None:
         with self._lock:
@@ -433,6 +437,22 @@ def _fresh(prior: Dict[str, Any], now: datetime, days: float = 3.0) -> bool:
     return bool(last) and (now - datetime.fromisoformat(last.replace("Z", "+00:00"))).total_seconds() < days * 86400
 
 
+def _history_complete(prior: Dict[str, Any], start: datetime, slack_days: float = 31.0) -> bool:
+    """Does the stored series already reach back to the backfill ``start``?
+
+    2026-11-18 (AM-OPS-3, trainer-diag #26983): QQQ, TLT, IWM, SLV and IEF held only 2026-10/11 1m partitions while SPY and GLD
+    reach 2016-01, yet every backfill run counted them ``skipped_fresh`` because the skip looked only at the LAST bar. A series is
+    complete when a full fetch from (at most) ``start`` has been recorded (``backfill_start``; a symbol listed after ``start``
+    legitimately begins later), or when its first bar is within ``slack_days`` of ``start``."""
+    done_from = prior.get("backfill_start")
+    if done_from and done_from <= _iso(start):
+        return True
+    first = prior.get("first")
+    if not first:
+        return False
+    return datetime.fromisoformat(first.replace("Z", "+00:00")) <= start + timedelta(days=slack_days)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=["probe", "backfill", "refresh"], required=True)
@@ -484,20 +504,29 @@ def main(argv: Optional[List[str]] = None) -> int:
             if a.skip_fetched_after and (prior.get("fetched_at") or "") >= a.skip_fetched_after:
                 skipped += 1
                 continue
-            if a.mode == "backfill" and prior.get("status") in ("ok", "no_data") and (prior.get("status") == "no_data" or _fresh(prior, now)):
+            history_gap = a.mode == "backfill" and prior.get("status") == "ok" and not _history_complete(prior, start)
+            if (a.mode == "backfill" and prior.get("status") in ("ok", "no_data") and not history_gap
+                    and (prior.get("status") == "no_data" or _fresh(prior, now))):
                 skipped += 1
                 continue
-            todo.append((sym, tf, key, prior))
+            todo.append((sym, tf, key, prior, history_gap))
     if a.max_new and len(todo) > a.max_new:
         todo, stopped = todo[: a.max_new], True
 
     def work(job: tuple) -> tuple:
-        sym, tf, key, prior = job
+        sym, tf, key, prior, history_gap = job
         if deadline and time.monotonic() > deadline:
             return job, None, "deadline"
         try:
-            return job, update_symbol(get, root, sym, tf, feed, start, end, full=False,
-                                      prior=prior if prior.get("status") == "ok" else None), None
+            if history_gap:  # the stored series starts after `start`: refetch it whole from `start` (month files are rewritten)
+                rec = update_symbol(get, root, sym, tf, feed, start, end, full=True, prior=None)
+                rec["note"] = (rec.get("note") or "") + f" history gap: first was {prior.get('first')} -> full fetch from {_iso(start)}"
+            else:
+                rec = update_symbol(get, root, sym, tf, feed, start, end, full=False,
+                                    prior=prior if prior.get("status") == "ok" else None)
+            if (history_gap or not prior) and rec.get("status") in ("ok", "no_data"):
+                rec["backfill_start"] = _iso(start)
+            return job, rec, None
         except Exception as e:  # contained per item: one symbol never halts the run
             return job, None, str(e)[:140]
 
@@ -537,7 +566,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         for sym in syms:
             pr = manifest["series"].get(f"{sym}/{tf}") or {}
             done_now = bool(a.skip_fetched_after) and (pr.get("fetched_at") or "") >= a.skip_fetched_after
-            if not (done_now or pr.get("status") == "no_data" or (pr.get("status") == "ok" and _fresh(pr, now))):
+            complete = a.mode != "backfill" or _history_complete(pr, start)
+            if not (done_now or pr.get("status") == "no_data" or (pr.get("status") == "ok" and _fresh(pr, now) and complete)):
                 pending += 1
     manifest["run"] = {"mode": a.mode, "symbols": len(syms), "tfs": tfs, "fetched": done, "skipped_fresh": skipped, "no_data": no_data,
                        "failed": len(failures), "stopped_early": stopped, "remaining": pending}

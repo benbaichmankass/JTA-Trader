@@ -47,7 +47,7 @@ on:
     # at the next :20 instead of waiting up to 6 h. The 06:20 slot still
     # follows the IB gateway's 06:05 reset window. schedule-keeper reads these
     # crons from this file, so its dedupe/keep logic follows the change with no
-    # edit of its own; `--max-repo-queued 10` (the in-flight caps moved to scripts/research/research_compute.yaml),
+    # edit of its own; the repo-queued cap and the in-flight caps (both in scripts/research/research_compute.yaml since 2026-11-19),
     # the per-run GPU cap and the monthly ledger cap are UNCHANGED and bind
     # each run exactly as before (24 runs/day x cap 1 is the per-day GPU
     # ceiling — the ledger's $10/month still binds first). The replenisher's
@@ -184,6 +184,7 @@ jobs:
       payload: ${{ steps.bundle.outputs.payload }}
       dispatched: ${{ steps.flag.outputs.dispatched }}
       deferred: ${{ steps.flag.outputs.deferred }}
+      rearmed: ${{ steps.rearm_inline.outputs.rearmed }}
     env:
       # THE ONE FIRE DECISION. Both consumers below read THIS, never `inputs`
       # directly — see the header. A scheduled run fires; a hand dispatch fires
@@ -269,8 +270,12 @@ jobs:
           # RESEARCH-ROUTER (2026-10-13): the TOTAL cap and each backend's own
           # max_concurrent (runner 3, trainer 1, kaggle 1) now live in
           # scripts/research/research_compute.yaml, not on this command line.
+          # REPO-QUEUED SHARE (2026-11-19, manager): the repo-queued cap (limits.max_repo_queued) and the short-job workflows it does
+          # not count (limits.repo_queued_ignore_workflows) live there too; the repo-queued flag was REMOVED from this command line
+          # (an explicit flag would override the config). MEASURED: the flat cap of 10 left research runner units blocked 100% of
+          # the time 11-19 06:00-11:30Z, see research_compute.yaml.
           ARGS=(--ref "${{ github.ref_name }}" --max-gpu-dispatches-per-run "${{ inputs.max_gpu || '1' }}"
-                --max-repo-queued 10 --utilization-dir comms/research/utilization)
+                --utilization-dir comms/research/utilization)
           # Kaggle weekly GPU quota (token-free): unreadable = GPU units WAIT, never routed blind.
           if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
             pip install --quiet "kaggle>=2.0" six && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
@@ -444,9 +449,10 @@ jobs:
           HEALTH="$(python3 scripts/ci/check_research_queue_health.py 2>&1)" || HRC=$?
           echo "${HEALTH}"
           if [ "${HRC}" -eq 3 ]; then
-            echo "::notice::research-queue health: runnable below target but fillable — dispatching research-queue-replenish.yml (its concurrency group serialises it with the daily run)."
-            gh workflow run research-queue-replenish.yml \
-              || echo "::error::could not dispatch research-queue-replenish.yml — see the step log above."
+            # REPLENISH-PR-HONEST (manager 2026-11-19): STOP-GENERATED-AUTHORING (operator 2026-11-01) sets the refill
+            # target to 0, so dispatching the replenisher here filled nothing (the 4x/day cron already emits programme
+            # nodes). A fillable floor gap is REPORTED, never filled, and does not page.
+            echo "::notice::research-queue health: runnable below the floor (fillable from templates) -- REPORTED, not filled (STOP-GENERATED-AUTHORING); the 4x/day replenish cron still emits plan-driven programme nodes."
           elif [ "${HRC}" -ne 0 ]; then
             echo "::warning::research-queue health tripped — dispatching send-ping."
             gh workflow run system-actions.yml \
@@ -467,6 +473,30 @@ jobs:
             cat /tmp/dispatch.txt 2>/dev/null || echo "(the dispatcher produced no output — see the step log)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # PI-20261118-JFWRQYOV-0001 (2026-11-18, MEASURED): with work left, the separate `rearm` job waited 6-13 min for a
+      # hosted runner before its 150 s sleep (run 21:16Z: rearm queued 21:21:55Z, started 21:34:39Z), so cycles ran 19-21 min
+      # apart instead of 3-10. With work left, re-arm HERE on the runner this job already holds; the `rearm` job then
+      # only carries the idle (1800 s) heartbeat and the backstop for a cycle that died before this step.
+      - name: Re-arm the next cycle inline (work left)
+        id: rearm_inline
+        if: always() && steps.flag.outputs.fire == 'true' && (steps.flag.outputs.dispatched != '0' || steps.flag.outputs.deferred != '0')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          sleep 60
+          other=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=20" \
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null || echo 0)
+          echo "other dispatch runs waiting to start: ${other}"
+          if [ "${other}" != "0" ]; then echo "another cycle is already pending; not re-arming"; echo "rearmed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if gh workflow run research-queue-dispatch.yml --ref main; then
+            echo "rearmed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::inline re-arm failed; the rearm job is the backstop"
+          fi
 
       # Re-asserts the failure "Grade and dispatch" swallowed via `continue-
       # on-error`, now that the receipt and any real stamps have had their
@@ -506,9 +536,9 @@ jobs:
   # the cron stay as the backstop that restarts the chain if it ever dies. Adds no gate.
   rearm:
     needs: [dispatch]
-    if: ${{ always() && needs.dispatch.result != 'skipped' && needs.dispatch.result != 'cancelled' }}
+    if: ${{ always() && needs.dispatch.result != 'skipped' && needs.dispatch.result != 'cancelled' && needs.dispatch.outputs.rearmed != 'true' }}
     runs-on: ubuntu-latest  # B13 (COMPUTE-ALLOCATION): research never lands on the ops pool; not vars.INFRA_RUNS_ON
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       actions: write
       contents: read
@@ -691,9 +721,22 @@ jobs:
           if [ -f /tmp/payload/collected.json ]; then cp /tmp/payload/collected.json /tmp/collected.json; fi
           git status --short | head -40
 
+      # LAND-TIME DEDUPE (2026-11-19, #27097/#27103/#27111/#27119): the collect step's open-batch check runs ~12 min
+      # before this job, and the previous cycle's batch PR opens in between -- so the same runs were landed twice and
+      # the second PR went dirty. Ask again NOW, drop runs already in an open batch PR, and land only what is left.
+      # Fails open (could not list -> land as collected). The utilization receipt is not lost when the whole batch is
+      # pruned: "Land the liveness receipt" below lands comms/research/utilization on its own.
+      - name: Drop runs already in an open results-batch PR (land-time re-check)
+        id: prune
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/research/collect_runner_results.py --prune-pending
+
       - name: Land the batch of runner results on main
         id: batch
-        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != ''
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != '' && steps.prune.outputs.count != '0'
         uses: ./.github/actions/commit-to-main
         with:
           # "false" (B6 / GH-CAPACITY-LAND-VERIFY-OFF-RUNNER, COMPUTE-ALLOCATION-2026-11-03 section 3.3): the in-run wait held a
@@ -753,6 +796,24 @@ jobs:
       # liveness signal (the guard grades age against a 48 h window, so a
       # receipt a few minutes older changes nothing). Fails open: if the API
       # call fails, land it.
+      # AUTOMATION-DATACOMMIT-CONFLICT (manager-approved 2026-11-19): the stamp landing runs with
+      # verify-merged "false", so commit-to-main's refresh (where resolve_stamp_conflicts.py runs) never
+      # reaches a stamp PR, and one that a later stamp beat to main sat conflicted until the 6 h closer
+      # above. Each cycle: merge main into every CONFLICTED open stamp PR and resolve with that resolver;
+      # close it as superseded when main already carries the same or later stamps, else push the refresh.
+      # A non-stamp conflict is left alone and printed. In a SEPARATE worktree: this tree holds this
+      # cycle's unlanded stamps. Listing uses GITHUB_TOKEN (the PAT's REST budget is exhausted at times,
+      # ACTIONS-QUEUE-BACKLOG); the push uses the checkout's PAT so the refreshed head gets its checks.
+      - name: Refresh or retire conflicted stamp PRs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          git worktree add -q --detach /tmp/stamp-refresh HEAD
+          python3 scripts/research/refresh_stamp_prs.py --cwd /tmp/stamp-refresh
+          git worktree remove --force /tmp/stamp-refresh || true
+
       - name: Check for an in-flight receipt PR
         id: rcpt
         env:

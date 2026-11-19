@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "BOOT-AUDIT-PER-QTY-TRACKING: the restart ping counted a broker position as tracked per SYMBOL. alpaca_portfolio SLV read '1/1 tracked' at 2026-11-18 23:28:59Z with venue 877 short against one 6-share journal row. It now compares summed journal position_size with venue size per (symbol, side) and names a mismatch as a problem line. Read path / report only: no order, no refusal. Gates this adds or changes: none.",
+  "hold_reason": "tier2_by_path",
+  "hold_text": "src/runtime/boot_audit.py is outside the guard's Tier-1 surface (the trader imports it). The change is report-only: the restart ping's qty comparison, with no order, no refusal and no write. The trader restarts on deploy. Manager merges. Revert: git revert."
+}

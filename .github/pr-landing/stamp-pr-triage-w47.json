@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "New scripts/research/stamp_pr_triage.py + a dry-run-first step in research-watchdog.yml. Closes (with a per-unit comment) a DIRTY automation/research-queue-stamp-* PR whose stamps are all superseded/moot; never touches another branch; never lands a stamp for an unstamped producer_failed unit (test). Dry run is the default (STAMP_TRIAGE_LIVE: false); the merge-main path (--land) exists but is not enabled. Manager GO 23:52Z (PI-20261118-EFILLW47-0005). Replay on the four real PRs (#26904/#26908/#26916/#26920) reproduces the hand disposition. Revert: git revert.",
+  "why": "Dirty stamp PRs run no CI and never merge; nothing refreshed or closed them."
+}

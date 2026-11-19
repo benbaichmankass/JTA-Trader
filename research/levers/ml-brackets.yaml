@@ -45,3 +45,24 @@ declared:
     range: 12, 24, 48
     hypothesis: unknown
     unit: RQ-20261101-b603-01
+units:
+- RQ-20261118-04a5-02
+levers_tested:
+- family: labels
+  varied: TP placed per decision at the q0.60 LightGBM quantile of forward MFE-before-stop (clip 1-6 ATR) vs the fixed TP 3 ATR, SL 2 fixed, on
+    the frozen Foxhound-1 held-out decisions at per-symbol cost
+  response:
+    paired_mean_delta_r: -0.0052
+    se: 0.0048
+    ci:
+    - -0.0145
+    - 0.0041
+    bar: 0.02
+    n: 12746
+    verdict: fail
+    run: '44394894343'
+    note: quantile-TP mechanism closed on Foxhound-1 for q 0.60; next D6 lever only after a positive-net D3 entry model; a distributional MAE
+      head for the SL is a separate unit
+  shape: flat
+  tested_at_power: true
+  unit: RQ-20261118-04a5-02

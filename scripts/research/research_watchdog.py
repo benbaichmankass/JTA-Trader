@@ -157,6 +157,26 @@ def _active(runs: list, now: datetime) -> list:
             and (_age_min(r.get("created_at"), now) or 0) <= STALE_ACTIVE_HOURS * 60]
 
 
+def _idle_age_min(r: dict, now: datetime) -> Optional[float]:
+    """Minutes since this run last HELD its backend's slot: 0 while it is queued/in progress, else minutes since it
+    ended (`updated_at` of a completed run, never earlier than its start). A run with no readable `updated_at` falls
+    back to its start, which is the old (stricter) reading.
+
+    MEASURED 2026-11-19 18:47Z: kaggle_cpu escalated "IDLE 87 min, 6 runnable" while RQ-20261118-abab-37 had held the
+    one slot for 73 min (queued 17:24Z, ran 17:34:13Z-18:47:40Z) and finished that very minute. The limit was counted
+    from the run's START, so any run longer than the limit tripped it the moment it ended, before the dispatcher's next
+    cycle could refill the slot. The idle clock starts when the slot became free."""
+    if str(r.get("status")) in ("queued", "in_progress", "waiting", "pending"):
+        return 0.0
+    start = _age_min(r.get("created_at"), now)
+    end = _age_min(r.get("updated_at"), now)
+    if end is None:
+        return start
+    if start is None:
+        return end
+    return end if end <= start else start      # the end can never be older than the start; a bad stamp falls back to it
+
+
 def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: datetime, th: dict,
                 workflows: Optional[List[str]] = None) -> Dict[str, Any]:
     lim = float(th["fires_idle_minutes"])
@@ -257,8 +277,10 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
             return verdict(chk, OK, f"quota-bound: {quota['remaining']} GPU h left, under the {quota.get('floor_hours')} h floor "
                            "(units wait by design)", evidence=ev)
     act = _active(runs, now)
-    ages = [a for a in (_age_min(r.get("created_at"), now) for r in runs) if a is not None]
-    ev.update(active=len(act), minutes_since_last_start=round(min(ages), 1) if ages else None)
+    starts = [a for a in (_age_min(r.get("created_at"), now) for r in runs) if a is not None]
+    ages = [a for a in (_idle_age_min(r, now) for r in runs) if a is not None]   # since the slot was last held, not since a start
+    ev.update(active=len(act), minutes_since_last_start=round(min(starts), 1) if starts else None,
+              minutes_since_slot_free=round(min(ages), 1) if ages else None)
     # UNDERUTILISED (operator 2026-10-13): runnable work AND free slots. A reading, never an alert: it stays state OK
     # (so nothing reaches ops-flags or Telegram) and is recorded only in evidence / the weekly utilisation view.
     if max_concurrent is not None and len(act) < max_concurrent:
@@ -266,7 +288,8 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
     if act:
         return verdict(chk, OK, f"{len(act)} run(s) queued/in progress", evidence=ev)
     if ages and min(ages) <= lim:
-        return verdict(chk, OK, f"last run started {min(ages):.0f} min ago (limit {lim:g})", evidence=ev)
+        return verdict(chk, OK, f"slot free for {min(ages):.0f} min; last run started {min(starts):.0f} min ago (limit {lim:g})",
+                       evidence=ev)
     # The idle clock starts when work became due here (dispatcher utilization records), never before it: idle while
     # nothing was due is correct, so `ages` (minutes since the last start) is capped by minutes since work came due.
     due_min = _age_min(due_since.isoformat() if isinstance(due_since, datetime) else due_since, now) if due_since else None
@@ -291,10 +314,10 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
             return verdict(chk, OK, f"window opened {pos['since_open_min']:.0f} min ago (idle limit {lim:g} runs from the opening)",
                            evidence=ev)
         since = f"{min(pos['since_open_min'], min(ages)) if ages else pos['since_open_min']:.0f} min (inside its window)"
-        return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: nothing started on it for {since} "
+        return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: the slot has been free for {since} "
                        f"(limit {lim:g}, counted from window open)", evidence=ev, heal="dispatch")
     since = f"{min(ages):.0f} min" if ages else "ever (0 runs listed)"
-    return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: nothing started on it for {since} "
+    return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: the slot has been free for {since} "
                    f"(limit {lim:g})", evidence=ev, heal="dispatch")
 
 
@@ -494,7 +517,10 @@ class GhProbe:
 
     def dispatch(self, action: str) -> bool:
         if action == "replenish":
-            return self._gh(["workflow", "run", "research-queue-replenish.yml", "-f", "target=25"]) is not None
+            # REPLENISH-PR-HONEST (manager 2026-11-19): no explicit target. `target=25` expanded templates to meet a
+            # queue count, which STOP-GENERATED-AUTHORING (operator 2026-11-01) bans; a blank target = 0 = programme
+            # nodes only. Latent until now: no watchdog-dispatched run since 2026-11-12 (all 25 manual runs target 0).
+            return self._gh(["workflow", "run", "research-queue-replenish.yml"]) is not None
         return self._gh(["workflow", "run", DISPATCH_WORKFLOW]) is not None
 
     def ping(self, message: str) -> bool:

@@ -1,0 +1,76 @@
+{
+ "verdict": "report",
+ "read_state": "measured",
+ "n": 675,
+ "population": "aadc-14's (leg, trade) points: closed live/paper trades on 49 legs with a measured Stage-0 record, label mean net R of the next 20 trades < 0; null = each leg's trades shuffled",
+ "note": "order-null excess AUC (pooled / within-leg): cusum 0.1405 / 0.206, learned -0.0107 / -0.2512",
+ "measurement": {
+  "calibration": {
+   "cusum": {
+    "key": "cusum",
+    "pooled": {
+     "observed": 0.6555,
+     "null_mean": 0.515,
+     "null_sd": 0.043,
+     "excess": 0.1405,
+     "p_one_sided": 0.005,
+     "draws": 200
+    },
+    "within_leg": {
+     "observed": 0.5498,
+     "null_mean": 0.3438,
+     "null_sd": 0.053,
+     "excess": 0.206,
+     "p_one_sided": 0.005,
+     "draws": 200
+    }
+   },
+   "learned": {
+    "key": "learned",
+    "pooled": {
+     "observed": 0.4305,
+     "null_mean": 0.4412,
+     "null_sd": 0.0719,
+     "excess": -0.0107,
+     "p_one_sided": 0.5122,
+     "draws": 40
+    },
+    "within_leg": {
+     "observed": 0.318,
+     "null_mean": 0.5692,
+     "null_sd": 0.0936,
+     "excess": -0.2512,
+     "p_one_sided": 1.0,
+     "draws": 40
+    }
+   }
+  },
+  "features": [
+   "cusum",
+   "mean5",
+   "mean10",
+   "mean20",
+   "std10",
+   "win10",
+   "dd",
+   "gap_mu",
+   "n_seen",
+   "mu"
+  ],
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "N_NEXT": 20,
+   "folds": 5
+  },
+  "trades_in": 7965,
+  "excluded": {
+   "not_closed": 5192,
+   "no_leg_record": 1196,
+   "no_contract_multiplier": 52,
+   "degenerate_risk_basis": 47,
+   "no_net_r": 151,
+   "backtest": 0
+  }
+ }
+}

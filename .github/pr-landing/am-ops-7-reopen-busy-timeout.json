@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "PI-20261118-JFWRQYOV-0004. The QQQ reopen apply (system-actions run 44513698892, manager-approved) failed with sqlite3.OperationalError 'database is locked' on its first UPDATE: scripts/ops/reopen_filled_closed_rows.py opened the live journal with sqlite3's default 5 s lock wait while the trader was writing. The `with conn:` transaction rolled back and a fresh journal read confirmed nothing was written. Fix: the APPLY connection waits up to WRITE_LOCK_TIMEOUT_S = 60 s (sqlite3 timeout + PRAGMA busy_timeout); the dry-run and lookup paths are unchanged. Test test_apply_waits_for_the_traders_write_lock holds a write lock for 6 s (past the 5 s default): it FAILS on main's script with 'database is locked' and passes with the fix; tests/test_reopen_filled_closed_rows.py 17 passed. Journal-repair tooling run only by the system action; not in the trader closure, no restart. Gates this adds or changes: none."
+}

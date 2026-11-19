@@ -5,7 +5,7 @@ id: RQ-20261118-04a5-06
 title: 'D4 TD reference-corpus RE-PIN: at current config, does the TD family Stage-0 corpus (2020-07-01..2026-10-15) build cleanly on
   every real-money gate leg (all trades aligned to a decision bar, n_gate >= 200), so it can replace the 10-24 reference every TD
   overlay read is INDETERMINATE against?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -147,4 +147,15 @@ related:
 - RQ-20261116-cc86-01
 - RQ-20261024-09a6-01
 - ML-REAL-MONEY-OVERLAY
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T23:02:05+00:00'
+grading:
+  attested: RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY
+  auto: true
+  decision_rule_id: RULE-RQ20261118-04a5-06-TD-REPIN-FIDELITY
+  evidence:
+  - research/results/RQ-20261118-04a5-06/44417153590.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

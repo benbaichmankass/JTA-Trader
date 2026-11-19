@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-19 by lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), dispatched by the manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV). Unblocked by desk_trigger_replay.py --decluster-bars (same PR). Gates this adds or changes: none.
+id: RQ-20261119-f2a4-02
+title: 'DESK TRIGGER REPLAY, level_break_sweep DECLUSTERED (first firing per symbol per 12 bars): RQ-20261119-d7c3-04 found a FADE edge
+  with a positive cluster lower bound (S3 +0.057 R, lb +0.026) under the +0.15 R bar, with 17,132 of 29,113 firings clustered. Do the
+  FIRST firings clear the bar?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- M40
+kind: experiment
+question: 'Same detector, window, symbols, bracket, baseline and cost stack as RQ-20261119-d7c3-04, with ONE change: the firings are
+  declustered (desk_trigger_replay.py --decluster-bars 12 keeps the first firing per symbol, then only firings more than 12 bars after
+  the last kept one). Does the better rule beat the matched random baseline by S3 >= +0.15 R, with a Holm-adjusted weekly-cluster lower
+  bound > 0 over 10 cells, on n >= 100 declustered firings?'
+why_this_matters: 'Decision it changes: whether the desk wakes on level_break_sweep at all (DESK-ENTRY-REVIEW-REDESIGN). RQ-20261119-d7c3-04
+  is NOT_CLEARED at the materiality bar but its fade cell has a lower bound > 0 (p 1e-4) and 59% of its firings repeat within 12 bars,
+  so the mean mixes a first break with its echoes. PASS -> the holdout read for this family, declustered (one claim through holdout_lock);
+  FAIL -> the declustered configuration is closed and the trigger stays label-only (data collection kept). A desk wake fires once per
+  event anyway, so the declustered read is the one that matches how the desk would use it.'
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.15
+  effect_units: R per firing
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: 29,113 - 17,132 = 11,981 non-clustered firings in RQ-20261119-d7c3-04; the measured sd there was ~1.2 R and the
+    cluster MDE 0.04-0.05 R, so +0.15 R stays detectable. The harness still recomputes the MDE from the measured sd and returns INDETERMINATE
+    if it is not.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision 5m history; nothing accrues. The firing count for this family on the DEV window is
+      unmeasured until the run (the live trigger log is not a point-in-time record of every firing); the n >= 100 floor and the power
+      clause decide the verdict, not this estimate.
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119f2a402-DESK-TRIGGER-LEVEL-BREAK-SWEEP-DC12
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'B3 (decisive): random cutoffs of the SAME symbol in the SAME window, same ATR%-decile (vol_matched_pool), more than 12
+    bars from any firing of the family, the firing''s own side and geometry, 200 draws; refused slot = no-trade = 0 R on both sides.'
+  statistic: 'S3 = mean over firings of (firing net R minus B3 mean net R) per direction rule (continuation, fade), weekly-cluster bootstrap
+    10,000 draws; the verdict reads the better rule by S3 mean. Cost stack: venue fee + resolve_cost_policy slippage + funding (execution_costs.roundtrip_cost_r)
+    through the certified desk_gen_replay_driver engine.'
+  rule: PASS iff n >= 100 declustered firings AND S3 >= +0.15 R AND the one-sided level 0.05/10 (Holm step 1 over the 8 d7c3 family
+    x rule cells plus the 2 declustered fade families of this re-plan) weekly-cluster lower bound > 0 AND the planted controls hold
+    (oracle clears, anti-oracle S3 < 0, random-side does not clear, detectors identical on a truncated history, AFTER declustering).
+    NOT_CLEARED otherwise. INDETERMINATE iff n < 100, the cluster MDE from the measured sd exceeds +0.15 R, or any control fails. The
+    +0.15 R bar is unchanged from d7c3 (not lowered). Thresholds, window, bracket, rules and the 12-bar decluster are fixed now and
+    not changed after any result.
+  pass_action: author the HOLDOUT read for this family only (desk_trigger_replay.py holdout, one read through holdout_lock.claim_read,
+    claim before the read); a family that also passes the holdout goes forward as a candidate trigger for desk_triggers.yaml (a Tier-3
+    proposal, not this unit).
+  fail_action: the declustered configuration is closed; the family stays label-only (data collection kept); nothing else is re-run in
+    this configuration.
+  what_it_does_not_do: Changes no live leg, no desk_triggers.yaml setting, no config; places no order; adds no gate. Not a promotion
+    case. near_signal and calendar triggers are NOT scored (their firings are not reconstructable point-in-time) and are recorded unscored
+    in the result.
+  min_n: 100 firings in the DEV window
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  bucket: ai_trader
+  basis: 'planning stand-in, not a measurement: as the DESK-18G units (RQ-20261030-e18g-01); prior P(clear) about 10%.'
+practice_precedent: DESK-18G / desk_event_entry_replay.py (same engine, same S3 statistic, matched random baseline, planted oracle controls);
+  docs/research/desk-18g-event-entries-2026-10-30.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  basis: 'ESTIMATE: six symbols of about 100k 5m bars, a few thousand firings x 200 draws x 2 rules of at most 12 bars, plus three control
+    passes at 40 draws and a vol-matched pool per firing; the 5m candle fetch dominates.'
+  why_runner: public Binance Vision fetch and CPU only; no trainer-resident data.
+run:
+  command:
+  - python3
+  - scripts/research/desk_trigger_replay.py
+  - run
+  - --family
+  - level_break_sweep
+  - --decluster-bars
+  - '12'
+  - --m-cells
+  - '10'
+  - --fetch
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261119-f2a4-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261119-d7c3-04
+- PI-20261119-VEWZICCB-0001
+- DESK-ENTRY-REVIEW-REDESIGN
+- scripts/research/desk_trigger_replay.py
+- config/desk_triggers.yaml
+population: closed 5m bars, BTC/ETH/SOL/XRP/ADA/AVAX USDT perps, 2025-11-01..2026-09-15 (DEV); the declustered firings (first per symbol
+  per 12 bars) of the level_break_sweep detector in that window.
+iteration:
+  subject: claude_desk
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261119-d7c3-04
+  verdict_read: fail
+  diagnosis: Fade S3 +0.057 R (lb +0.026) on n 29,113; 17,132 firings within 12 bars of the previous same-symbol firing. Effect real
+    but small and diluted by clustered repeats; n is overstated, so the cluster bootstrap is right to be wide.
+  search: entry selection (declustering at the 12-bar horizon of the bracket); one configuration, bar unchanged.
+  levers:
+  - entry
+  map_entries:
+  - research/levers/claude_desk.yaml
+  attempt: 1
+  due_by: '2026-11-26'
+last_dispatched_at: '2026-11-19T11:24:04+00:00'

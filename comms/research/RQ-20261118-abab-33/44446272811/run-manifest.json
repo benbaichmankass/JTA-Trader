@@ -1,0 +1,91 @@
+{
+  "unit": "RQ-20261118-abab-33",
+  "run_id": "44446272811",
+  "commit_sha": "d1b2b09374b1f9dd2128d6514bd5c2232ad2e4fc",
+  "run_url": null,
+  "timeout_minutes": 156,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.1 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "e82f46504fe7",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "ict_scalp_sol_5m",
+        "--arm",
+        "A=",
+        "--arm",
+        "S_LATE=--skip-hours=20,21,22,23",
+        "--arm",
+        "S_ASIA=--skip-hours=0,1,2,3,4,5,6,7",
+        "--days",
+        "760",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59",
+        "--research-unit",
+        "RQ-20261118-abab-33",
+        "--grade",
+        "replace",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0.02",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261118-abab-33/44446272811"
+      ],
+      "log": "comms/research/RQ-20261118-abab-33/44446272811/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 517.6
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}

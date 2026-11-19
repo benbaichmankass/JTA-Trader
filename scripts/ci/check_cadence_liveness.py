@@ -285,6 +285,16 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "every scheduled run rewrites the per-kind freshness stamp (ok, last_ok_at, consecutive_failures) and lands it through "
                "commit-to-main; the last commit touching it IS the receipt (KAGGLE-BACKUPS, 2026-11-05)",
     },
+    "afford-snapshot.yml": {
+        "receipt": "comms/mandate_evidence/account_snapshot/bybit_2.json",
+        "why": "every daily run rewrites each Stage-2 account's per-leg answer (stamped captured_at) and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt (AFFORD-SNAPSHOT-REFRESH, 2026-11-19)",
+    },
+    "live-bar.yml": {
+        "receipt": "comms/live_bar/latest.json",
+        "why": "every daily run rewrites latest.json (stamped generated_at) and lands it through commit-to-main; the last "
+               "commit touching it IS the receipt (LIVE-BAR-LADDER-FEED, 2026-11-19)",
+    },
     "research-slo.yml": {
         "receipt": "comms/research/health",
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "

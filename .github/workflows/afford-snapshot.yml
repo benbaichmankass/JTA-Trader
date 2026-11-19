@@ -1,0 +1,79 @@
+name: afford-snapshot
+
+# AFFORD-SNAPSHOT-REFRESH (2026-11-19): once a day, refresh the R-AFFORD answer the promotion resolver reads
+# (scripts/ops/mandate_resolver.py, ACCOUNT_SNAPSHOT_MAX_AGE_DAYS = 7) for every real-money account it sizes.
+# Before this, scripts/ops/snapshot_account_for_mandate.py had no scheduled caller, and both files went 12-18 days
+# stale, so every real-money promotion (Stage-0 or live-bar path) read NEEDS_DATA on affordability.
+#
+# Tier-1: read-only diag read (broker_account_status); the writer commits ONLY each leg's affordability answer,
+# never a balance (balance_committed: false; manager rule 2026-11-01). Changes no roster or config; never halts.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: afford-snapshot
+  cancel-in-progress: false
+
+jobs:
+  afford-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install the sizer's imports
+        run: python3 -m pip install --quiet pyyaml pandas
+
+      - name: Refresh the per-leg affordability answers
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DIAG_READ_TOKEN:-}" ]; then
+            echo "::error::DIAG_READ_TOKEN is unset: no account could be read, so no snapshot was written (not a clean read)."
+            exit 1
+          fi
+          failed=0
+          # The resolver's Stage-2 accounts (MIRROR_OF keys): the accounts a promotion sizes against.
+          for acct in $(python3 -c "import sys; sys.path.insert(0, 'scripts/ops'); from mandate_resolver import MIRROR_OF; print(' '.join(sorted(MIRROR_OF)))"); do
+            # One failed account never stops the others (no halting); the run still fails at the end so it is seen.
+            if bash scripts/ops/diag_fetch.sh "broker_account_status?account_id=${acct}" > "/tmp/${acct}.json" \
+               && python3 scripts/ops/snapshot_account_for_mandate.py --account "${acct}" < "/tmp/${acct}.json" | tee -a /tmp/snap.txt; then
+              :
+            else
+              echo "::error::${acct}: the snapshot was not refreshed (diag read or writer failed)"; failed=1
+            fi
+          done
+          { echo '### afford-snapshot'; cat /tmp/snap.txt 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+          echo "FAILED=${failed}" >> "$GITHUB_ENV"
+
+      - name: Land the snapshot files
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/mandate_evidence/account_snapshot
+          message: "chore(afford-snapshot): daily R-AFFORD per-leg answers (run ${{ github.run_id }})"
+          pr-title: "chore(afford-snapshot): daily R-AFFORD answers (auto)"
+          pr-body: >-
+            Daily per-leg affordability answers from scripts/ops/snapshot_account_for_mandate.py for the resolver's
+            R-AFFORD clause. No balance is committed (balance_committed: false). Data-only.
+          branch-prefix: automation/afford-snapshot
+
+      - name: Fail visibly if any account was not refreshed
+        if: env.FAILED == '1'
+        run: exit 1

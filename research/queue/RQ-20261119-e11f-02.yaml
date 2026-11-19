@@ -1,0 +1,107 @@
+id: RQ-20261119-e11f-02
+title: 'tlt_pullback_1h (real money, alpaca_live + alpaca_portfolio), CURRENT declared config (long only, tp_r 3.5) on the 8-year proxy history DISJOINT from its record window (2018-06-01..2025-05-31): does it clear Stage 0 net of the full cost stack, with the short side reported beside it?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'tlt_pullback_1h went to alpaca_live on 2026-11-14 as long-only with tp_r 3.5 on ONE record: 75 trades, +8.17 R, 3 of 4 folds, window 2025-06-02..2026-11-11 (2025 net -0.11 R n 29; 2026 net +8.28 R n 46). Every 8-year-history iteration unit on this leg ran a DIFFERENT config: RQ-20261104-003 and RQ-20261112-c1b4-02 ran the then-declared both-sides leg; RQ-20261113-1751-01 and RQ-20261113-f090-01 ran the short side; RQ-20261114-db1a-10 ran the live-faithful record window only. No unit has scored the config the real-money leg now runs on history before its record window. Asked BEFORE the run: on 2018-06-01..2025-05-31 (dukascopy 1h proxy, the same family of data as the earlier units, entirely before the record window), does the leg exactly as declared in config/strategies.yaml on 2026-11-19 clear Stage 0 net of the full cost stack, and what does the short side net on the same bars?'
+why_this_matters: 'A real-money leg whose entire evidence for its declared direction sits in a 528-day window in which TLT trended up (2026 carries all of the net R; 2025 is flat) is one regime read, not a Stage-0 record. This is the first disjoint-window read of the exact declared config (PI-20261118-PREP1118-0007: tlt_pullback_1h had no live iteration unit counted by iteration_orphans). PASS -> the declared direction has out-of-record support and the leg keeps accruing; FAIL -> a Tier-3 PROPOSAL to the operator (direction / demotion to the demo floor, mirror in the same PR, alpaca_portfolio carries the same roster by strict equality), never an applied change.'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.18
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not a measurement: the 8-year both-sides baseline measured n 571 / +119.8 R on 2018-06..2026-10-15 (research/levers/tlt_pullback_1h.yaml, RQ-20261113-f090-01); the long side is roughly 60 percent of it and the window here is about 7 of those 8.4 years, so about 250 trades. d = 2.8 / sqrt(250) = 0.18 sd at alpha 0.05 / power 0.8. Below the 39-trade E35 floor the arm grades INDETERMINATE, never FAIL. The measured n replaces this when the run lands.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on a pinned in-hand window of public daily/hourly proxy bars; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261119-E11F-02-TLT1H-DECLARED-DISJOINT
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade stage0 on tlt_pullback_1h, dukascopy 1h, 2018-06-01..2025-05-31 23:59 (entirely before the record window 2025-06-02..2026-11-11), 4 equal calendar folds, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, equity fee 0 + slippage 5 bps round trip + funding 0, recorded per arm as cost_stack). Arm A = the leg exactly as declared in config/strategies.yaml (config-exact: side_filter long, tp_r 3.5, tp_intent r_multiple); the graded arm. Arm SHORT = side_filter=short, everything else as A; REPORTED, never graded. Per arm: n, net_total_r, net R by fold, net R per trade, max drawdown.'
+  rule: 'INDETERMINATE IF n(A) < 39. PASS iff n(A) >= 39 AND net_r(A) > 0 AND net R positive in >= 3 of 4 folds. FAIL iff n(A) >= 39 and not PASS. A FAIL is a Tier-3 PROPOSAL to the operator (pipeline item, ask_operator, scope tlt_pullback_1h direction / roster with the mirror), carrying this record, the short arm''s numbers and the record-window result; a PASS needs no action. The SHORT arm''s numbers are context for the proposal and never select an arm after the run. Thresholds, window and folds are fixed now and not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion or a demotion. The proxy is dukascopy closed 1h bars, not the Alpaca forming-bar feed of the record, so it tests whether the declared rules have edge across regimes, not the live fill path; the forming-bar record stays the as-traded evidence. A PASS here does not extend the record.'
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): a disjoint window read once against the config as declared; operator 2026-11-05 RESEARCH-NO-WAIT.'
+intervention_controls:
+  not_applicable: re-scoring the declared entry/exit on a disjoint history window through the harness (A/B arms), not an active-management action on live check-ins
+iteration:
+  subject: tlt_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/levers/tlt_pullback_1h.yaml#levers_tested
+  verdict_read: pass
+  diagnosis: 'db1a-10 PASS rests on the record window alone (75 trades, 2025 net -0.11 R n 29, 2026 net +8.28 R n 46); the 8-year units tested the previous both-sides config and the short side, so the declared long-only tp 3.5 config has no history before 2025-06. MEASURED from comms/strategy_evidence/tlt_pullback_1h.json and research/levers/tlt_pullback_1h.yaml.'
+  search: 'none: one graded arm (the declared leg) on one disjoint window; the short arm is reported context'
+  levers:
+  - direction
+  map_entries:
+  - research/levers/tlt_pullback_1h.yaml#levers_tested
+  attempt: 2
+  due_by: '2026-11-27'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: stand-in planning weight for a real-money leg whose evidence is one window; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: 'ESTIMATE from RQ-20261113-1751-01 (the same harness, leg and feed on a 2-year window, est 40); the first run replaces it.'
+  why_runner: 'Fetches keyless public candles (dukascopy) for a pinned window; CPU only; reads no trainer data.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - tlt_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - SHORT=side_filter=short
+  - --days
+  - '3060'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2025-05-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - stage0
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261119-e11f-02
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-e11f-02
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-ATM
+related:
+- scripts/research/exit_lever_ablation.py
+- research/levers/tlt_pullback_1h.yaml
+- RQ-20261114-db1a-10
+- RQ-20261104-003
+last_dispatched_at: '2026-11-19T14:30:15+00:00'

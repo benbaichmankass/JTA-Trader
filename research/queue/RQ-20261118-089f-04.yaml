@@ -4,7 +4,7 @@
 id: RQ-20261118-089f-04
 title: 'CJ-4 sensitivity: with trades whose package stop is under 1 ATR excluded (the tier-A risk_atr<1 label artifact), does the blind grade
   rank-predict realised net R and beat strategy confidence, under 089f-01''s rule unchanged?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -126,4 +126,18 @@ related:
 - CJ-LABEL-ALTERNATIVE
 - CJ-4-LABEL-VALIDATION
 - PI-20261117-ZZUFKM1F-0001
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T23:44:44+00:00'
+grading:
+  attested: RULE-RQ20261118-089f-04-BLIND-VALIDATION-RISKATR1
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261118-089f-04-BLIND-VALIDATION-RISKATR1
+  evidence:
+  - research/results/RQ-20261118-089f-04/44419224195.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

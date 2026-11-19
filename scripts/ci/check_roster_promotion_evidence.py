@@ -235,12 +235,7 @@ FIDELITY_OPERATOR_WAIVER: Dict[Tuple[str, str], str] = {
 #: "Both strategies and MLs (Recommended)". Each entry names its decision; the exact per-trade
 #: live-bar check and a backtest fidelity re-test are owed after the 2026-11-18 reset. This is a
 #: PATH (it admits a slot), not a gate. Remove an entry if the exact live-bar check fails.
-LIVE_BAR_PROMOTION: Dict[Tuple[str, str], str] = {
-    ("bybit_2", "ict_scalp_eth_15m"): 'operator popup 2026-11-17 "2, but then 1 also after the reset" '
-                                      '(46 live trades, 26 confirmed, +8.11R, E[R] +0.18)',
-    ("bybit_portfolio", "ict_scalp_eth_15m"): 'operator popup 2026-11-17 "2, but then 1 also after the reset" '
-                                              '(46 live trades, 26 confirmed, +8.11R, E[R] +0.18)',
-}
+LIVE_BAR_PROMOTION: Dict[Tuple[str, str], str] = {}
 
 
 #: C5 PENDING RE-MEASURE -- (account, leg) -> (owning row, expiry YYYY-MM-DD). See the

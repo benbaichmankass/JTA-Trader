@@ -1,0 +1,33 @@
+{
+  "leg": "scha_trend_long_1d",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/scha_trend_long_1d.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg scha_trend_long_1d arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261018-ef5d-01/39121076582/data/SCHA_D.csv",
+  "decision_bar": "forming",
+  "data_start": "2010-01-08 00:00:00+00:00",
+  "data_end": "2026-08-31 00:00:00+00:00",
+  "n_trades": 78,
+  "net_total_r": 4.6986,
+  "fee_bps_roundtrip": 0.0,
+  "slippage_bps_roundtrip": 5.0,
+  "funding_bps_per_window": 0.0,
+  "params": {
+    "long_only": true,
+    "timeframe": "1d",
+    "symbols": [
+      "SCHA"
+    ],
+    "donchian": 30,
+    "atr_period": 14,
+    "atr_stop_mult": 3.0,
+    "trail_mult": 4.0,
+    "tp_r": 1.5,
+    "min_confidence": 0.0
+  },
+  "config_fingerprint": "sha256:a6d254b58e8cde878c87e180fd494c93",
+  "trades_sha256": "15f05a5a061c31f33364b5c45a5aed628277af0a5f8a44ba20845264a3183709",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/scha_trend_long_1d.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261018-ef5d-01/39121076582/data/SCHA_D.csv",
+  "note": "real-TP holdout population for ltr near_target (RQ-20261119-c9d2-01); separate dir so default all-corpora runs are unchanged"
+}

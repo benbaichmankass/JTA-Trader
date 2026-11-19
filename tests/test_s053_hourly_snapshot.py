@@ -138,8 +138,9 @@ def test_systemd_units_present_in_deploy():
     assert service.exists(), f"missing {service}"
     timer_text = timer.read_text()
     service_text = service.read_text()
-    # Timer fires hourly with the bounded jitter the runbook documents.
-    assert "OnCalendar=hourly" in timer_text
+    # Timer fires once an hour with the bounded jitter the runbook documents,
+    # off the top of the hour (LIVE-VM-HOURLY-BURST: not on the trader's 1h bar close).
+    assert "OnCalendar=*-*-* *:07:00" in timer_text
     assert "RandomizedDelaySec=" in timer_text
     # Service ExecStart points at our script and tolerates EX_TEMPFAIL.
     assert "scripts/send_hourly_now.py" in service_text

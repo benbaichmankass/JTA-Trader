@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "IB order path (IBClient._locked_place_protective). On the KEYED path only, a re-arm that carries a stop and no take-profit now re-places the trade's own resting take-profit at its own price, instead of cancelling it with the pre-cancel. No change when a TP is passed, on the keyless symbol-wide path, or when the resting targets are ambiguous. Also: _protective_leg_price rejects ib_insync's UNSET_DOUBLE sentinel. The trader restarts on deploy. Manager merges. Revert: git revert + deploy.",
+  "why": "BRACKETS-ALWAYS inventory item 1 (AM-OPS-4, verified): execute.modify_open_order sets eff_tp = tp or cur_tp, and a journal row with no TP re-arms stop-only, which silently removes a TP resting at the venue. Tested against real ib_insync 0.9.86 Order objects (7 new tests; all 7 fail on the old code). Gates this adds or changes: none."
+}

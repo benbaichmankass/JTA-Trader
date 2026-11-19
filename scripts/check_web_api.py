@@ -87,9 +87,14 @@ def save_state(path: Path, state: Dict[str, Any]) -> None:
 
 def send_alert(message: str) -> bool:
     try:
+        import html
+
         from src.runtime.notify import send_telegram_direct
 
-        send_telegram_direct(message)
+        # send_telegram_direct defaults to parse_mode="HTML", and a probe failure reason
+        # such as "<urlopen error timed out>" is an invalid HTML tag: Telegram answered
+        # HTTP 400 and the WARN never arrived (measured 2026-11-18 22:30:08Z). Escape it.
+        send_telegram_direct(html.escape(message, quote=False))
         return True
     except Exception as exc:  # noqa: BLE001 — alerting must never crash the watchdog
         print(f"WARN: alert delivery failed: {exc}", file=sys.stderr)

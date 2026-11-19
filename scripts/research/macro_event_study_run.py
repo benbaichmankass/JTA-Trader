@@ -151,6 +151,51 @@ def sign_book(events: List[Dict[str, Any]], fwd, *, horizon: int, cost_frac: flo
             "book_hit_rate": (round(hits / len(book), 4) if book else None)}
 
 
+def rank_tilt(events: List[Dict[str, Any]], fwd, *, horizon: int, cost_frac: float, expected_sign: str,
+              value_key: str = "surprise", warmup: int = 24) -> Dict[str, Any]:
+    """Exposure-matched, MAGNITUDE-weighted long tilt vs the all-long floor (row MACRO-EVENT-RANKTILT-ARM). Pure.
+
+    Per release in date order: z = 2*pct - 1, pct = fraction of PRIOR releases' values below this one (ties count 0.5),
+    so z uses ONLY releases before it; the first ``warmup`` releases only seed the ranking. Weight w = 1 - z when
+    ``expected_sign`` is negative (a hot print UNDERweights), else w = 1 + z; mean w ~ 1, so exposure matches the floor.
+    Excess vs all-long = (w - 1) * r_h - |w - 1| * cost_frac (the tilt pays the full stack on the part it re-sizes)."""
+    sgn = -1.0 if expected_sign == "negative" else 1.0
+    ordered = sorted((e for e in events if e.get(value_key) is not None), key=lambda e: str(e["date"]))
+    prior: List[float] = []
+    excess: List[float] = []
+    weights: List[float] = []
+    for e in ordered:
+        v = float(e[value_key])
+        if len(prior) >= warmup:
+            r = fwd(e["date"], horizon)
+            if r is not None:
+                below = sum(1.0 for p in prior if p < v) + 0.5 * sum(1.0 for p in prior if p == v)
+                z = 2.0 * below / len(prior) - 1.0
+                w = 1.0 + sgn * z
+                excess.append((w - 1.0) * float(r) - abs(w - 1.0) * cost_frac)
+                weights.append(w)
+        prior.append(v)
+    return {"horizon_days": horizon, "cost_frac_roundtrip": cost_frac, "rank_warmup": warmup,
+            "tilt_excess_net": _mean_t(excess),
+            "mean_weight": (round(sum(weights) / len(weights), 6) if weights else None)}
+
+
+def grade_tilt(rt: Dict[str, Any], *, min_n: int, t_bar: float) -> Dict[str, Any]:
+    """PASS iff n >= min_n AND mean excess > 0 AND t >= t_bar; FAIL iff n >= min_n and not; INDETERMINATE iff n < min_n."""
+    x = rt["tilt_excess_net"]
+    n = int(x["n"] or 0)
+    if not n:
+        return {"verdict": "not_applicable", "read_state": "no_data", "note": "no release past the rank warm-up"}
+    if n < min_n:
+        return {"verdict": "indeterminate", "read_state": "measured",
+                "note": f"rank tilt n={n} < {min_n}: the source bounded the test, not the hypothesis"}
+    if x["mean"] is not None and x["mean"] > 0 and x["t"] is not None and x["t"] >= t_bar:
+        return {"verdict": "pass", "read_state": "measured",
+                "note": f"net-of-cost rank-tilt excess over all-long {x['mean']} (t {x['t']}) >= t-bar {t_bar}"}
+    return {"verdict": "fail", "read_state": "measured",
+            "note": f"rank-tilt excess {x['mean']} (t {x['t']}) vs t-bar {t_bar}"}
+
+
 def grade_trade(sb: Dict[str, Any], *, min_n: int, t_bar: float) -> Dict[str, Any]:
     """The registered trade rule. Pure, unit-tested.
 
@@ -217,6 +262,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--trade-horizon", type=int, default=None, help="enable the net-of-cost sign book at H days")
     ap.add_argument("--cost-symbol", default=None, help="instrument whose cost stack the sign book pays")
     ap.add_argument("--trade-t-bar", type=float, default=2.0)
+    ap.add_argument("--book", choices=["sign", "rank_tilt"], default="sign",
+                    help="trade arm: sign book (default, unchanged) or the exposure-matched magnitude rank tilt")
+    ap.add_argument("--rank-warmup", type=int, default=24, help="rank_tilt: releases that only seed the ranking")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
 
@@ -272,6 +320,19 @@ def main(argv: Optional[List[str]] = None) -> int:
             return _emit({"verdict": "not_applicable", "read_state": "producer_failed", "population": pop, "n": 0,
                           "measurement": meas, "note": "--trade-horizon needs --cost-symbol (no cost stack, no verdict)"})
         cost = cost_frac_for(a.cost_symbol)
+        if a.book == "rank_tilt":
+            rt = rank_tilt(events, ees.make_forward_return(panel), horizon=a.trade_horizon, cost_frac=cost["cost_frac"],
+                           expected_sign=a.expected_sign, value_key=a.value_key, warmup=a.rank_warmup)
+            rt["cost_stack"] = cost
+            gt = grade_tilt(rt, min_n=a.min_n, t_bar=a.trade_t_bar)
+            meas.update({"rank_tilt": rt, "ic_grade": {"verdict": g["verdict"], "note": g["note"]},
+                         "trade_rule": {"book": "rank_tilt", "horizon": a.trade_horizon, "min_n": a.min_n,
+                                        "t_bar": a.trade_t_bar, "rank_warmup": a.rank_warmup}})
+            g = dict(g, verdict=gt["verdict"], read_state=gt["read_state"], note=gt["note"])
+            (out / "scorecard.json").write_text(json.dumps({"rows": rows, "summary": summary, "meta": meas}, indent=2,
+                                                           default=str) + "\n", encoding="utf-8")
+            return _emit({"verdict": g["verdict"], "read_state": g["read_state"], "population": pop,
+                          "n": int(rt["tilt_excess_net"]["n"] or 0), "measurement": meas, "note": g["note"]})
         sb = sign_book(events, ees.make_forward_return(panel), horizon=a.trade_horizon, cost_frac=cost["cost_frac"],
                        expected_sign=a.expected_sign, value_key=a.value_key)
         sb["cost_stack"] = cost

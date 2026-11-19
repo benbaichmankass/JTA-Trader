@@ -4,7 +4,7 @@
 id: RQ-20261118-04a5-03
 title: 'D2 SERVE-PATH DIFF: on bars the live per-bar scorer logged with their full feature rows (2026-11-09..18), do the BTC and SOL
   fc-pcv-v2 live rows match the trainer v002 rows, and if the labels disagree, which feature block alone flips them?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -124,4 +124,15 @@ related:
 - scripts/research/ml_vol_label_replay.py
 - scripts/research/vol_label_live_verify.py
 - src/runtime/regime_bar_scoring.py
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T03:39:24+00:00'
+grading:
+  attested: RULE-RQ20261118-04a5-03-VOL-SERVE-DIFF
+  auto: true
+  decision_rule_id: RULE-RQ20261118-04a5-03-VOL-SERVE-DIFF
+  evidence:
+  - research/results/RQ-20261118-04a5-03/44451377227.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

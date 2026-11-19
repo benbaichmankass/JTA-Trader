@@ -1,0 +1,90 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Row IB-GROSS-NO-CAP-FIX; the rule is RULE-IB-GROSS-ATR-FLOOR-S0 as registered by AM-OPS-4
+# (work-store event 16958, 2026-11-19 01:17Z) before any harness existed. Gates this adds or changes: none.
+id: RQ-20261119-b9a4-01
+title: 'IB-GROSS-ATR-FLOOR-S0: on the 141 committed Stage-0 trades of the four IB futures legs, does sizing on max(stop, k x ATR14) for k in {0.5, 1.0} hold max concurrent gross notional at or under 1.5x equity without giving up the dollar edge?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-OPS
+kind: experiment
+question: 'Replaying the committed net-of-cost Stage-0 trades of mgc_trend_1h, mhg_pullback_1d, mgc_pullback_1d and mes_trend_long_1d on one compounding equity path, with the risk distance floored at k x ATR14 (k 0.5 and 1.0; the stop and so each trade''s net R unchanged, only its dollar weight), is there a smallest k for which (a) M1 max concurrent gross notional / equity <= 1.5 at every point, (b) the 80% bootstrap lower bound of M2(B_k)/M2(A) >= 0.80, and (c) M3(B_k) >= 0.90 x M3(A)?'
+why_this_matters: 'Flat 1.5% risk over a 0.26-0.40% futures stop buys 3.7-5.8x notional per trade, and the 1.5x IB gross cap then bricks ib_paper (row IB-GROSS-NO-CAP-FIX; docs/research/mgc-sizing-oversize-2026-10-24.md). PASS -> a data-backed Tier-3 sizing change (size futures legs on max(stop, k ATR14)) and a re-read of whether 1.5x ever binds; FAIL -> the caps stay and the next lever is a per-leg risk_pct for the 15m scalp.'
+power:
+  expected_n: 141
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'n = 141 MEASURED (committed per-trade rows: 118 + 10 + 8 + 5). The power table is a PROXY here: the test is a PAIRED reweighting (the same trades in every arm, only the weights differ), so the per-trade sd of net R (1.856 R, MEASURED over the 141) cancels in the ratio M2(B_k)/M2(A) and the registered bar is the 80% bootstrap lower bound >= 0.80 of that ratio, not a mean test. alpha 0.1 is the nearest tabulated level to that one-sided 80% bound; d 0.25 needs about 99 trades at that level, inside 141. If more than 50% of trades are reweighted the bound widens and INDETERMINATE is the likely verdict (stated before the run, by the registered rule); the harness reports the reweighted share.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays committed per-trade rows; nothing accrues. The corpus is fixed at 141 trades by the registered rule (ict_scalp_mgc_15m has no committed per-trade rows and is excluded); the n >= 60 ATR-computable floor decides INDETERMINATE.'
+evidence_class:
+  holdout: dev_folds
+  claim: sizing
+decision_rule:
+  id: RULE-IB-GROSS-ATR-FLOOR-S0
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'A = current sizing: risk 1.5% of equity over |entry-sl|, on the same trades and the same compounding equity path.'
+  statistic: 'M1 = max concurrent gross notional / equity; M2 = sum(w_i x net_r_i) and the ratio M2(B_k)/M2(A) with its 80% bootstrap lower bound (one-sided 20th percentile, 10,000 trade resamples, seed 20261119); M3 = return / max drawdown on the path; w_i = |entry-sl| / max(|entry-sl|, k x ATR14), ATR14 from bars closed before entry_time at each leg''s timeframe (read from its bt.json).'
+  rule: 'PASS for the smallest k in {0.5, 1.0} where M1 <= 1.5 at every point AND the 80% bootstrap lower bound of M2(B_k)/M2(A) >= 0.80 AND M3(B_k) >= 0.90 x M3(A). FAIL if no k passes. INDETERMINATE if fewer than 60 trades have a computable ATR14. Thresholds, k grid, corpus and seed are fixed now and not changed after any result.'
+  pass_action: 'data-backed Tier 3 proposal: size futures legs on max(stop, k x ATR14); re-read whether 1.5x ever binds on ib_paper and propose retiring both IB caps if it never does; read exposure from the venue, not the journal.'
+  fail_action: 'the caps stay. The tight-stop trades carry the dollar edge. The next lever is a per-leg risk_pct for the 15m scalp.'
+  what_it_does_not_do: 'Changes no sizer, no cap, no config; places no order; adds no gate. A PASS on a Stage-0 corpus is a proposal for the operator-gated Tier-3 sizing change, not the change.'
+  min_n: 60 ATR-computable trades of the 141
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'planning stand-in, not a measurement: ib_paper is bricked by the cap today (sized_qty=0 refusals on trades 6892-6895) and the corpus is the registered one.'
+practice_precedent: 'docs/research/mgc-sizing-oversize-2026-10-24.md (the sizer replay this unit follows up); comms/strategy_evidence/runs/2026-09-24-e55 (the corpus).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'ESTIMATE: 141 trades x 3 arms on one event path plus 10,000 bootstrap resamples of 141 values; the intraday candle fetch (Yahoo 60m) dominates.'
+  why_runner: 'fetches keyless public candles (Yahoo ES=F and HG=F 60m intraday, which the candle dataset does not hold); reads committed evidence; CPU only.'
+run:
+  command:
+  - python3
+  - scripts/research/ib_gross_atr_floor.py
+  - run
+  - --fetch
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261119-b9a4-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IB-GROSS-NO-CAP-FIX
+- scripts/research/ib_gross_atr_floor.py
+- docs/research/mgc-sizing-oversize-2026-10-24.md
+population: the 141 committed Stage-0 per-trade rows of mgc_trend_1h (118), mhg_pullback_1d (10), mgc_pullback_1d (8) and mes_trend_long_1d (5), net of the full cost stack.
+last_dispatched_at: '2026-11-19T03:33:06+00:00'
+grading:
+  attested: RULE-IB-GROSS-ATR-FLOOR-S0
+  auto: true
+  decision_rule_id: RULE-IB-GROSS-ATR-FLOOR-S0
+  evidence:
+  - research/results/RQ-20261119-b9a4-01/44450610030.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

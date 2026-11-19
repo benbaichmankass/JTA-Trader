@@ -4,7 +4,7 @@
 id: RQ-20261118-aadc-14
 title: 'D10 Basset LEARNED score: does a LightGBM on past-only leg statistics, out of fold by leg group, anticipate a leg''s next 20 trades
   going net-negative better than the CUSUM baseline on the same points (AUC >= 0.654 and paired delta > 0)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -129,4 +129,17 @@ related:
 - RQ-20261117-aadc-09
 - ML-D10-BASSET-BASELINE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
-last_dispatched_at: '2026-11-18T19:28:47+00:00'
+last_dispatched_at: '2026-11-18T19:45:46+00:00'
+grading:
+  attested: RULE-RQ20261118-aadc-14-D10-LEARNED
+  auto: true
+  decision_rule_id: RULE-RQ20261118-aadc-14-D10-LEARNED
+  evidence:
+  - research/results/RQ-20261118-aadc-14/44381000615.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

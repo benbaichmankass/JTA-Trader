@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261105-e9a1-01.yaml (dev) and RQ-20261105-e9a1-02.yaml (confirm); lane ML-ENTRY-EQUITY-NATIVE
+# wiring: research/queue/blocked/RQ-20261118-f7c1-03.yaml + -04.yaml (P8-Q5 feature families / P8-Q8 horizon, via alpaca_live_book.py)
 """EQUITY-NATIVE ENTRY model: trained on the 173-ETF Alpaca liquidity pool itself (row ML-ENTRY-EQUITY-NATIVE).
 
 Operator popup 2026-11-05 ~20:50Z, verbatim: "Equity-native model (Rec.)", after the frozen crypto ENTRY v1 FAILED on this pool
@@ -95,7 +96,7 @@ def _lgb(params: dict):
 STRUCT_SPEC = "pivot=5;sl_only"      # the LIVE ml_entry exit (config/strategies.yaml ml_entry.structure_exit), RQ-20261106-98e3-01 primary arm
 
 
-def _structure_outcomes(df: pd.DataFrame, cand: np.ndarray, entry: np.ndarray, atr: np.ndarray, spec: str):
+def _structure_outcomes(df: pd.DataFrame, cand: np.ndarray, entry: np.ndarray, atr: np.ndarray, spec: str, hold: int = H):
     """LONG first-passage under the LIVE SL-only structure exit for each decision bar: the stop path comes from
     src/runtime/structure_exit_live.replay (via ml_entry_tp_revision.structure_sl_path), the walk is ml_entry_tp_revision.walk
     with the TP fixed at the entry bracket (3 ATR, no revision) -- the same functions the structure arm of RQ-20261103-5e04-01 used."""
@@ -104,13 +105,29 @@ def _structure_outcomes(df: pd.DataFrame, cand: np.ndarray, entry: np.ndarray, a
     px, jj, rs = np.empty(len(cand)), np.empty(len(cand), int), np.empty(len(cand), int)
     for r, i in enumerate(cand):
         path = R.structure_sl_path(h, lo, c, int(i), float(entry[r]), float(atr[r]), 1, spec)
-        sl = slice(i + 1, i + 1 + H)
+        sl = slice(i + 1, i + 1 + hold)
         px[r], jj[r], rs[r], _ = R.walk(o[sl], h[sl], lo[sl], c[sl], float(entry[r]), float(atr[r]), 1, None, sl_path=path)
     return px, jj, rs
 
 
-def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float, struct: str = "") -> pd.DataFrame:
-    """Decision rows for one ETF on its own RTH bar sequence: harness features + the LONG first-passage net R (as equity_rows)."""
+def decision_mask(close_ts: pd.Series, daily: bool = False) -> np.ndarray:
+    """The decision bars. Default: every RTH close with UTC hour % 4 == 0 (unchanged). ``daily`` (P8-Q8 arm, opt-in): ONE decision per
+    New-York session, the LATEST of that session's hour % 4 == 0 closes (a subset of the default bars, so the session gate and the
+    features are unchanged; only the cadence drops to one per day)."""
+    ct = pd.to_datetime(close_ts, utc=True)
+    m = (ct.dt.hour % 4 == 0).to_numpy()
+    if not daily:
+        return m
+    day = ct.dt.tz_convert("America/New_York").dt.date.to_numpy()
+    last = pd.Series(np.where(m, np.arange(len(ct)), -1)).groupby(day).transform("max").to_numpy()
+    return m & (np.arange(len(ct)) == last)
+
+
+def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float, struct: str = "", hold: int = H,
+                daily: bool = False) -> pd.DataFrame:
+    """Decision rows for one ETF on its own RTH bar sequence: harness features + the LONG first-passage net R (as equity_rows).
+    ``hold`` = the label's time stop in bars (default H = 24, the live 24-bar stop) and ``daily`` = one decision per session
+    (decision_mask): both are P8-Q8 opt-in arms; the defaults reproduce the graded tables exactly."""
     f = E.features_symbol(df[["ts", "open", "high", "low", "close", "volume"]])
     f["hour"] = df.close_ts.dt.hour.to_numpy()
     f["dow"] = df.close_ts.dt.day_of_week.to_numpy()
@@ -119,18 +136,18 @@ def symbol_rows(sym: str, df: pd.DataFrame, slip_bps: float, fee_bps: float, str
     tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
     atr = pd.Series(tr).rolling(14, min_periods=14).mean().to_numpy()
     n = len(df)
-    decision = (df.close_ts.dt.hour % 4 == 0).to_numpy()
+    decision = decision_mask(df.close_ts, daily)
     cand = np.where(decision & ~np.isnan(atr))[0]
-    cand = cand[cand + H < n]
+    cand = cand[cand + hold < n]
     if len(cand) == 0:
         return pd.DataFrame()
-    win = cand[:, None] + np.arange(1, H + 1)[None, :]
+    win = cand[:, None] + np.arange(1, hold + 1)[None, :]
     entry = o[win][:, 0]
     a = atr[cand]
     risk = 2.0 * a
     px, j, reason = E.bracket_outcome(o[win], h[win], lo[win], c[win], entry, a, 1)
     if struct:
-        px, j, reason = _structure_outcomes(df, cand, entry, a, struct)
+        px, j, reason = _structure_outcomes(df, cand, entry, a, struct, hold)
     gross = (px - entry) / risk
     per_r = ((np.abs(entry) + np.abs(px)) / 2.0) / risk
     cost = (fee_bps + slip_bps + S.REGULATORY_BPS) / 1e4 * per_r
@@ -163,8 +180,9 @@ def proxy_frame(bars: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return ctx
 
 
-def build_table(bars: dict[str, pd.DataFrame], pool: list[str], slip: float, fee: float, struct: str = "") -> pd.DataFrame:
-    frames = [symbol_rows(s, bars[s], slip, fee, struct) for s in pool if s in bars and len(bars[s]) > 400]
+def build_table(bars: dict[str, pd.DataFrame], pool: list[str], slip: float, fee: float, struct: str = "", hold: int = H,
+                daily: bool = False) -> pd.DataFrame:
+    frames = [symbol_rows(s, bars[s], slip, fee, struct, hold, daily) for s in pool if s in bars and len(bars[s]) > 400]
     frames = [f for f in frames if len(f)]
     t = pd.concat(frames, ignore_index=True)
     g = t.groupby("ts")
@@ -196,8 +214,108 @@ def _stats(tk: pd.DataFrame) -> dict:
             "se": float(tk.net_r.std(ddof=1) / np.sqrt(len(tk))) if len(tk) > 1 else None}
 
 
-def purge(train: pd.DataFrame, cut: pd.Timestamp) -> pd.DataFrame:
-    return train[train.ts < cut - pd.Timedelta(days=PURGE_DAYS)]
+def purge(train: pd.DataFrame, cut: pd.Timestamp, days: int = PURGE_DAYS) -> pd.DataFrame:
+    return train[train.ts < cut - pd.Timedelta(days=days)]
+
+
+def purge_days_for(h: int) -> int:
+    """PURGE_DAYS scaled to a longer label: 10 days covers the 24-bar label (~4 sessions); h bars need ceil(10 * h / 24) days."""
+    return max(PURGE_DAYS, int(np.ceil(PURGE_DAYS * h / H)))
+
+
+# ------------------------------------------------------------------------------------------------ P8-Q5 feature families (opt-in)
+# Each family is ADDED to config B's features by alpaca_live_book.py --section features; nothing below is called by default, and
+# build_table's output is unchanged. Every input is at or before the decision bar's close (causal). Not built: FOMC/CPI event flags --
+# the repo has no point-in-time historical calendar (config/economic_calendar.yaml is forward-only from 2026-10-26 and
+# config/macro_events.yaml forbids a hardcoded release list), so that family is left out rather than fabricated.
+FAMILY_ANCHORS = ("SPY", "TLT", "GLD", "VIXY")   # equity-beta / rates / commodity / volatility anchors (GLD only if its bars exist)
+FAMILY_CORR_BARS = 336                            # trailing 1h-return window (~48 sessions) for the causal family assignment
+VOL_PCTILE_LOOKBACK = 500                         # prior decision timestamps the pool-vol percentile is ranked against
+FAMILY_FEATURES = {
+    "volregime": ["vixy_ret24", "vixy_vol24", "pool_vol_med24", "pool_vol_pctile"],
+    "familyrs": ["fam_rank_ret24", "fam_rank_ret168", "fam_rel_ret24"],
+    "noise9": [f"noise_{k}" for k in range(9)],
+}
+
+
+def _vol_regime(t: pd.DataFrame) -> pd.DataFrame:
+    """Pool realised-vol context: the cross-sectional median vol24 at each close, and its percentile among the PRIOR
+    VOL_PCTILE_LOOKBACK closes (strictly earlier timestamps only). vixy_ret24 / vixy_vol24 already come from proxy_frame."""
+    med = t.groupby("ts")["vol24"].median().sort_index()
+    v = med.to_numpy(float)
+    pct = np.full(len(v), np.nan)
+    for k in range(len(v)):
+        prior = v[max(0, k - VOL_PCTILE_LOOKBACK):k]
+        prior = prior[~np.isnan(prior)]
+        if len(prior) >= 50 and not np.isnan(v[k]):
+            pct[k] = float((prior < v[k]).mean())
+    ctx = pd.DataFrame({"pool_vol_med24": v, "pool_vol_pctile": pct}, index=med.index)
+    return t.join(ctx, on="ts")
+
+
+def _family_of(bars: dict[str, pd.DataFrame], symbols) -> pd.DataFrame:
+    """(symbol, ts) -> family key from the TRAILING FAMILY_CORR_BARS correlation of 1h log returns with each anchor, ending at the
+    bar's close: the anchor with the largest correlation, or 'inverse' when the SPY correlation is below -0.5. Causal and
+    data-defined (the repo has no curated ETF-family map)."""
+    aret = {}
+    for a in FAMILY_ANCHORS:
+        df = bars.get(a)
+        if df is not None and len(df):
+            x = pd.Series(np.log(df["close"].astype(float)).diff().to_numpy(), index=pd.to_datetime(df["close_ts"], utc=True))
+            aret[a] = x[~x.index.duplicated()]
+    out = []
+    for s in symbols:
+        df = bars.get(s)
+        if df is None or not len(df):
+            continue
+        idx = pd.to_datetime(df["close_ts"], utc=True)
+        r = pd.Series(np.log(df["close"].astype(float)).diff().to_numpy(), index=idx)
+        c = pd.DataFrame({a: r.rolling(FAMILY_CORR_BARS, min_periods=FAMILY_CORR_BARS // 2).corr(x.reindex(idx)).to_numpy()
+                          for a, x in aret.items()}, index=idx)
+        best = c.fillna(-np.inf).idxmax(axis=1).where(c.notna().any(axis=1))
+        if "SPY" in c:
+            best = best.where(~(c["SPY"] < -0.5), "inverse")
+        out.append(pd.DataFrame({"symbol": s, "ts": idx.to_numpy(), "family": best.to_numpy()}))
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame(columns=["symbol", "ts", "family"])
+
+
+def _family_rs(t: pd.DataFrame, bars: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    fam = _family_of(bars, sorted(t.symbol.unique()))
+    fam["ts"] = pd.to_datetime(fam["ts"], utc=True)
+    fam = fam.drop_duplicates(["symbol", "ts"], keep="last")
+    t = t.merge(fam, on=["symbol", "ts"], how="left", validate="many_to_one")
+    g = t.groupby(["ts", "family"])
+    t["fam_rank_ret24"] = g["ret24_raw"].rank(pct=True)
+    t["fam_rank_ret168"] = g["ret168_raw"].rank(pct=True)
+    t["fam_rel_ret24"] = t["ret24_raw"] - g["ret24_raw"].transform("median")
+    one = (g["ret24_raw"].transform("count") < 2).fillna(True).to_numpy(bool) | t["family"].isna().to_numpy()
+    t.loc[one, ["fam_rank_ret24", "fam_rank_ret168", "fam_rel_ret24"]] = np.nan   # a family of one has no relative strength
+    return t
+
+
+def _noise9(t: pd.DataFrame, seed: int = 20261118) -> pd.DataFrame:
+    """The 9-pure-noise-column control (ml-entry fs01 lesson): N(0,1), drawn in (ts, symbol) order so the draw does not depend on
+    the table's row order. A recipe that gains from these columns is overfitting."""
+    order = np.lexsort((t["symbol"].astype(str).to_numpy(), pd.to_datetime(t["ts"], utc=True).to_numpy()))
+    z = np.random.default_rng(seed).standard_normal((len(t), 9))
+    out = np.empty_like(z)
+    out[order] = z
+    return t.assign(**{f"noise_{k}": out[:, k] for k in range(9)})
+
+
+def add_feature_families(t: pd.DataFrame, bars: dict[str, pd.DataFrame], families) -> pd.DataFrame:
+    """Add the named P8-Q5 families' columns to a build_table() frame (a copy; existing columns untouched)."""
+    t = t.copy()
+    for f in families:
+        if f == "volregime":
+            t = _vol_regime(t)
+        elif f == "familyrs":
+            t = _family_rs(t, bars)
+        elif f == "noise9":
+            t = _noise9(t)
+        else:
+            raise ValueError(f"unknown feature family {f!r}; built: {sorted(FAMILY_FEATURES)}")
+    return t
 
 
 def cap_per_bar(rows: pd.DataFrame, pred: np.ndarray, tau: float, k: int) -> np.ndarray:
@@ -451,6 +569,47 @@ def _pool_and_bars(a, end_day: str):
     return pool, prep, bars, client
 
 
+def _pinned_pool_and_bars(a, end_day: str, pool: list[str]):
+    """RQ-20261119-e8a1-04: the pool PINNED to a frozen artifact's own pool_symbols (no live asset-list rebuild) + 1h RTH bars for
+    pool and proxies. The live POOL_RULE rebuild is what made d9c0-01's refit drift (pool 173 -> 172 between 11-07 and 11-14)."""
+    from alpaca_readonly import AlpacaReadOnly
+    client = AlpacaReadOnly.from_env()
+    want = sorted(set(pool) | set(PROXIES))
+    end = (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    bars = S.fetch_alpaca_1h(client, want, Path(a.cache), end, start=DATA_START)
+    missing = [p for p in PROXIES if p not in bars]
+    if missing:
+        raise RuntimeError(f"proxy bars missing: {missing} (the model needs its market-context features)")
+    print(f"[pool] PINNED {len(pool)} ETFs from the artifact; {sum(1 for x in pool if x in bars)} with bars; {client.calls} calls", flush=True)
+    return bars, client
+
+
+def reproduce_frozen(tab: pd.DataFrame, artifact: str, start: str, end: str, expect_n: int | None, expect_mean: float | None,
+                     pool: list[str], bars_symbols) -> tuple[dict, pd.DataFrame]:
+    """Score the FROZEN artifact's boosters (nothing refit) on [start, end] with the pool pinned to the artifact's pool_symbols, and
+    check the graded confirm population: n == expect_n and |mean - expect_mean| <= 1e-6. No holdout read is claimed (a reproduction
+    of an already-graded read). Reports which pinned pool symbols have no bars, so a FAIL names its cause."""
+    feats, tau, predict, model_id = _artifact_scorer(artifact)
+    hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    n_before = int(len(test))
+    test = test[session_mask(test.ts)]
+    tk = taken_trades(test, predict(test), tau)   # provenance: predict -- mean regressed LONG net R of the frozen boosters, not a probability
+    st = _stats(tk)
+    n_ok = expect_n is None or st.get("n") == int(expect_n)
+    mean_ok = expect_mean is None or (st.get("mean_net_r") is not None and abs(float(st["mean_net_r"]) - float(expect_mean)) <= 1e-6)
+    no_bars = sorted(x for x in pool if x not in set(bars_symbols))
+    rep_ = {"artifact": artifact, "model_id": model_id, "tau": tau, "expect_n": expect_n, "n_match": n_ok, "expect_mean": expect_mean,
+            "mean_match": mean_ok, "reproduces": bool(n_ok and mean_ok), "ledger_claimed": False,
+            "pool_pinned_n": len(pool), "pool_symbols_without_bars": no_bars, "table_symbols": int(tab.symbol.nunique())}
+    v = "pass" if rep_["reproduces"] else "fail"
+    note = (f"FROZEN artifact {model_id} (no refit), pool pinned to its {len(pool)} pool_symbols, window {start}..{end}: n={st.get('n')} "
+            f"(expect {expect_n}: {'ok' if n_ok else 'MISMATCH'}), mean net R {st.get('mean_net_r')} (expect {expect_mean}: "
+            f"{'ok' if mean_ok else 'MISMATCH'}); pool symbols without bars: {len(no_bars)}; no holdout read claimed")
+    return {"verdict": v, "note": note, "stats": st, "reproduction": rep_, "decision_rows_before_session_gate": n_before,
+            "decision_rows": int(len(test)), "window": {"start": start, "end": end}}, tk
+
+
 def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, spec: str = STRUCT_SPEC,
                     configs: dict = None, train_end: str = TRAIN_END, start: str = CONFIRM_START, folds: list = None,
                     taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print, ens_seeds=None, min_mean: float = 0.0) -> dict:
@@ -648,6 +807,38 @@ def _write_taken(c: dict, a, repro: str) -> None:
         print(f"[trades-out] {len(tk)} rows -> {p}", flush=True)
 
 
+def _run_reproduce_frozen(a, slip: float, fee: float, t0: float, out: Path) -> int:
+    art = json.loads((REPO / a.artifact).read_text())
+    pool = list(art["pool_symbols"])
+    bars, client = _pinned_pool_and_bars(a, a.end, pool)
+    tab = build_table(bars, pool, slip, fee, struct=art.get("structure_exit") or STRUCT_SPEC)
+    print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols", flush=True)
+    c, tk = reproduce_frozen(tab, a.artifact, a.start, a.end, int(a.expect_n) if a.expect_n else None,
+                             float(a.expect_mean) if a.expect_mean else None, pool, bars.keys())
+    if a.trades_out and tk is not None:
+        p = Path(a.trades_out)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        cols = [x for x in ("symbol", "ts", "net_r", "gross_r", "cost_r") if x in tk.columns]
+        with p.open("w") as fh:
+            for _, r in tk[cols].iterrows():
+                fh.write(json.dumps({"leg": "ml_entry_eq_struct", **{k: (str(r[k]) if k in ("symbol", "ts") else float(r[k])) for k in cols}}) + "\n")
+        c["trades_jsonl"] = {"path": str(p), "rows": int(len(tk)), "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
+    c.update({"alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
+    row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+           "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+           "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+           "population": {"n": c["stats"].get("n"), "description": f"FROZEN {c['reproduction']['model_id']} scored (no refit) on its own pinned "
+                          f"{len(pool)}-ETF pool_symbols, restricted-LONG, bars {a.start}..{a.end}, net of the Alpaca cost stack"},
+           "measurement": c, "n": c["stats"].get("n"),
+           "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py reproduce-frozen", "where": a.where}}
+    (out / "verdict.json").write_text(json.dumps({"verdict": row["verdict"], "read_state": "measured", "n": row["n"],
+                                                  "population": row["population"]["description"], "note": row["note"],
+                                                  "measurement": c}, indent=1, default=str) + "\n")
+    (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": row["verdict"], "note": row["note"]}), flush=True)
+    return 0
+
+
 def main_run(a) -> int:
     from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
     t0 = time.time()
@@ -657,6 +848,8 @@ def main_run(a) -> int:
     fee = resolve_fee_bps_roundtrip("SPY")
     # --full-bars (export): build the table from the SAME bars the graded confirm stage used (to the last complete month); training still takes rows < train_end only
     end_day = TRAIN_END if (a.cmd == "dev" or (a.cmd == "export" and not getattr(a, "full_bars", False))) else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    if a.cmd == "reproduce-frozen":
+        return _run_reproduce_frozen(a, slip, fee, t0, out)
     pool, prep, bars, client = _pool_and_bars(a, end_day)
     spec_used = getattr(a, "struct_spec", "") or STRUCT_SPEC   # dev-only override (pivot 3 / pivot 8 variants); default = the live exit
     tab = build_table(bars, pool, slip, fee, struct=spec_used if (a.cmd in ("structure", "forward") or getattr(a, "structure", False)) else "")
@@ -891,6 +1084,53 @@ def self_test() -> int:
                                   - (n_both and r["arms"]["both_fire_v1_exit"]["mean_net_r"] * n_both or 0)) / r["n_union"]) < 1e-3, "mean d must equal the arm decomposition"
         r0 = h2h_stage(tab, ts_tab, s1, s2, "RQ-T", Path(td), "2023-05-20", "2023-08-31", pool, train_end="2023-04-30", min_n_union=10**6, claim=False)
         assert r0["verdict"] == "indeterminate", r0
+    # ---- P8-Q8 switches: daily decision bar and time-stop length (defaults reproduce the graded table)
+    ct = bars["E0"]["close_ts"]
+    dm, dd = decision_mask(ct), decision_mask(ct, daily=True)
+    assert (dd <= dm).all() and dd.sum() > 0, "daily decisions must be a subset of the default bars"
+    per_day = pd.Series(dd).groupby(pd.to_datetime(ct, utc=True).dt.tz_convert("America/New_York").dt.date.to_numpy()).sum()
+    assert per_day.max() == 1, "daily = at most one decision per session"
+    pd.testing.assert_frame_equal(build_table(bars, pool, 5.0, 0.0, hold=H, daily=False), tab)
+    t48 = build_table(bars, pool, 5.0, 0.0, hold=48)
+    assert t48["bars_long"].max() <= 48 and t48["bars_long"].max() > H and len(t48) <= len(tab), "48-bar stop must allow holds past 24"
+    td = build_table(bars, pool, 5.0, 0.0, daily=True)
+    assert 0 < len(td) < len(tab) and set(map(tuple, td[["symbol", "ts"]].to_numpy())) <= set(map(tuple, tab[["symbol", "ts"]].to_numpy()))
+    assert purge_days_for(H) == PURGE_DAYS and purge_days_for(72) == 30 and purge_days_for(48) == 20
+    # ---- P8-Q5 feature families: columns present, causal, deterministic
+    ff = add_feature_families(tab, bars, ["volregime", "familyrs", "noise9"])
+    assert all(c in ff.columns for fam in FAMILY_FEATURES.values() for c in fam) and len(ff) == len(tab)
+    assert ff["pool_vol_pctile"].dropna().between(0, 1).all() and ff["pool_vol_pctile"].notna().any()
+    cut = ff.ts.sort_values().unique()[len(ff.ts.unique()) // 2]
+    later = tab.assign(vol24=np.where(tab.ts > cut, tab.vol24 * 5.0, tab.vol24))      # change only the FUTURE
+    f2 = add_feature_families(later, bars, ["volregime"])
+    early = ff.ts <= cut
+    assert np.allclose(ff.loc[early, "pool_vol_pctile"].to_numpy(), f2.loc[early, "pool_vol_pctile"].to_numpy(), equal_nan=True), "vol pctile must be causal"
+    assert ff["fam_rank_ret24"].dropna().between(0, 1).all() and ff["family"].notna().any()
+    shuf = add_feature_families(tab.sample(frac=1.0, random_state=3), bars, ["noise9"]).sort_index()
+    assert np.allclose(shuf["noise_0"].to_numpy(), ff["noise_0"].to_numpy()), "noise draw must not depend on row order"
+    assert set(add_feature_families(tab, bars, []).columns) == set(tab.columns), "no family = no new column"
+    try:
+        add_feature_families(tab, bars, ["events"])
+        raise AssertionError("an unbuilt family must be refused")
+    except ValueError:
+        pass
+    # RQ-20261119-e8a1-04 reproduce-frozen: a frozen booster scored on a pinned pool reproduces its own population exactly,
+    # a wrong expectation FAILS, and a pinned pool symbol with no bars is NAMED (the d9c0-01 drift cause)
+    import lightgbm as _lgbm_mod
+    _f = OWN + XS
+    _tr = tab[tab.ts <= "2023-04-30"].dropna(subset=_f + ["net_long"])
+    _b = _lgbm_mod.LGBMRegressor(n_estimators=20, min_child_samples=20, verbose=-1).fit(_tr[_f], _tr["net_long"]).booster_.model_to_string()
+    with tempfile.TemporaryDirectory() as _td:
+        _ap = Path(_td) / "model.json"
+        _ap.write_text(json.dumps({"model_id": "SYN-FROZEN", "features": _f, "tau": 0.0, "booster_txt": {"long": [_b]},
+                                   "pool_symbols": pool + ["GHOST"]}))
+        c0, tk0 = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", None, None, pool + ["GHOST"], bars.keys())
+        n0, m0 = c0["stats"]["n"], c0["stats"]["mean_net_r"]
+        assert n0 and c0["reproduction"]["pool_symbols_without_bars"] == ["GHOST"], c0["reproduction"]
+        c1, _ = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", n0, m0, pool, bars.keys())
+        assert c1["verdict"] == "pass" and c1["reproduction"]["reproduces"] and not c1["reproduction"]["ledger_claimed"], c1
+        c2, _ = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", n0 + 1, m0, pool, bars.keys())
+        assert c2["verdict"] == "fail" and not c2["reproduction"]["n_match"], c2
     print("self-test ok")
     return 0
 
@@ -955,10 +1195,23 @@ def main(argv=None) -> int:
             p.add_argument("--dev-oof-mean", required=True)
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
+    rf = sub.add_parser("reproduce-frozen", help="RQ-20261119-e8a1-04: score a FROZEN artifact (no refit) on its own pinned pool_symbols")
+    rf.add_argument("--cache", required=True)
+    rf.add_argument("--out", required=True)
+    rf.add_argument("--unit", required=True)
+    rf.add_argument("--where", default="local")
+    rf.add_argument("--artifact", required=True, help="repo-relative model.json (booster_txt + pool_symbols)")
+    rf.add_argument("--start", default=CONFIRM_START)
+    rf.add_argument("--end", required=True, help="pinned last bar day of the graded window (e.g. 2026-10-31)")
+    rf.add_argument("--expect-n", dest="expect_n", default="")
+    rf.add_argument("--expect-mean", dest="expect_mean", default="")
+    rf.add_argument("--trades-out", dest="trades_out", default="")
+    rf.add_argument("--rule-id", required=True)
+    rf.add_argument("--registered-at", required=True)
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h", "reproduce-frozen") else 2
 
 
 if __name__ == "__main__":

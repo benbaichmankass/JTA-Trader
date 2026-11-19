@@ -104,7 +104,8 @@ def load_pages(trades_glob: str, packages_glob: str) -> List[dict]:
     out = []
     for t in T.values():
         p = P.get(str(t.get("order_package_id") or ""))
-        out.append({**t, "pkg_sl": _f(p.get("sl")) if p else None})
+        out.append({**t, "pkg_sl": _f(p.get("sl")) if p else None, "pkg_entry": _f(p.get("entry")) if p else None,
+                    "pkg_direction": p.get("direction") if p else None, "pkg_meta": p.get("meta") if p else None})
     return out
 
 
@@ -112,7 +113,8 @@ def load_db(db: Path) -> List[dict]:
     conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute("SELECT t.*, op.sl AS pkg_sl FROM trades t LEFT JOIN order_packages op "
+        rows = conn.execute("SELECT t.*, op.sl AS pkg_sl, op.entry AS pkg_entry, op.direction AS pkg_direction, op.meta AS pkg_meta "
+                            "FROM trades t LEFT JOIN order_packages op "
                             "ON op.order_package_id = t.order_package_id").fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -128,6 +130,49 @@ def stage0(evidence_dir: Path) -> Dict[str, float]:
             continue
         if d.get("coverage_state") == "measured" and _f(d.get("expectancy_r_oos")) is not None:
             out[f.stem] = float(d["expectancy_r_oos"])
+    return out
+
+
+def _vol_tag(meta) -> Optional[float]:
+    """The live vol regime the package was routed under (1 volatile, 0 calm/normal), read from order_packages.meta (top level
+    or one level down, e.g. a regime-gate block); None when the package recorded none. Never imputed."""
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (ValueError, TypeError):
+            return None
+    if not isinstance(meta, dict):
+        return None
+    cands = [meta] + [v for v in meta.values() if isinstance(v, dict)]
+    for d in cands:
+        for k in ("vol_regime", "vol_regime_ml", "vol_regime_frozen"):
+            v = str(d.get(k) or "").lower()
+            if v == "volatile":
+                return 1.0
+            if v in ("calm", "normal", "low", "range"):
+                return 0.0
+    return None
+
+
+def entry_info(t: dict) -> dict:
+    """Per-trade NEW-INFORMATION inputs (RQ-20261119-a10d-03), all known by the trade's close (and most at its entry):
+    risk_pct = |fill - package stop| / fill (the stop distance is ATR-scaled on most legs, so it reads the volatility regime
+    at entry); cost_r = (fees + funding) / initial risk; slip_r = adverse entry slippage (fill vs package entry) / initial
+    risk; vol_tag = the live vol regime the package was routed under. None where the journal does not carry the input."""
+    e, sl, q, cv = _f(t.get("entry_price")), _f(t.get("pkg_sl")), _f(t.get("position_size")), contract_value(t)
+    out = {"risk_pct": None, "cost_r": None, "slip_r": None, "vol_tag": _vol_tag(t.get("pkg_meta"))}
+    if e is None or sl is None or e <= 0:
+        return out
+    out["risk_pct"] = abs(e - sl) / e
+    risk = abs(e - sl) * abs(q) * cv if (q is not None and cv is not None) else None
+    if risk and risk > 0:
+        cost = (_f(t.get("fee_taker_usd")) or 0.0) + (_f(t.get("fee_maker_usd")) or 0.0) + (_f(t.get("funding_paid_usd")) or 0.0)
+        out["cost_r"] = cost / risk
+    pe = _f(t.get("pkg_entry"))
+    d = str(t.get("pkg_direction") or t.get("direction") or "").lower()
+    if pe is not None and pe > 0 and abs(e - sl) > 0 and d in ("long", "short", "buy", "sell"):
+        sign = 1.0 if d in ("long", "buy") else -1.0
+        out["slip_r"] = sign * (e - pe) / abs(e - sl)
     return out
 
 
@@ -158,7 +203,7 @@ def leg_series(trades: List[dict], mu: Dict[str, float]) -> tuple[Dict[str, List
             continue
         # winsorised at +-CLIP everywhere (labels and action sums too, not only inside the CUSUM): per-trade R is heavy-tailed
         by.setdefault(leg, []).append({"trade_id": int(t["id"]), "closed_at": str(t["closed_at"]),
-                                       "r": float(np.clip(r, -CLIP, CLIP)), "r_raw": r})
+                                       "r": float(np.clip(r, -CLIP, CLIP)), "r_raw": r, **entry_info(t)})
     for v in by.values():
         v.sort(key=lambda x: (x["closed_at"], x["trade_id"]))
     return by, ex
@@ -270,14 +315,14 @@ def learned_points(by: Dict[str, List[dict]], mu: Dict[str, float]) -> List[dict
     return pts
 
 
-def learned_oof(pts: List[dict], seed: int = SEED) -> np.ndarray:
+def learned_oof(pts: List[dict], seed: int = SEED, features: Optional[List[str]] = None) -> np.ndarray:
     """Out-of-fold P(decay): legs are split into N_GROUP_FOLDS groups, so no leg's own points train its score."""
     import lightgbm as lgb
     legs = sorted({p["leg"] for p in pts})
     rng = np.random.default_rng(seed)
     order = list(rng.permutation(len(legs)))
     fold_of = {legs[j]: k % N_GROUP_FOLDS for k, j in enumerate(order)}
-    X = np.array([[p[f] for f in LEARNED_FEATURES] for p in pts], float)
+    X = np.array([[p[f] for f in (features or LEARNED_FEATURES)] for p in pts], float)
     y = np.array([p["decay"] for p in pts], int)
     f = np.array([fold_of[p["leg"]] for p in pts])
     oof = np.full(len(pts), np.nan)
@@ -324,6 +369,242 @@ def learned_verdict(learn: dict, base: dict, paired: dict) -> tuple[str, str]:
                         f"{paired['delta']} (leg-cluster CI95 {paired['ci95']})")
     return "fail", (f"learned AUC {learn['auc']} (CI95 {learn['ci95']}) vs CUSUM {base['auc']}: paired delta {paired['delta']} "
                     f"CI95 {paired['ci95']} does not clear 0 with AUC >= {LEARNED_BAR}")
+
+# ── FALSIFIER (RQ-20261118-f7c1-07): is aadc-14's below-chance AUC a leg-identity artifact of leg-grouped CV? ─────────
+FALSIFY_UNIT = "RQ-20261118-f7c1-07"
+FALSIFY_RULE_ID = "RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT"
+LEG_LEVEL = ["n_seen", "mu"]          # leg-constant (mu) or leg-age (n_seen) inputs: under leg-grouped CV they identify the leg
+REPRO_TOL = 0.02
+
+
+def within_leg_auc(pts: List[dict], key: str) -> dict:
+    """Pair-weighted mean of per-leg AUCs (legs with both classes): ranking skill INSIDE a leg, free of between-leg base rates."""
+    num = den = 0.0
+    legs = 0
+    for lg in sorted({p["leg"] for p in pts}):
+        sel = [p for p in pts if p["leg"] == lg and p.get(key) is not None and not np.isnan(p[key])]
+        y = np.array([p["decay"] for p in sel])
+        a = auc(np.array([p[key] for p in sel], float), y) if sel else None
+        if a is None:
+            continue
+        w = float(y.sum() * (len(y) - y.sum()))
+        num, den, legs = num + a * w, den + w, legs + 1
+    return {"auc": round(num / den, 4) if den else None, "legs": legs, "pairs": int(den)}
+
+
+def falsify_verdict(full: dict, drop: dict, wl_full: dict, ref_auc: float) -> tuple[str, str]:
+    if drop["n"] < MIN_POINTS or drop["legs"] < MIN_LEGS or drop["ci95"] is None or full["auc"] is None:
+        return "indeterminate", f"labelled points {drop['n']} / legs {drop['legs']} below {MIN_POINTS} / {MIN_LEGS}"
+    if abs(full["auc"] - ref_auc) > REPRO_TOL:
+        return "indeterminate", f"full-feature arm AUC {full['auc']} does not reproduce aadc-14's {ref_auc} within {REPRO_TOL}"
+    if drop["auc"] >= 0.5 and (wl_full["auc"] or 0) >= 0.5:
+        return "pass", (f"artifact SUPPORTED: without {LEG_LEVEL} pooled AUC {drop['auc']} (CI95 {drop['ci95']}) >= 0.5 and the full "
+                        f"arm's within-leg AUC {wl_full['auc']} >= 0.5 while its pooled AUC is {full['auc']}")
+    if drop["ci95"][1] < 0.5:
+        return "fail", f"artifact REFUTED: without {LEG_LEVEL} pooled AUC {drop['auc']} CI95 {drop['ci95']} is still below 0.5"
+    return "indeterminate", (f"neither: drop-arm AUC {drop['auc']} CI95 {drop['ci95']}, full-arm within-leg AUC {wl_full['auc']}")
+
+
+# ── NULL CALIBRATION (PI-20261119-JX6BUNMV-0001, the f7c1-07 harness audit) ─────────────────────────────────────────
+# AUDIT FINDING (ML-PRIMARY-9, 2026-11-19). The below-chance learned AUC of aadc-14 / f7c1-07 is NOT a leak in learned_points
+# or learned_oof: features read trades 0..i, the label reads i+1..i+N_NEXT, folds are by leg group (self-tests below). It is
+# that 0.5 is the wrong null for this design, for two measured reasons (iid synthetic legs, no signal at all, 24 legs of
+# 21 + geometric(mean 28) trades like aadc-14's 670 points / 24 legs, 20 seeds, through these exact functions):
+#   1. WITHIN-LEG, a short realised series splits a fixed total between the past window and the next-N window, so any
+#      "bad recent R -> decay" score ranks BELOW chance with no signal: within-leg AUC -mean20 0.364, CUSUM 0.373.
+#   2. POOLED out-of-fold by leg group, a fold whose legs decay more is scored by a model fitted on legs that decay less
+#      (base-rate anti-learning): learned pooled AUC 0.461-0.477 with no signal. With leg means that differ (sd 0.3 R) but
+#      no change over time, the CUSUM pooled AUC is 0.706, so a pooled AUC above 0.5 also reads "this leg is persistently
+#      below its Stage-0 expectancy", not "this leg is turning".
+# So every D10 AUC is graded against the ORDER NULL below: each leg's trades are shuffled (same legs, lengths, trade set and
+# mean; only the order is destroyed), points and scores are rebuilt, and the read is observed minus the null mean, with
+# p = share of null draws >= observed. A learned score refits on every null draw.
+NULL_DRAWS_CUSUM, NULL_DRAWS_LEARNED = 200, 40
+NULL_UNIT = "RQ-20261119-b9d0-01"
+NULL_RULE_ID = "RULE-RQ20261119-b9d0-01-D10-ORDER-NULL"
+NULL_MIN_LEARNED_DRAWS = 30
+
+
+def null_verdict(cal: dict, n: int, legs: int) -> tuple[str, str]:
+    """RULE-RQ20261119-b9d0-01-D10-ORDER-NULL, as registered: INDETERMINATE if points < 200 OR legs < 3 OR fewer than 30 learned
+    null draws scored; PASS if learned pooled excess > 0 AND its p < 0.05 AND it exceeds the CUSUM's pooled excess; FAIL if
+    the learned pooled p >= 0.20; INDETERMINATE otherwise. Emits only result-contract verdicts (script_run.VERDICTS): the
+    collector treats any other token as producer_failed and retries the run (the b9d0-01 double dispatch, 2026-11-19)."""
+    lp, cp = cal["learned"]["pooled"], cal["cusum"]["pooled"]
+    if n < MIN_POINTS or legs < MIN_LEGS or (lp.get("draws") or 0) < NULL_MIN_LEARNED_DRAWS or lp.get("p_one_sided") is None:
+        return "indeterminate", f"points {n} / legs {legs} / learned null draws {lp.get('draws')} below {MIN_POINTS} / {MIN_LEGS} / {NULL_MIN_LEARNED_DRAWS}"
+    ex, p, cex = lp["excess"], lp["p_one_sided"], cp.get("excess")
+    txt = f"learned pooled excess {ex:+.4f} (p {p}) vs CUSUM {cex:+.4f} (p {cp.get('p_one_sided')})"
+    if ex > 0 and p < 0.05 and cex is not None and ex > cex:
+        return "pass", txt + ": the learned score ranks decay beyond the order null and beyond the CUSUM"
+    if p >= 0.20:
+        return "fail", txt + ": no learned skill over the order null"
+    return "indeterminate", txt + ": between the bars"
+
+
+def _shuffle_legs(by: Dict[str, List[dict]], rng: np.random.Generator) -> Dict[str, List[dict]]:
+    out = {}
+    for leg, seq in by.items():
+        rs = [x["r"] for x in seq]
+        perm = rng.permutation(len(rs))
+        out[leg] = [{**x, "r": rs[j]} for x, j in zip(seq, perm)]
+    return out
+
+
+def score_points(by: Dict[str, List[dict]], mu: Dict[str, float], key: str, seed: int = SEED,
+                 features: Optional[List[str]] = None) -> List[dict]:
+    """learned_points with p[key] filled: key 'cusum' is the baseline itself; any other key is the out-of-fold learned score."""
+    lp = learned_points(by, mu)
+    if key != "cusum":
+        for p, s_ in zip(lp, learned_oof(lp, seed=seed, features=features)):
+            p[key] = None if np.isnan(s_) else float(s_)
+    return lp
+
+
+def _aucs(lp: List[dict], key: str) -> tuple[Optional[float], Optional[float]]:
+    sel = [p for p in lp if p.get(key) is not None]
+    if not sel:
+        return None, None
+    return auc(np.array([p[key] for p in sel], float), np.array([p["decay"] for p in sel])), within_leg_auc(sel, key)["auc"]
+
+
+def order_null(by: Dict[str, List[dict]], mu: Dict[str, float], key: str, draws: int, seed: int = SEED,
+               features: Optional[List[str]] = None) -> dict:
+    """Observed pooled / within-leg AUC of `key`, the order-null mean of each, the excess and its one-sided p."""
+    obs_p, obs_w = _aucs(score_points(by, mu, key, seed, features), key)
+    rng = np.random.default_rng(seed + 1)
+    nulls_p, nulls_w = [], []
+    for d in range(draws):
+        np_, nw = _aucs(score_points(_shuffle_legs(by, rng), mu, key, seed + 2 + d, features), key)
+        if np_ is not None:
+            nulls_p.append(np_)
+        if nw is not None:
+            nulls_w.append(nw)
+
+    def side(obs, nulls):
+        if obs is None or not nulls:
+            return {"observed": obs, "null_mean": None, "excess": None, "p_one_sided": None, "draws": len(nulls)}
+        m = float(np.mean(nulls))
+        return {"observed": round(obs, 4), "null_mean": round(m, 4), "null_sd": round(float(np.std(nulls)), 4),
+                "excess": round(obs - m, 4), "p_one_sided": round((1 + sum(v >= obs for v in nulls)) / (1 + len(nulls)), 4),
+                "draws": len(nulls)}
+    return {"key": key, "pooled": side(obs_p, nulls_p), "within_leg": side(obs_w, nulls_w)}
+
+
+# ── NEW INFORMATION (RQ-20261119-a10d-03): regime at entry + cost drift, the aadc-14 / b9d0-01 fail_action lever ─────────
+# aadc-14 FAILED and b9d0-01 FAILED (the learned score on recent-path statistics has no skill over the order null); both name
+# the next lever as NEW INFORMATION, not a stronger learner. One factor against aadc-14's learned score on the same points,
+# folds and learner: add five past-only inputs the realised-R path cannot see.
+#   volreg_z   log(risk_pct_i) - median log(risk_pct) of the leg's trades 0..i-1   (the vol regime at entry vs the leg's own)
+#   volreg_z5  mean volreg_z over the last 5 trades
+#   vol_tag10  share of the last 10 trades routed under a volatile live vol regime (packages that recorded one; else NaN)
+#   cost10     mean realised cost in R (fees + funding / initial risk) over the last 10 trades
+#   cost_drift cost10 - the leg's mean cost_r over trades 0..i-10 (NaN until there is an earlier window)
+#   slip10     mean adverse entry slippage in R (fill vs package entry) over the last 10 trades
+# Missing inputs stay NaN (LightGBM routes them), never 0. The ORDER NULL here permutes WHOLE TRADE RECORDS (r together with
+# its entry info), because a null that shuffled r alone would leave the new inputs in time order and credit them with order.
+NEWINFO_UNIT = "RQ-20261119-a10d-03"
+NEWINFO_RULE_ID = "RULE-RQ20261119-a10d-03-D10-NEWINFO"
+NEWINFO_FEATURES = ["volreg_z", "volreg_z5", "vol_tag10", "cost10", "cost_drift", "slip10"]
+NEWINFO_MIN_COVERAGE = 0.5
+NEWINFO_NULL_DRAWS = 40
+
+
+def _nanmean(xs) -> float:
+    v = [x for x in xs if x is not None and not (isinstance(x, float) and np.isnan(x))]
+    return float(np.mean(v)) if v else float("nan")
+
+
+def newinfo_points(by: Dict[str, List[dict]], mu: Dict[str, float]) -> List[dict]:
+    """learned_points plus NEWINFO_FEATURES; every new input reads trades 0..i only."""
+    lp = learned_points(by, mu)
+    extra: Dict[tuple, dict] = {}
+    for leg, seq in by.items():
+        lrp = [np.log(x["risk_pct"]) if (x.get("risk_pct") or 0) > 0 else None for x in seq]
+        z: List[float] = []
+        for i, x in enumerate(seq):
+            prior = [v for v in lrp[:i] if v is not None]
+            z.append(float(lrp[i] - np.median(prior)) if (lrp[i] is not None and prior) else float("nan"))
+            cost = [y.get("cost_r") for y in seq[:i + 1]]
+            c10 = _nanmean(cost[-10:])
+            extra[(leg, i)] = {"volreg_z": z[i], "volreg_z5": _nanmean(z[-5:]),
+                               "vol_tag10": _nanmean([y.get("vol_tag") for y in seq[max(0, i - 9):i + 1]]),
+                               "cost10": c10, "cost_drift": (c10 - _nanmean(cost[:-10])) if len(cost) > 10 else float("nan"),
+                               "slip10": _nanmean([y.get("slip_r") for y in seq[max(0, i - 9):i + 1]])}
+    for p in lp:
+        p.update(extra[(p["leg"], p["i"])])
+    return lp
+
+
+def newinfo_coverage(pts: List[dict]) -> dict:
+    n = len(pts)
+    per = {f: (round(sum(not np.isnan(p[f]) for p in pts) / n, 4) if n else None) for f in NEWINFO_FEATURES}
+    core = round(sum((not np.isnan(p["volreg_z"])) and (not np.isnan(p["cost10"])) for p in pts) / n, 4) if n else None
+    return {"per_feature": per, "core_volreg_and_cost": core}
+
+
+def _shuffle_records(by: Dict[str, List[dict]], rng: np.random.Generator) -> Dict[str, List[dict]]:
+    """Order null for the new-information arm: each leg's trade RECORDS permuted (r and entry info move together)."""
+    out = {}
+    for leg, seq in by.items():
+        perm = rng.permutation(len(seq))
+        out[leg] = [{**seq[j], "trade_id": seq[k]["trade_id"], "closed_at": seq[k]["closed_at"]} for k, j in enumerate(perm)]
+    return out
+
+
+def newinfo_scored(by: Dict[str, List[dict]], mu: Dict[str, float], seed: int = SEED) -> List[dict]:
+    lp = newinfo_points(by, mu)
+    for key, feats in (("learned_base", LEARNED_FEATURES), ("learned_newinfo", LEARNED_FEATURES + NEWINFO_FEATURES)):
+        for p, s_ in zip(lp, learned_oof(lp, seed=seed, features=feats)):
+            p[key] = None if np.isnan(s_) else float(s_)
+    return lp
+
+
+def newinfo_null(by: Dict[str, List[dict]], mu: Dict[str, float], draws: int, seed: int = SEED) -> dict:
+    """Pooled / within-leg AUC of the newinfo score vs its RECORD-order null (refit on every draw)."""
+    obs = newinfo_scored(by, mu, seed)
+    obs_p, obs_w = _aucs(obs, "learned_newinfo")
+    rng = np.random.default_rng(seed + 1)
+    nulls_p, nulls_w = [], []
+    for d in range(draws):
+        lp = newinfo_points(_shuffle_records(by, rng), mu)
+        for p, s_ in zip(lp, learned_oof(lp, seed=seed + 2 + d, features=LEARNED_FEATURES + NEWINFO_FEATURES)):
+            p["learned_newinfo"] = None if np.isnan(s_) else float(s_)
+        a_p, a_w = _aucs(lp, "learned_newinfo")
+        if a_p is not None:
+            nulls_p.append(a_p)
+        if a_w is not None:
+            nulls_w.append(a_w)
+
+    def side(o, nulls):
+        if o is None or not nulls:
+            return {"observed": o, "null_mean": None, "excess": None, "p_one_sided": None, "draws": len(nulls)}
+        m = float(np.mean(nulls))
+        return {"observed": round(o, 4), "null_mean": round(m, 4), "null_sd": round(float(np.std(nulls)), 4),
+                "excess": round(o - m, 4), "p_one_sided": round((1 + sum(v >= o for v in nulls)) / (1 + len(nulls)), 4),
+                "draws": len(nulls)}
+    return {"points": obs, "pooled": side(obs_p, nulls_p), "within_leg": side(obs_w, nulls_w)}
+
+
+def newinfo_verdict(n: int, legs: int, cov: dict, nul: dict, paired: dict) -> tuple[str, str]:
+    """RULE-RQ20261119-a10d-03-D10-NEWINFO, as registered: INDETERMINATE if points < 200 OR legs < 3 OR core coverage < 0.5 OR
+    fewer than 30 null draws scored; PASS if the newinfo pooled excess over the record-order null > 0 with p < 0.05 AND its
+    within-leg excess > 0 AND the paired AUC(newinfo) - AUC(base) leg-cluster CI95 lower bound > 0; FAIL if the newinfo pooled
+    p >= 0.20 OR the paired CI95 upper bound <= 0; INDETERMINATE otherwise."""
+    pp, wl = nul["pooled"], nul["within_leg"]
+    core = cov.get("core_volreg_and_cost") or 0.0
+    if n < MIN_POINTS or legs < MIN_LEGS or core < NEWINFO_MIN_COVERAGE or (pp.get("draws") or 0) < NULL_MIN_LEARNED_DRAWS \
+            or pp.get("p_one_sided") is None or paired.get("ci95") is None:
+        return "indeterminate", (f"points {n} / legs {legs} / core coverage {core} / null draws {pp.get('draws')} below "
+                                 f"{MIN_POINTS} / {MIN_LEGS} / {NEWINFO_MIN_COVERAGE} / {NULL_MIN_LEARNED_DRAWS}")
+    txt = (f"newinfo pooled excess {pp['excess']:+.4f} (p {pp['p_one_sided']}), within-leg excess {wl.get('excess')}, "
+           f"paired AUC(newinfo) - AUC(base) {paired['delta']} CI95 {paired['ci95']}")
+    if pp["excess"] > 0 and pp["p_one_sided"] < 0.05 and (wl.get("excess") or 0) > 0 and paired["ci95"][0] > 0:
+        return "pass", txt + ": the new information ranks decay beyond the record-order null and beyond the path-only score"
+    if pp["p_one_sided"] >= 0.20 or paired["ci95"][1] <= 0:
+        return "fail", txt + ": the new information adds no ranking skill"
+    return "indeterminate", txt + ": between the bars"
+
 
 # ── ACTION replay (RQ-20261117-aadc-06): does acting on the alarm add net R? ─────────────────────────────────────────
 ACTION_UNIT = "RQ-20261117-aadc-06"
@@ -507,8 +788,83 @@ def run(a) -> int:
         out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
         print(json.dumps({"verdict": v, "note": why}, indent=1))
         return 0
+    if a.falsify_legid:
+        lp = learned_points(by, mu)
+        drop_feats = [f for f in LEARNED_FEATURES if f not in LEG_LEVEL]
+        for key, feats in (("learned_full", LEARNED_FEATURES), ("learned_drop", drop_feats)):
+            for p, s_ in zip(lp, learned_oof(lp, features=feats)):
+                p[key] = None if np.isnan(s_) else float(s_)
+        full, drop, base = leg_boot(lp, "learned_full"), leg_boot(lp, "learned_drop"), leg_boot(lp, "cusum")
+        wl = {k: within_leg_auc(lp, k) for k in ("learned_full", "learned_drop", "cusum")}
+        v, why = falsify_verdict(full, drop, wl["learned_full"], 0.4137)
+        res = {"verdict": v, "read_state": "measured", "n": drop["n"],
+               "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 record, "
+                              f"label mean net R of the next {N_NEXT} trades < 0, out of fold by {N_GROUP_FOLDS} leg groups"),
+               "note": why, "measurement": {"rule": FALSIFY_RULE_ID, "learned_full": full, "learned_drop": drop,
+                                            "cusum_same_points": base, "within_leg_auc": wl, "dropped_features": LEG_LEVEL,
+                                            "paired_drop_vs_cusum_reported_not_gating": paired_leg_boot(lp, "learned_drop", "cusum"),
+                                            "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS, "repro_ref": 0.4137},
+                                            "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": why}, indent=1))
+        return 0
+    if a.null_calibrate:
+        # RQ-20261119-b9d0-01: the order-null calibration of the CUSUM baseline and the learned score on the same points, graded
+        # by that unit's registered rule (null_verdict). The learned refits on every draw, so it takes the heavy queue.
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        try:
+            from scripts.ml._heavy_queue import take_heavy_queue
+            _lock = take_heavy_queue("d10-basset-null")   # noqa: F841 - held for the process lifetime
+        except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
+            print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
+        cal = {"cusum": order_null(by, mu, "cusum", a.null_draws_cusum),
+               "learned": order_null(by, mu, "learned", a.null_draws_learned)}
+        n_pts = len(learned_points(by, mu))
+        v, why = null_verdict(cal, n_pts, len(by))
+        res = {"verdict": v, "read_state": "measured", "n": n_pts,
+               "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 "
+                              f"record, label mean net R of the next {N_NEXT} trades < 0; null = each leg's trades shuffled"),
+               "note": (f"{why}; order-null excess AUC (pooled / within-leg): cusum {cal['cusum']['pooled']['excess']} / "
+                        f"{cal['cusum']['within_leg']['excess']}, learned {cal['learned']['pooled']['excess']} / "
+                        f"{cal['learned']['within_leg']['excess']}"),
+               "measurement": {"rule": NULL_RULE_ID, "calibration": cal, "features": LEARNED_FEATURES,
+                               "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS},
+                               "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": v, "note": res["note"]}, indent=1))
+        return 0
+    if a.newinfo:
+        # RQ-20261119-a10d-03: aadc-14's learned score with and without the new-information inputs, graded against the
+        # record-order null. It refits on every draw, so it takes the trainer heavy queue.
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        try:
+            from scripts.ml._heavy_queue import take_heavy_queue
+            _lock = take_heavy_queue("d10-basset-newinfo")   # noqa: F841 - held for the process lifetime
+        except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
+            print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
+        nul = newinfo_null(by, mu, a.null_draws_learned)
+        lp = nul.pop("points")
+        cov = newinfo_coverage(lp)
+        paired = paired_leg_boot(lp, "learned_newinfo", "learned_base")
+        arms = {k: leg_boot(lp, k) for k in ("learned_newinfo", "learned_base", "cusum")}
+        v, why = newinfo_verdict(len(lp), len(by), cov, nul, paired)
+        res = {"verdict": v, "read_state": "measured", "n": len(lp),
+               "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 "
+                              f"record, label mean net R of the next {N_NEXT} trades < 0, out of fold by {N_GROUP_FOLDS} leg groups; "
+                              "null = each leg's trade records permuted"),
+               "note": why,
+               "measurement": {"rule": NEWINFO_RULE_ID, "null": nul, "paired_newinfo_minus_base": paired, "arms": arms,
+                               "within_leg_auc": {k: within_leg_auc(lp, k) for k in ("learned_newinfo", "learned_base", "cusum")},
+                               "coverage": cov, "features_base": LEARNED_FEATURES, "features_new": NEWINFO_FEATURES,
+                               "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS},
+                               "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+        print(json.dumps({"verdict": v, "note": why, "coverage": cov}, indent=1))
+        return 0
     if a.alarm_h_sweep:
-        arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
+        arms =[action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
         res = {"verdict": v, "read_state": "measured", "n": max(x["n_alarmed"] for x in arms),
                "population": (f"closed live/paper journal trades on {len(by)} legs with a measured Stage-0 record (as aadc-05/-06); "
@@ -629,6 +985,98 @@ def _self_test() -> int:
     assert learned_verdict({"n": 400, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "pass"
     assert learned_verdict({"n": 400, "legs": 4, "auc": 0.60, "ci95": [0.5, 0.7]}, {"auc": 0.55}, pr)[0] == "fail"
     assert learned_verdict({"n": 50, "legs": 4, "auc": 0.70, "ci95": [0.6, 0.8]}, {"auc": 0.65}, pr)[0] == "indeterminate"
+    # FALSIFIER (f7c1-07): within-leg AUC ignores between-leg base rates; verdict branches
+    wpts = ([{"leg": "A", "decay": d, "s": v} for d, v in ((1, 0.9), (0, 0.1), (1, 0.8), (0, 0.2))]
+            + [{"leg": "B", "decay": d, "s": v} for d, v in ((1, 0.4), (0, 0.3))])
+    assert within_leg_auc(wpts, "s")["auc"] == 1.0 and within_leg_auc(wpts, "s")["legs"] == 2
+    good = {"n": 400, "legs": 10, "auc": 0.55, "ci95": [0.45, 0.65]}
+    assert falsify_verdict({"auc": 0.41}, good, {"auc": 0.56}, 0.4137)[0] == "pass"
+    assert falsify_verdict({"auc": 0.41}, {**good, "auc": 0.40, "ci95": [0.30, 0.48]}, {"auc": 0.4}, 0.4137)[0] == "fail"
+    assert falsify_verdict({"auc": 0.50}, good, {"auc": 0.56}, 0.4137)[0] == "indeterminate"      # does not reproduce aadc-14
+    assert falsify_verdict({"auc": 0.41}, {**good, "n": 10}, {"auc": 0.56}, 0.4137)[0] == "indeterminate"
+    # NULL CALIBRATION (PI-20261119-JX6BUNMV-0001). Short iid legs, no signal: the within-leg AUC of "bad recent R -> decay"
+    # is BELOW 0.5 by construction (the audit finding), and the order null absorbs it (excess ~ 0).
+    nrng = np.random.default_rng(11)
+    nby = {f"N{j}": [{"trade_id": k, "closed_at": f"t{k:04d}", "r": float(np.clip(nrng.normal(0, 1), -CLIP, CLIP))}
+                     for k in range(21 + int(nrng.geometric(1 / 28)))] for j in range(24)}
+    nmu = {lg: 0.05 for lg in nby}
+    nlp = learned_points(nby, nmu)
+    for p in nlp:
+        p["neg_m20"] = -p["mean20"]
+    assert within_leg_auc(nlp, "neg_m20")["auc"] < 0.45, within_leg_auc(nlp, "neg_m20")
+    on = order_null(nby, nmu, "cusum", draws=60)
+    assert abs(on["within_leg"]["excess"]) < 0.06 and on["within_leg"]["null_mean"] < 0.45, on
+    assert on["pooled"]["p_one_sided"] > 0.05, on
+    # null_verdict emits only result-contract verdicts, and maps the registered branches
+    def _cal(ex, p, d, cex=0.1):
+        return {"learned": {"pooled": {"excess": ex, "p_one_sided": p, "draws": d}}, "cusum": {"pooled": {"excess": cex, "p_one_sided": 0.005}}}
+    assert null_verdict(_cal(0.2, 0.01, 40), 675, 24)[0] == "pass"
+    assert null_verdict(_cal(0.05, 0.01, 40), 675, 24)[0] == "indeterminate"     # beats the null but not the CUSUM, p < 0.20
+    assert null_verdict(_cal(-0.0107, 0.5122, 40), 675, 24)[0] == "fail"         # the b9d0-01 live read
+    assert null_verdict(_cal(0.02, 0.10, 40), 675, 24)[0] == "indeterminate"
+    assert null_verdict(_cal(-0.01, 0.5, 20), 675, 24)[0] == "indeterminate"     # too few learned draws
+    assert null_verdict(_cal(-0.01, 0.5, 40), 150, 24)[0] == "indeterminate"     # too few points
+    assert {null_verdict(_cal(*a), 675, 24)[0] for a in ((0.2, 0.01, 40), (-0.01, 0.5, 40), (0.02, 0.1, 40))} <= {
+        "pass", "fail", "no_action_warranted", "indeterminate", "not_applicable"}
+    # the shuffle keeps each leg's trade set and length, and changes only the order
+    sh = _shuffle_legs(nby, np.random.default_rng(0))
+    assert all(sorted(x["r"] for x in sh[lg]) == sorted(x["r"] for x in nby[lg]) for lg in nby)
+    # NEW INFORMATION (a10d-03): entry_info reads the journal fields; features read trades 0..i only; record shuffle moves r
+    # and its entry info together; the verdict emits only contract tokens
+    ei = entry_info({"entry_price": 100.0, "pkg_sl": 98.0, "position_size": 2, "fee_taker_usd": 0.4, "pkg_entry": 99.9,
+                     "pkg_direction": "long", "pkg_meta": json.dumps({"gate": {"vol_regime": "volatile"}})})
+    assert abs(ei["risk_pct"] - 0.02) < 1e-12 and abs(ei["cost_r"] - 0.1) < 1e-12 and abs(ei["slip_r"] - 0.05) < 1e-9 \
+        and ei["vol_tag"] == 1.0, ei
+    assert entry_info({"entry_price": 100.0})["risk_pct"] is None and _vol_tag("not json") is None and _vol_tag("{}") is None
+    iseq = [{"trade_id": k, "closed_at": f"t{k:03d}", "r": 0.1, "risk_pct": 0.01 if k < 30 else 0.04, "cost_r": 0.05,
+             "slip_r": None, "vol_tag": None} for k in range(60)]
+    ip = {q["i"]: q for q in newinfo_points({"A": iseq}, {"A": 0.2})}
+    assert np.isnan(ip[0]["volreg_z"]) and ip[29]["volreg_z"] == 0.0 and ip[30]["volreg_z"] > 1.0, (ip[0], ip[29], ip[30])
+    assert np.isnan(ip[5]["cost_drift"]) and abs(ip[20]["cost_drift"]) < 1e-12 and np.isnan(ip[10]["slip10"])
+    cov = newinfo_coverage(list(ip.values()))
+    assert cov["per_feature"]["slip10"] == 0.0 and 0.9 < cov["core_volreg_and_cost"] < 1.0, cov
+    rs = _shuffle_records({"A": iseq}, np.random.default_rng(1))["A"]
+    assert sorted((x["r"], x["risk_pct"]) for x in rs) == sorted((x["r"], x["risk_pct"]) for x in iseq)
+    assert [x["closed_at"] for x in rs] == [x["closed_at"] for x in iseq]
+    _nn = {"pooled": {"excess": 0.06, "p_one_sided": 0.02, "draws": 40}, "within_leg": {"excess": 0.03}}
+    _cv = {"core_volreg_and_cost": 0.9}
+    assert newinfo_verdict(600, 20, _cv, _nn, {"delta": 0.05, "ci95": [0.01, 0.09]})[0] == "pass"
+    assert newinfo_verdict(600, 20, _cv, _nn, {"delta": -0.02, "ci95": [-0.06, -0.001]})[0] == "fail"
+    assert newinfo_verdict(600, 20, {"core_volreg_and_cost": 0.3}, _nn, {"delta": 0.05, "ci95": [0.01, 0.09]})[0] == "indeterminate"
+    assert newinfo_verdict(600, 20, _cv, {"pooled": {"excess": -0.01, "p_one_sided": 0.6, "draws": 40}, "within_leg": {}},
+                           {"delta": 0.0, "ci95": [-0.03, 0.03]})[0] == "fail"
+    try:
+        import lightgbm  # noqa: F401
+    except ImportError:  # allow-silent: the learned checks need lightgbm (trainer / research venv); stated on stdout
+        print("d10_basset_baseline self-test OK (learned planted-leak / order-null checks SKIPPED: lightgbm not installed)")
+        return 0
+    # PLANTED LEAK: a feature that reads the label must drive the out-of-fold AUC near 1, i.e. the OOF path CAN surface a
+    # leak, so a below-chance score from it is not a hidden leak running backwards.
+    for p in nlp:
+        p["leak"] = float(p["decay"]) + float(nrng.normal(0, 0.3))
+    loof = learned_oof(nlp, features=["leak"] + LEARNED_FEATURES)
+    ok = ~np.isnan(loof)
+    assert auc(loof[ok], np.array([p["decay"] for p in nlp])[ok]) > 0.9
+    # a learned score with real within-leg signal (legs that turn bad) clears the order null
+    tby = {f"T{j}": [{"trade_id": k, "closed_at": f"t{k:04d}",
+                      "r": float(np.clip(nrng.normal(-0.6 if (j % 2 == 0 and k >= 40) else 0.3, 1), -CLIP, CLIP))}
+                     for k in range(90)] for j in range(12)}
+    tn = order_null(tby, {lg: 0.2 for lg in tby}, "learned", draws=8)
+    assert tn["within_leg"]["excess"] > 0.05 and tn["pooled"]["excess"] > 0.05, tn
+    # NEW INFORMATION planted signal: every leg alternates 30-trade good / bad blocks (no between-leg difference), and its cost
+    # rises over the 10 trades BEFORE each bad block -> only the new input leads, so the newinfo score clears its record null
+    pby = {}
+    for j in range(12):
+        seq = []
+        for k in range(150):
+            bad = (k + 7 * j) % 60 >= 30
+            lead = 20 <= (k + 7 * j) % 60 < 30
+            seq.append({"trade_id": k, "closed_at": f"t{k:04d}",
+                        "r": float(np.clip(nrng.normal(-0.6 if bad else 0.4, 0.8), -CLIP, CLIP)),
+                        "risk_pct": 0.01, "cost_r": 0.4 if lead else 0.05, "slip_r": None, "vol_tag": None})
+        pby[f"P{j}"] = seq
+    pn = newinfo_null(pby, {lg: 0.2 for lg in pby}, draws=6)
+    assert pn["pooled"]["excess"] > 0.05 and pn["within_leg"]["excess"] > 0.05, pn
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -645,6 +1093,14 @@ def main(argv=None) -> int:
     ap.add_argument("--alarm-h-sweep", action="store_true", help="RQ-20261117-aadc-07: demote-on-alarm at H in SWEEP_H, Bonferroni")
     ap.add_argument("--stage0-confirm", action="store_true", help="RQ-20261117-aadc-09: H 2 on the Stage-0 OOS series before 2026-05-01")
     ap.add_argument("--learned", action="store_true", help="RQ-20261118-aadc-14: learned degradation score vs the CUSUM baseline")
+    ap.add_argument("--falsify-legid", action="store_true",
+                    help="RQ-20261118-f7c1-07: aadc-14 with and without the leg-level inputs (n_seen, mu) + within-leg AUC")
+    ap.add_argument("--null-calibrate", action="store_true",
+                    help="PI-20261119-JX6BUNMV-0001: order-null calibration (excess AUC) of the CUSUM and learned scores")
+    ap.add_argument("--newinfo", action="store_true",
+                    help="RQ-20261119-a10d-03: aadc-14's learned score plus regime-at-entry and cost-drift inputs, record-order null")
+    ap.add_argument("--null-draws-cusum", type=int, default=NULL_DRAWS_CUSUM)
+    ap.add_argument("--null-draws-learned", type=int, default=NULL_DRAWS_LEARNED)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

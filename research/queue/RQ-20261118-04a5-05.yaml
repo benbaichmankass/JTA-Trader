@@ -5,7 +5,7 @@ id: RQ-20261118-04a5-05
 title: 'D9 Whippet, EXIT order PRICE: does a post-only maker time-stop exit resting at the MID (half a tick inside the touch) with the
   1-minute market fallback improve R per exit over the market exit on v1''s held-out time-stop exits, where the touch at W 1 (aadc-10) and
   W 5 (aadc-02) did not?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -148,4 +148,15 @@ related:
 - RQ-20261112-1c4e-01
 - RQ-20261027-a3f1-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-last_dispatched_at: '2026-11-18T21:19:33+00:00'
+last_dispatched_at: '2026-11-18T21:41:02+00:00'
+grading:
+  attested: RULE-RQ20261118-04a5-05-MAKER-EXIT-MIDPEG
+  auto: true
+  decision_rule_id: RULE-RQ20261118-04a5-05-MAKER-EXIT-MIDPEG
+  evidence:
+  - research/results/RQ-20261118-04a5-05/44400344151.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

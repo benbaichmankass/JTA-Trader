@@ -1,0 +1,171 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). D9 "spec B": RQ-20261118-e8a1-01's registered next step (the learned step after a PASS).
+# Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261119-b9d0-03
+title: 'D9 Whippet spec B, a LEARNED P(fill) GATE on the mid-peg time-stop exit: fit on the dev out-of-fold exits, graded on the held-out
+  year, does posting only when P(fill) x filled gain + (1 - P(fill)) x unfilled cost > 0 beat ALWAYS posting at the mid, in R per exit?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): a learned gate is fit on
+  one population and graded on another it never saw, against the static policy it would replace, paired on the same orders; the held-out
+  read is claimed (and deflated) before any outcome is computed.'
+question: 'Same approximation, exit epoch, calibration arm, W 1 and mid peg as RQ-20261118-e8a1-01 / 04a5-05. A LightGBM classifier
+  P(filled) on pre-exit 1m features only (closing direction, UTC hour, tick in bps, returns over 1 / 5 / 15 / 60 min signed by the
+  closing direction, 15-min realised vol, 5-min range in ticks, position in the 60-min range) is fit on the dev out-of-fold time-stop exits
+  (v1''s recipe, 2022-01..2025-09). On the held-out year''s time-stop exits (frozen v1, 2025-10..2026-09) each closing order posts at the
+  mid iff P x filled_gain + (1 - P) x U_hat > 0, where filled_gain = half a tick in bps + the 3.5 bps maker/taker fee gap (known at T)
+  and U_hat = the dev mean unfilled delta in bps (fixed from dev); otherwise it takes the market at T (delta 0). Is the paired
+  difference, gated minus always-post, positive in R per exit at the deflated level?'
+why_this_matters: 'e8a1-01 (run 44422089383) CONFIRMED the static mid-peg exit on a fresh window: +0.0066 R per time-stop exit, deflated
+  CI [+0.0059, +0.0073], n 16,764 on 60 symbols. But the gain is the net of two very different outcomes: +4.79 bps when filled (82.8%)
+  and -12.05 bps when unfilled. If P(fill) is predictable from the minutes before the exit, skipping the low-P posts keeps the fills and
+  avoids most of the unfilled cost. This is the step that makes the D9 lever a model rather than a fixed peg; it can only be shipped on
+  top of the static mid-peg exit (proposed to the manager 2026-11-19 03:15Z), so a PASS refines that proposal and a FAIL leaves it as is.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261118-e8a1-01
+  verdict_read: pass
+  diagnosis: 'e8a1-01 PASS: mean delta +0.0066 R per exit (long +0.0063, short +0.0068), fill rate 0.828, +4.79 bps if filled, -12.05
+    bps if unfilled, calibration arm +1.73 bps (in band). The unfilled branch costs ~2.5x what a fill earns, so a classifier that
+    separates fills from misses only modestly (AUC ~0.6) can already change which orders post. Its pass_action names this learned step
+    explicitly. The held-out year has been read for this family before (aadc-02 x2, aadc-10, 04a5-05, 1c4e-01): the ledger counts this
+    read and the deflated bar tightens accordingly.'
+  search: 'none: features, classifier hyper-parameters, the decision rule (expected-value sign with the dev U_hat) and W / peg are fixed
+    here before any run; nothing is tuned on the held-out year'
+  attempt: 5
+  due_by: '2026-11-26'
+levers:
+- name: exit_order_price
+  values: [post_only_mid_w1_always, post_only_mid_w1_fill_gated]
+  hypothesised_effect: the gate skips the posts most likely to miss, so gated minus always-post is > 0 at the deflated level while the gated
+    policy still beats the market exit
+data_and_approximation: 'Unchanged from RQ-20261118-e8a1-01 (Binance Vision daily 1m futures klines; touch at T with a one-tick spread;
+  the mid rests at p, the close of the minute ending at T; STRICT fill iff a 1m high / low in (T, T+1m] trades a tick through the mid;
+  else market at the T+1m close +- half a tick). Features read only the 1m bars that END at or before T (self-tested: changing every bar
+  that starts at or after T leaves them identical); a feature window that crosses the start of the day file is NaN (the previous day is
+  stitched only for a 00:00Z exit). No volume (the cached klines keep OHLC only). The filled gain is exact at the mid peg (the fill price
+  is the mid), so the only learned quantity is P(fill).'
+decision_rule:
+  id: RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_maker_replay.py exit-gate --exit-w-min 1: per held-out time-stop exit, d = delta_R(gated) -
+    delta_R(always-post) (= -delta_R where the gate skips, 0 where it posts); pooled mean with a day-block bootstrap CI (2000 reps) at the
+    DEFLATED lower percentile holdout_lock.claim_read returns for this read (family EXEC, model EXEC-maker-exit-fillgate-ml_entry_v1,
+    window 2025-10-01..2026-09-30). Also the gated policy vs the market exit (mean delta_R, same CI). Reported, never gating: skip
+    share, fill rate overall / posted / skipped, AUC and Brier of P(fill) on held-out vs the dev base rate, d in bps, by side, the
+    always-post mean (reproduces 04a5-05''s population), and the BASE-RATE gate (the same rule with P fixed at the dev fill rate): the filled
+    gain is known at T, so a gate can beat random skips by tick size alone, and model-minus-base-rate d is what P(fill) itself adds.'
+  rule: 'INDETERMINATE IF the calibration arm (W 5) is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured exits < 1000 on
+    dev or on held-out, OR held-out symbols < 10, OR the gate skips < 1% of held-out exits (inert). PASS IF mean d > 0 AND the deflated
+    lower bound of d > 0 AND the gated policy''s mean delta_R vs the market exit > 0 AND the matched-random control (the same number of
+    skips chosen at random, 1000 draws) gives one-sided p < 0.05 for the gate''s mean d. FAIL otherwise. The holdout ledger is claimed BEFORE
+    any held-out post-exit 1m bar is read. Thresholds fixed now and not changed after any result.'
+  pass_action: 'Refine the static mid-peg exit proposal (e8a1-01) into a GATED one: a Tier-3 PROPOSAL to the manager to ship the gate with
+    the exit (P(fill) model exported from the dev fit, features computed at the exit moment from the live 1m feed), on the demo floor /
+    paper first; then a live parity check of the feature vector before it decides any real-money order.'
+  fail_action: 'The fill gate adds nothing over always posting at the mid out of sample: keep the static mid-peg proposal unchanged;
+    record the gate on the D9 lever map (AUC reported) and the next D9 lever is the market-fallback window W (1 vs 2 vs 3 min, its own
+    unit), not another classifier.'
+  what_it_does_not_do: No sizing, no config change, no order; SL/TP exits untouched; serves no model. A PASS is a Tier-3 PROPOSAL.
+  min_n: 1000 measured time-stop exits on dev and on held-out, >= 10 held-out symbols, gate skips >= 1%
+family_note: 'Ledger family EXEC (as 1c4e-01, aadc-02, aadc-10, 04a5-05): the decision set is fixed by v1; this unit gates the execution
+  of a fixed exit, paired. The held-out window has prior EXEC reads, so the claim''s n_tries (and therefore the deflated percentile) is
+  higher than a first read; the run records it.'
+power:
+  expected_n: 2786
+  min_detectable_effect: 0.0015
+  effect_units: r_multiple
+  sd: 0.03
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: 04a5-05 measured 2,786 held-out time-stop exits on 53 symbols at W 1 / mid. d is non-zero only on skipped exits, so
+    its sd is well below the per-order 0.08 R; ASSUMED ~0.03 R. At n 2,786 the SE is ~0.0006 R and the deflated half-width ~0.0015 R
+    (more if the ledger counts several prior tries). A gate that skips 15% of exits with a 0.4 miss rate among them (vs 0.17 overall)
+    would gain roughly 0.15 x (0.4 x 12 - 0.6 x 4.8) bps ~ +0.3 bps ~ +0.001 R, near the floor: INDETERMINATE-by-power is not a branch of
+    this rule, so a real but small gain can read FAIL; stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 1000
+    note: 'GATING: skip the SAME number of held-out exits as the gate, chosen uniformly at random, 1000 times (seed 20261119); the gate''s
+      mean d must beat them at one-sided p < 0.05, so a PASS is about WHICH exits the model skips, not about skipping as such
+      (ml_entry_maker_replay.matched_random_skip, self-tested).'
+  best_static:
+    grid:
+    - market_exit
+    - post_only_mid_w1_always (04a5-05 / e8a1-01, fixed)
+    excludes_test_folds: true
+    note: the gate is fit on dev only; nothing is chosen on the held-out year
+  bootstrap_group: day
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.25
+  basis: 'stand-in: refines the execution of ml_entry''s time-stop exit (~25% of decisions) on the real-money leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: needs_internet (keyless public Binance Vision klines); 8 fold refits of the c692-01 recipe for the dev decisions, the frozen
+    v1 for held-out, one small classifier fit
+  basis: 'ESTIMATED: e8a1-01 (dev exits only) is the larger half; this adds the held-out exits (~2,800, 04a5-05 took minutes) and one
+    200-tree fit. e8a1-04 shows runner commands can overrun estimates, so the timeout is generous.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - exit-gate
+  - --unit
+  - '{unit}'
+  - --exit-w-min
+  - '1'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261119-b9d0-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry's mid-peg time-stop exit (proposed 2026-11-19) should be gated by a P(fill) model, i.e. take the market when a
+    miss is likely
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261118-e8a1-01
+- RQ-20261118-04a5-05
+- RQ-20261117-aadc-10
+- ML-D9-MAKER-EXIT-HARNESS
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-19T04:47:37+00:00'
+grading:
+  attested: RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE
+  auto: true
+  decision_rule_id: RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE
+  evidence:
+  - research/results/RQ-20261119-b9d0-03/44460770328.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

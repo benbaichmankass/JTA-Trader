@@ -55,8 +55,11 @@ def test_guard_passes_and_self_tests():
 
 # ---- ML-REGISTRY-SERVED-MODELS-NO-STAGE (2026-11-12) ------------------------------------------------------------
 # The 8 served/inventory ids the UI-SPA lane found with target_deployment_stage null next to a LIVE/SHADOW bucket.
-SERVED_8 = TRADING | {"ml-decision-entry-v1r20261106", "ml-entry-tp-revision-v1", "overlay-td-v1",
-                      "exit-head-donchian-1h-v1"}
+# The refit sibling is whatever ml/served/ENTRY_SERVED.json serves (it moves on every graded promotion, e.g. #26288:
+# r20261106 -> r20261115), so it is read from the pointer, never hard-coded.
+_PTR = __import__("json").loads((REPO / "ml/served/ENTRY_SERVED.json").read_text())["artifact_dir"]
+SERVED_SIBLING = "ml-decision-entry-" + _PTR.split("entry_")[-1]
+SERVED_8 = TRADING | {SERVED_SIBLING, "ml-entry-tp-revision-v1", "overlay-td-v1", "exit-head-donchian-1h-v1"}
 
 
 # The exit head is whatever config/strategies.yaml pins on the donchian legs (it moves on every graded retrain, e.g.

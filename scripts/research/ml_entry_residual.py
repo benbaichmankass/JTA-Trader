@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-4654-01.yaml (runner unit); lane FRONTIER-RESEARCH; work item FRONTIER-Q-RESID-ENTRY
+# wiring: research/queue/RQ-20261118-f7c1-05.yaml (`--arms raw,lrank`: D3 LambdaRank arm, ml-week-plan 2026-11-19 section 4 #1)
 """Market-residual TARGET for the served crypto ENTRY recipe (frontier scan 2026-11-11 K1; FRONTIER-Q-RESID-ENTRY).
 
 Question: the served ENTRY replay's result flips with the market's direction (RQ-20261108-98e3-23 SIDE-DRIVER). Does training the
@@ -52,7 +53,7 @@ PLACEBO_SEED = 20261112
 ARMS = ("raw", "resid", "placebo")
 #: FRONTIER-Q-XSEC-RANK-ENTRY (not part of RQ-20261112-4654-01): the ranking objective in regression form -- each side's net R
 #: minus its cross-sectional mean over the symbols at the same decision timestamp, so only the relative order at a time is learned.
-EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross", "cb", "ens3")
+EXTRA_ARMS = ("xsdemean", "ens", "ridge", "conf", "gross", "cb", "ens3", "lrank")
 # gross (ML-PRIMARY-3, 2026-11-15; diagnosis cd01-01 R3: the net-R label is cost-driven, IC net 0.497 vs gross 0.003): the
 # DECOMPOSED score. LightGBM learns GROSS R per side; the decision score subtracts the KNOWN pre-trade cost per R,
 # c_hat = k_side / (SL_ATR x atr_pct), where k_side = sum(cost) / sum(1 / (SL_ATR x atr_pct)) on the refit's OWN training rows.
@@ -75,7 +76,17 @@ CB_PARAMS = {"iterations": 600, "depth": 6, "learning_rate": 0.05, "loss_functio
 CONF_SPLIT = (0.70, 0.85)
 CONF_SIGMA_FLOOR_Q = 0.05
 LEARNER_ARMS["conf"] = "raw"
-TAU_ARMS = ("conf",)
+TAU_ARMS = ("conf", "lrank")
+# lrank (RQ-20261118-f7c1-05, ML-PRIMARY-7): a TRUE ranking loss. Per side, LightGBM lambdarank (LGB_PARAMS + objective lambdarank)
+# with one query group per decision timestamp (the cross-section of perps at that bar) and the relevance = net R graded into
+# the fixed integer bins LRANK_EDGES. Unlike xsdemean (4654-06: a demeaned REGRESSION target, FAILED), the loss only sees the
+# ORDER inside a timestamp, so its score has no net-R scale and cannot be thresholded at tau. Coverage is therefore matched
+# out of sample inside the refit's training rows (the conf slices): the ranker and a RAW LightGBM are fit on PROPER + CAL-A;
+# on CAL-B, s*_side = the ranker-score quantile that admits as many rows as RAW's prediction > tau admits there; the test
+# score is ranker - s*_side + tau, so E.policy's ``> tau`` means ``ranker > s*_side`` and its side choice compares margins.
+# The served ranker is the PROPER + CAL-A fit (no refit on CAL-B: a refit would move the score scale). Nothing reads the test window.
+LRANK_EDGES = (-0.5, 0.0, 0.5, 1.5)          # net R bins -> relevance 0..4 (fixed before any run)
+LRANK_PARAMS = {"objective": "lambdarank", "metric": "ndcg"}
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -131,6 +142,8 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
         return fit_conf(train, tau if tau is not None else 0.0)
     if arm == "gross":
         return fit_gross(train)
+    if arm == "lrank":
+        return fit_lrank(train, tau if tau is not None else 0.0)
     target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
@@ -214,6 +227,48 @@ class _Normalised:
     def predict(self, x):
         # provenance: predict -- the RAW booster's regressed net R over the sigma model's absolute-residual scale, shifted
         return self.mu.predict(x) / np.maximum(self.sigma.predict(x), self.floor) - self.s_star + self.tau
+
+
+def lrank_relevance(y: np.ndarray) -> np.ndarray:
+    """Net R -> integer relevance 0..len(LRANK_EDGES) (bins closed on the left at the fixed edges)."""
+    return np.searchsorted(np.asarray(LRANK_EDGES), np.asarray(y, float), side="right").astype(int)
+
+
+def fit_lrank(train: pd.DataFrame, tau: float) -> dict:
+    import lightgbm as lgb
+    proper, cal_a, cal_b = _slices(train)
+    fit_rows = pd.concat([proper, cal_a]).sort_values(["ts", "symbol"], kind="mergesort")
+    groups = fit_rows.groupby("ts", sort=False).size().to_numpy()
+    out, info = {}, {"n_rows": [len(fit_rows), len(cal_b)], "n_groups": int(len(groups))}
+    for side in ("long", "short"):
+        y = fit_rows[f"y_{side}_raw"].to_numpy(float)
+        rk = lgb.LGBMRanker(**{**E.LGB_PARAMS, **LRANK_PARAMS})
+        rk.fit(fit_rows[E.FEATURES], lrank_relevance(y), group=groups)
+        rw = lgb.LGBMRegressor(**E.LGB_PARAMS).fit(fit_rows[E.FEATURES], y)
+        # provenance: predict -- RAW regressed net R on CAL-B (the coverage reference) and the lambdarank score (an order, no R scale)
+        n_raw = int((rw.predict(cal_b[E.FEATURES]) > tau).sum())
+        sc = rk.predict(cal_b[E.FEATURES])
+        if n_raw <= 0:
+            s_star = float(sc.max()) + 1.0
+        elif n_raw >= len(sc):
+            s_star = float(sc.min()) - 1.0
+        else:
+            s_star = float(np.quantile(sc, 1.0 - n_raw / len(sc)))
+        out[side] = _Shifted(rk, s_star, tau)
+        info[f"{side}_n_cal_b_raw"], info[f"{side}_s_star"] = n_raw, s_star
+    out["_lrank"] = info
+    return out
+
+
+class _Shifted:
+    """A ranker score shifted so ``> tau`` means ``score > s_star``."""
+
+    def __init__(self, m, s_star, tau):
+        self.m, self.s_star, self.tau = m, s_star, tau
+
+    def predict(self, x):
+        # provenance: predict -- LightGBM lambdarank score of one side (an order within a timestamp, not net R), shifted to the coverage threshold
+        return self.m.predict(x) - self.s_star + self.tau
 
 
 def _per_r_hat(x: pd.DataFrame) -> np.ndarray:
@@ -344,6 +399,8 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
                 row[f"{arm}_info"] = m["_conf"]
             if "_gross" in m:                # gross: the training-set cost-per-R slopes behind this window's scores
                 row[f"{arm}_info"] = m["_gross"]
+            if "_lrank" in m:                # lrank: the matched coverage thresholds and group counts behind this window's scores
+                row[f"{arm}_info"] = m["_lrank"]
             alls[arm].append(taken)
         if frozen is not None:
             # provenance: predict -- the frozen v1 booster's regressed net R of each side (policy() thresholds at tau), not a probability
@@ -475,6 +532,17 @@ def self_test() -> int:
     assert np.allclose(mgr["long"].predict(xg), mgr["long"].m.predict(xg[E.FEATURES]) - kk["k_long"] * _per_r_hat(xg), equal_nan=True)
     d5 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "gross"))
     assert "gross" in d5["paired_extra_vs_raw"] and d5["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    # lrank (RQ-20261118-f7c1-05): fixed relevance bins; coverage on CAL-B matched to RAW's count above tau per side
+    assert lrank_relevance(np.array([-2.0, -0.5, -0.1, 0.0, 0.4, 0.5, 1.0, 1.5, 3.0])).tolist() == [0, 1, 1, 2, 2, 3, 3, 4, 4]
+    ml = fit_lrank(tab.sample(min(len(tab), 15000), random_state=0), 0.0)
+    li = ml["_lrank"]
+    assert li["n_groups"] > 1 and all(np.isfinite(li[f"{s}_s_star"]) for s in ("long", "short")), li
+    xs = tab[E.FEATURES].head(50)
+    # provenance: predict -- the lambdarank score of the long side, shifted (a self-test identity check of the shift)
+    assert np.allclose(ml["long"].predict(xs), ml["long"].m.predict(xs) - li["long_s_star"])
+    d6 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "lrank"))
+    assert "lrank" in d6["paired_extra_vs_raw"] and d6["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    assert any("lrank_info" in w for w in d6["windows"])
     print("self-test ok")
     return 0
 
@@ -491,7 +559,7 @@ def main(argv=None) -> int:
     ap.add_argument("--rule-id", dest="rule_id", default="")
     ap.add_argument("--registered-at", dest="registered_at", default="")
     ap.add_argument("--arms", default=",".join(ARMS), help="comma list; default = the RQ-20261112-4654-01 arms (raw,resid,placebo). "
-                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY) are EXTRA arms for their own units; "
+                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY), lrank (RQ-20261118-f7c1-05) are EXTRA arms for their own units; "
                     "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
     if a.self_test:

@@ -7,6 +7,12 @@ description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE, in 
 
 # /performance-review — CHECKS, then ANALYSIS
 
+> **Live-performance promotion path (operator, 2026-11-17, binding).** Every leg's live record is also a PROMOTION input:
+> >= 20 closed live trades with R on the declared signal-time risk (venue-measured P&L where available), net of real costs, total R > 0 and the mean's ~80% lower bound > 0 promote it
+> (live wins; a fidelity-check unit runs in parallel; a better demo variant on the same symbol takes the slot). The rule is
+> stated once in [`OPERATING-PLAN` § 2 "Live-performance promotion path"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md);
+> list each leg's live-bar state (PASS / FAIL / n-short, with n) in the review.
+
 > Also answers to **`/research-review`**. Follows the shared pattern in
 > [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md). Serves the **TRADING** research track
 > ([`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md)).

@@ -207,7 +207,14 @@ app.include_router(ops_channel_router.router)  # MANAGER-VM-DIRECT-OPS (X-Work-S
 
 
 @app.get("/api/health", tags=["health"])
-def health() -> dict:
+async def health() -> dict:  # async-route-allow: returns a constant; on purpose ON the loop so the watchdog probes loop liveness, not threadpool queueing (WEBAPI-WEDGE-RECURRING)
+    # WEBAPI-WEDGE-RECURRING (2026-11-18): ``async`` on purpose. A sync ``def``
+    # runs on the AnyIO threadpool (default 40 tokens) shared with every sync
+    # diag/broker route, so under host CPU saturation a single /api/health
+    # probe could queue past the watchdog's 10 s timeout while the event loop
+    # was perfectly alive -- logged as a "wedge" that recovered on its own.
+    # On the loop it touches nothing and answers the one question the
+    # watchdog restarts for: is the event loop serving requests.
     return {"ok": True}
 
 

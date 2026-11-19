@@ -171,3 +171,33 @@ def test_parallel_main_fetches_every_pending_symbol_once(tmp_path, monkeypatch):
     m = json.loads((tmp_path / "o" / "MANIFEST.json").read_text())
     assert rc == 0 and m["run"]["fetched"] == 3 and m["run"]["remaining"] >= 1 and m["run"]["stopped_early"] is True
     assert sorted(k for k in m["series"]) == ["AAA/1h", "BBB/1h", "CCC/1h"]
+
+
+def test_backfill_refetches_a_fresh_series_whose_history_starts_after_start(tmp_path, monkeypatch):
+    """2026-11-18 (#26983): QQQ/TLT/IWM/SLV/IEF held only 2026-10/11 yet were skipped as 'fresh' on every backfill."""
+    s0 = (datetime.now(UTC) - timedelta(hours=6)).replace(minute=0, second=0, microsecond=0)
+    bars = _bars(s0, 5, 100.0)
+    monkeypatch.setattr(f, "make_getter", lambda *a, **k: fake_getter(bars))
+    monkeypatch.setattr(f, "pick_feed", lambda get, pref: "iex")
+    monkeypatch.setattr(f, "fetch_corporate_actions", lambda *a, **k: pd.DataFrame(columns=["kind"]))
+    (tmp_path / "u.yaml").write_text("us_equity_bars: {}\n")
+    out = tmp_path / "o"
+    out.mkdir()
+    now = datetime.now(UTC)
+    fresh_last = f._iso(now - timedelta(hours=2))
+    (out / "MANIFEST.json").write_text(json.dumps({"series": {
+        # fresh, but begins years after --start: a history gap -> must be fetched
+        "GAP/1h": {"status": "ok", "first": "2026-10-01T14:00:00Z", "last": fresh_last, "feed": "iex"},
+        # fresh and begins at --start: complete -> skipped
+        "FULL/1h": {"status": "ok", "first": "2016-01-04T14:30:00Z", "last": fresh_last, "feed": "iex"},
+        # fresh, begins late, but a full backfill from <= start was recorded (listed later): complete -> skipped
+        "LATE/1h": {"status": "ok", "first": "2026-10-01T14:00:00Z", "last": fresh_last, "feed": "iex",
+                    "backfill_start": "2016-01-04T00:00:00Z"},
+    }}))
+    rc = f.main(["--mode", "backfill", "--out", str(out), "--universe", str(tmp_path / "u.yaml"), "--symbols", "GAP,FULL,LATE",
+                 "--tfs", "1h", "--start", "2016-01-04", "--workers", "1"])
+    m = json.loads((out / "MANIFEST.json").read_text())
+    assert rc == 0 and m["run"]["fetched"] == 1 and m["run"]["skipped_fresh"] == 2
+    assert m["series"]["GAP/1h"]["backfill_start"].startswith("2016-01-04")
+    assert "history gap" in m["series"]["GAP/1h"]["note"]
+    assert m["run"]["remaining"] == 0

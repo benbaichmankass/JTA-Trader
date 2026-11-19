@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Dispatcher tooling (scripts/research/dispatch_queue.py + research_compute.yaml limits.repo_queued_exempt_backends). The repo-queued cap (>10 fresh queued runs) no longer defers units bound for kaggle_cpu / trainer (each max_concurrent 1, runner job only polls). github_runner units, infra yield, unreadable-gh and the in-flight caps are unchanged; empty list restores the old behaviour. MEASURED: of 19 dispatcher cycles since 13:00Z, 6 had >10 queued; 3 deferred every fire (20:37Z, 21:06Z, 21:58Z) with 42-44 kaggle_cpu/trainer units deferred each; the other 3 were lifted by the starvation floor for ONE fire. The manager merges (dispatcher tooling is outside R5's vouch). Revert: git revert.",
+  "why": "Research supply was zero with 91 runnable units while CI saturated the hosted pool; kaggle_cpu/trainer do not use it."
+}

@@ -101,11 +101,16 @@ def test_self_tests_pass():
 
 
 def test_the_dispatcher_workflow_passes_both_caps():
-    """--max-repo-queued rides the command line; the in-flight caps (total + per backend) moved to
-    scripts/research/research_compute.yaml with RESEARCH-ROUTER (2026-10-13) -- both must be present."""
+    """Both caps now live in scripts/research/research_compute.yaml: the in-flight caps (total + per backend) since
+    RESEARCH-ROUTER (2026-10-13), the repo-queued cap since 2026-11-19 (REPO-QUEUED SHARE). The workflow must NOT pass
+    --max-repo-queued: an explicit flag overrides the config, so one left on the command line silently freezes the cap
+    (it did: 10 on the command line while the config said so too, until the measured change to 30)."""
     from scripts.research import compute_router as cr
-    assert "--max-repo-queued" in (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
+    wf = (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
+    code = "\n".join(ln for ln in wf.splitlines() if not ln.strip().startswith("#"))
+    assert "--max-repo-queued" not in code
     cfg = cr.load_config()
+    assert cfg["limits"]["max_repo_queued"] >= 1
     assert cfg["limits"]["max_total_inflight"] >= 1
     assert all(b["max_concurrent"] >= 1 for b in cfg["backends"].values())
 
@@ -329,7 +334,7 @@ def test_the_measured_listener_flood_of_2026_10_16_no_longer_defers_every_fire()
                      + [("pr-landing hold-merge alarm", "push")] * 2 + [("work-digest", "push")])
     r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
     assert r["block"] is None and r["repo_queued"] == 7 and r["listener_queued_ignored"] == 20, r
-    assert "20 workflow_run listener run(s) not counted" in r["detail"]
+    assert "20 workflow_run listener run(s)" in r["detail"] and "not counted" in r["detail"]
 
 
 def test_competing_runs_over_the_cap_still_defer():
@@ -493,14 +498,14 @@ def test_a_starved_saturated_cycle_fires_exactly_one_unit(tmp_path, monkeypatch)
     from scripts.research import script_run
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     monkeypatch.setattr(dq.subprocess, "run", fake_run)
-    rc = dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json"])
+    rc = dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--max-repo-queued", "10"])
     assert rc == 0
     assert len(fired) == 1, fired
     # the same cycle with the floor disabled dispatches nothing: the pre-fix behaviour, reproduced
     fired.clear()
     for uid, wf in units:
         (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
-    assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0"]) == 0
+    assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0", "--max-repo-queued", "10"]) == 0
     assert fired == []
 
 
@@ -642,3 +647,140 @@ def test_the_research_stuck_window_is_configured_and_read():
     cfg = yaml.safe_load((REPO / "scripts/research/research_compute.yaml").read_text())
     assert float(cfg["limits"]["research_stuck_hours"]) == dq.RESEARCH_STUCK_HOURS == 1.0
     assert '"research_stuck_hours"' in (REPO / "scripts/research/dispatch_queue.py").read_text()
+
+
+# ── repo-queued exempt backends (lane QUEUE-FILL-STANDING-W47, manager 2026-11-18 22:52Z) ──
+
+def _saturated_cycle(tmp_path, monkeypatch, units, exempt, floor=False, queued_runs=None):
+    """12 fresh queued CI runs (over the cap of 10), floor off unless `floor`, committed config with `exempt` for the limit.
+    `queued_runs` replaces the queued rows (e.g. to add fresh infra runs). Returns fired cmds."""
+    from scripts.research import compute_router as cr
+    real = cr.load_config()
+    cfg = dict(real, limits=dict(real["limits"], repo_queued_exempt_backends=list(exempt)))
+    monkeypatch.setattr(cr, "load_config", lambda path=None: cfg)
+    q = tmp_path / "queue"
+    q.mkdir()
+    for uid, wf in units:
+        (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
+    fired = []
+
+    def fake_run(cmd, *a, **k):
+        class P:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        if cmd[:3] == ["gh", "workflow", "run"]:
+            fired.append(cmd)
+        return P()
+
+    queued = queued_runs if queued_runs is not None else _evruns([("pytest-run", "pull_request")] * 12)
+    monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: queued if status == "queued" else [])
+    monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: {"research_unit", "power_state"})
+    from scripts.research import script_run
+    monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
+    monkeypatch.setattr(dq.subprocess, "run", fake_run)
+    argv = ["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--max-repo-queued", "10"] + ([] if floor else ["--starvation-hours", "0"])
+    assert dq.main(argv) == 0
+    return fired
+
+
+def test_a_saturated_repo_queue_still_fires_an_exempt_backend_and_defers_the_runner(tmp_path, monkeypatch):
+    """MEASURED 2026-11-18 21:58Z: 19 fresh queued runs deferred all 84 due units incl. 44 bound for kaggle_cpu/trainer. Those
+    backends' own capacity is not the hosted pool, so the cap no longer defers them; github_runner units still defer."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"])
+    assert _fired_workflows(fired) == ["research-script-run-kaggle-cpu.yml"], _fired_workflows(fired)
+
+
+def test_without_the_exemption_a_saturated_repo_queue_fires_nothing(tmp_path, monkeypatch):
+    """The pre-fix behaviour, reproduced: empty exempt list -> every fire is deferred."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    assert _saturated_cycle(tmp_path, monkeypatch, units, []) == []
+
+
+def test_the_committed_config_exempts_kaggle_cpu_and_trainer_only():
+    from scripts.research import compute_router as cr
+    assert cr.load_config()["limits"]["repo_queued_exempt_backends"] == ["kaggle_cpu", "trainer"]
+
+
+# ── the floor's one-fire cap vs exempt backends (lane ML-PRIMARY-10, row RESEARCH-DISPATCH-EXEMPT-FLOOR-1119) ──
+
+def test_a_floor_lifted_repo_queued_cycle_fires_the_pool_unit_and_the_exempt_backend(tmp_path, monkeypatch):
+    """Before the fix the floor cleared the block (so soft_block went False) and capped the cycle at inflight+1, deferring the
+    exempt unit soft_block would have passed. Now the pool gets exactly one floor fire and the exempt backend fires too."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _fired_workflows(_saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"], floor=True))
+    assert sorted(fired) == ["research-script-run-kaggle-cpu.yml", "research-script-run.yml"], fired
+
+
+def test_the_measured_infra_floor_cycle_of_2026_11_19_fires_the_exempt_backend(tmp_path, monkeypatch):
+    """MEASURED run 44492257802 (09:19Z): 2 fresh infra runs (yield at 2), floor lifted the infra block, cap inflight+1:
+    one runner unit fired and the trainer/kaggle_cpu units were deferred on 'research compute cap N reached'."""
+    from scripts.research import compute_router as cr
+    infra = list(cr.load_config()["limits"]["infra_workflows"])[:2]
+    queued = _evruns([(n, "workflow_dispatch") for n in infra])
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _fired_workflows(_saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"], floor=True,
+                                              queued_runs=queued))
+    assert sorted(fired) == ["research-script-run-kaggle-cpu.yml", "research-script-run.yml"], fired
+
+
+def test_without_the_exemption_the_floor_still_fires_exactly_one(tmp_path, monkeypatch):
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    assert len(_saturated_cycle(tmp_path, monkeypatch, units, [], floor=True)) == 1
+
+
+# --- REPO-QUEUED SHARE (QUEUE-FILL-STANDING-W47b, manager 2026-11-19) ------------------------------------------------------------
+# MEASURED (job timestamps, 5-min grid, 11-18 18Z..11-19 11:30Z): the flat cap of 10 blocked the dispatcher 50% of the time and 100% of
+# 11-19 06:00-11:30Z; ~81% of the count at its p90 moments was 1-minute alarm runs. See research_compute.yaml for the table.
+SHORT = ["pr-landing hold-merge alarm", "claude-pr-automerge"]
+
+
+def test_short_job_workflows_are_not_counted_against_the_repo_queued_cap():
+    queued = _runs(["pytest-run"] * 4 + SHORT * 20)
+    old = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
+    assert old["repo_queued"] == 44 and old["block"] and "queued repo-wide" in old["block"]          # today's rule: blocked
+    new = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, repo_queued_ignore=SHORT,
+                          runs_by_status={"queued": queued, "in_progress": []})
+    assert new["repo_queued"] == 4 and new["short_job_ignored"] == 40 and new["block"] is None
+    assert "40 short-job run(s) not counted" in new["detail"]
+
+
+def test_real_load_still_blocks_with_the_ignore_list_set():
+    r = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, repo_queued_ignore=SHORT,
+                        runs_by_status={"queued": _runs(["pytest-run"] * 11 + SHORT * 5), "in_progress": []})
+    assert r["repo_queued"] == 11 and r["block"] and "queued repo-wide" in r["block"]
+
+
+def test_an_empty_or_absent_ignore_list_changes_nothing():
+    q = _runs(["pytest-run"] * 3 + SHORT * 9)
+    base = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, runs_by_status={"queued": q, "in_progress": []})
+    empty = dq.backpressure(RESEARCH, max_inflight=3, max_queued=10, repo_queued_ignore=[],
+                            runs_by_status={"queued": q, "in_progress": []})
+    assert base["repo_queued"] == empty["repo_queued"] == len(q) and empty["short_job_ignored"] == 0
+
+
+def test_the_configured_cap_and_ignore_list_are_real():
+    """The ignore names must be real workflow `name:` values (a typo would silently ignore nothing), and the cap is the config's."""
+    import yaml
+
+    from scripts.research import compute_router as cr
+    lim = cr.load_config()["limits"]
+    assert lim["max_repo_queued"] == 30 and lim["repo_queued_ignore_workflows"]
+    names = set()
+    for wf in (REPO / ".github" / "workflows").glob("*.yml"):
+        d = yaml.safe_load(wf.read_text())
+        if isinstance(d, dict) and d.get("name"):
+            names.add(str(d["name"]))
+    missing = [n for n in lim["repo_queued_ignore_workflows"] if n not in names]
+    assert not missing, f"no workflow is named {missing}"
+
+
+def test_the_flag_is_only_an_override_and_the_config_is_the_default():
+    src = (REPO / "scripts" / "research" / "dispatch_queue.py").read_text()
+    assert '"--max-repo-queued", type=int, default=None' in src
+    assert 'get("max_repo_queued", 10)' in src and 'get("repo_queued_ignore_workflows")' in src
+

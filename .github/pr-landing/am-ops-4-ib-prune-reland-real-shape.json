@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "IB order-path read (ib_client list_open_orders feeds the naked sweep and protection_coverage). Re-land of #26996 (reverted by #27014) against the REAL ib_insync response shape. Merge only after the post-revert fresh-client book read (cancel-ib-order dry run) is on the record. After deploy: no 'kept 0' prune line, naked sweep covered=3 naked=0 on ib_paper across 3 consecutive sweeps, /api/diag/ib_open_orders matches the fresh-client read. Revert: git revert.",
+  "why": "BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW / PI-20261117-LSFHBH4A-0006: the grow-only Trade cache serves orders cancelled elsewhere as resting (70 MGC stop lots vs one real pair on 11-18), so a dead leg reads as coverage. Gates this adds or changes: none."
+}

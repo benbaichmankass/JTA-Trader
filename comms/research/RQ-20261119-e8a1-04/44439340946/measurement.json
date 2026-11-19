@@ -1,0 +1,39 @@
+{
+  "verdict": "pass",
+  "note": "FROZEN artifact ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5 (no refit), pool pinned to its 173 pool_symbols, window 2025-07-15..2026-10-31: n=207 (expect 207: ok), mean net R 0.4922070639835765 (expect 0.4922070639835765: ok); pool symbols without bars: 0; no holdout read claimed",
+  "stats": {
+    "n": 207,
+    "mean_net_r": 0.4922070639835765,
+    "mean_gross_r": 0.542747638408497,
+    "mean_cost_r": 0.05054057442492052,
+    "n_symbols": 113,
+    "se": 0.07584025051818984
+  },
+  "reproduction": {
+    "artifact": "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json",
+    "model_id": "ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5",
+    "tau": 0.25,
+    "expect_n": 207,
+    "n_match": true,
+    "expect_mean": 0.4922070639835765,
+    "mean_match": true,
+    "reproduces": true,
+    "ledger_claimed": false,
+    "pool_pinned_n": 173,
+    "pool_symbols_without_bars": [],
+    "table_symbols": 171
+  },
+  "decision_rows_before_session_gate": 109331,
+  "decision_rows": 57408,
+  "window": {
+    "start": "2025-07-15",
+    "end": "2026-10-31"
+  },
+  "trades_jsonl": {
+    "path": "comms/research/RQ-20261119-e8a1-04/44439340946/ml_entry_eq_struct__trades.jsonl",
+    "rows": 207,
+    "sum_net_r": 101.88686224460034
+  },
+  "alpaca_calls": 10877,
+  "runtime_s": 7241.4
+}

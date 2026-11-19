@@ -326,6 +326,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/audits/2026-11-06-skills-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-06-workflow-prune.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/2026-11-12-ui-spec-gap-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
+| `docs/audits/2026-11-19-deep-system-audit.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | Deep system audit (week plan §4): OCI Always Free compliance (4/24 vs 2/12, storage at limits), efficiency, bugs, free resources, operator hypotheses, ranked migration plan. |
 | `docs/audits/M1-comms-audit-2026-05-07-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/M1-comms-audit-followups-fresh.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
 | `docs/audits/amend-parity-2026-10-25.md` | evidence | unknown | — | never | `dir:audits-are-measurement / not-assessed` | — |
@@ -629,6 +630,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ml-live-promotion-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Short path to put 3-5 ML models into live decision loops by 2026-11-02 on existing consumers: pre-registered gates, day-by-day build steps, Tier map, 8 MODEL infra rows. |
 | `docs/plans/week-plan-2026-11-19.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Week plan for 11-19..25 (operator away Thu-Sun): two-lane format, ML priorities, ranked general-lane list, deep system audit scope, the 2026-11-18 operator decisions, autonomy checklist. |
 | `docs/plans/ml-week-plan-2026-11-19.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ML week plan for the operator's Thu-Sun 11-19..22 absence: per-slot D1-D10 live state, tasks, dependencies and owners; per-family label/feature/model-family iteration; frontier scans; units to author per backend; operator-blocking list. |
+| `docs/plans/holdout-scale-to-trade-frequency-DRAFT-2026-11-19.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | DRAFT for operator sign-off: holdout_min_n scaled to each leg's trade frequency (clamp(ceil(8 weeks of trades),10,25)); changes an existing bar, not applied. |
 | `docs/plans/ml-pipeline-design-2026-10-29.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | The ML assembly line from the money roster backward: six stations (dataset, CPCV, gate, shadow, canary, CUSUM/retrain) with owner, cadence and own quality metric; measured gap per station; ranked build rows; ML intake rule. |
 | `docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/OCI-STATE-CHECK-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
@@ -708,6 +710,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/entry-grade-42473814600-repro-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/hyperliquid-tradexyz-scoping-2026-11-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Hyperliquid / trade[XYZ] scoping memo (operator D10): unlocks, costs, jurisdiction blocker, effort, recommendation (eligibility first, then data adapter + Stage-0). |
 | `docs/research/ml-entry-hole-safe-adopt-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18h-event-packet-arm-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

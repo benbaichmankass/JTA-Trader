@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "Order-path latency (trader import closure): journal_sync is held per reconciliation PHASE instead of for the whole pass. Measured before: tick mean 55.3 s vs 60 s interval, journal_sync.wait mean 23.8 s, reconcile hold mean 37.0 s (tick_cost, 136 ticks). Invariant preserved per phase (each phase reads fresh state; order unchanged). Needs a trader restart. Revert: this commit. Ships under the data-backed rule once the after-measurement settles it (manager, 2026-11-18).",
+  "why": "Row LIVE-TICK-NEAR-BUDGET. 5,309 tests across the 287 order_monitor/reconcile test files pass; the lock tests are rewritten to the per-phase contract plus a new test that a dispatch runs between two phases."
+}

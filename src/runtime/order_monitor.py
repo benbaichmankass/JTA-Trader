@@ -47,6 +47,7 @@ The loop never raises. Each step is wrapped:
 from __future__ import annotations
 
 import importlib
+import contextlib
 import json
 import logging
 import math
@@ -1218,6 +1219,7 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         _cooldown_s = _close_retry_cooldown_seconds()
         matched_trade = None
         _retry = None
+        _mk = None
         for _cand in _legs_after_failed(legs, _PACKAGE_CLOSE_SKIP.get(pkg_id)):
             _cand_key = (
                 str(_cand.get("account_id") or ""),
@@ -1306,8 +1308,22 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             # close sends nothing, and marking it blinded the re-arm sweep to a
             # position no close was touching (PI-20260930-ZPDIPMDA-0001). (The
             # cooldown `continue` above already preceded the mark.)
+            #
+            # D9-MAKER-EXIT-BUILD: a fenced-in time-stop close is worked post-only
+            # at the mid first (src/units/accounts/maker_exit.py). While its limit
+            # rests (or a stop flattened it during the window) this leg sends
+            # nothing and the next leg is tried; the pass that PLACES the limit
+            # is this package's one venue action for the tick. Every other close
+            # gets `market`, i.e. the code below unchanged.
+            _cand_mk = _maker_exit_step(db, _cand, reason, open_pkg)
+            if _cand_mk.action in ("wait", "venue_flat"):
+                continue
+            if _cand_mk.action == "placed":
+                summary.no_change_count += 1
+                return
             mark_active_close(_cand.get("account_id"), _cand.get("symbol"))
             matched_trade, _retry, _close_key = _cand, _cand_retry, _cand_key
+            _mk = _cand_mk
             break
 
         if matched_trade is None:
@@ -1324,7 +1340,21 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             )
 
         # Exchange-first: attempt the live close BEFORE any DB write.
-        ex_result = _send_close_to_exchange(matched_trade)
+        if _mk.action == "maker_filled":
+            # The resting limit flattened the leg: no Market order. Its own fill
+            # price is read below through the limit's order id.
+            ex_result = _mk.ex_result()
+            _maker_exit_cancel_legs(matched_trade)
+        elif _mk.action == "fallback":
+            # The 1-minute window expired (or the post-only was refused): the
+            # Market close for the unfilled REMAINDER only.
+            if (_mk.qty or 0.0) > 1e-12:
+                ex_result = _send_close_to_exchange(
+                    {**matched_trade, "position_size": _mk.qty})
+            else:
+                ex_result = _mk.ex_result()
+        else:
+            ex_result = _send_close_to_exchange(matched_trade)
         logger.info(
             "order_monitor: exchange close for pkg=%s account=%s → %s",
             pkg_id, matched_trade.get("account_id"), ex_result,
@@ -1521,6 +1551,20 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                 float(verdict_exit_price) if verdict_exit_price is not None else None
             )
             exit_price_source = "verdict"
+        if _mk.action == "fallback" and _mk.filled_qty > 0:
+            # Part of the leg filled at the maker limit before the Market
+            # remainder: the row's exit is the qty-weighted blend of the two
+            # (None when either part is unpriced -> the verdict branch above).
+            from src.units.accounts.maker_exit import blended_exit_price
+            _blend = blended_exit_price(
+                _mk.filled_qty, _mk.filled_avg, float(_mk.qty or 0.0),
+                actual_exit_price if exit_price_source == "exchange" else None)
+            if _blend is not None:
+                actual_exit_price, exit_price_source = _blend, "exchange"
+            else:
+                _vx = (verdict or {}).get("exit_price")
+                actual_exit_price = float(_vx) if _vx is not None else None
+                exit_price_source = "verdict"
 
         # DB writes. The historical order was package-close → trade-close;
         # since 2026-08-18 the trade closes FIRST so the remaining-leg check
@@ -2155,6 +2199,83 @@ def _build_account_client(account_id):
             account_id, exc,
         )
         return None, None
+
+
+def _maker_exit_position_open(cfg: Dict[str, Any], symbol: str, direction: str) -> Optional[bool]:
+    """Is (symbol, direction) still open on the venue? ``None`` = could not look (never read as flat)."""
+    try:
+        from src.units.accounts.clients import account_open_positions
+        pos = account_open_positions(cfg)
+        if pos is None:
+            return None
+        if symbol in frozenset(getattr(pos, "unreadable_symbols", ()) or ()):
+            return None
+        return (symbol, str(direction or "").lower()) in _exchange_position_set(pos)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: maker-exit position read failed for %s: %s", symbol, exc)
+        return None
+
+
+def _maker_exit_step(db, cand: Dict[str, Any], reason: Optional[str], open_pkg: Dict[str, Any]):
+    """D9-MAKER-EXIT-BUILD: the maker-exit decision for one leg's close this pass.
+
+    Returns a ``maker_exit.Step``. ``market`` (today's path) for every close that is not a fenced-in time stop,
+    and on any error. A changed ``notes.maker_exit`` block is written to the trade row at once (so a failed
+    Market fallback still remembers what filled) and folded into ``cand["notes"]`` so the close write keeps it.
+    """
+    from src.units.accounts import maker_exit as mx
+    try:
+        if reason not in mx.TIME_STOP_REASONS and not mx.block_of(cand.get("notes")):
+            return mx.Step(mx.A_MARKET, why="not_time_stop")
+        from src.units.accounts.clients import account_order_status
+        client, cfg = _build_account_client(cand.get("account_id"))
+        step = mx.exit_step(
+            cand, reason,
+            strategy=cand.get("strategy_name") or open_pkg.get("strategy_name"),
+            client=client, cfg=cfg, order_status=account_order_status,
+            position_open=_maker_exit_position_open,
+        )
+    except Exception as exc:  # noqa: BLE001 -- a maker-exit fault is a Market close, never a stuck exit
+        logger.warning("order_monitor: maker-exit step failed for trade %s: %s", cand.get("id"), exc)
+        return mx.Step(mx.A_MARKET, why="error")
+    if step.block is not None:
+        notes = mx.decode_notes(cand.get("notes"))
+        notes[mx.NOTES_KEY] = step.block
+        raw = json.dumps(notes)
+        cand["notes"] = raw
+        try:
+            if cand.get("id") is not None:
+                db.update_trade(int(cand["id"]), {"notes": raw})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("order_monitor: maker-exit notes write failed for trade %s: %s", cand.get("id"), exc)
+            if step.action == mx.A_PLACED:
+                # A resting limit the journal does not know about must not be left behind: cancel it and
+                # close at Market this pass instead.
+                try:
+                    from src.units.accounts.execute import _bybit_category
+                    mx.cancel_limit(client, _bybit_category(cfg), str(cand.get("symbol") or ""),
+                                    str(step.order_id or ""))
+                except Exception:  # noqa: BLE001  # allow-silent: reduce-only; the sweep cannot see it, logged above
+                    pass
+                return mx.Step(mx.A_MARKET, why="notes_write_failed")
+    logger.info("order_monitor: maker-exit trade=%s account=%s symbol=%s -> %s (%s)",
+                cand.get("id"), cand.get("account_id"), cand.get("symbol"), step.action, step.why)
+    return step
+
+
+def _maker_exit_cancel_legs(matched_trade: Dict[str, Any]) -> None:
+    """After a maker fill flattened the leg: cancel its tracked SL/TP legs (``close_open_position`` does this
+    after a Market close). Best effort; never raises."""
+    try:
+        from src.units.accounts import maker_exit as mx
+        from src.units.accounts.execute import _bybit_category
+        client, cfg = _build_account_client(matched_trade.get("account_id"))
+        if client is None or cfg is None:
+            return
+        mx.cancel_own_legs(client, _bybit_category(cfg), str(matched_trade.get("symbol") or ""),
+                           matched_trade.get("sl_order_id"), matched_trade.get("tp_order_id"))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: maker-exit leg cancel failed: %s", exc)
 
 
 def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
@@ -4133,6 +4254,56 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
+def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
+    """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
+
+    PI-20261118-JFWRQYOV-0004 (root cause). A flat position read says nothing about an
+    entry order that has not filled yet: an Alpaca bracket sent outside the regular
+    session is ACCEPTED and QUEUED until the open, so the symbol reads flat for hours
+    while the order is alive. Closing the row then frees the strategy-monocle gate, the
+    same signal re-fires, and every queued order fills at the open into one netted
+    position (alpaca_paper QQQ: journal 2 vs venue 1981 = 1182 + 735 + 55 + 7 + 2;
+    alpaca_portfolio SLV: 6 vs 877). #26862 held only the snapshot path, and only on a
+    POSITIVE "still pending"; an unreadable order read still closed the row, and the
+    stuck-strategy watchdog (30 min, flat x2) had no check at all.
+
+    Keyed on the entry order's venue state, for every flat-close path:
+
+      * ``"pending"``    - the venue says the order is still working -> hold.
+      * ``"unreadable"`` - the integration CAN answer but this read failed -> hold
+                           ("could not look" is never "gone"); retried next pass.
+      * ``None``         - proceed with the caller's own flat logic: no real entry
+                           order id (``rejected-*`` / ``dry-*`` / missing), an
+                           integration that cannot answer (IB, OANDA, Bybit - the
+                           Bybit forward reconciler keys on order status already),
+                           or the order is terminal / unknown to the venue (404).
+
+    Never raises: an exception is treated as ``"unreadable"`` on a supported account.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return None
+    try:
+        from src.units.accounts.clients import (
+            account_entry_order_pending,
+            supports_entry_order_state,
+        )
+        if not supports_entry_order_state(cfg):
+            return None
+    except Exception:  # noqa: BLE001 — import/cfg shape problem: cannot answer
+        return None
+    try:
+        state = account_entry_order_pending(cfg, oid)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_order_hold: order %s read raised: %s", oid, exc)
+        state = None
+    if state is True:
+        return "pending"
+    if state is None:
+        return "unreadable"
+    return None
+
+
 def _reverify_reset_suspect_row(
     db, r, *, state: Dict[str, Any], aid: str, cfg: Any, sym: str,
     canonical: str, exchange_positions: set, now_dt: datetime, now_iso: str,
@@ -4190,6 +4361,18 @@ def _reverify_reset_suspect_row(
                 summary.get("snapshot_reset_suspect", 0) + 1
             )
             return "suspect"
+    # PI-20261118-JFWRQYOV-0004: an entry order still working (or unreadable) means
+    # this flat read is not evidence of a close. Break the streak, keep the row open.
+    _entry_oid = r["broker_order_id"] if "broker_order_id" in r.keys() else None
+    _hold = _entry_order_hold(cfg, _entry_oid)
+    if _hold is not None:
+        _reset_suspect_break_streak(state)
+        _reset_suspect_bump(tid_int, state, f"entry_order_{_hold}",
+                            failed=(_hold == "unreadable"))
+        summary["snapshot_reset_suspect"] = (
+            summary.get("snapshot_reset_suspect", 0) + 1
+        )
+        return "suspect"
     last_flat = state.get("last_flat_at")
     if (
         last_flat is not None
@@ -4458,7 +4641,6 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         return summary
 
     from src.units.accounts.clients import (
-        account_entry_order_pending,
         account_open_positions,
         account_position_present,
         account_supports_management,
@@ -4885,25 +5067,27 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 # re-fired every ~7 min (SLV x7 on alpaca_portfolio, QQQ x4 on
                 # alpaca_paper), every queued order filling at the open. Where the
                 # integration can say so, an entry order that is still working is NOT
-                # flat. ``None`` (cannot tell) keeps the prior behaviour; only a
-                # positive "still pending" holds the row open.
+                # flat. 2026-11-19 (AM-OPS-7): an UNREADABLE order read also holds
+                # ("could not look" is never "gone"); see _entry_order_hold.
                 _entry_oid = (
                     r["broker_order_id"] if "broker_order_id" in r.keys() else None
                 )
-                if _entry_oid and not str(_entry_oid).startswith("rejected-"):
-                    if account_entry_order_pending(cfg, str(_entry_oid)) is True:
-                        summary["snapshot_order_pending"] = (
-                            summary.get("snapshot_order_pending", 0) + 1
-                        )
-                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
-                        logger.info(
-                            "_reconcile_orphan_exchange_positions: NOT closing "
-                            "trade_id=%s account=%s symbol=%s side=%s — flat at the "
-                            "venue but its entry order %s is still pending (queued "
-                            "for the open / not yet filled).",
-                            tid_int, aid, sym, canonical, _entry_oid,
-                        )
-                        continue
+                _hold = _entry_order_hold(cfg, _entry_oid)
+                if _hold is not None:
+                    _hold_key = (
+                        "snapshot_order_pending" if _hold == "pending"
+                        else "snapshot_order_unreadable"
+                    )
+                    summary[_hold_key] = summary.get(_hold_key, 0) + 1
+                    _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                    logger.info(
+                        "_reconcile_orphan_exchange_positions: NOT closing "
+                        "trade_id=%s account=%s symbol=%s side=%s — flat at the "
+                        "venue but its entry order %s is %s (queued for the open "
+                        "/ not yet filled, or its state could not be read).",
+                        tid_int, aid, sym, canonical, _entry_oid, _hold,
+                    )
+                    continue
                 # Defer the close: collect it and decide reset-vs-single AFTER
                 # the whole account's open_rows are scanned (below).
                 _snapshot_to_close.append((r, tid_int, sym, canonical))
@@ -6095,6 +6279,20 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
         unreadable_syms: frozenset = frozenset()
 
         for row in trade_rows:
+            # D9-MAKER-EXIT-BUILD: a time-stop exit RESTING as a maker limit is
+            # owned by the exit pass, which closes it at the limit's own fill
+            # price and `max_hold` label. Reading its flat here would close it
+            # as `reconciler_filled`. Bounded: maker_exit.ABANDON_S, after which
+            # the sweep cancels the limit and this reconciler owns the row again.
+            # A stop that fills during the window releases the block
+            # (`released_venue_flat`), so the stop's close is still made here.
+            try:
+                from src.units.accounts.maker_exit import reconciler_defers
+                if reconciler_defers(row.get("notes"), now):
+                    _note_reconciler_seen(row.get("id"), "maker_exit_resting")
+                    continue
+            except Exception:  # noqa: BLE001  # allow-silent: an import fault reconciles the row as before
+                pass
             trade_id_str = _extract_trade_id_from_notes(row.get("notes"))
             if trade_id_str is None or not _is_real_order_id(trade_id_str):
                 # Synthetic id (``rejected-…``, ``exchange_rejected-…``,
@@ -7353,7 +7551,8 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                 db_conn.row_factory = __import__("sqlite3").Row
                 trade_row = db_conn.execute(
                     "SELECT id, status, notes, account_id, symbol, "
-                    "       direction, position_size, entry_price, created_at "
+                    "       direction, position_size, entry_price, created_at, "
+                    "       broker_order_id "
                     "FROM trades WHERE id=?",
                     (trade_id,),
                 ).fetchone()
@@ -7469,6 +7668,31 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
             # to let a stale package linger one more cycle than to
             # force-clear blind on an exchange we can't see.
             summary["skipped_position_read_failed"] += 1
+            continue
+
+        # PI-20261118-JFWRQYOV-0004: flat at the venue is not "closed" while the
+        # row's ENTRY ORDER is still working. An Alpaca bracket placed after the
+        # close (alpaca_paper QQQ 7712: sent 21:01Z, filled 14:34Z next day) sits
+        # queued for hours with no package update, so this 30-min watchdog was the
+        # next path to close it once the snapshot reconciler held it (#26862).
+        # Pending or unreadable -> defer, and restart the flat confirm.
+        _wd_hold = _entry_order_hold(
+            cfg,
+            trade_row["broker_order_id"]
+            if trade_row is not None and "broker_order_id" in trade_row.keys()
+            else None,
+        )
+        if _wd_hold is not None:
+            if trade_id is not None:
+                _PENDING_WATCHDOG_FLAT_CONFIRM.pop(int(trade_id), None)
+            _wd_key = f"deferred_entry_order_{_wd_hold}"
+            summary[_wd_key] = summary.get(_wd_key, 0) + 1
+            logger.info(
+                "_watchdog_stuck_strategies: %s/%s/%s reads flat but entry order "
+                "%s is %s — not finalizing (trade_id=%s)",
+                aid, symbol, direction, trade_row["broker_order_id"], _wd_hold,
+                trade_id,
+            )
             continue
 
         # Position reads flat at the exchange. BUT a SINGLE flat read is not
@@ -10832,6 +11056,105 @@ def _alpaca_protect_after_target_cancel(db, client, account_id: str, symbol: str
     return "unprotected"
 
 
+#: BRACKETS-ALWAYS item 4 (manager pick B, 2026-11-19): restore the row's DECLARED target beside a resting stop.
+_ALPACA_TP_RESTORE: Dict[Tuple[str, str, Any], Dict[str, Any]] = {}
+_ALPACA_TP_RESTORE_COOLDOWN_S = 900.0     # >= 15 min between attempts (manager)
+_ALPACA_TP_RESTORE_MAX_ATTEMPTS = 4       # capped; one red flag when exhausted, the target-naked page keeps firing
+#: A refusal about the PRICE relation (TP/SL vs the market or each other) is not transient: re-sending the same levels
+#: cannot succeed, so it is reported with its reason and not retried until the row's declared TP changes.
+_PRICE_REFUSAL_MARKERS = ("limit_price", "stop_price", "must be greater", "must be less", "must be higher",
+                          "must be lower", "invalid price", "price must", "sub-penny", "take_profit", "stop_loss")
+
+
+def _alpaca_restore_declared_target(db, client, account_id: str, symbol: str, row, rows: list,
+                                    now: Optional[float] = None) -> str:
+    """Re-arm the row's DECLARED target beside its resting stop; never invent one (BRACKETS-ALWAYS item 4).
+
+    The documented rule is "a target is decision-time geometry a repair must READ rather than invent": this reads
+    ``trades.take_profit_1`` (the field active management and live review write) and restores exactly that level.
+    Scope: ONE open row on the symbol, ONE resting plain (``simple``) stop sized to the position; anything else is
+    ``not_restorable`` and stays alert-only. Sequence: cancel the stop CONFIRMED -> OCO at the row's stop and TP ->
+    immediate stop-only fallback if the OCO is refused (never longer unprotected than that). Retry: transient
+    refusals only, on a >= 15-min cooldown, capped; a price-relation refusal is reported and not retried.
+    Returns the outcome; the caller's target-naked page keeps firing until the target rests.
+    """
+    now = time.monotonic() if now is None else now
+    tid = row["id"]
+    key = (account_id, symbol.upper(), tid)
+    tp = _safe_float(row["take_profit_1"])
+    sl = _safe_float(row["stop_loss"])
+    if not tp or tp <= 0 or not sl or sl <= 0:
+        return "undeclared"
+    st = _ALPACA_TP_RESTORE.get(key) or {}
+    if st.get("price_refused_tp") == tp:
+        return "price_refused"                      # reported once; waits for a new declared TP
+    if st and now < float(st.get("next_at") or 0):
+        return "cooldown"
+    if int(st.get("attempts") or 0) >= _ALPACA_TP_RESTORE_MAX_ATTEMPTS:
+        if not st.get("flagged"):
+            st["flagged"] = True
+            _ALPACA_TP_RESTORE[key] = st
+            _page_rearm_refusal("target_restore_exhausted", account_id, symbol, tid,
+                                f"{st.get('attempts')} attempts to re-arm the declared TP {tp} failed "
+                                f"(last: {st.get('last_reason')}); the stop rests, the target does not")
+        return "exhausted"
+    same = [r for r in rows if str(r["account_id"] or "") == account_id
+            and str(r["symbol"] or "").upper() == symbol.upper()]
+    if len(same) != 1:
+        return "not_restorable"
+    legs = client._open_orders_for_symbol(symbol)
+    if legs is None:
+        return "unread"
+    stops = [o for o in legs if "stop" in str(o.get("type") or o.get("order_type") or "").lower()]
+    if len(stops) != 1 or str(stops[0].get("order_class") or "simple").lower() not in ("simple", ""):
+        return "not_restorable"
+    stop = stops[0]
+    try:
+        qty = int(math.floor(float(stop.get("qty")) + 1e-9))
+    except (TypeError, ValueError):
+        return "not_restorable"
+    if qty < 1:
+        return "not_restorable"
+    side = str(row["direction"] or "")
+    cancel = client.cancel_order_confirmed(stop.get("id"))
+    if cancel.get("state") == "filled":
+        _ALPACA_TP_RESTORE.pop(key, None)
+        return "stop_filled"
+    if cancel.get("state") != "canceled":
+        st.update(attempts=int(st.get("attempts") or 0) + 1, next_at=now + _ALPACA_TP_RESTORE_COOLDOWN_S,
+                  last_reason=f"stop cancel {cancel.get('state')}")
+        _ALPACA_TP_RESTORE[key] = st
+        return "cancel_unconfirmed"                 # the stop may still rest: nothing else this attempt
+    oco = client.place_protective({"symbol": symbol, "direction": side, "qty": qty, "sl": sl, "tp": tp,
+                                   "additive": True, "oca_key": str(tid), "account_id": account_id})
+    if oco and oco.get("retCode") == 0:
+        _ALPACA_TP_RESTORE.pop(key, None)
+        _alpaca_partial_tp_log({"step": "restore_declared_tp", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "oco_placed", "qty": qty, "sl": sl, "tp": tp})
+        return "restored"
+    reason = str((oco or {}).get("retMsg") or "no response")
+    fb = client.place_stop_only(symbol, side, qty, sl)
+    fb_ok = bool(fb and fb.get("retCode") == 0)
+    _alpaca_partial_tp_log({"step": "restore_declared_tp", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "oco_refused", "ret_msg": reason,
+                            "fallback_stop": "placed" if fb_ok else "refused", "qty": qty, "sl": sl, "tp": tp})
+    if not fb_ok:
+        _page_rearm_refusal("target_restore_unprotected", account_id, symbol, tid,
+                            f"the stop was cancelled to re-arm the declared TP, the OCO was refused ({reason}) "
+                            f"and the stop fallback was refused too: {qty} share(s) have NO STOP until the naked "
+                            "sweep re-arms them", no_cooldown=True)
+    if any(m in reason.lower() for m in _PRICE_REFUSAL_MARKERS):
+        _ALPACA_TP_RESTORE[key] = {"price_refused_tp": tp, "last_reason": reason}
+        _page_rearm_refusal("target_restore_price_refused", account_id, symbol, tid,
+                            f"the venue refused the declared TP {tp} on price ({reason}); not retried until the "
+                            "row's TP changes", verb="price_refused")
+        return "price_refused"
+    st.update(attempts=int(st.get("attempts") or 0) + 1, next_at=now + _ALPACA_TP_RESTORE_COOLDOWN_S,
+              last_reason=reason)
+    _ALPACA_TP_RESTORE[key] = st
+    return "oco_refused_transient"
+
+
 def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row,
                                    rows: list, side: str, sl: Optional[float],
                                    tp: Optional[float]) -> str:
@@ -11660,10 +11983,11 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                 )
             elif state.get("target") is False and row["take_profit_1"] not in (None, 0):
                 # TARGET-naked while the journal DECLARES a take-profit. Alert,
-                # do NOT re-arm: a missing stop is a safety gap worth closing
-                # blind, but a target is decision-time geometry a repair must
-                # read rather than invent, and placing one is an order the
-                # strategy did not ask for at this instant. Same split the IB
+                # and re-arm the DECLARED target; never invent one (BRACKETS-ALWAYS
+                # item 4, manager pick B 2026-11-19): a target is decision-time
+                # geometry a repair must READ (trades.take_profit_1) rather than
+                # invent, so _alpaca_restore_declared_target restores exactly that
+                # level beside the resting stop, on a cooldown, and nothing else. Same split the IB
                 # sweep makes; the repair wire is the `attach-ib-target`
                 # action's Alpaca analogue, not this sweep.
                 summary["target_naked"] += 1
@@ -11686,6 +12010,14 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     trade_id=row["id"],
                     venue="alpaca",
                 )
+                # BRACKETS-ALWAYS item 4 (manager pick B): re-arm the DECLARED target; never invent one.
+                if state.get("stop"):
+                    try:
+                        _rt = _alpaca_restore_declared_target(db, client, account_id, symbol, row, rows)
+                        summary[f"target_restore_{_rt}"] = summary.get(f"target_restore_{_rt}", 0) + 1
+                    except Exception as _rexc:  # noqa: BLE001 -- the restore never breaks the sweep
+                        logger.warning("target restore failed for %s/%s trade %s: %s",
+                                       account_id, symbol, row["id"], _rexc)
             if state.get("stop"):
                 # A confirmed resting stop refills this row's re-arm budget
                 # (REVIEW-14241 item 4).
@@ -13219,6 +13551,33 @@ def _bybit_top_up_partial_sl(acc: dict, symbol: str, row, uncovered_qty, sl) -> 
         client = bybit_client_for(acc)
         if client is None:
             return False
+        # TP DOCTRINE + BRACKETS-ALWAYS item 5 (2026-11-19, manager decision): the top-up qty gets the row's
+        # OWN declared take-profit in the SAME Partial add-a-leg call, so it is never TP-naked. This supersedes
+        # the "TP deliberately omitted" note above. If the venue refuses the pair (e.g. a TP that is now on the
+        # wrong side of the market), the SL-only top-up is sent at once: the stop is never lost for the TP's sake.
+        tp = None
+        from src.units.accounts.execute import _bybit_tpsl_mode
+        try:
+            # Partial mode ONLY: under Full mode a TP on this call would be a POSITION-level TP over the whole
+            # netted position, overriding sibling trades' own targets.
+            if _bybit_tpsl_mode() != "partial":
+                raise ValueError("not partial mode")
+            _tp = row["take_profit_1"]
+            tp = float(_tp) if _tp not in (None, "") and float(_tp) > 0 else None
+        except (KeyError, IndexError, TypeError, ValueError):
+            tp = None
+        if tp is not None:
+            resp = modify_open_order(
+                client, acc, symbol=symbol, sl=float(sl), tp=tp, qty=qty,
+                sl_order_id=None, tp_order_id=None,
+            )
+            if bool((resp or {}).get("ok")):
+                return True
+            logger.warning(
+                "_bybit_top_up_partial_sl: SL+TP top-up refused for %s/%s uncovered=%s (tp=%s): %r -- "
+                "sending the SL-only top-up; this qty stays TP-NAKED (TP doctrine)",
+                acc.get("account_id"), symbol, qty, tp, (resp or {}).get("error"),
+            )
         resp = modify_open_order(
             client, acc, symbol=symbol, sl=float(sl), tp=None, qty=qty,
             sl_order_id=None, tp_order_id=None,
@@ -18225,6 +18584,34 @@ def run_exit_evaluation_tick(
     return summaries
 
 
+@contextlib.contextmanager
+def _recon_phase(name: str):
+    """One reconciliation phase, timed AND held under ``journal_sync`` for that phase only.
+
+    Row LIVE-TICK-NEAR-BUDGET (2026-11-19, AM-OPS-3). MEASURED /api/diag/tick_cost over 136 ticks
+    (2026-11-18 20:10:57Z..22:30Z): the reconciliation loop held ``journal_sync`` for the WHOLE pass
+    (mean 37.0 s, max 57.5 s of every 60 s), so the trader tick waited a mean 23.8 s (43% of its tick)
+    before it could dispatch an entry; tick mean 55.3 s vs the 60 s interval.
+
+    WHY PER-PHASE KEEPS THE INVARIANT. ``journal_sync`` exists so a reconciliation step never observes a
+    dispatch half-done (placed at the venue, not yet journaled) and vice versa. Every phase below reads
+    its OWN state fresh (journal rows and venue reads inside the phase); no phase consumes a snapshot taken
+    by an earlier phase. Holding the lock per phase therefore still guarantees that no phase runs during
+    a dispatch, and that a dispatch completes atomically between phases. Phase ORDER is unchanged (the
+    forward reconciler still precedes the reverse one). An entry now waits at most ONE phase (the longest
+    measured: reconcile_open_trades, mean 10.5 s / max 12.5 s) instead of the whole pass.
+    Re-entrant (RLock): the RECONCILE_OFFTICK_DISABLED inline path still wraps the whole call and nests fine.
+    """
+    try:
+        from src.runtime.journal_sync import journal_sync
+        sync = journal_sync(f"reconciliation:{name}")
+    except Exception:  # noqa: BLE001 - the phase still runs without the module
+        sync = contextlib.nullcontext()
+    with sync:
+        with _phase(name):
+            yield
+
+
 def run_reconciliation_tick(
     *,
     db_path: Optional[str] = None,
@@ -18256,7 +18643,7 @@ def run_reconciliation_tick(
     # evaluation is decoupled. Unconditional — a sweep behind a gate is a sweep
     # that will be found switched off after the incident it existed for.
     try:
-        with _phase("sweep_close_wedges"):
+        with _recon_phase("sweep_close_wedges"):
             swept = sweep_close_wedges()
         if swept:
             # collapsed-state: vanished_unattributed — a SWEEP watches for an
@@ -18276,7 +18663,7 @@ def run_reconciliation_tick(
     # reconciler, which would otherwise orphan a cancelled zero-fill entry the fallback replaced.
     # Selects only rows carrying notes.maker_probe, so it is a no-op for every other trade.
     try:
-        with _phase("sweep_maker_entries"):
+        with _recon_phase("sweep_maker_entries"):
             from src.units.accounts.clients import account_order_status as _mk_status
             from src.units.accounts.maker_entry import sweep_maker_entries
             maker = sweep_maker_entries(
@@ -18287,11 +18674,27 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: maker-entry sweep raised: %s", exc)
 
+    # D9-MAKER-EXIT-BUILD: cancel a maker time-stop limit left resting on a row
+    # that closed (a stop, a desk close), and abandon a block nobody resolved
+    # within maker_exit.ABANDON_S. BEFORE the forward reconciler, which stops
+    # deferring an abandoned row. Selects only rows carrying notes.maker_exit.
+    try:
+        with _recon_phase("sweep_maker_exits"):
+            from src.units.accounts.clients import account_order_status as _mx_status
+            from src.units.accounts.maker_exit import sweep_maker_exits
+            mkx = sweep_maker_exits(
+                db, build_client=_build_account_client, order_status=_mx_status,
+            )
+        if mkx.get("resolved") or mkx.get("errors"):
+            summaries["__maker_exits__"] = mkx
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: maker-exit sweep raised: %s", exc)
+
     # BUG-042: write-back reconciler. Runs unconditionally every tick
     # (the MONITOR_RECONCILE_ENABLED gate was removed 2026-06-15,
     # BL-20260615-MGCNAKED — self-heal is baseline correctness).
     try:
-        with _phase("reconcile_open_trades"):
+        with _recon_phase("reconcile_open_trades"):
             recon = _reconcile_open_trades(db)
         if recon.get("orphaned") or recon.get("errors"):
             summaries["__reconciler__"] = recon
@@ -18307,7 +18710,7 @@ def run_reconciliation_tick(
     # mutations from forward-orphan closures don't
     # produce spurious reverse-orphan adoptions on the same tick.
     try:
-        with _phase("reconcile_orphan_exchange_positions"):
+        with _recon_phase("reconcile_orphan_exchange_positions"):
             reverse_recon = _reconcile_orphan_exchange_positions(db)
         if (
             reverse_recon.get("orphans_found")
@@ -18326,7 +18729,7 @@ def run_reconciliation_tick(
     # takes the broker's own filled bracket leg (reason, price, time) before
     # either PnL sweep infers one. A failed read falls back to that inference.
     try:
-        with _phase("sweep_alpaca_close_from_broker_leg"):
+        with _recon_phase("sweep_alpaca_close_from_broker_leg"):
             leg_close = _sweep_alpaca_close_from_broker_leg(db)
         if leg_close.get("closed_from_leg") or leg_close.get("errors"):
             summaries["__alpaca_broker_leg_close__"] = leg_close
@@ -18342,7 +18745,7 @@ def run_reconciliation_tick(
     # net number. Runs after both reconcilers so any newly-closed row
     # gets its first lookup attempt on the same tick it was closed.
     try:
-        with _phase("sweep_pending_pnl_from_bybit"):
+        with _recon_phase("sweep_pending_pnl_from_bybit"):
             pending_pnl = _sweep_pending_pnl_from_bybit(db)
         if (
             pending_pnl.get("filled")
@@ -18357,7 +18760,7 @@ def run_reconciliation_tick(
     # ENTRY-FILL-WRITEBACK: the entry order's own fill replaces the planned entry on open Bybit rows marked
     # fill_pending_writeback. DB field update only (no order, bracket or slice is touched).
     try:
-        with _phase("sweep_entry_fill_writeback"):
+        with _recon_phase("sweep_entry_fill_writeback"):
             entry_fill = _sweep_entry_fill_writeback(db)
         if entry_fill.get("written") or entry_fill.get("kept_plan") or entry_fill.get("errors"):
             summaries["__entry_fill_writeback__"] = entry_fill
@@ -18374,7 +18777,7 @@ def run_reconciliation_tick(
     # Broker-reader rows are deferred until past the broker recovery window so
     # fee-accurate truth is never pre-empted.
     try:
-        with _phase("sweep_local_pnl_for_unpriced"):
+        with _recon_phase("sweep_local_pnl_for_unpriced"):
             local_pnl = _sweep_local_pnl_for_unpriced(db)
         if local_pnl.get("filled") or local_pnl.get("errors"):
             summaries["__local_pnl_sweep__"] = local_pnl
@@ -18386,7 +18789,7 @@ def run_reconciliation_tick(
     # PARTIAL-CLOSE-PNL-NOT-JOURNALED: price partial-close child rows whose fill
     # was not readable at apply time, from the fills store by close order id.
     try:
-        with _phase("settle_partial_close_children"):
+        with _recon_phase("settle_partial_close_children"):
             from src.runtime.partial_close_journal import settle_pending_children
             pc_settle = settle_pending_children(db)
         if pc_settle.get("settled") or pc_settle.get("errors"):
@@ -18400,7 +18803,7 @@ def run_reconciliation_tick(
     # ``pnl`` (our own figure kept in ``pnl_computed``, the gap in ``pnl_gap_usd``).
     # Runs after both PnL sweeps, so it classifies a row the tick after it is priced.
     try:
-        with _phase("sweep_venue_net_pnl"):
+        with _recon_phase("sweep_venue_net_pnl"):
             venue_pnl = _sweep_venue_net_pnl(db)
         if venue_pnl.get("venue_net") or venue_pnl.get("gaps") or venue_pnl.get("errors"):
             summaries["__venue_net_pnl__"] = venue_pnl
@@ -18410,7 +18813,7 @@ def run_reconciliation_tick(
     # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
     # fills (a partially-consumed parent is shrunk, so nothing else books it).
     try:
-        with _phase("sweep_settle_intent_reduce_legs"):
+        with _recon_phase("sweep_settle_intent_reduce_legs"):
             reduce_settle = _sweep_settle_intent_reduce_legs(db)
         if reduce_settle.get("settled") or reduce_settle.get("unverified") \
                 or reduce_settle.get("errors"):
@@ -18424,7 +18827,7 @@ def run_reconciliation_tick(
     # the whole position is closed here. A netted sibling keeps the symbol
     # non-flat, so no absence-keyed reconciler can see it go.
     try:
-        with _phase("sweep_open_row_own_leg_fill"):
+        with _recon_phase("sweep_open_row_own_leg_fill"):
             own_leg = _sweep_open_row_own_leg_fill(db)
         if own_leg.get("closed") or own_leg.get("errors"):
             summaries["__own_leg_fill__"] = own_leg
@@ -18437,7 +18840,7 @@ def run_reconciliation_tick(
     # bracket-order fill once the hourly fills pull has it (label sweep below
     # never touches price/pnl).
     try:
-        with _phase("sweep_upgrade_anchored_exit_to_fill"):
+        with _recon_phase("sweep_upgrade_anchored_exit_to_fill"):
             anchored_up = _sweep_upgrade_anchored_exit_to_fill(db)
         if anchored_up.get("upgraded") or anchored_up.get("errors"):
             summaries["__anchored_exit_upgrade__"] = anchored_up
@@ -18450,7 +18853,7 @@ def run_reconciliation_tick(
     # sl/tp, whatever path noticed it. Runs after both PnL sweeps so it only
     # ever relabels a row the price-based classifier left generic.
     try:
-        with _phase("sweep_exit_label_from_bracket_order"):
+        with _recon_phase("sweep_exit_label_from_bracket_order"):
             bracket_lbl = _sweep_exit_label_from_bracket_order(db)
         if bracket_lbl.get("relabelled") or bracket_lbl.get("errors"):
             summaries["__bracket_order_label__"] = bracket_lbl
@@ -18461,7 +18864,7 @@ def run_reconciliation_tick(
 
     # NON-TPSL-CLOSES-20261029: the package carries the trade's refined label.
     try:
-        with _phase("sweep_package_close_reason_from_trade"):
+        with _recon_phase("sweep_package_close_reason_from_trade"):
             pkg_lbl = _sweep_package_close_reason_from_trade(db)
         if pkg_lbl.get("relabelled") or pkg_lbl.get("errors"):
             summaries["__package_close_reason__"] = pkg_lbl
@@ -18473,7 +18876,7 @@ def run_reconciliation_tick(
     # CLOSE-LABELS-1214: a reconciler-detected close time is moved back to the
     # row's own bracket fill once the hourly fills pull has it.
     try:
-        with _phase("sweep_correct_closed_at_from_own_fill"):
+        with _recon_phase("sweep_correct_closed_at_from_own_fill"):
             closed_at_fix = _sweep_correct_closed_at_from_own_fill(db)
         if closed_at_fix.get("corrected") or closed_at_fix.get("errors"):
             summaries["__closed_at_correction__"] = closed_at_fix
@@ -18488,7 +18891,7 @@ def run_reconciliation_tick(
     # deployment without one. Runs after the PnL sweeps (which now defer options rows
     # to it) so a row it closes this tick isn't first mis-priced by the equity sweep.
     try:
-        with _phase("reconcile_options_expiry_and_assignment"):
+        with _recon_phase("reconcile_options_expiry_and_assignment"):
             options_recon = _reconcile_options_expiry_and_assignment(db)
         if options_recon.get("closed") or options_recon.get("errors") or options_recon.get("ambiguous"):
             summaries["__options_lifecycle__"] = options_recon
@@ -18500,7 +18903,7 @@ def run_reconciliation_tick(
     # BUG-049: sweep order_packages that are status='open' but have no
     # linked_trade_id (never executed). Runs unconditionally.
     try:
-        with _phase("sweep_unlinked_packages"):
+        with _recon_phase("sweep_unlinked_packages"):
             _sweep_unlinked_packages(db)
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: unlinked-pkg sweep raised: %s", exc)
@@ -18512,7 +18915,7 @@ def run_reconciliation_tick(
     # stuck and silently block every future signal for the strategy.
     # Runs unconditionally.
     try:
-        with _phase("sweep_stuck_linked_packages"):
+        with _recon_phase("sweep_stuck_linked_packages"):
             _sweep_stuck_linked_packages(db)
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: stuck-linked-pkg sweep raised: %s", exc)
@@ -18524,7 +18927,7 @@ def run_reconciliation_tick(
     # the trade row + emits a high-priority operator alert.
     # Runs unconditionally.
     try:
-        with _phase("watchdog_stuck_strategies"):
+        with _recon_phase("watchdog_stuck_strategies"):
             watchdog_summary = _watchdog_stuck_strategies(db)
         if (
             watchdog_summary.get("alerted")
@@ -18545,7 +18948,7 @@ def run_reconciliation_tick(
     # SL/TP. New orders are blocked at execute_pkg before reaching the
     # exchange; this sweep catches any pre-fix rows that slipped through.
     try:
-        with _phase("check_naked_positions"):
+        with _recon_phase("check_naked_positions"):
             naked_summary = _check_naked_positions(db)
         if naked_summary.get("naked") or naked_summary.get("errors"):
             summaries["__naked_positions__"] = naked_summary
@@ -18557,7 +18960,7 @@ def run_reconciliation_tick(
     # cancelled at the RTH close, so it is broker-naked yet invisible to the
     # DB-driven check above. This re-arms a GTC OCO for any such position.
     try:
-        with _phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
             broker_naked_summary = _check_broker_naked_equity_positions(db)
         # ONE line per sweep with EVERY outcome counter, zeros included — the
         # only place these are observable. The `summaries` dict below is
@@ -18586,7 +18989,7 @@ def run_reconciliation_tick(
     # (IB_BROKER_NAKED_CHECK_SECONDS, default 300s) so the account-wide IB order
     # read is never a per-tick cost (BL-20260609 pacing class).
     try:
-        with _phase("check_broker_naked_ib_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_ib_positions"), _venue_snapshot_batch():
             ib_naked_summary = _check_broker_naked_ib_positions(db)
         if ib_naked_summary.get("broker_naked") or ib_naked_summary.get("errors"):
             summaries["__broker_naked_ib__"] = ib_naked_summary
@@ -18606,7 +19009,7 @@ def run_reconciliation_tick(
     # does. The real-money bybit_2 XRPUSDT no-bracket incident (2026-07-29)
     # disproved the earlier "Bybit atomic at entry, can't go naked" assumption.
     try:
-        with _phase("check_broker_naked_bybit_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_bybit_positions"), _venue_snapshot_batch():
             bybit_naked_summary = _check_broker_naked_bybit_positions(db)
         if _bybit_naked_summary_reportable(bybit_naked_summary):
             summaries["__broker_naked_bybit__"] = bybit_naked_summary
@@ -18623,7 +19026,7 @@ def run_reconciliation_tick(
     # exchange truth. Default mode is `annotate`: it does all the work and
     # records the rows it WOULD reduce, without touching the money DB.
     try:
-        with _phase("reconcile_netting_partial_closes"):
+        with _recon_phase("reconcile_netting_partial_closes"):
             netting_summary = _reconcile_netting_partial_closes(db)
         if (
             netting_summary.get("divergent")

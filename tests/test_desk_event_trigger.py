@@ -15,6 +15,12 @@ cdr = di.cdr
 dw = cdr.desk_write
 ROOT = Path(__file__).resolve().parents[1]
 CFG = yaml.safe_load((ROOT / "config/desk_triggers.yaml").read_text())
+# The mechanics tests below exercise detection, limits and posting with EVERY detector waking; the shipped
+# label-only flags (operator D8 2026-11-18) are tested on the shipped file in
+# test_zero_yield_detectors_are_label_only_on_the_shipped_config.
+for _blk in (CFG.get("detectors") or {}).values():
+    if isinstance(_blk, dict):
+        _blk.pop("wake", None)
 NOW = datetime(2026, 10, 27, 10, 30, 5, tzinfo=timezone.utc)
 
 
@@ -97,7 +103,22 @@ def test_shipped_day_cap_is_four_per_utc_day():
     shipped = det.load_config()
     assert shipped["max_per_day"] == 4 and int(shipped["scan_wake_every_h"]) >= 2  # 2 normally; 24 in WEEKEND-TRIGGER-ONLY
     st = {"wakes": [{"at": (NOW - timedelta(minutes=5 * i)).isoformat(), "symbol": "ETHUSDT"} for i in range(1, 5)]}
-    assert det.plan([_f("atr_burst")], st, dict(shipped, max_per_hour=99, cooldown_min=0), NOW)[1][0][1] == "day_cap"
+    # near_signal still wakes on the shipped config (the 0-of-72 detectors are label-only since D8)
+    assert det.plan([_f("near_signal")], st, dict(shipped, max_per_hour=99, cooldown_min=0), NOW)[1][0][1] == "day_cap"
+
+
+def test_zero_yield_detectors_are_label_only_on_the_shipped_config():
+    """Operator D8 2026-11-18 (desk-entry-review-redesign § 6 Q4): atr_burst, momentum_burst and level_break
+    (with its liquidity_sweep) produced 0 propose_entry in 72 wakes. They still DETECT and are logged as labels,
+    but never wake; near_signal and calendar still wake."""
+    shipped = det.load_config()
+    firings = [_f(k) for k in ("atr_burst", "momentum_burst", "liquidity_sweep", "level_break")]
+    chosen, lim = det.plan(firings, {}, shipped, NOW)
+    assert chosen is None and [w for _, w in lim] == ["label_only"] * 4
+    chosen, lim = det.plan(firings + [_f("near_signal")], {}, shipped, NOW)
+    assert chosen["kind"] == "near_signal" and len(lim) == 4
+    # a config without the flag wakes exactly as before (revert = delete the `wake: false` lines)
+    assert det.plan([_f("atr_burst")], {}, CFG, NOW)[0]["kind"] == "atr_burst"
 
 
 def test_cost_line_states_the_measured_rate_and_the_ceiling():

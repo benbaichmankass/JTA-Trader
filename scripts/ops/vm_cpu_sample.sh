@@ -16,6 +16,25 @@ case "${WINDOW}" in (''|*[!0-9]*) WINDOW=30 ;; esac
 [ "${WINDOW}" -lt 5 ] && WINDOW=5
 [ "${WINDOW}" -gt 120 ] && WINDOW=120
 
+# Optional: start the window at a given clock minute (issue body `align_minute: 0` = the top of the hour), so a
+# burst can be sampled on purpose rather than by runner-queue luck. Waits at most 12 min (the job's timeout is 20);
+# a longer wait is skipped and said so, never silently.
+ALIGN="${CPU_SAMPLE_ALIGN_MINUTE:-}"
+if [ -n "${ALIGN}" ]; then
+    case "${ALIGN}" in (*[!0-9]*) ALIGN="" ;; esac
+fi
+if [ -n "${ALIGN}" ] && [ "${ALIGN}" -le 59 ]; then
+    now_s=$(( $(date -u +%s) % 3600 ))
+    wait_s=$(( (10#${ALIGN} * 60 - now_s + 3600) % 3600 ))
+    if [ "${wait_s}" -le 720 ]; then
+        echo "align: waiting ${wait_s}s for minute :$(printf '%02d' "$((10#${ALIGN}))") UTC (now $(date -u +%H:%M:%S))"
+        sleep "${wait_s}"
+    else
+        echo "align: NOT aligned: minute :${ALIGN} is ${wait_s}s away (> 720 s cap); sampling now ($(date -u +%H:%M:%S))"
+    fi
+fi
+echo "window starts: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 echo "===== loadavg / nproc ====="
 echo "loadavg: $(cat /proc/loadavg 2>/dev/null || echo '(unreadable)')   nproc: $(nproc 2>/dev/null || echo '?')"
 echo "--- CPU pressure (PSI; some/full avg10/avg60/avg300) ---"

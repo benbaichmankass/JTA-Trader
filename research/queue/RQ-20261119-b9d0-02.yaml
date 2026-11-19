@@ -1,0 +1,119 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Answers PI-20261118-JX6BUNMV-0001. Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch; a FAIL is demotion evidence the operator decides on).
+id: RQ-20261119-b9d0-02
+title: 'ENTRY served-refit FORWARD read: on decisions it was neither trained nor selected on, on the real-money bybit_2 symbols, does
+  ml-decision-entry-v1r20261115 make money net of cost?'
+status: queued
+cadence: once
+not_before: '2026-12-02T06:00:00+00:00'
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): a model is graded on
+  data it was not fit OR selected on; the window a promotion grade chose it on is reported, never gating.'
+question: 'The served ENTRY refit (ml/served/ml_decision_entry_v1r20261115/model.json; train_end_exclusive 2026-10-23T19:00Z; promoted
+  on its RULE-ENTRY-PROMOTE-20261106 grade over 2026-11-01..2026-11-14) scores every decision bar on the c692-01 table built over its
+  universe; ml_decision_entry.policy (tau from the artifact, sequential one-position-per-symbol) picks decisions; kept on the bybit_2
+  symbols (traded_symbols(), re-parsed at run time). In the FRESH windows A = [2026-10-24, 2026-11-01) and B = [2026-11-15, run day - 2],
+  is the mean net R per decision above 0, with a bar-clustered CI that excludes 0?'
+why_this_matters: 'This booster trades real money on bybit_2 since #26288 (2026-11-18 22:59Z). Its only record is the grade it was
+  SELECTED on (n 366 over the 60-symbol universe, +0.169 vs the old served +0.101), and f7c1-08 read the OLD frozen v1 forward at
+  -0.058 R/decision (n 118, 2026-10-01..11-15). Neither says how THIS model does on unseen decisions on the symbols that carry money.
+  A FAIL is demotion evidence for the operator (demotions wait for the operator); a PASS is the forward record beside the grade.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261118-f7c1-08
+  verdict_read: indeterminate
+  diagnosis: 'f7c1-08 graded the frozen v1, not the served refit, and its window overlaps the refit''s selection window. PI-20261118-
+    JX6BUNMV-0001 (ML-PRIMARY-8) asked for the served refit''s post-train read with n >= 60. Correction (ML-PRIMARY-9, 2026-11-19): that
+    item counted 2026-11-01..11-14 as forward, but it is the promotion grade''s window, so it is reported here and never gates; the
+    fresh windows are the purge gap (A) and after the grade''s data_through (B).'
+  search: 'none: model, tau, policy, bracket, symbols and cost stack are fixed by the artifact and the c692-01 recipe; only the window
+    is chosen here, before any run'
+  attempt: 1
+  due_by: '2026-12-09'
+levers:
+- name: entry_model_served
+  values: [ml-decision-entry-v1r20261115]
+  hypothesised_effect: mean net R per fresh decision on the bybit_2 symbols is > 0
+data_and_approximation: 'FIDELITY GAP, declared before the run: the outcome is the c692-01 label harness''s fixed bracket (SL 2 x ATR14,
+  TP 3 x ATR14, 24 h time stop, net of fee 11 + slippage 3 bps + funding 1 bps per 8 h), not the live exit; same gap as f7c1-08.
+  Window A starts at the UTC day after train_end (the holdout ledger is date-grained), dropping 5 hours of 2026-10-23. Decisions whose
+  24 h outcome passes the last fetched bar are dropped by the table build. The frozen v1 on the same rows is reported, never gating.'
+decision_rule:
+  id: RULE-RQ20261119-b9d0-02-ENTRY-SERVED-FWD
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_served_forward.py: over windows A + B, mean net R per decision of the served refit on the bybit_2
+    symbols, with a bootstrap CI95 resampling decision BARS (2000 draws). Reported, never gating: A and B separately, the 2026-11-01..
+    11-14 selection slice, and the frozen v1 under its own policy on the same rows. The read is claimed in the holdout ledger (copy in the
+    run dir) before any outcome is computed.'
+  rule: 'INDETERMINATE IF fewer than 60 fresh decisions. PASS IF the CI95 lower bound > 0. FAIL IF the CI95 upper bound < 0.
+    INDETERMINATE otherwise (CI spans 0). Thresholds, windows and draws fixed now and not changed after any result.'
+  pass_action: 'Record it as the served refit''s forward record (beside the promotion grade) on PI-20261118-JX6BUNMV-0001 and the ml-entry
+    lever map. No change.'
+  fail_action: 'Demotion evidence: report to the manager at once for the operator (demotions wait for the operator); the drift-
+    remediation skill runs (transient vs persistent) before any proposal. No change by this lane.'
+  indeterminate_action: 'Re-date one re-read at the date the measured accrual rate reaches n 60 (or a CI that can exclude 0), recorded
+    on the PI; the holdout ledger counts the re-read.'
+  what_it_does_not_do: No config change, no order, no registry or served-pointer change.
+  min_n: 60 fresh decisions
+power:
+  expected_n: 60
+  min_detectable_effect: 0.35
+  effect_units: r_multiple
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: f7c1-08 measured 118 decisions in 46 days on the bybit_2 symbols (~2.6/day; the refit''s own grade, 366 over 14 days
+    on 60 symbols, is ~2.2/day for 5). Window A (8 days) gives ~20; B needs ~40 more, so decisions through ~2026-11-30 plus 2 days for
+    outcomes -> not_before 2026-12-02. At n 60 and sd ~1.2 R (fixed bracket, ASSUMED) the CI half-width is ~0.3 R, so only a large
+    effect resolves; INDETERMINATE is likely and is stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public klines; the window grows with time, a later re-read has more power.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: the real-money ml_entry leg on bybit_2; a FAIL changes what the operator is asked; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 20
+  why_runner: needs_internet (keyless public Binance Vision monthly + daily 1h klines); scores a committed booster (no fit).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_served_forward.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261119-b9d0-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether the served ENTRY refit's forward record supports keeping it on bybit_2 (a FAIL goes to the operator)
+  legs:
+  - ml_entry
+  book: money
+related:
+- PI-20261118-JX6BUNMV-0001
+- RQ-20261118-f7c1-08
+- RQ-20261119-e8a1-04
+what_it_does_not_do: Registers, serves, promotes or demotes nothing; changes no config; places no order.
+last_dispatched_at: null

@@ -1,0 +1,30 @@
+# ============================================
+# ICT UNIT-FAILURE ALERT, TRAINER VM (template). FIX-SA-08 on the trainer.
+#
+# The live VM's template is deploy/ict-notify-failure@.service. This one differs
+# only in that it FORWARDS the ping to the live VM's pending_pings queue
+# (UNIT_FAILURE_FORWARD=live). Nothing drains pings on the trainer, so a local
+# enqueue alone reaches no-one (PI-20261004-GCFA5DOR-0010 (a), confirmed by
+# trainer-diag #27026: 13 of 14 trainer units had no OnFailure, and this template
+# was not installed).
+#
+# Installed by scripts/ops/install_trainer_onfailure.sh, together with the
+# deploy/dropins/onfailure.conf drop-in on every timer-driven trainer oneshot.
+# It never restarts anything. The live host is the one
+# ict-promotion-readiness.service declares. The key is the trainer->trader key the
+# 2026-11-15 rotation installed (scripts/ops/host_security_change.sh TRAINER_KEYFILE,
+# ~/.ssh/ict-bot-ovm-private.key): ~/.ssh/id_ed25519 does not exist on the trainer, so
+# every forward failed 'Permission denied (publickey)' (trainer-diag 44464412958).
+# ============================================
+
+[Unit]
+Description=ICT trainer: unit failure alert for %i
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+Environment=UNIT_FAILURE_FORWARD=live
+Environment=UNIT_FAILURE_HOST_LABEL=trainer
+Environment=VM_SSH_KEY=/home/ubuntu/.ssh/ict-bot-ovm-private.key
+ExecStart=/usr/bin/python3 -u scripts/ops/notify_unit_failure.py %i

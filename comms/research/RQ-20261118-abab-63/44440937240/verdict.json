@@ -1,0 +1,3587 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "family=trend timeframe=4h symbols=QTUMUSDT,ZRXUSDT,BATUSDT,RLCUSDT,KNCUSDT,CRVUSDT arms=['B', 'D55'] window=2020-06-01..2026-11-17 days=2500; 12 of 12 cells measured; trades net of fee+slippage+funding",
+  "n": 2293,
+  "note": "FAIL: B: pooled net_r <= 0 or folds short; D55: net_r/trade -0.0138 beats the baseline's -0.015 by 0.0012 < the 0.05 materiality bar. Thresholds: n_floor 39, pooled_n_floor 88, folds 6 majority 4, breadth 0.5 over >= 2 powered cells, holm alpha 0.05, baseline B with materiality 0.05 R/trade. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "decision_rule_id": "RULE-RQ20261118-ABAB-63-D55-HOLDOUT2-4H",
+  "data_inputs": [
+    "comms/research/RQ-20261118-abab-63/44440937240/data/BATUSDT_240.csv",
+    "comms/research/RQ-20261118-abab-63/44440937240/data/CRVUSDT_240.csv",
+    "comms/research/RQ-20261118-abab-63/44440937240/data/KNCUSDT_240.csv",
+    "comms/research/RQ-20261118-abab-63/44440937240/data/QTUMUSDT_240.csv",
+    "comms/research/RQ-20261118-abab-63/44440937240/data/RLCUSDT_240.csv",
+    "comms/research/RQ-20261118-abab-63/44440937240/data/ZRXUSDT_240.csv"
+  ],
+  "measurement": {
+    "family": "trend",
+    "timeframe": "4h",
+    "params": {
+      "donchian": 20,
+      "atr_period": 14,
+      "atr_stop_mult": 2.5,
+      "trail_mult": 6.0,
+      "min_confidence": 0.0
+    },
+    "best_arm": null,
+    "thresholds": {
+      "n_floor": 39,
+      "pooled_n_floor": 88,
+      "folds": 6,
+      "fold_majority": 4,
+      "breadth_frac": 0.5,
+      "min_powered_cells": 2,
+      "holm_alpha": 0.05,
+      "baseline": "B",
+      "delta_r_per_trade": 0.05
+    },
+    "arms": {
+      "B": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [],
+        "cells": {
+          "QTUMUSDT": {
+            "state": "measured",
+            "n": 204,
+            "net_r": 37.9963,
+            "max_drawdown_r": 14.9659,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-29 08:00:00+00:00",
+                "trades": 38,
+                "net_r": 21.2475
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-29 08:00:00+00:00",
+                "end": "2022-07-27 16:00:00+00:00",
+                "trades": 28,
+                "net_r": 10.5441
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-27 16:00:00+00:00",
+                "end": "2023-08-25 00:00:00+00:00",
+                "trades": 33,
+                "net_r": -5.0126
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-25 00:00:00+00:00",
+                "end": "2024-09-21 08:00:00+00:00",
+                "trades": 40,
+                "net_r": 8.5079
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-21 08:00:00+00:00",
+                "end": "2025-10-19 16:00:00+00:00",
+                "trades": 33,
+                "net_r": 4.8059
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-19 16:00:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 32,
+                "net_r": -2.0961
+              }
+            ],
+            "folds_pos": 4,
+            "net_r_per_capital_day": 0.0218,
+            "mean_bars_held": 51.333,
+            "hold_days_mean": 8.556,
+            "net_r_per_trade": 0.1863,
+            "t_one_sided_p": 0.09173851216204537,
+            "by_outcome": {
+              "stop": 111,
+              "trail_stop": 75,
+              "timeout": 18
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/QTUMUSDT_240.csv",
+              "--symbol",
+              "QTUMUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_QTUMUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_QTUMUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 204,
+              "n_with_cf": 204,
+              "n_graded": 204,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 204,
+                "mean_net_r": 0.2374,
+                "ci95_mean": [
+                  -0.0353,
+                  0.5081
+                ]
+              },
+              "replayed_actual": {
+                "n": 204,
+                "mean_net_r": 0.2374,
+                "ci95_mean": [
+                  -0.0353,
+                  0.5081
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 204,
+                  "mean_net_r": 0.0391
+                },
+                "sl0.75x_tp3R": {
+                  "n": 204,
+                  "mean_net_r": 0.0974
+                },
+                "sl0.75x_tp4R": {
+                  "n": 204,
+                  "mean_net_r": 0.1987
+                },
+                "sl0.75x_tp5R": {
+                  "n": 204,
+                  "mean_net_r": 0.3102
+                },
+                "sl0.75x_tp6R": {
+                  "n": 204,
+                  "mean_net_r": 0.2867
+                },
+                "sl1.25x_tp2R": {
+                  "n": 204,
+                  "mean_net_r": 0.0904
+                },
+                "sl1.25x_tp3R": {
+                  "n": 204,
+                  "mean_net_r": 0.2085
+                },
+                "sl1.25x_tp4R": {
+                  "n": 204,
+                  "mean_net_r": 0.1604
+                },
+                "sl1.25x_tp5R": {
+                  "n": 204,
+                  "mean_net_r": 0.1761
+                },
+                "sl1.25x_tp6R": {
+                  "n": 204,
+                  "mean_net_r": 0.1923
+                },
+                "sl1.5x_tp2R": {
+                  "n": 204,
+                  "mean_net_r": 0.0985
+                },
+                "sl1.5x_tp3R": {
+                  "n": 204,
+                  "mean_net_r": 0.1635
+                },
+                "sl1.5x_tp4R": {
+                  "n": 204,
+                  "mean_net_r": 0.1469
+                },
+                "sl1.5x_tp5R": {
+                  "n": 204,
+                  "mean_net_r": 0.1502
+                },
+                "sl1.5x_tp6R": {
+                  "n": 204,
+                  "mean_net_r": 0.1516
+                },
+                "sl1x_tp2R": {
+                  "n": 204,
+                  "mean_net_r": 0.0852
+                },
+                "sl1x_tp3R": {
+                  "n": 204,
+                  "mean_net_r": 0.1905
+                },
+                "sl1x_tp5R": {
+                  "n": 204,
+                  "mean_net_r": 0.2226
+                },
+                "sl1x_tp6R": {
+                  "n": 204,
+                  "mean_net_r": 0.2442
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 204,
+                  "mean_net_r": -0.0124
+                },
+                "more_atr_trail_2x": {
+                  "n": 204,
+                  "mean_net_r": -0.004
+                },
+                "more_atr_trail_3x": {
+                  "n": 204,
+                  "mean_net_r": -0.0623
+                },
+                "more_atr_trail_4x": {
+                  "n": 204,
+                  "mean_net_r": 0.0736
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 204,
+                  "mean_net_r": 0.2706
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 204,
+                  "mean_net_r": 0.1357
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 204,
+                  "mean_net_r": 0.1037
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 204,
+                  "mean_net_r": 0.0239
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 120,
+                "neutral": 67,
+                "exited_early": 16,
+                "exit_saved_r": 1
+              },
+              "fidelity_abs_gap_r": {
+                "n": 204,
+                "mean": 0.0789,
+                "max": 2.8664
+              }
+            }
+          },
+          "ZRXUSDT": {
+            "state": "measured",
+            "n": 228,
+            "net_r": -17.7663,
+            "max_drawdown_r": 27.1517,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-24 08:00:00+00:00",
+                "end": "2021-07-18 18:40:00+00:00",
+                "trades": 44,
+                "net_r": -5.6878
+              },
+              {
+                "fold": 2,
+                "start": "2021-07-18 18:40:00+00:00",
+                "end": "2022-08-12 05:20:00+00:00",
+                "trades": 37,
+                "net_r": -3.1045
+              },
+              {
+                "fold": 3,
+                "start": "2022-08-12 05:20:00+00:00",
+                "end": "2023-09-05 16:00:00+00:00",
+                "trades": 39,
+                "net_r": -10.6833
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-05 16:00:00+00:00",
+                "end": "2024-09-29 02:40:00+00:00",
+                "trades": 39,
+                "net_r": 5.2453
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-29 02:40:00+00:00",
+                "end": "2025-10-23 13:20:00+00:00",
+                "trades": 41,
+                "net_r": -7.14
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-23 13:20:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 28,
+                "net_r": 3.6051
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0107,
+            "mean_bars_held": 43.772,
+            "hold_days_mean": 7.295,
+            "net_r_per_trade": -0.0779,
+            "t_one_sided_p": 0.7520172762429396,
+            "by_outcome": {
+              "stop": 131,
+              "trail_stop": 82,
+              "timeout": 15
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-24 08:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/ZRXUSDT_240.csv",
+              "--symbol",
+              "ZRXUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_ZRXUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_ZRXUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 228,
+              "n_with_cf": 228,
+              "n_graded": 228,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 228,
+                "mean_net_r": -0.0641,
+                "ci95_mean": [
+                  -0.2894,
+                  0.1655
+                ]
+              },
+              "replayed_actual": {
+                "n": 228,
+                "mean_net_r": -0.0641,
+                "ci95_mean": [
+                  -0.2894,
+                  0.1655
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 228,
+                  "mean_net_r": -0.0237
+                },
+                "sl0.75x_tp3R": {
+                  "n": 228,
+                  "mean_net_r": -0.0542
+                },
+                "sl0.75x_tp4R": {
+                  "n": 228,
+                  "mean_net_r": 0.0196
+                },
+                "sl0.75x_tp5R": {
+                  "n": 228,
+                  "mean_net_r": 0.0281
+                },
+                "sl0.75x_tp6R": {
+                  "n": 228,
+                  "mean_net_r": -0.0542
+                },
+                "sl1.25x_tp2R": {
+                  "n": 228,
+                  "mean_net_r": 0.0298
+                },
+                "sl1.25x_tp3R": {
+                  "n": 228,
+                  "mean_net_r": 0.0454
+                },
+                "sl1.25x_tp4R": {
+                  "n": 228,
+                  "mean_net_r": -0.0038
+                },
+                "sl1.25x_tp5R": {
+                  "n": 228,
+                  "mean_net_r": -0.0118
+                },
+                "sl1.25x_tp6R": {
+                  "n": 228,
+                  "mean_net_r": -0.0159
+                },
+                "sl1.5x_tp2R": {
+                  "n": 228,
+                  "mean_net_r": 0.0322
+                },
+                "sl1.5x_tp3R": {
+                  "n": 228,
+                  "mean_net_r": -0.0084
+                },
+                "sl1.5x_tp4R": {
+                  "n": 228,
+                  "mean_net_r": -0.0171
+                },
+                "sl1.5x_tp5R": {
+                  "n": 228,
+                  "mean_net_r": -0.0208
+                },
+                "sl1.5x_tp6R": {
+                  "n": 228,
+                  "mean_net_r": -0.0343
+                },
+                "sl1x_tp2R": {
+                  "n": 228,
+                  "mean_net_r": -0.0406
+                },
+                "sl1x_tp3R": {
+                  "n": 228,
+                  "mean_net_r": 0.0089
+                },
+                "sl1x_tp5R": {
+                  "n": 228,
+                  "mean_net_r": -0.0498
+                },
+                "sl1x_tp6R": {
+                  "n": 228,
+                  "mean_net_r": -0.0546
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 228,
+                  "mean_net_r": -0.0232
+                },
+                "more_atr_trail_2x": {
+                  "n": 228,
+                  "mean_net_r": 0.0042
+                },
+                "more_atr_trail_3x": {
+                  "n": 228,
+                  "mean_net_r": 0.0126
+                },
+                "more_atr_trail_4x": {
+                  "n": 228,
+                  "mean_net_r": -0.0403
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 228,
+                  "mean_net_r": -0.0358
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 228,
+                  "mean_net_r": -0.0604
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 228,
+                  "mean_net_r": -0.0064
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 228,
+                  "mean_net_r": -0.0248
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "exited_early": 16,
+                "null": 142,
+                "neutral": 69,
+                "exit_saved_r": 1
+              },
+              "fidelity_abs_gap_r": {
+                "n": 228,
+                "mean": 0.0477,
+                "max": 1.8517
+              }
+            }
+          },
+          "BATUSDT": {
+            "state": "measured",
+            "n": 231,
+            "net_r": -22.4092,
+            "max_drawdown_r": 48.3017,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-29 08:00:00+00:00",
+                "trades": 41,
+                "net_r": -5.6885
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-29 08:00:00+00:00",
+                "end": "2022-07-27 16:00:00+00:00",
+                "trades": 28,
+                "net_r": 7.8423
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-27 16:00:00+00:00",
+                "end": "2023-08-25 00:00:00+00:00",
+                "trades": 36,
+                "net_r": 6.8353
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-25 00:00:00+00:00",
+                "end": "2024-09-21 08:00:00+00:00",
+                "trades": 43,
+                "net_r": -19.2436
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-21 08:00:00+00:00",
+                "end": "2025-10-19 16:00:00+00:00",
+                "trades": 44,
+                "net_r": -15.3846
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-19 16:00:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 39,
+                "net_r": 3.2299
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.013,
+            "mean_bars_held": 44.632,
+            "hold_days_mean": 7.439,
+            "net_r_per_trade": -0.097,
+            "t_one_sided_p": 0.8147094928173082,
+            "by_outcome": {
+              "stop": 134,
+              "trail_stop": 80,
+              "timeout": 17
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/BATUSDT_240.csv",
+              "--symbol",
+              "BATUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_BATUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_BATUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 231,
+              "n_with_cf": 231,
+              "n_graded": 231,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 231,
+                "mean_net_r": -0.0848,
+                "ci95_mean": [
+                  -0.2821,
+                  0.1366
+                ]
+              },
+              "replayed_actual": {
+                "n": 231,
+                "mean_net_r": -0.0848,
+                "ci95_mean": [
+                  -0.2821,
+                  0.1366
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 231,
+                  "mean_net_r": 0.0108
+                },
+                "sl0.75x_tp3R": {
+                  "n": 231,
+                  "mean_net_r": 0.0044
+                },
+                "sl0.75x_tp4R": {
+                  "n": 231,
+                  "mean_net_r": 0.0275
+                },
+                "sl0.75x_tp5R": {
+                  "n": 231,
+                  "mean_net_r": 0.0316
+                },
+                "sl0.75x_tp6R": {
+                  "n": 231,
+                  "mean_net_r": 0.0294
+                },
+                "sl1.25x_tp2R": {
+                  "n": 231,
+                  "mean_net_r": -0.0209
+                },
+                "sl1.25x_tp3R": {
+                  "n": 231,
+                  "mean_net_r": 0.0127
+                },
+                "sl1.25x_tp4R": {
+                  "n": 231,
+                  "mean_net_r": -0.0142
+                },
+                "sl1.25x_tp5R": {
+                  "n": 231,
+                  "mean_net_r": -0.0386
+                },
+                "sl1.25x_tp6R": {
+                  "n": 231,
+                  "mean_net_r": -0.0446
+                },
+                "sl1.5x_tp2R": {
+                  "n": 231,
+                  "mean_net_r": 0.0122
+                },
+                "sl1.5x_tp3R": {
+                  "n": 231,
+                  "mean_net_r": 0.018
+                },
+                "sl1.5x_tp4R": {
+                  "n": 231,
+                  "mean_net_r": -0.0011
+                },
+                "sl1.5x_tp5R": {
+                  "n": 231,
+                  "mean_net_r": -0.0179
+                },
+                "sl1.5x_tp6R": {
+                  "n": 231,
+                  "mean_net_r": -0.0299
+                },
+                "sl1x_tp2R": {
+                  "n": 231,
+                  "mean_net_r": 0.037
+                },
+                "sl1x_tp3R": {
+                  "n": 231,
+                  "mean_net_r": -0.0221
+                },
+                "sl1x_tp5R": {
+                  "n": 231,
+                  "mean_net_r": -0.0228
+                },
+                "sl1x_tp6R": {
+                  "n": 231,
+                  "mean_net_r": -0.0422
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 231,
+                  "mean_net_r": -0.0468
+                },
+                "more_atr_trail_2x": {
+                  "n": 231,
+                  "mean_net_r": -0.0332
+                },
+                "more_atr_trail_3x": {
+                  "n": 231,
+                  "mean_net_r": -0.1151
+                },
+                "more_atr_trail_4x": {
+                  "n": 231,
+                  "mean_net_r": -0.0916
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 231,
+                  "mean_net_r": -0.0866
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 231,
+                  "mean_net_r": -0.0477
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 231,
+                  "mean_net_r": -0.0689
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 231,
+                  "mean_net_r": -0.0739
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 124,
+                "neutral": 83,
+                "exited_early": 21,
+                "exit_saved_r": 3
+              },
+              "fidelity_abs_gap_r": {
+                "n": 231,
+                "mean": 0.0596,
+                "max": 1.9786
+              }
+            }
+          },
+          "RLCUSDT": {
+            "state": "measured",
+            "n": 193,
+            "net_r": 11.1155,
+            "max_drawdown_r": 17.5635,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-07-31 04:00:00+00:00",
+                "end": "2021-08-18 11:20:00+00:00",
+                "trades": 44,
+                "net_r": -5.0014
+              },
+              {
+                "fold": 2,
+                "start": "2021-08-18 11:20:00+00:00",
+                "end": "2022-09-05 18:40:00+00:00",
+                "trades": 22,
+                "net_r": 12.9455
+              },
+              {
+                "fold": 3,
+                "start": "2022-09-05 18:40:00+00:00",
+                "end": "2023-09-24 02:00:00+00:00",
+                "trades": 28,
+                "net_r": -5.2402
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-24 02:00:00+00:00",
+                "end": "2024-10-11 09:20:00+00:00",
+                "trades": 37,
+                "net_r": -6.4248
+              },
+              {
+                "fold": 5,
+                "start": "2024-10-11 09:20:00+00:00",
+                "end": "2025-10-29 16:40:00+00:00",
+                "trades": 35,
+                "net_r": 2.2693
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-29 16:40:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 27,
+                "net_r": 12.5674
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": 0.0063,
+            "mean_bars_held": 54.902,
+            "hold_days_mean": 9.15,
+            "net_r_per_trade": 0.0576,
+            "t_one_sided_p": 0.32177721535422266,
+            "by_outcome": {
+              "trail_stop": 75,
+              "stop": 100,
+              "timeout": 18
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-07-31 04:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/RLCUSDT_240.csv",
+              "--symbol",
+              "RLCUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_RLCUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_RLCUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 193,
+              "n_with_cf": 193,
+              "n_graded": 193,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 193,
+                "mean_net_r": 0.0596,
+                "ci95_mean": [
+                  -0.1801,
+                  0.294
+                ]
+              },
+              "replayed_actual": {
+                "n": 193,
+                "mean_net_r": 0.0596,
+                "ci95_mean": [
+                  -0.1801,
+                  0.294
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.0584
+                },
+                "sl0.75x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": 0.1419
+                },
+                "sl0.75x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": 0.0576
+                },
+                "sl0.75x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": 0.0684
+                },
+                "sl0.75x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": 0.0593
+                },
+                "sl1.25x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.142
+                },
+                "sl1.25x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": 0.1295
+                },
+                "sl1.25x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": 0.1217
+                },
+                "sl1.25x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": 0.1279
+                },
+                "sl1.25x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": 0.0948
+                },
+                "sl1.5x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.0827
+                },
+                "sl1.5x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": 0.0759
+                },
+                "sl1.5x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": 0.0814
+                },
+                "sl1.5x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": 0.0547
+                },
+                "sl1.5x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": 0.047
+                },
+                "sl1x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.1295
+                },
+                "sl1x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": 0.0917
+                },
+                "sl1x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": 0.1051
+                },
+                "sl1x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": 0.1116
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 193,
+                  "mean_net_r": -0.0647
+                },
+                "more_atr_trail_2x": {
+                  "n": 193,
+                  "mean_net_r": -0.0684
+                },
+                "more_atr_trail_3x": {
+                  "n": 193,
+                  "mean_net_r": -0.0775
+                },
+                "more_atr_trail_4x": {
+                  "n": 193,
+                  "mean_net_r": 0.0493
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 193,
+                  "mean_net_r": 0.0745
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 193,
+                  "mean_net_r": 0.0407
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 193,
+                  "mean_net_r": 0.0665
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 193,
+                  "mean_net_r": 0.0154
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 123,
+                "neutral": 53,
+                "exited_early": 14,
+                "exit_saved_r": 3
+              },
+              "fidelity_abs_gap_r": {
+                "n": 193,
+                "mean": 0.0671,
+                "max": 1.7497
+              }
+            }
+          },
+          "KNCUSDT": {
+            "state": "measured",
+            "n": 215,
+            "net_r": -18.414,
+            "max_drawdown_r": 26.5138,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-22 08:00:00+00:00",
+                "end": "2021-07-17 02:40:00+00:00",
+                "trades": 37,
+                "net_r": -2.6821
+              },
+              {
+                "fold": 2,
+                "start": "2021-07-17 02:40:00+00:00",
+                "end": "2022-08-10 21:20:00+00:00",
+                "trades": 29,
+                "net_r": -7.599
+              },
+              {
+                "fold": 3,
+                "start": "2022-08-10 21:20:00+00:00",
+                "end": "2023-09-04 16:00:00+00:00",
+                "trades": 36,
+                "net_r": 9.4321
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-04 16:00:00+00:00",
+                "end": "2024-09-28 10:40:00+00:00",
+                "trades": 40,
+                "net_r": -15.7153
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-28 10:40:00+00:00",
+                "end": "2025-10-23 05:20:00+00:00",
+                "trades": 42,
+                "net_r": -1.8776
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-23 05:20:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 31,
+                "net_r": 0.028
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0104,
+            "mean_bars_held": 49.451,
+            "hold_days_mean": 8.242,
+            "net_r_per_trade": -0.0856,
+            "t_one_sided_p": 0.7740620981018045,
+            "by_outcome": {
+              "trail_stop": 80,
+              "stop": 122,
+              "timeout": 13
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-22 08:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/KNCUSDT_240.csv",
+              "--symbol",
+              "KNCUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_KNCUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_KNCUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 215,
+              "n_with_cf": 215,
+              "n_graded": 215,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 215,
+                "mean_net_r": -0.0807,
+                "ci95_mean": [
+                  -0.2899,
+                  0.16
+                ]
+              },
+              "replayed_actual": {
+                "n": 215,
+                "mean_net_r": -0.0807,
+                "ci95_mean": [
+                  -0.2899,
+                  0.16
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 215,
+                  "mean_net_r": -0.0057
+                },
+                "sl0.75x_tp3R": {
+                  "n": 215,
+                  "mean_net_r": -0.0535
+                },
+                "sl0.75x_tp4R": {
+                  "n": 215,
+                  "mean_net_r": -0.0314
+                },
+                "sl0.75x_tp5R": {
+                  "n": 215,
+                  "mean_net_r": -0.0365
+                },
+                "sl0.75x_tp6R": {
+                  "n": 215,
+                  "mean_net_r": -0.0434
+                },
+                "sl1.25x_tp2R": {
+                  "n": 215,
+                  "mean_net_r": 0.0352
+                },
+                "sl1.25x_tp3R": {
+                  "n": 215,
+                  "mean_net_r": 0.0258
+                },
+                "sl1.25x_tp4R": {
+                  "n": 215,
+                  "mean_net_r": 0.0129
+                },
+                "sl1.25x_tp5R": {
+                  "n": 215,
+                  "mean_net_r": 0.0071
+                },
+                "sl1.25x_tp6R": {
+                  "n": 215,
+                  "mean_net_r": 0.003
+                },
+                "sl1.5x_tp2R": {
+                  "n": 215,
+                  "mean_net_r": 0.0003
+                },
+                "sl1.5x_tp3R": {
+                  "n": 215,
+                  "mean_net_r": -0.0103
+                },
+                "sl1.5x_tp4R": {
+                  "n": 215,
+                  "mean_net_r": -0.0032
+                },
+                "sl1.5x_tp5R": {
+                  "n": 215,
+                  "mean_net_r": -0.0213
+                },
+                "sl1.5x_tp6R": {
+                  "n": 215,
+                  "mean_net_r": -0.0255
+                },
+                "sl1x_tp2R": {
+                  "n": 215,
+                  "mean_net_r": -0.0025
+                },
+                "sl1x_tp3R": {
+                  "n": 215,
+                  "mean_net_r": -0.0398
+                },
+                "sl1x_tp5R": {
+                  "n": 215,
+                  "mean_net_r": -0.0422
+                },
+                "sl1x_tp6R": {
+                  "n": 215,
+                  "mean_net_r": -0.0322
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 215,
+                  "mean_net_r": -0.0098
+                },
+                "more_atr_trail_2x": {
+                  "n": 215,
+                  "mean_net_r": -0.0078
+                },
+                "more_atr_trail_3x": {
+                  "n": 215,
+                  "mean_net_r": -0.0609
+                },
+                "more_atr_trail_4x": {
+                  "n": 215,
+                  "mean_net_r": -0.1213
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 215,
+                  "mean_net_r": -0.0901
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 215,
+                  "mean_net_r": -0.1151
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 215,
+                  "mean_net_r": -0.1763
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 215,
+                  "mean_net_r": -0.1176
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 141,
+                "neutral": 56,
+                "exited_early": 18
+              },
+              "fidelity_abs_gap_r": {
+                "n": 215,
+                "mean": 0.0362,
+                "max": 1.4856
+              }
+            }
+          },
+          "CRVUSDT": {
+            "state": "measured",
+            "n": 193,
+            "net_r": -9.4918,
+            "max_drawdown_r": 21.6183,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-09-01 04:00:00+00:00",
+                "end": "2021-09-14 03:20:00+00:00",
+                "trades": 30,
+                "net_r": -0.9408
+              },
+              {
+                "fold": 2,
+                "start": "2021-09-14 03:20:00+00:00",
+                "end": "2022-09-27 02:40:00+00:00",
+                "trades": 33,
+                "net_r": -1.1823
+              },
+              {
+                "fold": 3,
+                "start": "2022-09-27 02:40:00+00:00",
+                "end": "2023-10-10 02:00:00+00:00",
+                "trades": 29,
+                "net_r": 2.0189
+              },
+              {
+                "fold": 4,
+                "start": "2023-10-10 02:00:00+00:00",
+                "end": "2024-10-22 01:20:00+00:00",
+                "trades": 32,
+                "net_r": -9.2337
+              },
+              {
+                "fold": 5,
+                "start": "2024-10-22 01:20:00+00:00",
+                "end": "2025-11-04 00:40:00+00:00",
+                "trades": 31,
+                "net_r": 6.2774
+              },
+              {
+                "fold": 6,
+                "start": "2025-11-04 00:40:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 38,
+                "net_r": -6.4313
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0052,
+            "mean_bars_held": 56.679,
+            "hold_days_mean": 9.447,
+            "net_r_per_trade": -0.0492,
+            "t_one_sided_p": 0.6525875142276961,
+            "by_outcome": {
+              "timeout": 18,
+              "trail_stop": 67,
+              "stop": 108
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-09-01 04:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/CRVUSDT_240.csv",
+              "--symbol",
+              "CRVUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_CRVUSDT_4h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_CRVUSDT_4h_B__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 193,
+              "n_with_cf": 193,
+              "n_graded": 193,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 193,
+                "mean_net_r": -0.0626,
+                "ci95_mean": [
+                  -0.2878,
+                  0.1716
+                ]
+              },
+              "replayed_actual": {
+                "n": 193,
+                "mean_net_r": -0.0626,
+                "ci95_mean": [
+                  -0.2878,
+                  0.1716
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.0301
+                },
+                "sl0.75x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": -0.0011
+                },
+                "sl0.75x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": -0.0288
+                },
+                "sl0.75x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": -0.0536
+                },
+                "sl0.75x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": -0.0619
+                },
+                "sl1.25x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": -0.0071
+                },
+                "sl1.25x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": -0.0288
+                },
+                "sl1.25x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": -0.0204
+                },
+                "sl1.25x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": -0.0261
+                },
+                "sl1.25x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": -0.0364
+                },
+                "sl1.5x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": -0.016
+                },
+                "sl1.5x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": -0.013
+                },
+                "sl1.5x_tp4R": {
+                  "n": 193,
+                  "mean_net_r": -0.0184
+                },
+                "sl1.5x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": -0.0272
+                },
+                "sl1.5x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": -0.0356
+                },
+                "sl1x_tp2R": {
+                  "n": 193,
+                  "mean_net_r": 0.0103
+                },
+                "sl1x_tp3R": {
+                  "n": 193,
+                  "mean_net_r": -0.0241
+                },
+                "sl1x_tp5R": {
+                  "n": 193,
+                  "mean_net_r": -0.0346
+                },
+                "sl1x_tp6R": {
+                  "n": 193,
+                  "mean_net_r": -0.0505
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 193,
+                  "mean_net_r": -0.0241
+                },
+                "more_atr_trail_2x": {
+                  "n": 193,
+                  "mean_net_r": -0.0492
+                },
+                "more_atr_trail_3x": {
+                  "n": 193,
+                  "mean_net_r": -0.0649
+                },
+                "more_atr_trail_4x": {
+                  "n": 193,
+                  "mean_net_r": -0.0782
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 193,
+                  "mean_net_r": -0.086
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 193,
+                  "mean_net_r": -0.1483
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 193,
+                  "mean_net_r": -0.02
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 193,
+                  "mean_net_r": -0.1094
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "exited_early": 14,
+                "null": 106,
+                "neutral": 70,
+                "exit_saved_r": 3
+              },
+              "fidelity_abs_gap_r": {
+                "n": 193,
+                "mean": 0.0721,
+                "max": 1.9428
+              }
+            }
+          }
+        },
+        "pooled": {
+          "n": 1264,
+          "net_r": -18.9676,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-06-01 00:00:00+00:00",
+              "end": "2021-06-29 08:00:00+00:00",
+              "trades": 223,
+              "net_r": -2.6446
+            },
+            {
+              "fold": 2,
+              "start": "2021-06-29 08:00:00+00:00",
+              "end": "2022-07-27 16:00:00+00:00",
+              "trades": 172,
+              "net_r": 30.5231
+            },
+            {
+              "fold": 3,
+              "start": "2022-07-27 16:00:00+00:00",
+              "end": "2023-08-25 00:00:00+00:00",
+              "trades": 211,
+              "net_r": -7.3846
+            },
+            {
+              "fold": 4,
+              "start": "2023-08-25 00:00:00+00:00",
+              "end": "2024-09-21 08:00:00+00:00",
+              "trades": 234,
+              "net_r": -38.8231
+            },
+            {
+              "fold": 5,
+              "start": "2024-09-21 08:00:00+00:00",
+              "end": "2025-10-19 16:00:00+00:00",
+              "trades": 229,
+              "net_r": -11.5414
+            },
+            {
+              "fold": 6,
+              "start": "2025-10-19 16:00:00+00:00",
+              "end": "2026-11-17 00:00:00+00:00",
+              "trades": 195,
+              "net_r": 10.903
+            }
+          ],
+          "folds_pos": 2,
+          "max_drawdown_r_sequential": 95.5224,
+          "net_r_per_trade": -0.015,
+          "t_one_sided_p": 0.6198066002112798,
+          "window": [
+            "2020-06-01 00:00:00+00:00",
+            "2026-11-17 00:00:00+00:00"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 1264,
+            "n_with_cf": 1264,
+            "n_graded": 1264,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 1264,
+              "mean_net_r": -0.0029,
+              "ci95_mean": [
+                -0.0988,
+                0.0967
+              ]
+            },
+            "replayed_actual": {
+              "n": 1264,
+              "mean_net_r": -0.0029,
+              "ci95_mean": [
+                -0.0988,
+                0.0967
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 1264,
+                "mean_net_r": 0.0166
+              },
+              "sl0.75x_tp3R": {
+                "n": 1264,
+                "mean_net_r": 0.0191
+              },
+              "sl0.75x_tp4R": {
+                "n": 1264,
+                "mean_net_r": 0.0397
+              },
+              "sl0.75x_tp5R": {
+                "n": 1264,
+                "mean_net_r": 0.057
+              },
+              "sl0.75x_tp6R": {
+                "n": 1264,
+                "mean_net_r": 0.0341
+              },
+              "sl1.25x_tp2R": {
+                "n": 1264,
+                "mean_net_r": 0.0427
+              },
+              "sl1.25x_tp3R": {
+                "n": 1264,
+                "mean_net_r": 0.0639
+              },
+              "sl1.25x_tp4R": {
+                "n": 1264,
+                "mean_net_r": 0.0403
+              },
+              "sl1.25x_tp5R": {
+                "n": 1264,
+                "mean_net_r": 0.036
+              },
+              "sl1.25x_tp6R": {
+                "n": 1264,
+                "mean_net_r": 0.0294
+              },
+              "sl1.5x_tp2R": {
+                "n": 1264,
+                "mean_net_r": 0.0342
+              },
+              "sl1.5x_tp3R": {
+                "n": 1264,
+                "mean_net_r": 0.036
+              },
+              "sl1.5x_tp4R": {
+                "n": 1264,
+                "mean_net_r": 0.0295
+              },
+              "sl1.5x_tp5R": {
+                "n": 1264,
+                "mean_net_r": 0.0178
+              },
+              "sl1.5x_tp6R": {
+                "n": 1264,
+                "mean_net_r": 0.0102
+              },
+              "sl1x_tp2R": {
+                "n": 1264,
+                "mean_net_r": 0.0341
+              },
+              "sl1x_tp3R": {
+                "n": 1264,
+                "mean_net_r": 0.0319
+              },
+              "sl1x_tp5R": {
+                "n": 1264,
+                "mean_net_r": 0.0264
+              },
+              "sl1x_tp6R": {
+                "n": 1264,
+                "mean_net_r": 0.0257
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 1264,
+                "mean_net_r": -0.03
+              },
+              "more_atr_trail_2x": {
+                "n": 1264,
+                "mean_net_r": -0.0252
+              },
+              "more_atr_trail_3x": {
+                "n": 1264,
+                "mean_net_r": -0.0609
+              },
+              "more_atr_trail_4x": {
+                "n": 1264,
+                "mean_net_r": -0.0372
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 1264,
+                "mean_net_r": 0.0043
+              },
+              "more_rule_1R_to_0R": {
+                "n": 1264,
+                "mean_net_r": -0.0337
+              },
+              "more_rule_2R_to_1R": {
+                "n": 1264,
+                "mean_net_r": -0.0199
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 1264,
+                "mean_net_r": -0.0485
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "null": 756,
+              "neutral": 398,
+              "exited_early": 99,
+              "exit_saved_r": 11
+            },
+            "fidelity_abs_gap_r": {
+              "n": 1264,
+              "mean": 0.0597,
+              "max": 2.8664
+            }
+          }
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 1,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": null,
+          "why": "pooled net_r <= 0 or folds short",
+          "role": "baseline",
+          "holm_survivors": []
+        }
+      },
+      "D55": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [
+          "--donchian",
+          "55",
+          "--trail-mult",
+          "6.0"
+        ],
+        "cells": {
+          "QTUMUSDT": {
+            "state": "measured",
+            "n": 179,
+            "net_r": 11.5491,
+            "max_drawdown_r": 14.9476,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-29 08:00:00+00:00",
+                "trades": 30,
+                "net_r": 16.8074
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-29 08:00:00+00:00",
+                "end": "2022-07-27 16:00:00+00:00",
+                "trades": 36,
+                "net_r": -0.7832
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-27 16:00:00+00:00",
+                "end": "2023-08-25 00:00:00+00:00",
+                "trades": 23,
+                "net_r": 2.3243
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-25 00:00:00+00:00",
+                "end": "2024-09-21 08:00:00+00:00",
+                "trades": 31,
+                "net_r": -0.6679
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-21 08:00:00+00:00",
+                "end": "2025-10-19 16:00:00+00:00",
+                "trades": 31,
+                "net_r": -5.0934
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-19 16:00:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 28,
+                "net_r": -1.0379
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": 0.0093,
+            "mean_bars_held": 41.503,
+            "hold_days_mean": 6.917,
+            "net_r_per_trade": 0.0645,
+            "t_one_sided_p": 0.32119355938454386,
+            "by_outcome": {
+              "stop": 104,
+              "trail_stop": 63,
+              "timeout": 12
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/QTUMUSDT_240.csv",
+              "--symbol",
+              "QTUMUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_QTUMUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_QTUMUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 179,
+              "n_with_cf": 179,
+              "n_graded": 179,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 179,
+                "mean_net_r": 0.0719,
+                "ci95_mean": [
+                  -0.1894,
+                  0.379
+                ]
+              },
+              "replayed_actual": {
+                "n": 179,
+                "mean_net_r": 0.0719,
+                "ci95_mean": [
+                  -0.1894,
+                  0.379
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 179,
+                  "mean_net_r": -0.0418
+                },
+                "sl0.75x_tp3R": {
+                  "n": 179,
+                  "mean_net_r": 0.0627
+                },
+                "sl0.75x_tp4R": {
+                  "n": 179,
+                  "mean_net_r": 0.1706
+                },
+                "sl0.75x_tp5R": {
+                  "n": 179,
+                  "mean_net_r": 0.135
+                },
+                "sl0.75x_tp6R": {
+                  "n": 179,
+                  "mean_net_r": 0.109
+                },
+                "sl1.25x_tp2R": {
+                  "n": 179,
+                  "mean_net_r": 0.0394
+                },
+                "sl1.25x_tp3R": {
+                  "n": 179,
+                  "mean_net_r": 0.1237
+                },
+                "sl1.25x_tp4R": {
+                  "n": 179,
+                  "mean_net_r": 0.12
+                },
+                "sl1.25x_tp5R": {
+                  "n": 179,
+                  "mean_net_r": 0.1098
+                },
+                "sl1.25x_tp6R": {
+                  "n": 179,
+                  "mean_net_r": 0.1391
+                },
+                "sl1.5x_tp2R": {
+                  "n": 179,
+                  "mean_net_r": 0.0996
+                },
+                "sl1.5x_tp3R": {
+                  "n": 179,
+                  "mean_net_r": 0.082
+                },
+                "sl1.5x_tp4R": {
+                  "n": 179,
+                  "mean_net_r": 0.0932
+                },
+                "sl1.5x_tp5R": {
+                  "n": 179,
+                  "mean_net_r": 0.1012
+                },
+                "sl1.5x_tp6R": {
+                  "n": 179,
+                  "mean_net_r": 0.0697
+                },
+                "sl1x_tp2R": {
+                  "n": 179,
+                  "mean_net_r": 0.0079
+                },
+                "sl1x_tp3R": {
+                  "n": 179,
+                  "mean_net_r": 0.1484
+                },
+                "sl1x_tp5R": {
+                  "n": 179,
+                  "mean_net_r": 0.1167
+                },
+                "sl1x_tp6R": {
+                  "n": 179,
+                  "mean_net_r": 0.1173
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 179,
+                  "mean_net_r": -0.0402
+                },
+                "more_atr_trail_2x": {
+                  "n": 179,
+                  "mean_net_r": -0.0649
+                },
+                "more_atr_trail_3x": {
+                  "n": 179,
+                  "mean_net_r": -0.0592
+                },
+                "more_atr_trail_4x": {
+                  "n": 179,
+                  "mean_net_r": -0.0292
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 179,
+                  "mean_net_r": 0.0572
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 179,
+                  "mean_net_r": 0.0897
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 179,
+                  "mean_net_r": -0.0261
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 179,
+                  "mean_net_r": 0.0189
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "neutral": 58,
+                "null": 107,
+                "exit_saved_r": 3,
+                "exited_early": 11
+              },
+              "fidelity_abs_gap_r": {
+                "n": 179,
+                "mean": 0.0379,
+                "max": 1.2672
+              }
+            }
+          },
+          "ZRXUSDT": {
+            "state": "measured",
+            "n": 177,
+            "net_r": -2.3067,
+            "max_drawdown_r": 18.28,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-24 08:00:00+00:00",
+                "end": "2021-07-18 18:40:00+00:00",
+                "trades": 31,
+                "net_r": 2.9291
+              },
+              {
+                "fold": 2,
+                "start": "2021-07-18 18:40:00+00:00",
+                "end": "2022-08-12 05:20:00+00:00",
+                "trades": 29,
+                "net_r": 0.8318
+              },
+              {
+                "fold": 3,
+                "start": "2022-08-12 05:20:00+00:00",
+                "end": "2023-09-05 16:00:00+00:00",
+                "trades": 27,
+                "net_r": -2.0986
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-05 16:00:00+00:00",
+                "end": "2024-09-29 02:40:00+00:00",
+                "trades": 26,
+                "net_r": 9.1148
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-29 02:40:00+00:00",
+                "end": "2025-10-23 13:20:00+00:00",
+                "trades": 31,
+                "net_r": -2.3347
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-23 13:20:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 33,
+                "net_r": -10.7494
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.002,
+            "mean_bars_held": 39.559,
+            "hold_days_mean": 6.593,
+            "net_r_per_trade": -0.013,
+            "t_one_sided_p": 0.5361398492627452,
+            "by_outcome": {
+              "stop": 98,
+              "trail_stop": 69,
+              "timeout": 10
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-24 08:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/ZRXUSDT_240.csv",
+              "--symbol",
+              "ZRXUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_ZRXUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_ZRXUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 177,
+              "n_with_cf": 177,
+              "n_graded": 177,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 177,
+                "mean_net_r": -0.0152,
+                "ci95_mean": [
+                  -0.275,
+                  0.276
+                ]
+              },
+              "replayed_actual": {
+                "n": 177,
+                "mean_net_r": -0.0152,
+                "ci95_mean": [
+                  -0.275,
+                  0.276
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": 0.0049
+                },
+                "sl0.75x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": 0.0017
+                },
+                "sl0.75x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": -0.0141
+                },
+                "sl0.75x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": 0.0428
+                },
+                "sl0.75x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.0201
+                },
+                "sl1.25x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": 0.034
+                },
+                "sl1.25x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": 0.0408
+                },
+                "sl1.25x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": 0.0328
+                },
+                "sl1.25x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": 0.0303
+                },
+                "sl1.25x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.0241
+                },
+                "sl1.5x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": 0.035
+                },
+                "sl1.5x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": 0.0208
+                },
+                "sl1.5x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": 0.0174
+                },
+                "sl1.5x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": -0.0185
+                },
+                "sl1.5x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.0146
+                },
+                "sl1x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": -0.0135
+                },
+                "sl1x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": 0.0086
+                },
+                "sl1x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": 0.0261
+                },
+                "sl1x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": 0.0032
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 177,
+                  "mean_net_r": -0.0111
+                },
+                "more_atr_trail_2x": {
+                  "n": 177,
+                  "mean_net_r": -0.0348
+                },
+                "more_atr_trail_3x": {
+                  "n": 177,
+                  "mean_net_r": -0.0502
+                },
+                "more_atr_trail_4x": {
+                  "n": 177,
+                  "mean_net_r": -0.0097
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 177,
+                  "mean_net_r": -0.0084
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 177,
+                  "mean_net_r": 0.0105
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 177,
+                  "mean_net_r": -0.0749
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 177,
+                  "mean_net_r": -0.0487
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "neutral": 53,
+                "null": 110,
+                "exited_early": 12,
+                "exit_saved_r": 2
+              },
+              "fidelity_abs_gap_r": {
+                "n": 177,
+                "mean": 0.0377,
+                "max": 1.8517
+              }
+            }
+          },
+          "BATUSDT": {
+            "state": "measured",
+            "n": 174,
+            "net_r": -13.9797,
+            "max_drawdown_r": 37.9369,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-29 08:00:00+00:00",
+                "trades": 31,
+                "net_r": -4.363
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-29 08:00:00+00:00",
+                "end": "2022-07-27 16:00:00+00:00",
+                "trades": 22,
+                "net_r": 8.1859
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-27 16:00:00+00:00",
+                "end": "2023-08-25 00:00:00+00:00",
+                "trades": 26,
+                "net_r": 2.855
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-25 00:00:00+00:00",
+                "end": "2024-09-21 08:00:00+00:00",
+                "trades": 34,
+                "net_r": -16.6832
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-21 08:00:00+00:00",
+                "end": "2025-10-19 16:00:00+00:00",
+                "trades": 33,
+                "net_r": -11.4937
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-19 16:00:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 28,
+                "net_r": 7.5192
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.0109,
+            "mean_bars_held": 44.27,
+            "hold_days_mean": 7.378,
+            "net_r_per_trade": -0.0803,
+            "t_one_sided_p": 0.7454842099587858,
+            "by_outcome": {
+              "trail_stop": 58,
+              "stop": 99,
+              "timeout": 17
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/BATUSDT_240.csv",
+              "--symbol",
+              "BATUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_BATUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_BATUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 174,
+              "n_with_cf": 174,
+              "n_graded": 174,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 174,
+                "mean_net_r": -0.0706,
+                "ci95_mean": [
+                  -0.2901,
+                  0.1538
+                ]
+              },
+              "replayed_actual": {
+                "n": 174,
+                "mean_net_r": -0.0706,
+                "ci95_mean": [
+                  -0.2901,
+                  0.1538
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 174,
+                  "mean_net_r": -0.0482
+                },
+                "sl0.75x_tp3R": {
+                  "n": 174,
+                  "mean_net_r": -0.0685
+                },
+                "sl0.75x_tp4R": {
+                  "n": 174,
+                  "mean_net_r": -0.043
+                },
+                "sl0.75x_tp5R": {
+                  "n": 174,
+                  "mean_net_r": -0.0236
+                },
+                "sl0.75x_tp6R": {
+                  "n": 174,
+                  "mean_net_r": -0.0566
+                },
+                "sl1.25x_tp2R": {
+                  "n": 174,
+                  "mean_net_r": -0.0208
+                },
+                "sl1.25x_tp3R": {
+                  "n": 174,
+                  "mean_net_r": 0.0232
+                },
+                "sl1.25x_tp4R": {
+                  "n": 174,
+                  "mean_net_r": -0.0287
+                },
+                "sl1.25x_tp5R": {
+                  "n": 174,
+                  "mean_net_r": -0.0219
+                },
+                "sl1.25x_tp6R": {
+                  "n": 174,
+                  "mean_net_r": -0.0546
+                },
+                "sl1.5x_tp2R": {
+                  "n": 174,
+                  "mean_net_r": -0.0462
+                },
+                "sl1.5x_tp3R": {
+                  "n": 174,
+                  "mean_net_r": -0.0491
+                },
+                "sl1.5x_tp4R": {
+                  "n": 174,
+                  "mean_net_r": -0.0618
+                },
+                "sl1.5x_tp5R": {
+                  "n": 174,
+                  "mean_net_r": -0.0813
+                },
+                "sl1.5x_tp6R": {
+                  "n": 174,
+                  "mean_net_r": -0.0939
+                },
+                "sl1x_tp2R": {
+                  "n": 174,
+                  "mean_net_r": 0.0919
+                },
+                "sl1x_tp3R": {
+                  "n": 174,
+                  "mean_net_r": -0.0216
+                },
+                "sl1x_tp5R": {
+                  "n": 174,
+                  "mean_net_r": -0.0192
+                },
+                "sl1x_tp6R": {
+                  "n": 174,
+                  "mean_net_r": -0.0223
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 174,
+                  "mean_net_r": -0.0662
+                },
+                "more_atr_trail_2x": {
+                  "n": 174,
+                  "mean_net_r": -0.0472
+                },
+                "more_atr_trail_3x": {
+                  "n": 174,
+                  "mean_net_r": -0.1024
+                },
+                "more_atr_trail_4x": {
+                  "n": 174,
+                  "mean_net_r": -0.1074
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 174,
+                  "mean_net_r": -0.1198
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 174,
+                  "mean_net_r": -0.125
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 174,
+                  "mean_net_r": -0.0253
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 174,
+                  "mean_net_r": -0.101
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 100,
+                "neutral": 59,
+                "exited_early": 12,
+                "exit_saved_r": 3
+              },
+              "fidelity_abs_gap_r": {
+                "n": 174,
+                "mean": 0.0652,
+                "max": 1.472
+              }
+            }
+          },
+          "RLCUSDT": {
+            "state": "measured",
+            "n": 155,
+            "net_r": -2.8816,
+            "max_drawdown_r": 23.8304,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-07-31 04:00:00+00:00",
+                "end": "2021-08-18 11:20:00+00:00",
+                "trades": 31,
+                "net_r": -5.2467
+              },
+              {
+                "fold": 2,
+                "start": "2021-08-18 11:20:00+00:00",
+                "end": "2022-09-05 18:40:00+00:00",
+                "trades": 21,
+                "net_r": 9.2115
+              },
+              {
+                "fold": 3,
+                "start": "2022-09-05 18:40:00+00:00",
+                "end": "2023-09-24 02:00:00+00:00",
+                "trades": 25,
+                "net_r": -9.8465
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-24 02:00:00+00:00",
+                "end": "2024-10-11 09:20:00+00:00",
+                "trades": 31,
+                "net_r": -6.699
+              },
+              {
+                "fold": 5,
+                "start": "2024-10-11 09:20:00+00:00",
+                "end": "2025-10-29 16:40:00+00:00",
+                "trades": 23,
+                "net_r": -0.9113
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-29 16:40:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 24,
+                "net_r": 10.6103
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0022,
+            "mean_bars_held": 51.252,
+            "hold_days_mean": 8.542,
+            "net_r_per_trade": -0.0186,
+            "t_one_sided_p": 0.5518907705289764,
+            "by_outcome": {
+              "stop": 85,
+              "trail_stop": 57,
+              "timeout": 13
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-07-31 04:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/RLCUSDT_240.csv",
+              "--symbol",
+              "RLCUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_RLCUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_RLCUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 155,
+              "n_with_cf": 155,
+              "n_graded": 155,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 155,
+                "mean_net_r": -0.0195,
+                "ci95_mean": [
+                  -0.3032,
+                  0.2829
+                ]
+              },
+              "replayed_actual": {
+                "n": 155,
+                "mean_net_r": -0.0195,
+                "ci95_mean": [
+                  -0.3032,
+                  0.2829
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 155,
+                  "mean_net_r": -0.0354
+                },
+                "sl0.75x_tp3R": {
+                  "n": 155,
+                  "mean_net_r": -0.0924
+                },
+                "sl0.75x_tp4R": {
+                  "n": 155,
+                  "mean_net_r": -0.2227
+                },
+                "sl0.75x_tp5R": {
+                  "n": 155,
+                  "mean_net_r": -0.2003
+                },
+                "sl0.75x_tp6R": {
+                  "n": 155,
+                  "mean_net_r": -0.1837
+                },
+                "sl1.25x_tp2R": {
+                  "n": 155,
+                  "mean_net_r": -0.013
+                },
+                "sl1.25x_tp3R": {
+                  "n": 155,
+                  "mean_net_r": -0.0035
+                },
+                "sl1.25x_tp4R": {
+                  "n": 155,
+                  "mean_net_r": 0.0375
+                },
+                "sl1.25x_tp5R": {
+                  "n": 155,
+                  "mean_net_r": 0.0119
+                },
+                "sl1.25x_tp6R": {
+                  "n": 155,
+                  "mean_net_r": 0.021
+                },
+                "sl1.5x_tp2R": {
+                  "n": 155,
+                  "mean_net_r": -0.055
+                },
+                "sl1.5x_tp3R": {
+                  "n": 155,
+                  "mean_net_r": 0.0078
+                },
+                "sl1.5x_tp4R": {
+                  "n": 155,
+                  "mean_net_r": -0.014
+                },
+                "sl1.5x_tp5R": {
+                  "n": 155,
+                  "mean_net_r": -0.009
+                },
+                "sl1.5x_tp6R": {
+                  "n": 155,
+                  "mean_net_r": -0.0273
+                },
+                "sl1x_tp2R": {
+                  "n": 155,
+                  "mean_net_r": 0.0188
+                },
+                "sl1x_tp3R": {
+                  "n": 155,
+                  "mean_net_r": -0.0661
+                },
+                "sl1x_tp5R": {
+                  "n": 155,
+                  "mean_net_r": 0.0172
+                },
+                "sl1x_tp6R": {
+                  "n": 155,
+                  "mean_net_r": 0.0009
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 155,
+                  "mean_net_r": -0.0304
+                },
+                "more_atr_trail_2x": {
+                  "n": 155,
+                  "mean_net_r": -0.0671
+                },
+                "more_atr_trail_3x": {
+                  "n": 155,
+                  "mean_net_r": -0.0585
+                },
+                "more_atr_trail_4x": {
+                  "n": 155,
+                  "mean_net_r": -0.0311
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 155,
+                  "mean_net_r": 0.0408
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 155,
+                  "mean_net_r": -0.0601
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 155,
+                  "mean_net_r": -0.0152
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 155,
+                  "mean_net_r": -0.0532
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "neutral": 47,
+                "null": 99,
+                "exited_early": 8,
+                "exit_saved_r": 1
+              },
+              "fidelity_abs_gap_r": {
+                "n": 155,
+                "mean": 0.058,
+                "max": 1.5972
+              }
+            }
+          },
+          "KNCUSDT": {
+            "state": "measured",
+            "n": 177,
+            "net_r": -12.0793,
+            "max_drawdown_r": 22.4927,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-22 08:00:00+00:00",
+                "end": "2021-07-17 02:40:00+00:00",
+                "trades": 30,
+                "net_r": -5.1381
+              },
+              {
+                "fold": 2,
+                "start": "2021-07-17 02:40:00+00:00",
+                "end": "2022-08-10 21:20:00+00:00",
+                "trades": 29,
+                "net_r": -9.1606
+              },
+              {
+                "fold": 3,
+                "start": "2022-08-10 21:20:00+00:00",
+                "end": "2023-09-04 16:00:00+00:00",
+                "trades": 27,
+                "net_r": 13.1107
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-04 16:00:00+00:00",
+                "end": "2024-09-28 10:40:00+00:00",
+                "trades": 34,
+                "net_r": -19.9674
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-28 10:40:00+00:00",
+                "end": "2025-10-23 05:20:00+00:00",
+                "trades": 30,
+                "net_r": 16.3932
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-23 05:20:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 27,
+                "net_r": -7.3174
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0101,
+            "mean_bars_held": 40.514,
+            "hold_days_mean": 6.752,
+            "net_r_per_trade": -0.0682,
+            "t_one_sided_p": 0.6562511878929371,
+            "by_outcome": {
+              "stop": 102,
+              "trail_stop": 68,
+              "timeout": 7
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-22 08:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/KNCUSDT_240.csv",
+              "--symbol",
+              "KNCUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_KNCUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_KNCUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 177,
+              "n_with_cf": 177,
+              "n_graded": 177,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 177,
+                "mean_net_r": -0.0755,
+                "ci95_mean": [
+                  -0.3661,
+                  0.317
+                ]
+              },
+              "replayed_actual": {
+                "n": 177,
+                "mean_net_r": -0.0755,
+                "ci95_mean": [
+                  -0.3661,
+                  0.317
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": 0.0703
+                },
+                "sl0.75x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": 0.0097
+                },
+                "sl0.75x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": -0.0907
+                },
+                "sl0.75x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": -0.0197
+                },
+                "sl0.75x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.0246
+                },
+                "sl1.25x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": -0.0821
+                },
+                "sl1.25x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": -0.0654
+                },
+                "sl1.25x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": -0.1047
+                },
+                "sl1.25x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": -0.1245
+                },
+                "sl1.25x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.1068
+                },
+                "sl1.5x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": -0.056
+                },
+                "sl1.5x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": -0.0333
+                },
+                "sl1.5x_tp4R": {
+                  "n": 177,
+                  "mean_net_r": -0.0787
+                },
+                "sl1.5x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": -0.0666
+                },
+                "sl1.5x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.0746
+                },
+                "sl1x_tp2R": {
+                  "n": 177,
+                  "mean_net_r": -0.0257
+                },
+                "sl1x_tp3R": {
+                  "n": 177,
+                  "mean_net_r": -0.1408
+                },
+                "sl1x_tp5R": {
+                  "n": 177,
+                  "mean_net_r": -0.1284
+                },
+                "sl1x_tp6R": {
+                  "n": 177,
+                  "mean_net_r": -0.1492
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 177,
+                  "mean_net_r": -0.0576
+                },
+                "more_atr_trail_2x": {
+                  "n": 177,
+                  "mean_net_r": -0.0682
+                },
+                "more_atr_trail_3x": {
+                  "n": 177,
+                  "mean_net_r": -0.095
+                },
+                "more_atr_trail_4x": {
+                  "n": 177,
+                  "mean_net_r": -0.0342
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 177,
+                  "mean_net_r": -0.0508
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 177,
+                  "mean_net_r": -0.1105
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 177,
+                  "mean_net_r": -0.0782
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 177,
+                  "mean_net_r": -0.0687
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "neutral": 48,
+                "null": 113,
+                "exited_early": 15,
+                "exit_saved_r": 1
+              },
+              "fidelity_abs_gap_r": {
+                "n": 177,
+                "mean": 0.0234,
+                "max": 1.0506
+              }
+            }
+          },
+          "CRVUSDT": {
+            "state": "measured",
+            "n": 167,
+            "net_r": 5.4847,
+            "max_drawdown_r": 17.6334,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-09-01 04:00:00+00:00",
+                "end": "2021-09-14 03:20:00+00:00",
+                "trades": 29,
+                "net_r": -5.6746
+              },
+              {
+                "fold": 2,
+                "start": "2021-09-14 03:20:00+00:00",
+                "end": "2022-09-27 02:40:00+00:00",
+                "trades": 30,
+                "net_r": -3.7625
+              },
+              {
+                "fold": 3,
+                "start": "2022-09-27 02:40:00+00:00",
+                "end": "2023-10-10 02:00:00+00:00",
+                "trades": 23,
+                "net_r": 6.1789
+              },
+              {
+                "fold": 4,
+                "start": "2023-10-10 02:00:00+00:00",
+                "end": "2024-10-22 01:20:00+00:00",
+                "trades": 27,
+                "net_r": -7.143
+              },
+              {
+                "fold": 5,
+                "start": "2024-10-22 01:20:00+00:00",
+                "end": "2025-11-04 00:40:00+00:00",
+                "trades": 24,
+                "net_r": 24.7037
+              },
+              {
+                "fold": 6,
+                "start": "2025-11-04 00:40:00+00:00",
+                "end": "2026-11-17 00:00:00+00:00",
+                "trades": 34,
+                "net_r": -8.8178
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": 0.0039,
+            "mean_bars_held": 49.91,
+            "hold_days_mean": 8.318,
+            "net_r_per_trade": 0.0328,
+            "t_one_sided_p": 0.41632856933869,
+            "by_outcome": {
+              "timeout": 15,
+              "trail_stop": 51,
+              "stop": 101
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 55,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 6.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-09-01 04:00:00+00:00",
+            "data_end": "2026-11-17 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+              "--donchian",
+              "55",
+              "--data",
+              "comms/research/RQ-20261118-abab-63/44440937240/data/CRVUSDT_240.csv",
+              "--symbol",
+              "CRVUSDT",
+              "--resample",
+              "4h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "6.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_CRVUSDT_4h_D55__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261118-abab-63/44440937240/cells/trend_CRVUSDT_4h_D55__bt.json",
+              "--timeframe",
+              "4h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-11-17",
+              "--cf"
+            ],
+            "cf_summary": {
+              "schema": "cf_summary/1",
+              "n_rows": 167,
+              "n_with_cf": 167,
+              "n_graded": 167,
+              "n_could_not_grade": 0,
+              "provenance": "ESTIMATED",
+              "original_brackets": {
+                "n": 167,
+                "mean_net_r": 0.0014,
+                "ci95_mean": [
+                  -0.299,
+                  0.3389
+                ]
+              },
+              "replayed_actual": {
+                "n": 167,
+                "mean_net_r": 0.0014,
+                "ci95_mean": [
+                  -0.299,
+                  0.3389
+                ]
+              },
+              "alt_brackets_mean_by_cell": {
+                "sl0.75x_tp2R": {
+                  "n": 167,
+                  "mean_net_r": -0.1178
+                },
+                "sl0.75x_tp3R": {
+                  "n": 167,
+                  "mean_net_r": -0.1053
+                },
+                "sl0.75x_tp4R": {
+                  "n": 167,
+                  "mean_net_r": -0.0524
+                },
+                "sl0.75x_tp5R": {
+                  "n": 167,
+                  "mean_net_r": -0.089
+                },
+                "sl0.75x_tp6R": {
+                  "n": 167,
+                  "mean_net_r": -0.0879
+                },
+                "sl1.25x_tp2R": {
+                  "n": 167,
+                  "mean_net_r": 0.0895
+                },
+                "sl1.25x_tp3R": {
+                  "n": 167,
+                  "mean_net_r": 0.0663
+                },
+                "sl1.25x_tp4R": {
+                  "n": 167,
+                  "mean_net_r": 0.0731
+                },
+                "sl1.25x_tp5R": {
+                  "n": 167,
+                  "mean_net_r": 0.0715
+                },
+                "sl1.25x_tp6R": {
+                  "n": 167,
+                  "mean_net_r": 0.0796
+                },
+                "sl1.5x_tp2R": {
+                  "n": 167,
+                  "mean_net_r": 0.1094
+                },
+                "sl1.5x_tp3R": {
+                  "n": 167,
+                  "mean_net_r": 0.0871
+                },
+                "sl1.5x_tp4R": {
+                  "n": 167,
+                  "mean_net_r": 0.077
+                },
+                "sl1.5x_tp5R": {
+                  "n": 167,
+                  "mean_net_r": 0.0918
+                },
+                "sl1.5x_tp6R": {
+                  "n": 167,
+                  "mean_net_r": 0.0692
+                },
+                "sl1x_tp2R": {
+                  "n": 167,
+                  "mean_net_r": -0.0129
+                },
+                "sl1x_tp3R": {
+                  "n": 167,
+                  "mean_net_r": 0.0104
+                },
+                "sl1x_tp5R": {
+                  "n": 167,
+                  "mean_net_r": -0.0014
+                },
+                "sl1x_tp6R": {
+                  "n": 167,
+                  "mean_net_r": -0.0155
+                }
+              },
+              "more_management_mean_by_arm": {
+                "more_atr_trail_1.5x": {
+                  "n": 167,
+                  "mean_net_r": -0.0313
+                },
+                "more_atr_trail_2x": {
+                  "n": 167,
+                  "mean_net_r": -0.108
+                },
+                "more_atr_trail_3x": {
+                  "n": 167,
+                  "mean_net_r": -0.1012
+                },
+                "more_atr_trail_4x": {
+                  "n": 167,
+                  "mean_net_r": -0.1385
+                },
+                "more_rule_1.5R_to_0R": {
+                  "n": 167,
+                  "mean_net_r": 0.0148
+                },
+                "more_rule_1R_to_0R": {
+                  "n": 167,
+                  "mean_net_r": -0.0101
+                },
+                "more_rule_2R_to_1R": {
+                  "n": 167,
+                  "mean_net_r": -0.0748
+                },
+                "more_rule_ladder_be1_lock2": {
+                  "n": 167,
+                  "mean_net_r": -0.1044
+                }
+              },
+              "p_random_ge_actual": {
+                "n": 0,
+                "mean": null
+              },
+              "post_exit_verdict_mix": {
+                "null": 89,
+                "neutral": 58,
+                "exited_early": 16,
+                "exit_saved_r": 4
+              },
+              "fidelity_abs_gap_r": {
+                "n": 167,
+                "mean": 0.0678,
+                "max": 1.9428
+              }
+            }
+          }
+        },
+        "pooled": {
+          "n": 1029,
+          "net_r": -14.2141,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-06-01 00:00:00+00:00",
+              "end": "2021-06-29 08:00:00+00:00",
+              "trades": 166,
+              "net_r": 5.968
+            },
+            {
+              "fold": 2,
+              "start": "2021-06-29 08:00:00+00:00",
+              "end": "2022-07-27 16:00:00+00:00",
+              "trades": 175,
+              "net_r": -3.8786
+            },
+            {
+              "fold": 3,
+              "start": "2022-07-27 16:00:00+00:00",
+              "end": "2023-08-25 00:00:00+00:00",
+              "trades": 154,
+              "net_r": 17.3856
+            },
+            {
+              "fold": 4,
+              "start": "2023-08-25 00:00:00+00:00",
+              "end": "2024-09-21 08:00:00+00:00",
+              "trades": 185,
+              "net_r": -44.6681
+            },
+            {
+              "fold": 5,
+              "start": "2024-09-21 08:00:00+00:00",
+              "end": "2025-10-19 16:00:00+00:00",
+              "trades": 173,
+              "net_r": 21.9369
+            },
+            {
+              "fold": 6,
+              "start": "2025-10-19 16:00:00+00:00",
+              "end": "2026-11-17 00:00:00+00:00",
+              "trades": 176,
+              "net_r": -10.9579
+            }
+          ],
+          "folds_pos": 3,
+          "max_drawdown_r_sequential": 62.6007,
+          "net_r_per_trade": -0.0138,
+          "t_one_sided_p": 0.5917624656277742,
+          "window": [
+            "2020-06-01 00:00:00+00:00",
+            "2026-11-17 00:00:00+00:00"
+          ],
+          "cf_summary": {
+            "schema": "cf_summary/1",
+            "n_rows": 1029,
+            "n_with_cf": 1029,
+            "n_graded": 1029,
+            "n_could_not_grade": 0,
+            "provenance": "ESTIMATED",
+            "original_brackets": {
+              "n": 1029,
+              "mean_net_r": -0.0178,
+              "ci95_mean": [
+                -0.1331,
+                0.095
+              ]
+            },
+            "replayed_actual": {
+              "n": 1029,
+              "mean_net_r": -0.0178,
+              "ci95_mean": [
+                -0.1331,
+                0.095
+              ]
+            },
+            "alt_brackets_mean_by_cell": {
+              "sl0.75x_tp2R": {
+                "n": 1029,
+                "mean_net_r": -0.0269
+              },
+              "sl0.75x_tp3R": {
+                "n": 1029,
+                "mean_net_r": -0.0297
+              },
+              "sl0.75x_tp4R": {
+                "n": 1029,
+                "mean_net_r": -0.0377
+              },
+              "sl0.75x_tp5R": {
+                "n": 1029,
+                "mean_net_r": -0.0212
+              },
+              "sl0.75x_tp6R": {
+                "n": 1029,
+                "mean_net_r": -0.0402
+              },
+              "sl1.25x_tp2R": {
+                "n": 1029,
+                "mean_net_r": 0.0077
+              },
+              "sl1.25x_tp3R": {
+                "n": 1029,
+                "mean_net_r": 0.0314
+              },
+              "sl1.25x_tp4R": {
+                "n": 1029,
+                "mean_net_r": 0.0212
+              },
+              "sl1.25x_tp5R": {
+                "n": 1029,
+                "mean_net_r": 0.0126
+              },
+              "sl1.25x_tp6R": {
+                "n": 1029,
+                "mean_net_r": 0.0085
+              },
+              "sl1.5x_tp2R": {
+                "n": 1029,
+                "mean_net_r": 0.0154
+              },
+              "sl1.5x_tp3R": {
+                "n": 1029,
+                "mean_net_r": 0.0191
+              },
+              "sl1.5x_tp4R": {
+                "n": 1029,
+                "mean_net_r": 0.0056
+              },
+              "sl1.5x_tp5R": {
+                "n": 1029,
+                "mean_net_r": 0.0028
+              },
+              "sl1.5x_tp6R": {
+                "n": 1029,
+                "mean_net_r": -0.012
+              },
+              "sl1x_tp2R": {
+                "n": 1029,
+                "mean_net_r": 0.0109
+              },
+              "sl1x_tp3R": {
+                "n": 1029,
+                "mean_net_r": -0.0088
+              },
+              "sl1x_tp5R": {
+                "n": 1029,
+                "mean_net_r": 0.0018
+              },
+              "sl1x_tp6R": {
+                "n": 1029,
+                "mean_net_r": -0.0109
+              }
+            },
+            "more_management_mean_by_arm": {
+              "more_atr_trail_1.5x": {
+                "n": 1029,
+                "mean_net_r": -0.0397
+              },
+              "more_atr_trail_2x": {
+                "n": 1029,
+                "mean_net_r": -0.0646
+              },
+              "more_atr_trail_3x": {
+                "n": 1029,
+                "mean_net_r": -0.0778
+              },
+              "more_atr_trail_4x": {
+                "n": 1029,
+                "mean_net_r": -0.058
+              },
+              "more_rule_1.5R_to_0R": {
+                "n": 1029,
+                "mean_net_r": -0.0119
+              },
+              "more_rule_1R_to_0R": {
+                "n": 1029,
+                "mean_net_r": -0.0334
+              },
+              "more_rule_2R_to_1R": {
+                "n": 1029,
+                "mean_net_r": -0.0496
+              },
+              "more_rule_ladder_be1_lock2": {
+                "n": 1029,
+                "mean_net_r": -0.059
+              }
+            },
+            "p_random_ge_actual": {
+              "n": 0,
+              "mean": null
+            },
+            "post_exit_verdict_mix": {
+              "neutral": 323,
+              "null": 618,
+              "exit_saved_r": 14,
+              "exited_early": 74
+            },
+            "fidelity_abs_gap_r": {
+              "n": 1029,
+              "mean": 0.0479,
+              "max": 1.9428
+            }
+          }
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 0,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": 0.0012,
+          "why": "net_r/trade -0.0138 beats the baseline's -0.015 by 0.0012 < the 0.05 materiality bar",
+          "role": "candidate",
+          "holm_survivors": []
+        }
+      }
+    }
+  }
+}

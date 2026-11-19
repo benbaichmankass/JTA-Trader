@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tests only: test_loss_between_signals_trips_on_the_tick_once_and_evaluate_refuses read the wall clock and failed in the first ~2 min after the daily reset (CI on #27023 ~00:2xZ). It now freezes the switch module's clock at a mid-day instant; a negative control at 00:00:30 reproduces the CI assertion. No src change. Gates this adds or changes: none."
+}

@@ -1,0 +1,188 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). ml-week-plan-2026-11-19 D7 (Labrador) "stronger model next" + RQ-20261118-04a5-07's
+# registered fail_action ("next family = learner class (CatBoost / a monotone head), then fitted-Q"). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261119-b9d0-04
+title: 'ml-tm-action-value ITERATION 8 (learner class): with the incumbent mean-target labels, corpora, path_state block, horizon 12 and
+  actions, do CatBoost action-value heads (instead of LightGBM) pass S-OFFLINE on the in-trade management bench?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): change one factor
+  against the incumbent on the incumbent''s harness, folds and cost stack; a learner-class step is tried only after the label and
+  feature levers it competes with were tested.'
+question: 'Same command as RQ-20261118-04a5-07 and its predecessor 7e18-01 (test corpus tmb-73f5c3660014, train corpus v2
+  bp2-f4271084b120 x4 sample, seed 11, path_state feature block, horizon-12 labels, every-bar check-ins, actions close and
+  partial_close_50, act margin chosen on 3 inner folds from the registered grid, 6 folds, 2000 bootstrap, 200 random draws). ONE
+  FACTOR CHANGED: the action-value heads are CatBoost (300 rounds, lr 0.05, depth 6, l2 3; tm_bench.CB_PARAMS, fixed) instead of
+  LightGBM, each predicting the per-state action value (MEAN target, not 04a5-07''s quantile). Does the CatBoost arm pass S-OFFLINE?'
+why_this_matters: 'Labrador-1b (TP extend-only) is the only live in-trade model; every learned management arm so far has failed
+  S-OFFLINE (tm-action-value iterations 1-7, c21d-04). The label and feature levers have been tried: horizon labels, check-in cadence
+  (c21d-04), the path_state block, and the quantile target (04a5-07, INDETERMINATE and confounded by per-action variance). The
+  learner class has not: every arm was LightGBM or logit. CatBoost''s ordered boosting and symmetric trees are the standard stronger
+  choice on n of a few thousand trades with correlated within-trade states. A PASS is pending a fresh window (S-OFFLINE''s own
+  verdict), never a live change; a FAIL moves D7 to fitted-Q, its registered next family.'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-07
+  verdict_read: indeterminate
+  diagnosis: '04a5-07 (run 44404069465) INDETERMINATE by its selfcheck clause: the quantile-of-each-action label is confounded by
+    per-action variance (it selects low-variance actions even on the driftless null), so that CONFIG (per-action quantile heads at
+    alpha 0.3) is not re-run. Its
+    lgbm arm read +0.0010 R/trade vs B0 (CI95 [-0.0002, +0.0025]), 2 of 6 folds positive; the 7e18-01 mean-target lgbm arm read
+    +0.0033 R/trade. The harness works (selfcheck planted / null controls pass for lgbm and now for catboost); the open question is
+    whether a stronger learner extracts more from the same states. fail_action ordering: learner class first, then fitted-Q.'
+  search: 'none: CatBoost hyper-parameters are capacity-matched to the incumbent LightGBM (300 rounds, lr 0.05, depth 6 ~ 31 leaves)
+    and fixed in tm_bench.CB_PARAMS before any run; the act margin is chosen exactly as for lgbm (3 inner folds, registered grid, the
+    CatBoost arm''s OWN inner out-of-fold scores); nothing is tuned on a test fold'
+  attempt: 8
+  due_by: '2026-11-26'
+levers:
+- name: tm_action_value_learner
+  values: [lgbm_action_value, catboost_action_value]
+  hypothesised_effect: the CatBoost arm clears S-OFFLINE (gain >= 0.03 R/trade over max(B0, B1) with every control) where LightGBM did not
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'test n MEASURED (v1, 2,627 trades, 3144-02 / 7e18-01 / 04a5-07); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01
+    (ESTIMATE). SE ~0.0088 R, MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. One arm.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+baseline:
+  definition: 'B0 hold (the trade''s own exit) and B1 the best static management rule chosen on train folds, on identical folds; the
+    7e18-01 mean-target LightGBM arm (+0.0033 R/trade) is the incumbent learner read, reported as context.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261119-b9d0-04-TM-CATBOOST-LEARNER
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'tm_bench score --rule s_offline on the one catboost_action_value arm: delta vs B0 per trade, trade-clustered bootstrap
+    CI95, folds positive of 6, per-leg max drawdown vs B0, net R per capital-day vs B0, delta vs B2, B4 matched-random margin CI,
+    Holm-adjusted p (tm_bench.s_offline, which now grades catboost_* arms exactly as lgbm_* arms).'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for the catboost arm: gain >= 0.03
+    R/trade over max(B0, B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2, beats its
+    own matched random B4 (margin CI lower > 0), Holm p < 0.05. FAIL iff its CI95 upper < max(B0, B1) + 0.03. INDETERMINATE
+    otherwise, or if the catboost arm is unavailable or not measured, the test corpus is not tmb-73f5c3660014, the train corpus is not
+    bp2-f4271084b120 with >= 10,000 de-duplicated trades after purge, or the selfcheck fails. Thresholds, actions, grid and CatBoost
+    parameters are fixed now and not changed after any result.'
+  pass_action: 'pass_pending_fresh_window: author the fresh-window confirmation (S-OFFLINE''s own next step) on a corpus disjoint from
+    tmb-73f5c3660014 before any live proposal; record the learner-class response on research/levers/ml-tm-action-value.yaml.'
+  fail_action: 'Record the learner class (CatBoost) as tested on research/levers/ml-tm-action-value.yaml; the next D7 family is
+    fitted-Q iteration on the same action grid (the frontier ranking''s next step), never a re-run of this configuration.'
+  what_it_does_not_do: Trains nothing persistent, registers, serves or promotes nothing; changes no config; places no order.
+  min_n: 2000 test trades
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and mix as the catboost policy on each test fold, random eligible check-ins,
+      sequential'
+  best_static:
+    grid:
+    - be_at_1r
+    - lock1_at_2r
+    - be_lock_ladder
+    - chandelier_2atr
+    - chandelier_3atr
+    - channel_10
+    - channel_20
+    excludes_test_folds: true
+    how: 'tm_bench B1: the static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.12
+  bucket: ai_trader
+  basis: 'planning weight carried from 7e18-01 / c21d-04 / 04a5-07; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 150
+  why_runner: "corpus v2 is an Actions artifact / regenerable on a runner (the workflow's corpus_v2 step); CPU only; catboost is in
+    scripts/research/requirements-learners.txt, which the runner installs for tm_bench units."
+  basis: 'ESTIMATE: 04a5-07 (same data and arm count) est 90 min; CatBoost fits ~1.5x LightGBM per round at this size and the inner
+    3-fold margin selection refits it, so ~150 min; timeout 240.'
+run:
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - horizon
+  - --horizon
+  - '12'
+  - --learners
+  - catboost_action_value
+  - --checkins
+  - every_bar
+  - --actions
+  - close,partial_close_50
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261119-b9d0-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: whether ml-tm-action-value with CatBoost heads proceeds to a fresh-window confirmation for close / partial_close_50 on the
+    money legs
+  legs:
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+related:
+- RQ-20261118-04a5-07
+- RQ-20261117-c21d-04
+- RQ-20261115-7e18-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+last_dispatched_at: '2026-11-19T13:02:36+00:00'

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "corrects blocked_on / grading text on seven research units (no rule change); manager merges after the FULL pytest-run is green",
+  "why": "Correction of ML-PRIMARY-10's own freshness premise (trainer-vm-diag #27238): the exit-head replay resolver reads FRESH data/<SYM>_15m/_5m.csv (last bar 2026-11-19), not frozen 1h files, and no data/<SYM>_1h.csv exists. The clears_when on a10d-07/-08, 04a5-04, aadc-13, a10d-06 named that missing file and could never clear; they now gate on the exit-head ROWS rebuild only. 04a5-01's block reason (frozen files) was wrong; it now names its undiagnosed n=0. aadc-11/12 grading caveats corrected: only the training rows are July; the test trades are fresh. No rule, arm or threshold changes. Gates this adds or changes: none."
+}

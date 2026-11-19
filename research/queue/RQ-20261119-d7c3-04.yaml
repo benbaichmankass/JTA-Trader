@@ -1,0 +1,94 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Build item (b) of row DESK-ENTRY-REVIEW-REDESIGN; the rule is the REGISTERED RULE NOTE of work-store
+# event 16945 (2026-11-19 01:00Z), registered before the harness existed. Gates this adds or changes: none.
+id: RQ-20261119-d7c3-04
+title: 'DESK TRIGGER REPLAY, family level_break_sweep: when the live desk trigger fires (a 5m bar wicks beyond the prior-48-bar high/low and closes back inside (live liquidity_sweep)), does entering (continuation or fade, one fixed 1.5 ATR SL / 3.0 ATR TP / 12-bar bracket) beat a same-symbol, same-ATR%-decile random entry by S3 >= +0.15 R net of the full cost stack on the DEV window?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- M40
+kind: experiment
+question: 'On closed 5m bars of BTC/ETH/SOL/XRP/ADA/AVAX USDT over the DESK-18G DEV window (2025-11-01..2026-09-15), firings of the level_break_sweep detector of config/desk_triggers.yaml (frozen parameters), entered at the next bar open with SL 1.5 x ATR14, TP 3.0 x ATR14 and a 12-bar time stop, scored under a continuation rule (side of the wick (up = wick above the prior-48 high)) and its fade, net of fee + slippage + funding: does the better rule beat random same-symbol, same-ATR%-decile cutoffs (the firing''s own side and geometry, 200 draws, more than 12 bars from any firing) by S3 >= +0.15 R with a Holm-adjusted 97.5% weekly-cluster lower bound > 0 on n >= 100 firings?'
+why_this_matters: 'The desk wakes on these triggers (desk_triggers.yaml) but no trigger has ever been measured as an entry situation; the operator asked to rethink HOW we test (row DESK-ENTRY-REVIEW-REDESIGN). PASS -> the family goes forward as a candidate trigger for desk_triggers.yaml; FAIL -> it stays label-only with its data collection kept. A fail is as useful as a pass: it tells the desk which wakes spend a session on a coin flip.'
+power:
+  expected_n: 350
+  min_detectable_effect: 0.15
+  effect_units: R per firing
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not a measurement: sd 1.0 R is the per-firing spread of a 3.0/1.5 ATR bracket minus a matched baseline mean; n = (2.8 x sd / MDE)^2 = 348 for an iid one-sided test. The firing count is MEASURED only when the run lands; the harness then computes the cluster MDE from the MEASURED sd and returns INDETERMINATE by design if +0.15 R is undetectable at 80% power or n < 100.'
+  feasibility:
+    source: none
+    accrual_basis: 'Replays public Binance Vision 5m history; nothing accrues. The firing count for this family on the DEV window is unmeasured until the run (the live trigger log is not a point-in-time record of every firing); the n >= 100 floor and the power clause decide the verdict, not this estimate.'
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119d7c304-DESK-TRIGGER-LEVEL-BREAK-SWEEP
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'B3 (decisive): random cutoffs of the SAME symbol in the SAME window, same ATR%-decile (vol_matched_pool), more than 12 bars from any firing of the family, the firing''s own side and geometry, 200 draws; refused slot = no-trade = 0 R on both sides.'
+  statistic: 'S3 = mean over firings of (firing net R minus B3 mean net R) per direction rule (continuation, fade), weekly-cluster bootstrap 10,000 draws; the verdict reads the better rule by S3 mean. Cost stack: venue fee + resolve_cost_policy slippage + funding (execution_costs.roundtrip_cost_r) through the certified desk_gen_replay_driver engine.'
+  rule: 'PASS iff n >= 100 firings AND S3 >= +0.15 R AND the one-sided level 0.05/8 (Holm step 1 over the 8 registered family x rule cells) weekly-cluster lower bound > 0 AND the planted controls hold (oracle clears, anti-oracle S3 < 0, random-side does not clear, detectors identical on a truncated history). NOT_CLEARED otherwise (the one-sided p is recorded; desk_trigger_replay.py holm over the four family results may still upgrade a cell by the full Holm step-down). INDETERMINATE iff n < 100, the cluster MDE from the measured sd exceeds +0.15 R, or any control fails. Thresholds, windows, bracket and rules are fixed now and not changed after any result.'
+  pass_action: 'author the HOLDOUT read for this family only (desk_trigger_replay.py holdout, one read through holdout_lock.claim_read, claim before the read); a family that also passes the holdout goes forward as a candidate trigger for desk_triggers.yaml (a Tier-3 proposal, not this unit).'
+  fail_action: 'the family stays label-only in desk_triggers.yaml (data collection kept, shadowed-features record unchanged); nothing is re-run in this configuration.'
+  what_it_does_not_do: 'Changes no live leg, no desk_triggers.yaml setting, no config; places no order; adds no gate. Not a promotion case. near_signal and calendar triggers are NOT scored (their firings are not reconstructable point-in-time) and are recorded unscored in the result.'
+  min_n: 100 firings in the DEV window
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  bucket: ai_trader
+  basis: 'planning stand-in, not a measurement: as the DESK-18G units (RQ-20261030-e18g-01); prior P(clear) about 10%.'
+practice_precedent: 'DESK-18G / desk_event_entry_replay.py (same engine, same S3 statistic, matched random baseline, planted oracle controls); docs/research/desk-18g-event-entries-2026-10-30.md.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  basis: 'ESTIMATE: six symbols of about 100k 5m bars, a few thousand firings x 200 draws x 2 rules of at most 12 bars, plus three control passes at 40 draws and a vol-matched pool per firing; the 5m candle fetch dominates.'
+  why_runner: 'public Binance Vision fetch and CPU only; no trainer-resident data.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_trigger_replay.py
+  - run
+  - --family
+  - level_break_sweep
+  - --fetch
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261119-d7c3-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261030-e18g-01
+- DESK-ENTRY-REVIEW-REDESIGN
+- scripts/research/desk_trigger_replay.py
+- config/desk_triggers.yaml
+population: closed 5m bars, BTC/ETH/SOL/XRP/ADA/AVAX USDT perps, 2025-11-01..2026-09-15 (DEV); every firing of the level_break_sweep detector in that window.
+last_dispatched_at: '2026-11-19T02:50:50+00:00'
+grading:
+  attested: RULE-RQ20261119d7c304-DESK-TRIGGER-LEVEL-BREAK-SWEEP
+  auto: true
+  decision_rule_id: RULE-RQ20261119d7c304-DESK-TRIGGER-LEVEL-BREAK-SWEEP
+  evidence:
+  - research/results/RQ-20261119-d7c3-04/44445105111.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -30,6 +30,10 @@ on:
         description: "Send ONE labelled test message through the operator system Telegram channel, then stop."
         type: boolean
         default: false
+      stamp_triage_live:
+        description: "Stamp-PR triage: true = close/comment on conflicted automation/research-queue-stamp-* PRs; false/empty = dry run (log only)."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -97,6 +101,22 @@ jobs:
           echo "events=$(wc -l < /tmp/rows.jsonl | tr -d ' ')" >> "$GITHUB_OUTPUT"
           { echo '### research-watchdog'; echo '```'; cat /tmp/watchdog.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" -le 1 ]
+
+      # STAMP-PR-TRIAGE (PI-20261118-EFILLW47-0005, manager GO 2026-11-18). A dispatch-stamp PR that went `dirty` runs no checks
+      # and never merges; nothing refreshed or closed it. This closes, with a per-unit comment, a dirty stamp PR whose stamps are
+      # all superseded/moot, and never touches another branch or a producer_failed unit's re-run. DRY RUN is the default: the
+      # first fire only logs. FLIPPED to "true" 2026-11-19 (manager GO after reading dry-run 44435622171; REVERT: set it back to "false"). No halting: continue-on-error.
+      - name: Triage conflicted stamp PRs
+        continue-on-error: true
+        if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
+        env:
+          STAMP_TRIAGE_LIVE: "true"
+        run: |
+          set -uo pipefail
+          LIVE=""
+          if [ "${STAMP_TRIAGE_LIVE}" = "true" ] || [ "${{ inputs.stamp_triage_live }}" = "true" ]; then LIVE="--live"; fi
+          python3 scripts/research/stamp_pr_triage.py ${LIVE} | tee /tmp/stamp-triage.txt
+          { echo '### stamp-pr-triage ('"${LIVE:-dry run}"')'; echo '```'; cat /tmp/stamp-triage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always() && steps.run.outputs.events != '' && steps.run.outputs.events != '0'

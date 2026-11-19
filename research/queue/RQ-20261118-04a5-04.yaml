@@ -1,9 +1,13 @@
+# UN-BLOCKED 2026-11-19 ~15:15Z by ML-PRIMARY-11: RQ-20261119-ef40-01 (run 44539864523, trainer) built and PUBLISHED
+# datasets-out/exit_head/1h/donchian_fresh/rows.jsonl: 45,372 rows, build_report.generated_at 2026-11-19T14:07:34Z, last bar_t
+# BTCUSDT 2026-11-08T17:00Z, ETHUSDT 2026-11-19T07:00Z, SOLUSDT 2026-11-05T15:00Z (all past 2026-11-01; comms/research/RQ-20261119-ef40-01/
+# 44539864523/verdict.json). Rule unchanged; nothing run on these rows.
 # Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
 # manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Follows PI-20261118-MANAYJZO-0001 (exit-head replays scored the class label).
 # Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261118-04a5-04
-title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the
-  head (holding_pays_neg25, and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
+title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the head (holding_pays_neg25,
+  and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
 status: queued
 cadence: once
 roadmap:
@@ -16,27 +20,26 @@ iteration:
   subject_kind: ml_model
   from_result: RQ-20261101-78fc-03
   verdict_read: fail
-  diagnosis: 'The 10-29 BTC and 11-12 ETH annotate de-risks (RQ-20260927-002, 78fc-03) and the v2-neg25 evidence (aadc-11/12) were all
-    produced by replays that scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0], i.e. the 0/1 CLASS LABEL, into
-    would_exit_for(score < tau 0.10). So every one evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED 2026-11-18:
-    aadc-12 fired on 16,739 of 18,649 trades). The served policy has never been evaluated out of sample on these legs, in either direction.
-    The replays now use predict_proba (branch claude/ml6-exithead-proba-fix). This unit runs 78fc-03''s own per-leg walk-forward + matched
-    random-truncation control, unchanged except the scoring fix and the target, on all three legs the v2-neg25 artifact covers.'
-  search: 'two targets fixed before the run: holding_pays_neg25 (the exported v2 recipe, gating) and holding_pays (v1''s recipe, a
-    re-grade of the de-risks, reported, never gating); everything else is 78fc-03''s recipe (5 folds, 7 d embargo, lookback 500, shape
-    below_half_r tau 0.10 below_r 0.5, 1,000 control draws, seed 20261112)'
+  diagnosis: 'The 10-29 BTC and 11-12 ETH annotate de-risks (RQ-20260927-002, 78fc-03) and the v2-neg25 evidence (aadc-11/12) were all produced
+    by replays that scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0], i.e. the 0/1 CLASS LABEL, into would_exit_for(score
+    < tau 0.10). So every one evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED 2026-11-18: aadc-12 fired on 16,739 of 18,649
+    trades). The served policy has never been evaluated out of sample on these legs, in either direction. The replays now use predict_proba (branch
+    claude/ml6-exithead-proba-fix). This unit runs 78fc-03''s own per-leg walk-forward + matched random-truncation control, unchanged except the
+    scoring fix and the target, on all three legs the v2-neg25 artifact covers.'
+  search: 'two targets fixed before the run: holding_pays_neg25 (the exported v2 recipe, gating) and holding_pays (v1''s recipe, a re-grade of
+    the de-risks, reported, never gating); everything else is 78fc-03''s recipe (5 folds, 7 d embargo, lookback 500, shape below_half_r tau 0.10
+    below_r 0.5, 1,000 control draws, seed 20261112)'
   levers:
   - labels
   map_entries:
   - research/levers/ml-exit-head-donchian-1h.yaml#manifest.labels
   attempt: 7
   due_by: '2026-11-23'
-question: 'Per leg (trend_donchian BTCUSDT, trend_donchian_eth ETHUSDT, trend_donchian_sol SOLUSDT 1h), on a 5-fold sequential
-  walk-forward with the head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7 d and scored with predict_proba: is the
-  neg25 head''s OOS dR/trade vs the leg''s own exits >= 0 with a 95% LB > -0.02 R, and does its pooled recovered R beat the p95 of
-  1,000 matched random truncations?'
-why_this_matters: 'This is the only evidence that can move exit_head_action from annotate to close on these legs (demo floor). A
-  passing leg is a data-backed Tier-3 proposal; the holding_pays cells say whether the two de-risks would have stood on the served policy.'
+question: 'Per leg (trend_donchian BTCUSDT, trend_donchian_eth ETHUSDT, trend_donchian_sol SOLUSDT 1h), on a 5-fold sequential walk-forward with
+  the head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7 d and scored with predict_proba: is the neg25 head''s OOS dR/trade
+  vs the leg''s own exits >= 0 with a 95% LB > -0.02 R, and does its pooled recovered R beat the p95 of 1,000 matched random truncations?'
+why_this_matters: This is the only evidence that can move exit_head_action from annotate to close on these legs (demo floor). A passing leg is
+  a data-backed Tier-3 proposal; the holding_pays cells say whether the two de-risks would have stood on the served policy.
 evidence_class:
   holdout: walk_forward
   claim: model_quality
@@ -48,39 +51,39 @@ power:
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE from the source results: 78fc-03 read 605 ETH OOS trades over 5 folds; RQ-20260927-002 read 1,041 BTC OOS trades
-    over 3 folds; SOL is of the same order. Each leg is judged on its own n_oos with the 300 floor (INDETERMINATE below), as 78fc-03.'
+  basis: 'ESTIMATE from the source results: 78fc-03 read 605 ETH OOS trades over 5 folds; RQ-20260927-002 read 1,041 BTC OOS trades over 3 folds;
+    SOL is of the same order. Each leg is judged on its own n_oos with the 300 floor (INDETERMINATE below), as 78fc-03.'
   feasibility:
     source: none
     accrual_basis: Replays trainer-resolved 1h candles and the trainer-resident rows.jsonl; nothing accrues.
 baseline:
-  definition: 'B0: the leg''s own exits on the same OOS trades (the harness trade with no head), per trade; plus the matched random
-    truncation control (k = the head''s fire count per fold, each closed at a uniform in-trade bar, 1,000 draws).'
+  definition: 'B0: the leg''s own exits on the same OOS trades (the harness trade with no head), per trade; plus the matched random truncation
+    control (k = the head''s fire count per fold, each closed at a uniform in-trade bar, 1,000 draws).'
   net_of_cost: true
 decision_rule:
   id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
   registered_at: '2026-11-18'
   registered_before_run: true
   baseline: B0 (the leg's own exits) and the matched random-truncation p95
-  statistic: 'scripts/research/exit_head_eth_oos_control.py --legs ... --targets holding_pays,holding_pays_neg25: per (leg, target) cell,
-    78fc-03''s judge (n_oos, dR/trade, trade-clustered 95% LB) and control (head recovered R vs the control p50/p95, pct rank).'
-  rule: 'A cell PASSES iff n_oos >= 300 AND dR/trade >= 0 AND 95% LB > -0.02 R AND the head''s pooled recovered R > the control p95.
-    Unit: PASS iff the holding_pays_neg25 cell passes on >= 1 leg; FAIL iff every leg''s neg25 cell is measured (pass/fail) and none
-    passes; else INDETERMINATE. holding_pays cells are reported (re-grade of the de-risks) and never gate. Thresholds, legs, targets,
-    folds, embargo, lookback, shape and control are not changed after any result.'
-  pass_action: 'Per passing leg: a data-backed Tier-3 change exit_head_action annotate -> close on that leg (bybit_1 demo floor only),
-    with this record and revert = annotate, reported to the manager for the email.'
-  fail_action: 'Keep annotate on all three legs. The exit head goes back to diagnosis on the fixed harness: per-symbol heads and the
-    exhaustion feature block (--features extended) are the next levers.'
-  what_it_does_not_do: 'Edits no config; promotes or demotes nothing; places no order; adds no gate. A walk-forward over the training
-    span, not a holdout read; said so.'
+  statistic: 'scripts/research/exit_head_eth_oos_control.py --legs ... --targets holding_pays,holding_pays_neg25: per (leg, target) cell, 78fc-03''s
+    judge (n_oos, dR/trade, trade-clustered 95% LB) and control (head recovered R vs the control p50/p95, pct rank).'
+  rule: 'A cell PASSES iff n_oos >= 300 AND dR/trade >= 0 AND 95% LB > -0.02 R AND the head''s pooled recovered R > the control p95. Unit: PASS
+    iff the holding_pays_neg25 cell passes on >= 1 leg; FAIL iff every leg''s neg25 cell is measured (pass/fail) and none passes; else INDETERMINATE.
+    holding_pays cells are reported (re-grade of the de-risks) and never gate. Thresholds, legs, targets, folds, embargo, lookback, shape and
+    control are not changed after any result.'
+  pass_action: 'Per passing leg: a data-backed Tier-3 change exit_head_action annotate -> close on that leg (bybit_1 demo floor only), with this
+    record and revert = annotate, reported to the manager for the email.'
+  fail_action: 'Keep annotate on all three legs. The exit head goes back to diagnosis on the fixed harness: per-symbol heads and the exhaustion
+    feature block (--features extended) are the next levers.'
+  what_it_does_not_do: Edits no config; promotes or demotes nothing; places no order; adds no gate. A walk-forward over the training span, not
+    a holdout read; said so.
   min_n: 300 OOS trades per leg
 practice_precedent: 'T1 matched random-truncation control and M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md):
   replay the policy that is served, against a control that removes the timing skill'
 intervention_controls:
   hold_to_bracket: true
-  hold_to_bracket_note: 'every cell keeps the leg''s own entry, stop and trail; only the head''s close decision differs, replayed by the
-    live predicate would_exit_for'
+  hold_to_bracket_note: every cell keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+    would_exit_for
   matched_random:
     draws: 1000
     note: 'computed by this unit per leg: k = the head''s fire count per fold, each closed at a uniform in-trade bar (seed 20261112)'
@@ -102,8 +105,8 @@ routing:
   needs_gpu: false
   peak_memory_gb: 4.0
   est_minutes: 90
-  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in
-    the trainer venv.
+  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in the trainer
+    venv.
   basis: 'ESTIMATE: 6 cells x 5 folds of a single-leg walk-forward; 78fc-03 (one cell) ran inside one relay call.'
 run:
   workflow: research-script-run-trainer.yml
@@ -111,6 +114,8 @@ run:
   command:
   - python3
   - scripts/research/exit_head_eth_oos_control.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
   - --legs
   - trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT
   - --targets
@@ -142,4 +147,12 @@ related:
 - research/queue/RQ-20260927-002.yaml
 - research/queue/RQ-20261117-aadc-12.yaml
 - scripts/research/exit_head_eth_oos_control.py
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T18:20:35+00:00'
+amendments:
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)
+  text:
+  - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
+    its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
+    to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_runtime",
+  "hold_text": "src/runtime/desk_event_trigger.py (trader import closure): a per-detector `wake: false` makes a detector LABEL-ONLY; config/desk_triggers.yaml sets it on atr_burst, momentum_burst, level_break (+ liquidity_sweep). Desk wakes only, no trading path. decision: 2026-11-18 operator-popup \"Adopt it (Recommended)\" (D8, desk-entry-review-redesign § 6 Q4). Manager merges; auto-deploy restarts. Observe: next firings of those kinds log reason label_only and post no desk-trigger-wake marker. Revert: delete the `wake: false` lines.",
+  "why": "DESK-ENTRY-REVIEW-REDESIGN: those detectors produced 0 propose_entry in 72 wakes at $0.30-0.47 each. Still detected and logged as labels for the trigger-replay units. Gates this adds or changes: none."
+}

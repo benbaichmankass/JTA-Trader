@@ -1,0 +1,149 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, P8-SWITCHES fork), dispatched by the JTA Trader manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV). Programme node P8-Q8-horizon. Decision rule registered BEFORE any run. Parked in blocked/ per the node's
+# authoring_blocked note (author after 207f-01 grades and c21d-06 says whether the label changes). Gates this adds or changes: none.
+id: RQ-20261118-f7c1-04
+title: 'P8-Q8 Foxhound-4 HORIZON: does a 48- or 72-bar time stop, or one DAILY decision per session, beat the live 24-bar 4h-cadence recipe on the
+  alpaca_live cash book, on the ETF-pool dev walk-forward?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P8
+kind: experiment
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: RQ-20261108-98e3-16
+  verdict_read: pending
+  diagnosis: 'Pivot 8 read +0.109 vs pivot 5 +0.132 R (98e3-16, dev, one point); pivot 3 (98e3-15) is queued after a producer failure. The exit
+    plan''s other axis, the 24-bar time stop, and the decision cadence are untested. The book is a one-slot T+1 cash book that is refused on
+    unsettled cash and busy slots, so fewer, longer trades may suit it better than the per-trade R suggests.'
+  search: 'lever family horizon: arms h48, h72 (time stop 24 -> 48 / 72 bars) and daily_h24 (one decision per New-York session, the latest
+    hour%4==0 close, 24-bar stop); fixed here before any run'
+  levers:
+  - horizon
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+  attempt: 1
+  due_by: '2026-12-02'
+levers:
+- name: time_stop_and_cadence
+  values: [h24_4h (live), h48, h72, daily_h24]
+  hypothesised_effect: a longer hold or a daily cadence raises the cash book's monthly return by >= +0.25 %/month (fewer T+1 / slot refusals per R)
+question: 'Foxhound-4 (config B, structure exit pivot=5;sl_only kept SL-only with the 3-ATR TP per the TP doctrine, 5-seed pinned ensemble, tau 0.25)
+  on the ETF-pool dev walk-forward. Each arm re-labels the table with ml_entry_equity.build_table(hold=48 | 72) or (daily=True), re-fits with the purge
+  scaled to the label (purge_days_for: 20 / 30 days), takes at tau 0.25 and replays through the alpaca_live cash book. Does any arm beat the live
+  24-bar, every-4h recipe?'
+why_this_matters: 'PASS -> the first holding-period lever for the real-money equity book: a confirm-window read (fresh unit), then a Tier-3 proposal to
+  change ml_entry_eq_struct''s max hold / cadence. FAIL -> the time-stop and cadence arms close on this leg, recorded on the lever map.'
+power:
+  expected_n: 1600
+  min_detectable_effect: 0.25
+  effect_units: pct_per_month
+  sd: 2.15
+  sd_basis: 'MEASURED: RQ-20261111-207f-01 run 44387485084 live-book monthly return SE 0.392 %/month over 30 dev months -> sd ~0.392 x sqrt(30) = 2.15 %/month (single-arm sd, used for the paired difference as a conservative stand-in; added 2026-11-19 by ML-PRIMARY-9 when unblocking, rule unchanged)'
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = dev OOF trade replayed through the one-slot cash book; graded on paired monthly book return (~30 dev months). The daily arm has about
+    half the decision rows, so its book n_taken may fall under 30 (INDETERMINATE for that arm, reported). 3 draws deflate the bar: holdout_lock.bar_for(3).
+    ESTIMATE: no monthly-difference power is derived here.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history to TRAIN_END; nothing accrues.
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: (the pool picks that feed ml_entry_eq_struct, config/strategies.yaml) whether ml_entry_eq_struct's max hold / decision cadence is changed (Tier
+    3, operator) on alpaca_live + alpaca_portfolio
+  legs:
+  - ml_entry_eq_struct
+  book: money
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - foxhound
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --section
+  - horizon
+  - --horizon-arms
+  - h48,h72,daily_h24
+  - --rule-id
+  - RULE-RQ20261118-f7c1-04-HORIZON
+  - --registered-at
+  - '2026-11-18'
+  inputs:
+    research_unit: RQ-20261118-f7c1-04
+decision_rule:
+  id: RULE-RQ20261118-f7c1-04-HORIZON
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'alpaca_live_book.py foxhound --section horizon: per arm, the table re-labelled (time stop hold bars; daily = one decision per session),
+    dev walk-forward OOF re-fit (DEV_FOLDS to TRAIN_END, 5-seed pinned ensemble, config B, purge_days_for(hold)), restricted-LONG at tau 0.25, replayed
+    through the alpaca_live cash book (one slot, T+1, whole shares, live sizer constants, net of the measured Alpaca cost stack the harness resolves:
+    fee + slippage from src/runtime/execution_costs + 0.5 bps regulatory). Per arm vs the live recipe: paired monthly book return % (mean diff, t),
+    n_taken, dev folds with mean net R > 0. The session gate stays the live one (one factor: the label / exit and cadence).'
+  rule: 'INDETERMINATE IF the baseline book n_taken < 30 and no arm clears. PASS IF an arm has book n_taken >= 30 AND paired monthly mean diff >= +0.25
+    %/month AND t >= holdout_lock.bar_for(3).point_t_min AND mean net R > 0 in >= 3 of 5 dev folds. FAIL otherwise. Thresholds fixed now, never changed
+    after any result.'
+  proposal_mapping: pass -> a confirm-window read of the winning arm (fresh unit), then a Tier-3 proposal for ml_entry_eq_struct's max hold / cadence;
+    fail -> the three arms close on this leg; indeterminate -> reported with the reason.
+  what_it_does_not_do: Reads no confirm-window row (bars end at TRAIN_END), serves nothing, places no order, changes no config; removes no TP. Not a
+    promotion case.
+  min_n: 30 book trades per arm
+blocked_on:
+- what: 'Programme node P8-Q8 authoring_blocked (PROGRAMME-REVIEW-20261118): every P8 arm is scored against the Foxhound-4 live-book baseline
+    RQ-20261111-207f-01, which has not graded (producer_failed 2026-11-13, re-armed 2026-11-18).'
+  ref: RQ-20261111-207f-01
+  kind: unit_result
+  clears_when: 207f-01 has a measured, graded result row (any verdict)
+- what: 'c21d-06 decides whether the label changes; a horizon arm on a label about to change is wasted (node authoring_blocked).'
+  ref: RQ-20261117-c21d-06
+  kind: unit_result
+  clears_when: 'c21d-06 has a measured result row. On FAIL (label stays net R) git mv to research/queue/ and set status queued. On PASS re-register
+    this rule on the winning target before moving it.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 40
+  confidence: 0.25
+  basis: carried from programme node P8-Q8-horizon (value block); not a P&L measurement.
+intervention_controls:
+  not_applicable: a label / cadence replay of entry decisions on history, not an active-management action on live check-ins; the live 24-bar every-4h
+    recipe at tau 0.25 is the control arm
+practice_precedent: 'T-series holding-period practice (docs/reference/trading-and-model-practice-principles.md): a holding period is chosen against the
+  book that carries it; a T+1 one-slot cash book pays for every refusal; programme node P8-Q8-horizon.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 360
+  why_runner: 'Alpaca 1h bars need the read-only paper key on research-script-run; three re-labelled tables (structure-exit replay) and three 5-fold
+    ensemble fits.'
+  basis: 'ESTIMATE from 207f-03 / c21d-06 shape (same harness) plus two extra structure-exit table builds.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261111-207f-01
+- RQ-20261117-c21d-06
+- RQ-20261108-98e3-15
+- RQ-20261108-98e3-16
+last_dispatched_at: '2026-11-19T13:02:42+00:00'
+unblocked:
+  at: '2026-11-19'
+  by: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7)
+  why: 'Both blocked_on clauses cleared: RQ-20261111-207f-01 has a measured, graded row (FAIL, run 44387485084); RQ-20261117-c21d-06 has a measured result graded FAIL (label stays net R), so per its clears_when this file moves to research/queue/ as queued with the rule unchanged.'

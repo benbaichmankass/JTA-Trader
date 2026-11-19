@@ -5,7 +5,7 @@ id: RQ-20261118-04a5-02
 title: 'D6 distributional TP head: on the SAME frozen Foxhound-1 held-out decisions, does a per-decision TP at the predicted 60th
   percentile of forward MFE (LightGBM quantile, SL 2 ATR unchanged) beat the live fixed 3 ATR TP by +0.02 R/decision, paired, net of
   each symbol''s own cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -151,4 +151,17 @@ related:
 - research/queue/RQ-20261112-2e3b-01.yaml
 - research/queue/blocked/RQ-20261101-c692-02.yaml
 - scripts/research/ml_decision_entry.py
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T21:06:38+00:00'
+grading:
+  attested: RULE-RQ20261118-04a5-02-QUANTILE-MFE-TP
+  auto: true
+  decision_rule_id: RULE-RQ20261118-04a5-02-QUANTILE-MFE-TP
+  evidence:
+  - research/results/RQ-20261118-04a5-02/44394894343.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

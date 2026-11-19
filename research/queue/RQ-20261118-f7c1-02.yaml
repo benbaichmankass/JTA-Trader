@@ -1,0 +1,164 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Row ML-EXITHEAD-ROWS-KAGGLE: the proving kaggle_cpu unit.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-f7c1-02
+title: 'ml-exit-head-donchian-1h on KAGGLE CPU, BACKTEST-SOURCE ROWS ONLY: rebuilt in-run from the published market_raw 1h shards, does the
+  holding_pays_neg25 target beat the holding_pays champion by +0.01 R/trade on BTC/ETH/SOL donchian 1h trades (aadc-11 replicated on a
+  market-only corpus)?'
+status: done
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-11
+  verdict_read: pass
+  diagnosis: 'aadc-11 PASSED on the trainer corpus (holding_pays_neg25 - champion +0.0134 R/trade, n 11,160) and is being re-run on the
+    fixed replay (#26915). Every exit-head unit queues on the one-slot trainer because rows.jsonl lives only there, and rows.jsonl cannot
+    be published: it includes live journal trades (OURS; docs/research/ml-data-classification-2026-10-13.md approves MARKET data only).
+    This unit rebuilds a corpus from MARKET data only (published market_raw 1h, harness trades, no journal) inside a Kaggle CPU kernel.
+    It proves the route and replicates the neg25 lift on an independent, market-only corpus.'
+  search: 'none: arm (holding_pays_neg25), recipe, shape, folds (5), embargo (7 d), lookback (500) fixed at aadc-11''s; only the ROW
+    CORPUS changes (backtest-source rows rebuilt from the published shards)'
+  levers:
+  - labels
+  attempt: 6
+  due_by: '2026-11-25'
+question: 'Inside one Kaggle CPU kernel: convert the published market_raw 1h v002 shards (BTCUSDT, ETHUSDT, SOLUSDT) to harness candles,
+  emit trend_donchian / _eth / _sol harness trades (config/strategies.yaml params, venue cost policy), build exit-head rows from those
+  trades only (build_exit_head_dataset.py with NO --db), and run exit_head_label_bakeoff.py with one arm (holding_pays_neg25) vs the
+  holding_pays champion. Is the paired per-trade replayed R >= +0.01 with a CI lower bound > 0?'
+why_this_matters: 'Kaggle CPU (~100 h/week) sat idle while every exit-head unit waited for the trainer. If this route measures, exit-head
+  bake-offs that can live on backtest rows move off the trainer. The verdict also says whether the neg25 lift exists on a corpus with no
+  live trades, which bears on the held #26906 pin (context only: it does not replace the trainer re-run of aadc-11/12).'
+population_note: 'BACKTEST-SOURCE ROWS ONLY. The trainer corpus (rows.jsonl) also carries live journal trades and was built on the
+  trainer''s candles; this corpus is harness trades only, on the published market_raw 1h window (its span per symbol is recorded in
+  measurement.published_shard_spans; the shards may be stale, which published_data.json states). This is a POPULATION CHANGE: a PROVING
+  and REPLICATION run, not a replacement for RQ-20261117-aadc-04 / -11 / -12.'
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 960
+  min_detectable_effect: 0.0134
+  effect_units: r_multiple
+  sd: 0.535
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED on a local end-to-end smoke of this driver (2026-11-18, NOT this unit''s run: Binance Vision 1h klines
+    2020-07-01..2026-09-30 written in the market_raw shape as a stand-in for the published shard, whose span this lane could not read):
+    1,511 harness trades (BTC 438, ETH 716, SOL 357), 54,517 harness-only rows, pooled OOS n 960 (SOL''s folds are under the bake-off''s
+    MIN_FOLD_TEST_N at 59 test trades). sd ~0.535 R per trade from aadc-11. At n ~960 the rule''s 3000 floor is not reached, so the
+    EXPECTED VERDICT IS INDETERMINATE ON POWER, stated before the run; the rule is unchanged. The unit''s job is the route: the row''s
+    done-condition (ML-EXITHEAD-ROWS-KAGGLE) is a MEASURED row from kaggle_cpu, which an indeterminate verdict satisfies. aadc-11''s
+    n 11,160 on the trainer corpus is much larger than this window yields; that gap is unexplained here and is not assumed away.'
+  feasibility:
+    source: none
+    accrual_basis: Replays published market history; nothing accrues.
+baseline:
+  definition: 'The holding_pays champion (shipped recipe, unchanged hyper-parameters) retrained on the SAME fold rows and replayed on the
+    SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported as context.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py --arms holding_pays_neg25 --z 1.96 --pass-dr
+    0.01): pooled over the 3 legs and 5 folds, per OOS trade d = replayed_r(neg25) - replayed_r(champion); mean, SE, CI at z 1.96.
+    Reported: rows_by_source (must be harness only; the run refuses otherwise), published_shard_spans, build_report, each arm vs hold,
+    firing counts, per-leg read_state.'
+  rule: 'PASS iff n_oos >= 3000 AND mean d >= +0.01 R/trade AND CI lower bound > 0. FAIL iff n_oos >= 3000 AND CI upper bound < +0.01.
+    INDETERMINATE otherwise. producer_failed (a route defect, not a verdict) if no harness trade or no row is built. Thresholds, arm,
+    folds, embargo and lookback are not changed after any result.'
+  pass_action: 'Record the neg25 lift as replicated on a market-only corpus (context for the manager''s #26906 hold; it does not clear
+    it). Route the next backtest-row exit-head bake-offs to kaggle_cpu with this driver.'
+  fail_action: 'Record that the neg25 lift does not appear on backtest-only rows (it may depend on the live rows or the trainer candles):
+    one line on the aadc-11/12 re-run grade. The route is still proven if read_state is measured.'
+  what_it_does_not_do: 'Publishes nothing (reads only the already-published MARKET shards); edits no config, registry, artifact or
+    exit_head_action; retrains nothing for serving; places no order; adds no gate.'
+  min_n: 3000 pooled OOS trades
+practice_precedent: 'M1 (label what the decision is paid on), one-factor ablation against a baseline control
+  (docs/reference/trading-and-model-practice-principles.md); replication on an independent corpus before reading a dev pass as real.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'every arm keeps the leg''s own entry, stop and trail; only the head''s close decision differs'
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit (the champion''s matched random truncation control is RQ-20260927-002 / 78fc-03); hold per arm is
+      reported as context'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_neg25 (fixed by aadc-11)
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.3
+  basis: 'stand-in: unlocks Kaggle CPU for exit-head work (trainer time saved) plus one replication read; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  published_paths:
+  - datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/ETHUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/SOLUSDT/1h/v002/data.jsonl
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 'Estimate: aadc-11 (3 legs x 2 arms, trainer corpus) took ~34 min on the 1-OCPU trainer; here one arm plus an in-run row build.
+    A local end-to-end smoke of this driver on Binance 1h candles is reported in the PR.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_head_kaggle_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261118-f7c1-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: scripts/ml/train_exit_head.py
+  decision: whether the exit-head neg25 target lift replicates on a market-only corpus, and whether exit-head bake-offs can leave the
+    trainer
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+  book: demo_floor
+related:
+- RQ-20261117-aadc-11
+- RQ-20261117-aadc-12
+- RQ-20261117-aadc-04
+- ML-EXITHEAD-ROWS-KAGGLE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; publishes nothing.
+last_dispatched_at: '2026-11-18T23:02:05+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25
+  evidence:
+  - research/results/RQ-20261118-f7c1-02/44417157132.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

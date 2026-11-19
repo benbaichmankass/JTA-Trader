@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -350,3 +353,100 @@ def test_candles_that_start_after_the_review_are_refused_not_shifted():
     assert r["state"] == "could_not_price" and r["reason"] == "candles_start_after_review"
     ok = [dict(b, time=b["time"] + H) for b in bars((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))]
     assert cf.price_review(review(), pkg(), trade(realised(4.0)), ok)["reason"] != "candles_start_after_review"
+
+
+# ---- PI-20261118-PREP1118-0006: futures R used an unscaled multiplier; a trailed stop stood in for the initial ----
+
+def test_futures_net_r_uses_the_symbol_contract_multiplier():
+    """MHG (2500 lb): trade 5886 read net_r 4937 because the journal row carries no contract value and net_r_label
+    defaulted it to 1.0. With the symbol multiplier the same row is an ordinary R."""
+    t = {"id": 5886, "symbol": "MHG", "direction": "short", "entry_price": 6.6195, "position_size": 1.0,
+         "pnl": 2500.0 * 0.29, "status": "closed", "fee_taker_usd": 0.0, "fee_maker_usd": 0.0,
+         "funding_paid_usd": 0.0, "cost_source": "broker"}
+    lab = cf._r_label(t, 6.7645)                     # initial stop 0.145 above entry -> 1 R = 0.145 x 2500
+    assert lab is not None and abs(lab["net_R"] - 2.0) < 0.01, lab
+    raw = cf.net_r_for_trade(dict(t, stop_loss=6.7645))
+    assert raw["net_R"] > 1000                       # the old, unscaled reading (control)
+    assert abs(cf._r_label(dict(t, contract_value_usd=2500.0), 6.7645)["net_R"] - 2.0) < 0.01  # row value wins
+
+
+def test_initial_stop_refuses_a_trailed_stop_on_the_profit_side():
+    """MGC pkg-011a7bf8 short: entry 4180.9, sl 4116.03 (trailed past entry, no exit_plan, no risk_per_unit)."""
+    assert cf.initial_stop({"direction": "short", "entry": 4180.9, "sl": 4116.03, "meta": {}}) is None
+    assert cf.initial_stop({"direction": "long", "entry": 100.0, "sl": 101.0, "meta": {}}) is None
+    assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 101.0, "meta": {}}) == 101.0   # risk side
+    assert cf.initial_stop({"direction": "short", "entry": 100.0, "sl": 99.0,
+                            "meta": {"risk_per_unit": 1.5}}) == 101.5                                   # rpu wins
+
+
+def test_supersede_appends_only_changed_rows_and_never_edits(tmp_path):
+    """G6 (manager 2026-11-19): a re-price appends a superseding row; the stale line stays byte-identical."""
+    old_a = {"review_id": "LR-20261101T0000Z-pkg-a", "computed_at": "2026-11-02T00:00:00Z", "net_r": 91.47,
+             "cf_r": 91.47, "cf_r_shadow_0_5": 91.47, "rec_r": 91.47, "delta_r": 0.0, "cf_method": "no_path_change",
+             "replay_fidelity": None}
+    old_b = dict(old_a, review_id="LR-20261101T0000Z-pkg-b", net_r=1.0, cf_r=1.0, cf_r_shadow_0_5=1.0, rec_r=1.0)
+    p = tmp_path / "outcomes.jsonl"
+    p.write_text(json.dumps(old_a, sort_keys=True) + "\n" + json.dumps(old_b, sort_keys=True) + "\n")
+    before = p.read_text()
+    new_a = dict(old_a, computed_at="2026-11-19T07:00:00Z", net_r=0.27, cf_r=0.27, cf_r_shadow_0_5=0.27, rec_r=0.27)
+    new_b = dict(old_b, computed_at="2026-11-19T07:00:00Z")                  # unchanged price -> no row
+    new_c = dict(old_b, review_id="LR-20261101T0000Z-pkg-c")                 # never recorded -> append_outcomes' job
+    res = [{"review_id": o["review_id"], "outcome": o} for o in (new_a, new_b, new_c)]
+    assert cf.supersede_outcomes(res, "fix", path=p, dry_run=True) and p.read_text() == before
+    pairs = cf.supersede_outcomes(res, "PREP1118-0006 contract multiplier", path=p)
+    assert [pr["new"]["review_id"] for pr in pairs] == [old_a["review_id"]]
+    text = p.read_text()
+    assert text.startswith(before)                                            # nothing edited
+    latest = cf.latest_outcomes(cf.read_jsonl(p))
+    assert latest[old_a["review_id"]]["net_r"] == 0.27
+    assert latest[old_a["review_id"]]["supersedes"] == old_a["computed_at"]
+    assert latest[old_b["review_id"]]["net_r"] == 1.0
+    assert cf.supersede_outcomes(res, "fix", path=p) == []                    # idempotent: latest now matches
+    with pytest.raises(ValueError):
+        cf.supersede_outcomes(res, "", path=p)
+
+
+def test_supersede_only_limits_to_the_named_ids(tmp_path):
+    old = {"review_id": "LR-20261101T0000Z-pkg-a", "computed_at": "2026-11-02T00:00:00Z", "net_r": 1.0}
+    p = tmp_path / "outcomes.jsonl"
+    p.write_text(json.dumps(old) + "\n" + json.dumps(dict(old, review_id="LR-20261101T0000Z-pkg-b")) + "\n")
+    res = [{"review_id": rid, "outcome": dict(old, review_id=rid, net_r=2.0, computed_at="2026-11-19T07:00:00Z")}
+           for rid in ("LR-20261101T0000Z-pkg-a", "LR-20261101T0000Z-pkg-b")]
+    pairs = cf.supersede_outcomes(res, "fix", path=p, only={"LR-20261101T0000Z-pkg-b"})
+    assert [pr["new"]["review_id"] for pr in pairs] == ["LR-20261101T0000Z-pkg-b"]
+
+
+# ---- LTR-GRADE-APPLIED (2026-11-19): a dispatchable row main's schema refused is still priced ------------------
+import json as _json  # noqa: E402
+
+_REAL = _json.loads((REPO / "tests/fixtures/ltr_refused_applied_row_20261105.json").read_text())
+
+
+def test_the_real_refused_applied_close_shape_prices_as_a_paired_close():
+    """The refused row's own shape (old forecast keys, level-less trigger, + schema_problems from the sidecar) prices
+    like any close. Only the join keys, time and levels are re-pointed at this file's synthetic package/bars."""
+    rv = dict(_REAL, schema_problems=["trigger.event structure_break names a due event but no level"],
+              order_package_id="pkg-t", trade_id=1, reviewed_at=cf._iso(T0), applied=False,
+              state={**_REAL["state"], "sl": 101.0, "tp": 96.0})
+    res = cf.price_contained([rv], {"pkg-t": pkg()}, {1: trade(realised(4.0), exit_reason="live_review_close")},
+                             lambda sym, tf: bars(*_RUN))
+    assert len(res) == 1 and res[0]["state"] == "priced", res
+    o = res[0]["outcome"]
+    assert o["action"] == "close" and o["cf_method"].startswith("paired_replay")
+    assert o["review_id"] == _REAL["review_id"]
+    assert chk.row_problems(o, "outcomes", chk.json.loads(chk.SCHEMA.read_text())) == []
+
+
+def test_price_contained_counts_a_row_that_raises_and_prices_the_rest():
+    broken = {"review_id": "LR-x-pkg-t"}                       # no order_package_id: price_all raises KeyError
+    good = review(action="close", level=None)
+    res = cf.price_contained([broken, good], {"pkg-t": pkg()}, {1: trade(realised(4.0))}, lambda s, t: bars(*_RUN))
+    assert [r["review_id"] for r in res] == [broken["review_id"], good["review_id"]]
+    assert (res[0]["state"], res[0]["reason"]) == ("could_not_price", "sidecar_row_unpriceable:KeyError")
+
+
+def test_sidecar_reader_skips_ids_already_on_main(tmp_path):
+    p = tmp_path / "side.jsonl"
+    p.write_text(_json.dumps({"review_id": "A"}) + "\n" + _json.dumps({"review_id": "B"}) + "\n")
+    assert [r["review_id"] for r in cf.read_refused_dispatchable(p, skip_ids=["A"])] == ["B"]
+    assert cf.read_refused_dispatchable(tmp_path / "absent.jsonl") == []

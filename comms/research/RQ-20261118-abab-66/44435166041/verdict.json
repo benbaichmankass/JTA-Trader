@@ -1,0 +1,173 @@
+{
+ "schema": "ltr_action_trigger_s0/v1",
+ "action": "sl_to_structure",
+ "triggers": [
+  "new_peak"
+ ],
+ "options": {
+  "partial_frac": 0.5,
+  "tp_keep": 0.5,
+  "pivot_bars": 5,
+  "pivot_buffer_atr": 0.05,
+  "max_real_tp_r": 10.0
+ },
+ "computed_at": "2026-11-19T01:18:20Z",
+ "population": "3921 trades priced of 4076 in 8 committed Stage-0 corpora (ada_pullback_2h, iaum_pullback_1d, ml_entry, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h); action sl_to_structure; triggers ['new_peak']",
+ "excluded": {
+  "no_path_or_single_bar": 155
+ },
+ "by_leg_priced": {
+  "ada_pullback_2h": 395,
+  "iaum_pullback_1d": 66,
+  "ml_entry": 884,
+  "trend_donchian_eth_4h": 394,
+  "trend_donchian_eth_prop": 1148,
+  "trend_donchian_sol_prop": 563,
+  "trend_donchian_xrp_4h": 70,
+  "xrp_pullback_2h": 401
+ },
+ "cost_stack": "corpus rows' recorded fee + slippage + funding legs (live_review_outcomes.trade_costs)",
+ "provenance": "MEASURED",
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 3921,
+ "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R; graduation_eligible false). sl_to_structure@new_peak: pass (risk_adjusted_pass)",
+ "measurement": {
+  "rule": {
+   "id": "RULE-AM-RISK-ADJUSTED-V1",
+   "registered_at": "2026-10-29",
+   "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+   "max_r_cost_per_trade": 0.05,
+   "min_dd_cut_pct": 0.15,
+   "min_cvar5_cut_pct": 0.15,
+   "cvar_tail": 0.05,
+   "cvar_basis": "book_iso_week_of_exit",
+   "folds": 6,
+   "fold_majority": 4,
+   "fold_min_risk_cut_pct": 0.0,
+   "n_floor": 39,
+   "random_control": "required",
+   "min_control_beat_frac": 0.9962,
+   "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+   "reported_measurements": [
+    "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+    "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+    "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+   ]
+  },
+  "baseline_book": {
+   "n": 3921,
+   "net_r": 462.198053,
+   "max_drawdown_r": 70.432504,
+   "cvar5_week_r": -10.281777,
+   "cvar5_trade_r": -1.129178,
+   "weeks": 370,
+   "giveback": {
+    "n_measured": 3921,
+    "n_missing_mfe": 0,
+    "mean_r": 1.091718,
+    "p95_r": 2.407291
+   }
+  },
+  "candidates": {
+   "sl_to_structure@new_peak": {
+    "verdict": "pass",
+    "label": "risk_adjusted_pass",
+    "r_cost_per_trade": 0.022964,
+    "dd_cut_pct": 0.19341,
+    "cvar5_cut_pct": 0.144255,
+    "folds_held": 4,
+    "n_folds": 6,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": true,
+     "R3_folds": true,
+     "R4_control": true
+    },
+    "controls": {
+     "n": 200,
+     "beaten": 200
+    },
+    "L1_drop_best_leg": {
+     "best_leg": "ml_entry",
+     "r_cost_per_trade_without": 0.038555,
+     "holds": true
+    },
+    "s0_report": {
+     "n_fired": 2086,
+     "mean_dT_vs_hold": -0.0432,
+     "mean_edge_vs_random": 0.0494,
+     "ci95_dT": [
+      -0.0745,
+      -0.0113
+     ],
+     "ci95_edge": [
+      0.0256,
+      0.0737
+     ],
+     "ci_bonf_edge": [
+      0.0131,
+      0.0825
+     ],
+     "by_leg": {
+      "ada_pullback_2h": {
+       "n": 217,
+       "sum_dT": -24.41
+      },
+      "iaum_pullback_1d": {
+       "n": 45,
+       "sum_dT": -13.27
+      },
+      "ml_entry": {
+       "n": 502,
+       "sum_dT": 27.049
+      },
+      "trend_donchian_eth_4h": {
+       "n": 223,
+       "sum_dT": -4.834
+      },
+      "trend_donchian_eth_prop": {
+       "n": 543,
+       "sum_dT": -23.998
+      },
+      "trend_donchian_sol_prop": {
+       "n": 319,
+       "sum_dT": -5.039
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 32,
+       "sum_dT": -1.128
+      },
+      "xrp_pullback_2h": {
+       "n": 205,
+       "sum_dT": -44.413
+      }
+     }
+    },
+    "vs_best_static_mean_dR": -0.022964
+   }
+  },
+  "best_static_reported": {
+   "grid": [
+    "hold",
+    "sl_to_structure@new_peak"
+   ],
+   "excludes_test_folds": true,
+   "chosen_by_fold": {
+    "0": "hold",
+    "1": "hold",
+    "2": "hold",
+    "3": "hold",
+    "4": "hold",
+    "5": "hold"
+   },
+   "sum_dR_vs_hold": 0.0,
+   "mean_dR_vs_hold": 0.0
+  },
+  "passing": [
+   "sl_to_structure@new_peak"
+  ],
+  "min_control_beat_frac": 0.9962,
+  "n_comparisons": 13
+ }
+}

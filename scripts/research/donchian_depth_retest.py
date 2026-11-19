@@ -88,7 +88,9 @@ def verdict_row(per_leg: dict, unit: str, split: str, legs: list[str]) -> dict:
     n = sum(int(v.get("fresh", {}).get("incumbent", {}).get("total_trades") or 0) for v in per_leg.values())
     return {"schema_version": 1, "research_unit": unit, "rule_id": RULE_ID,
             "verdict": top.lower(),
-            "read_state": "measured" if measured else "producer_failed",
+            "read_state": "measured" if measured else (
+                "no_data" if per_leg and all(v.get("read_state") == "no_data" for v in per_leg.values())
+                else "producer_failed"),
             "note": f"{top}: " + "; ".join(f"{k} {v['verdict']} ({v['reason']})" for k, v in per_leg.items()),
             "population": f"config-exact harness replay of {', '.join(legs)}, fresh window {split}..latest bar, "
                           f"incumbent min_confidence vs incumbent{DELTA:+.2f}, TP cap 0.099",
@@ -115,6 +117,15 @@ def run(legs: list[str], data_dir: Path, split: str, tp_cap: float) -> dict:
         if data is None:
             out[leg] = {"verdict": "INDETERMINATE", "reason": f"data_missing:{sym}"}
             continue
+        last = _last_bar(data)
+        if last and str(last)[:10] <= split:
+            # PI-20261119-R3TMBVGF-0001: run 44383743409 read data ending 07-10 / 06-18 and reported "thin: n=0" --
+            # a zero that meant "we could not look". A fresh window the data never reaches is could_not_look.
+            out[leg] = {"verdict": "INDETERMINATE", "reason": f"could_not_look: data ends {last}, before split {split}",
+                        "read_state": "no_data", "symbol": sym, "tf": tf, "data": str(data),
+                        "data_last_bar": last}
+            print(f"{leg}: INDETERMINATE - {out[leg]['reason']}", flush=True)
+            continue
         harness = FAMILY_HARNESS["donchian"]
         base = base_args(leg, cfg, "donchian", data, resample, tp_cap)
         arm = {"incumbent": base + ["--min-confidence", str(inc_conf)],
@@ -127,7 +138,7 @@ def run(legs: list[str], data_dir: Path, split: str, tp_cap: float) -> dict:
         v, why = grade_leg(fresh["incumbent"], fresh["lower"])
         out[leg] = {"verdict": v, "reason": why, "symbol": sym, "tf": tf, "proxy": proxy,
                     "incumbent_min_confidence": inc_conf, "lower_min_confidence": low_conf,
-                    "data": str(data), "data_last_bar": _last_bar(data),
+                    "data": str(data), "data_last_bar": last,
                     "fresh": fresh, "context_is": is_, "context_folds": folds}
         print(f"{leg}: {v} - {why}", flush=True)
     return out
@@ -161,6 +172,10 @@ def _self_test() -> int:
     check("verdict row: population is a string and n present", isinstance(row["population"], str) and row["n"] == 30)
     bad = verdict_row({"x": {"verdict": "INDETERMINATE", "reason": "data_missing"}}, "U", "2026-07-14", ["x"])
     check("verdict row: nothing measured is producer_failed", bad["read_state"] == "producer_failed")
+    cnl = verdict_row({"x": {"verdict": "INDETERMINATE", "reason": "could_not_look: data ends 2026-07-10",
+                             "read_state": "no_data"}}, "U", "2026-07-14", ["x"])
+    check("verdict row: data ending before the split is no_data (could not look), never a measured n=0",
+          cnl["read_state"] == "no_data" and cnl["read_state"] in SR.READ_STATES)
     print("donchian_depth_retest self-test " + ("OK" if ok else "FAILED"))
     return 0 if ok else 1
 

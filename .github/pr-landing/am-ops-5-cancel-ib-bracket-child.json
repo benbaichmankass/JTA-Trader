@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_by_path",
+  "hold_text": "scripts/ops/cancel_ib_order.py: an entry-bracket child (parent_id > 0) now classifies as protective, so the cancel-ib-order system action needs --force-protective to cancel it. Over-inclusive by design: a false positive costs one flag. scripts/ops restarts the trader on deploy. The manager merges. Revert: git revert.",
+  "why": "BRACKETS-ALWAYS inventory item 7: a bracket child LMT take-profit can read oca_group empty client-side (ib_paper TLT 2026-11-04), so it was cancellable without --force-protective. Gates this adds or changes: none (an existing guard on a manual action reaches one more leg type)."
+}

@@ -1,0 +1,147 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; GO 05:32Z, D10 new-information features). The fail_action of aadc-14 and b9d0-01.
+# Decision rule registered BEFORE any run. Journal data is OURS: trainer-only, never committed, never Kaggle. Gates this adds or changes: none.
+id: RQ-20261119-a10d-03
+title: 'D10 NEW INFORMATION: does adding regime-at-entry (stop-distance vol regime vs the legs own history, the live vol tag) and cost-drift (realised
+  cost in R, its drift, entry slippage in R) inputs to aadc-14s learned decay score rank decay beyond the record-order null AND beyond the path-only
+  score on the same points?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'Model-track principle (docs/reference/trading-and-model-practice-principles.md): when a learner fails at power, change the
+  information set before the learner; grade against a null that preserves everything but the hypothesised signal (here the record order).'
+question: 'Same points, label, folds, learner and seed as RQ-20261118-aadc-14 (closed live/paper journal trades on legs with a measured Stage-0
+  record; decay = 1[mean net R of the leg''s next 20 trades < 0]; LightGBM out of fold by 5 leg groups). One factor: add six past-only inputs
+  (volreg_z, volreg_z5, vol_tag10, cost10, cost_drift, slip10). Does the newinfo score beat its record-order null (pooled p < 0.05, within-leg
+  excess > 0) AND the path-only score on the same points (paired leg-cluster CI95 > 0)?'
+why_this_matters: 'aadc-14 FAILED and b9d0-01 FAILED: recent-path statistics carry no ranking skill over the order null, and both name the next
+  D10 lever as NEW INFORMATION (regime at entry, cost drift), not a stronger learner. If it is empty too, the D10 learned score is recorded flat
+  on journal data and the next family is the survival model / signal-quality drift (ml-week-plan s2 Basset).'
+iteration:
+  attempt: 4
+  due_by: '2026-11-26'
+  from_result: RQ-20261119-b9d0-01
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  verdict_read: fail
+  diagnosis: 'b9d0-01 (graded FAIL by ML-PRIMARY-9, #27144): the learned pooled AUC has no excess over the order null; the within-leg inversion
+    is the design''s null; the CUSUM''s pooled excess (+0.14 / +0.21 within-leg) is the only D10 skill. aadc-14''s fail_action and b9d0-01''s
+    both name the next lever: new information the realised-R path cannot see. The journal carries three such inputs: the package stop distance
+    at entry (ATR-scaled on most legs, so a vol-regime read), the realised fees + funding per trade and the fill vs the package entry; the package
+    meta carries the live vol regime when it was routed through the regime gate.'
+  search: 'one factor: + NEWINFO_FEATURES (six, fixed in scripts/research/d10_basset_baseline.py); aadc-14''s ten features, learner, folds, seed
+    and label unchanged; null draws fixed now at 40 (record-order).'
+levers:
+- name: d10_feature_family
+  values:
+  - path_only (aadc-14)
+  - path + new information
+  hypothesised_effect: regime-at-entry and cost-drift inputs lead decay, so the newinfo score beats the path-only score on the same points and
+    its record-order null
+power:
+  expected_n: 670
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.025
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: aadc-14 / b9d0-01 read ~670-675 points on 24 legs; the order-null sd of the pooled AUC is ~0.02-0.03 there, so 40 draws reach
+    p < 0.05 at an excess near 0.05 (smallest attainable p 1/41). The paired newinfo-minus-base CI on a synthetic with a planted leading cost
+    signal (12 legs x 150 trades) was [+0.029, +0.099] and with random cost [-0.001, +0.032]; at ~670 points the real CI is wider, so a delta
+    below ~0.04 is expected INDETERMINATE. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the trainer-synced trade_journal.db as of the run; nothing accrues.
+baseline:
+  definition: aadc-14's learned path-only score on the same points, folds and seed (paired); the record-order null for the newinfo score itself.
+decision_rule:
+  id: RULE-RQ20261119-a10d-03-D10-NEWINFO
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: aadc-14's learned path-only score on the same points (paired), and the newinfo score's own record-order null
+  statistic: 'scripts/research/d10_basset_baseline.py --newinfo (40 null draws): aadc-14''s points with six added past-only inputs (entry_info
+    + newinfo_points); out-of-fold P(decay) for the path-only arm (LEARNED_FEATURES) and the newinfo arm (LEARNED_FEATURES + NEWINFO_FEATURES);
+    paired AUC(newinfo) - AUC(base) with a 2000-draw leg-cluster bootstrap; the newinfo score''s pooled and within-leg AUC against a null that
+    permutes each leg''s WHOLE TRADE RECORDS (r with its entry info), refit every draw; coverage of the new inputs reported.'
+  rule: INDETERMINATE if points < 200 OR legs < 3 OR the share of points with both volreg_z and cost10 present < 0.5 OR fewer than 30 null draws
+    scored; PASS if the newinfo pooled excess over the record-order null > 0 with one-sided p < 0.05 AND its within-leg excess > 0 AND the paired
+    AUC(newinfo) - AUC(base) CI95 lower bound > 0; FAIL if the newinfo pooled p >= 0.20 OR the paired CI95 upper bound <= 0; INDETERMINATE otherwise.
+    Thresholds fixed now.
+  pass_action: 'A pass_pending_fresh_window: confirm on trades closed AFTER this run''s journal snapshot (one unit, same rule) before any advisory
+    use; then a D10 advisory score is a build row (nothing is served from this unit). Record which new input carries it (drop-one read in the
+    confirm).'
+  fail_action: 'The journal''s regime-at-entry and cost inputs add nothing over the path: record the D10 feature-family lever flat at power for
+    these inputs; the CUSUM stays the D10 reference; the next D10 family is the survival model (time to drawdown) or signal-quality drift (model
+    scores at entry), per ml-week-plan s2.'
+  indeterminate_action: If coverage is the cause, file the missing journal input (which field, which legs) as a build row; if power, re-run once
+    the journal adds ~50% more points.
+  what_it_does_not_do: Serves, stages or promotes nothing; demotes no leg; changes no alarm, roster or config; adds no gate. Journal data stays
+    on the trainer (never committed, never Kaggle); only aggregate AUCs leave it.
+  min_n: 200 points on >= 3 legs
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 20
+  confidence: 0.3
+  basis: 'stand-in: decides whether the D10 learned lever is empty or mis-graded and which next D10 unit is worth a trainer slot; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Needs the trade journal (account data, never committed), which the trainer syncs to data/trade_journal.db; lightgbm is in the trainer
+    venv.
+  basis: 'ESTIMATE: b9d0-01''s 41 learned fits doubled (two arms on the observed draw, one per null draw) on ~700 points; minutes.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --newinfo
+  - --journal-db
+  - data/trade_journal.db
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-a10d-03
+  note: The trainer journal is the live-DB sync (scripts/ops/sync_trainer_data.sh), so the points can differ slightly from aadc-14's 670; the
+    population and the new inputs' coverage are printed. Journal data never leaves the trainer; verdict.json carries aggregates only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: D10 has no served model; this read decides how the D10 learned lever is recorded and which next D10 unit runs. No leg's order
+    changes.
+related:
+- research/queue/RQ-20261118-aadc-14.yaml
+- research/queue/RQ-20261119-b9d0-01.yaml
+- scripts/research/d10_basset_baseline.py
+what_it_does_not_do: Serves, stages or promotes nothing; demotes no leg; changes no alarm, roster or config; adds no gate. Journal data stays
+  on the trainer (never committed, never Kaggle); only aggregate AUCs leave it.
+last_dispatched_at: '2026-11-19T11:39:04+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-03-D10-NEWINFO
+  evidence:
+  - comms/research/RQ-20261119-a10d-03/44514550360/verdict.json
+  - comms/research/RQ-20261119-a10d-03/44514550360/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  rows: 3
+  verdict: indeterminate
+  reason: 'run 44514550360 (dispatched by the research dispatcher 11:24Z, success). Population: 676 points on 24 legs (7,985 journal trades in;
+    excluded not_closed 5,216, no_leg_record 1,196, no_net_r 145, no_contract_multiplier 52, degenerate_risk_basis 47). Coverage: volreg_z /
+    volreg_z5 0.9645, cost10 1.0, slip10 1.0, cost_drift 0.6997, vol_tag10 0.2959; core volreg_and_cost 0.9645 (>= 0.5); 40 null draws (>= 30).
+    newinfo pooled AUC 0.5013 vs record-order null 0.4184 (sd 0.0644): excess +0.0829, one-sided p 0.1463 (not < 0.05, not >= 0.20); within-leg
+    excess -0.2036 (p 0.9756); paired AUC(newinfo) - AUC(base) +0.0722, CI95 [-0.0134, +0.1903] (lower <= 0, upper > 0). Neither PASS nor FAIL ->
+    INDETERMINATE. Cause = POWER (coverage passes its floor). indeterminate_action: re-run once the journal adds ~50% more points (>= ~1,014).
+    Worth carrying: the CUSUM reference (AUC 0.6554, CI95 [0.551, 0.750]) beats both learned scores (base 0.4292, newinfo 0.5013); within-leg
+    the learned scores sit below 0.5 (0.31 / 0.36) while CUSUM is 0.55. vol_tag10 is present on only 29.6% of points (a journal field gap,
+    not the cause here).'

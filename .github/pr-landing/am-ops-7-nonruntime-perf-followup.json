@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Deploy-gate path list (scripts/deploy_pull_restart.sh + its lockstep copies in diag.py and trader_import_closure.py). The manager merges. Its own deploy may restart services once: diag.py is a web-api file, and the closure decides the trader. Revert: git revert.",
+  "why": "The trader restarted at 08:03Z on deploy 35b1b75 (e787251..35b1b75) for NO runtime reason. The gate line reads non_py_runtime: comms/perf_followup/evidence/20261119-codirection/{README.md,by_family/verdict.json,pooled/verdict.json} and comms/perf_followup/perf-followup-20261118-190000.json, from #27202 (perf-followup W47 research evidence). No src/, config/, deploy/ or scripts/ reader of comms/perf_followup exists (grep 2026-11-19). Fix: add perf_followup to the comms/(...) non-runtime subset in all four lockstep copies (same set as #27099), plus 2 test paths. Before: both new cases fail on main's deploy_pull_restart.sh; after: 75/75 restart-gate tests and 19/19 import-closure tests pass. Gates this adds or changes: none."
+}

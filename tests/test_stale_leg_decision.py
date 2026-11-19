@@ -215,3 +215,28 @@ def test_every_declared_state_is_reachable():
     ):
         seen.add(decide_stale_legs(**kwargs)["state"])
     assert seen == set(ALL_STATES), sorted(set(ALL_STATES) - seen)
+
+
+def test_target_cover_is_reported_when_the_only_tp_belongs_to_a_closed_row():
+    """BRACKETS-ALWAYS item 6: the stop check passes, but cancelling the closed row's TP leaves the open row TP-naked.
+    Reported only (no new refusal): the state is still cancel_legs."""
+    out = decide_stale_legs(
+        position_qty=2.0,
+        legs=[_leg("s", side="stop", qty=2.0), _leg("dead_t", side="target", qty=2.0)],
+        journal_rows=[_row(1, "open", sl_order_id="s", qty=2.0),
+                      _row(2, "closed", tp_order_id="dead_t", qty=2.0)])
+    assert out["state"] == STATE_CANCEL_LEGS and out["cancel_order_ids"] == ["dead_t"]
+    assert out["target_qty_kept"] == pytest.approx(0.0)
+    assert out["target_qty_resting"] == pytest.approx(2.0)
+    assert out["target_undercover_after_cancel"] is True
+
+
+def test_target_cover_is_clean_when_the_open_row_keeps_its_own_tp():
+    out = decide_stale_legs(
+        position_qty=2.0,
+        legs=[_leg("s", side="stop", qty=2.0), _leg("t", side="target", qty=2.0),
+              _leg("dead_t", side="target", qty=1.0)],
+        journal_rows=[_row(1, "open", sl_order_id="s", tp_order_id="t", qty=2.0),
+                      _row(2, "closed", tp_order_id="dead_t", qty=1.0)])
+    assert out["target_undercover_after_cancel"] is False
+    assert out["target_qty_kept"] == pytest.approx(2.0)

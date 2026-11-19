@@ -14,7 +14,7 @@ MAIN="${MAIN:-/home/ubuntu/ict-trading-bot}"
 cd "$REPO"
 LIVE_JOURNAL="${LIVE_JOURNAL:-$MAIN/data/trade_journal.db}"
 BT_DB="${BT_DB:-/tmp/p1_costnet_backtest.db}"
-SC_V_WON="${SC_V_WON:-v022}"
+SC_V_WON="${SC_V_WON:-v023}"   # v023: + signal-time meta stop (PI-20261029-MLP1-0001); v022 immutable
 SC_V_C1="${SC_V_C1:-v021}"
 RUN_TAG="${RUN_TAG:-p1-costnet-$(date +%Y%m%d 2>/dev/null || echo 20260719)}"
 RESULT="${RESULT:-/tmp/p1_costnet_result.txt}"
@@ -200,7 +200,7 @@ except Exception as e:
 PY
 }
 
-log "STEP 3: build $SC_V_WON (v020 params + initial-risk live R)"
+log "STEP 3: build $SC_V_WON (v020 params + entry-time live R: risk_per_unit or the signal-time meta stop)"
 [ -e "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" ] && log "  NOTE: $SC_V_WON exists; --overwrite rebuilds it"
 build_pool "$SC_V_WON"
 

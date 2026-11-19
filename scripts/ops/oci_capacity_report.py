@@ -13,7 +13,8 @@ import os
 import sys
 from typing import Any
 
-FREE_NOTE = ("The Always Free ceiling (200 GB total block+boot, 4 OCPU/24 GB A1, 20 GB object) "
+FREE_NOTE = ("The Always Free ceiling (200 GB total block+boot, 2 OCPU/12 GB A1 = 1,500 OCPU-h + 9,000 GB-h a month, 20 GB object; "
+             "docs.oracle.com Always Free Resources, re-read 2026-11-18) "
              "is a BILLING rule, not a Limits-API value; this report prints what the API says "
              "and the totals so the caller can compare.")
 

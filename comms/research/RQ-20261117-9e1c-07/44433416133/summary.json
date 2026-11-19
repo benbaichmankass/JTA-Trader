@@ -1,0 +1,390 @@
+{
+  "leg": "scha_trend_long_1d",
+  "grade": {
+    "verdict": "pass",
+    "label": "candidate_replaces_incumbent",
+    "best": "AX40",
+    "baseline": "A",
+    "candidates": {
+      "AX40": {
+        "net_r": 8.7554,
+        "delta_net_r": 4.0563,
+        "max_drawdown_r": 7.3871,
+        "max_drawdown_cap": 11.3445,
+        "folds_ge_incumbent": 6,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 1.5,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": false,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "AX50": {
+        "net_r": 4.6991,
+        "delta_net_r": 0.0,
+        "max_drawdown_r": 8.4033,
+        "max_drawdown_cap": 11.3445,
+        "folds_ge_incumbent": 6,
+        "passes": false,
+        "lever_fired": false,
+        "tp_doctrine": {
+          "declared_tp_r": 1.5,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": false,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 1.56,
+    "why": "AX40 beats the incumbent A (net R 8.7554 vs 4.6991) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 78,
+      "net_r": 4.6991,
+      "net_r_fee_only": 5.6717,
+      "max_drawdown_r": 8.4033,
+      "by_outcome": {
+        "stop": 23,
+        "take_profit": 29,
+        "trail_stop": 26
+      },
+      "mean_bars_held": 23.756,
+      "net_r_per_capital_day": 0.0025,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2009-11-03 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2009-11-03 00:00:00+00:00",
+          "end": "2012-09-01 16:00:00+00:00",
+          "trades": 13,
+          "net_r": 5.1046
+        },
+        {
+          "fold": 2,
+          "start": "2012-09-01 16:00:00+00:00",
+          "end": "2015-07-02 08:00:00+00:00",
+          "trades": 14,
+          "net_r": -2.7361
+        },
+        {
+          "fold": 3,
+          "start": "2015-07-02 08:00:00+00:00",
+          "end": "2018-05-01 00:00:00+00:00",
+          "trades": 14,
+          "net_r": -3.079
+        },
+        {
+          "fold": 4,
+          "start": "2018-05-01 00:00:00+00:00",
+          "end": "2021-02-27 16:00:00+00:00",
+          "trades": 14,
+          "net_r": 5.2583
+        },
+        {
+          "fold": 5,
+          "start": "2021-02-27 16:00:00+00:00",
+          "end": "2023-12-28 08:00:00+00:00",
+          "trades": 11,
+          "net_r": -0.4049
+        },
+        {
+          "fold": 6,
+          "start": "2023-12-28 08:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 12,
+          "net_r": 0.5557
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SCHA",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX40": {
+      "reach_ge_6r": 0.0,
+      "n": 74,
+      "net_r": 8.7554,
+      "net_r_fee_only": 9.6723,
+      "max_drawdown_r": 7.3871,
+      "by_outcome": {
+        "stop": 20,
+        "take_profit": 29,
+        "trail_stop": 25
+      },
+      "mean_bars_held": 24.419,
+      "net_r_per_capital_day": 0.0048,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 40.0,
+        "adx_period": 14
+      },
+      "data_start": "2009-11-03 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2009-11-03 00:00:00+00:00",
+          "end": "2012-09-01 16:00:00+00:00",
+          "trades": 12,
+          "net_r": 6.1163
+        },
+        {
+          "fold": 2,
+          "start": "2012-09-01 16:00:00+00:00",
+          "end": "2015-07-02 08:00:00+00:00",
+          "trades": 13,
+          "net_r": -1.7175
+        },
+        {
+          "fold": 3,
+          "start": "2015-07-02 08:00:00+00:00",
+          "end": "2018-05-01 00:00:00+00:00",
+          "trades": 13,
+          "net_r": -2.0628
+        },
+        {
+          "fold": 4,
+          "start": "2018-05-01 00:00:00+00:00",
+          "end": "2021-02-27 16:00:00+00:00",
+          "trades": 14,
+          "net_r": 5.2583
+        },
+        {
+          "fold": 5,
+          "start": "2021-02-27 16:00:00+00:00",
+          "end": "2023-12-28 08:00:00+00:00",
+          "trades": 10,
+          "net_r": 0.605
+        },
+        {
+          "fold": 6,
+          "start": "2023-12-28 08:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 12,
+          "net_r": 0.5557
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SCHA",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/AX40__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX50": {
+      "reach_ge_6r": 0.0,
+      "n": 78,
+      "net_r": 4.6991,
+      "net_r_fee_only": 5.6717,
+      "max_drawdown_r": 8.4033,
+      "by_outcome": {
+        "stop": 23,
+        "take_profit": 29,
+        "trail_stop": 26
+      },
+      "mean_bars_held": 23.756,
+      "net_r_per_capital_day": 0.0025,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 50.0,
+        "adx_period": 14
+      },
+      "data_start": "2009-11-03 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2009-11-03 00:00:00+00:00",
+          "end": "2012-09-01 16:00:00+00:00",
+          "trades": 13,
+          "net_r": 5.1046
+        },
+        {
+          "fold": 2,
+          "start": "2012-09-01 16:00:00+00:00",
+          "end": "2015-07-02 08:00:00+00:00",
+          "trades": 14,
+          "net_r": -2.7361
+        },
+        {
+          "fold": 3,
+          "start": "2015-07-02 08:00:00+00:00",
+          "end": "2018-05-01 00:00:00+00:00",
+          "trades": 14,
+          "net_r": -3.079
+        },
+        {
+          "fold": 4,
+          "start": "2018-05-01 00:00:00+00:00",
+          "end": "2021-02-27 16:00:00+00:00",
+          "trades": 14,
+          "net_r": 5.2583
+        },
+        {
+          "fold": 5,
+          "start": "2021-02-27 16:00:00+00:00",
+          "end": "2023-12-28 08:00:00+00:00",
+          "trades": 11,
+          "net_r": -0.4049
+        },
+        {
+          "fold": 6,
+          "start": "2023-12-28 08:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 12,
+          "net_r": 0.5557
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SCHA",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/AX50__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261117-9e1c-07/44433416133/arms/AX50__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "1.5",
+        "--adx-max",
+        "50",
+        "--end",
+        "2026-10-27"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": "2026-10-27",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "SCHA",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2009-11-03 00:00:00+00:00",
+      "2012-09-01 16:00:00+00:00",
+      "2015-07-02 08:00:00+00:00",
+      "2018-05-01 00:00:00+00:00",
+      "2021-02-27 16:00:00+00:00",
+      "2023-12-28 08:00:00+00:00",
+      "2026-10-27 00:00:00+00:00"
+    ]
+  }
+}

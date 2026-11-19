@@ -1,0 +1,858 @@
+{
+ "runs": {
+  "trend_donchian_eth_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "6.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4.0",
+    "--tp-revision",
+    "donchian_measured_move",
+    "--tp-revision-width-mult",
+    "0.5",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 275,
+   "bt_net_expectancy_r": 0.3112
+  },
+  "trend_donchian_xrp_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_4h__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 68,
+   "bt_net_expectancy_r": 0.2351
+  },
+  "trend_donchian_eth_prop": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_prop__bt.json",
+    "--trail-decay-arm-r",
+    "2.99",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_eth_prop__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "timeframe_declared": "1h",
+   "timeframe_bt": "1h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 864,
+   "bt_net_expectancy_r": 0.0881
+  },
+  "trend_donchian_sol_prop": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "4.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_prop__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_prop__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "timeframe_declared": "1h",
+   "timeframe_bt": "1h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 388,
+   "bt_net_expectancy_r": 0.1472
+  },
+  "trend_donchian_sol_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_4h__bt.json",
+    "--trail-decay-arm-r",
+    "5.57",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_sol_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 267,
+   "bt_net_expectancy_r": 0.2485
+  },
+  "trend_donchian_ada_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "ADAUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_ada_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_ada_4h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_ada_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ADAUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 257,
+   "bt_net_expectancy_r": 0.2232
+  },
+  "trend_donchian_avax_4h": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "AVAXUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.7",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_avax_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_avax_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_avax_4h__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "AVAXUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 263,
+   "bt_net_expectancy_r": 0.1077
+  },
+  "trend_donchian_xrp_adx25": {
+   "state": "ok",
+   "argv": [
+    "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "<data>",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_adx25__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_adx25__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--trail-adx-below",
+    "25",
+    "--trail-adx-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-07-01",
+    "--end",
+    "2026-10-15 23:59",
+    "--emit-paths",
+    "comms/research/RQ-20261119-e8a1-03/44434321550/corpus/trend_donchian_xrp_adx25__paths.jsonl"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "timeframe_declared": "4h",
+   "timeframe_bt": "4h",
+   "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bt_total_trades": 68,
+   "bt_net_expectancy_r": 0.2427
+  }
+ },
+ "families": [
+  {
+   "family": "TD",
+   "legs_all": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop",
+    "trend_donchian_sol_4h",
+    "trend_donchian_ada_4h",
+    "trend_donchian_avax_4h",
+    "trend_donchian_xrp_adx25"
+   ],
+   "legs_gate": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop"
+   ],
+   "n_pool_scored": 2434,
+   "verdict": "PASS",
+   "reasons": [],
+   "primary": {
+    "C": 0.1,
+    "q": 0.2
+   },
+   "primary_eval": {
+    "n_gate": 1587,
+    "take_all_mean_r": 0.1428,
+    "delta_mean_r": 0.0003,
+    "delta_lb95_r": -0.0138,
+    "delta_lb_bonferroni_r": -0.021,
+    "maxdd_take_r": 23.644,
+    "maxdd_overlay_r": 22.267,
+    "cvar5_take_r": -1.1311,
+    "cvar5_overlay_r": -1.0889,
+    "random_delta_mean_r": -0.018,
+    "random_delta_p90_r": -0.0082,
+    "random_p_value": 0.006,
+    "reduce_rate": 0.2704,
+    "reduced_mean_r": -0.0021,
+    "net_total_r_take": 226.63,
+    "net_total_r_overlay": 227.08,
+    "paths_delta_mean_r": [
+     0.0008,
+     -0.0027,
+     -0.0028,
+     0.004,
+     0.0021
+    ],
+    "calibration": {
+     "brier": 0.234,
+     "brier_const": 0.2331,
+     "ece": 0.0295,
+     "base_rate": 0.3699
+    },
+    "folds": [
+     {
+      "group": 0,
+      "n": 248,
+      "delta": -0.0302,
+      "random_mean": -0.0279,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 1,
+      "n": 270,
+      "delta": -0.0015,
+      "random_mean": -0.0139,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 2,
+      "n": 269,
+      "delta": 0.0508,
+      "random_mean": -0.0137,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 3,
+      "n": 260,
+      "delta": -0.0187,
+      "random_mean": -0.0231,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 4,
+      "n": 265,
+      "delta": -0.0087,
+      "random_mean": -0.0217,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 5,
+      "n": 275,
+      "delta": 0.0068,
+      "random_mean": -0.012,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     }
+    ],
+    "folds_passing": 5,
+    "checks": {
+     "a_noninferior": true,
+     "b_risk": true,
+     "c_beats_random": true,
+     "d_not_vacuous": true,
+     "e_folds": true
+    },
+    "pass": true
+   },
+   "pool_eval_primary": {
+    "n_gate": 2434,
+    "delta_mean_r": -0.0042,
+    "delta_lb95_r": -0.0155,
+    "reduce_rate": 0.2218,
+    "reduced_mean_r": 0.0382,
+    "take_all_mean_r": 0.16,
+    "folds_passing": 5
+   },
+   "trials": [
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0018,
+     "delta_lb95_r": -0.0084,
+     "reduce_rate": 0.141,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.2
+     },
+     "primary": true,
+     "pass": true,
+     "delta_mean_r": 0.0003,
+     "delta_lb95_r": -0.0138,
+     "reduce_rate": 0.2704,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.005,
+     "delta_lb95_r": -0.0212,
+     "reduce_rate": 0.3865,
+     "folds_passing": 4
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0015,
+     "delta_lb95_r": -0.0083,
+     "reduce_rate": 0.1403,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.2
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0006,
+     "delta_lb95_r": -0.0136,
+     "reduce_rate": 0.2687,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0045,
+     "delta_lb95_r": -0.0211,
+     "reduce_rate": 0.3882,
+     "folds_passing": 4
+    }
+   ],
+   "n_trials": 6,
+   "pbo": 0.85,
+   "legs": {
+    "trend_donchian_eth_4h": {
+     "n_trades": 275,
+     "n_scored": 270,
+     "n_aligned": 275,
+     "gate_leg": true,
+     "net_expectancy_r": 0.3112,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 275,
+      "n_ours_in_ref_span": 275,
+      "n_same_trade": 275,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": 0.0
+     }
+    },
+    "trend_donchian_xrp_4h": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": true,
+     "net_expectancy_r": 0.2351,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 68,
+      "n_ours_in_ref_span": 68,
+      "n_same_trade": 68,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": 0.0
+     }
+    },
+    "trend_donchian_eth_prop": {
+     "n_trades": 864,
+     "n_scored": 862,
+     "n_aligned": 864,
+     "gate_leg": true,
+     "net_expectancy_r": 0.0881,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 864,
+      "n_ours_in_ref_span": 864,
+      "n_same_trade": 864,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": 0.0
+     }
+    },
+    "trend_donchian_sol_prop": {
+     "n_trades": 388,
+     "n_scored": 387,
+     "n_aligned": 388,
+     "gate_leg": true,
+     "net_expectancy_r": 0.1472,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 388,
+      "n_ours_in_ref_span": 388,
+      "n_same_trade": 388,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": 0.0
+     }
+    },
+    "trend_donchian_sol_4h": {
+     "n_trades": 267,
+     "n_scored": 264,
+     "n_aligned": 267,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2485,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_ada_4h": {
+     "n_trades": 257,
+     "n_scored": 256,
+     "n_aligned": 257,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2232,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_avax_4h": {
+     "n_trades": 263,
+     "n_scored": 259,
+     "n_aligned": 263,
+     "gate_leg": false,
+     "net_expectancy_r": 0.1077,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_xrp_adx25": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2427,
+     "parity": {
+      "state": "training_only"
+     }
+    }
+   },
+   "parity_basis": "trade",
+   "holdout": null,
+   "cpcv_challengers": {
+    "rule": "RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER",
+    "n_gate": 1587,
+    "min_disagree": 0.2,
+    "arms": [
+     {
+      "target": "mlgbm",
+      "pass": true,
+      "disagree_rate_cells": 0.2304,
+      "target_base_rate": 0.3699,
+      "own_checks": {
+       "a_noninferior": true,
+       "b_risk": true,
+       "c_beats_random": true,
+       "d_not_vacuous": true,
+       "e_folds": true
+      },
+      "own_delta_mean_r": 0.0016,
+      "own_delta_lb95_r": -0.0085,
+      "own_reduce_rate": 0.2357,
+      "own_reduced_mean_r": -0.0135,
+      "own_folds_passing": 6,
+      "paired": {
+       "n": 1587,
+       "delta_ch_vs_base_mean_r": 0.0013,
+       "delta_ch_vs_base_lb95_r": -0.0086,
+       "delta_ch_vs_base_lb_deflated_r": -0.0118,
+       "disagree_rate": 0.4568,
+       "reduce_rate_base": 0.4077,
+       "reduce_rate_ch": 0.3938,
+       "delta_base_vs_take_r": 0.0003,
+       "delta_ch_vs_take_r": 0.0016,
+       "maxdd_base_r": 22.267,
+       "maxdd_ch_r": 21.545,
+       "cvar5_base_r": -1.0889,
+       "cvar5_ch_r": -1.1036
+      }
+     }
+    ],
+    "n_arms": 1,
+    "chosen": "mlgbm",
+    "verdict": "PASS"
+   },
+   "exported_cpcv_challenger": null
+  }
+ ]
+}

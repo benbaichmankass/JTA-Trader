@@ -1,0 +1,128 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). PI-20261118-EFILLW47-0004: abab-38 (ief_pullback_1d DIRECTION) was INDETERMINATE, n 33 < floor 39;
+# the standing doctrine for a thin 1d leg is a POOLED population, never a wait for accrual. Decision rule registered BEFORE any run.
+# Gates this adds or changes: none.
+id: RQ-20261119-c5e8-01
+title: 'POOLED 1d-ETF pullback DIRECTION (cells IEF, TLT, SLV, GLD, GDX; arms BOTH / LONG-only / SHORT-only): does restricting the pullback family to one side beat both sides pooled, net of the full cost stack?'
+status: queued
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: 'On daily bars of IEF, TLT, SLV, GLD and GDX (Dukascopy proxies, 2021-07-01..2026-10-15, the abab-38 window), does the pullback family at its harness-declared parameters read better pooled across the five cells when entries are restricted to LONG only or SHORT only (arms LONG, SHORT) than with both sides (baseline A), by at least 0.02 R per trade, with pooled net R > 0 and >= 4 of 6 calendar folds net positive?'
+why_this_matters: 'abab-38 asked the DIRECTION question on ief_pullback_1d alone and was INDETERMINATE (n 33 < 39); the same window is shared by the sibling 1d legs, so the standing doctrine (STRUCTURE-EXITS-DEFAULT) is one pooled 1d-ETF population. PASS -> a per-leg direction confirmation on a disjoint window, then a Tier-3 declare proposal; FAIL -> this configuration (the pooled five-cell population at one shared parameter set, arms LONG and SHORT) is closed for direction and abab-38 is retired by record. It tests the pullback harness at one shared parameter set; it does not test any leg''s own declared parameters (they differ per leg).'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not a measurement: abab-38 measured n 33 for IEF alone on this window (incumbent arm), x5 cells = about 165 pooled trades for the both-sides arm, fewer per one-sided arm; d 0.25 at alpha 0.05 / power 0.8 needs about 126. Below the pooled floor of 60 the arm grades INDETERMINATE, never FAIL. The 0.02 R per trade materiality bar is not a powered effect: a PASS is a lead, a FAIL closes this configuration only.'
+  feasibility:
+    source: none
+    accrual_basis: 'Re-measurement on a pinned in-hand window of public daily bars; nothing accrues. The realised pooled n is MEASURED when the run lands.'
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'Arm A = both sides, the pullback family at its harness-declared parameters, same cells, window, folds and cost stack as the candidates.'
+  statistic: 'scripts/research/harness_stage0.py --family pullback, cells IEF, TLT, SLV, GLD, GDX on 1d bars, arms A (both sides), LONG (--side-filter=long), SHORT (--side-filter=short); per arm the pooled trades, pooled net R (full venue-aware cost stack the harness resolves per symbol), net R by calendar fold (6), net R per trade, one-sided t p-value; baseline A.'
+  rule: 'A candidate arm PASSES iff pooled n >= 60 AND pooled net R > 0 AND >= 4 of 6 calendar folds net positive AND at least half the measured cells with n >= 20 pass their own cell rule AND its pooled net R per trade beats arm A by >= 0.02 R. INDETERMINATE for an arm with pooled n < 60 or fewer than half the five cells measured. Verdict: pass iff any candidate passes (the best by pooled net R is named; the denominator is 2 candidate arms); indeterminate iff none passes and any arm is indeterminate; fail iff both candidates fail. Thresholds, cells, window and arm grid are fixed now and not changed after any result.'
+  pass_action: 'ONE per-leg direction confirmation unit on a disjoint window for the leg(s) whose own cell carries the effect, then a Tier-3 declare PROPOSAL with the mirror in the same PR; never a config edit. abab-38 is re-armed on the pooled lead.'
+  fail_action: 'record the direction arms LONG and SHORT as tested at this pooled 1d-ETF configuration (research/levers/ief_pullback_1d.yaml and the sibling 1d legs); retire abab-38 by record. Nothing beyond this configuration is ruled out by this unit (family_retirement_policy.yaml).'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. It does not test any leg''s own declared parameters. The arm grid is the whole search: no arm is added after the run.'
+  min_n: 60 pooled trades per arm
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared base arm; RQ-20261018-ef5d-03 (same harness, pooled cells, breadth) and RQ-20261118-abab-38 (the thin single-leg unit this pools).'
+intervention_controls:
+  not_applicable: a direction restriction run through the harness on closed historical bars, not an in-trade action or active-management intervention
+iteration:
+  subject: ief_pullback_1d
+  subject_kind: strategy_leg
+  from_result: RQ-20261118-abab-38
+  verdict_read: indeterminate
+  diagnosis: 'abab-38 (direction on ief_pullback_1d) INDETERMINATE: incumbent n 33 < floor 39 on 2021-07-01..2026-10-15 (run 44387493913); the 1d sibling legs share the window, so more trades come from pooling cells, not from waiting.'
+  search: 'direction family on the pooled 1d-ETF population: arms LONG, SHORT, one factor each against both sides, one shared parameter set.'
+  levers:
+  - direction
+  map_entries:
+  - research/levers/ief_pullback_1d.yaml
+  attempt: 2
+  due_by: '2026-11-27'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: structural
+  basis: 'planning weight for a lever cell on rostered 1d legs; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  basis: 'ESTIMATE: 5 cells x 3 arms of the pullback harness on about 1,300 daily bars each (a538-style runs take about 30 min per leg-arm set).'
+  why_runner: 'fetches keyless public candles (Dukascopy daily proxies); the candle dataset coverage is checked by the router.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - IEF,TLT,SLV,GLD,GDX
+  - --timeframe
+  - 1d
+  - --days
+  - '2330'
+  - --start
+  - '2021-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --arm
+  - A=
+  - --arm
+  - LONG=--side-filter=long
+  - --arm
+  - SHORT=--side-filter=short
+  - --baseline
+  - A
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '60'
+  - --breadth-frac
+  - '0.5'
+  - --non-crypto-source
+  - dukascopy
+  - --rule-id
+  - RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261119-c5e8-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+roadmap:
+- L-REGIME
+related:
+- RQ-20261118-abab-38
+- RQ-20261018-ef5d-03
+- research/levers/ief_pullback_1d.yaml
+population: daily bars of IEF, TLT, SLV, GLD, GDX (Dukascopy), 2021-07-01..2026-10-15; the pullback family at harness-declared parameters, all trades the harness emits per arm.
+last_dispatched_at: null

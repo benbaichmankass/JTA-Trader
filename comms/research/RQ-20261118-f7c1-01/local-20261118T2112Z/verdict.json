@@ -1,0 +1,160 @@
+{
+ "research_unit": "RQ-20261118-f7c1-01",
+ "rule_id": "RULE-RQ20261118-f7c1-01-SAMEBAR-CAP",
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 907,
+ "note": "k=2 (largest passing of [2]): sum net R +54.09 vs +33.68, max DD 41.07 vs 62.81 R, control median +34.58",
+ "population": "committed ml_entry Stage-0 arm-F record (907 trades, 437 decision bars, 2025-10-01..2026-09-30 held-out, 5 bybit_2 symbols), scored by the frozen v1 booster",
+ "measurement": {
+  "unit": "RQ-20261118-f7c1-01",
+  "rule_id": "RULE-RQ20261118-f7c1-01-SAMEBAR-CAP",
+  "record": "comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl",
+  "artifact": "comms/research/RQ-20261101-c692-06/41324826751/model",
+  "score_coverage": 1.0,
+  "n_scored": 907,
+  "selected_k": 2,
+  "uncapped": {
+   "n": 907,
+   "sum_net_r": 33.67874152768204,
+   "mean_net_r": 0.037132019324897514,
+   "max_dd_r": 62.809681183667564,
+   "mean_net_r_ci95_bar_clustered": [
+    -0.07354450471749872,
+    0.14847712689991058
+   ],
+   "longest_losing_bar_run": 16,
+   "decision_bars": 437,
+   "decisions_per_bar_hist": {
+    "1": 206,
+    "2": 92,
+    "3": 65,
+    "4": 48,
+    "5": 26
+   }
+  },
+  "arms": {
+   "k1": {
+    "n_kept": 439,
+    "n_dropped": 468,
+    "bars_where_cap_binds": 229,
+    "sum_net_r": 17.956768308722893,
+    "mean_net_r": 0.04090380024766035,
+    "max_dd_r": 30.650024909779006,
+    "dd_ratio_vs_uncapped": 0.4879824946118171,
+    "sum_net_r_diff_vs_uncapped": -15.72197321895915,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -80.76905902575736,
+     50.99993844279068
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.06511343645356922,
+     0.1501192362089378
+    ],
+    "control_median_sum_net_r": 6.309317111374936,
+    "control_median_max_dd_r": 31.187522959227955,
+    "ranked_sum_percentile_in_control": 0.924,
+    "ranked_dd_percentile_in_control": 0.4385,
+    "dropped_mean_net_r": 0.03359395986957083,
+    "longest_losing_bar_run": 16,
+    "kept_by_side": {
+     "short": 301,
+     "long": 138
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 145,
+     "SOLUSDT": 101,
+     "XRPUSDT": 86,
+     "ETHUSDT": 70,
+     "BTCUSDT": 37
+    },
+    "cond_a_net_r_holds": false,
+    "cond_b_dd_cut_20pct": true,
+    "cond_c_beats_random_drop_median": true,
+    "pass_k": false
+   },
+   "k2": {
+    "n_kept": 668,
+    "n_dropped": 239,
+    "bars_where_cap_binds": 139,
+    "sum_net_r": 54.09411369840035,
+    "mean_net_r": 0.08097921212335382,
+    "max_dd_r": 41.06714632428814,
+    "dd_ratio_vs_uncapped": 0.6538346565428332,
+    "sum_net_r_diff_vs_uncapped": 20.415372170718307,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -21.289345872766372,
+     61.15187501979149
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.02638421534909736,
+     0.18734306667443806
+    ],
+    "control_median_sum_net_r": 34.58338826440562,
+    "control_median_max_dd_r": 42.40824228494593,
+    "ranked_sum_percentile_in_control": 0.997,
+    "ranked_dd_percentile_in_control": 0.361,
+    "dropped_mean_net_r": -0.0854199672414992,
+    "longest_losing_bar_run": 16,
+    "kept_by_side": {
+     "short": 453,
+     "long": 215
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 199,
+     "SOLUSDT": 156,
+     "XRPUSDT": 131,
+     "ETHUSDT": 121,
+     "BTCUSDT": 61
+    },
+    "cond_a_net_r_holds": true,
+    "cond_b_dd_cut_20pct": true,
+    "cond_c_beats_random_drop_median": true,
+    "pass_k": true
+   },
+   "k3": {
+    "n_kept": 807,
+    "n_dropped": 100,
+    "bars_where_cap_binds": 74,
+    "sum_net_r": 44.479292138901315,
+    "mean_net_r": 0.055116842799134216,
+    "max_dd_r": 55.37211164754885,
+    "dd_ratio_vs_uncapped": 0.8815856187142579,
+    "sum_net_r_diff_vs_uncapped": 10.800550611219272,
+    "sum_net_r_diff_ci95_bar_clustered": [
+     -14.153458950846433,
+     33.43666024066117
+    ],
+    "mean_net_r_ci95_bar_clustered": [
+     -0.04647474365283778,
+     0.16563700945906776
+    ],
+    "control_median_sum_net_r": 42.017987697222466,
+    "control_median_max_dd_r": 50.46625981144065,
+    "ranked_sum_percentile_in_control": 0.6725,
+    "ranked_dd_percentile_in_control": 0.945,
+    "dropped_mean_net_r": -0.10800550611219276,
+    "longest_losing_bar_run": 16,
+    "kept_by_side": {
+     "short": 540,
+     "long": 267
+    },
+    "kept_by_symbol": {
+     "ADAUSDT": 219,
+     "SOLUSDT": 188,
+     "ETHUSDT": 161,
+     "XRPUSDT": 161,
+     "BTCUSDT": 78
+    },
+    "cond_a_net_r_holds": true,
+    "cond_b_dd_cut_20pct": false,
+    "cond_c_beats_random_drop_median": true,
+    "pass_k": false
+   }
+  },
+  "not_modelled": "a dropped decision would free its symbol earlier; the capped arm cannot add the later decision the live policy might take (bias direction unknown)",
+  "drawdown_definition": "per-bar net R summed, booked at the decision bar, in decision order; max peak-to-trough in R",
+  "git_sha": "ce21e1c5e337346bb439397c86fc06e5b52dec80",
+  "elapsed_s": 23
+ }
+}

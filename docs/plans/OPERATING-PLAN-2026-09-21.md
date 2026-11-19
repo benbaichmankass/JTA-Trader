@@ -125,6 +125,34 @@ Operator, 2026-11-06 ~19:35Z (Manager Session 2026-11-06a, popup "Holdout govern
 
 Gates this adds or changes: removes DSR as a promotion gate (operator decision above); adds none.
 
+### Live-performance promotion path (operator, 2026-11-17, binding)
+
+**Gates this adds or changes: none. It adds a promotion path and removes friction.** The backtest path above (holdout pass on held-out data, net of the full cost stack, committed record) stays the primary, fast path and needs nothing from live. This is a SECOND way up.
+
+Operator, 2026-11-17 ~16:26Z, verbatim: *"we might need to add like that some level of performance can push a strategy or an ML up the promotion ladder, even if the backtest results, like we need to take into account live performance. That's the whole point of having them do live trades and not just rely only on our backtest. The backtesting is the main key because we need to be able to iterate fast, but that doesn't mean we should be ignoring live performance, right?"*
+
+Popup answers, 2026-11-17, verbatim:
+- live bar: *"20+ trades, clearly positive (Recommended)"*;
+- conflict: *"Live wins + fix backtest (Recommended)"*;
+- scope: *"Both strategies and MLs (Recommended)"*.
+
+1. **The live bar.**
+   - A leg (strategy or ML) clears it with **≥ 20 closed live trades with R on the declared signal-time risk (`declared_initial`)**, net of real costs, with venue-measured P&L where available.
+   - Total R must be positive, AND the mean trade's **one-sided ~80% lower confidence bound** must be above zero (mean − 0.84 × sd/√n > 0).
+   - Demo-floor and real-money trades of the SAME leg configuration pool, and the record says so.
+   - Trades with no declared risk never count; the n is always stated. (The stored-stop `confirmedInitial` grade keeps only trades whose stop never moved and is biased toward losses, measured 2026-11-18, so it is reported but is not the bar.)
+2. **A live-bar pass promotes**, even when Stage 0 failed or is missing.
+   - **Conflict rule:** live wins, and a fidelity-check unit runs in parallel to find why the backtest disagreed. That unit is drafted with the promotion, never after it.
+   - A real-money roster change is still a Tier-3 act. It promotes on this record under the standing data-backed rule, with the operator notified at once.
+3. **The swap rule.** Operator ~16:29Z, verbatim: *"if, for example, it's a thing where like the ADA was on paper because it was 2 hours and we were keeping the 4 hours, but the 2 hours outperforming the 4 hours, then let the 2 hours take over instead of the 4 hours."*
+   - When a demo-floor variant on the same symbol clears the live bar and beats the real-money variant on the same bar, the better variant **takes the slot**. It is a swap, not an add: the live one moves to the demo floor.
+   - The same-symbol and non-slice rules still apply.
+4. **This is not a soak and never a precondition.**
+   - The soak stays MECHANICAL (1–2 clean trades, § "The soak is MECHANICAL").
+   - No leg waits for 20 live trades before the backtest path may promote it.
+   - Live results only ADD a way up; they are also what the demotion signal reads.
+5. **Tooling:** a live-bar check script feeds the ladder automatically (pipeline item filed with this section).
+
 ### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding; merged 97dde7e5 #21038)
 
 <!-- STRATEGY-STATUS-CANONICAL: the ONE statement of the status model. Other docs point here. -->

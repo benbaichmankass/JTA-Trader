@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_data_mutation",
+  "hold_text": "ONE-OFF, PINNED journal repair action (8 row ids, alpaca_portfolio SLV, paper mirror). Adding the action writes nothing; the apply is a separate system-action run after the dry-run diff is posted on PI-20261118-JFWRQYOV-0004 and the manager approves. decision: 2026-11-19 manager (option a + GO on this action). Places/modifies/cancels nothing at any venue. Revert: git revert (the action), restore from the timestamped DB backup (the apply).",
+  "why": "The 7 rows the reconciler closed before their entries filled hold the venue's 877 sh untracked; row 7784 is a 6-sh phantom. Neither sanctioned action (reattach-stranded-package-legs: hard-coded 2026-09 targets; reconcile-orphan-history: flap duplicates) can do this. Gates this adds or changes: none."
+}

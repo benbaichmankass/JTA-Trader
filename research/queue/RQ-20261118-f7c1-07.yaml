@@ -1,0 +1,127 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Manager dispatch item (d): sanity-check aadc-14's AUC 0.414 and record which.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261118-f7c1-07
+title: 'D10 Basset falsifier: is aadc-14''s BELOW-chance learned AUC (0.414, CI upper 0.516) an artifact of leg-level inputs (mu, n_seen)
+  under leg-grouped CV, or does the learned score really rank decay backwards?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): an out-of-sample score
+  significantly BELOW chance is a pipeline signal, not a weak model; check the label sign, then group-identifying features under grouped
+  CV, before reading it as information.'
+question: 'Same points, label, folds, learner and bootstrap as RQ-20261118-aadc-14 (closed live/paper journal trades on legs with a
+  measured Stage-0 record; decay = 1[mean net R of the leg''s next 20 trades < 0]; LightGBM out of fold by 5 leg groups). Two arms in one
+  run: FULL = aadc-14''s 10 features (must reproduce 0.414 within 0.02), DROP = the same without the leg-level inputs mu (the leg''s
+  Stage-0 mean, constant per leg) and n_seen (trade index, a leg-age proxy). Plus the within-leg AUC of each arm (pair-weighted mean of
+  per-leg AUCs). Does removing the leg-identifying inputs lift the pooled AUC to >= 0.5, with the full arm ranking correctly INSIDE legs?'
+why_this_matters: 'A significantly below-chance AUC means the learner picked up a structure that inverts out of fold. Code read
+  (ML-PRIMARY-7, 2026-11-18): the label sign, the predict_proba column and the AUC positive class agree with the CUSUM''s convention, so
+  it is not a sign flip. If the leg-identity explanation holds, aadc-14''s FAIL says "this feature set leaks leg identity", not "recent-path
+  statistics carry nothing", and the D10 lever map should record it that way before the next lever is chosen.'
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261118-aadc-14
+  verdict_read: fail
+  diagnosis: 'aadc-14 (run 44381000615) FAIL: learned AUC 0.4137 CI95 [0.3029, 0.5163] vs CUSUM 0.6554 on 670 points, 24 legs. mu is
+    constant within a leg and n_seen orders a leg''s history, so under leg-grouped CV the trees can split on leg identity; the base rate
+    learned for a training leg with a similar mu does not transfer to the held-out leg and can invert (24 legs, 5 groups).'
+  search: 'one factor (drop the two leg-level inputs), fixed here; nothing tuned; the full arm is a reproduction control'
+  attempt: 2
+  due_by: '2026-11-25'
+levers:
+- name: learned_feature_set
+  values: [aadc14_full_10, without_mu_n_seen_8]
+  hypothesised_effect: the drop arm's pooled AUC rises to >= 0.5 and the full arm's within-leg AUC is >= 0.5
+power:
+  expected_n: 670
+  min_detectable_effect: 0.09
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED from aadc-14: leg-clustered CI half-width ~0.107 at 24 legs. The REFUTED branch needs the drop arm''s CI upper < 0.5,
+    i.e. a point near 0.40 or lower; anything between reads INDETERMINATE, stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the trainer-synced trade_journal.db as of the run; nothing accrues.
+baseline:
+  definition: 'aadc-14''s own full-feature arm, re-run in the same process (reproduction control), and the CUSUM on the same points.'
+decision_rule:
+  id: RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/d10_basset_baseline.py --falsify-legid: pooled out-of-fold AUC of FULL and DROP with aadc-14''s leg-cluster
+    bootstrap CI (2000 draws), and the pair-weighted within-leg AUC of FULL, DROP and CUSUM. Reported, never gating: DROP minus CUSUM
+    paired delta (a feature set chosen after aadc-14''s result is not a fresh test of the D10 question).'
+  rule: 'INDETERMINATE IF labelled points < 200 OR legs < 3, OR the FULL arm does not reproduce aadc-14''s 0.4137 within 0.02.
+    PASS (artifact SUPPORTED) IF the DROP arm''s pooled AUC >= 0.5 AND the FULL arm''s within-leg AUC >= 0.5. FAIL (artifact REFUTED) IF
+    the DROP arm''s pooled AUC CI95 upper < 0.5. INDETERMINATE otherwise. Thresholds fixed now and not changed after any result.'
+  pass_action: 'Record on aadc-14 and the D10 lever map: the FAIL is a leg-identity artifact of mu/n_seen under grouped CV, not evidence
+    that recent-path statistics are empty. The next D10 unit tests the 8-feature set against the CUSUM on a FRESH window (trades closed
+    after this run), never on these points.'
+  fail_action: 'The inversion is not the leg-level inputs: open a pipeline item for a harness audit of learned_points / learned_oof
+    (label horizon overlap with features, fold leakage) before any further D10 learned unit.'
+  what_it_does_not_do: Trains nothing persistent, registers, serves or promotes nothing; changes no config; places no order.
+  min_n: 200 labelled points on >= 3 legs
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 20
+  confidence: 0.3
+  basis: 'stand-in: decides how the D10 learned lever is recorded and which next unit is worth a trainer slot; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: 'Needs the trade journal (account data, never committed), which the trainer syncs to data/trade_journal.db; lightgbm is in
+    the trainer venv.'
+  basis: 'ESTIMATE from aadc-14 (same points): two arms of 5 small fits each, three 2000-draw bootstraps.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --falsify-legid
+  - --journal-db
+  - data/trade_journal.db
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261118-f7c1-07
+  note: 'The trainer journal is the live-DB sync, so the points can differ slightly from aadc-14''s; the FULL arm''s reproduction check
+    (within 0.02) makes that visible and turns a drifted population into INDETERMINATE, not a verdict.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'D10 has no served model; this read decides how aadc-14''s FAIL is recorded and which next D10 unit runs. No leg''s order
+    changes.'
+related:
+- RQ-20261118-aadc-14
+- RQ-20261117-aadc-05
+- ML-D10-BASSET-BASELINE
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+last_dispatched_at: '2026-11-18T23:02:05+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT
+  auto: true
+  decision_rule_id: RULE-RQ20261118-f7c1-07-D10-LEGID-ARTIFACT
+  evidence:
+  - research/results/RQ-20261118-f7c1-07/44417165432.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

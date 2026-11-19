@@ -1,0 +1,100 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, manager GO 04:21Z (four conditions kept).
+# Re-registers RULE-IB-GROSS-ATR-FLOOR-S0 on the missing live leg. Gates this adds or changes: none.
+id: RQ-20261119-d4f8-01
+title: 'IB-GROSS-ATR-FLOOR-S0 re-registered on ict_scalp_mgc_15m, on a Dukascopy XAU_USD spot PROXY of MGC: with the risk distance floored at
+  k x ATR14 (k 0.5, 1.0), does the live 15m scalp''s tight stop stop buying leverage without giving up the dollar edge?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-OPS
+kind: experiment
+question: 'On Dukascopy XAU_USD 15m bars (the adjudicated spot-gold PROXY for MGC: no futures roll, a different session calendar, MGC''s own cost
+  stack applied), over the last 1,100 days, with the trades of ict_scalp_mgc_15m as declared in config/strategies.yaml, is there a smallest k
+  in {0.5, 1.0} for which (a) M1 max concurrent gross notional / equity <= 1.5, (b) the 80% bootstrap lower bound of M2(B_k)/M2(A) >= 0.80, and
+  (c) M3(B_k) >= 0.90 x M3(A), with at least 100 trades and 100 computable ATR14 values?'
+why_this_matters: 'RQ-20261119-b9a4-01 (the same test on the 141 committed IB trades) was vacuous: the floor never binds there (0% reweighted,
+  every stop already >= 2.5 ATR). The leg whose stop motivated the fix is ict_scalp_mgc_15m (live stop 0.26-0.40% of price), which has no committed
+  per-trade rows; the only committed 15m MGC candles give 18 trades in 54 days. This unit builds that corpus from a Dukascopy gold proxy on a
+  runner and runs the floor on it. It is a statement about the leg''s stop geometry against ATR on gold, not a Stage-0 record for MGC futures.
+  The leg trades on ib_paper only (no real-money roster) and its evidence record reads coverage_state harness_failed.'
+power:
+  expected_n: 360
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'The trade count is NOT measured yet: 18 trades in the 54 committed days (0.33 per day) projects to about 360 over 1,100 days, an ESTIMATE;
+    the unit is INDETERMINATE below 100 trades or 100 computable ATR14 values (manager condition). The power table is a PROXY: the test is a PAIRED
+    reweighting (the same trades in every arm, only the weights differ), so the per-trade sd cancels in the ratio M2(B_k)/M2(A); the registered
+    bar is the 80% bootstrap lower bound >= 0.80 of that ratio. alpha 0.1 is the nearest tabulated level to that one-sided 80% bound; d 0.25 needs
+    about 99 trades at that level.'
+  feasibility:
+    source: none
+    accrual_basis: Replays about 1,100 days of public Dukascopy 15m history; nothing accrues. The trade count is measured when the run lands.
+evidence_class:
+  holdout: dev_folds
+  claim: sizing
+decision_rule:
+  id: RULE-IB-GROSS-ATR-FLOOR-S0-MGC15-XAUPROXY
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'A = current sizing: risk 1.5% of equity over |entry-sl|, on the same trades and the same compounding equity path.'
+  statistic: 'Steps registered in order, none previewed: (1) fetch Dukascopy XAU_USD 15m for 1,100 days (fetch_backtest_candles.py --source dukascopy);
+    (2) exit_lever_ablation.py --leg ict_scalp_mgc_15m --arm A= --data-csv <that csv>, the leg as declared, MGC''s own cost stack; (3) the ib_gross_atr_floor.evaluate
+    test UNCHANGED on those rows: ATR14 at entry from bars closed before entry_time at 15m; M1 max concurrent gross notional / equity; M2 = sum(w_i
+    x net_r_i) and its ratio to arm A with the 80% bootstrap lower bound (one-sided 20th percentile, 10,000 trade resamples, seed 20261119); M3
+    return / max drawdown; w_i = |entry-sl| / max(|entry-sl|, k x ATR14).'
+  rule: PASS for the smallest k in {0.5, 1.0} where M1 <= 1.5 at every point AND the 80% bootstrap lower bound of M2(B_k)/M2(A) >= 0.80 AND M3(B_k)
+    >= 0.90 x M3(A). FAIL if no k passes. INDETERMINATE if fewer than 100 trades come out of step 2 or fewer than 100 have a computable ATR14.
+    Thresholds, k grid, window, proxy and seed are fixed now and not changed after any result. A PASS is a result on a spot-gold proxy and is
+    not actionable without a MGC-futures confirmation and the operator-gated Tier-3 decision.
+  pass_action: a data-backed Tier-3 PROPOSAL to size the 15m scalp on max(stop, k x ATR14) is only drafted after a confirmation on actual MGC
+    futures candles (the proxy has no roll and a different session); config is not edited here.
+  fail_action: the floor does not rescue the 15m scalp's gross exposure on gold at these k; the next lever is a per-leg risk_pct for the 15m scalp
+    (row IB-GROSS-NO-CAP-FIX). The caps stay until a lever passes.
+  what_it_does_not_do: 'Changes no sizer, no cap, no config; places no order; adds no gate. Says nothing about MGC futures directly (spot proxy).
+    No verdict statistic was computed before this unit was written: the harness self-test used planted data only.'
+  min_n: 100 trades and 100 computable ATR14 values
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'planning stand-in, not a measurement: ib_paper is bricked by the cap today and the 15m scalp is the leg whose tight stop drives it.'
+practice_precedent: RQ-20261119-b9a4-01 (the vacuous ATR-floor run this re-registers on the missing leg); docs/research/mgc-sizing-oversize-2026-10-24.md;
+  scripts/ops/dukascopy_instruments.py (the adjudicated MGC -> XAU_USD proxy).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 45
+  basis: 'ESTIMATE: the Dukascopy 15m fetch of 1,100 days (about 105k bars) dominates, then one ict_scalp harness pass and the floor test (seconds).'
+  why_runner: fetches keyless public candles (Dukascopy XAU_USD 15m, not in the candle dataset); CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/ict_mgc_xau_atr_floor.py
+  - run
+  - --root
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261119-d4f8-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IB-GROSS-NO-CAP-FIX
+- RQ-20261119-b9a4-01
+- scripts/research/ict_mgc_xau_atr_floor.py
+- scripts/ops/dukascopy_instruments.py
+population: ict_scalp_mgc_15m trades over the last 1,100 days on the Dukascopy XAU_USD 15m proxy of MGC, as declared in config/strategies.yaml,
+  MGC's own cost stack.
+last_dispatched_at: '2026-11-19T13:02:42+00:00'

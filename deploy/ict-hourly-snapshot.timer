@@ -8,11 +8,13 @@
 Description=Trigger ict-hourly-snapshot every hour
 
 [Timer]
-# Fire on the top of every hour. RandomizedDelaySec spreads load so a
-# fleet of VMs doesn't hit Telegram simultaneously, and the script's own
-# flock guards against a missed-tick replay racing the next on-time
-# firing.
-OnCalendar=hourly
+# Fire once an hour at :07, NOT on the top of the hour (LIVE-VM-HOURLY-BURST,
+# 2026-11-19): on the hour this job (34% of a CPU, vm-cpu-sample #27025) and
+# the work digest's hourly build (32%) landed on top of the trader's 1h
+# bar-close work on a 2-OCPU host (machine 99.9% busy vs 34.9% off the hour,
+# #27035). RandomizedDelaySec spreads load, and the script's own flock guards
+# against a missed-tick replay racing the next on-time firing.
+OnCalendar=*-*-* *:07:00
 RandomizedDelaySec=60
 Persistent=true
 Unit=ict-hourly-snapshot.service

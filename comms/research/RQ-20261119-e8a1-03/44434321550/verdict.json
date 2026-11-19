@@ -1,0 +1,86 @@
+{
+ "rule": "RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER",
+ "window": [
+  "2020-07-01",
+  "2026-10-15 23:59"
+ ],
+ "multiplier": 0.5,
+ "primary": {
+  "C": 0.1,
+  "q": 0.2
+ },
+ "grid": [
+  {
+   "C": 0.1,
+   "q": 0.1
+  },
+  {
+   "C": 0.1,
+   "q": 0.2
+  },
+  {
+   "C": 0.1,
+   "q": 0.3
+  },
+  {
+   "C": 1.0,
+   "q": 0.1
+  },
+  {
+   "C": 1.0,
+   "q": 0.2
+  },
+  {
+   "C": 1.0,
+   "q": 0.3
+  }
+ ],
+ "cpcv": {
+  "n_groups": 6,
+  "k_test": 2,
+  "embargo_days": 7.0
+ },
+ "families": {
+  "TD": {
+   "verdict": "PASS",
+   "reasons": []
+  }
+ },
+ "read_state": "measured",
+ "verdict": "pass",
+ "population": "real-money gate legs' CPCV out-of-sample Stage-0 trades, per family: TD n_gate=1587 (trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop)",
+ "n": 1587,
+ "note": "TD: chosen mlgbm, arms mlgbm PASS (paired +0.0013, disagree 0.230, own pass)",
+ "records": [
+  {
+   "family": "TD",
+   "target": "mlgbm",
+   "verdict": "pass",
+   "n": 1587,
+   "population": "TD gate legs CPCV OOS trades, arm mlgbm",
+   "paired": {
+    "n": 1587,
+    "delta_ch_vs_base_mean_r": 0.0013,
+    "delta_ch_vs_base_lb95_r": -0.0086,
+    "delta_ch_vs_base_lb_deflated_r": -0.0118,
+    "disagree_rate": 0.4568,
+    "reduce_rate_base": 0.4077,
+    "reduce_rate_ch": 0.3938,
+    "delta_base_vs_take_r": 0.0003,
+    "delta_ch_vs_take_r": 0.0016,
+    "maxdd_base_r": 22.267,
+    "maxdd_ch_r": 21.545,
+    "cvar5_base_r": -1.0889,
+    "cvar5_ch_r": -1.1036
+   },
+   "disagree_rate_cells": 0.2304,
+   "own_checks": {
+    "a_noninferior": true,
+    "b_risk": true,
+    "c_beats_random": true,
+    "d_not_vacuous": true,
+    "e_folds": true
+   }
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+# Every 15 min at :02/:17/:32/:47 UTC (manager 2026-11-19: 15, not 5, so the clock does not add
+# ~288 runs/day to a ~463-deep queue). Install: sudo bash scripts/ops/install_trainer_keeper_dispatch.sh
+[Unit]
+Description=15-min trainer dispatch of live-review-wake.yml (LTR-GH-WAKE-CRON-THROTTLED)
+
+[Timer]
+OnCalendar=*-*-* *:02,17,32,47:00 UTC
+RandomizedDelaySec=30s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

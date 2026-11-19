@@ -53,14 +53,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dedupe:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.d.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ops/schedule_keeper.py
+          sparse-checkout-cone-mode: false
+      - id: d
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/ops/schedule_keeper.py dedupe
+          --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
+
   check:
+    # HOURLY-CRON-SCHEDULE-DROP (2026-11-19): schedule-keeper dispatches a dropped hour; dedupe skips the late cron of that slot.
+    needs: dedupe
     if: |
+      needs.dedupe.outputs.skip != 'true' && !cancelled() && (
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'repository_dispatch' &&
        (github.event.client_payload.issue.user.login == github.repository_owner ||
         github.event.client_payload.issue.user.login == 'github-actions[bot]') &&
-       contains(github.event.client_payload.issue.labels.*.name, 'dashboard-edge-watch-now'))
+       contains(github.event.client_payload.issue.labels.*.name, 'dashboard-edge-watch-now')))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

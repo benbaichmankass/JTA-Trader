@@ -212,7 +212,9 @@ def plan(firings: List[Dict[str, Any]], state: Dict[str, Any], cfg: Dict[str, An
     chosen: Optional[Dict[str, Any]] = None
     limited: List[Tuple[Dict[str, Any], str]] = []
     for f in sorted(firings, key=lambda x: order.get(x["kind"], len(KINDS))):
-        if f["key"] in seen:
+        if not _wakes(f["kind"], cfg):
+            limited.append((f, "label_only"))
+        elif f["key"] in seen:
             limited.append((f, "deduped"))
         elif any(s == f["symbol"] and now - t < cool for t, s in stamps):
             limited.append((f, "cooldown"))
@@ -225,6 +227,16 @@ def plan(firings: List[Dict[str, Any]], state: Dict[str, Any], cfg: Dict[str, An
         else:
             chosen = f
     return chosen, limited
+
+
+def _wakes(kind: str, cfg: Dict[str, Any]) -> bool:
+    """False when the detector is LABEL-ONLY (``wake: false`` in its config block): it still detects and every firing
+    is logged as a label (the data path the trigger-replay units read), but it never wakes a desk session. Operator D8,
+    2026-11-18 ("Adopt it (Recommended)", docs/design/desk-entry-review-redesign-2026-11-11.md § 6 Q4): the detectors
+    that produced 0 entries in 72 wakes stop spending wakes; they are re-admitted only on a passing replay unit.
+    ``liquidity_sweep`` is emitted by the ``level_break`` block, so it follows that block's flag."""
+    block = (cfg.get("detectors") or {}).get("level_break" if kind == "liquidity_sweep" else kind)
+    return not (isinstance(block, dict) and block.get("wake") is False)
 
 
 def _parse(v: Any) -> Optional[datetime]:

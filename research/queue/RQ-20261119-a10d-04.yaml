@@ -1,0 +1,201 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; 05:35Z / 06:06Z: PI-20261119-K7ZSW5Z7-0003 FIRST). The deciding read for the operator's
+# ml_entry_eq_struct demotion question. Decision rule and verdict meanings registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-a10d-04
+title: 'ml_entry_eq_struct REAL-MONEY DECIDING READ: does the FROZEN served artifact, on its PINNED pool and the graded confirm window, keep a
+  positive net-of-cost edge when walked through the alpaca_live one-slot whole-share T+1 cash book (at every cash level on a fixed grid)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+practice_precedent: 'T8 / M13 (docs/reference/trading-and-model-practice-principles.md): grade a live leg on the population the account can actually
+  trade, with inputs held fixed (served boosters, own pool, graded window); a re-read of a used window is graded at the deflated bar of its read
+  count.'
+intervention_controls:
+  not_applicable: Replays an already-graded population through the account's sizing constraints; the arms are cash levels and settlement variants
+    of the same trade list, not interventions. No order is placed and no config changes.
+question: 'Over the restricted-LONG decisions of the FROZEN ml-entry-eq-struct-ens5 boosters (no refit) on the artifact''s own 173 pool_symbols,
+  confirm window 2025-07-15..2026-10-31, net of the Alpaca cost stack (the population that reproduces RQ-20261107-98e3-06 exactly, n 207, mean
+  +0.4922 R): when those trades go through the alpaca_live book (one slot, whole shares, live sizer risk_pct / 0.9 cash wall / 1.5x round-up,
+  T+1 settlement, live pick order by predicted score) at cash 250 / 1,000 / 5,000 USD, is the taken mean net R above the deflated bar at each
+  level?'
+why_this_matters: 'ml_entry_eq_struct trades real money on alpaca_live, and the operator''s demotion question (manager 17:37Z email, 2026-11-19)
+  hangs on four reads that disagree: 98e3-06 confirm +0.492 R n 207 (reproduced exactly by e8a1-04), dev OOF refits 98e3-06 +0.132 n 1,691, c21d-06
+  +0.0845 n 1,628 and 207f-01 -0.0015 n 1,016, and 207f-01''s live-book arm -0.058 R n 97. Every dev read is a REFIT on a pool that the live POOL_RULE
+  rebuilt at run time (pool 173 -> 172 between runs, revised bars), and the only book read (207f-01) was a dev refit at synthetic cash. None measured
+  the SERVED model through the ACCOUNT on the held-out window. This read does, with both moving parts removed.'
+iteration:
+  attempt: 1
+  due_by: '2026-11-21'
+  from_result: RQ-20261111-207f-01
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  verdict_read: fail
+  diagnosis: 'Reconciliation (ML-PRIMARY-9 05:45Z, PI-20261119-K7ZSW5Z7-0003): the confirm read reproduces exactly from the frozen artifact on
+    its pinned pool (e8a1-04 PASS), so the served model''s held-out per-trade edge is not in doubt. The disagreeing dev reads differ in what was
+    REFIT and on WHICH pool (run-time pool/bar snapshot), so they measure the recipe''s stability, not the served model. The open question is
+    whether the account''s constraints (one slot, whole shares, cash wall, T+1) keep the edge: 207f-01''s -0.058 R n 97 answered it only for a
+    dev refit at synthetic $200.'
+  search: 'none: one artifact, its own tau and pool, the graded window; the cash grid and the reported settlement arms are fixed now'
+levers:
+- name: cash_book_constraints
+  values:
+  - cash 250
+  - cash 1000
+  - cash 5000
+  hypothesised_effect: the one-slot T+1 book takes a subset of the 207 trades whose mean net R stays above the deflated bar at every cash level
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  alpha: 0.05
+  design: one_sample
+  effect_units: R
+  expected_n: 100
+  sd: 1.09
+  min_detectable_effect: 0.34
+  power: 0.8
+  basis: 'ESTIMATE: per-trade sd 1.09 R (98e3-06 iid se 0.0758 x sqrt 207); the one-slot T+1 book takes a subset of the 207 candidates (207f-01''s
+    dev book took 97 of its candidates), so n_taken ~ 80-150. At n 100 the se is ~0.11 R, so the N=5 deflated point bar (t_min 1.19) needs a taken
+    mean >= ~0.13 R and FAIL needs mean + 2.57 x se < 0 (mean <= ~-0.28 R). A taken mean near the unconstrained +0.49 R passes with room; a mean
+    near 0 is INDETERMINATE by construction. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca bars (read-only key) for the pinned pool; nothing accrues.
+baseline:
+  definition: Zero net R per taken trade at the deflated bar of the 5th ENTRY-EQ read of this window; the unconstrained frozen population (+0.4922
+    R n 207) is reported beside each arm.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261119-a10d-04-EQSTRUCT-FROZEN-BOOK
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 0 R per taken trade, deflated for the read count
+  statistic: 'scripts/research/alpaca_live_book.py frozen-book: claim the holdout read (family ENTRY-EQ; N = prior reads + 1, 5 at registration)
+    BEFORE any bar is read; score the frozen boosters on the pinned pool (ml_entry_equity._pinned_pool_and_bars + build_table with the artifact''s
+    structure_exit + _artifact_scorer); check the population reproduces 98e3-06 (n 207, |mean - 0.4922070639835765| <= 1e-6); attach entry / stop
+    / entry and exit times (attach_prices); walk the taken trades through replay() at cash 250 / 1,000 / 5,000 with the live sizer constants (src/units/accounts/risk.py,
+    accounts.yaml alpaca_live risk_pct). Per arm: n_taken, taken mean net R, iid se, monthly return %, refusals by reason. Reported only: the
+    same cash levels without T+1, and an unconstrained multi-slot arm.'
+  rule: 'Per cash arm: INDETERMINATE if n_taken < 30; PASS if taken mean net R > 0 AND mean >= point_t_min(N) x se; FAIL if mean + ci_z(N) x se
+    < 0; INDETERMINATE otherwise (N and its bar from holdout_lock.claim_read; N = 5 gives t_min 1.1926, ci_z 2.5723). UNIT: INDETERMINATE unless
+    the frozen population reproduces 98e3-06 exactly; PASS iff every cash arm PASSES; FAIL iff every cash arm FAILS; INDETERMINATE otherwise.
+    Thresholds and the grid are fixed now.'
+  meaning_for_the_leg:
+    pass: 'The served model''s held-out edge survives the account at every plausible balance: the data do NOT support demoting ml_entry_eq_struct;
+      the 207f-01 book read is superseded (a dev refit). Recommend keep; the operator decides.'
+    fail: 'The account''s constraints turn the edge negative at every balance on the grid: the data support demoting the leg to the demo floor
+      (alpaca_paper) while the book is iterated. Demotion is the operator''s decision; this read is the evidence put to them.'
+    indeterminate: Either thin, not separable from zero at the deflated bar, or cash-dependent (the per-arm table says which). No data-backed
+      case to demote or to clear; the operator decides on the per-arm table against the account's own balance (never committed). If the cause
+      is the population not reproducing, the read is void and re-runs once the bar revision is named.
+  pass_action: 'Report to the manager for the operator''s demotion question: keep, with the per-arm table. Record the result on PI-20261119-K7ZSW5Z7-0003
+    and close it; the evidence record''s known_gaps line on cash-book sizing is updated in a separate PR.'
+  fail_action: 'Report to the manager for the operator: the data support demotion to the demo floor; nothing is changed by this lane (demotions
+    wait for the operator). File the book-side iteration (sizing / slot policy) as a P8 unit.'
+  what_it_does_not_do: Places no order; changes no roster, mode, execution, sizing or config; demotes nothing; refits nothing. The live balance
+    is never read or committed (the grid stands in for it). Claims one holdout read of the confirm window (the 5th ENTRY-EQ read).
+  min_n: 30 taken trades per cash arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.5
+  basis: 'stand-in as e8a1-04: settles a real-money leg''s demotion question; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 130
+  why_runner: Alpaca market data (read-only key, the route e8a1-04 used); scoring only, no LightGBM fit; the book replay is seconds.
+  basis: 'MEASURED neighbour: e8a1-04 (same bar fetch, table and frozen scoring) ran 7,241 s (~121 min, 10,877 Alpaca calls; run 44439340946 measurement.runtime_s);
+    the book replay adds seconds.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - frozen-book
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --artifact
+  - ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  - --start
+  - '2025-07-15'
+  - --end
+  - '2026-10-31'
+  - --expect-n
+  - '207'
+  - --expect-mean
+  - '0.4922070639835765'
+  - --rule-id
+  - RULE-RQ20261119-a10d-04-EQSTRUCT-FROZEN-BOOK
+  - --registered-at
+  - '2026-11-19'
+  inputs:
+    research_unit: RQ-20261119-a10d-04
+ml_consumer:
+  consumer: config/strategies.yaml
+  decision: the operator's demotion question for ml_entry_eq_struct on alpaca_live (keep on real money vs demote to the demo floor); no change
+    from this unit
+  legs:
+  - ml_entry_eq_struct
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: The frozen served artifact's own 173 pool_symbols (pinned), confirm window 2025-07-15..2026-10-31, restricted-LONG decisions at the
+  artifact tau 0.25, net of the Alpaca cost stack, walked through the alpaca_live one-slot whole-share T+1 cash book at cash 250 / 1,000 / 5,000.
+related:
+- research/queue/RQ-20261119-e8a1-04.yaml
+- research/queue/RQ-20261107-98e3-06.yaml
+- research/queue/RQ-20261111-207f-01.yaml
+- research/queue/RQ-20261117-c21d-06.yaml
+- scripts/research/alpaca_live_book.py
+- scripts/research/ml_entry_equity.py
+- comms/strategy_evidence/ml_entry_eq_struct.json
+what_it_does_not_do: Places no order; changes no roster, mode, execution, sizing or config; demotes nothing; refits nothing. The live balance
+  is never read or committed (the grid stands in for it). Claims one holdout read of the confirm window (the 5th ENTRY-EQ read).
+last_dispatched_at: '2026-11-19T09:09:43+00:00'
+amendments:
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)
+  text:
+  - 'manager override 2026-11-19 09:10Z: hand dispatch for the operator decision deadline (research-script-run.yml, research_unit=RQ-20261119-a10d-04,
+    run 44493850432, queued 09:09:43Z). The dispatcher was firing one unit per delayed cycle under repo backpressure. Rule, arms, thresholds and
+    command unchanged; this stamp stops the dispatcher from double-firing it.'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-04-EQSTRUCT-FROZEN-BOOK
+  evidence:
+  - comms/research/RQ-20261119-a10d-04/44493850432/verdict.json
+  - comms/research/RQ-20261119-a10d-04/44493850432/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  rows: 3
+  verdict: indeterminate
+  reason: 'run 44493850432 (research-script-run.yml, started 09:33Z, success). REPRODUCTION GATE PASSED: frozen ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5,
+    pinned 173-ETF pool, 2025-07-15..2026-10-31, n 207 (expect 207), mean net R 0.4922070639835765 (exact), 0 pool symbols without bars. Holdout:
+    5th ENTRY-EQ read, bar N=5 (point_t_min 1.1926, ci_z 2.5723). PER CASH ARM (one-slot whole-share T+1 alpaca_live book, risk 2%, wall 0.9,
+    roundup 1.5): cash_250 n_taken 22 / 207 (slot_busy 180, unaffordable 4, roundup 1), mean -0.0345 R, se 0.2608, t -0.13, ci [-0.705, +0.636],
+    P&L -4.81 USD over 15 months (4 with no trade); cash_1000 n_taken 22 (slot_busy 184, roundup 1), mean -0.1968 R, se 0.2506, t -0.79, ci
+    [-0.841, +0.448], P&L -38.36 USD; cash_5000 n_taken 22 (slot_busy 185), mean -0.0818 R, se 0.2584, t -0.32, ci [-0.747, +0.583], P&L -23.58
+    USD. Every arm is INDETERMINATE: n_taken 22 < the registered min 30, and no arm clears either bar (no mean >= t_min x se, no upper bound < 0).
+    Unit verdict INDETERMINATE (the arms agree on indeterminate; the population reproduced, so the read is valid, not void).
+    MEANING FOR THE LEG (registered meaning_for_the_leg.indeterminate, cause = THIN): no data-backed case to demote ml_entry_eq_struct and none to
+    clear it; the operator decides on this table against the account''s own balance. What the table adds: the one-slot book takes ~11% of the
+    signals (the slot is busy for ~88% of them), so 15 months give only 22 book trades per arm and min 30 is not reachable on this window with one
+    slot; the 22 taken trades average below zero at every cash level while the 207-signal population averages +0.49 R, a gap the book design (first
+    signal wins the slot) may cause and this read cannot separate from noise.'

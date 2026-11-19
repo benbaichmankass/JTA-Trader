@@ -1,0 +1,165 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). docs/plans/ml-week-plan-2026-11-19.md D4 task 4 (section 4 #7), unblocked by
+# RQ-20261118-04a5-06 PASS (TD reference corpus re-pinned). Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-e8a1-03
+title: 'D4 Beagle LEARNER challenger: on the re-pinned TD corpus, does a MONOTONE LightGBM on Beagle-1''s exact features (target win,
+  monotone directions fixed from Beagle-1''s own coefficient signs) beat the Beagle-1 logistic recipe, paired on the same CPCV splits?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series (docs/reference/trading-and-model-practice-principles.md): one factor per unit, paired against the incumbent
+  on identical splits. A monotone GBM keeps the incumbent''s direction of every effect (so it cannot learn a spurious reversal on ~2-3k
+  trades) while letting each effect bend and interact, which is the cheapest step up in learner capacity from a linear logit.'
+question: 'Same corpus, features (src/runtime/overlay_features.FEATURES), target (win = P(net_r > 0)), quantile q 0.20, multiplier 0.5
+  and CPCV splits as Beagle-1 (RULE-ML-OVERLAY-NONINFERIOR-V1 recipe), on the TD family re-pinned at current config (04a5-06, run
+  44417153590). ONE FACTOR CHANGED: the learner, L2 logistic (C 0.1) -> a monotone-constrained LightGBM classifier (200 trees, 7 leaves,
+  min 50 per leaf), each feature''s monotone direction = the sign of the committed Beagle-1 coefficient (ml/overlay/overlay_td.json),
+  unconstrained where |coef| < 0.02. Does it pass its own V1 gate AND beat Beagle-1 paired AND disagree on >= 20% of cells?'
+why_this_matters: 'Beagle-1 (logistic, TD family, reduce x0.5) is live on real money. Every D4 challenger so far changed the threshold or
+  the target of the same linear model (cc86-01 EV threshold: disagreed on 8.7%; aadc-03 tail1r/evweight: parity-blocked, re-armed in
+  #27039). The learner family is the untested lever on research/levers/ml-overlay-td-v1.yaml. Run it now, beside the re-armed target
+  arms, so Friday''s queue holds a D4 read whichever way aadc-03 lands.'
+iteration:
+  subject: ml-overlay-td-v1
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-06
+  verdict_read: pass
+  diagnosis: '04a5-06 (run 44417153590) PASSED its fidelity rule (TD n_gate 1587, every gate leg built and trade-aligned at current
+    config), so D4 reads can be graded again. Before it, every TD overlay read since 10-24 was INDETERMINATE on trade parity (0.09-0.85),
+    so no learner, target or feature arm has been graded. The diagnosis carried from 5785-05 / cc86-01 stands: the P(win) ranking cuts
+    trades that are still net positive, and a cut-off move barely changes which trades are cut (8.7% disagreement). A different learner
+    changes the ranking itself; monotone constraints fixed from Beagle-1''s signs keep it from fitting reversals on a small corpus. A
+    synthetic plumbing run (self-test) produced disagreement 0.36 against the logistic base, so the arm is not a threshold in disguise
+    by construction; no verdict is drawn from it.'
+  search: 'one lever (learner) at one value; hyperparameters fixed before any run (MLGBM_PARAMS in the harness); monotone directions
+    from the committed coefficients by a stated rule; nothing chosen on this corpus'
+  attempt: 1
+  due_by: '2026-11-26'
+  map_entries:
+  - research/levers/ml-overlay-td-v1.yaml
+levers:
+- name: overlay_learner
+  values: [logistic_l2 (Beagle-1), monotone_lgbm]
+  hypothesised_effect: the monotone GBM ranks the tail winners above the small losers better than the linear logit, so the reduced trades'
+    mean R falls further below take-all and the paired R vs Beagle-1 is positive at a disagreement rate >= 20%
+decision_rule:
+  id: RULE-RQ20261119-e8a1-03-D4-MONOTONE-GBM
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_overlay_noninferior.py --cpcv-challenger mlgbm (function cpcv_challengers, the aadc-03 statistic with a
+    learner arm): on the 4 gate legs'' CPCV out-of-sample trades, net_r cost-net (fee + slippage + funding) in R of initial risk.
+    (own) the RULE-ML-OVERLAY-NONINFERIOR-V1 checks a-e vs take-all; (paired) mean of d = (m_ch - m_base) x net_R on path-averaged
+    multipliers, month-block one-sided LB95 and LB at the deflated level reported; (disagree) share of (trade, CPCV path) cells where
+    the multipliers differ. Reported: reduce rate, reduced-trade mean R, maxDD and CVaR5 of both arms, the family V1 verdict.'
+  rule: 'PASS iff the mlgbm arm''s own V1 gate passes (all of a-e) AND paired mean d > 0 AND disagree >= 0.20. FAIL otherwise.
+    INDETERMINATE iff the family corpus is INDETERMINATE by the V1 harness reasons (parity < 0.98 against the 04a5-06 reference, n_gate
+    < 200, unaligned trades). The paired LBs are reported, not gating: this is a dev screen on the window Beagle-1 was selected on, and
+    any swap rests on a forward read. Thresholds are aadc-03''s, fixed now and not changed after any result.'
+  pass_action: 'A follow-up build exports the monotone GBM as a shadow challenger artifact (a GBM is not the logistic overlay JSON; the
+    harness deliberately exports nothing for a learner arm) and adds GBM scoring to src/runtime/overlay_shadow.py, log-only beside
+    Beagle-1. Then a forward paired read, n = 60 disagreement packages, accrual scaled by the measured disagree rate. A Tier-3 swap of the
+    real-money overlay only after that forward read passes.'
+  fail_action: 'Record the learner lever on research/levers/ml-overlay-td-v1.yaml (one value tested). If the arm passes its own gate and
+    the paired test but disagrees < 0.20, the learner is acting as a threshold in disguise. Next D4 lever: the FEATURE family (the
+    path_state block, made live-computable in overlay_features first; ml-week-plan D4 task 3), not another learner.'
+  what_it_does_not_do: Changes no served overlay, no config, no sizing; places no order. A PASS is a shadow-challenger build, not a swap.
+  min_n: 200 gate trades (the V1 harness floor)
+family_note: 'Same family and splits as aadc-03 / cc86-01; the deflated paired LB counts every D4 arm read on this corpus.'
+power:
+  expected_n: 1587
+  min_detectable_effect: 0.024
+  effect_units: metric
+  sd: 0.34
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED as aadc-03 (same corpus, n_gate 1587 from 04a5-06): d is non-zero only on disagreement cells; at 20% disagreement and
+    per-disagreement |d| sd ~0.75 R, sd(d) ~0.34 R; month-block clustering ~2x the SE, MDE ~0.024 R. A dev screen: the rule needs a
+    positive paired point estimate, not a CI. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles through the Stage-0 harness; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms size the same TD trades; only which trades get the x0.5 reduce differs'
+  matched_random:
+    draws: 2000
+    note: 'check c (beats a same-rate random reduce, permuted within calendar groups) is part of the own V1 gate'
+  best_static:
+    grid:
+    - take_all
+    - beagle_1_logistic (incumbent, refit per split)
+    - monotone_lgbm (this arm)
+    excludes_test_folds: true
+    note: CPCV out-of-sample only; nothing tuned on the test folds
+  bootstrap_group: month
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in as aadc-03: a challenger that cuts fewer still-positive TD trades on the real-money TD legs; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  why_runner: 'Fetches keyless public candles for a pinned window (needs_internet); reads no trainer data. lightgbm is installed on the
+    research runner.'
+  basis: 'INFERRED from 04a5-06 / cc86-01 (same corpus build ~40-45 min); 15 CPCV splits x one 200-tree fit adds seconds.'
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261119-e8a1-03
+  commands:
+  - - python3
+    - scripts/research/ml_overlay_noninferior.py
+    - --family
+    - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+    - --start
+    - '2020-07-01'
+    - --end
+    - 2026-10-15 23:59
+    - --days
+    - '2330'
+    - --reference-corpus
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
+    - --parity-basis
+    - trade
+    - --cpcv-challenger
+    - mlgbm
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/runtime/overlay_shadow.py
+  decision: whether a monotone-GBM challenger is built as a log-only shadow beside Beagle-1 and gets a forward paired read that could lead
+    to a Tier-3 swap of the TD overlay artifact
+  legs: [trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+  book: money
+related:
+- RQ-20261117-aadc-03
+- RQ-20261116-cc86-01
+- RQ-20261118-04a5-06
+- ML-REAL-MONEY-OVERLAY
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-19T01:37:46+00:00'
+grading:
+  attested: RULE-RQ20261119-e8a1-03-D4-MONOTONE-GBM
+  auto: true
+  decision_rule_id: RULE-RQ20261119-e8a1-03-D4-MONOTONE-GBM
+  evidence:
+  - research/results/RQ-20261119-e8a1-03/44434321550.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

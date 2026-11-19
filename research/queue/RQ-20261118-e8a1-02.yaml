@@ -1,0 +1,165 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV), who assigned the D9 specs to this lane (22:53Z). Iteration of RQ-20261112-1c4e-01 using
+# what RQ-20261118-04a5-05 learned on the exit side. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-e8a1-02
+title: 'D9 Whippet, ENTRY order at the exit''s passing policy: does a post-only maker ENTRY resting at the MID with a 1-minute market
+  fallback (04a5-05''s passing exit policy) improve the frozen v1 model''s own held-out decisions in R per decision, where the touch at
+  W 5 (1c4e-01) lost to adverse selection?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'T-series execution practice (docs/reference/trading-and-model-practice-principles.md): when a resting order''s
+  unfilled leg carries the adverse selection, shorten its exposure and raise its fill probability before abandoning the passive leg. On
+  the exit side of this same harness that sequence turned a FAIL (aadc-02, W 5 touch) into a PASS (04a5-05, W 1 mid).'
+question: 'Same decisions, data, approximation, entry epoch and calibration arm as RQ-20261112-1c4e-01 (frozen v1 booster, 60-perp
+  pool, tau 0.10, held-out 2025-10-01..2026-09-30). ONE FACTOR CHANGED: the entry order policy, F (rest at the near touch, 5-min market
+  fallback) -> M1 (04a5-05''s passing exit policy, applied as one fixed policy: rest at the modelled MID, 1-min market fallback). Is the
+  paired delta, maker minus market entry, positive in R per decision at the deflated level?'
+why_this_matters: '1c4e-01 FAILED at -0.0041 R per decision (CI95 [-0.0087, +0.0002]), n 9,210 on 53 symbols: fill rate 0.73, filled
+  +7.16 bps, unfilled -22.61 bps. The runaway (unfilled) leg carried the loss: v1 picks a direction, and when it is right the price leaves
+  the resting limit. On the exit side, W 1 cut the unfilled loss (-18.2 -> -6.9 bps, aadc-10) and the mid raised the fill rate (0.54 ->
+  0.75, 04a5-05 PASS +0.0060 R per exit). The entry is every decision, not ~25% of them, so a pass here is worth ~4x the exit lever per
+  unit of effect. Cost is ~90% of v1''s gross (RQ-20261112-a7e8-03): execution is the binding constraint on the real-money D3 model.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261112-1c4e-01
+  verdict_read: fail
+  diagnosis: '1c4e-01 (local run 2026-11-12T20:47Z) FAILED: maker entry -0.0041 R per decision, day-block CI95 [-0.0087, +0.0002], n
+    9,210 on 53 symbols; fill rate 0.732, +7.16 bps if filled, -22.61 bps if unfilled; v1''s mean sat BELOW the matched-random-direction
+    band [-0.0012, +0.0005], so the loss is directional selection (runaways), not the approximation (calibration +1.73 bps, inside
+    [+1.0, +3.0]). The exit-side sequence on the same harness (aadc-02 -> aadc-10 -> 04a5-05) showed that W 1 shrinks the unfilled leg
+    and the mid raises the fill rate; the combination PASSED. A 2-symbol smoke of this arm (BTC/SOL, n 408, scratch ledger, not a read)
+    showed fill 0.86, filled +3.80 bps, unfilled -9.72 bps: both legs moved in the predicted direction; no verdict is drawn from it.'
+  search: 'none on the test window: one fixed policy (W 1 + mid) carried over whole from 04a5-05, which chose it on EXIT data; W and peg are
+    not gridded here. The calibration arm stays at a3f1-01''s W 5.'
+  attempt: 2
+  due_by: '2026-11-25'
+levers:
+- name: entry_order_policy
+  values: [market_entry, post_only_mid_w1]
+  hypothesised_effect: the unfilled loss falls from -22.6 bps toward the exit side's -7 to -11 bps and the fill rate rises above 0.73, so
+    the paired delta turns positive
+data_and_approximation: 'Unchanged from RQ-20261112-1c4e-01 (Binance Vision daily 1m futures klines; touch at T with a one-tick spread;
+  STRICT fill iff some 1m low (buy) / high (sell) in (T, T+W] trades a tick through the limit; else market at the T+W close +- half a
+  tick). The MID arm rests at p, the close of the minute ending at T; W = 1 means only the minute starting at T counts. The smoke above
+  claimed a SCRATCH ledger, never the repo ledger.'
+decision_rule:
+  id: RULE-RQ20261118-e8a1-02-MAKER-ENTRY-MIDPEG
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_maker_replay.py run --unit RQ-20261118-e8a1-02 --entry-w-min 1 --entry-peg mid: pooled mean
+    paired delta_R (maker minus market entry) per decision over the measured v1 held-out decisions, with a day-block bootstrap CI (2000
+    reps) at the DEFLATED lower percentile holdout_lock.claim_read returns for this read (family EXEC, model EXEC-maker-entry-ml_entry_v1;
+    n_tries counts every EXEC read on the window). Reported, never gating: delta in bps, fill rate, delta if filled / unfilled, by side,
+    matched random direction, the traded-5 subset, the calibration arm.'
+  rule: 'INDETERMINATE IF the calibration arm (W 5) is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured decisions <
+    1000 OR distinct symbols < 10. PASS IF mean delta_R > 0 AND the deflated lower bound > 0. FAIL otherwise. The holdout ledger is
+    claimed BEFORE any post-decision 1m bar is read. Thresholds are 1c4e-01''s, fixed now and not changed after any result.'
+  pass_action: 'A fresh-window confirmation first: the same rule on --population dev_oof (v1''s recipe out of fold on the 2022-01..2025-09
+    dev walk-forward; the flag lands with RQ-20261118-e8a1-01, #26992, and run mode needs it wired). Then one Tier-3 proposal to the
+    manager folding entry and exit: ml_entry worked post-only at the mid with a 1-min market fallback on both legs, demo floor / paper
+    first, as an extension of src/units/accounts/maker_entry.py.'
+  fail_action: 'The entry maker is closed even at the mid at W 1: a directional pick runs away from any resting entry within a minute.
+    Record it on the D9 lever map; the entry stays taker and the exit lever (04a5-05 / e8a1-01) carries D9 alone. Next for the entry is
+    not another peg but the learned gate (a fill / runaway probability from pre-T 1m features), only if the exit-side gate (spec B,
+    blocked on e8a1-01) shows that pre-T features predict fills at all.'
+  what_it_does_not_do: No sizing, no config change, no order. A PASS is a confirmation unit then a Tier-3 PROPOSAL, not a change.
+  min_n: 1000 measured decisions on >= 10 symbols
+family_note: 'Ledger family EXEC (as 1c4e-01, aadc-02, aadc-10, 04a5-05): the decision set is fixed and this unit selects nothing; the
+  factor is the execution of a fixed entry, paired.'
+power:
+  expected_n: 9210
+  min_detectable_effect: 0.006
+  effect_units: metric
+  sd: 0.08
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED basis from 1c4e-01 (same decisions): n 9,210 measured on 53 symbols; its CI95 half-width was ~0.0045 R; at the deflated
+    bar (n_tries ~6, z ~2.6) the half-width is ~0.006 R. sd 0.08 R per order (1c4e-01 basis); W 1 shrinks both legs, so the paired sd
+    falls; the run replaces it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms take the identical v1 decision and bracket; only the price and fee of the entry order differ'
+  matched_random:
+    draws: 200
+    note: 'same (symbol, T), entry side drawn at random with v1''s long share. Reported, never gating; v1 BELOW the band is the runaway
+      signature 1c4e-01 showed.'
+  best_static:
+    grid:
+    - market_entry
+    - post_only_touch_w5 (1c4e-01, fixed)
+    - post_only_mid_w1 (this arm, fixed; chosen on exit data by 04a5-05)
+    excludes_test_folds: true
+    note: nothing is chosen on this window
+  bootstrap_group: day
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: +0.006 R on every ml_entry decision (~4x the exit lever''s share); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 15
+  why_runner: needs_internet (keyless public Binance Vision klines); scores a committed booster (no fit). Kaggle kernels have no internet.
+  basis: 'MEASURED: 1c4e-01 ran ~5 min on the same decisions; the 2-symbol smoke ran in under 10 min including the calibration fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - run
+  - --unit
+  - '{unit}'
+  - --entry-w-min
+  - '1'
+  - --entry-peg
+  - mid
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261118-e8a1-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry's entry order should be worked post-only at the mid with a 1-min market fallback (the existing maker entry is
+    demo/paper-fenced at the touch)
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261112-1c4e-01
+- RQ-20261118-04a5-05
+- RQ-20261118-e8a1-01
+- RQ-20261117-aadc-10
+- ML-D9-MAKER-EXIT-HARNESS
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-19T00:59:12+00:00'
+grading:
+  attested: RULE-RQ20261118-e8a1-02-MAKER-ENTRY-MIDPEG
+  auto: true
+  decision_rule_id: RULE-RQ20261118-e8a1-02-MAKER-ENTRY-MIDPEG
+  evidence:
+  - research/results/RQ-20261118-e8a1-02/44433409711.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

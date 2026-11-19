@@ -172,4 +172,15 @@ related:
 - RQ-20261112-3144-02
 - ML-AM-NEXT-LIVE
 population: TM-BENCH v1 (tmb-73f5c3660014), the six money legs as traded, 2,627 test trades in 6 purged calendar folds by entry.
-last_dispatched_at: null
+last_dispatched_at: '2026-11-18T23:01:54+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261118-04a5-07-TM-QUANTILE-LABEL
+  evidence:
+  - research/results/RQ-20261118-04a5-07/44404069465.jsonl
+  - comms/research/RQ-20261118-04a5-07/44404069465/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj), HELD for the manager
+  reason: 'INDETERMINATE by the registered rule''s selfcheck clause, NOT FAIL: run 44404069465''s verdict.json says fail (S-OFFLINE), but its tm_bench selfcheck reports pass=false on two checks. (1) ''lgbm quantile 0.3 head sits below the mean head'': mean q30 -0.604 vs mean -0.604. That is a HARNESS defect in the check, not in the fit: _fit_lgbm(quantile=None) falls back to the module global LGBM_QUANTILE, which --lgbm-quantile 0.3 set, so the check compared q30 with q30 (fixed in this PR). The real arm did fit quantile 0.3 (measurement lgbm_objective quantile, alpha 0.3). (2) ''Stage A: driftless null has no passing action class'': under quantile heads the NULL corpus passes tp_pull_in_1r (the planted corpus passes 7 classes). That one is SUBSTANTIVE: comparing a low quantile of each action''s value across actions favours the low-variance actions (a TP pull-in compresses the outcome spread), so per-action quantile heads pick variance reduction even with no drift. Train corpus clause met (bp2-f4271084b120 materialised, trade-key sha and n 146,158 match); test corpus tmb-73f5c3660014 as registered. Read for the record only, not a verdict: lgbm arm +0.0010 R/trade vs B0 (CI95 [-0.0002, +0.0025]), 2 of 6 folds positive, action rate 0.4%; B0 net +0.1023 R/trade, n 2,627 trades on 6 legs. Iteration input: the quantile-of-each-action label is confounded by per-action variance; a valid quantile lever would target the quantile of the per-state ADVANTAGE (action value minus hold value), not of each action''s value. Not re-run in this configuration. Next D7 family per the fail_action ordering: learner class (CatBoost / a monotone head), then fitted-Q (RQ-20261118 D7 unit from #26935).'
+  rows: 1
+  verdict: indeterminate

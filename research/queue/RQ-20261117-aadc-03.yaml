@@ -140,7 +140,7 @@ run:
     - --days
     - '2330'
     - --reference-corpus
-    - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
     - --parity-basis
     - trade
     - --cpcv-challenger
@@ -167,15 +167,22 @@ related:
 - RQ-20261116-cc86-02
 - RQ-20261029-5785-05
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
-last_dispatched_at: '2026-11-17T12:07:47+00:00'
+last_dispatched_at: '2026-11-19T00:59:12+00:00'
 grading:
   auto: false
   decision_rule_id: RULE-RQ20261117-aadc-03-D4-TARGET-CHALLENGER
   evidence:
-  - research/results/RQ-20261117-aadc-03/44070620023.jsonl
-  - comms/research/RQ-20261117-aadc-03/44070620023/verdict.json
-  graded_at: '2026-11-17'
-  grader: lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), HELD for the manager
-  reason: 'INDETERMINATE by the registered rule''s family clause, NOT FAIL: verdict.json reports the TD family INDETERMINATE on trade parity vs the 09a6-01 reference corpus (eth_4h 0.8473, xrp_4h 0.0882, eth_prop 0.5779, sol_prop 0.4194; all < 0.98), the identical reasons cc86-01 was graded indeterminate on. The two result rows say fail because cpcv_challengers writes each arm''s verdict without inheriting the family INDETERMINATE (harness defect, filed). Read for the record only, not a verdict: tail1r paired -0.0122 R (deflated LB -0.0252), own gate fails (a, c, e), cell disagreement 0.216; evweight paired -0.0029 (deflated LB -0.0142), own gate passes all a-e, disagreement 0.170, reduce rate 0.27 vs Beagle-1 0.41. Neither arm beats Beagle-1 paired on this (parity-failing) corpus. Iteration input: the TD overlay corpus no longer reproduces the reference trades; until it does every TD overlay read on it is indeterminate, so the parity cause is the blocker before any further D4 target or feature arm.'
+  - research/results/RQ-20261117-aadc-03/44433412847.jsonl
+  - comms/research/RQ-20261117-aadc-03/44433412847/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7), HELD for the manager
+  reason: 'FAIL by the registered rule (re-run on the 04a5-06 re-pinned reference corpus): the family is NOT indeterminate this time (TD verdict PASS on fidelity, n_gate 1587, parity_share 1.0 on all four gate legs), so the per-arm clauses decide. tail1r: own V1 gate fails (a_noninferior, c_beats_random, e_folds false), paired mean d -0.0122 R (deflated LB -0.0252) -> fails. evweight: own gate passes a-e, but paired mean d -0.0029 R (deflated LB -0.0142) is not > 0 and cell disagreement 0.170 < 0.20 -> fails. No arm passes -> unit FAIL; nothing exported. The challenger numbers are identical to the first (parity-failing) run 44070620023, as expected: both runs rebuild the corpus from the same current leg configs and only the parity reference changed. DISCLOSURE (amendment): Beagle-1 was fit on the pre-change 10-24 population. fail_action: neither arm was a threshold-in-disguise pass (both fail the paired test), so the next D4 lever is the FEATURE family (path_state, made live-computable in overlay_features first); the learner-family arm (monotone GBM, RQ-20261119-e8a1-03) is queued separately. The first run''s grading (INDETERMINATE on parity, ML-PRIMARY-5) is superseded by this one.'
   rows: 2
-  verdict: indeterminate
+  verdict: fail
+amendments:
+- at: '2026-11-19'
+  before_any_run: false
+  by: lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj)
+  text:
+  - 'RE-PINNED REFERENCE CORPUS (RQ-20261118-04a5-06 pass_action; PI-20261117-ZZUFKM1F-0002 part 1): the first run read trade parity against the 2026-10-24 reference RQ-20261024-09a6-01, which the gate legs'' later config changes (eth_4h tp_r/tp_intent/decision_bar, xrp_4h atr_stop_mult/trail_mult, eth_prop min_confidence, sol_prop trail_mult) and two harness fidelity fixes (#21628, #21898) had drifted to parity 0.09-0.85, so its verdict was INDETERMINATE on parity, not on the challengers. 04a5-06 (run 44417153590) PASSED its fidelity rule (TD n_gate 1587, every gate leg built and aligned). RE-ARMED once with --reference-corpus pointing at its landed __trades.jsonl corpus; rule, arms, thresholds, windows and cost stack unchanged. DISCLOSURE on every read: Beagle-1 was fit and validated on the PRE-change (10-24) population, so this read measures the challengers on the trades the legs now make, not on the trades Beagle-1 was selected on. The grading block below describes the pre-re-pin run; the re-run is graded by lane ML-PRIMARY-8. Counted as a new try in the holdout ledger where it reads held-out bars.'
+rearmed_at: '2026-11-19T00:20:00+00:00'

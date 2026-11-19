@@ -1,0 +1,140 @@
+{
+  "rule": "RULE-DESK-ENTRY-REVIEW-REDESIGN-EVENT-16945-TRIGGER-REPLAY",
+  "family": "level_break_sweep",
+  "window": [
+    "2025-11-01T00:00:00+00:00",
+    "2026-09-15T00:00:00+00:00"
+  ],
+  "firings_detected": 38867,
+  "firings_in_window": 29113,
+  "firings_within_12_bars_of_previous_same_symbol": 17132,
+  "m_cells": 8,
+  "unscored_families": {
+    "near_signal": "firing reads the hourly packet's system_book, not archived per bar: not reconstructable point-in-time",
+    "calendar": "firing reads the packet's economic-calendar block, not archived per bar: not reconstructable point-in-time"
+  },
+  "cells": {
+    "continuation": {
+      "firings_in_window": 29113,
+      "n": 29113,
+      "excluded": {
+        "outside_window": 9754,
+        "unresolved": 0
+      },
+      "n_long": 13823,
+      "n_short": 15290,
+      "mean_net_r": -0.48177741010208386,
+      "mean_b3": -0.5062024457461067,
+      "S3": {
+        "n": 29113,
+        "weeks": 47,
+        "mean": 0.024425035644022885,
+        "alpha_one_sided": 0.00625,
+        "lb_holm1": -0.009849450567054933,
+        "lb_97_5": -0.0035214012560885683,
+        "p_one_sided": 0.04279572042795721,
+        "mde_cluster_r": 0.04730532054066345,
+        "sd": 1.208079031198646
+      },
+      "per_symbol": {
+        "ADAUSDT": {
+          "n": 4772,
+          "S3": 0.02155105668634187
+        },
+        "AVAXUSDT": {
+          "n": 4862,
+          "S3": 0.0019833561453407676
+        },
+        "BTCUSDT": {
+          "n": 4822,
+          "S3": -0.007997457611186344
+        },
+        "ETHUSDT": {
+          "n": 4358,
+          "S3": 0.030807810914441073
+        },
+        "SOLUSDT": {
+          "n": 5107,
+          "S3": 0.03776542032227062
+        },
+        "XRPUSDT": {
+          "n": 5192,
+          "S3": 0.05971429924282328
+        }
+      },
+      "clears": false
+    },
+    "fade": {
+      "firings_in_window": 29113,
+      "n": 29113,
+      "excluded": {
+        "outside_window": 9754,
+        "unresolved": 0
+      },
+      "n_long": 15290,
+      "n_short": 13823,
+      "mean_net_r": -0.4512353679939924,
+      "mean_b3": -0.5078625751601447,
+      "S3": {
+        "n": 29113,
+        "weeks": 47,
+        "mean": 0.05662720716615235,
+        "alpha_one_sided": 0.00625,
+        "lb_holm1": 0.026156900715796846,
+        "lb_97_5": 0.03210576935293612,
+        "p_one_sided": 9.999000099990002e-05,
+        "mde_cluster_r": 0.04145848626285012,
+        "sd": 1.174984453072883
+      },
+      "per_symbol": {
+        "ADAUSDT": {
+          "n": 4772,
+          "S3": 0.05028516792212957
+        },
+        "AVAXUSDT": {
+          "n": 4862,
+          "S3": 0.07271445324162698
+        },
+        "BTCUSDT": {
+          "n": 4822,
+          "S3": 0.08437903029503949
+        },
+        "ETHUSDT": {
+          "n": 4358,
+          "S3": 0.03757748348416017
+        },
+        "SOLUSDT": {
+          "n": 5107,
+          "S3": 0.05296986634303639
+        },
+        "XRPUSDT": {
+          "n": 5192,
+          "S3": 0.04120453095579036
+        }
+      },
+      "clears": false
+    }
+  },
+  "better_rule": "fade",
+  "controls": {
+    "oracle": {
+      "n": 29113,
+      "S3": 0.8374837988222084,
+      "clears": true
+    },
+    "anti_oracle": {
+      "n": 29113,
+      "S3": -0.7580347133067468,
+      "clears": false
+    },
+    "random_side": {
+      "n": 29113,
+      "S3": 0.02579640626242586,
+      "clears": false
+    }
+  },
+  "controls_ok": true,
+  "no_lookahead_prefix_identical": true,
+  "verdict": "NOT_CLEARED",
+  "verdict_reason": "fade: S3 +0.057 R, lb +0.026, p 0.0001 (holm may still upgrade)"
+}

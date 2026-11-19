@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "REPLENISH-PR-HONEST (manager 2026-11-19 09:04Z). (1) research-queue-replenish.yml's PR title/body were hardcoded 'replenish from templates' even when the only output is a plan-driven programme node (template target = 0 under STOP-GENERATED-AUTHORING), so #26927 was read as banned floor-filler and closed; the title/body now state what was written (N programme node(s) / N template unit(s)). (2) research-queue-dispatch.yml's exit-3 branch dispatched the replenisher to 'refill' a floor gap that target 0 cannot fill; it now REPORTS the gap (no dispatch, no page). The 4x/day cron is kept. (3) research_watchdog.py's replenish heal passed target=25, a latent floor-filler path (an explicit target expands templates to meet a count); it now passes no target. Not fired since 2026-11-12: all 25 manual replenish runs read target 0. Test updated: exit 3 reports, never dispatches. Gates this adds or changes: none."
+}

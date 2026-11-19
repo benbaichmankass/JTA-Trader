@@ -18,10 +18,12 @@ silent drop.
 from __future__ import annotations
 
 import ast
+import math
 import os
 
 import pytest
 
+from src.runtime import monitor_verdict as mv_mod
 from src.runtime.monitor_verdict import (
     KIND_CLOSE, KIND_MODIFY, KIND_NONE, KIND_PARTIAL_CLOSE,
     MEANINGFUL_MODIFY_REL_TOL, interpret_verdict,
@@ -187,3 +189,18 @@ def test_order_monitor_reexports_the_shared_tolerance():
     """Two copies of the tolerance is how the two paths drift apart."""
     from src.runtime import order_monitor
     assert order_monitor._MEANINGFUL_MODIFY_REL_TOL is MEANINGFUL_MODIFY_REL_TOL
+
+
+# BRACKETS-ALWAYS (2026-11-19): a non-positive or non-finite stop/target is never a level to move to;
+# at the venue it can REMOVE the leg (Bybit takeProfit=0 clears the TP). It is dropped, the other key still applies.
+@pytest.mark.parametrize("bad", [0, 0.0, -1.5, float("nan"), float("inf"), "0"])
+def test_non_positive_or_non_finite_tp_is_dropped_and_sl_still_applies(bad):
+    d = mv_mod.interpret_verdict({"sl": 95.0, "tp": bad}, current_sl=90.0, current_tp=120.0)
+    assert d.kind == mv_mod.KIND_MODIFY and d.sl == 95.0 and d.tp is None
+
+
+@pytest.mark.parametrize("bad", [0, float("nan"), -3])
+def test_only_a_bad_price_is_a_none_verdict_never_a_removal(bad):
+    d = mv_mod.interpret_verdict({"tp": bad}, current_sl=90.0, current_tp=120.0)
+    assert d.kind == mv_mod.KIND_NONE and d.rejection == "non_positive_price"
+    assert d.tp is None and d.sl is None and not math.isnan(d.tp or 0.0)

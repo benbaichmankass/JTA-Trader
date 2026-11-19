@@ -228,6 +228,12 @@ def main(argv: list[str]) -> int:
                          "names. Recorded in _round_meta and on every evidence "
                          "row, with None meaning 'trainer default', never 'not "
                          "recorded'.")
+    ap.add_argument("--build-only", action="store_true",
+                    help="stop after the E0 dataset build (emit + "
+                         "build_exit_head_dataset.py) and train nothing. For "
+                         "row rebuilds whose consumer is a separate bake-off "
+                         "unit (ML-EXITHEAD-ROWS-FRESH-REBUILD). Writes no "
+                         "rounds.jsonl / round_report.json.")
     a = ap.parse_args(argv[1:])
 
     # ---------------------------------------------------------------------
@@ -494,6 +500,12 @@ def main(argv: list[str]) -> int:
     print(p.stdout[-2000:], p.stderr[-500:], flush=True)
     if p.returncode != 0:
         return 1
+    if a.build_only:
+        # Rows only: the consumer is a separate bake-off; nothing is trained,
+        # so no e1_report / rounds.jsonl is written (absence is by design).
+        print(f"build-only: rows under {out} (emitted legs: "
+              f"{sorted(emitted_meta)})", flush=True)
+        return 0
 
     report = {}
     # WHY THIS LIST EXISTS. The dataset-build subprocess above is checked

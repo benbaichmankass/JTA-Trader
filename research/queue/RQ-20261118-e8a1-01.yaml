@@ -1,0 +1,167 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). RQ-20261118-04a5-05's registered pass_action ("a fresh-window confirmation first").
+# Decision rule registered BEFORE any run. Gates this adds or changes: none (a research rule, not a runtime switch).
+id: RQ-20261118-e8a1-01
+title: 'D9 Whippet, EXIT at the MID, FRESH-WINDOW CONFIRMATION: does 04a5-05''s post-only mid-peg time-stop exit (W 1, market fallback)
+  still beat the market exit in R per exit on a population DISJOINT from the held-out year: v1''s recipe scored out of fold on the
+  2022-01..2025-09 dev walk-forward?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series confirmation practice (docs/reference/trading-and-model-practice-principles.md): a lever chosen after
+  looking at one window (the mid peg, chosen from aadc-02 / aadc-10 on the held-out year) is confirmed on data it was not chosen on
+  before it becomes a proposal. The execution lever is not fit at all, so any window whose ENTRY decisions are out of fold is fresh for it.'
+question: 'Same approximation, exit epoch, calibration arm, W 1, mid peg, fallback and statistic as RQ-20261118-04a5-05. ONE FACTOR
+  CHANGED: the population. Instead of the frozen v1 booster on the held-out year 2025-10-01..2026-09-30 (used by every maker-exit read so
+  far: 1c4e-01, aadc-02 x2, aadc-10, 04a5-05), v1''s recipe (c692-01 FEATURES, LGB_PARAMS, purge + embargo, tau 0.10) scored OUT OF
+  FOLD on the dev walk-forward folds E.DEV_FOLDS (2022-01-01..2025-09-30), each fold fit only on rows before its start. Is the paired
+  delta, maker minus market closing order, positive in R per time-stop exit at the deflated level?'
+why_this_matters: '04a5-05 PASSED: +0.0060 R per time-stop exit, deflated CI [+0.0034, +0.0087], n 2,786 on 53 symbols, fill rate 0.75
+  (aadc-10 at the touch: 0.54). Its pass_action is a Tier-3 proposal for ml_entry''s time-stop exit (~25% of decisions, so about +0.0015
+  R per decision), after a fresh-window confirmation. Calendar-forward data cannot carry it: Binance Vision monthly files reach only
+  October 2026, about 230 time-stop exits a month against the 1,000 floor. The dev walk-forward gives several thousand exits that no
+  maker-exit read has touched. Cost is about 90% of v1''s gross (RQ-20261112-a7e8-03), so execution is the binding constraint on the
+  real-money D3 model.'
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-05
+  verdict_read: pass
+  diagnosis: '04a5-05 (run 44400344151) PASSED: mean delta +0.0060 R per exit, deflated lower bound +0.0034 > 0, n 2,786 on 53 symbols;
+    fill rate 0.754, +5.78 bps if filled, -11.12 bps if unfilled; both sides positive (long +0.0069, short +0.0056); v1''s own mean
+    +0.00603 sits inside the matched-random-side band [+0.0051, +0.0066], so the gain is a property of the clock exit, not of v1''s side
+    picks. That last point is what makes an out-of-fold dev population a valid confirmation: the lever does not depend on which model
+    picked the trade, only on the time-stop exit moment. The held-out year has now been read five times for this family (deflation
+    counted it); the mid peg was chosen on it.'
+  search: 'none: one population swap, every other choice frozen at 04a5-05 (W 1, mid, k 0, calibration arm at W 5, day-block bootstrap
+    2000 reps, seed); nothing chosen on this window'
+  attempt: 4
+  due_by: '2026-11-25'
+levers:
+- name: exit_order_price
+  values: [market_exit, post_only_mid_w1]
+  hypothesised_effect: the paired delta stays positive with a deflated lower bound above 0 on the dev out-of-fold time-stop exits, at a fill
+    rate near 04a5-05's 0.75
+data_and_approximation: 'Unchanged from RQ-20261118-04a5-05 (Binance Vision daily 1m futures klines; touch at T with a one-tick spread;
+  the MID arm rests at p, the close of the minute ending at T; STRICT fill iff a 1m high / low in (T, T+1m] trades a tick through the
+  mid; else market at the T+1m close +- half a tick). Earlier years have fewer listed perps, so the symbol count per month is lower in
+  2022; the n and symbol floors still bind.'
+decision_rule:
+  id: RULE-RQ20261118-e8a1-01-MAKER-EXIT-MIDPEG-CONFIRM
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_maker_replay.py exit --exit-w-min 1 --exit-peg mid --population dev_oof: pooled mean paired
+    delta_R (maker minus market closing order) per time-stop exit over the measured dev out-of-fold decisions, with a day-block bootstrap
+    CI (2000 reps) at the DEFLATED lower percentile holdout_lock.claim_read returns for this read (family EXEC, model
+    EXEC-maker-exit-ml_entry_v1, window 2022-01-01..2025-09-30). Reported, never gating: delta in bps, fill rate, delta if filled /
+    unfilled, by side, matched random side, the delta per ALL decisions, the calibration arm.'
+  rule: 'INDETERMINATE IF the calibration arm (W 5) is not calibrated (mean delta_F outside [+1.0, +3.0] bps), OR measured time-stop exits
+    < 1000 OR distinct symbols < 10. PASS IF mean delta_R > 0 AND the deflated lower bound > 0. FAIL otherwise. The holdout ledger is
+    claimed BEFORE any post-exit 1m bar is read. Thresholds are 04a5-05''s, fixed now and not changed after any result.'
+  pass_action: 'Tier-3 PROPOSAL to the manager (data-backed, standing rule): ml_entry''s 24h time-stop exit worked post-only at the mid
+    with a 1-minute market fallback, on the demo floor / paper first (an exit counterpart of src/units/accounts/maker_entry.py), with the
+    exact change, 04a5-05 and this record. Then the learned step: a fill-probability model to skip the post when P(fill) is low (it can
+    only add to a lever that already pays).'
+  fail_action: 'The 04a5-05 pass does not replicate out of window: no proposal. Record both reads on the D9 lever map; next is the
+    learned step D9 lacks, a fill-probability model (post maker only when P(fill) x filled gain exceeds (1 - P(fill)) x unfilled
+    cost) fit on the dev out-of-fold exits and graded on the held-out year''s exits, so the gate is a model and not a fixed peg.'
+  what_it_does_not_do: No sizing, no config change, no order; SL/TP exits untouched. A PASS is a Tier-3 PROPOSAL, not a change.
+  min_n: 1000 measured time-stop exits on >= 10 symbols
+family_note: 'Ledger family EXEC (as 1c4e-01, aadc-02, aadc-10 and 04a5-05): the decision set is fixed by v1''s recipe and this unit
+  selects nothing; the factor is the execution of a fixed exit, paired. A different window, so the claim starts its own n_tries count.'
+power:
+  expected_n: 6000
+  min_detectable_effect: 0.004
+  effect_units: metric
+  sd: 0.08
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATED: 04a5-05 measured 2,786 time-stop exits on 53 symbols in 12 months; the dev window is 45 months with fewer listed
+    perps early on, so ~6,000 is a conservative guess. MEASURED smoke (2026-11-18, BTCUSDT + SOLUSDT only): 2,357 out-of-fold
+    decisions, 605 time-stop exits over 2022-01..2025-09, 0 missing ATR, i.e. ~80 time-stop exits per symbol-year. sd 0.08 R per order (1c4e-01 basis; the
+    paired sd at W 1 is lower). At n 6,000 the 95% half-width is ~0.002 R, below 04a5-05''s +0.0060 point estimate.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public history; nothing accrues.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'both arms hold the identical entry and bracket; only the price and fee of the time-stop closing order differ'
+  matched_random:
+    draws: 200
+    note: 'same exit moments, closing-order side drawn at random (p_long = the population''s long share). Reported, never gating.'
+  best_static:
+    grid:
+    - market_exit
+    - post_only_mid_w1 (04a5-05, fixed)
+    excludes_test_folds: true
+    note: nothing is chosen on this window; every parameter is 04a5-05's
+  bootstrap_group: day
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.35
+  basis: 'stand-in: +0.006 R on ~25% of ml_entry decisions; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 45
+  why_runner: needs_internet (keyless public Binance Vision klines); 8 fold refits of the c692-01 LightGBM recipe (minutes each on a runner)
+  basis: 'ESTIMATED: 04a5-05 ran in 210 s for 2,786 exits; ~2x the 1m day files plus 8 fold fits.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_maker_replay.py
+  - exit
+  - --unit
+  - '{unit}'
+  - --exit-rule
+  - RULE-RQ20261118-e8a1-01-MAKER-EXIT-MIDPEG-CONFIRM
+  - --exit-w-min
+  - '1'
+  - --exit-peg
+  - mid
+  - --population
+  - dev_oof
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261118-e8a1-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/units/accounts/maker_entry.py
+  decision: whether ml_entry's 24h time-stop exit should be worked post-only at the mid with a 1-min market fallback (an exit counterpart
+    of the demo/paper-fenced maker entry; none exists today)
+  legs:
+  - ml_entry
+  book: money
+related:
+- RQ-20261118-04a5-05
+- RQ-20261117-aadc-10
+- RQ-20261117-aadc-02
+- ML-D9-MAKER-EXIT-HARNESS
+- RQ-20261112-1c4e-01
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
+last_dispatched_at: '2026-11-18T23:53:11+00:00'
+grading:
+  attested: RULE-RQ20261118-e8a1-01-MAKER-EXIT-MIDPEG-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261118-e8a1-01-MAKER-EXIT-MIDPEG-CONFIRM
+  evidence:
+  - research/results/RQ-20261118-e8a1-01/44422089383.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

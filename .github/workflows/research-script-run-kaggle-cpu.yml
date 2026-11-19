@@ -47,13 +47,17 @@ jobs:
           persist-credentials: false
           # GH-CAPACITY-INFRA-RUNNER / PI-20261103-RAM7EH86-0003: sparse + blobless so a job on the self-hosted trainer
           # runner costs ~0.5 GB, not the 6-8 GB full clone that filled the trainer disk on 2026-11-03.
-          # comms/research (5.0 GB of tracked unit data) and comms/macro are never read by this job.
-          # Pinned by tests/test_infra_runner_sparse_checkout.py.
+          # comms/research's per-unit data (RQ-*/, ~5.0 GB) and comms/macro are never read by this job.
+          # ⚠️ NOT `!/comms/research/` (2026-11-19, PI-20261118-EFILLW47-0003): that dropped the whole directory, including
+          # comms/research/candle_dataset/coverage.json, the record kaggle_run.py bundle reads (candle_dataset.covers) to decide
+          # whether the published candle dataset is MOUNTED. With it missing every candle-fetching unit bundled with
+          # published_data [], the kernel had no internet and no candles, and 24 results landed producer_failed on DNS errors.
+          # Pinned by tests/test_infra_runner_sparse_checkout.py and tests/test_kaggle_sparse_keeps_candle_coverage.py.
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /*
-            !/comms/research/
+            !/comms/research/RQ-*/**
             !/comms/macro/
       - name: Materialize this unit's run.bundle_paths (sparse checkout excludes comms/research by default)
         # kaggle_run.py bundle tars `git ls-files` of BUNDLE_ROOTS + run.bundle_paths; a bundle path under comms/ must be

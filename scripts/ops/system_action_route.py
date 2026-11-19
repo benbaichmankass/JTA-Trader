@@ -75,20 +75,46 @@ def concurrency_group(action: str, run_id: str) -> str:
     return f"{SHARED_GROUP}-{run_id}"
 
 
-def overlap_report(runs: list, run_id: str) -> list[str]:
+GHOST_AFTER_S = 24 * 3600
+
+
+def _age_s(r: dict, now) -> float | None:
+    from datetime import datetime
+    raw = r.get("updated_at") or r.get("created_at")
+    try:
+        return (now - datetime.fromisoformat(str(raw).replace("Z", "+00:00"))).total_seconds()
+    except (TypeError, ValueError):
+        return None
+
+
+def overlap_report(runs: list, run_id: str, now=None) -> list[str]:
     """Lines naming OTHER system-actions runs in flight (queued/in_progress).
 
     ``runs`` is the ``workflow_runs`` list from the Actions API. Reports only;
     the caller never waits, cancels or fails on it.
+
+    GHOSTS (2026-11-18, manager disposition): a run still WAITING TO START with no update for more than 24 h
+    never got a job (runs 43096446717, 43096628504, 43096787421, queued since 2026-11-11 20:30Z; GitHub
+    answers 409 to a cancel because they were never queued). They are not overlap; they are summarised on ONE
+    line so they stay visible without repeating on every report. An in_progress run is never a ghost.
     """
-    out = []
+    from datetime import datetime, timezone
+    now = now or datetime.now(timezone.utc)
+    out, ghosts = [], []
     for r in runs or []:
         if str(r.get("id")) == str(run_id):
             continue
-        if r.get("status") not in ("queued", "in_progress", "waiting", "pending", "requested"):
+        st = r.get("status")
+        if st not in ("queued", "in_progress", "waiting", "pending", "requested"):
             continue
-        out.append(f"run {r.get('id')} ({r.get('status')}): {r.get('display_title') or ''} "
+        age = _age_s(r, now)
+        if st != "in_progress" and age is not None and age > GHOST_AFTER_S:
+            ghosts.append(str(r.get("id")))
+            continue
+        out.append(f"run {r.get('id')} ({st}): {r.get('display_title') or ''} "
                    f"{r.get('html_url') or ''}".rstrip())
+    if ghosts:
+        out.append(f"ignored {len(ghosts)} ghost run(s) waiting > 24 h with no job: {', '.join(ghosts)}")
     return out
 
 

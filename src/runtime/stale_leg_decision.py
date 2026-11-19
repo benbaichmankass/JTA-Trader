@@ -211,6 +211,11 @@ def decide_stale_legs(
         "position_qty": None,
         "stop_qty_resting": None,
         "stop_qty_kept": None,
+        # BRACKETS-ALWAYS (2026-11-19): the TARGET side, REPORTED, never a refusal (no new gate). A cancel set that
+        # leaves the open rows' own targets short of the position means the position is TP-naked after the cancel.
+        "target_qty_resting": None,
+        "target_qty_kept": None,
+        "target_undercover_after_cancel": None,
         "reason": None,
     }
 
@@ -245,6 +250,8 @@ def decide_stale_legs(
     unreadable_side = 0
     stop_resting = 0.0
     stop_kept = 0.0
+    target_resting = 0.0
+    target_kept = 0.0
 
     for leg in legs:
         side = _leg_side(leg)
@@ -258,6 +265,8 @@ def decide_stale_legs(
             continue
         if side == "stop" and leg_qty is not None:
             stop_resting += leg_qty
+        if side == "target" and leg_qty is not None:
+            target_resting += leg_qty
 
         owner = owners.get(oid) if oid else None
         record = {
@@ -273,6 +282,8 @@ def decide_stale_legs(
             keep.append(record)
             if side == "stop" and leg_qty is not None:
                 stop_kept += leg_qty
+            if side == "target" and leg_qty is not None:
+                target_kept += leg_qty
         else:
             cancel.append(record)
 
@@ -281,6 +292,8 @@ def decide_stale_legs(
     out["unattributable_legs"] = unattributable
     out["stop_qty_resting"] = stop_resting
     out["stop_qty_kept"] = stop_kept
+    out["target_qty_resting"] = target_resting
+    out["target_qty_kept"] = target_kept
 
     if unreadable_side:
         out["state"] = STATE_NOT_GRADED
@@ -321,6 +334,8 @@ def decide_stale_legs(
 
     out["state"] = STATE_CANCEL_LEGS
     out["cancel_order_ids"] = [r["order_id"] for r in cancel]
+    # REPORTED ONLY (BRACKETS-ALWAYS): does the cancel leave the position short of take-profit cover?
+    out["target_undercover_after_cancel"] = bool(target_kept < qty * (1.0 - coverage_tolerance))
     out["reason"] = (
         f"{len(cancel)} resting leg(s) are owned by CLOSED journal rows; the "
         f"{len(keep)} leg(s) owned by OPEN rows carry {stop_kept} of stop "

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit",
+  "hold_text": "Live VM timer schedule: ict-hourly-snapshot moves from :00 to :07, and the work digest's hourly build waits until :10 (its 5-min alert_watch runs are unchanged). The timer needs a unit reinstall on the live VM after merge. Manager merges; AM-OPS-4 reinstalls the timer and re-samples CPU at :00. Revert: git revert + reinstall.",
+  "why": "LIVE-VM-HOURLY-BURST: on the hour the machine is 99.9% busy (#27025: snapshot 34% + digest build 32% on top of the trader's bar close) vs 34.9% off the hour (#27035). Gates this adds or changes: none."
+}

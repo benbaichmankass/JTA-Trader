@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-20261112-1c4e-01.yaml (ENTRY execution lever: maker entry on ml_entry's own decisions, lane ML-DECISION-MODELS)
+# wiring: research/queue/RQ-20261118-e8a1-02.yaml (`run --entry-w-min 1 --entry-peg mid`: maker ENTRY at 04a5-05's passing exit policy)
 # wiring: research/queue/RQ-20261118-04a5-05.yaml (`exit --exit-peg mid`: D9 mid-peg arm, aadc-10 fail_action)
+# wiring: research/queue/RQ-20261118-e8a1-01.yaml (`exit --exit-peg mid --population dev_oof`: fresh-window confirmation of 04a5-05)
+# wiring: research/queue/RQ-20261119-b9d0-03.yaml (`exit-gate`: D9 spec B, a learned P(fill) gate on the mid-peg time-stop exit)
 # wiring: research/queue/RQ-20261117-aadc-02.yaml (`exit`: maker EXIT on v1's 24h time-stop exits, row ML-D9-MAKER-EXIT-HARNESS)
 """Does a post-only MAKER entry (DESK-MAKER-FILLS policy F: join the near touch, 5-min fallback to the market) improve the FROZEN
 ENTRY v1 model's own decisions, net of fees and adverse selection, in R per decision? (Tier-1 research; no order, no config.)
@@ -172,6 +175,44 @@ def v1_decisions(cache: Path) -> pd.DataFrame:
     return taken
 
 
+def dev_oof_decisions(cache: Path, tau: float = 0.10) -> pd.DataFrame:
+    """v1's RECIPE (c692-01: FEATURES, LGB_PARAMS, purge + embargo) scored OUT OF FOLD on the development walk-forward
+    (E.DEV_FOLDS, 2022-01-01..HOLDOUT_START): each fold is fit only on rows before its start, exactly as E.walk_forward does,
+    and the same tau-0.10 sequential policy picks the decisions. A population DISJOINT from the held-out year every maker-exit
+    read so far used (1c4e-01, aadc-02, aadc-10, 04a5-05), so it is the fresh window 04a5-05's pass_action asks for. These are
+    per-fold refits, not the frozen live booster (declared in the population string)."""
+    import itertools
+    syms = E.universe()
+    E.fetch(cache, syms, end=E.END)
+    tab = E.build_table(cache, syms)
+    tab["ts"] = pd.to_datetime(tab["ts"], utc=True)
+    hs = pd.Timestamp(E.HOLDOUT_START, tz="UTC")
+    dev = tab[tab.ts < hs]
+    bounds = [pd.Timestamp(x, tz="UTC") for x in E.DEV_FOLDS] + [hs]
+    out = []
+    for lo, hi in itertools.pairwise(bounds):
+        test = dev[(dev.ts >= lo) & (dev.ts < hi - pd.Timedelta(hours=E.HORIZON_H + 1))].reset_index(drop=True)
+        pl, ps = E.fit_predict(E.purge_train(dev, lo), test)
+        tk = E.policy(test, pl, ps, tau)
+        key = test.set_index(["symbol", "ts"])[["atr", "entry"]]
+        got = key.reindex(pd.MultiIndex.from_arrays([tk.symbol, pd.to_datetime(tk.ts, utc=True)]))
+        tk["atr"], tk["entry"] = got["atr"].to_numpy(), got["entry"].to_numpy()
+        out.append(tk)
+        print(json.dumps({"fold": str(lo.date()), "n_taken": len(tk)}), flush=True)
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+
+POPULATIONS = {  # name -> (window start, window end, train_end for the holdout-ledger disjointness check, label)
+    "heldout": (E.HOLDOUT_START, E.END, "2025-09-30",
+                f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END}"),
+    # each fold trains only on rows before its own start; the earliest test row is 2022-01-01, so the ledger's window-level
+    # train_end is the day before it (the EXEC lever itself is not fit at all)
+    "dev_oof": (E.DEV_FOLDS[0], "2025-09-30", "2021-12-31",
+                f"v1's recipe (c692-01) scored out of fold on the dev walk-forward {E.DEV_FOLDS[0]}..2025-09-30 (per-fold "
+                "refits, tau 0.10; disjoint from the held-out year)"),
+}
+
+
 def run(a) -> int:
     import holdout_lock as HL
     out = Path(a.out)
@@ -183,7 +224,12 @@ def run(a) -> int:
     taken = v1_decisions(Path(a.kcache))
     print(f"v1 held-out decisions: {len(taken)} on {taken.symbol.nunique()} symbols", flush=True)
     # the claim comes BEFORE any post-decision 1m outcome is read
-    claim = HL.claim_read(MODEL_ID, E.HOLDOUT_START, E.END, UNIT, a.reader, Path(a.ledger), train_end="2025-09-30", family="EXEC")
+    unit = getattr(a, "unit", UNIT) or UNIT
+    ew, epeg = getattr(a, "entry_w_min", None), getattr(a, "entry_peg", "touch")
+    claim = HL.claim_read(MODEL_ID, E.HOLDOUT_START, E.END, unit, a.reader, Path(a.ledger), train_end="2025-09-30", family="EXEC")
+    # 1c4e-01 (the default unit) graded on the undeflated day-block CI95 (its claim was n_tries 1); every later entry unit is graded
+    # at the DEFLATED lower percentile its own claim returns, as the exit units are
+    deflated = unit != UNIT
     cache = Path(a.cache)
     # epoch seconds via the unit-explicit path: pandas 3 stores datetimes in ms/us, so astype("int64") // 1e9 is wrong (found on the
     # first attempt 2026-11-12, which therefore read no post-decision bar; disclosed in the result)
@@ -200,8 +246,8 @@ def run(a) -> int:
         opp = None
         if d is not None and len(d) > 100:
             tk = tick_of(d)
-            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk)
-            opp = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk)
+            res = delta_f(d, int(r.T), 1 if r.side == "long" else -1, tk, ew, epeg)
+            opp = delta_f(d, int(r.T), -1 if r.side == "long" else 1, tk, ew, epeg)
         rows.append({"symbol": r.symbol, "day": str(r.day), "side": r.side, "net_r_taker": r.net_r,
                      "delta_bps_opp": (opp or {}).get("delta_bps", np.nan),
                      "per_r": (r.entry / (2.0 * r.atr)) if r.atr and r.atr > 0 else np.nan,
@@ -210,8 +256,13 @@ def run(a) -> int:
     df["delta_r"] = df.delta_bps / 1e4 * df.per_r
     df["delta_r_opp"] = df.delta_bps_opp / 1e4 * df.per_r
     ok = df.dropna(subset=["delta_r", "delta_r_opp"])
-    mean, lo, hi = DMF.day_block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy())
-    mb, lob, hib = DMF.day_block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy())
+    if deflated:
+        lo_pct = float(claim["bar"]["ci_lo_percentile"])
+        mean, lo, hi = block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy(), lo_pct)
+        mb, lob, hib = block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy(), lo_pct)
+    else:
+        mean, lo, hi = DMF.day_block_ci(ok.delta_r.to_numpy(), ok.day.to_numpy())
+        mb, lob, hib = DMF.day_block_ci(ok.delta_bps.to_numpy(), ok.day.to_numpy())
     n, ns = len(ok), int(ok.symbol.nunique())
     if not cal["calibrated"]:
         v, why = "indeterminate", f"1m approximation not calibrated: {cal['mean_delta_F_bps']:+.2f} bps vs a3f1 +2.03 (band {CAL_BAND})"
@@ -231,7 +282,10 @@ def run(a) -> int:
     draws = [float(np.where(rng.random(len(ok)) < p_long, long_d, short_d).mean()) for _ in range(200)]
     matched = {"draws": 200, "p_long": p_long, "mean_of_means": float(np.mean(draws)), "p05": float(np.percentile(draws, 5)),
                "p95": float(np.percentile(draws, 95))}
-    res = {"unit": UNIT, "verdict": v, "why": why, "calibration": cal, "n_decisions": len(df), "n_measured": n, "n_symbols": ns,
+    if deflated:
+        why = why.replace("day-block CI95", f"deflated day-block CI at percentile {lo_pct:.4f}")
+    res = {"unit": unit, **({"entry_w_min": int(ew or W_MIN), "entry_peg": epeg, "ci_lo_percentile": lo_pct} if deflated else {}),
+           "verdict": v, "why": why, "calibration": cal, "n_decisions": len(df), "n_measured": n, "n_symbols": ns,
            "mean_delta_r": mean, "ci95_delta_r": [lo, hi], "mean_delta_bps": mb, "ci95_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()), "delta_bps_if_filled": float(ok.delta_bps[fl].mean()) if fl.any() else None,
            "delta_bps_if_unfilled": float(ok.delta_bps[~fl].mean()) if (~fl).any() else None,
@@ -240,9 +294,16 @@ def run(a) -> int:
            "traded5": {"n": int(ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]).sum()),
                        "mean_delta_r": float(ok.delta_r[ok.symbol.isin(["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])].mean())},
            "median_tick_bps": float(ok.tick_bps.median()), "matched_random_direction": matched,
-           "disclosure": "a first attempt (2026-11-12 ~20:50Z) made the EXEC ledger claim, then computed every decision time in 1970 (pandas 3 datetime unit), so every 1m fetch 404d and NO post-decision bar was read; it crashed on an empty sample. This run re-claims from the repo ledger; the aborted claim is not counted as a read.", "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
+           **({} if deflated else {"disclosure": "a first attempt (2026-11-12 ~20:50Z) made the EXEC ledger claim, then computed every decision time in 1970 (pandas 3 datetime unit), so every 1m fetch 404d and NO post-decision bar was read; it crashed on an empty sample. This run re-claims from the repo ledger; the aborted claim is not counted as a read."}), "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "decisions.csv.gz", index=False)
+    if deflated:   # the runner collector reads verdict.json (1c4e-01 ran locally and wrote only result.json)
+        verdict = {"verdict": v, "read_state": "measured", "n": n,
+                   "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END}, entry order "
+                                  f"worked post-only at the {epeg} with a {int(ew or W_MIN)}-min market fallback, measured where 1m "
+                                  "Binance-vision klines exist"),
+                   "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock", "disclosure")}}
+        (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
     print(json.dumps({"verdict": v, "why": why}), flush=True)
     return 0
 
@@ -318,12 +379,14 @@ def run_exit(a) -> int:
     t0 = time.time()
     cal = calibrate(a)
     (out / "calibration.json").write_text(json.dumps(cal, indent=1) + "\n")
-    taken = v1_decisions(Path(a.kcache))
+    pop = getattr(a, "population", "heldout")
+    w_start, w_end, train_end, pop_label = POPULATIONS[pop]
+    taken = v1_decisions(Path(a.kcache)) if pop == "heldout" else dev_oof_decisions(Path(a.kcache))
     n_all = len(taken)
     ts_exit = taken[taken.reason == 0].reset_index(drop=True)
-    print(f"v1 held-out decisions {n_all}; time-stop exits {len(ts_exit)}", flush=True)
+    print(f"{pop} decisions {n_all}; time-stop exits {len(ts_exit)}", flush=True)
     # the claim comes BEFORE any post-exit 1m outcome is read
-    claim = HL.claim_read(EXIT_MODEL_ID, E.HOLDOUT_START, E.END, a.unit, a.reader, Path(a.ledger), train_end="2025-09-30",
+    claim = HL.claim_read(EXIT_MODEL_ID, w_start, w_end, a.unit, a.reader, Path(a.ledger), train_end=train_end,
                           family="EXEC")
     lo_pct = float(claim["bar"]["ci_lo_percentile"])
     cache = Path(a.cache)
@@ -370,7 +433,8 @@ def run_exit(a) -> int:
         mean = lo = hi = mb = lob = hib = None
     v, why = exit_verdict(bool(cal["calibrated"]), n, ns, mean, lo)
     fl = ok.filled.astype(bool) if n else pd.Series(dtype=bool)
-    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), **({"exit_peg": a.exit_peg} if a.exit_peg != "touch" else {}), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
+    res = {"unit": a.unit, "rule": a.exit_rule, "exit_w_min": int(a.exit_w_min), **({"exit_peg": a.exit_peg} if a.exit_peg != "touch" else {}),
+           **({"population": pop} if pop != "heldout" else {}), "verdict": v, "why": why, "calibration": cal, "n_decisions_all": n_all,
            "n_time_stop_exits": len(ts_exit), "n_measured": n, "n_symbols": ns, "mean_delta_r": mean,
            "deflated_ci_delta_r": [lo, hi], "ci_lo_percentile": lo_pct, "mean_delta_bps": mb, "deflated_ci_delta_bps": [lob, hib],
            "fill_rate": float(fl.mean()) if n else None,
@@ -386,9 +450,200 @@ def run_exit(a) -> int:
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     df.to_csv(out / "exits.csv.gz", index=False)
     verdict = {"verdict": v, "read_state": "measured", "n": n,
-               "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {E.HOLDOUT_START}..{E.END} that exit on "
-                              "the 24h time stop, measured where 1m Binance-vision klines exist"),
+               "population": f"{pop_label} that exit on the 24h time stop, measured where 1m Binance-vision klines exist",
                "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock")}}
+    (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "why": why}), flush=True)
+    return 0
+
+
+# ------------------------------------------------------------------------------------------------ exit-gate (D9 spec B)
+# RQ-20261119-b9d0-03 (e8a1-01's registered next step): a LEARNED gate on the mid-peg time-stop exit. At the mid peg a FILLED exit
+# earns exactly half a tick plus the maker/taker fee gap (known at T); an UNFILLED one pays the W-minute drift to the fallback market.
+# A P(fill) classifier fit on the dev out-of-fold exits (pre-T 1m features only) decides per exit: post at the mid iff
+# P x filled_gain + (1 - P) x U_hat > 0 (U_hat = the dev mean unfilled delta, fixed before any held-out bar is read), else take the
+# market at T (delta 0). Graded on the held-out year's exits against ALWAYS posting (the e8a1-01 / 04a5-05 policy), paired per exit.
+GATE_UNIT = "RQ-20261119-b9d0-03"
+GATE_RULE_ID = "RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE"
+GATE_MODEL_ID = "EXEC-maker-exit-fillgate-ml_entry_v1"
+GATE_FEATURES = ["dir", "hour", "tick_bps", "ret1", "ret5", "ret15", "ret60", "rv15", "rng5_ticks", "pos60"]
+GATE_LGB = {"n_estimators": 200, "learning_rate": 0.05, "num_leaves": 15, "min_child_samples": 200, "subsample": 0.8,
+            "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": 20261119, "verbose": -1, "n_jobs": 4}
+GATE_MIN_SKIP = 0.01   # a gate that skips < 1% of exits is inert: INDETERMINATE, not a FAIL on d == 0
+GATE_RANDOM_DRAWS = 1000   # matched-random control: skip the SAME number of held-out exits chosen at random
+GATE_RANDOM_P = 0.05
+
+
+def pre_features(d: pd.DataFrame, T: int, direction: int, tick: float) -> dict | None:
+    """Features from the 1m bars that END at or before T (the minute ending at T starts at T - 60); nothing after T is read.
+    Returns are signed by the closing order's direction (dir x price change, in bps): positive = price moved the way the order
+    trades (up for a buy). A window without enough history is NaN (LightGBM handles it)."""
+    t = d["t"].to_numpy()
+    i0 = int(np.searchsorted(t, T - 60))
+    if i0 >= len(t) or t[i0] != T - 60:
+        return None
+    c = d["close"].to_numpy()
+    h, lo = d["high"].to_numpy(), d["low"].to_numpy()
+    p = float(c[i0])
+
+    def ret(k):
+        j = i0 - k
+        return float(direction * (p - c[j]) / p * 1e4) if j >= 0 and t[j] == T - 60 * (k + 1) else np.nan
+    w15 = c[max(0, i0 - 15):i0 + 1]
+    rv15 = float(np.std(np.diff(np.log(w15))) * 1e4) if len(w15) >= 16 else np.nan
+    rng5 = float((h[max(0, i0 - 4):i0 + 1].max() - lo[max(0, i0 - 4):i0 + 1].min()) / tick) if i0 >= 4 else np.nan
+    if i0 >= 59:
+        hh, ll = h[i0 - 59:i0 + 1].max(), lo[i0 - 59:i0 + 1].min()
+        pos60 = float((p - ll) / (hh - ll)) if hh > ll else 0.5
+        pos60 = pos60 if direction == 1 else 1.0 - pos60
+    else:
+        pos60 = np.nan
+    return {"dir": float(direction), "hour": float(datetime.fromtimestamp(T, tz=timezone.utc).hour), "tick_bps": tick / p * 1e4,
+            "ret1": ret(1), "ret5": ret(5), "ret15": ret(15), "ret60": ret(60), "rv15": rv15, "rng5_ticks": rng5, "pos60": pos60}
+
+
+def exit_rows(taken: pd.DataFrame, a, frames_cache: Path) -> pd.DataFrame:
+    """One row per measured time-stop exit of `taken`: the mid-peg W-min delta (delta_f), its fill flag, per_r and pre-T features."""
+    ts_exit = taken[taken.reason == 0].reset_index(drop=True)
+    ts_exit["T"] = [exit_epoch(t, E.HORIZON_H) for t in ts_exit.ts]
+    need = set()
+    for sym, T in zip(ts_exit.symbol, ts_exit["T"]):
+        day = datetime.fromtimestamp(int(T), tz=timezone.utc).date()
+        need.add((sym, day))
+        if int(T) % 86400 == 0:
+            need.add((sym, date.fromordinal(day.toordinal() - 1)))
+    jobs = sorted(need)
+    with cf.ThreadPoolExecutor(24) as ex:
+        frames = dict(zip(jobs, ex.map(lambda j: fetch_1m(j[0], j[1], frames_cache), jobs)))
+    rows = []
+    for r in ts_exit.itertuples(index=False):
+        d = day_frame(r.symbol, int(r.T), frames)
+        if d is None or len(d) <= 100:
+            continue
+        try:
+            tk = tick_of(d)
+        except ValueError:   # allow-silent: a flat symbol-day has no tick; the exit is unmeasured (n_time_stop vs n_measured shows it)
+            continue
+        direction = -1 if r.side == "long" else 1
+        res = delta_f(d, int(r.T), direction, tk, a.exit_w_min, "mid")
+        ft = pre_features(d, int(r.T), direction, tk)
+        atr = getattr(r, "atr", np.nan)
+        if res is None or ft is None or not (atr and atr > 0):
+            continue
+        rows.append({"symbol": r.symbol, "day": datetime.fromtimestamp(int(r.T), tz=timezone.utc).date().isoformat(),
+                     "side": r.side, "per_r": res["mid"] / (E.SL_ATR * atr), "filled": bool(res["filled"]),
+                     "delta_bps": res["delta_bps"], **ft})
+    df = pd.DataFrame(rows)
+    if len(df):
+        df["delta_r"] = df.delta_bps / 1e4 * df.per_r
+        df["filled_gain_bps"] = df.tick_bps / 2.0 + (TAKER - MAKER)
+    df.attrs["n_time_stop"] = len(ts_exit)
+    return df
+
+
+def gate_decide(p_fill: np.ndarray, filled_gain_bps: np.ndarray, u_hat_bps: float) -> np.ndarray:
+    """True = post at the mid; False = take the market at T (delta 0)."""
+    return p_fill * filled_gain_bps + (1.0 - p_fill) * u_hat_bps > 0.0
+
+
+def auc_score(score: np.ndarray, y: np.ndarray) -> float | None:
+    pos, neg = score[y == 1], score[y == 0]
+    if not len(pos) or not len(neg):
+        return None
+    r = pd.Series(np.concatenate([pos, neg])).rank().to_numpy()
+    return float((r[:len(pos)].sum() - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg)))
+
+
+def matched_random_skip(delta_r: np.ndarray, n_skip: int, mean_d: float, draws: int = GATE_RANDOM_DRAWS,
+                        seed: int = 20261119) -> dict:
+    """GATING control: skip the SAME number of exits, chosen uniformly at random, `draws` times. The gate's choice must beat it, so
+    the result is about WHICH exits the model skips, not about skipping as such. p = (1 + #draws with mean d >= the gate's) / (1 + draws)."""
+    n = len(delta_r)
+    rng = np.random.default_rng(seed)
+    means = np.array([-delta_r[rng.choice(n, n_skip, replace=False)].sum() / n for _ in range(draws)]) if n_skip and n else np.zeros(draws)
+    return {"draws": draws, "n_skip": int(n_skip), "mean_of_means": float(means.mean()), "p95": float(np.percentile(means, 95)),
+            "p_value": float((1 + (means >= mean_d).sum()) / (1 + draws))}
+
+
+def gate_verdict(cal_ok: bool, n_dev: int, n_held: int, ns_held: int, skip_share: float | None, mean_d: float | None,
+                 lo_d: float | None, gated_mean: float | None, p_random: float | None = None) -> tuple[str, str]:
+    if not cal_ok:
+        return "indeterminate", "1m approximation not calibrated against a3f1-01"
+    if n_dev < EXIT_N_FLOOR or n_held < EXIT_N_FLOOR or ns_held < EXIT_SYM_FLOOR:
+        return "indeterminate", f"exits dev {n_dev} / held-out {n_held} / held-out symbols {ns_held} below floor"
+    if skip_share is None or skip_share < GATE_MIN_SKIP:
+        return "indeterminate", f"gate inert: skips {skip_share} of held-out exits (< {GATE_MIN_SKIP})"
+    txt = (f"gated - always-post {mean_d:+.5f} R/exit, deflated lower bound {lo_d:+.5f}; gated vs taker {gated_mean:+.5f} R/exit; "
+           f"skips {skip_share:.3f}, matched-random p {p_random}, n={n_held}")
+    if mean_d > 0 and lo_d > 0 and gated_mean > 0 and p_random is not None and p_random < GATE_RANDOM_P:
+        return "pass", txt
+    return "fail", txt
+
+
+def run_exit_gate(a) -> int:
+    import holdout_lock as HL
+    import lightgbm as lgb
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    cal = calibrate(a)
+    (out / "calibration.json").write_text(json.dumps(cal, indent=1) + "\n")
+    cache = Path(a.cache)
+    # TRAIN: the dev out-of-fold exits (their outcomes were read by e8a1-01; here they are the training set, not a holdout read)
+    dev = exit_rows(dev_oof_decisions(Path(a.kcache)), a, cache)
+    u_hat = float(dev.delta_bps[~dev.filled].mean()) if len(dev) and (~dev.filled).any() else float("nan")
+    clf = lgb.LGBMClassifier(**GATE_LGB).fit(dev[GATE_FEATURES], dev.filled.astype(int)) if len(dev) else None
+    # TEST: the held-out year; the claim comes BEFORE any post-exit 1m bar of it is read
+    w_start, w_end, train_end, _lab = POPULATIONS["heldout"]
+    held_taken = v1_decisions(Path(a.kcache))
+    claim = HL.claim_read(GATE_MODEL_ID, w_start, w_end, a.unit, a.reader, Path(a.ledger), train_end=train_end, family="EXEC")
+    lo_pct = float(claim["bar"]["ci_lo_percentile"])
+    held = exit_rows(held_taken, a, cache)
+    n_dev, n_held = len(dev), len(held)
+    ns_held = int(held.symbol.nunique()) if n_held else 0
+    res = {"unit": a.unit, "rule": GATE_RULE_ID, "exit_w_min": int(a.exit_w_min), "exit_peg": "mid", "calibration": cal,
+           "features": GATE_FEATURES, "lgb_params": GATE_LGB, "n_dev_time_stop": dev.attrs.get("n_time_stop"), "n_dev_exits": n_dev,
+           "n_held_time_stop": held.attrs.get("n_time_stop"), "n_held_exits": n_held, "n_held_symbols": ns_held,
+           "u_hat_bps_dev": u_hat, "dev_fill_rate": float(dev.filled.mean()) if n_dev else None}
+    mean_d = lo_d = gated_mean = skip = p_random = None
+    if n_held and clf is not None:
+        # provenance: predict_proba — column 1 of the binary LGBMClassifier fit on dev is P(filled) for the order resting at the mid
+        pf = clf.predict_proba(held[GATE_FEATURES])[:, 1]
+        post = gate_decide(pf, held.filled_gain_bps.to_numpy(), u_hat)
+        d = np.where(post, 0.0, -held.delta_r.to_numpy())                 # gated - always-post, per exit
+        gated = np.where(post, held.delta_r.to_numpy(), 0.0)
+        days = held.day.to_numpy()
+        mean_d, lo_d, hi_d = block_ci(d, days, lo_pct)
+        gated_mean, g_lo, g_hi = block_ci(gated, days, lo_pct)
+        always_mean, a_lo, a_hi = block_ci(held.delta_r.to_numpy(), days, lo_pct)
+        skip = float(1.0 - post.mean())
+        mr = matched_random_skip(held.delta_r.to_numpy(), int((~post).sum()), mean_d)
+        p_random = mr["p_value"]
+        # reported, never gating: the SAME decision rule with P fixed at the dev base rate. The filled gain is known at T, so a gate
+        # can beat random skips by tick size alone; the gap between the model gate and this one is what P(fill) itself adds.
+        post0 = gate_decide(np.full(n_held, float(dev.filled.mean())), held.filled_gain_bps.to_numpy(), u_hat)
+        d0 = np.where(post0, 0.0, -held.delta_r.to_numpy())
+        base_rate_gate = {"skip_share": float(1.0 - post0.mean()), "mean_d_r": float(d0.mean()),
+                          "model_minus_base_rate_d_r": float(np.mean(d) - d0.mean())}
+        y = held.filled.astype(int).to_numpy()
+        res.update({"skip_share": skip, "matched_random_skip": mr, "base_rate_gate_reported": base_rate_gate, "mean_d_r": mean_d, "deflated_ci_d_r": [lo_d, hi_d], "ci_lo_percentile": lo_pct,
+                    "gated_mean_r": gated_mean, "deflated_ci_gated_r": [g_lo, g_hi], "always_post_mean_r": always_mean,
+                    "deflated_ci_always_r": [a_lo, a_hi], "held_fill_rate": float(y.mean()),
+                    "held_fill_rate_posted": float(y[post].mean()) if post.any() else None,
+                    "held_fill_rate_skipped": float(y[~post].mean()) if (~post).any() else None,
+                    "auc_p_fill_held": auc_score(pf, y), "brier_held": float(np.mean((pf - y) ** 2)),
+                    "brier_const_held": float(np.mean((dev.filled.mean() - y) ** 2)),
+                    "mean_d_bps": float(np.where(post, 0.0, -held.delta_bps.to_numpy()).mean()),
+                    "by_side": {s: {"n": int((held.side == s).sum()), "mean_d_r": float(d[(held.side == s).to_numpy()].mean())}
+                                for s in ("long", "short") if (held.side == s).any()}})
+    v, why = gate_verdict(bool(cal["calibrated"]), n_dev, n_held, ns_held, skip, mean_d, lo_d, gated_mean, p_random)
+    res.update({"verdict": v, "why": why, "holdout_lock": claim, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0)})
+    (out / "result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    verdict = {"verdict": v, "read_state": "measured", "n": n_held,
+               "population": (f"v1 (frozen ml_entry booster, tau 0.10) held-out decisions {w_start}..{w_end} that exit on the 24h time "
+                              f"stop, mid-peg W {int(a.exit_w_min)} closing order, P(fill) gate fit on {n_dev} dev out-of-fold exits; "
+                              "measured where 1m Binance-vision klines exist"),
+               "note": why, "measurement": {k: res[k] for k in res if k not in ("calibration", "holdout_lock", "lgb_params")}}
     (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=str) + "\n")
     print(json.dumps({"verdict": v, "why": why}), flush=True)
     return 0
@@ -396,6 +651,10 @@ def run_exit(a) -> int:
 
 # ------------------------------------------------------------------------------------------------ self-test
 def _self_test() -> None:
+    # fresh-window population (RQ-20261118-e8a1-01): disjoint from the held-out year, and each window starts after its train_end
+    for _name, (w0, w1, tr_end, _lab) in POPULATIONS.items():
+        assert tr_end < w0 <= w1, _name
+    assert POPULATIONS["dev_oof"][1] < POPULATIONS["heldout"][0]
     T0 = 1_700_000_000 - (1_700_000_000 % 3600)
     t = np.arange(T0 - 3600, T0 + 3600, 60)
     base = np.full(len(t), 100.0)
@@ -488,24 +747,59 @@ def _self_test() -> None:
         raise AssertionError("tick_of must refuse a flat day")
     except ValueError:
         pass
+    # EXIT-GATE (RQ-20261119-b9d0-03): features read nothing after T; the decision rule; the verdict mapping
+    dz = pd.DataFrame({"t": t, "open": base, "high": base + 0.01, "low": base - 0.01, "close": base})
+    f0 = pre_features(dz, int(T0), -1, tick)
+    dz2 = dz.copy()
+    dz2.loc[dz2.t >= T0, ["open", "high", "low", "close"]] = 150.0    # change only bars that START at/after T
+    assert pre_features(dz2, int(T0), -1, tick) == f0, "pre_features must not read bars after T"
+    assert set(GATE_FEATURES) == set(f0) and f0["dir"] == -1.0 and abs(f0["tick_bps"] - 1.0) < 1e-9, f0
+    dz3 = dz.copy()
+    dz3.loc[dz3.t == T0 - 360, "close"] = 99.0                        # the close 5 minutes before the minute ending at T
+    assert abs(pre_features(dz3, int(T0), 1, tick)["ret5"] - (100.0 - 99.0) / 100.0 * 1e4) < 1e-6
+    assert pre_features(dz3, int(T0), -1, tick)["ret5"] < 0           # signed by the closing direction
+    g = gate_decide(np.array([0.9, 0.1, 0.5]), np.array([4.0, 4.0, 4.0]), -12.0)
+    assert g.tolist() == [True, False, False], g                      # 0.9*4-0.1*12>0; 0.1*4-0.9*12<0; 0.5*4-0.5*12<0
+    assert auc_score(np.array([0.1, 0.2, 0.8, 0.9]), np.array([0, 0, 1, 1])) == 1.0
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, 0.01)[0] == "pass"
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, 0.20)[0] == "fail"     # random skips do as well
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006, None)[0] == "fail"     # no control, no pass
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, -0.0002, 0.006, 0.01)[0] == "fail"
+    assert gate_verdict(True, 5000, 3000, 40, 0.1, 0.001, 0.0002, -0.001, 0.01)[0] == "fail"
+    # matched random: skipping exactly the losing exits beats random skips of the same count; skipping winners does not
+    dr = np.array([0.01] * 90 + [-0.05] * 10)
+    good = -dr[90:].sum() / 100
+    assert matched_random_skip(dr, 10, good, draws=300)["p_value"] < 0.01
+    bad = -dr[:10].sum() / 100
+    assert matched_random_skip(dr, 10, bad, draws=300)["p_value"] > 0.5
+    assert gate_verdict(True, 5000, 3000, 40, 0.005, 0.001, 0.0002, 0.006)[0] == "indeterminate"
+    assert gate_verdict(True, 900, 3000, 40, 0.1, 0.001, 0.0002, 0.006)[0] == "indeterminate"
+    assert gate_verdict(False, 5000, 3000, 40, 0.1, 0.001, 0.0002, 0.006)[0] == "indeterminate"
     print("ml_entry_maker_replay self-test OK")
 
 
 def main(argv=None) -> int:
     import holdout_lock as HL
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "calibrate", "exit"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "calibrate", "exit", "exit-gate"])
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--out", default="/tmp/maker_replay")
     ap.add_argument("--cache", default="/tmp/maker_1m")
     ap.add_argument("--kcache", default="/tmp/ml_decision_klines")
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--ledger", default=str(HL.LEDGER))
+    ap.add_argument("--entry-w-min", type=int, default=None,
+                    help="run mode: market-fallback window W for the ENTRY maker order (default W_MIN, reproducing 1c4e-01)")
+    ap.add_argument("--entry-peg", choices=["touch", "mid"], default="touch",
+                    help="run mode: where the entry maker order rests (touch = policy F, 1c4e-01's default; mid = RQ-20261118-e8a1-02)")
     ap.add_argument("--exit-rule", default=EXIT_RULE_ID, help="exit mode: the registered rule id the result names")
     ap.add_argument("--exit-w-min", type=int, default=W_MIN,
                     help="exit mode: market-fallback window W in minutes for the closing order (calibration stays at W_MIN)")
     ap.add_argument("--exit-peg", choices=["touch", "mid"], default="touch",
                     help="exit mode: where the closing maker order rests (touch = policy F, the default; mid = the D9 mid-peg arm)")
+    ap.add_argument("--population", choices=sorted(POPULATIONS), default="heldout",
+                    help="exit mode: heldout = v1's frozen booster on the held-out year (default); dev_oof = v1's recipe out of "
+                         "fold on the dev walk-forward (the fresh-window confirmation, RQ-20261118-e8a1-01)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -514,6 +808,10 @@ def main(argv=None) -> int:
     if a.cmd == "calibrate":
         print(json.dumps(calibrate(a), indent=1))
         return 0
+    if a.cmd == "exit-gate":
+        if a.unit != GATE_UNIT:
+            raise SystemExit(f"exit-gate answers {GATE_UNIT} only, got {a.unit}")
+        return run_exit_gate(a)
     if a.cmd == "exit":
         if a.unit == UNIT:
             a.unit = EXIT_UNIT

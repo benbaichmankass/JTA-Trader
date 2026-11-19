@@ -95,7 +95,7 @@ def test_the_dispatcher_lands_the_batch_once_per_cycle_and_asserts_it():
     assert i_collect < i_grade
     assert "collect_runner_results.py" in steps[i_collect]["run"]
     # RESEARCH-ROUTER: the in-flight caps (total + per backend) live in scripts/research/research_compute.yaml
-    assert "--max-research-inflight" not in steps[i_grade]["run"] and "--max-repo-queued 10" in steps[i_grade]["run"]
+    assert "--max-research-inflight" not in steps[i_grade]["run"] and "--max-repo-queued" not in steps[i_grade]["run"]   # both caps: research_compute.yaml (2026-11-19)
     assert "collect_count" in wf["jobs"]["dispatch"]["outputs"]
     lsteps = wf["jobs"]["land"]["steps"]
     lnames = [s.get("name", "") for s in lsteps]

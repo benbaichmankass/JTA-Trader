@@ -50,14 +50,19 @@ jobs:
       # per-trade mechanics fault (reconciler close, costs missing past the 3h window, missing bracket) as ONE pipeline
       # item (scripts/ops/mechanics_fault_intake.py). Mechanics monitoring only: files, blocks nothing, adds no gate.
       # A read failure is a warning (could not look), never a stop.
+      # AM-OPS-7 2026-11-19: the work store (WSD-S4) needs WORK_STORE_TOKEN to WRITE; without it every filing was
+      # refused (HTTP 401: missing authorization) while the step stayed green under the ::warning below -- run
+      # 44452854714 read 12 unfiled faults and filed none. A refused write is now an ::error (visible), not a warning;
+      # it still never stops the run (no halting).
       - name: File per-trade mechanics faults as pipeline items
         id: mech
         continue-on-error: true
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
         run: |
           python3 scripts/ops/mechanics_fault_intake.py --live --apply --session-ref ci-mechanics-intake \
-            || echo "::warning::mechanics_fault_intake could not run this hour"
+            || echo "::error::mechanics_fault_intake failed this hour (read or work-store write); faults NOT filed"
           if [ -n "$(git status --porcelain docs/claude/work/pipeline)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
       - name: Land on main (one self-landing PR)

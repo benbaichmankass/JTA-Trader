@@ -110,3 +110,17 @@ def test_max_restarts_exhausts():
     # second exhausted check is silent (no repeat alert spam)
     d2 = _decide(False, d["new_state"], now=10_001.0)
     assert d2["action"] == "none" and d2["alert"] is False
+
+
+def test_send_alert_escapes_html_so_telegram_accepts_a_probe_error(monkeypatch):
+    """2026-11-18 22:30:08Z: '[WARN] ... <urlopen error timed out>' was rejected (HTTP 400, parse_mode HTML)."""
+    import importlib
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    cw = importlib.import_module("check_web_api")
+    sent = []
+    import src.runtime.notify as notify
+    monkeypatch.setattr(notify, "send_telegram_direct", lambda m, *a, **k: sent.append(m))
+    assert cw.send_alert("[WARN] probe failed: <urlopen error timed out> & more") is True
+    assert sent == ["[WARN] probe failed: &lt;urlopen error timed out&gt; &amp; more"]

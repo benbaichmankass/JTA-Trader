@@ -972,7 +972,9 @@ build_equity_daily() {
     "adapter=yfinance_offvm" "symbol=${sym}" "timeframe=1d" \
     "start=${EQ_1D_START}" "end=${MARKET_END}" ${ticker:+"ticker=${ticker}"}
 }
-for s in SPY QQQ GLD TLT IWM SLV IEF TQQQ QLD SPYM IAUM; do build_equity_daily "$s"; done
+# TRAINER-1D-STALE-ROSTERED (2026-11-19): GDX SCHA USO (rostered) + DBC DBA UNG were never built, so their
+# trainer data/<SYM>_1d.csv froze in June/July (extend_data_from_lake.py extends only what the lake holds).
+for s in SPY QQQ GLD TLT IWM SLV IEF TQQQ QLD SPYM IAUM GDX SCHA USO DBC DBA UNG; do build_equity_daily "$s"; done
 build_equity_daily MGC "GC=F"
 build_equity_daily MHG "HG=F"
 

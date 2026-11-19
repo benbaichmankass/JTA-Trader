@@ -42,6 +42,19 @@ models:
       rule: RULE-ENTRY-PROMOTE-20261106
       provenance: MEASURED
       source: comms/research/ml_entry_grade/42250040398/verdict_amended_2.json
+  ml-decision-entry-v1r20261115:
+    stage: advisory
+    stage_basis: "the artifact ml/served/ENTRY_SERVED.json points at once #26288 lands (ml-entry-retrain run 43710344172); serves every ml_entry consumer"
+    headline_metric:
+      name: promotion_grade_mean_net_r_per_trade
+      value: 0.1692
+      n: 366
+      window: "2026-11-01..2026-11-14"
+      population: "candidate refit vs served ml-decision-entry-v1r20261106 on the 14-day grade window (served +0.1015 R, n 425), 48 symbols, net of fee 11 + slip 3 bps + funding 1 bps/8h"
+      verdict: pass
+      rule: RULE-ENTRY-PROMOTE-20261106
+      provenance: MEASURED
+      source: comms/research/ml_entry_grade/43710344172/grade_evidence.json
   ml-decision-entry-v2:
     stage: advisory
     stage_basis: "model of ml_entry_v2, executes live on bybit_1 (paper, testing)"

@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-12
 title: 'ml-exit-head-donchian-1h CONFIRMATION (held-out symbols): does the holding_pays_neg25 target, trained on the BTC/ETH/SOL rows only,
   beat the holding_pays champion by +0.01 R/trade on donchian 1h trades of 10 perps the head never saw?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -201,5 +201,26 @@ grading:
   graded_at: '2026-11-18'
   grader: scripts/research/queue_grade.py
   reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM
+  evidence:
+  - research/results/RQ-20261117-aadc-12/44170813134.jsonl
+  - comms/research/RQ-20261117-aadc-12/44170813134/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  reason: 'row measured (run 44170813134, 2026-11-17T20:49Z; landed on main in #27075) -> PASS by the registered rule, ON 5 OF THE 10 HELD-OUT
+    SYMBOLS: XRP, ADA, AVAX, LINK and BNB were measured (each dropped from training by --exclude-train-symbol); DOGE, LTC, DOT, TRX and NEAR were
+    producer_failed (no candle file resolve_data finds on the trainer). On the measured five, holding_pays_neg25 minus the champion +0.01596 R/trade, se
+    0.00494, CI (z 1.96) [+0.00628, +0.02564], n_oos 18,649 >= 3,000, mean >= +0.01 and CI lower > 0; not accruing. DATA-WINDOW (measured 10:15Z 2026-11-19): the test trades are replayed by harness.run_backtest on the candle file
+    resolve_or_refuse picked (exit_head_label_bakeoff.py L158-176), so the last test trade is bounded by that file''s last bar on the
+    run date. Both runs (44098413330 started 2026-11-17T14:00Z; 44170813134 started 2026-11-17T20:34Z) predate #26930 (merged
+    2026-11-18T21:06Z), which first brought the 5m feeds and BTCUSDT_15m under the trainer candle refresh (trainer-vm-diag #26926 at 2026-11-18T20:39Z, before the
+    one-time backfill #26928 at 20:44Z: every data/<SYM>_5m.csv last bar 2026-06-18, BTCUSDT_15m last bar 2026-07-10). The TEST
+    WINDOW therefore ended 2026-06-18 (5m legs) / 2026-07-10 (BTC), not 2026-11-17, and the TRAINING rows
+    (donchian/rows.jsonl, built 2026-07-12) end BTC 07-10 / ETH 07-07 / SOL 07-05. The PASS is a walk-forward read on data
+    ending 2026-06-18 / 2026-07-10; the fresh re-run is RQ-20261119-a10d-07/-08 (blocked on ML-EXITHEAD-ROWS-FRESH-REBUILD).'
   rows: 1
   verdict: pass

@@ -290,3 +290,13 @@ def test_pending_cancel_text_under_another_code_stays_a_refusal():
     assert not mod._is_cancel_in_flight({"code": 10148, "message": None})
     assert not mod._is_cancel_in_flight({"code": "x", "message": "state: PendingCancel"})
     assert not mod._is_cancel_in_flight(None)
+
+
+def test_an_entry_bracket_child_is_protective_even_with_an_empty_oca_group():
+    """BRACKETS-ALWAYS item 7: IBKR assigns a bracket's OCA group server-side, so a child LMT take-profit can read
+    oca_group '' (ib_paper TLT 2026-11-04, children of entry 1231). Its parent_id still marks it protective."""
+
+    assert mod._is_protective({"oca_group": "", "order_type": "LMT", "parent_id": 1231})
+    assert not mod._is_protective({"oca_group": "", "order_type": "LMT", "parent_id": 0})   # a working entry LMT
+    assert not mod._is_protective({"oca_group": None, "order_type": "LMT", "parent_id": None})
+    assert not mod._is_protective({"oca_group": None, "order_type": "LMT", "parent_id": "x"})

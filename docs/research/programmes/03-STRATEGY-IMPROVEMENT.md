@@ -4,6 +4,31 @@
 
 Numbers marked MEASURED were measured in this lane on 2026-10-14 from the file or command named beside them. Re-run the command rather than quoting the figure. Seeds: [`.claude/skills/perf-followup/SKILL.md`](../../../.claude/skills/perf-followup/SKILL.md) (the four tracks), `comms/reviews/performance-review-20261010-191000.json` and its follow-up record `comms/perf_followup/perf-followup-20261010-191000.json`, `research/THEMES.yaml`, `research/queue/PLANNING.md`, `docs/roadmap/milestones.yaml`.
 
+## Mid-week re-plan 2026-11-19 (lane PROGRAMME-REPLAN-20261119) — TRADING track, iteration loop only
+
+**Population:** the regime / direction lever cells graded 2026-11-17..19: 9e1a (top-vol skip, 7 legs), 9e1b (cold-vol skip,
+6), 9e1c (ADX ceiling, 3), the b2f1 direction cells and abab-47..50, plus the trend_donchian_1h LONG twins abab-69..72.
+
+**Learned.**
+- *The top-vol skip helps the long-only daily index trend legs, and only at the extreme decile*: scha VH90 +3.2 R (6 of 6), splg
+  VH90 +2.2 R (4 of 6); VH80 fails on both. Read across the family, not leg by leg: the next nodes test it on spy / qqq / iwm /
+  qld with a registered family rule (>= 3 of 4).
+- *Vol is the wrong regime axis for the commodity legs that lost on both tails* (mgc_pullback_1d, uso_trend_1h, tlt_pullback_1h).
+  Removing either tail cost R. The untested axes are trend state (HTF SMA) and trend strength (ADX ceiling); nodes for both.
+- *mhg_pullback_1d improves when EITHER tail is removed* (VH90 +6.6, VL20 +7.7). That is a mid-vol band hypothesis, tested as
+  BAND on pre-dev history.
+- *A fixed direction is not an edge on trend_donchian_1h*: the BTC LONG-only lead (abab-48) held on ETH, failed on SOL and BNB,
+  and XRP passed SHORT. That is 1 of 4 in the lead's direction, which reads as BTC drift. The slope-conditioned side (DS, +78 R on
+  BTC) is the hypothesis that explains both ETH-long and XRP-short; four twin nodes test it with a >= 3-of-4 family rule.
+- *Dead levers were being graded FAIL* (abab-47, side-filter on a long-only leg). The grader is fixed. trend_donchian,
+  trend_donchian_sol and uso_trend_1h are long_only, and trend_donchian_xrp_adx25 is short-only, so direction cannot be read on
+  those four.
+
+**Next (nodes authored, after: [] -> due).** Confirmations: mhg BAND (pre-dev 2008-18), mgc_pullback AX50 (pre-dev), scha VH90 (IJR
+twin), splg VH90 (RSP twin), mgc_trend_1h VL30 (SLV twin), qqq_trend_long DS (pre-dev 2006-18), trend_donchian_1h DS on four
+twins. Iterations: the trend-long family VH test (4 legs), mgc_pullback HTF gate, uso / tlt ADX ceiling, gdx vol skips on the
+long history, trend_donchian session. Each node names its decision, both branches and its pre-mortem in why_this_matters.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
