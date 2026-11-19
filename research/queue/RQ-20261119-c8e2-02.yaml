@@ -1,0 +1,117 @@
+# AUTHORED by AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN), 2026-11-19, the ONE regime OFF-cell re-run unit the manager
+# asked for once #27299 refreshed the trainer's data/backtest_BTCUSDT_5m.csv (row TRAINER-INTRADAY-EQUITY-REFRESH, observed
+# 2026-11-19 15:15Z: last bar 2026-11-19 14:50Z, contiguous). Report only. Gates this adds or changes: none.
+id: RQ-20261119-c8e2-02
+title: 'FRESH-DATA RE-RUN: do the LIVE trend_vol regime OFF-cells (config/regime_policy.yaml, vol-keyed) still remove a money-losing slice on
+  post-freeze BTC data, or have they become cosmetic?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: regime-router-trend-vol-cells
+  subject_kind: regime_cell
+  from_result: null
+  verdict_read: none
+  diagnosis: 'The live trend_vol OFF-cells rest on the 2026-06-27 vol-gating A/B (docs/research/A-vol-gating-AB-evidence-2026-06-27.md,
+    scripts/ml/walkforward_vol_gating.sh): four consecutive BTC year-folds ending 2026-06-01 on data/backtest_BTCUSDT_5m.csv, which stayed
+    frozen at 2026-05-21 until #27299 (2026-11-19). The cells have never been read on post-freeze data, and that A/B compared frozen vs ML
+    keying but never graded the cells against NO cell (regime-selectivity Rule 1).'
+  search: 'none: three fixed arms (ungated, frozen-keyed, ML-keyed) of the same harness over the 2026-06-27 roster and the live policy file'
+  levers:
+  - regime_cells
+  attempt: 1
+  due_by: '2026-11-26'
+question: 'On the fresh fold 2026-06-01..2026-11-19 (scripts/backtest_system.py, BTC data/backtest_BTCUSDT_5m.csv, roster trend_donchian,
+  squeeze_breakout_4h, htf_pullback_trend_2h, live config/regime_policy.yaml), does the book with the ML-keyed trend_vol OFF-cells have net
+  >= the ungated book AND max drawdown % <= the ungated book? The four 2026-06-27 year-folds are re-run beside it as context.'
+why_this_matters: The cells drop live intents before routing on every account the roster reaches. If they no longer separate a money-losing
+  slice on current data they are cosmetic (Rule 1) and cost trades for nothing; if they hold, the June evidence is confirmed on data it never saw.
+evidence_class:
+  holdout: fresh_window
+  claim: regime_cell
+power:
+  expected_n: 60
+  min_detectable_effect: 0.0
+  effect_units: usd
+  sd: 0.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, stated before the run: the 2026-06-27 folds held ~1,100 gated decisions over ~4 years for this roster on BTC, so ~5.5 months
+    gives tens of trades per arm. This unit is NOT powered for a per-trade difference; it applies the two-metric book criterion (net AND maxDD%,
+    both) with an INDETERMINATE floor of 30 ungated trades on the fresh fold. An INDETERMINATE changes nothing.'
+  feasibility:
+    source: none
+    accrual_basis: Replays trainer-resident candles through the system backtest; nothing accrues.
+baseline:
+  definition: The ungated book (--regime-router off), same roster, window, data and harness cost model as the gated arms.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261119-c8e2-02-TRENDVOL-CELLS-FRESH
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: the ungated book on the same fold
+  statistic: 'scripts/research/vol_offcell_fresh_wf.py grade(): on the fresh fold, ml.net - ungated.net and ml.maxdd_pct - ungated.maxdd_pct
+    (scripts/backtest_system.py --json net_pnl / max_drawdown_pct). The four 2026-06-27 folds and ml vs frozen are reported, decide nothing.'
+  rule: 'HOLDS iff ml.net >= ungated.net AND ml.maxdd_pct <= ungated.maxdd_pct. DOES_NOT_HOLD iff ml.net < ungated.net AND ml.maxdd_pct >=
+    ungated.maxdd_pct. MIXED otherwise. INDETERMINATE if the ungated arm has < 30 trades on the fresh fold or any arm is unreadable. Roster,
+    folds, head (btc-regime-15m-lgbm-v2, the A/B''s validated head) and floor are not changed after any result.'
+  pass_action: Record the cells as confirmed on post-freeze data (regime-selectivity evidence note); nothing changes.
+  fail_action: 'DOES_NOT_HOLD: a data-backed Tier-3 proposal to the manager to retire the cosmetic cells, with this record and the
+    regime_cell_walkforward 2-D check (Rule 2) as the next step. Nothing is flipped by this unit.'
+  min_n: 30 ungated trades on the fresh fold
+practice_precedent: confirm a single-window pass on data the decision never saw (weekly audit 2026-11-18 Q3; docs/reference/trading-and-model-practice-principles.md)
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps each strategy's own stop, trail and TP; only the regime router differs
+  best_static:
+    grid:
+    - ungated (router off)
+    - frozen-keyed cells
+    - ML-keyed cells (live)
+    excludes_test_folds: true
+    note: nothing is tuned; the three arms are fixed before the run
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 30
+  confidence: 0.3
+  basis: 'stand-in: the cells gate trend_donchian / squeeze / htf_pullback intents on BTC; the value is confirming or retiring a live gate on
+    fresh data.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  why_runner: data/backtest_BTCUSDT_5m.csv and the ML registry are trainer-resident
+  basis: 'ESTIMATE: 5 folds x 3 arms = 15 system-backtest runs over a 5m BTC series.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 150
+  command:
+  - python3
+  - scripts/research/vol_offcell_fresh_wf.py
+  - --data
+  - data/backtest_BTCUSDT_5m.csv
+  - --policy
+  - config/regime_policy.yaml
+  - --unit
+  - RQ-20261119-c8e2-02
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261119-c8e2-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/A-vol-gating-AB-evidence-2026-06-27.md
+- scripts/ml/walkforward_vol_gating.sh
+- .claude/skills/regime-selectivity/SKILL.md
+last_dispatched_at: null
