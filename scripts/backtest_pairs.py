@@ -382,6 +382,10 @@ def _self_test() -> int:
     return 0 if ok else 1
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW_A', 'FUNDING_BPS_PER_WINDOW_B', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP
     global FUNDING_BPS_PER_WINDOW_A, FUNDING_BPS_PER_WINDOW_B

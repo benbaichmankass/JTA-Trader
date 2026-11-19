@@ -551,6 +551,10 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv):
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     p = argparse.ArgumentParser(description="Volatility-squeeze breakout backtest (net-of-cost: fee+slippage+funding).")

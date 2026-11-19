@@ -1708,6 +1708,10 @@ def _fmt_sweep(sw: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     p = argparse.ArgumentParser(description="Donchian trend-follower backtest (net-of-cost: fee+slippage+funding).")

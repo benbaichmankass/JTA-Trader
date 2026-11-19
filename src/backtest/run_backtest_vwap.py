@@ -1009,6 +1009,10 @@ def run_windows(
     }
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('BE_AT_R', 'BE_OFFSET_BPS', 'FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'MIN_HOLD_MINUTES_FOR_VWAP_CROSS', 'MIN_R_FOR_VWAP_CROSS', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv: list[str]) -> int:
     global FEE_BPS_ROUNDTRIP  # set from --fee-bps-roundtrip after parse
     global SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW
