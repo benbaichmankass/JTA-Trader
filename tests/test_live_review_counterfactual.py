@@ -350,3 +350,39 @@ def test_candles_that_start_after_the_review_are_refused_not_shifted():
     assert r["state"] == "could_not_price" and r["reason"] == "candles_start_after_review"
     ok = [dict(b, time=b["time"] + H) for b in bars((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))]
     assert cf.price_review(review(), pkg(), trade(realised(4.0)), ok)["reason"] != "candles_start_after_review"
+
+
+# ---- LTR-GRADE-APPLIED (2026-11-19): a dispatchable row main's schema refused is still priced ------------------
+import json as _json  # noqa: E402
+
+_REAL = _json.loads((REPO / "tests/fixtures/ltr_refused_applied_row_20261105.json").read_text())
+
+
+def test_the_real_refused_applied_close_shape_prices_as_a_paired_close():
+    """The refused row's own shape (old forecast keys, level-less trigger, + schema_problems from the sidecar) prices
+    like any close. Only the join keys, time and levels are re-pointed at this file's synthetic package/bars."""
+    rv = dict(_REAL, schema_problems=["trigger.event structure_break names a due event but no level"],
+              order_package_id="pkg-t", trade_id=1, reviewed_at=cf._iso(T0), applied=False,
+              state={**_REAL["state"], "sl": 101.0, "tp": 96.0})
+    res = cf.price_contained([rv], {"pkg-t": pkg()}, {1: trade(realised(4.0), exit_reason="live_review_close")},
+                             lambda sym, tf: bars(*_RUN))
+    assert len(res) == 1 and res[0]["state"] == "priced", res
+    o = res[0]["outcome"]
+    assert o["action"] == "close" and o["cf_method"].startswith("paired_replay")
+    assert o["review_id"] == _REAL["review_id"]
+    assert chk.row_problems(o, "outcomes", chk.json.loads(chk.SCHEMA.read_text())) == []
+
+
+def test_price_contained_counts_a_row_that_raises_and_prices_the_rest():
+    broken = {"review_id": "LR-x-pkg-t"}                       # no order_package_id: price_all raises KeyError
+    good = review(action="close", level=None)
+    res = cf.price_contained([broken, good], {"pkg-t": pkg()}, {1: trade(realised(4.0))}, lambda s, t: bars(*_RUN))
+    assert [r["review_id"] for r in res] == [broken["review_id"], good["review_id"]]
+    assert (res[0]["state"], res[0]["reason"]) == ("could_not_price", "sidecar_row_unpriceable:KeyError")
+
+
+def test_sidecar_reader_skips_ids_already_on_main(tmp_path):
+    p = tmp_path / "side.jsonl"
+    p.write_text(_json.dumps({"review_id": "A"}) + "\n" + _json.dumps({"review_id": "B"}) + "\n")
+    assert [r["review_id"] for r in cf.read_refused_dispatchable(p, skip_ids=["A"])] == ["B"]
+    assert cf.read_refused_dispatchable(tmp_path / "absent.jsonl") == []

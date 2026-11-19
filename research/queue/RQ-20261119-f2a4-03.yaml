@@ -1,0 +1,129 @@
+# Hand-authored 2026-11-19 by lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), dispatched by the manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV). Unblocked by alpaca_live_book.py h2h (same PR). Gates this adds or changes: none.
+id: RQ-20261119-f2a4-03
+title: 'P8-Q4 HEAD-TO-HEAD on the alpaca_live cash book: does slv_trend_1h (the one leg 207f-04 qualified), alone or sharing the slot
+  with Foxhound-4 (+ tqqq_trend_long_1d), beat Foxhound-4 alone by the P8 promotion rule s 5.2, on their common DEV window?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+- L-ML-LIVE
+programme: P8
+kind: experiment
+question: 'Replaying Foxhound-4 as configured (tau 0.25, net-R label, the purged DEV walk-forward of `foxhound --section book`, <= 2025-06-30)
+  and the Stage-0 trades of slv_trend_1h (build_strategy_evidence, config-exact) through the alpaca_live cash book on their COMMON window,
+  paired by month: does slv_trend_1h alone (REPLACE) or the combined book (Foxhound-4 picks first, tqqq_trend_long_1d included; JOIN)
+  clear plan s 5.2 against Foxhound-4 alone: mean monthly return difference >= +0.25 % of the book, paired t >= holdout_lock.bar_for(2).point_t_min,
+  n_taken >= 30 for both books, max drawdown <= 1.5x the incumbent''s?'
+why_this_matters: 'Decision it changes: what alpaca_live (a real-money book) trades. 207f-01 found Foxhound-4''s dev edge does NOT survive
+  the cash book (book mean -0.058 R over n 97 vs -0.002 R unconstrained), and 207f-04 qualified slv_trend_1h as the only challenger
+  (n_taken >= 30, book mean > 0, month-clustered t >= 1). PASS (REPLACE or JOIN) -> a Tier-3 proposal for the manager per plan s 5.5,
+  after the s 5.3 confirmation on a window after the leg''s Stage-0 window; FAIL -> Foxhound-4 stays, and the record says no rostered
+  rule-based leg beats it on this book; the P8 search moves to Q7 rotation (a new family sized for the account).'
+iteration:
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261111-207f-04
+  verdict_read: pass
+  diagnosis: '207f-01 FAIL: the live leg''s edge is eaten by the account (whole shares, one slot, T+1). 207f-04 PASS: slv_trend_1h survives
+    the same book. The head-to-head is the registered next rung (node P8-Q4-h2h); it was blocked only on the instrument (no h2h replay),
+    built in this PR.'
+  search: 'selection (which leg holds the one slot): incumbent vs one challenger vs the combined book; arms fixed by the plan.'
+  levers:
+  - universe
+  attempt: 1
+  due_by: '2026-11-26'
+  map_entries:
+  - research/levers/ml-entry-eq-struct.yaml
+power:
+  expected_n: 60
+  min_detectable_effect: 0.36
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'Standardised: d = 2.8 / sqrt(60) = 0.36 sd of the paired MONTHLY difference at alpha 0.05 / power 0.8 (the monthly sd is not measured before the run, so the detectable effect is stated in sd; the rule''s +0.25 %/month materiality bar is unchanged). INFERRED: 207f-01 took 97 Foxhound-4 trades on the book over ~30 dev months; 207f-04 qualified slv_trend_1h at n_taken >=
+    30 over 700 days. The common window is MEASURED at run time and printed; under n_taken 30 on the incumbent or the combined book
+    the unit grades INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays in-hand history (Alpaca 1h bars for the refit, Yahoo candles for the leg); nothing accrues.
+decision_rule:
+  id: RULE-RQ20261119f2a403-P8-H2H
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/alpaca_live_book.py h2h: books = incumbent (Foxhound-4), slv_trend_1h, combined; each clipped to the
+    common window [latest first entry, earliest last entry] and replayed by replay() with the live sizer constants; h2h_grade() per
+    arm vs the incumbent.'
+  rule: 'Per plan s 5.2 / 5.4, every clause reported: an arm CLEARS iff paired monthly mean difference >= +0.25 %/month AND paired t
+    >= bar_for(2).point_t_min AND n_taken >= 30 for both AND maxDD <= 1.5x the incumbent''s. PASS (REPLACE) iff slv_trend_1h clears
+    vs Foxhound-4 AND clears vs the combined book; PASS (JOIN) iff the combined book clears vs Foxhound-4; FAIL iff neither; INDETERMINATE
+    iff the incumbent or the combined book has n_taken < 30, or there is no common window. If the common window reaches 2025-07-15 the
+    read must be claimed in the holdout ledger (family ENTRY-EQ) first: this unit stays on the DEV window, so the record states overlaps_entry_eq_confirm_window
+    false. Thresholds and arms are fixed now and not changed after any result.'
+  what_it_does_not_do: Changes no roster, config or account; places no order. A PASS is a Tier-3 proposal input that still needs the
+    s 5.3 confirmation on data not used to select it.
+compute: cpu_long
+value:
+  bucket: structural
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: planning weight for the slot on a real-money cash book; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  basis: 'INFERRED: the Foxhound-4 refit is 207f-01''s (~130 min) plus two config-exact leg harness passes (207f-04: ~4 min per leg).'
+  why_runner: Alpaca 1h bars (read-only paper key, research-script-run) for the refit and Yahoo candles for the legs; Kaggle CPU runs
+    with the internet off; no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - h2h
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --rule-id
+  - RULE-RQ20261119f2a403-P8-H2H
+  - --registered-at
+  - '2026-11-19'
+  - --strategy
+  - slv_trend_1h
+  - --book-leg
+  - tqqq_trend_long_1d
+  - --days
+  - '1460'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261119-f2a4-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/runtime/ml_pool_scoring.py
+  decision: whether the one-slot cash book keeps Foxhound-4, replaces it, or shares the slot
+  legs:
+  - ml_entry_eq_struct
+  - slv_trend_1h
+  - tqqq_trend_long_1d
+  book: money
+intervention_controls:
+  not_applicable: a book replay comparison of two trade lists, not an in-trade action
+what_it_does_not_do: Changes no roster, config or account; places no order. A PASS is a Tier-3 proposal input that still needs the s
+  5.3 confirmation.
+practice_precedent: docs/research/programmes/08-ALPACA-LIVE-BOOK.md s 5 (the promotion rule); M13 selection-deflated bar via holdout_lock.bar_for.
+related:
+- RQ-20261111-207f-01
+- RQ-20261111-207f-04
+- research/programmes/08-alpaca-live-book.yaml#P8-Q4-h2h
+- scripts/research/alpaca_live_book.py

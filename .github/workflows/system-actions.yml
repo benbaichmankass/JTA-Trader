@@ -2670,9 +2670,10 @@ jobs:
           if [ "${ACTION}" = "reattach-stranded-package-legs" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
-          # reopen-filled-closed-rows (PI-20261118-JFWRQYOV-0004, one-off, pinned): dry-run unless apply:true.
+          # reopen-filled-closed-rows (PI-20261118-JFWRQYOV-0004, spec-driven): dry-run unless apply:true;
+          # account + symbol pick the committed spec comms/ops/reopen_specs/<account>__<SYMBOL>.json.
           if [ "${ACTION}" = "reopen-filled-closed-rows" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ${REMOTE_CMD}"
           fi
           # relabel-package-close-reasons: its apply was never forwarded (found 2026-11-01, LTR-PACKET-FIXES),
           # so `apply: true` ran as a dry run on the VM.

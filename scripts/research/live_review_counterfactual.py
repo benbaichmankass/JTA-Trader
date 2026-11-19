@@ -69,6 +69,9 @@ from src.runtime.execution_costs import DEFAULT_FEE_BPS_ROUNDTRIP, resolve_cost_
 from src.runtime.net_r_label import net_r_for_trade  # noqa: E402
 
 REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
+#: Dispatchable rows main's schema refused (live_review_rows_mirror.REFUSED_DISPATCHABLE): still priced, because a row
+#: the VM applied must be graded whatever shape it was written in (LTR-GRADE-APPLIED, 2026-11-19).
+REFUSED_DISPATCHABLE = REPO / "comms" / "live_review" / "reviews_refused_dispatchable.jsonl"
 OUTCOMES = REPO / "comms" / "live_review" / "outcomes.jsonl"
 FIDELITY_TOL_R = 0.15
 ALTERING = ("tighten_sl", "tp_revise", "partial_close", "close", "move_tp", "widen_sl", "change_size", "add_entry")
@@ -497,6 +500,27 @@ def read_jsonl(p: Path) -> List[dict]:
     return out
 
 
+def read_refused_dispatchable(path: Path = REFUSED_DISPATCHABLE, skip_ids: Iterable[str] = ()) -> List[dict]:
+    """The sidecar rows, minus any review_id already in main's reviews (``skip_ids``). Absent file = []."""
+    skip = set(skip_ids)
+    return [r for r in (read_jsonl(path) if path.exists() else []) if r.get("review_id") not in skip]
+
+
+def price_contained(reviews: Iterable[dict], packages: Dict[str, dict], trades: Dict[int, dict],
+                    candle_fn: Callable[[str, str], Optional[List[dict]]]) -> List[dict]:
+    """price_all, one row at a time, a row that raises is skipped with a stderr line: the sidecar holds rows the schema
+    refused, so a missing field must cost that row only, never the hourly pricing of every other review."""
+    out: List[dict] = []
+    for rv in reviews:
+        try:
+            out += price_all([rv], packages, trades, candle_fn)
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:   # a schema-refused row's missing/odd field
+            print(f"price_contained: {rv.get('review_id')}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            # counted, never dropped: the grade's could_not_price_reasons names it
+            out.append(_result({"order_package_id": None, **rv, "review_id": rv.get("review_id")}, state="could_not_price", reason=f"sidecar_row_unpriceable:{type(exc).__name__}"))
+    return out
+
+
 def price_all(reviews: Iterable[dict], packages: Dict[str, dict], trades: Dict[int, dict],
               candle_fn: Callable[[str, str], Optional[List[dict]]], computed_at: Optional[str] = None) -> List[dict]:
     """Price every review. ``candle_fn(symbol, interval)`` returns bars (``time`` epoch s, OHLC) or None."""
@@ -588,8 +612,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not a.live:
         ap.error("only --live is wired on the CLI; tests and the grader call price_all() with their own sources")
     reviews = read_jsonl(Path(a.reviews))
-    packages, trades = load_live_sources(reviews)
+    side = read_refused_dispatchable(skip_ids=[r.get("review_id") for r in reviews])
+    packages, trades = load_live_sources(reviews + side)
     res = price_all(reviews, packages, trades, fetch_candles_live)
+    res += price_contained(side, packages, trades, fetch_candles_live)
     from collections import Counter
     print(json.dumps({"n_reviews": len(res), "by_state": Counter(r["state"] for r in res),
                       "by_reason": Counter(r["reason"] for r in res if r["reason"])}, indent=1))

@@ -9,8 +9,9 @@ carries ``If-Match: <version>``; a stale version is answered 409 with the curren
 Reads (``GET``) stay open ("Reading is never gated"). CORS is configured once in
 ``src/web/api/main.py`` and is not touched here.
 
-S1 only: nothing reads this store as truth yet. The checklist row files and the pipeline
-store stay canonical until S2 (importer + parity) and S4 (reader flip).
+Canonical since the WSD-S4 freeze (``docs/claude/work/checklist/_header.json`` carries
+``frozen_into_work_store``): this store is the register and the row / record files are its EXPORT.
+Every list response reports that from the freeze key itself (``work_read.frozen``), never a literal.
 """
 from __future__ import annotations
 
@@ -25,6 +26,18 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from src.runtime import work_store as ws
+
+
+def _canonical() -> bool:
+    """Is this store the register? Read from the S4 freeze key; False when it cannot be read."""
+    try:
+        from pathlib import Path  # noqa: PLC0415
+        from src.runtime import work_read  # noqa: PLC0415
+        from src.utils.paths import repo_root  # noqa: PLC0415
+        return work_read.frozen(Path(repo_root()))
+    except Exception:  # noqa: BLE001  # allow-silent: a provenance label only; False is the conservative answer
+        logger.warning("work_items: freeze key unreadable", exc_info=True)
+        return False
 
 logger = logging.getLogger(__name__)
 
@@ -314,8 +327,9 @@ def list_items(state: str | None = None, due: bool = False, parent: str | None =
         return JSONResponse(status_code=503, content={
             "readState": "could_not_look", "error": str(exc), "items": None, "total": None})
     out = {"readState": "read", "items": items, "returned": len(items), "total": total,
-           "canonical": False,
-           "note": "S1: the checklist + pipeline files stay canonical until S2 parity and the S4 reader flip"}
+           "canonical": _canonical(),
+           "note": ("the work store is the register; docs/claude/work/checklist|pipeline files are its export"
+                    if _canonical() else "pre-freeze: the checklist + pipeline files are canonical")}
     if matched is not None:
         out["matched"] = matched
     if count_block is not None:
