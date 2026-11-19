@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Test-only fix: scripts/ops/work_report.py --self-test wrote digest-log entries dated 2026-10-05; on 2026-11-19 they aged past KEEP=45 days and append_digest_log pruned them, so tests/test_attention_watch.py::test_work_report_self_test_passes is red on main and on every PR (seen on #27170 pytest-run 44469178202: 1 failed, 30013 passed). The self-test now dates its entries relative to now. No runtime path changes. Gates this adds or changes: none."
+}
