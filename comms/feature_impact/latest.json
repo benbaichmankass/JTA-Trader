@@ -1,9 +1,10 @@
 {
- "computed_at": "2026-11-12T20:13:39Z",
+ "computed_at": "2026-11-19T14:43:00Z",
  "coverage": {
   "in_v0": "M1 split_share + gain_share for ml/served + ml/candidates LightGBM artifacts, pooled population",
   "m2": {
    "data_end": "2026-09-29 23:00:00+00:00",
+   "label_note": "net_long = net R of the 2 ATR / 3 ATR / 24 h long bracket after the full cost stack (the v1 / v1r20261106 label; v2 trains on a 2 / 4 bracket); fwd_ret_24h = raw 24 h log return. READ BOTH: net_long is in R, and cost in R = cost_bps / stop distance, so volatility features rank net_long through cheaper cost per R, not direction (first run 2026-11-11: atr_pct IC +0.49 vs net_long, -0.08 vs fwd_ret_24h)",
    "missing_months": {
     "AAVEUSDT": [
      "2020-07",
@@ -110,6 +111,7 @@
     ]
    },
    "rows": 3190,
+   "se_basis": "rank_ic_xs: sd over timestamps / sqrt(n / 6) (overlapping 24 h labels on a 4 h step)",
    "state": "measured",
    "symbols_built": 60,
    "symbols_requested": 60,
@@ -122,7 +124,7 @@
     "slippage_status": "PROVISIONAL"
    },
    "data_end": "2025-06-25 16:00:00+00:00",
-   "decision_rows": 377067,
+   "decision_rows": 378440,
    "features": [
     "ret_1",
     "ret_4",
@@ -157,33 +159,34 @@
    ],
    "label_note": "net_long = LONG net R of the registered 2 ATR stop / 3 ATR target / 24 RTH-bar bracket after fee + provisional 5 bps slippage + 0.5 bps regulatory (the ENTRY-EQ label; the struct models train a pivot-5 SL-only variant of it); fwd_ret_24 = raw 24 RTH-bar log return. Read both: net R divides by stop distance, so a volatility feature can rank net R through cost-per-R rather than direction. DEV ONLY: decisions before 2025-07-01; the confirming window is never loaded. Population: the registered POOL_RULE ETF pool (sha in this block).",
    "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
-   "pool_symbols": 172,
-   "rows": 11004,
+   "pool_symbols": 173,
+   "rows": 11064,
    "state": "measured",
-   "symbols_built": 170
+   "symbols_built": 171
   },
   "m2_regime": {
    "data_end": "2025-06-30 23:00:00+00:00",
    "data_start": "2020-07-01 19:00:00+00:00",
    "label_note": "regime_label = forward_vol > vol_threshold (a function of forward_vol alone) and trend_regime_label keys off the Kaufman efficiency ratio of the same forward window; both are measured here as the continuous quantity (forward_vol = pstdev of the next 5 1h log returns; forward_er = |sum r| / sum |r|), which carries every threshold. Features are re-derived past-only from the cached klines (vol_bucket is a monotone bucket of rolling_log_return_vol and is not listed separately). Rank IC is monotone association only.",
-   "rows": 129488,
+   "rows": 264,
    "state": "measured",
    "symbols": [
     "BTCUSDT",
     "ETHUSDT",
     "SOLUSDT"
-   ]
+   ],
+   "table_rows": 129488
   },
   "m2_scope": "rank_ic_xs (cross-sectional per 4 h decision timestamp, averaged; by quarter) and rank_ic_ts (per symbol) for the crypto decision-entry family's 20 features vs its own net-R label and the raw 24 h return",
   "m3_crypto": {
    "base": {
-    "mean_net_r": -0.06002737289255669,
-    "n_taken": 13144,
-    "rank_ic": 0.16991769919939334
+    "mean_net_r": -0.05217454466354009,
+    "n_taken": 13101,
+    "rank_ic": 0.16873622205110278
    },
    "noise_floor": {
-    "ic": 0.0037380439817616684,
-    "taken": 0.006031295941849785
+    "ic": 0.004722262567713631,
+    "taken": 0.015305211222011533
    },
    "rows": 50,
    "state": "measured",
@@ -192,17 +195,17 @@
    "test_end": "2025-07-01",
    "test_rows": 125660,
    "train_end": "2024-07-01",
-   "train_rows": 506401
+   "train_rows": 504486
   },
   "m3_equity": {
    "base": {
-    "mean_net_r": -0.1294627083966819,
-    "n_taken": 2424,
-    "rank_ic": 0.20465400274946594
+    "mean_net_r": -0.14487888312467642,
+    "n_taken": 2711,
+    "rank_ic": 0.20415243604572614
    },
    "noise_floor": {
-    "ic": 0.007574955082490009,
-    "taken": 0.03854975494899203
+    "ic": 0.0022283213472716057,
+    "taken": 0.04191283647682764
    },
    "rows": 72,
    "state": "measured",
@@ -211,7 +214,7 @@
    "test_end": "2025-07-01",
    "test_rows": 82184,
    "train_end": "2024-07-01",
-   "train_rows": 292872
+   "train_rows": 294245
   },
   "not_yet": [
    "M2 / M3 for the tp-revision exit head (its 18-class check-in label needs its own builder)",
@@ -221,7 +224,7 @@
    "SHAP / permutation on OOF"
   ]
  },
- "file": "20261112T2013Z.jsonl",
+ "file": "20261119T1443Z.jsonl",
  "measures": [
   "abl_rank_ic",
   "abl_taken_mean_net_r",
@@ -236,12 +239,13 @@
   "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json": "measured",
   "ml/served/ml_decision_entry_v1/model.json": "measured",
   "ml/served/ml_decision_entry_v1r20261106/model.json": "measured",
+  "ml/served/ml_decision_entry_v1r20261115/model.json": "measured",
   "ml/served/ml_decision_entry_v2/model.json": "measured",
   "ml/served/ml_entry_tp_revision_v1/model.json": "measured"
  },
- "n_measured": 14970,
- "n_rows": 15004,
+ "n_measured": 15110,
+ "n_rows": 15144,
  "read_state": "measured",
- "run_id": "20261112T2013Z",
+ "run_id": "20261119T1443Z",
  "schema": "feature_impact/1"
 }
