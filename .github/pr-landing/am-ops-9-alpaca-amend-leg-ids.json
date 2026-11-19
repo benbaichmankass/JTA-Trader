@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "ALPACA-AMEND-LEG-IDS: the Alpaca trail / live-review amend (src/units/accounts/alpaca_amend.py) picks a trade's stop and target legs by ORDER ID (the legs nested under trades.broker_order_id) instead of by share count, so same-size sibling trades on one symbol stop refusing as ambiguous_legs (alpaca_portfolio SLV 7758/7766/7770, 2026-11-19 21:09Z). Falls back to the prior qty rule, which still refuses ambiguity. Order path: execute.modify_open_order threads entry_order_id. Adds no gate.",
+  "hold_text": "Tier-2 order path: the manager merges and restarts ict-trader-live in a window, then checks the next alpaca_portfolio SLV trail logs 'alpaca stop applied' (or a named refusal that is not ambiguous_legs)."
+}

@@ -1073,3 +1073,74 @@ def test_packet_names_its_journal_trades():
     p = _build(pkg, s)
     assert p["trades"] == [{"account_id": "alpaca_paper", "status": "open", "trade_id": 8031},
                            {"account_id": "alpaca_portfolio", "status": "closed", "trade_id": 8030}]
+
+
+def _no_tf_pkg(pkg, leg, symbol):
+    return {"order_package_id": pkg, "strategy_name": leg, "symbol": symbol, "direction": "short",
+            "entry": "1.0", "sl": "1.1", "tp": "0.8", "status": "open", "close_reason": None,
+            "meta": json.dumps({"atr": 0.5})}
+
+
+def test_a_package_without_meta_timeframe_takes_the_leg_suffix_and_says_so():
+    """2026-11-19 21:20Z: the avax_4h / ada_4h packets had no chart and no htf because meta carried no
+    timeframe. The leg suffix is the fallback (the rule live_review_due.timeframe_seconds uses)."""
+    s = _snap(telemetry={"rows": []})
+    s.packages["pkg-a"] = _no_tf_pkg("pkg-a", "trend_donchian_avax_4h", "AVAXUSDT")
+    s.candles["AVAXUSDT|4h"] = {"candles": [], "error": "no_data"}
+    p = _build("pkg-a", s)
+    assert p["regime"]["timeframe"] == "4h" and p["regime"]["timeframe_source"] == "leg_suffix"
+    reasons = {m["field"]: m["reason"] for m in p["missing_inputs"]}
+    # it LOOKED on 4h (the candle read was empty) instead of refusing for an unrecorded timeframe
+    assert "not recorded in meta" not in reasons.get("regime.trend_now", "")
+    assert "AVAXUSDT|4h" in s.candles
+
+
+def test_meta_timeframe_still_wins_over_the_leg_suffix():
+    s = _snap(telemetry={"rows": []})
+    pk = _no_tf_pkg("pkg-b", "trend_donchian_avax_4h", "AVAXUSDT")
+    pk["meta"] = json.dumps({"atr": 0.5, "timeframe": "1h"})
+    s.packages["pkg-b"] = pk
+    s.candles["AVAXUSDT|1h"] = {"candles": [], "error": "no_data"}
+    p = _build("pkg-b", s)
+    assert p["regime"]["timeframe"] == "1h" and p["regime"]["timeframe_source"] == "meta"
+
+
+def test_a_leg_without_a_timeframe_suffix_stays_unrecorded():
+    s = _snap(telemetry={"rows": []})
+    s.packages["pkg-c"] = _no_tf_pkg("pkg-c", "claude_desk", "AVAXUSDT")
+    p = _build("pkg-c", s)
+    assert p["regime"]["timeframe"] is None and p["regime"]["timeframe_source"] is None
+    reasons = {m["field"]: m["reason"] for m in p["missing_inputs"]}
+    assert reasons["regime.trend_now"] == "package timeframe not recorded in meta"
+
+
+def _paged_diag(n_pkgs, calls):
+    """order_packages newest-first by id (150 per page), trades empty, every other read empty."""
+    pk = [{"order_package_id": f"pkg-{i:05d}", "meta": "{}"} for i in range(n_pkgs)]
+
+    def diag(path):
+        calls.append(path)
+        if path.startswith("journal?table=order_packages"):
+            off = int(path.split("offset=")[1])
+            return pk[off:off + 150]
+        if path.startswith("journal?table=trades"):
+            return []
+        return {}
+    return diag
+
+
+def test_collect_pages_order_packages_past_the_trades_cap_until_the_wanted_package_is_found():
+    """2026-11-19: the bybit_2 ADA package sat at row 484 of order_packages; the shared 3 x 150 cap stopped at 450,
+    so its meta was never read and the REAL-MONEY packet could not price."""
+    calls = []
+    s = L.collect(["pkg-00484"], diag=_paged_diag(2000, calls), public=lambda p: {})
+    assert "pkg-00484" in s.packages
+    pk_calls = [c for c in calls if c.startswith("journal?table=order_packages")]
+    assert len(pk_calls) == 4  # offsets 0/150/300/450, stops once found (not all 14 pages)
+
+
+def test_collect_stops_order_packages_paging_at_the_end_of_history():
+    calls = []
+    s = L.collect(["pkg-missing"], diag=_paged_diag(200, calls), public=lambda p: {})
+    assert "pkg-missing" not in s.packages
+    assert len([c for c in calls if c.startswith("journal?table=order_packages")]) == 2
