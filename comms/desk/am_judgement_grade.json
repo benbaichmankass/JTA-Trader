@@ -10,7 +10,7 @@
   },
   "hold": {
    "mean_d_hold": 0.0,
-   "n_rows": 341
+   "n_rows": 342
   },
   "partial_close": {
    "mean_d_hold": 0.9042,
@@ -21,13 +21,13 @@
    "n_rows": 3
   }
  },
- "computed_at": "2026-11-19T14:22:59Z",
+ "computed_at": "2026-11-19T15:23:44Z",
  "forecast": {
-  "brier": 0.2121,
+  "brier": 0.2106,
   "brier_ref_constant_0_5": 0.25,
   "hits": 120,
-  "n_scored": 397,
-  "unresolved": 32
+  "n_scored": 406,
+  "unresolved": 23
  },
  "population": "live-review rows with a forecast reviewed from 2026-10-31T00:00:00Z: 429 rows, 143 packages",
  "rows": [
@@ -35,7 +35,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-32a5162bbbdd4ef6",
    "p_target": 0.5,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -71,7 +71,7 @@
    "action": "hold",
    "d_hold": 0.0,
    "d_mech": 0.0,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-92d1cafe559b4309",
    "p_target": 0.55,
    "price_reason": "no_path_change",
@@ -179,7 +179,7 @@
    "action": "hold",
    "d_hold": 0.0,
    "d_mech": 0.0,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-92d1cafe559b4309",
    "p_target": 0.33,
    "price_reason": "no_path_change",
@@ -287,7 +287,7 @@
    "action": "hold",
    "d_hold": 0.0,
    "d_mech": 0.0,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-92d1cafe559b4309",
    "p_target": 0.3,
    "price_reason": "no_path_change",
@@ -491,7 +491,7 @@
    "action": "hold",
    "d_hold": 0.0,
    "d_mech": 0.0,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-92d1cafe559b4309",
    "p_target": 0.3,
    "price_reason": "no_path_change",
@@ -707,7 +707,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-32a5162bbbdd4ef6",
    "p_target": 0.3,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -899,7 +899,7 @@
    "action": "hold",
    "d_hold": null,
    "d_mech": null,
-   "forecast_outcome": null,
+   "forecast_outcome": "miss",
    "order_package_id": "pkg-32a5162bbbdd4ef6",
    "p_target": 0.4,
    "price_reason": "no_path_change_trade_open_or_unjoined",
@@ -3946,8 +3946,8 @@
   {
    "action": "hold",
    "d_hold": 0.0,
-   "d_mech": null,
-   "forecast_outcome": null,
+   "d_mech": -1.23069961,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-ccd62bd7265a4e33",
    "p_target": 0.35,
    "price_reason": "no_path_change",
@@ -4079,7 +4079,7 @@
    "action": "hold",
    "d_hold": 0.0,
    "d_mech": 0.0,
-   "forecast_outcome": null,
+   "forecast_outcome": "expired",
    "order_package_id": "pkg-ccd62bd7265a4e33",
    "p_target": 0.3,
    "price_reason": "no_path_change",
@@ -5054,19 +5054,19 @@
    "forecast_outcome": "expired",
    "order_package_id": "pkg-6216eeb9d4f84954",
    "p_target": 0.45,
-   "price_reason": "no_candles",
+   "price_reason": "hold_replay_unresolved_before_close",
    "price_state": "could_not_price",
    "review_id": "LR-20261119T0624Z-pkg-6216eeb9d4f84954",
    "trigger": "structure_break"
   },
   {
    "action": "hold",
-   "d_hold": null,
-   "d_mech": null,
+   "d_hold": 0.0,
+   "d_mech": 0.07178968,
    "forecast_outcome": "expired",
    "order_package_id": "pkg-630d394a03bb4f7f",
    "p_target": 0.45,
-   "price_reason": "no_path_change_trade_open_or_unjoined",
+   "price_reason": "no_path_change",
    "price_state": "not_a_call",
    "review_id": "LR-20261119T0624Z-pkg-630d394a03bb4f7f",
    "trigger": "giveback"
@@ -5183,14 +5183,14 @@
  "rule": "RULE-DESK-AM-JUDGEMENT-V1",
  "verdict": {
   "ci95_d_hold": [
-   0.0143,
-   0.0649
+   0.0142,
+   0.0637
   ],
-  "mean_d_hold": 0.0366,
-  "mean_d_mech": 0.0145,
+  "mean_d_hold": 0.0363,
+  "mean_d_mech": 0.0095,
   "min_packages": 30,
-  "n_packages": 125,
-  "n_packages_mech": 110,
+  "n_packages": 126,
+  "n_packages_mech": 111,
   "rule": "RULE-DESK-AM-JUDGEMENT-V1",
   "verdict": "pass"
  }
