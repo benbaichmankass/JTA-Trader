@@ -101,7 +101,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f1-29
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'MS lever family never tested on uso_trend_1h: MOMENTUM-STALE exit (--momentum-stale-bars 8/12 with --momentum-stale-adx-below 20) vs the declared leg, net of cost?'
 value:
@@ -113,3 +113,17 @@ why_this_matters: 'Plan node: research/levers/uso_trend_1h.yaml (testing leg; le
   / adx_below 20 on slv_pullback_1d (20.73 vs 12.82 R, 3 of 4 folds, 2018-03..2026-10) and the leg-by-leg lever maps carry no momentum_stale family for this leg. One factor,
   2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-19T18:29:44+00:00'
+
+grading:
+  attested: RULERQ20261117b2f129
+  auto: true
+  decision_rule_id: RULERQ20261117b2f129
+  evidence:
+  - research/results/RQ-20261117-b2f1-29/44583689973.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
