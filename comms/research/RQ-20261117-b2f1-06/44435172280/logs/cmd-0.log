@@ -1,0 +1,9 @@
+candle dataset: served yahoo__HG-F__1d (2131 rows, last 2026-11-18 00:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.5 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261117-b2f1-06/44435172280/arms/A__trades.jsonl --json comms/research/RQ-20261117-b2f1-06/44435172280/arms/A__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --start 2018-06-01 --end 2026-11-12 23:59
+[DI] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.5 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261117-b2f1-06/44435172280/arms/DI__trades.jsonl --json comms/research/RQ-20261117-b2f1-06/44435172280/arms/DI__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --direction-filter di --start 2018-06-01 --end 2026-11-12 23:59
+[DS] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 15 --pullback-frac 0.5 --data <data> --symbol MHG --resample 1d --atr-period 14 --atr-stop-mult 2.0 --trail-mult 3.0 --min-confidence 0.0 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261117-b2f1-06/44435172280/arms/DS__trades.jsonl --json comms/research/RQ-20261117-b2f1-06/44435172280/arms/DS__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.5 --tp-cap-pct 0.099 --tp-r 50.0 --direction-filter slope --start 2018-06-01 --end 2026-11-12 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
