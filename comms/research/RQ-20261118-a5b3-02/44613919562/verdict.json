@@ -1,0 +1,272 @@
+{
+ "schema_version": 1,
+ "schema": "event_vol_study/1",
+ "research_unit": "RQ-20261118-a5b3-02",
+ "read_state": "measured",
+ "verdict": "pass",
+ "n": 819,
+ "note": "weights evidenced: elevated cells ['cpi/SOLUSDT', 'fomc_decision/BTCUSDT', 'fomc_decision/ETHUSDT', 'fomc_decision/GLD', 'fomc_decision/SOLUSDT', 'fomc_decision/SPY', 'fomc_minutes/GLD', 'fomc_minutes/SPY']; DECISION > MINUTES on 5 of 5 symbols",
+ "generated_at": "2026-11-19T21:12:57Z",
+ "decision_rule": {
+  "id": "RULE-RQ-20261118-a5b3-02-EVENT-CLASS-WEIGHTS",
+  "registered_at": "2026-11-18",
+  "registered_before_run": true
+ },
+ "population": "US releases in comms/research/event_span_history/us_releases.jsonl x ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'SPY', 'GLD']; RV over [t, t+2h) vs 8 matched non-event weekday-hours",
+ "measurement": {
+  "verdict": "pass",
+  "note": "weights evidenced: elevated cells ['cpi/SOLUSDT', 'fomc_decision/BTCUSDT', 'fomc_decision/ETHUSDT', 'fomc_decision/GLD', 'fomc_decision/SOLUSDT', 'fomc_decision/SPY', 'fomc_minutes/GLD', 'fomc_minutes/SPY']; DECISION > MINUTES on 5 of 5 symbols",
+  "n": 819,
+  "cells": {
+   "fomc_decision": {
+    "BTCUSDT": {
+     "n": 44,
+     "median_log_ratio": 1.1174,
+     "lo": 0.5829,
+     "hi": 1.8011,
+     "elevated": true
+    },
+    "ETHUSDT": {
+     "n": 44,
+     "median_log_ratio": 1.1715,
+     "lo": 0.7749,
+     "hi": 1.6333,
+     "elevated": true
+    },
+    "SOLUSDT": {
+     "n": 44,
+     "median_log_ratio": 1.1755,
+     "lo": 0.5094,
+     "hi": 1.5896,
+     "elevated": true
+    },
+    "SPY": {
+     "n": 39,
+     "median_log_ratio": 1.9404,
+     "lo": 1.3132,
+     "hi": 2.2571,
+     "elevated": true
+    },
+    "GLD": {
+     "n": 39,
+     "median_log_ratio": 2.4454,
+     "lo": 2.2497,
+     "hi": 2.8893,
+     "elevated": true
+    }
+   },
+   "fomc_minutes": {
+    "BTCUSDT": {
+     "n": 45,
+     "median_log_ratio": -0.3507,
+     "lo": -0.6792,
+     "hi": 0.0362,
+     "elevated": false
+    },
+    "ETHUSDT": {
+     "n": 45,
+     "median_log_ratio": -0.3177,
+     "lo": -0.5418,
+     "hi": 0.0867,
+     "elevated": false
+    },
+    "SOLUSDT": {
+     "n": 45,
+     "median_log_ratio": -0.3452,
+     "lo": -0.5804,
+     "hi": -0.0047,
+     "elevated": false
+    },
+    "SPY": {
+     "n": 32,
+     "median_log_ratio": 0.4787,
+     "lo": 0.1364,
+     "hi": 0.7202,
+     "elevated": true
+    },
+    "GLD": {
+     "n": 32,
+     "median_log_ratio": 0.6183,
+     "lo": 0.3723,
+     "hi": 1.1119,
+     "elevated": true
+    }
+   },
+   "cpi": {
+    "BTCUSDT": {
+     "n": 68,
+     "median_log_ratio": 0.2714,
+     "lo": -0.0038,
+     "hi": 0.417,
+     "elevated": false
+    },
+    "ETHUSDT": {
+     "n": 68,
+     "median_log_ratio": 0.3046,
+     "lo": -0.09,
+     "hi": 0.5071,
+     "elevated": false
+    },
+    "SOLUSDT": {
+     "n": 68,
+     "median_log_ratio": 0.1625,
+     "lo": 0.0362,
+     "hi": 0.3716,
+     "elevated": true
+    },
+    "SPY": {
+     "n": 0,
+     "elevated": null,
+     "read": false
+    },
+    "GLD": {
+     "n": 0,
+     "elevated": null,
+     "read": false
+    }
+   },
+   "nfp": {
+    "BTCUSDT": {
+     "n": 69,
+     "median_log_ratio": 0.0172,
+     "lo": -0.2337,
+     "hi": 0.2585,
+     "elevated": false
+    },
+    "ETHUSDT": {
+     "n": 69,
+     "median_log_ratio": 0.0363,
+     "lo": -0.2695,
+     "hi": 0.24,
+     "elevated": false
+    },
+    "SOLUSDT": {
+     "n": 68,
+     "median_log_ratio": -0.0836,
+     "lo": -0.2472,
+     "hi": 0.1887,
+     "elevated": false
+    },
+    "SPY": {
+     "n": 0,
+     "elevated": null,
+     "read": false
+    },
+    "GLD": {
+     "n": 0,
+     "elevated": null,
+     "read": false
+    }
+   }
+  },
+  "decision_minus_minutes": {
+   "BTCUSDT": {
+    "diff": 1.4681,
+    "lo": 0.7262,
+    "hi": 2.2203,
+    "decision_gt_minutes": true
+   },
+   "ETHUSDT": {
+    "diff": 1.4892,
+    "lo": 0.9635,
+    "hi": 2.0385,
+    "decision_gt_minutes": true
+   },
+   "SOLUSDT": {
+    "diff": 1.5207,
+    "lo": 0.8728,
+    "hi": 2.0329,
+    "decision_gt_minutes": true
+   },
+   "SPY": {
+    "diff": 1.4617,
+    "lo": 0.8346,
+    "hi": 1.9376,
+    "decision_gt_minutes": true
+   },
+   "GLD": {
+    "diff": 1.8271,
+    "lo": 1.2548,
+    "hi": 2.2842,
+    "decision_gt_minutes": true
+   }
+  },
+  "class_events": {
+   "fomc_decision": 45,
+   "fomc_minutes": 46,
+   "cpi": 69,
+   "nfp": 70
+  },
+  "weights_rel_fomc_decision_btc": {
+   "fomc_decision": {
+    "BTCUSDT": 1.0,
+    "ETHUSDT": 1.048,
+    "SOLUSDT": 1.052,
+    "SPY": 1.737,
+    "GLD": 2.188
+   },
+   "fomc_minutes": {
+    "BTCUSDT": -0.314,
+    "ETHUSDT": -0.284,
+    "SOLUSDT": -0.309,
+    "SPY": 0.428,
+    "GLD": 0.553
+   },
+   "cpi": {
+    "BTCUSDT": 0.243,
+    "ETHUSDT": 0.273,
+    "SOLUSDT": 0.145
+   },
+   "nfp": {
+    "BTCUSDT": 0.015,
+    "ETHUSDT": 0.032,
+    "SOLUSDT": -0.075
+   }
+  },
+  "skipped_events": {
+   "fomc_decision/BTCUSDT": 1,
+   "fomc_minutes/BTCUSDT": 1,
+   "cpi/BTCUSDT": 1,
+   "nfp/BTCUSDT": 1,
+   "fomc_decision/ETHUSDT": 1,
+   "fomc_minutes/ETHUSDT": 1,
+   "cpi/ETHUSDT": 1,
+   "nfp/ETHUSDT": 1,
+   "fomc_decision/SOLUSDT": 1,
+   "fomc_minutes/SOLUSDT": 1,
+   "cpi/SOLUSDT": 1,
+   "nfp/SOLUSDT": 2,
+   "fomc_decision/SPY": 6,
+   "fomc_minutes/SPY": 14,
+   "cpi/SPY": 69,
+   "nfp/SPY": 70,
+   "fomc_decision/GLD": 6,
+   "fomc_minutes/GLD": 14,
+   "cpi/GLD": 69,
+   "nfp/GLD": 70
+  },
+  "symbols": {
+   "BTCUSDT": {
+    "bar_minutes": 5,
+    "bars": 627264
+   },
+   "ETHUSDT": {
+    "bar_minutes": 5,
+    "bars": 627264
+   },
+   "SOLUSDT": {
+    "bar_minutes": 5,
+    "bars": 625824
+   },
+   "SPY": {
+    "bar_minutes": 5,
+    "bars": 116443
+   },
+   "GLD": {
+    "bar_minutes": 5,
+    "bars": 116442
+   }
+  },
+  "events_source": "comms/research/event_span_history/us_releases.jsonl"
+ }
+}

@@ -47,6 +47,32 @@ if [ -f "$LATCH" ] && { [ ! -e "$ENV_FILE" ] || [ "$LATCH" -nt "$ENV_FILE" ]; };
   exit 0
 fi
 
+# PAT RATE SAMPLE (ACTIONS-QUEUE-BACKLOG, PAT 5,000/h consumer hunt): one journal line per run with the shared
+# PAT's core budget, read from GET /rate_limit, which GitHub documents as NOT counting against the limit. This
+# script runs every 15 min (ict-ltr-wake-dispatch) and hourly (ict-keeper-dispatch) with the same token, so the
+# journal becomes a used/remaining time series whose slope can be lined up against the per-workflow run census:
+# the consumer is named by measurement, not inference. Read-only and best-effort: a failed read logs
+# "could not read" and the dispatch below is unaffected. Only numbers are logged, never the token.
+pat_line="$(
+  printf 'Authorization: Bearer %s\n' "$GH_DISPATCH_TOKEN" | curl -sS --max-time 20 -H @- \
+      -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "$API/rate_limit" 2>/dev/null \
+    | python3 -c '
+import json, sys, datetime
+try:
+    c = json.load(sys.stdin)["resources"]["core"]
+    r = datetime.datetime.fromtimestamp(int(c["reset"]), datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    print("core used=%d remaining=%d limit=%d reset=%s" % (int(c["used"]), int(c["remaining"]), int(c["limit"]), r))
+except Exception:
+    pass
+' 2>/dev/null
+)" || pat_line=""
+if [ -n "$pat_line" ]; then
+  log "pat_rate $pat_line"
+else
+  log "pat_rate could not read GET /rate_limit (sample skipped; dispatch unaffected)"
+fi
+
 # SKIP-IF-ACTIVE (ict-ltr-wake-dispatch, manager 2026-11-19): with KEEPER_DISPATCH_SKIP_IF_ACTIVE=1, do not
 # dispatch while a RECENT run of $WORKFLOW is queued or in progress, so a 15-min clock never stacks runs into a
 # deep queue. Only runs created in the last KEEPER_DISPATCH_ACTIVE_WINDOW_MIN (default 45) minutes count: this repo

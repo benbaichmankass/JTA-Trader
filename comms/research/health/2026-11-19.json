@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-11-19T21:23:03Z",
+ "as_of": "2026-11-19T22:32:37Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -336,13 +336,13 @@
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 16,
+   "value": 11,
    "op": ">=",
-   "threshold": 125,
+   "threshold": 133,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "diagnostic": true,
    "evidence": {
-    "fired_24h_stamps": 157,
+    "fired_24h_stamps": 168,
     "queued": 326,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -351,13 +351,13 @@
   {
    "slo": "fires_24h",
    "state": "ok",
-   "value": 152,
+   "value": 161,
    "op": ">=",
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "diagnostic": true,
    "evidence": {
-    "dispatch_runs_24h": 51,
+    "dispatch_runs_24h": 52,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -365,7 +365,7 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 203,
+   "value": 206,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
@@ -381,14 +381,14 @@
   {
    "slo": "producer_failed_rate_24h",
    "state": "ok",
-   "value": 0.158,
+   "value": 0.156,
    "op": "<=",
    "threshold": 0.25,
    "what": "share of result rows landed in the last 24 h that are read_state=producer_failed (a run that completed but graded nothing, or whose command failed). Alerts through the same ops-flags path as every SLO; no gate, no halt.",
    "diagnostic": false,
    "evidence": {
     "producer_failed_rows": 38,
-    "rows_24h": 241,
+    "rows_24h": 244,
     "basis": "producer_failed rows / all rows landed in 24 h",
     "read_state": "measured"
    }
@@ -404,8 +404,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 525,
-    "ungraded_fresh": 47,
+    "n": 520,
+    "ungraded_fresh": 50,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -421,8 +421,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 525,
-    "ungraded_fresh": 47,
+    "n": 520,
+    "ungraded_fresh": 50,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -437,16 +437,16 @@
    "diagnostic": true,
    "evidence": {
     "counts": {
-     "graded": 2140,
-     "in_grace": 24,
+     "graded": 2143,
+     "in_grace": 26,
      "legacy_prose": 132,
      "needs_review": 103,
      "needs_review_unowned": 7,
-     "non_verdict_only": 9,
+     "non_verdict_only": 10,
      "retired": 12,
      "ungraded": 2
     },
-    "with_results": 2429,
+    "with_results": 2435,
     "sample": [
      "RQ-20261118-04a5-01",
      "RQ-20261118-aadc-13"
@@ -458,15 +458,15 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.11,
+   "value": 1.1,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "diagnostic": true,
    "evidence": {
-    "authored_7d": 474,
-    "consumed_7d": 426,
-    "authored_since_yesterday": 163,
+    "authored_7d": 477,
+    "consumed_7d": 435,
+    "authored_since_yesterday": 166,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
    }
@@ -508,36 +508,36 @@
     "per_theme": {
      "regime": {
       "fires": 70,
-      "share": 0.113,
+      "share": 0.112,
       "weight_share": 0.227,
-      "ratio": 0.5
+      "ratio": 0.49
      },
      "live_strategy": {
-      "fires": 323,
-      "share": 0.524,
+      "fires": 330,
+      "share": 0.526,
       "weight_share": 0.182,
-      "ratio": 2.88
+      "ratio": 2.89
      },
      "ml_health": {
       "fires": 101,
-      "share": 0.164,
+      "share": 0.161,
       "weight_share": 0.136,
-      "ratio": 1.2
+      "ratio": 1.18
      },
      "new_strategy_prop": {
       "fires": 16,
       "share": 0.026,
       "weight_share": 0.273,
-      "ratio": 0.1
+      "ratio": 0.09
      },
      "macro": {
-      "fires": 2,
-      "share": 0.003,
+      "fires": 3,
+      "share": 0.005,
       "weight_share": 0.045,
-      "ratio": 0.07
+      "ratio": 0.11
      },
      "infra": {
-      "fires": 103,
+      "fires": 105,
       "share": 0.167,
       "weight_share": 0.091,
       "ratio": 1.84
@@ -549,7 +549,7 @@
       "ratio": 0.07
      }
     },
-    "fires_themed": 617,
+    "fires_themed": 627,
     "fires_untheme_or_unknown": 0,
     "basis": "7 d of utilization `dispatched` ids joined to unit theme vs THEMES.yaml weight share",
     "read_state": "measured"
@@ -582,13 +582,13 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 1.43,
+   "value": 0.75,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-19T19:57:13.681540+00:00",
+    "newest": "2026-11-19T21:47:31.547413+00:00",
     "basis": "newest utilization record generated_at",
     "read_state": "measured"
    }
@@ -596,13 +596,13 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.9,
+   "value": 0.19,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
    "diagnostic": true,
    "evidence": {
-    "newest": "2026-11-19T20:29:09+00:00",
+    "newest": "2026-11-19T22:21:28+00:00",
     "basis": "git log -1 -- research/results (commit time)",
     "read_state": "measured"
    }
@@ -610,7 +610,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 0.16,
+   "value": 1.32,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -624,7 +624,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 5.88,
+   "value": 7.04,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -657,38 +657,28 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 0.47,
+   "value": 1.1,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "diagnostic": true,
    "evidence": {
-    "open_unit_prs": 5,
+    "open_unit_prs": 3,
     "oldest": [
      {
-      "pr": 27472,
-      "hours": 0.47,
-      "title": "8260-02/03: pin to the GitHub runner (window precedes the candle dataset) and re-queue"
+      "pr": 27491,
+      "hours": 1.1,
+      "title": "fix(research): exit-head drivers replay at the leg's timeframe (honour Resolution.resample"
      },
      {
-      "pr": 27476,
-      "hours": 0.39,
-      "title": "mgc_15m research units: add --non-crypto-source dukascopy (every run failed in the yfinanc"
+      "pr": 27508,
+      "hours": 0.32,
+      "title": "research(ml/P1): iteration 3, threshold read on training-fold OOF scores + RQ-20261119-278"
      },
      {
-      "pr": 27480,
-      "hours": 0.24,
-      "title": "research(queue): D8 give-back static exit grid on trend_donchian/_eth/_sol (RQ-20261119-27"
-     },
-     {
-      "pr": 27481,
-      "hours": 0.23,
-      "title": "RQ-20261119-c5e8-01: record the FAIL, direction entries in five 1d lever maps, retire abab"
-     },
-     {
-      "pr": 27489,
-      "hours": 0.02,
-      "title": "research(queue): grade RQ-20261119-c8e2-02 INDETERMINATE (MIXED); vol_offcell_fresh_wf emi"
+      "pr": 27511,
+      "hours": 0.01,
+      "title": "research(ml/D7): exit-holdbias margin lever, tau chosen inside training folds (--tau-grid)"
      }
     ],
     "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
@@ -699,7 +689,9 @@
  "alert_state": {
   "open": {},
   "last_alert": "2026-11-12T15:56:53Z",
-  "suppressed_by_watchdog": []
+  "suppressed_by_watchdog": [
+   "runnable_floor"
+  ]
  },
  "runs": [
   {
@@ -875,6 +867,21 @@
   },
   {
    "at": "2026-11-19T21:23:03Z",
+   "counts": {
+    "ok": 17,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "undispositioned_24h",
+    "theme_share_min_ratio"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-19T22:32:37Z",
    "counts": {
     "ok": 17,
     "breach": 3,
