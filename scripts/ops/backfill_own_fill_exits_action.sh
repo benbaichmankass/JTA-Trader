@@ -25,6 +25,7 @@ DB_PATH="$(runtime_db_path)"
 PY_SCRIPT="${REPO_DIR}/scripts/ops/backfill_own_fill_exits.py"
 ACTION_APPLY="${ACTION_APPLY:-}"
 ACTION_IDS="${ACTION_IDS:-}"
+ACTION_GROUP="${ACTION_GROUP:-}"
 
 if [ ! -f "${PY_SCRIPT}" ]; then
     log "ERROR: backfill not present at ${PY_SCRIPT}. Did the VM pull latest main?"
@@ -50,6 +51,9 @@ ARGS=(--db "${DB_PATH}" --fills-db "${FILLS_DB}")
 if [ -n "${ACTION_IDS// }" ]; then
     ARGS+=(--ids "${ACTION_IDS}")
 fi
+case "${ACTION_GROUP}" in
+  true|True) ARGS+=(--group); echo ">>> group mode: the --ids rows are priced TOGETHER from ONE venue order (refuses on any mismatch)." ;;
+esac
 case "${ACTION_APPLY}" in
   true|True)
     echo ">>> backfill-own-fill-exits: APPLY mode — will write (DB backup taken first)."
