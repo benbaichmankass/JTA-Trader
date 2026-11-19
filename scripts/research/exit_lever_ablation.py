@@ -543,6 +543,14 @@ def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates:
         return {"verdict": "pass", "label": "candidate_replaces_incumbent", "best": best, **m,
                 "why": f"{best} beats the incumbent {baseline} (net R {best_r} vs {a['net_r']}) in >= {fold_majority}/{N_FOLDS} "
                        "folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"}
+    if candidates and not any(m["candidates"][cl]["lever_fired"] for cl in candidates):
+        # LEVER-NEVER-FIRED (lane PROGRAMME-REPLAN-20261119): every candidate reproduced A exactly (same n, same net R),
+        # so the run measured nothing about the lever. MEASURED: RQ-20261118-abab-47 (--side-filter on the long-only
+        # trend_donchian) graded FAIL with lever_fired False on both arms, and the lever map then read the direction
+        # family as "tested". The units' own rules already say INDETERMINATE here; the grader now agrees.
+        return {"verdict": "indeterminate", "label": "lever_never_fired", **m,
+                "why": "every candidate arm is identical to the incumbent (same n and net R): the lever never fired, "
+                       "so nothing about it was measured"}
     return {"verdict": "fail", "label": "incumbent_stands", **m,
             "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"}
 
@@ -1341,6 +1349,14 @@ def _self_test() -> int:
     g = grade_replace({"A": _arm(30, 1.0, 1.0, [0, 0, 0, 1]), "B": B1}, baseline="A", candidates=["B"], fold_majority=3,
                       n_floor=39, dd_tol_frac=0.10, control=None)
     check("replace: thin incumbent -> indeterminate", g["verdict"] == "indeterminate")
+    g = grade_replace({"A": A, "B": dict(A), "C": dict(A)}, baseline="A", candidates=["B", "C"], fold_majority=3,
+                      n_floor=39, dd_tol_frac=0.10, control=None)
+    check("replace: every candidate identical to A (dead lever) -> indeterminate/lever_never_fired",
+          g["verdict"] == "indeterminate" and g["label"] == "lever_never_fired")
+    g = grade_replace({"A": A, "B": dict(A), "C": B2}, baseline="A", candidates=["B", "C"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None)
+    check("replace: one dead arm beside a live failing arm -> still fail/incumbent_stands",
+          g["verdict"] == "fail" and g["label"] == "incumbent_stands")
     # materiality: B beats A by 2.0 R over 100 trades (0.02 R/trade) -- passes at 0.02, fails at 0.03
     g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
                       dd_tol_frac=0.10, control=None, delta_r_per_trade=0.02)
