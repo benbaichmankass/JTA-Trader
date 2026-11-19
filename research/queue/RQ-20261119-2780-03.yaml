@@ -1,0 +1,185 @@
+# Authored 2026-11-19 by lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), Tier 1. D8 give-back static exit grid; rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-2780-03
+title: 'D8 give-back: registered static exit grid on trend_donchian (5 exit levers x 4 values, one lever per arm) vs the declared exit, 2020-07-01..2026-10-15, net of the full cost stack'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P1
+practice_precedent: 'T1/T3 (docs/reference/trading-and-model-practice-principles.md): one setting per arm against the declared exit on the same entries and cost stack; a grid winner is a SELECTION that
+  needs an out-of-window confirmation (M13) before any declare.'
+question: On trend_donchian (BTCUSDT 1h), over 2020-07-01..2026-10-15 (the abab/b2f2 window), does any single static exit setting in the registered grid -- trail_mult {2.5, 3.0, 3.5, 4.0} (declared 5.0);
+  tp_r {3, 4, 6, 8} R through the live capped-TP formula (declared 50 = no predictive TP); giveback stop armed at 1.0 R MFE with giveback_r {0.5, 0.75, 1.0, 1.5} R; trail_decay_arm_r {1.0, 2.0, 3.0, 4.0}
+  R with tight mult 2.5; partial bank of 0.5 of the position at bank_at_r {1.0, 1.5, 2.0, 3.0} R. One lever moved per arm, every other key as declared (20 candidates + B). -- replace the declared exit by
+  the registered bar (net R per trade >= +0.03 R over B, >= 5 of 6 calendar folds at least as good, max drawdown within +35% of B), net of the full cost stack?
+why_this_matters: 'D8 give-back (PI-20261119-RIMARY12-0004; manager 2026-11-19: ''that''s where the money is''). RQ-20261118-04a5-04 (run 44572560928) measured that closing the same number of trades at
+  RANDOM points recovers 4-7x the R the neg25 exit head recovers on every cell (ETH 951.8 vs 143.6 at p95; SOL 416.2 vs 59.7; BTC 169.6 vs 19.8), so these legs hand back a lot of open profit after entry.
+  The lever maps (research/levers/<leg>.yaml, read 2026-11-19) show the exit levers that act on give-back were never swept on these legs: trail_mult has only ever run at 5.0, tp_r only at the 50 R sentinel,
+  giveback_r and bank_* were never tested, and trail_decay has one point. If a static setting captures the give-back, it is a cheaper, auditable exit than any head; if none does, the head work (per-symbol
+  heads, --features extended, sequence model) is justified on a measured floor.'
+power:
+  expected_n: 458
+  min_detectable_effect: 0.03
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.2
+  basis: 'MEASURED n: RQ-20261118-abab-47 arm A (this leg as declared, same window and cost stack) held 458 trades, net 51.4 R. Exit levers change exits and re-entry timing, not the entry signal, so B''s
+    n should match within a few trades. sd 1.2 R is an ESTIMATE. The bar is materiality + fold stability, not a significance test; n < 39 grades INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays fetched public candles over a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119-2780-D8-GIVEBACK-STATIC-GRID
+  unit_rule_id: RULE-RQ20261119-2780-D8-GIVEBACK-STATIC-GRID-TREND-DONCHIAN
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  min_n: 39
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian --grade replace, baseline B = the leg as declared in config/strategies.yaml (config-exact argv from regime_debt_matrix.build_harness_cmd),
+    20 candidate arms fixed now: trail_mult {2.5, 3.0, 3.5, 4.0} (declared 5.0); tp_r {3, 4, 6, 8} R through the live capped-TP formula (declared 50 = no predictive TP); giveback stop armed at 1.0 R MFE
+    with giveback_r {0.5, 0.75, 1.0, 1.5} R; trail_decay_arm_r {1.0, 2.0, 3.0, 4.0} R with tight mult 2.5; partial bank of 0.5 of the position at bank_at_r {1.0, 1.5, 2.0, 3.0} R. One lever moved per arm,
+    every other key as declared (20 candidates + B). trail_decay_arm_r 6.49 / tight 2.5 is DECLARED on this leg, so the TD arms move the arm point only. BTCUSDT 1h, 2020-07-01..2026-10-15 23:59, 6 equal
+    calendar folds by entry time, net of the venue-aware cost stack the harness resolves (fee 11 bps rt incl. taker, slippage 3 bps rt, funding 1 bps per 8h window, recorded per arm as cost_stack). Per
+    arm: n, net_total_r, max_drawdown_r, net R per fold, tp_doctrine reach, lever_fired.'
+  rule: 'Registered 2026-11-19 by ML-PRIMARY-13 BEFORE any run of the grid. A candidate C REPLACES B iff net_r(C) > net_r(B) AND net_r(C) - net_r(B) >= 0.03 R x n(B) AND folds where net_r(C) >= net_r(B)
+    >= 5 of 6 AND maxDD(C) <= 1.35 x maxDD(B). Several pass -> the highest net R is SELECTED. MULTIPLICITY: 20 candidates per leg (60 across the three units), so the bars are STRICTER than the single-arm
+    RULE-STRUCTURE-EXITS-V1 family (0.02 R/trade, 4 of 6): 0.03 R/trade and 5 of 6, fixed now. PASS = a SELECTION, unconfirmed: it supports nothing on the order path until the selected arm alone passes
+    a confirmation registered now: exit_lever_ablation --grade paired (selected vs B) on the disjoint pre-window 2017-09-01..2020-06-30 for BTC/ETH (paired mean dR > 0 with |t| >= 2.0 and >= 3 of 4 folds),
+    and for SOL (Binance 1h history starts 2020-08) the same selected setting must also pass on the ETH and BTC confirmation windows. FAIL = no candidate passes at n(B) >= 39: these 20 settings are closed
+    on this leg and window (honest negative for the configurations tested; the lever families stay open, and the D8 head work proceeds against this measured floor). INDETERMINATE if n(B) < 39 or the B arm''s
+    argv differs from the declared config. Reported, never graded: per-lever shape over its 4 values (monotone / peaked / flat), each arm''s lever_fired, long vs short net, and the MFE-capture decomposition
+    of B by scripts/research/exit_census.py on B__trades.jsonl. Thresholds, arms and window are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or order path; grants no exit model close authority; a PASS is a selection for a confirmation, not a declare.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  basis: 'ESTIMATE: governs the profit exit of a testing leg on the demo floor (and the exit family of the 4h/prop siblings); the random-truncation control''s size suggests material give-back. Not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 'MEASURED scale: b2f2-15 (same leg family, window and harness, 3 arms) ran in 3-8 min on the runner; 21 arms here, so ~30-60 min.'
+  needs_internet: 'github_runner: fetches keyless public 1h candles (kaggle_cpu did not serve candles for the 5e01 siblings).'
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian
+  - --arm
+  - B=
+  - --arm
+  - TM25=trail_mult=2.5
+  - --arm
+  - TM30=trail_mult=3.0
+  - --arm
+  - TM35=trail_mult=3.5
+  - --arm
+  - TM40=trail_mult=4.0
+  - --arm
+  - TP3=tp_r=3
+  - --arm
+  - TP4=tp_r=4
+  - --arm
+  - TP6=tp_r=6
+  - --arm
+  - TP8=tp_r=8
+  - --arm
+  - GB05=giveback_min_mfe_r=1.0;giveback_r=0.5
+  - --arm
+  - GB075=giveback_min_mfe_r=1.0;giveback_r=0.75
+  - --arm
+  - GB10=giveback_min_mfe_r=1.0;giveback_r=1.0
+  - --arm
+  - GB15=giveback_min_mfe_r=1.0;giveback_r=1.5
+  - --arm
+  - TD10=trail_decay_arm_r=1.0;trail_decay_tight_mult=2.5
+  - --arm
+  - TD20=trail_decay_arm_r=2.0;trail_decay_tight_mult=2.5
+  - --arm
+  - TD30=trail_decay_arm_r=3.0;trail_decay_tight_mult=2.5
+  - --arm
+  - TD40=trail_decay_arm_r=4.0;trail_decay_tight_mult=2.5
+  - --arm
+  - BK10=bank_frac=0.5;bank_at_r=1.0
+  - --arm
+  - BK15=bank_frac=0.5;bank_at_r=1.5
+  - --arm
+  - BK20=bank_frac=0.5;bank_at_r=2.0
+  - --arm
+  - BK30=bank_frac=0.5;bank_at_r=3.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.03'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261119-2780-03
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-2780-03
+ml_consumer:
+  not_applicable: Static exit settings on a rule-based leg; the result sets the measured floor the D8 exit head (exit-head-donchian-1h) must beat.
+intervention_controls:
+  not_applicable: Static exit mechanisms fixed at entry; hold is arm B, the leg as declared. The random-truncation control belongs to the exit-head units (04a5-04).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261118-04a5-04.yaml
+- research/queue/RQ-20261119-a10d-07.yaml
+- research/queue/RQ-20261118-abab-47.yaml
+- research/levers/trend_donchian.yaml
+- research/levers/ml-exit-head-donchian-1h.yaml
+iteration:
+  subject: trend_donchian
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261118-04a5-04
+  verdict_read: fail
+  diagnosis: '04a5-04: random truncation recovers 4-7x the exit head''s R at the same firing count, so the legs give back open profit after entry; the exit levers that act on give-back sit at one point
+    (trail_mult 5.0, tp_r 50) or were never tested (giveback_r, bank_*).'
+  search: registered static grid, 5 levers x 4 values, one lever per arm
+  levers:
+  - exit
+  map_entries:
+  - research/levers/trend_donchian.yaml#levers.exit.trail_mult
+  - research/levers/trend_donchian.yaml#levers.exit.tp_r
+  - research/levers/trend_donchian.yaml#levers.exit.giveback_r
+  - research/levers/trend_donchian.yaml#levers.exit.trail_decay_arm_r
+  - research/levers/trend_donchian.yaml#levers.exit.bank_at_r
+  attempt: 1
+  due_by: '2026-11-26'
+follow_up: PASS -> author the registered paired confirmation for the selected arm (pre-window 2017-09-01..2020-06-30; SOL via the ETH/BTC windows). FAIL -> record the floor on PI-20261119-RIMARY12-0004
+  and proceed to the D8 head levers.

@@ -248,14 +248,37 @@ def runner_only_reason(entry: Dict[str, Any]) -> Optional[str]:
     reason, e.g. 'fetches keyless public candles') and the explicit booleans all mean the same thing: the Kaggle kernel
     has no internet and no secret, so the unit cannot run there."""
     r = entry.get("routing")
-    if not isinstance(r, dict):
+    if isinstance(r, dict):
+        for k in RUNNER_ONLY_KEYS:
+            if r.get(k):
+                if k == "why_runner" and candle_dataset_covers(entry):
+                    continue        # the reason was "fetches public candles" and the Kaggle candle dataset now holds them
+                return f"routing.{k}" + (f": {str(r[k])[:60]}" if isinstance(r[k], str) else "")
+    return uncovered_fetch_reason(entry)
+
+
+def uncovered_fetch_reason(entry: Dict[str, Any]) -> Optional[str]:
+    """PI-20261119-FILLW47B-0009. Why a unit that fetches candles over the network cannot take the Kaggle kernel, or None.
+
+    MEASURED 2026-11-19: RQ-20261119-8260-02/-03 had no `routing.why_runner`, the candle dataset did not hold their window
+    (days_built 1830 < --days 2610/2290), and the router sent them to Kaggle, where the fetch died with a DNS error. Two cases
+    are runner-only without the author having to say so: (1) the harness resolves a feed the dataset does not cover
+    (`candle_dataset.covers` is the single source), and (2) the unit uses the Dukascopy lane (`--non-crypto-source`), which is
+    network-only and never in the dataset. Anything else (not a fetch unit, a `--data-csv` unit) is left to the existing rules.
+    Unreadable coverage or config leaves the unit where it was: this only ever REMOVES the Kaggle option."""
+    cmd = (entry.get("run") or {}).get("command")
+    if not (isinstance(cmd, list) and any(str(c).endswith("exit_lever_ablation.py") for c in cmd)) or "--data-csv" in cmd:
         return None
-    for k in RUNNER_ONLY_KEYS:
-        if r.get(k):
-            if k == "why_runner" and candle_dataset_covers(entry):
-                continue        # the reason was "fetches public candles" and the Kaggle candle dataset now holds them
-            return f"routing.{k}" + (f": {str(r[k])[:60]}" if isinstance(r[k], str) else "")
-    return None
+    try:
+        from scripts.research import candle_dataset as cd  # noqa: PLC0415
+        if "--non-crypto-source" in [str(c) for c in cmd]:
+            return "fetches the network-only --non-crypto-source lane (not in the Kaggle candle dataset)"
+        if cd.unit_feed(entry) is None:
+            return None
+        ok, why = cd.covers(entry)
+        return None if ok else f"candle dataset does not cover this unit's fetch: {why}"
+    except Exception:  # allow-silent: coverage or config unreadable -> leave the unit's routing as it was
+        return None
 
 
 def class_backends(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
