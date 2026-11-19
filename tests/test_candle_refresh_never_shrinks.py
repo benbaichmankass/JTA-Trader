@@ -160,3 +160,72 @@ def test_every_rolling_window_caller_opts_out_explicitly():
         text = (root / rel).read_text()
         import re
         assert re.search(r"fetch_backtest_candles\.py[^#]{0,400}--allow-window-replace", text), rel
+
+
+# ---- TRAINER-INTRADAY-EQUITY-REFRESH (2026-11-19): file aliases + yfinance source --------------------
+def test_parse_pair_forms(tmp_path):
+    assert rch.parse_pair("SOLUSDT:15", tmp_path) == ("bybit", "SOLUSDT", "15", tmp_path / "SOLUSDT_15m.csv")
+    assert rch.parse_pair("BTCUSDT:5=backtest_BTCUSDT_5m.csv", tmp_path) == (
+        "bybit", "BTCUSDT", "5", tmp_path / "backtest_BTCUSDT_5m.csv")
+    assert rch.parse_pair("yf:GC=F:60=GC_F_1h.csv", tmp_path) == ("yf", "GC=F", "60", tmp_path / "GC_F_1h.csv")
+    import pytest
+    with pytest.raises(ValueError):
+        rch.parse_pair("SOLUSDT:7", tmp_path)
+
+
+def test_btc_alias_extends_the_existing_backtest_file_in_its_own_spelling(tmp_path, monkeypatch):
+    """No native BTCUSDT_5m.csv is created: the bars land in backtest_BTCUSDT_5m.csv, ISO-Z spelled like the file."""
+    p = tmp_path / "backtest_BTCUSDT_5m.csv"
+    ts = pd.date_range("2026-05-21 23:40", periods=4, freq="5min", tz="UTC")
+    pd.DataFrame({"timestamp": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in ts], "open": 1.0, "high": 1.0,
+                  "low": 1.0, "close": 1.0, "volume": 1.0}).to_csv(p, index=False)
+    new = [{"timestamp": t.to_pydatetime(), "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 2.0}
+           for t in pd.date_range("2026-05-21 23:55", periods=3, freq="5min", tz="UTC")]
+    monkeypatch.setattr(rch.fbc, "fetch_klines", lambda *a, **k: new)
+    assert rch.main(["--data-dir", str(tmp_path), "BTCUSDT:5=backtest_BTCUSDT_5m.csv"]) == 0
+    out = pd.read_csv(p)
+    assert len(out) == 6 and out["timestamp"].iloc[-1] == "2026-05-22T00:05:00Z"
+    assert not (tmp_path / "BTCUSDT_5m.csv").exists()
+
+
+def test_yfinance_source_extends_a_volumeless_file_and_drops_the_forming_bar(tmp_path, monkeypatch):
+    p = tmp_path / "GC_F_1h.csv"
+    ts = pd.date_range("2026-06-18 14:00", periods=3, freq="h", tz="UTC")
+    pd.DataFrame({"timestamp": [t.isoformat(sep=" ") for t in ts], "open": 1.0, "high": 1.0, "low": 1.0,
+                  "close": 1.0}).to_csv(p, index=False)
+    now = datetime(2026, 6, 18, 19, 30, tzinfo=timezone.utc)
+    calls = {}
+
+    def fake_yf(ticker, interval, start_ms, end_ms):
+        calls["args"] = (ticker, interval, start_ms, end_ms)
+        return [{"timestamp": t.to_pydatetime(), "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 5.0}
+                for t in pd.date_range("2026-06-18 17:00", periods=2, freq="h", tz="UTC")]
+    monkeypatch.setitem(rch.SOURCES, "yf", fake_yf)
+    msg = rch.refresh_one(p, "GC=F", "60", now, source="yf")
+    out = pd.read_csv(p)
+    assert list(out.columns) == ["timestamp", "open", "high", "low", "close"]      # no volume column invented
+    assert out["timestamp"].iloc[-1] == "2026-06-18 18:00:00+00:00" and len(out) == 5, msg
+    assert calls["args"][0] == "GC=F" and calls["args"][3] == int(datetime(2026, 6, 18, 19, tzinfo=timezone.utc).timestamp() * 1000)
+
+
+def test_yfinance_alias_refuses_to_create(tmp_path, capsys):
+    assert rch.main(["--data-dir", str(tmp_path), "yf:GC=F:60=GC_F_1h.csv"]) == 1
+    assert "MISSING" in capsys.readouterr().err
+
+
+def test_dukascopy_source_keeps_only_closed_rth_bars(tmp_path, monkeypatch):
+    import types
+    p = tmp_path / "SPY_1h.csv"
+    ts = pd.date_range("2026-11-17 18:00", periods=2, freq="h", tz="UTC")
+    pd.DataFrame({"timestamp": [t.isoformat(sep=" ") for t in ts], "open": 1.0, "high": 1.0, "low": 1.0,
+                  "close": 1.0, "volume": 1.0}).to_csv(p, index=False)
+    hours = pd.date_range("2026-11-18 13:00", periods=10, freq="h", tz="UTC")     # 13:00..22:00
+    frame = pd.DataFrame({"timestamp": hours, "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 3.0})
+    import fetch_dukascopy_ohlcv as fd
+    monkeypatch.setattr(fd, "fetch", lambda inst, s, e, iv: frame[(frame.timestamp >= s) & (frame.timestamp < e)])
+    now = datetime(2026, 11, 18, 20, 30, tzinfo=timezone.utc)
+    rch.refresh_one(p, "INSTRUMENT_ETF_CFD_US_SPY_US_USD", "60", now, source="dk")
+    out = pd.read_csv(p)
+    added = list(out["timestamp"].iloc[2:])
+    # November = standard time: cash session 14:30-21:00 UTC -> hour bars 15:00..20:00; 20:00 is still forming at 20:30
+    assert added == [f"2026-11-18 {h:02d}:00:00+00:00" for h in range(15, 20)], added
