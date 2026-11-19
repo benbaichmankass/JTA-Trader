@@ -499,6 +499,30 @@ CHECKLIST_REL = "docs/claude/work/MANAGER-CHECKLIST.json"
 #: After the per-row cutover a row's history is its own file under here.
 STORE_REL = "docs/claude/work/checklist"
 
+#: THE WSD-S4 FREEZE, read as the committed fact `src/runtime/work_read.py`
+#: defines it: `_header.json` carrying `frozen_into_work_store`. From that
+#: commit on (#23962, 2026-11-07) a row write goes to `work_store.db` on the VM
+#: and the row FILES are an EXPORT — `scripts/ops/work.py export --to-files`
+#: re-emits every row the store changed, lanes included, in one commit carrying
+#: the EXPORTER's trailer.
+#:
+#: ⚠️ SO A LANE LINE IN AN EXPORT COMMIT IS NOT A DISPATCH ACT, AND READING IT
+#: AS ONE ADMITS WHOEVER RAN THE EXPORT AS A MANAGER. MEASURED 2026-11-19:
+#: AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL, a lane) ran an export dry run on
+#: branch `am-ops-7/work-export` (496dfe54de). The fast reader counted 87
+#: lanes naming other sessions, admitted AM-OPS-7 to the roster with a 24h
+#: window, and R2 failed its PRs #27299, #27308 and #27313 on ops tooling and
+#: tests. Over every commit reachable from all 2,285 remote branches, that
+#: export was the ONLY post-freeze commit the reader counted as a dispatch.
+#: The act it copied happened earlier, in the store, by the session the
+#: store's hash-chained `events` log records — never by the exporter.
+#:
+#: Literal rather than imported: this guard stays runnable without `src/` on
+#: the path. `tests/test_manager_scope_export_commits.py` pins it to
+#: `work_read.FROZEN_KEY` so the two cannot drift.
+STORE_HEADER_REL = f"{STORE_REL}/_header.json"
+FROZEN_KEY = "frozen_into_work_store"
+
 #: The PER-BRANCH merge-slot claim `scripts/ops/claim_merge_slot.py
 #: --branch-claim` writes, and the faithful successor of the
 #: `session-board.json::merge_slot` carve-out below.
@@ -750,6 +774,50 @@ LANE_DEL = re.compile(r'^-\s*"lane"\s*:\s*"(session_[A-Za-z0-9]+)"')
 DISPATCH_GRACE_MINUTES = 1440
 
 
+def frozen_at(root: Path, ref: str) -> Optional[bool]:
+    """Does `ref`'s tree carry the WSD-S4 freeze? True / False / None (unreadable).
+
+    An absent header is False (the file-written era, or a pre-cutover tree).
+    A header that exists and does not parse is None: we could not look.
+    """
+    rc, blob = _git(root, "show", f"{ref}:{STORE_HEADER_REL}")
+    if rc != 0:
+        return False
+    try:
+        d = json.loads(blob)
+    except Exception:
+        return None
+    return bool(isinstance(d, dict) and d.get(FROZEN_KEY))
+
+
+def is_export_commit(root: Path, sha: str,
+                     cache: Optional[dict] = None) -> Optional[bool]:
+    """Is `sha` a commit in the EXPORT era — its tree, or ANY parent's, frozen?
+
+    The parent half matters for the one commit whose own tree is NOT frozen and
+    which still writes rows from the store: `work.py export --to-files
+    --unfreeze`, the design's rollback, removes the key in the same commit that
+    re-emits every row. That is an export too.
+
+    True / False / None — None when a header could not be parsed and no other
+    tree in the set said True. The caller counts None out loud and does NOT
+    treat it as an export (a header nobody can read must not become the
+    cheapest way to hide a real dispatch).
+    """
+    cache = {} if cache is None else cache
+    rc, par = _git(root, "log", "-1", "--pretty=%P", sha)
+    refs = [sha] + (par.split() if rc == 0 else [])
+    seen_unknown = False
+    for ref in refs:
+        if ref not in cache:
+            cache[ref] = frozen_at(root, ref)
+        if cache[ref] is True:
+            return True
+        if cache[ref] is None:
+            seen_unknown = True
+    return None if seen_unknown else False
+
+
 def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[str]]:
     """(sorted [(when, session)], notes) — every observed DISPATCH act.
 
@@ -778,6 +846,9 @@ def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[
     commits = 0
     untrailered = 0
     self_only: set[str] = set()
+    exported: collections.Counter = collections.Counter()  # exporter -> commits
+    export_unknown = 0
+    fcache: dict = {}
     for chunk in raw.split("\x00COMMIT\x00")[1:]:
         head, _sep, patch = chunk.partition("\x00ENDMSG\x00")
         parts = head.split("\x00")
@@ -803,6 +874,16 @@ def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[
         added = {lane for lane, n in plus.items() if n > minus[lane]}
         if not added:
             continue
+        # An EXPORT copies the store's lanes; the act was the store writer's.
+        # Checked before the trailer so an untrailered export is not counted
+        # as an unidentified dispatcher either. See STORE_HEADER_REL.
+        sha = parts[0]
+        exp = is_export_commit(root, sha, fcache)
+        if exp is True:
+            exported[author or "(no trailer)"] += 1
+            continue
+        if exp is None:
+            export_unknown += 1
         if author is None:
             untrailered += 1
             continue
@@ -820,6 +901,18 @@ def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[
         f"{len(obs)} act(s) assigning a lane to ANOTHER session, by "
         f"{len({s for _w, s in obs})} session(s); {len(self_only)} session(s) "
         f"only ever set a lane to THEMSELVES and are NOT admitted")
+    if exported:
+        notes.append(
+            f"{sum(exported.values())} commit(s) add lanes in the WSD-S4 EXPORT "
+            f"era ({STORE_HEADER_REL} carries `{FROZEN_KEY}` in the commit or a "
+            f"parent) and are NOT dispatch evidence: an export copies lanes the "
+            f"work store already holds, under the exporter's trailer. Exporters "
+            f"NOT admitted: {sorted(exported)}")
+    if export_unknown:
+        notes.append(
+            f"⚠️ {export_unknown} lane-adding commit(s) have a {STORE_HEADER_REL} "
+            f"that could not be parsed, so whether they are exports is unknown. "
+            f"They were graded as file-era writes (not excused).")
     if untrailered:
         notes.append(
             f"⚠️ {untrailered} commit(s) assign a lane while carrying NO "
@@ -870,7 +963,10 @@ def dispatch_observations_exact(root: Path) -> tuple[list[tuple[datetime, str]],
         return found
 
     obs: list[tuple[datetime, str]] = []
+    fcache: dict = {}
     for sha in shas:
+        if is_export_commit(root, sha, fcache) is True:
+            continue        # an export is not an act; see STORE_HEADER_REL
         after = lanes(sha)
         if after is None:
             continue
@@ -1751,6 +1847,11 @@ def exit_code(state: str, fails: list) -> int:
 SRC_LIVE = "live"              # subject present at HEAD: the roster can GROW
 SRC_RETIRED = "retired"        # subject ABSENT at HEAD: history only, frozen
 SRC_UNREADABLE = "unreadable"  # subject present, history unreadable: could not look
+#: Subject present at HEAD but FROZEN into work_store.db (STORE_HEADER_REL): the
+#: files are an export, so their git history can no longer show a NEW act. The
+#: roster cannot grow from it — the same fact as `retired`, stated as its own
+#: state because "the file is gone" and "the file is a copy" have different fixes.
+SRC_EXPORT_ONLY = "export_only"
 
 #: Each identity source, and the ONE path whose presence at HEAD decides whether
 #: it can still learn about a new manager. Order is documentation only.
@@ -1801,6 +1902,8 @@ def manager_roster(root: Path):
 
     # -- dispatch ----------------------------------------------------------
     disp_state = _subject_state(root, CHECKLIST_REL)
+    if disp_state == SRC_LIVE and frozen_at(root, "HEAD") is True:
+        disp_state = SRC_EXPORT_ONLY
     dobs, dnotes = dispatch_observations(root)
     notes.extend(dnotes)
     disp_ids = {s for _w, s in dobs}
@@ -1983,7 +2086,26 @@ def check(root: Path, base: str, today: Optional[str] = None,
 
     # ── FAIL CLOSED. A guard that cannot identify its subject must say so. ──
     live = [s for s in sources if s[2] == SRC_LIVE]
-    if not live:
+    exported = [s for s in sources if s[2] == SRC_EXPORT_ONLY]
+    if not live and exported:
+        # ⚠️ REPORTED, NOT FAILED — and the coverage loss is real. The dispatch
+        # source's subject was frozen into work_store.db by an operator-approved
+        # cutover (WSD-S4, #23962), so the roster cannot grow from git. Failing
+        # every contributor's PR over a register no contributor can restore is
+        # the alarm-on-its-own-plumbing failure `rule_liveness` already declines
+        # for R6/R7/R8 on the same grounds. What this guard grades now is the
+        # pre-freeze roster inside its windows. The fix is a live source: the
+        # store's `events` log (who set `lane`, when), committed by the export
+        # (row MANAGER-SCOPE-STORE-IDENTITY). Until then this note prints on
+        # every run, so nobody reads a green R2 as coverage of a new manager.
+        notes.append(
+            "⚠️ R2 CANNOT SEE A MANAGER WHO STARTED AFTER THE WSD-S4 FREEZE: "
+            + ", ".join(f"`{n}` ({p}) is {st}" for n, p, st, _c in sources)
+            + f". Lanes are written to work_store.db; {STORE_REL} is the "
+              f"export, so no new dispatch act can appear in git. The roster "
+              f"below is the pre-freeze one. Live source to restore it: the "
+              f"store's events log (row MANAGER-SCOPE-STORE-IDENTITY).")
+    elif not live:
         return ("no_identity_source", [
             "IDENTITY: every source this guard derives the manager roster from "
             "has had its subject REMOVED, so the roster is frozen at "
@@ -2007,7 +2129,7 @@ def check(root: Path, base: str, today: Optional[str] = None,
               "Reporting `clean` here would be a bill of health from a read "
               "that never happened."], notes)
     notes.append(f"manager roster (UNION of {len(live)} live + "
-                 f"{len(sources) - len(live)} retired source(s)): "
+                 f"{len(sources) - len(live)} retired/export-only source(s)): "
                  f"{len(holders)} session(s)")
 
     active, exc_notes = load_exceptions(root, today=today)
@@ -3131,6 +3253,96 @@ def self_test() -> int:
         assert st == "unattributed", (st, fails)
         assert any("not evidence of compliance" in n for n in notes), notes
         cases.append(("untrailered commits -> unattributed (NOT a pass)", st, ""))
+
+        # ================================================================
+        # THE 2026-11-19 FALSE POSITIVE. A LANE ran the work-store export;
+        # its commit re-emitted rows whose lanes name other sessions, and the
+        # dispatch reader admitted the lane as a manager (#27299/#27308/#27313).
+        # ================================================================
+        def _store_rows(root: Path, rows: list[tuple[str, Optional[str]]],
+                        frozen: bool) -> None:
+            head = {"schema_version": 2, "items": None}
+            if frozen:
+                head[FROZEN_KEY] = {"at": "2026-11-07T00:00:00Z"}
+            _write(root, STORE_HEADER_REL, json.dumps(head, indent=2) + "\n")
+            for rid, lane in rows:
+                _write(root, f"{STORE_REL}/{rid}.json", json.dumps(
+                    {"id": rid, "title": "a row", "state": "in_flight",
+                     "owner": "manager", "lane": lane}, indent=2) + "\n")
+
+        # -- 14. PLANTED (the exact case): freeze committed on main; a LANE's
+        #    branch carries an export commit adding lanes for OTHER sessions,
+        #    then the lane's own ops-tooling + test commits. The lane must NOT
+        #    be on the roster, and its commits must NOT be graded as a
+        #    manager's.
+        shutil.rmtree(root)
+        root = _fixture(tmp)
+        _archive_lease(root)
+        _store_rows(root, [("X0", None)], frozen=True)
+        _commit(root, "WSD-S4: freeze register files", MANAGER2,
+                when="2026-09-03T08:00:00+00:00")
+        _branch(root, "plant-lane-export")
+        _store_rows(root, [("X0", None), ("X1", WORKER2), ("X2", MANAGER2)],
+                    frozen=True)
+        _commit(root, "DRY RUN: work-store export --to-files", WORKER)
+        _write(root, "scripts/ops/refresh_candle_history.py", "y = 1\n")
+        _write(root, "tests/test_candle_refresh_never_shrinks.py", "z = 1\n")
+        _commit(root, "refresh_candle_history: gap check", WORKER)
+        holders, _w, sources, rnotes = manager_roster(root)
+        assert WORKER not in holders, (
+            "a lane that ran the EXPORT must not be admitted as a manager — "
+            "the export copies lanes the store already holds", sorted(holders))
+        assert ("dispatch", CHECKLIST_REL, SRC_EXPORT_ONLY, 0) in sources, sources
+        assert any("NOT dispatch evidence" in n and WORKER in n
+                   for n in rnotes), rnotes
+        st, fails, notes = check(root, "main")
+        assert not any("refresh_candle_history" in f for f in fails), fails
+        assert st == "no_manager_commits", (st, fails)
+        assert exit_code(st, fails) == 0, exit_code(st, fails)
+        assert any("CANNOT SEE A MANAGER WHO STARTED AFTER" in n
+                   for n in notes), "the frozen-roster limit must be printed"
+        cases.append(("a LANE's work-store EXPORT commit is not a dispatch -> "
+                      "lane off the roster, its tooling commits not graded "
+                      "(2026-11-19, #27299)", st, ""))
+
+        # -- 14b. PLANTED: the ROLLBACK export (`--unfreeze`) drops the key in
+        #     the same commit that re-emits the rows. Its parent is frozen, so
+        #     it is an export too.
+        shutil.rmtree(root)
+        root = _fixture(tmp)
+        _archive_lease(root)
+        _store_rows(root, [("X0", None)], frozen=True)
+        _commit(root, "WSD-S4: freeze register files", MANAGER2)
+        _branch(root, "plant-unfreeze-export")
+        _store_rows(root, [("X0", None), ("X1", WORKER2)], frozen=False)
+        _commit(root, "work.py export --to-files --unfreeze", WORKER)
+        holders, _w, _s, _n = manager_roster(root)
+        assert WORKER not in holders, sorted(holders)
+        cases.append(("the --unfreeze rollback export is an export too "
+                      "(parent frozen) -> not a dispatch", "no_manager_commits",
+                      ""))
+
+        # -- 14c. CONTROL: a PRE-freeze dispatch in the per-row store still
+        #     admits its manager, and that manager's src/ commit still FAILS.
+        #     Without this, "skip the store" satisfies 14 by blinding R2.
+        shutil.rmtree(root)
+        root = _fixture(tmp)
+        _archive_lease(root)
+        _store_rows(root, [("X0", None)], frozen=False)
+        _commit(root, "cutover: per-row store", WORKER)
+        _store_rows(root, [("X0", None), ("X1", WORKER)], frozen=False)
+        _commit(root, "manager2: dispatch X1", MANAGER2)
+        _branch(root, "control-prefreeze-row-dispatch")
+        _write(root, "src/runtime/orders.py", "x = 9\n")
+        _commit(root, "manager2: tweak the order path", MANAGER2)
+        holders, _w, sources, _n = manager_roster(root)
+        assert MANAGER2 in holders, sorted(holders)
+        assert ("dispatch", CHECKLIST_REL, SRC_LIVE, 1) in sources, sources
+        st, fails, _ = check(root, "main")
+        assert st == "violation", (st, fails)
+        assert "application source" in "\n".join(fails), fails
+        cases.append(("CONTROL: a pre-freeze row-file dispatch still admits "
+                      "its manager -> violation", st, "\n".join(fails)))
 
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

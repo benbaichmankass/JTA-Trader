@@ -5,7 +5,7 @@ id: RQ-20261119-a10d-01
 title: 'D2 OPTION A: rebuild the BTC/SOL 15m fc-pcv forecast side-stream at stride 1 (private root), retrain the fc-pcv-v2 heads as
   private candidates, and check that the served heads now score the rebuilt rows the way they score the live rows (agreement >= 0.98,
   kappa >= 0.8)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -142,3 +142,23 @@ amendments:
   - 'manager override 2026-11-19 10:42Z: hand dispatch (research-script-run-trainer.yml, research_unit=RQ-20261119-a10d-01, run 44508147996,
     queued 10:42:30Z). The dispatcher defers every unit under repo backpressure (~456 queued runs, mostly stale; fix tracked separately).
     Rule, thresholds and command unchanged; this stamp stops the dispatcher from double-firing it.'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261119-a10d-01-FC-STRIDE1-PARITY
+  evidence:
+  - comms/research/RQ-20261119-a10d-01/44508147996/verdict.json
+  - comms/research/RQ-20261119-a10d-01/44508147996/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  rows: 2
+  verdict: fail
+  reason: 'run 44508147996 (hand-dispatched 10:42Z, success, trainer wall 1005.7 s = 16.8 min for both heads; per head forecasts ~300 s, features
+    ~100-108 s, candidate train ~65-75 s, diffs ~14-15 s). Steps 1-4 all rc 0 on both heads. BTCUSDT (btc-regime-15m-lgbm-fc-pcv-v2): served
+    agreement 0.9736, kappa 0.8626, n 983 matched (>= 200), 26 flips, forecast_fc reproduces 26/26; candidate 0.9776 / 0.8669, 22/22 -> FAIL
+    (agreement < 0.98). SOLUSDT: served 0.9296 / 0.8445, n 895, 63 flips, forecast_fc 63/63; candidate 0.9307 / 0.8488, 62/62 -> FAIL. Unit
+    verdict FAIL (worst head). STALENESS: the production v002 dataset repeats the previous bar''s fc_* on 75.05% (BTC, n 954) / 75.06% (SOL, n
+    858) of bars since 2026-11-09; the stride-1 rebuild repeats on 0.0%. So the stride-4 staleness is real and the rebuild removes it, but parity
+    barely moves (+0.004 BTC, +0.001 SOL): stride was NOT the defect. Every other feature block reproduces 0 flips (vol_bucket mean |dp| 1e-5).
+    fail_action applies: forecast_fc reproduces 100% (>= 80%) of the remaining flips, so the live forecast differs from a stride-1 offline
+    forecast for another reason (context window end, the bar the live publisher anchors on, model id); next iteration diffs the fc_* values
+    bar-for-bar against the live publisher''s inputs. a10d-02 stays blocked (its clears_when is a10d-01 PASS).'
