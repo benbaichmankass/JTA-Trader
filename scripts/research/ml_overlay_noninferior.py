@@ -68,6 +68,29 @@ N_RAND = 2000
 PARITY_MIN = 0.98
 N_GATE_MIN = 200
 SEED = 20261029
+# ml-week-plan D4 task 4 (RQ-20261119-e8a1-03): a MONOTONE LightGBM learner on Beagle-1's features, target win, same CPCV
+# splits, config q and multiplier. Each feature's monotone direction is FIXED BEFORE ANY RUN from the sign of the committed
+# Beagle-1 coefficient (ml/overlay/overlay_td.json); a coefficient with |coef| < MONO_MIN_ABS_COEF is left unconstrained (0).
+LEARNER_ARMS = ("mlgbm",)
+MONO_MIN_ABS_COEF = 0.02
+MLGBM_PARAMS = {"n_estimators": 200, "learning_rate": 0.05, "num_leaves": 7, "min_child_samples": 50, "subsample": 0.8,
+                "subsample_freq": 1, "colsample_bytree": 0.9, "reg_lambda": 1.0, "verbose": -1}
+
+
+def monotone_signs(artifact: Path | None = None) -> list[int]:
+    """+1 / -1 / 0 per FEATURES entry from the committed Beagle-1 coefficients (features matched by name)."""
+    art = json.loads((artifact or REPO / "ml/overlay/overlay_td.json").read_text())
+    coef = dict(zip(art["features"], art["coef"]))
+    return [0 if abs(coef.get(f, 0.0)) < MONO_MIN_ABS_COEF else (1 if coef[f] > 0 else -1) for f in FEATURES]
+
+
+def fit_predict_mlgbm(Xtr: np.ndarray, ytr: np.ndarray, Xte: np.ndarray, signs: list[int], seed: int = SEED):
+    """(p_train, p_test) = P(win) from a monotone-constrained LGBMClassifier."""
+    import lightgbm as lgb
+    m = lgb.LGBMClassifier(**MLGBM_PARAMS, monotone_constraints=list(signs), random_state=seed)
+    m.fit(Xtr, ytr.astype(int))
+    # provenance: predict_proba[:, 1] = P(net_r > 0), the same quantity Beagle-1's logistic score is
+    return m.predict_proba(Xtr)[:, 1], m.predict_proba(Xte)[:, 1]
 
 
 # ----------------------------------------------------------------------------------------------- model
@@ -267,7 +290,7 @@ def target_labels(net_r: np.ndarray, target: str = "win") -> tuple[np.ndarray, n
     raise ValueError(f"unknown target {target!r}")
 
 
-def run_cpcv(df: pd.DataFrame, cfg: dict, target: str = "win") -> dict:
+def run_cpcv(df: pd.DataFrame, cfg: dict, target: str = "win", learner: str = "logistic") -> dict:
     """Out-of-sample reduce decisions per trade per CPCV path. Returns m (n x paths multiplier), p (scores)."""
     X = df[list(FEATURES)].to_numpy(float)
     y, sw = target_labels(df["net_r"].to_numpy(), target)
@@ -277,12 +300,17 @@ def run_cpcv(df: pd.DataFrame, cfg: dict, target: str = "win") -> dict:
     score = np.full((n, n_paths), np.nan)
     seen = np.zeros(N_GROUPS, dtype=int)
     groups = None
+    signs = monotone_signs() if learner == "mlgbm" else None
     for _sid, tg, train, test, g in cpcv_splits(df["entry_time"], df["exit_time"]):
         groups = g
         _mu, _sd, (Xtr, Xte) = standardise(X[train], X[test])
-        coef, b = fit_logistic(Xtr, y[train], cfg["C"], sw=None if sw is None else sw[train])
-        tau = float(np.quantile(predict(Xtr, coef, b), cfg["q"]))
-        pte = predict(Xte, coef, b)
+        if learner == "mlgbm":
+            ptr, pte = fit_predict_mlgbm(Xtr, y[train], Xte, signs)
+            tau = float(np.quantile(ptr, cfg["q"]))
+        else:
+            coef, b = fit_logistic(Xtr, y[train], cfg["C"], sw=None if sw is None else sw[train])
+            tau = float(np.quantile(predict(Xtr, coef, b), cfg["q"]))
+            pte = predict(Xte, coef, b)
         te_idx = np.where(test)[0]
         for k in tg:
             col = seen[k]
@@ -523,7 +551,9 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
     if CPCV_CHALLENGERS["targets"]:  # --cpcv-challenger: target-variant challengers vs Beagle-1 on the same CPCV splits
         out["cpcv_challengers"] = inherit_family_state(cpcv_challengers(df, gate_mask, CPCV_CHALLENGERS["targets"]), verdict)
         chosen = out["cpcv_challengers"]["chosen"]
-        if chosen and CPCV_CHALLENGERS.get("export_dir") is not None:
+        if chosen in LEARNER_ARMS:   # a GBM is not a logistic overlay artifact: a PASS is exported by its own follow-up build
+            out["exported_cpcv_challenger"] = None
+        elif chosen and CPCV_CHALLENGERS.get("export_dir") is not None:
             ch = export_model(df, PRIMARY, target=chosen)
             ch.update({"family": name, "legs_gate": gate, "legs_train": legs, "role": "challenger",
                        "challenger_of": f"overlay_{name.lower()}.json", "rule": CPCV_RULE_ID})
@@ -570,14 +600,14 @@ def cpcv_challengers(df: pd.DataFrame, gate_mask: np.ndarray, targets: list[str]
     mb = np.nanmean(base["mult"], axis=1)[gate_mask]
     arms = []
     for i, t in enumerate(targets):
-        res = run_cpcv(df, PRIMARY, t)
+        res = run_cpcv(df, PRIMARY, "win", learner=t) if t in LEARNER_ARMS else run_cpcv(df, PRIMARY, t)
         own = evaluate(df, res, gate_mask, np.random.default_rng(SEED + 10 + i))
         mc = np.nanmean(res["mult"], axis=1)[gate_mask]
         paired = challenger_compare(gdf, mb, mc, np.random.default_rng(SEED + 20 + i))
         bm, cm = base["mult"][gate_mask], res["mult"][gate_mask]
         cells = ~np.isnan(bm) & ~np.isnan(cm)
         dis = float(np.mean(bm[cells] != cm[cells])) if cells.any() else 0.0
-        y_rate = float(target_labels(gdf["net_r"].to_numpy(), t)[0].mean())
+        y_rate = float(target_labels(gdf["net_r"].to_numpy(), "win" if t in LEARNER_ARMS else t)[0].mean())
         ok = bool(own["pass"] and paired["delta_ch_vs_base_mean_r"] > 0 and dis >= MIN_DISAGREE)
         arms.append({"target": t, "pass": ok, "disagree_rate_cells": round(dis, 4), "target_base_rate": round(y_rate, 4),
                      "own_checks": own["checks"], "own_delta_mean_r": own["delta_mean_r"], "own_delta_lb95_r": own["delta_lb95_r"],
@@ -909,7 +939,7 @@ def _self_test() -> int:
             with open(d / f"{leg}__trades.jsonl", "w") as fh:
                 fh.write("\n".join(json.dumps(x) for x in rows) + "\n")
         a = run_family("SYN", ["syn"], ["syn"], d, {}, None, None)
-        CPCV_CHALLENGERS.update(targets=["tail1r", "evweight"])
+        CPCV_CHALLENGERS.update(targets=["tail1r", "evweight", "mlgbm"])
         try:
             cpa = run_family("SYN", ["syn"], ["syn"], d, {}, None, None)["cpcv_challengers"]
         finally:
@@ -927,8 +957,14 @@ def _self_test() -> int:
     c1, b1 = fit_logistic(Xs_, ys_, 1.0)
     c2, b2 = fit_logistic(Xs_, ys_, 1.0, sw=np.full(200, 3.0))
     assert np.allclose(c1, c2) and abs(b1 - b2) < 1e-9
-    assert cpa["n_arms"] == 2 and all(0.0 <= x["disagree_rate_cells"] <= 1.0 for x in cpa["arms"]), cpa
-    assert {x["target"] for x in cpa["arms"]} == {"tail1r", "evweight"} and cpa["verdict"] in ("PASS", "FAIL")
+    assert cpa["n_arms"] == 3 and all(0.0 <= x["disagree_rate_cells"] <= 1.0 for x in cpa["arms"]), cpa
+    assert {x["target"] for x in cpa["arms"]} == {"tail1r", "evweight", "mlgbm"} and cpa["verdict"] in ("PASS", "FAIL")
+    # RQ-20261119-e8a1-03: monotone signs come from the committed Beagle-1 coefficients; tiny coefficients are unconstrained
+    _sg = monotone_signs()
+    assert len(_sg) == len(FEATURES) and set(_sg) <= {-1, 0, 1}
+    _art = json.loads((REPO / "ml/overlay/overlay_td.json").read_text())
+    _cf = dict(zip(_art["features"], _art["coef"]))
+    assert all(sg == 0 if abs(_cf[f]) < MONO_MIN_ABS_COEF else sg == (1 if _cf[f] > 0 else -1) for f, sg in zip(FEATURES, _sg))
     rf_ok = repin_fidelity_verdict([{"family": "F", "reasons": [], "verdict": "FAIL", "legs_gate": ["x"], "legs": {},
                                       "primary_eval": {"n_gate": 250}}], "R", Path("."), None, {"verdict": "fail"})
     rf_bad = repin_fidelity_verdict([{"family": "F", "reasons": ["x: 3 trades not aligned to a decision bar"], "verdict": "INDETERMINATE",
@@ -984,7 +1020,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--export-challenger", default=None,
                     help="write the tau_rule=ev challenger, fit on the main-window family pool, to this dir "
                          "(the forward shadow read's artifact; training window only, reads no holdout)")
-    ap.add_argument("--cpcv-challenger", action="append", choices=("tail1r", "evweight"), default=[],
+    ap.add_argument("--cpcv-challenger", action="append", choices=("tail1r", "evweight") + LEARNER_ARMS, default=[],
                     help="RQ-20261117-aadc-03: a TARGET-variant challenger compared, paired, with Beagle-1 on the same CPCV "
                          "splits (repeatable; every arm counted)")
     ap.add_argument("--export-cpcv-challenger", default=None,
