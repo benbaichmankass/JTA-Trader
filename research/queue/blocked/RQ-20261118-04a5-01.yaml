@@ -147,13 +147,16 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). Rule, arms, thresholds, legs, folds and
     cost stack unchanged. before_any_run is false because run 44383743409 exists (INDETERMINATE, n=0 on both legs after the split: the evidence
     of the freeze); no edge outcome was read.'
+  - 'CORRECTED ~10:00Z: the freeze premise above was wrong (trainer-vm-diag #27238); the block now names the undiagnosed n=0 cause instead.'
 last_dispatched_at: '2026-11-18T20:06:01+00:00'
 rearmed_at: '2026-11-18T22:05:00+00:00'
 blocked_on:
-- what: 'This unit reads the trainer data/<SYM>_1h.csv / _4h.csv files frozen ~06-15/18 (AM-OPS-7). Its 2026-11-18 run (44383743409) read n=0
-    trades after its 2026-07-14 split on both legs, i.e. the window it tests does not exist in the files. Needs #27214 deployed (refreshes BTCUSDT:60
-    and AVAXUSDT:240).'
-  ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
+- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
+    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
+    1h-file clause could never clear. The earlier block reason (frozen 1h/4h files) was WRONG: both legs resolve to fresh files (BTCUSDT_15m,
+    AVAXUSDT_5m), yet run 44383743409 read n=0 trades after the 2026-07-14 split on both legs. The cause is undiagnosed (harness signal path,
+    cache or split logic); re-running unchanged would repeat n=0.'
+  ref: 'PI to be filed: 04a5-01 n=0 diagnosis'
   kind: build
-  clears_when: data/BTCUSDT_1h.csv and data/AVAXUSDT_4h.csv each have a last bar within 3 days of the run (trainer-vm-diag read quoted in the
-    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).
+  clears_when: the n=0 cause is diagnosed and fixed (a local or trainer run of donchian_depth_retest.py shows incumbent n > 0 after the split
+    on both legs); then git mv this file to research/queue/ and set status queued (rule unchanged).

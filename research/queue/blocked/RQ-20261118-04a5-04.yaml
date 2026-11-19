@@ -153,12 +153,11 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
 blocked_on:
-- what: 'The exit-head rows these units read (datasets-out/exit_head/1h/donchian/rows.jsonl) were built 2026-07-12 and the replay reads the trainer
-    data/<SYM>_1h.csv files frozen ~06-15/18 (AM-OPS-7; RQ-20261118-04a5-01 read n=0 trades after 2026-07-14). A run now would grade July data.
-    Needs #27214 deployed and the rows rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD, ML-PRIMARY
-    lane).'
+- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
+    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
+    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
+    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
   ref: ML-EXITHEAD-ROWS-FRESH-REBUILD
   kind: build
-  clears_when: data/<SYM>_1h.csv for every replayed symbol has a last bar within 3 days of the run AND datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
-    exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the move commit); then git mv this file to research/queue/ and set
-    status queued (rule unchanged).
+  clears_when: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
+    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).
