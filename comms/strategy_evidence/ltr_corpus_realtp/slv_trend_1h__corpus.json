@@ -1,0 +1,32 @@
+{
+  "leg": "slv_trend_1h",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/slv_trend_1h.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg slv_trend_1h arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261018-ef5d-01/39121076582/data/SLV_60.csv",
+  "decision_bar": "forming",
+  "data_start": "2024-10-29 14:00:00+00:00",
+  "data_end": "2026-10-15 14:00:00+00:00",
+  "n_trades": 98,
+  "net_total_r": 31.7278,
+  "fee_bps_roundtrip": 0.0,
+  "slippage_bps_roundtrip": 5.0,
+  "funding_bps_per_window": 0.0,
+  "params": {
+    "timeframe": "1h",
+    "symbols": [
+      "SLV"
+    ],
+    "donchian": 24,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 4.0,
+    "tp_r": 6.0,
+    "min_confidence": 0.3
+  },
+  "config_fingerprint": "sha256:eab5e2b837006499c757a8d8335fa810",
+  "trades_sha256": "cc9728e36be35222cad6932167bcd1851b075274c183f7b695e1ca268dff4c74",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/slv_trend_1h.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261018-ef5d-01/39121076582/data/SLV_60.csv",
+  "note": "real-TP holdout population for ltr near_target (RQ-20261119-c9d2-01); separate dir so default all-corpora runs are unchanged"
+}

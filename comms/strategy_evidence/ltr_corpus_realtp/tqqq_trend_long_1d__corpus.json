@@ -1,0 +1,38 @@
+{
+  "leg": "tqqq_trend_long_1d",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/tqqq_trend_long_1d.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg tqqq_trend_long_1d arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261018-ef5d-01/39121076582/data/TQQQ_D.csv",
+  "decision_bar": "forming",
+  "data_start": "2010-04-06 00:00:00+00:00",
+  "data_end": "2026-10-14 00:00:00+00:00",
+  "n_trades": 136,
+  "net_total_r": 24.9578,
+  "fee_bps_roundtrip": 0.0,
+  "slippage_bps_roundtrip": 5.0,
+  "funding_bps_per_window": 0.0,
+  "params": {
+    "long_only": true,
+    "timeframe": "1d",
+    "symbols": [
+      "TQQQ"
+    ],
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 4.0,
+    "tp_r": 1.5,
+    "tp_intent": {
+      "mode": "r_multiple",
+      "basis": "RQ-20261106-7850-02_pooled_kstar_1.5R",
+      "calibrated": true
+    },
+    "min_confidence": 0.0
+  },
+  "config_fingerprint": "sha256:4f04fd90ada03b3c17bb8542abe6273a",
+  "trades_sha256": "021d8f2f1dd841fb286ce4cf8db442db01776cd3b22e5a977aea14f2367a3f46",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/tqqq_trend_long_1d.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261018-ef5d-01/39121076582/data/TQQQ_D.csv",
+  "note": "real-TP holdout population for ltr near_target (RQ-20261119-c9d2-01); separate dir so default all-corpora runs are unchanged"
+}
