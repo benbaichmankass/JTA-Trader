@@ -1,0 +1,135 @@
+# Hand-authored 2026-11-19 by lane RESEARCH-OPS-20261119-1448 (Tier 1). ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-48ac-01
+title: 'ITERATION 3 of ltr-tp-pull-in (43b6-04 PASS@new_peak is a discovery): ONE confirmation of tp_pull_in@new_peak on the four real-TP legs never used to choose
+  the trigger (RULE-AM-RISK-ADJUSTED-V1)'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On the real-TP corpora comms/strategy_evidence/ltr_corpus_realtp (tlt_pullback_1d, tqqq_trend_long_1d, scha_trend_long_1d, slv_trend_1h; none a selection
+  leg of ed2b-05 or 43b6-04), does tp_pull_in at the first new_peak (tp_keep 0.5) cut maxDD or weekly CVaR5 by >= 15% at <= 0.05 R/trade net, hold in >= 4 of 6 folds
+  and beat 200 random-time pull-ins?
+why_this_matters: 'ltr-tp-pull-in is an orphan after 43b6-04 (research-ops 2026-11-19). On PASS: a confirmed screen result, a Tier-3 proposal input for the class
+  (the manager owns it). On FAIL: the 43b6-04 pass was selection from 3 of 6 cumulative triggers; the class goes to a lever-exhaustion review (tp_keep and trigger
+  families both read), not another trigger sweep.'
+iteration:
+  subject: ltr-tp-pull-in
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261117-43b6-04
+  verdict_read: pass_unconfirmed
+  diagnosis: 'RQ-20261117-43b6-04 (3,527 priced trades, 3 triggers): tp_pull_in@new_peak cleared R1-R4 (R2 maxDD cut 43.2%, 5 of 6 folds, 200 of 200 controls beaten,
+    n_fired 1,850, edge vs random +0.050 R) while near_target and structure_break failed (0 of 200 controls beaten). It is the one survivor of 6 cumulative triggers,
+    so it is a discovery chosen from a family of 6. The real-TP holdout legs the registered rule required now exist (comms/strategy_evidence/ltr_corpus_realtp, built
+    2026-11-19 for RQ-20261119-c9d2-01).'
+  search: ONE pre-registered trigger (new_peak) at the fixed tp_keep 0.5 on the four real-TP holdout legs; arm denominator 1 (+ hold), cumulative family 6 recorded
+    as the multiple-testing denominator
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-tp-pull-in.yaml
+  attempt: 3
+  due_by: '2026-11-26'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window, as recorded
+    per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED, not measured: sized from the subject''s previous result n (see iteration.diagnosis); V1 n_floor 39 governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261119-48ac-01
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: Per-trade R books over the stated corpus, intervention at the first trigger vs the HOLD book, against 200 matched random-time interventions on the same
+    trades, net of the full cost stack.
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.95), plus L1: a pass keeps r_cost
+    <= 0.05 R/trade after dropping the leg with the largest favourable contribution. PASS: every pre-registered candidate listed clears R1-R4 and L1 (one candidate
+    suffices where several are listed; that is a discovery, never a promotion). FAIL: every candidate fails a necessary clause (R1, R2 or R3) or is beaten by its
+    random control (R4). INDETERMINATE: anything else (under the n floor, never fired, carried by one leg, no_data). Fixed now; not changed after a run. Population:
+    the four real-TP holdout legs only.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the
+  same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; a pull-in limit fills at its level, SL-first on the recorded exit bar
+- triggers are evaluated on bar closes, live on telemetry passes
+- legs declaring a fictional TP (tp_r >= 10) are excluded and named, so the population is smaller than 4,076
+- the same corpus was read by ed2b-05 for this class (3 other triggers)
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tp_pull_in@new_peak
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds; REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261119-48ac-01
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --corpus-dir
+  - comms/strategy_evidence/ltr_corpus_realtp
+  - --action
+  - tp_pull_in
+  - --triggers
+  - new_peak
+  - --legs
+  - scha_trend_long_1d,slv_trend_1h,tlt_pullback_1d,tqqq_trend_long_1d
+  - --tp-keep
+  - '0.5'
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.95'
+  - --n-comparisons
+  - '1'
+  - --out
+  - '{out_dir}'

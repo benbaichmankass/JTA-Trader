@@ -241,6 +241,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     vmap = {"LAG_EXPLAINS": "pass", "RESIDUAL": "fail", "INDETERMINATE": "indeterminate"}
     verdict = {"unit": a.unit, "rule_id": RULE_ID, "verdict": vmap[unit_v], "verdict_label": unit_v,
                "read_state": rs, "heads": heads,
+               "population": ("live per-bar rows of btc/sol-regime-15m-lgbm-fc-pcv-v2 in " + str(a.snapshot_dir)
+                              + " matched to the stride-1 rebuilt market_features fc_* (" + a.rebuilt_template + ")"),
+               "n": (sum(int(h.get("n_matched") or 0) for h in heads.values())
+                     if any(h.get("read_state") == "measured" for h in heads.values()) else None),
+               "note": "; ".join(f"{s}: {h['verdict']} ({h['reason']})" for s, h in heads.items()),
                "data_inputs": [a.rebuilt_template, str(Path(a.snapshot_dir).relative_to(REPO))
                                if Path(a.snapshot_dir).is_relative_to(REPO) else a.snapshot_dir],
                "generated_at": datetime.now(timezone.utc).isoformat()}

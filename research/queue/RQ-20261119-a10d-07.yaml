@@ -1,10 +1,14 @@
+# UN-BLOCKED 2026-11-19 ~15:15Z by ML-PRIMARY-11: RQ-20261119-ef40-01 (run 44539864523, trainer) built and PUBLISHED
+# datasets-out/exit_head/1h/donchian_fresh/rows.jsonl: 45,372 rows, build_report.generated_at 2026-11-19T14:07:34Z, last bar_t
+# BTCUSDT 2026-11-08T17:00Z, ETHUSDT 2026-11-19T07:00Z, SOLUSDT 2026-11-05T15:00Z (all past 2026-11-01; comms/research/RQ-20261119-ef40-01/
+# 44539864523/verdict.json). Rule unchanged; nothing run on these rows.
 # Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
 # manager (session_01AFoLuHbhd9wFuGJfWRqyoV; 08:24Z: re-run RQ-20261117-aadc-11 on fresh data, blocked on the 1h refresh). Rule = RQ-20261117-aadc-11's,
 # registered 2026-11-17 BEFORE its first run, unchanged. Gates this adds or changes: none.
 id: RQ-20261119-a10d-07
 title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future
   R >= -0.25), improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -151,12 +155,3 @@ related:
 - research/queue/RQ-20261117-aadc-11.yaml
 - scripts/research/exit_head_label_bakeoff.py
 - scripts/research/m20_exit_head_round.py
-blocked_on:
-- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
-    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
-    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
-    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
-  ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
-  kind: build
-  clears_when: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
-    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).

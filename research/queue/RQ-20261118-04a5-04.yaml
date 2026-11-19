@@ -1,10 +1,14 @@
+# UN-BLOCKED 2026-11-19 ~15:15Z by ML-PRIMARY-11: RQ-20261119-ef40-01 (run 44539864523, trainer) built and PUBLISHED
+# datasets-out/exit_head/1h/donchian_fresh/rows.jsonl: 45,372 rows, build_report.generated_at 2026-11-19T14:07:34Z, last bar_t
+# BTCUSDT 2026-11-08T17:00Z, ETHUSDT 2026-11-19T07:00Z, SOLUSDT 2026-11-05T15:00Z (all past 2026-11-01; comms/research/RQ-20261119-ef40-01/
+# 44539864523/verdict.json). Rule unchanged; nothing run on these rows.
 # Hand-authored 2026-11-18 by lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo, Tier 1 research), dispatched by the JTA Trader
 # manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Follows PI-20261118-MANAYJZO-0001 (exit-head replays scored the class label).
 # Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261118-04a5-04
 title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the head (holding_pays_neg25,
   and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -152,12 +156,3 @@ amendments:
   - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
-blocked_on:
-- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
-    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
-    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
-    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
-  ref: ML-EXITHEAD-ROWS-FRESH-REBUILD
-  kind: build
-  clears_when: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
-    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged).
