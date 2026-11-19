@@ -112,13 +112,40 @@ jobs:
             slug=$(python3 -c "import sys; ref = sys.argv[1]; ref = ref[len('claude/'):] if ref.startswith('claude/') else ref; print(ref.replace('/', '-'))" "$head_ref")
             decl_path=".github/pr-landing/${slug}.json"
 
-            if [ -f "$decl_path" ]; then
+            # Read the declaration AS MERGED (the PR's merge commit), not from this run's checkout. Since #27315
+            # a run grades every PR merged in the last 6 h, but it checks out the push that TRIGGERED it; a run
+            # that queued behind the runner backlog (2026-11-19: triggered 18:09:55Z at d6cc77bb3, started
+            # 18:14:59Z) then graded #27399/#27406/#27416, merged 18:13-18:14Z, against a tree without their
+            # landing files and paged three false "no .github/pr-landing declaration" alarms. A 404 at the
+            # merge commit is a real MISSING; any other failed read falls back to the local tree below.
+            merge_sha=$(gh api "repos/${REPO}/pulls/${pr_number}" --jq '.merge_commit_sha // empty' 2>/dev/null || true)
+            merged_decl="/tmp/decl-${pr_number}.json"
+            merged_read="none"
+            if [ -n "$merge_sha" ]; then
+              if gh api -H "Accept: application/vnd.github.raw" "repos/${REPO}/contents/${decl_path}?ref=${merge_sha}" \
+                   > "$merged_decl" 2>/tmp/decl-err-${pr_number}.txt; then
+                merged_read="found"
+              elif grep -q "HTTP 404" /tmp/decl-err-${pr_number}.txt 2>/dev/null; then
+                merged_read="missing"
+              fi
+            fi
+
+            if [ "$merged_read" = "found" ]; then
+              decl_arg="$merged_decl"
+              if ! python3 -c "import json; json.load(open('$merged_decl'))" 2>/dev/null; then
+                decl_arg="UNREADABLE"
+              fi
+            elif [ "$merged_read" = "missing" ]; then
+              decl_arg="MISSING"
+            elif [ -f "$decl_path" ]; then
               decl_arg="$decl_path"
               if ! python3 -c "import json; json.load(open('$decl_path'))" 2>/dev/null; then
                 decl_arg="UNREADABLE"
               fi
             else
-              decl_arg="MISSING"
+              # The merge-commit read failed (no merge sha, or an error other than 404) and this checkout lacks
+              # the file: "could not look" is UNREADABLE (not final: left unlabelled, retried next run), never MISSING.
+              decl_arg="UNREADABLE"
             fi
 
             reviews_path="/tmp/reviews-${pr_number}.json"
