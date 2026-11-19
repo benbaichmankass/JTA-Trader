@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-05
 title: 'ITERATION 1 of ml-holdbias-exit (pending): on held-out corpus-B folds, does exit-holdbias-v1 acting only when the best action beats hold
   by >= 0.15 R keep as-if-applied >= hold-to-bracket?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -70,11 +70,29 @@ related:
 - RESEARCH-ITERATE
 - ML-EXIT-ACTIONGRID-LABELS
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: ML-EXIT-ACTIONGRID-LABELS
-  what: the action-grid labels (desk_lifecycle_driver.py --action-grid) the model trains on
-  clears_when: the labels land; then git-mv to research/queue/ (rule unchanged)
+unblocked:
+  at: '2026-11-19'
+  by: lane ML-BUILD-1119 (session_01AFoLuLWp2gWxxBuEKpvVAR), owner of ML-HOLDBIAS-EXIT-MODEL
+  what_cleared: 'ML-EXIT-ACTIONGRID-LABELS landed (#27377, merged 2026-11-19): corpus-B labels at
+    comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz. The harness this unit runs is
+    scripts/research/exit_holdbias.py (row ML-HOLDBIAS-EXIT-MODEL). Decision rule unchanged.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_holdbias.py
+  - --labels
+  - comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261101-78fc-05
+  timeout_minutes: 60
+  note: >-
+    exit-holdbias-v1: one LightGBM value head per action of the 13-action grid, 6 calendar walk-forward folds with
+    a trade-level purge + embargo (longest trade span), act only when the best feasible predicted value beats hold
+    by >= 0.15 R, first action per trade, rest hold-to-bracket. Grades RULE-RQ-20261101-78fc-05 verbatim (constants
+    in the script header). Matched random reported, not graded.
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
 ml_consumer:
