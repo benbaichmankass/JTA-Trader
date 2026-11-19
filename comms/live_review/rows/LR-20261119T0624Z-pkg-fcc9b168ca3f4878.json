@@ -1,0 +1,172 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0624Z-pkg-fcc9b168ca3f4878",
+ "reviewed_at": "2026-11-19T06:40:00Z",
+ "order_package_id": "pkg-fcc9b168ca3f4878",
+ "trade_id": null,
+ "leg": "eth_pullback_prop_2h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-19",
+  "l0_snapshot_at": "2026-11-19T06:22:57.878145+00:00"
+ },
+ "info_cutoff_at": "2026-11-19T06:24:39Z",
+ "state": {
+  "atr_now_over_entry": 0.5364,
+  "bars_held": 49,
+  "giveback_r": 0.6296,
+  "open_r": 0.1048,
+  "peak_provenance": "estimated",
+  "peak_r": 0.7345,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1889.31,
+  "tp": 1637.70265
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.5364,
+  "bars_since_peak": 6,
+  "giveback_r": 0.6296,
+  "open_r": 0.1048,
+  "peak_r": 0.7345,
+  "r_to_stop": 0.7461,
+  "r_to_target": 1.4447
+ },
+ "mechanics": {
+  "evidence": "bybit_1: ETHUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-a29e677a8dc24525); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "per_account": {
+   "bybit_1": {
+    "by_design": null,
+    "evidence": "bybit_1: ETHUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-a29e677a8dc24525); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261119T0624Z-pkg-fcc9b168ca3f4878.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Thin cell (hold n=4 < floor 20, options unpriced), so judgement. +0.10 R after a +0.74 R peak; SL 1889.31 is 0.5-0.75 R away, TP 1637.7 1.45 R away. 1d ETH trend ADX 38 intact, 2h lows 1731.31/1750.0 are the targets and highs 1835.54/1843.11 cap the bounce; ATR 0.54x entry (calm). A tighten inside 1 ATR is barred and tighten evidence is negative on average; hold."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "thin_cell: hold n=4 < floor 20, no option priced (insufficient_n); not measured",
+  "regime: atr_now_over_entry 0.54 (calm); 1d trending ADX 38.2",
+  "book: eth_pullback_2h and eth_pullback_prop_2h are the same ETH short on bybit_1 (duplicate exposure), plus BTC/SOL/AVAX/ADA shorts: one risk-off bet",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 4/4",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMZmf4T6qb8m48pZXY",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "count": 4,
+   "denominator": 4,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n"
+  }
+ ],
+ "packet_sha": "8721f4e3ac019d810e205f21e4ca3485eaabc05379001439e45521984bd038d1",
+ "forecast": {
+  "thesis": "1d downtrend (ADX 38) intact; the bounce fails under the 1843 lower high and price re-tests the 1731 low, a 2h close above 1866 invalidates.",
+  "direction": "with_trade",
+  "target_px": 1731.31,
+  "p_target": 0.4,
+  "invalidation_px": 1843.11,
+  "horizon_bars": 6,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings lows 1731.31/1750.0, highs 1835.54/1843.11",
+   "chart.htf 1d trending ADX 38.2",
+   "exit_plan sl 1889.31 tp 1637.7",
+   "table hold n=4 insufficient_n"
+  ]
+ }
+}

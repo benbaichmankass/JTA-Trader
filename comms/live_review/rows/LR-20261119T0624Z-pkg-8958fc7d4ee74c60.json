@@ -1,0 +1,145 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0624Z-pkg-8958fc7d4ee74c60",
+ "reviewed_at": "2026-11-19T06:40:00Z",
+ "order_package_id": "pkg-8958fc7d4ee74c60",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.5,
+  "l0_snapshot_at": "2026-11-19T06:22:57.878145+00:00"
+ },
+ "info_cutoff_at": "2026-11-19T06:24:38Z",
+ "state": {
+  "atr_now_over_entry": 1.3018,
+  "bars_held": 22,
+  "giveback_r": 1.037,
+  "open_r": 0.9577,
+  "peak_provenance": "estimated",
+  "peak_r": 1.9947,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3756.68571429,
+  "tp": 3398.6621
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3018,
+  "bars_since_peak": 2,
+  "giveback_r": 1.037,
+  "open_r": 0.9577,
+  "peak_r": 1.9947,
+  "r_to_stop": 0.563,
+  "r_to_target": 8.6045
+ },
+ "mechanics": {
+  "evidence": "package sl 3756.68571429 / tp 3398.6621 agree with every readable account",
+  "per_account": {
+   "ib_paper": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261119T0624Z-pkg-8958fc7d4ee74c60.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "Thin cell (hold n=13 < floor 20; tighten/close could_not_look, no candles), so judgement. +0.96 R after a +1.99 R peak; momentum_flip fired (3 closed bars against, 1 ATR) but the trail already sits at 3756.69, 0.75 ATR above price, locking about +0.57 R; a tighten is barred inside 1 ATR. 1h trending ADX 36 with htf ADX 40.5 down; the trend leg exits on its 4x ATR trail and ib_paper has no apply path. Hold."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "thin_cell: hold n=13 < floor 20; tighten/close could_not_look (no_candles); not measured",
+  "regime: atr_now_over_entry 1.30; 1h trending ADX 36.3; momentum_flip 3 bars against net >= 1 ATR",
+  "book: GLD/SLV/GDX shorts: same gold-down exposure",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 2/2",
+  "packet_defect: priced_options.candles candles_missing 2/2",
+  "account_path: ib_paper apply_paths empty; any action here refuses no_action_path",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMZmf4T6qb8m48pZXY",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "count": 2,
+   "denominator": 2,
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles"
+  },
+  {
+   "count": 2,
+   "denominator": 2,
+   "field": "priced_options.candles",
+   "reason": "candles_missing"
+  }
+ ],
+ "packet_sha": "0b8268e11500fa18f08b4674017a3bee3bea416c981f97ca777608a2c9e2aeb0",
+ "forecast": {
+  "thesis": "Gold downtrend (htf ADX 40.5) continues: price re-tests the 3694.2 low; a close above the 3759.7 swing high (and the 3756.7 trail) ends the trade at about +0.57 R.",
+  "direction": "with_trade",
+  "target_px": 3694.2,
+  "p_target": 0.4,
+  "invalidation_px": 3759.7,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 3694.2/3722.2, highs 3759.7/3792.9",
+   "chart.htf trending ADX 40.5 last 3721.5",
+   "exit_plan sl 3756.69 trail_mult 4.0",
+   "event momentum_flip net >= 1 ATR since 05:00Z",
+   "table hold n=13 insufficient_n"
+  ]
+ }
+}

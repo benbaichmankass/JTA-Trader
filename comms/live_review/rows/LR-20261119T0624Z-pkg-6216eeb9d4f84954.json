@@ -1,0 +1,158 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0624Z-pkg-6216eeb9d4f84954",
+ "reviewed_at": "2026-11-19T06:40:00Z",
+ "order_package_id": "pkg-6216eeb9d4f84954",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "alpaca_paper"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-11-18T20:00:00+00:00",
+  "l0_snapshot_at": "2026-11-19T06:22:57.878145+00:00"
+ },
+ "info_cutoff_at": "2026-11-19T06:24:38Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 7,
+  "giveback_r": 0.625,
+  "open_r": -0.4676,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1574,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 76.57071428571429,
+  "tp": 70.49392857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 5,
+  "giveback_r": 0.625,
+  "open_r": -0.4676,
+  "peak_r": 0.1574,
+  "r_to_stop": 0.5324,
+  "r_to_target": 1.6379
+ },
+ "mechanics": {
+  "evidence": "package sl 76.57071428571429 / tp 70.49392857142857 agree with every readable account",
+  "per_account": {
+   "alpaca_paper": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 233,
+   "mean_r": -0.8332,
+   "sd_r": 0.6443,
+   "worst_r": -1.2032,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 233,
+   "mean_r": -0.8292,
+   "sd_r": 0.3477,
+   "worst_r": -2.8107,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 233,
+   "mean_r": -0.836,
+   "sd_r": 0.3809,
+   "worst_r": -2.8107,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 233,
+   "mean_r": -0.5534,
+   "sd_r": 0.0318,
+   "worst_r": -0.6681,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261119T0624Z-pkg-6216eeb9d4f84954.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.2798,
+  "worst_case_delta_r": 0.5352,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.65,
+  "reason": "Table (n=233, floor 20, ml_entry short corpus, 5 symbols): hold mean -0.833 sd 0.644 worst -1.203 vs close mean -0.553 sd 0.032 worst -0.668, so closing now is +0.280 R better on the mean (SE of the difference 0.042, ~6.6 SE) and +0.535 R on the worst case; both atr tighten cells (-0.829, -0.836) are no better than hold and carry a -2.81 R worst. Trade is -0.47 R after a +0.16 R peak, 7 bars held, 1h trending ADX 54 against the short with price at 75.08 above entry 74.14; the TP at 70.49 needs a break of the 73.33 low. Close on the table."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=233 measured mean -0.833 (sd 0.644, worst -1.203); close -0.553 (sd 0.032, worst -0.668); atr:1.5 -0.829, atr:2.0 -0.836, atr:1.0 invalid_level",
+  "regime: 1h trending ADX 53.9; atr_now_over_entry null (not read)",
+  "market: us_equity closed at review time; a close fills at the next open, the state may move before then",
+  "book: GDX short correlated with GLD/MGC/SLV shorts (gold-down); GDX is the one against-the-trade leg",
+  "live_vs_backtest: realMoney CONSISTENT live_r -1.63 n=36; mirror CONSISTENT live_r -0.95 n=36",
+  "missing_inputs: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.news",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "alpaca_paper",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "alpaca_orders: SL 76.57 / TP 70.49, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMZmf4T6qb8m48pZXY",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [],
+ "packet_sha": "5e87d822cbdf40fbe11ff13328b63801756b2e946a76e548f8020403c767e392",
+ "forecast": {
+  "thesis": "Short fades: price presses the 75.09 high and drifts toward the 76.57 stop in a 1h ADX 54 trend; the leg's own history prices holding at -0.83 R against -0.55 R closing.",
+  "direction": "against_trade",
+  "target_px": 76.0,
+  "p_target": 0.45,
+  "invalidation_px": 73.79,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "table hold n=233 mean -0.8332 vs close -0.5534",
+   "chart.since_entry high 75.09 low 73.79",
+   "regime.trend_now trending ADX 53.9",
+   "exit_plan sl 76.57 tp 70.49 entry 74.14"
+  ]
+ }
+}

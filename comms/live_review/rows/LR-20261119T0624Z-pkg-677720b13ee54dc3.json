@@ -1,0 +1,137 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0624Z-pkg-677720b13ee54dc3",
+ "reviewed_at": "2026-11-19T06:40:00Z",
+ "order_package_id": "pkg-677720b13ee54dc3",
+ "trade_id": null,
+ "leg": "trend_donchian_ada_4h",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-19T06:22:57.878145+00:00"
+ },
+ "info_cutoff_at": "2026-11-19T06:24:39Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 26,
+  "giveback_r": 1.0925,
+  "open_r": -0.5221,
+  "peak_provenance": "estimated",
+  "peak_r": 0.5704,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.15864286,
+  "tp": 0.1336183
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 24,
+  "giveback_r": 1.0925,
+  "open_r": -0.5221,
+  "peak_r": 0.5704,
+  "r_to_stop": 0.4779,
+  "r_to_target": 1.9416
+ },
+ "mechanics": {
+  "evidence": "package sl 0.15864286 / tp 0.1336183 agree with every readable account",
+  "per_account": {
+   "bybit_1": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.45,
+  "reason": "Packet could not price options and carries no chart or htf (context_null), so thin and judgement only. -0.52 R after a +0.57 R peak; stop 0.15864 is 0.48 R away above the 0.1565 2h swing high (read from the sibling ADA package's chart in the same snapshot, not this packet), TP 0.1336 far. 4h donchian trend leg: the trail and stop are the exit. No priced evidence for a move; hold with low confidence."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "packet_defect: priced_options could_not_price 1/1",
+  "packet_defect: context_v3.chart context_null:chart 1/1",
+  "packet_defect: context_v3.htf context_null:htf 1/1",
+  "book: bybit_2 ADA short (pkg-897d89b7edf34aa3, real money) is the same ADA short thesis at -0.14 R; 13+ correlated shorts",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuMZmf4T6qb8m48pZXY",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "priced_options",
+   "reason": "could_not_price"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "context_v3.chart",
+   "reason": "context_null:chart"
+  },
+  {
+   "count": 1,
+   "denominator": 1,
+   "field": "context_v3.htf",
+   "reason": "context_null:htf"
+  }
+ ],
+ "packet_sha": "fb0ac25059468141553d87aa5e04e7e239809b3b3dfec0aec134296b0e8bbc2e",
+ "forecast": {
+  "thesis": "ADA 1d downtrend (ADX 44, sibling packet) intact; the bounce fails under 0.1565 and price re-tests the 0.1480 low, a 4h close above 0.1586 invalidates.",
+  "direction": "with_trade",
+  "target_px": 0.148,
+  "p_target": 0.35,
+  "invalidation_px": 0.1586,
+  "horizon_bars": 6,
+  "timeframe": "4h",
+  "evidence": [
+   "sibling pkg-897d89b7edf34aa3 chart: 2h low 0.1480, highs 0.1552/0.1565, last 0.1529",
+   "exit_plan sl 0.158643 tp 0.133618 entry 0.1483",
+   "this packet: chart/htf null, options could_not_price"
+  ]
+ }
+}
