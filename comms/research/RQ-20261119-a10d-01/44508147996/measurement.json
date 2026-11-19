@@ -1,0 +1,374 @@
+{
+  "heads": {
+    "BTCUSDT": {
+      "symbol": "BTCUSDT",
+      "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+      "steps": {
+        "forecasts": {
+          "rc": 0,
+          "seconds": 299.6,
+          "cmd": [
+            "-m",
+            "scripts.ml.build_forecasts",
+            "--target",
+            "/home/ubuntu/ict-trading-bot/datasets-out/market_raw/BTCUSDT/15m/v002",
+            "--out"
+          ],
+          "log_tail": [
+            "{\"family\": \"tsfm_forecasts\", \"model_id\": \"amazon/chronos-bolt-tiny\", \"row_count\": 175289, \"target_symbol\": \"BTCUSDT\"}"
+          ]
+        },
+        "features": {
+          "rc": 0,
+          "seconds": 107.5,
+          "cmd": [
+            "-m",
+            "ml",
+            "build-dataset",
+            "market_features",
+            "--output-dir"
+          ],
+          "log_tail": [
+            "{\"status\": \"parquet_sidecar\", \"dir\": \"/home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/BTCUSDT/15m/v002\", \"sidecar\": {\"status\": \"written\", \"rows\": 175272, \"columns\": 108, \"jsonl_bytes\": 464702993, \"parquet_bytes\": 25491953}}",
+            "wrote dataset under /home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/BTCUSDT/15m/v002"
+          ]
+        },
+        "candidate": {
+          "rc": 0,
+          "seconds": 74.5,
+          "cmd": [
+            "-m",
+            "ml",
+            "train",
+            "/home/ubuntu/ict-trading-bot/ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml",
+            "--datasets-root"
+          ],
+          "log_tail": [
+            "    \"support_volatile\": 2586.0,",
+            "    \"weighted_f1\": 0.9305341918825465",
+            "  },",
+            "  \"model_id\": \"btc-regime-15m-lgbm-fc-pcv-v2\",",
+            "  \"registered\": true",
+            "}"
+          ]
+        },
+        "diffs": {
+          "rc": 0,
+          "seconds": 15.3
+        }
+      },
+      "parity_served": {
+        "n_live": 1000,
+        "n_matched": 983,
+        "n_scored": 983,
+        "agreement": 0.9736,
+        "kappa": 0.8626,
+        "n_disagree": 26,
+        "match_offsets": {
+          "0": 983
+        },
+        "share_volatile_live": 0.1139,
+        "share_volatile_replay": 0.1017,
+        "dataset_last_matched_bar": "2026-11-18T19:00",
+        "column_share_differing_1e-3": {
+          "vol_bucket": 0.001,
+          "rolling_log_return_vol": 0.0,
+          "log_return": 0.0,
+          "log_return_lag_1": 0.0,
+          "log_return_lag_2": 0.0,
+          "hour_of_day": 0.0,
+          "dayofweek": 0.0,
+          "fc_ret_med": 0.4486,
+          "fc_range_rel": 0.4466,
+          "fc_up_prob": 0.1811,
+          "fc_skew": 0.4486,
+          "fc_q10_rel": 0.4486,
+          "fc_q90_rel": 0.4486
+        },
+        "blocks": {
+          "vol_bucket": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 1e-05,
+            "n": 983
+          },
+          "vol_estimators": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "returns": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "calendar": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "forecast_fc": {
+            "flips_reproduced": 26,
+            "mean_abs_dp": 0.02984,
+            "n": 983
+          }
+        }
+      },
+      "parity_candidate": {
+        "n_live": 1000,
+        "n_matched": 983,
+        "n_scored": 983,
+        "agreement": 0.9776,
+        "kappa": 0.8669,
+        "n_disagree": 22,
+        "match_offsets": {
+          "0": 983
+        },
+        "share_volatile_live": 0.1007,
+        "share_volatile_replay": 0.0844,
+        "dataset_last_matched_bar": "2026-11-18T19:00",
+        "column_share_differing_1e-3": {
+          "vol_bucket": 0.001,
+          "rolling_log_return_vol": 0.0,
+          "log_return": 0.0,
+          "log_return_lag_1": 0.0,
+          "log_return_lag_2": 0.0,
+          "hour_of_day": 0.0,
+          "dayofweek": 0.0,
+          "fc_ret_med": 0.4486,
+          "fc_range_rel": 0.4466,
+          "fc_up_prob": 0.1811,
+          "fc_skew": 0.4486,
+          "fc_q10_rel": 0.4486,
+          "fc_q90_rel": 0.4486
+        },
+        "blocks": {
+          "vol_bucket": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "vol_estimators": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "returns": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "calendar": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 983
+          },
+          "forecast_fc": {
+            "flips_reproduced": 22,
+            "mean_abs_dp": 0.02668,
+            "n": 983
+          }
+        }
+      },
+      "verdict": "FAIL",
+      "reason": "agreement 0.9736 kappa 0.8626 n 983; forecast_fc reproduces 26/26 flips",
+      "staleness": {
+        "production_v002_since_2026-11-09": {
+          "n": 954,
+          "share_repeat": 0.7505,
+          "read_state": "measured"
+        },
+        "rebuilt_since_2026-11-09": {
+          "n": 954,
+          "share_repeat": 0.0,
+          "read_state": "measured"
+        }
+      }
+    },
+    "SOLUSDT": {
+      "symbol": "SOLUSDT",
+      "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+      "steps": {
+        "forecasts": {
+          "rc": 0,
+          "seconds": 302.3,
+          "cmd": [
+            "-m",
+            "scripts.ml.build_forecasts",
+            "--target",
+            "/home/ubuntu/ict-trading-bot/datasets-out/market_raw/SOLUSDT/15m/v002",
+            "--out"
+          ],
+          "log_tail": [
+            "{\"family\": \"tsfm_forecasts\", \"model_id\": \"amazon/chronos-bolt-tiny\", \"row_count\": 175289, \"target_symbol\": \"SOLUSDT\"}"
+          ]
+        },
+        "features": {
+          "rc": 0,
+          "seconds": 99.5,
+          "cmd": [
+            "-m",
+            "ml",
+            "build-dataset",
+            "market_features",
+            "--output-dir"
+          ],
+          "log_tail": [
+            "{\"status\": \"parquet_sidecar\", \"dir\": \"/home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/SOLUSDT/15m/v002\", \"sidecar\": {\"status\": \"written\", \"rows\": 175272, \"columns\": 108, \"jsonl_bytes\": 463960447, \"parquet_bytes\": 25316334}}",
+            "wrote dataset under /home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/SOLUSDT/15m/v002"
+          ]
+        },
+        "candidate": {
+          "rc": 0,
+          "seconds": 64.8,
+          "cmd": [
+            "-m",
+            "ml",
+            "train",
+            "/home/ubuntu/ict-trading-bot/ml/configs/sol-regime-15m-lgbm-fc-pcv-v2.yaml",
+            "--datasets-root"
+          ],
+          "log_tail": [
+            "    \"support_volatile\": 10849.0,",
+            "    \"weighted_f1\": 0.6842833643946887",
+            "  },",
+            "  \"model_id\": \"sol-regime-15m-lgbm-fc-pcv-v2\",",
+            "  \"registered\": true",
+            "}"
+          ]
+        },
+        "diffs": {
+          "rc": 0,
+          "seconds": 13.9
+        }
+      },
+      "parity_served": {
+        "n_live": 1000,
+        "n_matched": 895,
+        "n_scored": 895,
+        "agreement": 0.9296,
+        "kappa": 0.8445,
+        "n_disagree": 63,
+        "match_offsets": {
+          "0": 895
+        },
+        "share_volatile_live": 0.3553,
+        "share_volatile_replay": 0.3363,
+        "dataset_last_matched_bar": "2026-11-17T22:30",
+        "column_share_differing_1e-3": {
+          "vol_bucket": 0.0,
+          "rolling_log_return_vol": 0.0,
+          "log_return": 0.0,
+          "log_return_lag_1": 0.0,
+          "log_return_lag_2": 0.0,
+          "hour_of_day": 0.0,
+          "dayofweek": 0.0,
+          "fc_ret_med": 0.4771,
+          "fc_range_rel": 0.4715,
+          "fc_up_prob": 0.1095,
+          "fc_skew": 0.4771,
+          "fc_q10_rel": 0.4771,
+          "fc_q90_rel": 0.476
+        },
+        "blocks": {
+          "vol_bucket": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "vol_estimators": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "returns": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "calendar": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "forecast_fc": {
+            "flips_reproduced": 63,
+            "mean_abs_dp": 0.04637,
+            "n": 895
+          }
+        }
+      },
+      "parity_candidate": {
+        "n_live": 1000,
+        "n_matched": 895,
+        "n_scored": 895,
+        "agreement": 0.9307,
+        "kappa": 0.8488,
+        "n_disagree": 62,
+        "match_offsets": {
+          "0": 895
+        },
+        "share_volatile_live": 0.3721,
+        "share_volatile_replay": 0.3363,
+        "dataset_last_matched_bar": "2026-11-17T22:30",
+        "column_share_differing_1e-3": {
+          "vol_bucket": 0.0,
+          "rolling_log_return_vol": 0.0,
+          "log_return": 0.0,
+          "log_return_lag_1": 0.0,
+          "log_return_lag_2": 0.0,
+          "hour_of_day": 0.0,
+          "dayofweek": 0.0,
+          "fc_ret_med": 0.4771,
+          "fc_range_rel": 0.4715,
+          "fc_up_prob": 0.1095,
+          "fc_skew": 0.4771,
+          "fc_q10_rel": 0.4771,
+          "fc_q90_rel": 0.476
+        },
+        "blocks": {
+          "vol_bucket": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "vol_estimators": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "returns": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "calendar": {
+            "flips_reproduced": 0,
+            "mean_abs_dp": 0.0,
+            "n": 895
+          },
+          "forecast_fc": {
+            "flips_reproduced": 62,
+            "mean_abs_dp": 0.04618,
+            "n": 895
+          }
+        }
+      },
+      "verdict": "FAIL",
+      "reason": "agreement 0.9296 kappa 0.8445 n 895; forecast_fc reproduces 63/63 flips",
+      "staleness": {
+        "production_v002_since_2026-11-09": {
+          "n": 858,
+          "share_repeat": 0.7506,
+          "read_state": "measured"
+        },
+        "rebuilt_since_2026-11-09": {
+          "n": 858,
+          "share_repeat": 0.0,
+          "read_state": "measured"
+        }
+      }
+    }
+  },
+  "total_wall_seconds": 1005.7,
+  "generated_at": "2026-11-19T11:11:06.282703+00:00"
+}
