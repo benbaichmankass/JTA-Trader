@@ -1,0 +1,144 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; GO 05:32Z, D2 option A). The aadc-01 re-run named by RQ-20261118-04a5-03's pass_action.
+# Rule = aadc-01's, registered 2026-11-17 BEFORE its first run; unchanged here. Gates this adds or changes: none.
+id: RQ-20261119-a10d-02
+title: 'ML-VOL-LABEL-LIVE-VERIFY RE-RUN on the STRIDE-1 rebuild (aadc-01''s rule unchanged): do the trainer-replayed vol labels of the BTC and
+  SOL fc-pcv-v2 heads, replayed from the stride-1 market_features rebuild of RQ-20261119-a10d-01, reproduce the label the LIVE gate recorded on
+  the same bars (regime_ml_vol_shadow), chance-corrected?'
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: 'For each live D2 head, over the distinct bars where the live regime_ml_vol_shadow row of THAT head (model_id match) carried a calm/volatile
+  label: does the label replayed offline by scripts/research/ml_vol_label_replay.py from the trainer''s market_features v002 dataset agree with
+  the live label (agreement >= 0.90 AND Cohen''s kappa >= 0.60 AND median |live p - replayed p| <= 0.10) under one of the two declared bar alignments?'
+why_this_matters: Every D2 money test grades (trend, vol) cells on REPLAYED labels and carries the caveat "not verified against the live gate"
+  (RQ-20261112-bcd2-01, RQ-20261113-b819-01). RQ-20261112-0f87-01 (D2 consumer cells for the SOL / MES / ETH heads) is blocked on exactly this
+  verification. Until it runs, a D2 cell verdict may be grading a population the live gate never sees. It is also the trainer-shaped build that
+  frees the D2 slot's next unit.
+iteration:
+  subject:
+  - btc-regime-15m-lgbm-fc-pcv-v2
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-03
+  verdict_read: pass
+  diagnosis: 'aadc-01 FAILED (BTC kappa 0.24 n 1,111; SOL kappa 0.51 n 676) and 04a5-03 PASSED naming forecast_fc: the replay side-stream carries
+    a stride-4 forecast forward while the live publisher serves a fresh one per bar. RQ-20261119-a10d-01 rebuilds the replay at stride 1 into
+    a private root; 04a5-03''s pass_action is to re-run aadc-01 on the fixed side. This is that re-run: same script, same audit snapshot, same
+    registered rule and thresholds, BTC and SOL heads only (MES was INDETERMINATE by construction and ETH not_applicable in aadc-01; neither reads
+    fc_*).'
+  search: 'none: one re-run of a registered rule on the fixed replay dataset'
+  attempt: 4
+  due_by: '2026-11-26'
+levers:
+- name: label_fidelity
+  values:
+  - alignment asof
+  - alignment prev_bar
+  hypothesised_effect: with the stride-1 replay, one alignment reproduces the live label at kappa >= 0.6 for BTC and SOL
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 1787
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED input size: aadc-01 matched 1,111 BTC + 676 SOL distinct bars on the same committed audit snapshot (comms/live_parity/vol_label_audit_20261117);
+    the rebuild keeps the same bars. kappa SE near 0.03 at n ~ 1,000.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the private stride-1 rebuild of RQ-20261119-a10d-01 on the trainer and reads a committed snapshot of live audit rows;
+      nothing accrues.
+baseline:
+  definition: 'Chance agreement: Cohen''s kappa corrects observed agreement for the agreement expected from the two marginal volatile shares (an
+    always-calm replay scores kappa 0 however high its raw agreement).'
+  net_of_cost: false
+decision_rule:
+  id: RULE-RQ-20261117-aadc-01-VOL-LABEL-VERIFY
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: chance agreement (kappa 0)
+  statistic: 'scripts/research/vol_label_live_verify.py: per head, replay the labels (ml_vol_label_replay.run_replay, live threshold, feature
+    pre-flight on); keep the audit rows whose model_id is that head and whose vol_regime_ml is calm/volatile; match each to a replayed bar under
+    alignment asof (the bar at/just before the audit stamp) and prev_bar (one bar earlier), dropping a match more than 2 bars stale or past the
+    labels end; one comparison per distinct bar (first row wins; within-bar live label conflicts are counted and reported). On the distinct bars:
+    agreement, Cohen''s kappa, median and p90 |live p_volatile - replayed p_volatile|.'
+  rule: 'Per head and alignment: INDETERMINATE iff bars < 100; PASS iff bars >= 100 AND agreement >= 0.90 AND kappa >= 0.60 AND median |dp| <=
+    0.10; else FAIL. Per head: PASS iff either alignment PASSES (the higher-kappa passing alignment is the one consumers must use); FAIL iff any
+    alignment has >= 100 bars and none passes; else INDETERMINATE. A head whose replay raises is PRODUCER_FAILED for that head only. UNIT verdict
+    = the BTCUSDT head''s verdict (the row''s named head); SOL, MES and ETH are fanned-out records. The ETH head is replay only (no live label
+    exists to verify against) and is recorded not_applicable with its volatile share. Thresholds fixed now.'
+  pass_action: 'Per passing head: the replay is the live population again. Stamp live_verified with the alignment on the label files'' consumers;
+    for SOL git-mv RQ-20261112-0f87-01 to research/queue/ (rule unchanged). Then propose to the manager (data-backed, with a10d-01''s candidate
+    eval metrics and trainer cost) the nightly builder change to stride 1 for the fc-pcv side-stream; nothing is served from this unit. Close
+    PI-20261119-K7ZSW5Z7-0002.'
+  fail_action: 'Per failing head: the per-bar feature path is fixed (a10d-01) but the signal-time label still differs, so the residual is in the
+    signal-audit alignment (04a5-03 no_action_action): next unit re-runs with the signal-time cache age read from the audit stamp.'
+  what_it_does_not_do: Edits no config/regime_policy.yaml cell; flips no REGIME_ML_VERDICT_MODE; retrains, re-stages or serves nothing; changes
+    no nightly builder; places no order; adds no gate. Verifies labels, not edge. In-sample caveat stands. Audit snapshot ends 2026-11-17 ~10:20Z.
+  min_n: 100 distinct bars per head
+  rerun_of: RQ-20261117-aadc-01
+  rerun_note: Re-run of aadc-01's registered rule, unchanged (statistic, thresholds, alignments, unit verdict = BTC head), on the dataset fixed
+    by RQ-20261119-a10d-01. Only the dataset path differs; MES and ETH are dropped (not fc heads; their aadc-01 verdicts stand).
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify an offline feature/label path against
+  the served one before grading anything on it; chance-corrected agreement for an imbalanced label'
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: The replay needs the served heads' registry artifacts, the trainer lightgbm venv and the private stride-1 rebuild that RQ-20261119-a10d-01
+    leaves on the trainer.
+  basis: 'ESTIMATE: aadc-01''s run with two of its four heads.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 120
+  commands:
+  - - python3
+    - scripts/research/vol_label_live_verify.py
+    - --head
+    - BTCUSDT:btc-regime-15m-lgbm-fc-pcv-v2:runtime_logs/research/fc_stride1/datasets/market_features/BTCUSDT/15m/v002/data.jsonl:comms/live_parity/vol_label_audit_20261117/BTCUSDT.jsonl
+    - --head
+    - SOLUSDT:sol-regime-15m-lgbm-fc-pcv-v2:runtime_logs/research/fc_stride1/datasets/market_features/SOLUSDT/15m/v002/data.jsonl:comms/live_parity/vol_label_audit_20261117/SOLUSDT.jsonl
+    - --primary
+    - BTCUSDT
+    - --out-dir
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-a10d-02
+  note: Dataset paths are the PRIVATE stride-1 rebuild written by RQ-20261119-a10d-01 under the trainer checkout (runtime_logs/ is git-ignored,
+    so the trainer code reset keeps it). A missing dataset is producer_failed for that head only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: whether replayed vol labels may grade the trend_vol OFF-cells that drop BTC bybit_1 intents (and future SOL/MES cells); no change
+    from this unit
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+status: blocked
+blocked_on:
+- what: RQ-20261119-a10d-01 (the stride-1 rebuild) must have run on the trainer and graded PASS; this unit reads the dataset it writes.
+  ref: RQ-20261119-a10d-01
+  kind: unit_result
+  clears_when: RQ-20261119-a10d-01 graded PASS with its rebuilt datasets on the trainer; then git mv this file to research/queue/ and set status
+    queued (rule unchanged).
+related:
+- research/queue/RQ-20261117-aadc-01.yaml
+- research/queue/RQ-20261119-a10d-01.yaml
+- research/queue/RQ-20261118-04a5-03.yaml
+- scripts/research/vol_label_live_verify.py

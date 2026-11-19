@@ -63,6 +63,9 @@ HEAVY_ENTRYPOINTS = [
     # own definition. Recorded here because it is the direct evidence that a
     # hand-written list needs a completeness pass behind it.
     "scripts/ml/spike_a_pooled_labels.py",
+    # D2 option A (RQ-20261119-a10d-01): a stride-1 Chronos forecast rebuild, a market_features build and two
+    # LightGBM head retrains in one process; it takes the queue once and its `python -m ml` children inherit it.
+    "scripts/research/fc_stride1_rebuild.py",
 ]
 
 # Scripts that import a heavy ML library but are NOT heavy trainer jobs. Each
