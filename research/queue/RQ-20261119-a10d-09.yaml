@@ -16,12 +16,11 @@ practice_precedent: 'T8 / M13 (docs/reference/trading-and-model-practice-princip
   trade, inputs held fixed; book-side levers are tested one family per read against the status quo reproduced exactly, at the deflated bar of
   the read count plus the arms in the read.'
 intervention_controls:
-  control_arm: first_signal (the status-quo book, replay() unchanged) must reproduce RQ-20261119-a10d-04's per-cash n_taken and taken mean
-    exactly; it is the in-run control every challenger is read beside.
-  negative_control: 'selection null: net_r shuffled across the 207 candidates (times, prices, scores kept), status quo replayed 2,000 times
-    (seed 20261119); a book whose picks are unrelated to outcome lands inside it.'
-  positive_control: 'alpaca_live_book.py --self-test: a synthetic book that always takes the first (losing) trade of each pair is flagged
-    (p_low < 0.01); a book with outcome-unrelated picks is not (p_low >= 0.05).'
+  not_applicable: 'Replays an already-graded population through alternative account BOOK policies (slot count, a score gate); no exit, bracket or
+    entry intervention, so hold-to-bracket / best-static / matched-random exit controls do not apply. The in-run control is first_signal (the
+    status-quo book, replay() unchanged), which must reproduce a10d-04 exactly; the selection null (net_r shuffled across the 207 candidates,
+    2,000 draws, seed 20261119) is the negative control for the selection-vs-noise read, and alpaca_live_book.py --self-test carries its
+    positive control. No order is placed and no config changes.'
 question: 'Over the same population as a10d-04 (frozen ml-entry-eq-struct-ens5, no refit, its 173 pinned pool_symbols, 2025-07-15..2026-10-31,
   restricted-LONG at tau 0.25, net of the Alpaca cost stack; reproduces 98e3-06 n 207 mean +0.4922 R): (1) is the status-quo one-slot book''s
   taken mean (22 trades, -0.03 to -0.20 R) lower than chance would put a 22-trade pick of these 207 (SELECTION), or inside chance (NOISE)? (2) At

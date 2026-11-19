@@ -694,6 +694,7 @@ def replay_slots(trades: List[Dict[str, Any]], cash0: float, k: int, risk_pct: f
     (NY dates), and a new position is capped at min(wall x equity / k, free settled cash) whole shares. P&L is booked at exit.
     k == 1 is NOT routed here: the registered status quo is replay() itself, reproduced exactly."""
     assert k >= 2, "k == 1 is replay(); this ledger is for the multi-slot arms"
+    # provenance: picks -- `score` is the regressed net R the live pick order sorts on (ml_pool_scoring.picks), not a probability
     rows = sorted(trades, key=lambda t: (pd.Timestamp(t["entry_time"]), -float(t.get("score") or 0.0), str(t["symbol"])))
     equity = float(cash0)
     open_pos: List[Dict[str, Any]] = []      # {exit, notional, pnl, rec}
@@ -759,6 +760,7 @@ def score_gate_p50_30d(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     candidate with fewer than 5 prior-30-day candidates is kept). Reserves the one slot for the stronger signals."""
     rows = sorted(trades, key=lambda t: pd.Timestamp(t["entry_time"]))
     ts = [pd.Timestamp(t["entry_time"]) for t in rows]
+    # provenance: picks -- `score` is the regressed net R (ml_pool_scoring.picks order key), not a probability
     sc = [float(t.get("score") or 0.0) for t in rows]
     out = []
     for i, t in enumerate(rows):
