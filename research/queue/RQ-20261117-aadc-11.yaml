@@ -189,9 +189,10 @@ grading:
     DATA-WINDOW (measured 10:15Z 2026-11-19): the test trades are replayed by harness.run_backtest on the candle file
     resolve_or_refuse picked (exit_head_label_bakeoff.py L158-176), so the last test trade is bounded by that file''s last bar on the
     run date. Both runs (44098413330 started 2026-11-17T14:00Z; 44170813134 started 2026-11-17T20:34Z) predate #26930 (merged
-    2026-11-18T21:06Z), which first brought the 5m feeds and BTCUSDT_15m under the trainer candle refresh (AM-OPS-7 confirms; spans of
-    m20 runs on 2026-11-08 ended ~2026-06-15). The TEST WINDOW therefore ended ~mid-2026, not 2026-11-17, and the TRAINING rows
+    2026-11-18T21:06Z), which first brought the 5m feeds and BTCUSDT_15m under the trainer candle refresh (trainer-vm-diag #26926 at 2026-11-18T20:39Z, before the
+    one-time backfill #26928 at 20:44Z: every data/<SYM>_5m.csv last bar 2026-06-18, BTCUSDT_15m last bar 2026-07-10). The TEST
+    WINDOW therefore ended 2026-06-18 (5m legs) / 2026-07-10 (BTC), not 2026-11-17, and the TRAINING rows
     (donchian/rows.jsonl, built 2026-07-12) end BTC 07-10 / ETH 07-07 / SOL 07-05. The PASS is a walk-forward read on data
-    ending ~June 2026; the fresh re-run is RQ-20261119-a10d-07/-08 (blocked on ML-EXITHEAD-ROWS-FRESH-REBUILD).'
+    ending 2026-06-18 / 2026-07-10; the fresh re-run is RQ-20261119-a10d-07/-08 (blocked on ML-EXITHEAD-ROWS-FRESH-REBUILD).'
   rows: 1
   verdict: pass
