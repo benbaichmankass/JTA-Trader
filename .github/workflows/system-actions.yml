@@ -549,6 +549,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*window_days[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ww]indow_days[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # vm-cpu-sample: `window_s:` (5-120) and `align_minute:` (0-59; wait for that clock minute, max 12 min).
+            cpu_window_s=$(printf '%s\n' "${ISSUE_BODY}" | grep -i -m1 '^[[:space:]]*window_s[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ww]indow_s[[:space:]]*:[[:space:]]*//' | tr -d '[:space:]' || true)
+            cpu_align_minute=$(printf '%s\n' "${ISSUE_BODY}" | grep -i -m1 '^[[:space:]]*align_minute[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Aa]lign_minute[[:space:]]*:[[:space:]]*//' | tr -d '[:space:]' || true)
             # pull-ibkr-history params: `symbol:` (reused, MES/MGC/MHG),
             # `timeframes:` may carry >1 space-separated tf (e.g. "1h 1d") so
             # it keeps internal spaces (trailing trim only); `hist_start:` is a
@@ -871,6 +876,8 @@ jobs:
           echo "ACTION_DAYS=${days:-}" >>"$GITHUB_ENV"
           echo "ACTION_WINDOWS=${windows:-}" >>"$GITHUB_ENV"
           echo "ACTION_WINDOW_DAYS=${window_days:-}" >>"$GITHUB_ENV"
+          echo "ACTION_CPU_WINDOW_S=${cpu_window_s:-}" >>"$GITHUB_ENV"
+          echo "ACTION_CPU_ALIGN_MINUTE=${cpu_align_minute:-}" >>"$GITHUB_ENV"
           echo "ACTION_MODE=${bt_mode:-}" >>"$GITHUB_ENV"
           echo "ACTION_RECENT_ONLY_FRAC=${recent_only_frac:-}" >>"$GITHUB_ENV"
           echo "ACTION_STRATEGY=${review_strategy:-}" >>"$GITHUB_ENV"
@@ -2252,6 +2259,17 @@ jobs:
               *) echo "::error::set-journal-trade-qty apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
             esac
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_TRADE_ID=$(printf '%q' "${TRADE_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_NEW_QTY=$(printf '%q' "${ACTION_NEW_QTY}") ACTION_EXPECT_QTY=$(printf '%q' "${ACTION_EXPECT_QTY}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "vm-cpu-sample" ]; then
+            # Shape-check only; vm_cpu_sample.sh clamps both. Before this, a `CPU_SAMPLE_WINDOW_S:` body line never
+            # reached the script (#27025 asked for 60 s and sampled 30 s).
+            for _kv in "window_s:${ACTION_CPU_WINDOW_S:-}:^[0-9]{0,3}$" "align_minute:${ACTION_CPU_ALIGN_MINUTE:-}:^[0-9]{0,2}$"; do
+              _k="${_kv%%:*}"; _rest="${_kv#*:}"; _v="${_rest%%:*}"; _re="${_rest#*:}"
+              if ! printf '%s' "${_v}" | grep -Eq "${_re}"; then
+                echo "::error::vm-cpu-sample '${_k}:' must be a whole number (got '${_v}')."; exit 1
+              fi
+            done
+            REMOTE_CMD="CPU_SAMPLE_WINDOW_S=$(printf '%q' "${ACTION_CPU_WINDOW_S:-}") CPU_SAMPLE_ALIGN_MINUTE=$(printf '%q' "${ACTION_CPU_ALIGN_MINUTE:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "cap-vm-logs" ]; then
             REMOTE_CMD="ACTION_TARGET=$(printf '%q' "${ACTION_TARGET:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
