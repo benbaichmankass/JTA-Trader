@@ -259,6 +259,10 @@ def _load_live_trades(
         risk_cols = [c for c in ("entry_price", "stop_loss", "position_size")
                      if c in have]
         select_cols = ["timestamp", "direction", "pnl", "pnl_percent", *risk_cols]
+        # The emitting strategy (outcome metadata for population filters such as
+        # RQ-20261119-3e98-01's rostered-strategies read; never a feature).
+        if "strategy_name" in have:
+            select_cols.append("strategy_name")
         # P0.1 (2026-07-31 audit): this loader feeds the M23 real-money
         # holdout / EV gate, whose target derives from `pnl` — a fabricated
         # pnl is a WRONG holdout outcome. Judge each row's provenance via
@@ -364,10 +368,11 @@ def _load_live_trades(
     out: list[dict[str, Any]] = []
     excluded_untrusted = {"real": 0, "paper": 0}
     if judge_provenance:
-        from src.runtime.provenance import pnl_is_trustworthy  # noqa: PLC0415
+        from src.runtime.provenance import ESTIMATED, MEASURED, pnl_bucket  # noqa: PLC0415
     for group, is_paper in ((db_rows, False), (paper_rows, True)):
         for r in group:
-            if judge_provenance and not pnl_is_trustworthy(r["notes"]):
+            bucket = pnl_bucket(r["notes"]) if judge_provenance else None
+            if judge_provenance and bucket not in (MEASURED, ESTIMATED):
                 excluded_untrusted["paper" if is_paper else "real"] += 1
                 continue
             side = str(r["direction"] or "").lower()
@@ -388,6 +393,12 @@ def _load_live_trades(
                 ),
                 "symbol": symbol,
                 "is_paper": is_paper,
+                "strategy": (
+                    str(r["strategy_name"] or "") if "strategy_name" in keys else ""
+                ),
+                # provenance bucket of the pnl (measured / estimated), None when
+                # the journal has no notes column to judge it from.
+                "pnl_provenance": bucket,
             })
     total_excluded = sum(excluded_untrusted.values())
     if total_excluded:
@@ -965,6 +976,14 @@ class SetupCandidatesBuilder(DatasetBuilder):
         # meta-label can be re-evaluated when the training distribution matches
         # real setups instead of CUSUM momentum events.
         "event_source": str,
+        # the strategy that emitted a `live` / `live_paper` row (journal
+        # trades.strategy_name; absent on synthetic and backtest rows). Outcome
+        # metadata for population filters, NEVER a feature (RQ-20261119-3e98-01).
+        "strategy": str,
+        # provenance bucket of a `live` / `live_paper` row's pnl
+        # (src/runtime/provenance.py::pnl_bucket: measured | estimated; the
+        # loader drops the untrusted rest). Outcome metadata, NEVER a feature.
+        "pnl_provenance": str,
     }
 
     def iter_rows(
@@ -1392,4 +1411,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "label_cost_basis": "realized",
                     "is_live_trade": not is_paper,
                     "event_source": "live_paper" if is_paper else "live",
+                    **({"strategy": tr["strategy"]} if tr.get("strategy") else {}),
+                    **({"pnl_provenance": tr["pnl_provenance"]}
+                       if tr.get("pnl_provenance") else {}),
                 }

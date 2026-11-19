@@ -632,9 +632,12 @@ strategies:
     atr_sl_buffer_mult: 0.20
     tp_at_r: 1.5
     be_offset_bps: 15
-    session_filter_enabled: false
-    session_start_hour: 7
-    session_end_hour: 17
+    # SESSION LEVER (Tier-3 PROPOSAL, HELD): skip signal bars at UTC hours 0-7 == allowed window [8, 24). Evidence: RQ-20261118-abab-33 (S_ASIA PASS,
+    # net R -44.69 vs -56.38, n 384, 2024-10-05..2026-10-04) and its disjoint-window confirmation RQ-20261119-8260-01 (PASS, -24.64 vs -51.53, n 337,
+    # 2022-10-05..2024-10-04). The leg STILL LOSES NET on both windows: this cuts losses, it is not an edge. Demo floor only (bybit_1). ROLLBACK = false.
+    session_filter_enabled: true
+    session_start_hour: 8
+    session_end_hour: 24
     shadow_model_ids: []          # fresh data-collector — no ML predictors yet
 
   ict_scalp_xrp_5m:
