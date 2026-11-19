@@ -35,18 +35,8 @@ def _stamp(text: str) -> str | None:
     return None if v in (None, "", "null", "~", "Null", "NULL") else v
 
 
-def resolve(path: str, ours: str, theirs: str, base: str | None = None) -> str | None:
-    """Return the winning side's text, or None if this is not a pure stamp conflict.
-
-    ours = the automation (stamp) branch, theirs = main.  A side whose stamp equals the merge base did
-    not change it, so the other side wins.  When BOTH changed: a CLEARED stamp (`null`) beats a stamp --
-    a clear is a deliberate re-arm (#17829) and a stamp from an older base must never undo it
-    (PI-20261013-HOPS1447-0001; before, `null` parsed as the string "null" and "a missing stamp loses");
-    two stamps resolve to the later one."""
-    if not (path.startswith("research/queue/") and path.endswith(".yaml")):
-        return None
-    if _STAMP.sub("", ours) != _STAMP.sub("", theirs):
-        return None
+def _pick(ours: str, theirs: str, base: str | None) -> str | None:
+    """'ours' | 'theirs' | None (neither side carries a stamp line): which side's STAMP wins."""
     a, b = _stamp(ours), _stamp(theirs)
     has_a, has_b = _STAMP.search(ours) is not None, _STAMP.search(theirs) is not None
     if not has_a and not has_b:
@@ -54,17 +44,58 @@ def resolve(path: str, ours: str, theirs: str, base: str | None = None) -> str |
     if base is not None:
         v = _stamp(base)
         if a == v and b != v:
-            return theirs
+            return "theirs"
         if b == v and a != v:
-            return ours
+            return "ours"
     if a is None and b is None:
-        return ours
+        return "ours"
     if a is None:
-        return ours      # the branch cleared it (re-arm) -- keep the clear
+        return "ours"      # the branch cleared it (re-arm) -- keep the clear
     if b is None:
-        return theirs    # main cleared it (re-arm) -- keep the clear
+        return "theirs"    # main cleared it (re-arm) -- keep the clear
     # ISO-8601 UTC strings of one format sort chronologically.
-    return ours if a >= b else theirs
+    return "ours" if a >= b else "theirs"
+
+
+def _graft_stamp(theirs: str, ours: str) -> str:
+    """`theirs` (main's text, with its own edits) carrying OURS' stamp line (or none, when ours has none)."""
+    m = _STAMP.search(ours)
+    if m is None:
+        return _STAMP.sub("", theirs)
+    if _STAMP.search(theirs) is not None:
+        return _STAMP.sub(lambda _m: m.group(0), theirs, count=1)
+    return theirs + ("" if theirs.endswith("\n") else "\n") + m.group(0) + "\n"
+
+
+def resolve(path: str, ours: str, theirs: str, base: str | None = None) -> str | None:
+    """Return the winning text, or None if this is not a pure stamp conflict.
+
+    ours = the automation (stamp) branch, theirs = main.  A side whose stamp equals the merge base did
+    not change it, so the other side wins.  When BOTH changed: a CLEARED stamp (`null`) beats a stamp --
+    a clear is a deliberate re-arm (#17829) and a stamp from an older base must never undo it
+    (PI-20261013-HOPS1447-0001; before, `null` parsed as the string "null" and "a missing stamp loses");
+    two stamps resolve to the later one.
+
+    A STAMP-ONLY BRANCH (its text differs from the merge base in `last_dispatched_at` and nothing else) vs a main
+    that ALSO edited the unit (a manager's `grading:` block, a corrected run command) is still a stamp conflict:
+    git conflicts because the stamp line sits next to main's edit, but nothing the branch wrote is lost by taking
+    main's text and applying the winning stamp to it. Without a merge base this is refused as before. MEASURED
+    2026-11-19: #27359 sat 3 h as `not_stamp_only` over RQ-20261119-ef40-02 (graded on main) and RQ-20261118-abab-31
+    (run flags fixed on main), both stamp-only on the branch."""
+    if not (path.startswith("research/queue/") and path.endswith(".yaml")):
+        return None
+    ours_body, theirs_body = _STAMP.sub("", ours), _STAMP.sub("", theirs)
+    if ours_body != theirs_body:
+        if base is None or ours_body != _STAMP.sub("", base):
+            return None        # the branch itself changed something besides the stamp: not ours to guess
+        pick = _pick(ours, theirs, base)
+        if pick is None:
+            return None
+        return theirs if pick == "theirs" else _graft_stamp(theirs, ours)
+    pick = _pick(ours, theirs, base)
+    if pick is None:
+        return None
+    return ours if pick == "ours" else theirs
 
 
 def main(paths: list[str]) -> int:

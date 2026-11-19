@@ -27,7 +27,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 
-def _bootstrap_lb(pairs: list[tuple[bool, float]], n_boot: int = 10_000, seed: int = 42) -> dict:
+def _bootstrap_lb(pairs: list[tuple[bool, float]], n_boot: int = 10_000, seed: int = 42,
+                  lb_pct: float = 2.5) -> dict:
     import numpy as np
 
     taken = np.array([t for t, _ in pairs], dtype=float)
@@ -44,24 +45,79 @@ def _bootstrap_lb(pairs: list[tuple[bool, float]], n_boot: int = 10_000, seed: i
     return {
         "n_resamples": n_boot, "seed": seed,
         "point": float((taken * r).sum() / n - taken.mean() * r.mean()),
-        "lb95": float(np.percentile(diffs, 2.5)), "ub95": float(np.percentile(diffs, 97.5)),
+        "lb95": float(np.percentile(diffs, lb_pct)), "ub95": float(np.percentile(diffs, 100.0 - lb_pct)),
+        "lb_pct": lb_pct,
     }
 
 
-def _journal_basis_counts(journal: Path, symbols: list[str]) -> dict:
+def _recompute_cost_gate(rows_pairs: list[tuple[dict, tuple[bool, float]]]) -> dict:
+    """(a) on an arbitrary eval population, exactly as ml/promotion/cost_gate.py:
+    value_r = sum(taken R) / n must exceed max(take_all, take_none 0, matched_random),
+    and every row must carry a net cost basis (``realized`` for live / paper rows)."""
+    n = len(rows_pairs)
+    if not n:
+        return {"passed": False, "reason": "no_scored_eval_rows", "value_r": None,
+                "take_all_r": None, "matched_random_r": None, "eval_cost_bases": {}}
+    bases: dict = {}
+    for r, _ in rows_pairs:
+        b = r.get("label_cost_basis")
+        bases[b] = bases.get(b, 0) + 1
+    taken = [x for _, (t, x) in rows_pairs if t]
+    value = sum(taken) / n
+    take_all = sum(x for _, (_, x) in rows_pairs) / n
+    matched = (len(taken) / n) * take_all
+    out = {"value_r": value, "take_all_r": take_all, "matched_random_r": matched,
+           "take_none_r": 0.0, "n_taken": len(taken), "eval_cost_bases": bases,
+           "recomputed": True}
+    gross = {b: c for b, c in bases.items() if b not in ("realized", "net", "harness")}
+    if gross:
+        out.update(passed=False, reason=f"eval_not_cost_net: {gross}")
+        return out
+    comps = {"take_all": take_all, "take_none": 0.0, "matched_random": matched}
+    best_name, best = max(comps.items(), key=lambda kv: kv[1])
+    out["passed"] = value > best
+    out["reason"] = (f"beats all comparators: value {value:+.4f}R/opp > best {best_name} {best:+.4f}R/opp"
+                     if out["passed"] else
+                     f"does_not_beat_{best_name}: value {value:+.4f}R/opp <= {best:+.4f}R/opp")
+    out["reason"] += f" (n={n}, taken={len(taken)})"
+    return out
+
+
+def _load_strategies(path: str | None) -> set[str] | None:
+    """A frozen strategy list: JSON/YAML list, or one name per line (# comments)."""
+    if not path:
+        return None
+    text = Path(path).read_text()
+    try:
+        import yaml
+
+        data = yaml.safe_load(text)
+        if isinstance(data, list):
+            return {str(x).strip() for x in data if str(x).strip()}
+    except Exception:  # noqa: BLE001 - fall through to one-per-line
+        pass
+    return {ln.split("#", 1)[0].strip() for ln in text.splitlines() if ln.split("#", 1)[0].strip()}
+
+
+def _journal_basis_counts(journal: Path, symbols: list[str], *, paper: bool = False,
+                          strategies: set[str] | None = None) -> dict:
     from ml.datasets.families.setup_candidates import _live_realized_r, _load_live_trades
 
     out: dict = {}
     for sym in symbols:
-        c = {"initial_risk": 0, "stop_distance": 0, "unit_fallback": 0}
-        for tr in _load_live_trades(journal, sym):
+        c = {"initial_risk": 0, "initial_risk_signal": 0, "stop_distance": 0, "unit_fallback": 0}
+        for tr in _load_live_trades(journal, sym, include_paper=paper):
+            if bool(tr.get("is_paper")) != paper:
+                continue
+            if strategies is not None and tr.get("strategy") not in strategies:
+                continue
             won = 1 if (tr["pnl"] is not None and float(tr["pnl"]) > 0) else 0
             c[_live_realized_r(tr, won)[1]] += 1
         out[sym] = c
     return out
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--model-state", required=True)
@@ -70,7 +126,15 @@ def main() -> int:
     ap.add_argument("--journal", required=True)
     ap.add_argument("--symbols", default="BTCUSDT,ETHUSDT,SOLUSDT")
     ap.add_argument("--out", required=True)
-    a = ap.parse_args()
+    ap.add_argument("--eval-source", choices=("live", "live_paper"), default="live",
+                    help="live = real-money rows (is_live_trade); live_paper = the paper-book cohort")
+    ap.add_argument("--strategies-file", default=None,
+                    help="frozen strategy list; eval rows whose `strategy` is not in it are excluded and counted")
+    ap.add_argument("--measured-only", action="store_true",
+                    help="keep only eval rows whose pnl_provenance is 'measured' (provenance.py), the strict read")
+    ap.add_argument("--lb-pct", type=float, default=2.5,
+                    help="lower percentile of the (b) bootstrap (2.5 = the registered 95%%; deflate for re-reads)")
+    a = ap.parse_args(argv)
 
     import yaml
     from ml.experiments.runner import score_decisions
@@ -92,18 +156,45 @@ def main() -> int:
     gate = json.loads(Path(a.cost_gate).read_text())
 
     rows = [json.loads(ln) for ln in open(a.dataset) if ln.strip()]
-    ev = [r for r in rows if r.get("is_live_trade")]
+    if a.eval_source == "live":
+        ev = [r for r in rows if r.get("is_live_trade")]
+    else:
+        ev = [r for r in rows if r.get("event_source") == "live_paper"]
+    strategies = _load_strategies(a.strategies_file)
+    filt = None
+    if strategies is not None:
+        no_strategy = sum(1 for r in ev if not r.get("strategy"))
+        off_list = sum(1 for r in ev if r.get("strategy") and r["strategy"] not in strategies)
+        filt = {"strategies_n": len(strategies), "before": len(ev),
+                "excluded_no_strategy": no_strategy, "excluded_off_list": off_list}
+        ev = [r for r in ev if r.get("strategy") in strategies]
+        filt["after"] = len(ev)
+    # Outcome provenance of the eval population (src/runtime/provenance.py buckets;
+    # the dataset loader already dropped fabricated / unverified pnl). Always stated.
+    prov_counts: dict = {}
+    for r in ev:
+        k = r.get("pnl_provenance") or "not_recorded"
+        prov_counts[k] = prov_counts.get(k, 0) + 1
+    if a.measured_only:
+        ev = [r for r in ev if r.get("pnl_provenance") == "measured"]
     srcs: dict = {}
     for r in ev:
         srcs[r.get("r_multiple_source")] = srcs.get(r.get("r_multiple_source"), 0) + 1
     scored = []
+    rows_pairs = []
     for r in ev:
         p = score_decisions(state, [r], vcol, thr)
         if p:
             scored.append((r.get("symbol"), p[0]))
+            rows_pairs.append((r, p[0]))
     pairs = [p for _, p in scored]
     n = len(pairs)
-    boot = _bootstrap_lb(pairs) if n >= 3 else None
+    boot = _bootstrap_lb(pairs, lb_pct=a.lb_pct) if n >= 3 else None
+    # (a): the experiment's cost_gate.json was computed on its own eval split; a
+    # different population (paper book, a strategy filter) is re-graded here.
+    if a.eval_source != "live" or strategies is not None:
+        gate = _recompute_cost_gate(rows_pairs)
+        gate["candidate_value_r"] = gate["value_r"]
 
     per_sym = {}
     for s in sorted({s for s, _ in scored}):
@@ -114,8 +205,10 @@ def main() -> int:
     counted = {s: v for s, v in per_sym.items() if v["n"] >= 30}
     pos = [s for s, v in counted.items() if v["value_r"] > 0]
 
-    basis = _journal_basis_counts(Path(a.journal), a.symbols.split(","))
-    tot = {k: sum(b[k] for b in basis.values()) for k in ("initial_risk", "stop_distance", "unit_fallback")}
+    basis = _journal_basis_counts(Path(a.journal), a.symbols.split(","),
+                                  paper=a.eval_source == "live_paper", strategies=strategies)
+    tot = {k: sum(b[k] for b in basis.values())
+           for k in ("initial_risk", "initial_risk_signal", "stop_distance", "unit_fallback")}
     pop = sum(tot.values())
     excl = (tot["stop_distance"] + tot["unit_fallback"]) / pop if pop else None
     fallback_share = tot["unit_fallback"] / pop if pop else None
@@ -140,7 +233,13 @@ def main() -> int:
     rec = {
         "rule": "docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P1",
         "verdict": verdict,
-        "population": f"{n} real closed trades (is_live_trade) in the live_holdout book of the dataset; symbols {sorted(per_sym)}",
+        "population": (
+            f"{n} real closed trades (is_live_trade) in the live_holdout book of the dataset; symbols {sorted(per_sym)}"
+            if a.eval_source == "live" else
+            f"{n} PAPER-book closed trades (event_source live_paper) of the dataset; symbols {sorted(per_sym)}"
+        ) + (f"; strategy filter {a.strategies_file} ({len(strategies)} names)" if strategies is not None else ""),
+        "eval_source": a.eval_source, "strategy_filter": filt,
+        "pnl_provenance_counts": prov_counts, "measured_only": bool(a.measured_only),
         "n_eval": n, "take_rate": take_rate, "threshold": thr,
         "a_cost_gate": {"passed": a_ok, "reason": gate.get("reason"), "value_r": gate.get("candidate_value_r"),
                         "take_all_r": gate.get("take_all_r"), "matched_random_r": gate.get("matched_random_r"),

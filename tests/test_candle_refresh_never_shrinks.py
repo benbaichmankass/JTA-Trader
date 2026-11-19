@@ -76,7 +76,7 @@ def _fake(monkeypatch, start, n):
 def test_forming_bar_never_fetched_or_written(tmp_path, monkeypatch):
     p = tmp_path / "SOLUSDT_15m.csv"
     _write(p)
-    seen = _fake(monkeypatch, "2026-06-19 07:00", 72)  # source would emit bars past 'now'
+    seen = _fake(monkeypatch, "2026-06-18 22:30", 110)  # contiguous; source would emit bars past 'now'
     now = datetime(2026, 6, 19, 23, 37, tzinfo=timezone.utc)
     rch.refresh_one(p, "SOLUSDT", "15", now)
     last = pd.read_csv(p)["timestamp"].iloc[-1]
@@ -160,3 +160,133 @@ def test_every_rolling_window_caller_opts_out_explicitly():
         text = (root / rel).read_text()
         import re
         assert re.search(r"fetch_backtest_candles\.py[^#]{0,400}--allow-window-replace", text), rel
+
+
+# ---- TRAINER-INTRADAY-EQUITY-REFRESH (2026-11-19): file aliases + yfinance source --------------------
+def test_parse_pair_forms(tmp_path):
+    assert rch.parse_pair("SOLUSDT:15", tmp_path) == ("bybit", "SOLUSDT", "15", tmp_path / "SOLUSDT_15m.csv")
+    assert rch.parse_pair("BTCUSDT:5=backtest_BTCUSDT_5m.csv", tmp_path) == (
+        "bybit", "BTCUSDT", "5", tmp_path / "backtest_BTCUSDT_5m.csv")
+    assert rch.parse_pair("yf:GC=F:60=GC_F_1h.csv", tmp_path) == ("yf", "GC=F", "60", tmp_path / "GC_F_1h.csv")
+    import pytest
+    with pytest.raises(ValueError):
+        rch.parse_pair("SOLUSDT:7", tmp_path)
+
+
+def test_btc_alias_extends_the_existing_backtest_file_in_its_own_spelling(tmp_path, monkeypatch):
+    """No native BTCUSDT_5m.csv is created: the bars land in backtest_BTCUSDT_5m.csv, ISO-Z spelled like the file."""
+    p = tmp_path / "backtest_BTCUSDT_5m.csv"
+    ts = pd.date_range("2026-05-21 23:40", periods=4, freq="5min", tz="UTC")
+    pd.DataFrame({"timestamp": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in ts], "open": 1.0, "high": 1.0,
+                  "low": 1.0, "close": 1.0, "volume": 1.0}).to_csv(p, index=False)
+    new = [{"timestamp": t.to_pydatetime(), "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 2.0}
+           for t in pd.date_range("2026-05-21 23:55", periods=3, freq="5min", tz="UTC")]
+    monkeypatch.setattr(rch.fbc, "fetch_klines", lambda *a, **k: new)
+
+    class _Now(datetime):  # pin 'now' so the tail is covered (the partial-data guard checks it)
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 5, 22, 0, 10, tzinfo=timezone.utc)
+    monkeypatch.setattr(rch, "datetime", _Now)
+    assert rch.main(["--data-dir", str(tmp_path), "BTCUSDT:5=backtest_BTCUSDT_5m.csv"]) == 0
+    out = pd.read_csv(p)
+    assert len(out) == 6 and out["timestamp"].iloc[-1] == "2026-05-22T00:05:00Z"
+    assert not (tmp_path / "BTCUSDT_5m.csv").exists()
+
+
+def test_yfinance_source_extends_a_volumeless_file_and_drops_the_forming_bar(tmp_path, monkeypatch):
+    p = tmp_path / "GC_F_1h.csv"
+    ts = pd.date_range("2026-06-18 14:00", periods=3, freq="h", tz="UTC")
+    pd.DataFrame({"timestamp": [t.isoformat(sep=" ") for t in ts], "open": 1.0, "high": 1.0, "low": 1.0,
+                  "close": 1.0}).to_csv(p, index=False)
+    now = datetime(2026, 6, 18, 19, 30, tzinfo=timezone.utc)
+    calls = {}
+
+    def fake_yf(ticker, interval, start_ms, end_ms):
+        calls["args"] = (ticker, interval, start_ms, end_ms)
+        return [{"timestamp": t.to_pydatetime(), "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 5.0}
+                for t in pd.date_range("2026-06-18 17:00", periods=2, freq="h", tz="UTC")]
+    monkeypatch.setitem(rch.SOURCES, "yf", fake_yf)
+    msg = rch.refresh_one(p, "GC=F", "60", now, source="yf")
+    out = pd.read_csv(p)
+    assert list(out.columns) == ["timestamp", "open", "high", "low", "close"]      # no volume column invented
+    assert out["timestamp"].iloc[-1] == "2026-06-18 18:00:00+00:00" and len(out) == 5, msg
+    assert calls["args"][0] == "GC=F" and calls["args"][3] == int(datetime(2026, 6, 18, 19, tzinfo=timezone.utc).timestamp() * 1000)
+
+
+def test_yfinance_alias_refuses_to_create(tmp_path, capsys):
+    assert rch.main(["--data-dir", str(tmp_path), "yf:GC=F:60=GC_F_1h.csv"]) == 1
+    assert "MISSING" in capsys.readouterr().err
+
+
+def test_dukascopy_source_keeps_only_closed_rth_bars(tmp_path, monkeypatch):
+    p = tmp_path / "SPY_1h.csv"
+    ts = pd.date_range("2026-11-17 18:00", periods=2, freq="h", tz="UTC")
+    pd.DataFrame({"timestamp": [t.isoformat(sep=" ") for t in ts], "open": 1.0, "high": 1.0, "low": 1.0,
+                  "close": 1.0, "volume": 1.0}).to_csv(p, index=False)
+    hours = pd.date_range("2026-11-18 13:00", periods=10, freq="h", tz="UTC")     # 13:00..22:00
+    frame = pd.DataFrame({"timestamp": hours, "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 3.0})
+    import fetch_dukascopy_ohlcv as fd
+    monkeypatch.setattr(fd, "fetch", lambda inst, s, e, iv: frame[(frame.timestamp >= s) & (frame.timestamp < e)])
+    now = datetime(2026, 11, 18, 20, 30, tzinfo=timezone.utc)
+    rch.refresh_one(p, "INSTRUMENT_ETF_CFD_US_SPY_US_USD", "60", now, source="dk")
+    out = pd.read_csv(p)
+    added = list(out["timestamp"].iloc[2:])
+    # November = standard time: cash session 14:30-21:00 UTC -> hour bars 15:00..20:00; 20:00 is still forming at 20:30
+    assert added == [f"2026-11-18 {h:02d}:00:00+00:00" for h in range(15, 20)], added
+
+
+# ---- partial-data guard (manager, 2026-11-19): a hole means UNEXTENDED, never half-filled ----
+def _fake_rows(monkeypatch, stamps):
+    rows = [{"timestamp": pd.Timestamp(t, tz="UTC").to_pydatetime(), "open": 100.0 + i % 3, "high": 105.0,
+             "low": 99.0, "close": 100.0 + i % 3, "volume": 2.0} for i, t in enumerate(stamps)]
+    monkeypatch.setattr(fbc, "fetch_klines", lambda *a, **k: rows)
+
+
+def test_interior_hole_leaves_file_unextended(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)                                        # 06-18 00:00 .. 23:45
+    before = p.read_bytes()
+    stamps = list(pd.date_range("2026-06-19 00:00", periods=8, freq="15min")) + \
+        list(pd.date_range("2026-06-19 12:00", periods=8, freq="15min"))   # 10h hole in the middle
+    _fake_rows(monkeypatch, stamps)
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 19, 14, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "interior gap" in str(exc)
+    assert p.read_bytes() == before
+
+
+def test_truncated_tail_leaves_file_unextended(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)
+    before = p.read_bytes()
+    _fake_rows(monkeypatch, pd.date_range("2026-06-19 00:00", periods=8, freq="15min"))  # stops at 01:45
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 20, 0, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "tail gap" in str(exc)
+    assert p.read_bytes() == before
+
+
+def test_empty_pull_over_a_long_window_is_a_failure_not_current(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)
+    _fake_rows(monkeypatch, [])
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 25, 0, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "seam gap" in str(exc)
+
+
+def test_rth_holiday_weekend_seam_is_allowed():
+    h = 3_600_000
+    last = int(pd.Timestamp("2026-06-18 19:00", tz="UTC").timestamp() * 1000)   # Thu last RTH bar
+    first = int(pd.Timestamp("2026-06-22 13:00", tz="UTC").timestamp() * 1000)  # Mon (Fri 06-19 holiday)
+    new = [first + i * h for i in range(7)]
+    end = new[-1] + 2 * h
+    assert rch.coverage_refusal(last, new, end, h, rch.MAX_GAP_MS["dk"]) is None
+    assert rch.coverage_refusal(last, new, end, h, rch.MAX_GAP_MS["bybit"]) is not None

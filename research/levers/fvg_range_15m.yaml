@@ -71,6 +71,41 @@ manifest:
   sizing_vs_cost: untested
 levers:
   exit:
+    exit_style:
+      tests:
+      - value: far
+        baseline_value: mid
+        arm: A
+        unit: RQ-20261117-dc44-05
+        window: 2021-11-14..2026-11-17
+        n: 44
+        net_r: -11.89
+        baseline_n: 45
+        baseline_net_r: -13.8379
+        delta_net_r: 1.9479
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.0
+        verdict: fail
+        joint_change: false
+      - value: far
+        baseline_value: mid
+        arm: A
+        unit: RQ-20261117-dc44-05
+        window: 2021-11-14..2026-11-17
+        n: 44
+        net_r: -11.89
+        baseline_n: 45
+        baseline_net_r: -13.8379
+        delta_net_r: 1.9479
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.0
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0433
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     atr_stop_buffer:
       tests:
       - value: '0.1'

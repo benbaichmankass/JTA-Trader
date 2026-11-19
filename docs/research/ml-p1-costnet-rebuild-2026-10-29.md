@@ -46,3 +46,24 @@ PI-20261029-MLP1-0001: 245 of 307 BTC live closed trades have no declared initia
 ## Not done in this lane (stated, not dropped)
 
 - Re-gate of the other 8 setup heads on v022, `exit_candidates` for the 1h Donchian legs, and P4 `conviction_meta` restamp/regate: see the lane's closing note on the checklist row for what ran.
+
+## v023 re-grade (2026-11-19, lane ML-BUILD-1119): **FAIL** (P1 rule, graded unchanged)
+
+Machine record: [`comms/ml-plan/p1_costnet_verdict_v023.json`](../../comms/ml-plan/p1_costnet_verdict_v023.json). Code: PR #27372.
+
+**What unlocked the data (PI-20261029-MLP1-0001), MEASURED** on the trainer journal copy (relays #27362, #27384). Population: 470 real closed BTC/ETH/SOL trades.
+- 318 BTC trades come from the `vwap` builder (2026-05). Their packages carry the signal-time `entry_price`/`stop_loss` in `meta` (223 also carry `sl_distance`) but no `risk_per_unit`.
+- Those packages link to their trade only through `order_packages.linked_trade_id`; `trades.order_package_id` is NULL. Each trade has exactly one linked package, and no link crosses symbols.
+- The builder now joins by that link as a fallback and reads the meta stop as entry-time risk (`initial_risk_signal`). Run 1 lacked the join and read 0 such rows. That run is superseded, not a second grade.
+
+| rule leg | v023 result (population: 434 real closed trades in the live_holdout book, cost basis `realized`) |
+|---|---|
+| eval rows / excluded | **434** (≥ 200 ok) / **4.9 %** excluded (BTC 2 stored-stop + 17 unit-fallback of 388; ≤ 20 % ok) |
+| (a) cost gate | **failed**. Value **−0.0035 R/opp** vs take-none 0, take-all −0.415, matched-random −0.075 (78 taken, rate 0.180) |
+| (b) bootstrap LB, value − matched-random | +0.0137 > 0 (point +0.071) |
+| (c) take rate in [0.05, 0.60] | 0.180, ok |
+| (d) ≥ 2 of 3 counted symbols positive | ETH +0.134 (n 45), XRP +0.079 (n 37) positive; BTC **−0.085** (n 308) |
+
+**Verdict: FAIL**, because leg (a) fails. The head beats a random take, but it does not beat taking nothing on this book.
+
+**Context, observed and not graded:** 240 of the 308 BTC eval rows are the retired `vwap` strategy (`config/strategies.yaml`: `enabled: false`, `execution: shadow`). BTC take-all reads −0.527 R/opp on this book. Unit `RQ-20261101-78fc-02` registered this exact re-run, so this run is its result. Per the research loop, a FAIL goes back to diagnosis. It is not re-run on the same book.

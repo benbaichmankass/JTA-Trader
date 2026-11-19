@@ -4,7 +4,7 @@ id: RQ-20261118-a5b3-01
 title: 'Book-level macro-event exposure: do trades held THROUGH a scheduled fomc / cpi / nfp release carry a worse net mean or left
   tail than the same legs'' other trades, and does flattening the same-direction book 60 min before the release beat HOLD and a matched
   random-time flatten under RULE-AM-RISK-ADJUSTED-V1?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -158,3 +158,17 @@ amendments:
     non-spanning (stated bias).'
   - 'MEASURED pre-run (counts only, no outcome read): 3,665 of 4,076 corpus trades price inside the covered window; 384
     outside_event_history, 27 no candle path.'
+last_dispatched_at: '2026-11-19T15:17:35+00:00'
+grading:
+  attested: RULE-RQ-20261118-a5b3-01-BOOK-EVENT-FLATTEN
+  auto: true
+  decision_rule_id: RULE-RQ-20261118-a5b3-01-BOOK-EVENT-FLATTEN
+  evidence:
+  - research/results/RQ-20261118-a5b3-01/44551250786.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

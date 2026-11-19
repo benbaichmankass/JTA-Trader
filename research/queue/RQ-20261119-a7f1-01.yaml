@@ -2,7 +2,7 @@
 # re-run of a result whose input was a FROZEN trainer data file (TRAINER-1D-STALE-ROSTERED blast radius).
 id: RQ-20261119-a7f1-01
 title: RE-RUN on current data of RQ-20261016-d37f-06 (SCHA holdout re-run, confirmed vt_hot90_t2)
-status: blocked
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -66,6 +66,4 @@ rerun_of:
   unit: RQ-20261016-d37f-06
   reason: input trainer data/SCHA_1d.csv frozen; sample ended 2026-06-12
   blast_radius: TRAINER-1D-STALE-ROSTERED (2026-11-19)
-blocked_reason: 'BLOCKED on data freshness, never a date: unblock when trainer data/SCHA_1d.csv has last bar >=
-  the previous trading day (read via trainer-vm-diag or report_data_freshness.py --alert-rostered). Fix in flight:
-  #27214 (TRAINER-1D-STALE-ROSTERED). The original result''s sample ends 2026-06-12 because the file froze there.'
+last_dispatched_at: '2026-11-19T13:02:42+00:00'

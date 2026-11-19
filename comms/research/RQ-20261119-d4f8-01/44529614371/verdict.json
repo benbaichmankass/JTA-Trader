@@ -1,0 +1,118 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "245 ict_scalp_mgc_15m trades on the Dukascopy XAU_USD 15m proxy of MGC, 245 with a computable ATR14",
+  "n": 245,
+  "measurement": {
+    "rule": "RULE-IB-GROSS-ATR-FLOOR-S0-MGC15-XAUPROXY",
+    "n_trades": 245,
+    "n_atr_computable": 245,
+    "per_leg": {
+      "ict_scalp_mgc_15m": {
+        "n": 245,
+        "timeframe": "15m",
+        "n_atr": 245,
+        "stop_over_atr_median": 3.370258251894658,
+        "stop_vs_atr_stop_mult_median": null
+      }
+    },
+    "exit_imputed": 0,
+    "A": {
+      "m1_max": 150.59070216313498,
+      "total_return": -0.7683720178436829,
+      "max_drawdown": 0.7728272717616806,
+      "m3": -0.9942351233182521,
+      "m2": -93.1562
+    },
+    "arms": {
+      "0.5": {
+        "m1_max": 18.389721398168405,
+        "total_return": -0.6495172530009765,
+        "max_drawdown": 0.6562586217130875,
+        "m3": -0.9897275731105621,
+        "m2": -68.19513529284885,
+        "m2_ratio": null,
+        "reweighted_share": 0.02040816326530612,
+        "mean_w": 0.9872906303503246,
+        "ratio_boot": {
+          "lower_80": NaN,
+          "median": -Infinity,
+          "draws_den_not_positive": 10000
+        },
+        "a_m1_ok": false,
+        "b_ratio_ok": false,
+        "c_m3_ok": false,
+        "passes": false
+      },
+      "1.0": {
+        "m1_max": 17.00287917212567,
+        "total_return": -0.6287645687074359,
+        "max_drawdown": 0.635905105417934,
+        "m3": -0.9887710656045053,
+        "m2": -64.43887688182095,
+        "m2_ratio": null,
+        "reweighted_share": 0.0326530612244898,
+        "mean_w": 0.9808445491200305,
+        "ratio_boot": {
+          "lower_80": NaN,
+          "median": -Infinity,
+          "draws_den_not_positive": 10000
+        },
+        "a_m1_ok": false,
+        "b_ratio_ok": false,
+        "c_m3_ok": false,
+        "passes": false
+      }
+    },
+    "power_note": "paired design, the same trades in every arm; more than 50% reweighted widens the bound (INDETERMINATE likely); reweighted share k=0.5 0.02, k=1.0 0.03",
+    "verdict": "FAIL",
+    "smallest_passing_k": null,
+    "verdict_reason": "no k passes: k=0.5: M1 18.39 (<=1.5 False), ratio lb80 nan (False), M3 ok False; k=1.0: M1 17.00 (<=1.5 False), ratio lb80 nan (False), M3 ok False",
+    "proxy": "Dukascopy XAU_USD spot 15m for MGC (no roll, different session, MGC's own cost stack)",
+    "n_floor": 100,
+    "median_stop_over_atr": 3.370258251894658,
+    "trades_per_month": {
+      "2023-11": 1,
+      "2023-12": 5,
+      "2024-01": 4,
+      "2024-02": 6,
+      "2024-03": 2,
+      "2024-04": 7,
+      "2024-05": 2,
+      "2024-06": 7,
+      "2024-07": 8,
+      "2024-08": 5,
+      "2024-09": 2,
+      "2024-10": 6,
+      "2024-11": 7,
+      "2024-12": 5,
+      "2025-01": 3,
+      "2025-02": 9,
+      "2025-03": 7,
+      "2025-04": 9,
+      "2025-05": 8,
+      "2025-06": 8,
+      "2025-07": 7,
+      "2025-08": 7,
+      "2025-09": 10,
+      "2025-10": 12,
+      "2025-11": 5,
+      "2025-12": 4,
+      "2026-01": 9,
+      "2026-02": 8,
+      "2026-03": 9,
+      "2026-04": 8,
+      "2026-05": 7,
+      "2026-06": 8,
+      "2026-07": 7,
+      "2026-08": 9,
+      "2026-09": 14,
+      "2026-10": 8,
+      "2026-11": 2
+    }
+  },
+  "note": "no k passes: k=0.5: M1 18.39 (<=1.5 False), ratio lb80 nan (False), M3 ok False; k=1.0: M1 17.00 (<=1.5 False), ratio lb80 nan (False), M3 ok False",
+  "data_inputs": [
+    "dukascopy XAU_USD 15m (proxy for MGC)"
+  ]
+}

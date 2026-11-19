@@ -1,0 +1,114 @@
+# DONE 2026-11-19 ~15:15Z (ML-PRIMARY-11): run 44539864523 PASSED and published donchian_fresh/rows.jsonl (verdict.json pass / measured /
+# published true; 45,372 rows; last bar_t BTC 2026-11-08, ETH 2026-11-19, SOL 2026-11-05). The collector filed the run producer_failed only
+# because verdict.json lacked population / n (fixed in exit_head_fresh_rows.py); status done so the non-verdict retry does not
+# rebuild the rows under the units now reading them.
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Row ML-EXITHEAD-ROWS-FRESH-REBUILD: a one-off trainer BUILD of the donchian 1h exit-head rows on
+# fresh candles. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-ef40-01
+title: 'BUILD: rebuild the donchian 1h exit-head training rows (trend_donchian BTC, _eth, _sol) on the fresh trainer candles into
+  datasets-out/exit_head/1h/donchian_fresh/rows.jsonl, with every symbol''s last bar_t after 2026-11-01'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+compute: needs_vm_data
+question: 'On the trainer, with today''s candles (the replay resolver reads data/BTCUSDT_15m.csv and data/{ETH,SOL}USDT_5m.csv resampled to 1h;
+  last bar 2026-11-19 per trainer-vm-diag #27238): re-emit the trend_donchian / trend_donchian_eth / trend_donchian_sol harness trades
+  (m20_exit_head_round.py --build-only, the same emit + build_exit_head_dataset.py path as the 2026-07-12 corpus, with the journal live arm via
+  --db) and build the 1h rows. Is build_report.generated_at from this run, and is the last bar_t of BTCUSDT, ETHUSDT and SOLUSDT each after
+  2026-11-01? If so the rows are published to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl.'
+why_this_matters: 'Five units are blocked on fresh rows: a10d-07 / a10d-08 (the fresh re-runs of aadc-11 / aadc-12, which decide the held #26906
+  exit-head neg25 pin), 04a5-04, aadc-13 and a10d-06. The current corpus (datasets-out/exit_head/1h/donchian/rows.jsonl) was built 2026-07-12
+  with last bars BTC 07-10 / ETH 07-07 / SOL 07-05, so every read on it ends in mid-summer.'
+why_not_inferential: 'This estimates no effect. It builds a dataset and checks two structural facts about its own output (the report is from this
+  run; every required symbol reaches past a fixed date). An expected_n or a minimum detectable effect would be theatre; the row counts per symbol
+  are reported, not graded.'
+decision_rule:
+  id: RULE-RQ20261119-ef40-01-EXITHEAD-FRESH-ROWS
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_head_fresh_rows.py: runs m20_exit_head_round.py --legs trend_donchian,trend_donchian_eth,trend_donchian_sol
+    --tf 1h --build-only --db data/trade_journal.db --out datasets-out/exit_head/1h/donchian_fresh_build; then reads
+    donchian_fresh_build/donchian/rows.jsonl and build_report.json and reports, per symbol, rows, trades, sources and last bar_t (UTC).'
+  rule: 'PASS iff build_report.generated_at is at or after the run''s start AND the last bar_t of each of BTCUSDT, ETHUSDT and SOLUSDT is after
+    2026-11-01T00:00Z; only a PASS publishes (atomic copy to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl plus its build_report.json).
+    FAIL otherwise, with the reasons named; a FAIL publishes nothing. A harness, build or missing-rows failure is producer_failed, never a FAIL.
+    The script refuses to write to the frozen path datasets-out/exit_head/1h/donchian/rows.jsonl. Legs, date and paths are fixed now.'
+  pass_action: 'Quote the verdict''s per-symbol last bar_t in a commit that git mv''s research/queue/blocked/RQ-20261119-a10d-07.yaml,
+    RQ-20261118-04a5-04.yaml, RQ-20261118-aadc-13.yaml and RQ-20261119-a10d-06.yaml to research/queue/ (status queued, rules unchanged), per
+    their clears_when. a10d-08 moves only once its own second clause (DOGE / LTC / DOT / TRX / NEAR 1h candles resolvable) also holds.'
+  fail_action: 'The five units stay blocked; the named reason (stale report or a symbol''s last bar) is fixed on row ML-EXITHEAD-ROWS-FRESH-REBUILD
+    and this unit re-run (a re-run of the same rule, not a new one).'
+  what_it_does_not_do: 'Trains, registers and serves nothing (--build-only); overwrites no existing corpus; edits no config; publishes nothing off
+    the trainer (the rows include journal trades, which are OURS and never leave the trainer); places no order; adds no gate.'
+practice_precedent: 'Train and evaluate on the data the decision will see: a held pin decided on a corpus ending in July would be decided on a
+  regime the head no longer trades (docs/reference/trading-and-model-practice-principles.md, data freshness before any read).'
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.5
+  bucket: ai_trader
+  basis: 'planning weight inherited from a10d-07 (the exit-head pin it unblocks); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: 'ESTIMATE: the July round emitted 1,662 harness trades over three 1h legs and built 34,919 rows; emit is three harness passes on
+    resampled 5m/15m, the build one pass. No training. The first run replaces it.'
+  why_runner: 'The fresh 5m/15m candles and data/trade_journal.db are trainer-resident, and the rows must stay there (journal-derived).'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_head_fresh_rows.py
+  - --legs
+  - trend_donchian,trend_donchian_eth,trend_donchian_sol
+  - --tf
+  - 1h
+  - --family
+  - donchian
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT
+  - --after
+  - '2026-11-01'
+  - --db
+  - data/trade_journal.db
+  - --build-out
+  - datasets-out/exit_head/1h/donchian_fresh_build
+  - --publish
+  - datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-ef40-01
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: none directly; supplies the fresh corpus that a10d-07 / a10d-08 read to decide the held #26906 exit-head neg25 pin (close or annotate on the three donchian 1h legs, exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-EXITHEAD-ROWS-FRESH-REBUILD
+- research/queue/blocked/RQ-20261119-a10d-07.yaml
+- research/queue/blocked/RQ-20261119-a10d-08.yaml
+- research/queue/blocked/RQ-20261118-04a5-04.yaml
+- research/queue/blocked/RQ-20261118-aadc-13.yaml
+- research/queue/blocked/RQ-20261119-a10d-06.yaml
+- scripts/research/exit_head_fresh_rows.py
+- scripts/research/m20_exit_head_round.py
+population: trend_donchian (BTCUSDT), trend_donchian_eth, trend_donchian_sol harness trades on the trainer's fresh 1h-resampled candles plus
+  their closed journal trades, 1h exit-head rows.
+last_dispatched_at: '2026-11-19T14:04:23+00:00'

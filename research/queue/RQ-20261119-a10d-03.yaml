@@ -5,7 +5,7 @@ id: RQ-20261119-a10d-03
 title: 'D10 NEW INFORMATION: does adding regime-at-entry (stop-distance vol regime vs the legs own history, the live vol tag) and cost-drift (realised
   cost in R, its drift, entry slippage in R) inputs to aadc-14s learned decay score rank decay beyond the record-order null AND beyond the path-only
   score on the same points?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -125,3 +125,23 @@ related:
 - scripts/research/d10_basset_baseline.py
 what_it_does_not_do: Serves, stages or promotes nothing; demotes no leg; changes no alarm, roster or config; adds no gate. Journal data stays
   on the trainer (never committed, never Kaggle); only aggregate AUCs leave it.
+last_dispatched_at: '2026-11-19T11:39:04+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-03-D10-NEWINFO
+  evidence:
+  - comms/research/RQ-20261119-a10d-03/44514550360/verdict.json
+  - comms/research/RQ-20261119-a10d-03/44514550360/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  rows: 3
+  verdict: indeterminate
+  reason: 'run 44514550360 (dispatched by the research dispatcher 11:24Z, success). Population: 676 points on 24 legs (7,985 journal trades in;
+    excluded not_closed 5,216, no_leg_record 1,196, no_net_r 145, no_contract_multiplier 52, degenerate_risk_basis 47). Coverage: volreg_z /
+    volreg_z5 0.9645, cost10 1.0, slip10 1.0, cost_drift 0.6997, vol_tag10 0.2959; core volreg_and_cost 0.9645 (>= 0.5); 40 null draws (>= 30).
+    newinfo pooled AUC 0.5013 vs record-order null 0.4184 (sd 0.0644): excess +0.0829, one-sided p 0.1463 (not < 0.05, not >= 0.20); within-leg
+    excess -0.2036 (p 0.9756); paired AUC(newinfo) - AUC(base) +0.0722, CI95 [-0.0134, +0.1903] (lower <= 0, upper > 0). Neither PASS nor FAIL ->
+    INDETERMINATE. Cause = POWER (coverage passes its floor). indeterminate_action: re-run once the journal adds ~50% more points (>= ~1,014).
+    Worth carrying: the CUSUM reference (AUC 0.6554, CI95 [0.551, 0.750]) beats both learned scores (base 0.4292, newinfo 0.5013); within-leg
+    the learned scores sit below 0.5 (0.31 / 0.36) while CUSUM is 0.55. vol_tag10 is present on only 29.6% of points (a journal field gap,
+    not the cause here).'

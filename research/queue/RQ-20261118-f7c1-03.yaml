@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-03
 title: 'P8-Q5 Foxhound-4 FEATURE FAMILIES: does adding volatility-regime context or ETF-family-relative strength to config B beat the live recipe on
   the alpaca_live cash book, above a 9-pure-noise-column control, on the ETF-pool dev walk-forward?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -142,8 +142,21 @@ related:
 - RQ-20261111-207f-01
 - RQ-20261117-c21d-06
 - RQ-20261108-98e3-14
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T14:30:11+00:00'
 unblocked:
   at: '2026-11-19'
   by: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7)
   why: 'Both blocked_on clauses cleared: RQ-20261111-207f-01 has a measured, graded row (FAIL, run 44387485084); RQ-20261117-c21d-06 has a measured result graded FAIL (label stays net R), so per its clears_when this file moves to research/queue/ as queued with the rule unchanged.'
+grading:
+  attested: RULE-RQ20261118-f7c1-03-FEATURE-FAMILIES
+  auto: true
+  decision_rule_id: RULE-RQ20261118-f7c1-03-FEATURE-FAMILIES
+  evidence:
+  - research/results/RQ-20261118-f7c1-03/44516766113.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

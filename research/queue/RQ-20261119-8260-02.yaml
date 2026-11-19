@@ -1,0 +1,121 @@
+# Authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research. Called by RQ-20261118-abab-25's registered PASS rule. Gates this adds or changes: none.
+id: RQ-20261119-8260-02
+title: 'CONFIRMATION of RQ-20261118-abab-25 on a DISJOINT window: does S_ASIA (--skip-hours=0..7) on ict_scalp_5m (BTCUSDT) beat the declared leg A again, on 2019-10-01..2021-11-13, net of the
+  harness cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On ict_scalp_5m (BTCUSDT 5m) over 2019-10-01 .. 2021-11-13 23:59 (disjoint from the 2021-11-14 .. 2026-11-17 window of RQ-20261118-abab-25), does the ONE arm abab-25 named best, S_ASIA
+  (--skip-hours=0,1,2,3,4,5,6,7), beat the declared leg A by the registered bar (net R higher, delta >= 0.02 R x n(A), net R >= A in >= 4 of 6 calendar folds, max drawdown <= 1.35 x A's), net
+  of the harness cost stack? Under the registered rule abab-25 re-graded PASS (S_ASIA net R -149.32 vs A -226.11, 6/6 folds, n(A) 670; PI-20261119-FILLW47B-0005); this unit asks whether it survives
+  out of window.
+why_this_matters: 'abab-25''s registered PASS rule names ONE confirmation unit on a disjoint in-hand window before any live-producer check or Tier-3 declare proposal. Decision changed: PASS ->
+  a live-producer check for the session lever on ict_scalp_5m and a Tier-3 declare PROPOSAL (mirror in the same PR, never a config edit); FAIL -> the abab-25 PASS is not confirmed and no proposal
+  is drafted. Both arms lose net R on the first window (the declared leg is net-negative there), so a PASS is ''less negative'', not an edge claim.'
+power:
+  expected_n: 200
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n=200 is an ESTIMATE scaled from abab-25's measured 670 trades in ~5 years, NOT a measurement;
+    below 39 the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar is a materiality bar, not a powered effect.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on a pinned in-hand window (public Binance perpetual candles); nothing accrues.
+decision_rule:
+  id: RULERQ20261119826002
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg ict_scalp_5m --grade replace on the pinned window 2019-10-01 .. 2021-11-13 23:59, 6 equal calendar folds, net of the full cost stack
+    the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared in config/strategies.yaml; candidate S_ASIA ONLY
+    (the arm abab-25 named best under the registered rule; S_LATE is not re-tested, so there is no re-selection). Per arm: n, net_total_r, max_drawdown_r, net R per fold. Every threshold is copied
+    unchanged from abab-25''s registered rule.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF the S_ASIA arm is byte-identical to A (the lever never fired). S_ASIA PASSES iff net_r(S_ASIA) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(S_ASIA)
+    >= net R(A) in >= 4 of 6 folds AND maxDD(S_ASIA) <= maxDD(A) x 1.35. PASS: the abab-25 PASS is confirmed on a disjoint window; the follow-up is a live-producer check for the session lever
+    and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL (n(A) >= 39, S_ASIA does not pass): the abab-25 PASS is NOT confirmed; no proposal is drafted; the lever
+    FAMILY is not retired (scripts/research/family_retirement_policy.yaml); the record names how close the arm came. Thresholds, arm, window and folds are not changed after any result.'
+  what_it_does_not_do: Edits no config and no roster, places no order, adds no gate, is not a promotion case. It does not re-run S_LATE or add an arm. No verdict statistic of this window was computed
+    before this unit was written; the only prior statistic is abab-25's own landed result on the other window.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): confirmation on a disjoint window named by the registered PASS rule; one arm, no re-selection'
+intervention_controls:
+  not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+iteration:
+  subject: ict_scalp_5m
+  subject_kind: strategy_leg
+  from_result: RQ-20261118-abab-25
+  verdict_read: pass
+  diagnosis: 'RQ-20261118-abab-25 (run 44539877475) landed a harness PASS (sweep grade, 4 folds); re-graded from its arms trades under its REGISTERED rule (6 calendar folds, >=4, 0.02 R x n, DD
+    x1.35): S_ASIA PASS, net R -149.32 vs -226.11, 6/6 folds, best arm S_ASIA. Its registered PASS action is one confirmation unit on a disjoint window.'
+  search: session family, ONE arm (S_ASIA) against the declared leg A on the disjoint window 2019-10-01..2021-11-13, registered bar and 6 folds.
+  levers:
+  - session
+  map_entries:
+  - research/levers/ict_scalp_5m.yaml
+  attempt: 2
+  due_by: '2026-11-27'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: structural
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 78
+  basis: est_minutes copied from abab-25 (52), a deliberate over-estimate (PI-20261118-EFILLW47-0002); the longer fetch (~2,600 trailing days of 5m) adds some. Quote supply in units/fires per
+    day.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ict_scalp_5m
+  - --arm
+  - A=
+  - --arm
+  - S_ASIA=--skip-hours=0,1,2,3,4,5,6,7
+  - --days
+  - '2610'
+  - --start
+  - '2019-10-01'
+  - --end
+  - 2021-11-13 23:59
+  - --research-unit
+  - RQ-20261119-8260-02
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-8260-02
+  timeout_minutes: 156
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- RQ-20261118-abab-25
+- research/levers/ict_scalp_5m.yaml

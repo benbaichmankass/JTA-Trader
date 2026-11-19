@@ -1,0 +1,152 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "level_break_sweep firings of config/desk_triggers.yaml detectors on closed 5m bars, six USDT perps, 2025-11-01..2026-09-15; n = 14307 scored firings of the better rule (fade)",
+  "n": 14307,
+  "measurement": {
+    "rule": "RULE-DESK-ENTRY-REVIEW-REDESIGN-EVENT-16945-TRIGGER-REPLAY",
+    "family": "level_break_sweep",
+    "window": [
+      "2025-11-01T00:00:00+00:00",
+      "2026-09-15T00:00:00+00:00"
+    ],
+    "firings_detected": 18942,
+    "firings_in_window": 14307,
+    "firings_within_12_bars_of_previous_same_symbol": 0,
+    "m_cells": 10,
+    "unscored_families": {
+      "near_signal": "firing reads the hourly packet's system_book, not archived per bar: not reconstructable point-in-time",
+      "calendar": "firing reads the packet's economic-calendar block, not archived per bar: not reconstructable point-in-time"
+    },
+    "decluster_bars": 12,
+    "firings_dropped_by_decluster": 20013,
+    "cells": {
+      "continuation": {
+        "firings_in_window": 14307,
+        "n": 14307,
+        "excluded": {
+          "outside_window": 4635,
+          "unresolved": 0
+        },
+        "n_long": 6936,
+        "n_short": 7371,
+        "mean_net_r": -0.4988907317787984,
+        "mean_b3": -0.5361271332982259,
+        "S3": {
+          "n": 14307,
+          "weeks": 47,
+          "mean": 0.03723640151942758,
+          "alpha_one_sided": 0.005,
+          "lb_holm1": 0.0015784863151500695,
+          "lb_97_5": 0.009912760071786488,
+          "p_one_sided": 0.0034996500349965005,
+          "mde_cluster_r": 0.048599037640219424,
+          "sd": 1.2276043687937481
+        },
+        "per_symbol": {
+          "ADAUSDT": {
+            "n": 2383,
+            "S3": 0.0320348404638208
+          },
+          "AVAXUSDT": {
+            "n": 2395,
+            "S3": 0.03721152980230189
+          },
+          "BTCUSDT": {
+            "n": 2369,
+            "S3": -0.0012791276210775786
+          },
+          "ETHUSDT": {
+            "n": 2221,
+            "S3": 0.06611470978380518
+          },
+          "SOLUSDT": {
+            "n": 2469,
+            "S3": 0.032706515932535235
+          },
+          "XRPUSDT": {
+            "n": 2470,
+            "S3": 0.05778042627681142
+          }
+        },
+        "clears": false
+      },
+      "fade": {
+        "firings_in_window": 14307,
+        "n": 14307,
+        "excluded": {
+          "outside_window": 4635,
+          "unresolved": 0
+        },
+        "n_long": 7371,
+        "n_short": 6936,
+        "mean_net_r": -0.48418668694240996,
+        "mean_b3": -0.5368439687755662,
+        "S3": {
+          "n": 14307,
+          "weeks": 47,
+          "mean": 0.05265728183315606,
+          "alpha_one_sided": 0.005,
+          "lb_holm1": 0.018900076578791437,
+          "lb_97_5": 0.026591900215974722,
+          "p_one_sided": 0.00019998000199980003,
+          "mde_cluster_r": 0.044656362805092796,
+          "sd": 1.1930918770722196
+        },
+        "per_symbol": {
+          "ADAUSDT": {
+            "n": 2383,
+            "S3": 0.039970635306757346
+          },
+          "AVAXUSDT": {
+            "n": 2395,
+            "S3": 0.06551235018068371
+          },
+          "BTCUSDT": {
+            "n": 2369,
+            "S3": 0.06007456375873123
+          },
+          "ETHUSDT": {
+            "n": 2221,
+            "S3": 0.045930699953486025
+          },
+          "SOLUSDT": {
+            "n": 2469,
+            "S3": 0.06792136901260572
+          },
+          "XRPUSDT": {
+            "n": 2470,
+            "S3": 0.03610892402225639
+          }
+        },
+        "clears": false
+      }
+    },
+    "better_rule": "fade",
+    "controls": {
+      "oracle": {
+        "n": 14307,
+        "S3": 0.8522216633211457,
+        "clears": true
+      },
+      "anti_oracle": {
+        "n": 14307,
+        "S3": -0.763118247588666,
+        "clears": false
+      },
+      "random_side": {
+        "n": 14307,
+        "S3": 0.022793600379635275,
+        "clears": false
+      }
+    },
+    "controls_ok": true,
+    "no_lookahead_prefix_identical": true,
+    "verdict": "NOT_CLEARED",
+    "verdict_reason": "fade: S3 +0.053 R, lb +0.019, p 0.0002 (holm may still upgrade)"
+  },
+  "note": "fade: S3 +0.053 R, lb +0.019, p 0.0002 (holm may still upgrade)",
+  "data_inputs": [
+    "binance_vision 5m klines"
+  ]
+}

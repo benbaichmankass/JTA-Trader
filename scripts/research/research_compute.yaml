@@ -142,7 +142,22 @@ kaggle_overflow:
 #   research-script-run.yml's concurrency group is per-unit, so --max-fires-per-workflow=1 does not throttle it.
 limits:
   max_total_inflight: 8        # OPERATOR 2026-11-03 D5-A: runner 4 + runner_data 1 + trainer 1 + kaggle 1 + kaggle_cpu 1. Was 15: runner 10 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1 (RESEARCH-FLOW 2026-11-03; was 11 at runner 6)
-  max_repo_queued: 10          # unchanged from the dispatcher's flag default
+  # REPO-QUEUED SHARE (QUEUE-FILL-STANDING-W47b, manager 2026-11-19; PR body has the full table). The dispatcher defers EVERY fire while more
+  # than max_repo_queued non-listener runs are queued repo-wide. MEASURED from job timestamps (a run is queued until its first job starts),
+  # 5-min grid: before 11-18 18Z the count was ~0 (median 0); since then PR CI volume tripled (pytest-run 26-88 -> 137-175 per 6 h) and the
+  # count was <= 10 only 50% of the time, and 0% of the time 11-19 06:00-11:30Z (median 54, max 90): research runner units got only the
+  # floor's one fire per cycle (research script runs per 6 h: 38, 56, then 11). ~81% of the count at its p90 moments was the 1-minute
+  # post-merge alarm (pr-landing hold-merge alarm, 90 runs/6 h, p90 queue wait 99 min), a symptom of the saturated pool, not load on it.
+  # LOAD (48 h): PR CI pytest-run+Guards+collect = 20,550 runner-min (7.1 slots busy on average); research GitHub-runner jobs = 1,561 min
+  # (median job 1.7 min, 0.54 slots), i.e. ~7% of PR CI; research_compute's runner max_concurrent still bounds it.
+  # THE CHANGE: ignore the short-job workflows below AND cap at 30 -> the dispatcher would have been unblocked 88% of the time since
+  # 11-18 18Z (was 50%) and 61% of 11-19 06:00-11:30Z (was 0%). Reverts by setting max_repo_queued: 10 and emptying the ignore list.
+  max_repo_queued: 30          # was 10 (the dispatcher flag's old default); an explicit --max-repo-queued still overrides
+  repo_queued_ignore_workflows:  # gh `workflowName`: runs of these (each ~0.2-1.0 min of runner) are NOT counted against max_repo_queued
+  - pr-landing hold-merge alarm
+  - claude-pr-automerge
+  - armed-branch-push-watch
+  - branch-mirror-heartbeat
   # REPO-QUEUED EXEMPT BACKENDS (QUEUE-FILL-W47, manager 2026-11-18): the repo-queued cap above is about the hosted-runner pool.
   # These backends do their work off it (a polled Kaggle kernel; the trainer VM over SSH), each capped at max_concurrent 1, so
   # the cap does not defer them. MEASURED 2026-11-18: the cap deferred every fire at 21:55Z (19 fresh queued, mostly CI) and

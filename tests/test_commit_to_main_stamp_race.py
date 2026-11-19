@@ -152,3 +152,37 @@ def test_refresh_never_restarts_checks_that_are_running():
     i = TEXT.index("WANT_REFRESH=0\n                if [ \"${MERGEABLE}\"")
     block = TEXT[i:i + 700]
     assert "inflight) REFRESH_STATE=" in block and "WANT_REFRESH=1" not in block.split("inflight)")[1].split(";;")[0]
+
+
+# --- a STAMP-ONLY branch vs a main that also edited the unit (#27359, 2026-11-19) -----------------------------------
+_P = "research/queue/RQ-1.yaml"
+
+
+def test_a_stamp_only_branch_keeps_mains_graded_block_and_applies_its_own_stamp():
+    base = "id: RQ-1\nstatus: queued\nlast_dispatched_at: null\n"                       # unit never stamped
+    ours = _unit("2026-11-19T15:07:11+00:00")                                           # the stamp branch: only the stamp
+    theirs = "id: RQ-1\nstatus: queued\ngrading:\n  verdict: fail\nlast_dispatched_at: null\n"   # main graded it
+    won = rsc.resolve(_P, ours, theirs, base)
+    assert "grading:\n  verdict: fail\n" in won                                         # main's edit survives
+    assert won.count("last_dispatched_at") == 1 and "2026-11-19T15:07:11+00:00" in won  # the branch's stamp is applied
+
+
+def test_a_stamp_only_branch_loses_to_a_later_stamp_on_a_main_that_also_edited_the_unit():
+    base = "id: RQ-1\nstatus: queued\n"
+    ours = _unit("2026-11-19T15:07:11+00:00")
+    theirs = "id: RQ-1\nstatus: queued\nrun: fixed\nlast_dispatched_at: '2026-11-19T16:44:11+00:00'\n"
+    assert rsc.resolve(_P, ours, theirs, base) == theirs
+
+
+def test_a_rearm_on_main_still_beats_a_stamp_only_branch_even_with_other_edits():
+    base = _unit("2026-11-19T08:00:00+00:00")
+    ours = _unit("2026-11-19T15:07:11+00:00")
+    theirs = "id: RQ-1\nstatus: queued\nrun: fixed\nlast_dispatched_at: null\n"
+    assert rsc.resolve(_P, ours, theirs, base) == theirs
+
+
+def test_without_a_merge_base_or_when_the_branch_edited_more_than_the_stamp_it_is_still_refused():
+    base = "id: RQ-1\nstatus: queued\n"
+    theirs = "id: RQ-1\nstatus: queued\nrun: fixed\nlast_dispatched_at: '2026-11-19T16:44:11+00:00'\n"
+    assert rsc.resolve(_P, _unit("2026-11-19T15:07:11+00:00"), theirs) is None                    # no base
+    assert rsc.resolve(_P, _unit("2026-11-19T15:07:11+00:00", "x: branch\n"), theirs, base) is None   # branch edited x

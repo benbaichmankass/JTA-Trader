@@ -60,6 +60,7 @@ def _candles(n: int, *, base_close: float = 100.0) -> list[dict]:
 def _point_dir(fl_mod, monkeypatch, tmp_path):
     """Point the reader's forecasts dir at ``tmp_path`` + clear its cache."""
     monkeypatch.setattr(fl_mod, "_forecasts_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(fl_mod, "_serves_log_path", lambda: str(tmp_path / "serves.jsonl"))
     fl_mod._artifact_cache.clear()
 
 
@@ -209,6 +210,7 @@ def _write_fc(tmp_path, as_of):
 def _stale_setup(monkeypatch, tmp_path):
     _point_dir(fl, monkeypatch, tmp_path)
     monkeypatch.setattr(fl, "_status_path", lambda: str(tmp_path / "status.json"))
+    monkeypatch.setattr(fl, "_serves_log_path", lambda: str(tmp_path / "serves.jsonl"))
     fl.reset_serve_counters()
 
 
@@ -268,3 +270,49 @@ def test_missing_as_of_ts_is_stale_when_bar_given(monkeypatch, tmp_path):
     assert fl.compute_live_forecast_row(
         "BTCUSDT", timeframe="15m", bar_ts=_BAR.isoformat(),
     ) is None
+
+
+# --- PI-20261119-K7ZSW5Z7-0005: the serve log -------------------------------
+
+
+def test_serve_log_writes_one_line_per_bar_and_artifact(monkeypatch, tmp_path):
+    _stale_setup(monkeypatch, tmp_path)
+    (tmp_path / "BTCUSDT.json").write_text(json.dumps({
+        "timeframe": "15m",
+        "as_of_ts": _BAR.isoformat(),
+        "window_end_ts": _BAR.isoformat(),
+        "window_closes_sha256": "abc",
+        "generated_at": "2026-11-19T00:00:00Z",
+        "fc_row": {c: 1.0 for c in FORECAST_FEATURE_COLUMNS},
+    }))
+    bar = _BAR.isoformat()
+    for _ in range(3):  # the scorer re-reads every tick within one bar
+        assert fl.compute_live_forecast_row("BTCUSDT", timeframe="15m", bar_ts=bar)
+    nxt = (_BAR + timedelta(minutes=15)).isoformat()
+    assert fl.compute_live_forecast_row("BTCUSDT", timeframe="15m", bar_ts=nxt)
+    lines = [json.loads(x) for x in (tmp_path / "serves.jsonl").read_text().splitlines()]
+    assert len(lines) == 2
+    assert lines[0]["symbol"] == "BTCUSDT"
+    assert lines[0]["window_closes_sha256"] == "abc"
+    assert lines[0]["lag_bars"] == 0 and lines[1]["lag_bars"] == 1
+    status = json.loads((tmp_path / "status.json").read_text())
+    assert status["symbols"]["BTCUSDT"]["window_closes_sha256"] == "abc"
+
+
+def test_serve_log_tolerates_pre_stamp_artifact(monkeypatch, tmp_path):
+    _stale_setup(monkeypatch, tmp_path)
+    _write_fc(tmp_path, _BAR.isoformat())
+    assert fl.compute_live_forecast_row(
+        "BTCUSDT", timeframe="15m", bar_ts=_BAR.isoformat(),
+    ) is not None
+    line = json.loads((tmp_path / "serves.jsonl").read_text().splitlines()[0])
+    assert line["window_closes_sha256"] is None
+
+
+def test_diag_exposes_the_serve_log_at_the_writers_path():
+    """The diag log_file entry must be the SAME file forecast_live appends to."""
+    from pathlib import Path
+
+    from src.web.api.routers import diag
+
+    assert Path(diag._LOG_FILES["forecast_live_serves"]) == Path(fl._serves_log_path())

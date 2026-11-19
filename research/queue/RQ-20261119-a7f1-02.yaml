@@ -2,7 +2,7 @@
 # re-run of a result whose input was a FROZEN trainer data file (TRAINER-1D-STALE-ROSTERED blast radius).
 id: RQ-20261119-a7f1-02
 title: RE-RUN on current data of RQ-20261016-d37f-02 (GDX holdout re-run; the coverage matrix's GDX vol_trail passed_unshipped)
-status: blocked
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -66,6 +66,4 @@ rerun_of:
   unit: RQ-20261016-d37f-02
   reason: input trainer data/GDX_1d.csv frozen; sample ended 2026-06-17
   blast_radius: TRAINER-1D-STALE-ROSTERED (2026-11-19)
-blocked_reason: 'BLOCKED on data freshness, never a date: unblock when trainer data/GDX_1d.csv has last bar >= the
-  previous trading day (read via trainer-vm-diag or report_data_freshness.py --alert-rostered). Fix in flight: #27214
-  (TRAINER-1D-STALE-ROSTERED). The original result''s sample ends 2026-06-17 because the file froze there.'
+last_dispatched_at: '2026-11-19T14:04:23+00:00'

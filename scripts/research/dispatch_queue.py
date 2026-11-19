@@ -1044,7 +1044,11 @@ def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, st
     return out
 
 
-def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
+#: `gh run list --limit`. A listing that returns exactly this many rows is truncated (2026-11-19: 200 listed of ~456 queued).
+GH_RUNS_LIMIT = 200
+
+
+def gh_runs(status: str, *, limit: int = GH_RUNS_LIMIT) -> Optional[List[Dict[str, Any]]]:
     """`gh run list` rows for one status, or None when gh could not answer --
     a count we could not take is reported as such, never as zero."""
     cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
@@ -1115,7 +1119,8 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
                  now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
                  infra_names: Optional[List[str]] = None, infra_yield_at: int = 1,
                  infra_stuck_after_hours: float = INFRA_STUCK_HOURS,
-                 research_stuck_after_hours: float = RESEARCH_STUCK_HOURS) -> Dict[str, Any]:
+                 research_stuck_after_hours: float = RESEARCH_STUCK_HOURS,
+                 repo_queued_ignore: Optional[List[str]] = None) -> Dict[str, Any]:
     """What the runner pool looks like before this cycle fires anything.
 
     Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
@@ -1172,8 +1177,15 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     by_name: Dict[str, int] = {}
     for r in counted:
         by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
-    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
-    listeners = len(queued) - len(competing)
+    # REPO-QUEUED SHARE (lane QUEUE-FILL-STANDING-W47b, manager 2026-11-19; limits.repo_queued_ignore_workflows): a queued run of a
+    # SHORT-JOB workflow (the post-merge alarm, the automerge arm, the branch watchers; each ~0.2-1 min of runner) is a symptom of a
+    # saturated pool, not load on it, yet it counted 1:1 against the cap like a 35-min pytest-run. MEASURED 11-18 18Z..11-19 11:30Z:
+    # those runs were ~81% of the count at its p90 moments while using ~2 runner-min/h against ~430 for PR CI.
+    ignore = set(repo_queued_ignore or [])
+    competing_all = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    competing = [r for r in competing_all if str(r.get("workflowName")) not in ignore]
+    short_ignored = len(competing_all) - len(competing)
+    listeners = len(queued) - len(competing_all)
     infra = set(infra_names or [])
     infra_rows = [r for r in queued if str(r.get("workflowName")) in infra]
     infra_fresh = []
@@ -1186,10 +1198,11 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     infra_queued = len(infra_fresh)
     out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
            "infra_queued": infra_queued, "infra_stuck_ignored": infra_stuck, "listener_queued_ignored": listeners,
-           "research_stuck_ignored": research_stuck,
+           "research_stuck_ignored": research_stuck, "short_job_ignored": short_ignored,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}; {research_stuck} research run(s) queued "
                      f"> {research_stuck_after_hours:g} h not counted); repo runs queued "
-                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) and {short_ignored} short-job run(s) not counted; population: "
+                     f"the newest {len(queued_all)} queued run(s) gh listed, limit {GH_RUNS_LIMIT}); "
                      f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored; infra queued {infra_queued} "
                      f"fresh (yield at {max(1, int(infra_yield_at))}; {infra_stuck} stuck > {infra_stuck_after_hours:g} h "
                      "not yielded to)"}
@@ -1532,9 +1545,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pressure-stale-hours", type=float, default=STALE_PRESSURE_HOURS,
                     help="a run still queued/in progress this many hours after creation is stuck, "
                          "not load, and counts against neither cap (see STALE_PRESSURE_HOURS)")
-    ap.add_argument("--max-repo-queued", type=int, default=10,
+    ap.add_argument("--max-repo-queued", type=int, default=None,
                     help="defer every fire while more than this many workflow runs are queued "
-                         "repo-wide (research must never starve a system-action)")
+                         "repo-wide (research must never starve a system-action). Default: research_compute.yaml "
+                         "limits.max_repo_queued, else 10 (an explicit flag overrides the config)")
     ap.add_argument("--starvation-hours", type=float, default=None,
                     help="lift the repo-queued backpressure block for ONE fire per cycle once nothing has been "
                          "dispatched for this many hours (0 = never). Default: research_compute.yaml "
@@ -1601,13 +1615,16 @@ def main(argv: Optional[List[str]] = None) -> int:
               "to id order; this is a broken scheduler, not a quiet one.", file=sys.stderr)
 
     decisions: List[Dict[str, Any]] = []
+    floor_max_inflight: Optional[int] = None   # set only when the starvation floor lifts a block (see cycle_cap)
     # Backpressure is read ONCE per cycle, then every successful fire counts
     # against the in-flight cap so one cycle cannot fan the whole queue out.
     pressure: Dict[str, Any] = {"block": None, "inflight_research": 0, "detail": "dry run: not counted"}
     if args.fire:
         wf_names = research_workflow_names(jobs)
         pressure = backpressure(wf_names, max_inflight=max_inflight,
-                                max_queued=args.max_repo_queued,
+                                max_queued=(args.max_repo_queued if args.max_repo_queued is not None
+                                            else int((cfg or {}).get("limits", {}).get("max_repo_queued", 10))),
+                                repo_queued_ignore=list((cfg or {}).get("limits", {}).get("repo_queued_ignore_workflows") or []),
                                 stale_after_hours=args.pressure_stale_hours,
                                 infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []),
                                 infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)),
@@ -1622,7 +1639,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         _floor = starvation_override(pressure, jobs, now, _starve_h, _infra_starve_h)
         if _floor:
             print(f"::warning::research-queue-dispatch {_floor}", file=sys.stderr)
-            max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire
+            floor_max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire
         if pressure["block"]:
             print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
     # REPO-QUEUED EXEMPT BACKENDS (lane QUEUE-FILL-STANDING-W47, manager 2026-11-18 22:52Z): the repo-queued cap protects
@@ -1630,6 +1647,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     # its runner job only polls a remote kernel / VM) is not deferred by THAT cap. Infra yield, an unreadable gh and
     # the in-flight caps are untouched. Empty (the default) = the original behaviour.
     _exempt_be = frozenset(str(b) for b in ((cfg or {}).get("limits", {}).get("repo_queued_exempt_backends") or []))
+    # FLOOR vs EXEMPT BACKENDS (lane ML-PRIMARY-10, row RESEARCH-DISPATCH-EXEMPT-FLOOR-1119, manager 2026-11-19 10:42Z). The
+    # starvation floor's one-fire cap bounds the hosted-pool backends only. An exempt backend stays bounded by its own
+    # max_concurrent and max_total_inflight. MEASURED run 44492257802 (09:19Z 2026-11-19): the floor lifted an infra block
+    # and capped the cycle at inflight+1 = 4. One runner unit fired, and trainer a10d-03 was deferred on "research compute
+    # cap 4 reached" with trainer 0/1 busy. The trainer had had no run since 03:25Z. Before this fix, the floor took a
+    # trainer unit that soft_block would have passed and deferred it instead.
+    # An exempt fire does not use up the pool's one floor fire, hence + exempt_fired.
+    exempt_fired = [0]
+
+    def is_exempt(res: Any) -> bool:
+        return res is not None and res.ok and res.backend in _exempt_be
+
+    def cycle_cap(res: Any) -> int:
+        if floor_max_inflight is not None and not is_exempt(res):
+            return floor_max_inflight + exempt_fired[0]
+        return max_inflight
     soft_block = bool(args.fire and pressure.get("block") and pressure.get("block_kind") == "repo_queued" and _exempt_be)
     inflight = int(pressure.get("inflight_research") or 0)
     # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
@@ -1883,9 +1916,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                               "unit was already dispatched by a previous cycle; due again next cycle")
             decisions.append(row)
             continue
-        if inflight >= max_inflight:
+        if inflight >= cycle_cap(res):
             row.update(outcome=DEFERRED,
-                       reason=f"research compute cap {max_inflight} reached this cycle "
+                       reason=f"research compute cap {cycle_cap(res)} reached this cycle "
                               f"({inflight} in flight incl. fires above) -- due again next cycle")
             decisions.append(row)
             continue
@@ -1902,6 +1935,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                            power_state=power.state)
         if ok:
             inflight += 1
+            if is_exempt(res):
+                exempt_fired[0] += 1
             if res is not None and res.ok and res.backend in (cfg or {}).get("backends", {}):
                 state.took(res.backend)
             fired_by_workflow[wf_file] = fired_by_workflow.get(wf_file, 0) + 1

@@ -14,7 +14,7 @@ MAIN="${MAIN:-/home/ubuntu/ict-trading-bot}"
 cd "$REPO"
 LIVE_JOURNAL="${LIVE_JOURNAL:-$MAIN/data/trade_journal.db}"
 BT_DB="${BT_DB:-/tmp/p1_costnet_backtest.db}"
-SC_V_WON="${SC_V_WON:-v022}"
+SC_V_WON="${SC_V_WON:-v023}"   # v023: + signal-time meta stop (PI-20261029-MLP1-0001); v022 immutable
 SC_V_C1="${SC_V_C1:-v021}"
 RUN_TAG="${RUN_TAG:-p1-costnet-$(date +%Y%m%d 2>/dev/null || echo 20260719)}"
 RESULT="${RESULT:-/tmp/p1_costnet_result.txt}"
@@ -25,6 +25,18 @@ MR_VER="${MR_VER:-v002}"
 # tagged (event_source="live_paper") population for the paper-eval manifest;
 # NEVER blended into the real-money eval (see setup_candidates.py::iter_rows).
 INCLUDE_PAPER="${INCLUDE_PAPER:-true}"
+# RQ-20261119-3e98-01 knobs (defaults = the v023 run, unchanged):
+#   MANIFEST      the manifest to train (its dataset.version must equal SC_V_WON)
+#   REGISTER      true -> register the model (research_only); false -> --no-register
+#   GRADE_ARGS    extra p1_costnet_grade.py args, e.g.
+#                 "--eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt --lb-pct 0.833"
+#   MEASURED_TOO  true -> a second grade with --measured-only, written to ${VERDICT_OUT%.json}_measured.json
+#   VERDICT_OUT   the primary verdict path
+MANIFEST="${MANIFEST:-ml/configs/setup-candidates-metalabel-p2pool-v2.yaml}"
+REGISTER="${REGISTER:-true}"
+GRADE_ARGS="${GRADE_ARGS:-}"
+MEASURED_TOO="${MEASURED_TOO:-false}"
+VERDICT_OUT="${VERDICT_OUT:-/tmp/p1_costnet_verdict.json}"
 
 : > "$RESULT"
 log() { echo "[$(date -u +%H:%M:%S 2>/dev/null || echo m23p2)] $*" | tee -a "$RESULT"; }
@@ -200,25 +212,40 @@ except Exception as e:
 PY
 }
 
-log "STEP 3: build $SC_V_WON (v020 params + initial-risk live R)"
+log "STEP 3: build $SC_V_WON (v020 params + entry-time live R: risk_per_unit or the signal-time meta stop)"
 [ -e "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" ] && log "  NOTE: $SC_V_WON exists; --overwrite rebuilds it"
 build_pool "$SC_V_WON"
 
-log "STEP 4: train setup-candidates-metalabel-p2pool-v2 (research_only, registered)"
-python3 -m ml train ml/configs/setup-candidates-metalabel-p2pool-v2.yaml \
+MODEL_ID="$(python3 -c 'import sys,yaml;print(yaml.safe_load(open(sys.argv[1]))["model_id"])' "$MANIFEST")"
+MAN_VER="$(python3 -c 'import sys,yaml;print(yaml.safe_load(open(sys.argv[1]))["dataset"]["version"])' "$MANIFEST")"
+if [ "$MAN_VER" != "$SC_V_WON" ]; then
+  log "ABORT: $MANIFEST dataset.version $MAN_VER != SC_V_WON $SC_V_WON (it would train on another build)"
+  echo '{"p1_costnet_done":false,"error":"manifest_version_mismatch"}' >> "$RESULT"; exit 1
+fi
+REG_FLAG=""; [ "$REGISTER" = "true" ] || REG_FLAG="--no-register"
+log "STEP 4: train $MODEL_ID (research_only, register=$REGISTER)"
+python3 -m ml train "$MANIFEST" $REG_FLAG \
   --datasets-root "$MAIN/datasets-out" --experiments-root "$MAIN/ml/experiments-runs" --registry-root "$MAIN/ml/registry-store" \
   > /tmp/p1_costnet_train.out 2>>"$RESULT" || log "WARN: train returned nonzero"
 tail -c 1500 /tmp/p1_costnet_train.out | tee -a "$RESULT"
-EXP="$(ls -dt "$MAIN"/ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/*/ 2>/dev/null | head -1)"
+EXP="$(ls -dt "$MAIN"/ml/experiments-runs/"$MODEL_ID"/*/ 2>/dev/null | head -1)"
 log "  experiment dir: ${EXP:-NONE}"
 if [ -n "$EXP" ] && [ -f "${EXP}cost_gate.json" ]; then
   mkdir -p comms/ml
-  python3 -m scripts.ml.p1_costnet_grade \
-    --manifest ml/configs/setup-candidates-metalabel-p2pool-v2.yaml \
-    --model-state "${EXP}model_state.json" \
-    --dataset "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" \
-    --cost-gate "${EXP}cost_gate.json" --journal "$LIVE_JOURNAL" \
-    --out /tmp/p1_costnet_verdict.json 2>>"$RESULT" | tee -a "$RESULT"
+  grade() {  # grade <out> [extra args...]
+    local out="$1"; shift
+    # shellcheck disable=SC2086
+    python3 -m scripts.ml.p1_costnet_grade \
+      --manifest "$MANIFEST" \
+      --model-state "${EXP}model_state.json" \
+      --dataset "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" \
+      --cost-gate "${EXP}cost_gate.json" --journal "$LIVE_JOURNAL" \
+      $GRADE_ARGS "$@" --out "$out" 2>>"$RESULT" | tee -a "$RESULT"
+  }
+  grade "$VERDICT_OUT"
+  if [ "$MEASURED_TOO" = "true" ]; then
+    grade "${VERDICT_OUT%.json}_measured.json" --measured-only
+  fi
   cp "${EXP}cost_gate.json" /tmp/p1_costnet_cost_gate.json
 else
   log "ABORT: no experiment dir / cost_gate.json"

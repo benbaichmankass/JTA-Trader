@@ -1,0 +1,9 @@
+candle dataset: served binance__XRPUSDT__15 (175200 rows, last 2026-11-17 23:45:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol XRPUSDT --timeframe 15m --strategy-name ict_scalp_xrp_15m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261118-abab-34/44565627622/arms/A__trades.jsonl --json comms/research/RQ-20261118-abab-34/44565627622/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven
+[LONG] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol XRPUSDT --timeframe 15m --strategy-name ict_scalp_xrp_15m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261118-abab-34/44565627622/arms/LONG__trades.jsonl --json comms/research/RQ-20261118-abab-34/44565627622/arms/LONG__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --side-filter long
+[SHORT] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol XRPUSDT --timeframe 15m --strategy-name ict_scalp_xrp_15m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261118-abab-34/44565627622/arms/SHORT__trades.jsonl --json comms/research/RQ-20261118-abab-34/44565627622/arms/SHORT__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --side-filter short
+{
+ "verdict": "pass",
+ "label": "reachable_lever_beats_removed",
+ "why": "SHORT beats the removed-lever baseline by 22.5306 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+}
