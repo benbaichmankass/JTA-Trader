@@ -1,0 +1,95 @@
+{
+  "kind": "ppi_mom",
+  "symbol": "ES=F",
+  "snapshot_files": [
+    "comms/macro/econ_calendar_snapshots.jsonl",
+    "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+  ],
+  "releases": 141,
+  "releases_with_value": 141,
+  "price_bars": 5513,
+  "first_release": "2015-01-15",
+  "last_release": "2026-11-13",
+  "release_start": null,
+  "release_end": null,
+  "anchor_shift_td": 0,
+  "releases_after_window": 141,
+  "rows": [
+    {
+      "horizon_days": 3,
+      "n": 141,
+      "ic": -0.275357,
+      "ic_t": -3.377,
+      "overlap_factor": 1.0,
+      "n_eff": 141.0,
+      "ic_t_eff": -3.377,
+      "pearson": -0.312073,
+      "sign_hit_rate": 0.408333,
+      "mean_fwd_return": 0.003385
+    }
+  ],
+  "summary": {
+    "max_n": 141,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": true,
+    "any_flagged_horizon_overlap_corrected": true,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.275357,
+    "strongest_ic_t": -3.377,
+    "strongest_ic_t_eff": -3.377,
+    "t_flag": 2.0,
+    "verdict": "surprise_predicts_forward_return"
+  },
+  "rule": {
+    "primary": [
+      3
+    ],
+    "min_n": 100,
+    "t_bar": 2.4,
+    "expected_sign": "negative"
+  },
+  "per_horizon": [
+    {
+      "horizon_days": 3,
+      "n": 141,
+      "ic": -0.275357,
+      "ic_t_eff": -3.377,
+      "n_ok": true,
+      "t_reached": true,
+      "sign_ok": true
+    }
+  ],
+  "rank_tilt": {
+    "horizon_days": 3,
+    "cost_frac_roundtrip": 0.00125,
+    "rank_warmup": 24,
+    "tilt_excess_net": {
+      "n": 117,
+      "mean": 0.00191615,
+      "t": 1.886
+    },
+    "mean_weight": 0.972918,
+    "cost_stack": {
+      "cost_symbol": "MES",
+      "fee_bps_roundtrip": 7.5,
+      "fee_source": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP (venue rate unset)",
+      "slippage_bps_roundtrip": 5.0,
+      "funding_bps_per_window": 0.0,
+      "funding_applied": false,
+      "total_bps_roundtrip": 12.5,
+      "cost_frac": 0.00125
+    }
+  },
+  "ic_grade": {
+    "verdict": "pass",
+    "note": "a pre-registered horizon reached the t-bar in the expected sign (evidence for a build row, not a leg: costs, tradeable timing and a placebo are still owed)"
+  },
+  "trade_rule": {
+    "book": "rank_tilt",
+    "horizon": 3,
+    "min_n": 100,
+    "t_bar": 2.0,
+    "rank_warmup": 24
+  }
+}
