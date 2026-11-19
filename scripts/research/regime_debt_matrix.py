@@ -1180,6 +1180,11 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
                 argv += [flag, str(cfg[k])]
         if cfg.get("be_offset_bps"):
             argv.append(_SCALP_BE_FLAG)
+        if forming_1m:
+            # ROW ICT-SCALP-FORMING-BAR-ARM: hand the 1m CSV to the harness so an arm that adds `--decision-bar forming` can read it.
+            # The harness ignores it on a closed-bar arm (the control), so the base argv stays valid for every arm. No forming_1m
+            # (every existing caller) = no flag = argv byte-identical to before.
+            argv += ["--minutes-1m-csv", str(forming_1m)]
         omitted = sorted(k for k in cfg
                          if k not in _SCALP_PLAIN and k not in _SCALP_LEVER_FLAG
                          and k != "be_offset_bps")
