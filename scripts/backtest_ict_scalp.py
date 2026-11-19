@@ -647,6 +647,107 @@ def _stamp_decision_time_regime(
         pass
 
 
+def _parse_skip_hours(raw: str) -> set:
+    """CSV of UTC hours (0-23) -> set. Empty = off. Anything else is refused: a typo must not silently mean 'no gate'."""
+    out = set()
+    for tok in str(raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            h = int(tok)
+        except ValueError:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}") from None
+        if not 0 <= h <= 23:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}")
+        out.add(h)
+    return out
+
+
+_FBE = None
+
+
+def _forming_bar_entries():
+    """scripts/research/forming_bar_entries.py, loaded by FILE (the one implementation of the forming-bar tick convention)."""
+    global _FBE
+    if _FBE is None:
+        import importlib.util
+        mod = sys.modules.get("forming_bar_entries")
+        if mod is None:
+            spec = importlib.util.spec_from_file_location(
+                "forming_bar_entries", Path(__file__).resolve().parent / "research" / "forming_bar_entries.py")
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules["forming_bar_entries"] = mod
+            spec.loader.exec_module(mod)
+        _FBE = mod
+    return _FBE
+
+
+def _forming_pick(df: pd.DataFrame, i: int, window_size: int, per_bar_cfg: Dict[str, Any], M: Dict[str, Any], tf_min: int,
+                  tick_step: int, side_filter: str, min_confidence: float, adx_max: Optional[float]):
+    """The LIVE decision on the still-forming bar i, replayed from 1m data (row ICT-SCALP-FORMING-BAR-ARM).
+
+    Live, the ict_scalp builder calls order_package every ~2 min on a 200-bar frame whose last row is the forming bar. At tick k
+    (k = 2, 4, ..., 12 minutes into a 15m bar: scripts/research/forming_bar_entries.py::session_ticks, the ONE definition) the frame is the closed bars up to i-1 plus bar i truncated to
+    its first k minutes (its open, the running high/low, the last close). The FIRST tick whose package passes every gate of the arm
+    (direction filter, min_confidence, ADX ceiling read on the same truncated frame, never the whole closed bar) is the decision.
+    Returns (pkg, k, rest_high, rest_low) with the bar's range AFTER that tick (NaN-safe -> None), or None when no tick fires."""
+    lo = max(0, i + 1 - window_size)
+    for k in _forming_bar_entries().session_ticks(None, tf_min, tick_step):
+        col = k - 1                                    # minutes [0, k) are seen at tick k
+        rh_run, rl_run, lc = M["run_h"][i, col], M["run_l"][i, col], M["last_c"][i, col]
+        if rh_run != rh_run or rl_run != rl_run or lc != lc:   # no 1m data for this minute: no tick, never invented
+            continue
+        fr = df.iloc[lo: i + 1].copy()
+        for name, val in (("high", rh_run), ("low", rl_run), ("close", lc)):
+            fr.iloc[-1, fr.columns.get_loc(name)] = float(val)
+        try:
+            pkg = order_package(dict(per_bar_cfg), candles_df=fr)
+        except ValueError:
+            continue
+        if side_filter != "both":
+            from src.runtime.strategy_signal_builders import _side_filter_suppresses
+            if _side_filter_suppresses(pkg["direction"], side_filter):
+                continue
+        if float(pkg.get("confidence") or 0.0) < min_confidence:
+            continue
+        if adx_max is not None:
+            from src.runtime.regime import detect_regime
+            f200 = df.iloc[max(0, i + 1 - 200): i + 1].copy()
+            for name, val in (("high", rh_run), ("low", rl_run), ("close", lc)):
+                f200.iloc[-1, f200.columns.get_loc(name)] = float(val)
+            _adx_v = detect_regime(f200).get("adx")
+            if _adx_v is None or float(_adx_v) >= float(adx_max):
+                continue
+        rh, rl = M["rest_h"][i, k], M["rest_l"][i, k]
+        return pkg, k, (None if rh != rh else float(rh)), (None if rl != rl else float(rl))
+    return None
+
+
+def _forming_same_bar_exit(i: int, direction: str, sl: float, tp: Optional[float],
+                           rest_high: Optional[float], rest_low: Optional[float]) -> Optional[Dict[str, Any]]:
+    """A stop/target touched in the rest of the entry bar itself, after the entry tick. Stop first when both are touched (the
+    closed engine's own pessimistic ordering). None = nothing touched (or no 1m range known): the normal walk starts on bar i+1."""
+    if rest_high is None or rest_low is None:
+        return None
+    long_ = direction == "long"
+    sl_hit = (rest_low <= sl) if long_ else (rest_high >= sl)
+    tp_hit = tp is not None and ((rest_high >= tp) if long_ else (rest_low <= tp))
+    if not (sl_hit or tp_hit):
+        return None
+    return {"outcome": "sl_hit" if sl_hit else "tp_hit", "exit_index": i, "exit_price": sl if sl_hit else float(tp),
+            "mfe_price": None, "mae_price": None, "banked": False, "banked_index": None}
+
+
+def _skip_hours_arg(raw: str) -> str:
+    """argparse `type=`: refuse a malformed CSV at parse time (exit 2), keep the raw string for run_backtest."""
+    try:
+        _parse_skip_hours(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+    return raw
+
+
 def run_backtest(
     df: pd.DataFrame,
     *,
@@ -683,9 +784,28 @@ def run_backtest(
     adx_max: Optional[float] = None,
     session_flat_et: Optional[str] = None,
     side_filter: str = "both",
+    skip_hours: str = "",
+    decision_bar: str = "closed",
+    decision_1m: Optional[pd.DataFrame] = None,
 ) -> Dict[str, Any]:
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
+    skip_hour_set = _parse_skip_hours(skip_hours)
+    decision_bar = str(decision_bar or "closed").lower()
+    if decision_bar not in ("closed", "forming"):
+        raise ValueError(f"decision_bar must be closed|forming, got {decision_bar!r}")
+    forming = decision_bar == "forming"
+    fb = None
+    if forming:
+        # ROW ICT-SCALP-FORMING-BAR-ARM: replay the LIVE decision, taken on the still-forming bar every ~2 min, from 1m data.
+        # Same tick convention as scripts/research/forming_bar_entries.py (the one implementation the trend/pullback
+        # harnesses use): ticks every 2 minutes into the bar (session_ticks), the first tick that passes every gate of the arm enters
+        # at that tick's price, and the bar's remaining range decides a same-bar stop/target touch (stop first).
+        if decision_1m is None:
+            raise ValueError("decision_bar='forming' needs decision_1m (a 1m OHLC frame)")
+        if stamp_regime:
+            raise ValueError("stamp_regime is not implemented with decision_bar='forming' (it would read the whole closed bar)")
+        fb = _forming_bar_entries()
     tp_geom = tp_geometry or _tpg.TPGeometrySpec()
     _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
     if _refused:
@@ -694,6 +814,9 @@ def run_backtest(
         raise ValueError(f"entry_mode must be 'market' or 'limit', got {entry_mode!r}")
     if entry_mode == "limit" and int(limit_expire_bars) < 1:
         raise ValueError("limit_expire_bars must be >= 1")
+    if forming and (entry_mode != "market" or tp_geom.armed):
+        raise ValueError("decision_bar='forming' supports the market entry and the unit's own bracket only "
+                         "(limit entry and moving-target geometry are not implemented on the forming bar)")
     n_signals = 0
     cfg = {"symbol": symbol, "timeframe": timeframe, **cfg_overrides}
     htf_df = _build_htf_series(df, htf_rule=htf_rule, ema_period=htf_ema_period)
@@ -739,12 +862,27 @@ def run_backtest(
     if session_flat_et:
         flat_bar, no_entry = session_flat_marks(df, session_flat_et)
 
+    M = tf_min = None
+    if forming:
+        tf_min = fb.tf_minutes(timeframe)
+        M = fb.minute_matrices(decision_1m, df, tf_min)
     next_eligible_idx = warmup_bars
     for i in range(warmup_bars, n - 1):
         if i < next_eligible_idx:
             continue
         if no_entry is not None and no_entry[i]:
             continue
+        # TIME-OF-DAY GATE (PI-20261119-FILLW47B-0002): skip a signal whose SIGNAL bar's UTC hour is in --skip-hours. Same semantics as
+        # scripts/backtest_trend.py --skip-hours (the signal bar is the decision anchor; an unparseable timestamp never skips). It sits BEFORE
+        # order_package because a skipped bar mutates no state there (no cooldown, no entry), so the result is the same as gating after it,
+        # and S_ASIA/S_LATE skip 8/4 of 24 hours. The live ict_scalp builder reads no skip_hours today: a PASS still needs a live producer.
+        # Default "" = no gate = byte-identical to before (tests/data/ict_scalp_side_filter_golden.json).
+        if skip_hour_set:
+            try:
+                if pd.Timestamp(df["timestamp"].iloc[i]).hour in skip_hour_set:
+                    continue
+            except (TypeError, ValueError):
+                pass
         lo = max(0, i + 1 - window_size)
         window = df.iloc[lo : i + 1]
         # v2 HTF bias: read the pre-aligned htf_close + htf_ema for this bar
@@ -756,34 +894,44 @@ def run_backtest(
             if hc == hc and he == he:  # not NaN
                 per_bar_cfg["htf_close"] = float(hc)
                 per_bar_cfg["htf_ema"] = float(he)
-        try:
-            pkg = order_package(per_bar_cfg, candles_df=window)
-        except ValueError:
-            continue
-        direction = pkg["direction"]
-        # DIRECTION GATE (PI-20261119-OFUCR5NF-0003): the shared live gate, imported not copied --
-        # src.runtime.strategy_signal_builders._side_filter_suppresses is what the trend/pullback live builders call
-        # (`long` suppresses shorts, `short` suppresses longs, `both` never). The live ict_scalp builder does NOT read a
-        # side_filter today (no ict_scalp leg configures one), so a PASS from this arm still needs a live producer.
-        # Default "both" = no gate and no import = byte-identical to before (tests/data/ict_scalp_side_filter_golden.json).
-        if side_filter != "both":
-            from src.runtime.strategy_signal_builders import _side_filter_suppresses
-            if _side_filter_suppresses(direction, side_filter):
+        tick_k = rest_h = rest_l = None
+        if forming:
+            picked = _forming_pick(df, i, window_size, per_bar_cfg, M, tf_min, fb.TICK_STEP,
+                                   side_filter, min_confidence, adx_max)
+            if picked is None:
                 continue
-        # Confidence is computed by the live order_package() itself, so this
-        # gate is an exact mirror of a live min_confidence floor.
-        confidence = float(pkg.get("confidence") or 0.0)
-        if confidence < min_confidence:
-            continue
-        # ADX CEILING (PI-20261101-HIPIPRHQ-0001): skip a signal whose decision-time ADX-14 is >= adx_max. Same
-        # detector + same trailing 200-bar window the live builder stamps (_stamp_decision_time_regime), read at
-        # signal bars only. Default None = no gate = byte-identical to before. An unreadable ADX is SKIPPED (the
-        # conservative reading, as backtest_fade.py), never silently let through.
-        if adx_max is not None:
-            from src.runtime.regime import detect_regime
-            _adx_v = detect_regime(df.iloc[max(0, i + 1 - 200): i + 1]).get("adx")
-            if _adx_v is None or float(_adx_v) >= float(adx_max):
+            pkg, tick_k, rest_h, rest_l = picked
+            direction = pkg["direction"]
+            confidence = float(pkg.get("confidence") or 0.0)
+        else:
+            try:
+                pkg = order_package(per_bar_cfg, candles_df=window)
+            except ValueError:
                 continue
+            direction = pkg["direction"]
+            # DIRECTION GATE (PI-20261119-OFUCR5NF-0003): the shared live gate, imported not copied --
+            # src.runtime.strategy_signal_builders._side_filter_suppresses is what the trend/pullback live builders call
+            # (`long` suppresses shorts, `short` suppresses longs, `both` never). The live ict_scalp builder does NOT read a
+            # side_filter today (no ict_scalp leg configures one), so a PASS from this arm still needs a live producer.
+            # Default "both" = no gate and no import = byte-identical to before (tests/data/ict_scalp_side_filter_golden.json).
+            if side_filter != "both":
+                from src.runtime.strategy_signal_builders import _side_filter_suppresses
+                if _side_filter_suppresses(direction, side_filter):
+                    continue
+            # Confidence is computed by the live order_package() itself, so this
+            # gate is an exact mirror of a live min_confidence floor.
+            confidence = float(pkg.get("confidence") or 0.0)
+            if confidence < min_confidence:
+                continue
+            # ADX CEILING (PI-20261101-HIPIPRHQ-0001): skip a signal whose decision-time ADX-14 is >= adx_max. Same
+            # detector + same trailing 200-bar window the live builder stamps (_stamp_decision_time_regime), read at
+            # signal bars only. Default None = no gate = byte-identical to before. An unreadable ADX is SKIPPED (the
+            # conservative reading, as backtest_fade.py), never silently let through.
+            if adx_max is not None:
+                from src.runtime.regime import detect_regime
+                _adx_v = detect_regime(df.iloc[max(0, i + 1 - 200): i + 1]).get("adx")
+                if _adx_v is None or float(_adx_v) >= float(adx_max):
+                    continue
         entry = float(pkg["entry"])
         sl = float(pkg["sl"])
         unit_tp = float(pkg["tp"])
@@ -860,7 +1008,7 @@ def run_backtest(
             ref_idx = fill_idx
             sim_start = fill_idx
         # Fill simulation starts on the next bar (limit mode: on the fill bar itself).
-        result = _simulate_exit(
+        result = (_forming_same_bar_exit(i, direction, sl, tp, rest_h, rest_l) if forming else None) or _simulate_exit(
             df,
             start_idx=sim_start,
             direction=direction,
@@ -900,10 +1048,15 @@ def run_backtest(
         # sum to the original position, so round-trip notional — and therefore
         # the bps cost model in _cost_breakdown — is unchanged to first order.
         ts = df["timestamp"].iloc[ref_idx] if "timestamp" in df.columns else ref_idx
+        if forming and tick_k is not None and "timestamp" in df.columns:
+            ts = pd.Timestamp(ts) + pd.Timedelta(minutes=int(tick_k))      # the tick the live decision was taken on
         exit_ts = (
             df["timestamp"].iloc[result["exit_index"]] if "timestamp" in df.columns else result["exit_index"]
         )
         meta = dict(pkg.get("meta") or {})
+        if forming:
+            meta["decision_bar"] = "forming"
+            meta["tick_min"] = int(tick_k)
         if stamp_regime:
             # Decision-time stamp over the live builder's 200-bar fetch window.
             lo200 = max(0, i + 1 - 200)
@@ -1486,6 +1639,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--side-filter", choices=["long", "short", "both"], default="both",
                    help="Directional gate, the shared live _side_filter_suppresses: long skips shorts, short skips longs, "
                         "both (default) = no gate, byte-identical. exit_lever_ablation passes it for the DIRECTION arms.")
+    p.add_argument("--skip-hours", default="", type=_skip_hours_arg, metavar="H,H,...",
+                   help="Time-of-day entry lever (empty = off, byte-identical): CSV of UTC hours (0-23) whose SIGNAL bars never enter. "
+                        "Same semantics as backtest_trend.py --skip-hours. exit_lever_ablation passes it for the SESSION arms.")
+    p.add_argument("--decision-bar", choices=["closed", "forming"], default="closed",
+                   help="closed (default, byte-identical): decide on each CLOSED bar. forming: replay the LIVE decision, taken on the "
+                        "still-forming bar every ~2 min, from --minutes-1m-csv (row ICT-SCALP-FORMING-BAR-ARM; the as-traded Stage-0 arm). "
+                        "Market entry and the unit's own bracket only.")
+    p.add_argument("--minutes-1m-csv", default=None, metavar="CSV",
+                   help="1m OHLC CSV (timestamp,open,high,low,close[,volume]) for --decision-bar forming; ignored when closed, so a driver "
+                        "can pass it to every arm (exit_lever_ablation --minutes-1m-csv / --forming-1m-fetch).")
     p.add_argument("--adx-max", type=float, default=None, metavar="X",
                    help="Skip signals whose decision-time ADX-14 (live detect_regime, trailing 200 bars) is >= X. "
                         "Default off (no gate).")
@@ -1758,6 +1921,16 @@ def main(argv: List[str]) -> int:
         except Exception as exc:
             print(f"WARNING: could not read --vol-spec-json {args.vol_spec_json}: {exc}; "
                   "vol_regime will stamp as unknown", file=sys.stderr)
+    decision_1m = None
+    if args.decision_bar == "forming":
+        if not args.minutes_1m_csv:
+            print("ERROR: --decision-bar forming needs --minutes-1m-csv", file=sys.stderr)
+            return 2
+        try:
+            decision_1m = _forming_bar_entries().load_1m_csv(args.minutes_1m_csv)
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"ERROR: could not read --minutes-1m-csv {args.minutes_1m_csv}: {exc}", file=sys.stderr)
+            return 2
     bt_kwargs = dict(
         cfg_overrides=cfg_overrides,
         timeframe=args.timeframe,
@@ -1770,6 +1943,9 @@ def main(argv: List[str]) -> int:
         vol_spec=vol_spec,
         adx_max=(float(args.adx_max) if args.adx_max is not None else None),
         side_filter=str(args.side_filter),
+        skip_hours=str(args.skip_hours),
+        decision_bar=str(args.decision_bar),
+        decision_1m=decision_1m,
         stamp_regime=bool(args.stamp_regime),
         sim_breakeven=bool(args.sim_breakeven),
         be_arm_on_touch=bool(args.be_arm_on_touch),

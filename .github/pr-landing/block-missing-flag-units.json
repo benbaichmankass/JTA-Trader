@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "moves 14 queued units into research/queue/blocked/ (the pr-landing guard refuses self-land for that)",
+  "why": "check_queue_harness_flags.py --audit (PR #27200) found 14 more queued abab units that pass lever flags their harness does not declare (fade, fvg_range, squeeze, turtle_soup, ict_scalp); each would die at argparse and land producer_failed (abab-18 and abab-19 already did). Blocked on PI-20261119-FILLW47B-0003 so no runner slot is spent on a deterministic failure. Gates this adds or changes: none."
+}

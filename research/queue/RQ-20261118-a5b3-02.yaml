@@ -1,0 +1,119 @@
+# Hand-authored 2026-11-18 by lane PRACTICE-REFRESH-20261118 (Tier 1, frontier-research practice refresh), dispatched by the manager.
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261118-a5b3-02
+title: 'Event-class weights from our own markets: is the absolute 2 h move and realized vol of BTC / ETH / SOL (1h, 5m) and MGC / SPY
+  after an fomc DECISION larger than after fomc MINUTES, cpi and nfp, against matched non-event hours? Sets the evidence for the impact
+  weights in config/economic_calendar.yaml'
+status: queued
+cadence: once
+kind: experiment
+theme: macro
+priority: 3
+roadmap:
+- L-DATA
+programme: P4
+origin: new_hypothesis
+practice_precedent: 'T15 (new 2026-11-18): minutes move markets less than statements but more than a normal day [S80 Rosa, NY Fed EPR
+  2013, ACAD; S81 Nechio & Wilson, FRBSF EL 2016-37, ACAD]; crypto evidence around FOMC is small-sample and mixed [S82, secondary summaries];
+  our calendar weights every fomc-kind release 1.0 (scripts/macro/econ_calendar_data.py) on judgement, not an evidence record.'
+question: 'For each release class (fomc_decision, fomc_minutes, cpi, nfp) with a point-in-time time stamp, 2021-01..2026-10: is the
+  median |log return| and the realized variance over [t, t+2h] on BTCUSDT, ETHUSDT, SOLUSDT (Binance 5m) and SPY, GLD (1h where 5m is
+  missing) larger than over the same weekday-hour on the 8 surrounding non-event weeks, and is the decision effect larger than the minutes
+  effect?'
+why_this_matters: 'The trader''s only event input is event_risk = impact x proximity (src/news/news_events.py). Read 2026-11-18: tonight''s
+  19:00Z "fomc" entry is the FOMC MINUTES (comms/macro/econ_calendar_snapshots.jsonl event evt-fomc-2026-11-18-us, event_name "FOMC
+  Minutes", impact_score 1.0), weighted the same as a rate decision; and on decision days the statement, decision and press conference
+  share one event_id, so config/economic_calendar.yaml keeps only the 19:30Z press conference for 2026-12-09 (proximity at the 19:00Z
+  decision = 0.5 under the 60 min ramp). CALENDAR-FOMC-RELEASE-SPLIT fixes the labels; this unit supplies the weights. Decision it changes:
+  a Tier-3 proposal of per-class impact values (and whether minutes belong in the crypto classes at all).'
+power:
+  expected_n: 46
+  min_detectable_effect: 0.3
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: ~46 fomc decisions and ~46 minutes 2021-2026 (8 per year each), ~70 cpi and ~70 nfp; effect in log-ratio units of
+    event vs matched non-event realized variance, sd ~1.0 assumed; ~46 pairs detect a log-ratio ~0.42 at 80% power, so a decision-vs-minutes
+    difference smaller than that reads INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Historical public candles and a historical release schedule; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: measurement
+decision_rule:
+  id: RULE-RQ-20261118-a5b3-02-EVENT-CLASS-WEIGHTS
+  registered_at: '2026-11-18'
+  registered_before_run: true
+  statistic: 'Per (class, symbol): the median over events of log(RV[t, t+2h] / mean RV of the 8 matched non-event weekday-hours), with
+    an event-level bootstrap 95% CI; and the decision-minus-minutes difference of that statistic with its CI.'
+  rule: 'A class is EVENT-ELEVATED on a symbol iff its CI lower bound > 0. DECISION > MINUTES iff the difference CI lower bound > 0
+    on at least 3 of the 5 symbols. PASS (weights evidenced): every class with n >= 30 events reads its CI, and the proposed impact
+    for each class = its median log-ratio rescaled so fomc_decision on BTC = 1.0, reported per asset class. FAIL: no class is EVENT-ELEVATED
+    on any crypto symbol (then the crypto event classes carry no measured basis and the proposal is to drop them from crypto). INDETERMINATE:
+    fewer than 30 events in a class, or the history does not separate decision from minutes. Fixed now; not changed after a run.'
+  baseline: matched non-event weekday-hours on the same symbol (8 surrounding weeks).
+  what_it_does_not_do: Measures only. Changes no calendar weight; a weight change is a Tier-3 proposal citing this record.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: 5m candles 2020-12..2026-12 for 3 crypto symbols (binance vision) and SPY/GLD (dukascopy 4.0.1), 230 releases x 9 RV windows
+    each; the fetch dominates.
+  why_runner: Fetches public candles; the Kaggle CPU kernel has no internet; no trainer data.
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  bucket: own_losses
+  basis: event_risk sizes every entry near a release on every account; an estimate, not a measurement.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- CALENDAR-FOMC-RELEASE-SPLIT
+- CALENDAR-EVENT-REACTION-STUDY
+- scripts/macro/econ_calendar_data.py
+- config/economic_calendar.yaml
+stated_biases:
+- release times from a reconstructed schedule (EVENT-SPAN-HISTORY), not a contemporaneous feed
+- SPY / GLD trade only in session; overnight releases are excluded for them
+what_it_does_not_do: Measures only; adds no gate; changes no config or weight.
+ml_consumer:
+  not_applicable: 'Not an ML unit: an event-window measurement for a calendar weight.'
+run:
+  command:
+  - python3
+  - scripts/research/event_vol_study.py
+  - run
+  - --events
+  - comms/research/event_span_history/us_releases.jsonl
+  - --unit
+  - RQ-20261118-a5b3-02
+  - --rule-id
+  - RULE-RQ-20261118-a5b3-02-EVENT-CLASS-WEIGHTS
+  - --registered-at
+  - '2026-11-18'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261118-a5b3-02
+amendments:
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), EVENT-SPAN-HISTORY build
+  text:
+  - 'UNBLOCKED: the release history is comms/research/event_span_history/us_releases.jsonl (scripts/research/event_span_history.py,
+    as of 2026-11-19): fomc_decision 45, fomc_minutes 46, cpi 69, nfp 70 releases 2021-01..2026-11, UTC, source per row. fomc_minutes
+    before 2026-07 are DERIVED (decision + 21 d at 14:00 ET), verified against all 4 observed minutes rows (across a DST change); derived=true
+    marks them.'
+  - 'Harness: scripts/research/event_vol_study.py (self-tested). SPY and GLD use 5m dukascopy bars (RTH CFDs), so cpi/nfp windows at
+    13:30Z have no SPY/GLD bars: those cells are REPORTED with n and not read. The registered ''fewer than 30 events in a class'' clause
+    is read per CLASS (events in the history), as the PASS clause (''every class with n >= 30 events reads its CI'') implies, fixed
+    now before any run.'
+  - No threshold, window, baseline definition or pass clause changes.

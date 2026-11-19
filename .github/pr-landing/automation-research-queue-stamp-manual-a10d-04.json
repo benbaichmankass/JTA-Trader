@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "hand-written dispatch stamp on research/queue/RQ-20261119-a10d-04.yaml (last_dispatched_at + an amendment line, text-appended); manager merges after CI",
+  "why": "Manager override 2026-11-19 09:10Z: RQ-20261119-a10d-04 (the ml_entry_eq_struct deciding read) was hand-dispatched (research-script-run.yml on main, run 44493850432) because the research dispatcher fires one unit per delayed cycle under repo backpressure. This stamp stops a double fire: while open the dispatcher's --check-open-stamp-prs treats the unit as dispatched; once merged _is_due reads not_due. Rule and command unchanged. Gates this adds or changes: none."
+}

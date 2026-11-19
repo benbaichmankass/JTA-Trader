@@ -67,6 +67,45 @@ def _epoch(v: Any) -> Optional[int]:
         return None
 
 
+PEAK_EPS_R = 0.25   # scripts/ml/build_exit_head_dataset.py HOLDING_PAYS_R, the eps its peak_is_in pass uses
+
+
+def derive_peak_is_in(rows: List[dict]) -> Dict[str, Any]:
+    """D8 more_mfe (RQ-20261119-a10d-06): stamp peak_is_in on rows built before the builder's second pass existed, IN PLACE,
+    with the builder's own definition (build_exit_head_dataset.py, "M20 P4.2 label"): per trade, final MFE = the running
+    mfe_r at the trade's last bar (the builder emits one row per bar of the hold and mfe_r is a running max, so it is the
+    trade's max mfe_r); peak_is_in = 1 iff final MFE - mfe_r(t) <= 0.25 R. A truncation observable from the row's own trade,
+    no barrier re-simulation. Rows that already carry peak_is_in are left untouched; rows without trade_key or mfe_r are
+    left without it (could_not_look, never imputed). Returns the counts so the result can say where the label came from."""
+    final: Dict[str, float] = {}
+    for r in rows:
+        k, m = r.get("trade_key"), r.get("mfe_r")
+        if k is None or m is None:
+            continue
+        final[k] = max(final.get(k, float("-inf")), float(m))
+    had = derived = missing = 0
+    for r in rows:
+        if r.get("peak_is_in") is not None:
+            had += 1
+            continue
+        k, m = r.get("trade_key"), r.get("mfe_r")
+        if k is None or m is None or k not in final:
+            missing += 1
+            continue
+        fmd = final[k] - float(m)
+        r["future_mfe_delta"] = round(fmd, 4)
+        r["peak_is_in"] = 1 if fmd <= PEAK_EPS_R else 0
+        derived += 1
+    return {"rows": len(rows), "already_labelled": had, "derived": derived, "not_derivable": missing, "trades": len(final)}
+
+
+PEAK_MIN_DERIVABLE = 0.90   # a10d-06: below this share of rows labelled, more_mfe is could_not_look (INDETERMINATE)
+
+
+def peak_derivable_share(src: Dict[str, Any]) -> float:
+    return (src["already_labelled"] + src["derived"]) / src["rows"] if src.get("rows") else 0.0
+
+
 def with_target(rows: List[dict], arm: str) -> Optional[List[dict]]:
     """Copies of `rows` carrying the arm's target under train_exit_head.TARGET's name; None if the source column is absent."""
     if arm == CHAMPION:
@@ -190,7 +229,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="drop rows.jsonl rows of this symbol from every fold's training (a held-out-symbol read); repeatable")
     ap.add_argument("--z", type=float, default=Z_DEFLATED, help="CI z for the judge (default the aadc-04 deflated 2.241)")
     ap.add_argument("--pass-dr", type=float, default=PASS_DR, help="pass bar in R/trade (default +0.01)")
+    ap.add_argument("--derive-peak-is-in", action="store_true",
+                    help="RQ-20261119-a10d-06: stamp peak_is_in from trade_key + mfe_r on rows that predate the builder's pass")
     ap.add_argument("--rule-id", default=RULE_ID)
+    ap.add_argument("--registered-at", default="2026-11-17", help="the unit's decision_rule.registered_at (default aadc-04/-11's)")
     ap.add_argument("--json", dest="json_out", required=False)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -210,6 +252,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     rows_path = Path(a.rows) if os.path.isabs(a.rows) else Path(_REPO_ROOT) / a.rows
     rows = teh.load_rows(rows_path)
+    peak_source = derive_peak_is_in(rows) if a.derive_peak_is_in else None
     from collections import Counter
     rows_by_symbol = dict(Counter(str(r.get("symbol") or "unknown") for r in rows))
     excl = set(a.exclude_train_symbol)
@@ -236,14 +279,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     fired = {arm: sum(1 for r in recs if r.get(f"fired_{arm}")) for arm in arms}
     measured = bool(recs)
     n = max((s["n"] for s in j["arms"].values()), default=0)
+    if peak_source is not None and peak_derivable_share(peak_source) < PEAK_MIN_DERIVABLE:   # a10d-06 rule: could_not_look
+        j = {**j, "verdict": "indeterminate",
+             "why": f"peak_is_in derivable on {peak_derivable_share(peak_source):.3f} of rows < {PEAK_MIN_DERIVABLE} (could_not_look); judge: {j['why']}"}
     row = {"schema_version": 1, "research_unit": a.unit,
            "read_state": "measured" if measured else "producer_failed",
            "verdict": j["verdict"] if measured else "not_applicable", "note": j["why"], "n": n,
            "population": (f"OOS harness trades of {[leg for leg, _ in legs]} ({a.timeframe}), {a.num_folds}-fold sequential "
                           f"walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n {len(rows)}) "
                           f"bar_t <= fold start - {a.embargo_days} d; paired per-trade replayed R vs the holding_pays champion"),
-           "decision_rule": {"id": a.rule_id, "registered_at": "2026-11-17", "registered_before_run": True},
+           "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
            "measurement": {"judge": j, "arm_dr_vs_hold_context": context, "fired": fired, "target_coverage": coverage,
+                           "peak_is_in_source": peak_source,
                            "cost_basis": cost, "lookback": a.lookback,
                            "rows_by_symbol": rows_by_symbol, "excluded_train_symbols": sorted(excl),
                            "train_rows_after_exclusion": len(rows), "z": a.z, "pass_dr": a.pass_dr,
@@ -267,6 +314,14 @@ def _self_test() -> int:
     mm = with_target(rows, "more_mfe")
     assert [r["holding_pays"] for r in mm] == [0 if i % 4 == 0 else 1 for i in range(12)]
     assert with_target([{"bar_t": 1, "holding_pays": 1}], "more_mfe") is None, "an absent source column is could_not_look"
+    # a10d-06: peak_is_in derived from trade_key + running mfe_r equals the builder's definition (final MFE - MFE(t) <= 0.25)
+    tr = [{"trade_key": "A", "mfe_r": m} for m in (0.0, 0.4, 0.9, 1.0, 1.0)] + [{"trade_key": "B", "mfe_r": 0.2},
+          {"trade_key": None, "mfe_r": 0.1}, {"trade_key": "C", "mfe_r": 0.5, "peak_is_in": 0}]
+    st = derive_peak_is_in(tr)
+    assert [r.get("peak_is_in") for r in tr] == [0, 0, 1, 1, 1, 1, None, 0], [r.get("peak_is_in") for r in tr]
+    assert st == {"rows": 8, "already_labelled": 1, "derived": 6, "not_derivable": 1, "trades": 3}, st
+    assert tr[1]["future_mfe_delta"] == 0.6 and with_target(tr, "more_mfe") is not None
+    assert abs(peak_derivable_share(st) - 7 / 8) < 1e-12 and peak_derivable_share(st) < PEAK_MIN_DERIVABLE
     assert judge({"holding_pays_0": [0.03] * 400, "more_mfe": [0.0] * 400})["chosen"] == "holding_pays_0"
     assert judge({"holding_pays_0": [-0.01, 0.0] * 200, "more_mfe": [0.0, -0.005] * 200})["verdict"] == "fail"
     assert judge({"holding_pays_0": [0.03] * 100, "more_mfe": [0.03] * 100})["verdict"] == "indeterminate"

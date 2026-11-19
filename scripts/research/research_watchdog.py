@@ -494,7 +494,10 @@ class GhProbe:
 
     def dispatch(self, action: str) -> bool:
         if action == "replenish":
-            return self._gh(["workflow", "run", "research-queue-replenish.yml", "-f", "target=25"]) is not None
+            # REPLENISH-PR-HONEST (manager 2026-11-19): no explicit target. `target=25` expanded templates to meet a
+            # queue count, which STOP-GENERATED-AUTHORING (operator 2026-11-01) bans; a blank target = 0 = programme
+            # nodes only. Latent until now: no watchdog-dispatched run since 2026-11-12 (all 25 manual runs target 0).
+            return self._gh(["workflow", "run", "research-queue-replenish.yml"]) is not None
         return self._gh(["workflow", "run", DISPATCH_WORKFLOW]) is not None
 
     def ping(self, message: str) -> bool:
