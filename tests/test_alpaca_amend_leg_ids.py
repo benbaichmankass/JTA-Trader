@@ -123,7 +123,9 @@ def test_without_an_entry_order_id_the_prior_rule_still_refuses_ambiguity():
     c = NestedFakeAlpaca(_three_slv_shorts())
     r = aa.tighten(c, symbol="SLV", direction="short", qty=2, new_sl=41.50, apply=True)
     assert r["result"] == aa.X_REFUSED
-    assert r["detail"].startswith("ambiguous_legs: 3 stop / 3 target leg(s) of qty=2.0")
+    # a stop tighten needs only the stop resolved; three same-size stops still refuse
+    assert r["detail"].startswith("ambiguous_legs: 3 stop / 0 target leg(s) of qty=2.0")
+    assert r["before"]["ambiguous_unneeded"] == {"target": 3}
     assert c.patches == [] and c.entry_reads == []
 
 
@@ -218,3 +220,31 @@ def test_exec_trade_leg_scopes_by_the_rows_broker_order_id():
     assert r["result"] == aa.X_APPLIED, r
     assert c.patches == [("sl-e7758", {"stop_price": "41.60"})]
     assert db.updates and db.updates[0][1]["stop_loss"] == 41.6
+
+
+def _three_slv_shorts_targets_unnested():
+    """Stops nested under their entries; the three same-size targets are NOT
+    attributable to an entry (the shape AM-OPS-8 feared from the flat read)."""
+    legs = _three_slv_shorts()
+    for o in legs:
+        if o["type"] == "limit":
+            o["parent"] = None
+    return legs
+
+
+def test_a_stop_tighten_is_not_blocked_by_sibling_targets_it_cannot_attribute():
+    c = NestedFakeAlpaca(_three_slv_shorts_targets_unnested())
+    r = aa.tighten(c, symbol="SLV", direction="short", qty=2, new_sl=41.50,
+                   apply=True, entry_order_id="e7758")
+    assert r["result"] == aa.X_APPLIED, r
+    assert c.patches == [("sl-e7758", {"stop_price": "41.50"})]
+    assert r["before"]["ambiguous_unneeded"] == {"target": 3}
+    assert r["before"]["target_leg"] is None  # never guessed
+
+
+def test_a_target_move_still_refuses_when_its_targets_are_ambiguous():
+    c = NestedFakeAlpaca(_three_slv_shorts_targets_unnested())
+    r = aa.tighten(c, symbol="SLV", direction="short", qty=2, new_tp=37.0,
+                   apply=True, entry_order_id="e7758")
+    assert r["result"] == aa.X_REFUSED and "ambiguous_legs" in r["detail"]
+    assert c.patches == []

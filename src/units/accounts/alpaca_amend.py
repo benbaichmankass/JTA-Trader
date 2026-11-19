@@ -188,14 +188,18 @@ def _entry_leg_ids(client: Any, entry_order_id: Any) -> Optional[set]:
 
 def read_trade_legs(client: Any, *, symbol: str, direction: str,
                     qty: float, entry_order_id: Any = None,
-                    extra_leg_ids: Any = ()) -> Dict[str, Any]:
+                    extra_leg_ids: Any = (),
+                    need: Any = ("stop", "target")) -> Dict[str, Any]:
     """The venue's view of ONE trade's protection: its stop leg and target leg,
     the position and the mark. Legs are this trade's by ORDER ID when
     *entry_order_id* resolves (its nested legs, plus *extra_leg_ids*, e.g. the
     id a PATCH just returned), else by share count (``leg_scope`` says which,
-    per kind). ``read_state`` is ``resolved`` or ``read_failed``; a resolved
-    read may still carry a ``refuse`` reason (we looked and the shape is unsafe
-    to patch)."""
+    per kind). Only a kind in *need* refuses when ambiguous; an ambiguous kind
+    the caller will not touch reads as no leg (``ambiguous_unneeded`` names it),
+    so a stop tighten is never blocked by sibling targets it cannot tell apart
+    and never patches them either. ``read_state`` is ``resolved`` or
+    ``read_failed``; a resolved read may still carry a ``refuse`` reason (we
+    looked and the shape is unsafe to patch)."""
     sym = str(symbol).upper()
     out: Dict[str, Any] = {"read_state": "read_failed", "symbol": sym,
                            "direction": direction, "qty": qty,
@@ -255,6 +259,11 @@ def read_trade_legs(client: Any, *, symbol: str, direction: str,
             out["leg_scope"][kind] = "entry_order"
         else:
             mine[kind] = by_qty[kind]
+    need = {str(k) for k in (need or ("stop", "target"))}
+    for kind in ("stop", "target"):
+        if len(mine[kind]) > 1 and kind not in need:
+            out.setdefault("ambiguous_unneeded", {})[kind] = len(mine[kind])
+            mine[kind] = []
     if len(mine["stop"]) > 1 or len(mine["target"]) > 1:
         out["refuse"] = (f"ambiguous_legs: {len(mine['stop'])} stop / "
                          f"{len(mine['target'])} target leg(s) of qty={qty}"
@@ -364,9 +373,11 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
         return {"result": X_REFUSED, "detail": f"bad qty {qty!r}"}
     if qty <= 0:
         return {"result": X_REFUSED, "detail": "qty must be positive (it scopes the legs)"}
+    need = tuple(k for k, v in (("stop", new_sl), ("target", new_tp)) if v is not None) \
+        or ("stop", "target")
     try:
         before = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty,
-                                 entry_order_id=entry_order_id)
+                                 entry_order_id=entry_order_id, need=need)
     except Exception as exc:  # noqa: BLE001 — a raised read is could-not-look
         return {"result": X_COULD_NOT_LOOK, "detail": f"{type(exc).__name__}: {exc}"}
     out: Dict[str, Any] = {"before": before, "oco_leg_ids": {
@@ -432,7 +443,8 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
             try:
                 after = read_trade_legs(client, symbol=symbol, direction=direction, qty=qty,
                                         entry_order_id=entry_order_id,
-                                        extra_leg_ids=[sent.get("new_id")])
+                                        extra_leg_ids=[sent.get("new_id")],
+                                        need=need)
             except Exception as exc:  # noqa: BLE001
                 after = {"read_state": "read_failed", "detail": str(exc)}
             if not _replace_pending(after, step["kind"], sent, step["leg_id"]) \
