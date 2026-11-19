@@ -5332,9 +5332,10 @@ nodes:
     kind: experiment
     question: On USO 1h (dukascopy) over 2018-06-01..2026-10-15, the 9e1a/9e1b window and folds, does AX40 or AX50 (--adx-max) beat
       the declared uso_trend_1h by the replace grade, net of cost?
-    why_this_matters: 'Decision it changes: whether uso_trend_1h''s regime family is closed (vol AND trend-strength flat -> the map
-      moves to session / sizing_vs_cost, the last untested families) or carries a trend-strength ceiling into its declare case. The
-      ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read on uso_trend_1h.'
+    why_this_matters: 'Decision it changes: whether the ADX-ceiling configurations AX40 / AX50 join uso_trend_1h''s declare case or
+      are recorded as failed on this window (then the map''s next read is session / sizing_vs_cost) or carries a trend-strength ceiling
+      into its declare case. The ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read
+      on uso_trend_1h.'
     iteration:
       subject: uso_trend_1h
       subject_kind: strategy_leg
@@ -5469,9 +5470,10 @@ nodes:
     kind: experiment
     question: On TLT 1h (dukascopy) over 2018-06-01..2026-10-26, the 9e1a/9e1b window and folds, does AX40 or AX50 (--adx-max) beat
       the declared tlt_pullback_1h by the replace grade, net of cost?
-    why_this_matters: 'Decision it changes: whether tlt_pullback_1h''s regime family is closed (vol AND trend-strength flat -> the map
-      moves to session / sizing_vs_cost, the last untested families) or carries a trend-strength ceiling into its declare case. The
-      ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read on tlt_pullback_1h.'
+    why_this_matters: 'Decision it changes: whether the ADX-ceiling configurations AX40 / AX50 join tlt_pullback_1h''s declare case
+      or are recorded as failed on this window (then the map''s next read is session / sizing_vs_cost) or carries a trend-strength ceiling
+      into its declare case. The ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read
+      on tlt_pullback_1h.'
     iteration:
       subject: tlt_pullback_1h
       subject_kind: strategy_leg

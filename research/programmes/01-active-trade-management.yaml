@@ -17781,8 +17781,8 @@ nodes:
     question: On the 8 selection legs' committed corpora, does partial_close (frac 0.5) at the first new_peak trigger clear RULE-AM-RISK-ADJUSTED-V1?
     why_this_matters: 'Decision it changes: ltr-partial-close is an ORPHAN. Its two iterations searched 6 triggers, never new_peak.
       new_peak is the only trigger that cleared R2 and R3 for another action class on this corpus (tp_pull_in, 43% dd cut; sl_to_structure
-      4 of 6). PASS -> holdout read on the real-TP corpus; FAIL -> the trigger family is exhausted for partial closes at 0.5 and the
-      next pass moves to action_bounds (frac 0.33 / 0.75) on the least-bad trigger.'
+      4 of 6). PASS -> holdout read on the real-TP corpus; FAIL -> this configuration (partial_close 0.5 @ new_peak) is closed on this
+      corpus and the next pass moves to action_bounds (frac 0.33 / 0.75) on the least-bad trigger.'
     iteration:
       subject: ltr-partial-close
       subject_kind: ltr_class
@@ -17903,8 +17903,8 @@ nodes:
     question: On the 8 selection legs' committed corpora, does a FULL close (partial_frac 1.0) at the first new_peak trigger clear RULE-AM-RISK-ADJUSTED-V1?
     why_this_matters: 'Decision it changes: the near_target line of ltr-close is closed by c9d2-01. On real-TP legs, near_target duplicates
       the TP and cuts nothing, and on tp_r-50 legs it fakes one. new_peak is the remaining informative trigger. PASS -> a holdout read
-      on the real-TP corpus (the c9d2-01 shape); FAIL -> the trigger family for full closes is exhausted at this power and the class
-      moves to timing (the desk''s wake cadence).'
+      on the real-TP corpus (the c9d2-01 shape); FAIL -> this configuration (full close @ new_peak) is closed on this corpus and the
+      class''s next read is timing (the desk''s wake cadence).'
     iteration:
       subject: ltr-close
       subject_kind: ltr_class
