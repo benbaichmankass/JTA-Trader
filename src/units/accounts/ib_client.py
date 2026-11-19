@@ -573,6 +573,10 @@ def _readable_client_id(order: Any) -> Optional[int]:
         return None
 
 
+#: Any price at or above this is ib_insync's UNSET_DOUBLE sentinel (sys.float_info.max), never a level.
+_IB_UNSET_PRICE_FLOOR = 1e300
+
+
 def _protective_leg_side(order_type: Optional[str]) -> Optional[str]:
     """Classify an IB order type as the ``stop`` side, the ``target`` side, or
     neither — the axis :meth:`IBClient.protection_coverage` was missing.
@@ -1914,6 +1918,23 @@ class IBClient:
         # says so loudly, because that path is the one that can strand a sibling.
         oca_key = str(order.get("oca_key") or "").strip()
         oca_group = f"oca-protect-t{oca_key}" if oca_key else None
+        # ── NEVER DROP A RESTING TAKE-PROFIT ON A STOP-ONLY RE-ARM (BRACKETS-ALWAYS) ──
+        # The keyed pre-cancel below removes this trade's legs, a resting target included. When the caller carries a
+        # stop and no target, read the target it is about to cancel and re-place it at the SAME price. Keyed path only:
+        # on the symbol-wide fallback the resting targets may be a SIBLING trade's, sized to that trade.
+        tp_carried: Optional[float] = None
+        _no_tp = tp_raw in (None, 0) or float(tp_raw) <= 0
+        if oca_group and _no_tp:
+            try:
+                tp_carried = self._resting_own_target_price(
+                    ib, sym, oca_group, order.get("entry_order_id"))
+            except Exception as exc:  # noqa: BLE001 -- a failed read keeps today's behaviour
+                logger.warning("place_protective: resting-target read for %s failed: %s", sym, exc)
+            if tp_carried is not None:
+                logger.warning(
+                    "place_protective: stop-only re-arm for %s group %s carries the resting take-profit %s forward "
+                    "instead of cancelling it (BRACKETS-ALWAYS)", sym, oca_group, tp_carried)
+                tp_raw = tp_carried
         precancel: Optional[Dict[str, Any]] = None
         try:
             if oca_group:
@@ -2137,7 +2158,7 @@ class IBClient:
         return {
             "retCode": 0,
             "result": {"orderId": str(_named.orderId), "ocaGroup": oca_group,
-                       "legs_placed": len(legs)},
+                       "legs_placed": len(legs), "tp_carried_forward": tp_carried},
             "retMsg": "OK",
         }
 
@@ -3622,6 +3643,67 @@ class IBClient:
         self._log_cancel_verdict(sym, f"stray groups {plan['stray_groups']}", plan)
         return plan
 
+    @staticmethod
+    def _is_own_trade_leg(order: Any, group: str, parent: int) -> bool:
+        """Is *order* one of THIS trade's legs: in its keyed OCA group, or a protective child of its entry?
+
+        The ONE definition of the keyed pre-cancel's population, shared by :meth:`_cancel_oca_group_for_symbol` (which
+        cancels it) and :meth:`_resting_own_target_price` (which reads the take-profit it is about to cancel), so the two
+        can never disagree about which legs are this trade's."""
+        if group and str(getattr(order, "ocaGroup", "") or "") == group:
+            return True
+        if parent > 0:
+            try:
+                return (int(float(getattr(order, "parentId", 0) or 0)) == parent
+                        and _protective_leg_side(getattr(order, "orderType", "")) is not None)
+            except (TypeError, ValueError):
+                return False
+        return False
+
+    def _resting_own_target_price(self, ib: Any, symbol: str, oca_group: str,
+                                  parent_order_id: Any = None) -> Optional[float]:
+        """The price of the take-profit leg THIS trade has resting, or None.
+
+        BRACKETS-ALWAYS (inventory item 1, AM-OPS-4 2026-11-19): a re-arm that carries a stop and NO target (a trailing
+        amend on a trade whose journal row has no take-profit) used to cancel the trade's resting legs, its take-profit
+        included, and re-place the stop alone, so a TP resting at the venue was silently removed. The re-arm now carries
+        the resting target's own price forward. Population = exactly what the keyed pre-cancel removes
+        (:meth:`_is_own_trade_leg`), read from this session's book (``openTrades``), the same book the cancel acts on.
+        A leg this session cannot see, it also cannot cancel, so it survives and is joined as before.
+
+        Returns None when there is no such leg, or when the legs disagree on price (ambiguous: logged, never guessed).
+        """
+        sym = str(symbol or "").upper()
+        try:
+            parent = int(float(parent_order_id)) if parent_order_id is not None else 0
+        except (TypeError, ValueError):
+            parent = 0
+        prices: set = set()
+        for trade in self._open_trades(ib):
+            try:
+                contract = getattr(trade, "contract", None)
+                trade_sym = str(getattr(contract, "symbol", "") or "").upper()
+                if sym and trade_sym and trade_sym != sym:
+                    continue
+                order = getattr(trade, "order", None)
+                if not self._is_own_trade_leg(order, str(oca_group or ""), parent):
+                    continue
+                if _protective_leg_side(getattr(order, "orderType", "")) != "target":
+                    continue
+                px = self._protective_leg_price(order, "target")
+                if px is not None:
+                    prices.add(px)
+            except Exception:  # noqa: BLE001 -- one malformed leg never breaks the read
+                continue
+        if len(prices) == 1:
+            return next(iter(prices))
+        if len(prices) > 1:
+            logger.error(
+                "place_protective: %s group %s holds %d resting take-profit legs at different prices %s; not carrying "
+                "any forward (ambiguous). The stop-only re-arm will remove them (BRACKETS-ALWAYS)",
+                sym, oca_group, len(prices), sorted(prices))
+        return None
+
     def _cancel_oca_group_for_symbol(
         self, ib: Any, symbol: str, oca_group: str,
         parent_order_id: Optional[int] = None,
@@ -3682,17 +3764,7 @@ class IBClient:
                     if sym and trade_sym and trade_sym != sym:
                         continue
                     order = getattr(trade, "order", None)
-                    in_group = str(getattr(order, "ocaGroup", "") or "") == group
-                    own_bracket_child = False
-                    if parent > 0 and not in_group:
-                        try:
-                            own_bracket_child = (
-                                int(float(getattr(order, "parentId", 0) or 0)) == parent
-                                and _protective_leg_side(
-                                    getattr(order, "orderType", "")) is not None)
-                        except (TypeError, ValueError):
-                            own_bracket_child = False
-                    if not (in_group or own_bracket_child):
+                    if not self._is_own_trade_leg(order, group, parent):
                         continue
                     key = self._leg_identity(order)
                     if key:
@@ -4066,7 +4138,10 @@ class IBClient:
                 val = float(raw)
             except (TypeError, ValueError):
                 continue
-            if val > 0 and val == val:
+            # ib_insync marks an unset price with UNSET_DOUBLE (sys.float_info.max, 1.797e308), not None: verified on
+            # ib_insync 0.9.86, where LimitOrder(...).auxPrice == 1.7976931348623157e+308. Without this bound a leg whose
+            # first-choice price is unset fell back to the other field and read as a 1.8e308 level.
+            if val > 0 and val == val and val < _IB_UNSET_PRICE_FLOOR:
                 return val
         return None
 
