@@ -157,14 +157,15 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
 grading:
+  attested: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
   auto: false
   decision_rule_id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
   evidence:
   - comms/research/RQ-20261118-04a5-04/44572560928/verdict.json
   - research/results/RQ-20261118-04a5-04/44572560928.jsonl
   graded_at: '2026-11-19'
-  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
-  rows: 1
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager; scripts/research/queue_grade.py auto-grade on main concurs (verdict fail, all rows measured)
+  rows: 2
   verdict: fail
   reason: 'run 44572560928 (trainer, landed on main). Cell rule: n_oos >= 300 AND dR/trade >= 0 AND 95% LB > -0.02 R AND pooled recovered R
     > the random-truncation control p95. neg25 cells: trend_donchian (BTC) n 1,235, dR +0.0160, LB -0.0384 -> fails the LB clause (and
