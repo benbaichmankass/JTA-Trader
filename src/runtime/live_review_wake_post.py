@@ -40,6 +40,9 @@ Routine fire (TRADE-ACTION-DIRECT-PATH phase 3): before the comment, ``src.runti
 starts ONE fresh reviewer session for every newly due entry whose packet is on the rows branch (receipt key
 ``routine_fire``; log ``runtime_logs/live_review/fires.jsonl``). The comment still posts either way; a fired entry
 carries ``routine_fire.state: fired`` + ``session_id`` in the marker, so the manager does not dispatch it.
+⚠️ ORDER: the wake toggles are applied BEFORE the fire, so an entry a toggle drops is neither fired nor commented
+(only its packet lands). The fire is also off for every class while ``LIVE_REVIEW_ROUTINE_ID`` is unset on the VM
+(operator pause, #25869, 2026-11-13): ``fire()`` returns ``not_configured`` and every wake goes to manager dispatch.
 
 Pre-screen log (LTR-PRACTICE-REDESIGN): each pass appends the due computation's
 ``prescreen`` records to ``runtime_logs/live_review/prescreen.jsonl`` (read via
