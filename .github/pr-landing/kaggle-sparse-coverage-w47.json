@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Two research workflows (research-script-run-kaggle-cpu.yml, research-script-run-kaggle.yml): the sparse checkout excluded all of comms/research/, so comms/research/candle_dataset/coverage.json was absent in the bundle step, candle_dataset.covers() returned False, the published candle dataset was never mounted and every candle-fetching unit hit Binance DNS errors on the internet-off kernel. Now excludes only comms/research/RQ-*/** (the dispatcher's own pattern). Behavioral test with a real git sparse checkout. Root cause of PI-20261118-EFILLW47-0003. Revert: git revert.",
+  "why": "24 of 142 results since 11-17 landed producer_failed; the unit bundled with published_data [] although the dataset and coverage were published."
+}
