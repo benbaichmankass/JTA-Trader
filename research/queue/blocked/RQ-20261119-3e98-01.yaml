@@ -29,9 +29,10 @@ iteration:
     initial_risk_signal), whose take-all is the -0.527 R that drags the gate. Removing them from the real-money book leaves 434 - 240 = 194
     rows < the P1 floor of 200, so a live-only re-read is INDETERMINATE by construction. The dataset already emits 1,061 paper rows
     (event_source live_paper, never eval), which are the demo floor the consumer acts on.'
-  search: 'one factor, the EVAL POPULATION: real-money book (all strategies) -> paper book of rostered strategies. Model recipe, features,
-    threshold and P1 criteria are the v023 ones; the only data change is a strategy field on live/paper rows (outcome metadata, never a
-    feature).'
+  search: 'one factor, the EVAL POPULATION: real-money book (all strategies) -> paper book of rostered strategies. Features, LightGBM params,
+    threshold and P1 criteria are the v023 ones. Because the paper cohort is the hold-out, the real-money live rows move to the TRAIN side
+    (the setup-candidates-metalabel-paper-v1 precedent); the only data change is a strategy field on live/paper rows (outcome metadata,
+    never a feature). Manifest: research/manifests/setup-candidates-metalabel-rostered-paper-v1.yaml.'
   levers:
   - universe
   map_entries:
@@ -122,7 +123,9 @@ blocked_on:
     new dataset version; (2) scripts/ml/p1_costnet_grade.py: --eval-source live|live_paper and --strategies-file, recomputing (a) on the
     filtered rows and reading (b) at --lb-pct; (3) a paper manifest of the v023 recipe (live_flag_column event_source, live_flag_true_value
     live_paper, include_paper true) and a run: block.'
-  clears_when: (1)-(3) are merged with tests; then git-mv to research/queue/ with the run block, rule unchanged
+  clears_when: '(1)-(3) are merged with tests (PR #27430); the run is then one trainer relay as for v023 (build v024 include_paper=true,
+    ml train --no-register, p1_costnet_grade.py --eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt
+    --lb-pct 0.833), graded from its record; rule unchanged'
 lands:
   store: research/results/
   assert_field: read_state
