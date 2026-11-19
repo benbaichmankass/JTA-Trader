@@ -4,7 +4,7 @@
 id: RQ-20261119-ef40-02
 title: 'D2 MECHANICS: after the stride-1 rebuild, does the live fc_* block of each matched bar equal the offline stride-1 fc_* of its OWN
   bar or of an EARLIER bar (the scorer serving the previous published forecast), for btc/sol-regime-15m-lgbm-fc-pcv-v2?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -92,4 +92,26 @@ related:
 - PI-20261119-K7ZSW5Z7-0005
 - scripts/research/fc_live_lag_diff.py
 - scripts/research/vol_serve_path_diff.py
-last_dispatched_at: null
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-ef40-02-FC-LIVE-LAG
+  evidence:
+  - comms/research/RQ-20261119-ef40-02/44551241841/verdict.json
+  - comms/research/RQ-20261119-ef40-02/44551241841/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ), HELD for the manager
+  rows: 1
+  verdict: fail
+  verdict_label: RESIDUAL
+  reason: 'run 44551241841 (trainer, 15:07-15:16Z, success). The collector row research/results/RQ-20261119-ef40-02/44551241841.jsonl reads
+    producer_failed ONLY because this run predates #27357 (verdict.json then lacked population / n); the run''s own verdict.json is read_state
+    measured, verdict fail (RESIDUAL), and is graded here by the registered rule. BTCUSDT (n matched 983): exact_k0 0.5514, exact_k-1 0.0793,
+    none 0.3693 -> k0 + top nonzero k = 0.6307 < 0.98 = RESIDUAL. SOLUSDT (n 895): exact_k0 0.5218, exact_k-1 0.0715, near_only 0.0022, none
+    0.4045 -> 0.5933 < 0.98 = RESIDUAL. Unit RESIDUAL (fail). WHAT IT SHOWS: the previous-bar lag exists but is small (7-8% of rows; scored a
+    median 90-124 s into the bar vs 476-487 s for own-bar matches: the forecast for the new bar was not yet published at score time; lag -1
+    streaks mostly length 1). The dominant mismatch (37-40% of rows) matches NO bar within -2..+2: a different input window or input, not a lag;
+    its median |diff| fc_ret_med 0.00058 BTC / 0.00036 SOL, fc_skew 0.079 / 0.039, comparable to the signal size; those rows are scored late in
+    the bar (median 508-522 s). REGISTERED fail_action: observability first. The live publisher (scripts/ml/publish_live_forecasts.py) stamps
+    its window end ts and a window hash into the artifact so the next diff compares windows directly (filed as the follow-on on
+    PI-20261119-K7ZSW5Z7-0005). No serving change from this unit; a10d-02 stays blocked.'
+last_dispatched_at: '2026-11-19T15:07:11+00:00'

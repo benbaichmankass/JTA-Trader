@@ -1,0 +1,69 @@
+# AUTHORED by AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN), 2026-11-19: the LEVER-OFF ARM a7f1-07 did not emit. a7f1-07
+# (run 44517900736) swept 25 alternative cells against a base that already carries the live trail_decay, so the shipped
+# lever itself (on vs off) was not re-graded on fresh data. Same data, rule, split and cost stack; only without_declared_levers
+# changes. Gates this adds or changes: none.
+id: RQ-20261119-c8e2-01
+title: 'LEVER-OFF ARM on current data: does the SHIPPED trail_decay on REAL-MONEY leg trend_donchian_eth_4h still earn
+  its place (base with trail_decay removed vs the shipped_* cell restoring it at live values)?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- M20
+practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg
+  and net of the full cost stack [S4, S5, S6]'
+question: 'On CURRENT data (trainer data/ETHUSDT_5m.csv resampled to 4h, refreshed past the ~2026-06-18 freeze; the same
+  input a7f1-07 used), with trail_decay REMOVED from the base book (m20 --without-declared-lever trail_decay), does the shipped_*
+  revalidation cell that restores trail_decay at its live values (stall 10 / tight 1.8) clear the exit-refinement P2 gate?
+  A FAIL is a data-backed argument to retire the live lever (a Tier-3 decision for the manager); a PASS confirms it.'
+why_this_matters: trail_decay is SHIPPED live on bybit_2 (real money) + bybit_portfolio + bybit_1. a7f1-07 showed no alternative
+  beats it but never measured lever on vs off on fresh data, which is the question its own text names for a shipped lever.
+power:
+  expected_n: 25
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades insufficient_base,
+    not fail. The sweep derives the IS/OOS boundary to target that OOS count (split_mode oos-trades).
+  feasibility:
+    source: none
+    accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-EXIT-REFINEMENT-P2-GATE
+  statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
+  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path B (improves
+    net_r_per_capital_day in BOTH IS and OOS with maxDD not worsening and net_R not falling more than the declared
+    floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is capped at the base book's own D_b.
+    Below the floor grades insufficient_base. No cell is shipped by this unit.
+  registered_at: '2026-10-31'
+  registered_before_run: true
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: one leg per unit; the workflow scp's the leg's frames from the trainer and sweeps on the runner.
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: trend_donchian_eth_4h
+    tp_cap_pct: '0.099'
+    split_mode: oos-trades
+    research_unit: RQ-20261119-c8e2-01
+    without_declared_levers: trail_decay
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+follows_from:
+  unit: RQ-20261119-a7f1-07
+  run: '44517900736'
+  reason: its sweep emitted no lever-off arm (all 25 rows kind=cell vs the live-lever base)
+last_dispatched_at: '2026-11-19T16:03:36+00:00'

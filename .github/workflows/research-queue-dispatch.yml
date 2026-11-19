@@ -796,6 +796,24 @@ jobs:
       # liveness signal (the guard grades age against a 48 h window, so a
       # receipt a few minutes older changes nothing). Fails open: if the API
       # call fails, land it.
+      # AUTOMATION-DATACOMMIT-CONFLICT (manager-approved 2026-11-19): the stamp landing runs with
+      # verify-merged "false", so commit-to-main's refresh (where resolve_stamp_conflicts.py runs) never
+      # reaches a stamp PR, and one that a later stamp beat to main sat conflicted until the 6 h closer
+      # above. Each cycle: merge main into every CONFLICTED open stamp PR and resolve with that resolver;
+      # close it as superseded when main already carries the same or later stamps, else push the refresh.
+      # A non-stamp conflict is left alone and printed. In a SEPARATE worktree: this tree holds this
+      # cycle's unlanded stamps. Listing uses GITHUB_TOKEN (the PAT's REST budget is exhausted at times,
+      # ACTIONS-QUEUE-BACKLOG); the push uses the checkout's PAT so the refreshed head gets its checks.
+      - name: Refresh or retire conflicted stamp PRs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          git worktree add -q --detach /tmp/stamp-refresh HEAD
+          python3 scripts/research/refresh_stamp_prs.py --cwd /tmp/stamp-refresh
+          git worktree remove --force /tmp/stamp-refresh || true
+
       - name: Check for an in-flight receipt PR
         id: rcpt
         env:

@@ -168,6 +168,88 @@ def plan_row(row: Dict[str, Any], conn_factory: Callable[[], Any]
     return updates, None
 
 
+#: GROUP MODE (opt-in, ``--group``): rows closed in ONE close event span at most this many seconds.
+GROUP_CLOSE_SPAN_S = 300
+
+
+def plan_group(rows: List[Dict[str, Any]], conn_factory: Callable[[], Any]
+               ) -> Tuple[Optional[Dict[int, Dict[str, Any]]], Optional[str]]:
+    """``({row_id: updates}, None)`` or ``(None, why_not)`` for SEVERAL rows one venue order closed together.
+
+    WHY (ALPACA-CLOSE-BROKER-TRUTH, 2026-11-19): alpaca_paper QQQ rows 7780/7781/7782 (735/55/7 sh) and 7783 (2 sh)
+    were closed at once when the US-open gap took out their stops; no row's OWN qty equals a fill window or an order,
+    so ``plan_row`` refuses each one. Every share of a single venue order fills at that order's price, so when ONE
+    order's fills sum to the rows' combined qty, giving each row that price is still a MEASURED exit.
+
+    Refuses (never guesses) unless ALL hold: >= 2 rows; every row passes ``_skip_reason``; one account + symbol +
+    direction; closes within ``GROUP_CLOSE_SPAN_S``; ``exit_from_one_order_fills`` over the union window finds
+    exactly ONE order whose fills sum to the combined qty (two candidates or none refuse there). Close fees are
+    split by qty. The match is recorded as ``group_single_order`` with the group's ids and qty.
+    """
+    if len(rows) < 2:
+        return None, "group mode needs >= 2 rows"
+    for r in rows:
+        why = _skip_reason(r)
+        if why:
+            return None, f"id={r['id']}: {why}"
+    keys = {(str(r["account_id"] or ""), str(r["symbol"] or ""), str(r["direction"] or "").lower()) for r in rows}
+    if len(keys) != 1:
+        return None, f"rows span {len(keys)} account/symbol/direction keys; a group is one"
+    closes = [_ms(r["closed_at"]) for r in rows]
+    if (max(closes) - min(closes)) > GROUP_CLOSE_SPAN_S * 1000:
+        return None, f"closes span {(max(closes) - min(closes)) / 1000:.0f}s > {GROUP_CLOSE_SPAN_S}s: not one close event"
+    total = round(sum(float(r["position_size"]) for r in rows), 10)
+    acct, sym, direction = next(iter(keys))
+    rec = exit_from_one_order_fills(
+        account_id=acct, symbol=sym, direction=direction,
+        opened_at_ms=min(_ms(r["created_at"]) for r in rows), closed_at_ms=max(closes) + _SLACK_MS,
+        qty=total, own_order_ids=(), conn_factory=conn_factory)
+    if rec is None or rec.get("match") != "single_order_qty":
+        return None, f"no single venue order whose fills sum to the group qty {total:g} (or two that do)"
+    # EXACT, not the per-row QTY_TOLERANCE (5%): a group is allocated share-for-share, so an order that filled
+    # 797 of 799 grouped shares would price a row that order never closed. Any mismatch refuses.
+    filled = float(rec.get("qty") or 0.0)
+    if abs(filled - total) > max(1e-9, total * 1e-9):
+        return None, (f"no single venue order whose fills sum to the group qty {total:g} "
+                      f"(nearest order {rec.get('order_id')} filled {filled:g}; group mode needs an exact match)")
+    exit_px = float(rec["avg_exit_price"])
+    fees_total = float(rec.get("fees") or 0.0)
+    cvu = contract_value_usd_for(sym)
+    ids = [r["id"] for r in rows]
+    out: Dict[int, Dict[str, Any]] = {}
+    for r in rows:
+        share = float(r["position_size"]) / total
+        pnl = compute_realized_pnl(entry_price=r["entry_price"], exit_price=exit_px, qty=r["position_size"],
+                                   direction=r["direction"], contract_value_usd=cvu)
+        if pnl is None:
+            return None, f"id={r['id']}: pnl not computable"
+        fees = round(fees_total * share, 6)
+        pnl = round(pnl - fees, 4)
+        notes = _notes(r.get("notes"))
+        notes["backfill_own_fill"] = {
+            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "match": "group_single_order", "order_id": rec.get("order_id"), "fill_at": rec.get("closed_at"),
+            "group_ids": ids, "group_qty": total, "qty_share": round(share, 8),
+            "prior_exit_price": r.get("exit_price"),
+            "prior_exit_price_source": notes.get("exit_price_source"),
+            "prior_pnl": r.get("pnl"),
+        }
+        notes["exit_price_source"] = FILL_EXIT_SOURCE
+        notes["exit_price_allocation"] = "group_allocated"
+        notes["pnl_source"] = "local_compute"
+        notes["contract_value_usd"] = cvu
+        if fees:
+            notes["close_fees_usd"] = fees
+            notes["pnl_net_of_close_fees"] = True
+        upd: Dict[str, Any] = {"exit_price": exit_px, "pnl": pnl, "notes": json.dumps(notes, ensure_ascii=False)}
+        pct = compute_pnl_percent(pnl=pnl, entry_price=r["entry_price"], qty=r["position_size"],
+                                  contract_value_usd=cvu)
+        if pct is not None:
+            upd["pnl_percent"] = pct
+        out[r["id"]] = upd
+    return out, None
+
+
 def _candidates(conn: sqlite3.Connection, ids: Optional[List[int]]) -> List[Dict[str, Any]]:
     conn.row_factory = sqlite3.Row
     cols = ("id, account_id, symbol, direction, entry_price, exit_price, position_size, "
@@ -191,7 +273,7 @@ def _take_backup():
     return take_backup
 
 
-def run(db_path: str, fills_db: str, *, apply: bool, ids: Optional[List[int]] = None) -> int:
+def run(db_path: str, fills_db: str, *, apply: bool, ids: Optional[List[int]] = None, group: bool = False) -> int:
     def fills_conn():
         return sqlite3.connect(f"file:{fills_db}?mode=ro", uri=True) if os.path.exists(fills_db) else None
 
@@ -207,6 +289,21 @@ def run(db_path: str, fills_db: str, *, apply: bool, ids: Optional[List[int]] = 
         missing = sorted(set(ids) - {r["id"] for r in rows})
         if missing:
             print(f"  ids not in the journal: {missing}")
+    if group:
+        gplan, why = plan_group(rows, fills_conn)
+        if gplan is None:
+            print(f"  GROUP REFUSED: {why}")
+            rows = []
+        else:
+            for r in rows:
+                upd = gplan[r["id"]]
+                n = json.loads(upd["notes"])["backfill_own_fill"]
+                print(f"  PLAN id={r['id']} {r['account_id']} {r['symbol']} {r['direction']} "
+                      f"qty={r['position_size']} exit {r['exit_price']} -> {upd['exit_price']:.6g} "
+                      f"pnl {r['pnl']} -> {upd['pnl']} (group_single_order order={n['order_id']} "
+                      f"group_qty={n['group_qty']:g} share={n['qty_share']} prior_src={n['prior_exit_price_source']})")
+                plans.append((r, upd))
+            rows = []
     for r in rows:
         upd, why = plan_row(r, fills_conn)
         if upd is None:
@@ -256,6 +353,9 @@ def main() -> int:
     ap.add_argument("--fills-db", default=None,
                     help="exchange_fills.sqlite (default: canonical resolver)")
     ap.add_argument("--ids", default=None, help="comma-separated trade-id allowlist")
+    ap.add_argument("--group", action="store_true",
+                    help="opt-in: price the --ids rows TOGETHER from the ONE venue order whose fills sum to their "
+                         "combined qty (refuses on any mismatch); see plan_group()")
     a = ap.parse_args()
     if a.db:
         db = a.db
@@ -268,13 +368,16 @@ def main() -> int:
         from src.runtime.exchange_fills_store import get_fills_db_path  # noqa: PLC0415
         fills = str(get_fills_db_path())
     ids = [int(x) for x in a.ids.split(",") if x.strip()] if a.ids else None
+    if a.group and (not ids or len(ids) < 2):
+        print("refusing --group without --ids naming >= 2 rows", file=sys.stderr)
+        return 2
     if a.apply and not ids:
         print("refusing --apply without --ids: name the rows you are repricing", file=sys.stderr)
         return 2
     if not os.path.exists(db):
         print(f"error: db not found at {db}", file=sys.stderr)
         return 2
-    return run(db, fills, apply=a.apply, ids=ids)
+    return run(db, fills, apply=a.apply, ids=ids, group=a.group)
 
 
 if __name__ == "__main__":

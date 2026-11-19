@@ -48,6 +48,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 
 from src.runtime.shadow_adapter import with_shadow_preds
@@ -296,7 +297,18 @@ def _passes_session_filter(
     if not enabled:
         return True
     try:
-        ts = df.index[-1]
+        # The live ``fetch_candles`` frame and the backtest windows carry the bar time in a ``timestamp`` COLUMN with a plain
+        # integer index (see ``_extract_entry_time``); reading ``df.index[-1]`` there gave epoch-hour 0 and blocked every
+        # signal whenever the filter was on. Prefer the column, fall back to the index (timestamp-indexed fixtures).
+        if "timestamp" in getattr(df, "columns", []):
+            ts = df["timestamp"].iloc[-1]
+        else:
+            ts = df.index[-1]
+        # A bare number is an epoch, never nanoseconds: ``pd.Timestamp(1_700_000_000_000)`` is 1970-01-01 00:28 (hour 0) and
+        # would block every signal. The Bybit connector already returns datetimes (``pd.to_datetime(..., unit="ms")``); this
+        # guards any connector that hands back raw epoch ms (13 digits) or seconds (10 digits).
+        if isinstance(ts, (int, float, np.integer, np.floating)) and not isinstance(ts, bool):
+            ts = pd.to_datetime(ts, unit="ms" if abs(float(ts)) > 1e11 else "s", utc=True)
         ts = pd.Timestamp(ts)
         if ts.tzinfo is None:
             # Assume UTC for naive indices — consistent with the rest of the repo.

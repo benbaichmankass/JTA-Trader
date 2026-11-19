@@ -535,6 +535,17 @@ def test_trigger_first_unreadable_inputs_and_unknown_class_fire_with_a_reason():
     assert ok and cls == "us_equity"
 
 
+def test_trigger_first_stale_history_is_unmeasured_not_zero_move():
+    """LTR-PACKET-READ-REACH 2026-11-19: one history bar, from before the last review, read as a 0.00 ATR move."""
+    last = datetime(2026, 11, 3, 13, 55, tzinfo=timezone.utc)
+    stale = {"history": [{"bar_ts": datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc).isoformat(),
+                          "last_price": 40.63, "atr": 0.41}]}
+    new, why = lrd.package_novelty(_prior(last), stale, 0.5, TF_NOW, 7200)
+    assert new and "no history bar after the last review" in why
+    ev, skips = _jc("SPY", _prior(last), stale)
+    assert ev is not None and not skips
+
+
 def test_trigger_first_unknown_asset_class_reads_open_and_says_why(monkeypatch):
     import src.runtime.market_hours as mh
     # the seam is the memoized profile exchange -> market_hours.asset_class_for_exchange (RM-AM-DUE-COULDNOTLOOK)

@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-31
 title: 'SESSION lever family on ict_scalp_sol_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of S_LATE/S_ASIA (SESSION skip-hours) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -87,15 +87,19 @@ run:
   - --research-unit
   - RQ-20261118-abab-31
   - --grade
-  - sweep
+  - replace
   - --baseline
   - A
   - --delta-r
-  - '4.0'
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
   - --folds
-  - '4'
+  - '6'
   - --fold-majority
-  - '3'
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
   - --n-floor
   - '39'
   - --out
@@ -113,3 +117,15 @@ roadmap:
 related:
 - RQ-20261105-032
 - research/levers/ict_scalp_sol_15m.yaml
+last_dispatched_at: '2026-11-19T16:44:11+00:00'
+grading:
+  attested: RULERQ20261118abab31
+  auto: true
+  decision_rule_id: RULERQ20261118abab31
+  evidence:
+  - research/results/RQ-20261118-abab-31/44551268234.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

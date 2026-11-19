@@ -257,3 +257,34 @@ def test_api_parity_route_and_checklist_source_db(tmp_path, monkeypatch):
     # WSD-S4: the repo is frozen, so the store-served payload is the canonical one
     assert "source" not in files and db["source"] == "db" and db["canonical"] is True
     assert [i["id"] for i in db["items"]] == [i["id"] for i in files["items"]]
+
+
+def test_a_column_written_after_import_is_exported_despite_absent():
+    """EXPORT-ABSENT-DROP (2026-11-19): a closed observation imported without terminal_reason kept it in
+    ``_absent``, so the export dropped the reason the store held and the record failed pipeline.validate."""
+    item = {"id": "X-1", "kind": "observation", "state": "dropped", "terminal_reason": "retired by record",
+            "owner": None, "extra": {"_source": "pipeline", "_absent": ["terminal_reason", "owner"],
+                                     "_legacy_state": "queued"}}
+    rec = wi.to_pipeline_item(item)
+    assert rec["state"] == "killed" and rec["terminal_reason"] == "retired by record"
+    assert "owner" not in rec                     # still empty -> still absent (round-trip unchanged)
+    item["terminal_reason"] = None
+    assert "terminal_reason" not in wi.to_pipeline_item(item)
+
+
+def test_a_terminal_reason_written_after_import_is_exported_despite_absent():
+    """EXPORT-ABSENT-DROP (2026-11-19): 44 closed observations exported without their terminal_reason."""
+    item = {"id": "X-1", "kind": "observation", "state": "dropped", "terminal_reason": "retired by record",
+            "owner": "someone", "extra": {"_source": "pipeline", "_absent": ["terminal_reason", "owner"],
+                                          "_legacy_state": "queued"}}
+    rec = wi.to_pipeline_item(item)
+    assert rec["state"] == "killed" and rec["terminal_reason"] == "retired by record"
+    assert "owner" not in rec                     # other absent keys keep their import-time shape
+    item["terminal_reason"] = None
+    assert "terminal_reason" not in wi.to_pipeline_item(item)
+
+
+def test_a_native_routed_item_exports_its_parent_as_routed_to():
+    item = {"id": "PI-N-1", "kind": "observation", "state": "queued", "parent_id": "ROW-1", "extra": None}
+    rec = wi.to_pipeline_item(item)
+    assert rec["state"] == "routed" and rec["routed_to"] == "ROW-1"

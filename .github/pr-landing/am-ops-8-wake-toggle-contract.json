@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_restart",
+  "hold_text": "Docstring-only, but both files are in the trader import closure (decide: RESTART). Manager merges; ideally with #27308.",
+  "why": "LTR-REVIEWER-NOT-FIRED-20261119, manager decision (b) 2026-11-19 14:04Z: keep paper off the automatic reviewer path (ltr_paper=false is the operator's own console act, 2026-11-08) and correct the contract text so it says what the code does. DOCSTRING-ONLY: src/runtime/wake_toggles.py claimed a toggle 'never decides ... what is reviewed', but live_review_wake_post applies the toggles BEFORE the routine fire (line 467 vs 481), so a dropped entry gets neither the comment nor a reviewer. Also records in live_review_wake_post that the fire is off for every class while LIVE_REVIEW_ROUTINE_ID is unset (operator pause, #25869). No behaviour change. trader_import_closure decide over the full file list: RESTART (both files are in the closure), so this is Tier 2 by deploy effect only. Suggest merging it in the same deploy window as #27308 (which restarts anyway) so one restart covers both. Tests: 42 pass; 3 test_wake_toggles failures are identical on main (ModuleNotFoundError in this environment), so pre-existing and unrelated. Revert: git revert. Gates this adds or changes: none."
+}

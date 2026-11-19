@@ -1,0 +1,73 @@
+{
+  "unit": "RQ-20261119-ef40-01",
+  "run_id": "44539864523",
+  "commit_sha": null,
+  "run_url": null,
+  "timeout_minutes": 240,
+  "runner": {
+    "cpu_model": null,
+    "cpu_simd": [
+      "asimd"
+    ],
+    "cores_logical": 1,
+    "cores_usable": 1,
+    "machine": "aarch64",
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-1060-oracle",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.11.0rc1",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.4",
+      "pandas": "3.0.3",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [
+      "cpu_model"
+    ],
+    "class_id": "8b8eea7d004b",
+    "read_state": "partial"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_head_fresh_rows.py",
+        "--legs",
+        "trend_donchian,trend_donchian_eth,trend_donchian_sol",
+        "--tf",
+        "1h",
+        "--family",
+        "donchian",
+        "--symbols",
+        "BTCUSDT,ETHUSDT,SOLUSDT",
+        "--after",
+        "2026-11-01",
+        "--db",
+        "data/trade_journal.db",
+        "--build-out",
+        "datasets-out/exit_head/1h/donchian_fresh_build",
+        "--publish",
+        "datasets-out/exit_head/1h/donchian_fresh/rows.jsonl",
+        "--unit",
+        "RQ-20261119-ef40-01",
+        "--out",
+        "comms/research/RQ-20261119-ef40-01/44539864523"
+      ],
+      "log": "comms/research/RQ-20261119-ef40-01/44539864523/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 31.2
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

@@ -1,0 +1,144 @@
+# Hand-authored 2026-11-19 by lane RESEARCH-OPS-20261119-1448 (Tier 1). ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-48ac-02
+title: 'ITERATION 3 of ltr-sl-to-structure (43b6-01 holdout FAIL on R3 only): one-factor pivot_bars 8 vs the registered 5 at new_peak, on the SELECTION corpora'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On the committed selection corpora (default all corpora), does sl_to_structure at the first new_peak with pivot_bars 8 (buffer 0.1 ATR, as registered) clear
+  R1-R4 including >= 4 of 6 folds, where pivot_bars 5 held only 3 of 6 on the holdout?
+why_this_matters: 'ltr-sl-to-structure is an orphan after 43b6-01 (research-ops 2026-11-19). On PASS: the geometry lever responds on selection data; the single survivor
+  then gets a holdout re-read (M13, recorded and deflated). On FAIL: the R3 miss is fold noise or timing, and the next family is the trigger/timing lever, not geometry.'
+iteration:
+  subject: ltr-sl-to-structure
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261117-43b6-01
+  verdict_read: fail
+  diagnosis: 'RQ-20261117-43b6-01 (holdout legs eth/sol_pullback_2h, donchian avax/ada_4h, 1 trigger): sl_to_structure@new_peak cleared R1 (cost), R2 (maxDD cut 17.4%)
+    and R4 (193 of 200 controls, edge +0.041 R, n_fired 577) but held only 3 of 6 folds (R3), so the verdict was FAIL on fold stability alone. Hypotheses: (a) the
+    5-bar swing stop is too tight and is taken out by noise in half the folds (geometry), (b) the effect is real but small and fold-noisy (noise), (c) the discovery
+    was selection from 9 trigger-cells. Only (a) is testable by a one-factor change; (b)/(c) are read from the result of this arm against its control.'
+  search: geometry lever (pivot_bars 8 vs 5), one factor, trigger new_peak fixed, selection corpora; arm denominator 1 new + the registered control; cumulative cells
+    10
+  levers:
+  - action_bounds
+  map_entries:
+  - research/levers/ltr-sl-to-structure.yaml
+  attempt: 3
+  due_by: '2026-11-26'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window, as recorded
+    per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 3500
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED, not measured: sized from the subject''s previous result n (see iteration.diagnosis); V1 n_floor 39 governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261119-48ac-02
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: Per-trade R books over the stated corpus, intervention at the first trigger vs the HOLD book, against 200 matched random-time interventions on the same
+    trades, net of the full cost stack.
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books (min_control_beat_frac 0.95), plus L1: a pass keeps r_cost
+    <= 0.05 R/trade after dropping the leg with the largest favourable contribution. PASS: every pre-registered candidate listed clears R1-R4 and L1 (one candidate
+    suffices where several are listed; that is a discovery, never a promotion). FAIL: every candidate fails a necessary clause (R1, R2 or R3) or is beaten by its
+    random control (R4). INDETERMINATE: anything else (under the n floor, never fired, carried by one leg, no_data). Fixed now; not changed after a run. Population:
+    all committed selection corpora in comms/strategy_evidence/ltr_corpus.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the
+  same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank (the live-review classes act on real-money packages); an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; a pull-in limit fills at its level, SL-first on the recorded exit bar
+- triggers are evaluated on bar closes, live on telemetry passes
+- legs declaring a fictional TP (tp_r >= 10) are excluded and named, so the population is smaller than 4,076
+- the same corpus was read by ed2b-05 for this class (3 other triggers)
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - sl_to_structure@new_peak
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds; REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261119-48ac-02
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - sl_to_structure
+  - --triggers
+  - new_peak
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.95'
+  - --n-comparisons
+  - '1'
+  - --pivot-bars
+  - '8'
+  - --pivot-buffer-atr
+  - '0.1'
+  - --out
+  - '{out_dir}'
+last_dispatched_at: '2026-11-19T17:12:15+00:00'
+grading:
+  attested: RULE-RQ-20261119-48ac-02
+  auto: true
+  decision_rule_id: RULE-RQ-20261119-48ac-02
+  evidence:
+  - research/results/RQ-20261119-48ac-02/44569543329.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
