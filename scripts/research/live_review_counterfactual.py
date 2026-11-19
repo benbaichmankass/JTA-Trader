@@ -514,8 +514,10 @@ def price_contained(reviews: Iterable[dict], packages: Dict[str, dict], trades: 
     for rv in reviews:
         try:
             out += price_all([rv], packages, trades, candle_fn)
-        except Exception as exc:  # noqa: BLE001
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:   # a schema-refused row's missing/odd field
             print(f"price_contained: {rv.get('review_id')}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            # counted, never dropped: the grade's could_not_price_reasons names it
+            out.append(_result({"order_package_id": None, **rv, "review_id": rv.get("review_id")}, state="could_not_price", reason=f"sidecar_row_unpriceable:{type(exc).__name__}"))
     return out
 
 

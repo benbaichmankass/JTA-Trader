@@ -373,11 +373,12 @@ def test_the_real_refused_applied_close_shape_prices_as_a_paired_close():
     assert chk.row_problems(o, "outcomes", chk.json.loads(chk.SCHEMA.read_text())) == []
 
 
-def test_price_contained_skips_a_row_that_raises_and_prices_the_rest():
+def test_price_contained_counts_a_row_that_raises_and_prices_the_rest():
     broken = {"review_id": "LR-x-pkg-t"}                       # no order_package_id: price_all raises KeyError
     good = review(action="close", level=None)
     res = cf.price_contained([broken, good], {"pkg-t": pkg()}, {1: trade(realised(4.0))}, lambda s, t: bars(*_RUN))
-    assert [r["review_id"] for r in res] == [good["review_id"]]
+    assert [r["review_id"] for r in res] == [broken["review_id"], good["review_id"]]
+    assert (res[0]["state"], res[0]["reason"]) == ("could_not_price", "sidecar_row_unpriceable:KeyError")
 
 
 def test_sidecar_reader_skips_ids_already_on_main(tmp_path):
