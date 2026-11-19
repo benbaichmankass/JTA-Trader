@@ -62,3 +62,14 @@ def test_main_alert_mode_never_gates(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(rdf, "rostered_symbols", lambda repo=None: None)       # could not look
     assert rdf.main(["--data-dir", str(tmp_path), "--alert-rostered"]) == 0
     assert "rostered_symbols_unreadable" in capsys.readouterr().out
+
+
+def test_stale_rostered_watches_the_legs_own_timeframe():
+    import scripts.ops.report_data_freshness as rdf
+    rows = _rows() + [
+        {"file": "USO_1h.csv", "grain": "1h", "read_state": "ok", "last_bar": "2026-06-18T19:00:00+00:00", "stale": True},
+        {"file": "SPY_15m.csv", "grain": "15m", "read_state": "ok", "last_bar": "2026-06-18", "stale": True},
+    ]
+    bad = rdf.stale_rostered(rows, {"USO": {"1h"}, "SPY": {"1h"}, "GDX": {"1d"}})
+    # USO_1h (its leg's tf) and GDX_1d; SPY_15m is not a rostered tf, SPY_1d is fresh
+    assert sorted(r["file"] for r in bad) == ["GDX_1d.csv", "USO_1h.csv"]

@@ -86,8 +86,9 @@ ALERT_COOLDOWN_S = 24 * 3600
 _STEM = {"MGC": "GC_F", "MHG": "HG_F", "MES": "ES_F", "SPYM": "SPLG"}
 
 
-def rostered_symbols(repo: Path = REPO_ROOT) -> set[str] | None:
-    """Every symbol of every enabled leg on a configured account's roster; None = could not look."""
+def rostered_symbols(repo: Path = REPO_ROOT) -> dict[str, set[str]] | None:
+    """{symbol: {timeframes its rostered legs trade}} for every enabled leg on a configured account's roster;
+    None = could not look. A symbol's 1d file is always watched too (HTF filters and daily harnesses read it)."""
     try:
         import yaml  # noqa: PLC0415
         if str(repo) not in sys.path:
@@ -100,22 +101,31 @@ def rostered_symbols(repo: Path = REPO_ROOT) -> set[str] | None:
         return None
     if not accounts or not strategies:
         return None
-    out: set[str] = set()
+    out: dict[str, set[str]] = {}
     for a in accounts.values():
         if not isinstance(a, dict) or a.get("configured") is False:
             continue
         for leg in a.get("strategies") or []:
             c = strategies.get(leg)
             if isinstance(c, dict) and c.get("enabled") is not False:
-                out.update(str(s) for s in c.get("symbols") or [])
+                for s in c.get("symbols") or []:
+                    out.setdefault(str(s), set()).update({"1d", str(c.get("timeframe") or "1h")})
     return out
 
 
-def stale_rostered(rows: list[dict], symbols: set[str]) -> list[dict]:
-    """The 1d rows for rostered symbols that are stale or unreadable (a missing file is not a row here)."""
-    stems = {_STEM.get(s, s.replace("=", "_")) for s in symbols}
-    return [r for r in rows if r["grain"] == "1d" and r["file"].removesuffix("_1d.csv") in stems
-            and (r["stale"] or r["read_state"] != "ok")]
+def stale_rostered(rows: list[dict], symbols) -> list[dict]:
+    """Rows for a rostered symbol's 1d file OR the timeframe its legs trade (``symbols`` is the
+    rostered_symbols() mapping; a bare set means 1d only) that are stale or unreadable. A missing file is not
+    a row here. TRAINER-1D-STALE-ROSTERED: USO_1h (uso_trend_1h) froze at 2026-06-18 unseen, like the 1d files."""
+    tfs = symbols if isinstance(symbols, dict) else {s: {"1d"} for s in symbols}
+    want = {(_STEM.get(s, s.replace("=", "_")), tf) for s, v in tfs.items() for tf in (v | {"1d"})}
+    out = []
+    for r in rows:
+        stem = r["file"].removesuffix(".csv")
+        sym, _, tf = stem.rpartition("_")
+        if (sym, r["grain"]) in want and tf == r["grain"] and (r["stale"] or r["read_state"] != "ok"):
+            out.append(r)
+    return out
 
 
 def alert(bad: list[dict], logs: Path, now: float) -> str:
