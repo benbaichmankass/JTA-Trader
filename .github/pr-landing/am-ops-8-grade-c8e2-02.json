@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Hand grade of RQ-20261119-c8e2-02 plus a producer fix in scripts/research/vol_offcell_fresh_wf.py (research harness, off the trade path); the manager merges.",
+  "why": "WHY: trainer run 44598184518 completed, but vol_offcell_fresh_wf.py wrote verdict 'mixed' / read_state 'complete' / no n, outside script_run's verdict.json contract, so the result landed as producer_failed and the unit stayed queued (re-dispatchable). WHAT: (1) RQ-20261119-c8e2-02 graded by hand from the raw verdict.json under RULE-RQ20261119-c8e2-02-TRENDVOL-CELLS-FRESH. Fresh fold: ungated -221.93 / 5.44% / 34 trades; ML-keyed -223.50 / 3.75% / 27. Net worse by 1.57 and drawdown better by 1.69 pp, so the outcome is MIXED -> indeterminate. The rule registers no action for MIXED, so nothing changes. Status done. (2) The producer now maps holds/does_not_hold/mixed to pass/fail/indeterminate (keeping the rule word in grade.rule_outcome), emits read_state measured/no_data, n = fresh-fold ungated trades and a string population. Self-test: 11 PASS (5 new). Replaying the real run gives indeterminate / measured / n 34, all inside script_run.VERDICTS / READ_STATES. Only this unit uses the script. Gates this adds or changes: none."
+}
