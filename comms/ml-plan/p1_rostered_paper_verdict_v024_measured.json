@@ -1,0 +1,65 @@
+{
+ "rule": "RULE-RQ20261119-3e98-01-P1-ROSTERED-PAPER (P1 per docs/plans/ml-live-promotion-plan-2026-10-29.md s3, (a) recomputed, (b) at lb_pct 0.833)",
+ "model_id": "setup-candidates-metalabel-rostered-paper-v1",
+ "dataset": "setup_candidates/all/all/v024: 6,659 rows = 5,164 backtest, 434 live, 1,061 live_paper",
+ "experiment_dir": "ml/experiments-runs/setup-candidates-metalabel-rostered-paper-v1/20261119T202129Z (trainer, --no-register)",
+ "eval_source": "live_paper",
+ "strategy_filter": {
+  "after": 1053,
+  "before": 1061,
+  "excluded_no_strategy": 0,
+  "excluded_off_list": 8,
+  "strategies_n": 59
+ },
+ "pnl_provenance_counts": {
+  "estimated": 355,
+  "measured": 698
+ },
+ "e_excluded_share": 0.007380073800738007,
+ "unit_fallback_share_pre_exclusion": 0.0,
+ "source": {
+  "relay": "trainer-vm-diag #27459 (run 44605905477), trainer worktree at 66f24891e7 (#27451 merged)",
+  "trainer_path": "/tmp/p1v024_verdict_measured.json",
+  "note": "FIELD SUBSET copied verbatim from the relay comment (the script printed these keys); the full record stays on the trainer at the trainer_path"
+ },
+ "verdict": "FAIL",
+ "n_eval": 698,
+ "measured_only": true,
+ "take_rate": 0.04297994269340974,
+ "a_cost_gate": {
+  "passed": true,
+  "value_r": 0.025626338449703034,
+  "take_all_r": -0.030380193062326036,
+  "matched_random_r": -0.0013057389568334973,
+  "eval_cost_bases": {
+   "realized": 698
+  },
+  "reason": "beats all comparators: value +0.0256R/opp > best take_none +0.0000R/opp (n=698, taken=30)"
+ },
+ "b_bootstrap": {
+  "lb95": -0.006087151697924293,
+  "ub95": 0.06377994125952513,
+  "point": 0.026932077406536525,
+  "lb_pct": 0.833,
+  "n_resamples": 10000,
+  "seed": 42
+ },
+ "b_ok": false,
+ "c_ok": false,
+ "d_ok": true,
+ "d_counted_symbols": [
+  "ADAUSDT",
+  "AVAXUSDT",
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "XRPUSDT"
+ ],
+ "d_positive_symbols": [
+  "ADAUSDT",
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "XRPUSDT"
+ ]
+}

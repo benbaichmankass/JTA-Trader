@@ -65,10 +65,15 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   packet ONCE per newly-due package|event|level inside a 120-min package|event cooldown, so a later review of a repeating due event finds the
   packet built when the event FIRST fired (2026-11-19 18:20Z paper lane: all 10 packets 45-140 min old; VM receipt `already_posted`). Before
   reviewing, a lane that batches several due packages (a) rebuilds any due packet older than ~30 min:
-  `python3 scripts/ops/live_review_packet.py <order_package_id> --write` on its `live-review/rows` checkout (pure diag reads, ~1 min;
-  `--bundle` previews and writes nothing), commits the generator's `comms/live_review/packets/<review_id>.json` (+ table) UNEDITED, and
-  reviews against that packet, so its row's `packet_sha` resolves on the branch. These are the generator's bytes, not a packet typed from
-  comment text, which stays forbidden above. (b) For 5m/15m legs (short-hold lane) it reads `comms/live_review/short_hold/<order_package_id>/latest.json`,
+  `python3 scripts/ops/live_review_packet.py <order_package_id> --write` run from a **FULL `main` checkout** (pure diag reads, ~1 min;
+  `--bundle` previews and writes nothing), then copies the generator's `comms/live_review/packets/<review_id>.json` and its priced table
+  (the packet's `priced_options.source` path) byte-for-byte into its `live-review/rows` checkout, commits them UNEDITED, and reviews against
+  that packet, so its row's `packet_sha` resolves on the branch. **Never run the generator from the `live-review/rows` checkout or from a
+  sparse `main` worktree** (2026-11-19 20:10Z lane): the rows branch carries an OLDER generator (rebuilt packets lacked `context_v3` and
+  `packet_health`), and a worktree without `comms/research/` and `comms/strategy_evidence/` prices nothing (`priced_options` null,
+  `evidence_missing`). A rebuild that hits a diag timeout reads `could_not_look` on that input (e.g. mechanics); retry it once rather than
+  review against it. The packet names its journal rows in `trades` (account, trade id, status), so a lane never matches a trade to a
+  package by inference. These are the generator's bytes, not a packet typed from comment text, which stays forbidden above. (b) For 5m/15m legs (short-hold lane) it reads `comms/live_review/short_hold/<order_package_id>/latest.json`,
   refreshed every 5 min: those packages are never in `comms/live_review/packets/` (2026-11-19: 8033 ict_scalp_eth_15m read as "no packet").
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do

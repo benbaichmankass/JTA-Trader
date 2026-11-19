@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-11-19T08:55:27Z",
+  "generated_at": "2026-11-19T20:53:43Z",
   "overall": "findings",
   "produced_by": {
-    "run_id": "44481313943",
+    "run_id": "44612535596",
     "workflow": "research-loss-detector"
   },
   "questions": {
@@ -10,12 +10,36 @@
       "findings": [
         {
           "age_hours": 12.2,
-          "branch": "automation/research-queue-replenish-44391356546-1",
-          "pr": 26927,
+          "branch": "automation/research-queue-replenish-44483786628-1",
+          "pr": 27229,
           "title": "research-queue: replenish from templates (auto)"
+        },
+        {
+          "age_hours": 10.4,
+          "branch": "automation/research-queue-replenish-44495773960-1",
+          "pr": 27257,
+          "title": "research-queue: replenish from templates (auto)"
+        },
+        {
+          "age_hours": 8.2,
+          "branch": "automation/research-queue-replenish-44524304064-1",
+          "pr": 27312,
+          "title": "research-queue: replenish, 20 programme node(s) (auto)"
+        },
+        {
+          "age_hours": 7.3,
+          "branch": "automation/research-queue-grade-44533148252-1",
+          "pr": 27328,
+          "title": "research-queue: mechanical grading (auto)"
+        },
+        {
+          "age_hours": 6.6,
+          "branch": "automation/research-queue-replenish-44540693525-1",
+          "pr": 27339,
+          "title": "research-queue: replenish, 20 programme node(s) (auto)"
         }
       ],
-      "population": "52 open PRs; 19 automation/*; 12 carry research; 7 automation/* carry none (not graded here)",
+      "population": "36 open PRs; 21 automation/*; 14 carry research; 7 automation/* carry none (not graded here)",
       "state": "findings",
       "threshold_hours": 6.0
     },
@@ -23,11 +47,18 @@
       "findings": [],
       "lost": [],
       "pending_merge": [],
-      "population": "70 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-11-05 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 509 produced no result by design (skipped); 4 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3273 result file(s) on origin/main",
+      "population": "80 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-11-05 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 509 produced no result by design (skipped); 4 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3380 result file(s) on origin/main",
       "state": "clean"
     },
     "C_expiring_unlanded_artifacts": {
       "findings": [
+        {
+          "artifact": "research-store-bundle",
+          "artifact_id": 14533579693,
+          "expires_at": "2026-11-22T13:32:21Z",
+          "run_id": "44533148252",
+          "workflow": "research-queue-grade.yml"
+        },
         {
           "artifact": "research-store-bundle",
           "artifact_id": 14508626094,
@@ -36,7 +67,7 @@
           "workflow": "research-queue-grade.yml"
         }
       ],
-      "population": "[bulk] 1385 artifact(s) listed, 1385 unexpired, 332 expire within 72.0h across 200 run(s); 20 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "population": "[bulk] 1474 artifact(s) listed, 1474 unexpired, 365 expire within 72.0h across 217 run(s); 31 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "read_via": "bulk",
       "state": "findings"
     }

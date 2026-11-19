@@ -4,7 +4,7 @@
 id: RQ-20261119-3e98-01
 title: 'ITERATION 2 of ml-setup-metalabel-p2pool (78fc-02 FAIL, retired-book dominated): on the DEMO-FLOOR book it acts on, restricted to
   rostered strategies, does setup-candidates-metalabel-p2pool beat take-all, take-none and a matched random take net of realized cost?'
-status: blocked
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -120,16 +120,11 @@ value:
   confidence: 0.15
   bucket: ai_trader
   basis: planning weight carried from 78fc-02; an estimate, not a measurement
-blocked_on:
-- kind: work_item
-  ref: PI-20261119-RIMARY12-0001
-  what: '(1) ml/datasets/families/setup_candidates.py: carry strategy_name on live and live_paper rows as outcome metadata (never a feature),
-    new dataset version; (2) scripts/ml/p1_costnet_grade.py: --eval-source live|live_paper and --strategies-file, recomputing (a) on the
-    filtered rows and reading (b) at --lb-pct; (3) a paper manifest of the v023 recipe (live_flag_column event_source, live_flag_true_value
-    live_paper, include_paper true) and a run: block.'
-  clears_when: '(1)-(3) are merged with tests (PR #27430); the run is then one trainer relay as for v023 (build v024 include_paper=true,
-    ml train --no-register, p1_costnet_grade.py --eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt
-    --lb-pct 0.833, then again with --measured-only), graded from its records; rule unchanged'
+unblocked:
+  at: '2026-11-19'
+  by: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC)
+  what_cleared: 'build PR 27430 (strategy + pnl_provenance on live/paper rows, grader flags, paper manifest) and run tooling PR 27451 merged;
+    run once on the trainer by relay issue 27459, rule unchanged'
 lands:
   store: research/results/
   assert_field: read_state
@@ -151,3 +146,25 @@ related:
 - ml/datasets/families/setup_candidates.py
 - PI-20261119-RIMARY12-0001
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-3e98-01-P1-ROSTERED-PAPER
+  evidence:
+  - comms/ml-plan/p1_rostered_paper_verdict_v024.json
+  - comms/ml-plan/p1_rostered_paper_verdict_v024_measured.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
+  rows: 2
+  verdict: indeterminate
+  reason: 'relay #27459 (trainer, worktree 66f24891e7): v024 built (6,659 rows; 1,061 live_paper), setup-candidates-metalabel-rostered-paper-v1
+    trained --no-register, graded twice. Filter ROSTER_59: 1,061 -> 1,053 (8 off-list, 0 without a strategy). Provenance (provenance.py
+    buckets): 698 measured / 355 estimated. PRIMARY (measured + estimated, n_eval 1,053): (a) value +0.0585 R/opp > take_all +0.0056,
+    take_none 0, matched random +0.0003 -> pass; (b) bootstrap LB at the deflated 0.833 percentile +0.0164 > 0 -> pass; (c) take rate
+    0.0532 in [0.05, 0.60] -> pass (just above the floor; 56 taken); (d) 6 of 6 counted symbols positive; (e) excluded 0.7% -> PASS.
+    MEASURED-ONLY (n_eval 698 >= 200): (a) +0.0256 vs take_none 0 -> pass; (b) LB -0.0061 -> fail; (c) take rate 0.043 < 0.05 -> fail;
+    verdict FAIL. REGISTERED PROVENANCE CLAUSE: the measured-only read has n >= 200 and a different verdict, so the unit is INDETERMINATE
+    (the PASS depends on estimated outcomes). Context, not graded: on measured rows the head still beats take-all (-0.030) and take-none,
+    so the selection signal survives; what fails is the deflated LB and the take-rate floor (30 taken of 698). Real-money live rows were
+    not graded here. INDETERMINATE ACTION (one line): the measured share of the paper book is the binding input; next = a re-read on the
+    measured paper book after the threshold lever is read on training folds (take rate sits at the 0.05 floor), filed as
+    PI-20261119-RIMARY12-0006. No serve, registry or config change.'

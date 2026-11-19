@@ -1,0 +1,79 @@
+# AUTHORED by AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN), 2026-11-19, on the manager's decision (20:30Z): the TLT shipped
+# trail_decay FAILED its lever-off arm (c8e2-03, run 44599554210: OOS d net_R -1.24 at n=49, drawdown better in both windows), which is
+# MIXED evidence. The manager KEPT the lever and asked for the comparison re-run with more OOS power and a pre-registered net-R rule
+# with a minimum detectable effect. Same lever-off arm; only the split changes (no holdout, OOS target 120 of ~232 base trades).
+# Gates this adds or changes: none.
+id: RQ-20261119-c8e2-04
+title: 'POWERED LEVER-OFF RE-TEST: does the SHIPPED trail_decay on REAL-MONEY leg tlt_pullback_1h cost net R out of sample
+  (decay ON at stall 6 / tight 1.5 vs OFF), measured on ~120 OOS trades instead of 49?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- M20
+practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg
+  and net of the full cost stack [S4, S5, S6]'
+question: 'Same lever-off comparison as RQ-20261119-c8e2-03 (m20 --without-declared-lever trail_decay; cell shipped_trail_decay_6_1.5 restores
+  it at live values), on trainer data/TLT_1h.csv refreshed past the ~2026-06-18 freeze, with NO holdout (holdout_frac 0) and the IS/OOS boundary
+  derived to target 120 OOS trades (split_target_oos 120) out of ~232 base trades. What is the OOS net-R difference per OOS trade (decay ON minus
+  OFF)?'
+why_this_matters: 'trail_decay is SHIPPED on alpaca_live (real money) + alpaca_portfolio. c8e2-03 measured OOS -1.24 R over 49 trades
+  (-0.025 R per trade, noise-sized) with drawdown better in both windows. The manager kept the lever pending a test that can tell a real net-R
+  cost from noise; this unit is that test.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE stated before the run: tlt_pullback_1h holds ~232 base trades on the trainer series (c8e2-03 corpus row: 127 IS + 49 OOS
+    + 56 holdout). With holdout_frac 0 and split_target_oos 120 the OOS side holds ~120 trades; required_n paired at d=0.3, alpha 0.05,
+    power 0.8 is 87.2, so a per-trade effect of 0.3 SD is resolvable and a smaller one is not. The leg trades 1h; no finer TLT series is
+    used, so more OOS trades cannot come from a finer frame.'
+  feasibility:
+    source: none
+    accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261119-c8e2-04-TLT-DECAY-OOS-NETR
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: the same leg with trail_decay REMOVED (the m20 lever-off base), same data, split, cost stack and harness
+  statistic: 'OOS d net_R per OOS trade = d_net_r_OOS / base_trades_OOS for cell shipped_trail_decay_6_1.5 in the m20 corpus row
+    (decay ON minus OFF). IS deltas and both maxDD deltas are reported and decide nothing.'
+  rule: 'RETIRE-CANDIDATE iff OOS d net_R per OOS trade <= -0.03 R. KEEP iff >= 0. INDETERMINATE if strictly between -0.03 and 0, or if
+    base_trades_OOS < 87 (the power floor). The threshold, split target and holdout are not changed after any result.'
+  pass_action: 'KEEP: record on the matrix that the shipped trail_decay is confirmed net-R-neutral-or-better OOS at n >= 87; nothing changes.'
+  fail_action: 'RETIRE-CANDIDATE: a data-backed Tier-3 proposal to the manager to set trail_decay off for tlt_pullback_1h in
+    config/strategies.yaml, with this record. Nothing is flipped by this unit.'
+  min_n: 87 base OOS trades
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: one leg per unit; the workflow scp's the leg's frames from the trainer and sweeps on the runner.
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: tlt_pullback_1h
+    tp_cap_pct: '0.099'
+    split_mode: oos-trades
+    research_unit: RQ-20261119-c8e2-04
+    split_target_oos: '120'
+    holdout_frac: '0'
+    without_declared_levers: trail_decay
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+follows_from:
+  unit: RQ-20261119-c8e2-03
+  run: '44599554210'
+  reason: lever-off FAIL on OOS net R (-1.24 at n=49) with drawdown better in both windows; the manager kept the lever pending this powered re-test
+last_dispatched_at: null
