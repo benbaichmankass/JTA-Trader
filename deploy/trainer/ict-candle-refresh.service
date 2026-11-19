@@ -28,6 +28,10 @@ ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/extend_d
 ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_funding_history.py --data-dir data ADAUSDT AVAXUSDT BTCUSDT ETHUSDT SOLUSDT XRPUSDT
 ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15 ADAUSDT:15 AVAXUSDT:15 BNBUSDT:15 LINKUSDT:15 BTCUSDT:15 ADAUSDT:5 AVAXUSDT:5 BNBUSDT:5 LINKUSDT:5 ETHUSDT:5 SOLUSDT:5 XRPUSDT:5
 # Report-only freshness of every data/*.csv (PI-20261118-MANAYJZO-0002); the '-' prefix means it can never fail the unit.
-ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data
+ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data --alert-rostered
+# TRAINER-1D-STALE-ROSTERED: forward the stale-rostered-data ping to the live VM queue (the trainer has no
+# drainer); same key and path as ict-notify-failure@.service.
+Environment=UNIT_FAILURE_FORWARD=live
+Environment=UNIT_FAILURE_HOST_LABEL=trainer
 StandardOutput=journal
 StandardError=journal
