@@ -142,6 +142,14 @@ LGBM_PARAMS = {"objective": "regression", "learning_rate": 0.05, "num_leaves": 3
                # test_transfer_end_to_end 21 s alone, 1424 s inside the suite. Unset -> 4, as before.
                "num_threads": int(os.environ.get("OMP_NUM_THREADS") or 4)}
 S_OFFLINE = {"min_gain_r": 0.03, "min_folds": 5}
+#: RQ-20261119-b9d0-04 (04a5-07's fail_action: next D7 family = learner class): CatBoost action-value heads, capacity matched to
+#: LGBM_PARAMS (300 rounds, lr 0.05, depth 6 ~ 31 leaves, l2 3); fixed here, never tuned on a test fold.
+CB_ROUNDS = 300
+CB_PARAMS = {"loss_function": "RMSE", "learning_rate": 0.05, "depth": 6, "l2_leaf_reg": 3.0, "rsm": 0.8,
+             "bootstrap_type": "Bernoulli", "subsample": 0.8, "verbose": False, "allow_writing_files": False,
+             "thread_count": int(os.environ.get("OMP_NUM_THREADS") or 4)}
+#: learners whose heads predict an action VALUE in R (act on argmax > the act margin); logit heads predict a probability
+VALUE_LEARNERS = ("lgbm_action_value", "catboost_action_value")
 INNER_MARGIN_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.3)   # RQ-20261030-c7a1-01 (Q-TM1b) registered grid
 SYNTH_SUBSTEPS = 100
 
@@ -617,6 +625,12 @@ def _fit_lgbm(X: np.ndarray, y: np.ndarray, seed: int, quantile: Optional[float]
     return lgb.train(dict(lgbm_params_for(q), seed=seed), lgb.Dataset(X, label=y), num_boost_round=LGBM_ROUNDS)
 
 
+def _fit_catboost(X: np.ndarray, y: np.ndarray, seed: int):
+    from catboost import CatBoostRegressor   # lazy: only a catboost_action_value unit needs it
+    # provenance: CatBoostRegressor RMSE -> .predict is the predicted action value (R), not a probability
+    return CatBoostRegressor(iterations=CB_ROUNDS, random_seed=seed, **CB_PARAMS).fit(X, y)
+
+
 def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -> Dict[str, Any]:
     rows = [i for i in tr_idx if ev[i]["n"]]
     if not rows:
@@ -633,6 +647,11 @@ def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -
             out["lgbm_action_value"] = {a: _fit_lgbm(Xf, Y[a], seed) for a in ACTIONS}
         except ImportError as exc:  # allow-silent: an unavailable learner is a recorded fact in the arm, never a pooled zero
             out["lgbm_action_value"] = {"unavailable": repr(exc)}
+    if "catboost_action_value" in kinds:
+        try:
+            out["catboost_action_value"] = {a: _fit_catboost(Xf, Y[a], seed) for a in ACTIONS}
+        except ImportError as exc:  # allow-silent: an unavailable learner is a recorded fact in the arm, never a pooled zero
+            out["catboost_action_value"] = {"unavailable": repr(exc)}
     if "logit_action_value" in kinds:
         out["logit_action_value"] = {a: Logit().fit(Xf, (Y[a] > 0).astype(float), w) for a in ACTIONS}
     if "b2" in kinds:   # distance-only reference: stop_atr, target_atr, no_target (R1 columns 4, 5, 6)
@@ -646,7 +665,7 @@ def learner_scores(kind: str, model, X: np.ndarray, med: np.ndarray) -> Optional
     if isinstance(model, dict) and "unavailable" in model:
         return None
     Xf = np.where(np.isfinite(X), X, med)
-    if kind == "lgbm_action_value":
+    if kind in VALUE_LEARNERS:
         return np.column_stack([model[a].predict(Xf) for a in ACTIONS])
     return np.column_stack([model[a].predict_proba_sl(Xf) for a in ACTIONS])
 
@@ -968,8 +987,11 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             raise ValueError(f"unknown action classes {bad}; valid: {list(ACTIONS)}")
         allowed = [ACTIONS.index(a) for a in names]
 
-    inner_oof: Dict[int, Dict[int, np.ndarray]] = {}
-    if inner_folds > 0 and "lgbm_action_value" in kinds:
+    # per value learner, per outer fold: inner out-of-fold scores of the train fold (each learner picks its own margin from its
+    # own OOF predictions; a learner never reuses another's)
+    inner_oof: Dict[str, Dict[int, Dict[int, np.ndarray]]] = {}
+    for vk in [k_ for k_ in VALUE_LEARNERS if k_ in kinds and inner_folds > 0]:
+        inner_oof[vk] = {}
         for f in fl["folds"]:
             if f["fold"] not in fold_models:
                 continue
@@ -980,15 +1002,15 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 if not g["test"] or not g["train"]:
                     continue
                 gtr = [f["train"][x] for x in g["train"]]
-                m_ = fit_learners(ev_tr, {i: lab_tr(i) for i in gtr}, gtr, ["lgbm_action_value"], seed)
-                mdl = m_.get("lgbm_action_value")
+                m_ = fit_learners(ev_tr, {i: lab_tr(i) for i in gtr}, gtr, [vk], seed)
+                mdl = m_.get(vk)
                 if mdl is None or (isinstance(mdl, dict) and "unavailable" in mdl):
                     continue
                 for x in g["test"]:
                     j = f["train"][x]
                     if ev_tr[j]["n"]:
-                        oof[j] = learner_scores("lgbm_action_value", mdl, ev_tr[j]["X1"], m_["_med"])
-            inner_oof[f["fold"]] = oof
+                        oof[j] = learner_scores(vk, mdl, ev_tr[j]["X1"], m_["_med"])
+            inner_oof[vk][f["fold"]] = oof
 
     def rec(i, fold, act):
         if act is None:
@@ -1043,7 +1065,7 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         for kind in kinds:
             recs, unavailable = [], None
             thr_by_fold: Dict[int, float] = {}
-            lgbm = kind == "lgbm_action_value"
+            lgbm = kind in VALUE_LEARNERS   # a VALUE learner (LightGBM or CatBoost): act-margin threshold, Stage-A action mask
             if lgbm and allowed is not None and not allowed:
                 cell_arms.append({"arm_id": f"{kind}@{cell}", "read_state": "not_run",
                                   "reason": "Stage A: no action class passed; Stage B is not run (RULE-RQ20261030-c7a1-01-QTM1B)"})
@@ -1051,10 +1073,10 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
             if lgbm and inner_folds > 0:
                 grid = list(act_margin_grid) or list(INNER_MARGIN_GRID)
                 for f in fold_models:
-                    if f not in inner_oof:
+                    if f not in inner_oof.get(kind, {}):
                         continue
                     val = {m: 0.0 for m in grid}
-                    for j, sc_tr in inner_oof[f].items():
+                    for j, sc_tr in inner_oof[kind][f].items():
                         mk_tr = checkin_mask(TR[j], cell, fold_medwin[f].get(TR[j]["leg"]))
                         for m in grid:
                             act = first_action(sc_tr, mk_tr, m, allowed)
@@ -1081,13 +1103,13 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
                 sc = learner_scores(kind, mdl, ev[i]["X1"], fold_models[f]["_med"]) if (mdl is not None and ev[i]["n"]) else None
                 if isinstance(mdl, dict) and "unavailable" in mdl:
                     unavailable = mdl["unavailable"]
-                thr = thr_by_fold.get(f, act_margin_r) if kind == "lgbm_action_value" else logit_act_p
+                thr = thr_by_fold.get(f, act_margin_r) if lgbm else logit_act_p
                 recs.append(rec(i, f, first_action(sc, masks[i], thr, allowed if lgbm else None)))
             if unavailable:
                 cell_arms.append({"arm_id": f"{kind}@{cell}", "read_state": "unavailable", "reason": unavailable})
                 continue
             arm = summarize_arm(f"{kind}@{cell}", T, recs, rng, n_boot, b4_for(recs, labs, masks, seed + 3, draws),
-                                extra={"act_threshold": act_margin_r if kind == "lgbm_action_value" else logit_act_p,
+                                extra={"act_threshold": act_margin_r if lgbm else logit_act_p,
                                        "act_threshold_by_fold": thr_by_fold or None,
                                        "act_margin_selection": ("inner_oof" if lgbm and inner_folds > 0 else
                                                                 "train_in_sample" if lgbm and act_margin_grid else "fixed"),
@@ -1303,6 +1325,31 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
             checks.append(("null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
                            lo.get("read_state") == "measured" and lo["ci95"][0] <= 0,
                            f"null {lo.get('delta_vs_b0_r')} {lo.get('ci95')}"))
+        # 2a. RQ-20261119-b9d0-04: the CatBoost value learner passes the same planted / null controls, choosing its margin from
+        # its OWN inner OOF scores (inner_folds > 0); recorded as skipped (not failed) where catboost is not installed
+        try:
+            import catboost  # noqa: F401
+            have_cb = True
+        except ImportError:   # allow-silent: the skip is a recorded check line, never a silent pass
+            have_cb = False
+        if have_cb:
+            cbr = {}
+            for spec in ("synthetic", "synthetic-planted"):
+                corp, meta = resolve_corpus(spec, work=Path(td))
+                bc = build_corpus(corp, meta, cost_fn=cx)
+                bc["trades"] = bc["trades"][:300]
+                rr = score(bc, None, k=6, n_boot=200, draws=50, seed=7, cost=cost, kinds=("catboost_action_value",),
+                           checkins=("every_bar",), inner_folds=2)
+                cbr[spec] = next((a for a in rr["arms"] if a.get("arm_id") == "catboost_action_value@every_bar"), {})
+            cp, cn = cbr["synthetic-planted"], cbr["synthetic"]
+            checks.append(("planted: catboost action-value beats B0 (CI lower > 0)",
+                           cp.get("read_state") == "measured" and cp["ci95"][0] > 0, f"{cp.get('delta_vs_b0_r')} {cp.get('ci95')}"))
+            checks.append(("null: catboost action-value does not pass on a driftless walk (CI lower <= 0)",
+                           cn.get("read_state") == "measured" and cn["ci95"][0] <= 0, f"null {cn.get('delta_vs_b0_r')} {cn.get('ci95')}"))
+            checks.append(("catboost margin chosen from its own inner OOF", cp.get("act_margin_selection") == "inner_oof",
+                           str(cp.get("act_margin_selection"))))
+        else:
+            checks.append(("catboost action-value controls (skipped: catboost not installed)", True, "skipped"))
         # 2b. path-state block: causal (truncation-invariant) and the per-fold Stage-A rule separates planted from null
         corp, meta = resolve_corpus("synthetic-planted", work=Path(td))
         TT = build_corpus(corp, meta, cost_fn=cx)["trades"][:200]
@@ -1617,7 +1664,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         b0 = next(x for x in r["arms"] if x["arm_id"] == "B0_hold")
         orc = r["oracle"]["census_best_close_saving_r_per_trade"]
         for arm in r["arms"]:
-            if arm.get("arm_id", "").startswith(("lgbm_", "logit_")) and arm.get("read_state") == "measured":
+            if arm.get("arm_id", "").startswith(("lgbm_", "logit_", "catboost_")) and arm.get("read_state") == "measured":
                 arm["s_offline"] = dict(zip(("verdict", "why"), s_offline(arm, r["arms"])))
         if a.rule == "reproduce":
             parts = [f"selfcheck {'pass' if sc['pass'] else 'FAIL'}", f"B0-B0 {b0['b0_minus_b0_r']}",
