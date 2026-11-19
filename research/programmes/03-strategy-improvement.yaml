@@ -141,7 +141,8 @@ nodes:
   value:
     usd_at_stake_per_month: 600
     confidence: 0.4
-  needs_authoring: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: answered. LIVE-BT-STAGE-B landed (#18870, live_bt_trade_join.py) and its 2026-10-18 run (comms/research/live_bt_join/2026-10-18/) named the gap: the largest component on BOTH legs is ENTRY (live-only entries the closed-bar backtest never took): xrp_pullback_2h entry -5.79 R vs exit +0.66 / execution 0.00; ada_pullback_2h entry -3.89 vs exit -0.26 / execution +0.04. That is the forming-bar finding the decision-bar line now owns (RQ-20261113-f251-01, forming_evidence_regen.py, the 2026-10-18-decision-bar join). Do not re-author; a rerun on later closes is the f251 line''s re-measure, not a new question.'
+  authoring_closed_ask: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
     BELOW_BACKTEST (8bbc-01: -8.84 R over 16, 3.4th pct; 8bbc-02: -7.04 R over 15, 4.7th pct). Stage B: register
     ONE unit that joins each live close to its config-exact backtest counterpart over the same bars and splits the
     gap into cost (fee/slippage/funding vs the harness stack), missed/extra signals, exit-path differences and regime;
@@ -225,6 +226,7 @@ nodes:
   - unit: RQ-20261016-c56e-13
     verdict: indeterminate
   authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action (L-LADDER note) -- c56e-13 INDETERMINATE, n-bound'
+  not_authored: 'DECIDED 2026-11-19 (manager, on the lane QUEUE-FILL-STANDING-W47b recommendation): the xrp4h short-only min_confidence-0.8 leg is `infeasible at 4y` on L-LADDER; the record''s own 4-fold grade is the only Stage-0 evidence it can carry; NO both-sides unit (it would test a different leg than the live short-only one, and a PASS would have no live producer). Basis: RQ-20261016-c56e-13 INDETERMINATE, n 29 < n_floor 39 (2018-10..2022-10).'
   needs_authoring: c56e-13 read INDETERMINATE (n < 39 on 2018-10..2022-10 for the short-only, min_confidence 0.8
     leg). State the leg `infeasible at 4y` on L-LADDER and decide whether the record's own 4-fold grade is the only
     Stage-0 evidence it can carry, or whether the both-sides arm (side_filter both) is worth a separate Stage-0
@@ -1269,6 +1271,7 @@ nodes:
   - unit: RQ-20261014-470a-12
     verdict: any
   authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- 470a-12 FAIL, so the retire case goes per pair through the manager'
+  not_authored: 'CLOSED 2026-11-19 (manager): on RQ-20261014-470a-12 FAIL (net_total_r -119.0626 R over n 273, floor 39; fee-only arm -79.465 R). Sleeve already empty (config/pairs.yaml on main reads `pairs: []`, account bybit_1, demo), so nothing to retire and no config change; re-entry needs a new Stage-0 PASS.'
   needs_authoring: 'The honest-R-scale pairs re-measure (470a-12, unblocked by build row PAIRS-R-SCALE) closed.
     Decide the M22 sleeve from THAT record, not the sprint log: PASS -> a Tier-3 keep note per pair with both records;
     FAIL -> the retire case per pair through the manager (config/pairs.yaml is the sleeve''s own gate); INDETERMINATE
