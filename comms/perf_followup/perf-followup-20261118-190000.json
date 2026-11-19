@@ -1,0 +1,309 @@
+{
+ "run_at": "2026-11-19T08:00:00Z",
+ "reviewer": "claude (perf-followup)",
+ "session": "session_01AFoLuJQHZnwtERq8HCwKL1",
+ "lane": "PERF-FOLLOWUP-2026W47",
+ "review": "comms/reviews/performance-review-20261118-190000.json",
+ "window": [
+  "2026-11-11T20:00:00Z",
+  "2026-11-18T18:45:00Z"
+ ],
+ "dedupe_against": {
+  "PROGRAMME-REPLAN-20261119": "G1 = RQ-20261118-f7c1-01/-08, G2 = RQ-20261119-f2a4-05..07 (not on main at authoring; not re-authored)",
+  "G4": "PI-20261118-PREP1118-0002 (answered below on the backtest population; live-journal population kept open on that item)",
+  "G3_G5_G6": "PI-20261118-PREP1118-0004/-0005/-0006, tooling, AM-OPS-7 (not touched)"
+ },
+ "previous_run": {
+  "record": "comms/perf_followup/perf-followup-20261021-walkthrough.json",
+  "units_total": 3,
+  "ran_and_read": 3,
+  "ran_unread": 0,
+  "not_run": 0,
+  "underpowered": 0,
+  "killed": 0,
+  "pipeline_items": {
+   "PI-20261022-LOWUPW43-0001": "done (operator decision DECISION-BAR-MATCH 2026-10-22)",
+   "PI-20261022-LOWUPW43-0004": "killed (bulk reset 2026-10-29, terminal_reason on the record)",
+   "PI-20261022-LOWUPW43-0002": "not_run, overdue since 2026-11-05: giveback_census.py has 0 references to a backtest benchmark; owned by GRADER-INTEGRITY (queued, lane active). Re-dated with this observation.",
+   "PI-20261022-LOWUPW43-0003": "not_run, overdue since 2026-10-29: the 17-close pull is still unmade; same owner. Re-dated with this observation."
+  },
+  "actions": [
+   "RQ-20261022-fd06-01/-02/-03 all ran (research/results/RQ-20261022-fd06-0{1,2,3}/39790*.jsonl) and verdict fail, label incumbent_stands: ada dR -56.97/-42.80/-68.30 at n 402; xrp_pullback_2h dR -18.81/-6.93/-28.38 at n 394; xrp_4h dR -4.84/-2.63/-4.92 at n 68 (underpowered, 'U'). Read in docs/research/exit-failed-levers-diag-2026-10-24.md rows fd06-01..03 (the pre-registered consequence, the July banking verdict extends to the capped-TP exit for a FIXED threshold, is recorded there); a metric-triggered split stays with Programme 01 Q11.",
+   "Lessons graded: the 2026-10-21 lessons carried no machine check (their check blocks are absent), so none is gradable as held/refuted; Brier not computed (n resolved = 0 < 10). This run's lessons carry checks."
+  ],
+  "lessons_graded": {
+   "held": 0,
+   "refuted": 0,
+   "unresolved": 7,
+   "brier": "not computed (n < 10)"
+  }
+ },
+ "tune": [
+  {
+   "leg": "ml_entry (bybit_2 real money)",
+   "cause": "noise+clustering",
+   "detail": "7d -6.63R n=25; live_vs_backtest uncut pct 33.6 (noise survives); losses are 3 same-bar long baskets (13/13 SL). The review's 'regime' hypothesis is partly answered by RQ-20261112-cd01-01 (indeterminate): the clean frozen v1 model loses MORE than the served refit on the same recent window (V -0.324 R/trade n 430 vs S -0.204 n 375; REGIME-SHARED, gap -0.211 with t -1.13, REGIME-UNRESOLVED). Cap: f7c1-01 PASS k=2 on the 907-trade record (+54.09 vs +33.68 R, maxDD 41.07 vs 62.81, beats random drop median +34.58) but the net-R gain sits inside noise (CI of difference [-21.3, +61.2]); f7c1-08 forward INDETERMINATE (binds on 18 bars < 30) with point estimates AGAINST the cap (k=2 -12.39 vs uncapped -6.90 R). Cap stays OFF.",
+   "retest_ref": "RQ-20261118-f7c1-08 re-run when the forward window binds >= 30 bars (estimate 2026-12-17 at 18 bars per 47 days)",
+   "ends_in": "PI-20261118-PREP1118-0001 (updated with the f7c1-01/-08 outcome and a re-run date)"
+  },
+  {
+   "leg": "ict_scalp_eth_15m (bybit_2 + bybit_portfolio real money since 2026-11-17)",
+   "cause": "execution (decision-bar mismatch; measurement validity)",
+   "detail": "The owed fidelity re-test already exists and ran: RQ-20261118-abab-56, FAIL 2026-11-19 (run 44385139200; PI-20261118-PREP1118-0009 missed it (the unit id is dated 11-18)). Arm A: match rate 0.0652 (3 of 46 live trades with an R basis matched), 43 live-only trades median 4.8 min into the 15m bar (forming-bar entries), 14 harness-only; mean live-minus-replay gross gap +0.097 R, CI [-0.60, +0.84] contains 0. Arm B: expectancy -0.013 .. +0.035 R/trade at five cost bases, every 95% CI spans 0 (n 78). So the failure is bar timing, not a measured gap; the closed-bar record scores a different trade set than the leg trades. No ict_scalp harness has a forming-bar mode.",
+   "retest_ref": "RQ-20261119-e11f-01 (blocked on ICT-SCALP-FORMING-BAR-ARM)",
+   "ends_in": "RQ-20261119-e11f-01 (blocked unit) + checklist row ICT-SCALP-FORMING-BAR-ARM + Tier-3 proposal PI-20261119-Q8HCWKL1-0001"
+  },
+  {
+   "leg": "tlt_pullback_1h (alpaca_live + alpaca_portfolio real money since 2026-11-14)",
+   "cause": "overfit risk (one-window evidence)",
+   "detail": "Not BELOW_BACKTEST on a cut read. The declared long-only tp 3.5 config's evidence is one 528-day window (n 75, +8.17 R; 2025 -0.11 R n 29, 2026 +8.28 R n 46); the earlier 8-year units ran the previous both-sides config or the short side. DSR 0.005. PI-20261118-PREP1118-0007 asked for an iteration unit from a diagnosis; dsr_probation.py listed none.",
+   "retest_ref": "RQ-20261119-e11f-02",
+   "ends_in": "RQ-20261119-e11f-02"
+  },
+  {
+   "leg": "slv_trend_1h (alpaca_live)",
+   "cause": "noise",
+   "detail": "INSUFFICIENT_N n=1 +2.40 R on the config cut; the BELOW read came from a shallow clone (cut=unknown), review call G7.",
+   "retest_ref": "n/a",
+   "ends_in": "no action, because the review's own full-clone read is INSUFFICIENT_N / CONSISTENT (pct 9.6 uncut) and n=1 cannot support a verdict; the tooling gap is PI-20261118-PREP1118-0005 (AM-OPS-7)"
+  },
+  {
+   "leg": "xrp_pullback_2h / ada_pullback_2h (bybit_2)",
+   "cause": "execution (forming-bar entry, from the 10-21 run)",
+   "detail": "Step 0 closed fd06 (banking FAIL on both).",
+   "retest_ref": "n/a",
+   "ends_in": "no action, because the 10-21 diagnosis was decided by the operator on 2026-10-22 (DECISION-BAR-MATCH, PI-20261022-LOWUPW43-0001 done) and no new in-window evidence on either leg is in the 11-18 review (n=0 real-money closes)"
+  }
+ ],
+ "lessons": [
+  {
+   "id": "L1",
+   "kind": "weakness",
+   "claim": "The ict_scalp family has no as-traded evidence: live decides on the forming bar (median entry 4.8 min into the bar), every committed ict_scalp record scores closed bars, so a fidelity test cannot pass or fail on edge.",
+   "evidence": [
+    "research/results/RQ-20261118-abab-56/44385139200.jsonl",
+    "comms/strategy_evidence/ict_scalp_eth_15m.json",
+    "scripts/backtest_ict_scalp.py (0 hits for forming / decision_bar)"
+   ],
+   "population": "ict_scalp_eth_15m, bybit_1 closed trades 2026-07-24..2026-11-17, n 47 live (46 with an R basis) vs 17 harness trades in window; cost arm n 78 on 2025-10-04..2026-10-01",
+   "confidence": "measured",
+   "p": 0.85,
+   "check": {
+    "command": "python3 scripts/research/exit_lever_ablation.py --leg ict_scalp_eth_15m --arm CLOSED= --arm FORMING=--decision-bar=forming ... (RQ-20261119-e11f-01 once unblocked)",
+    "rule": "match rate on the forming arm >= 0.80 (abab-56 arm A bar) = held; < 0.30 = refuted (the mismatch is not the bar)",
+    "resolves_when": "RQ-20261119-e11f-01 graded and abab-56 arm A re-run on the forming harness"
+   },
+   "ends_in": "RQ-20261119-e11f-01 + ICT-SCALP-FORMING-BAR-ARM"
+  },
+  {
+   "id": "L2",
+   "kind": "weakness",
+   "claim": "ml_entry's real-money loss is a clustered-basket loss, but the registered same-bar cap is not yet proven: it passes on the record inside noise and is indeterminate (against, on point estimates) forward.",
+   "evidence": [
+    "research/results/RQ-20261118-f7c1-01/local-20261118T2112Z.jsonl",
+    "research/results/RQ-20261118-f7c1-08/local-20261118T2159Z.jsonl",
+    "comms/reviews/performance-review-20261118-190000.json#calls.G1"
+   ],
+   "population": "907 Stage-0 trades / 437 decision bars (record) and 118 decisions / 55 bars 2026-10-01..2026-11-16 (forward), frozen v1 booster",
+   "confidence": "suggestive",
+   "p": 0.4,
+   "check": {
+    "command": "python3 scripts/research/ml_entry_samebar_cap.py forward --unit RQ-20261118-f7c1-08 --out <dir>",
+    "rule": "PASS per RULE-RQ20261118-f7c1-08-SAMEBAR-CAP-FWD with the k=2 cap binding on >= 30 bars",
+    "resolves_when": "forward window binds >= 30 bars (estimate 2026-12-17)"
+   },
+   "ends_in": "PI-20261118-PREP1118-0001"
+  },
+  {
+   "id": "L3",
+   "kind": "weakness",
+   "claim": "The recent ml_entry negative is shared by the clean frozen model on the same window, so it is a population/regime effect, not refit damage.",
+   "evidence": [
+    "research/results/RQ-20261112-cd01-01 (R2 REGIME-SHARED: V on window B -0.324 R/trade n 430, S -0.204 n 375, 14 day-clusters)",
+    "research/queue/RQ-20261112-cd01-01.yaml"
+   ],
+   "population": "served v1r20261106 vs frozen v1, window B, 14 day-clusters; R1 t -1.13 (unresolved)",
+   "confidence": "suggestive",
+   "p": 0.6,
+   "check": {
+    "command": "RQ-20261119-b9d0-02 (ENTRY served-refit FORWARD read)",
+    "rule": "its registered rule",
+    "resolves_when": "b9d0-02 graded"
+   },
+   "ends_in": "no action, because RQ-20261119-b9d0-02 already is the accruing forward read of exactly this question and the ml-entry iteration subject is covered (iteration_orphans.py: 18 units)"
+  },
+  {
+   "id": "L4",
+   "kind": "weakness",
+   "claim": "The real-money tlt_pullback_1h leg's declared direction rests on one trending window; the config now live has no history before 2025-06.",
+   "evidence": [
+    "comms/strategy_evidence/tlt_pullback_1h.json (by_year 2025 n 29 -0.108 R; 2026 n 46 +8.278 R)",
+    "research/levers/tlt_pullback_1h.yaml#levers_tested",
+    "RQ-20261104-003 / RQ-20261112-c1b4-02 (ran the then-declared both-sides leg)"
+   ],
+   "population": "tlt_pullback_1h forming-bar record, 2025-06-02..2026-11-11, n 75 long-only",
+   "confidence": "measured",
+   "p": 0.5,
+   "check": {
+    "command": "python3 scripts/research/exit_lever_ablation.py --leg tlt_pullback_1h --arm A= ... --start 2018-06-01 --end '2025-05-31 23:59' --grade stage0",
+    "rule": "PASS iff n >= 39 and net R > 0 and >= 3 of 4 folds positive (RULE-RQ20261119-E11F-02-TLT1H-DECLARED-DISJOINT)",
+    "resolves_when": "RQ-20261119-e11f-02 graded"
+   },
+   "ends_in": "RQ-20261119-e11f-02"
+  },
+  {
+   "id": "L5",
+   "kind": "strength",
+   "claim": "Claude live-review closes on real money are adding value so far: applied closes mean dR +0.35 (n 7, hit 0.857), though 10 of 29 real-money closes in the week were reviewer closes.",
+   "evidence": [
+    "comms/performance-review: live_review.close_applied (n 7, mean_dR 0.3485, worst -0.0505)",
+    "comms/live_review/reviews.jsonl (156 reviews since 2026-11-11T20:00Z; 11 close recommendations, 9 on ml_entry)"
+   ],
+   "population": "7 applied closes / 9 priced packages; per-package CI95 [0.0597, 0.6134]",
+   "confidence": "anecdote",
+   "p": 0.6,
+   "check": {
+    "command": "python3 scripts/ops/live_review_grade.py --live --json",
+    "rule": "use_rule_close leaves HOLD_SCOPE (n_packages >= 20) with a positive lower bound",
+    "resolves_when": "n_packages >= 20"
+   },
+   "ends_in": "no action, because the use rule is HOLD_SCOPE (n_packages 9 < 20) and the stall/pullback close pattern is already registered: RQ-20261116-7c1a-01 (stall time stop vs hold vs random) graded FAIL, abab-68 and c9d2-01 (ltr-close iterations) are queued"
+  },
+  {
+   "id": "L6",
+   "kind": "weakness",
+   "claim": "The pre-trade grade does not order outcomes: B-graded trades win less (36.6%, n 265) than C-graded (46.9%, n 456).",
+   "evidence": [
+    "comms/reviews/performance-review-20261118-190000.json#checks.C9",
+    "RQ-20261116-089f-01 (blind-grade rank test, fail)"
+   ],
+   "population": "762 graded trades joined to the journal 2026-09-20..2026-11-17",
+   "confidence": "measured",
+   "p": 0.8,
+   "check": {
+    "command": "python3 scripts/research/research_queue.py (RQ-20261116-089f-01 / -04 results)",
+    "rule": "n/a (measured)",
+    "resolves_when": "n/a"
+   },
+   "ends_in": "no action, because CJ-4 measured the same question on 707 joined trades and graded fail (RQ-20261116-089f-01, 089f-04 sensitivity); a grade that does not rank outcomes is a known weakness, not a new finding"
+  },
+  {
+   "id": "L7",
+   "kind": "weakness",
+   "claim": "Real-money TP-doctrine compliance is 2 of 10 routings (mirror 2 of 9, paper 4 of 61); the guard is baselined at 73 routings.",
+   "evidence": [
+    "python3 scripts/ci/check_tp_doctrine.py (re-run 2026-11-19)",
+    "comms/reviews/performance-review-20261118-190000.json#checks.C7"
+   ],
+   "population": "86 routings / 59 legs (review); guard output 2026-11-19",
+   "confidence": "measured",
+   "p": 0.9,
+   "check": {
+    "command": "python3 scripts/ci/check_tp_doctrine.py",
+    "rule": "baseline line count only shrinks",
+    "resolves_when": "each routing declared or exempt"
+   },
+   "ends_in": "no action, because owned and moving: checklist rows TP-DOCTRINE, TP-DOCTRINE-W43, RM-AM-ETH4H-ENTRYTP, RM-AM-ADA-TPX, TP-DECLARE-ALPACA-PB1D"
+  }
+ ],
+ "extrapolate": [
+  {
+   "lesson": "L1",
+   "applies_to": [
+    "ict_scalp_avax_5m",
+    "ict_scalp_sol_5m",
+    "ict_scalp_sol_15m",
+    "ict_scalp_mgc_15m",
+    "ict_scalp_xrp_15m",
+    "ict_scalp_xrp_5m",
+    "ict_scalp_5m"
+   ],
+   "new_hypothesis": "every ict_scalp leg shares the harness and the absent decision_bar, so every ict_scalp Stage-0 record is closed-bar; the forming arm is built once for the family",
+   "ends_in": "ICT-SCALP-FORMING-BAR-ARM (family-wide build); per-leg as-traded units queue behind it, ict_scalp_eth_15m first (RQ-20261119-e11f-01)"
+  },
+  {
+   "lesson": "L4",
+   "applies_to": [
+    "slv_trend_1h",
+    "tqqq_trend_long_1d",
+    "ml_entry_eq_struct"
+   ],
+   "new_hypothesis": "the other alpaca_live legs may also rest on a single window or a config that differs from the one the history units ran",
+   "ends_in": "no action, because their committed Stage-0 records exist (research/levers baselines: slv_trend_1h n 92 +54.5 R, cost share 0.065; tqqq_trend_long_1d n 54 +12.8 R, cost share 0.022), which this run did not re-derive; the alarm in L4 is specific to tlt's both-sides-to-long change on 2026-11-14"
+  },
+  {
+   "lesson": "frontier (Track 3.3)",
+   "applies_to": [],
+   "new_hypothesis": "",
+   "ends_in": "no action, because this week's strategy-frontier scan ran 2026-11-12 (docs/research/frontier-static-markets-2026-11-12.md, prop-frontier-2026-11-12.md, tradeify-futures-frontier-2026-11-12.md) and the weekly FRONTIER-SCAN lane owns the next; the three-unit allowance is unused, not dropped"
+  }
+ ],
+ "portfolio": [
+  {
+   "question": "G4: does same-direction concentration across legs predict the book's next-24h loss?",
+   "finding": "MEASURED on the BACKTEST population only (8 legs with a committed full-history corpus, 4076 trades, 1090 daily snapshots 2020-06..2026-10, realised-only, week-block bootstrap): NOT supported. Pooled rho(cdir, sum_r) +0.118 CI [0.048, 0.185]; rho(cdir, mean_r) +0.189 [0.126, 0.250]; placebo p05 +0.017: concentration goes with BETTER, not worse, next-24h realised R (a trend-regime co-movement; pooled across families it is a composition effect, within trend rho(sum_r) -0.04 [-0.18, 0.12] n 117, within pullback rho(sum_r) -0.02 [-0.14, 0.10] n 285, both inconclusive). Both reads were taken at authoring BEFORE a rule was written for them, so they are descriptive, not a pre-registered test. The LIVE-journal population (>= 90 d, the G4 check as written) is unread and is the pre-registered test: rule = codirection_drawdown.py grade() as committed.",
+   "ends_in": "PI-20261118-PREP1118-0002 (kept open: observation + how_to_check for the journal run) + scripts/research/codirection_drawdown.py (tooling, tests/test_codirection_drawdown.py) + comms/perf_followup/evidence/20261119-codirection/"
+  },
+  {
+   "question": "Real-money concentration and contribution",
+   "finding": "1 open real-money position at 18:15Z (bybit_2 ADA short, $3 risk); real_money_allocation_benchmark null (alpaca_live has 1 close).",
+   "ends_in": "no action, because n=1 real-money close on alpaca_live and SRQ-20260715-REALMONEY-ALLOC-BENCHMARK is kept open by the review"
+  },
+  {
+   "question": "Paper family concentration: trend +$17,155 vs pullback -$5,605 on the bybit_1 book (n 221, +$11,551)",
+   "finding": "The pullback family is net negative on the demo floor over 221 closes.",
+   "ends_in": "no action, because RQ-20261114-db1a-02 (is the record-year loss common across the 15 crypto pullback/trend demo legs, 1-D trend gate) and RQ-20261114-db1a-04 / 2411-04 (HTF long gate) are queued, and the direction-lever family (abab-xx, f251-xx) covers the pullback legs one by one"
+  },
+  {
+   "question": "ict_scalp_eth_15m on real money with a failed record: does the leg stay?",
+   "finding": "abab-56's registered action is a revert proposal; its evidence is silent on edge (L1). A Tier-3 proposal carries both options and the recommendation to hold until the as-traded record or the real-money mirror window decides.",
+   "ends_in": "PI-20261119-Q8HCWKL1-0001 (tier-3 proposal, ask_operator)"
+  }
+ ],
+ "queue_units": [
+  "RQ-20261119-e11f-02 (tlt_pullback_1h declared config on a disjoint 8y window; research-script-run.yml; est 40 min; dispatchable)",
+  "RQ-20261119-e11f-01 (ict_scalp_eth_15m as-traded forming-bar Stage 0; blocked on ICT-SCALP-FORMING-BAR-ARM; est 60 min)"
+ ],
+ "pipeline_items": [
+  "PI-20261119-Q8HCWKL1-0001 (new, tier-3 proposal, ask_operator)",
+  "PI-20261118-PREP1118-0001 (updated)",
+  "PI-20261118-PREP1118-0002 (updated)",
+  "PI-20261118-PREP1118-0007 (done: unit authored)",
+  "PI-20261118-PREP1118-0009 (done: abab-56 ran, consequence filed)",
+  "PI-20261022-LOWUPW43-0002 / -0003 (re-dated with observations)"
+ ],
+ "checklist_rows": [
+  "ICT-SCALP-FORMING-BAR-ARM (new, build, tier 1)"
+ ],
+ "rejected": [
+  {
+   "candidate": "tlt_pullback_1h stop-width / cost-in-R lever",
+   "reason": "duplicate: RQ-20261101-78fc-56 tested atr_stop_mult 3.0 and trend_lookback 120 (fail); RQ-20261111-203c-02 tested frequency filters that cut cost share (pass)"
+  },
+  {
+   "candidate": "trend_donchian_xrp_4h stop-width (cost share 0.455)",
+   "reason": "duplicate: atr_stop_mult already swept by RQ-20261007-023/-040, RQ-20261011-002, RQ-20261026-1b57-05..09 and others; banking failed (fd06-03)"
+  },
+  {
+   "candidate": "ml_entry regime / side unit on the 907 record",
+   "reason": "duplicate of the answered question: RQ-20261112-cd01-01 (regime vs selection vs cost) and RQ-20261112-8d20-01 (HTF counter-trend, fail); the open part (regime unresolved at t -1.13) is accruing in RQ-20261119-b9d0-02"
+  },
+  {
+   "candidate": "ml_entry same-bar cap re-registered on an untouched in-hand population",
+   "reason": "no in-hand population exists: the 907 record was used for selection and the forward window is the only post-record span; the sibling record (ml_entry_eq_struct, RQ-20261119-e8a1-04) has no scores for the frozen v1 booster the script requires"
+  },
+  {
+   "candidate": "co-direction unit on the live journal as a dispatchable queue unit",
+   "reason": "no instrument path for a journal pull on a runner (diag-only); filed as the pre-registered live-journal read on PI-20261118-PREP1118-0002 instead of a session-bound unit (debt, PI-20261006-LCEVL8D5-0002)"
+  },
+  {
+   "candidate": "stall-close exit rule for ml_entry (3+ reviews, same state/action)",
+   "reason": "the hook fires (ml_entry stall @ 8 bars, peak < 0.5 R: 3 reviews on 3 packages) but RQ-20261116-7c1a-01 already pre-registered and graded FAIL the stall time stop; abab-68 / c9d2-01 are the live iterations"
+  }
+ ],
+ "cost_usd": null,
+ "done": {
+  "every_entry_ends": true,
+  "previous_run_closed": true
+ }
+}
