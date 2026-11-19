@@ -70,3 +70,24 @@ def test_every_exit_head_driver_loads_through_the_resolved_grain():
         assert "harness._load_candles(res.path)" not in text and "harness._load_candles(path)" not in text, \
             f"{rel} still reads the resolved file at its native grain"
     assert os.path.exists(REPO / "scripts" / "ops" / "backtest_data_source.py")
+
+
+def _bt_kwargs():
+    return dict(donchian=20, atr_period=14, atr_stop_mult=2.5, trail_mult=5.0, timeout_bars=200, cooldown_bars=1,
+                timeframe="1h", symbol="ZZZUSDT")
+
+
+def test_run_backtest_refuses_a_frame_finer_than_its_timeframe(tmp_path):
+    """Manager 2026-11-19: run_backtest called DIRECTLY on a finer file must refuse (it never resamples itself)."""
+    import pytest
+    h = _harness()
+    _write_5m(tmp_path / "ZZZUSDT_5m.csv", hours=24 * 10)
+    raw = h._load_candles(str(tmp_path / "ZZZUSDT_5m.csv"))
+    with pytest.raises(ValueError, match="finer bars"):
+        h.run_backtest(raw.copy(), **_bt_kwargs())
+    # the same data at the declared grain runs
+    from scripts.ops import backtest_data_source as ds
+    ok = ds.load_resolved_frame(h, str(tmp_path / "ZZZUSDT_5m.csv"), "1h")
+    h.run_backtest(ok.copy(), **_bt_kwargs())
+    # the CLI path keeps its label semantics (opt-out), filed as PI-20261119-RIMARY13-0002
+    h.run_backtest(raw.copy(), grain_check=False, **_bt_kwargs())
