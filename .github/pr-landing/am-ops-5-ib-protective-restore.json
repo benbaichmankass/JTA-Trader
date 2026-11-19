@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "IB order path (IBClient._locked_place_protective): when placeOrder raises after the pre-cancel, each leg that did not go out is retried once, immediately, with a fresh orderId in the same OCA group. If a leg still is not resting: logger.critical and retCode 1 with result.legs_missing / protection_restored false. The happy path is unchanged. The trader restarts on deploy. Manager merges. Revert: git revert + deploy.",
+  "why": "BRACKETS-ALWAYS item 2 (manager: build it). A placeOrder that raised after the pre-cancel returned at once, with the trade's legs cancelled and nothing restored until the ~5-min naked sweep. Tested on real ib_insync 0.9.86 orders with placeOrder raising; the 4 failure-path tests fail on the old code. Gates this adds or changes: none."
+}

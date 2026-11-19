@@ -13220,6 +13220,33 @@ def _bybit_top_up_partial_sl(acc: dict, symbol: str, row, uncovered_qty, sl) -> 
         client = bybit_client_for(acc)
         if client is None:
             return False
+        # TP DOCTRINE + BRACKETS-ALWAYS item 5 (2026-11-19, manager decision): the top-up qty gets the row's
+        # OWN declared take-profit in the SAME Partial add-a-leg call, so it is never TP-naked. This supersedes
+        # the "TP deliberately omitted" note above. If the venue refuses the pair (e.g. a TP that is now on the
+        # wrong side of the market), the SL-only top-up is sent at once: the stop is never lost for the TP's sake.
+        tp = None
+        from src.units.accounts.execute import _bybit_tpsl_mode
+        try:
+            # Partial mode ONLY: under Full mode a TP on this call would be a POSITION-level TP over the whole
+            # netted position, overriding sibling trades' own targets.
+            if _bybit_tpsl_mode() != "partial":
+                raise ValueError("not partial mode")
+            _tp = row["take_profit_1"]
+            tp = float(_tp) if _tp not in (None, "") and float(_tp) > 0 else None
+        except (KeyError, IndexError, TypeError, ValueError):
+            tp = None
+        if tp is not None:
+            resp = modify_open_order(
+                client, acc, symbol=symbol, sl=float(sl), tp=tp, qty=qty,
+                sl_order_id=None, tp_order_id=None,
+            )
+            if bool((resp or {}).get("ok")):
+                return True
+            logger.warning(
+                "_bybit_top_up_partial_sl: SL+TP top-up refused for %s/%s uncovered=%s (tp=%s): %r -- "
+                "sending the SL-only top-up; this qty stays TP-NAKED (TP doctrine)",
+                acc.get("account_id"), symbol, qty, tp, (resp or {}).get("error"),
+            )
         resp = modify_open_order(
             client, acc, symbol=symbol, sl=float(sl), tp=None, qty=qty,
             sl_order_id=None, tp_order_id=None,
