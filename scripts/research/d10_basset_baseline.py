@@ -360,6 +360,72 @@ def falsify_verdict(full: dict, drop: dict, wl_full: dict, ref_auc: float) -> tu
     return "indeterminate", (f"neither: drop-arm AUC {drop['auc']} CI95 {drop['ci95']}, full-arm within-leg AUC {wl_full['auc']}")
 
 
+# ── NULL CALIBRATION (PI-20261119-JX6BUNMV-0001, the f7c1-07 harness audit) ─────────────────────────────────────────
+# AUDIT FINDING (ML-PRIMARY-9, 2026-11-19). The below-chance learned AUC of aadc-14 / f7c1-07 is NOT a leak in learned_points
+# or learned_oof: features read trades 0..i, the label reads i+1..i+N_NEXT, folds are by leg group (self-tests below). It is
+# that 0.5 is the wrong null for this design, for two measured reasons (iid synthetic legs, no signal at all, 24 legs of
+# 21 + geometric(mean 28) trades like aadc-14's 670 points / 24 legs, 20 seeds, through these exact functions):
+#   1. WITHIN-LEG, a short realised series splits a fixed total between the past window and the next-N window, so any
+#      "bad recent R -> decay" score ranks BELOW chance with no signal: within-leg AUC -mean20 0.364, CUSUM 0.373.
+#   2. POOLED out-of-fold by leg group, a fold whose legs decay more is scored by a model fitted on legs that decay less
+#      (base-rate anti-learning): learned pooled AUC 0.461-0.477 with no signal. With leg means that differ (sd 0.3 R) but
+#      no change over time, the CUSUM pooled AUC is 0.706, so a pooled AUC above 0.5 also reads "this leg is persistently
+#      below its Stage-0 expectancy", not "this leg is turning".
+# So every D10 AUC is graded against the ORDER NULL below: each leg's trades are shuffled (same legs, lengths, trade set and
+# mean; only the order is destroyed), points and scores are rebuilt, and the read is observed minus the null mean, with
+# p = share of null draws >= observed. A learned score refits on every null draw.
+NULL_DRAWS_CUSUM, NULL_DRAWS_LEARNED = 200, 40
+
+
+def _shuffle_legs(by: Dict[str, List[dict]], rng: np.random.Generator) -> Dict[str, List[dict]]:
+    out = {}
+    for leg, seq in by.items():
+        rs = [x["r"] for x in seq]
+        perm = rng.permutation(len(rs))
+        out[leg] = [{**x, "r": rs[j]} for x, j in zip(seq, perm)]
+    return out
+
+
+def score_points(by: Dict[str, List[dict]], mu: Dict[str, float], key: str, seed: int = SEED,
+                 features: Optional[List[str]] = None) -> List[dict]:
+    """learned_points with p[key] filled: key 'cusum' is the baseline itself; any other key is the out-of-fold learned score."""
+    lp = learned_points(by, mu)
+    if key != "cusum":
+        for p, s_ in zip(lp, learned_oof(lp, seed=seed, features=features)):
+            p[key] = None if np.isnan(s_) else float(s_)
+    return lp
+
+
+def _aucs(lp: List[dict], key: str) -> tuple[Optional[float], Optional[float]]:
+    sel = [p for p in lp if p.get(key) is not None]
+    if not sel:
+        return None, None
+    return auc(np.array([p[key] for p in sel], float), np.array([p["decay"] for p in sel])), within_leg_auc(sel, key)["auc"]
+
+
+def order_null(by: Dict[str, List[dict]], mu: Dict[str, float], key: str, draws: int, seed: int = SEED,
+               features: Optional[List[str]] = None) -> dict:
+    """Observed pooled / within-leg AUC of `key`, the order-null mean of each, the excess and its one-sided p."""
+    obs_p, obs_w = _aucs(score_points(by, mu, key, seed, features), key)
+    rng = np.random.default_rng(seed + 1)
+    nulls_p, nulls_w = [], []
+    for d in range(draws):
+        np_, nw = _aucs(score_points(_shuffle_legs(by, rng), mu, key, seed + 2 + d, features), key)
+        if np_ is not None:
+            nulls_p.append(np_)
+        if nw is not None:
+            nulls_w.append(nw)
+
+    def side(obs, nulls):
+        if obs is None or not nulls:
+            return {"observed": obs, "null_mean": None, "excess": None, "p_one_sided": None, "draws": len(nulls)}
+        m = float(np.mean(nulls))
+        return {"observed": round(obs, 4), "null_mean": round(m, 4), "null_sd": round(float(np.std(nulls)), 4),
+                "excess": round(obs - m, 4), "p_one_sided": round((1 + sum(v >= obs for v in nulls)) / (1 + len(nulls)), 4),
+                "draws": len(nulls)}
+    return {"key": key, "pooled": side(obs_p, nulls_p), "within_leg": side(obs_w, nulls_w)}
+
+
 # ── ACTION replay (RQ-20261117-aadc-06): does acting on the alarm add net R? ─────────────────────────────────────────
 ACTION_UNIT = "RQ-20261117-aadc-06"
 ACTION_RULE_ID = "RULE-RQ20261117-aadc-06-D10-ALARM-ACTION"
@@ -562,8 +628,32 @@ def run(a) -> int:
         out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
         print(json.dumps({"verdict": v, "note": why}, indent=1))
         return 0
+    if a.null_calibrate:
+        # REPORT mode (no verdict rule of its own): the order-null calibration of the CUSUM baseline and the learned score on
+        # the same points, for a registered unit to grade. The learned refits on every draw, so it takes the heavy queue.
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        try:
+            from scripts.ml._heavy_queue import take_heavy_queue
+            _lock = take_heavy_queue("d10-basset-null")   # noqa: F841 - held for the process lifetime
+        except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
+            print(f"WARN heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
+        cal = {"cusum": order_null(by, mu, "cusum", a.null_draws_cusum),
+               "learned": order_null(by, mu, "learned", a.null_draws_learned)}
+        res = {"verdict": "report", "read_state": "measured", "n": len(learned_points(by, mu)),
+               "population": (f"aadc-14's (leg, trade) points: closed live/paper trades on {len(by)} legs with a measured Stage-0 "
+                              f"record, label mean net R of the next {N_NEXT} trades < 0; null = each leg's trades shuffled"),
+               "note": (f"order-null excess AUC (pooled / within-leg): cusum {cal['cusum']['pooled']['excess']} / "
+                        f"{cal['cusum']['within_leg']['excess']}, learned {cal['learned']['pooled']['excess']} / "
+                        f"{cal['learned']['within_leg']['excess']}"),
+               "measurement": {"calibration": cal, "features": LEARNED_FEATURES,
+                               "params": {"K": K, "CLIP": CLIP, "N_NEXT": N_NEXT, "folds": N_GROUP_FOLDS},
+                               "trades_in": len(trades), "excluded": ex}}
+        out.joinpath("verdict.json").write_text(json.dumps(res, indent=1) + "\n")
+        print(json.dumps({"verdict": "report", "note": res["note"]}, indent=1))
+        return 0
     if a.alarm_h_sweep:
-        arms = [action_replay(by, mu, h=hh) for hh in SWEEP_H]
+        arms =[action_replay(by, mu, h=hh) for hh in SWEEP_H]
         v, why, chosen = sweep_verdict(arms)
         res = {"verdict": v, "read_state": "measured", "n": max(x["n_alarmed"] for x in arms),
                "population": (f"closed live/paper journal trades on {len(by)} legs with a measured Stage-0 record (as aadc-05/-06); "
@@ -693,6 +783,40 @@ def _self_test() -> int:
     assert falsify_verdict({"auc": 0.41}, {**good, "auc": 0.40, "ci95": [0.30, 0.48]}, {"auc": 0.4}, 0.4137)[0] == "fail"
     assert falsify_verdict({"auc": 0.50}, good, {"auc": 0.56}, 0.4137)[0] == "indeterminate"      # does not reproduce aadc-14
     assert falsify_verdict({"auc": 0.41}, {**good, "n": 10}, {"auc": 0.56}, 0.4137)[0] == "indeterminate"
+    # NULL CALIBRATION (PI-20261119-JX6BUNMV-0001). Short iid legs, no signal: the within-leg AUC of "bad recent R -> decay"
+    # is BELOW 0.5 by construction (the audit finding), and the order null absorbs it (excess ~ 0).
+    nrng = np.random.default_rng(11)
+    nby = {f"N{j}": [{"trade_id": k, "closed_at": f"t{k:04d}", "r": float(np.clip(nrng.normal(0, 1), -CLIP, CLIP))}
+                     for k in range(21 + int(nrng.geometric(1 / 28)))] for j in range(24)}
+    nmu = {lg: 0.05 for lg in nby}
+    nlp = learned_points(nby, nmu)
+    for p in nlp:
+        p["neg_m20"] = -p["mean20"]
+    assert within_leg_auc(nlp, "neg_m20")["auc"] < 0.45, within_leg_auc(nlp, "neg_m20")
+    on = order_null(nby, nmu, "cusum", draws=60)
+    assert abs(on["within_leg"]["excess"]) < 0.06 and on["within_leg"]["null_mean"] < 0.45, on
+    assert on["pooled"]["p_one_sided"] > 0.05, on
+    # the shuffle keeps each leg's trade set and length, and changes only the order
+    sh = _shuffle_legs(nby, np.random.default_rng(0))
+    assert all(sorted(x["r"] for x in sh[lg]) == sorted(x["r"] for x in nby[lg]) for lg in nby)
+    try:
+        import lightgbm  # noqa: F401
+    except ImportError:  # allow-silent: the learned checks need lightgbm (trainer / research venv); stated on stdout
+        print("d10_basset_baseline self-test OK (learned planted-leak / order-null checks SKIPPED: lightgbm not installed)")
+        return 0
+    # PLANTED LEAK: a feature that reads the label must drive the out-of-fold AUC near 1, i.e. the OOF path CAN surface a
+    # leak, so a below-chance score from it is not a hidden leak running backwards.
+    for p in nlp:
+        p["leak"] = float(p["decay"]) + float(nrng.normal(0, 0.3))
+    loof = learned_oof(nlp, features=["leak"] + LEARNED_FEATURES)
+    ok = ~np.isnan(loof)
+    assert auc(loof[ok], np.array([p["decay"] for p in nlp])[ok]) > 0.9
+    # a learned score with real within-leg signal (legs that turn bad) clears the order null
+    tby = {f"T{j}": [{"trade_id": k, "closed_at": f"t{k:04d}",
+                      "r": float(np.clip(nrng.normal(-0.6 if (j % 2 == 0 and k >= 40) else 0.3, 1), -CLIP, CLIP))}
+                     for k in range(90)] for j in range(12)}
+    tn = order_null(tby, {lg: 0.2 for lg in tby}, "learned", draws=8)
+    assert tn["within_leg"]["excess"] > 0.05 and tn["pooled"]["excess"] > 0.05, tn
     print("d10_basset_baseline self-test OK")
     return 0
 
@@ -711,6 +835,10 @@ def main(argv=None) -> int:
     ap.add_argument("--learned", action="store_true", help="RQ-20261118-aadc-14: learned degradation score vs the CUSUM baseline")
     ap.add_argument("--falsify-legid", action="store_true",
                     help="RQ-20261118-f7c1-07: aadc-14 with and without the leg-level inputs (n_seen, mu) + within-leg AUC")
+    ap.add_argument("--null-calibrate", action="store_true",
+                    help="PI-20261119-JX6BUNMV-0001: order-null calibration (excess AUC) of the CUSUM and learned scores")
+    ap.add_argument("--null-draws-cusum", type=int, default=NULL_DRAWS_CUSUM)
+    ap.add_argument("--null-draws-learned", type=int, default=NULL_DRAWS_LEARNED)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
