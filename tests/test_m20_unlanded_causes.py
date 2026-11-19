@@ -78,3 +78,25 @@ def test_thin_leg_split_beyond_holdout_lands_a_record_not_a_crash(tmp_path):
                      "--sweep-result", "success"]) == 0
     rec = json.loads(out.read_text().splitlines()[0])
     assert rec["measurement"]["leg"] == "qld_trend_long_1d" and rec["read_state"] == "measured"
+
+
+def test_split_beyond_holdout_keeps_its_boundary_and_why_in_corpus_and_summary(tmp_path):
+    """RQ-20261119-a7f1-08 (trend_donchian_xrp_4h, run 44517905271): the corpus row read split null / why null and
+    the SUMMARY printed 'split_beyond_holdout ()', so the refused leg could not be diagnosed from the run."""
+    import json
+    import subprocess
+    d = tmp_path / "sweep_out" / "exit-lever-sweep-x"
+    d.mkdir(parents=True)
+    (d / "verdicts.json").write_text(json.dumps({
+        "generated_at": "2026-11-19T12:10:14Z", "split": None, "tp_cap_pct": 0.099,
+        "verdicts": {"trend_donchian_xrp_4h": {"status": "split_beyond_holdout", "split": "2025-07-01",
+                                               "split_fallback": "leg_too_thin",
+                                               "holdout": {"last_discovery_day": "2025-06-12"}}}}))
+    corpus = tmp_path / "c.jsonl"
+    r = subprocess.run([sys.executable, "scripts/research/m20_corpus_extract.py", "--in",
+                        str(tmp_path / "sweep_out"), "--corpus", str(corpus)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    row = [json.loads(x) for x in corpus.read_text().splitlines()
+           if json.loads(x).get("leg") == "trend_donchian_xrp_4h"][0]
+    assert row["split"] == "2025-07-01"
+    assert row["leg_status_why"] == "split 2025-07-01 fell back (leg_too_thin) past last discovery day 2025-06-12"
