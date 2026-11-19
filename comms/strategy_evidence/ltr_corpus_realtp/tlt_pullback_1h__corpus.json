@@ -1,0 +1,42 @@
+{
+  "leg": "tlt_pullback_1h",
+  "purpose": "full-history per-trade corpus for the live-trade-review outcome table (scripts/research/live_review_outcomes.py --corpus auto); NOT a promotion-evidence record (the Stage-0 gate reads comms/strategy_evidence/tlt_pullback_1h.json)",
+  "produced_by": "scripts/research/exit_lever_ablation.py --leg tlt_pullback_1h arm A (the leg as declared in config/strategies.yaml; closed-bar harness)",
+  "builder": "scripts/research/build_ltr_corpus.py (mode harness)",
+  "source_file": "comms/research/RQ-20261018-ef5d-01/39121076582/data/TLT_60.csv",
+  "decision_bar": "forming",
+  "data_start": "2024-11-11 20:00:00+00:00",
+  "data_end": "2026-10-16 20:00:00+00:00",
+  "n_trades": 64,
+  "net_total_r": 6.9214,
+  "fee_bps_roundtrip": 0.0,
+  "slippage_bps_roundtrip": 5.0,
+  "funding_bps_per_window": 0.0,
+  "params": {
+    "timeframe": "1h",
+    "symbols": [
+      "TLT"
+    ],
+    "trend_lookback": 60,
+    "pullback_lookback": 12,
+    "pullback_frac": 0.5,
+    "atr_period": 14,
+    "atr_stop_mult": 2.0,
+    "trail_mult": 3.0,
+    "trail_decay_stall_bars": 6,
+    "trail_decay_tight_mult": 1.5,
+    "side_filter": "long",
+    "tp_r": 3.5,
+    "tp_intent": {
+      "mode": "r_multiple",
+      "basis": "RQ-20261112-5ab1-01_kstar_3.5R",
+      "calibrated": true
+    },
+    "min_confidence": 0.0
+  },
+  "config_fingerprint": "sha256:e4e373ded0531f81ad9dd194e00ead4b",
+  "trades_sha256": "75910fc098d25c4af9bba367104a6da001195c82da43173e13abe29a3d688be7",
+  "staleness": "regenerate when the leg's declared params or decision_bar change (config_fingerprint no longer matches comms/strategy_evidence/tlt_pullback_1h.json) or when the cost stack moves",
+  "candles": "comms/research/RQ-20261018-ef5d-01/39121076582/data/TLT_60.csv",
+  "note": "real-TP holdout population for ltr near_target (RQ-20261119-c9d2-01); separate dir so default all-corpora runs are unchanged"
+}
