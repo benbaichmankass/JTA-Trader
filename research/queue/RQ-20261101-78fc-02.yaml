@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-02
 title: 'ITERATION 1 of ml-setup-metalabel-p2pool (indeterminate): with the declared-initial-risk backfill, does setup-candidates-metalabel-p2pool-v2
   hold its cost-net lift on >= 200 eval rows?'
-status: blocked
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -70,11 +70,11 @@ related:
 - RESEARCH-ITERATE
 - ML-P1-COSTNET-REBUILD
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- kind: work_item
-  ref: ML-P1-COSTNET-REBUILD
-  what: 'PI-20261029-MLP1-0001: backfill the declared initial risk for the BTC/ETH/SOL live closed trades (245 of 307 BTC trades lack it)'
-  clears_when: the backfill lands and setup_candidates v023 rebuilds with >= 200 eval rows; then git-mv to research/queue/ (rule unchanged)
+unblocked:
+  at: '2026-11-19'
+  by: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC)
+  what_cleared: 'ML-P1-COSTNET-REBUILD landed (#27372, merged 2026-11-19 18:05Z as 82ae722a1): the signal-time meta stop + linked_trade_id
+    join backfilled the vwap BTC trades; setup_candidates v023 rebuilt with 434 eval rows (>= 200). Rule unchanged; run and graded once.'
 intervention_controls:
   not_applicable: an offline model evaluation; the consumer's own gate applies any action
 ml_consumer:
@@ -87,3 +87,21 @@ ml_consumer:
   - squeeze_breakout_4h
   - htf_pullback_trend_2h
   book: demo_floor
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261101-78fc-02
+  evidence:
+  - comms/ml-plan/p1_costnet_verdict_v023.json
+  graded_at: '2026-11-19'
+  grader: 'run and graded on the trainer by lane ML-BUILD-1119 (session_01AFoLuLWp2gWxxBuEKpvVAR; relay #27390, code #27372 @1713b5ff2);
+    unit closed by lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager'
+  rows: 1
+  verdict: fail
+  reason: 'P1 (docs/plans/ml-live-promotion-plan-2026-10-29.md s3, graded unchanged) on setup_candidates v023: n_eval 434 real closed trades
+    (>= 200), excluded 4.9% (<= 20%). (a) cost gate FAILED: value -0.0035 R/opp vs take-none 0 (take-all -0.415, matched random -0.075; 78
+    taken). (b) bootstrap LB of value minus matched random +0.0137 ok; (c) take rate 0.180 ok; (d) ETH +0.134 (n 45), XRP +0.079 (n 37),
+    BTC -0.085 (n 308). The first run (relay #27379, no linked_trade_id join, n_eval 191) is superseded, not a second look. P1 needs all
+    of (a)-(d): FAIL. DIAGNOSIS (observed, not graded): 240 of the 308 BTC eval rows are the vwap strategy''s 2026-05 book, which is
+    enabled:false; BTC take-all is -0.527 R. Configuration closed: setup-candidates-metalabel-p2pool-v2 on the v023 live eval set. Family
+    ml-setup-metalabel stays open; next test = PI-20261119-RIMARY12-0001 (rostered-strategies-only iteration; a live-only re-read would
+    have 434 - 240 = 194 rows < 200, so it needs an n-adequate design registered before the run). No config, registry or serving change.'
