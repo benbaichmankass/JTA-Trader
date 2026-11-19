@@ -1623,6 +1623,24 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+def _restores_cost_globals(fn):
+    """main() applies the cost stack through module globals (the harness reads them while it runs); restore the caller's
+    values on exit so an in-process call (a test, a driver) cannot leak venue-aware slippage/funding or a per-contract
+    arm into the next in-process run (PR #27149: net_total_r -14.7793 -> -17.1766 with identical trades)."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        saved = {n: globals()[n] for n in ("FEE_BPS_ROUNDTRIP", "SLIPPAGE_BPS_ROUNDTRIP", "FUNDING_BPS_PER_WINDOW",
+                                           "FUNDING_WINDOW_HOURS", "CONTRACT_COST")}
+        try:
+            return fn(*a, **k)
+        finally:
+            globals().update(saved)
+    return wrapper
+
+
+@_restores_cost_globals
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     global CONTRACT_COST

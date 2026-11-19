@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits scripts/backtest_ict_scalp.py (evidence harness main(), a wrapper only); manager merges after the full pytest-run is green",
+  "why": "main() assigned module-level cost globals and never restored them, so an in-process test leaked venue-aware slippage/funding into the next run (#27149: net_total_r -14.7793 -> -17.1766, identical trades). main() now saves and restores them in try/finally. CLI behaviour is unchanged (the process exits right after). Gates this adds or changes: none."
+}
