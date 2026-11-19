@@ -90,6 +90,8 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 RECEIPT = REPO_ROOT / "runtime_logs" / "work_digest_receipt.json"
 
 WINDOW = "1 hour ago"
+#: The hourly digest build runs at or after this minute (LIVE-VM-HOURLY-BURST).
+DIGEST_EARLIEST_MINUTE = 10
 
 
 def _resolve_base(head: str = "HEAD") -> tuple[str | None, str]:
@@ -146,8 +148,16 @@ def _write_receipt(**fields) -> None:
 def run(dry_run: bool = False, force: bool = False) -> int:
     from scripts.ops.work_digest import build_digest, render  # noqa: PLC0415
 
-    hour = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
+    now = datetime.now(timezone.utc)
+    hour = now.strftime("%Y-%m-%dT%H")
     prior = _read_receipt()
+    # LIVE-VM-HOURLY-BURST (2026-11-19): the hourly build (32% of a CPU, vm-cpu-sample
+    # #27025) waits until :10, off the trader's 1h bar close. The 5-min runs before :10
+    # skip cheaply and latch nothing, so the hour's digest is still sent once.
+    if not force and now.minute < DIGEST_EARLIEST_MINUTE and prior.get("lastSentHour") != hour:
+        print(f"work-digest-now: before :{DIGEST_EARLIEST_MINUTE:02d} — the hourly build waits "
+              f"(off the bar close)")
+        return 0
     if prior.get("lastSentHour") == hour and not force:
         print(f"work-digest-now: already sent for {hour}Z — not sending a second "
               f"(use --force to override)")
