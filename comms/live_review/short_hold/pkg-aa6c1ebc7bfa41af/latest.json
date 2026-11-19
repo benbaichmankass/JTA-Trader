@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T18:15:00Z",
- "bar_close": "2026-11-19T18:20:00Z",
- "built_at": "2026-11-19T18:23:15Z",
+ "bar": "2026-11-19T18:20:00Z",
+ "bar_close": "2026-11-19T18:25:00Z",
+ "built_at": "2026-11-19T18:27:32Z",
  "closed": false,
  "order_package_id": "pkg-aa6c1ebc7bfa41af",
  "packet": {
@@ -134,21 +134,22 @@
     "forecast": {
      "direction": "with_trade",
      "evidence": [
-      "desk_handoff.opening forecast (target 0.954, invalidation 1.0001, p 0.35)",
-      "chart.swings highs 0.9944 / 1.0072, lows 0.954",
-      "regime.trend_now chop adx 15.8; chart.htf 4h transitional ADX 24.8",
-      "exit_plan sl_now 1.0031 tp_now 0.954"
+      "chart.swings",
+      "chart.since_entry",
+      "exit_plan",
+      "regime",
+      "packet_health"
      ],
      "horizon_bars": 12,
      "invalidation_px": 1.0001,
-     "p_target": 0.3,
+     "p_target": 0.4,
      "target_px": 0.954,
-     "thesis": "Chop regime (1h ADX 16, 4h transitional), price pressed against the 0.9944 swing high; the fade toward the 0.954 range low stands. The last bar printed 0.9935 high but closed at 0.9888, under the 1.0001 invalidation.",
+     "thesis": "1h chop with the fade working: lower highs under 0.9974, price toward the 0.954 range low before the 1.0001 invalidation.",
      "timeframe": "1h"
     },
-    "reason": "Hand-off CONFIRM against DD-20261119T1229Z-scan-1h-1 (opened 12:34Z, 3 minutes before this review, no chain yet). No priced table (claude_desk has no Stage-0 evidence record) and no open_r, so judgement. Price 0.9888 equals the entry; the 1.0001 invalidation and the 1.0031 stop are untouched and the 12-bar horizon has hardly begun. p_target lowered 0.35 to 0.30 for the 0.9935 spike. Brackets own \u2026",
-    "review_id": "LR-20261119T1237Z-pkg-aa6c1ebc7bfa41af",
-    "reviewed_at": "2026-11-19T14:03:00Z",
+    "reason": "Desk hand-off CONFIRM against the 12:34Z opening and LR-20261119T1237Z (confirm). Previous forecast held: the 1.0001 invalidation was never touched (since_entry high 0.9974) and price moved in favour (0.9689 at packet time, low 0.964); target 0.954 still ahead, p raised 0.30 to 0.40. No table and no open_r, so judgement. Brackets SL 1.0031 / TP 0.954 unchanged; they own the exit.",
+    "review_id": "LR-20261119T1606Z-pkg-aa6c1ebc7bfa41af",
+    "reviewed_at": "2026-11-19T18:25:00Z",
     "route": null
    },
    "symbol": "XRPUSDT"
@@ -159,7 +160,7 @@
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.355
+     -0.417
     ],
     [
      "SLV",
@@ -171,13 +172,13 @@
      "SLV",
      "short",
      "slv_trend_1h",
-     0.181
+     0.121
     ],
     [
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.145
+     0.0916
     ],
     [
      "SLV",
@@ -207,25 +208,25 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.455
+     0.394
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.106
+     -0.0489
     ],
     [
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.407
+     0.399
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.493
+     -0.532
     ],
     [
      "SLV",
@@ -237,13 +238,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.38
+     2.4
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     -0.111
+     -0.167
     ],
     [
      "BTCUSDT",
@@ -261,43 +262,43 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.315
+     0.284
     ],
     [
      "SOLUSDT",
      "short",
      "e4_oi_shock_1h",
-     -0.846
+     -1.08
     ],
     [
      "GLD",
      "short",
      "gld_pullback_1d",
-     2.46
+     2.44
     ],
     [
      "IEF",
      "long",
      "ief_pullback_1d",
-     0.276
+     0.259
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     0.887
+     0.825
     ],
     [
      "ETHUSDT",
      "short",
      "ict_scalp_eth_15m",
-     -0.218
+     -0.266
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.307
+     0.277
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -625,7 +626,7 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 1,
+   "chain_length": 2,
    "chain_tail": [
     {
      "action": "hold",
@@ -640,6 +641,21 @@
      "reason": "Hand-off CONFIRM against DD-20261119T1229Z-scan-1h-1 (opened 12:34Z, 3 minutes before this review, no chain yet). No priced table (claude_desk has no Stage-0 evidence record) and no open_r, so judgement. Price 0.9888 equals the entry; the 1.0001 invalidation and the 1.0031 stop are untouched and the 12-bar horizon has hardly begun. p_target lowered 0.35 to 0.30 for the 0.9935 spike. Brackets own the exit; no bracket move beats them.",
      "review_id": "LR-20261119T1237Z-pkg-aa6c1ebc7bfa41af",
      "reviewed_at": "2026-11-19T14:03:00Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 12,
+      "invalidation_px": 1.0001,
+      "p_target": 0.4,
+      "target_px": 0.954,
+      "timeframe": "1h"
+     },
+     "reason": "Desk hand-off CONFIRM against the 12:34Z opening and LR-20261119T1237Z (confirm). Previous forecast held: the 1.0001 invalidation was never touched (since_entry high 0.9974) and price moved in favour (0.9689 at packet time, low 0.964); target 0.954 still ahead, p raised 0.30 to 0.40. No table and no open_r, so judgement. Brackets SL 1.0031 / TP 0.954 unchanged; they own the exit.",
+     "review_id": "LR-20261119T1606Z-pkg-aa6c1ebc7bfa41af",
+     "reviewed_at": "2026-11-19T18:25:00Z",
      "verdict": "confirm"
     }
    ],
@@ -671,7 +687,7 @@
     "timeframe": "1h",
     "tp": 0.954
    },
-   "prior_decision_id": "LR-20261119T1237Z-pkg-aa6c1ebc7bfa41af",
+   "prior_decision_id": "LR-20261119T1606Z-pkg-aa6c1ebc7bfa41af",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -688,7 +704,7 @@
    "head": "fcc9e7efb0",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T18:23:43Z",
+  "info_cutoff_at": "2026-11-19T18:27:49Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
@@ -759,25 +775,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261119T1823Z-pkg-aa6c1ebc7bfa41af",
+  "review_id": "LR-20261119T1827Z-pkg-aa6c1ebc7bfa41af",
   "short_hold": {
-   "atr": 0.004042857142857149,
-   "bar": "2026-11-19T18:15:00Z",
-   "bar_close": "2026-11-19T18:20:00Z",
+   "atr": 0.004014285714285725,
+   "bar": "2026-11-19T18:20:00Z",
+   "bar_close": "2026-11-19T18:25:00Z",
    "entry": 0.9888,
-   "mark": 0.9698,
-   "minutes_held": 346.1,
-   "open_r_at_mark": 1.3287,
+   "mark": 0.9734,
+   "minutes_held": 350.3,
+   "open_r_at_mark": 1.0769,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 0.9724,
-     "high": 0.9726,
-     "low": 0.9623,
-     "open": 0.9625,
-     "t": "2026-11-19T17:20:00Z"
-    },
     {
      "close": 0.9739,
      "high": 0.9754,
@@ -854,6 +863,13 @@
      "low": 0.9675,
      "open": 0.9679,
      "t": "2026-11-19T18:15:00Z"
+    },
+    {
+     "close": 0.9734,
+     "high": 0.9744,
+     "low": 0.9697,
+     "open": 0.9698,
+     "t": "2026-11-19T18:20:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -872,25 +888,18 @@
    "tp": 0.954
   }
  },
- "packet_sha": "648584eb37fe7b0a79af0f2ad23b6ac742814ae9e25d88467a75eb3b56a53601",
+ "packet_sha": "508391d77f2c4e24f21c2972a1bfd67d5902623162db3bffc6d513c5da1339ec",
  "short_hold": {
-  "atr": 0.004042857142857149,
-  "bar": "2026-11-19T18:15:00Z",
-  "bar_close": "2026-11-19T18:20:00Z",
+  "atr": 0.004014285714285725,
+  "bar": "2026-11-19T18:20:00Z",
+  "bar_close": "2026-11-19T18:25:00Z",
   "entry": 0.9888,
-  "mark": 0.9698,
-  "minutes_held": 346.1,
-  "open_r_at_mark": 1.3287,
+  "mark": 0.9734,
+  "minutes_held": 350.3,
+  "open_r_at_mark": 1.0769,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 0.9724,
-    "high": 0.9726,
-    "low": 0.9623,
-    "open": 0.9625,
-    "t": "2026-11-19T17:20:00Z"
-   },
    {
     "close": 0.9739,
     "high": 0.9754,
@@ -967,6 +976,13 @@
     "low": 0.9675,
     "open": 0.9679,
     "t": "2026-11-19T18:15:00Z"
+   },
+   {
+    "close": 0.9734,
+    "high": 0.9744,
+    "low": 0.9697,
+    "open": 0.9698,
+    "t": "2026-11-19T18:20:00Z"
    }
   ],
   "risk_per_unit": null,
