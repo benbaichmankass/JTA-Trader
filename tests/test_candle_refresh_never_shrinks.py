@@ -76,7 +76,7 @@ def _fake(monkeypatch, start, n):
 def test_forming_bar_never_fetched_or_written(tmp_path, monkeypatch):
     p = tmp_path / "SOLUSDT_15m.csv"
     _write(p)
-    seen = _fake(monkeypatch, "2026-06-19 07:00", 72)  # source would emit bars past 'now'
+    seen = _fake(monkeypatch, "2026-06-18 22:30", 110)  # contiguous; source would emit bars past 'now'
     now = datetime(2026, 6, 19, 23, 37, tzinfo=timezone.utc)
     rch.refresh_one(p, "SOLUSDT", "15", now)
     last = pd.read_csv(p)["timestamp"].iloc[-1]
@@ -182,6 +182,12 @@ def test_btc_alias_extends_the_existing_backtest_file_in_its_own_spelling(tmp_pa
     new = [{"timestamp": t.to_pydatetime(), "open": 2.0, "high": 2.0, "low": 2.0, "close": 2.0, "volume": 2.0}
            for t in pd.date_range("2026-05-21 23:55", periods=3, freq="5min", tz="UTC")]
     monkeypatch.setattr(rch.fbc, "fetch_klines", lambda *a, **k: new)
+
+    class _Now(datetime):  # pin 'now' so the tail is covered (the partial-data guard checks it)
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 5, 22, 0, 10, tzinfo=timezone.utc)
+    monkeypatch.setattr(rch, "datetime", _Now)
     assert rch.main(["--data-dir", str(tmp_path), "BTCUSDT:5=backtest_BTCUSDT_5m.csv"]) == 0
     out = pd.read_csv(p)
     assert len(out) == 6 and out["timestamp"].iloc[-1] == "2026-05-22T00:05:00Z"
@@ -229,3 +235,59 @@ def test_dukascopy_source_keeps_only_closed_rth_bars(tmp_path, monkeypatch):
     added = list(out["timestamp"].iloc[2:])
     # November = standard time: cash session 14:30-21:00 UTC -> hour bars 15:00..20:00; 20:00 is still forming at 20:30
     assert added == [f"2026-11-18 {h:02d}:00:00+00:00" for h in range(15, 20)], added
+
+
+# ---- partial-data guard (manager, 2026-11-19): a hole means UNEXTENDED, never half-filled ----
+def _fake_rows(monkeypatch, stamps):
+    rows = [{"timestamp": pd.Timestamp(t, tz="UTC").to_pydatetime(), "open": 100.0 + i % 3, "high": 105.0,
+             "low": 99.0, "close": 100.0 + i % 3, "volume": 2.0} for i, t in enumerate(stamps)]
+    monkeypatch.setattr(fbc, "fetch_klines", lambda *a, **k: rows)
+
+
+def test_interior_hole_leaves_file_unextended(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)                                        # 06-18 00:00 .. 23:45
+    before = p.read_bytes()
+    stamps = list(pd.date_range("2026-06-19 00:00", periods=8, freq="15min")) + \
+        list(pd.date_range("2026-06-19 12:00", periods=8, freq="15min"))   # 10h hole in the middle
+    _fake_rows(monkeypatch, stamps)
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 19, 14, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "interior gap" in str(exc)
+    assert p.read_bytes() == before
+
+
+def test_truncated_tail_leaves_file_unextended(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)
+    before = p.read_bytes()
+    _fake_rows(monkeypatch, pd.date_range("2026-06-19 00:00", periods=8, freq="15min"))  # stops at 01:45
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 20, 0, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "tail gap" in str(exc)
+    assert p.read_bytes() == before
+
+
+def test_empty_pull_over_a_long_window_is_a_failure_not_current(tmp_path, monkeypatch):
+    p = tmp_path / "SOLUSDT_15m.csv"
+    _write(p, n=96)
+    _fake_rows(monkeypatch, [])
+    try:
+        rch.refresh_one(p, "SOLUSDT", "15", datetime(2026, 6, 25, 0, 0, tzinfo=timezone.utc))
+        raise AssertionError("must refuse")
+    except RuntimeError as exc:
+        assert "seam gap" in str(exc)
+
+
+def test_rth_holiday_weekend_seam_is_allowed():
+    h = 3_600_000
+    last = int(pd.Timestamp("2026-06-18 19:00", tz="UTC").timestamp() * 1000)   # Thu last RTH bar
+    first = int(pd.Timestamp("2026-06-22 13:00", tz="UTC").timestamp() * 1000)  # Mon (Fri 06-19 holiday)
+    new = [first + i * h for i in range(7)]
+    end = new[-1] + 2 * h
+    assert rch.coverage_refusal(last, new, end, h, rch.MAX_GAP_MS["dk"]) is None
+    assert rch.coverage_refusal(last, new, end, h, rch.MAX_GAP_MS["bybit"]) is not None

@@ -152,6 +152,26 @@ SOURCES = {"bybit": lambda s, iv, a, b: fbc.fetch_klines(s, iv, a, b), "yf": fet
            "dk": fetch_dukascopy_rth}
 
 
+#: Largest hole allowed between consecutive bar OPENS (beyond one bar) inside the extension, across the seam
+#: (old last bar -> first new bar) and at the tail (last new bar -> last closed bar). Anything larger means the
+#: source returned PARTIAL data, and the file stays UNEXTENDED rather than half-filled (manager, 2026-11-19).
+#: bybit is 24/7: 6h tolerates an exchange maintenance window and catches a truncated pull. yf/dk are RTH 1h or
+#: futures 1h: the longest legitimate closure is a 4-day holiday weekend (~96h), so 108h.
+MAX_GAP_MS = {"bybit": 6 * 3_600_000, "yf": 108 * 3_600_000, "dk": 108 * 3_600_000}
+
+
+def coverage_refusal(last_ms: int, new_ms: list, end_ms: int, step: int, max_gap: int):
+    """Reason string when the extension has a hole wider than ``max_gap`` (seam, interior or tail), else None."""
+    seq = [last_ms] + sorted(new_ms) + [end_ms - step]   # end_ms - step = open of the last CLOSED bar
+    for a, b in zip(seq, seq[1:]):
+        if b - a - step > max_gap:
+            where = "seam" if a == last_ms else ("tail" if b == end_ms - step else "interior")
+            return (f"{where} gap {(b - a - step) / 3_600_000:.1f}h after "
+                    f"{pd.Timestamp(a, unit='ms', tz='UTC')} exceeds {max_gap / 3_600_000:.0f}h; "
+                    f"source returned partial data, file left unextended")
+    return None
+
+
 def parse_pair(pair: str, data_dir: Path):
     """``[source:]SYMBOL:INTERVAL[=FILE]`` -> (source, symbol, interval, path).
 
@@ -177,9 +197,15 @@ def refresh_one(path: Path, symbol: str, interval: str, now: datetime, source: s
     if start_ms >= end_ms:
         return f"{path.name}: already current (last {last})"
     rows = SOURCES[source](symbol, interval, start_ms, end_ms)  # raises, never falls back to another venue
-    if not rows:
-        return f"{path.name}: no new bars after {last}"
+    step = fbc._interval_ms(interval)
     new = pd.DataFrame(rows)
+    nts = pd.to_datetime(new["timestamp"], utc=True, format="mixed") if rows else pd.Series([], dtype=object)
+    new_ms = [int(t.timestamp() * 1000) for t in nts if t > last]
+    why = coverage_refusal(int(last.timestamp() * 1000), new_ms, end_ms, step, MAX_GAP_MS[source])
+    if why:
+        raise RuntimeError(f"{path.name}: {why}")
+    if not new_ms:
+        return f"{path.name}: no new bars after {last}"
     fmt = ts_formatter(old["timestamp"].iloc[-1])
     new["timestamp"] = new["timestamp"].map(fmt)
     out = merge_extend(old, new)
