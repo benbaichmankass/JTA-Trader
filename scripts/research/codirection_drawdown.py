@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a MEASUREMENT INSTRUMENT run by a session or a queue unit over committed corpora or a pulled journal; it grades a descriptive read and gates nothing.
 """Does same-direction concentration across legs predict the book's next-24h loss?  (perf-followup Track 4)
 
 Question (PI-20261118-PREP1118-0002, review call G4, p 0.55): when many open positions across the roster lean the same
