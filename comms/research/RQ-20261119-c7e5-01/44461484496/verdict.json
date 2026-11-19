@@ -1,0 +1,78 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "141 committed Stage-0 trades over 4 IB futures legs (comms/strategy_evidence/runs/2026-09-24-e55), gross cap replay",
+  "n": 141,
+  "measurement": {
+    "rule": "RULE-IB-GROSS-CAP-S0",
+    "n_trades": 141,
+    "A": {
+      "m1_max": 3.5337771501563457,
+      "total_return": 0.5462515955876872,
+      "max_drawdown": 0.21697734684225378,
+      "m3": 2.5175512722294524,
+      "m2": 32.5819
+    },
+    "arms": {
+      "2.5": {
+        "m1_max": 2.5000000000000004,
+        "total_return": 0.5253190792737985,
+        "max_drawdown": 0.2186999691266256,
+        "m3": 2.4020080175212226,
+        "m2": 31.491378487602304,
+        "m2_ratio": 0.9665298367376459,
+        "ratio_boot": {
+          "lower_80": 0.9065495890837484,
+          "median": 0.9677251179847568,
+          "draws_den_not_positive": 634
+        },
+        "taken": 141,
+        "skipped_share": 0.0,
+        "scaled_share": 0.1702127659574468,
+        "skipped_by_leg": {
+          "mes_trend_long_1d": 0,
+          "mgc_pullback_1d": 0,
+          "mgc_trend_1h": 0,
+          "mhg_pullback_1d": 0
+        },
+        "a_ratio_ok": true,
+        "b_m3_ok": true,
+        "c_taken_ok": true,
+        "passes": true
+      },
+      "1.5": {
+        "m1_max": 1.5000000000000002,
+        "total_return": 0.2716763589264568,
+        "max_drawdown": 0.20164644574138368,
+        "m3": 1.3472905903577796,
+        "m2": 17.871007727668758,
+        "m2_ratio": 0.5484949535683542,
+        "ratio_boot": {
+          "lower_80": 0.25982989298817605,
+          "median": 0.5466660053768045,
+          "draws_den_not_positive": 634
+        },
+        "taken": 135,
+        "skipped_share": 0.0425531914893617,
+        "scaled_share": 0.6170212765957447,
+        "skipped_by_leg": {
+          "mes_trend_long_1d": 2,
+          "mgc_pullback_1d": 0,
+          "mgc_trend_1h": 0,
+          "mhg_pullback_1d": 4
+        },
+        "a_ratio_ok": false,
+        "b_m3_ok": false,
+        "c_taken_ok": true,
+        "passes": false
+      }
+    },
+    "verdict": "PASS",
+    "passing_cap": 2.5,
+    "verdict_reason": "largest passing cap G = 2.5"
+  },
+  "note": "largest passing cap G = 2.5",
+  "data_inputs": [
+    "comms/strategy_evidence/runs/2026-09-24-e55"
+  ]
+}
