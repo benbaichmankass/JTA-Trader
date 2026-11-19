@@ -25,7 +25,7 @@ RESEARCH_PREFIXES = ("research-script-run", "e35-bracket-sweep")
 
 def _gh(args):
     r = subprocess.run(["gh", "api", "-X", "GET", *args], capture_output=True, text=True, check=False)
-    return [l for l in r.stdout.splitlines() if l.strip()]
+    return [ln for ln in r.stdout.splitlines() if ln.strip()]
 
 
 def _ts(s):
@@ -57,17 +57,17 @@ def main(argv=None):
         for page in range(1, 11):
             ls = _gh([f"repos/{repo}/actions/runs", "-f", f"created={t:%Y-%m-%dT%H:%M:%SZ}..{t2:%Y-%m-%dT%H:%M:%SZ}",
                       "-f", "per_page=100", "-f", f"page={page}", "--jq", ".workflow_runs[] | [.id,.name,.event] | @json"])
-            for l in ls:
-                v = json.loads(l)
+            for ln in ls:
+                v = json.loads(ln)
                 runs[v[0]] = v
             if len(ls) < 100:
                 break
         t = t2
     lat = {"research": [], "alarm": [], "ci": []}
     for rid, name, _ev in runs.values():
-        for l in _gh([f"repos/{repo}/actions/runs/{rid}/jobs", "-f", "per_page=100", "--jq",
+        for ln in _gh([f"repos/{repo}/actions/runs/{rid}/jobs", "-f", "per_page=100", "--jq",
                       ".jobs[] | [.created_at,(.started_at//\"\")] | @json"]):
-            c, s = json.loads(l)
+            c, s = json.loads(ln)
             if s:
                 lat[classify(name, alarm)].append((_ts(s) - _ts(c)).total_seconds() / 60)
     print(f"population: {len(runs)} runs created in the last {a.hours:g} h in {repo}; jobs with a start time only")

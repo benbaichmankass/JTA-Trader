@@ -107,7 +107,7 @@ def test_the_dispatcher_workflow_passes_both_caps():
     (it did: 10 on the command line while the config said so too, until the measured change to 30)."""
     from scripts.research import compute_router as cr
     wf = (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
-    code = "\n".join(l for l in wf.splitlines() if not l.strip().startswith("#"))
+    code = "\n".join(ln for ln in wf.splitlines() if not ln.strip().startswith("#"))
     assert "--max-repo-queued" not in code
     cfg = cr.load_config()
     assert cfg["limits"]["max_repo_queued"] >= 1
