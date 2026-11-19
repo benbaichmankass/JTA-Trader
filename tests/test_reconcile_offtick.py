@@ -48,20 +48,31 @@ def _other_thread_can_take_the_lock() -> bool:
 
 # --- the lock -------------------------------------------------------------------
 
-def test_dispatch_waits_for_an_in_flight_reconciliation_pass():
-    in_pass = threading.Event()
+# The lock is held PER RECONCILIATION PHASE (order_monitor._recon_phase; row LIVE-TICK-NEAR-BUDGET,
+# 2026-11-19): a whole-pass hold made every entry wait a mean 23.8 s. The invariant is unchanged at the
+# granularity that matters: no phase runs during a dispatch, and a dispatch never runs inside a phase.
+
+def _recon_phase():
+    from src.runtime.order_monitor import _recon_phase
+    return _recon_phase
+
+
+def test_dispatch_waits_for_an_in_flight_reconciliation_phase():
+    in_phase = threading.Event()
     release = threading.Event()
     order: list[str] = []
+    phase = _recon_phase()
 
-    def slow_pass():
-        order.append("pass_start")
-        in_pass.set()
-        release.wait(5)
-        order.append("pass_end")
+    def slow_phase():
+        with phase("reconcile_open_trades"):
+            order.append("phase_start")
+            in_phase.set()
+            release.wait(5)
+            order.append("phase_end")
 
-    t = threading.Thread(target=rl.run_one_pass, args=(slow_pass,))
+    t = threading.Thread(target=slow_phase)
     t.start()
-    assert in_pass.wait(5)
+    assert in_phase.wait(5)
 
     def dispatch():
         with js.journal_sync("entry_dispatch"):
@@ -70,17 +81,18 @@ def test_dispatch_waits_for_an_in_flight_reconciliation_pass():
     d = threading.Thread(target=dispatch)
     d.start()
     time.sleep(0.2)
-    assert "dispatch" not in order, "dispatch ran inside a reconciliation pass"
+    assert "dispatch" not in order, "dispatch ran inside a reconciliation phase"
     release.set()
     t.join(5)
     d.join(5)
-    assert order == ["pass_start", "pass_end", "dispatch"]
+    assert order == ["phase_start", "phase_end", "dispatch"]
 
 
-def test_reconciliation_pass_waits_for_an_in_flight_dispatch():
+def test_reconciliation_phase_waits_for_an_in_flight_dispatch():
     holding = threading.Event()
     release = threading.Event()
     order: list[str] = []
+    phase = _recon_phase()
 
     def dispatch():
         with js.journal_sync("entry_dispatch"):
@@ -92,15 +104,51 @@ def test_reconciliation_pass_waits_for_an_in_flight_dispatch():
     d = threading.Thread(target=dispatch)
     d.start()
     assert holding.wait(5)
-    t = threading.Thread(target=rl.run_one_pass,
-                         args=(lambda: order.append("pass"),))
+
+    def one_phase():
+        with phase("reconcile_orphan_exchange_positions"):
+            order.append("phase")
+
+    t = threading.Thread(target=one_phase)
     t.start()
     time.sleep(0.2)
-    assert "pass" not in order, "reconciliation saw a half-done dispatch"
+    assert "phase" not in order, "reconciliation saw a half-done dispatch"
     release.set()
     d.join(5)
     t.join(5)
-    assert order == ["dispatch_start", "dispatch_end", "pass"]
+    assert order == ["dispatch_start", "dispatch_end", "phase"]
+
+
+def test_a_dispatch_runs_between_two_phases_of_one_pass():
+    """The point of the change: an entry waits one phase, not the whole pass."""
+    phase = _recon_phase()
+    first_done = threading.Event()
+    let_second_run = threading.Event()
+    order: list[str] = []
+
+    def a_pass():
+        with phase("reconcile_open_trades"):
+            order.append("phase1")
+        first_done.set()
+        let_second_run.wait(5)
+        with phase("reconcile_orphan_exchange_positions"):
+            order.append("phase2")
+
+    t = threading.Thread(target=a_pass)
+    t.start()
+    assert first_done.wait(5)
+    with js.journal_sync("entry_dispatch"):
+        order.append("dispatch")
+    let_second_run.set()
+    t.join(5)
+    assert order == ["phase1", "dispatch", "phase2"]
+
+
+def test_every_reconciliation_phase_takes_the_lock():
+    import inspect
+    from src.runtime import order_monitor as om
+    src = inspect.getsource(om.run_reconciliation_tick)
+    assert "with _phase(" not in src and src.count("with _recon_phase(") >= 25
 
 
 def test_lock_is_reentrant():

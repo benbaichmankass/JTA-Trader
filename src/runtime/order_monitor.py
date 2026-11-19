@@ -47,6 +47,7 @@ The loop never raises. Each step is wrapped:
 from __future__ import annotations
 
 import importlib
+import contextlib
 import json
 import logging
 import math
@@ -18225,6 +18226,34 @@ def run_exit_evaluation_tick(
     return summaries
 
 
+@contextlib.contextmanager
+def _recon_phase(name: str):
+    """One reconciliation phase, timed AND held under ``journal_sync`` for that phase only.
+
+    Row LIVE-TICK-NEAR-BUDGET (2026-11-19, AM-OPS-3). MEASURED /api/diag/tick_cost over 136 ticks
+    (2026-11-18 20:10:57Z..22:30Z): the reconciliation loop held ``journal_sync`` for the WHOLE pass
+    (mean 37.0 s, max 57.5 s of every 60 s), so the trader tick waited a mean 23.8 s (43% of its tick)
+    before it could dispatch an entry; tick mean 55.3 s vs the 60 s interval.
+
+    WHY PER-PHASE KEEPS THE INVARIANT. ``journal_sync`` exists so a reconciliation step never observes a
+    dispatch half-done (placed at the venue, not yet journaled) and vice versa. Every phase below reads
+    its OWN state fresh (journal rows and venue reads inside the phase); no phase consumes a snapshot taken
+    by an earlier phase. Holding the lock per phase therefore still guarantees that no phase runs during
+    a dispatch, and that a dispatch completes atomically between phases. Phase ORDER is unchanged (the
+    forward reconciler still precedes the reverse one). An entry now waits at most ONE phase (the longest
+    measured: reconcile_open_trades, mean 10.5 s / max 12.5 s) instead of the whole pass.
+    Re-entrant (RLock): the RECONCILE_OFFTICK_DISABLED inline path still wraps the whole call and nests fine.
+    """
+    try:
+        from src.runtime.journal_sync import journal_sync
+        sync = journal_sync(f"reconciliation:{name}")
+    except Exception:  # noqa: BLE001 - the phase still runs without the module
+        sync = contextlib.nullcontext()
+    with sync:
+        with _phase(name):
+            yield
+
+
 def run_reconciliation_tick(
     *,
     db_path: Optional[str] = None,
@@ -18256,7 +18285,7 @@ def run_reconciliation_tick(
     # evaluation is decoupled. Unconditional — a sweep behind a gate is a sweep
     # that will be found switched off after the incident it existed for.
     try:
-        with _phase("sweep_close_wedges"):
+        with _recon_phase("sweep_close_wedges"):
             swept = sweep_close_wedges()
         if swept:
             # collapsed-state: vanished_unattributed — a SWEEP watches for an
@@ -18276,7 +18305,7 @@ def run_reconciliation_tick(
     # reconciler, which would otherwise orphan a cancelled zero-fill entry the fallback replaced.
     # Selects only rows carrying notes.maker_probe, so it is a no-op for every other trade.
     try:
-        with _phase("sweep_maker_entries"):
+        with _recon_phase("sweep_maker_entries"):
             from src.units.accounts.clients import account_order_status as _mk_status
             from src.units.accounts.maker_entry import sweep_maker_entries
             maker = sweep_maker_entries(
@@ -18291,7 +18320,7 @@ def run_reconciliation_tick(
     # (the MONITOR_RECONCILE_ENABLED gate was removed 2026-06-15,
     # BL-20260615-MGCNAKED — self-heal is baseline correctness).
     try:
-        with _phase("reconcile_open_trades"):
+        with _recon_phase("reconcile_open_trades"):
             recon = _reconcile_open_trades(db)
         if recon.get("orphaned") or recon.get("errors"):
             summaries["__reconciler__"] = recon
@@ -18307,7 +18336,7 @@ def run_reconciliation_tick(
     # mutations from forward-orphan closures don't
     # produce spurious reverse-orphan adoptions on the same tick.
     try:
-        with _phase("reconcile_orphan_exchange_positions"):
+        with _recon_phase("reconcile_orphan_exchange_positions"):
             reverse_recon = _reconcile_orphan_exchange_positions(db)
         if (
             reverse_recon.get("orphans_found")
@@ -18326,7 +18355,7 @@ def run_reconciliation_tick(
     # takes the broker's own filled bracket leg (reason, price, time) before
     # either PnL sweep infers one. A failed read falls back to that inference.
     try:
-        with _phase("sweep_alpaca_close_from_broker_leg"):
+        with _recon_phase("sweep_alpaca_close_from_broker_leg"):
             leg_close = _sweep_alpaca_close_from_broker_leg(db)
         if leg_close.get("closed_from_leg") or leg_close.get("errors"):
             summaries["__alpaca_broker_leg_close__"] = leg_close
@@ -18342,7 +18371,7 @@ def run_reconciliation_tick(
     # net number. Runs after both reconcilers so any newly-closed row
     # gets its first lookup attempt on the same tick it was closed.
     try:
-        with _phase("sweep_pending_pnl_from_bybit"):
+        with _recon_phase("sweep_pending_pnl_from_bybit"):
             pending_pnl = _sweep_pending_pnl_from_bybit(db)
         if (
             pending_pnl.get("filled")
@@ -18357,7 +18386,7 @@ def run_reconciliation_tick(
     # ENTRY-FILL-WRITEBACK: the entry order's own fill replaces the planned entry on open Bybit rows marked
     # fill_pending_writeback. DB field update only (no order, bracket or slice is touched).
     try:
-        with _phase("sweep_entry_fill_writeback"):
+        with _recon_phase("sweep_entry_fill_writeback"):
             entry_fill = _sweep_entry_fill_writeback(db)
         if entry_fill.get("written") or entry_fill.get("kept_plan") or entry_fill.get("errors"):
             summaries["__entry_fill_writeback__"] = entry_fill
@@ -18374,7 +18403,7 @@ def run_reconciliation_tick(
     # Broker-reader rows are deferred until past the broker recovery window so
     # fee-accurate truth is never pre-empted.
     try:
-        with _phase("sweep_local_pnl_for_unpriced"):
+        with _recon_phase("sweep_local_pnl_for_unpriced"):
             local_pnl = _sweep_local_pnl_for_unpriced(db)
         if local_pnl.get("filled") or local_pnl.get("errors"):
             summaries["__local_pnl_sweep__"] = local_pnl
@@ -18386,7 +18415,7 @@ def run_reconciliation_tick(
     # PARTIAL-CLOSE-PNL-NOT-JOURNALED: price partial-close child rows whose fill
     # was not readable at apply time, from the fills store by close order id.
     try:
-        with _phase("settle_partial_close_children"):
+        with _recon_phase("settle_partial_close_children"):
             from src.runtime.partial_close_journal import settle_pending_children
             pc_settle = settle_pending_children(db)
         if pc_settle.get("settled") or pc_settle.get("errors"):
@@ -18400,7 +18429,7 @@ def run_reconciliation_tick(
     # ``pnl`` (our own figure kept in ``pnl_computed``, the gap in ``pnl_gap_usd``).
     # Runs after both PnL sweeps, so it classifies a row the tick after it is priced.
     try:
-        with _phase("sweep_venue_net_pnl"):
+        with _recon_phase("sweep_venue_net_pnl"):
             venue_pnl = _sweep_venue_net_pnl(db)
         if venue_pnl.get("venue_net") or venue_pnl.get("gaps") or venue_pnl.get("errors"):
             summaries["__venue_net_pnl__"] = venue_pnl
@@ -18410,7 +18439,7 @@ def run_reconciliation_tick(
     # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
     # fills (a partially-consumed parent is shrunk, so nothing else books it).
     try:
-        with _phase("sweep_settle_intent_reduce_legs"):
+        with _recon_phase("sweep_settle_intent_reduce_legs"):
             reduce_settle = _sweep_settle_intent_reduce_legs(db)
         if reduce_settle.get("settled") or reduce_settle.get("unverified") \
                 or reduce_settle.get("errors"):
@@ -18424,7 +18453,7 @@ def run_reconciliation_tick(
     # the whole position is closed here. A netted sibling keeps the symbol
     # non-flat, so no absence-keyed reconciler can see it go.
     try:
-        with _phase("sweep_open_row_own_leg_fill"):
+        with _recon_phase("sweep_open_row_own_leg_fill"):
             own_leg = _sweep_open_row_own_leg_fill(db)
         if own_leg.get("closed") or own_leg.get("errors"):
             summaries["__own_leg_fill__"] = own_leg
@@ -18437,7 +18466,7 @@ def run_reconciliation_tick(
     # bracket-order fill once the hourly fills pull has it (label sweep below
     # never touches price/pnl).
     try:
-        with _phase("sweep_upgrade_anchored_exit_to_fill"):
+        with _recon_phase("sweep_upgrade_anchored_exit_to_fill"):
             anchored_up = _sweep_upgrade_anchored_exit_to_fill(db)
         if anchored_up.get("upgraded") or anchored_up.get("errors"):
             summaries["__anchored_exit_upgrade__"] = anchored_up
@@ -18450,7 +18479,7 @@ def run_reconciliation_tick(
     # sl/tp, whatever path noticed it. Runs after both PnL sweeps so it only
     # ever relabels a row the price-based classifier left generic.
     try:
-        with _phase("sweep_exit_label_from_bracket_order"):
+        with _recon_phase("sweep_exit_label_from_bracket_order"):
             bracket_lbl = _sweep_exit_label_from_bracket_order(db)
         if bracket_lbl.get("relabelled") or bracket_lbl.get("errors"):
             summaries["__bracket_order_label__"] = bracket_lbl
@@ -18461,7 +18490,7 @@ def run_reconciliation_tick(
 
     # NON-TPSL-CLOSES-20261029: the package carries the trade's refined label.
     try:
-        with _phase("sweep_package_close_reason_from_trade"):
+        with _recon_phase("sweep_package_close_reason_from_trade"):
             pkg_lbl = _sweep_package_close_reason_from_trade(db)
         if pkg_lbl.get("relabelled") or pkg_lbl.get("errors"):
             summaries["__package_close_reason__"] = pkg_lbl
@@ -18473,7 +18502,7 @@ def run_reconciliation_tick(
     # CLOSE-LABELS-1214: a reconciler-detected close time is moved back to the
     # row's own bracket fill once the hourly fills pull has it.
     try:
-        with _phase("sweep_correct_closed_at_from_own_fill"):
+        with _recon_phase("sweep_correct_closed_at_from_own_fill"):
             closed_at_fix = _sweep_correct_closed_at_from_own_fill(db)
         if closed_at_fix.get("corrected") or closed_at_fix.get("errors"):
             summaries["__closed_at_correction__"] = closed_at_fix
@@ -18488,7 +18517,7 @@ def run_reconciliation_tick(
     # deployment without one. Runs after the PnL sweeps (which now defer options rows
     # to it) so a row it closes this tick isn't first mis-priced by the equity sweep.
     try:
-        with _phase("reconcile_options_expiry_and_assignment"):
+        with _recon_phase("reconcile_options_expiry_and_assignment"):
             options_recon = _reconcile_options_expiry_and_assignment(db)
         if options_recon.get("closed") or options_recon.get("errors") or options_recon.get("ambiguous"):
             summaries["__options_lifecycle__"] = options_recon
@@ -18500,7 +18529,7 @@ def run_reconciliation_tick(
     # BUG-049: sweep order_packages that are status='open' but have no
     # linked_trade_id (never executed). Runs unconditionally.
     try:
-        with _phase("sweep_unlinked_packages"):
+        with _recon_phase("sweep_unlinked_packages"):
             _sweep_unlinked_packages(db)
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: unlinked-pkg sweep raised: %s", exc)
@@ -18512,7 +18541,7 @@ def run_reconciliation_tick(
     # stuck and silently block every future signal for the strategy.
     # Runs unconditionally.
     try:
-        with _phase("sweep_stuck_linked_packages"):
+        with _recon_phase("sweep_stuck_linked_packages"):
             _sweep_stuck_linked_packages(db)
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: stuck-linked-pkg sweep raised: %s", exc)
@@ -18524,7 +18553,7 @@ def run_reconciliation_tick(
     # the trade row + emits a high-priority operator alert.
     # Runs unconditionally.
     try:
-        with _phase("watchdog_stuck_strategies"):
+        with _recon_phase("watchdog_stuck_strategies"):
             watchdog_summary = _watchdog_stuck_strategies(db)
         if (
             watchdog_summary.get("alerted")
@@ -18545,7 +18574,7 @@ def run_reconciliation_tick(
     # SL/TP. New orders are blocked at execute_pkg before reaching the
     # exchange; this sweep catches any pre-fix rows that slipped through.
     try:
-        with _phase("check_naked_positions"):
+        with _recon_phase("check_naked_positions"):
             naked_summary = _check_naked_positions(db)
         if naked_summary.get("naked") or naked_summary.get("errors"):
             summaries["__naked_positions__"] = naked_summary
@@ -18557,7 +18586,7 @@ def run_reconciliation_tick(
     # cancelled at the RTH close, so it is broker-naked yet invisible to the
     # DB-driven check above. This re-arms a GTC OCO for any such position.
     try:
-        with _phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
             broker_naked_summary = _check_broker_naked_equity_positions(db)
         # ONE line per sweep with EVERY outcome counter, zeros included — the
         # only place these are observable. The `summaries` dict below is
@@ -18586,7 +18615,7 @@ def run_reconciliation_tick(
     # (IB_BROKER_NAKED_CHECK_SECONDS, default 300s) so the account-wide IB order
     # read is never a per-tick cost (BL-20260609 pacing class).
     try:
-        with _phase("check_broker_naked_ib_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_ib_positions"), _venue_snapshot_batch():
             ib_naked_summary = _check_broker_naked_ib_positions(db)
         if ib_naked_summary.get("broker_naked") or ib_naked_summary.get("errors"):
             summaries["__broker_naked_ib__"] = ib_naked_summary
@@ -18606,7 +18635,7 @@ def run_reconciliation_tick(
     # does. The real-money bybit_2 XRPUSDT no-bracket incident (2026-07-29)
     # disproved the earlier "Bybit atomic at entry, can't go naked" assumption.
     try:
-        with _phase("check_broker_naked_bybit_positions"), _venue_snapshot_batch():
+        with _recon_phase("check_broker_naked_bybit_positions"), _venue_snapshot_batch():
             bybit_naked_summary = _check_broker_naked_bybit_positions(db)
         if _bybit_naked_summary_reportable(bybit_naked_summary):
             summaries["__broker_naked_bybit__"] = bybit_naked_summary
@@ -18623,7 +18652,7 @@ def run_reconciliation_tick(
     # exchange truth. Default mode is `annotate`: it does all the work and
     # records the rows it WOULD reduce, without touching the money DB.
     try:
-        with _phase("reconcile_netting_partial_closes"):
+        with _recon_phase("reconcile_netting_partial_closes"):
             netting_summary = _reconcile_netting_partial_closes(db)
         if (
             netting_summary.get("divergent")
