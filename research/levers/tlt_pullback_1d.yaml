@@ -958,6 +958,7 @@ units:
 - RQ-20261113-f251-11
 - RQ-20261113-f251-16
 - RQ-20261113-f251-18
+- RQ-20261119-c5e8-01
 levers_tested:
 - family: side_filter
   varied: side_filter both vs short-only, forming bar from Alpaca iex 1Day + 1Min, window 2020-07-27..2026-11-13, full cost stack
@@ -1026,3 +1027,35 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261113-f251-18
   lever_family: exit
+- family: direction (pooled 1d-ETF pullback, LONG/SHORT vs both sides)
+  varied: --side-filter long / short vs both sides at the harness-declared pullback parameters, pooled IEF/TLT/SLV/GLD/GDX 1d, 2021-07-01..2026-10-15,
+    six calendar folds, full cost stack (cell TLT)
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '44589971319'
+    rule: RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+    pooled_grade_note: rule verdict FAIL (both one-sided arms fail the pooled rule); the harness wrote INDETERMINATE (powered-cell breadth, not
+      registered); PI-20261119-FILLW47B-0005
+    baseline:
+      arm: A
+      n: 25
+      net_r: -2.9291
+      folds_positive: 3/6
+    arms:
+    - side_filter: long
+      n: 12
+      net_r: -3.4324
+      folds_positive: 2/6
+      max_drawdown_r: 3.9252
+    - side_filter: short
+      n: 14
+      net_r: 5.5751
+      folds_positive: 4/6
+      max_drawdown_r: 3.0354
+    reading: this is the TLT cell of a POOLED five-cell test (pooled n LONG 68 / SHORT 66 / A 125; pooled folds positive 2/6 in every arm); one-sided
+      cell n 12/14 is below the 20-trade cell floor, so no per-cell verdict; not tested at power
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261119-c5e8-01
+  lever_family: direction

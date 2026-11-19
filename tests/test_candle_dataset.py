@@ -85,6 +85,35 @@ def test_router_releases_covered_unit_to_kaggle_cpu(monkeypatch):
     assert cr.runner_only_reason(u)
 
 
+def test_uncovered_fetch_is_runner_only_without_why_runner(monkeypatch):
+    """PI-20261119-FILLW47B-0009: 8260-02/03 had no why_runner, the dataset did not hold their window, and they ran on Kaggle (no
+    internet) and died with a DNS error. An uncovered fetch is runner-only whether or not the author wrote the reason."""
+    cfg = cr.load_config()
+    u = _unit()
+    del u["routing"]["why_runner"]
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov(days=10))      # built for 10 d < --days 100
+    assert "does not cover" in cr.runner_only_reason(u)
+    assert cr.class_backends("cpu_light", u, cfg) == ["github_runner"]
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov())             # covered: the Kaggle kernel is allowed again
+    assert cr.runner_only_reason(u) is None
+    assert cr.class_backends("cpu_light", u, cfg)[0] == "kaggle_cpu"
+    u2 = {k: v for k, v in u.items() if k != "routing"}                         # no routing block at all, still uncovered
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov(days=10))
+    assert "does not cover" in cr.runner_only_reason(u2)
+
+
+def test_dukascopy_lane_is_runner_only_and_other_units_are_untouched(monkeypatch):
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov())
+    u = _unit(extra=("--non-crypto-source", "dukascopy"))
+    del u["routing"]["why_runner"]
+    assert "non-crypto-source" in cr.runner_only_reason(u)
+    other = {"id": "RQ-O", "status": "queued", "compute": "cpu_light", "run": {"command": ["python3", "other.py"]}}
+    assert cr.runner_only_reason(other) is None                                 # not a fetch unit: no new pin
+    csv = _unit(extra=("--data-csv", "x.csv"))
+    del csv["routing"]["why_runner"]
+    assert cr.runner_only_reason(csv) is None                                   # a --data-csv unit fetches nothing
+
+
 def test_build_records_failure_and_continues(tmp_path, monkeypatch):
     def fake(key, days, out):
         if key[1] == "BADUSDT":
