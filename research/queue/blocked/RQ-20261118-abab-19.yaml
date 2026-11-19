@@ -1,16 +1,16 @@
-id: RQ-20261118-abab-18
-title: 'DIRECTION lever family on fvg_range_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost stack?'
-status: queued
+id: RQ-20261118-abab-19
+title: 'SESSION lever family on fvg_range_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of S_LATE/S_ASIA (SESSION skip-hours) beat the declared leg, net of the harness cost stack?'
+status: blocked
 cadence: once
 theme: live_strategy
 priority: 2
 kind: experiment
-question: 'On fvg_range_15m, over the same window, folds and bar as the sibling unit RQ-20261117-dc44-05, does any of the arms LONG/SHORT (LONG: --side-filter=long; SHORT: --side-filter=short) beat the
-  declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/fvg_range_15m.yaml (direction family: untested or untested at power on this leg per the 2026-11-18 programme
-  review).'
-why_this_matters: 'Programme review 2026-11-18 (comms/research/programme_review/20261118-unit-specs.json) chose this cell from the lever-coverage census: the direction family on fvg_range_15m has no graded
+question: 'On fvg_range_15m, over the same window, folds and bar as the sibling unit RQ-20261117-dc44-05, does any of the arms S_LATE/S_ASIA (S_LATE: --skip-hours=20,21,22,23; S_ASIA: --skip-hours=0,1,2,3,4,5,6,7)
+  beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/fvg_range_15m.yaml (session family: untested or untested at power on this leg per the 2026-11-18
+  programme review).'
+why_this_matters: 'Programme review 2026-11-18 (comms/research/programme_review/20261118-unit-specs.json) chose this cell from the lever-coverage census: the session family on fvg_range_15m has no graded
   test at power, and a diagnosis from the leg''s own sibling RQ-20261117-dc44-05 points here. Value order: real-money/prop roster legs first (demo-floor or testing leg). Decision changed: PASS -> a disjoint-window/holdout
-  confirmation unit, then a Tier-3 declare proposal; FAIL -> family direction marked tested at power for fvg_range_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion
+  confirmation unit, then a Tier-3 declare proposal; FAIL -> family session marked tested at power for fvg_range_15m (lever map), next pass moves to the next untested family; contributes to lever-exhaustion
   for any retirement case'
 power:
   expected_n: 80
@@ -25,11 +25,11 @@ power:
     source: none
     accrual_basis: Re-measurement on a pinned in-hand window; nothing accrues.
 decision_rule:
-  id: RULERQ20261118abab18
+  id: RULERQ20261118abab19
   registered_at: '2026-11-18'
   registered_before_run: true
   statistic: 'scripts/research/exit_lever_ablation.py --leg fvg_range_15m --grade replace, the sibling window and folds of RQ-20261117-dc44-05 (same leg, same flags) by entry time, net of the full cost
-    stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared in config/strategies.yaml; candidates LONG, SHORT.
+    stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared in config/strategies.yaml; candidates S_LATE, S_ASIA.
     Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
   rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net
     R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 2 candidate arm(s) here) and the follow-up is ONE confirmation unit
@@ -46,11 +46,11 @@ iteration:
   subject_kind: strategy_leg
   from_result: RQ-20261117-dc44-05
   verdict_read: pending
-  diagnosis: 'Programme review 2026-11-18 lever census: the direction family has no graded test at power on fvg_range_15m; its sibling unit RQ-20261117-dc44-05 measured the same leg and window. This unit
+  diagnosis: 'Programme review 2026-11-18 lever census: the session family has no graded test at power on fvg_range_15m; its sibling unit RQ-20261117-dc44-05 measured the same leg and window. This unit
     measures the family the census names next.'
-  search: 'direction family: arms LONG, SHORT, one factor each against the declared leg A, sibling window and folds.'
+  search: 'session family: arms S_LATE, S_ASIA, one factor each against the declared leg A, sibling window and folds.'
   levers:
-  - direction
+  - session
   map_entries:
   - research/levers/fvg_range_15m.yaml
   attempt: 1
@@ -80,13 +80,13 @@ run:
   - --arm
   - A=
   - --arm
-  - LONG=--side-filter=long
+  - S_LATE=--skip-hours=20,21,22,23
   - --arm
-  - SHORT=--side-filter=short
+  - S_ASIA=--skip-hours=0,1,2,3,4,5,6,7
   - --days
   - '1830'
   - --research-unit
-  - RQ-20261118-abab-18
+  - RQ-20261118-abab-19
   - --grade
   - sweep
   - --baseline
@@ -102,7 +102,7 @@ run:
   - --out
   - '{out_dir}'
   inputs:
-    research_unit: RQ-20261118-abab-18
+    research_unit: RQ-20261118-abab-19
   timeout_minutes: 195
 lands:
   store: research/results/
@@ -114,4 +114,10 @@ roadmap:
 related:
 - RQ-20261117-dc44-05
 - research/levers/fvg_range_15m.yaml
-last_dispatched_at: '2026-11-19T03:19:00+00:00'
+blocked_on:
+- kind: harness
+  ref: scripts/backtest_fvg_range.py
+  owner: PI-20261119-FILLW47B-0003
+  what: 'scripts/backtest_fvg_range.py declares none of --skip-hours: the arm dies at argparse (unrecognized arguments). Found by check_queue_harness_flags.py --audit. This unit also passes --baseline mid (an undeclared arm): correct it to A when unblocking.'
+  clears_when: 'the harness accepts every flag this unit passes (default byte-identical, golden test), merged on main (PI-20261119-FILLW47B-0003); then git-mv this file back to research/queue/ with status queued, rule unchanged'
+  due_by: '2026-11-26'
