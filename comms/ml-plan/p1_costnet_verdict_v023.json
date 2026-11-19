@@ -1,0 +1,129 @@
+{
+ "schema": "ml-plan/p1_costnet_verdict/v023",
+ "rule": "docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P1 (registered 2026-10-28, graded unchanged)",
+ "verdict": "FAIL",
+ "model_id": "setup-candidates-metalabel-p2pool-v2",
+ "registered_stage": "research_only (cost gate failed; stays candidate)",
+ "experiment_dir": "ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/20261119T165545Z (trainer)",
+ "dataset": "setup_candidates/all/all/v023 (trainer datasets-out): 6,659 rows = 5,164 backtest train, 434 live eval, 1,061 paper (tagged, never eval)",
+ "code": "branch lane/ml-p1-costnet-rebuild-v023 @ 1713b5ff2 (PR #27372), isolated worktree on the trainer",
+ "relays": {
+  "cause_probe": 27362,
+  "link_shape": 27384,
+  "run1_join_gap": [
+   27371,
+   27379,
+   27381
+  ],
+  "run2_graded": 27390
+ },
+ "run1_note": "run 1 (@ c255c9999) read package_meta None on the vwap rows (linked only by order_packages.linked_trade_id): initial_risk_signal 0, n_eval 191, INDETERMINATE (excluded 67.5%). Superseded by run 2; not a second grade of the same book.",
+ "n_eval": 434,
+ "population": "434 real closed trades (is_live_trade) in the live_holdout book of v023; symbols ADAUSDT, BTCUSDT, ETHUSDT, IAUM, IEF, SLV, SOLUSDT, TLT, XRPUSDT",
+ "take_rate": 0.17972350230414746,
+ "a_cost_gate": {
+  "passed": false,
+  "value_r": -0.0035311467802636425,
+  "take_all_r": -0.41496981143127454,
+  "matched_random_r": -0.07457982786092031,
+  "eval_cost_bases": {
+   "realized": 434
+  },
+  "reason": "does_not_beat_take_none: value -0.0035R/opp <= +0.0000R/opp (n=434, taken=78)"
+ },
+ "b_bootstrap": {
+  "lb95": 0.013689531025388826,
+  "point": 0.07104868108065666,
+  "ub95": 0.1283991269445427,
+  "n_resamples": 10000,
+  "seed": 42
+ },
+ "b_ok": true,
+ "c_ok": true,
+ "d_ok": true,
+ "d_counted_symbols": [
+  "BTCUSDT",
+  "ETHUSDT",
+  "XRPUSDT"
+ ],
+ "d_positive_symbols": [
+  "ETHUSDT",
+  "XRPUSDT"
+ ],
+ "d_per_symbol": {
+  "ADAUSDT": {
+   "n": 24,
+   "n_taken": 11,
+   "take_all_r": 0.08801327499039414,
+   "value_r": 0.6155761657496548
+  },
+  "BTCUSDT": {
+   "n": 308,
+   "n_taken": 51,
+   "take_all_r": -0.5270460061539296,
+   "value_r": -0.08512691713358851
+  },
+  "ETHUSDT": {
+   "n": 45,
+   "n_taken": 8,
+   "take_all_r": 0.01793138798883719,
+   "value_r": 0.134376407016696
+  },
+  "SOLUSDT": {
+   "n": 16,
+   "n_taken": 2,
+   "take_all_r": -0.3389918695045005,
+   "value_r": 0.05985593412892796
+  },
+  "XRPUSDT": {
+   "n": 37,
+   "n_taken": 6,
+   "take_all_r": -0.3671100222674484,
+   "value_r": 0.0785976090460799
+  },
+  "IAUM": {
+   "n": 1,
+   "n_taken": 0
+  },
+  "IEF": {
+   "n": 1,
+   "n_taken": 0
+  },
+  "SLV": {
+   "n": 1,
+   "n_taken": 0
+  },
+  "TLT": {
+   "n": 1,
+   "n_taken": 0
+  }
+ },
+ "e_excluded_share": 0.04896907216494845,
+ "e_journal_basis_counts": {
+  "BTCUSDT": {
+   "initial_risk": 68,
+   "initial_risk_signal": 240,
+   "stop_distance": 2,
+   "unit_fallback": 17
+  },
+  "ETHUSDT": {
+   "initial_risk": 45,
+   "initial_risk_signal": 0,
+   "stop_distance": 0,
+   "unit_fallback": 0
+  },
+  "SOLUSDT": {
+   "initial_risk": 16,
+   "initial_risk_signal": 0,
+   "stop_distance": 0,
+   "unit_fallback": 0
+  }
+ },
+ "eval_r_multiple_source": {
+  "initial_risk": 194,
+  "initial_risk_signal": 240
+ },
+ "unit_fallback_share_pre_exclusion": 0.04381443298969072,
+ "observed_not_graded": "The 240 backfilled rows are the vwap strategy's BTC book (2026-05; vwap is enabled:false in config/strategies.yaml), so 240 of 308 BTC eval rows are a retired strategy's trades. BTC take-all reads -0.527 R/opp on this book. Recorded as context; the rule is graded unchanged.",
+ "graded_at": "2026-11-19T16:55:51Z"
+}

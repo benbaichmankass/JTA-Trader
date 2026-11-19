@@ -1,0 +1,722 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261118-04a5-04",
+ "rule_id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+ "verdict": "fail",
+ "read_state": "measured",
+ "note": "neg25 measured on 3 legs, none passes judge + control; trend_donchian|holding_pays: fail (FAIL: OOS dR/trade -0.0154, CI LB -0.0876 (needs >= 0 and > -0.02) -> Tier-3 proposal: ann); trend_donchian|holding_pays_neg25: fail (FAIL: OOS dR/trade +0.0160, CI LB -0.0384 (needs >= 0 and > -0.02) -> Tier-3 proposal: ann); trend_donchian_eth|holding_pays: fail (FAIL: OOS dR/trade -0.0084, CI LB -0.0344 (needs >= 0 and > -0.02) -> Tier-3 proposal: ann); trend_donchian_eth|holding_pays_neg25: pass (KEEP: OOS dR/trade +0.0183 >= 0 and CI LB -0.0022 > -0.02); trend_donchian_sol|holding_pays: fail (FAIL: OOS dR/trade -0.0122, CI LB -0.0539 (needs >= 0 and > -0.02) -> Tier-3 proposal: ann); trend_donchian_sol|holding_pays_neg25: pass (KEEP: OOS dR/trade +0.0203 >= 0 and CI LB -0.0108 > -0.02)",
+ "population": "exit-head per-leg OOS walk-forward, legs trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT, targets holding_pays,holding_pays_neg25; n = neg25 OOS trades pooled over legs",
+ "n": 12015,
+ "measurement": {
+  "cells": {
+   "trend_donchian|holding_pays": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "fail",
+    "note": "FAIL: OOS dR/trade -0.0154, CI LB -0.0876 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)",
+    "n": 1235,
+    "population": {
+     "n": 1235,
+     "description": "trend_donchian BTCUSDT 1h harness trades, target holding_pays, 5-fold sequential walk-forward (block_n 247), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays",
+    "measurement": {
+     "judge": {
+      "verdict": "fail",
+      "n_oos": 1235,
+      "dr_per_trade": -0.01539,
+      "se": 0.03683,
+      "ci95_lb": -0.08759,
+      "why": "FAIL: OOS dR/trade -0.0154, CI LB -0.0876 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 247,
+       "train_rows_n": 7985,
+       "test_start": "2022-06-07T08:30:00+00:00",
+       "train_cutoff": "2022-05-31T08:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -15.5952,
+       "dr_per_trade": -0.06314,
+       "n_fired_oos": 168
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 247,
+       "train_rows_n": 14584,
+       "test_start": "2023-04-23T07:30:00+00:00",
+       "train_cutoff": "2023-04-16T07:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 7.6099,
+       "dr_per_trade": 0.03081,
+       "n_fired_oos": 174
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 247,
+       "train_rows_n": 21027,
+       "test_start": "2024-02-18T22:00:00+00:00",
+       "train_cutoff": "2024-02-11T22:00:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -20.3232,
+       "dr_per_trade": -0.08228,
+       "n_fired_oos": 164
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 247,
+       "train_rows_n": 28611,
+       "test_start": "2025-01-05T20:15:00+00:00",
+       "train_cutoff": "2024-12-29T20:15:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 0.159,
+       "dr_per_trade": 0.00064,
+       "n_fired_oos": 165
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 247,
+       "train_rows_n": 35997,
+       "test_start": "2025-12-11T18:30:00+00:00",
+       "train_cutoff": "2025-12-04T18:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 9.1395,
+       "dr_per_trade": 0.037,
+       "n_fired_oos": 173
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       168,
+       174,
+       164,
+       165,
+       173
+      ],
+      "p50": 250.9841,
+      "p95": 301.5924,
+      "head_recovered_r": -19.01,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -194.1684,
+     "n_total_trades": 1485,
+     "data_start": "2021-07-11 00:00:00+00:00",
+     "data_end": "2026-11-19 14:30:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:04:14Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   },
+   "trend_donchian|holding_pays_neg25": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "fail",
+    "note": "FAIL: OOS dR/trade +0.0160, CI LB -0.0384 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)",
+    "n": 1235,
+    "population": {
+     "n": 1235,
+     "description": "trend_donchian BTCUSDT 1h harness trades, target holding_pays_neg25, 5-fold sequential walk-forward (block_n 247), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays_neg25",
+    "measurement": {
+     "judge": {
+      "verdict": "fail",
+      "n_oos": 1235,
+      "dr_per_trade": 0.016,
+      "se": 0.02773,
+      "ci95_lb": -0.03836,
+      "why": "FAIL: OOS dR/trade +0.0160, CI LB -0.0384 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 247,
+       "train_rows_n": 7985,
+       "test_start": "2022-06-07T08:30:00+00:00",
+       "train_cutoff": "2022-05-31T08:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 13.3276,
+       "dr_per_trade": 0.05396,
+       "n_fired_oos": 113
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 247,
+       "train_rows_n": 14584,
+       "test_start": "2023-04-23T07:30:00+00:00",
+       "train_cutoff": "2023-04-16T07:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 16.7589,
+       "dr_per_trade": 0.06785,
+       "n_fired_oos": 85
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 247,
+       "train_rows_n": 21027,
+       "test_start": "2024-02-18T22:00:00+00:00",
+       "train_cutoff": "2024-02-11T22:00:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -16.5057,
+       "dr_per_trade": -0.06682,
+       "n_fired_oos": 78
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 247,
+       "train_rows_n": 28611,
+       "test_start": "2025-01-05T20:15:00+00:00",
+       "train_cutoff": "2024-12-29T20:15:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 4.8754,
+       "dr_per_trade": 0.01974,
+       "n_fired_oos": 82
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 247,
+       "train_rows_n": 35997,
+       "test_start": "2025-12-11T18:30:00+00:00",
+       "train_cutoff": "2025-12-04T18:30:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 1.2986,
+       "dr_per_trade": 0.00526,
+       "n_fired_oos": 75
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       113,
+       85,
+       78,
+       82,
+       75
+      ],
+      "p50": 127.7341,
+      "p95": 169.5876,
+      "head_recovered_r": 19.7548,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -194.1684,
+     "n_total_trades": 1485,
+     "data_start": "2021-07-11 00:00:00+00:00",
+     "data_end": "2026-11-19 14:30:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:05:36Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   },
+   "trend_donchian_eth|holding_pays": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "fail",
+    "note": "FAIL: OOS dR/trade -0.0084, CI LB -0.0344 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)",
+    "n": 7845,
+    "population": {
+     "n": 7845,
+     "description": "trend_donchian_eth ETHUSDT 1h harness trades, target holding_pays, 5-fold sequential walk-forward (block_n 1569), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays",
+    "measurement": {
+     "judge": {
+      "verdict": "fail",
+      "n_oos": 7845,
+      "dr_per_trade": -0.00836,
+      "se": 0.01328,
+      "ci95_lb": -0.03438,
+      "why": "FAIL: OOS dR/trade -0.0084, CI LB -0.0344 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 1569,
+       "train_rows_n": 4786,
+       "test_start": "2021-12-30T08:55:00+00:00",
+       "train_cutoff": "2021-12-23T08:55:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -17.927,
+       "dr_per_trade": -0.01143,
+       "n_fired_oos": 1340
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 1569,
+       "train_rows_n": 11814,
+       "test_start": "2022-12-09T07:25:00+00:00",
+       "train_cutoff": "2022-12-02T07:25:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -68.6052,
+       "dr_per_trade": -0.04373,
+       "n_fired_oos": 1215
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 1569,
+       "train_rows_n": 17879,
+       "test_start": "2023-10-11T00:35:00+00:00",
+       "train_cutoff": "2023-10-04T00:35:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 30.5551,
+       "dr_per_trade": 0.01947,
+       "n_fired_oos": 1222
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 1569,
+       "train_rows_n": 26227,
+       "test_start": "2024-09-30T09:45:00+00:00",
+       "train_cutoff": "2024-09-23T09:45:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -33.1785,
+       "dr_per_trade": -0.02115,
+       "n_fired_oos": 1197
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 1569,
+       "train_rows_n": 34943,
+       "test_start": "2025-11-03T15:20:00+00:00",
+       "train_cutoff": "2025-10-27T15:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 23.5452,
+       "dr_per_trade": 0.01501,
+       "n_fired_oos": 1128
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       1340,
+       1215,
+       1222,
+       1197,
+       1128
+      ],
+      "p50": 1565.4508,
+      "p95": 1681.8877,
+      "head_recovered_r": -65.6104,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -2303.8564,
+     "n_total_trades": 9418,
+     "data_start": "2021-03-15 00:00:00+00:00",
+     "data_end": "2026-11-19 14:50:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:12:46Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   },
+   "trend_donchian_eth|holding_pays_neg25": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "pass",
+    "note": "KEEP: OOS dR/trade +0.0183 >= 0 and CI LB -0.0022 > -0.02",
+    "n": 7845,
+    "population": {
+     "n": 7845,
+     "description": "trend_donchian_eth ETHUSDT 1h harness trades, target holding_pays_neg25, 5-fold sequential walk-forward (block_n 1569), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays_neg25",
+    "measurement": {
+     "judge": {
+      "verdict": "pass",
+      "n_oos": 7845,
+      "dr_per_trade": 0.0183,
+      "se": 0.01044,
+      "ci95_lb": -0.00216,
+      "why": "KEEP: OOS dR/trade +0.0183 >= 0 and CI LB -0.0022 > -0.02"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 1569,
+       "train_rows_n": 4786,
+       "test_start": "2021-12-30T08:55:00+00:00",
+       "train_cutoff": "2021-12-23T08:55:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -2.0583,
+       "dr_per_trade": -0.00131,
+       "n_fired_oos": 1036
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 1569,
+       "train_rows_n": 11814,
+       "test_start": "2022-12-09T07:25:00+00:00",
+       "train_cutoff": "2022-12-02T07:25:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 16.3839,
+       "dr_per_trade": 0.01044,
+       "n_fired_oos": 752
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 1569,
+       "train_rows_n": 17879,
+       "test_start": "2023-10-11T00:35:00+00:00",
+       "train_cutoff": "2023-10-04T00:35:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 79.8316,
+       "dr_per_trade": 0.05088,
+       "n_fired_oos": 660
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 1569,
+       "train_rows_n": 26227,
+       "test_start": "2024-09-30T09:45:00+00:00",
+       "train_cutoff": "2024-09-23T09:45:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -1.6364,
+       "dr_per_trade": -0.00104,
+       "n_fired_oos": 517
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 1569,
+       "train_rows_n": 34943,
+       "test_start": "2025-11-03T15:20:00+00:00",
+       "train_cutoff": "2025-10-27T15:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 51.05,
+       "dr_per_trade": 0.03254,
+       "n_fired_oos": 388
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       1036,
+       752,
+       660,
+       517,
+       388
+      ],
+      "p50": 855.578,
+      "p95": 951.7524,
+      "head_recovered_r": 143.5708,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -2303.8564,
+     "n_total_trades": 9418,
+     "data_start": "2021-03-15 00:00:00+00:00",
+     "data_end": "2026-11-19 14:50:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:21:01Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   },
+   "trend_donchian_sol|holding_pays": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "fail",
+    "note": "FAIL: OOS dR/trade -0.0122, CI LB -0.0539 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)",
+    "n": 2935,
+    "population": {
+     "n": 2935,
+     "description": "trend_donchian_sol SOLUSDT 1h harness trades, target holding_pays, 5-fold sequential walk-forward (block_n 587), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays",
+    "measurement": {
+     "judge": {
+      "verdict": "fail",
+      "n_oos": 2935,
+      "dr_per_trade": -0.0122,
+      "se": 0.02126,
+      "ci95_lb": -0.05388,
+      "why": "FAIL: OOS dR/trade -0.0122, CI LB -0.0539 (needs >= 0 and > -0.02) -> Tier-3 proposal: annotate on trend_donchian_eth (held for the manager)"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 587,
+       "train_rows_n": 8722,
+       "test_start": "2022-07-20T10:20:00+00:00",
+       "train_cutoff": "2022-07-13T10:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 16.4178,
+       "dr_per_trade": 0.02797,
+       "n_fired_oos": 471
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 587,
+       "train_rows_n": 14944,
+       "test_start": "2023-05-14T02:50:00+00:00",
+       "train_cutoff": "2023-05-07T02:50:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -49.4692,
+       "dr_per_trade": -0.08427,
+       "n_fired_oos": 477
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 587,
+       "train_rows_n": 21552,
+       "test_start": "2024-03-12T02:25:00+00:00",
+       "train_cutoff": "2024-03-05T02:25:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -8.6129,
+       "dr_per_trade": -0.01467,
+       "n_fired_oos": 457
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 587,
+       "train_rows_n": 29146,
+       "test_start": "2025-01-27T20:20:00+00:00",
+       "train_cutoff": "2025-01-20T20:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 1.9759,
+       "dr_per_trade": 0.00337,
+       "n_fired_oos": 444
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 587,
+       "train_rows_n": 36265,
+       "test_start": "2025-12-27T21:10:00+00:00",
+       "train_cutoff": "2025-12-20T21:10:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 3.8679,
+       "dr_per_trade": 0.00659,
+       "n_fired_oos": 458
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       471,
+       477,
+       457,
+       444,
+       458
+      ],
+      "p50": 753.9077,
+      "p95": 814.2889,
+      "head_recovered_r": -35.8205,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -625.8966,
+     "n_total_trades": 3527,
+     "data_start": "2021-10-15 00:00:00+00:00",
+     "data_end": "2026-11-19 14:50:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:24:41Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   },
+   "trend_donchian_sol|holding_pays_neg25": {
+    "schema_version": 1,
+    "research_unit": "RQ-20261118-04a5-04",
+    "read_state": "measured",
+    "verdict": "pass",
+    "note": "KEEP: OOS dR/trade +0.0203 >= 0 and CI LB -0.0108 > -0.02",
+    "n": 2935,
+    "population": {
+     "n": 2935,
+     "description": "trend_donchian_sol SOLUSDT 1h harness trades, target holding_pays_neg25, 5-fold sequential walk-forward (block_n 587), head retrained per fold on pooled rows.jsonl bar_t <= fold start - 7.0 d; paired dR per OOS trade"
+    },
+    "decision_rule": {
+     "id": "RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL",
+     "registered_at": "2026-11-18",
+     "registered_before_run": true
+    },
+    "target": "holding_pays_neg25",
+    "measurement": {
+     "judge": {
+      "verdict": "pass",
+      "n_oos": 2935,
+      "dr_per_trade": 0.02033,
+      "se": 0.01589,
+      "ci95_lb": -0.01082,
+      "why": "KEEP: OOS dR/trade +0.0203 >= 0 and CI LB -0.0108 > -0.02"
+     },
+     "folds": [
+      {
+       "fold_index": 1,
+       "n_test_trades": 587,
+       "train_rows_n": 8722,
+       "test_start": "2022-07-20T10:20:00+00:00",
+       "train_cutoff": "2022-07-13T10:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 23.7126,
+       "dr_per_trade": 0.0404,
+       "n_fired_oos": 315
+      },
+      {
+       "fold_index": 2,
+       "n_test_trades": 587,
+       "train_rows_n": 14944,
+       "test_start": "2023-05-14T02:50:00+00:00",
+       "train_cutoff": "2023-05-07T02:50:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": -13.5851,
+       "dr_per_trade": -0.02314,
+       "n_fired_oos": 245
+      },
+      {
+       "fold_index": 3,
+       "n_test_trades": 587,
+       "train_rows_n": 21552,
+       "test_start": "2024-03-12T02:25:00+00:00",
+       "train_cutoff": "2024-03-05T02:25:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 10.7922,
+       "dr_per_trade": 0.01839,
+       "n_fired_oos": 210
+      },
+      {
+       "fold_index": 4,
+       "n_test_trades": 587,
+       "train_rows_n": 29146,
+       "test_start": "2025-01-27T20:20:00+00:00",
+       "train_cutoff": "2025-01-20T20:20:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 15.5119,
+       "dr_per_trade": 0.02643,
+       "n_fired_oos": 167
+      },
+      {
+       "fold_index": 5,
+       "n_test_trades": 587,
+       "train_rows_n": 36265,
+       "test_start": "2025-12-27T21:10:00+00:00",
+       "train_cutoff": "2025-12-20T21:10:00+00:00",
+       "read_state": "measured",
+       "recovered_r_oos": 23.2368,
+       "dr_per_trade": 0.03959,
+       "n_fired_oos": 185
+      }
+     ],
+     "control_random_truncation": {
+      "draws": 1000,
+      "seed": 20261112,
+      "k_fired_per_fold": [
+       315,
+       245,
+       210,
+       167,
+       185
+      ],
+      "p50": 363.2619,
+      "p95": 416.2489,
+      "head_recovered_r": 59.6684,
+      "head_beats_control_p95": false,
+      "head_pct_rank": 0.0,
+      "gating": false
+     },
+     "cost_basis": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+     },
+     "baseline_net_total_r": -625.8966,
+     "n_total_trades": 3527,
+     "data_start": "2021-10-15 00:00:00+00:00",
+     "data_end": "2026-11-19 14:50:00+00:00",
+     "lookback": 500
+    },
+    "generated_at": "2026-11-19T17:28:31Z",
+    "produced_by": {
+     "tool": "python3 scripts/research/exit_head_eth_oos_control.py",
+     "where": "trainer (trainer-vm-diag relay)"
+    }
+   }
+  }
+ }
+}
