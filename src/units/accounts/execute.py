@@ -4050,8 +4050,36 @@ def close_open_position(
                 # position is flat — cancel them so they can't linger and
                 # count toward the symbol's 20-leg cap. Best-effort; a
                 # cancel failure never turns a successful close into one.
+                #
+                # BRACKETS-ALWAYS item 5 (2026-11-19): only once the close is
+                # CONFIRMED FILLED. An ACCEPTED market order that has not
+                # (yet) filled -- a halt, a partial, an unreadable status --
+                # used to lose its SL/TP here while the position stayed open.
+                # The legs are reduce-only, so leaving them over a flat
+                # position can never open one; the stale-leg sweep (or the
+                # next close) cleans them.
+                legs_cancel = "not_needed"
+                if sl_order_id or tp_order_id:
+                    try:
+                        _fill = read_reduce_fill(
+                            exchange_client, account_cfg, symbol=symbol,
+                            order_id=order_id, requested_qty=float(snap_qty_str),
+                        )
+                    except Exception as fill_exc:  # noqa: BLE001 -- never break a placed close
+                        _fill = {"state": "unknown", "reason": str(fill_exc)}
+                    if _fill.get("state") == "filled":
+                        legs_cancel = "confirmed_filled"
+                    else:
+                        legs_cancel = f"skipped_{_fill.get('state')}"
+                        logger.warning(
+                            "close_open_position: account=%s symbol=%s close %s "
+                            "not confirmed filled (%s: %s) -- KEEPING the "
+                            "trade's SL/TP legs (BRACKETS-ALWAYS)",
+                            account_cfg.get("account_id"), symbol, order_id,
+                            _fill.get("state"), _fill.get("reason"),
+                        )
                 for leg_id in (sl_order_id, tp_order_id):
-                    if not leg_id:
+                    if not leg_id or legs_cancel != "confirmed_filled":
                         continue
                     try:
                         cancel_resp = exchange_client.cancel_order(
@@ -4072,7 +4100,8 @@ def close_open_position(
                             leg_id, symbol, leg_exc,
                         )
                 return {"ok": True, "exchange_response": resp,
-                        "exchange_order_id": order_id, "error": None}
+                        "exchange_order_id": order_id, "error": None,
+                        "legs_cancel": legs_cancel}
             err = str(resp.get("retMsg") or f"retCode={ret_code}")
             return {"ok": False, "exchange_response": resp,
                     "exchange_order_id": None, "error": err}
