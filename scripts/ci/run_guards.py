@@ -2150,6 +2150,24 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "queue-harness-flags-guard",
+        # 2026-11-19 (manager direction; PROGRAMME-REVIEW-20261119): a queued unit may only pass a harness the flags its parser declares.
+        # --side-filter and --skip-hours were authored against backtest_ict_scalp.py without existing there; the runs died at argparse
+        # (producer_failed). check_harness_lever_coupling.py cannot catch it (it grades config keys, not unit flags, and skips ict_scalp).
+        # REPORT-ONLY (no --enforce): a refusal would be a new gate, which needs the operator's recorded permission
+        # (canonical "No new gates"); a NEW unit with a missing flag prints a ::warning:: and exits 0. Existing ones are counted.
+        "when": {"globs": ["research/queue/**", "scripts/backtest_*.py", "src/backtest/run_backtest_vwap.py",
+                           "scripts/research/regime_debt_matrix.py", "scripts/research/exit_lever_ablation.py",
+                           "scripts/ci/check_queue_harness_flags.py", "config/strategies.yaml"]},
+        "steps": [
+            ["python3", "scripts/ci/check_queue_harness_flags.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_queue_harness_flags.py", "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "research-queue-ml-consumer-guard",
         # ML-PIPELINE-DESIGN (operator system-first rule, 2026-10-29): a NEW ML queue unit names the consumer
         # that acts on its answer and the live or demo decision it would change (`ml_consumer:`,
