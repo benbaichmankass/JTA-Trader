@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits scripts/research/dispatch_queue.py, the dispatcher's own retry/dedupe logic (non-runtime, but it decides what fires on the trainer and runners); manager merges after the FULL pytest-run is green",
+  "why": "PI-20261119-K7ZSW5Z7-0001: RQ-20261119-b9d0-01 dispatched twice to the trainer. Root cause: its verdict.json used verdict 'report' (not in the contract), landed producer_failed 'verdict.json malformed', and the dispatcher's non-verdict retry (MAX_NONVERDICT_RETRIES 2) re-armed it. deterministic_failure_block only knew 'no verdict.json' and compared the recorded tool against json.dumps(run), which never holds the joined text of a list-form command, so it never fired for list-form units. Fix: recognise both notes and match the joined argv per command segment; tests added; no queued unit changes due state (0 of 379). Gates this adds or changes: none."
+}

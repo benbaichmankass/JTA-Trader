@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "IB order path (execute.close_open_position): after a successful IB close on a contract a same-direction sibling trade also holds, each sibling's own bracket is re-armed via place_protective, keyed by its trade id, at its journal SL/TP and qty, with its entry id. Best-effort; a refused re-arm is reported and never fails the close; the naked sweep stays the net. IB is paper today. The trader restarts on deploy. Manager merges. Revert: git revert + deploy.",
+  "why": "BRACKETS-ALWAYS item 3, option B (manager decision 04:00Z): IBClient.close cancels every leg on the symbol before flattening this trade's lots, so a sibling sat unprotected until the ~5-min sweep. Gates this adds or changes: none."
+}
