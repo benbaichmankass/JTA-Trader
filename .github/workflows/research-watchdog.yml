@@ -105,12 +105,12 @@ jobs:
       # STAMP-PR-TRIAGE (PI-20261118-EFILLW47-0005, manager GO 2026-11-18). A dispatch-stamp PR that went `dirty` runs no checks
       # and never merges; nothing refreshed or closed it. This closes, with a per-unit comment, a dirty stamp PR whose stamps are
       # all superseded/moot, and never touches another branch or a producer_failed unit's re-run. DRY RUN is the default: the
-      # first fire only logs. Flip STAMP_TRIAGE_LIVE to "true" below after the log has been read. No halting: continue-on-error.
+      # first fire only logs. FLIPPED to "true" 2026-11-19 (manager GO after reading dry-run 44435622171; REVERT: set it back to "false"). No halting: continue-on-error.
       - name: Triage conflicted stamp PRs
         continue-on-error: true
         if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
         env:
-          STAMP_TRIAGE_LIVE: "false"
+          STAMP_TRIAGE_LIVE: "true"
         run: |
           set -uo pipefail
           LIVE=""
