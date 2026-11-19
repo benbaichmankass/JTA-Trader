@@ -399,3 +399,14 @@ def test_api_meta_set_get_needs_token(client, monkeypatch):
     r = client.get("/api/bot/work/meta/last_review")
     assert r.json()["meta"]["value"] == {"a": 1}
     assert client.post("/api/bot/work/meta/items", json={"value": 1, "by": "x"}, headers=h).status_code == 422
+
+
+def test_api_list_canonical_reads_the_freeze_key(client, monkeypatch):
+    """The list's ``canonical`` flag follows the S4 freeze key, not a stale S1 literal (AUD-20261118-STORE-WRITES-UNGUARDED)."""
+    from src.runtime import work_read
+    monkeypatch.setattr(work_read, "frozen", lambda repo=None: True)
+    got = client.get("/api/bot/work/items").json()
+    assert got["canonical"] is True and "export" in got["note"]
+    monkeypatch.setattr(work_read, "frozen", lambda repo=None: False)
+    got = client.get("/api/bot/work/items").json()
+    assert got["canonical"] is False and "pre-freeze" in got["note"]
