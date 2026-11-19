@@ -58,6 +58,20 @@ def emit(obj: Any) -> None:
     print(json.dumps(obj, indent=2, sort_keys=False))
 
 
+def redact_ocid(value: Any) -> Any:
+    """``ocid1.<type>...<last 6>`` for a printed report (audit B7, 2026-11-19).
+
+    The report is posted on a PUBLIC GitHub issue. Instance and tenancy OCIDs are
+    identifiers, not secrets, but the repo's rule is no account ids in public
+    output, so the PRINTED report keeps the type and a 6-char tail, which is enough
+    to tell instances apart. ``fetch_live`` still returns the full OCID, because
+    ``compute_util.py`` needs it for metric queries."""
+    if not isinstance(value, str) or not value.startswith("ocid1."):
+        return value
+    kind = value.split(".")[1] if value.count(".") >= 2 else "?"
+    return f"ocid1.{kind}...{value[-6:]}"
+
+
 def _config_from_env() -> dict[str, str]:
     missing = [k for k in ("OCI_CLI_USER", "OCI_CLI_KEY_CONTENT", "OCI_CLI_FINGERPRINT",
                            "OCI_CLI_TENANCY", "OCI_CLI_REGION") if not os.environ.get(k)]
@@ -281,9 +295,9 @@ def main() -> int:
 
     report = {
         "region": os.environ.get("OCI_CLI_REGION", "unknown"),
-        "compartment_id": args.compartment_id,
+        "compartment_id": redact_ocid(args.compartment_id),
         "instance_count": len(live),
-        "instances": live,
+        "instances": [{**r, "ocid": redact_ocid(r.get("ocid"))} for r in live],
         "ampere_budget": ampere_budget(live),
         "diff": diff(live, expected),
     }
