@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="live = real-money rows (is_live_trade); live_paper = the paper-book cohort")
     ap.add_argument("--strategies-file", default=None,
                     help="frozen strategy list; eval rows whose `strategy` is not in it are excluded and counted")
+    ap.add_argument("--measured-only", action="store_true",
+                    help="keep only eval rows whose pnl_provenance is 'measured' (provenance.py), the strict read")
     ap.add_argument("--lb-pct", type=float, default=2.5,
                     help="lower percentile of the (b) bootstrap (2.5 = the registered 95%%; deflate for re-reads)")
     a = ap.parse_args(argv)
@@ -167,6 +169,14 @@ def main(argv: list[str] | None = None) -> int:
                 "excluded_no_strategy": no_strategy, "excluded_off_list": off_list}
         ev = [r for r in ev if r.get("strategy") in strategies]
         filt["after"] = len(ev)
+    # Outcome provenance of the eval population (src/runtime/provenance.py buckets;
+    # the dataset loader already dropped fabricated / unverified pnl). Always stated.
+    prov_counts: dict = {}
+    for r in ev:
+        k = r.get("pnl_provenance") or "not_recorded"
+        prov_counts[k] = prov_counts.get(k, 0) + 1
+    if a.measured_only:
+        ev = [r for r in ev if r.get("pnl_provenance") == "measured"]
     srcs: dict = {}
     for r in ev:
         srcs[r.get("r_multiple_source")] = srcs.get(r.get("r_multiple_source"), 0) + 1
@@ -229,6 +239,7 @@ def main(argv: list[str] | None = None) -> int:
             f"{n} PAPER-book closed trades (event_source live_paper) of the dataset; symbols {sorted(per_sym)}"
         ) + (f"; strategy filter {a.strategies_file} ({len(strategies)} names)" if strategies is not None else ""),
         "eval_source": a.eval_source, "strategy_filter": filt,
+        "pnl_provenance_counts": prov_counts, "measured_only": bool(a.measured_only),
         "n_eval": n, "take_rate": take_rate, "threshold": thr,
         "a_cost_gate": {"passed": a_ok, "reason": gate.get("reason"), "value_r": gate.get("candidate_value_r"),
                         "take_all_r": gate.get("take_all_r"), "matched_random_r": gate.get("matched_random_r"),

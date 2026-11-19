@@ -368,10 +368,11 @@ def _load_live_trades(
     out: list[dict[str, Any]] = []
     excluded_untrusted = {"real": 0, "paper": 0}
     if judge_provenance:
-        from src.runtime.provenance import pnl_is_trustworthy  # noqa: PLC0415
+        from src.runtime.provenance import ESTIMATED, MEASURED, pnl_bucket  # noqa: PLC0415
     for group, is_paper in ((db_rows, False), (paper_rows, True)):
         for r in group:
-            if judge_provenance and not pnl_is_trustworthy(r["notes"]):
+            bucket = pnl_bucket(r["notes"]) if judge_provenance else None
+            if judge_provenance and bucket not in (MEASURED, ESTIMATED):
                 excluded_untrusted["paper" if is_paper else "real"] += 1
                 continue
             side = str(r["direction"] or "").lower()
@@ -395,6 +396,9 @@ def _load_live_trades(
                 "strategy": (
                     str(r["strategy_name"] or "") if "strategy_name" in keys else ""
                 ),
+                # provenance bucket of the pnl (measured / estimated), None when
+                # the journal has no notes column to judge it from.
+                "pnl_provenance": bucket,
             })
     total_excluded = sum(excluded_untrusted.values())
     if total_excluded:
@@ -976,6 +980,10 @@ class SetupCandidatesBuilder(DatasetBuilder):
         # trades.strategy_name; absent on synthetic and backtest rows). Outcome
         # metadata for population filters, NEVER a feature (RQ-20261119-3e98-01).
         "strategy": str,
+        # provenance bucket of a `live` / `live_paper` row's pnl
+        # (src/runtime/provenance.py::pnl_bucket: measured | estimated; the
+        # loader drops the untrusted rest). Outcome metadata, NEVER a feature.
+        "pnl_provenance": str,
     }
 
     def iter_rows(
@@ -1404,4 +1412,6 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "is_live_trade": not is_paper,
                     "event_source": "live_paper" if is_paper else "live",
                     **({"strategy": tr["strategy"]} if tr.get("strategy") else {}),
+                    **({"pnl_provenance": tr["pnl_provenance"]}
+                       if tr.get("pnl_provenance") else {}),
                 }

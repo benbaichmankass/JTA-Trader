@@ -83,3 +83,46 @@ def test_basis_counts_split_real_paper_and_filter(tmp_path):
     assert sum(real["BTCUSDT"].values()) == 1
     assert sum(paper["BTCUSDT"].values()) == 2
     assert sum(paper_f["BTCUSDT"].values()) == 1
+
+
+
+def test_main_counts_provenance_and_measured_only(tmp_path, monkeypatch):
+    """main() states the eval population's pnl_provenance split and --measured-only narrows it."""
+    import json
+
+    import ml.experiments.runner as runner
+
+    rows = [
+        {"event_source": "live_paper", "is_live_trade": False, "symbol": "BTCUSDT", "strategy": "trend_donchian",
+         "pnl_provenance": "measured", "label_cost_basis": "realized", "r_multiple": 1.0},
+        {"event_source": "live_paper", "is_live_trade": False, "symbol": "BTCUSDT", "strategy": "trend_donchian",
+         "pnl_provenance": "estimated", "label_cost_basis": "realized", "r_multiple": -1.0},
+        {"event_source": "live_paper", "is_live_trade": False, "symbol": "BTCUSDT", "strategy": "vwap",
+         "pnl_provenance": "measured", "label_cost_basis": "realized", "r_multiple": 2.0},
+        {"event_source": "live", "is_live_trade": True, "symbol": "BTCUSDT", "strategy": "trend_donchian",
+         "pnl_provenance": "measured", "label_cost_basis": "realized", "r_multiple": 3.0},
+    ]
+    ds = tmp_path / "data.jsonl"
+    ds.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    man = tmp_path / "m.yaml"
+    man.write_text("dataset: {family: setup_candidates}\nevaluator_config: {threshold: 0.5}\n")
+    (tmp_path / "state.json").write_text("{}")
+    (tmp_path / "gate.json").write_text("{}")
+    strat = tmp_path / "s.txt"
+    strat.write_text("trend_donchian\n")
+    monkeypatch.setattr(runner, "score_decisions", lambda state, rs, vcol, thr: [(True, rs[0]["r_multiple"])])
+    monkeypatch.setattr(g, "_journal_basis_counts", lambda *a, **k: {"BTCUSDT": {
+        "initial_risk": 2, "initial_risk_signal": 0, "stop_distance": 0, "unit_fallback": 0}})
+    base = ["--manifest", str(man), "--model-state", str(tmp_path / "state.json"), "--dataset", str(ds),
+            "--cost-gate", str(tmp_path / "gate.json"), "--journal", str(tmp_path / "j.db"),
+            "--eval-source", "live_paper", "--strategies-file", str(strat)]
+    out = tmp_path / "rec.json"
+    assert g.main(base + ["--out", str(out)]) == 0
+    rec = json.loads(out.read_text())
+    assert rec["n_eval"] == 2 and rec["pnl_provenance_counts"] == {"measured": 1, "estimated": 1}
+    assert rec["strategy_filter"] == {"strategies_n": 1, "before": 3, "excluded_no_strategy": 0,
+                                      "excluded_off_list": 1, "after": 2}
+    assert rec["a_cost_gate"]["value_r"] == 0.0  # (1 - 1) / 2, recomputed on the filtered rows
+    assert g.main(base + ["--measured-only", "--out", str(out)]) == 0
+    rec = json.loads(out.read_text())
+    assert rec["n_eval"] == 1 and rec["measured_only"] is True

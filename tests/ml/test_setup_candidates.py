@@ -1156,3 +1156,32 @@ def test_journal_without_strategy_name_emits_no_strategy(tmp_path: Path):
         include_synthetic=False, live_trades_db=db,
     ))
     assert rows and all("strategy" not in r for r in rows)
+
+
+
+def test_live_rows_carry_pnl_provenance_and_untrusted_are_dropped(tmp_path: Path):
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "trade_journal.db"
+    _seed_trades_funding(db, [
+        ((base + timedelta(hours=40)).isoformat(), "buy", 10.0, 1, "paper"),
+        ((base + timedelta(hours=80)).isoformat(), "buy", 20.0, 1, "paper"),
+        ((base + timedelta(hours=120)).isoformat(), "buy", 30.0, 1, "paper"),
+    ])
+    conn = sqlite3.connect(str(db))
+    conn.execute("ALTER TABLE trades ADD COLUMN notes TEXT")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "bybit_closed_pnl"}' WHERE id=0""")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "candle_at_close"}' WHERE id=1""")
+    conn.execute("""UPDATE trades SET notes='{"exit_price_source": "local_markprice"}' WHERE id=2""")
+    conn.commit()
+    conn.close()
+    builder = SetupCandidatesBuilder()
+    rows = list(builder.iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8,
+        include_synthetic=False, live_trades_db=db, include_paper=True,
+    ))
+    for r in rows:
+        builder._validate_row(r, set(builder.schema))
+    paper = sorted((r for r in rows if r["event_source"] == "live_paper"), key=lambda r: r["ts"])
+    assert [r.get("pnl_provenance") for r in paper] == ["measured", "estimated"]  # untrusted dropped
