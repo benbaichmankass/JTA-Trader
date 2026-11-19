@@ -85,6 +85,8 @@ import argparse
 import json
 import os
 import re
+import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -538,6 +540,61 @@ def _load_pr(raw: Optional[str]) -> "tuple[Optional[str], List[str], bool]":
     return pr.get("body") or "", labels, False
 
 
+# ---------------------------------------------------------------------------
+# SELECTION — which merged PRs this run grades (ACTIONS-QUEUE-BACKLOG alarm dedupe, manager-approved
+# design 2026-11-19: a 6 h window, a per-PR dedupe marker, one concurrency group without cancel).
+#
+# The workflow used to grade only the PRs of the push that triggered it, in a concurrency group PER SHA:
+# one queued run per push to main (a large share of the Actions queue). With ONE group and no cancel,
+# GitHub keeps a single PENDING run and drops the older pending one, so a run can no longer assume it
+# saw its own push. Instead every run grades every PR merged in the last WINDOW_HOURS that is in this
+# alarm's scope and does not yet carry the MARKER label: a dropped push's PR is graded by the next run,
+# and a PR that was already graded (clean or alarm) is never graded, or paged, twice.
+# ---------------------------------------------------------------------------
+WINDOW_HOURS = 6
+MARKER_LABEL = "hold-merge-graded"
+
+
+def branch_slug(head_ref: str) -> str:
+    """The .github/pr-landing/<slug>.json name for a head branch (same rule check_pr_landing uses)."""
+    ref = head_ref[len("claude/"):] if head_ref.startswith("claude/") else head_ref
+    return ref.replace("/", "-")
+
+
+def _in_scope(decl_dir: str, head_ref: str) -> bool:
+    """True when grading could alarm: the declaration is MISSING or UNREADABLE (both alarm/unreadable),
+    or declares tier 2/3 + landing hold. Every other declaration grades CLEAN without any API read."""
+    p = os.path.join(decl_dir, f"{branch_slug(head_ref)}.json")
+    if not os.path.isfile(p):
+        return True
+    try:
+        with open(p, encoding="utf-8") as fh:
+            d = json.load(fh)
+    except (OSError, ValueError):
+        return True
+    return not isinstance(d, dict) or (d.get("tier") in _ALARM_TIERS and d.get("landing") == _ALARM_LANDING)
+
+
+def select_prs(prs: List[Dict[str, Any]], now: datetime, decl_dir: str,
+               window_hours: float = WINDOW_HOURS) -> List[Dict[str, Any]]:
+    """Merged PRs from a ``GET /pulls?state=closed`` page that this run must grade."""
+    out = []
+    for pr in prs:
+        merged = pr.get("merged_at")
+        if not merged:
+            continue
+        at = datetime.fromisoformat(str(merged).replace("Z", "+00:00"))
+        if (now - at).total_seconds() > window_hours * 3600:
+            continue
+        if MARKER_LABEL in [lb.get("name") for lb in pr.get("labels") or [] if isinstance(lb, dict)]:
+            continue
+        ref = (pr.get("head") or {}).get("ref") or ""
+        if not _in_scope(decl_dir, ref):
+            continue
+        out.append(pr)
+    return out
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
@@ -549,6 +606,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                      "citation is resolved against (default: cwd)")
     ap.add_argument("--pr-json", default=None, help="path to the fetched PR object (GET /pulls/N) for its "
                      "body and labels, or the literal UNREADABLE; omitted = not supplied")
+    ap.add_argument("--select-from", default=None, help="path to a GET /pulls?state=closed page: print the "
+                     "PRs to grade (number<TAB>title<TAB>head_ref) and exit")
+    ap.add_argument("--decl-dir", default=".github/pr-landing")
+    ap.add_argument("--window-hours", type=float, default=WINDOW_HOURS)
     ap.add_argument("--pr-number", type=int, default=None)
     ap.add_argument("--pr-title", default=None)
     args = ap.parse_args(argv)
@@ -556,6 +617,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.self_test:
         ok, _ = _self_test()
         return 0 if ok else 1
+
+    if args.select_from:
+        with open(args.select_from, encoding="utf-8") as fh:
+            prs = json.load(fh)
+        if not isinstance(prs, list):
+            print("pr-landing-hold-merge-alarm: the closed-PR page is not a list (could not look)", file=sys.stderr)
+            return 3
+        for pr in select_prs(prs, datetime.now(timezone.utc), args.decl_dir, args.window_hours):
+            title = str(pr.get("title") or "").replace("\t", " ").replace("\n", " ")
+            print(f"{pr['number']}\t{title}\t{(pr.get('head') or {}).get('ref') or ''}")
+        return 0
 
     if not args.decl_json or not args.reviews_json:
         ap.error("--decl-json and --reviews-json are required outside --self-test")
