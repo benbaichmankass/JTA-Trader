@@ -81,7 +81,8 @@ def _r_label(trade: dict, sl0: Optional[float]) -> Optional[dict]:
         try:
             from src.runtime.local_pnl import contract_value_usd_for  # noqa: PLC0415
             cv = contract_value_usd_for(str(basis.get("symbol") or ""))
-        except Exception:  # noqa: BLE001
+        except (ImportError, KeyError, ValueError, TypeError) as exc:     # no multiplier known: net_r_label's 1.0 default
+            print(f"live_review_counterfactual: contract_value_usd_for({basis.get('symbol')!r}): {exc!r}", file=sys.stderr)
             cv = None
         if cv:
             basis["contract_value_usd"] = cv
