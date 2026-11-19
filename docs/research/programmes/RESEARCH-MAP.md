@@ -6,6 +6,21 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Mid-week re-plan 2026-11-19 (lane PROGRAMME-REPLAN-20261119)
+
+Dispatched by the manager for queue runway: ~52 due units at ~5 fires/h against a 48 h target. The iteration loop was run on
+the results graded 2026-11-17..19, and the outcome is **30 genuine pre-registered units** (P1 11, P3 19) plus one node blocked
+on a build. That falls well short of the +190 asked: the honest supply from this window's diagnoses is ~6 h of runway at 5
+fires/h. Every testing leg whose results landed this window got its next step. The rest of the gap is a SUPPLY problem of the
+programmes' shape: most open nodes wait on predecessors (W47b's measurement), and the remaining authorable P8 nodes are BUILD-gated
+(alpaca_live_book.py --trades-from, the rotation harness).
+
+| from | to | what | dest | state |
+|---|---|---|---|---|
+| P3 | P2 | the regime axis that matters differs by asset class (vol for index trend, trend state / strength for commodities): a label/feature hint for the D2 regime head | ML lane (ML-PRIMARY-9) | told in the handoff |
+| P1 | P2 | new_peak is the informative in-trade trigger across three action classes: a candidate event feature for the D7 in-trade head | ML lane | told in the handoff |
+| P1 | desk | level-break fade, small edge, clustered firings | DESK-ENTRY-REVIEW-REDESIGN (decluster build) | blocked node |
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118)
 
 Record: [`comms/research/programme_review/20261118.json`](../../../comms/research/programme_review/20261118.json). Population: 2,528 units, 1,044 result rows in the 7-day window, 428 units with rows (256 unprogrammed, assigned in the record). Last week's calls: 3 hit / 3 miss (Brier 0.232).
