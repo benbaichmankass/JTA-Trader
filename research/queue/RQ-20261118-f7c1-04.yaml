@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-04
 title: 'P8-Q8 Foxhound-4 HORIZON: does a 48- or 72-bar time stop, or one DAILY decision per session, beat the live 24-bar 4h-cadence recipe on the
   alpaca_live cash book, on the ETF-pool dev walk-forward?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -42,6 +42,8 @@ power:
   expected_n: 1600
   min_detectable_effect: 0.25
   effect_units: pct_per_month
+  sd: 2.15
+  sd_basis: 'MEASURED: RQ-20261111-207f-01 run 44387485084 live-book monthly return SE 0.392 %/month over 30 dev months -> sd ~0.392 x sqrt(30) = 2.15 %/month (single-arm sd, used for the paired difference as a conservative stand-in; added 2026-11-19 by ML-PRIMARY-9 when unblocking, rule unchanged)'
   design: paired
   alpha: 0.05
   power: 0.8
@@ -141,3 +143,7 @@ related:
 - RQ-20261108-98e3-15
 - RQ-20261108-98e3-16
 last_dispatched_at: null
+unblocked:
+  at: '2026-11-19'
+  by: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7)
+  why: 'Both blocked_on clauses cleared: RQ-20261111-207f-01 has a measured, graded row (FAIL, run 44387485084); RQ-20261117-c21d-06 has a measured result graded FAIL (label stays net R), so per its clears_when this file moves to research/queue/ as queued with the rule unchanged.'
