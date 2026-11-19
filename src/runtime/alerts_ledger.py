@@ -1,6 +1,7 @@
 """The alert ledger: ONE append-only EVENT LOG of what the system told the operator.
 
-Row shape ``{ts, kind, channel, priority, dedup_key, body[:1024], delivered}``,
+Row shape ``{ts, kind, channel, priority, dedup_key, body[:cap], delivered}`` (+ ``body_truncated: true``
+and ``body_len`` when the body was cut; cap = :func:`body_max_for`, 1024 except the restart report),
 written at the send chokepoint (``notify``'s direct-send function) and by
 ``POST /api/bot/alerts`` for shell / workflow senders that curl Telegram directly.
 Design: ``docs/audits/2026-11-04-system-integration.md`` § "Design: how alerts,
@@ -41,6 +42,11 @@ LEDGER_NAME = "alerts_ledger.jsonl"
 #: amortised trim ``operator_alerts.jsonl`` uses).
 KEEP = 5000
 BODY_MAX = 1024
+#: Kinds whose body carries the PROBLEM lines deep in a long sectioned report: a 1024 cap hid them
+#: (ALERT-LEDGER-BODY-TRUNCATION, 2026-11-19: the 04:09:13Z restart report's 'qty mismatch: alpaca_paper
+#: QQQ short: journal 2 / venue 1981' sat past char 1024 of ~2,900, and the manager held two merges).
+#: Bounded: the ledger keeps KEEP rows, and restarts are rare.
+KIND_BODY_MAX = {"restart": 8192}
 #: Reads scan at most this many trailing lines (the population is reported).
 READ_MAX_LINES = 20000
 
@@ -77,6 +83,10 @@ def default_dedup_key(kind: str, body: str) -> str:
     return f"{kind}:{re.sub(r'[0-9]+', '#', first)[:80]}"
 
 
+def body_max_for(kind: str) -> int:
+    return KIND_BODY_MAX.get(str(kind or ""), BODY_MAX)
+
+
 def priority_for(kind: str) -> str:
     return "high" if kind in HIGH_KINDS else "normal"
 
@@ -92,9 +102,13 @@ def build_row(kind: str, channel: str, body: str, *, priority: Optional[str] = N
         "channel": str(channel or "unknown"),
         "priority": str(priority or priority_for(kind)),
         "dedup_key": str(dedup_key or default_dedup_key(kind, body)),
-        "body": body[:BODY_MAX],
+        "body": body[:body_max_for(kind)],
         "delivered": delivered if delivered in DELIVERED_VALUES else "unknown",
     }
+    if len(body) > body_max_for(kind):
+        # A reader must know the body is not whole (and how much is missing).
+        row["body_truncated"] = True
+        row["body_len"] = len(body)
     # Flat scalar extras (e.g. the TELEGRAM-TRIM reason / account / package_id);
     # never shadowing a core field.
     for k, v in (extra or {}).items():
