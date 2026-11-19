@@ -123,14 +123,23 @@ def _is_cancel_in_flight(refusal: Optional[Dict[str, Any]]) -> bool:
 def _is_protective(row: Dict[str, Any]) -> bool:
     """True when *row* is a protective leg rather than a working order.
 
-    Two independent signals, either sufficient: an OCA group (a bracket leg is
+    Three independent signals, any one sufficient: an OCA group (a bracket leg is
     always OCA-grouped here -- see ``IBClient.place_protective``) or a
-    stop/trailing order type. Deliberately over-inclusive: a false positive
+    stop/trailing order type, or a parent (an entry-bracket child). Deliberately over-inclusive: a false positive
     costs one explicit ``--force-protective`` flag, a false negative costs a
     live position its stop.
     """
     if str(row.get("oca_group") or "").strip():
         return True
+    # A third signal (BRACKETS-ALWAYS item 7, 2026-11-19): an entry-bracket CHILD carries parentId = the entry.
+    # IBKR assigns the bracket's OCA group server-side, and the client can read it EMPTY (measured ib_paper TLT
+    # 2026-11-04, children 1232/1233 of entry 1231), so a child LMT take-profit used to classify as a working order
+    # and was cancellable without --force-protective.
+    try:
+        if int(float(row.get("parent_id") or 0)) > 0:
+            return True
+    except (TypeError, ValueError):
+        pass
     return str(row.get("order_type") or "").strip().upper() in _PROTECTIVE_ORDER_TYPES
 
 
