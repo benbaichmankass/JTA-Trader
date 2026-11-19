@@ -155,7 +155,7 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
     cfg = conf.get("strategies", conf).get(strategy)
     if not isinstance(cfg, dict):
         return {"leg": strategy, "read_state": "producer_failed", "why": f"no strategy {strategy!r} in config"}
-    path = None
+    path, resample = None, None
     if a.candles_dir:
         cand = [os.path.join(a.candles_dir, f"{symbol}_{a.timeframe}.csv"), os.path.join(a.candles_dir, f"{symbol}.csv")]
         path = next((c for c in cand if os.path.exists(c)), None)
@@ -165,8 +165,9 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
         if not res.ok:
             return {"leg": strategy, "read_state": "producer_failed",
                     "why": backtest_data_source.refusal_message(res, harness="exit_head_label_bakeoff.py", legacy_default=None)}
-        path = res.path
-    df = harness._load_candles(path)
+        path, resample = res.path, res.resample
+    from scripts.ops.backtest_data_source import load_resolved_frame
+    df = load_resolved_frame(harness, path, resample)   # honour the resolver's grain (5m/15m file -> the leg's tf)
     trades: List[Any] = []
     harness.run_backtest(
         df.copy(), donchian=int(cfg.get("donchian", 20)), atr_period=int(cfg.get("atr_period", 14)),
@@ -210,7 +211,7 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
                   "n_fired": {arm: sum(1 for r in per_arm[arm] if r["exit_head_fired"]) for arm in per_arm}})
         folds.append(f)
         print(json.dumps({"leg": strategy, **{k: f[k] for k in ("fold_index", "n_test_trades", "n_fired")}}), flush=True)
-    return {"leg": strategy, "symbol": symbol, "read_state": "measured" if recs else "unestablishable",
+    return {"leg": strategy, "symbol": symbol, "candle_source": {"path": str(path), "resampled_to": resample, "bars": len(df)}, "read_state": "measured" if recs else "unestablishable",
             "n_total_trades": len(ordered), "block_n": block_n, "folds": folds, "records": recs}
 
 
