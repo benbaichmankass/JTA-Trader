@@ -334,6 +334,8 @@ def main(argv=None) -> int:
                     help="exit 1 on a NEW unit with a missing flag (a gate: needs the operator's recorded permission); default is report-only")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
+    import _dirty_tree  # noqa: PLC0415 -- path shim above; the shared dirty-tree notice (a --base guard grades a commit range)
+    _dirty_tree.warn()
     if a.self_test:
         return _self_test()
     if a.audit:
