@@ -259,6 +259,10 @@ def _load_live_trades(
         risk_cols = [c for c in ("entry_price", "stop_loss", "position_size")
                      if c in have]
         select_cols = ["timestamp", "direction", "pnl", "pnl_percent", *risk_cols]
+        # The emitting strategy (outcome metadata for population filters such as
+        # RQ-20261119-3e98-01's rostered-strategies read; never a feature).
+        if "strategy_name" in have:
+            select_cols.append("strategy_name")
         # P0.1 (2026-07-31 audit): this loader feeds the M23 real-money
         # holdout / EV gate, whose target derives from `pnl` — a fabricated
         # pnl is a WRONG holdout outcome. Judge each row's provenance via
@@ -289,11 +293,31 @@ def _load_live_trades(
                 "AND name='order_packages'").fetchone())
         except sqlite3.OperationalError:
             has_pkg = False
-        if has_pkg and "order_package_id" in have:
+        # The package can be linked from EITHER side: `trades.order_package_id`
+        # or `order_packages.linked_trade_id` (the vwap book, 2026-05, carries
+        # only the second -- relay #27384). The id link is tried first; the
+        # reverse link is the fallback, the earliest package for that trade on
+        # the same symbol.
+        pkg_cols: set[str] = set()
+        if has_pkg:
+            try:
+                pkg_cols = {r[1] for r in conn.execute("PRAGMA table_info(order_packages)")}
+            except sqlite3.OperationalError:
+                pkg_cols = set()
+        by_id = ("(SELECT p.meta FROM order_packages p "
+                 "WHERE p.order_package_id = trades.order_package_id)"
+                 if has_pkg and "order_package_id" in have else None)
+        by_link = None
+        if has_pkg and "linked_trade_id" in pkg_cols and "id" in have:
+            sym_pred = " AND p.symbol = trades.symbol" if "symbol" in pkg_cols else ""
+            order = " ORDER BY p.created_at" if "created_at" in pkg_cols else ""
+            by_link = ("(SELECT p.meta FROM order_packages p "
+                       f"WHERE p.linked_trade_id = trades.id{sym_pred}{order} LIMIT 1)")
+        parts = [x for x in (by_id, by_link) if x]
+        if parts:
             select_cols.append(
-                "(SELECT p.meta FROM order_packages p "
-                "WHERE p.order_package_id = trades.order_package_id) "
-                "AS package_meta")
+                (parts[0] if len(parts) == 1 else f"COALESCE({', '.join(parts)})")
+                + " AS package_meta")
         # account_class-authoritative real filter (mirrors build_research_panel.py):
         # a row is real only if account_class isn't 'paper' AND is_demo is 0.
         # Guarded on column presence so an old-schema journal (no account_class)
@@ -344,10 +368,11 @@ def _load_live_trades(
     out: list[dict[str, Any]] = []
     excluded_untrusted = {"real": 0, "paper": 0}
     if judge_provenance:
-        from src.runtime.provenance import pnl_is_trustworthy  # noqa: PLC0415
+        from src.runtime.provenance import ESTIMATED, MEASURED, pnl_bucket  # noqa: PLC0415
     for group, is_paper in ((db_rows, False), (paper_rows, True)):
         for r in group:
-            if judge_provenance and not pnl_is_trustworthy(r["notes"]):
+            bucket = pnl_bucket(r["notes"]) if judge_provenance else None
+            if judge_provenance and bucket not in (MEASURED, ESTIMATED):
                 excluded_untrusted["paper" if is_paper else "real"] += 1
                 continue
             side = str(r["direction"] or "").lower()
@@ -368,6 +393,12 @@ def _load_live_trades(
                 ),
                 "symbol": symbol,
                 "is_paper": is_paper,
+                "strategy": (
+                    str(r["strategy_name"] or "") if "strategy_name" in keys else ""
+                ),
+                # provenance bucket of the pnl (measured / estimated), None when
+                # the journal has no notes column to judge it from.
+                "pnl_provenance": bucket,
             })
     total_excluded = sum(excluded_untrusted.values())
     if total_excluded:
@@ -398,6 +429,9 @@ def _live_realized_r(tr: dict[str, Any], won: int) -> tuple[float, str]:
       declared record exists. That column is overwritten by a trail, so this R
       is INFLATED on a trailed winner; it is tagged so a consumer can exclude
       it (``live_r_basis=initial_only``).
+    * ``initial_risk_signal`` — no ``risk_per_unit``, but the builder wrote its
+      signal-time ``stop_loss``/``entry_price`` (or ``sl_distance``) into
+      ``order_packages.meta``: still entry-time risk (PI-20261029-MLP1-0001).
     * ``unit_fallback`` — a coarse signed ±1 when neither basis exists (or the
       stop is proven wrong-side), so the column is never a silent 0.0.
 
@@ -424,9 +458,58 @@ def _live_realized_r(tr: dict[str, Any], won: int) -> tuple[float, str]:
     )
     if r is not None and basis == R_BASIS_DECLARED:
         return float(r), "initial_risk"
+    # Signal-time stop record (PI-20261029-MLP1-0001): a package whose builder
+    # wrote no `risk_per_unit` but did write its signal-time `stop_loss` /
+    # `entry_price` (or `sl_distance`) into `order_packages.meta` -- the vwap
+    # builder, src/units/strategies/vwap.py, 318 of the 408 BTC real closed
+    # trades on the trainer journal 2026-11-19 (relay #27362). The meta blob is
+    # written once when the package is built; a trailing amend writes only the
+    # package's `sl`/`tp` COLUMNS, so this is entry-time risk, never the trail.
+    sig = _signal_meta_risk(tr.get("package_meta"))
+    if sig is not None:
+        try:
+            qty = abs(float(tr.get("position_size") or 0.0))
+            pnl = float(tr["pnl"]) if tr.get("pnl") is not None else None
+        except (TypeError, ValueError):
+            qty, pnl = 0.0, None
+        risk_usd = sig * qty * float(cv)
+        if pnl is not None and risk_usd > 0:
+            return pnl / risk_usd, "initial_risk_signal"
     if r is not None and basis == R_BASIS_STORED_STOP:
         return float(r), "stop_distance"
     return (1.0 if won else -1.0), "unit_fallback"
+
+
+#: live-row R sources that are on the trade's ENTRY-TIME risk (P1 rule (e)).
+INITIAL_R_SOURCES = ("initial_risk", "initial_risk_signal")
+
+
+def _signal_meta_risk(package_meta: Any) -> float | None:
+    """Per-unit risk from the signal-time stop a builder wrote into
+    ``order_packages.meta``: ``sl_distance`` when present, else
+    ``|entry_price - stop_loss|``. ``None`` (never 0.0) when the blob carries
+    neither, or a non-positive / non-finite distance."""
+    meta: Any = package_meta
+    if isinstance(meta, (str, bytes, bytearray)):
+        try:
+            meta = json.loads(meta)
+        except (ValueError, TypeError):
+            return None
+    if not isinstance(meta, dict):
+        return None
+
+    def _f(x: Any) -> float | None:
+        try:
+            v = float(x)
+        except (TypeError, ValueError):
+            return None
+        return v if math.isfinite(v) else None
+
+    d = _f(meta.get("sl_distance"))
+    if d is None:
+        e, sl = _f(meta.get("entry_price")), _f(meta.get("stop_loss"))
+        d = abs(e - sl) if e is not None and sl is not None else None
+    return d if d is not None and d > 0 else None
 
 
 def _load_backtest_trades(
@@ -893,6 +976,14 @@ class SetupCandidatesBuilder(DatasetBuilder):
         # meta-label can be re-evaluated when the training distribution matches
         # real setups instead of CUSUM momentum events.
         "event_source": str,
+        # the strategy that emitted a `live` / `live_paper` row (journal
+        # trades.strategy_name; absent on synthetic and backtest rows). Outcome
+        # metadata for population filters, NEVER a feature (RQ-20261119-3e98-01).
+        "strategy": str,
+        # provenance bucket of a `live` / `live_paper` row's pnl
+        # (src/runtime/provenance.py::pnl_bucket: measured | estimated; the
+        # loader drops the untrusted rest). Outcome metadata, NEVER a feature.
+        "pnl_provenance": str,
     }
 
     def iter_rows(
@@ -1294,7 +1385,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 # live_r_basis=initial_only (P1 rule (e)): a row whose R is not
                 # on the entry-time initial risk is NOT an eval row; it is
                 # dropped here and counted by the grader from the journal.
-                if live_r_basis == "initial_only" and r_source != "initial_risk":
+                if live_r_basis == "initial_only" and r_source not in INITIAL_R_SOURCES:
                     continue
                 # L3 paper-book eval population: a PAPER trade is a DISTINCT,
                 # TAGGED population — event_source="live_paper" +
@@ -1320,4 +1411,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "label_cost_basis": "realized",
                     "is_live_trade": not is_paper,
                     "event_source": "live_paper" if is_paper else "live",
+                    **({"strategy": tr["strategy"]} if tr.get("strategy") else {}),
+                    **({"pnl_provenance": tr["pnl_provenance"]}
+                       if tr.get("pnl_provenance") else {}),
                 }

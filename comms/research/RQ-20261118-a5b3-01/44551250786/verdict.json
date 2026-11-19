@@ -1,0 +1,339 @@
+{
+ "schema": "event_flatten_s0/v1",
+ "computed_at": "2026-11-19T15:14:21Z",
+ "population": "3665 trades priced of 4076 in 8 committed Stage-0 corpora (ada_pullback_2h, iaum_pullback_1d, ml_entry, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h), entering inside the release history's covered window 2021-01-01T00:00:00+00:00..2026-11-10T13:30:00+00:00; 184 graded releases (fomc_decision, cpi, nfp)",
+ "covered_window": [
+  "2021-01-01T00:00:00+00:00",
+  "2026-11-10T13:30:00+00:00"
+ ],
+ "uncovered_span": {
+  "from": "2018-02-26T00:00:00+00:00",
+  "to": "2021-01-01T00:00:00+00:00",
+  "read_state": "could_not_look"
+ },
+ "coverage_gaps": [
+  {
+   "class": "fomc_decision",
+   "after": "2021-07-28T18:00:00+00:00",
+   "before": "2021-11-03T18:00:00+00:00",
+   "days": "98"
+  },
+  {
+   "class": "fomc_decision",
+   "after": "2025-03-19T18:00:00+00:00",
+   "before": "2025-06-18T18:00:00+00:00",
+   "days": "91"
+  },
+  {
+   "class": "cpi",
+   "after": "2023-10-12T12:30:00+00:00",
+   "before": "2023-12-12T13:30:00+00:00",
+   "days": "61"
+  },
+  {
+   "class": "cpi",
+   "after": "2025-09-11T12:30:00+00:00",
+   "before": "2025-10-24T12:30:00+00:00",
+   "days": "43"
+  },
+  {
+   "class": "cpi",
+   "after": "2025-10-24T12:30:00+00:00",
+   "before": "2025-12-18T13:30:00+00:00",
+   "days": "55"
+  },
+  {
+   "class": "nfp",
+   "after": "2025-09-05T12:30:00+00:00",
+   "before": "2025-11-20T13:30:00+00:00",
+   "days": "76"
+  }
+ ],
+ "excluded": {
+  "outside_event_history": 384,
+  "no_path": 27
+ },
+ "by_leg_priced": {
+  "ada_pullback_2h": 364,
+  "iaum_pullback_1d": 45,
+  "ml_entry": 907,
+  "trend_donchian_eth_4h": 368,
+  "trend_donchian_eth_prop": 1005,
+  "trend_donchian_sol_prop": 555,
+  "trend_donchian_xrp_4h": 64,
+  "xrp_pullback_2h": 357
+ },
+ "cost_stack": "corpus rows' recorded fee + slippage + funding legs (live_review_outcomes.trade_costs)",
+ "provenance": "MEASURED",
+ "rule_id": "RULE-RQ-20261118-a5b3-01-BOOK-EVENT-FLATTEN",
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 3665,
+ "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 + R4 + L1 (per-trade R; graduation_eligible false). flatten@T-60m: fail (fails_R2_R3); 304 trades flattened at 137 of 184 releases",
+ "measurement": {
+  "rule": {
+   "id": "RULE-AM-RISK-ADJUSTED-V1",
+   "registered_at": "2026-10-29",
+   "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+   "max_r_cost_per_trade": 0.05,
+   "min_dd_cut_pct": 0.15,
+   "min_cvar5_cut_pct": 0.15,
+   "cvar_tail": 0.05,
+   "cvar_basis": "book_iso_week_of_exit",
+   "folds": 6,
+   "fold_majority": 4,
+   "fold_min_risk_cut_pct": 0.0,
+   "n_floor": 39,
+   "random_control": "required",
+   "min_control_beat_frac": 0.95,
+   "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+   "reported_measurements": [
+    "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+    "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+    "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+   ]
+  },
+  "candidate": "flatten@T-60m",
+  "graded": {
+   "verdict": "fail",
+   "label": "fails_R2_R3",
+   "r_cost_per_trade": 0.011861,
+   "dd_cut_pct": 0.026038,
+   "cvar5_cut_pct": 0.05905,
+   "folds_held": 0,
+   "n_folds": 6,
+   "clauses": {
+    "R1_cost": true,
+    "R2_risk_cut": false,
+    "R3_folds": false,
+    "R4_control": false
+   },
+   "controls": {
+    "n": 200,
+    "beaten": 0
+   },
+   "L1_drop_best_leg": {
+    "best_leg": "trend_donchian_eth_prop",
+    "r_cost_per_trade_without": 0.018415,
+    "holds": true
+   }
+  },
+  "flatten_stats": {
+   "events_flattened": 137,
+   "ties": 22,
+   "events_nothing_open": 25,
+   "trades_flattened": 304
+  },
+  "random_trades_flattened": {
+   "mean": 299.2,
+   "min": 255,
+   "max": 349
+  },
+  "sensitivity_reported": {
+   "flatten@T-30m": {
+    "r_cost_per_trade": 0.02225,
+    "dd_cut_pct": 0.064358,
+    "cvar5_cut_pct": 0.039634,
+    "events_flattened": 132,
+    "ties": 26,
+    "events_nothing_open": 26,
+    "trades_flattened": 309
+   },
+   "flatten@T-120m": {
+    "r_cost_per_trade": 0.013977,
+    "dd_cut_pct": 0.007673,
+    "cvar5_cut_pct": 0.049869,
+    "events_nothing_open": 24,
+    "events_flattened": 137,
+    "ties": 23,
+    "trades_flattened": 307
+   },
+   "minutes_flatten@T-60m": {
+    "r_cost_per_trade": 0.021816,
+    "dd_cut_pct": 0.021155,
+    "cvar5_cut_pct": 0.0,
+    "events_nothing_open": 4,
+    "events_flattened": 33,
+    "ties": 8,
+    "trades_flattened": 76
+   }
+  },
+  "spanning_reported": {
+   "pooled": {
+    "n_spanning": 392,
+    "n_not": 3273,
+    "read_state": "measured",
+    "mean_spanning": 0.4713,
+    "mean_not": 0.0407,
+    "p10_spanning": -1.0676,
+    "p10_not": -1.08,
+    "ci95_mean_diff": [
+     0.2663,
+     0.6079
+    ],
+    "ci95_p10_diff": [
+     0.0007,
+     0.0224
+    ]
+   },
+   "by_leg": {
+    "ada_pullback_2h": {
+     "n_spanning": 44,
+     "n_not": 320,
+     "read_state": "measured",
+     "mean_spanning": 1.2406,
+     "mean_not": 0.1144,
+     "p10_spanning": -1.0912,
+     "p10_not": -1.0807,
+     "ci95_mean_diff": [
+      0.4387,
+      1.7921
+     ],
+     "ci95_p10_diff": [
+      -0.0931,
+      0.0314
+     ]
+    },
+    "iaum_pullback_1d": {
+     "n_spanning": 39,
+     "n_not": 6,
+     "read_state": "measured",
+     "mean_spanning": 0.6352,
+     "mean_not": -0.6729,
+     "p10_spanning": -1.0246,
+     "p10_not": -1.0361,
+     "ci95_mean_diff": [
+      0.3838,
+      2.1113
+     ],
+     "ci95_p10_diff": [
+      -0.0001,
+      0.0188
+     ]
+    },
+    "ml_entry": {
+     "n_spanning": 52,
+     "n_not": 855,
+     "read_state": "measured",
+     "mean_spanning": 0.1569,
+     "mean_not": 0.0192,
+     "p10_spanning": -1.0865,
+     "p10_not": -1.1009,
+     "ci95_mean_diff": [
+      -0.1911,
+      0.4685
+     ],
+     "ci95_p10_diff": [
+      -0.0078,
+      0.0417
+     ]
+    },
+    "trend_donchian_eth_4h": {
+     "n_spanning": 63,
+     "n_not": 305,
+     "read_state": "measured",
+     "mean_spanning": 1.0201,
+     "mean_not": 0.1562,
+     "p10_spanning": -1.0767,
+     "p10_not": -1.0979,
+     "ci95_mean_diff": [
+      0.2885,
+      1.5234
+     ],
+     "ci95_p10_diff": [
+      0.0012,
+      0.0409
+     ]
+    },
+    "trend_donchian_eth_prop": {
+     "n_spanning": 56,
+     "n_not": 949,
+     "read_state": "measured",
+     "mean_spanning": 0.0796,
+     "mean_not": -0.0128,
+     "p10_spanning": -1.0604,
+     "p10_not": -1.0682,
+     "ci95_mean_diff": [
+      -0.2121,
+      0.4177
+     ],
+     "ci95_p10_diff": [
+      -0.0055,
+      0.1216
+     ]
+    },
+    "trend_donchian_sol_prop": {
+     "n_spanning": 50,
+     "n_not": 505,
+     "read_state": "measured",
+     "mean_spanning": 0.3024,
+     "mean_not": 0.0425,
+     "p10_spanning": -1.0341,
+     "p10_not": -1.0552,
+     "ci95_mean_diff": [
+      -0.0882,
+      0.6615
+     ],
+     "ci95_p10_diff": [
+      0.0034,
+      0.2798
+     ]
+    },
+    "trend_donchian_xrp_4h": {
+     "n_spanning": 5,
+     "n_not": 59,
+     "read_state": "measured",
+     "mean_spanning": -0.2574,
+     "mean_not": 0.2517,
+     "p10_spanning": -0.4267,
+     "p10_not": -1.0428,
+     "ci95_mean_diff": [
+      -0.8922,
+      -0.1466
+     ],
+     "ci95_p10_diff": [
+      0.5408,
+      0.8489
+     ]
+    },
+    "xrp_pullback_2h": {
+     "n_spanning": 83,
+     "n_not": 274,
+     "read_state": "measured",
+     "mean_spanning": 0.1767,
+     "mean_not": 0.0453,
+     "p10_spanning": -1.0796,
+     "p10_not": -1.0557,
+     "ci95_mean_diff": [
+      -0.1865,
+      0.4655
+     ],
+     "ci95_p10_diff": [
+      -0.0426,
+      0.0043
+     ]
+    }
+   }
+  },
+  "best_static_reported": {
+   "grid": [
+    "hold",
+    "flatten@T-60m",
+    "flatten@T-30m",
+    "flatten@T-120m"
+   ],
+   "excludes_test_folds": true,
+   "chosen_by_fold": {
+    "0": "hold",
+    "1": "hold",
+    "2": "hold",
+    "3": "hold",
+    "4": "hold",
+    "5": "hold"
+   },
+   "mean_dR_vs_hold": 0.0
+  },
+  "min_control_beat_frac": 0.95,
+  "draws": 200
+ }
+}

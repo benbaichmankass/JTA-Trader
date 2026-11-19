@@ -1,0 +1,380 @@
+{
+  "leg": "ict_scalp_5m",
+  "label": "reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "SHORT",
+    "baseline": "A",
+    "candidates": {
+      "LONG": {
+        "delta_net_r": 105.8796,
+        "delta_max_drawdown_r": -104.8216,
+        "fold_wins": 4,
+        "passes": true
+      },
+      "SHORT": {
+        "delta_net_r": 120.9011,
+        "delta_max_drawdown_r": -119.7218,
+        "fold_wins": 4,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "SHORT beats the removed-lever baseline by 120.9011 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.003,
+      "n": 670,
+      "net_r": -226.1061,
+      "net_r_fee_only": -180.8507,
+      "max_drawdown_r": 226.6831,
+      "by_outcome": {
+        "sl_hit": 214,
+        "tp_hit": 121,
+        "timeout": 318,
+        "be_stop": 17
+      },
+      "mean_bars_held": 18.09,
+      "net_r_per_capital_day": -5.3728,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:58:45+00:00",
+          "trades": 167,
+          "net_r": -47.5913
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:58:45+00:00",
+          "end": "2024-05-16 23:57:30+00:00",
+          "trades": 132,
+          "net_r": -38.6062
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:57:30+00:00",
+          "end": "2025-08-17 11:56:15+00:00",
+          "trades": 200,
+          "net_r": -83.9232
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 11:56:15+00:00",
+          "end": "2026-11-17 23:55:00+00:00",
+          "trades": 171,
+          "net_r": -55.9851
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "LONG": {
+      "reach_ge_6r": 0.0027,
+      "n": 368,
+      "net_r": -120.2265,
+      "net_r_fee_only": -93.3012,
+      "max_drawdown_r": 121.8615,
+      "by_outcome": {
+        "timeout": 179,
+        "tp_hit": 67,
+        "sl_hit": 113,
+        "be_stop": 9
+      },
+      "mean_bars_held": 17.992,
+      "net_r_per_capital_day": -5.2296,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:58:45+00:00",
+          "trades": 76,
+          "net_r": -17.2149
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:58:45+00:00",
+          "end": "2024-05-16 23:57:30+00:00",
+          "trades": 79,
+          "net_r": -17.1888
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:57:30+00:00",
+          "end": "2025-08-17 11:56:15+00:00",
+          "trades": 119,
+          "net_r": -46.6584
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 11:56:15+00:00",
+          "end": "2026-11-17 23:55:00+00:00",
+          "trades": 94,
+          "net_r": -39.1644
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/LONG__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/LONG__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--side-filter",
+        "long"
+      ]
+    },
+    "SHORT": {
+      "reach_ge_6r": 0.0033,
+      "n": 305,
+      "net_r": -105.205,
+      "net_r_fee_only": -86.7048,
+      "max_drawdown_r": 106.9613,
+      "by_outcome": {
+        "sl_hit": 101,
+        "tp_hit": 54,
+        "timeout": 142,
+        "be_stop": 8
+      },
+      "mean_bars_held": 18.275,
+      "net_r_per_capital_day": -5.4358,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:58:45+00:00",
+          "trades": 93,
+          "net_r": -30.1768
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:58:45+00:00",
+          "end": "2024-05-16 23:57:30+00:00",
+          "trades": 53,
+          "net_r": -21.4174
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:57:30+00:00",
+          "end": "2025-08-17 11:56:15+00:00",
+          "trades": 82,
+          "net_r": -36.7897
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 11:56:15+00:00",
+          "end": "2026-11-17 23:55:00+00:00",
+          "trades": 77,
+          "net_r": -16.8207
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/SHORT__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/SHORT__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--side-filter",
+        "short"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "5",
+      "resample": "5m"
+    },
+    "fold_edges": [
+      "2021-11-14 00:00:00+00:00",
+      "2023-02-14 11:58:45+00:00",
+      "2024-05-16 23:57:30+00:00",
+      "2025-08-17 11:56:15+00:00",
+      "2026-11-17 23:55:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "LONG": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/LONG__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/LONG__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--side-filter",
+        "long"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--side-filter",
+        "long"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "SHORT": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/SHORT__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-24/44529624098/arms/SHORT__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--side-filter",
+        "short"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--side-filter",
+        "short"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "unit": "RQ-20261119-ef40-01",
+  "started_at": "2026-11-19T14:07:04.742932+00:00",
+  "legs": "trend_donchian,trend_donchian_eth,trend_donchian_sol",
+  "tf": "1h",
+  "family": "donchian",
+  "required_symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "after": "2026-11-01",
+  "build_out": "datasets-out/exit_head/1h/donchian_fresh_build",
+  "publish": "datasets-out/exit_head/1h/donchian_fresh/rows.jsonl",
+  "published": true,
+  "round_returncode": 0,
+  "per_symbol": {
+    "BTCUSDT": {
+      "rows": 12217,
+      "trades": 407,
+      "last_bar_t": "2026-11-08T17:00:00+00:00",
+      "sources": {
+        "harness": 11157,
+        "live": 1060
+      }
+    },
+    "ETHUSDT": {
+      "rows": 23605,
+      "trades": 707,
+      "last_bar_t": "2026-11-19T07:00:00+00:00",
+      "sources": {
+        "harness": 22922,
+        "live": 683
+      }
+    },
+    "SOLUSDT": {
+      "rows": 9550,
+      "trades": 312,
+      "last_bar_t": "2026-11-05T15:00:00+00:00",
+      "sources": {
+        "harness": 9434,
+        "live": 116
+      }
+    }
+  },
+  "reasons": [],
+  "build_report_generated_at": "2026-11-19T14:07:34.384613+00:00",
+  "build_report": {
+    "generated_at": "2026-11-19T14:07:34.384613+00:00",
+    "tf": "1h",
+    "trades_in": 1508,
+    "skipped": {
+      "no_candles": 0,
+      "unresolvable": 82
+    },
+    "skipped_at_load": {},
+    "rows_seen_at_load": 1421,
+    "rows_loaded_at_load": 1421,
+    "per_family_load": {
+      "donchian": {
+        "seen": 1421,
+        "loaded": 1421
+      }
+    },
+    "families_starved": [],
+    "holding_pays_threshold_r": 0.25,
+    "families": {
+      "donchian": {
+        "rows": 45372,
+        "trades": {
+          "harness": 1353,
+          "live": 73
+        },
+        "holding_pays_pos": 12590,
+        "holding_pays_rate": 0.2775,
+        "rows_by_source": {
+          "harness": 43513,
+          "live": 1859
+        },
+        "rows_by_year": {
+          "2021": 5106,
+          "2022": 7284,
+          "2023": 7716,
+          "2024": 8510,
+          "2025": 7730,
+          "2026": 9026
+        }
+      }
+    }
+  },
+  "n_rows": 45372,
+  "verdict": "pass",
+  "read_state": "measured"
+}

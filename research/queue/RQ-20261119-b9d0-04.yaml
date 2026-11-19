@@ -5,7 +5,7 @@
 id: RQ-20261119-b9d0-04
 title: 'ml-tm-action-value ITERATION 8 (learner class): with the incumbent mean-target labels, corpora, path_state block, horizon 12 and
   actions, do CatBoost action-value heads (instead of LightGBM) pass S-OFFLINE on the in-trade management bench?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -185,4 +185,17 @@ related:
 - RQ-20261117-c21d-04
 - RQ-20261115-7e18-01
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T13:02:36+00:00'
+grading:
+  attested: RULE-RQ20261119-b9d0-04-TM-CATBOOST-LEARNER
+  auto: true
+  decision_rule_id: RULE-RQ20261119-b9d0-04-TM-CATBOOST-LEARNER
+  evidence:
+  - research/results/RQ-20261119-b9d0-04/44515648087.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

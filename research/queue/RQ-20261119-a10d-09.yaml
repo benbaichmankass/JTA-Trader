@@ -5,7 +5,7 @@
 id: RQ-20261119-a10d-09
 title: 'ml_entry_eq_struct SLOT POLICY: is the one-slot book''s 22-trade gap (taken mean < 0 vs population +0.49 R) selection or noise, and does
   a different slot policy (score gate, 2 slots, 3 slots) carry the frozen model''s edge into the alpaca_live cash book?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -191,3 +191,33 @@ related:
 - research/queue/RQ-20261107-98e3-06.yaml
 - scripts/research/alpaca_live_book.py
 - comms/strategy_evidence/ml_entry_eq_struct.json
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-09-EQSTRUCT-SLOT-POLICY
+  evidence:
+  - comms/research/RQ-20261119-a10d-09/44529605270/verdict.json
+  - comms/research/RQ-20261119-a10d-09/44529605270/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ), HELD for the manager; read from the run artifact
+    research-script-run-RQ-20261119-a10d-09-44529605270 before the batch-land
+  rows: 1
+  verdict: indeterminate
+  selection_vs_noise: unresolved
+  reason: 'run 44529605270 (research-script-run.yml, 13:02:59Z-15:55Z, success). GATE PASSED: frozen ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5,
+    pinned 173-ETF pool (0 without bars), 2025-07-15..2026-10-31, n 207, mean net R 0.4922070639835765 (exact); first_signal reproduces a10d-04
+    exactly (n_taken 22 at every cash; means -0.0345 / -0.1968 / -0.0818 R). Bars: status quo N=6, challengers N+2=8 (t_min 1.459, ci_z 2.7307).
+    TABLE (n_taken, taken mean net R, arm verdict) cash 250 / 1,000 / 5,000:
+    first_signal 22 -0.035 / 22 -0.197 / 22 -0.082, all indeterminate (n < 30);
+    score_gate_p50_30d 18 +0.014 / 18 -0.185 / 19 -0.096, all indeterminate (n < 30);
+    slots_2 35 -0.022 / 41 -0.159 / 42 -0.120, all indeterminate (n >= 30, between the bars);
+    slots_3 44 +0.093 / 55 +0.023 / 57 -0.016, all indeterminate (n >= 30, between the bars).
+    UNIT INDETERMINATE: no challenger passes at every cash level and none fails at every cash level.
+    SELECTION vs NOISE: UNRESOLVED. Null (net_r shuffled across the 207, 2,000 draws, seed 20261119): null mean ~+0.494 R, sd ~0.220; p_low 0.0115
+    (cash 250), 0.0015 (cash 1,000), 0.006 (cash 5,000). Only cash 1,000 is below alpha_N 0.004211; none is >= 0.10. Registered meaning: neither
+    reading is supported at this n; the challenger table carries the decision.
+    MEANING FOR THE LEG (registered indeterminate): no data-backed case to demote ml_entry_eq_struct and none to change the book; the operator decides
+    on the table. Context, not a verdict: every p_low sits at 0.0015-0.0115, i.e. the one-slot book''s 22 picks are lower than ~99% of random
+    22-picks of the same signals at every cash level, which leans toward SELECTION without clearing the registered bar at all three; and more slots
+    do not lift the taken mean toward the population''s +0.49 R (slots_3 best: +0.093 at cash 250). INDETERMINATE action taken: table and reading
+    reported to the manager; no NOISE accrual item and no pick-order unit is required by the registered action for UNRESOLVED.'
+last_dispatched_at: '2026-11-19T13:02:42+00:00'

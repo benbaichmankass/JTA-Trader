@@ -32,6 +32,13 @@ ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_c
 # (BTC 15m) files refreshed above (#26930). A 60/120/240 pair would only print MISSING (this refresher extends,
 # never creates), and CREATING native files would silently move every crypto leg's sweep basis onto a new series.
 # report_data_freshness --alert-rostered watches the files resolve_data actually reads.
+# TRAINER-INTRADAY-EQUITY-REFRESH (2026-11-19): extend the frozen non-Bybit-named intraday files IN PLACE from the
+# SAME source their history came from (parity MEASURED on the trainer: Dukascopy ETF-CFD BID RTH for the eight
+# ETF _1h files, 0.0 bps over 12 bars each, #27294; yfinance GC=F for GC_F_1h, median 0.0 bps, #27293; Bybit linear
+# for backtest_BTCUSDT_5m.csv, exact, #27293). backtest_BTCUSDT_5m.csv is extended under its own name, never as a new
+# native BTCUSDT_5m.csv (that would move the m20 resolver's basis for the BTC 5m legs). Own '-' line: a source outage
+# here can never fail the crypto refresh above.
+ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data BTCUSDT:5=backtest_BTCUSDT_5m.csv yf:GC=F:60=GC_F_1h.csv dk:INSTRUMENT_ETF_CFD_US_SPY_US_USD:60=SPY_1h.csv dk:INSTRUMENT_ETF_CFD_US_QQQ_US_USD:60=QQQ_1h.csv dk:INSTRUMENT_ETF_CFD_US_GLD_US_USD:60=GLD_1h.csv dk:INSTRUMENT_ETF_CFD_US_IEF_US_USD:60=IEF_1h.csv dk:INSTRUMENT_ETF_CFD_US_IWM_US_USD:60=IWM_1h.csv dk:INSTRUMENT_ETF_CFD_US_SLV_US_USD:60=SLV_1h.csv dk:INSTRUMENT_ETF_CFD_US_TLT_US_USD:60=TLT_1h.csv dk:INSTRUMENT_ETF_CFD_US_USO_US_USD:60=USO_1h.csv
 # Report-only freshness of every data/*.csv (PI-20261118-MANAYJZO-0002); the '-' prefix means it can never fail the unit.
 ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data --alert-rostered
 # TRAINER-1D-STALE-ROSTERED: forward the stale-rostered-data ping to the live VM queue (the trainer has no

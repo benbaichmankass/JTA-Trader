@@ -1,0 +1,354 @@
+{
+  "leg": "sol_pullback_2h",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "S_ASIA",
+    "baseline": "A",
+    "candidates": {
+      "S_LATE": {
+        "delta_net_r": -3.3623,
+        "delta_max_drawdown_r": 1.8425,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "S_ASIA": {
+        "delta_net_r": 5.6409,
+        "delta_max_drawdown_r": -1.0267,
+        "fold_wins": 4,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "S_ASIA beats the removed-lever baseline by 5.6409 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 127,
+      "net_r": 13.2635,
+      "net_r_fee_only": 16.1231,
+      "max_drawdown_r": 13.8334,
+      "by_outcome": {
+        "stop": 55,
+        "take_profit": 49,
+        "trail_stop": 21,
+        "timeout": 2
+      },
+      "mean_bars_held": 38.37,
+      "net_r_per_capital_day": 0.0327,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "adx_min": 30.0,
+        "adx_period": 14
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:30:00+00:00",
+          "trades": 40,
+          "net_r": 11.2739
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:30:00+00:00",
+          "end": "2024-05-16 23:00:00+00:00",
+          "trades": 34,
+          "net_r": -3.0674
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:00:00+00:00",
+          "end": "2025-08-17 10:30:00+00:00",
+          "trades": 28,
+          "net_r": -6.1268
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:30:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 25,
+          "net_r": 11.1842
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/A__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "S_LATE": {
+      "reach_ge_6r": 0.0,
+      "n": 121,
+      "net_r": 9.9012,
+      "net_r_fee_only": 12.6502,
+      "max_drawdown_r": 15.6759,
+      "by_outcome": {
+        "stop": 53,
+        "take_profit": 46,
+        "trail_stop": 20,
+        "timeout": 2
+      },
+      "mean_bars_held": 39.612,
+      "net_r_per_capital_day": 0.0248,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "skip_hours": "20,21,22,23",
+        "adx_min": 30.0,
+        "adx_period": 14
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:30:00+00:00",
+          "trades": 36,
+          "net_r": 13.0514
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:30:00+00:00",
+          "end": "2024-05-16 23:00:00+00:00",
+          "trades": 33,
+          "net_r": -4.7263
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:00:00+00:00",
+          "end": "2025-08-17 10:30:00+00:00",
+          "trades": 26,
+          "net_r": -5.3541
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:30:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 26,
+          "net_r": 6.9305
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/S_LATE__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "20,21,22,23"
+      ]
+    },
+    "S_ASIA": {
+      "reach_ge_6r": 0.0,
+      "n": 117,
+      "net_r": 18.9044,
+      "net_r_fee_only": 21.5677,
+      "max_drawdown_r": 12.8067,
+      "by_outcome": {
+        "stop": 44,
+        "take_profit": 47,
+        "trail_stop": 24,
+        "timeout": 2
+      },
+      "mean_bars_held": 36.427,
+      "net_r_per_capital_day": 0.0532,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "skip_hours": "0,1,2,3,4,5,6,7",
+        "adx_min": 30.0,
+        "adx_period": 14
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2023-02-14 11:30:00+00:00",
+          "trades": 35,
+          "net_r": 14.1204
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:30:00+00:00",
+          "end": "2024-05-16 23:00:00+00:00",
+          "trades": 32,
+          "net_r": -1.9968
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:00:00+00:00",
+          "end": "2025-08-17 10:30:00+00:00",
+          "trades": 26,
+          "net_r": -5.166
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:30:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 24,
+          "net_r": 11.947
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-43/44589975844/arms/S_ASIA__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2021-11-14 00:00:00+00:00",
+      "2023-02-14 11:30:00+00:00",
+      "2024-05-16 23:00:00+00:00",
+      "2025-08-17 10:30:00+00:00",
+      "2026-11-17 22:00:00+00:00"
+    ]
+  }
+}

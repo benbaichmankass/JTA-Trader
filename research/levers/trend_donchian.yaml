@@ -70,10 +70,74 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-47
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 51.3982
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 29.4558
+        verdict: fail
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-47
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 51.3982
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 29.4558
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-47
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 51.3982
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 29.4558
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-47
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 51.3982
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 29.4558
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 4
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
   entry:
     donchian:
       tests:

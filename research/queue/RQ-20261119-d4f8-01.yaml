@@ -3,7 +3,7 @@
 id: RQ-20261119-d4f8-01
 title: 'IB-GROSS-ATR-FLOOR-S0 re-registered on ict_scalp_mgc_15m, on a Dukascopy XAU_USD spot PROXY of MGC: with the risk distance floored at
   k x ATR14 (k 0.5, 1.0), does the live 15m scalp''s tight stop stop buying leverage without giving up the dollar edge?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -97,4 +97,17 @@ related:
 - scripts/ops/dukascopy_instruments.py
 population: ict_scalp_mgc_15m trades over the last 1,100 days on the Dukascopy XAU_USD 15m proxy of MGC, as declared in config/strategies.yaml,
   MGC's own cost stack.
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T13:02:42+00:00'
+grading:
+  attested: RULE-IB-GROSS-ATR-FLOOR-S0-MGC15-XAUPROXY
+  auto: true
+  decision_rule_id: RULE-IB-GROSS-ATR-FLOOR-S0-MGC15-XAUPROXY
+  evidence:
+  - research/results/RQ-20261119-d4f8-01/44529614371.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

@@ -556,7 +556,16 @@ class WorkStore:
             # stored). Moving the row's stamp with the write keeps store, export and files equal.
             ex = item.get("extra")
             if isinstance(ex, dict) and "updated_at" in ex:
-                item["extra"] = dict(ex, updated_at=at, updated_by=by)
+                item["extra"] = ex = dict(ex, updated_at=at, updated_by=by)
+            # EXPORT-ABSENT-DROP (2026-11-19): ``extra._absent`` names the keys the source file lacked
+            # AT IMPORT, and the export skips them. A column this write gives a value is no longer
+            # absent; left listed, the export dropped it (44 closed observations lost their
+            # terminal_reason and failed pipeline.validate in the export dry run).
+            if isinstance(ex, dict) and ex.get("_absent"):
+                now_set = {k for k in WRITABLE_FIELDS
+                           if item.get(k) != prior.get(k) and item.get(k) not in (None, "", [], {})}
+                if now_set & set(ex["_absent"]):
+                    item["extra"] = dict(ex, _absent=[k for k in ex["_absent"] if k not in now_set])
             self._write_item(conn, item, insert=False)
             if op == "note":
                 patch: Any = {"note": note}
