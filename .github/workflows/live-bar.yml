@@ -1,0 +1,64 @@
+name: live-bar
+
+# LIVE-BAR-LADDER-FEED (operator 2026-11-17, OPERATING-PLAN § 2 "Live-performance promotion path"):
+# once a day, compute each leg's LIVE BAR (>= 20 closed live trades with declared-initial R, sum R > 0 and the
+# one-sided 80% lower confidence bound of the mean > 0; demo floor + real money pooled) with
+# scripts/research/live_bar.py over the live journal (diag relay), and land comms/live_bar/latest.json.
+# Read by the promotion resolver (a live-bar PASS is an alternative way up), the performance review, and the
+# demotion signal (PERF-F1-DEMOTION-SIGNAL) for real-money FAILs. It changes no roster and no config.
+#
+# Tier-1: reads the live journal through the read-only diag surface, lands one data file. Never halts anything.
+
+on:
+  schedule:
+    - cron: "47 5 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: live-bar
+  cancel-in-progress: false
+
+jobs:
+  live-bar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compute the live bar and write the feed
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DIAG_READ_TOKEN:-}" ]; then
+            echo "::error::DIAG_READ_TOKEN is unset: the live journal could not be read, so no feed was written (not a clean read)."
+            exit 1
+          fi
+          python3 scripts/research/live_bar.py --write | tee /tmp/live_bar.txt
+          { echo '### live-bar'; cat /tmp/live_bar.txt; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Land the feed file
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/live_bar
+          message: "chore(live-bar): daily live-bar ladder feed (run ${{ github.run_id }})"
+          pr-title: "chore(live-bar): daily ladder feed (auto)"
+          pr-body: >-
+            Daily live-bar verdicts from scripts/research/live_bar.py (operator 2026-11-17 live bar,
+            OPERATING-PLAN § 2). Data-only; read by the promotion resolver, the performance review and the
+            demotion signal.
+          branch-prefix: automation/live-bar

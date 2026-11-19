@@ -40,3 +40,28 @@ def test_a_trailed_winner_counts_but_is_not_in_the_stop_unmoved_subset():
     out = lb.live_bar([win], {"p": meta})["legs"]["leg_b"]
     assert out["n"] == 1 and abs(out["sum_r"] - 3.0) < 1e-9
     assert out["stop_unmoved_subset"]["n"] == 0
+
+
+def test_write_latest_stamps_generated_at_and_writes_atomically(tmp_path):
+    """LIVE-BAR-LADDER-FEED: the daily feed file carries generated_at (its freshness) and schema."""
+    import json
+    from datetime import datetime, timezone
+    out = {"rule": {"min_n": 20}, "population": {"confirmed_r_trades": 0}, "legs": {}}
+    p = lb.write_latest(out, tmp_path / "live_bar" / "latest.json",
+                        now=datetime(2026, 11, 19, 5, 47, tzinfo=timezone.utc))
+    doc = json.loads(p.read_text())
+    assert doc["generated_at"] == "2026-11-19T05:47:00+00:00" and doc["schema"] == 1 and doc["legs"] == {}
+    assert not list((tmp_path / "live_bar").glob("*.tmp"))
+    assert out.get("generated_at") is None  # the caller's dict is not mutated
+
+
+def test_cli_write_uses_saved_inputs(tmp_path):
+    import json
+    trades = tmp_path / "t.json"
+    pk = tmp_path / "p.json"
+    trades.write_text("[]")
+    pk.write_text("[]")
+    dest = tmp_path / "latest.json"
+    assert lb.main(["--trades", str(trades), "--packages", str(pk), "--json", "--write", str(dest)]) == 0
+    doc = json.loads(dest.read_text())
+    assert doc["population"]["trades_read"] == 0 and "generated_at" in doc
