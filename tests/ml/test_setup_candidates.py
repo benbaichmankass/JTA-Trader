@@ -1032,3 +1032,43 @@ def test_live_r_uses_declared_initial_risk_not_trailed_stop(tmp_path: Path):
     only = [r for r in SetupCandidatesBuilder().iter_rows(live_r_basis="initial_only", **kw)
             if r["is_live_trade"]]
     assert [r["r_multiple_source"] for r in only] == ["initial_risk"]
+
+
+def test_live_r_reads_signal_time_meta_stop_when_no_risk_per_unit(tmp_path: Path):
+    """PI-20261029-MLP1-0001: a package with no `risk_per_unit` whose builder wrote
+    its signal-time `entry_price`/`stop_loss` (the vwap builder) is entry-time risk
+    -- tagged `initial_risk_signal` and KEPT by live_r_basis=initial_only; the
+    trail-overwritten trades.stop_loss is never read for it."""
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "pkg.db"
+    _seed_trades_with_package(db, [
+        # stored stop trailed to 99.5; signal-time stop 98.0 -> risk 2/unit; pnl +12 on 3 -> +2.0R
+        ((base + timedelta(hours=50)).isoformat(), "buy", 12.0, 100.0, 99.5, 3.0,
+         '{"entry_price": 100.0, "stop_loss": 98.0, "vwap": 101.0}'),
+        # sl_distance wins over the price pair when both exist: risk 4/unit; pnl -8 on 2 -> -1.0R
+        ((base + timedelta(hours=120)).isoformat(), "sell", -8.0, 100.0, 100.4, 2.0,
+         '{"sl_distance": 4.0, "entry_price": 100.0, "stop_loss": 103.0}'),
+    ])
+    kw = dict(market_raw_path=ddir, vol_window_n=10, max_holding=8,
+              cusum_threshold_mult=0.5, live_trades_db=db)
+    live = [r for r in SetupCandidatesBuilder().iter_rows(**kw) if r["is_live_trade"]]
+    won_row = next(r for r in live if r["direction"] == 1)
+    lost_row = next(r for r in live if r["direction"] == -1)
+    assert math.isclose(won_row["r_multiple"], 2.0, rel_tol=1e-9)
+    assert math.isclose(lost_row["r_multiple"], -1.0, rel_tol=1e-9)
+    assert {won_row["r_multiple_source"], lost_row["r_multiple_source"]} == {"initial_risk_signal"}
+    only = [r for r in SetupCandidatesBuilder().iter_rows(live_r_basis="initial_only", **kw)
+            if r["is_live_trade"]]
+    assert len(only) == 2
+
+
+def test_signal_meta_risk_refuses_absent_or_nonpositive():
+    from ml.datasets.families.setup_candidates import _signal_meta_risk
+    assert _signal_meta_risk(None) is None
+    assert _signal_meta_risk("not json") is None
+    assert _signal_meta_risk('{"entry_price": 100.0}') is None
+    assert _signal_meta_risk('{"entry_price": 100.0, "stop_loss": 100.0}') is None
+    assert _signal_meta_risk('{"sl_distance": -1}') is None
+    assert _signal_meta_risk({"entry_price": 100.0, "stop_loss": 97.5}) == 2.5
