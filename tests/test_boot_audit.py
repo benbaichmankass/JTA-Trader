@@ -32,11 +32,15 @@ def _journal(tmp_path, trades=(), packages=()):
     db = tmp_path / "trade_journal.db"
     with sqlite3.connect(db) as c:
         c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT, direction TEXT, "
-                  "status TEXT, is_backtest INTEGER, strategy_name TEXT, account_id TEXT)")
+                  "status TEXT, is_backtest INTEGER, strategy_name TEXT, account_id TEXT, "
+                  "position_size REAL)")
         c.execute("CREATE TABLE order_packages (order_package_id TEXT, strategy_name TEXT, "
                   "status TEXT, linked_trade_id INTEGER)")
         for t in trades:
-            c.execute("INSERT INTO trades VALUES (?,?,?,?,0,?,?)", t)
+            # 6-tuples keep their old meaning with the default sizes the `world` positions hold (BTC 0.01, SPY 10);
+            # a 7th element states the journal size explicitly (BOOT-AUDIT-PER-QTY-TRACKING).
+            size = t[6] if len(t) > 6 else {"BTCUSDT": 0.01, "SPY": 10}.get(t[1], 1)
+            c.execute("INSERT INTO trades VALUES (?,?,?,?,0,?,?,?)", (*t[:6], size))
         for p in packages:
             c.execute("INSERT INTO order_packages VALUES (?,?,?,?)", p)
     return str(db)
@@ -263,3 +267,48 @@ def test_report_thread_never_holds_boot_past_the_wait(monkeypatch):
     t = ba.start_restart_report_thread(wait_s=0.2)
     assert time.time() - t0 < 2 and t is not None and t.is_alive()
     gate.set()
+
+
+# ---------------------------------------------------------------------------
+# BOOT-AUDIT-PER-QTY-TRACKING: tracked means the SIZES agree, not just the symbol
+# ---------------------------------------------------------------------------
+
+def _qty_world(tmp_path, monkeypatch, trades, venue):
+    db = _journal(tmp_path, trades=trades)
+    monkeypatch.setattr("src.utils.paths.trade_journal_db_path", lambda: db)
+    monkeypatch.setattr(ba, "_load_live_accounts", lambda: {"alpaca_portfolio": {
+        "account_id": "alpaca_portfolio", "exchange": "alpaca", "mode": "live", "account_class": "paper"}})
+    import src.units.accounts.clients as cl
+    monkeypatch.setattr(cl, "account_open_positions", lambda cfg: venue)
+    monkeypatch.setattr(cl, "account_alpaca_open_orders", lambda cfg: {"orders": [
+        {"symbol": "SLV", "side": "buy", "order_type": "stop"},
+        {"symbol": "SLV", "side": "buy", "order_type": "limit"}]})
+    return ba.build_restart_report(cause=DEPLOY)
+
+
+def test_the_slv_case_reads_as_a_problem_not_tracked(tmp_path, monkeypatch):
+    """Measured 2026-11-18 23:28:59Z: venue 877 short, ONE open journal row of 6 -> it read '1/1 tracked'."""
+    rep = _qty_world(tmp_path, monkeypatch, [(7784, "SLV", "short", "open", "slv_trend_1h", "alpaca_portfolio", 6)],
+                     [{"symbol": "SLV", "side": "short", "size": 877}])
+    a = rep["accounts"][0]
+    assert a.tracked == 0 and a.qty_mismatch == ["SLV short: journal 6 / venue 877"]
+    assert a.problems == 1
+    text, _, full = ba.render_restart_message(rep)
+    assert full and "qty mismatch: SLV short: journal 6 / venue 877" in text
+
+
+def test_matching_sizes_summed_over_rows_are_tracked(tmp_path, monkeypatch):
+    rows = [(i, "SLV", "short", "open", "slv_trend_1h", "alpaca_portfolio", q)
+            for i, q in enumerate((100, 300, 477), start=1)]
+    rep = _qty_world(tmp_path, monkeypatch, rows, [{"symbol": "SLV", "side": "short", "size": 877}])
+    a = rep["accounts"][0]
+    assert a.tracked == 1 and a.qty_mismatch == [] and a.problems == 0
+
+
+def test_a_long_row_never_covers_a_short_position(tmp_path, monkeypatch):
+    rows = [(1, "SLV", "long", "open", "x", "alpaca_portfolio", 877),
+            (2, "SLV", "short", "open", "y", "alpaca_portfolio", 6)]
+    rep = _qty_world(tmp_path, monkeypatch, rows, [{"symbol": "SLV", "side": "short", "size": 877}])
+    a = rep["accounts"][0]
+    assert a.qty_mismatch == ["SLV short: journal 6 / venue 877"]
+    assert any("SLV long" in g for g in a.ghosts)  # the long row has no venue position
