@@ -1,0 +1,287 @@
+{
+ "schema": "desk_lifecycle/action_grid/1",
+ "verdict": "not_applicable",
+ "read_state": "measured",
+ "n": 1455635,
+ "population": "2627 filled trades, 117732 check-ins, 1530516 (check-in x action) rows of which 1455635 feasible; corpus stage0",
+ "what_it_is": "label producer: one-step action-vs-hold counterfactuals on the desk replay engine; grades nothing",
+ "stated_limits": [
+  "value_r is one step: the rest of the path is hold-to-bracket, never a sequence of moves",
+  "Binance Vision 1h USD-M perp klines; stop-first inside a bar; gaps fill at the open",
+  "corpus stage0: the harness's INITIAL bracket on 1h candles, NOT the leg's own trail; the hold horizon is the leg's longest Stage-0 hold; iaum_pullback_1d (equity) is out of scope"
+ ],
+ "summary": {
+  "trades": 2627,
+  "trades_filled": 2627,
+  "trades_not_filled": {
+   "filled": 2627
+  },
+  "checkins": 117732,
+  "label_rows": 1530516,
+  "feasible_label_rows": 1455635,
+  "by_action": {
+   "close": {
+    "class": "close",
+    "rows": 117732,
+    "feasible": 117732,
+    "infeasible": 0,
+    "mean_value_r": -0.08537,
+    "share_value_gt_0": 0.5339,
+    "trades_feasible": 2554
+   },
+   "partial_close": {
+    "class": "partial",
+    "rows": 117732,
+    "feasible": 117732,
+    "infeasible": 0,
+    "mean_value_r": -0.04269,
+    "share_value_gt_0": 0.5339,
+    "trades_feasible": 2554
+   },
+   "tighten_sl_0p25r": {
+    "class": "tighten",
+    "rows": 117732,
+    "feasible": 116045,
+    "infeasible": 1687,
+    "mean_value_r": 0.01368,
+    "share_value_gt_0": 0.4065,
+    "trades_feasible": 2554
+   },
+   "tighten_sl_0p5r": {
+    "class": "tighten",
+    "rows": 117732,
+    "feasible": 110743,
+    "infeasible": 6989,
+    "mean_value_r": 0.01391,
+    "share_value_gt_0": 0.3976,
+    "trades_feasible": 2554
+   },
+   "tighten_sl_1r": {
+    "class": "tighten",
+    "rows": 117732,
+    "feasible": 88876,
+    "infeasible": 28856,
+    "mean_value_r": -0.00561,
+    "share_value_gt_0": 0.3669,
+    "trades_feasible": 2511
+   },
+   "widen_sl_0p25r": {
+    "class": "widen",
+    "rows": 117732,
+    "feasible": 117732,
+    "infeasible": 0,
+    "mean_value_r": -0.0171,
+    "share_value_gt_0": 0.0417,
+    "trades_feasible": 2554
+   },
+   "widen_sl_0p5r": {
+    "class": "widen",
+    "rows": 117732,
+    "feasible": 117732,
+    "infeasible": 0,
+    "mean_value_r": -0.00979,
+    "share_value_gt_0": 0.083,
+    "trades_feasible": 2554
+   },
+   "sl_to_structure": {
+    "class": "sl_structure",
+    "rows": 117732,
+    "feasible": 108939,
+    "infeasible": 8793,
+    "mean_value_r": 0.00339,
+    "share_value_gt_0": 0.4408,
+    "trades_feasible": 2553
+   },
+   "tp_pull_in_0p5r": {
+    "class": "tp_pull_in",
+    "rows": 117732,
+    "feasible": 114122,
+    "infeasible": 3610,
+    "mean_value_r": -0.01405,
+    "share_value_gt_0": 0.0693,
+    "trades_feasible": 2510
+   },
+   "tp_pull_in_1r": {
+    "class": "tp_pull_in",
+    "rows": 117732,
+    "feasible": 103099,
+    "infeasible": 14633,
+    "mean_value_r": -0.05701,
+    "share_value_gt_0": 0.1241,
+    "trades_feasible": 2419
+   },
+   "tp_extend_1r": {
+    "class": "tp_extend",
+    "rows": 117732,
+    "feasible": 117691,
+    "infeasible": 41,
+    "mean_value_r": 0.04405,
+    "share_value_gt_0": 0.2349,
+    "trades_feasible": 2553
+   },
+   "tp_extend_2r": {
+    "class": "tp_extend",
+    "rows": 117732,
+    "feasible": 117158,
+    "infeasible": 574,
+    "mean_value_r": 0.05159,
+    "share_value_gt_0": 0.1933,
+    "trades_feasible": 2547
+   },
+   "tp_to_structure": {
+    "class": "tp_structure",
+    "rows": 117732,
+    "feasible": 108034,
+    "infeasible": 9698,
+    "mean_value_r": -0.10508,
+    "share_value_gt_0": 0.2769,
+    "trades_feasible": 2533
+   }
+  }
+ },
+ "source": {
+  "schema": "desk_lifecycle/action_grid/1",
+  "corpus": "stage0",
+  "actions": [
+   "close",
+   "partial_close",
+   "tighten_sl_0p25r",
+   "tighten_sl_0p5r",
+   "tighten_sl_1r",
+   "widen_sl_0p25r",
+   "widen_sl_0p5r",
+   "sl_to_structure",
+   "tp_pull_in_0p5r",
+   "tp_pull_in_1r",
+   "tp_extend_1r",
+   "tp_extend_2r",
+   "tp_to_structure"
+  ],
+  "levels": {
+   "tighten_r": [
+    0.25,
+    0.5,
+    1.0
+   ],
+   "widen_r": [
+    0.25,
+    0.5
+   ],
+   "pull_in_r": [
+    0.5,
+    1.0
+   ],
+   "extend_r": [
+    1.0,
+    2.0
+   ],
+   "structure_bars": 12,
+   "widen_floor_r": -2.0,
+   "tp_cap_r": 10.0,
+   "min_gap_r": 0.1
+  },
+  "policy": "every leg bar + events (clock_policy(tf_hours, events=True)) on 1h candles",
+  "stage0": "comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/*__paths.jsonl",
+  "corpus_id": "tmb-8b924106949b",
+  "corpus_source": "emitted path files comms/research/RQ-20261030-824b-01/41023664029/tm_bench_v1_66j6z8ys/*__paths.jsonl",
+  "corpus_parity_ok": true,
+  "corpus_legs": [
+   {
+    "leg": "ada_pullback_2h",
+    "n_trade_rows": 402,
+    "n_path_rows": 8876,
+    "n_trades": 402,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 402,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+    "state": "included",
+    "timeframe": "2h"
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "n_trade_rows": 275,
+    "n_path_rows": 3594,
+    "n_trades": 275,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 275,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+    "state": "included",
+    "timeframe": "4h"
+   },
+   {
+    "leg": "trend_donchian_eth_prop",
+    "n_trade_rows": 1085,
+    "n_path_rows": 15381,
+    "n_trades": 1085,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 1085,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+    "state": "included",
+    "timeframe": "1h"
+   },
+   {
+    "leg": "trend_donchian_sol_prop",
+    "n_trade_rows": 403,
+    "n_path_rows": 8287,
+    "n_trades": 403,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 403,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+    "state": "included",
+    "timeframe": "1h"
+   },
+   {
+    "leg": "trend_donchian_xrp_4h",
+    "n_trade_rows": 68,
+    "n_path_rows": 545,
+    "n_trades": 68,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 68,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+    "state": "included",
+    "timeframe": "4h"
+   },
+   {
+    "leg": "xrp_pullback_2h",
+    "n_trade_rows": 394,
+    "n_path_rows": 16870,
+    "n_trades": 394,
+    "n_without_path": 0,
+    "n_exit_r_mismatch_gross_r": 0,
+    "parity_n": 394,
+    "parity_share": 1.0,
+    "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+    "state": "included",
+    "timeframe": "2h"
+   }
+  ],
+  "missing_candles": [],
+  "n_stage0_trades": 2627,
+  "skipped": {},
+  "hold_horizon_1h_bars": {
+   "ada_pullback_2h": 304,
+   "trend_donchian_eth_4h": 368,
+   "trend_donchian_eth_prop": 77,
+   "trend_donchian_sol_prop": 178,
+   "trend_donchian_xrp_4h": 100,
+   "xrp_pullback_2h": 400
+  },
+  "fidelity_static_bracket": {
+   "population": "Stage-0 trades whose stop and target never moved and whose 1h hold replay exits at the bracket",
+   "n": 950,
+   "share_within_0p05r": 0.8905,
+   "median_abs_gap_r": 0.0
+  }
+ },
+ "generated_at": "2026-11-19T16:08:36Z"
+}

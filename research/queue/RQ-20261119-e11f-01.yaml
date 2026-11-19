@@ -3,7 +3,7 @@
 # the window is pinned by --start/--end; 460 is f1a7-01's value so both units fetch the same history and covers the pinned start until 2027-02); requires_result on f1a7-01 PASS.
 id: RQ-20261119-e11f-01
 title: 'AS-TRADED Stage 0 for ict_scalp_eth_15m (real money, bybit_2 + bybit_portfolio): scored on the FORMING 15m bar the leg actually enters on, does its trade set clear Stage 0 net of the full cost stack, where the committed closed-bar record fails (net_r_oos -2.93, n 76)?'
-status: blocked
+status: queued
 requires_result: {unit: RQ-20261119-f1a7-01, verdict: pass}
 cadence: once
 theme: live_strategy
@@ -106,8 +106,3 @@ related:
 - RQ-20261118-abab-56
 - RQ-20261117-9e1c-11
 - research/levers/ict_scalp_eth_15m.yaml
-blocked_on:
-- kind: harness
-  ref: scripts/backtest_ict_scalp.py
-  owner: ICT-SCALP-FORMING-BAR-ARM
-  clears_when: 'RQ-20261119-f1a7-01 graded PASS (carried by requires_result) AND scripts/backtest_ict_scalp.py accepts --decision-bar closed|forming (default closed, byte-identical when absent) with a parity test against the live ict_scalp decision bar, merged on main; then git-mv this unit to research/queue/ with status queued, rule unchanged. If the harness flag is spelled differently, only run.command changes.'
