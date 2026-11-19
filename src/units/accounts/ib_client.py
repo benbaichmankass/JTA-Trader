@@ -3933,6 +3933,7 @@ class IBClient:
         req_async = getattr(ib, "reqAllOpenOrdersAsync", None)
         loop = self._loop
         used_async = False
+        response: Any = None
         if req_async is not None and loop is not None and not loop.is_closed():
             try:
                 running = loop.is_running()
@@ -3946,7 +3947,7 @@ class IBClient:
                     else _IB_PROBE_TIMEOUT_S if _IB_PROBE_TIMEOUT_S > 0
                     else 8.0
                 )
-                loop.run_until_complete(
+                response = loop.run_until_complete(
                     asyncio.wait_for(req_async(), timeout=timeout)
                 )
                 used_async = True
@@ -3954,8 +3955,72 @@ class IBClient:
             # Sync fallback (test stubs, or no usable owned loop). ib_insync's
             # reqAllOpenOrders blocks until openOrderEnd; the connect breaker +
             # IB_FETCH_TIMEOUT_S bound the surrounding lifecycle. Last resort.
-            ib.reqAllOpenOrders()
-        return self._open_trades(ib)
+            response = ib.reqAllOpenOrders()
+        return self._prune_to_response(self._open_trades(ib), response)
+
+    @staticmethod
+    def _prune_to_response(trades: list, response: Any) -> list:
+        """Drop cached trades the account-wide response says are no longer open.
+
+        BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW
+        (re-measured 2026-11-18): ib_insync's ``Trade`` cache only GROWS --
+        nothing removes an order another client (or TWS, or a previous trader
+        process) cancelled, so ``openTrades()`` kept serving it as resting and
+        ``has_protective_orders`` / ``protection_coverage`` could read a dead
+        leg as coverage (the unsafe direction) or as over-cover.
+
+        ⚠️ THE RESPONSE IS ``List[Trade]``, NOT ``List[Order]`` (ib_insync
+        0.9.86, read from the library: ``reqAllOpenOrdersAsync`` ->
+        ``wrapper.startReq('openOrders')``; ``wrapper.openOrder`` appends the
+        TRADE it upserted into ``wrapper.trades``; ``openOrderEnd`` resolves the
+        future). The first version of this prune (#26996, reverted by #27014)
+        read ``permId`` off each element directly, found none, and pruned every
+        acknowledged leg on ib_paper ("kept 0"). Ids are therefore read from
+        ``element.order`` when present (and from the element itself only for an
+        Order-shaped element), and a cached trade that IS one of the response's
+        objects is kept by identity before any id comparison.
+
+        Kept on purpose: a trade with no ``permId`` yet (just placed, not
+        acknowledged -- dropping it would read a fresh bracket as naked and
+        invite a duplicate re-arm), and everything when the response is not a
+        list (unknown is not 'none open'). A non-empty cache with an EMPTY
+        response is also left untouched: an empty book is indistinguishable
+        from a response that carried nothing, so it never prunes a whole book."""
+        if not isinstance(response, (list, tuple)) or not response:
+            return trades
+        live_ids = set()
+        live_perm = set()
+        live_key = set()
+        for elem in response:
+            live_ids.add(id(elem))
+            o = getattr(elem, "order", None) or elem
+            try:
+                pid = int(getattr(o, "permId", 0) or 0)
+            except (TypeError, ValueError):
+                pid = 0
+            if pid:
+                live_perm.add(pid)
+            cid, oid = getattr(o, "clientId", None), getattr(o, "orderId", None)
+            if oid not in (None, 0):
+                live_key.add((cid, oid))
+        if not live_perm and not live_key:
+            # Nothing identifiable in the response: we could not read it, so
+            # we do not prune (the #26996 failure shape).
+            return trades
+        kept = []
+        for t in trades:
+            order = getattr(t, "order", None)
+            try:
+                pid = int(getattr(order, "permId", 0) or 0)
+            except (TypeError, ValueError):
+                pid = 0
+            if (id(t) in live_ids or not pid or pid in live_perm
+                    or (getattr(order, "clientId", None), getattr(order, "orderId", None)) in live_key):
+                kept.append(t)
+        if len(kept) != len(trades):
+            logger.info("IB open-trade cache: pruned %d trade(s) absent from the account-wide "
+                        "open-order response (kept %d)", len(trades) - len(kept), len(kept))
+        return kept
 
     @staticmethod
     def _protective_leg_qty(order: Any):

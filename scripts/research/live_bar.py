@@ -27,6 +27,7 @@ import json
 import math
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
@@ -114,6 +115,27 @@ def live_bar(trades: Iterable[Mapping], packages: Mapping[str, Any], min_n: int 
             "population": {"confirmed_r_trades": len(rows)}, "legs": legs}
 
 
+#: The daily ladder feed (LIVE-BAR-LADDER-FEED, OPERATING-PLAN § 2 "Live-performance promotion path").
+LATEST_REL = Path("comms/live_bar/latest.json")
+
+
+def write_latest(out: Dict[str, Any], path: Path, now: Optional[datetime] = None) -> Path:
+    """Write the live-bar result as the feed file, atomically, stamped ``generated_at`` (UTC ISO).
+
+    Consumers judge freshness from ``generated_at`` (the row's closing check: < 26 h old). The file carries
+    per-leg verdicts, n and R statistics only: no balances, no account ids beyond the account names already
+    in config/accounts.yaml."""
+    doc = dict(out)
+    doc["generated_at"] = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
+    doc["schema"] = 1
+    p = path if path.is_absolute() else REPO / path
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(p)
+    return p
+
+
 def _fetch(table: str, max_pages: int) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     for page in range(max_pages):
@@ -137,12 +159,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-pages", type=int, default=30)
     ap.add_argument("--min-n", type=int, default=MIN_N)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--write", nargs="?", const=str(LATEST_REL), default=None, metavar="PATH",
+                    help=f"also write the result (with generated_at) to PATH (default {LATEST_REL}): the daily "
+                         "ladder feed (LIVE-BAR-LADDER-FEED) read by the resolver and the reviews")
     a = ap.parse_args(argv)
     trades = json.loads(Path(a.trades).read_text()) if a.trades else _fetch("trades", a.max_pages)
     pk_rows = json.loads(Path(a.packages).read_text()) if a.packages else _fetch("order_packages", a.max_pages)
     packages = {str(p.get("order_package_id")): _meta(p.get("meta")) for p in pk_rows}
     out = live_bar(trades, packages, a.min_n)
     out["population"].update({"trades_read": len(trades), "packages_read": len(pk_rows)})
+    if a.write:
+        write_latest(out, Path(a.write))
     if a.json:
         print(json.dumps(out, indent=2))
         return 0
