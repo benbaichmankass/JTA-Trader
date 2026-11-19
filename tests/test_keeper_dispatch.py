@@ -85,3 +85,68 @@ def test_other_status_never_fails(tmp_path):
     p, _, latch = _run(tmp_path, "500")
     assert p.returncode == 0 and "not confirmed" in p.stdout
     assert not latch.exists()
+
+
+def _run_active(tmp_path: Path, queued: str, in_progress: str, *, skip: bool = True, status: str = "204",
+                queued_all: str | None = None, in_progress_all: str | None = None):
+    """A curl that answers runs?status= reads with a total_count body: ``queued`` / ``in_progress`` for the
+    windowed read (created>=), ``*_all`` (default: same) for the unwindowed one; the dispatch gets ``status``."""
+    qa = queued if queued_all is None else queued_all
+    ia = in_progress if in_progress_all is None else in_progress_all
+    bindir = tmp_path / "bin"
+    bindir.mkdir(exist_ok=True)
+    calls = bindir / "calls.log"
+    curl = bindir / "curl"
+    curl.write_text(
+        "#!/usr/bin/env bash\n"
+        'url=""; for a in "$@"; do case "$a" in http*) url="$a";; esac; done\n'
+        f'echo "$url" >> "{calls}"\n'
+        "cat >/dev/null\n"
+        'case "$url" in\n'
+        f'  *status=queued*created=*) printf \'{{"total_count": {queued}}}\';;\n'
+        f'  *status=queued*) printf \'{{"total_count": {qa}, "workflow_runs": []}}\';;\n'
+        f'  *status=in_progress*created=*) printf \'{{"total_count": {in_progress}}}\';;\n'
+        f'  *status=in_progress*) printf \'{{"total_count": {ia}}}\';;\n'
+        f'  *) printf "%s" "{status}";;\nesac\n'
+    )
+    curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
+    env_file = tmp_path / "gh-dispatch.env"
+    env_file.write_text(f"GH_DISPATCH_TOKEN={FAKE_TOKEN}\n")
+    env = {"PATH": f"{bindir}:{os.environ['PATH']}", "HOME": str(tmp_path),
+           "KEEPER_DISPATCH_ENV_FILE": str(env_file), "KEEPER_DISPATCH_LATCH": str(tmp_path / "state" / "denied"),
+           "KEEPER_DISPATCH_WORKFLOW": "live-review-wake.yml"}
+    if skip:
+        env["KEEPER_DISPATCH_SKIP_IF_ACTIVE"] = "1"
+    p = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=30)
+    return p, (calls.read_text().splitlines() if calls.exists() else [])
+
+
+def test_skip_if_active_skips_when_a_recent_run_is_queued(tmp_path):
+    p, calls = _run_active(tmp_path, "1", "0")
+    assert p.returncode == 0 and "skip: 1 run(s) of live-review-wake.yml created in the last 45 min" in p.stdout
+    assert not any(c.endswith("/dispatches") for c in calls), "no dispatch while a recent one is queued"
+    assert any("created=%3E%3D" in c for c in calls), "the count is windowed"
+    assert FAKE_TOKEN not in p.stdout + p.stderr
+
+
+def test_skip_if_active_dispatches_when_idle(tmp_path):
+    p, calls = _run_active(tmp_path, "0", "0")
+    assert p.returncode == 0 and "dispatched live-review-wake.yml (HTTP 204)" in p.stdout
+    assert sum(c.endswith("/actions/workflows/live-review-wake.yml/dispatches") for c in calls) == 1
+
+
+def test_a_stuck_old_queued_run_never_silences_the_wake(tmp_path):
+    """Manager 2026-11-19: zombie queued runs never start; one stuck run must not skip the clock forever."""
+    p, calls = _run_active(tmp_path, "0", "0", queued_all="1")
+    assert "dispatched live-review-wake.yml (HTTP 204)" in p.stdout
+    assert "ignoring 1 queued run(s) of live-review-wake.yml created before" in p.stdout, "the stuck run is logged"
+
+
+def test_skip_if_active_unreadable_count_still_dispatches(tmp_path):
+    p, calls = _run_active(tmp_path, "x", "x")
+    assert "could not read queued runs" in p.stdout and "HTTP 204" in p.stdout
+
+
+def test_default_never_reads_active_runs(tmp_path):
+    p, calls = _run_active(tmp_path, "5", "5", skip=False)
+    assert "HTTP 204" in p.stdout and not any("runs?status=" in c for c in calls)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wiring: systemd - deploy/trainer/ict-keeper-dispatch.{service,timer} (trainer VM, hourly).
+# wiring: systemd - deploy/trainer/ict-keeper-dispatch.{service,timer} (trainer VM, hourly) and deploy/trainer/ict-ltr-wake-dispatch.{service,timer} (15 min, live-review-wake.yml, skip-if-active).
 # scripts/ops/keeper_dispatch.sh — KEEPER-VM-FLOOR (2026-11-01).
 #
 # WHY: GitHub drops ~77% of this repo's scheduled runs (measured 2026-11-01: 13 of ~56
@@ -45,6 +45,50 @@ fi
 if [ -f "$LATCH" ] && { [ ! -e "$ENV_FILE" ] || [ "$LATCH" -nt "$ENV_FILE" ]; }; then
   log "latched: an earlier call was refused (401/403); replace $ENV_FILE to retry"
   exit 0
+fi
+
+# SKIP-IF-ACTIVE (ict-ltr-wake-dispatch, manager 2026-11-19): with KEEPER_DISPATCH_SKIP_IF_ACTIVE=1, do not
+# dispatch while a RECENT run of $WORKFLOW is queued or in progress, so a 15-min clock never stacks runs into a
+# deep queue. Only runs created in the last KEEPER_DISPATCH_ACTIVE_WINDOW_MIN (default 45) minutes count: this repo
+# keeps zombie queued runs that never start (395 from <= 2026-11-11, some from May; ACTIONS-QUEUE-BACKLOG), and one
+# stuck run must never silence the wake forever. An older active run is ignored and LOGGED, so it stays visible.
+# An unreadable count is logged and the dispatch goes ahead (one extra run beats a silent skip).
+# Off by default: the hourly schedule-keeper floor is unchanged.
+_runs_count() {  # $1 = status, $2 = optional created>= ISO stamp; prints total_count or nothing
+  local q="status=$1&per_page=1"
+  [ -n "${2:-}" ] && q="$q&created=%3E%3D$2"
+  printf 'Authorization: Bearer %s\n' "$GH_DISPATCH_TOKEN" | curl -sS --max-time 30 \
+      -H @- \
+      -H 'Accept: application/vnd.github+json' \
+      -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "$API/repos/$REPO/actions/workflows/$WORKFLOW/runs?$q" 2>/dev/null \
+    | sed -n 's/.*"total_count"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n 1
+}
+if [ "${KEEPER_DISPATCH_SKIP_IF_ACTIVE:-0}" = "1" ]; then
+  window="${KEEPER_DISPATCH_ACTIVE_WINDOW_MIN:-45}"
+  since="$(date -u -d "-${window} minutes" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || true)"
+  active=0
+  for st in queued in_progress; do
+    if [ -z "$since" ]; then
+      log "could not compute the ${window}-min window; dispatching anyway"
+      break
+    fi
+    recent="$(_runs_count "$st" "$since" || true)"
+    if [ -z "$recent" ]; then
+      log "could not read $st runs of $WORKFLOW; dispatching anyway"
+      continue
+    fi
+    active=$((active + recent))
+    all="$(_runs_count "$st" || true)"
+    if [ -n "$all" ] && [ "$all" -gt "$recent" ]; then
+      log "ignoring $((all - recent)) $st run(s) of $WORKFLOW created before $since (older than ${window} min: stuck?)"
+    fi
+  done
+  if [ "$active" -gt 0 ]; then
+    unset GH_DISPATCH_TOKEN
+    log "skip: $active run(s) of $WORKFLOW created in the last ${window} min are queued or in progress; nothing dispatched"
+    exit 0
+  fi
 fi
 
 status="$(
