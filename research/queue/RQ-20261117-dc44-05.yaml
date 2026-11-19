@@ -4,7 +4,7 @@ id: RQ-20261117-dc44-05
 title: 'fvg_range_15m FIDELITY: every replay so far ran the harness''s MIDLINE target while the live strategy targets the
   OPPOSITE boundary. What does the leg earn as it actually trades (far target), and does far beat the midline, net of the full cost
   stack, 1830 d?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -127,3 +127,16 @@ iteration:
   due_by: '2026-11-24'
 follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
 last_dispatched_at: '2026-11-18T17:34:46+00:00'
+grading:
+  attested: RULE-RQ20261117-dc44-05-FVG-FAR-TARGET
+  auto: true
+  decision_rule_id: RULE-RQ20261117-dc44-05-FVG-FAR-TARGET
+  evidence:
+  - research/results/RQ-20261117-dc44-05/44360294013.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
