@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import refresh_stamp_prs as rsp  # noqa: E402
+import refresh_stamp_prs as rsp
 
 UNIT = "id: RQ-T-01\nquestion: q\nlast_dispatched_at: {s}\n"
 
@@ -22,13 +22,17 @@ def _repo(tmp_path, branch_stamp, main_stamp, main_extra=""):
     (w / "research" / "queue").mkdir(parents=True)
     f = w / "research" / "queue" / "RQ-T-01.yaml"
     f.write_text(UNIT.format(s="2026-11-19T08:00:00Z"))
-    _g(w, "add", "-A"); _g(w, "commit", "-qm", "base"); _g(w, "push", "-q", "origin", "HEAD:main")
+    _g(w, "add", "-A")
+    _g(w, "commit", "-qm", "base")
+    _g(w, "push", "-q", "origin", "HEAD:main")
     _g(w, "checkout", "-qb", "automation/research-queue-stamp-1-1")
     f.write_text(UNIT.format(s=branch_stamp))
-    _g(w, "commit", "-qam", "stamp"); _g(w, "push", "-q", "origin", "HEAD:automation/research-queue-stamp-1-1")
+    _g(w, "commit", "-qam", "stamp")
+    _g(w, "push", "-q", "origin", "HEAD:automation/research-queue-stamp-1-1")
     _g(w, "checkout", "-q", "main")
     f.write_text(UNIT.format(s=main_stamp) + main_extra)
-    _g(w, "commit", "-qam", "later stamp"); _g(w, "push", "-q", "origin", "HEAD:main")
+    _g(w, "commit", "-qam", "later stamp")
+    _g(w, "push", "-q", "origin", "HEAD:main")
     return w
 
 

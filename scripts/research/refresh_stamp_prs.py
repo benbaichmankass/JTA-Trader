@@ -35,7 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ops"))
-import resolve_stamp_conflicts as rsc  # noqa: E402
+import resolve_stamp_conflicts as rsc
 
 PREFIX = "automation/research-queue-stamp"
 _BOT = ("-c", "user.name=github-actions[bot]", "-c", "user.email=github-actions[bot]@users.noreply.github.com")
@@ -85,7 +85,7 @@ def main(argv=None) -> int:
     try:
         raw = _gh(["api", f"repos/{a.repo}/pulls?state=open&per_page=100", "--paginate", "--jq",
                    f'.[] | select(.head.ref | startswith("{PREFIX}")) | "\\(.number) \\(.head.ref)"'])
-    except Exception as exc:
+    except (subprocess.CalledProcessError, OSError) as exc:
         print(f"refresh-stamp-prs: could not list open PRs (could not look): {exc}")
         return 0
     prs = [ln.split(" ", 1) for ln in raw.splitlines() if ln.strip()]
@@ -101,10 +101,10 @@ def main(argv=None) -> int:
             counts[outcome] = counts.get(outcome, 0) + 1
             if outcome == "superseded" and not a.dry_run:
                 _gh(["pr", "close", num, "--repo", a.repo, "--comment",
-                     "Closed by the research dispatcher (AUTOMATION-DATACOMMIT-CONFLICT): superseded. After "
-                     "merging main, this branch changes no research/queue unit, because main already carries the "
-                     "same or later dispatch stamps. Nothing is lost."])
-        except Exception as exc:  # one PR never blocks the others
+                     ("Closed by the research dispatcher (AUTOMATION-DATACOMMIT-CONFLICT): superseded. After "
+                      "merging main, this branch changes no research/queue unit, because main already carries the "
+                      "same or later dispatch stamps. Nothing is lost.")])
+        except (subprocess.CalledProcessError, OSError, ValueError) as exc:  # one PR never blocks the others
             print(f"#{num} {ref}: error -- {exc}")
             counts["error"] = counts.get("error", 0) + 1
     print(f"refresh-stamp-prs: {len(prs)} open stamp PR(s); {json.dumps(counts, sort_keys=True)}")
