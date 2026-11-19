@@ -73,7 +73,9 @@
       "delta_r": {"type": ["number", "null"], "_comment": "LTR-5: rec_r - cf_r = the value of following the call over holding, net of the full cost stack. 0.0 for a call that changes no path (hold / no_recommendation / flag_mechanics). null = could not price. CJ-2 should read this field, not net_r - cf_r, for an unapplied tighten."},
       "cf_cost_stack": {"type": ["string", "null"], "_comment": "LTR-5: where the replayed exit's costs came from (recorded trade legs + execution_costs.resolve_cost_policy slippage)."},
       "replay_fidelity": {"type": ["string", "null"], "_comment": "LTR-5: replay_matches_realised | replay_mismatch | unvalidated (an applied call has no untouched realised path to check against)."},
-      "exit_reason": {"type": ["string", "null"]}
+      "exit_reason": {"type": ["string", "null"]},
+      "supersedes": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$", "_comment": "PI-20261118-PREP1118-0006 (G6): outcomes.jsonl is append-only, never edited. A re-priced row names the computed_at of the latest earlier row for the same review_id that it replaces; readers take the LATEST row per review_id (live_review_counterfactual.latest_outcomes). Absent/null = an original row."},
+      "supersede_reason": {"type": ["string", "null"], "_comment": "Why the row was re-priced (the grader fix that changed it). live-review-records-guard requires it whenever supersedes is set."}
     }
   }
 }
