@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-54
 title: 'DIRECTION lever family on uso_trend_1h (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: blocked
 cadence: once
 theme: live_strategy
 priority: 2
@@ -129,3 +129,10 @@ roadmap:
 related:
 - RQ-20261117-b2f2-37
 - research/levers/uso_trend_1h.yaml
+blocked_on:
+- kind: design
+  ref: config/strategies.yaml::strategies.uso_trend_1h.long_only
+  owner: QUEUE-FILL-STANDING-W47b
+  what: 'uso_trend_1h declares long_only: true, so a --side-filter DIRECTION arm cannot change a single trade: the short arm is empty and the long arm equals A. abab-47 (the same lever on trend_donchian) graded FAIL with lever_fired False on both arms (PROGRAMME-REVIEW-20261119 finding). Dispatching this unit would spend a runner slot to measure nothing.'
+  clears_when: 'the leg drops long_only (then git-mv back with status queued), or the unit is re-shaped to an arm that can fire on a long-only leg'
+  due_by: '2026-11-26'
