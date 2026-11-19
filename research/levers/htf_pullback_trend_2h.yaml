@@ -75,7 +75,7 @@ manifest:
   timeframe: untested
   symbol_set: untested
   direction: tested
-  session: untested
+  session: tested
   sizing_vs_cost: untested
 levers:
   direction:
@@ -748,6 +748,70 @@ levers:
       best_delta_r_per_trade: -0.0324
       fold_stability: 0.333
       reading: every tested value is worse than the baseline
+  session:
+    skip_hours:
+      tests:
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261118-abab-22
+        window: 2020-07-01..2026-10-15
+        n: 446
+        net_r: 4.5845
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: -5.5307
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 21.6545
+        verdict: fail
+        joint_change: false
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261118-abab-22
+        window: 2020-07-01..2026-10-15
+        n: 446
+        net_r: 4.5845
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: -5.5307
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 21.6545
+        verdict: fail
+        joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261118-abab-22
+        window: 2020-07-01..2026-10-15
+        n: 460
+        net_r: 11.2574
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 1.1422
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 20.1814
+        verdict: fail
+        joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261118-abab-22
+        window: 2020-07-01..2026-10-15
+        n: 460
+        net_r: 11.2574
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 1.1422
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 20.1814
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 4
+      best_delta_r_per_trade: 0.0025
+      fold_stability: 0.417
+      reading: no response at the tested values
 manifest_notes:
   census_2026_11_14: 'DEMO-FLOOR-ITER lever-family census after the 2nd forming-bar lever failed (AM-ML guard); CORRECTED 2026-11-14 00:30Z, superseding
     the 00:00Z draft that read only the one-year forming window and wrongly concluded lever exhaustion. Forming record (f251-01, 2025-11-13..2026-11-12):

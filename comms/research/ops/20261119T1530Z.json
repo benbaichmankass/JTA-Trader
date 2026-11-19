@@ -1,0 +1,48 @@
+{
+  "run": "RESEARCH-OPS-20261119-1448", "finished_at": "2026-11-19T15:30:00Z", "by": "lane RESEARCH-OPS-20261119-1448 (dispatched by manager session_01AFoLuHbhd9wFuGJfWRqyoV)",
+  "floor": 103, "floor_basis": "computed_floor(fired_24h 129), diagnostic only", "authoring_queue_depth": 20, "idle_backends": [],
+  "needs_review_triaged": 19, "needs_review_left": 103,
+  "throughput": {"runnable_before": 69, "queued": 358, "fired_24h": 129, "results_landed_24h": 155, "hours_since_last_dispatch": 0.8, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok (last dispatch 0.8 h ago)", "collector": "ok", "stranded_stamp_prs": "open automation/research-queue-* stamp PRs 27345, 27331, 27288 listed, not judged stranded", "incident": null, "read_state": "tree_and_pr_list"},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": ["RQ-20261117-43b6-01", "RQ-20261117-43b6-02", "RQ-20261117-43b6-03", "RQ-20261117-43b6-04", "RQ-20261119-c9d2-01"]},
+  "unlocked": [], "retired": [],
+  "levers_filed": [{"lever": "new pre-registered grid for edge_portfolio_discovery (xsec / movement-capture / cost-levers); D2 money-grade of ml-btc-router-cells; ltr-close lever-exhaustion review", "ref": "PI-20261119-20261119-0001"}],
+  "units_authored": ["RQ-20261119-48ac-01", "RQ-20261119-48ac-02", "RQ-20261119-48ac-03"], "followups_filed": ["PI-20261119-20261119-0001"],
+  "authoring": {"queue_depth": 20, "nodes_drafted": 0, "skipped_on_purpose": true, "reason": "budget spent on the orphan iterations; the programme authoring queue (20 ready nodes, e.g. P1-Q6-eth4h-measured-move-w05-declare) is left to QUEUE-FILL and ML-PRIMARY-11 lanes"},
+  "checks": {"packet_as_of": "2026-11-19T14:51Z", "runnable_by_track": {"TRADING": 52, "MODEL": 7, "INFRA": 10}, "fails_without_next": 3, "needs_review": 119, "blocked_over_age": 6, "stale_block_rows": 14, "could_not_look": ["workflow runs (github-actions MCP down; PR list only)", "next_rq_id --fetch hung; ids minted without --fetch"]},
+  "prior_calls_scorecard": [
+    {"call": "RQ-20261117-b3aa-01 (turtle_soup stop 0.5 pre-dev) PASSes", "p": 0.35, "outcome": "hit", "check_rerun": "ls research/results/RQ-20261117-b3aa-01", "action_happened": true},
+    {"call": "RQ-20261117-b3aa-03 qqq trend_lookback_75 passes all clauses incl. fold clause", "p": 0.5, "outcome": "hit (unit verdict pass under its own rule; the fold clause was not opened separately)", "action_happened": true},
+    {"call": "RQ-20261117-b3aa-08 slv: no momentum arm beats trail_decay", "p": 0.6, "outcome": "hit", "action_happened": true}
+  ],
+  "iteration": {"results_attributed": {"count": 5, "of": 5}, "map_entries_added": 0, "next_tests_from_map": 3,
+    "lever_coverage": {"ltr_class": {"covered": 6, "of": 7}},
+    "orphans_before": {"strategy_leg": 3, "ml_model": 1, "ltr_class": 4}, "orphans_after": {"strategy_leg": 3, "ml_model": 1, "ltr_class": 1},
+    "results_iterated": [
+      {"result": "RQ-20261117-43b6-04", "verdict": "pass", "subject": "ltr-tp-pull-in", "next": "RQ-20261119-48ac-01", "attempt": 3},
+      {"result": "RQ-20261117-43b6-01", "verdict": "fail", "subject": "ltr-sl-to-structure", "next": "RQ-20261119-48ac-02", "attempt": 3},
+      {"result": "RQ-20261117-43b6-03", "verdict": "fail", "subject": "ltr-partial-close", "next": "RQ-20261119-48ac-03", "attempt": 3},
+      {"result": "RQ-20261119-c9d2-01", "verdict": "fail", "subject": "ltr-close", "next": "PI-20261119-20261119-0001", "attempt": 4}],
+    "advanced": 3, "survivors": [], "overdue": ["ml-brackets", "ml-setup-metalabel-p2pool", "ml-holdbias-exit"], "retired_by_review": []},
+  "analysis": {"rows_opened": ["RQ-20261117-43b6-01", "RQ-20261117-43b6-02", "RQ-20261117-43b6-03", "RQ-20261117-43b6-04", "RQ-20261119-c9d2-01", "RQ-20261117-9e1c-10"],
+    "trading": {"meaning": [
+      "Live-review actions: banking or pulling in risk cuts maxDD wherever it is placed, so the weakness-state triggers lose to a random time (43b6-03: 0 of 200 controls beaten on all 4), so only triggers with positive timing (new_peak, near_target) are worth another read.",
+      "ltr-close near_target did not confirm on real-TP holdout legs (c9d2-01: n_fired 66, maxDD cut 0.0, edge vs random +0.82 only because a random close cuts winners), so the abab-68 selection pass was selection noise, not a timing edge.",
+      "tp_pull_in@new_peak is the one survivor of 6 cumulative triggers (43b6-04: maxDD cut 43.2%, 5 of 6 folds, 200 of 200 controls, edge +0.05 R), so it is a discovery with denominator 6 until 48ac-01 reads it on legs it never saw."],
+     "fail_diagnoses": [
+      {"cluster": "ltr-sl-to-structure new_peak holdout (43b6-01)", "hypotheses": ["noise", "5-bar swing stop too tight", "selection from 9 cells"], "test": "RQ-20261119-48ac-02 (pivot_bars 8)", "survivor": "design", "next": "RQ-20261119-48ac-02"},
+      {"cluster": "ltr-partial-close (43b6-03)", "hypotheses": ["noise", "size too small at rare trigger", "weakness triggers carry negative timing"], "test": "RQ-20261119-48ac-03 (partial_frac 0.75 at near_target,new_peak)", "survivor": "design", "next": "RQ-20261119-48ac-03"},
+      {"cluster": "19 producer_failed units (9e1a/9e1b/9e1c/b2f1/b2f2/abab-04/-27)", "hypotheses": ["harness defect", "no internet on kaggle_cpu kernel (data.binance.vision NameResolutionError)", "Yahoo refusing_us HTTP 429"], "test": "owner PI-20261118-EFILLW47-0003", "survivor": "harness", "next": "PI-20261118-EFILLW47-0003"}],
+     "next_tests": [
+      {"id_or_node": "RQ-20261119-48ac-01", "decision_changed": "whether ltr-tp-pull-in gets a Tier-3 status proposal", "on_pass": "confirmed screen result, proposal input for the manager", "on_fail": "class goes to lever-exhaustion review", "premortem": "tp_r of the real-TP legs is 1.5-6.0, so a 50% keep may be below the cost floor"},
+      {"id_or_node": "RQ-20261119-48ac-02", "decision_changed": "whether geometry or timing is the sl_to_structure lever", "on_pass": "one holdout re-read", "on_fail": "move to timing family", "premortem": "fold noise would make any single arm fail R3 regardless"},
+      {"id_or_node": "RQ-20261119-48ac-03", "decision_changed": "whether partial_close size matters at the informative triggers", "on_pass": "ONE holdout read on ltr_corpus_realtp", "on_fail": "class to lever-exhaustion review", "premortem": "near_target fires rarely (322 of 3,527), so R2 may stay under n floor"}]},
+    "model": {"meaning": [], "fail_diagnoses": [], "next_tests": []},
+    "cross_track": [], "surprises": ["iteration_orphans.py counts only queued units as live, so ltr-close (iterated 4 times, last done) reads as an orphan though it has been worked; the real gap is a family-exhaustion decision, not another unit"]},
+  "slots": {"method": "keyword match of title + ml_consumer over queued units (ml_plan_status.py --slots does not exist; row ML-SLOT-REPORT queued)", "queued_units": {"D1": "2 (f251-01, f251-02)", "D2": 13, "D3": 22, "D4": 1, "D5": 0, "D6": 4, "D7": 3, "D8": 1, "D9": 2, "D10": 2}, "no_next_unit_named": ["D5 (no queued unit; plan section 4.7 VOI census P2 not authored)"], "not_verified": "keyword match is a screen: whether each unit is the right next test for its slot was not read"},
+  "runnable_hours_per_backend": "NOT COMPUTED in hours: research_utilization.py --week reports github_runner slot-cycles 519 of 740 used (utilization 0.701), kaggle GPU 27.65 of 30.0 h remaining until 2026-11-21 (expiring), flags floor_thin 185 cycles, kaggle_quota_expiring 51; trainer data in the report is from 2026-10-13 and is stale",
+  "calls": [{"call": "RQ-20261119-48ac-01 (tp_pull_in@new_peak on real-TP holdout) PASSes", "p": 0.3, "check": {"command": "ls research/results/RQ-20261119-48ac-01", "rule": "latest row verdict pass", "resolves_when": "2026-11-23"}},
+            {"call": "RQ-20261119-48ac-02 (pivot_bars 8) clears R3", "p": 0.3, "check": {"command": "ls research/results/RQ-20261119-48ac-02", "rule": "verdict pass", "resolves_when": "2026-11-23"}}],
+  "not_run": ["E authoring from the programme queue (nodes_drafted 0)", "A workflow run list (github-actions MCP down)"],
+  "handoff": ["PI-20261119-20261119-0001: orphans ltr-close, xsec-crypto, movement-capture, cost-levers-live-legs, ml-btc-router-cells; overdue ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit (ML-PRIMARY-11)", "14 STALE_BLOCK checklist rows from blocker_watch.py (edges with no resolvable ref), left to their owners", "19 producer_failed units now owned by PI-20261118-EFILLW47-0003", "D5 has no next unit"]
+}

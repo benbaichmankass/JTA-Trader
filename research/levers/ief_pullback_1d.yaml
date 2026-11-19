@@ -74,10 +74,74 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-38
+        window: 2021-07-01..2026-10-15
+        n: 17
+        net_r: -4.9146
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -10.1228
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 6.2005
+        verdict: indeterminate
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-38
+        window: 2021-07-01..2026-10-15
+        n: 17
+        net_r: -4.9146
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: -10.1228
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 6.2005
+        verdict: indeterminate
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-38
+        window: 2021-07-01..2026-10-15
+        n: 19
+        net_r: 6.9934
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: 1.7852
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 4.2164
+        verdict: indeterminate
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-38
+        window: 2021-07-01..2026-10-15
+        n: 19
+        net_r: 6.9934
+        baseline_n: 33
+        baseline_net_r: 5.2082
+        delta_net_r: 1.7852
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 4.2164
+        verdict: indeterminate
+        joint_change: false
+      shape: noisy
+      points: 4
+      best_delta_r_per_trade: 0.0541
+      fold_stability: 0.417
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   entry:
     pullback_frac:
       tests:
