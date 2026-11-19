@@ -101,7 +101,11 @@ class RateGate:
             if per_min and self.declared_per_min is None:
                 self.declared_per_min = per_min
                 self.base_rps = self.rps = min(self.cap_rps, max(self.rps, 0.8 * per_min / 60.0))
-                print(f"[rate] plan declares {per_min} req/min -> pacing at {self.rps:.2f} req/s", flush=True)
+                # stderr, not stdout: live_review_outcomes imports this module and its caller json.loads the
+                # pricer's STDOUT. A status line here broke every equity packet's priced_options on 2026-11-19
+                # (IEF LR-20261119T1437Z: "live_review_outcomes output is not JSON ... stdout starts '[rate] plan'").
+                print(f"[rate] plan declares {per_min} req/min -> pacing at {self.rps:.2f} req/s",
+                      file=sys.stderr, flush=True)
 
     def penalize(self, kind: str) -> None:
         with self._lock:

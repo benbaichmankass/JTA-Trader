@@ -71,10 +71,74 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-20
+        window: 2021-07-01..2026-10-15
+        n: 30
+        net_r: 9.2201
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: 0.4189
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 4.3438
+        verdict: fail
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-20
+        window: 2021-07-01..2026-10-15
+        n: 30
+        net_r: 9.2201
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: 0.4189
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 4.3438
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-20
+        window: 2021-07-01..2026-10-15
+        n: 21
+        net_r: -3.1578
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: -11.959
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 5.3632
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-20
+        window: 2021-07-01..2026-10-15
+        n: 21
+        net_r: -3.1578
+        baseline_n: 46
+        baseline_net_r: 8.8012
+        delta_net_r: -11.959
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 5.3632
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 4
+      best_delta_r_per_trade: 0.0091
+      fold_stability: 0.417
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   entry:
     pullback_frac:
       tests:

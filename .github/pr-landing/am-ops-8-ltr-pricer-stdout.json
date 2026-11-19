@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Touches the live-review pricer's import path on the live VM; the manager merges.",
+  "why": "Manager ask 2026-11-19 15:25Z (IEF packet 7702 'could not price any option'). ROOT CAUSE, from the packet itself (live-review/rows comms/live_review/packets/LR-20261119T1437Z-pkg-c2d9a660f6a14fce.json, priced_options_state could_not_price): missing_inputs says 'live_review_outcomes output is not JSON ... stdout starts \"[rate] plan declares 200 req/min -> pacing at 2.67 req/s\\n{ ...'. The pricer DID emit its JSON; scripts/ops/fetch_etf_history.py RateGate.declare() printed a status line to STDOUT first, and live_review_packet.py json.loads that stdout. The yfinance message in stderr is a separate, lesser fault: without yfinance on the live VM the pricer falls back to Alpaca SIP bars (warns 'not the corpus Yahoo source') and still prices; filed as its own pipeline item (live-VM dependency, Tier 2). FIX: that one print goes to stderr. tests/test_fetch_etf_history_rate_stdout.py asserts declare() writes nothing to stdout (passes with the fix, FAILS on main). 10 related test files (fetch_etf_history / live_review_outcomes / live_review_packet): 168 passed, 1 skipped, 1 xfailed. trader_import_closure decide: SKIP (no trader file; the pricer runs as a subprocess and picks the change up on the next ict-git-sync pull). Revert: git revert. Gates this adds or changes: none."
+}

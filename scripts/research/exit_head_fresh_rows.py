@@ -141,6 +141,12 @@ def main(argv: list[str]) -> int:
 
     def write(v: str, rs: str, **kw) -> int:
         verdict.update({"verdict": v, "read_state": rs, **kw})
+        # script_run's verdict contract: population (non-empty) and n (null when not measured) are required.
+        verdict["population"] = (f"{a.family} {a.tf} exit-head rows rebuilt from legs {a.legs} on the trainer's candles; "
+                                 f"required fresh symbols {','.join(required)} (last bar_t after {a.after})")
+        verdict["n"] = verdict.get("n_rows")
+        verdict["note"] = (f"{v.upper()} ({rs}): " + ("; ".join(verdict.get("reasons") or []) or
+                           ("published " + str(publish) if verdict.get("published") else str(kw.get("error") or ""))))
         (out / "verdict.json").write_text(json.dumps(verdict, indent=2) + "\n")
         print(json.dumps({k: verdict[k] for k in ("verdict", "read_state")}), flush=True)
         return 0
@@ -224,12 +230,14 @@ def _self_test() -> int:
                    "--out", str(td / "o"), "--skip-build"])
         got = json.loads((td / "o" / "verdict.json").read_text())
         assert rc == 0 and got["verdict"] == "pass" and got["published"] and pub.exists(), got
+        assert str(got.get("population") or "").strip() and "n" in got and got["n"] == 3, got
         rc = main(["x", "--legs", "a", "--tf", "1h", "--family", "donchian", "--symbols", "BTCUSDT",
                    "--after", "2026-11-01", "--build-out", str(td / "build"),
                    "--publish", str(td / "exit_head" / "1h" / "donchian" / "rows.jsonl"),
                    "--out", str(td / "o2"), "--skip-build"])
         got = json.loads((td / "o2" / "verdict.json").read_text())
         assert got["read_state"] == "producer_failed" and not got["published"], got
+        assert str(got.get("population") or "").strip() and "n" in got and got["n"] is None, got
     print("self-test OK")
     return 0
 
