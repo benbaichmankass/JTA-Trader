@@ -265,6 +265,18 @@ def system_book_from_snapshot(s: Any) -> List[dict]:
     return items
 
 
+#: The open-set sources live_review_packet.open_package_ids unions. If ANY failed, the union may be short, so the
+#: system book is "could not look", never an empty or partial book read as complete (2026-11-19: scan packet
+#: DP-20261119T2011Z-scan-1h rendered 0 open packages as read_state=read while live_review_due counted 23 open).
+SYSTEM_BOOK_SOURCES = ("telemetry", "prop_tickets", "order_packages@0", "trades@0")
+
+
+def system_book_read_errors(s: Any) -> List[str]:
+    """``source: error`` for every failed open-set read on a Snapshot (empty list = the book was looked at)."""
+    errs = getattr(s, "errors", None) or {}
+    return [f"{k}: {str(errs[k])[:120]}" for k in SYSTEM_BOOK_SOURCES if k in errs]
+
+
 def desk_book_from_records(decisions: Path, outcomes: Path, now: datetime) -> List[dict]:
     """Unresolved propose_entry rows (no outcome yet) still inside good_till_bars."""
     resolved = set()
@@ -579,7 +591,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         uni = [u for u in uni if u["symbol"] in keep]
     syms = [u["symbol"] for u in uni]
     candles = candles_from_dir(a.candles_dir, syms, tf) if a.candles_dir else candles_from_api(syms, tf)
-    sb, ns, ns_why = None, None, None
+    sb, ns, ns_why, sb_why = None, None, None, None
     if not historical and not a.no_system_book:
         try:
             import desk_near_signals
@@ -592,13 +604,21 @@ def main(argv: Optional[List[str]] = None) -> int:
             ns_why = f"near-signal producer failed: {type(exc).__name__}: {str(exc)[:120]}"
         try:
             from live_review_packet import collect
-            sb = system_book_from_snapshot(collect(max_pages=1))
+            snap = collect(max_pages=1)
+            sb_errs = system_book_read_errors(snap)
+            if sb_errs:
+                # collect() records failed reads instead of raising: a blind read must not become an empty book.
+                print(f"desk_scan_packet: system book read incomplete: {'; '.join(sb_errs)}", file=sys.stderr)
+                sb_why = "open-package read failed: " + "; ".join(sb_errs)
+            else:
+                sb = system_book_from_snapshot(snap)
         except Exception as exc:  # allow-silent: could_not_look, named in missing_inputs
             print(f"desk_scan_packet: system book read failed: {exc}", file=sys.stderr)
     db = None if historical else desk_book_from_records(a.decisions or cdr.DECISIONS, cdr.OUTCOMES, cutoff)
     unread = ({"system_book": "not reconstructed point in time (historical mode)",
                "desk_book": "not reconstructed point in time (historical mode)"} if historical
-              else {"system_book": "skipped (--no-system-book)"} if a.no_system_book else None)
+              else {"system_book": "skipped (--no-system-book)"} if a.no_system_book
+              else {"system_book": sb_why} if sb_why else None)
     p = build_scan_packet(cutoff=cutoff, tf=tf, universe=uni, candles=candles, horizons=horizons,
                           lookback=a.lookback, system_book=sb, near_signals=ns, desk_book=db, unread_why=unread,
                           near_signals_why=ns_why)
@@ -769,6 +789,21 @@ def _self_test() -> int:
     u = pulled_universe(acc, {"leg_x": {"symbols": ["SOLUSDT"]}})
     expect("universe = UNION(declared, roster-implied); an opted-out account contributes nothing",
            [x["symbol"] for x in u] == ["BTCUSDT", "SOLUSDT"] and u[0]["classes"] == ["paper", "real_money"])
+    # DP-20261119T2011Z: collect() records failed reads instead of raising; a blind read is not an empty book.
+    class _Snap:
+        def __init__(self, errors):
+            self.errors = errors
+    expect("an open-set read error is named (system book could_not_look, never an empty book)",
+           system_book_read_errors(_Snap({"trades@0": "HTTP 502", "news": "HTTP 502"})) == ["trades@0: HTTP 502"])
+    expect("...an unrelated read error (news) does not blind the book",
+           system_book_read_errors(_Snap({"news": "HTTP 502", "prop_status:breakout_2": "x"})) == [])
+    expect("...and a clean snapshot reads", system_book_read_errors(_Snap({})) == [])
+    pb = build_scan_packet(cutoff=cutoff, tf="1h", universe=uni, candles={u["symbol"]: bars for u in uni}, horizons=(4, 12),
+                           lookback=300, system_book=None, desk_book=[], built_at=cutoff,
+                           unread_why={"system_book": "open-package read failed: trades@0: HTTP 502"})
+    expect("...and the packet then carries system_book.read_state=could_not_look with the failed read named",
+           pb["system_book"]["read_state"] == "could_not_look" and pb["system_book"]["items"] is None
+           and any("trades@0" in m for m in pb["meta"]["missing_inputs"]))
     print("desk_scan_packet self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 

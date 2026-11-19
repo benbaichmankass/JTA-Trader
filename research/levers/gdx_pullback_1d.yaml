@@ -836,3 +836,38 @@ levers:
       best_delta_r_per_trade: -0.0719
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
+levers_tested:
+- family: direction (pooled 1d-ETF pullback, LONG/SHORT vs both sides)
+  varied: --side-filter long / short vs both sides at the harness-declared pullback parameters, pooled IEF/TLT/SLV/GLD/GDX 1d, 2021-07-01..2026-10-15,
+    six calendar folds, full cost stack (cell GDX)
+  response:
+    verdict: fail
+    unit_verdict: fail
+    run: '44589971319'
+    rule: RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+    pooled_grade_note: rule verdict FAIL (both one-sided arms fail the pooled rule); the harness wrote INDETERMINATE (powered-cell breadth, not
+      registered); PI-20261119-FILLW47B-0005
+    baseline:
+      arm: A
+      n: 26
+      net_r: -0.6373
+      folds_positive: 3/6
+    arms:
+    - side_filter: long
+      n: 14
+      net_r: 5.524
+      folds_positive: 2/6
+      max_drawdown_r: 2.9937
+    - side_filter: short
+      n: 13
+      net_r: -7.1672
+      folds_positive: 2/6
+      max_drawdown_r: 7.3975
+    reading: this is the GDX cell of a POOLED five-cell test (pooled n LONG 68 / SHORT 66 / A 125; pooled folds positive 2/6 in every arm); one-sided
+      cell n 14/13 is below the 20-trade cell floor, so no per-cell verdict; not tested at power
+  shape: noisy
+  tested_at_power: false
+  unit: RQ-20261119-c5e8-01
+  lever_family: direction
+units:
+- RQ-20261119-c5e8-01
