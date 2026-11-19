@@ -3,8 +3,9 @@
 # workflow_dispatch of live-review-wake.yml from the trainer VM. GitHub ran that workflow's
 # */5 cron 4 times in 24 h (MEASURED, Actions API event=schedule, to 10:38Z), so the
 # in-trade review wake was effectively ~4/day. Same script and token as ict-keeper-dispatch;
-# KEEPER_DISPATCH_SKIP_IF_ACTIVE=1 skips the dispatch while a live-review-wake run is already
-# queued or in progress, so the clock never stacks runs into the deep Actions queue.
+# KEEPER_DISPATCH_SKIP_IF_ACTIVE=1 skips the dispatch while a live-review-wake run created in the
+# last 45 min is queued or in progress (older stuck runs are ignored and logged, so a zombie never
+# silences the wake), so the clock never stacks runs into the deep Actions queue.
 #
 # **TRAINER VM ONLY** - lives in deploy/trainer/ so the live-VM unit installer never picks it
 # up. No order path, no DB. Revert: sudo systemctl disable --now ict-ltr-wake-dispatch.timer
