@@ -220,7 +220,6 @@ def test_yfinance_alias_refuses_to_create(tmp_path, capsys):
 
 
 def test_dukascopy_source_keeps_only_closed_rth_bars(tmp_path, monkeypatch):
-    import types
     p = tmp_path / "SPY_1h.csv"
     ts = pd.date_range("2026-11-17 18:00", periods=2, freq="h", tz="UTC")
     pd.DataFrame({"timestamp": [t.isoformat(sep=" ") for t in ts], "open": 1.0, "high": 1.0, "low": 1.0,
