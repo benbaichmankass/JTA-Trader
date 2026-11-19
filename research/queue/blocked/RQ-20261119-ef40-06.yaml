@@ -32,9 +32,10 @@ iteration:
 question: Same population, window 2025-10-01..2026-10-31, frozen boosters and tau as 2e3b-01; the SAME decisions relabelled with a longer time stop (48
   h vs the live 24) at the live SL and TP, re-costed per symbol (more trades reach SL or TP before the clock; funding cost per trade rises with hold time).
   Pooled mean net R, se, n; the paired difference vs the live 2/3/24 bracket on the same decisions is reported.
-why_this_matters: 'TP doctrine: the TP must be a real predicted target. If a static 4 ATR clears the hurdle it is a data-backed Tier-3 bracket proposal
-  for ml_entry AND the new D6 baseline every Pointer variant must beat; if it fails, the static-widening family is closed on this model and D6 work waits
-  for the entry model to have positive net edge (no bracket rescues a -0.068 R entry).'
+why_this_matters: ml_entry is the real-money learned leg and its bracket (SL 2 / TP 3 ATR / 24 h) is static. The TP side is measured flat (c21d-02, 04a5-02);
+  time_stop_horizon_h is declared in research/levers/ml-brackets.yaml and untested. Registering it now, blocked on the D3 gate, means the read runs the
+  day a positive-net entry exists instead of waiting on authoring. A FAIL closes only this one CONFIG (a 48 h time stop on the frozen Foxhound-1 decisions),
+  not a family.
 power:
   expected_n: 12000
   min_detectable_effect: 0.03
