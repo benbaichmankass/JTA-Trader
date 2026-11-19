@@ -156,3 +156,14 @@ def test_config_since_finds_the_commit_that_set_the_current_fingerprint(tmp_path
     # leg_b never changed: the history ends before a change -> unknown, never the root's date
     assert out["leg_b"]["state"] == "unknown" and out["leg_b"]["since"] is None and out["leg_b"]["why"]
     assert out["leg_gone"]["since"] is None and "not in" in out["leg_gone"]["why"]
+
+
+def test_shallow_clone_with_unknown_cut_warns_loudly():
+    """2026-11-19: a shallow clone left every cut 'unknown' and the legs were read UNCUT, silently.
+    The warning names the legs and the fix; a deep clone, or no unknown cut, prints nothing."""
+    cuts = {"tlt_pullback_1h": {"since": None, "state": "unknown"},
+            "ml_entry": {"since": "2026-11-15T13:21:00Z", "state": "applied"}}
+    w = lvb.shallow_cut_warning(cuts, shallow=True)
+    assert "SHALLOW" in w and "tlt_pullback_1h" in w and "ml_entry" not in w and "--shallow-since" in w
+    assert lvb.shallow_cut_warning(cuts, shallow=False) == ""
+    assert lvb.shallow_cut_warning({"ml_entry": cuts["ml_entry"]}, shallow=True) == ""
