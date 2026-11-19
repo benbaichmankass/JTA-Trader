@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Trainer OnFailure unit + its forward script (trainer VM only; not trader import closure: decide SKIP). The manager merges Tier-2 lane PRs. After merge: reinstall ict-notify-failure@.service on the trainer and re-probe until a ping is OBSERVED on live. Revert: git revert + reinstall.",
+  "why": "Trainer OnFailure records read forward_failed: the unit pointed VM_SSH_KEY at /home/ubuntu/.ssh/id_ed25519, which is not the trainer->trader key. trainer-vm-diag 44470072901 (2026-11-19 06:19Z): /home/ubuntu/.ssh/ict-bot-ovm-private.key ssh rc=0, scp rc=0 into the trader's dir (writable). The forward record now also carries scp's returncode and redacted stderr, so the next failure names its cause. Gates this adds or changes: none."
+}
