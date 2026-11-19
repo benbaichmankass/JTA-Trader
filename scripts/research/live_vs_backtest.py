@@ -115,6 +115,7 @@ NEXT_STEP = {
 DEFAULT_URL = "https://ict-bot.duckdns.org/api/bot/performance/recent?n=200"
 LOW_PCT, HIGH_PCT = 0.05, 0.95
 DRAWS = 20000
+BAR_KEYS = ("entry_time", "decision_ts", "entry_ts", "ts")   # the per-trade key that names the entry/decision bar
 SEED = 20261015
 STRATEGIES_REL = "config/strategies.yaml"
 
@@ -199,12 +200,15 @@ def load_backtest_r(leg: str, root: Path = REPO) -> Dict[str, Any]:
         out["why"] = f"{rel} cites source_run {src!r}, which is not a committed file"
         return out
     xs: List[float] = []
+    bars: List[Optional[str]] = []
     try:
         for line in (root / src).read_text(encoding="utf-8").splitlines():
             if line.strip():
-                v = json.loads(line).get("net_r")
+                row = json.loads(line)
+                v = row.get("net_r")
                 if isinstance(v, (int, float)) and not isinstance(v, bool):
                     xs.append(float(v))
+                    bars.append(next((str(row[k]) for k in BAR_KEYS if row.get(k)), None))
     except (OSError, ValueError, AttributeError) as e:
         out["why"] = f"{src} is not a readable per-trade JSONL: {e}"
         return out
@@ -213,6 +217,7 @@ def load_backtest_r(leg: str, root: Path = REPO) -> Dict[str, Any]:
                       f"{mr.T3_MIN_SOURCE_TRADES} are needed to resample")
         return out
     out["xs"] = xs
+    out["bars"] = bars
     return out
 
 
@@ -226,6 +231,35 @@ def bootstrap_sums(xs: List[float], n: int, *, draws: int = DRAWS, seed: int = S
     return sorted(sum(xs[rng.randrange(m)] for _ in range(n)) for _ in range(draws))
 
 
+def entry_bar_blocks(xs: List[float], bars: List[Optional[str]]) -> List[List[float]]:
+    """Group backtest trades into blocks that share an entry/decision bar (a row with no bar is its own block)."""
+    blocks: Dict[str, List[float]] = {}
+    out: List[List[float]] = []
+    for x, b in zip(xs, bars):
+        if b is None:
+            out.append([x])
+        else:
+            blocks.setdefault(b, []).append(x)
+    return out + list(blocks.values())
+
+
+def block_bootstrap_sums(blocks: List[List[float]], n: int, *, draws: int = DRAWS, seed: int = SEED) -> List[float]:
+    """Resample whole entry-bar blocks until n trades are covered (the last block truncated): trades that enter on the
+    same bar move together, as live trades on the same bar do (PI-20261118-PREP1118-0004)."""
+    rng = random.Random(seed)
+    m = len(blocks)
+    sums = []
+    for _ in range(draws):
+        s, k = 0.0, 0
+        while k < n:
+            b = blocks[rng.randrange(m)]
+            take = b[: n - k]
+            s += sum(take)
+            k += len(take)
+        sums.append(s)
+    return sorted(sums)
+
+
 def judge(live_r: float, xs: List[float], n: int, *, draws: int = DRAWS,
           seed: int = SEED) -> Dict[str, Any]:
     sums = bootstrap_sums(xs, n, draws=draws, seed=seed)
@@ -237,8 +271,19 @@ def judge(live_r: float, xs: List[float], n: int, *, draws: int = DRAWS,
             "live_percentile": round(100 * pct, 1), "draws": draws, "seed": seed}
 
 
+def judge_block(live_r: float, blocks: List[List[float]], n: int, *, draws: int = DRAWS, seed: int = SEED) -> Dict[str, Any]:
+    """The same verdict on the entry-bar block bootstrap; the i.i.d. judge() is unchanged and reported beside it."""
+    sums = block_bootstrap_sums(blocks, n, draws=draws, seed=seed)
+    p5, p50, p95 = (_quantile(sums, q) for q in (LOW_PCT, 0.5, HIGH_PCT))
+    pct = sum(1 for s in sums if s <= live_r) / len(sums)
+    verdict = BELOW if live_r < p5 else ABOVE if live_r > p95 else CONSISTENT
+    return {"verdict": verdict, "p5": round(p5, 4), "p50": round(p50, 4), "p95": round(p95, 4),
+            "live_percentile": round(100 * pct, 1), "n_entry_bars": len(blocks),
+            "max_trades_per_bar": max(len(b) for b in blocks) if blocks else 0}
+
+
 def check_leg(leg: str, book: str, row: Optional[Dict[str, Any]], root: Path = REPO,
-              *, draws: int = DRAWS, current_fp: Optional[str] = None) -> Dict[str, Any]:
+              *, draws: int = DRAWS, current_fp: Optional[str] = None, block: bool = False) -> Dict[str, Any]:
     """One (book, leg) verdict from the ``last`` per-strategy row of /performance/recent."""
     live = {"book": book, "leg": leg}
     r_n = (row or {}).get("rTradeCount") or 0
@@ -259,6 +304,14 @@ def check_leg(leg: str, book: str, row: Optional[Dict[str, Any]], root: Path = R
         return {**live, "verdict": NO_LIVE, "why": "no closed trade with an R basis on this book",
                 "next": NEXT_STEP[NO_LIVE]}
     res = judge(float(live_r), bt["xs"], int(r_n), draws=draws)
+    if block:
+        # --block-by-entry-bar: the verdict is read on the block band; the i.i.d. band stays in `iid` for comparison.
+        # n_touched (closes the live review acted on) is not on the aggregated /performance/recent route: reported null.
+        iid = {k: res[k] for k in ("verdict", "p5", "p50", "p95", "live_percentile")}
+        res.update(judge_block(float(live_r), entry_bar_blocks(bt["xs"], bt.get("bars") or [None] * len(bt["xs"])),
+                               int(r_n), draws=draws))
+        res.update(iid=iid, band="entry_bar_block", n_touched=None,
+                   n_touched_why="the aggregated /performance/recent row carries no per-trade close reason")
     if r_n < MIN_N:
         res["verdict"] = THIN
         res["worse_than_worst_bt_trade"] = float(live_r) < min(bt["xs"]) if r_n == 1 else None
@@ -275,7 +328,7 @@ def _leg_last(recent: Dict[str, Any], key: str, leg: str) -> Optional[Dict[str, 
 
 def run(recent: Dict[str, Any], legs: List[Any], root: Path = REPO,
         *, draws: int = DRAWS, cuts: Optional[Dict[str, Dict[str, Any]]] = None,
-        cut_payloads: Optional[Dict[str, Optional[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
+        cut_payloads: Optional[Dict[str, Optional[Dict[str, Any]]]] = None, block: bool = False) -> List[Dict[str, Any]]:
     """``legs`` is ``[(account, leg)]``; each is judged on realMoney and on the mirror.
 
     ``cuts`` (from ``config_since`` + overrides) and ``cut_payloads`` (``{since_iso:
@@ -300,7 +353,7 @@ def run(recent: Dict[str, Any], legs: List[Any], root: Path = REPO,
                      "why": f"route did not serve since={since} (no echo); the uncut rows are not a substitute"}
             else:
                 r = check_leg(leg, key, _leg_last(payload, key, leg), root, draws=draws,
-                              current_fp=cut.get("fingerprint"))
+                              current_fp=cut.get("fingerprint"), block=block)
             r.update(account=acct, config_cut=cut_state, config_since=since,
                      config_since_source=cut.get("source"), config_since_why=cut.get("why"))
             out.append(r)
@@ -368,6 +421,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--cut-json", action="append", default=[], metavar="ISO=PATH",
                     help="saved /performance/recent?n=200&since=ISO payload, instead of fetching it")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--block-by-entry-bar", action="store_true",
+                    help="judge on a bootstrap of whole entry-bar blocks (clustered legs, e.g. ml_entry); default off = the i.i.d. band")
     a = ap.parse_args(argv)
     try:
         recent = (json.loads(a.recent_json.read_text(encoding="utf-8")) if a.recent_json
@@ -404,7 +459,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             except (OSError, ValueError) as e:
                 print(f"warning: cut payload since={iso} unreadable: {e}", file=sys.stderr)
                 cut_payloads[iso] = None
-    rows = run(recent, legs, draws=a.draws, cuts=cuts, cut_payloads=cut_payloads)
+    rows = run(recent, legs, draws=a.draws, cuts=cuts, cut_payloads=cut_payloads, block=a.block_by_entry_bar)
     print(json.dumps(rows, indent=2, sort_keys=True) if a.json else render(rows))
     return 0
 

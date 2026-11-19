@@ -177,6 +177,13 @@ def nonverdict_attempts(uid: str, results_root: Optional[Path] = None) -> int:
 #: runner plus bookkeeping PRs. Such a unit is not re-armed until its script changes; any other non-verdict cause keeps
 #: the existing MAX_NONVERDICT_RETRIES retry.
 DETERMINISTIC_FAILURE_MARK = "no verdict.json"
+#: PI-20261119-K7ZSW5Z7-0001 (lane QUEUE-FILL-STANDING-W47b, 2026-11-19): the SAME class, one note over. RQ-20261119-b9d0-01's script ran to
+#: completion and wrote a verdict.json whose verdict 'report' is not in the result contract's vocabulary, so the collector landed
+#: producer_failed with "verdict.json malformed: verdict 'report' not in (...)". That note did not carry DETERMINISTIC_FAILURE_MARK, so the
+#: unit was re-armed and fired TWICE on the trainer (runs 44449459292 and 44450607058, byte-identical outputs) with a third retry still
+#: allowed by MAX_NONVERDICT_RETRIES. A malformed verdict.json from a byte-identical script is as deterministic as a missing one.
+DETERMINISTIC_MALFORMED_MARK = "verdict.json malformed"
+DETERMINISTIC_MARKS = (DETERMINISTIC_FAILURE_MARK, DETERMINISTIC_MALFORMED_MARK)
 UNCHANGED_SINCE_FAILURE_MARK = "deterministic producer_failed, script unchanged"
 
 
@@ -217,19 +224,29 @@ def deterministic_failure_block(entry: Dict[str, Any], uid: str, results_root: O
     row says the script completed without a verdict.json; the unit still runs that same tool; and git PROVES the tool's
     script is byte-identical between the failing row's commit and HEAD. Anything git cannot answer -> None (retry as before)."""
     row = _latest_nonverdict_row(uid, results_root)
-    if not row or DETERMINISTIC_FAILURE_MARK not in str(row.get("note") or ""):
+    if not row or not any(m in str(row.get("note") or "") for m in DETERMINISTIC_MARKS):
         return None
     pb = row.get("produced_by") or {}
     tool, sha = str(pb.get("tool") or ""), str(pb.get("commit_sha") or "")
-    if not tool or not sha or tool not in json.dumps(entry.get("run") or {}):
-        return None   # no tool recorded, or the unit's command changed -> let it run
+    if not tool or not sha:
+        return None   # no tool recorded -> let it run
+    # The recorded tool is the command's first two argv words joined by a space ("python3 scripts/x.py"), one per command, joined by " ; ".
+    # A unit's `run.command` is a LIST of argv words, so `json.dumps(run)` holds them as separate quoted strings and never contains that
+    # joined text: the block silently never fired for a list-form command (found 2026-11-19, PI-20261119-K7ZSW5Z7-0001). Compare against
+    # the joined argv as well, and per command segment.
+    run = entry.get("run") or {}
+    cmd = run.get("command")
+    hay = json.dumps(run) + " " + (" ".join(str(w) for w in cmd) if isinstance(cmd, list) else str(cmd or ""))
     script = next((t for t in tool.split() if t.endswith((".py", ".sh")) and "/" in t), None)
     if not script:
         return None
+    seg = next((g.strip() for g in tool.split(" ; ") if script in g), tool)
+    if seg not in hay:
+        return None   # the unit's command changed -> let it run
     same = _script_unchanged(script, sha, repo if repo is not None else _REPO)
     if same is not True:
         return None
-    return (f"{UNCHANGED_SINCE_FAILURE_MARK}: the last run ({pb.get('run_id')}) completed without verdict.json and "
+    return (f"{UNCHANGED_SINCE_FAILURE_MARK}: the last run ({pb.get('run_id')}) completed without a valid verdict.json and "
             f"{script} is unchanged since {sha[:9]} -- fix the script (or re-author/kill the unit), then it re-arms")
 
 
