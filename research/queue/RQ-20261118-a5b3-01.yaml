@@ -3,8 +3,8 @@
 id: RQ-20261118-a5b3-01
 title: 'Book-level macro-event exposure: do trades held THROUGH a scheduled fomc / cpi / nfp release carry a worse net mean or left
   tail than the same legs'' other trades, and does flattening the same-direction book 60 min before the release beat HOLD and a matched
-  random-time flatten under RULE-AM-RISK-ADJUSTED-V1? (BLOCKED on EVENT-SPAN-HISTORY)'
-status: blocked
+  random-time flatten under RULE-AM-RISK-ADJUSTED-V1?'
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -100,15 +100,6 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-blocked:
-  reason: 'no harness input yet: lever row EVENT-SPAN-HISTORY must land first'
-  owner: manager
-  since: '2026-11-18'
-  set_by: PRACTICE-REFRESH-20261118
-  clears_when:
-  - row_state:EVENT-SPAN-HISTORY=done
-blocked_on:
-- EVENT-FLATTEN-ARM
 related:
 - BOOK-CORR-VIEW-LTR
 - BOOK-SIM-REAL-SIZER
@@ -124,10 +115,15 @@ what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing;
 ml_consumer:
   not_applicable: 'Not an ML unit: a rule-based book-level action graded offline.'
 run:
-  workflow: null
-  note: 'Null on purpose: no harness tags corpus trades with a point-in-time release history before 2026-06 (comms/macro/econ_calendar_snapshots.jsonl
-    holds 9 fomc event ids, 2026-06-17 onward; the backfill file holds 0). On unblock: extend scripts/research/ltr_action_trigger_s0.py
-    with an event trigger (or a new script), set run.workflow research-script-run.yml.'
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/event_flatten_s0.py
+  - --draws
+  - '200'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
   inputs:
     research_unit: RQ-20261118-a5b3-01
 amendments:
@@ -141,3 +137,23 @@ amendments:
   - 'STILL BLOCKED, on the harness only: tagging the ltr_corpus trades as event-spanning and the majority-risk T-60 min FLATTEN book
     vs 200 matched random flattens need an event arm in scripts/research/ltr_action_trigger_s0.py (lever EVENT-FLATTEN-ARM, filed with
     this PR). No rule text changes.'
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), EVENT-FLATTEN-ARM build (manager YES 2026-11-19)
+  text:
+  - 'UNBLOCKED: harness scripts/research/event_flatten_s0.py (self-tested: planted adverse-release book PASS, favourable-release book
+    FAIL, tie flattens nothing, < 39 flattened INDETERMINATE, +-6 h random exclusion held). A new script, not an edit of
+    ltr_action_trigger_s0.py: a book-level action at a clock time does not fit that harness''s per-trade trigger loop; it reuses its
+    corpus, candle, cost and pricing primitives unchanged.'
+  - 'MADE EXPLICIT before any run, no threshold changed: (1) the INDETERMINATE clause''s corpus window is the release history''s covered
+    window, 2021-01-01 .. the last graded release (2026-11-10T13:30Z). Corpus trades entering before it, or exiting after it, are
+    excluded as outside_event_history and the uncovered span is published with read_state could_not_look; they are not graded and do
+    not by themselves make the unit INDETERMINATE (the history starts 2021-01 and the corpora 2018-2020, so the literal reading would
+    grade INDETERMINATE by construction). (2) Majority side = the side with more open trades at tau (each carries 1 R of declared risk
+    at entry); a tie flattens nothing. (3) The random control draws the same number of clock times as graded releases on the hourly
+    grid of the covered window, each > 6 h from every graded release, and applies the same majority rule. (4) Release gaps inside the
+    window longer than the class cadence (fomc_decision 2021-07..11 and 2025-03..06, cpi 2023-10..12 and 2025-09..12, nfp
+    2025-09..11) are listed in coverage_gaps and never filled; a trade spanning a release missing from the history counts as
+    non-spanning (stated bias).'
+  - 'MEASURED pre-run (counts only, no outcome read): 3,665 of 4,076 corpus trades price inside the covered window; 384
+    outside_event_history, 27 no candle path.'
