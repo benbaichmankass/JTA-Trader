@@ -20,6 +20,20 @@ REPO = Path(__file__).resolve().parents[1]
 GOLD = json.loads((REPO / "tests" / "data" / "ict_scalp_side_filter_golden.json").read_text())
 
 
+@pytest.fixture(autouse=True)
+def _pin_module_cost_globals(monkeypatch):
+    """`h.main()` ASSIGNS the module-level cost globals (venue-aware slippage + funding) and nothing restores them, so any
+    test that calls main() earlier in the same pytest process leaks them in (tests/test_backtest_ict_scalp_tp_override.py
+    does: net_total_r -14.7793 -> -17.1766 with identical trades and gross R; PR #27149 pytest-run, 2026-11-19). The golden
+    is the in-process default run_backtest documents ("run_backtest never touches these"), so pin exactly that."""
+    from src.runtime import execution_costs as ec
+    monkeypatch.setattr(h, "FEE_BPS_ROUNDTRIP", ec.DEFAULT_FEE_BPS_ROUNDTRIP)
+    monkeypatch.setattr(h, "SLIPPAGE_BPS_ROUNDTRIP", 0.0)
+    monkeypatch.setattr(h, "FUNDING_BPS_PER_WINDOW", 0.0)
+    monkeypatch.setattr(h, "FUNDING_WINDOW_HOURS", ec.FUNDING_WINDOW_HOURS)
+    monkeypatch.setattr(h, "CONTRACT_COST", None)
+
+
 def _run(**extra):
     df = pd.read_csv(REPO / GOLD["source_csv"])
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
