@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T16:45:00Z",
- "bar_close": "2026-11-19T16:50:00Z",
- "built_at": "2026-11-19T16:52:40Z",
+ "bar": "2026-11-19T16:50:00Z",
+ "bar_close": "2026-11-19T16:55:00Z",
+ "built_at": "2026-11-19T16:57:57Z",
  "closed": false,
  "order_package_id": "pkg-aa6c1ebc7bfa41af",
  "packet": {
@@ -128,12 +128,7 @@
    ],
    "direction": "short",
    "funding": null,
-   "news": {
-    "adjustment": -0.014583,
-    "decision": "neutral",
-    "ts": "2026-11-19T15:53:08.017165+00:00",
-    "veto": false
-   },
+   "news": null,
    "previous_review": {
     "action": "hold",
     "forecast": {
@@ -161,16 +156,10 @@
   "context_v3": {
    "book": [
     [
-     "BTCUSDT",
-     "long",
-     "trend_donchian_1h",
-     -0.661
-    ],
-    [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.185
+     -0.137
     ],
     [
      "SLV",
@@ -182,13 +171,13 @@
      "SLV",
      "short",
      "slv_trend_1h",
-     -0.31
+     -0.181
     ],
     [
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.212
+     0.294
     ],
     [
      "SLV",
@@ -224,25 +213,25 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.59
+     0.622
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.151
+     0.163
     ],
     [
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.277
+     0.287
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.454
+     -0.387
     ],
     [
      "SLV",
@@ -254,13 +243,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.18
+     2.15
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     0.0418
+     0.0836
     ],
     [
      "BTCUSDT",
@@ -278,37 +267,37 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.363
+     0.387
     ],
     [
      "GLD",
      "short",
      "gld_pullback_1d",
-     2.37
+     2.38
     ],
     [
      "IEF",
      "long",
      "ief_pullback_1d",
-     0.0585
+     0.134
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     0.207
+     0.303
     ],
     [
      "ETHUSDT",
      "short",
      "ict_scalp_eth_15m",
-     -0.134
+     -0.049
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.355
+     0.379
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -699,7 +688,7 @@
    "head": "2dcd198ec2",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T16:52:56Z",
+  "info_cutoff_at": "2026-11-19T16:58:14Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
@@ -736,6 +725,10 @@
    {
     "field": "context.funding",
     "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+   },
+   {
+    "field": "context.news",
+    "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
    }
   ],
   "order_package_id": "pkg-aa6c1ebc7bfa41af",
@@ -766,25 +759,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261119T1652Z-pkg-aa6c1ebc7bfa41af",
+  "review_id": "LR-20261119T1657Z-pkg-aa6c1ebc7bfa41af",
   "short_hold": {
-   "atr": 0.003978571428571458,
-   "bar": "2026-11-19T16:45:00Z",
-   "bar_close": "2026-11-19T16:50:00Z",
+   "atr": 0.004307142857142883,
+   "bar": "2026-11-19T16:50:00Z",
+   "bar_close": "2026-11-19T16:55:00Z",
    "entry": 0.9888,
-   "mark": 0.9752,
-   "minutes_held": 255.5,
-   "open_r_at_mark": 0.951,
+   "mark": 0.9712,
+   "minutes_held": 260.8,
+   "open_r_at_mark": 1.2308,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 0.9686,
-     "high": 0.9689,
-     "low": 0.964,
-     "open": 0.9644,
-     "t": "2026-11-19T15:50:00Z"
-    },
     {
      "close": 0.9689,
      "high": 0.9714,
@@ -861,6 +847,13 @@
      "low": 0.9741,
      "open": 0.9753,
      "t": "2026-11-19T16:45:00Z"
+    },
+    {
+     "close": 0.9712,
+     "high": 0.9752,
+     "low": 0.9654,
+     "open": 0.9752,
+     "t": "2026-11-19T16:50:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -879,25 +872,18 @@
    "tp": 0.954
   }
  },
- "packet_sha": "40dd305908a448280a0f7da3b4a212e0f626db6232db59f4dbc64d85ebb3820c",
+ "packet_sha": "2749c5b413976cf1601f69ce73978ab7a17060b603a70c9148a16c3e1ce8a565",
  "short_hold": {
-  "atr": 0.003978571428571458,
-  "bar": "2026-11-19T16:45:00Z",
-  "bar_close": "2026-11-19T16:50:00Z",
+  "atr": 0.004307142857142883,
+  "bar": "2026-11-19T16:50:00Z",
+  "bar_close": "2026-11-19T16:55:00Z",
   "entry": 0.9888,
-  "mark": 0.9752,
-  "minutes_held": 255.5,
-  "open_r_at_mark": 0.951,
+  "mark": 0.9712,
+  "minutes_held": 260.8,
+  "open_r_at_mark": 1.2308,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 0.9686,
-    "high": 0.9689,
-    "low": 0.964,
-    "open": 0.9644,
-    "t": "2026-11-19T15:50:00Z"
-   },
    {
     "close": 0.9689,
     "high": 0.9714,
@@ -974,6 +960,13 @@
     "low": 0.9741,
     "open": 0.9753,
     "t": "2026-11-19T16:45:00Z"
+   },
+   {
+    "close": 0.9712,
+    "high": 0.9752,
+    "low": 0.9654,
+    "open": 0.9752,
+    "t": "2026-11-19T16:50:00Z"
    }
   ],
   "risk_per_unit": null,
