@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T21:20:00Z",
- "bar_close": "2026-11-19T21:25:00Z",
- "built_at": "2026-11-19T21:26:28Z",
+ "bar": "2026-11-19T21:25:00Z",
+ "bar_close": "2026-11-19T21:30:00Z",
+ "built_at": "2026-11-19T21:31:29Z",
  "closed": false,
  "order_package_id": "pkg-aa6c1ebc7bfa41af",
  "packet": {
@@ -16,16 +16,16 @@
      "tighten",
      "widen_sl"
     ],
-    "evidence": "bybit_orders: SL 1.0031 / TP 0.954, position True, matched by order_id, 1 sibling package(s) on XRPUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "evidence": "bybit_orders: SL None / TP None, position False, matched by order_id, 1 sibling package(s) on XRPUSDT; this package is closed, the venue XRPUSDT position belongs to pkg-4594298d48b54ec0; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
     "mechanics": {
      "by_design": null,
-     "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: venue holds XRPUSDT for sibling package(s) pkg-4594298d48b54ec0; this package's trade row is not open",
      "verdict": "match"
     },
-    "own_position": true,
+    "own_position": false,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -144,7 +144,7 @@
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     0.0384
+     0.0695
     ],
     [
      "SLV",
@@ -156,7 +156,7 @@
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.466
+     0.487
     ],
     [
      "SLV",
@@ -186,19 +186,19 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.77
+     0.775
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.705
+     0.775
     ],
     [
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     0.532
+     0.505
     ],
     [
      "TLT",
@@ -210,7 +210,7 @@
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.232
+     -0.184
     ],
     [
      "SLV",
@@ -222,13 +222,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.82
+     3.03
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     0.334
+     0.292
     ],
     [
      "SLV",
@@ -240,7 +240,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.61
+     0.631
     ],
     [
      "GLD",
@@ -264,7 +264,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.601
+     0.622
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -682,17 +682,17 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "93e45535c9",
+   "head": "3a74c051a6",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T21:26:39Z",
+  "info_cutoff_at": "2026-11-19T21:31:44Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+   "evidence": "order_packages status=closed close_reason=tp; bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: venue holds XRPUSDT for sibling package(s) pkg-4594298d48b54ec0; this package's trade row is not open",
    "per_account": {
     "bybit_1": {
      "by_design": null,
-     "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": "bybit_1: XRPUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-4594298d48b54ec0); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: venue holds XRPUSDT for sibling package(s) pkg-4594298d48b54ec0; this package's trade row is not open",
      "verdict": "match"
     }
    },
@@ -756,25 +756,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261119T2126Z-pkg-aa6c1ebc7bfa41af",
+  "review_id": "LR-20261119T2131Z-pkg-aa6c1ebc7bfa41af",
   "short_hold": {
-   "atr": 0.003971428571428594,
-   "bar": "2026-11-19T21:20:00Z",
-   "bar_close": "2026-11-19T21:25:00Z",
+   "atr": 0.0037500000000000233,
+   "bar": "2026-11-19T21:25:00Z",
+   "bar_close": "2026-11-19T21:30:00Z",
    "entry": 0.9888,
-   "mark": 0.9573,
-   "minutes_held": 529.3,
-   "open_r_at_mark": 2.2028,
+   "mark": 0.9552,
+   "minutes_held": 534.3,
+   "open_r_at_mark": 2.3497,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 0.9587,
-     "high": 0.9645,
-     "low": 0.9581,
-     "open": 0.9637,
-     "t": "2026-11-19T20:25:00Z"
-    },
     {
      "close": 0.9597,
      "high": 0.9614,
@@ -851,6 +844,13 @@
      "low": 0.955,
      "open": 0.9566,
      "t": "2026-11-19T21:20:00Z"
+    },
+    {
+     "close": 0.9552,
+     "high": 0.9584,
+     "low": 0.9552,
+     "open": 0.9573,
+     "t": "2026-11-19T21:25:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -871,30 +871,23 @@
   "trades": [
    {
     "account_id": "bybit_1",
-    "status": "open",
+    "status": "closed",
     "trade_id": 7988
    }
   ]
  },
- "packet_sha": "800b22654d9769df3dd7a31ecca35a94ef8901dadc03843d76f21865f1734950",
+ "packet_sha": "e3f732be6158f9690a337d34687d3653eb66511e7300ff70daef49df464f81c0",
  "short_hold": {
-  "atr": 0.003971428571428594,
-  "bar": "2026-11-19T21:20:00Z",
-  "bar_close": "2026-11-19T21:25:00Z",
+  "atr": 0.0037500000000000233,
+  "bar": "2026-11-19T21:25:00Z",
+  "bar_close": "2026-11-19T21:30:00Z",
   "entry": 0.9888,
-  "mark": 0.9573,
-  "minutes_held": 529.3,
-  "open_r_at_mark": 2.2028,
+  "mark": 0.9552,
+  "minutes_held": 534.3,
+  "open_r_at_mark": 2.3497,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 0.9587,
-    "high": 0.9645,
-    "low": 0.9581,
-    "open": 0.9637,
-    "t": "2026-11-19T20:25:00Z"
-   },
    {
     "close": 0.9597,
     "high": 0.9614,
@@ -971,6 +964,13 @@
     "low": 0.955,
     "open": 0.9566,
     "t": "2026-11-19T21:20:00Z"
+   },
+   {
+    "close": 0.9552,
+    "high": 0.9584,
+    "low": 0.9552,
+    "open": 0.9573,
+    "t": "2026-11-19T21:25:00Z"
    }
   ],
   "risk_per_unit": null,
