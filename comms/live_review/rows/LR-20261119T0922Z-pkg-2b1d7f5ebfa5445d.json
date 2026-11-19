@@ -1,0 +1,140 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d",
+ "reviewed_at": "2026-11-19T09:40:00Z",
+ "order_package_id": "pkg-2b1d7f5ebfa5445d",
+ "trade_id": null,
+ "leg": "claude_desk",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "daily_floor",
+  "level": "2026-11-19",
+  "l0_snapshot_at": "2026-11-19T09:21:19Z"
+ },
+ "info_cutoff_at": "2026-11-19T09:22:23Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_provenance": "unverified",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.1562,
+  "tp": 0.151
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": null,
+  "peak_r": null,
+  "r_to_stop": null,
+  "r_to_target": null
+ },
+ "mechanics": {
+  "evidence": "bybit_1: ADAUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-677720b13ee54dc3); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "per_account": {
+   "bybit_1": {
+    "by_design": null,
+    "evidence": "bybit_1: ADAUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-677720b13ee54dc3); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [],
+ "outcome_table_source": null,
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuKPDMVzatgoKPgLtAk",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "field": "priced_options",
+   "reason": "evidence_missing",
+   "count": 1,
+   "denominator": 1
+  },
+  {
+   "field": "state.open_r",
+   "reason": "context_null:state.open_r",
+   "count": 1,
+   "denominator": 1
+  }
+ ],
+ "packet_sha": "c31528e45e92ea5141a1d12d33c2e5a03c5f5dafa1df594cd3db34598750a43e",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.5,
+  "reason": "No priced table (no Stage-0 evidence for claude_desk) and no telemetry, so judgement. Short from 0.1539 sits near 0 R at 0.1540; price rallied six 1h bars from 0.1503 but stays under the 0.1544/0.1552 swing highs and the stop 0.1562 is 1.4 ATR above, below the 2h swing high 0.1565. The TP 0.151 is 1.26 R away and the 1h trend is chop (ADX 13) against a 2h ADX 33, so the view is a fade of the rally that has not failed or confirmed. HOLD already runs the desk bracket; no bracket move beats it."
+ },
+ "context_flags": [
+  "thin_cell: no committed Stage-0 evidence for claude_desk; priced_options null, not measured",
+  "mechanics: bybit_1 ADAUSDT is netted across 2 open packages (this + pkg-677720b13ee54dc3); levels matched by order id (match)",
+  "desk_handoff: opening desk row DD-20261119T0802Z-scan-1h-1 not found, read_state could_not_look; thesis unknown, judged on the chart",
+  "book: ADA short is the same bet as trend_donchian_ada_4h (-0.56 R) and ada_pullback_2h (-0.18 R), plus ETH/SOL/AVAX shorts: one crypto-beta short; a rally through 0.1565 hurts all of them at once",
+  "packet_defect: priced_options evidence_missing 1/1",
+  "packet_defect: state.open_r context_null:state.open_r 1/1",
+  "missing: no telemetry (state.open_r, peak_r, bars_held null); funding unread (geo-blocked)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "forecast": {
+  "thesis": "ADA rally of six 1h bars stalls under the 0.1544-0.1552 swing highs and the short resumes toward the 0.1510 TP; a 1h close above 0.1552 proves the fade wrong.",
+  "direction": "with_trade",
+  "target_px": 0.151,
+  "p_target": 0.4,
+  "invalidation_px": 0.1552,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings highs 0.1544/0.1552, lows 0.1496/0.148",
+   "chart.htf ADX 33.5 swings high 0.1565",
+   "exit_plan sl_now 0.1562 tp_now 0.151",
+   "book other ADA shorts"
+  ]
+ },
+ "handoff": {
+  "prior_decision_id": null,
+  "verdict": "confirm",
+  "reason": null,
+  "read_state": "could_not_look"
+ }
+}

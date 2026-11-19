@@ -1,0 +1,192 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0922Z-pkg-4072f8c16bb743b4",
+ "reviewed_at": "2026-11-19T09:35:00Z",
+ "order_package_id": "pkg-4072f8c16bb743b4",
+ "trade_id": null,
+ "leg": "ict_scalp_sol_15m",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "vol_regime",
+  "level": "contract",
+  "l0_snapshot_at": "2026-11-19T09:21:19Z"
+ },
+ "info_cutoff_at": "2026-11-19T09:22:07Z",
+ "state": {
+  "atr_now_over_entry": 0.4719,
+  "bars_held": 200,
+  "giveback_r": 0.4634,
+  "open_r": 1.0157,
+  "peak_provenance": "estimated",
+  "peak_r": 1.4792,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 72.097985,
+  "tp": 75.96392857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.4719,
+  "bars_since_peak": 137,
+  "giveback_r": 0.4634,
+  "open_r": 1.0157,
+  "peak_r": 1.4792,
+  "r_to_stop": 0.9508,
+  "r_to_target": 0.5422
+ },
+ "mechanics": {
+  "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-091933af9ebd4872); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+  "per_account": {
+   "bybit_1": {
+    "by_design": null,
+    "evidence": "bybit_1: SOLUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-091933af9ebd4872); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261119T0922Z-pkg-4072f8c16bb743b4.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuKPDMVzatgoKPgLtAk",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:insufficient_n",
+   "count": 3,
+   "denominator": 3
+  }
+ ],
+ "packet_sha": "5823e20a4cb6013f821012a3a7b86d3d6f493fed9cfcb52bfc74dfc3b5112657",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 74.0,
+  "level_atr": 1.85,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.52,
+  "reason": "Thin cell (n=0, every option unpriced), so judgement. Previous forecast failed: its 74.43 invalidation closed under (15m bar closed 74.30) and price did not reach 75.76. +1.02 R after a +1.48 R peak, 200 bars held; the stop 72.10 locks only +0.04 R and sits 0.95 R below against a TP only 0.54 R above, a worse than 1:1 payoff in a driftless read, with ATR contracted to 0.47 of entry. A stop at 74.00 is under the 74.28 swing low and the 74.43 low, 1.85 ATR below price (outside the 1 ATR noise floor) and locks about +0.76 R; the cost is truncating a recovery to the 75.96 TP. Tighten evidence is negative on average, so confidence stays near a coin flip."
+ },
+ "context_flags": [
+  "thin_cell: n=0, all options unpriced (insufficient_n; atr levels invalid_level), not measured",
+  "regime: atr_now_over_entry 0.47 (<= 0.67 contraction, the vol_regime trigger); 15m ADX 27 trending, 1h ADX 16.7 chop",
+  "book: bybit_1 SOLUSDT is netted with sol_pullback_2h short (-0.45 R), opposite sides, each its own bracket; ten other crypto/equity shorts, so a long here is the only book hedge",
+  "previous_review: hold forecast invalidated (15m close 74.30 under 74.43), not carried",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 3/3",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "executor reaches this leg via tighten (packet account_bounds); not a RiskManager approval"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-LIVE-TIGHTEN-SL",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "forecast": {
+  "thesis": "15m long is failing under the 75.31 swing high: lower highs and a close under 74.43 show sellers; I expect a retest of the 74.28 low, and a break toward 73.6 before any run at the 75.96 TP. A 15m close above 75.31 proves this wrong.",
+  "direction": "against_trade",
+  "target_px": 74.28,
+  "p_target": 0.55,
+  "invalidation_px": 75.31,
+  "horizon_bars": 8,
+  "timeframe": "15m",
+  "evidence": [
+   "chart.swings highs 75.31/74.82, lows 74.28/74.43",
+   "chart.last_close 74.52 atr 0.281",
+   "exit_plan sl_now 72.098 tp_now 75.964",
+   "previous_review invalidation 74.43 closed under",
+   "features r_to_stop 0.95 r_to_target 0.54"
+  ]
+ }
+}

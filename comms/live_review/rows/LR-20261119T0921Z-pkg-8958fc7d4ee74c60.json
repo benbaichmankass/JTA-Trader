@@ -1,0 +1,190 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261119T0921Z-pkg-8958fc7d4ee74c60",
+ "reviewed_at": "2026-11-19T09:30:00Z",
+ "order_package_id": "pkg-8958fc7d4ee74c60",
+ "trade_id": null,
+ "leg": "mgc_trend_1h",
+ "accounts": [
+  "ib_paper"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-19T08:00:00+00:00",
+  "l0_snapshot_at": "2026-11-19T09:21:19Z"
+ },
+ "info_cutoff_at": "2026-11-19T09:21:49Z",
+ "state": {
+  "atr_now_over_entry": 1.1847,
+  "bars_held": 25,
+  "giveback_r": 1.1779,
+  "open_r": 0.8168,
+  "peak_provenance": "estimated",
+  "peak_r": 1.9947,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 3756.68571429,
+  "tp": 3398.6621
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.1847,
+  "bars_since_peak": 5,
+  "giveback_r": 1.1779,
+  "open_r": 0.8168,
+  "peak_r": 1.9947,
+  "r_to_stop": 0.4221,
+  "r_to_target": 8.7454
+ },
+ "mechanics": {
+  "evidence": "package sl 3756.68571429 / tp 3398.6621 agree with every readable account",
+  "per_account": {
+   "ib_paper": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 13,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 0,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261119T0921Z-pkg-8958fc7d4ee74c60.json",
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuKPDMVzatgoKPgLtAk",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [
+  {
+   "field": "priced_options.options",
+   "reason": "all_options_unpriced:no_candles",
+   "count": 2,
+   "denominator": 2
+  },
+  {
+   "field": "priced_options.candles",
+   "reason": "candles_missing",
+   "count": 2,
+   "denominator": 2
+  }
+ ],
+ "packet_sha": "5cfd47a96ab73bb70ccb96c50c89d9eb54df117792bf2b4e713c5154eeca5c97",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "Thin cell (hold n=13 < floor 20; tighten options invalid_level/could_not_look), so judgement. Previous forecast: the 3759.7 invalidation was not touched (highest bar 3743.9) and 3694.2 was not re-tested, so I carry it forward with p lowered. +0.82 R after a +1.99 R peak; the stop 3756.69 is 1.02 ATR above price (a tighten is barred inside 1 ATR) and already locks about +0.4 R; 1h ADX 33 and 2h ADX 41.6 still trend down, price is ranging 3722-3746 under the 3759.7 swing high. HOLD already expresses this view; ib_paper has no apply path for any action anyway."
+ },
+ "context_flags": [
+  "thin_cell: hold n=13 insufficient_n; tighten atr:1.0/1.5/2.0 invalid_level (stop not below price), r:0.41 and close could_not_look; not measured",
+  "regime: atr_now_over_entry 1.18 (no overlay); 1h ADX 33 trending, htf ADX 41.6",
+  "book: nine other short packages across crypto, gold-ETF and equity indices; GLD short +2.13 R is the same gold-beta bet",
+  "mechanics: ib_paper venue SL 3756.7 / TP 3398.7 equal the package (match); TP is a rest-at-venue-cap level (tp_r 50), see TP-doctrine guard, not a review call",
+  "packet_defect: priced_options.options all_options_unpriced:no_candles 2/2",
+  "packet_defect: priced_options.candles candles_missing 2/2",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {
+   "account_id": "ib_paper",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "forecast": {
+  "thesis": "Gold downtrend continues inside a range under the 3759.7 swing high: price tests the 3722 low and then the 3694.2 low; a 1h close above 3759.7 (above the 3756.7 trail) ends the trade near +0.4 R.",
+  "direction": "with_trade",
+  "target_px": 3694.2,
+  "p_target": 0.35,
+  "invalidation_px": 3759.7,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings lows 3694.2/3722.2, highs 3745.8/3759.7",
+   "chart.htf ADX 41.6 trending down",
+   "exit_plan sl_now 3756.69",
+   "previous_review forecast carried (3759.7 not touched)",
+   "table hold n=13 insufficient_n"
+  ]
+ }
+}
