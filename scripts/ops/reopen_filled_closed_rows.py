@@ -254,6 +254,10 @@ def _merge_json(raw: Optional[str], key: str, value: Dict[str, Any]) -> str:
     return json.dumps(doc, sort_keys=True)
 
 
+
+#: How long the apply waits for the live trader's journal write lock (seconds). A dry run never writes.
+WRITE_LOCK_TIMEOUT_S = 60.0
+
 def apply(conn: sqlite3.Connection, p: Dict[str, Any], now: str, why: str) -> None:
     with conn:
         for r in p["reopen"]:
@@ -335,7 +339,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     backup = f"{a.db}.bak-reopen-{now.replace(':', '')}"
     conn.close()
     shutil.copy2(a.db, backup)
-    conn = sqlite3.connect(a.db)
+    # The live trader writes this journal continuously. sqlite3's default 5 s wait lost the race on 2026-11-19
+    # (run 44513698892: 'database is locked' on the first UPDATE; the `with conn:` transaction rolled back, nothing
+    # written). Wait up to WRITE_LOCK_TIMEOUT_S for the trader's write lock instead.
+    conn = sqlite3.connect(a.db, timeout=WRITE_LOCK_TIMEOUT_S)
+    conn.execute(f"PRAGMA busy_timeout={int(WRITE_LOCK_TIMEOUT_S * 1000)}")
     why = f"PI-20261118-JFWRQYOV-0004: closed before its entry filled; the venue filled it ({spec_path.name})"
     apply(conn, plan(conn, spec, history, positions), now, why)
     print(f"APPLIED at {now}; backup {backup}")
