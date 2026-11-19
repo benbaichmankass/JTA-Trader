@@ -54,6 +54,47 @@ def test_blocks_when_script_unchanged(repo):
     assert why and dq.UNCHANGED_SINCE_FAILURE_MARK in why and "scripts/gate.py" in why
 
 
+MALFORMED = "producer_failed: verdict.json malformed: verdict 'report' not in ('pass', 'fail', 'no_action_warranted', 'indeterminate', 'not_applicable')"
+
+
+def test_blocks_a_malformed_verdict_from_an_unchanged_script(repo):
+    """PI-20261119-K7ZSW5Z7-0001: RQ-20261119-b9d0-01 wrote verdict 'report' and was dispatched twice."""
+    root, sha = repo
+    why = dq.deterministic_failure_block(ENTRY, "RQ-1", _row(root, "RQ-1", MALFORMED, sha), root)
+    assert why and dq.UNCHANGED_SINCE_FAILURE_MARK in why and "scripts/gate.py" in why
+
+
+def test_a_malformed_verdict_rearms_once_the_script_changes(repo):
+    root, sha = repo
+    res = _row(root, "RQ-1", MALFORMED, sha)
+    (root / "scripts" / "gate.py").write_text("print(3)\n")
+    _git(root, "commit", "-qam", "fix the verdict")
+    assert dq.deterministic_failure_block(ENTRY, "RQ-1", res, root) is None
+
+
+LIST_ENTRY = {"id": "RQ-1", "run": {"workflow": "research-script-run.yml", "command": ["python3", "scripts/gate.py", "--x", "1", "--out", "{out_dir}"]}}
+
+
+@pytest.mark.parametrize("note", [NOTE, MALFORMED])
+def test_blocks_for_a_list_form_command(repo, note):
+    """The form every unit uses: run.command is a LIST of argv words. json.dumps(run) never held 'python3 scripts/gate.py', so the block never fired."""
+    root, sha = repo
+    why = dq.deterministic_failure_block(LIST_ENTRY, "RQ-1", _row(root, "RQ-1", note, sha), root)
+    assert why and dq.UNCHANGED_SINCE_FAILURE_MARK in why
+
+
+def test_a_list_form_command_that_changed_script_rearms(repo):
+    root, sha = repo
+    other = {"id": "RQ-1", "run": {"command": ["python3", "scripts/other.py", "--x"]}}
+    assert dq.deterministic_failure_block(other, "RQ-1", _row(root, "RQ-1", MALFORMED, sha), root) is None
+
+
+def test_multi_command_tool_matches_the_script_segment(repo):
+    root, sha = repo
+    res = _row(root, "RQ-1", MALFORMED, sha, tool="python3 scripts/gate.py ; python3 scripts/post.py")
+    assert dq.deterministic_failure_block(LIST_ENTRY, "RQ-1", res, root) is not None
+
+
 def test_rearms_once_the_script_changes(repo):
     root, sha = repo
     res = _row(root, "RQ-1", NOTE, sha)
