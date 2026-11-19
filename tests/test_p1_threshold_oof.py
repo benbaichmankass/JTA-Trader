@@ -15,7 +15,7 @@ MANIFEST = REPO / "research" / "manifests" / "setup-candidates-metalabel-rostere
 
 def test_self_test():
     r = subprocess.run([sys.executable, str(REPO / "scripts/ml/p1_threshold_oof.py"), "--self-test"],
-                       capture_output=True, text=True, cwd=REPO)
+                       capture_output=True, text=True, cwd=REPO, check=False)
     assert r.returncode == 0, r.stderr
 
 
@@ -46,7 +46,7 @@ def test_end_to_end_on_the_real_manifest_never_reads_eval_rows(tmp_path):
     ds.write_text("".join(json.dumps(r) + "\n" for r in _rows(1200, 200)))
     out = tmp_path / "thr.json"
     r = subprocess.run([sys.executable, str(REPO / "scripts/ml/p1_threshold_oof.py"), "--manifest", str(MANIFEST),
-                        "--dataset", str(ds), "--out", str(out)], capture_output=True, text=True, cwd=REPO)
+                        "--dataset", str(ds), "--out", str(out)], capture_output=True, text=True, cwd=REPO, check=False)
     assert r.returncode == 0, r.stderr[-2000:]
     rec = json.loads(out.read_text())
     assert rec["read_state"] == "measured" and rec["current_threshold"] == 0.5

@@ -110,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     import importlib
 
     import yaml
+
     from ml.experiments.splitters import split_live_holdout
     from ml.promotion import cost_gate as cg
 
@@ -119,14 +120,15 @@ def main(argv: list[str] | None = None) -> int:
         evaluator_config = man.get("evaluator_config") or {}
         trainer_config = man.get("trainer_config") or {}
 
-        class dataset:  # noqa: N801
+        class dataset:
             family = (man.get("dataset") or {}).get("family")
 
     vcol = cg.value_column_for(_M)
     current = cg.decision_threshold(_M, vcol)
     mod, _, attr = str(man["trainer"]).rpartition(".")
     trainer_cls = getattr(importlib.import_module(mod), attr)
-    rows = [json.loads(ln) for ln in open(a.dataset, encoding="utf-8") if ln.strip()]
+    with open(a.dataset, encoding="utf-8") as fh:
+        rows = [json.loads(ln) for ln in fh if ln.strip()]
     ecfg = dict(man.get("evaluator_config") or {})
     train, evaluation = split_live_holdout(rows, ecfg)
     wf = {"n_folds": a.n_folds, "min_train_fraction": a.min_train_fraction,
