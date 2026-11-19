@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -106,14 +105,14 @@ def evaluate(cells: Dict[str, List[dict]], legs: Dict[str, List[dict]]) -> Dict[
     for c, ct in cells.items():
         table[c] = {}
         legs_ok = 0
-        for l, lt in legs.items():
+        for leg, lt in legs.items():
             r = corr_pair(ct, lt)
             r["concurrent_same_dir_share"] = concurrent_share(ct, lt)
-            table[c][l] = r
+            table[c][leg] = r
             if r["corr"] is not None and r["days"] >= MIN_DAYS:
                 legs_ok += 1
                 if abs(r["corr"]) > CORR_BAR:
-                    redundant.append({"cell": c, "leg": l, "corr": r["corr"], "days": r["days"]})
+                    redundant.append({"cell": c, "leg": leg, "corr": r["corr"], "days": r["days"]})
         if legs_ok >= MIN_LEGS_PER_CELL:
             enough += 1
     res: Dict[str, Any] = {"rule": RULE_ID, "n_cells": len(cells), "n_legs": len(legs), "table": table, "redundant": redundant,
@@ -161,8 +160,8 @@ def self_test() -> int:
     # the registered inputs exist and parse
     for c in CELLS:
         assert load(CELL_DIR / f"trend_{c}_4h_B__trades.jsonl"), c
-    for l in LEGS:
-        assert load(LEG_DIR / f"{l}__trades.jsonl"), l
+    for leg in LEGS:
+        assert load(LEG_DIR / f"{leg}__trades.jsonl"), leg
     print("self-test OK")
     return 0
 
@@ -178,7 +177,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not a.mode:
         ap.error("mode or --self-test required")
     cells = {c: load(CELL_DIR / f"trend_{c}_4h_B__trades.jsonl") for c in CELLS}
-    legs = {l: load(LEG_DIR / f"{l}__trades.jsonl") for l in LEGS}
+    legs = {leg: load(LEG_DIR / f"{leg}__trades.jsonl") for leg in LEGS}
     res = evaluate(cells, legs)
     out = Path(a.out or ".")
     out.mkdir(parents=True, exist_ok=True)
