@@ -3,7 +3,7 @@
 id: RQ-20261118-a5b3-03
 title: 'Execution cost as a markout: is the 1 h and 4 h markout of our fills (fill vs venue mid later, net of fees) worse than the cost
   the journal records (cost_source estimate / broker), by account, leg and order type?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -116,3 +116,14 @@ amendments:
   - 'RECORDED COST per fill: (fee_maker_usd + fee_taker_usd) over the trade''s two-fill notional, split evenly; only the bps ratio is
     written. Fill-grouped bootstrap groups by TRADE (its two fills).'
 last_dispatched_at: '2026-11-19T16:44:14+00:00'
+grading:
+  attested: RULE-RQ-20261118-a5b3-03-MARKOUT
+  auto: true
+  decision_rule_id: RULE-RQ-20261118-a5b3-03-MARKOUT
+  evidence:
+  - research/results/RQ-20261118-a5b3-03/44561843728.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
