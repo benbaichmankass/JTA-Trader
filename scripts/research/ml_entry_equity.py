@@ -569,6 +569,47 @@ def _pool_and_bars(a, end_day: str):
     return pool, prep, bars, client
 
 
+def _pinned_pool_and_bars(a, end_day: str, pool: list[str]):
+    """RQ-20261119-e8a1-04: the pool PINNED to a frozen artifact's own pool_symbols (no live asset-list rebuild) + 1h RTH bars for
+    pool and proxies. The live POOL_RULE rebuild is what made d9c0-01's refit drift (pool 173 -> 172 between 11-07 and 11-14)."""
+    from alpaca_readonly import AlpacaReadOnly
+    client = AlpacaReadOnly.from_env()
+    want = sorted(set(pool) | set(PROXIES))
+    end = (pd.Timestamp(end_day) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    bars = S.fetch_alpaca_1h(client, want, Path(a.cache), end, start=DATA_START)
+    missing = [p for p in PROXIES if p not in bars]
+    if missing:
+        raise RuntimeError(f"proxy bars missing: {missing} (the model needs its market-context features)")
+    print(f"[pool] PINNED {len(pool)} ETFs from the artifact; {sum(1 for x in pool if x in bars)} with bars; {client.calls} calls", flush=True)
+    return bars, client
+
+
+def reproduce_frozen(tab: pd.DataFrame, artifact: str, start: str, end: str, expect_n: int | None, expect_mean: float | None,
+                     pool: list[str], bars_symbols) -> tuple[dict, pd.DataFrame]:
+    """Score the FROZEN artifact's boosters (nothing refit) on [start, end] with the pool pinned to the artifact's pool_symbols, and
+    check the graded confirm population: n == expect_n and |mean - expect_mean| <= 1e-6. No holdout read is claimed (a reproduction
+    of an already-graded read). Reports which pinned pool symbols have no bars, so a FAIL names its cause."""
+    feats, tau, predict, model_id = _artifact_scorer(artifact)
+    hs, he = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    n_before = int(len(test))
+    test = test[session_mask(test.ts)]
+    tk = taken_trades(test, predict(test), tau)   # provenance: predict -- mean regressed LONG net R of the frozen boosters, not a probability
+    st = _stats(tk)
+    n_ok = expect_n is None or st.get("n") == int(expect_n)
+    mean_ok = expect_mean is None or (st.get("mean_net_r") is not None and abs(float(st["mean_net_r"]) - float(expect_mean)) <= 1e-6)
+    no_bars = sorted(x for x in pool if x not in set(bars_symbols))
+    rep_ = {"artifact": artifact, "model_id": model_id, "tau": tau, "expect_n": expect_n, "n_match": n_ok, "expect_mean": expect_mean,
+            "mean_match": mean_ok, "reproduces": bool(n_ok and mean_ok), "ledger_claimed": False,
+            "pool_pinned_n": len(pool), "pool_symbols_without_bars": no_bars, "table_symbols": int(tab.symbol.nunique())}
+    v = "pass" if rep_["reproduces"] else "fail"
+    note = (f"FROZEN artifact {model_id} (no refit), pool pinned to its {len(pool)} pool_symbols, window {start}..{end}: n={st.get('n')} "
+            f"(expect {expect_n}: {'ok' if n_ok else 'MISMATCH'}), mean net R {st.get('mean_net_r')} (expect {expect_mean}: "
+            f"{'ok' if mean_ok else 'MISMATCH'}); pool symbols without bars: {len(no_bars)}; no holdout read claimed")
+    return {"verdict": v, "note": note, "stats": st, "reproduction": rep_, "decision_rows_before_session_gate": n_before,
+            "decision_rows": int(len(test)), "window": {"start": start, "end": end}}, tk
+
+
 def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, spec: str = STRUCT_SPEC,
                     configs: dict = None, train_end: str = TRAIN_END, start: str = CONFIRM_START, folds: list = None,
                     taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print, ens_seeds=None, min_mean: float = 0.0) -> dict:
@@ -766,6 +807,38 @@ def _write_taken(c: dict, a, repro: str) -> None:
         print(f"[trades-out] {len(tk)} rows -> {p}", flush=True)
 
 
+def _run_reproduce_frozen(a, slip: float, fee: float, t0: float, out: Path) -> int:
+    art = json.loads((REPO / a.artifact).read_text())
+    pool = list(art["pool_symbols"])
+    bars, client = _pinned_pool_and_bars(a, a.end, pool)
+    tab = build_table(bars, pool, slip, fee, struct=art.get("structure_exit") or STRUCT_SPEC)
+    print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols", flush=True)
+    c, tk = reproduce_frozen(tab, a.artifact, a.start, a.end, int(a.expect_n) if a.expect_n else None,
+                             float(a.expect_mean) if a.expect_mean else None, pool, bars.keys())
+    if a.trades_out and tk is not None:
+        p = Path(a.trades_out)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        cols = [x for x in ("symbol", "ts", "net_r", "gross_r", "cost_r") if x in tk.columns]
+        with p.open("w") as fh:
+            for _, r in tk[cols].iterrows():
+                fh.write(json.dumps({"leg": "ml_entry_eq_struct", **{k: (str(r[k]) if k in ("symbol", "ts") else float(r[k])) for k in cols}}) + "\n")
+        c["trades_jsonl"] = {"path": str(p), "rows": int(len(tk)), "sum_net_r": float(tk.net_r.sum()) if len(tk) else 0.0}
+    c.update({"alpaca_calls": client.calls, "runtime_s": round(time.time() - t0, 1)})
+    row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
+           "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
+           "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+           "population": {"n": c["stats"].get("n"), "description": f"FROZEN {c['reproduction']['model_id']} scored (no refit) on its own pinned "
+                          f"{len(pool)}-ETF pool_symbols, restricted-LONG, bars {a.start}..{a.end}, net of the Alpaca cost stack"},
+           "measurement": c, "n": c["stats"].get("n"),
+           "produced_by": {"tool": "python3 scripts/research/ml_entry_equity.py reproduce-frozen", "where": a.where}}
+    (out / "verdict.json").write_text(json.dumps({"verdict": row["verdict"], "read_state": "measured", "n": row["n"],
+                                                  "population": row["population"]["description"], "note": row["note"],
+                                                  "measurement": c}, indent=1, default=str) + "\n")
+    (out / f"{a.unit}.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": row["verdict"], "note": row["note"]}), flush=True)
+    return 0
+
+
 def main_run(a) -> int:
     from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
     t0 = time.time()
@@ -775,6 +848,8 @@ def main_run(a) -> int:
     fee = resolve_fee_bps_roundtrip("SPY")
     # --full-bars (export): build the table from the SAME bars the graded confirm stage used (to the last complete month); training still takes rows < train_end only
     end_day = TRAIN_END if (a.cmd == "dev" or (a.cmd == "export" and not getattr(a, "full_bars", False))) else (pd.Timestamp.now(tz="UTC").normalize().replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    if a.cmd == "reproduce-frozen":
+        return _run_reproduce_frozen(a, slip, fee, t0, out)
     pool, prep, bars, client = _pool_and_bars(a, end_day)
     spec_used = getattr(a, "struct_spec", "") or STRUCT_SPEC   # dev-only override (pivot 3 / pivot 8 variants); default = the live exit
     tab = build_table(bars, pool, slip, fee, struct=spec_used if (a.cmd in ("structure", "forward") or getattr(a, "structure", False)) else "")
@@ -1039,6 +1114,23 @@ def self_test() -> int:
         raise AssertionError("an unbuilt family must be refused")
     except ValueError:
         pass
+    # RQ-20261119-e8a1-04 reproduce-frozen: a frozen booster scored on a pinned pool reproduces its own population exactly,
+    # a wrong expectation FAILS, and a pinned pool symbol with no bars is NAMED (the d9c0-01 drift cause)
+    import lightgbm as _lgbm_mod
+    _f = OWN + XS
+    _tr = tab[tab.ts <= "2023-04-30"].dropna(subset=_f + ["net_long"])
+    _b = _lgbm_mod.LGBMRegressor(n_estimators=20, min_child_samples=20, verbose=-1).fit(_tr[_f], _tr["net_long"]).booster_.model_to_string()
+    with tempfile.TemporaryDirectory() as _td:
+        _ap = Path(_td) / "model.json"
+        _ap.write_text(json.dumps({"model_id": "SYN-FROZEN", "features": _f, "tau": 0.0, "booster_txt": {"long": [_b]},
+                                   "pool_symbols": pool + ["GHOST"]}))
+        c0, tk0 = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", None, None, pool + ["GHOST"], bars.keys())
+        n0, m0 = c0["stats"]["n"], c0["stats"]["mean_net_r"]
+        assert n0 and c0["reproduction"]["pool_symbols_without_bars"] == ["GHOST"], c0["reproduction"]
+        c1, _ = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", n0, m0, pool, bars.keys())
+        assert c1["verdict"] == "pass" and c1["reproduction"]["reproduces"] and not c1["reproduction"]["ledger_claimed"], c1
+        c2, _ = reproduce_frozen(tab, str(_ap), "2023-05-15", "2023-08-31", n0 + 1, m0, pool, bars.keys())
+        assert c2["verdict"] == "fail" and not c2["reproduction"]["n_match"], c2
     print("self-test ok")
     return 0
 
@@ -1103,10 +1195,23 @@ def main(argv=None) -> int:
             p.add_argument("--dev-oof-mean", required=True)
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
+    rf = sub.add_parser("reproduce-frozen", help="RQ-20261119-e8a1-04: score a FROZEN artifact (no refit) on its own pinned pool_symbols")
+    rf.add_argument("--cache", required=True)
+    rf.add_argument("--out", required=True)
+    rf.add_argument("--unit", required=True)
+    rf.add_argument("--where", default="local")
+    rf.add_argument("--artifact", required=True, help="repo-relative model.json (booster_txt + pool_symbols)")
+    rf.add_argument("--start", default=CONFIRM_START)
+    rf.add_argument("--end", required=True, help="pinned last bar day of the graded window (e.g. 2026-10-31)")
+    rf.add_argument("--expect-n", dest="expect_n", default="")
+    rf.add_argument("--expect-mean", dest="expect_mean", default="")
+    rf.add_argument("--trades-out", dest="trades_out", default="")
+    rf.add_argument("--rule-id", required=True)
+    rf.add_argument("--registered-at", required=True)
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
-    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h") else 2
+    return main_run(a) if a.cmd in ("dev", "confirm", "export", "structure", "forward", "h2h", "reproduce-frozen") else 2
 
 
 if __name__ == "__main__":
