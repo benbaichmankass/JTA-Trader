@@ -35,15 +35,15 @@ evidence_class:
   claim: regime_cell
 power:
   expected_n: 60
-  min_detectable_effect: 0.0
-  effect_units: usd
-  sd: 0.0
+  min_detectable_effect: 0.37
+  effect_units: sd
   design: paired
   alpha: 0.05
   power: 0.8
   basis: 'ESTIMATE, stated before the run: the 2026-06-27 folds held ~1,100 gated decisions over ~4 years for this roster on BTC, so ~5.5 months
-    gives tens of trades per arm. This unit is NOT powered for a per-trade difference; it applies the two-metric book criterion (net AND maxDD%,
-    both) with an INDETERMINATE floor of 30 ungated trades on the fresh fold. An INDETERMINATE changes nothing.'
+    gives tens of trades per arm. Stated as the paired standardized effect this n can detect: d = 0.37 SD at n = 60, alpha 0.05, power 0.8
+    (required_n paired = 57.3); a per-trade difference smaller than that is not resolvable here. The decision itself is the two-metric book
+    criterion (net AND maxDD%, both) with an INDETERMINATE floor of 30 ungated trades on the fresh fold. An INDETERMINATE changes nothing.'
   feasibility:
     source: none
     accrual_basis: Replays trainer-resident candles through the system backtest; nothing accrues.
