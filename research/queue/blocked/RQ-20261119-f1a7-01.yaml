@@ -1,0 +1,90 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, manager instruction 2026-11-19 07:31Z.
+# A VALIDATION of the ict_scalp forming-bar harness arm (row ICT-SCALP-FORMING-BAR-ARM). Gates this adds or changes: none.
+id: RQ-20261119-f1a7-01
+title: 'VALIDATION of the ict_scalp forming-bar harness arm on ict_scalp_eth_15m: over the committed record''s own window, does the CLOSED arm
+  reproduce the committed record (n 76, net_r -2.925, within 2 trades / 0.5 R) and is the FORMING arm non-empty with every entry stamped on a decision tick?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+kind: deterministic
+compute: cpu_light
+question: 'Before any forming-bar RESULT is read: with `backtest_ict_scalp.py --decision-bar forming` fed real Binance-vision 1m (exit_lever_ablation
+  --forming-1m-fetch), over 2025-10-28..2026-10-27 23:59 (the window of the committed run comms/strategy_evidence/runs/2026-10-28/ict_scalp_eth_15m__bt.json),
+  (a) does the CLOSED control arm reproduce that record, |n - 76| / 76 <= 2/76 and |net_r - (-2.925)| <= 0.5 R, and (b) does the FORMING arm produce at
+  least one trade with every entry on a decision tick (2, 4, ..., 12 minutes into its 15m bar, whole minutes)?'
+why_this_matters: 'RQ-20261119-e11f-01 scores ict_scalp_eth_15m (real money, bybit_2 + bybit_portfolio) on the forming bar its trades actually enter on,
+  where the committed closed-bar record fails (net_r -2.93, n 76). Its answer is only as good as the harness arm, and the arm has so far been tested on planted
+  and synthesized-1m data only (the container cannot fetch exchange data). This unit is the real-data check the row''s DONE WHEN asks for, so that e11f-01 is not
+  graded on an arm that scores something the leg does not trade. It reads mechanics, never edge. NOTE: e11f-01 as filed pins 2025-10-04..2026-10-01 and `--days 400`;
+  the committed closed run on THAT window is the 2026-10-02 run (n 78, net_r +1.318), so its control (n 76 / -2.93) cannot reproduce there, and a 400-day fetch
+  from 2026-11-19 starts about 2025-10-15, after the pinned start. This unit uses the record''s own window and a 460-day fetch.'
+why_not_inferential: 'This estimates no effect from a sample. It checks that a harness arm reproduces a committed record within a stated tolerance and that every
+  entry of an arm carries a structural property (a tick-stamped entry time). Both are deterministic checks on the run''s own output; an expected_n and a minimum
+  detectable effect would be theatre. n and net R of the FORMING arm are reported, not graded.'
+decision_rule:
+  id: RULE-RQ20261119F1A7-01-FORMING-ARM-VALIDATION
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/forming_arm_validation.py run: exit_lever_ablation.py --leg ict_scalp_eth_15m --arm CLOSED= --arm FORMING=--decision-bar=forming
+    --forming-1m-fetch --days 460 --start 2025-10-28 --end "2026-10-27 23:59" --grade stage0 --baseline CLOSED --n-floor 1 --control CLOSED=<committed
+    2026-10-28 __bt.json> --control-tol-n 2/76 --control-tol-r 0.5. Then: (1) control = exit_lever_ablation.check_control on the CLOSED arm''s own __bt.json against
+    the committed run''s; (2) n(FORMING) from arms/FORMING__trades.jsonl; (3) for every FORMING entry, minutes into its own 15m bar must be in
+    forming_bar_entries.session_ticks(None, 15) = {2,4,6,8,10,12} on a whole minute.'
+  rule: 'PASS iff the control reproduces the record (n within 2 trades of 76 AND net_r within 0.5 R of -2.925) AND n(FORMING) >= 1 AND every FORMING entry is on a
+    decision tick. FAIL, with a named label: `control_failed` (the control does not reproduce), `forming_empty` (no FORMING trade), `bad_tick_stamp` (any FORMING
+    entry off a tick, including a bar-open entry). A harness or fetch failure is a producer failure (non-zero exit), never a FAIL. Thresholds, window and tick set
+    are fixed now and not changed after any result. A control_failed means the pinned window, feed or cost stack differs from the record''s: investigate those
+    before concluding the flag is wrong.'
+  pass_action: 'RQ-20261119-e11f-01 may be un-blocked (it carries `requires_result` on this unit''s PASS) with its window corrected to the record''s window
+    or the control re-based on the 2026-10-02 run; the row ICT-SCALP-FORMING-BAR-ARM DONE WHEN is met.'
+  fail_action: 'e11f-01 stays blocked; the label names what to fix (window / feed / cost stack for control_failed; the harness arm for forming_empty or
+    bad_tick_stamp).'
+  what_it_does_not_do: 'Reads no edge: the FORMING arm''s n and net R are reported and not graded here. Changes no config and no roster, places no order, is not a
+    promotion or demotion, and does not retire any lever family. A PASS validates the harness arm, not the leg.'
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): a control arm must reproduce the committed record before any delta is read;
+  RQ-20261119-e11f-01 (the as-traded run this gates); scripts/research/exit_lever_ablation.py --control.'
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.5
+  bucket: structural
+  basis: 'planning weight inherited from e11f-01 (a real-money leg with no as-traded evidence); an estimate, not a measurement. This unit gates that one.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 'ESTIMATE from the abab-56 fidelity run on this leg: one fetch of 460 days of 15m plus Binance-vision 1m for the window, two harness passes (the forming
+    arm evaluates order_package at 6 ticks per bar, about 6x the closed arm). The first run replaces it.'
+  why_runner: 'Fetches keyless public candles and Binance-vision 1m for a pinned window; CPU only; reads no trainer data.'
+run:
+  command:
+  - python3
+  - scripts/research/forming_arm_validation.py
+  - run
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261119-f1a7-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261119-e11f-01
+- ICT-SCALP-FORMING-BAR-ARM
+- scripts/research/forming_arm_validation.py
+- scripts/research/exit_lever_ablation.py
+population: ict_scalp_eth_15m CLOSED arm (the committed record's trade set) and FORMING arm, 2025-10-28..2026-10-27 23:59, real Binance 15m and Binance-vision 1m.
+last_dispatched_at: null
+blocked_on:
+- kind: harness
+  ref: scripts/backtest_ict_scalp.py
+  owner: ICT-SCALP-FORMING-BAR-ARM
+  what: 'the arm FORMING=--decision-bar=forming needs backtest_ict_scalp.py --decision-bar and the regime_debt_matrix --minutes-1m-csv forward (PR #27207, HELD).'
+  clears_when: 'PR #27207 is merged on main; then git-mv this unit to research/queue/ with status queued, rule unchanged.'
+  due_by: '2026-11-26'
