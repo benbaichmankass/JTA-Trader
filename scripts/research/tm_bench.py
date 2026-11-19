@@ -1361,7 +1361,12 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
             _rq = np.random.default_rng(5)
             _Xq = _rq.normal(size=(1500, 3))
             _yq = 0.3 * _Xq[:, 0] + _rq.exponential(1.0, 1500) - 1.0
-            _pm = _fit_lgbm(_Xq, _yq, 3, quantile=None).predict(_Xq)
+            # the mean head is fit from lgbm_params_for(None) directly: _fit_lgbm(quantile=None) falls back to the module global
+            # LGBM_QUANTILE, so under --lgbm-quantile 0.3 it would also be a q30 head and the check would compare q30 with q30
+            # (the selfcheck failure of RQ-20261118-04a5-07 run 44404069465, graded INDETERMINATE on it)
+            import lightgbm as _lgb
+            _pm = _lgb.train(dict(lgbm_params_for(None), seed=3), _lgb.Dataset(_Xq, label=_yq),
+                             num_boost_round=LGBM_ROUNDS).predict(_Xq)
             _pq = _fit_lgbm(_Xq, _yq, 3, quantile=0.3).predict(_Xq)
             try:
                 lgbm_params_for(1.5)

@@ -6,7 +6,7 @@
 id: RQ-20261116-cc86-01
 title: 'Beagle-1 CHALLENGER (EV-thresholded reduce) vs the LIVE baseline (shipped overlay_td.json, bottom-20% reduce): does
   cutting only entries with negative predicted net R beat the live baseline on the same TD trades, cost stack and holdouts?'
-status: done
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -99,7 +99,7 @@ run:
     - --days
     - '2330'
     - --reference-corpus
-    - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
     - --parity-basis
     - trade
     - --holdout-start
@@ -125,7 +125,7 @@ run:
     - --days
     - '2330'
     - --reference-corpus
-    - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
     - --parity-basis
     - trade
     - --holdout-start
@@ -162,7 +162,7 @@ ml_consumer:
   - trend_donchian_eth_prop
   - trend_donchian_sol_prop
   book: money
-last_dispatched_at: '2026-11-16T10:32:16+00:00'
+last_dispatched_at: null
 grading:
   attested: RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV
   auto: true
@@ -177,3 +177,10 @@ grading:
   reason: 1 row(s), all measured, all indeterminate
   rows: 1
   verdict: indeterminate
+amendments:
+- at: '2026-11-19'
+  before_any_run: false
+  by: lane ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj)
+  text:
+  - 'RE-PINNED REFERENCE CORPUS (RQ-20261118-04a5-06 pass_action; PI-20261117-ZZUFKM1F-0002 part 1): the first run read trade parity against the 2026-10-24 reference RQ-20261024-09a6-01, which the gate legs'' later config changes (eth_4h tp_r/tp_intent/decision_bar, xrp_4h atr_stop_mult/trail_mult, eth_prop min_confidence, sol_prop trail_mult) and two harness fidelity fixes (#21628, #21898) had drifted to parity 0.09-0.85, so its verdict was INDETERMINATE on parity, not on the challengers. 04a5-06 (run 44417153590) PASSED its fidelity rule (TD n_gate 1587, every gate leg built and aligned). RE-ARMED once with --reference-corpus pointing at its landed __trades.jsonl corpus; rule, arms, thresholds, windows and cost stack unchanged. DISCLOSURE on every read: Beagle-1 was fit and validated on the PRE-change (10-24) population, so this read measures the challengers on the trades the legs now make, not on the trades Beagle-1 was selected on. The grading block below describes the pre-re-pin run; the re-run is graded by lane ML-PRIMARY-8. Counted as a new try in the holdout ledger where it reads held-out bars.'
+rearmed_at: '2026-11-19T00:20:00+00:00'
