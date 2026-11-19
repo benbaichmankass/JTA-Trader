@@ -126,20 +126,48 @@ class TestEveryIBCallSitePassesIt:
         call = call[:call.index("\n        )")]
         assert '"oca_key"' in call
 
+    #: Every re-arm call site in order_monitor, by ENCLOSING FUNCTION -> venue. A new site fails
+    #: the population test below until it is named here (so a reviewer sees which venue it is),
+    #: and every site, IB or Alpaca, must pass oca_key (inert on Alpaca, the scope on IB).
+    #: History: 3 since PI-20260929-PR6YRTQY-0003 (_alpaca_top_up_uncovered); 4 since
+    #: PR6YRTQY-0005 / REVIEW-14241 (the naked-sweep additive OCO); 5 since
+    #: ALPACA-PARTIAL-TP-STOP-GAP (_alpaca_protect_after_target_cancel); 6 since
+    #: BRACKETS-ALWAYS item 4 (_alpaca_restore_declared_target, #27141).
+    REARM_CALL_SITES = {
+        "_alpaca_top_up_uncovered": "alpaca",
+        "_attempt_naked_autoprotect": "ib+alpaca",
+        "_alpaca_protect_after_target_cancel": "alpaca",
+        "_alpaca_restore_declared_target": "alpaca",
+        "_check_broker_naked_equity_positions": "alpaca",
+        "_reassert_from_divergence": "ib",
+    }
+
+    @staticmethod
+    def _rearm_calls(src):
+        """(enclosing function, call text) for every modify_/place_protective( call."""
+        import re
+        out = []
+        for m in re.finditer(r"\b(modify_protective|place_protective)\(", src):
+            d = src.rfind("\ndef ", 0, m.start())
+            fn = src[d + 5:src.index("(", d + 5)]
+            i, depth = m.end(), 1
+            while depth:
+                depth += (src[i] == "(") - (src[i] == ")")
+                i += 1
+            out.append((fn, src[m.start():i]))
+        return out
+
     def test_no_IB_rearm_call_site_is_left_unscoped(self):
-        """The population control. Three IB re-arm call sites were measured;
-        if a fourth appears, this test should FAIL rather than let it ship
-        unscoped — a guard over the population, not over three known names."""
+        """The population control, by name rather than by count: the set of enclosing functions
+        must equal REARM_CALL_SITES exactly (a new site FAILS until it is registered with its
+        venue), each function holds exactly one call, and every call passes oca_key."""
         src = (_REPO / "src/runtime/order_monitor.py").read_text()
-        n = src.count("modify_protective(") + src.count("place_protective(")
-        # 3 since PI-20260929-PR6YRTQY-0003: `_alpaca_top_up_uncovered` is an
-        # ALPACA-only additive top-up; it passes oca_key anyway (inert there).
-        # 4 since PR6YRTQY-0005 / REVIEW-14241: the Alpaca venue-holding
-        # additive OCO in the naked sweep — also passes oca_key.
-        # 5 since ALPACA-PARTIAL-TP-STOP-GAP: `_alpaca_protect_after_target_cancel`
-        # (ALPACA-only OCO after a partially filled target is cancelled) — also
-        # passes oca_key (the row id).
-        assert n == 5, (
-            f"expected 5 re-arm call sites in order_monitor, found {n}. A "
-            "new one must pass oca_key — add it above and update this count."
+        calls = self._rearm_calls(src)
+        fns = [fn for fn, _ in calls]
+        assert sorted(fns) == sorted(self.REARM_CALL_SITES), (
+            f"re-arm call sites in order_monitor are {sorted(fns)}; registered "
+            f"{sorted(self.REARM_CALL_SITES)}. A new one must pass oca_key and be named "
+            "in REARM_CALL_SITES with its venue."
         )
+        unscoped = [fn for fn, call in calls if '"oca_key"' not in call]
+        assert not unscoped, f"re-arm call(s) without oca_key: {unscoped}"
