@@ -307,3 +307,12 @@ def test_serve_log_tolerates_pre_stamp_artifact(monkeypatch, tmp_path):
     ) is not None
     line = json.loads((tmp_path / "serves.jsonl").read_text().splitlines()[0])
     assert line["window_closes_sha256"] is None
+
+
+def test_diag_exposes_the_serve_log_at_the_writers_path():
+    """The diag log_file entry must be the SAME file forecast_live appends to."""
+    from pathlib import Path
+
+    from src.web.api.routers import diag
+
+    assert Path(diag._LOG_FILES["forecast_live_serves"]) == Path(fl._serves_log_path())

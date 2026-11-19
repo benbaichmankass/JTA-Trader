@@ -420,6 +420,9 @@ _ADVISORY_LOG = runtime_logs_dir() / "advisory_decisions.jsonl"
 # the reader resolves it the same way. Read: log_file?name=structure_exit_moves.
 _STRUCTURE_EXIT_MOVES_LOG = runtime_logs_dir() / "structure_exit_moves.jsonl"
 _SHADOW_PRED_LOG = runtime_logs_dir() / "shadow_predictions.jsonl"
+# One line per distinct (symbol, scored bar, served artifact) from src/runtime/forecast_live.py
+# (PI-20261119-K7ZSW5Z7-0005): the window identity of each fc_* block the per-bar scorer served.
+_FC_LIVE_SERVES_LOG = runtime_logs_dir() / "forecast_live_serves.jsonl"
 _SHADOW_PRED_BACKFILL_LOG = runtime_logs_dir() / "shadow_predictions_backfill.jsonl"
 _IBKR_MES_PULL_LOG = runtime_logs_dir() / "ibkr_mes_pull.jsonl"
 _NEWS_DECISIONS_LOG = runtime_logs_dir() / "news_decisions.jsonl"
@@ -803,6 +806,10 @@ _LOG_FILES: dict[str, Path] = {
     # soak is accruing + its fc coverage. Absent until the first live opening
     # order runs post-deploy. Also surfaced at /api/bot/fc-geometry/soak.
     "fc_geometry_soak": _FC_GEOMETRY_SOAK_LOG,
+    # Live fc_* serve log (PI-20261119-K7ZSW5Z7-0005, observe-only): per (symbol, scored bar, artifact) the
+    # served forecast's as_of_ts, lag_bars and window_closes_sha256, so a live-vs-offline diff can join a
+    # shadow-log row to the producer's publish history. Absent until the first bar-checked serve post-deploy.
+    "forecast_live_serves": _FC_LIVE_SERVES_LOG,
     # M20 exit-lever annotate soak (observe-only): "the stale-stop would have
     # exited here" rows written by trend_donchian._stale_stop_verdict while a
     # strategy has NOT declared stale_exit_bars in YAML. The pre-declare
