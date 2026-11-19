@@ -1304,6 +1304,301 @@ def cmd_selfcheck(a: argparse.Namespace) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------- action grid (ML-EXIT-ACTIONGRID-LABELS)
+# Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a: at EVERY check-in of every trade, under one check-in
+# policy, price the whole bracket-action enum against HOLD, each with the rest of the path = hold-to-bracket. The label is
+# a one-step counterfactual on the SAME engine (`run`): value_r = net R(hold everywhere except action a at check-in k)
+# - net R(hold everywhere). Deterministic replay, $0 model usage. Levels are DECLARED here before any label is read.
+GRID_TIGHTEN_R = (0.25, 0.5, 1.0)                     # stop moved toward price by k R from the in-force stop
+GRID_WIDEN_R = (0.25, 0.5)                            # stop moved away by k R (floor WIDEN_FLOOR_R)
+GRID_PULL_IN_R = (0.5, 1.0)                           # target moved toward price by k R
+GRID_EXTEND_R = (1.0, 2.0)                            # target moved away by k R (cap TP_CAP_R)
+STRUCTURE_BARS = 12                                   # "structure" = the prior 12-bar swing (closed bars <= the check-in)
+GRID_SCHEMA = "desk_lifecycle/action_grid/1"
+
+
+def _k(x: float) -> str:
+    return f"{x:g}".replace(".", "p")
+
+
+GRID_ACTIONS: Tuple[str, ...] = (
+    ("close", "partial_close")
+    + tuple(f"tighten_sl_{_k(x)}r" for x in GRID_TIGHTEN_R)
+    + tuple(f"widen_sl_{_k(x)}r" for x in GRID_WIDEN_R)
+    + ("sl_to_structure",)
+    + tuple(f"tp_pull_in_{_k(x)}r" for x in GRID_PULL_IN_R)
+    + tuple(f"tp_extend_{_k(x)}r" for x in GRID_EXTEND_R)
+    + ("tp_to_structure",)
+)
+GRID_CLASS = {a: ("close" if a == "close" else "partial" if a == "partial_close" else
+                  "tighten" if a.startswith("tighten") else "widen" if a.startswith("widen") else
+                  "sl_structure" if a == "sl_to_structure" else "tp_pull_in" if a.startswith("tp_pull_in") else
+                  "tp_extend" if a.startswith("tp_extend") else "tp_structure") for a in GRID_ACTIONS}
+
+
+def grid_decision(name: str, s: g.Series, e: "Entry", kk: int, st: Dict[str, Any]) -> Tuple[Optional[dict], str]:
+    """(engine decision, "") for grid action `name` at check-in bar kk, or (None, why) when it is not a legal move
+    there. Legality is the engine's own `validate`, so an infeasible move is NAMED here, never priced as a hold."""
+    if name == "close":
+        d: dict = {"action": "close"}
+    elif name == "partial_close":
+        d = {"action": "partial_close"}
+    elif name.startswith("tighten_sl_"):
+        d = {"action": "tighten_sl", "level_r": st["stop_r"] + GRID_TIGHTEN_R[[f"tighten_sl_{_k(x)}r" for x in GRID_TIGHTEN_R].index(name)]}
+    elif name.startswith("widen_sl_"):
+        d = {"action": "widen_sl", "level_r": st["stop_r"] - GRID_WIDEN_R[[f"widen_sl_{_k(x)}r" for x in GRID_WIDEN_R].index(name)]}
+    elif name.startswith("tp_pull_in_"):
+        d = {"action": "move_tp", "level_r": st["tp_r"] - GRID_PULL_IN_R[[f"tp_pull_in_{_k(x)}r" for x in GRID_PULL_IN_R].index(name)]}
+    elif name.startswith("tp_extend_"):
+        d = {"action": "move_tp", "level_r": st["tp_r"] + GRID_EXTEND_R[[f"tp_extend_{_k(x)}r" for x in GRID_EXTEND_R].index(name)]}
+    elif name in ("sl_to_structure", "tp_to_structure"):
+        lo = max(0, kk - STRUCTURE_BARS + 1)
+        fill = st["ext_px"] - e.side * st["mfe_r"] * st["risk_px"]
+        low, high = float(s.l[lo:kk + 1].min()), float(s.h[lo:kk + 1].max())
+        if name == "sl_to_structure":
+            px = low if e.side > 0 else high
+            x = e.side * (px - fill) / st["risk_px"]
+            if abs(x - st["stop_r"]) <= 1e-9:
+                return None, "at_in_force_stop"
+            d = {"action": "tighten_sl" if x > st["stop_r"] else "widen_sl", "level_r": x}
+        else:
+            px = high if e.side > 0 else low
+            d = {"action": "move_tp", "level_r": e.side * (px - fill) / st["risk_px"]}
+    else:
+        raise ValueError(f"unknown grid action {name!r}")
+    a, x, ok = validate(d, st)
+    if not ok:
+        return None, "illegal_level" if "level_r" in d else "illegal"
+    return ({"action": a} if x is None else {"action": a, "level_r": x}), ""
+
+
+def _hold(k: int, j: int, st: Dict[str, Any]) -> dict:  # inert: k, j, st — the shared Decider signature
+    return {"action": "hold"}
+
+
+def _one_step(k_at: int, d: dict) -> Decider:
+    return lambda k, j, st: d if k == k_at else {"action": "hold"}
+
+
+def grid_trade(s: g.Series, e: "Entry", policy: Policy, corpus: str, leg: str = "") -> Tuple[List[dict], Dict[str, Any]]:
+    """Every (check-in, grid action) label of one trade, plus the trade's hold summary."""
+    states: List[Tuple[int, int, Dict[str, Any]]] = []
+
+    def rec(k: int, j: int, st: Dict[str, Any]) -> dict:
+        states.append((k, j, dict(st)))
+        return {"action": "hold"}
+
+    base, _ = run(s, e, rec, policy)
+    summ = {"entry_id": e.entry_id, "state": base.state, "net_r_hold": base.net_r if base.state == "filled" else None,
+            "gross_r_hold": base.gross_r if base.state == "filled" else None,
+            "exit_reason_hold": base.exit_reason or None, "checkins": len(states)}
+    if base.state != "filled":
+        return [], summ
+    t0 = g.simulate(s, e.i, e.side, e.etype, e.level, e.stop, e.tp, e.good_till, e.horizon)
+    if abs(t0.net_r - base.net_r) > 1e-9:
+        raise AssertionError(f"{e.entry_id}: hold replay {base.net_r} != simulate {t0.net_r}")
+    a0 = float(s.atr[t0.fill_i - 1]) if t0.fill_i >= 1 and np.isfinite(s.atr[t0.fill_i - 1]) else float("nan")
+    rows: List[dict] = []
+    for k, j, st in states:
+        risk = st["risk_px"]
+        atr_r = st["atr_px"] / risk if np.isfinite(st["atr_px"]) else None
+        mom = (e.side * float(s.c[j] - s.c[j - MOM_N]) / risk) if j - MOM_N >= 0 else None
+        feat = {"now_r": st["close_r"], "stop_r": st["stop_r"], "tp_r": st["tp_r"], "mfe_r": st["mfe_r"],
+                "mae_r": st["mae_r"], "bars_held": st["bars_held"], "bars_left": st["bars_left"],
+                "dist_sl_r": st["close_r"] - st["stop_r"], "dist_tp_r": st["tp_r"] - st["close_r"],
+                "atr_r": atr_r,
+                "dist_sl_atr": (st["close_r"] - st["stop_r"]) / atr_r if atr_r else None,
+                "dist_tp_atr": (st["tp_r"] - st["close_r"]) / atr_r if atr_r else None,
+                "atr_ratio": (st["atr_px"] / a0) if np.isfinite(a0) and a0 > 0 else None,
+                "mom3_r": mom, "tags": st.get("tags", [])}
+        for name in GRID_ACTIONS:
+            d, why = grid_decision(name, s, e, j, st)
+            row = {"corpus": corpus, "leg": leg, "entry_id": e.entry_id, "source": e.source, "symbol": e.symbol,
+                   "fold": e.fold, "week": e.week, "k": k, "bar_t": int(s.t[j]), **feat,
+                   "action": name, "action_class": GRID_CLASS[name], "feasible": d is not None,
+                   "infeasible_reason": why or None, "engine_action": None, "level_r": None,
+                   "net_r_hold": base.net_r, "net_r_action": None, "value_r": None, "exit_reason_action": None,
+                   "beyond_entry_risk": None}
+            if d is not None:
+                r, _p = run(s, e, _one_step(k, d), policy)
+                row.update(engine_action=d["action"], level_r=d.get("level_r"), net_r_action=r.net_r,
+                           value_r=r.net_r - base.net_r, exit_reason_action=r.exit_reason,
+                           beyond_entry_risk=bool(d["action"] == "widen_sl" and d["level_r"] < -1.0))
+            rows.append(row)
+    return rows, summ
+
+
+_ACTION_FIELDS = ("action", "action_class", "feasible", "infeasible_reason", "engine_action", "level_r", "net_r_action",
+                  "value_r", "exit_reason_action", "beyond_entry_risk")
+
+
+def grid_compact(rows: List[dict]) -> List[dict]:
+    """One row per check-in: the state once, then {action: label} for the whole enum (the file layout)."""
+    out: List[dict] = []
+    for r in rows:
+        key = (r["entry_id"], r["k"])
+        if not out or (out[-1]["entry_id"], out[-1]["k"]) != key:
+            out.append({f: v for f, v in r.items() if f not in _ACTION_FIELDS} | {"labels": {}})
+        lab = {f: r[f] for f in _ACTION_FIELDS if f not in ("action", "action_class")}
+        out[-1]["labels"][r["action"]] = {f: (round(v, 6) if isinstance(v, float) else v) for f, v in lab.items()}
+    return out
+
+
+def grid_summary(rows: List[dict], summ: List[dict]) -> Dict[str, Any]:
+    """Per action: feasible / infeasible counts, mean value vs hold, share > 0. Population stated, nothing graded."""
+    by: Dict[str, Dict[str, Any]] = {}
+    for a in GRID_ACTIONS:
+        rs = [r for r in rows if r["action"] == a]
+        v = np.array([r["value_r"] for r in rs if r["feasible"]], dtype=float)
+        by[a] = {"class": GRID_CLASS[a], "rows": len(rs), "feasible": int(len(v)), "infeasible": len(rs) - int(len(v)),
+                 "mean_value_r": round(float(v.mean()), 5) if len(v) else None,
+                 "share_value_gt_0": round(float((v > 0).mean()), 4) if len(v) else None,
+                 "trades_feasible": len({r["entry_id"] for r in rs if r["feasible"]})}
+    filled = [x for x in summ if x["state"] == "filled"]
+    return {"trades": len(summ), "trades_filled": len(filled),
+            "trades_not_filled": {st: sum(1 for x in summ if x["state"] == st) for st in sorted({x["state"] for x in summ})},
+            "checkins": sum(x["checkins"] for x in filled), "label_rows": len(rows),
+            "feasible_label_rows": sum(1 for r in rows if r["feasible"]), "by_action": by}
+
+
+def stage0_entries(trades: List[dict], mkt: Dict[str, g.Series], fold_k: int = 6
+                   ) -> Tuple[List[Tuple["Entry", str, int, dict]], Dict[str, Any]]:
+    """Corpus B: each Stage-0 harness trade (tm_bench / first_passage_paths trade dict: entry, entry_time, the R-space
+    path with stop_r / target_r per bar) as a MARKET entry on the 1h candles with the harness's INITIAL bracket in R
+    (stop -1 R, target = target_r at the first path bar) and a hold-to-bracket horizon of the leg's longest Stage-0 hold.
+    Returns [(entry, leg, check-in every N 1h bars)] and the skip counts. The decision bar is the 1h bar closing at the
+    harness entry time, so the fill is the next open (the harness's own entry bar open)."""
+    skips: Dict[str, int] = {}
+    longest: Dict[str, int] = {}
+    for t in trades:
+        tf_h = max(1, int(round((t.get("tfm") or 60) / 60)))
+        longest[t["leg"]] = max(longest.get(t["leg"], 0), int(t["bars"]) * tf_h)
+    order = sorted(range(len(trades)), key=lambda n: trades[n]["entry_time"])
+    fold_of = {n: min(fold_k - 1, r * fold_k // max(1, len(order))) for r, n in enumerate(order)}
+    out: List[Tuple[Entry, str, int, dict]] = []
+    for n, t in enumerate(trades):
+        s = mkt.get(t["symbol"])
+        if s is None:
+            skips["no_candles"] = skips.get("no_candles", 0) + 1
+            continue
+        tgt = next((float(x) for x in t["target_r"] if np.isfinite(x)), None)
+        if tgt is None or tgt <= 0:
+            skips["no_initial_target"] = skips.get("no_initial_target", 0) + 1
+            continue
+        ep = int(pd_ts(t["entry_time"]))
+        i = s.last_closed(ep)
+        if i < 1 or i + 1 >= len(s.t) or int(s.t[i + 1]) != ep:
+            skips["entry_bar_not_on_1h_grid"] = skips.get("entry_bar_not_on_1h_grid", 0) + 1
+            continue
+        side = _side_of(t)
+        fill = float(s.o[i + 1])
+        risk = fill / float(t["entry_over_risk"])     # the harness's risk as a fraction of price, kept on the 1h fill
+        tf_h = max(1, int(round((t.get("tfm") or 60) / 60)))
+        wk = g.iso_week(ep)
+        eid = "S-" + hashlib.sha256(t["trade_key"].encode()).hexdigest()[:12]
+        out.append((Entry(eid, "stage0", t["trade_key"], t["symbol"], i, side, "market", fill, fill - side * risk,
+                          fill + side * tgt * risk, 0, longest[t["leg"]], fold_of[n], wk, wk), t["leg"], tf_h, t))
+    return out, {"skipped": skips, "hold_horizon_1h_bars": longest}
+
+
+def pd_ts(x: Any) -> float:
+    import pandas as pd  # noqa: PLC0415
+    ts = pd.Timestamp(x)
+    if ts.tzinfo is None:
+        ts = ts.tz_localize("UTC")
+    return ts.timestamp()
+
+
+def _side_of(t: dict) -> float:
+    """Direction from the join key `strategy|symbol|entry_time|direction` (harness_emit.trade_key)."""
+    d = str(t["trade_key"]).rsplit("|", 1)[-1].strip().lower()
+    if d not in ("long", "short", "buy", "sell"):
+        raise ValueError(f"trade_key {t['trade_key']!r} carries no direction")
+    return 1.0 if d in ("long", "buy") else -1.0
+
+
+def cmd_action_grid(a: argparse.Namespace) -> int:
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    rows: List[dict] = []
+    summ: List[dict] = []
+    src: Dict[str, Any] = {"schema": GRID_SCHEMA, "corpus": a.corpus, "actions": list(GRID_ACTIONS),
+                           "levels": {"tighten_r": GRID_TIGHTEN_R, "widen_r": GRID_WIDEN_R, "pull_in_r": GRID_PULL_IN_R,
+                                      "extend_r": GRID_EXTEND_R, "structure_bars": STRUCTURE_BARS,
+                                      "widen_floor_r": WIDEN_FLOOR_R, "tp_cap_r": TP_CAP_R, "min_gap_r": MIN_GAP_R}}
+    if a.corpus == "desk":
+        mkt, missing, _classes, cman = _prepare_market(a)
+        if missing:
+            print(json.dumps({"error": f"candles missing for {missing}"}))
+            return 2
+        entries = read_entries(Path(a.entries))
+        pol = POLICIES[a.policy]
+        for e in entries:
+            r, sm = grid_trade(mkt[e.symbol], e, pol(), "desk")
+            rows += r
+            summ.append(sm)
+        src.update(policy=a.policy, entries=str(a.entries), candles=cman)
+    else:
+        import tm_bench as tmb  # noqa: PLC0415  (corpus B: the TM-BENCH corpus resolver, one construction)
+        legs = [x for x in (a.legs or "").split(",") if x]
+        if legs:
+            tmb.V1_LEGS = legs
+        corpus, meta = tmb.resolve_corpus(a.stage0, work=out)
+        bc = tmb.build_corpus(corpus, meta)
+        syms = sorted({t["symbol"] for t in bc["trades"]})
+        cdir = Path(a.candles_dir) if a.candles_dir else Path(tempfile.mkdtemp(prefix="desk_lc_grid_"))
+        if a.fetch:
+            from scripts.research import desk_replay_driver as d7  # noqa: PLC0415  (the one Binance Vision route)
+            start = min(t["entry_time"] for t in bc["trades"]).to_pydatetime()
+            days = int((datetime.now(timezone.utc) - start).days) + 60
+            for sym in syms:
+                d7.fetch_candles(sym, g.SCAN_TF, days, cdir / f"{sym}_{g.SCAN_TF}.csv")
+        mkt, missing = g.load_market(cdir, syms)
+        ents, emeta = stage0_entries(bc["trades"], mkt)
+        fid: List[float] = []
+        for e, leg, tf_h, t in ents:
+            r, sm = grid_trade(mkt[e.symbol], e, clock_policy(tf_h, True), "stage0", leg)
+            sm["leg"] = leg
+            # FIDELITY (positive control): a trade the harness held to an UNMOVED bracket must replay to the same exit R
+            # on the 1h candles, up to the 1h-vs-leg-bar fill difference. Reported, not asserted.
+            static = (np.nanmax(t["stop_r"]) - np.nanmin(t["stop_r"]) < 1e-6
+                      and np.nanmax(t["target_r"]) - np.nanmin(t["target_r"]) < 1e-6)
+            if static and sm["state"] == "filled" and sm["exit_reason_hold"] in ("sl", "tp", "gap_sl", "gap_tp"):
+                fid.append(abs(float(sm["gross_r_hold"]) - float(t["exit_r"])))
+            rows += r
+            summ.append(sm)
+        fa = np.array(fid)
+        emeta["fidelity_static_bracket"] = {
+            "population": "Stage-0 trades whose stop and target never moved and whose 1h hold replay exits at the bracket",
+            "n": int(len(fa)), "share_within_0p05r": round(float((fa <= 0.05).mean()), 4) if len(fa) else None,
+            "median_abs_gap_r": round(float(np.median(fa)), 4) if len(fa) else None}
+        src.update(policy="every leg bar + events (clock_policy(tf_hours, events=True)) on 1h candles",
+                   stage0=a.stage0, corpus_id=bc["corpus_id"], corpus_source=bc["source"], corpus_parity_ok=bc["parity_ok"],
+                   corpus_legs=bc["legs"], missing_candles=missing, n_stage0_trades=len(bc["trades"]), **emeta)
+    import gzip  # noqa: PLC0415
+    with gzip.open(out / "grid_labels.jsonl.gz", "wt", encoding="utf-8") as fh:   # one row per check-in
+        for r in grid_compact(rows):
+            fh.write(json.dumps(r, separators=(",", ":")) + "\n")
+    with open(out / "grid_trades.jsonl", "w", encoding="utf-8") as fh:
+        for x in summ:
+            fh.write(json.dumps(x) + "\n")
+    summary = grid_summary(rows, summ)
+    n = summary["feasible_label_rows"]
+    v = {"schema": GRID_SCHEMA, "verdict": "not_applicable", "read_state": "measured" if n else "no_data",
+         "n": n if n else None, "population": f"{summary['trades_filled']} filled trades, {summary['checkins']} check-ins, "
+         f"{summary['label_rows']} (check-in x action) rows of which {n} feasible; corpus {a.corpus}",
+         "what_it_is": "label producer: one-step action-vs-hold counterfactuals on the desk replay engine; grades nothing",
+         "stated_limits": ["value_r is one step: the rest of the path is hold-to-bracket, never a sequence of moves",
+                           "Binance Vision 1h USD-M perp klines; stop-first inside a bar; gaps fill at the open",
+                           "corpus stage0: the harness's INITIAL bracket on 1h candles, NOT the leg's own trail; the "
+                           "hold horizon is the leg's longest Stage-0 hold; iaum_pullback_1d (equity) is out of scope"],
+         "summary": summary, "source": src,
+         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    (out / "verdict.json").write_text(json.dumps(v, indent=1, default=float) + "\n")
+    print(json.dumps({"read_state": v["read_state"], "n": v["n"], "population": v["population"]}))
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
@@ -1329,6 +1624,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             s.add_argument("--policy", default="FIXED", choices=sorted(POLICIES), help="the check-in policy the decisions were made under")
             s.add_argument("--m1-draws", type=int, default=M1_DRAWS,
                            help=f"matched-random draws per trade (registered {M1_DRAWS}; larger = a robustness re-score)")
+    s = sub.add_parser("action-grid", help="ML-EXIT-ACTIONGRID-LABELS: price the bracket-action enum vs hold at every check-in")
+    s.add_argument("--out", required=True)
+    s.add_argument("--corpus", choices=("desk", "stage0"), default="desk",
+                   help="desk = corpus A (an entries.jsonl); stage0 = corpus B (the legs' Stage-0 harness paths)")
+    s.add_argument("--entries", help="corpus A: entries.jsonl (default: the committed full-c4e entries)",
+                   default=str(REPO / "comms" / "research" / "desk_lifecycle" / "full-c4e" / "entries.jsonl"))
+    s.add_argument("--policy", default="C4E", choices=sorted(POLICIES), help="corpus A check-in policy (full-c4e ran C4E)")
+    s.add_argument("--stage0", default="v1", help="corpus B: a tm_bench corpus spec (v1 | frozen dir | shard dir | paths glob)")
+    s.add_argument("--legs", default="", help="corpus B with --stage0 v1: comma list replacing tm_bench.V1_LEGS")
+    s.add_argument("--fetch", action="store_true", help="fetch candles from Binance Vision (the queue runner)")
+    s.add_argument("--candles-dir", help="default: a scratch dir outside --out")
+    s.add_argument("--seed", type=int, default=SEED)
+    s.set_defaults(fn=cmd_action_grid)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "--action-grid":           # the row's spelling: `desk_lifecycle_driver.py --action-grid ...`
+        argv[0] = "action-grid"
     a = ap.parse_args(argv)
     return a.fn(a)
 
