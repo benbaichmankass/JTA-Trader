@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "un-blocks one queue unit (moves it out of research/queue/blocked/) and re-arms one; two queue-unit edits, no code",
+  "why": "PR #27207 (--decision-bar and --skip-hours) merged, so RQ-20261119-f1a7-01's blocked_on (the harness flag) is cleared: moved to research/queue/ with status queued, rule unchanged, nothing run. RQ-20261118-abab-33 landed producer_failed ONLY because backtest_ict_scalp.py lacked --skip-hours (its log: 'unrecognized arguments: --skip-hours 20,21,22,23'), so last_dispatched_at is null and rearmed_at is set (the abab-26 precedent) so it can re-fire. abab-27 is NOT re-armed: its two failed rows are AVAX candle-fetch failures, not the flag. Gates this adds or changes: none."
+}

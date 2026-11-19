@@ -1,0 +1,52 @@
+{
+ "read_state": "measured",
+ "legs": [
+  "ada_pullback_2h",
+  "iaum_pullback_1d",
+  "ml_entry",
+  "trend_donchian_eth_4h",
+  "trend_donchian_eth_prop",
+  "trend_donchian_sol_prop",
+  "trend_donchian_xrp_4h",
+  "xrp_pullback_2h"
+ ],
+ "n_trades": 4076,
+ "window": [
+  "2020-06-13",
+  "2026-10-09"
+ ],
+ "params": {
+  "min_legs": 6,
+  "min_cohort": 3,
+  "boot": 2000,
+  "seed": 20261119
+ },
+ "result": {
+  "sum_r": {
+   "rho": 0.11824351018778306,
+   "ci95": [
+    0.04798203556165002,
+    0.18536638596944416
+   ],
+   "n_snapshots": 1090,
+   "n_week_blocks": 302
+  },
+  "mean_r": {
+   "rho": 0.18943668518364998,
+   "ci95": [
+    0.1260972079487738,
+    0.2503269562482879
+   ],
+   "n_snapshots": 924,
+   "n_week_blocks": 301
+  },
+  "placebo_mean_r": {
+   "p05": 0.017172614115707637,
+   "median": 0.05526930035548716,
+   "draws": 2000
+  }
+ },
+ "verdict": "miss",
+ "why": "rho(sum_r) 0.118 CI [0.04798203556165002, 0.18536638596944416]; rho(mean_r) 0.189 CI [0.1260972079487738, 0.2503269562482879]; placebo p05 0.017",
+ "research_unit": null
+}
