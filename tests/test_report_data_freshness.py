@@ -73,3 +73,16 @@ def test_stale_rostered_watches_the_legs_own_timeframe():
     bad = rdf.stale_rostered(rows, {"USO": {"1h"}, "SPY": {"1h"}, "GDX": {"1d"}})
     # USO_1h (its leg's tf) and GDX_1d; SPY_15m is not a rostered tf, SPY_1d is fresh
     assert sorted(r["file"] for r in bad) == ["GDX_1d.csv", "USO_1h.csv"]
+
+
+def test_stale_rostered_watches_the_file_the_resolver_reads(tmp_path):
+    """A crypto 4h leg reads <SYM>_5m.csv (no native 4h file): that file must be watched (ML-10, 2026-11-19)."""
+    (tmp_path / "ETHUSDT_5m.csv").write_text("timestamp,open,high,low,close,volume\n2026-06-18 19:00:00,1,1,1,1,1\n")
+    (tmp_path / "ETHUSDT_15m.csv").write_text("timestamp,open,high,low,close,volume\n2026-06-18 19:00:00,1,1,1,1,1\n")
+    now = datetime(2026, 11, 19, 6, tzinfo=timezone.utc)
+    rows = rdf.report(tmp_path, now)
+    syms = {"ETHUSDT": {"4h", "1d"}}
+    assert rdf.stale_rostered(rows, syms) == []          # the exact-name match alone misses it
+    read = rdf.resolved_files(syms, tmp_path)
+    assert read == {"ETHUSDT_5m.csv"}                    # finest grain <= 4h, not the 15m file
+    assert [r["file"] for r in rdf.stale_rostered(rows, syms, read)] == ["ETHUSDT_5m.csv"]

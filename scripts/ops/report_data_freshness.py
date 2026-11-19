@@ -118,9 +118,35 @@ def rostered_symbols(repo: Path = REPO_ROOT) -> dict[str, set[str]] | None:
     return out
 
 
-def stale_rostered(rows: list[dict], symbols) -> list[dict]:
+def resolved_files(symbols: dict, data_dir: Path) -> set[str] | None:
+    """Names of the files the m20 sweep's ``resolve_data`` READS for each rostered (symbol, timeframe): the native
+    ``<SYM>_<tf>.csv`` when it exists, else the finest grain <= tf (a crypto 4h leg reads ``<SYM>_5m.csv``; the trainer
+    holds no native crypto 1h/2h/4h). Watching only ``<SYM>_<tf>.csv`` missed exactly that: the 5m files froze at
+    2026-06-18 under every crypto m20 result until #26930. None = could not look."""
+    try:
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        from scripts.research.m20_fleet_exit_sweep import resolve_data  # noqa: PLC0415
+    except ImportError as exc:
+        print(json.dumps({"alert": "resolver_unimportable", "error": repr(exc)[:200]}))
+        return None
+    out: set[str] = set()
+    for sym, tfs in symbols.items():
+        for tf in tfs:
+            try:
+                path, _proxy, _resample = resolve_data(str(sym), str(tf), data_dir)
+            except (OSError, ValueError, KeyError) as exc:
+                print(json.dumps({"alert": "resolve_failed", "symbol": sym, "tf": tf, "error": repr(exc)[:200]}))
+                continue
+            if path:
+                out.add(Path(path).name)
+    return out
+
+
+def stale_rostered(rows: list[dict], symbols, read_files: set[str] | None = None) -> list[dict]:
     """Rows for a rostered symbol's 1d file OR the timeframe its legs trade (``symbols`` is the
-    rostered_symbols() mapping; a bare set means 1d only) that are stale or unreadable. A missing file is not
+    rostered_symbols() mapping; a bare set means 1d only), or for a file in ``read_files`` (resolved_files: what the sweep
+    actually reads), that are stale or unreadable. A missing file is not
     a row here. TRAINER-1D-STALE-ROSTERED: USO_1h (uso_trend_1h) froze at 2026-06-18 unseen, like the 1d files."""
     tfs = symbols if isinstance(symbols, dict) else {s: {"1d"} for s in symbols}
     want = {(_STEM.get(s, s.replace("=", "_")), tf) for s, v in tfs.items() for tf in (v | {"1d"})}
@@ -128,7 +154,8 @@ def stale_rostered(rows: list[dict], symbols) -> list[dict]:
     for r in rows:
         stem = r["file"].removesuffix(".csv")
         sym, _, tf = stem.rpartition("_")
-        if (sym, r["grain"]) in want and tf == r["grain"] and (r["stale"] or r["read_state"] != "ok"):
+        watched = ((sym, r["grain"]) in want and tf == r["grain"]) or r["file"] in (read_files or ())
+        if watched and (r["stale"] or r["read_state"] != "ok"):
             out.append(r)
     return out
 
@@ -181,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         if syms is None:
             print(json.dumps({"alert": "rostered_symbols_unreadable"}))   # could not look: said, never 'clean'
         else:
-            bad = stale_rostered(rows, syms)
+            bad = stale_rostered(rows, syms, resolved_files(syms, Path(args.data_dir)))
             logs = REPO_ROOT / "runtime_logs"
             try:
                 from src.utils.paths import runtime_logs_dir  # noqa: PLC0415

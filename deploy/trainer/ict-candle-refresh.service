@@ -27,12 +27,12 @@ TimeoutStartSec=9000
 ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/extend_data_from_lake.py --data-dir data --lake datasets-out/market_raw --apply
 ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_funding_history.py --data-dir data ADAUSDT AVAXUSDT BTCUSDT ETHUSDT SOLUSDT XRPUSDT
 ExecStart=/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15 ADAUSDT:15 AVAXUSDT:15 BNBUSDT:15 LINKUSDT:15 BTCUSDT:15 ADAUSDT:5 AVAXUSDT:5 BNBUSDT:5 LINKUSDT:5 ETHUSDT:5 SOLUSDT:5 XRPUSDT:5
+# No crypto 1h/2h/4h line, deliberately (reconciled with ML-10 2026-11-19, trainer-vm-diag #27238): the trainer
+# holds no native crypto 1h/2h/4h files, so m20 resolve_data reads the finest grain <= the leg tf, i.e. the 5m
+# (BTC 15m) files refreshed above (#26930). A 60/120/240 pair would only print MISSING (this refresher extends,
+# never creates), and CREATING native files would silently move every crypto leg's sweep basis onto a new series.
+# report_data_freshness --alert-rostered watches the files resolve_data actually reads.
 # Report-only freshness of every data/*.csv (PI-20261118-MANAYJZO-0002); the '-' prefix means it can never fail the unit.
-# TRAINER-1D-STALE-ROSTERED (manager 2026-11-19 08:21Z, decision a): the crypto 1h/2h/4h files the m20 sweep
-# reads for REAL-MONEY legs (eth_4h, xrp_4h, ada_2h, sol_prop 1h) froze at ~2026-06-18 because only 15m/5m
-# were refreshed. Same Bybit refresher, same venue as the history. Its own '-' line: a pair whose file does
-# not exist exits 1 (extends, never creates) and must not fail the 15m/5m refresh above it.
-ExecStart=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/refresh_candle_history.py --data-dir data ADAUSDT:60 ADAUSDT:120 ADAUSDT:240 AVAXUSDT:60 AVAXUSDT:120 AVAXUSDT:240 BTCUSDT:60 BTCUSDT:120 BTCUSDT:240 ETHUSDT:60 ETHUSDT:120 ETHUSDT:240 SOLUSDT:60 SOLUSDT:120 SOLUSDT:240 XRPUSDT:60 XRPUSDT:120 XRPUSDT:240
 ExecStartPost=-/home/ubuntu/ict-trading-bot/.venv/bin/python -u scripts/ops/report_data_freshness.py --data-dir data --alert-rostered
 # TRAINER-1D-STALE-ROSTERED: forward the stale-rostered-data ping to the live VM queue (the trainer has no
 # drainer); same key and path as ict-notify-failure@.service.
