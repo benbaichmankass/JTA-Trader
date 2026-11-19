@@ -96,6 +96,10 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+#: order_packages pages (x150 rows) to search for a wanted package; ~2026-08 at today's rate. Paging stops early.
+PKG_MAX_PAGES = 30
+
+
 def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Callable[[str], Any] = _diag,
             public: Callable[[str], Any] = _public) -> Snapshot:
     """All I/O. ``wanted`` = package ids to locate in the paged journal reads (None = the open set).
@@ -126,8 +130,11 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
         read(f"prop_status:{acct}", public, f"api/bot/prop/status?account_id={acct}")
 
     open_ids = set(wanted or open_package_ids(s))
-    # order_packages: newest-updated first, so old opens may sit past page 1
-    for page in range(max_pages):
+    # order_packages: newest first BY ID, so an older open sits deeper. Paged until every wanted package is found or
+    # history runs out, on its OWN cap (PKG_MAX_PAGES), not the trades' max_pages: the shared 3 x 150 cap stopped at
+    # 450 rows, and the bybit_2 ADA package pkg-897d89b7edf34aa3 (open ~4 days) sat at row 484 on 2026-11-19, so its
+    # meta (timeframe, atr, atr_stop_mult) was never read and the packet could not price a REAL-MONEY trade.
+    for page in range(max(max_pages, PKG_MAX_PAGES)):
         try:
             rows = diag(f"journal?table=order_packages&limit=150&offset={page * 150}")
         except Exception as exc:  # allow-silent: recorded

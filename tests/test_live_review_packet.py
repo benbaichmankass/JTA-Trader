@@ -1112,3 +1112,35 @@ def test_a_leg_without_a_timeframe_suffix_stays_unrecorded():
     assert p["regime"]["timeframe"] is None and p["regime"]["timeframe_source"] is None
     reasons = {m["field"]: m["reason"] for m in p["missing_inputs"]}
     assert reasons["regime.trend_now"] == "package timeframe not recorded in meta"
+
+
+def _paged_diag(n_pkgs, calls):
+    """order_packages newest-first by id (150 per page), trades empty, every other read empty."""
+    pk = [{"order_package_id": f"pkg-{i:05d}", "meta": "{}"} for i in range(n_pkgs)]
+
+    def diag(path):
+        calls.append(path)
+        if path.startswith("journal?table=order_packages"):
+            off = int(path.split("offset=")[1])
+            return pk[off:off + 150]
+        if path.startswith("journal?table=trades"):
+            return []
+        return {}
+    return diag
+
+
+def test_collect_pages_order_packages_past_the_trades_cap_until_the_wanted_package_is_found():
+    """2026-11-19: the bybit_2 ADA package sat at row 484 of order_packages; the shared 3 x 150 cap stopped at 450,
+    so its meta was never read and the REAL-MONEY packet could not price."""
+    calls = []
+    s = L.collect(["pkg-00484"], diag=_paged_diag(2000, calls), public=lambda p: {})
+    assert "pkg-00484" in s.packages
+    pk_calls = [c for c in calls if c.startswith("journal?table=order_packages")]
+    assert len(pk_calls) == 4  # offsets 0/150/300/450, stops once found (not all 14 pages)
+
+
+def test_collect_stops_order_packages_paging_at_the_end_of_history():
+    calls = []
+    s = L.collect(["pkg-missing"], diag=_paged_diag(200, calls), public=lambda p: {})
+    assert "pkg-missing" not in s.packages
+    assert len([c for c in calls if c.startswith("journal?table=order_packages")]) == 2
