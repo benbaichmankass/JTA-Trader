@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "why": "ACTIONS-QUEUE-BACKLOG PAT consumer hunt: scripts/ops/keeper_dispatch.sh (trainer VM, 15-min + hourly timers) logs one 'pat_rate core used/remaining/limit/reset' line per run from GET /rate_limit, which does not count against the limit. Read-only and best-effort; the dispatch is unaffected. Trainer picks it up via ict-trainer-git-sync; trader_import_closure decide = SKIP. Adds no gate.",
+  "hold_text": "Lane PRs are opened held per the AM-OPS brief; the manager merges on green. No restart anywhere: the script is re-read each timer run."
+}
