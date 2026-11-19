@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "awaiting_evidence",
+  "hold_text": "Manager runbook recipe change; the manager merges (instruction 2026-11-19 18:35Z).",
+  "why": "WHY: the 18:20Z paper review lane reviewed 10 due packages from packets 45-140 min old and read 8033 (ict_scalp_eth_15m) as having no packet. Diagnosis (row LTR-PACKET-READ-REACH, 18:40Z): the wake poster builds a packet once per newly-due package|event|level inside a 120-min cooldown (VM receipt already_posted at 18:31:04Z), so repeating due events are reviewed from the first build. 15m legs live in the short-hold lane at comms/live_review/short_hold/<pkg>/latest.json (refreshed every 5 min), never in comms/live_review/packets/. Manager 18:35Z: write it into manager-runbooks section A as Tier 1, no gate. WHAT: one paragraph under the ltr-wake recipe. Batched lanes rebuild any due packet older than ~30 min with scripts/ops/live_review_packet.py <pkg> --write on their live-review/rows checkout, commit the generator's file unedited and review against it. --write rather than --bundle, because check_live_review_records.py refuses a row whose packet_sha has no committed packet; these are generator bytes, not comment text, which stays forbidden. 5m/15m legs read short_hold/<pkg>/latest.json. Verified: a session-built --bundle for pkg-2616d7fbc5134e2e at 18:34Z was priced with no read errors. canonical-doc-coherence and document-index OK. Gates this adds or changes: none."
+}

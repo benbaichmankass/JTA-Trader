@@ -341,3 +341,63 @@ def test_sparse_checkout_cited_approval_clears_and_uncited_or_fake_still_alarms(
     assert grade(hold) == pla.ALARM                                                    # uncited
     assert grade({**hold, "recorded_decision": {"kind": "operator_decision",
                                                 "ref": "research/evidence/made-up.json"}}) == pla.ALARM
+
+
+# ---- alarm dedupe (manager-approved 2026-11-19): 6 h window, per-PR marker, one concurrency group ----
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+NOW = datetime(2026, 11, 19, 12, 0, tzinfo=timezone.utc)
+
+
+def _pr(n, ref, hours_ago, labels=()):
+    return {"number": n, "title": f"pr {n}", "head": {"ref": ref},
+            "merged_at": (NOW - timedelta(hours=hours_ago)).isoformat().replace("+00:00", "Z"),
+            "labels": [{"name": x} for x in labels]}
+
+
+def _decls(tmp_path):
+    d = tmp_path / "pr-landing"
+    d.mkdir()
+    (d / "lane-hold.json").write_text(json.dumps({"tier": 3, "landing": "hold", "why": "x"}))
+    (d / "lane-self.json").write_text(json.dumps({"tier": 1, "landing": "self", "why": "x"}))
+    return str(d)
+
+
+def test_a_dropped_pushs_pr_is_still_graded_by_the_next_run(tmp_path):
+    """The run for PR 1's push was dropped (one pending slot); the next run, triggered by an unrelated
+    push, still selects PR 1 because it is merged inside the window and unmarked."""
+    d = _decls(tmp_path)
+    page = [_pr(2, "lane/self", 0.1), _pr(1, "lane/hold", 2.0)]
+    assert [p["number"] for p in pla.select_prs(page, NOW, d)] == [1]
+
+
+def test_a_second_grade_does_not_page_twice(tmp_path):
+    d = _decls(tmp_path)
+    graded = _pr(1, "lane/hold", 2.0, labels=(pla.MARKER_LABEL,))
+    assert pla.select_prs([graded], NOW, d) == []
+
+
+def test_window_scope_and_missing_declaration(tmp_path):
+    d = _decls(tmp_path)
+    page = [_pr(1, "lane/hold", 7.0),                 # outside the 6 h window
+            _pr(2, "lane/self", 1.0),                 # tier 1 self: grades CLEAN, no API read
+            _pr(3, "lane/no-decl", 1.0),              # missing declaration: graded (it alarms)
+            {"number": 4, "head": {"ref": "lane/hold"}, "merged_at": None, "labels": []}]  # closed unmerged
+    assert [p["number"] for p in pla.select_prs(page, NOW, d)] == [3]
+
+
+def test_cli_select_prints_tsv_and_refuses_a_non_list(tmp_path, capsys):
+    d = _decls(tmp_path)
+    page = tmp_path / "closed.json"
+    page.write_text(json.dumps([{**_pr(1, "lane/hold", 0.0), "merged_at": datetime.now(timezone.utc).isoformat()}]))
+    assert pla.main(["--select-from", str(page), "--decl-dir", d]) == 0
+    assert capsys.readouterr().out.strip() == "1\tpr 1\tlane/hold"
+    page.write_text("{}")
+    assert pla.main(["--select-from", str(page), "--decl-dir", d]) == 3
+
+
+def test_workflow_uses_one_group_the_selector_and_the_marker():
+    wf = (Path(__file__).resolve().parents[1] / ".github/workflows/pr-landing-hold-merge-alarm.yml").read_text()
+    assert "group: pr-landing-hold-merge-alarm\n" in wf and "github.sha }}\n  cancel" not in wf
+    assert "cancel-in-progress: false" in wf
+    assert "--select-from" in wf and pla.MARKER_LABEL in wf

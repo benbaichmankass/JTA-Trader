@@ -151,9 +151,14 @@ def _project(item: dict, mapping: dict, source: str) -> dict:
     legacy = extra.pop("_legacy_state", None)
     out: dict[str, Any] = {"id": item["id"]}
     for k, (col, _fits) in mapping.items():
-        if k in absent or k in extra:
+        if k in extra:
             continue
         v = item.get(col)
+        # EXPORT-ABSENT-DROP (2026-11-19): a closed item's terminal_reason is never "absent" once the
+        # store holds one: items closed before the write side cleared ``_absent`` (work_store._update)
+        # still list it, and dropping it exports a record pipeline.validate refuses.
+        if k in absent and not (k == "terminal_reason" and v not in (None, "")):
+            continue
         if col == "due_rule" and source == "checklist":
             v = (v or {}).get("due_date")
         if k in ints and isinstance(v, float) and v.is_integer():
@@ -167,6 +172,10 @@ def _project(item: dict, mapping: dict, source: str) -> dict:
             out["state"] = "killed"
         elif st == "queued" and item.get("parent_id"):
             out["state"] = "routed"
+            # A store-native item (no ``extra``) carries its destination only as parent_id; a
+            # ``routed`` record without ``routed_to`` fails pipeline.validate (EXPORT-ABSENT-DROP, 6 items).
+            if not extra.get("routed_to"):
+                out["routed_to"] = item["parent_id"]
         else:
             out["state"] = st
     out.update(extra)

@@ -3,7 +3,7 @@
 id: RQ-20261119-a7f1-08
 title: 'RE-RUN on current data: M20 exit-lever sweep for REAL-MONEY leg trend_donchian_xrp_4h (inputs were frozen
   at ~2026-06-18)'
-status: blocked
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -12,12 +12,11 @@ roadmap:
 - M20
 practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg
   and net of the full cost stack [S4, S5, S6]'
-question: 'On CURRENT data (trainer data/XRPUSDT_4h.csv refreshed past the ~2026-06-18 freeze), does each lever
+question: 'On CURRENT data (trainer data/XRPUSDT_5m.csv, the file m20 resolve_data reads, resampled to 4h; no native XRPUSDT_4h.csv exists, refreshed past the ~2026-06-18 freeze), does each lever
   cell for trend_donchian_xrp_4h keep the verdict the matrix carries, in particular SHIPPED (live, bybit_2) stale_stop
   + trail_decay; passed_unshipped trail_geometry? A shipped lever is graded by the sweep''s lever-off arm (base
   with the lever removed vs the cell restoring it at live values). Basis: Which hard exit levers (stale_stop, giveback_stop,
-  trail_geometry, trail_decay, vol_trail, momentum_trail, momentum_stale) clear the exit-refinement P2 gate on uso_trend_1h
-  (USO 1h) on the data available now -- and does last month''s answer still hold?'
+  trail_geometry, trail_decay, vol_trail, momentum_trail, momentum_stale) clear the exit-refinement P2 gate on trend_donchian_xrp_4h (XRPUSDT 4h) on the data available now -- and does last month''s answer still hold?'
 why_this_matters: SHIPPED (live, bybit_2) stale_stop + trail_decay; passed_unshipped trail_geometry. Every committed
   m20 result for trend_donchian_xrp_4h ends at the freeze although run Aug-Nov, so the setting has not been re-checked
   on post-June data. Failing on current data = a data-backed demotion of the setting, brought to the manager (no
@@ -64,9 +63,7 @@ lands:
   assert_field: read_state
   min_rows: 1
 rerun_of:
-  unit: RQ-20261031-019
-  reason: trainer data/XRPUSDT_4h.csv frozen ~2026-06-18
+  unit: RQ-20261016-d37f-13
+  reason: trainer data/XRPUSDT_5m.csv (what resolve_data reads for 4h; no native XRPUSDT_4h.csv) frozen ~2026-06-18 until the 5m refresh added 2026-11-18 (#26930)
   blast_radius: TRAINER-1D-STALE-ROSTERED real-money extension (2026-11-19)
-blocked_reason: 'BLOCKED on data freshness, never a date: unblock when trainer data/XRPUSDT_4h.csv has last bar
-  >= the previous trading day (report_data_freshness.py --alert-rostered / trainer-vm-diag). Fix in flight: #27214
-  adds the crypto 1h/2h/4h pairs to ict-candle-refresh.'
+last_dispatched_at: '2026-11-19T11:47:12+00:00'

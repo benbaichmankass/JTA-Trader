@@ -885,6 +885,10 @@ def _summarize_conflicts(conflicts: List[Dict[str, Any]],
     }
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP')
 def run_system_backtest(base5m, *args, costs: Optional[Dict[str, Any]] = None,
                         require_full_costs: bool = False, **kwargs) -> Dict[str, Any]:
     """Portfolio backtest with an explicit cost stack (PROP-EVAL-COSTS, 2026-10-15).
@@ -1887,6 +1891,7 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     p = argparse.ArgumentParser(

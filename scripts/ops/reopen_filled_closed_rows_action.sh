@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Tier-2 operator action (ONE-OFF, PINNED): reopen-filled-closed-rows.
-# Wraps scripts/ops/reopen_filled_closed_rows.py: re-opens the 7 alpaca_portfolio SLV journal rows that were
-# closed before their bracket entries filled at the venue (877 sh), and closes the 6-sh phantom row 7784.
-# PI-20261118-JFWRQYOV-0004; decision: manager 2026-11-19 (option a, GO ~01:02Z). Dry-run unless apply: true.
+# Tier-2 operator action: reopen-filled-closed-rows (spec-driven).
+# Wraps scripts/ops/reopen_filled_closed_rows.py: re-opens journal rows that were closed before their bracket
+# entries filled at the venue, per the COMMITTED spec comms/ops/reopen_specs/<account>__<SYMBOL>.json, chosen
+# by the issue body's `account:` + `symbol:` (ACCOUNT_ID / ACTION_SYMBOL). PI-20261118-JFWRQYOV-0004.
+# Dry-run unless apply: true. Each spec's apply needs its own manager OK on the dry-run diff.
 # ⚠️ IT PLACES, MODIFIES AND CANCELS NOTHING at any venue: journal/state repair only.
 # The venue evidence (positions + order history) is captured HERE, inside the run, so it is fresh by construction.
 set -euo pipefail
@@ -16,6 +17,13 @@ BASE="http://127.0.0.1:8001/api/diag"
 SYSTEM_ENV="/etc/ict-trader/web-api.env"
 DB_PATH="$(runtime_db_path)"
 PY_SCRIPT="${REPO_DIR}/scripts/ops/reopen_filled_closed_rows.py"
+ACCT="${ACCOUNT_ID:-}"
+SYM="${ACTION_SYMBOL:-}"
+if ! printf '%s' "${ACCT}" | grep -Eq '^[a-z0-9_]+$' || ! printf '%s' "${SYM}" | grep -Eq '^[A-Za-z0-9]+$'; then
+    log "ERROR: account '${ACCT}' / symbol '${SYM}' missing or invalid (issue body: 'account: <id>' + 'symbol: <SYM>')."
+    record_audit "${ACTION_SLUG}" "error" "{\"reason\": \"bad account/symbol\"}" >/dev/null || true
+    exit 2
+fi
 
 for f in "${PY_SCRIPT}" "${DB_PATH}"; do
     if [ ! -f "${f}" ]; then
@@ -54,21 +62,32 @@ capture() {   # $1 = url, $2 = out file; header via stdin, never in argv / ps
         exit 1
     fi
 }
-capture "${BASE}/exchange_positions?account_id=alpaca_portfolio" "${POS_JSON}"
-capture "${BASE}/alpaca_order_history?account_id=alpaca_portfolio&symbol=SLV&limit=200" "${HIST_JSON}"
+# The spec decides which orders are evidence: look each one up by id (exact; a list page can miss them).
+set +e
+IDS="$(python3 "${PY_SCRIPT}" --db "${DB_PATH}" --account "${ACCT}" --symbol "${SYM}" --print-lookup)"
+rc=$?
+set -e
+if [ "${rc}" -ne 0 ] || ! printf '%s' "${IDS}" | grep -Eq '^[A-Za-z0-9,-]+$'; then
+    echo "${IDS}"
+    log "ERROR: no valid spec for ${ACCT} ${SYM} (rc=${rc}); nothing was written."
+    record_audit "${ACTION_SLUG}" "error" "{\"reason\": \"spec\"}" >/dev/null || true
+    exit 3
+fi
+capture "${BASE}/exchange_positions?account_id=${ACCT}" "${POS_JSON}"
+capture "${BASE}/alpaca_order_history?account_id=${ACCT}&order_ids=${IDS}" "${HIST_JSON}"
 
 APPLY_FLAG=""
 case "${ACTION_APPLY:-}" in
     true|True) APPLY_FLAG="--apply" ;;
     *)         APPLY_FLAG="" ;;
 esac
-echo "===== reopen_filled_closed_rows.py ${APPLY_FLAG:-(dry run)} ====="
+echo "===== reopen_filled_closed_rows.py ${ACCT} ${SYM} ${APPLY_FLAG:-(dry run)} ====="
 set +e
-python3 "${PY_SCRIPT}" --db "${DB_PATH}" --order-history "${HIST_JSON}" --positions "${POS_JSON}" ${APPLY_FLAG}
+python3 "${PY_SCRIPT}" --db "${DB_PATH}" --account "${ACCT}" --symbol "${SYM}" --order-history "${HIST_JSON}" --positions "${POS_JSON}" ${APPLY_FLAG}
 exit_code=$?
 set -e
 if [ "${exit_code}" -ne 0 ]; then
     record_audit "${ACTION_SLUG}" "failed" "{\"apply\": \"${ACTION_APPLY:-}\", \"exit_code\": ${exit_code}}" >/dev/null || true
     exit "${exit_code}"
 fi
-record_audit "${ACTION_SLUG}" "ok" "{\"apply\": \"${ACTION_APPLY:-}\"}" >/dev/null || true
+record_audit "${ACTION_SLUG}" "ok" "{\"apply\": \"${ACTION_APPLY:-}\", \"account\": \"${ACCT}\", \"symbol\": \"${SYM}\"}" >/dev/null || true

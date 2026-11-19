@@ -1,0 +1,122 @@
+# Hand-authored 2026-11-19 by lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), dispatched by the manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV). Unblocked by scripts/research/etf_rotation_stage0.py (same PR). Gates this adds or changes: none.
+id: RQ-20261119-f2a4-04
+title: 'P8-Q7 NEW FAMILY, Stage 0 on the alpaca_live cash book: does monthly dual-momentum ETF rotation (best 126-session total return
+  of SPYM / SCHA / IEF / TLT / GLD if it beats BIL, else cash) beat buy-and-hold SPYM on drawdown without giving up most of the return,
+  on 2010-2023, confirmed once on 2024-2026?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-LADDER
+programme: P8
+kind: experiment
+question: 'With the parameters fixed in scripts/research/etf_rotation_stage0.py (lookback 126 sessions, monthly decision at the last
+  session close, trades at the next open, catastrophic bracket stop -15%, the cost stack of execution_costs per symbol), replayed through
+  the alpaca_live cash book (alpaca_live_book.replay, live sizer constants, one slot, T+1, whole shares): on DISCOVERY 2010-01..2023-12
+  does the rotation clear the registered rule against buy-and-hold SPYM on the same book, and if so does the ONE confirm read on 2024-01..2026-10
+  hold?'
+why_this_matters: 'Decision it changes: whether P8 gets a second candidate family for the real-money cash book. 207f-01 showed the live
+  ML leg''s edge is eaten by the one-slot account (slot_busy 872 of 1,016 candidates), so a family that trades rarely and holds ONE
+  affordable ETF fits the account by construction. PASS -> the leg goes to the P8-Q4 head-to-head against Foxhound-4 (alpaca_live_book.py
+  h2h --trades-from this run''s rotation_trades.json) and, on a pass there, a Tier-3 proposal; FAIL -> this configuration is closed,
+  and the record says which clause failed (drawdown or return), which points the next variant (lookback or universe) at the failing
+  clause.'
+origin: new_hypothesis
+origin_reason: Time-series and cross-asset momentum persists because of slow-moving institutional rebalancing and investor under-reaction
+  (Moskowitz-Ooi-Pedersen 2012; Antonacci dual momentum). Absolute momentum's value is drawdown avoidance in sustained bear markets,
+  paid for by lag at turns. The cash book pays per trade, so a family that trades a few times a year is the cheapest edge the account
+  can hold.
+levers_declared:
+- entry (lookback 126, fixed)
+- universe (5 ETFs + BIL, fixed)
+- exit (monthly rebalance + catastrophic stop 15%, fixed)
+power:
+  expected_n: 70
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: monthly rotation among 5 assets switches ~4-6 times a year, so 14 discovery years hold ~55-85 trades; under 39 trades
+    or n_taken 30 on the book the unit grades INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Yahoo daily history for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261119f2a404-P8-ROTATION-S0
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'etf_rotation_stage0.py run: rotation and buy-and-hold-SPYM trade lists per window, net R per trade, per-year table, and
+    each list replayed through alpaca_live_book.replay.'
+  rule: 'DISCOVERY (2010-01-01..2023-12-31) PASSES iff rotation trades n >= 39 AND book n_taken >= 30 AND net R > 0 AND >= 75% of calendar
+    years net positive AND no single year above 50% of total net R AND book max drawdown <= 0.6x the hold book''s AND book return per
+    month >= 0.75x the hold book''s. Only then the ONE CONFIRM read (2024-01-01..2026-10-31): PASS iff rotation net R > 0 AND book max
+    drawdown <= the hold book''s. INDETERMINATE iff the floors are not met. FAIL otherwise; the failing clauses are named. Long-only,
+    so the short-side clause does not apply. Parameters, universe, windows and thresholds are fixed now and not changed after any result.'
+  what_it_does_not_do: 'Changes no roster, config or account; places no order. Not a promotion case: a PASS goes to the P8 head-to-head
+    first, and a live leg would also need a declared take-profit (TP doctrine), which this Stage-0 rule does not grade.'
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 90
+  confidence: 0.15
+  basis: planning weight shared with the P8 slot; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 6 Yahoo daily downloads and a monthly loop; seconds of CPU, the fetch dominates.
+  why_runner: Yahoo daily candles via yfinance (installed on research-script-run); the Kaggle CPU kernel has no internet; no trainer
+    data.
+run:
+  command:
+  - python3
+  - scripts/research/etf_rotation_stage0.py
+  - run
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --rule-id
+  - RULE-RQ20261119f2a404-P8-ROTATION-S0
+  - --registered-at
+  - '2026-11-19'
+  - --where
+  - research-script-run
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261119-f2a4-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based Stage-0 of a new strategy family.'
+intervention_controls:
+  not_applicable: a Stage-0 backtest against a buy-and-hold baseline, not an in-trade action
+what_it_does_not_do: Changes no roster, config or account; places no order. Not a promotion case.
+practice_precedent: 'M4, M13 (docs/reference/trading-and-model-practice-principles.md): parameters fixed before the run, declared naive
+  baseline, discovery then one confirm on data not used to select.'
+related:
+- research/programmes/08-alpaca-live-book.yaml#P8-Q7-rotation
+- RQ-20261111-207f-01
+- scripts/research/etf_rotation_stage0.py
+- scripts/research/alpaca_live_book.py
+last_dispatched_at: '2026-11-19T18:20:40+00:00'
+grading:
+  attested: RULE-RQ20261119f2a404-P8-ROTATION-S0
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261119f2a404-P8-ROTATION-S0
+  evidence:
+  - research/results/RQ-20261119-f2a4-04/44576875020.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

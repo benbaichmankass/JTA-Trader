@@ -46,8 +46,14 @@ from pathlib import Path
 # lake symbol -> data/ file stem. Micro symbols map to the proxy's own name.
 NAME_MAP = {
     "SPY": "SPY", "QQQ": "QQQ", "GLD": "GLD", "TLT": "TLT", "IWM": "IWM",
-    "SLV": "SLV", "IEF": "IEF", "TQQQ": "TQQQ", "QLD": "QLD", "SPYM": "SPYM",
-    "IAUM": "IAUM", "SPLG": "SPLG",
+    "SLV": "SLV", "IEF": "IEF", "TQQQ": "TQQQ", "QLD": "QLD",
+    "IAUM": "IAUM",
+    # SPDR renamed SPLG -> SPYM; the lake builds SPYM, the trainer file is still data/SPLG_1d.csv (and no
+    # SPYM_1d.csv exists), so neither old key matched and SPLG froze at 2026-07-02. The basis check below
+    # still decides extend vs splice (TRAINER-1D-STALE-ROSTERED, 2026-11-19).
+    "SPYM": "SPLG",
+    # never built before 2026-11-19 (TRAINER-1D-STALE-ROSTERED): GDX/SCHA/USO are rostered leg symbols.
+    "GDX": "GDX", "SCHA": "SCHA", "USO": "USO", "DBC": "DBC", "DBA": "DBA", "UNG": "UNG",
     "MGC": "GC_F", "MHG": "HG_F", "MES": "ES_F",
 }
 _BASE = ["timestamp", "open", "high", "low", "close", "volume"]

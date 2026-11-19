@@ -1,0 +1,78 @@
+{
+  "unit": "RQ-20261119-f2a4-03",
+  "run_id": "44576881277",
+  "commit_sha": "7107042e08750353f4d1b42a4af68802e75e2c58",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/44576881277",
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1016-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.82.6",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/alpaca_live_book.py",
+        "h2h",
+        "--cache",
+        "/tmp/ml_entry_equity",
+        "--out",
+        "comms/research/RQ-20261119-f2a4-03/44576881277",
+        "--unit",
+        "RQ-20261119-f2a4-03",
+        "--where",
+        "research-script-run",
+        "--rule-id",
+        "RULE-RQ20261119f2a403-P8-H2H",
+        "--registered-at",
+        "2026-11-19",
+        "--strategy",
+        "slv_trend_1h",
+        "--book-leg",
+        "tqqq_trend_long_1d",
+        "--days",
+        "1460"
+      ],
+      "log": "comms/research/RQ-20261119-f2a4-03/44576881277/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 5019.2
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

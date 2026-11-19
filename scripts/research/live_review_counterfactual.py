@@ -68,7 +68,30 @@ sys.path.insert(0, str(REPO))
 from src.runtime.execution_costs import DEFAULT_FEE_BPS_ROUNDTRIP, resolve_cost_policy  # noqa: E402
 from src.runtime.net_r_label import net_r_for_trade  # noqa: E402
 
+
+def _r_label(trade: dict, sl0: Optional[float]) -> Optional[dict]:
+    """net_r_for_trade on the INITIAL-stop basis, with the symbol's contract multiplier filled in when the journal row
+    does not carry one. PI-20261118-PREP1118-0006: net_r_label defaults a missing multiplier to 1.0, so a futures
+    row divided its dollar pnl by an unscaled risk (MHG trade 5886 read 4937 R = 2500 x ~1.97 R; MGC 6673 39.27 R =
+    10 x ~3.93 R) and poisoned the hold-vs-close mean (n=109, mean dR 91.47)."""
+    if not trade or sl0 is None:
+        return None
+    basis = dict(trade, stop_loss=sl0)
+    if not any(_num(basis.get(k)) for k in ("contract_value_usd", "contract_value")):
+        try:
+            from src.runtime.local_pnl import contract_value_usd_for  # noqa: PLC0415
+            cv = contract_value_usd_for(str(basis.get("symbol") or ""))
+        except (ImportError, KeyError, ValueError, TypeError) as exc:     # no multiplier known: net_r_label's 1.0 default
+            print(f"live_review_counterfactual: contract_value_usd_for({basis.get('symbol')!r}): {exc!r}", file=sys.stderr)
+            cv = None
+        if cv:
+            basis["contract_value_usd"] = cv
+    return net_r_for_trade(basis)
+
 REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
+#: Dispatchable rows main's schema refused (live_review_rows_mirror.REFUSED_DISPATCHABLE): still priced, because a row
+#: the VM applied must be graded whatever shape it was written in (LTR-GRADE-APPLIED, 2026-11-19).
+REFUSED_DISPATCHABLE = REPO / "comms" / "live_review" / "reviews_refused_dispatchable.jsonl"
 OUTCOMES = REPO / "comms" / "live_review" / "outcomes.jsonl"
 FIDELITY_TOL_R = 0.15
 ALTERING = ("tighten_sl", "tp_revise", "partial_close", "close", "move_tp", "widen_sl", "change_size", "add_entry")
@@ -209,7 +232,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     action = rec.get("action")
     if action in NO_PATH_CHANGE:
         sl0 = initial_stop(pkg) if pkg else None
-        lab = net_r_for_trade(dict(trade, stop_loss=sl0)) if (trade and sl0 is not None) else None
+        lab = _r_label(trade, sl0)
         out = _outcome_row(review, trade, delta=0.0, rec_r=None, cf_r=None, cf_shadow=None,
                            method="no_path_change", fidelity=None, stack=None, computed_at=computed_at,
                            net_r=lab["net_R"] if lab else None)
@@ -263,8 +286,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
         to_date = {"hold_exit": hold, "rec_exit": recp,
                    "note": "trade still open: delta needs the realised exit; this is a replay to the last candle"}
         return _result(review, state="could_not_price", reason="trade_open", to_date=to_date)
-    basis = dict(trade, stop_loss=sl0)                                   # R basis = the package's INITIAL stop
-    lab = net_r_for_trade(basis)
+    lab = _r_label(trade, sl0)                                           # R basis = the package's INITIAL stop
     if lab is None:
         return _result(review, state="could_not_price", reason="realised_net_r_uncomputable")
     net_r = lab["net_R"]
@@ -365,7 +387,7 @@ def _price_paired(review: dict, rec: dict, action: str, pkg: dict, trade: dict, 
         return _result(review, state="could_not_price", reason="trade_open",
                        to_date={"hold_exit": hold, "action_exit": act, "close_at_open": shut,
                                 "note": "trade still open: delta needs the realised exit; this is a replay to the last candle"})
-    lab = net_r_for_trade(dict(trade, stop_loss=sl0))
+    lab = _r_label(trade, sl0)
     if lab is None:
         return _result(review, state="could_not_price", reason="realised_net_r_uncomputable")
     net_r = lab["net_R"]
@@ -435,7 +457,14 @@ def initial_stop(pkg: dict) -> Optional[float]:
     side = str(pkg.get("direction") or "").lower()
     if entry is not None and rpu and side in ("long", "short"):
         return entry - rpu if side == "long" else entry + rpu
-    return _num(pkg.get("sl"))
+    sl = _num(pkg.get("sl"))
+    # The CURRENT stop is only a stand-in for the initial one while it is still on the RISK side of entry. A stop
+    # trailed past entry (MGC pkg-011a7bf8 short: entry 4180.9, sl 4116.03) is not an initial stop: R on it is
+    # wrong in size, so say "cannot price" instead (PI-20261118-PREP1118-0006).
+    if sl is not None and entry is not None and side in ("long", "short"):
+        if (side == "long" and sl >= entry) or (side == "short" and sl <= entry):
+            return None
+    return sl
 
 
 #: seconds after ``reviewed_at`` within which a ``live_review_close`` exit is attributed to that review's close
@@ -494,6 +523,27 @@ def read_jsonl(p: Path) -> List[dict]:
         ln = ln.strip()
         if ln and not ln.startswith('{"_meta"'):
             out.append(json.loads(ln))
+    return out
+
+
+def read_refused_dispatchable(path: Path = REFUSED_DISPATCHABLE, skip_ids: Iterable[str] = ()) -> List[dict]:
+    """The sidecar rows, minus any review_id already in main's reviews (``skip_ids``). Absent file = []."""
+    skip = set(skip_ids)
+    return [r for r in (read_jsonl(path) if path.exists() else []) if r.get("review_id") not in skip]
+
+
+def price_contained(reviews: Iterable[dict], packages: Dict[str, dict], trades: Dict[int, dict],
+                    candle_fn: Callable[[str, str], Optional[List[dict]]]) -> List[dict]:
+    """price_all, one row at a time, a row that raises is skipped with a stderr line: the sidecar holds rows the schema
+    refused, so a missing field must cost that row only, never the hourly pricing of every other review."""
+    out: List[dict] = []
+    for rv in reviews:
+        try:
+            out += price_all([rv], packages, trades, candle_fn)
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:   # a schema-refused row's missing/odd field
+            print(f"price_contained: {rv.get('review_id')}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            # counted, never dropped: the grade's could_not_price_reasons names it
+            out.append(_result({"order_package_id": None, **rv, "review_id": rv.get("review_id")}, state="could_not_price", reason=f"sidecar_row_unpriceable:{type(exc).__name__}"))
     return out
 
 
@@ -579,22 +629,84 @@ def append_outcomes(results: List[dict], path: Path = OUTCOMES) -> int:
     return len(new)
 
 
+#: the priced fields a re-price can change; any difference in one of them makes a superseding row.
+PRICED_FIELDS = ("net_r", "cf_r", "cf_r_shadow_0_5", "rec_r", "delta_r", "cf_method", "replay_fidelity")
+
+
+def latest_outcomes(rows: Iterable[dict]) -> Dict[str, dict]:
+    """review_id -> the LATEST row (file order). outcomes.jsonl is append-only: a re-price appends a row carrying
+    ``supersedes`` = the computed_at of the row it replaces (PI-20261118-PREP1118-0006, manager decision 2026-11-19)."""
+    out: Dict[str, dict] = {}
+    for r in rows:
+        out[r["review_id"]] = r
+    return out
+
+
+def _differs(a: dict, b: dict) -> bool:
+    for k in PRICED_FIELDS:
+        x, y = a.get(k), b.get(k)
+        if _num(x) is not None and _num(y) is not None:
+            if abs(float(x) - float(y)) > 1e-6:
+                return True
+        elif x != y:
+            return True
+    return False
+
+
+def supersede_outcomes(results: List[dict], reason: str, path: Path = OUTCOMES, dry_run: bool = False,
+                       only: Optional[set] = None) -> List[dict]:
+    """Append a superseding row for every review whose recomputed outcome differs from its latest recorded row in a
+    priced field. Never edits a line. Reviews with no recorded row are left to ``append_outcomes``. Returns the
+    (old, new) pairs written (or that would be, with ``dry_run``). ``only`` limits it to those review_ids (the set a
+    named fix changed; recompute drift in realised net_r is a separate decision)."""
+    if not reason:
+        raise ValueError("a supersede needs a reason")
+    latest = latest_outcomes(read_jsonl(path))
+    pairs = []
+    for r in results:
+        if only is not None and r["review_id"] not in only:
+            continue
+        o, old = r.get("outcome"), latest.get(r["review_id"])
+        if not o or old is None or not _differs(old, o):
+            continue
+        pairs.append({"old": old, "new": dict(o, supersedes=old["computed_at"], supersede_reason=reason)})
+    if pairs and not dry_run:
+        with path.open("a") as f:
+            for pr in pairs:
+                f.write(json.dumps(pr["new"], sort_keys=True) + "\n")
+    return pairs
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--live", action="store_true", help="read packages/trades via diag_fetch.sh and candles from the public API")
     ap.add_argument("--reviews", default=str(REVIEWS))
     ap.add_argument("--write", action="store_true", help="append computed outcome rows for CLOSED trades (idempotent by review_id)")
+    ap.add_argument("--supersede", metavar="REASON", help="append a superseding row (never an edit) for every recorded "
+                    "outcome whose re-priced value differs; REASON names the fix. Combine with --dry-run to list first.")
+    ap.add_argument("--dry-run", action="store_true", help="with --supersede: print the old -> new diff, write nothing")
+    ap.add_argument("--only-ids", metavar="FILE", help="with --supersede: one review_id per line; supersede only those")
     a = ap.parse_args(argv)
     if not a.live:
         ap.error("only --live is wired on the CLI; tests and the grader call price_all() with their own sources")
     reviews = read_jsonl(Path(a.reviews))
-    packages, trades = load_live_sources(reviews)
+    side = read_refused_dispatchable(skip_ids=[r.get("review_id") for r in reviews])
+    packages, trades = load_live_sources(reviews + side)
     res = price_all(reviews, packages, trades, fetch_candles_live)
+    res += price_contained(side, packages, trades, fetch_candles_live)
     from collections import Counter
     print(json.dumps({"n_reviews": len(res), "by_state": Counter(r["state"] for r in res),
                       "by_reason": Counter(r["reason"] for r in res if r["reason"])}, indent=1))
     if a.write:
         print(f"appended {append_outcomes(res)} outcome row(s)")
+    if a.supersede:
+        only = {ln.strip() for ln in Path(a.only_ids).read_text().splitlines() if ln.strip()} if a.only_ids else None
+        pairs = supersede_outcomes(res, a.supersede, dry_run=a.dry_run, only=only)
+        for pr in pairs:
+            print(json.dumps({"review_id": pr["new"]["review_id"], "action": pr["new"].get("action"),
+                              **{k: [pr["old"].get(k), pr["new"].get(k)] for k in PRICED_FIELDS
+                                 if pr["old"].get(k) != pr["new"].get(k)}}, sort_keys=True))
+        print(f"{'would supersede' if a.dry_run else 'superseded'} {len(pairs)} outcome row(s)")
     return 0
 
 

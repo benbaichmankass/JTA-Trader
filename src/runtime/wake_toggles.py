@@ -4,10 +4,14 @@ Operator 2026-11-07: *"we just need to be able to toggle off those notifications
 session types"* / *"I don't want to lose the timing of the real money ltr, just to toggle off the notifications
 that reach you"* / *"an easy toggle ... something I can toggle from the console dashboard"*.
 
-Gates this adds or changes: none. A toggle decides only whether a SESSION IS WOKEN by a comment on the ops-flags
-PR. It never decides what trades, what is reviewed, or whether a packet is built: when a switch is off the poster
-still builds and lands its packet / evidence and writes a ``suppressed_by_wake_toggle`` receipt; only the comment
-is withheld.
+Gates this adds or changes: none. A toggle decides whether a SESSION IS STARTED OR WOKEN for a due event. It never
+decides what trades or whether a packet is built: when a switch is off the poster still builds and lands its packet /
+evidence and writes a ``suppressed_by_wake_toggle`` receipt. ⚠️ What it DOES decide, said plainly (corrected
+2026-11-19, row LTR-REVIEWER-NOT-FIRED-20261119): the VM poster applies the toggles BEFORE the routine fire
+(``live_review_wake_post``), so an entry whose every account class is OFF gets NEITHER the ltr-wake comment NOR an
+automatic reviewer session. With ``ltr_paper`` off (the operator's console act, 2026-11-08) paper packages are
+reviewed only when the manager dispatches them, e.g. its batched paper lanes at check-ins (manager decision
+2026-11-19: keep it that way rather than move the fire ahead of the toggle).
 
 State lives in RUNTIME STATE on the VM (``runtime_state/wake_toggles.json``, not a git-tracked file): a flip needs
 no deploy, restart or PR, persists across restarts, and every poster reads it live each pass.

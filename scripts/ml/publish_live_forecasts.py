@@ -40,6 +40,7 @@ Run on the trainer VM:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -109,6 +110,69 @@ def _candles_to_rows(candles: Sequence[Candle]) -> list[dict[str, Any]]:
     return rows
 
 
+def window_closes_hash(closes: Sequence[float]) -> str:
+    """sha256 of the window's closes, each as ``repr(float(c))``, comma-joined.
+
+    The window identity a diff can recompute from any other candle source
+    (PI-20261119-K7ZSW5Z7-0005): two sides with the same hash fed the
+    forecaster the same closes, so a differing ``fc_*`` is the model; a
+    differing hash is the data.
+    """
+    text = ",".join(repr(float(c)) for c in closes)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def latest_window_stamp(
+    candles: Sequence[Candle],
+    timeframe: str,
+    *,
+    context_len: int = DEFAULT_CONTEXT_LEN,
+) -> dict[str, Any] | None:
+    """Describe the context window the LATEST forecast row is computed over.
+
+    Mirrors the slice in :func:`compute_forecast_feature_rows` for its last
+    emitted bar: the rows are sorted by ``str(ts)``, the window is the trailing
+    ``context_len`` rows ending at the last one, and ``None`` / non-positive
+    closes are dropped from it. Observability only (the forecast is computed by
+    the shared pure fn, never from this). ``None`` when there are no rows.
+    """
+    from src.runtime.closed_bars import TF_SECONDS, _epoch_seconds  # stdlib-only
+
+    rows = sorted(_candles_to_rows(candles), key=lambda r: str(r.get("ts", "")))
+    if not rows:
+        return None
+    win_rows = rows[max(0, len(rows) - context_len):]
+    closes: list[float] = []
+    for r in win_rows:
+        try:
+            c = float(r["close"])
+        except (TypeError, ValueError):
+            continue
+        if c > 0:
+            closes.append(c)
+    tf_s = TF_SECONDS.get(str(timeframe or "").strip().lower())
+    gaps = 0
+    unreadable_ts = 0
+    prev = None
+    for r in win_rows:
+        t = _epoch_seconds(r.get("ts"))
+        if t is None:
+            unreadable_ts += 1
+            continue
+        if prev is not None and tf_s and int(round(t - prev)) != tf_s:
+            gaps += 1
+        prev = t
+    return {
+        "window_start_ts": win_rows[0].get("ts"),
+        "window_end_ts": win_rows[-1].get("ts"),
+        "window_n": len(closes),
+        "window_gaps": gaps,
+        "window_unreadable_ts": unreadable_ts,
+        "window_closes_sha256": window_closes_hash(closes),
+        "window_closes": closes,
+    }
+
+
 def latest_forecast_row(
     candles: Sequence[Candle],
     *,
@@ -167,6 +231,7 @@ def build_forecast_artifact(
     """
     from src.runtime.closed_bars import drop_forming_bar  # stdlib-only
 
+    fetched_n = len(candles)
     candles = drop_forming_bar(list(candles), timeframe)
     row = latest_forecast_row(
         candles,
@@ -180,6 +245,9 @@ def build_forecast_artifact(
     if row is None:
         return None
     fc_row = {col: row[col] for col in FORECAST_FEATURE_COLUMNS}
+    # Window identity (PI-20261119-K7ZSW5Z7-0005): which closes this forecast
+    # saw, so a live-vs-offline diff can tell a data difference from a model one.
+    stamp = latest_window_stamp(candles, timeframe, context_len=context_len) or {}
     return {
         "symbol": symbol,
         "timeframe": timeframe,
@@ -192,6 +260,9 @@ def build_forecast_artifact(
         "feature_columns": list(FORECAST_FEATURE_COLUMNS),
         "fc_row": fc_row,
         "as_of_ts": row.get("ts"),
+        "fetched_n": fetched_n,
+        "forming_dropped": fetched_n - len(candles),
+        **stamp,
     }
 
 
@@ -225,8 +296,13 @@ def write_forecast_artifact(
     min_context: int = DEFAULT_MIN_CONTEXT,
     horizon: int = DEFAULT_HORIZON,
     quantile_levels: Sequence[float] = FORECAST_QUANTILES,
+    history_dir: Path | None = None,
 ) -> Path | None:
-    """Build + atomically write ``<out_dir>/<SYMBOL>.json``; ``None`` if no row."""
+    """Build + atomically write ``<out_dir>/<SYMBOL>.json``; ``None`` if no row.
+
+    With *history_dir*, the artifact is also appended to the per-day publish
+    history there (the CLI passes ``--history-dir``; library callers opt in).
+    """
     artifact = build_forecast_artifact(
         symbol,
         timeframe,
@@ -243,7 +319,33 @@ def write_forecast_artifact(
         return None
     path = Path(out_dir) / f"{symbol}.json"
     _atomic_write_json(path, artifact)
+    if history_dir is not None:
+        _append_history(artifact, history_dir)
     return path
+
+
+# Per-publish history (PI-20261119-K7ZSW5Z7-0005). The per-symbol artifact is
+# overwritten every bar, so without this nothing records which window a past
+# served forecast was computed over. One JSONL file per UTC day, outside the
+# rsynced forecasts dir (trainer-local; the diff reads it on the trainer).
+DEFAULT_HISTORY_DIR = (
+    Path(__file__).resolve().parents[2] / "runtime_logs" / "forecast_publish_history"
+)
+
+
+def _append_history(artifact: Mapping[str, Any], history_dir: Path) -> None:
+    """Append *artifact* as one line to ``<history_dir>/<UTC date>.jsonl``.
+
+    Best-effort: a history write failure never fails the publish.
+    """
+    try:
+        d = Path(history_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        with open(d / f"{day}.jsonl", "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(artifact, sort_keys=True, default=str) + "\n")
+    except Exception:  # noqa: BLE001 - observability only
+        pass
 
 
 def _fetch_candles(
@@ -287,6 +389,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=DEFAULT_FORECASTS_DIR,
         help="Output dir for the per-symbol artifacts.",
+    )
+    ap.add_argument(
+        "--history-dir",
+        type=Path,
+        default=DEFAULT_HISTORY_DIR,
+        help="Per-day JSONL history of every published artifact (window stamp included).",
     )
     ap.add_argument("--model-id", default=FORECAST_MODEL_ID)
     ap.add_argument("--context-len", type=int, default=DEFAULT_CONTEXT_LEN)
@@ -336,6 +444,7 @@ def main(argv: list[str] | None = None) -> int:
                 stride=args.stride,
                 min_context=args.min_context,
                 horizon=args.horizon,
+                history_dir=args.history_dir,
             )
             if path is None:
                 entry["status"] = "insufficient_history"

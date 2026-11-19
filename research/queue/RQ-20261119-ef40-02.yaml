@@ -1,0 +1,117 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV). Pipeline item PI-20261119-K7ZSW5Z7-0005: the D2 follow-on to RQ-20261119-a10d-01 (FAIL).
+# Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-ef40-02
+title: 'D2 MECHANICS: after the stride-1 rebuild, does the live fc_* block of each matched bar equal the offline stride-1 fc_* of its OWN
+  bar or of an EARLIER bar (the scorer serving the previous published forecast), for btc/sol-regime-15m-lgbm-fc-pcv-v2?'
+status: done
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: regime
+priority: 1
+kind: deterministic
+compute: needs_vm_data
+question: 'Per head (BTCUSDT, SOLUSDT 15m), over the live rows of the committed snapshot comms/live_parity/vol_serve_rows_20261118 that
+  a10d-01 graded, each matched to its own rebuilt bar exactly as vol_serve_path_diff does: are the six live fc_* values equal (1e-6)
+  to the rebuilt stride-1 fc_* of the own bar (k=0), of one other bar (k in -2..+2), close only (1e-3), or none? Does k=0 plus the single
+  most common nonzero k cover at least 98% of matched rows?'
+why_this_matters: 'a10d-01 FAILED: the stride-1 rebuild removed the 75% staleness, yet agreement stayed 0.9736 BTC / 0.9307 SOL and
+  forecast_fc reproduces 100% of the flips. Every non-forecast column agrees, so the closes agree and the forecast differs (fc_ret_med
+  differs > 1e-3 on 44.9% of BTC bars). src/runtime/forecast_live.py (MAX_FORECAST_LAG_BARS = 1) states that serving the previous
+  bar''s forecast is the normal in-flight case. If that explains the gap, no replay reproduces live labels until it models the serve
+  lag, and the heads are trained on own-bar fc_* but scored on lagged fc_* about half the time (a train/serve skew on a live advisory
+  input). a10d-02 and every D2 cell money test stay blocked until this is known.'
+why_not_inferential: 'This estimates no effect. Each matched row is classified by an exact equality test against a fixed set of offsets;
+  the rule reads a share of an enumerated population (about 980 BTC + 900 SOL rows), not a sample statistic. An expected_n or a
+  minimum detectable effect would be theatre.'
+population: 'live per-bar rows of btc-regime-15m-lgbm-fc-pcv-v2 and sol-regime-15m-lgbm-fc-pcv-v2 in comms/live_parity/vol_serve_rows_20261118
+  (2026-11-09..18, the most recent 1000 per head), matched to the stride-1 rebuild that a10d-01 wrote on the trainer.'
+decision_rule:
+  id: RULE-RQ20261119-ef40-02-FC-LIVE-LAG
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  statistic: 'scripts/research/fc_live_lag_diff.py: per matched row, class exact_k0 / exact_k<k> (exactly one nonzero offset within 1e-6
+    relative-or-absolute on all six fc_*) / exact_ambiguous / near_only (best offset within 1e-3) / none; shares over matched rows.
+    Reported: lag -1 streak lengths, scoring second-into-bar by class, per-column |diff| quantiles of near_only and none rows.'
+  rule: 'Per head: INDETERMINATE if matched rows < 200 or the rebuilt dataset is missing (read_state no_data); LAG_EXPLAINS iff
+    share(exact_k0) + share(the single most common nonzero exact_k) >= 0.98; RESIDUAL otherwise. Unit: LAG_EXPLAINS only if both heads
+    are; RESIDUAL if any head is; else INDETERMINATE. verdict.json carries LAG_EXPLAINS as pass, RESIDUAL as fail, INDETERMINATE as
+    indeterminate (verdict_label keeps the name). Tolerances, offsets and the 0.98 bar are fixed now.'
+  pass_action: 'LAG_EXPLAINS: (1) re-grade the a10d-01 parity with each live row matched to the rebuilt fc_* at its measured lag (a
+    re-run unit on the same snapshot); a PASS there unblocks a10d-02. (2) File a D2 build row for the train/serve skew: either the
+    scorer waits for its own bar''s forecast, or the heads train on the served lag; each choice is its own pre-registered test. No
+    serving change ships from this unit.'
+  fail_action: 'RESIDUAL: the none / near_only rows name what else differs (magnitude per column). Next step is observability: the live
+    publisher stamps its window end ts and a window hash into the artifact (Tier 1 tooling), so the next diff compares windows directly.'
+  what_it_does_not_do: Serves, trains, stages and promotes nothing; edits no config and no serving code; places no order; adds no gate.
+practice_precedent: 'Serve/train parity before any money read (docs/reference/trading-and-model-practice-principles.md); a10d-01 and
+  04a5-03 diff the same snapshot, so the three reads are comparable.'
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.5
+  bucket: ai_trader
+  basis: 'planning weight inherited from a10d-01 (it unblocks the D2 cell money tests); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: the stride-1 rebuilt market_features (runtime_logs/research/fc_stride1/datasets, written by a10d-01) is trainer-resident;
+    the live snapshot is committed
+  basis: 'ESTIMATE: two streaming passes over ~175k-row JSONL files (a10d-01''s diff step took 15.3 s for BTC with two heads), no model.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/fc_live_lag_diff.py
+  - --unit
+  - '{unit}'
+  - --out-dir
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-ef40-02
+ml_consumer:
+  book: demo_floor
+  consumer: config/regime_policy.yaml
+  decision: none directly; decides whether replayed fc-pcv-v2 vol labels can reproduce live labels, which gates a10d-02 and the trend_vol
+    OFF-cell money tests on BTC bybit_1 intents (fc_* served by src/runtime/forecast_live.py)
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261119-a10d-01
+- RQ-20261119-a10d-02
+- RQ-20261118-04a5-03
+- PI-20261119-K7ZSW5Z7-0005
+- scripts/research/fc_live_lag_diff.py
+- scripts/research/vol_serve_path_diff.py
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-ef40-02-FC-LIVE-LAG
+  evidence:
+  - comms/research/RQ-20261119-ef40-02/44551241841/verdict.json
+  - comms/research/RQ-20261119-ef40-02/44551241841/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-11 (session_01AFoLuKrgqS76QYDyWBAEMQ), HELD for the manager
+  rows: 1
+  verdict: fail
+  verdict_label: RESIDUAL
+  reason: 'run 44551241841 (trainer, 15:07-15:16Z, success). The collector row research/results/RQ-20261119-ef40-02/44551241841.jsonl reads
+    producer_failed ONLY because this run predates #27357 (verdict.json then lacked population / n); the run''s own verdict.json is read_state
+    measured, verdict fail (RESIDUAL), and is graded here by the registered rule. BTCUSDT (n matched 983): exact_k0 0.5514, exact_k-1 0.0793,
+    none 0.3693 -> k0 + top nonzero k = 0.6307 < 0.98 = RESIDUAL. SOLUSDT (n 895): exact_k0 0.5218, exact_k-1 0.0715, near_only 0.0022, none
+    0.4045 -> 0.5933 < 0.98 = RESIDUAL. Unit RESIDUAL (fail). WHAT IT SHOWS: the previous-bar lag exists but is small (7-8% of rows; scored a
+    median 90-124 s into the bar vs 476-487 s for own-bar matches: the forecast for the new bar was not yet published at score time; lag -1
+    streaks mostly length 1). The dominant mismatch (37-40% of rows) matches NO bar within -2..+2: a different input window or input, not a lag;
+    its median |diff| fc_ret_med 0.00058 BTC / 0.00036 SOL, fc_skew 0.079 / 0.039, comparable to the signal size; those rows are scored late in
+    the bar (median 508-522 s). REGISTERED fail_action: observability first. The live publisher (scripts/ml/publish_live_forecasts.py) stamps
+    its window end ts and a window hash into the artifact so the next diff compares windows directly (filed as the follow-on on
+    PI-20261119-K7ZSW5Z7-0005). No serving change from this unit; a10d-02 stays blocked.'
+last_dispatched_at: '2026-11-19T15:07:11+00:00'

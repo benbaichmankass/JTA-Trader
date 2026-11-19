@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-60
 title: 'POOLED direction lever (DI) on the xrp_pullback_2h declared config, fresh population: does the lever beat the declared baseline by >= 0.13 R/trade pooled over >= 1.5k trades?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -156,3 +156,16 @@ related:
 - scripts/research/harness_stage0.py
 - research/programmes/03-strategy-improvement.yaml
 last_dispatched_at: '2026-11-19T03:39:13+00:00'
+grading:
+  attested: RULE-RQ20261118abab60-DI-FRESH
+  auto: true
+  decision_rule_id: RULE-RQ20261118abab60-DI-FRESH
+  evidence:
+  - research/results/RQ-20261118-abab-60/44449465489.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

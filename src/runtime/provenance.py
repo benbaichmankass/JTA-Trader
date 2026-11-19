@@ -761,8 +761,20 @@ def pnl_is_trustworthy(notes: Any) -> bool:
     :func:`is_measured`: it admits ESTIMATED (a candle anchored to the close is
     a defensible outcome) while refusing anything with no anchor at all.
     """
+    return pnl_bucket(notes) in (MEASURED, ESTIMATED)
+
+
+def pnl_bucket(notes: Any) -> str:
+    """The :func:`classify_pnl` bucket of a raw ``trades.notes`` value.
+
+    The same decode + classification :func:`pnl_is_trustworthy` applies, for a
+    caller that must REPORT the split (MEASURED vs ESTIMATED) rather than only
+    admit or refuse a row (RQ-20261119-3e98-01: a paper-book eval must state how
+    many of its outcomes are broker-measured). Fail-closed like its sibling:
+    absent / unparseable notes read :data:`UNVERIFIED`.
+    """
     bucket, _why = classify_pnl(_decode_notes(notes))
-    return bucket in (MEASURED, ESTIMATED)
+    return bucket
 
 
 def split_counts(

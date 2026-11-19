@@ -4,7 +4,7 @@
 id: RQ-20261119-a10d-04
 title: 'ml_entry_eq_struct REAL-MONEY DECIDING READ: does the FROZEN served artifact, on its PINNED pool and the graded confirm window, keep a
   positive net-of-cost edge when walked through the alpaca_live one-slot whole-share T+1 cash book (at every cash level on a fixed grid)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -176,3 +176,26 @@ amendments:
   - 'manager override 2026-11-19 09:10Z: hand dispatch for the operator decision deadline (research-script-run.yml, research_unit=RQ-20261119-a10d-04,
     run 44493850432, queued 09:09:43Z). The dispatcher was firing one unit per delayed cycle under repo backpressure. Rule, arms, thresholds and
     command unchanged; this stamp stops the dispatcher from double-firing it.'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-04-EQSTRUCT-FROZEN-BOOK
+  evidence:
+  - comms/research/RQ-20261119-a10d-04/44493850432/verdict.json
+  - comms/research/RQ-20261119-a10d-04/44493850432/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  rows: 3
+  verdict: indeterminate
+  reason: 'run 44493850432 (research-script-run.yml, started 09:33Z, success). REPRODUCTION GATE PASSED: frozen ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5,
+    pinned 173-ETF pool, 2025-07-15..2026-10-31, n 207 (expect 207), mean net R 0.4922070639835765 (exact), 0 pool symbols without bars. Holdout:
+    5th ENTRY-EQ read, bar N=5 (point_t_min 1.1926, ci_z 2.5723). PER CASH ARM (one-slot whole-share T+1 alpaca_live book, risk 2%, wall 0.9,
+    roundup 1.5): cash_250 n_taken 22 / 207 (slot_busy 180, unaffordable 4, roundup 1), mean -0.0345 R, se 0.2608, t -0.13, ci [-0.705, +0.636],
+    P&L -4.81 USD over 15 months (4 with no trade); cash_1000 n_taken 22 (slot_busy 184, roundup 1), mean -0.1968 R, se 0.2506, t -0.79, ci
+    [-0.841, +0.448], P&L -38.36 USD; cash_5000 n_taken 22 (slot_busy 185), mean -0.0818 R, se 0.2584, t -0.32, ci [-0.747, +0.583], P&L -23.58
+    USD. Every arm is INDETERMINATE: n_taken 22 < the registered min 30, and no arm clears either bar (no mean >= t_min x se, no upper bound < 0).
+    Unit verdict INDETERMINATE (the arms agree on indeterminate; the population reproduced, so the read is valid, not void).
+    MEANING FOR THE LEG (registered meaning_for_the_leg.indeterminate, cause = THIN): no data-backed case to demote ml_entry_eq_struct and none to
+    clear it; the operator decides on this table against the account''s own balance. What the table adds: the one-slot book takes ~11% of the
+    signals (the slot is busy for ~88% of them), so 15 months give only 22 book trades per arm and min 30 is not reachable on this window with one
+    slot; the 22 taken trades average below zero at every cash level while the 207-signal population averages +0.49 R, a gap the book design (first
+    signal wins the slot) may cause and this read cannot separate from noise.'

@@ -69,7 +69,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dedupe:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.d.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ops/schedule_keeper.py
+          sparse-checkout-cone-mode: false
+      - id: d
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/ops/schedule_keeper.py dedupe
+          --run-id "${{ github.run_id }}" --schedule "${{ github.event.schedule }}"
+
   watch:
+    # HOURLY-CRON-SCHEDULE-DROP (2026-11-19): schedule-keeper dispatches a dropped hour; dedupe skips the late cron of that slot.
+    needs: dedupe
+    if: ${{ !cancelled() && needs.dedupe.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

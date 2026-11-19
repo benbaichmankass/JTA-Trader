@@ -761,6 +761,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*ids[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ii]ds[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # backfill-own-fill-exits: opt-in group mode (price several rows from ONE venue order).
+            group=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*group[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Gg]roup[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # supersede-intent-reduce-phantom-pnl: optional restrict to entry==exit rows.
             equal_only=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*equal_only[[:space:]]*:' \
@@ -948,6 +953,7 @@ jobs:
           echo "ACTION_FILE=${file:-}" >>"$GITHUB_ENV"
           echo "ACTION_CONFIRM=${confirm:-}" >>"$GITHUB_ENV"
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
+          echo "ACTION_GROUP=${group:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
           echo "ACTION_ENTRY_PRICE=${entry_price:-}" >>"$GITHUB_ENV"
@@ -1719,6 +1725,12 @@ jobs:
               ""|true|false) ;;
               *)
                 echo "::error::backfill-own-fill-exits apply must be true or false (got '${ACTION_APPLY}')."
+                exit 1 ;;
+            esac
+            case "${ACTION_GROUP:-}" in
+              ""|true|false) ;;
+              *)
+                echo "::error::backfill-own-fill-exits group must be true or false (got '${ACTION_GROUP}')."
                 exit 1 ;;
             esac
           fi
@@ -2518,7 +2530,7 @@ jobs:
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ACTION_GROUP=$(printf '%q' "${ACTION_GROUP:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "fix-prop-mislinked-close" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
@@ -2670,9 +2682,10 @@ jobs:
           if [ "${ACTION}" = "reattach-stranded-package-legs" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
-          # reopen-filled-closed-rows (PI-20261118-JFWRQYOV-0004, one-off, pinned): dry-run unless apply:true.
+          # reopen-filled-closed-rows (PI-20261118-JFWRQYOV-0004, spec-driven): dry-run unless apply:true;
+          # account + symbol pick the committed spec comms/ops/reopen_specs/<account>__<SYMBOL>.json.
           if [ "${ACTION}" = "reopen-filled-closed-rows" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ${REMOTE_CMD}"
           fi
           # relabel-package-close-reasons: its apply was never forwarded (found 2026-11-01, LTR-PACKET-FIXES),
           # so `apply: true` ran as a dry run on the VM.

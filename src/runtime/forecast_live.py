@@ -174,6 +174,7 @@ def reset_serve_counters() -> None:
         for k in _serve_counters:
             _serve_counters[k] = 0
         _serve_status.clear()
+        _last_serve_key.clear()
 
 
 def _status_path() -> str:
@@ -187,20 +188,64 @@ def _status_path() -> str:
         return ""
 
 
+def _serves_log_path() -> str:
+    """``runtime_logs/forecast_live_serves.jsonl``: one line per distinct
+    (symbol, scored bar, served artifact). ``""`` when unresolvable."""
+    try:
+        from src.utils.paths import runtime_logs_dir
+
+        return str(runtime_logs_dir() / "forecast_live_serves.jsonl")
+    except Exception:
+        return ""
+
+
+# symbol -> the last (bar_ts, as_of_ts, window sha) appended, so the per-tick
+# re-reads of one bar write one line, not one per tick.
+_last_serve_key: dict[str, tuple] = {}
+
+
+def _append_serve_line(symbol: str, entry: Mapping[str, Any]) -> None:
+    """Append one serve record when it differs from the last one for *symbol*
+    (PI-20261119-K7ZSW5Z7-0005). It joins a shadow-log row (symbol + bar) to
+    the artifact window the producer's publish history describes.
+    Best-effort: never raises."""
+    key = (entry.get("bar_ts"), entry.get("as_of_ts"), entry.get("window_closes_sha256"))
+    with _counter_lock:
+        if _last_serve_key.get(symbol) == key:
+            return
+        _last_serve_key[symbol] = key
+    path = _serves_log_path()
+    if not path:
+        return
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"symbol": symbol, **entry}, sort_keys=True) + "\n")
+    except Exception:
+        pass
+
+
 def _record_serve(symbol: str, *, served: bool, bar_ts: Any, as_of_ts: Any,
-                  lag_bars: int | None) -> None:
+                  lag_bars: int | None, artifact: Mapping[str, Any] | None = None) -> None:
     """Count one bar-checked serve and persist the per-symbol state, so the
     web API (a different process) can surface the served forecast's age.
     Best-effort: a write failure never breaks scoring."""
+    art = artifact if isinstance(artifact, Mapping) else {}
+    entry = {
+        "served": served,
+        "bar_ts": None if bar_ts is None else str(bar_ts),
+        "as_of_ts": None if as_of_ts is None else str(as_of_ts),
+        "lag_bars": lag_bars,
+        "checked_at_epoch_s": time.time(),
+        # Window identity of the artifact read (None for a pre-stamp producer).
+        "window_end_ts": art.get("window_end_ts"),
+        "window_closes_sha256": art.get("window_closes_sha256"),
+        "generated_at": art.get("generated_at"),
+    }
+    _append_serve_line(symbol, entry)
     with _counter_lock:
         _serve_counters["fc_served" if served else "fc_stale"] += 1
-        _serve_status[symbol] = {
-            "served": served,
-            "bar_ts": None if bar_ts is None else str(bar_ts),
-            "as_of_ts": None if as_of_ts is None else str(as_of_ts),
-            "lag_bars": lag_bars,
-            "checked_at_epoch_s": time.time(),
-        }
+        _serve_status[symbol] = entry
         payload = {
             "counters": dict(_serve_counters),
             "counters_scope": "since trader process start",
@@ -295,7 +340,8 @@ def compute_live_forecast_row(
         as_of = artifact.get("as_of_ts")
         lag = _lag_bars(bar_ts, as_of, timeframe or artifact.get("timeframe"))
         fresh = lag is not None and 0 <= lag <= MAX_FORECAST_LAG_BARS
-        _record_serve(sym, served=fresh, bar_ts=bar_ts, as_of_ts=as_of, lag_bars=lag)
+        _record_serve(sym, served=fresh, bar_ts=bar_ts, as_of_ts=as_of, lag_bars=lag,
+                      artifact=artifact)
         if not fresh:
             return None
     out: dict[str, float] = {}

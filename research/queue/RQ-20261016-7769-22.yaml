@@ -1,7 +1,7 @@
 id: RQ-20261016-7769-22
 title: 'P4-Q2 refinement of the 4a4c-06 FAIL: does a MAGNITUDE-weighted, exposure-matched long TILT on NQ=F (overweight after cool PPI prints, underweight
   after hot, weight from the surprise''s rank among PRIOR releases) beat the all-long floor net of the MNQ cost stack? (blocked: rank-tilt arm)'
-status: queued
+status: done
 cadence: once
 theme: macro
 priority: 1
@@ -126,3 +126,14 @@ amendments:
   by: AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)
   text:
   - 'RE-QUEUED per operator decision D7 (week plan 2026-11-19 section 5, popup "Reopen it (Recommended)"): the row MACRO-EVENT-RANKTILT-ARM was reopened and its lever built (macro_event_study_run.py --book rank_tilt / --rank-warmup, with tests that z uses PRIOR releases only). The 2026-11-01 retirement was "owner/lever gone", not a result; the unit carries its mechanism (rank IC t -3.43 vs sign hit rate 54%) and its rule was registered 2026-10-16 before any rank-tilt number existed. Rule, command and thresholds unchanged; blocked_on is cleared by this landing.'
+grading:
+  attested: RULE-RQ-20261016-7769-22
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-7769-22
+  evidence:
+  - research/results/RQ-20261016-7769-22/44433406709.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

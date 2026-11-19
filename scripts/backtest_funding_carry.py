@@ -376,6 +376,10 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('FEE_BPS_ROUNDTRIP', 'SLIPPAGE_BPS_ROUNDTRIP')
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP
     p = argparse.ArgumentParser(description="Funding-rate carry backtest (net-of-fee+slippage; funding is priced exactly by the strategy itself).")

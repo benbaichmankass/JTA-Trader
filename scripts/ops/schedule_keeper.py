@@ -165,6 +165,28 @@ TARGETS: dict[str, dict] = {
     # KEEPER-VM-FLOOR follow-up (2026-11-16): the capture watcher's cron ('23 */6 * * *') lost its 12:23Z and 18:23Z slots (last scheduled run 06:49Z;
     # MEASURED from the Actions API) and nothing re-dispatched them, so its receipt-age guard (check_trainer_capture_watch, 15 h window) went red on
     # every PR at ~21:50Z. stale_hours 8 = one 6 h slot + 2 h. A second run of one slot is harmless.
+    # HOURLY-CRON-SCHEDULE-DROP (manager 2026-11-19): MEASURED (Actions API, event=schedule, 24 h to 10:38Z) every
+    # hourly cron here got 3 of 24 slots, created in repo-wide bursts ~every 6-8 h (14:0x/22:0x/03:3x Z), so GitHub is
+    # dropping the slots, not queueing them. These hourly workflows had no keeper fallback. stale_hours 3 = two missed
+    # hourly slots + grace before it pages. The */15 research-watchdog is kept through starved_min (a 15-min slot never
+    # ages past GRACE_MIN). live-review-wake (*/5) is deliberately NOT here: the keeper runs ~hourly (trainer timer :23 +
+    # pushes) and cannot deliver a 5-min cadence; that needs a VM-side path (LTR-GH-WAKE-CRON-THROTTLED).
+    "counterfactual-grade-closed.yml": {"stale_hours": 3, "self_dedupes":
+        "concurrency-serialised; grade records are idempotent by package file name and mechanics_fault_intake skips a "
+        "fault whose key already has a pipeline item (_filed), so a second run of one slot files and writes nothing new"},
+    "dashboard-edge-watch.yml": {"stale_hours": 3},
+    "main-tree-watch.yml": {"stale_hours": 3},
+    "desk-decisions-mirror.yml": {"stale_hours": 3, "self_dedupes":
+        "the desk/decisions -> main mirror is idempotent by id (desk_branch.py mirror; a re-run is a no-op) and the "
+        "snapshot is rewritten only when an n/state moved"},
+    "live-review-rows-mirror.yml": {"stale_hours": 3, "self_dedupes":
+        "the live-review/rows -> main mirror is idempotent by review_id (live_review_rows_mirror.py); a re-run re-lands "
+        "only what main still lacks"},
+    "work-store-outbox.yml": {"stale_hours": 3, "self_dedupes":
+        "the outbox drain is idempotent by op_id on the server (work.py drain); a second run applies nothing twice"},
+    "research-watchdog.yml": {"stale_hours": 2, "starved_min": 30, "self_dedupes":
+        "self-heals once per incident and appends its rows idempotently by line (research_watchdog.py), so an extra "
+        "tick re-measures and re-sends nothing"},
     "trainer-capture-watch.yml": {"stale_hours": 8,
                                   "self_dedupes": "concurrency group trainer-capture-watch serialises overlapping runs, and a graded run only rewrites the dated receipt (docs/claude/work/TRAINER-CAPTURE-WATCH.json), so a second run of one slot just refreshes it"},
 }
