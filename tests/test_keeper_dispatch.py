@@ -150,3 +150,49 @@ def test_skip_if_active_unreadable_count_still_dispatches(tmp_path):
 def test_default_never_reads_active_runs(tmp_path):
     p, calls = _run_active(tmp_path, "5", "5", skip=False)
     assert "HTTP 204" in p.stdout and not any("runs?status=" in c for c in calls)
+
+
+def _run_rate(tmp_path: Path, rate_body: str):
+    """A curl that answers GET /rate_limit with ``rate_body`` and the dispatch with 204."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir(exist_ok=True)
+    calls = bindir / "calls.log"
+    curl = bindir / "curl"
+    curl.write_text(
+        "#!/usr/bin/env bash\n"
+        'url=""; for a in "$@"; do case "$a" in http*) url="$a";; esac; done\n'
+        f'echo "$url" >> "{calls}"\n'
+        "cat >/dev/null\n"
+        'case "$url" in\n'
+        f"  */rate_limit) printf '%s' '{rate_body}';;\n"
+        '  *) printf "%s" "204";;\nesac\n'
+    )
+    curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
+    env_file = tmp_path / "gh-dispatch.env"
+    if not env_file.exists():  # an unchanged env file keeps a latch in force
+        env_file.write_text(f"GH_DISPATCH_TOKEN={FAKE_TOKEN}\n")
+    env = {"PATH": f"{bindir}:{os.environ['PATH']}", "HOME": str(tmp_path),
+           "KEEPER_DISPATCH_ENV_FILE": str(env_file), "KEEPER_DISPATCH_LATCH": str(tmp_path / "state" / "denied")}
+    p = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=30)
+    return p, (calls.read_text().splitlines() if calls.exists() else [])
+
+
+def test_pat_rate_sample_logs_the_core_budget_and_still_dispatches(tmp_path):
+    body = '{"resources": {"core": {"limit": 5000, "used": 4123, "remaining": 877, "reset": 1795644000}}}'
+    p, calls = _run_rate(tmp_path, body)
+    assert "pat_rate core used=4123 remaining=877 limit=5000 reset=2026-11-25T" in p.stdout
+    assert "HTTP 204" in p.stdout
+    assert calls[0].endswith("/rate_limit") and calls[-1].endswith("/dispatches")
+    assert FAKE_TOKEN not in p.stdout + p.stderr
+
+
+def test_unreadable_rate_limit_is_logged_and_never_blocks_the_dispatch(tmp_path):
+    p, calls = _run_rate(tmp_path, "not json")
+    assert "pat_rate could not read GET /rate_limit" in p.stdout
+    assert p.returncode == 0 and "HTTP 204" in p.stdout
+
+
+def test_a_latched_token_is_not_used_for_the_rate_sample(tmp_path):
+    _run(tmp_path, "403")
+    p, calls = _run_rate(tmp_path, "{}")
+    assert "latched" in p.stdout and not any(c.endswith("/rate_limit") for c in calls)
