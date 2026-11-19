@@ -58,6 +58,7 @@ REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 PRICE_TOL = 5e-4  # relative: a venue trigger is rounded to the tick; 0.05% separates a tick from a real move
 CLASS_ORDER = {"real_money": 0, "prop": 1, "paper": 2}
 TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400}
+_LEG_TF_RE = re.compile(r"_(\d+[mhd])$")  # leg-name timeframe suffix, as live_review_due.timeframe_seconds
 
 
 # ----------------------------------------------------------------------------- reads
@@ -95,6 +96,10 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+#: order_packages pages (x150 rows) to search for a wanted package; ~2026-08 at today's rate. Paging stops early.
+PKG_MAX_PAGES = 30
+
+
 def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Callable[[str], Any] = _diag,
             public: Callable[[str], Any] = _public) -> Snapshot:
     """All I/O. ``wanted`` = package ids to locate in the paged journal reads (None = the open set).
@@ -125,8 +130,11 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
         read(f"prop_status:{acct}", public, f"api/bot/prop/status?account_id={acct}")
 
     open_ids = set(wanted or open_package_ids(s))
-    # order_packages: newest-updated first, so old opens may sit past page 1
-    for page in range(max_pages):
+    # order_packages: newest first BY ID, so an older open sits deeper. Paged until every wanted package is found or
+    # history runs out, on its OWN cap (PKG_MAX_PAGES), not the trades' max_pages: the shared 3 x 150 cap stopped at
+    # 450 rows, and the bybit_2 ADA package pkg-897d89b7edf34aa3 (open ~4 days) sat at row 484 on 2026-11-19, so its
+    # meta (timeframe, atr, atr_stop_mult) was never read and the packet could not price a REAL-MONEY trade.
+    for page in range(max(max_pages, PKG_MAX_PAGES)):
         try:
             rows = diag(f"journal?table=order_packages&limit=150&offset={page * 150}")
         except Exception as exc:  # allow-silent: recorded
@@ -1286,7 +1294,15 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     provenance = tel.get("peak_provenance") or pos_r.get("peakProvenance") or "unverified"
 
     # --- candles: ATR now / trend now
+    # The leg timeframe: the package's own meta first; else the leg-name suffix (`trend_donchian_avax_4h` -> 4h),
+    # the rule live_review_due.timeframe_seconds already uses. Without the fallback a package whose meta carries
+    # no timeframe got no chart, no htf and no ATR/trend-now (21:20Z 2026-11-19: the avax_4h and ada_4h packets).
     tf = meta.get("timeframe")
+    tf_source = "meta" if tf else None
+    if tf not in TF_SECONDS:
+        m = _LEG_TF_RE.search(str(leg or ""))
+        if m and m.group(1) in TF_SECONDS:
+            tf, tf_source = m.group(1), "leg_suffix"
     atr_ratio = trend = adx = a_now = None
     bars: List[dict] = []
     if symbol and tf in TF_SECONDS:
@@ -1404,7 +1420,8 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "packet_version": PACKET_VERSION,
         "priced_options": priced,
         "priced_options_state": priced_state(priced, why, bool(price and direction)),
-        "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend},
+        "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend,
+                   "timeframe": tf, "timeframe_source": tf_source},
         "review_id": review_id,
         # LTR-PACKET-READ-REACH (2026-11-19): the 20:10Z lane matched journal trade 8031 to pkg-d0743cad43c9449b by
         # inference. Every journal row of the package is named here: one per account the package reached.
