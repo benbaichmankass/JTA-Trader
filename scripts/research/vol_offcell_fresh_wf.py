@@ -83,11 +83,25 @@ def run(data: str, policy: str, mid: str, folds: list[str]) -> dict:
                      "ml": _arm(py, data, policy, s, e, ["--regime-router", "on", "--vol-verdict", "ml",
                                                         "--ml-model-id", mid])})
         print(json.dumps(rows[-1]), flush=True)
-    g = grade(rows)
-    read_state = "complete" if g["verdict"] != "indeterminate" else "incomplete"
-    return {"read_state": read_state, "verdict": g["verdict"], "grade": g, "folds": rows,
-            "population": {"description": f"BTC system backtest, roster {ROSTER}, live {policy}, data {data}",
-                           "fresh_fold": FRESH_FOLD}}
+    return contract_result(grade(rows), rows, f"BTC system backtest, roster {ROSTER}, live {policy}, data {data}")
+
+
+#: The rule's outcome -> script_run.py's verdict.json contract (VERDICTS / READ_STATES). The rule's own word is kept
+#: in grade.rule_outcome. MIXED has no registered action, so it lands as indeterminate, never as a pass. Before this
+#: map, run 44598184518 wrote verdict 'mixed' / read_state 'complete' / no n and landed as producer_failed.
+CONTRACT_VERDICT = {"holds": "pass", "does_not_hold": "fail", "mixed": "indeterminate", "indeterminate": "indeterminate"}
+
+
+def contract_result(g: dict, rows: list, description: str) -> dict:
+    fresh = next((f for f in rows if f.get("fold") == FRESH_FOLD), None)
+    readable = bool(fresh) and all(isinstance(fresh.get(a), dict) and fresh[a].get("net") is not None
+                                   for a in ("ungated", "ml"))
+    g = {**g, "rule_outcome": g["verdict"]}
+    return {"read_state": "measured" if readable else "no_data",
+            "verdict": CONTRACT_VERDICT[g["verdict"]],
+            "n": fresh["ungated"].get("trades") if readable else None,
+            "population": f"{description}; graded on the fresh fold {FRESH_FOLD} (n = ungated trades there)",
+            "grade": g, "folds": rows}
 
 
 def _self_test() -> int:
@@ -102,6 +116,18 @@ def _self_test() -> int:
         (grade([])["verdict"] == "indeterminate", "missing fold -> indeterminate"),
         (grade([{"fold": FRESH_FOLD, "ungated": {"net": None}, "ml": {"net": 1}}])["verdict"] == "indeterminate",
          "unreadable arm -> indeterminate (never a pass)"),
+    ]
+    mixed = contract_result(grade(fold(100, 10, 80, 9)), fold(100, 10, 80, 9), "t")
+    gone = contract_result(grade([]), [], "t")
+    checks += [
+        (mixed["verdict"] == "indeterminate" and mixed["grade"]["rule_outcome"] == "mixed"
+         and mixed["read_state"] == "measured" and mixed["n"] == 50, "contract: mixed -> indeterminate, measured, n"),
+        (contract_result(grade(fold(100, 10, 120, 9)), fold(100, 10, 120, 9), "t")["verdict"] == "pass",
+         "contract: holds -> pass"),
+        (contract_result(grade(fold(100, 10, 80, 11)), fold(100, 10, 80, 11), "t")["verdict"] == "fail",
+         "contract: does_not_hold -> fail"),
+        (gone["read_state"] == "no_data" and gone["n"] is None and "n" in gone, "contract: no fold -> no_data, n null"),
+        (isinstance(mixed["population"], str) and mixed["population"].strip() != "", "contract: population is a string"),
     ]
     ok = all(c for c, _ in checks)
     for c, label in checks:

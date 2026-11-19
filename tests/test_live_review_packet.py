@@ -1058,3 +1058,18 @@ def test_desk_rows_fetches_the_branch_tip_and_flags_when_it_cannot(tmp_path, mon
     monkeypatch.setattr(_sp, "run", lambda cmd, **kw: R(128))          # no such ref / fetch failed
     rows = L._desk_rows()
     assert [r["decision_id"] for r in rows] == ["DD-OLD"] and L.DESK_BRANCH_READ is False
+
+
+def test_packet_names_its_journal_trades():
+    """LTR-PACKET-READ-REACH 2026-11-19: a lane matched trade 8031 to its package by inference; the packet now names it."""
+    pkg = "pkg-tradeids0001"
+    s = _snap()
+    s.packages[pkg] = {"order_package_id": pkg, "strategy_name": "qqq_pullback_1h", "symbol": "QQQ", "direction": "short",
+                       "entry": "600.0", "sl": "610.0", "tp": "580.0", "status": "open", "close_reason": None,
+                       "meta": json.dumps({"timeframe": "1h"})}
+    s.trades = [{"id": 8031, "order_package_id": pkg, "account_id": "alpaca_paper", "status": "open", "account_class": "paper"},
+                {"id": 8030, "order_package_id": pkg, "account_id": "alpaca_portfolio", "status": "closed", "account_class": "paper"},
+                {"order_package_id": pkg, "account_id": "ghost", "status": "open"}]
+    p = _build(pkg, s)
+    assert p["trades"] == [{"account_id": "alpaca_paper", "status": "open", "trade_id": 8031},
+                           {"account_id": "alpaca_portfolio", "status": "closed", "trade_id": 8030}]
