@@ -231,3 +231,26 @@ def test_refuses_a_malformed_or_mismatched_spec(tmp_path, mutate):
     assert r.main(["--db", str(db), "--account", "alpaca_paper", "--symbol", "QQQ", "--spec", str(sp),
                    "--order-history", str(h), "--positions", str(p), "--apply"]) == 3
     assert _status(db)[0][7712] == "closed"
+
+
+def test_apply_waits_for_the_traders_write_lock(tmp_path):
+    """2026-11-19 run 44513698892: the apply lost a 5 s race for the live journal's write lock and rolled back.
+    A lock held longer than sqlite's 5 s default, then released, must now be waited out and the apply land."""
+    import sqlite3
+    import threading
+    import time
+    spec = _spec("alpaca_paper__QQQ.json")
+    db = _db(tmp_path, spec)
+    holder = sqlite3.connect(db, check_same_thread=False)
+    holder.execute("BEGIN IMMEDIATE")                       # the trader mid-write
+    t = threading.Timer(6.0, holder.rollback)               # past sqlite3's 5 s default, well inside 60 s
+    t.start()
+    t0 = time.monotonic()
+    try:
+        assert _run(tmp_path, db, spec, _by_id(spec), _positions(spec), "--apply") == 0
+    finally:
+        t.join()
+        holder.close()
+    assert time.monotonic() - t0 >= 5.5, "it really waited on the held lock"
+    rows, _pk = _status(db)
+    assert {i: rows[i] for i in (7712, 7780, 7781, 7782, 7783)} == {i: "open" for i in (7712, 7780, 7781, 7782, 7783)}
