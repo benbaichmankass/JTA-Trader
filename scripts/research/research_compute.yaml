@@ -115,6 +115,18 @@ kaggle_first:
   classes: [cpu_light]
   min_est_minutes: 30
 
+# KAGGLE GPU OVERFLOW (QUEUE-FILL-W47, manager 2026-11-18 23:58Z). The Kaggle GPU kernel runs the same bundle, the same kernel_main.py and
+# the same script_run allowlist as the CPU kernel (research-script-run-kaggle.yml is the GPU twin of -kaggle-cpu.yml), and its weekly quota
+# expires unspent (29.84 of 30 h on 2026-11-18, reset Sat 00:00Z) while kaggle_cpu holds one slot. A cpu_light/cpu_long unit that would go to
+# kaggle_cpu goes to `kaggle` when kaggle_cpu is full, BEFORE github_runner, while the quota keeps `keep_gpu_hours` back (on top of the
+# backend's own floor) for real GPU units. A runner-only unit never overflows (the kernel has no internet or secret). The same internet-off
+# limits as kaggle_cpu apply: a unit that fetches candles over the network needs the candle dataset to serve them on either kernel.
+kaggle_overflow:
+  backend: kaggle
+  classes: [cpu_light, cpu_long]
+  after: kaggle_cpu
+  keep_gpu_hours: 12
+
 # Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
 # these bound the sum, so research can never saturate the runner pool a system-action waits in.
 #

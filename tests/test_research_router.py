@@ -382,3 +382,45 @@ def test_kaggle_first_gpu_classes_unchanged_and_published_not_duplicated():
     assert cr.class_backends("gpu", unit(), CFG)[0] == "kaggle"
     assert cr.class_backends("gpu_preferred", unit(), CFG) == ["kaggle", "github_runner"]
     assert len(set(cr.class_backends("cpu_long", unit(), CFG))) == len(cr.class_backends("cpu_long", unit(), CFG))
+
+
+# ── Kaggle GPU overflow (QUEUE-FILL-W47, manager 2026-11-18): CPU units may use the idle GPU kernel, behind kaggle_cpu ──
+def test_overflow_puts_the_gpu_kernel_after_kaggle_cpu_and_before_the_runner_for_cpu_classes_only():
+    assert cr.class_backends("cpu_long", unit(routing=_r(est_minutes=90)), CFG) == ["kaggle_cpu", "kaggle", "github_runner"]
+    assert cr.class_backends("cpu_light", unit(routing=_r(est_minutes=45)), CFG) == ["kaggle_cpu", "kaggle", "github_runner"]
+    assert cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20)), CFG) == ["github_runner"]       # not on the Kaggle path at all
+    assert cr.class_backends("gpu", unit(), CFG)[0] == "kaggle" and cr.class_backends("needs_vm_data", unit(), CFG) == ["trainer"]
+
+
+def test_overflow_never_takes_a_runner_only_unit():
+    for k, v in [("why_runner", "fetches keyless public candles"), ("runner_only", True), ("needs_secrets", True), ("needs_internet", True)]:
+        assert "kaggle" not in cr.class_backends("cpu_long", unit(routing=_r(est_minutes=90, **{k: v})), CFG), k
+
+
+def test_a_cpu_unit_overflows_to_the_gpu_kernel_when_kaggle_cpu_is_full_and_quota_is_plentiful():
+    u = unit(compute="cpu_long", routing=_r(est_minutes=90))
+    st = cr.BackendState(total_inflight=0, now=NOW, quota_hours=29.84)
+    assert cr.resolve(u, CFG, st).backend == "kaggle_cpu"
+    st.inflight["kaggle_cpu"] = 1
+    r = cr.resolve(u, CFG, st)
+    assert (r.ok, r.wait, r.backend) == (True, False, "kaggle") and "fallback" in r.reason
+    st.inflight["kaggle"] = 1                                   # the GPU slot is one kernel: then the runner takes it
+    assert cr.resolve(u, CFG, st).backend == "github_runner"
+
+
+def test_overflow_keeps_gpu_hours_back_for_real_gpu_units_and_never_routes_blind():
+    keep = CFG["kaggle_overflow"]["keep_gpu_hours"]
+    floor = CFG["backends"]["kaggle"]["quota"]["floor_hours"]
+    u = unit(compute="cpu_long", routing=_r(est_minutes=60))
+    full = cr.BackendState(total_inflight=0, now=NOW, quota_hours=floor + keep + 1.01)
+    full.inflight["kaggle_cpu"] = 1
+    assert cr.resolve(u, CFG, full).backend == "kaggle"
+    low = cr.BackendState(total_inflight=0, now=NOW, quota_hours=floor + keep + 0.5)
+    low.inflight["kaggle_cpu"] = 1
+    assert cr.resolve(u, CFG, low).backend == "github_runner"   # below floor + keep: stays off the GPU quota
+    blind = cr.BackendState(total_inflight=0, now=NOW, quota_hours=None)
+    blind.inflight["kaggle_cpu"] = 1
+    assert cr.resolve(u, CFG, blind).backend == "github_runner"
+    # a REAL GPU unit is unaffected by the overflow reserve: it may use the hours down to the backend's own floor
+    gpu = unit(compute="gpu", routing=_r(needs_gpu=True, est_minutes=60))
+    assert cr.resolve(gpu, CFG, cr.BackendState(total_inflight=0, now=NOW, quota_hours=floor + 1.5)).backend == "kaggle"
