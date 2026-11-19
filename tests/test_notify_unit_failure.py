@@ -97,3 +97,27 @@ def test_trainer_template_forwards_and_installer_covers_timer_oneshots():
     assert "Environment=UNIT_FAILURE_FORWARD=live" in tpl and "notify_unit_failure.py %i" in tpl
     inst = (root / "scripts" / "ops" / "install_trainer_onfailure.sh").read_text()
     assert "deploy/dropins/onfailure.conf" in inst and "deploy/trainer/ict-notify-failure@.service" in inst
+
+
+def test_forward_record_carries_returncode_and_redacted_stderr(tmp_path, monkeypatch):
+    """2026-11-19: the 04:05Z probe logged a bare forward_failed. The record now says why."""
+    ping = tmp_path / "p3.json"
+    ping.write_text("{}")
+    monkeypatch.setenv("LIVE_VM_IP", "10.1.2.3")
+
+    class _Err:
+        returncode = 255
+        stderr = "ubuntu@10.1.2.3: Permission denied (publickey).\r\nlost connection to 192.168.0.9\n"
+
+    assert n.forward_to_live(ping, tmp_path, run=lambda argv, **kw: _Err()) == "forward_failed"
+    row = json.loads((tmp_path / "unit_failures.jsonl").read_text().splitlines()[-1])
+    assert row["returncode"] == 255
+    assert "Permission denied (publickey)" in row["stderr"]
+    assert "10.1.2.3" not in row["stderr"] and "192.168.0.9" not in row["stderr"]
+    assert "<live-host>" in row["stderr"]
+
+    def boom(argv, **kw):
+        raise OSError("no scp at 10.1.2.3")
+    n.forward_to_live(ping, tmp_path, run=boom)
+    row = json.loads((tmp_path / "unit_failures.jsonl").read_text().splitlines()[-1])
+    assert row["returncode"] is None and row["error"] == "OSError: no scp at <live-host>"
