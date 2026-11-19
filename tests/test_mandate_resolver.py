@@ -1594,11 +1594,12 @@ def test_soak_step_retired_still_needs_the_stage0_record(repo):
 # ── LIVE-BAR PATH (OPERATING-PLAN § 2 "Live-performance promotion path", LIVE-BAR-LADDER-FEED part 2) ────────
 # Decisive only when the GRANTED entry's bar states `live_bar_path: true`; otherwise REPORTED as evidence only.
 
-def _live_feed(root, leg=LEG, *, verdict="pass", n=45, sum_r=41.4, lcb80=0.31, age_h=1.0, measured="pass", schema=1):
+def _live_feed(root, leg=LEG, *, verdict="pass", n=45, sum_r=41.4, lcb80=0.31, age_h=1.0, measured="pass", schema=1,
+               measured_n=None):
     from datetime import datetime, timedelta, timezone
     row = {"verdict": verdict, "n": n, "sum_r": sum_r, "mean_r": round(sum_r / n, 4), "lcb80": lcb80,
            "pooled": {"accounts": ["bybit_1"], "paper": n, "real_money": 0},
-           "pnl_measured_subset": {"verdict": measured, "n": n}}
+           "pnl_measured_subset": {"verdict": measured, "n": measured_n if measured_n is not None else n}}
     _w(root, mr.LIVE_BAR_REL, {"schema": schema, "rule": {"min_n": 20},
                                "generated_at": (datetime.now(timezone.utc) - timedelta(hours=age_h)).isoformat(),
                                "legs": {leg: row}})
@@ -1662,6 +1663,9 @@ def test_live_bar_path_with_no_record_is_needs_data_on_affordability(repo):
     {"lcb80": -0.01},                # labelled pass, numbers disagree: the cross-check refuses the label
     {"n": 19},                       # labelled pass under the 20-trade floor
     {"schema": 2},                   # a feed this resolver cannot read
+    {"measured": "n_short", "measured_n": 11},   # declared R passes, the venue-measured subset is short
+    {"measured": "fail"},                        # the venue-measured subset fails
+    {"measured": "pass", "measured_n": 19},      # labelled pass under the floor
 ])
 def test_live_bar_path_does_not_carry_a_non_pass(repo, feed_kw):
     root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), **feed_kw)
@@ -1676,11 +1680,12 @@ def test_live_bar_path_never_carries_a_decisive_affordability_refusal(repo):
     _refused(_s1s2(root, leg=EQ_LEG, account="alpaca_live"), "R-AFFORD")
 
 
-def test_live_bar_measured_subset_not_passing_is_a_caveat(repo):
-    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), measured="n_short")
+def test_live_bar_states_the_measured_subset_n(repo):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), measured_n=30)
     res = _s1s2(root)
     assert res["verdict"] == "FIRE", res
-    assert any(c.startswith("LIVE-BAR MEASURED SUBSET") for c in res["caveats"])
+    assert res["evidence"]["live_bar"]["measured_subset_n"] == 30
+    assert any("venue-measured subset pass at n=30" in c for c in res["caveats"])
 
 
 def test_live_bar_absent_feed_reads_could_not_look(repo):

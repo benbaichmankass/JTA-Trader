@@ -1247,7 +1247,7 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
 #   keeps     the soak/mechanics section (it runs first), affordability (a decisive R-AFFORD REFUSE is never carried:
 #             a leg the account cannot size cannot trade, whatever its live record), and the cap.
 #   needs     a FRESH feed (comms/live_bar/latest.json, <= LIVE_BAR_MAX_AGE_H old) whose leg row passes, re-checked
-#             from its own n / sum_r / lcb80.
+#             from its own n / sum_r / lcb80, AND whose venue-MEASURED-pnl subset also passes at n >= 20.
 # The swap rule (a demo-floor variant takes a real-money variant's slot) is a demotion of the incumbent and stays a
 # separate MD-DEMOTE-S2-S1 decision; same-symbol-allocation-guard still checks the roster PR.
 LIVE_BAR_REL = "comms/live_bar/latest.json"
@@ -1262,7 +1262,8 @@ def _live_bar_read(leg: str, root: Path) -> Dict[str, Any]:
     from datetime import datetime, timezone
     out: Dict[str, Any] = {"feed": LIVE_BAR_REL, "read_state": "could_not_look", "verdict": None, "n": None,
                            "sum_r": None, "mean_r": None, "lcb80": None, "measured_subset_verdict": None,
-                           "pooled": None, "generated_at": None, "age_h": None, "rule": None}
+                           "measured_subset_n": None, "pooled": None, "generated_at": None, "age_h": None,
+                           "rule": None}
     doc = _json(root / LIVE_BAR_REL)
     if doc is None:
         out["why"] = f"{LIVE_BAR_REL} is absent or unreadable"
@@ -1288,13 +1289,20 @@ def _live_bar_read(leg: str, root: Path) -> Dict[str, Any]:
     sub = row.get("pnl_measured_subset")
     out.update({"read_state": "read", "verdict": row.get("verdict"), "n": row.get("n"), "sum_r": row.get("sum_r"),
                 "mean_r": row.get("mean_r"), "lcb80": row.get("lcb80"), "pooled": row.get("pooled"),
-                "measured_subset_verdict": sub.get("verdict") if isinstance(sub, dict) else None})
+                "measured_subset_verdict": sub.get("verdict") if isinstance(sub, dict) else None,
+                "measured_subset_n": sub.get("n") if isinstance(sub, dict) else None})
     return out
 
 
 def _live_bar_passes(live: Optional[Dict[str, Any]]) -> bool:
-    """The row's label AND its own numbers (cross-check, RULE ONE 4): n >= 20, sum R > 0, lcb80 > 0."""
+    """The row's label AND its own numbers (cross-check, RULE ONE 4): n >= 20, sum R > 0, lcb80 > 0; AND the
+    venue-MEASURED-pnl subset passes the same bar on its own n (manager design requirement 2026-11-19, relayed by
+    AM-OPS-4: "net of real costs" must rest on measured pnl, not only on declared R over estimated pnl)."""
     if not live or live.get("read_state") != "read" or live.get("verdict") != LIVE_BAR_PASS:
+        return False
+    sub_n = live.get("measured_subset_n")
+    if live.get("measured_subset_verdict") != LIVE_BAR_PASS or not isinstance(sub_n, int) or isinstance(sub_n, bool) \
+            or sub_n < LIVE_BAR_MIN_N:
         return False
     n, s, lb = live.get("n"), live.get("sum_r"), live.get("lcb80")
     return (isinstance(n, int) and not isinstance(n, bool) and n >= LIVE_BAR_MIN_N
@@ -1330,12 +1338,9 @@ def _live_bar_path(leg: str, account: str, stage0: Exception, live: Dict[str, An
     ctx["caveats"] = list(dict.fromkeys(ctx["caveats"]))  # the Stage-0 attempt may already have run it
     ctx["caveats"].append(
         f"LIVE-BAR PATH: promoted on the live bar (n={live.get('n')}, sum R {live.get('sum_r')}, lcb80 "
-        f"{live.get('lcb80')}, pooled {live.get('pooled')}); Stage 0 read {verdict} at {clause}. The conflict rule "
+        f"{live.get('lcb80')}; venue-measured subset pass at n={live.get('measured_subset_n')}; pooled "
+        f"{live.get('pooled')}); Stage 0 read {verdict} at {clause}. The conflict rule "
         "(live wins) requires a fidelity-check unit drafted WITH this promotion, never after it.")
-    if live.get("measured_subset_verdict") != LIVE_BAR_PASS:
-        ctx["caveats"].append(
-            f"LIVE-BAR MEASURED SUBSET: the venue-measured-pnl subset reads {live.get('measured_subset_verdict')!r}, "
-            "so the 'net of real costs' half of this pass rests partly on estimated pnl.")
 
 
 # ── R-HOLDOUT: a pass on a pre-registered, never-seen latest span ────────────

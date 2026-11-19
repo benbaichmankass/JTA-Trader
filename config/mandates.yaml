@@ -1771,7 +1771,8 @@ proposed:
       Add `live_bar_path: true` to MD-PROMOTE-S1-S2's `bar:`. Then, for S1 -> S2 only, when the Stage-0 record path
       answers REFUSE or NEEDS_DATA (anything except a decisive R-AFFORD refusal), the resolver reads the leg's row in
       comms/live_bar/latest.json. If that feed is <= 26 h old and the row passes (n >= 20 closed trades with R on the
-      declared signal-time risk, sum R > 0, one-sided 80% lower bound > 0, re-checked from the row's own numbers),
+      declared signal-time risk, sum R > 0, one-sided 80% lower bound > 0, re-checked from the row's own numbers)
+      AND its venue-measured-pnl subset passes the same bar at n >= 20 (manager design requirement 2026-11-19),
       the clause passes in place of the record clauses (record, B1, the bar's n / expectancy / folds, holdout, Stage-1
       cost fidelity). Affordability (against the committed record's setups; no record = NEEDS_DATA) and the 25% cap
       still bind, and so does everything in MD-PROMOTE-S1-S2's `never:`.
@@ -1779,6 +1780,7 @@ proposed:
       live_bar_path: true
       live_bar_feed: comms/live_bar/latest.json
       live_bar_max_age_h: 26
+      live_bar_measured_subset_required: true
     cap:
       basis: unchanged -- MD-PROMOTE-S1-S2's 25% auto-promoted declared-risk cap
       max_auto_share: 0.25
@@ -1794,8 +1796,9 @@ proposed:
       operator notification plus the brief's section 1.
     measured_at_proposal: >-
       2026-11-19 ~01:50Z (system clock), resolver on main (report-only): trend_donchian (n45, lcb80 +0.535, measured subset pass),
-      trend_donchian_ada_4h (n34, +0.253, measured n_short) and trend_donchian_avax_4h (n29, +0.063, measured n_short)
-      pass the live bar and REFUSE on Stage 0 at R-B1-C4; trend_donchian_sol_4h (n27, +0.154) stops at R-AFFORD
-      because the bybit_2 snapshot is 12.2 d old (row AFFORD-SNAPSHOT-REFRESH). Granting this would make the first
-      three FIRE-eligible, subject to affordability on a fresh snapshot; trend_donchian_ada_4h would also meet
-      same-symbol-allocation-guard against ada_pullback_2h (the swap question).
+      trend_donchian_ada_4h (n34, +0.253) and trend_donchian_avax_4h (n29, +0.063) pass the declared-R bar and REFUSE
+      on Stage 0 at R-B1-C4; trend_donchian_sol_4h (n27, +0.154) stops at R-AFFORD because the bybit_2 snapshot is
+      12.2 d old (row AFFORD-SNAPSHOT-REFRESH). Venue-measured subsets: trend_donchian pass at n29 (lcb80 +0.035);
+      ada_4h n12, avax_4h n8, sol_4h n11, all n_short. So granting this today would make ONLY trend_donchian
+      FIRE-eligible, subject to affordability on a fresh snapshot. trend_donchian_ada_4h would also meet
+      same-symbol-allocation-guard against ada_pullback_2h (the swap question) once its measured subset reaches 20.
