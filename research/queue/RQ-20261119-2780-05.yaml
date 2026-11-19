@@ -1,0 +1,107 @@
+# Authored 2026-11-19 by lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), Tier 1. exit-holdbias iteration 2 (margin); rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-2780-05
+title: 'exit-holdbias iteration 2 (margin lever): act margin tau chosen per fold on TRAINING data only (inner purged CV), graded on held-out folds by the unchanged 78fc-05 clauses'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: Does the hold-biased exit head (78fc-05's 13 value heads, features and folds unchanged) pass the 78fc-05 clauses on corpus B when its act margin tau is chosen per outer fold from the grid {0.15,0.25,0.35,0.5,0.75,1.0}
+  R by inner purged leave-one-fold-out on that fold's training trades only (advice rate <= 15% on the inner OOF, max inner mean dR)?
+why_this_matters: 'RQ-20261101-78fc-05 FAILED all three clauses at the fixed tau 0.15 R: advice rate 0.717 (cap 0.15), LB95 -0.0554, xrp_4h -0.054. At 0.15 the head acts on 72% of check-ins, so it is not
+  hold-biased at all; the margin is the lever that controls that, it was fixed by the plan rather than read, and it can be read without touching a held-out fold. The registered fail action is ''margin vs
+  features'': this unit reads the margin; if the head still cannot pass with a cap-respecting margin, the features lever is next (PI-20261119-RIMARY12-0005).'
+iteration:
+  subject: ml-holdbias-exit
+  subject_kind: ml_model
+  from_result: RQ-20261101-78fc-05
+  verdict_read: fail
+  diagnosis: 'advice rate 0.717 at tau 0.15: the per-action value heads clear a 0.15 R margin on most check-ins, so the policy acts almost everywhere and its mean is noise; the margin, never read, is the
+    first lever.'
+  search: one factor, the act margin tau, grid {0.15,0.25,0.35,0.5,0.75,1.0}, chosen per fold inside its training data; heads, features, folds, purge and corpus unchanged
+  levers:
+  - threshold
+  map_entries: []
+  attempt: 2
+  due_by: '2026-11-27'
+power:
+  expected_n: 2554
+  min_detectable_effect: 0.02
+  effect_units: r_multiple
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.0
+  basis: 'MEASURED: 78fc-05 graded 2,554 held-out trades on the same corpus and folds; the margin changes actions, not the population.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the committed corpus-B action-grid labels; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261119-2780-05-HOLDBIAS-TAU-INNER
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  min_n: 500 held-out trades
+  statistic: 'scripts/research/exit_holdbias.py --tau-grid 0.15,0.25,0.35,0.5,0.75,1.0 on comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz (the 78fc-05 corpus, sha256 66a209386d2f79fb...).
+    Per outer calendar fold: tau = select_tau_inner (inner leave-one-fold-out over the other folds; inner fit mask = the outer purged train mask AND the inner fold''s purged mask; selected = the highest
+    pooled inner-OOF mean dR among grid taus with inner advice rate <= 0.15, tie -> the larger tau; none meets the cap -> the largest tau, flagged cap_unreachable). The outer fold is then scored once at
+    that tau with heads fit on the full outer train mask. Clauses read on the pooled held-out trades exactly as 78fc-05.'
+  rule: 'PASS iff (a) trade-bootstrap 95% LB of the pooled mean dR > -0.01 R/trade AND (b) held-out advice rate <= 15% AND (c) no leg''s mean dR < -0.05 R/trade (the 78fc-05 clauses, unchanged). FAIL otherwise
+    at >= 500 held-out trades. INDETERMINATE below 500, or if any fold is cap_unreachable (then the margin cannot deliver a hold-biased head on that fold''s data and the read is diagnosis, not a test).
+    Reported, never graded: the matched-random policy, per-fold selected tau and inner tables, per-leg dR, action mix. Second read of this model family on corpus B; the selection is nested inside each fold''s
+    training data, so no outer selection bias is added. Thresholds, grid and corpus are not changed after any result.'
+  pass_action: ONE confirmation on a disjoint corpus (fresh-window action-grid labels on the same legs) before any Tier-3 proposal to give the head advice standing on the money legs; no close authority
+    follows from this unit.
+  fail_action: 'The margin lever is read and closed for this head on corpus B; next lever: the features (what the per-action value heads see), via a new unit.'
+  what_it_does_not_do: Trains nothing persistent; registers, serves, promotes or applies nothing; changes no config; adds no gate.
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md): a lever chosen inside training folds only, purged; the held-out folds read once.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: 'ESTIMATE: 78fc-05 is one fit of 13 heads per fold; the inner CV adds about 5 fits per fold (about 6x); the first run replaces it.'
+  why_runner: Replays the committed corpus-B labels on CPU (research-script-run.yml installs lightgbm).
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_holdbias.py
+  - --labels
+  - comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz
+  - --tau-grid
+  - 0.15,0.25,0.35,0.5,0.75,1.0
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261119-2780-05
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: hold vs act advice on the real-money legs' open packages
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+related:
+- research/queue/RQ-20261101-78fc-05.yaml
+- scripts/research/exit_holdbias.py
+- PI-20261119-RIMARY12-0005
+what_it_does_not_do: Trains nothing persistent; registers, serves, promotes or applies nothing; changes no config.
