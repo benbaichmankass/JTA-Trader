@@ -1119,7 +1119,8 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
                  now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
                  infra_names: Optional[List[str]] = None, infra_yield_at: int = 1,
                  infra_stuck_after_hours: float = INFRA_STUCK_HOURS,
-                 research_stuck_after_hours: float = RESEARCH_STUCK_HOURS) -> Dict[str, Any]:
+                 research_stuck_after_hours: float = RESEARCH_STUCK_HOURS,
+                 repo_queued_ignore: Optional[List[str]] = None) -> Dict[str, Any]:
     """What the runner pool looks like before this cycle fires anything.
 
     Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
@@ -1176,8 +1177,15 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     by_name: Dict[str, int] = {}
     for r in counted:
         by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
-    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
-    listeners = len(queued) - len(competing)
+    # REPO-QUEUED SHARE (lane QUEUE-FILL-STANDING-W47b, manager 2026-11-19; limits.repo_queued_ignore_workflows): a queued run of a
+    # SHORT-JOB workflow (the post-merge alarm, the automerge arm, the branch watchers; each ~0.2-1 min of runner) is a symptom of a
+    # saturated pool, not load on it, yet it counted 1:1 against the cap like a 35-min pytest-run. MEASURED 11-18 18Z..11-19 11:30Z:
+    # those runs were ~81% of the count at its p90 moments while using ~2 runner-min/h against ~430 for PR CI.
+    ignore = set(repo_queued_ignore or [])
+    competing_all = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    competing = [r for r in competing_all if str(r.get("workflowName")) not in ignore]
+    short_ignored = len(competing_all) - len(competing)
+    listeners = len(queued) - len(competing_all)
     infra = set(infra_names or [])
     infra_rows = [r for r in queued if str(r.get("workflowName")) in infra]
     infra_fresh = []
@@ -1190,10 +1198,10 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     infra_queued = len(infra_fresh)
     out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
            "infra_queued": infra_queued, "infra_stuck_ignored": infra_stuck, "listener_queued_ignored": listeners,
-           "research_stuck_ignored": research_stuck,
+           "research_stuck_ignored": research_stuck, "short_job_ignored": short_ignored,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}; {research_stuck} research run(s) queued "
                      f"> {research_stuck_after_hours:g} h not counted); repo runs queued "
-                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted; population: "
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) and {short_ignored} short-job run(s) not counted; population: "
                      f"the newest {len(queued_all)} queued run(s) gh listed, limit {GH_RUNS_LIMIT}); "
                      f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored; infra queued {infra_queued} "
                      f"fresh (yield at {max(1, int(infra_yield_at))}; {infra_stuck} stuck > {infra_stuck_after_hours:g} h "
@@ -1537,9 +1545,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pressure-stale-hours", type=float, default=STALE_PRESSURE_HOURS,
                     help="a run still queued/in progress this many hours after creation is stuck, "
                          "not load, and counts against neither cap (see STALE_PRESSURE_HOURS)")
-    ap.add_argument("--max-repo-queued", type=int, default=10,
+    ap.add_argument("--max-repo-queued", type=int, default=None,
                     help="defer every fire while more than this many workflow runs are queued "
-                         "repo-wide (research must never starve a system-action)")
+                         "repo-wide (research must never starve a system-action). Default: research_compute.yaml "
+                         "limits.max_repo_queued, else 10 (an explicit flag overrides the config)")
     ap.add_argument("--starvation-hours", type=float, default=None,
                     help="lift the repo-queued backpressure block for ONE fire per cycle once nothing has been "
                          "dispatched for this many hours (0 = never). Default: research_compute.yaml "
@@ -1613,7 +1622,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.fire:
         wf_names = research_workflow_names(jobs)
         pressure = backpressure(wf_names, max_inflight=max_inflight,
-                                max_queued=args.max_repo_queued,
+                                max_queued=(args.max_repo_queued if args.max_repo_queued is not None
+                                            else int((cfg or {}).get("limits", {}).get("max_repo_queued", 10))),
+                                repo_queued_ignore=list((cfg or {}).get("limits", {}).get("repo_queued_ignore_workflows") or []),
                                 stale_after_hours=args.pressure_stale_hours,
                                 infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []),
                                 infra_yield_at=int((cfg or {}).get("limits", {}).get("infra_yield_at", 1)),
