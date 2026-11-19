@@ -1,0 +1,194 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV, 11:44Z: "author the slot-policy unit now as a pre-registered P8 unit"). The follow-on to
+# RQ-20261119-a10d-04 (INDETERMINATE, thin). Decision rule, the selection-vs-noise test and every verdict meaning registered BEFORE any
+# run. Gates this adds or changes: none.
+id: RQ-20261119-a10d-09
+title: 'ml_entry_eq_struct SLOT POLICY: is the one-slot book''s 22-trade gap (taken mean < 0 vs population +0.49 R) selection or noise, and does
+  a different slot policy (score gate, 2 slots, 3 slots) carry the frozen model''s edge into the alpaca_live cash book?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-LADDER
+kind: experiment
+practice_precedent: 'T8 / M13 (docs/reference/trading-and-model-practice-principles.md): grade a live leg on the population the account can actually
+  trade, inputs held fixed; book-side levers are tested one family per read against the status quo reproduced exactly, at the deflated bar of
+  the read count plus the arms in the read.'
+intervention_controls:
+  control_arm: first_signal (the status-quo book, replay() unchanged) must reproduce RQ-20261119-a10d-04's per-cash n_taken and taken mean
+    exactly; it is the in-run control every challenger is read beside.
+  negative_control: 'selection null: net_r shuffled across the 207 candidates (times, prices, scores kept), status quo replayed 2,000 times
+    (seed 20261119); a book whose picks are unrelated to outcome lands inside it.'
+  positive_control: 'alpaca_live_book.py --self-test: a synthetic book that always takes the first (losing) trade of each pair is flagged
+    (p_low < 0.01); a book with outcome-unrelated picks is not (p_low >= 0.05).'
+question: 'Over the same population as a10d-04 (frozen ml-entry-eq-struct-ens5, no refit, its 173 pinned pool_symbols, 2025-07-15..2026-10-31,
+  restricted-LONG at tau 0.25, net of the Alpaca cost stack; reproduces 98e3-06 n 207 mean +0.4922 R): (1) is the status-quo one-slot book''s
+  taken mean (22 trades, -0.03 to -0.20 R) lower than chance would put a 22-trade pick of these 207 (SELECTION), or inside chance (NOISE)? (2) At
+  cash 250 / 1,000 / 5,000, does any of three challenger slot policies (score_gate_p50_30d, slots_2, slots_3) keep a taken mean net R above the
+  deflated bar at every cash level?'
+why_this_matters: 'a10d-04 left the operator''s ml_entry_eq_struct question open because the one-slot book takes only ~11% of the signals (slot
+  busy ~88%), so 30 book trades are unreachable on this window, and the 22 it takes average below zero while the population averages +0.49 R.
+  If the gap is the book''s selection, the live book is mis-designed for this model and a slot change is the fix; if it is noise, more slots
+  are the way to reach a decision-sized n. Under the standing rule "data leaves it open" means get the data (manager 11:44Z).'
+iteration:
+  attempt: 1
+  due_by: '2026-11-21'
+  from_result: RQ-20261119-a10d-04
+  subject: ml-entry-eq-struct
+  subject_kind: ml_model
+  verdict_read: indeterminate
+  diagnosis: 'a10d-04 (run 44493850432): population reproduced exactly; every cash arm n_taken 22 < 30 (refused slot_busy 180-185 of 207); taken
+    means -0.0345 / -0.1968 / -0.0818 R, CIs spanning 0. Cause THIN, driven by the slot policy: the one-slot book takes the first signal after
+    each exit and holds it, so the book''s sample is set by trade duration, not by score. The lever is the slot policy.'
+  search: 'none: the policy list, the cash grid, the score-gate quantile (median) and window (30 days) and the null (2,000 draws, seed 20261119)
+    are fixed now; no other policy is read on this window by this unit'
+levers:
+- name: slot_policy
+  values:
+  - first_signal (status quo, control)
+  - score_gate_p50_30d
+  - slots_2
+  - slots_3
+  hypothesised_effect: 'slots_2 / slots_3 take 2-3x the trades of the status quo and, if the gap is noise, move the taken mean toward the
+    population''s +0.49 R; score_gate_p50_30d keeps one slot but reserves it for the stronger half of recent signals'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  alpha: 0.05
+  design: one_sample
+  effect_units: R
+  expected_n: 50
+  sd: 1.09
+  min_detectable_effect: 0.5
+  power: 0.8
+  basis: 'ESTIMATE: per-trade sd 1.09 R (98e3-06 iid se 0.0758 x sqrt 207). first_signal takes 22 (measured, a10d-04). slots_2 / slots_3 should take
+    ~40-60 at cash 5,000 (2-3 concurrent positions over the same ~185 refused-busy candidates), fewer at cash 250 where wall x 250 / k leaves
+    many ETFs unaffordable as whole shares; score_gate_p50_30d takes <= 22. At n 50 the se is ~0.15 R, so the N=8 challenger point bar (t_min
+    1.459) needs a taken mean >= ~0.22 R; a mean near the population''s +0.49 R passes, a mean near 0 is INDETERMINATE. The selection null has
+    power against the observed gap: under the null the 22-trade mean is ~+0.49 R with sd ~1.09 / sqrt 22 x fpc ~0.21 R, so the observed -0.03 to
+    -0.20 R sits ~2.5-3.3 sd low (p ~0.0005-0.006): the test can separate selection from noise only near the N=6 alpha 0.0042. Stated before
+    the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca bars (read-only key) for the pinned pool, as a10d-04; nothing accrues.
+baseline:
+  definition: 'Zero net R per taken trade at the deflated bar: N = the claim''s read count (6 at registration) for the status quo, N + 2 for the
+    three challengers read together (8 at registration). The unconstrained population (+0.4922 R n 207) and the status quo are reported beside
+    each challenger.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261119-a10d-09-EQSTRUCT-SLOT-POLICY
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 0 R per taken trade, deflated for the read count plus the challengers in this read
+  statistic: 'scripts/research/alpaca_live_book.py slot-book: claim the holdout read (family ENTRY-EQ, model id ...-SLOTPOLICY; N = prior reads + 1,
+    6 at registration) BEFORE any bar is read; build the a10d-04 population exactly (frozen scorer, pinned pool, build_table with the artifact''s
+    structure_exit, reproduce_frozen n 207 / mean 0.4922070639835765); attach prices; per policy x cash (250 / 1,000 / 5,000), with the live
+    sizer constants: first_signal = replay() unchanged; score_gate_p50_30d = replay() over the candidates whose score >= the median score of the
+    candidates entered in the prior 30 days (kept when < 5 such); slots_k = replay_slots(k): k concurrent positions, each capped at min(0.9 x
+    equity / k, free settled cash) whole shares, proceeds unsettled until T+1 NY, same pick order. Selection null per cash: net_r shuffled across
+    candidates, status quo replayed 2,000 times (seed 20261119), p_low = share of draws with taken mean <= the observed.'
+  rule: 'GATE: INDETERMINATE (void) unless the population reproduces 98e3-06 (n 207, |mean - 0.4922070639835765| <= 1e-6) AND first_signal reproduces
+    a10d-04 at every cash level (n_taken 22, taken mean within 1e-9 of -0.03453278230010933 / -0.19676036273692965 / -0.08179399402889383).
+    PER CHALLENGER x CASH ARM (bar N+2 = 8 at registration: t_min 1.459, ci_z 2.7307): INDETERMINATE if n_taken < 30; PASS if taken mean > 0 AND
+    mean >= t_min x se; FAIL if mean + ci_z x se < 0; INDETERMINATE otherwise. UNIT: PASS iff some challenger PASSES at every cash level; FAIL iff
+    every challenger FAILS at every cash level; INDETERMINATE otherwise. SELECTION vs NOISE (reported beside the unit verdict, registered now):
+    SELECTION iff p_low < alpha_N (the claim''s Sidak alpha; 0.004211 at N=6) at every cash level; NOISE iff p_low >= 0.10 at every cash level;
+    UNRESOLVED otherwise. Thresholds, policies, quantile, window, draws and seed are fixed now and are not changed after any result.'
+  meaning_for_the_leg:
+    pass: 'A book-side change carries the frozen model''s edge into the account at every plausible balance: the data support CHANGING the live
+      book for ml_entry_eq_struct to the passing policy (Tier-3, data-backed: a sizing/slot change on a real-money leg, proposed to the manager
+      with this record; nothing is changed by this lane). The status quo stays as it is meanwhile.'
+    fail: 'No tested slot policy keeps the edge at any balance: the account''s constraints, not the slot rule, turn the edge negative; the data
+      support demoting the leg to the demo floor while the book is iterated. Demotion is the operator''s decision; this read is the evidence put
+      to them.'
+    indeterminate: 'No tested policy settles it at every balance (the per-arm table says which policies / cash levels are thin or between the
+      bars). No data-backed case to demote or to change the book; the operator decides on the table. If the cause is the gate (population or
+      status quo not reproducing) the read is void and re-runs once the drift is named.'
+  meaning_of_selection_vs_noise:
+    selection: 'The one-slot book''s 22 trades are systematically worse than a random 22 of the same 207 signals: the first-signal-after-exit
+      rule picks the weak tail (e.g. signals that arrive right after a stop-out cluster). The status-quo book is mis-designed for this model,
+      whatever the challengers show; a slot / pick-order change is the fix, and the challenger table says which.'
+    noise: 'The 22-trade mean is inside what a random 22 of these signals gives: the gap is sampling noise and the book''s selection is not the
+      problem; the population''s edge is the best estimate and the only obstacle is n. More slots (or more time) is the route to a decision-sized
+      book sample.'
+    unresolved: 'The null cannot separate the two at this n (p between alpha_N and 0.10 at some cash level): neither reading is supported; the
+      challenger table carries the decision.'
+  pass_action: 'Report to the manager: the passing policy, its per-cash table beside the status quo, and the selection-vs-noise reading. Propose the
+    live-book change (alpaca_live slot / pick policy for ml_entry_eq_struct) as a data-backed Tier-3 change with this record, a revert and the
+    live sizer diff; the manager / operator decide. Record the result on PI-20261119-K7ZSW5Z7-0003.'
+  fail_action: 'Report to the manager for the operator: the data support demotion to the demo floor; nothing is changed by this lane (demotions
+    wait for the operator). File the next book-side lever (sizing: risk_pct / wall) as a P8 unit.'
+  indeterminate_action: 'Report the table and the selection-vs-noise reading. If NOISE: file the accrual question (how many months of live signals
+    at k slots reach n_taken 30) as a pipeline item. If SELECTION with no passing challenger: author the pick-order lever (highest score among
+    the signals of the last decision bar before a slot frees) as the next unit. If void: name the drift and re-run.'
+  what_it_does_not_do: Places no order; changes no roster, mode, execution, sizing, slot count or config; demotes nothing; refits nothing. The
+    live balance is never read or committed (the grid stands in for it). Claims one holdout read of the confirm window (the 6th ENTRY-EQ read).
+  min_n: 30 taken trades per challenger x cash arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.5
+  basis: 'stand-in as a10d-04: settles a real-money leg''s book design or demotion question; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 130
+  why_runner: Alpaca market data (read-only key, the route a10d-04 used); scoring only, no LightGBM fit; the replays and the 3 x 2,000-draw null
+    are minutes.
+  basis: 'MEASURED neighbour: a10d-04 (same bar fetch, table and frozen scoring) ran ~117 min (run 44493850432, job 09:33Z..11:30Z); the null adds
+    ~6,000 replays of 207 candidates (seconds each batch).'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/alpaca_live_book.py
+  - slot-book
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --artifact
+  - ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  - --start
+  - '2025-07-15'
+  - --end
+  - '2026-10-31'
+  - --expect-n
+  - '207'
+  - --expect-mean
+  - '0.4922070639835765'
+  - --rule-id
+  - RULE-RQ20261119-a10d-09-EQSTRUCT-SLOT-POLICY
+  - --registered-at
+  - '2026-11-19'
+  inputs:
+    research_unit: RQ-20261119-a10d-09
+ml_consumer:
+  consumer: config/strategies.yaml
+  decision: the alpaca_live book design (slot / pick policy) for ml_entry_eq_struct, or the operator's demotion question; no change from this unit
+  legs:
+  - ml_entry_eq_struct
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: The frozen served artifact's own 173 pool_symbols (pinned), confirm window 2025-07-15..2026-10-31, restricted-LONG decisions at the
+  artifact tau 0.25, net of the Alpaca cost stack (the a10d-04 population), walked through the alpaca_live whole-share T+1 cash book under four
+  slot policies at cash 250 / 1,000 / 5,000.
+related:
+- research/queue/RQ-20261119-a10d-04.yaml
+- research/queue/RQ-20261119-e8a1-04.yaml
+- research/queue/RQ-20261107-98e3-06.yaml
+- scripts/research/alpaca_live_book.py
+- comms/strategy_evidence/ml_entry_eq_struct.json
