@@ -133,3 +133,16 @@ models:
       rule: RULE-RQ0927-002-EXIT-HEAD-OOS-MULTIFOLD
       provenance: MEASURED
       source: research/results/RQ-20260927-002/36302273043.jsonl
+  exit-head-donchian-1h-v2-neg25:
+    stage: advisory
+    stage_basis: "the exported artifact's stage field (advisory, mirror publish 2026-11-18 19:41Z); pinned as exit_head_model on trend_donchian / _eth / _sol with exit_head_action annotate on all three, so it changes no order; no close authority (RQ-20261118-04a5-04 FAIL: the head does not beat the random-truncation control)"
+    headline_metric:
+      name: paired_replayed_r_vs_champion_per_trade
+      value: 0.02858
+      n: 12015
+      window: "5-fold sequential walk-forward on datasets-out/exit_head/1h/donchian_fresh (rows 45,372; last bar_t BTC 2026-11-08, ETH 2026-11-19, SOL 2026-11-05)"
+      population: "trend_donchian / _eth / _sol 1h OOS harness trades, holding_pays_neg25 minus the holding_pays champion per trade, fixed harness (predict_proba), net of fee 7.5 + slip 3 bps + funding 1 bps/8h; deflated CI z 2.241 [+0.01234, +0.04483]"
+      verdict: pass
+      rule: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+      provenance: MEASURED
+      source: comms/research/RQ-20261119-a10d-07/44586889314/verdict.json
