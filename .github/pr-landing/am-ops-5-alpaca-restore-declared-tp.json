@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_order_path",
+  "hold_text": "Alpaca order path (equity naked sweep, includes alpaca_live): when a single-row symbol holds one resting plain stop and the row DECLARES take_profit_1, the sweep re-arms exactly that declared TP: cancel the stop CONFIRMED -> OCO at the row's stop and TP -> immediate stop fallback. Transient refusals retry on a 15-min cooldown, capped at 4 with one red flag; price refusals are reported and not retried until the TP changes; the target-naked page keeps firing until the target rests. Undeclared targets stay report-only. The trader restarts on deploy. Manager merges. Revert: git revert + deploy.",
+  "why": "BRACKETS-ALWAYS item 4, manager pick B (04:05Z): restore the DECLARED target, never invent one. Gates this adds or changes: none."
+}

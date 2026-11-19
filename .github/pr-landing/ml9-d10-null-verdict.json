@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research harness fix + a session grading block on research/queue/RQ-20261119-b9d0-01.yaml; manager merges after the FULL pytest-run is green",
+  "why": "Tier-1 research tooling fix: d10_basset_baseline.py --null-calibrate wrote verdict \"report\" (outside the result contract), so the collector marked RQ-20261119-b9d0-01 producer_failed and its retry ran the unit twice. The mode now grades by the unit's registered rule (null_verdict -> pass/fail/indeterminate only), with a self-test and a contract test against script_run.VERDICTS. Also records the by-hand FAIL grade of b9d0-01 (status done). Edits no config. Gates this adds or changes: none."
+}

@@ -2137,8 +2137,50 @@ class IBClient:
                 if self.account:
                     leg.account = self.account
 
-            for leg in legs:
-                ib.placeOrder(contract, leg)
+            # ── NEVER RETURN WITH PROTECTION CANCELLED AND NOT RESTORED (BRACKETS-ALWAYS item 2) ──
+            # The pre-cancel above has already removed this trade's previous legs. If a placeOrder raises here
+            # (gateway drop, a client error), returning at once used to leave the position with NO resting leg
+            # until the next naked sweep (~5 min). Each leg that did not go out is retried ONCE, immediately,
+            # with a fresh orderId in the SAME OCA group, so even a leg that was in fact transmitted before the
+            # raise can only add a mutually-cancelling twin, never a second independent bracket.
+            placed_idx: List[int] = []
+            first_exc: Optional[BaseException] = None
+            for i, leg in enumerate(legs):
+                try:
+                    ib.placeOrder(contract, leg)
+                    placed_idx.append(i)
+                except Exception as exc:  # noqa: BLE001 -- retried below, never swallowed
+                    first_exc = exc
+                    break
+            if first_exc is not None:
+                retry_exc: Optional[BaseException] = None
+                for i, leg in enumerate(legs):
+                    if i in placed_idx:
+                        continue
+                    try:
+                        leg.orderId = ib.client.getReqId()
+                        ib.placeOrder(contract, leg)
+                        placed_idx.append(i)
+                    except Exception as exc:  # noqa: BLE001
+                        retry_exc = exc
+                        break
+                missing = [type(leg).__name__ for i, leg in enumerate(legs) if i not in placed_idx]
+                if missing:
+                    logger.critical(
+                        "place_protective: %s group %s: placeOrder raised (%s: %s) AFTER the pre-cancel, and the "
+                        "one immediate retry failed too (%s). Legs NOT resting: %s. The position may be "
+                        "UNPROTECTED until the next naked sweep re-arms it (BRACKETS-ALWAYS)",
+                        sym, oca_group, type(first_exc).__name__, first_exc,
+                        f"{type(retry_exc).__name__}: {retry_exc}" if retry_exc else "not attempted", missing)
+                    return {"retCode": 1,
+                            "retMsg": f"{type(first_exc).__name__}: {first_exc}; retry failed; legs not resting: "
+                                      f"{missing}",
+                            "result": {"ocaGroup": oca_group, "legs_placed": len(placed_idx),
+                                       "legs_missing": missing, "protection_restored": False}}
+                logger.error(
+                    "place_protective: %s group %s: placeOrder raised (%s: %s) after the pre-cancel; RESTORED by "
+                    "the immediate retry (all %d leg(s) resting)", sym, oca_group, type(first_exc).__name__,
+                    first_exc, len(legs))
             try:
                 ib.sleep(0)
             except Exception:  # noqa: BLE001
