@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Order-path + strategy-config change (src/runtime/order_monitor.py exit pass and forward reconciler, new src/units/accounts/maker_exit.py, config/strategies.yaml leg fields). Data-backed Tier-3 under the standing rule (RQ-20261118-04a5-05 PASS + RQ-20261118-e8a1-01 PASS), staged to the demo floor only. src/ restarts the trader, so the MANAGER merges and schedules the restart (lane brief D9-MAKER-EXIT-BUILD).",
+  "why": "D9-MAKER-EXIT-BUILD PR 1: the 24h time-stop (max_hold) exit worked post-only at the passive mid with a 1-minute Market fallback, fenced to Bybit demo-floor paper accounts (account_class paper, demo true, not a portfolio mirror). Every other close is the taker Market exit byte for byte. Revert: delete the two time_stop_exit_order lines in config/strategies.yaml. Gates this adds or changes: none (a declared per-leg value plus an account fence that PR 2 widens; no *_ENABLED flag, no new refusal of any trade)."
+}
