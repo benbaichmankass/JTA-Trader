@@ -1308,11 +1308,15 @@ def test_flat_symbol_and_entry_order_terminal_still_closes(tmp_db):
     assert _alpaca_row_status(tmp_db) == "closed"
 
 
-def test_order_status_unreadable_keeps_prior_close_behaviour(tmp_db):
-    """None = cannot tell: only a positive 'still pending' holds a row open."""
+def test_order_status_unreadable_holds_the_row_open(tmp_db):
+    """None = could not look. 2026-11-19 (AM-OPS-7, PI-20261118-JFWRQYOV-0004 root
+    cause): an unreadable entry-order read is never "gone", so it holds the row open
+    and is retried next pass (was: closed, the hole an Alpaca 5xx burst falls through)."""
     _insert_alpaca_open_trade(tmp_db, "ord-unknown")
     summary, _ = _run_two_passes(tmp_db, None)
-    assert summary["snapshot_closed"] == 1
+    assert summary["snapshot_closed"] == 0
+    assert summary["snapshot_order_unreadable"] >= 1
+    assert _alpaca_row_status(tmp_db) == "open"
 
 
 def test_rejected_placeholder_order_id_is_never_looked_up(tmp_db):

@@ -4254,6 +4254,56 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
+def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
+    """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
+
+    PI-20261118-JFWRQYOV-0004 (root cause). A flat position read says nothing about an
+    entry order that has not filled yet: an Alpaca bracket sent outside the regular
+    session is ACCEPTED and QUEUED until the open, so the symbol reads flat for hours
+    while the order is alive. Closing the row then frees the strategy-monocle gate, the
+    same signal re-fires, and every queued order fills at the open into one netted
+    position (alpaca_paper QQQ: journal 2 vs venue 1981 = 1182 + 735 + 55 + 7 + 2;
+    alpaca_portfolio SLV: 6 vs 877). #26862 held only the snapshot path, and only on a
+    POSITIVE "still pending"; an unreadable order read still closed the row, and the
+    stuck-strategy watchdog (30 min, flat x2) had no check at all.
+
+    Keyed on the entry order's venue state, for every flat-close path:
+
+      * ``"pending"``    - the venue says the order is still working -> hold.
+      * ``"unreadable"`` - the integration CAN answer but this read failed -> hold
+                           ("could not look" is never "gone"); retried next pass.
+      * ``None``         - proceed with the caller's own flat logic: no real entry
+                           order id (``rejected-*`` / ``dry-*`` / missing), an
+                           integration that cannot answer (IB, OANDA, Bybit - the
+                           Bybit forward reconciler keys on order status already),
+                           or the order is terminal / unknown to the venue (404).
+
+    Never raises: an exception is treated as ``"unreadable"`` on a supported account.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return None
+    try:
+        from src.units.accounts.clients import (
+            account_entry_order_pending,
+            supports_entry_order_state,
+        )
+        if not supports_entry_order_state(cfg):
+            return None
+    except Exception:  # noqa: BLE001 — import/cfg shape problem: cannot answer
+        return None
+    try:
+        state = account_entry_order_pending(cfg, oid)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_order_hold: order %s read raised: %s", oid, exc)
+        state = None
+    if state is True:
+        return "pending"
+    if state is None:
+        return "unreadable"
+    return None
+
+
 def _reverify_reset_suspect_row(
     db, r, *, state: Dict[str, Any], aid: str, cfg: Any, sym: str,
     canonical: str, exchange_positions: set, now_dt: datetime, now_iso: str,
@@ -4311,6 +4361,18 @@ def _reverify_reset_suspect_row(
                 summary.get("snapshot_reset_suspect", 0) + 1
             )
             return "suspect"
+    # PI-20261118-JFWRQYOV-0004: an entry order still working (or unreadable) means
+    # this flat read is not evidence of a close. Break the streak, keep the row open.
+    _entry_oid = r["broker_order_id"] if "broker_order_id" in r.keys() else None
+    _hold = _entry_order_hold(cfg, _entry_oid)
+    if _hold is not None:
+        _reset_suspect_break_streak(state)
+        _reset_suspect_bump(tid_int, state, f"entry_order_{_hold}",
+                            failed=(_hold == "unreadable"))
+        summary["snapshot_reset_suspect"] = (
+            summary.get("snapshot_reset_suspect", 0) + 1
+        )
+        return "suspect"
     last_flat = state.get("last_flat_at")
     if (
         last_flat is not None
@@ -4579,7 +4641,6 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         return summary
 
     from src.units.accounts.clients import (
-        account_entry_order_pending,
         account_open_positions,
         account_position_present,
         account_supports_management,
@@ -5006,25 +5067,27 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 # re-fired every ~7 min (SLV x7 on alpaca_portfolio, QQQ x4 on
                 # alpaca_paper), every queued order filling at the open. Where the
                 # integration can say so, an entry order that is still working is NOT
-                # flat. ``None`` (cannot tell) keeps the prior behaviour; only a
-                # positive "still pending" holds the row open.
+                # flat. 2026-11-19 (AM-OPS-7): an UNREADABLE order read also holds
+                # ("could not look" is never "gone"); see _entry_order_hold.
                 _entry_oid = (
                     r["broker_order_id"] if "broker_order_id" in r.keys() else None
                 )
-                if _entry_oid and not str(_entry_oid).startswith("rejected-"):
-                    if account_entry_order_pending(cfg, str(_entry_oid)) is True:
-                        summary["snapshot_order_pending"] = (
-                            summary.get("snapshot_order_pending", 0) + 1
-                        )
-                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
-                        logger.info(
-                            "_reconcile_orphan_exchange_positions: NOT closing "
-                            "trade_id=%s account=%s symbol=%s side=%s — flat at the "
-                            "venue but its entry order %s is still pending (queued "
-                            "for the open / not yet filled).",
-                            tid_int, aid, sym, canonical, _entry_oid,
-                        )
-                        continue
+                _hold = _entry_order_hold(cfg, _entry_oid)
+                if _hold is not None:
+                    _hold_key = (
+                        "snapshot_order_pending" if _hold == "pending"
+                        else "snapshot_order_unreadable"
+                    )
+                    summary[_hold_key] = summary.get(_hold_key, 0) + 1
+                    _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                    logger.info(
+                        "_reconcile_orphan_exchange_positions: NOT closing "
+                        "trade_id=%s account=%s symbol=%s side=%s — flat at the "
+                        "venue but its entry order %s is %s (queued for the open "
+                        "/ not yet filled, or its state could not be read).",
+                        tid_int, aid, sym, canonical, _entry_oid, _hold,
+                    )
+                    continue
                 # Defer the close: collect it and decide reset-vs-single AFTER
                 # the whole account's open_rows are scanned (below).
                 _snapshot_to_close.append((r, tid_int, sym, canonical))
@@ -7488,7 +7551,8 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                 db_conn.row_factory = __import__("sqlite3").Row
                 trade_row = db_conn.execute(
                     "SELECT id, status, notes, account_id, symbol, "
-                    "       direction, position_size, entry_price, created_at "
+                    "       direction, position_size, entry_price, created_at, "
+                    "       broker_order_id "
                     "FROM trades WHERE id=?",
                     (trade_id,),
                 ).fetchone()
@@ -7604,6 +7668,31 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
             # to let a stale package linger one more cycle than to
             # force-clear blind on an exchange we can't see.
             summary["skipped_position_read_failed"] += 1
+            continue
+
+        # PI-20261118-JFWRQYOV-0004: flat at the venue is not "closed" while the
+        # row's ENTRY ORDER is still working. An Alpaca bracket placed after the
+        # close (alpaca_paper QQQ 7712: sent 21:01Z, filled 14:34Z next day) sits
+        # queued for hours with no package update, so this 30-min watchdog was the
+        # next path to close it once the snapshot reconciler held it (#26862).
+        # Pending or unreadable -> defer, and restart the flat confirm.
+        _wd_hold = _entry_order_hold(
+            cfg,
+            trade_row["broker_order_id"]
+            if trade_row is not None and "broker_order_id" in trade_row.keys()
+            else None,
+        )
+        if _wd_hold is not None:
+            if trade_id is not None:
+                _PENDING_WATCHDOG_FLAT_CONFIRM.pop(int(trade_id), None)
+            _wd_key = f"deferred_entry_order_{_wd_hold}"
+            summary[_wd_key] = summary.get(_wd_key, 0) + 1
+            logger.info(
+                "_watchdog_stuck_strategies: %s/%s/%s reads flat but entry order "
+                "%s is %s — not finalizing (trade_id=%s)",
+                aid, symbol, direction, trade_row["broker_order_id"], _wd_hold,
+                trade_id,
+            )
             continue
 
         # Position reads flat at the exchange. BUT a SINGLE flat read is not
