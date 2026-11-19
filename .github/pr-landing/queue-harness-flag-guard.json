@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "adds a REPORT-ONLY CI check (never fails CI) and registers it in scripts/ci/run_guards.py; enforcing it would be a new gate and needs the operator's recorded permission",
+  "why": "Manager 2026-11-19: make the harness-lever coupling check model ict_scalp so a spec using a flag the harness lacks is caught at authoring. check_harness_lever_coupling.py grades strategy config keys, not queue-unit flags, and skips ict_scalp, so this adds check_queue_harness_flags.py (reads each harness's argparse from its AST; for exit_lever_ablation units resolves the leg's harness the way the ablation does). Shipped report-only because a CI refusal is a gate (canonical: No new gates). Gates this adds or changes: none."
+}

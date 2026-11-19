@@ -632,6 +632,10 @@ _backtest_data_source = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
+from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
+
+
+@restores_globals('_ATR_WILDER')
 def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(description="Opening-Range Breakout (ORB) backtest.")
     p.add_argument("--data", default=None)

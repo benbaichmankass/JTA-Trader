@@ -448,6 +448,14 @@ def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Pa
                 if r.get("review_id") in ids:
                     out.append(f"{tag}: duplicate review_id {r.get('review_id')}")
                 ids.add(r.get("review_id"))
+    # LTR-GRADE-APPLIED: an outcome may price a dispatchable row main's schema refused; that row lives in the sidecar
+    # (scripts/ops/live_review_rows_mirror.py REFUSED_DISPATCHABLE), not in reviews.jsonl. Its id counts as known here;
+    # the sidecar rows themselves are known-refused and are not schema-validated (their schema_problems say why).
+    side = reviews.parent / "reviews_refused_dispatchable.jsonl"
+    if side.exists():
+        for _n, r, _err in _rows(side):
+            if isinstance(r, dict) and r.get("review_id"):
+                ids.add(r.get("review_id"))
     if outcomes.exists():
         seen: dict = {}       # review_id -> computed_at values of earlier rows (G6: append-only supersede chain)
         for n, r, err in _rows(outcomes):

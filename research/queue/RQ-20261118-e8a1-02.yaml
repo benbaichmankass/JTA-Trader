@@ -5,7 +5,7 @@ id: RQ-20261118-e8a1-02
 title: 'D9 Whippet, ENTRY order at the exit''s passing policy: does a post-only maker ENTRY resting at the MID with a 1-minute market
   fallback (04a5-05''s passing exit policy) improve the frozen v1 model''s own held-out decisions in R per decision, where the touch at
   W 5 (1c4e-01) lost to adverse selection?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -150,3 +150,16 @@ related:
 - ML-D9-MAKER-EXIT-HARNESS
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-19T00:59:12+00:00'
+grading:
+  attested: RULE-RQ20261118-e8a1-02-MAKER-ENTRY-MIDPEG
+  auto: true
+  decision_rule_id: RULE-RQ20261118-e8a1-02-MAKER-ENTRY-MIDPEG
+  evidence:
+  - research/results/RQ-20261118-e8a1-02/44433409711.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

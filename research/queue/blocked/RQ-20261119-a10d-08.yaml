@@ -180,15 +180,13 @@ related:
 - scripts/research/exit_head_label_bakeoff.py
 - scripts/research/m20_exit_head_round.py
 blocked_on:
-- what: 'The trainer''s crypto 1h candle files froze at ~2026-06-15/18 (AM-OPS-7, 2026-11-19) and the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl)
-    were built 2026-07-12, so the original read covers history only to about mid-2026. This re-run needs (a) #27214 merged and deployed, so ict-candle-refresh
-    extends data/<SYM>_1h.csv; (b) the exit-head rows REBUILT from the refreshed candles into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
-    (m20_exit_head_round / build_exit_head_dataset, donchian 1h legs, the July build''s inputs; rebuilt rows carry peak_is_in natively); and (c)
-    the held-out symbols covered: #27214 refreshes 1h only for ADA, AVAX, BTC, ETH, SOL and XRP, so LINKUSDT and BNBUSDT 1h must be added to the
-    refresher, and data/<SYM>_1h.csv must be CREATED for DOGE, LTC, DOT, TRX and NEAR (the refresher extends, never creates; the original run
-    was producer_failed on those five).'
+- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
+    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
+    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
+    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
   ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
   kind: build
-  clears_when: every symbol this unit replays has data/<SYM>_1h.csv with a last bar within 3 days of the run (trainer-vm-diag read, quoted in
-    the move commit), AND datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with rows whose last bar_t is past 2026-11-01; then git mv
-    this file to research/queue/ and set status queued (rule unchanged).
+  clears_when: 'datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
+    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged). ALSO: DOGEUSDT, LTCUSDT, DOTUSDT, TRXUSDT and
+    NEARUSDT must have a candle file resolve_data finds (the original run was producer_failed on those five; LINK and BNB resolve to fresh 5m
+    files).'
