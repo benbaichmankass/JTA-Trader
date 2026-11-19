@@ -587,6 +587,93 @@ def main_foxhound(a) -> Dict[str, Any]:
     return r
 
 
+# ------------------------------------------------------------------------------------------------ frozen artifact, live book, confirm window
+# PI-20261119-K7ZSW5Z7-0003 / RQ-20261119-a10d-04: the deciding read for the real-money leg ml_entry_eq_struct. Every earlier book
+# read (207f-01: -0.0576 R n 97) was a DEV-window REFIT on a live-rebuilt pool at synthetic cash; the dev reads disagree with each
+# other (98e3-06 +0.132 n 1691, c21d-06 +0.0845 n 1628, 207f-01 -0.0015 n 1016) because the pool and bar snapshot moved between runs.
+# This read removes both moving parts: the FROZEN served boosters (no refit), the artifact's PINNED pool_symbols, the graded confirm
+# window, and the live cash book. The live balance is never committed and no workflow supplies it, so the book is read on a fixed
+# CASH GRID and the unit verdict needs the grid to agree.
+FROZEN_ARTIFACT = "ml/candidates/ml_entry_eq_v3_struct_ens5/model.json"
+FROZEN_CASH_GRID = [250.0, 1000.0, 5000.0]
+FROZEN_MIN_TAKEN = 30
+FROZEN_FAMILY = "ENTRY-EQ"
+
+
+def frozen_arm_verdict(book: Dict[str, Any], bar: Dict[str, Any]) -> tuple:
+    """Per cash arm (registered): INDETERMINATE if n_taken < 30; PASS if taken mean net R > 0 AND mean >= point_t_min(N) x se;
+    FAIL if the deflated CI upper bound (mean + ci_z(N) x se) < 0; INDETERMINATE otherwise."""
+    n, m, se = book.get("n_taken") or 0, book.get("taken_mean_net_r"), book.get("taken_se_net_r")
+    if n < FROZEN_MIN_TAKEN or m is None or se is None:
+        return "indeterminate", f"n_taken {n} < {FROZEN_MIN_TAKEN}"
+    if m > 0 and m >= bar["point_t_min"] * se:
+        return "pass", f"mean {m:+.4f} R >= {bar['point_t_min']} x se {se:.4f} (n {n})"
+    if m + bar["ci_z"] * se < 0:
+        return "fail", f"mean {m:+.4f} R, deflated CI upper {m + bar['ci_z'] * se:+.4f} < 0 (n {n})"
+    return "indeterminate", f"mean {m:+.4f} R, se {se:.4f}: neither above the deflated point bar nor below 0 at ci_z {bar['ci_z']} (n {n})"
+
+
+def frozen_unit_verdict(arms: Dict[str, str], reproduces: bool) -> tuple:
+    """Unit (registered): INDETERMINATE unless the frozen population reproduces 98e3-06 exactly (n 207, mean 0.4922070639835765);
+    PASS iff every cash arm PASSES; FAIL iff every cash arm FAILS; INDETERMINATE otherwise (the verdict depends on the balance)."""
+    if not reproduces:
+        return "indeterminate", "the frozen population did not reproduce 98e3-06 (n / mean mismatch): the book read is not of the graded population"
+    vs = set(arms.values())
+    if vs == {"pass"}:
+        return "pass", "the edge survives the live cash book at every cash level on the grid"
+    if vs == {"fail"}:
+        return "fail", "the live cash book loses at every cash level on the grid"
+    return "indeterminate", "cash-dependent or unresolved: " + ", ".join(f"{k} {v}" for k, v in arms.items())
+
+
+def main_frozen_book(a) -> Dict[str, Any]:
+    import holdout_lock as HL
+    import ml_entry_equity as M
+    import ml_entry_alpaca_score as S
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    sizer = _live_sizer_constants()
+    slip, _ = resolve_cost_policy("SPY")
+    fee = resolve_fee_bps_roundtrip("SPY")
+    art = json.loads((REPO / a.artifact).read_text())
+    pool = list(art["pool_symbols"])
+    feats, tau, predict, model_id = M._artifact_scorer(a.artifact)
+    claim = HL.claim_read(f"{FROZEN_FAMILY}-{model_id}-LIVEBOOK", a.start, a.end, a.unit, a.where, train_end=M.TRAIN_END,
+                          family=FROZEN_FAMILY)
+    bar = claim["bar"]
+    bars, client = M._pinned_pool_and_bars(a, a.end, pool)
+    tab = M.build_table(bars, pool, slip, fee, struct=art.get("structure_exit") or M.STRUCT_SPEC)
+    rep, tk0 = M.reproduce_frozen(tab, a.artifact, a.start, a.end, int(a.expect_n), float(a.expect_mean), pool, bars.keys())
+    tab = attach_prices(tab, bars)
+    hs, he = pd.Timestamp(a.start, tz="UTC"), pd.Timestamp(a.end, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    test = test[M.session_mask(test.ts)]
+    test = test.assign(fold=pd.to_datetime(test.ts, utc=True).dt.year * 100 + pd.to_datetime(test.ts, utc=True).dt.month)
+    tk = take(test, predict(test), tau)   # provenance: predict -- mean regressed LONG net R of the frozen boosters, not a probability
+    tr = _trades(tk)
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    books = {f"cash_{int(c)}": replay(tr, c, **kw) for c in FROZEN_CASH_GRID}
+    arm_v = {}
+    for k, b in books.items():
+        v_, why_ = frozen_arm_verdict(b, bar)
+        b["verdict"], b["reason"] = v_, why_
+        arm_v[k] = v_
+    reported = {f"cash_{int(c)}_no_t1": replay(tr, c, settle_bdays=0, **kw) for c in FROZEN_CASH_GRID}
+    reported["multi_slot_no_cash_limit"] = replay(tr, 1e9, settle_bdays=0, one_slot=False, **kw)
+    reproduces = bool(rep["reproduction"]["reproduces"]) and len(tk) == len(tk0)
+    v, why = frozen_unit_verdict(arm_v, reproduces)
+    note = (f"{why}; frozen {model_id} on its pinned {len(pool)}-ETF pool, {a.start}..{a.end}: unconstrained n {len(tk)} mean "
+            f"{float(tk.net_r.mean()) if len(tk) else float('nan'):+.4f} R; " + "; ".join(
+                f"{k}: n_taken {b['n_taken']} mean {b.get('taken_mean_net_r')} -> {b['verdict']}" for k, b in books.items())
+            + f"; bar N={bar['n_tries']} (t_min {bar['point_t_min']}, ci_z {bar['ci_z']})")
+    return {"verdict": v, "note": note, "n": int(len(tk)), "books": books, "reported_arms": reported, "reproduction": rep,
+            "holdout_claim": {k: claim[k] for k in ("model_id", "family", "n_tries", "bar", "read_at")},
+            "sizer": sizer, "cash_grid": FROZEN_CASH_GRID, "cash0_source": "grid (the live balance is never committed)",
+            "costs": {"slippage_bps": slip, "fee_bps": fee, "regulatory_bps": S.REGULATORY_BPS}, "alpaca_calls": client.calls,
+            "population": (f"FROZEN {model_id} (no refit) restricted-LONG decisions on its pinned {len(pool)}-ETF pool_symbols, confirm window "
+                           f"{a.start}..{a.end}, net of the Alpaca cost stack, walked through the alpaca_live one-slot whole-share T+1 cash book "
+                           f"at cash {FROZEN_CASH_GRID}")}
+
+
 # ------------------------------------------------------------------------------------------------ challenger legs
 def leg_trades(name: str, workdir: Path, days: int) -> tuple:
     cmd = [sys.executable, str(REPO / "scripts/ops/build_strategy_evidence.py"), "--strategy", name, "--workdir", str(workdir),
@@ -712,6 +799,19 @@ def _self_test() -> int:
           "h72": {"hold": 72, "daily": False}, "daily_h24": {"hold": 24, "daily": True}})
     import ml_entry_equity as M
     check("built feature families exist in the equity module", all(f in M.FAMILY_FEATURES for f in FEATURE_FAMILIES + ["noise9"]))
+    # frozen-book (RQ-20261119-a10d-04): per-arm and unit verdicts, registered
+    b5 = {"n_tries": 5, "point_t_min": 1.1926, "ci_z": 2.5723}
+    check("frozen arm: thin is indeterminate", frozen_arm_verdict({"n_taken": 20, "taken_mean_net_r": 1.0, "taken_se_net_r": 0.1}, b5)[0] == "indeterminate")
+    check("frozen arm: mean 0.30 se 0.10 passes at N=5", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": 0.30, "taken_se_net_r": 0.10}, b5)[0] == "pass")
+    check("frozen arm: mean 0.10 se 0.10 is indeterminate", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": 0.10, "taken_se_net_r": 0.10}, b5)[0] == "indeterminate")
+    check("frozen arm: mean -0.30 se 0.10 fails", frozen_arm_verdict({"n_taken": 60, "taken_mean_net_r": -0.30, "taken_se_net_r": 0.10}, b5)[0] == "fail")
+    check("frozen unit: all pass", frozen_unit_verdict({"a": "pass", "b": "pass"}, True)[0] == "pass")
+    check("frozen unit: mixed is indeterminate", frozen_unit_verdict({"a": "pass", "b": "fail"}, True)[0] == "indeterminate")
+    check("frozen unit: all fail", frozen_unit_verdict({"a": "fail", "b": "fail"}, True)[0] == "fail")
+    check("frozen unit: no reproduction is indeterminate", frozen_unit_verdict({"a": "pass"}, False)[0] == "indeterminate")
+    import holdout_lock as HL
+    bb = HL.bar_for(5)
+    check("registered N=5 bar matches holdout_lock", bb["point_t_min"] == b5["point_t_min"] and bb["ci_z"] == b5["ci_z"])
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0
 
@@ -720,7 +820,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("foxhound", "legs"):
+    for name in ("foxhound", "legs", "frozen-book"):
         p = sub.add_parser(name)
         p.add_argument("--out", required=True)
         p.add_argument("--unit", required=True)
@@ -732,6 +832,13 @@ def main(argv=None) -> int:
             p.add_argument("--section", required=True, choices=["book", "calib", "label", "neutral", "features", "horizon"])
             p.add_argument("--families", default="", help="features: comma list of ml_entry_equity.FAMILY_FEATURES keys (default all built)")
             p.add_argument("--horizon-arms", default="", help="horizon: comma list of HORIZON_ARMS keys (default all)")
+        elif name == "frozen-book":
+            p.add_argument("--cache", required=True)
+            p.add_argument("--artifact", default=FROZEN_ARTIFACT)
+            p.add_argument("--start", default="2025-07-15")
+            p.add_argument("--end", default="2026-10-31")
+            p.add_argument("--expect-n", dest="expect_n", default="207")
+            p.add_argument("--expect-mean", dest="expect_mean", default="0.4922070639835765")
         else:
             p.add_argument("--strategy", action="append", required=True)
             p.add_argument("--days", type=int, default=700)
@@ -743,7 +850,7 @@ def main(argv=None) -> int:
     t0 = time.time()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    r = main_foxhound(a) if a.cmd == "foxhound" else main_legs(a)
+    r = main_foxhound(a) if a.cmd == "foxhound" else main_frozen_book(a) if a.cmd == "frozen-book" else main_legs(a)
     row = {"schema_version": 1, "schema": SCHEMA, "research_unit": a.unit, "read_state": "measured", "verdict": r["verdict"],
            "n": r.get("n"), "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},

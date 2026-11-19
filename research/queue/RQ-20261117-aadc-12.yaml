@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-12
 title: 'ml-exit-head-donchian-1h CONFIRMATION (held-out symbols): does the holding_pays_neg25 target, trained on the BTC/ETH/SOL rows only,
   beat the holding_pays champion by +0.01 R/trade on donchian 1h trades of 10 perps the head never saw?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -201,5 +201,23 @@ grading:
   graded_at: '2026-11-18'
   grader: scripts/research/queue_grade.py
   reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM
+  evidence:
+  - research/results/RQ-20261117-aadc-12/44170813134.jsonl
+  - comms/research/RQ-20261117-aadc-12/44170813134/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  reason: 'row measured (run 44170813134, 2026-11-17T20:49Z; landed on main in #27075) -> PASS by the registered rule, ON 5 OF THE 10 HELD-OUT
+    SYMBOLS: XRP, ADA, AVAX, LINK and BNB were measured (each dropped from training by --exclude-train-symbol); DOGE, LTC, DOT, TRX and NEAR were
+    producer_failed (no data/<SYM>_1h.csv on the trainer). On the measured five, holding_pays_neg25 minus the champion +0.01596 R/trade, se
+    0.00494, CI (z 1.96) [+0.00628, +0.02564], n_oos 18,649 >= 3,000, mean >= +0.01 and CI lower > 0; not accruing. DATA-WINDOW CAVEAT (manager
+    question 2026-11-19 ~08:22Z): the training rows (datasets-out/exit_head/1h/donchian/rows.jsonl) were built 2026-07-12 and the replay
+    candles are the trainer data/<SYM>_1h.csv files AM-OPS-7 found frozen near 2026-06-15, so the read covers history only to about mid-2026, not
+    to the run date; exact last bars per symbol from trainer-vm-diag #27224. pass_action: a data-backed Tier-3 proposal (#26906, HELD); with
+    aadc-11 these records are its evidence on truncated data, and the manager decides whether it waits for a fresh-data re-run.'
   rows: 1
   verdict: pass

@@ -3374,8 +3374,8 @@ nodes:
   value:
     usd_at_stake_per_month: 400
     confidence: 0.2
-  authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `FIRST-PASSAGE-ON-PATHS` -- the node says so'
-  needs_authoring: 'Q8 on the legs AS TRADED. The fixed-bracket linear line is closed FAIL (d6e7-02, RQ-20261016-012/-013,
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: answered. FIRST-PASSAGE-ON-PATHS landed (#19955) and RQ-20261014-d6e7-06 ran as asked (census + policy on harness-native paths, 2,627 OOS trades of 6 real-money legs): FAIL, the ridge exit-now policy loses vs as-traded (pullback -0.0137 R/trade CI [-0.043, +0.013] folds+ 2/6; trend_donchian -0.0239 CI [-0.048, -0.001] folds+ 2/6) while the oracle saving stands (+0.756 R/trade). The linear rung is closed; the next rung is a non-linear in-trade exit model, which is a D7/D8 ML question for the ML lane (ML-PRIMARY-9), not a unit here. Do not re-author.'
+  authoring_closed_ask: 'Q8 on the legs AS TRADED. The fixed-bracket linear line is closed FAIL (d6e7-02, RQ-20261016-012/-013,
     1fa6-06) while the 8.1 prize stands (d6e7-01 PASS, oracle 0.656 R/trade). Not a new unit: when checklist row
     FIRST-PASSAGE-ON-PATHS lands (first_passage.py --paths over --emit-paths rows, #18536), PROMOTE
     blocked/RQ-20261014-d6e7-06 (git mv, status queued, run.command = first_passage.py --paths <glob> --mode census
@@ -18006,3 +18006,23 @@ nodes:
     related:
     - PROGRAMME-REPLAN-2026-11-19
     - research/levers/ltr-close.yaml
+- id: P1-RP1119-desk-levelbreak-fade-decluster
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.1
+  after: []
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: AUTHORED as RQ-20261119-f2a4-01 (level_break_break) and RQ-20261119-f2a4-02
+    (level_break_sweep), declustered FADE via desk_trigger_replay.py --decluster-bars 12 (landed with #27165); this node follows their verdicts.'
+  authoring_closed_ask: 'RESULT 2026-11-19 (re-plan lane PROGRAMME-REPLAN-20261119): the four desk trigger replays (RQ-20261119-d7c3-01..04,
+    30,175 firings each family on 6 crypto symbols 2025-11..2026-09) are NOT_CLEARED against the +0.15 R materiality bar, BUT
+    both level-break families show a FADE edge whose weekly-cluster lower bound is above zero: level_break_break fade S3 +0.088 R
+    (lb +0.051, p 0.0001), level_break_sweep fade +0.057 R (lb +0.026, p 0.0001); atr_burst / momentum_burst continuation
+    +0.044 / +0.056 with lb < 0. Diagnosis: a real but small effect diluted by CLUSTERED firings (atr_burst: 15,407 of 30,175
+    firings fall within 12 bars of the previous same-symbol firing), so the n is overstated and the mean mixes first and repeat
+    firings. Next question, pre-registered when authored: on level_break_break and level_break_sweep, FADE on the FIRST firing per
+    symbol per 12 bars only (declustered) vs all firings, same bracket, same window, same +0.15 R bar and Holm family. A desk
+    wake that only fires on declustered level-break fades is the decision it changes (DESK-ENTRY-REVIEW-REDESIGN).'
