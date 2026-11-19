@@ -54,7 +54,13 @@ nodes:
   value: {usd_at_stake_per_month: 80, confidence: 0.3}
   after:
   - {unit: RQ-20261016-7769-20, verdict: fail}
-  needs_authoring: 'The PPI drift does not pay even magnitude-weighted at a daily-close entry on ES. Two honest exits: (a) the intraday-reaction rung (programme
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: configuration closed under this node''s own test -- ES=F, ppi_mom, rank-weighted long tilt
+    at the release-day close, h=3, MES cost stack (12.5 bps round trip). RQ-20261016-7769-20 (run 44433403564): IC -0.275, t_eff -3.38, n 141, but the
+    tilt''s net excess +0.19 pct per release, t 1.89 < the 2.0 bar, n 117 (FAIL). Exit (a) is NOT registered: the IC record measures drift FROM the
+    release-day close (h=3 strongest, decaying by h=5 in 4a4c-01/02/04), so nothing in it measures the first hours after 8:30 ET, which is what (a)
+    needed to argue; and no intraday ES bars at release time are in hand. The PPI signal stays open on M28 through its sibling configurations
+    (NQ=F tilt + P4-Q2-ppi-ym-tilt-holdout, the P4-Q2-ppi-rty-* rungs); this closes the ES daily-close tilt only.'
+  authoring_closed_ask: 'The PPI drift does not pay even magnitude-weighted at a daily-close entry on ES. Two honest exits: (a) the intraday-reaction rung (programme
     04 Q2 rung 6: needs intraday bars at release time, a build) if the IC record argues the money is in the first hours, or (b) close the PPI lead on M28
     with the 4a4c set + this record as the reason. Register (a) as a unit + lever row, or write (b).'
 - id: P4-Q2-ppi-rty-placebo
