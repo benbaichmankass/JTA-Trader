@@ -176,14 +176,18 @@ last_dispatched_at: '2026-11-19T18:29:41+00:00'
 
 grading:
   attested: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
-  auto: true
+  auto: false
   decision_rule_id: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
   evidence:
+  - comms/research/RQ-20261119-a10d-06/44582558646/measurement.json
   - research/results/RQ-20261119-a10d-06/44582558646.jsonl
   graded_at: '2026-11-19'
-  grader: scripts/research/queue_grade.py
-  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
-    confirmatory re-run)'
-  reason: 1 row(s), all measured, all fail
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager; scripts/research/queue_grade.py auto-grade on main concurs (verdict fail, all rows measured)
   rows: 1
   verdict: fail
+  reason: 'run 44582558646 (trainer 17:56-18:18Z, landed on main), fresh rows n 45,372, fixed harness. more_mfe vs the holding_pays champion,
+    paired per OOS trade, trend_donchian / _eth / _sol 1h: n 12,015 >= 300, mean d -0.01897 R/trade, deflated CI z 2.241 [-0.03912,
+    +0.00118]; UB +0.00118 < +0.01 -> FAIL by the registered rule. Configuration closed: the more_mfe (exhaustion) target for the 1h donchian
+    exit head; the label lever is now read at 0, -0.25 (a10d-07 PASS) and more_mfe (this FAIL). REGISTERED FAIL ACTION: record more_mfe as
+    read and closed on the lever map; the D8 next family is the exhaustion feature block (--features extended) or the trade-path sequence
+    model, carried with 04a5-04''s fail action on PI-20261119-RIMARY12-0004.'

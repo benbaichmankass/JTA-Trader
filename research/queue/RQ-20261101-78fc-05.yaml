@@ -2,7 +2,7 @@
 id: RQ-20261101-78fc-05
 title: 'ITERATION 1 of ml-holdbias-exit (pending): on held-out corpus-B folds, does exit-holdbias-v1 acting only when the best action beats hold
   by >= 0.15 R keep as-if-applied >= hold-to-bracket?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -105,4 +105,22 @@ ml_consumer:
   - ada_pullback_2h
   - trend_donchian_sol_prop
   book: money
-last_dispatched_at: '2026-11-19T18:29:54+00:00'
+last_dispatched_at: '2026-11-19T19:24:45+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ-20261101-78fc-05
+  evidence:
+  - comms/research/RQ-20261101-78fc-05/44588484604/verdict.json
+  - research/results/RQ-20261101-78fc-05/44588484604.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
+  rows: 1
+  verdict: fail
+  reason: 'run 44588484604 (landed on main), harness scripts/research/exit_holdbias.py (#27404), corpus-B labels sha256 66a209386d2f79fb:
+    2,554 held-out trades (>= 500), 117,732 check-ins, 6 calendar folds, legs ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop,
+    trend_donchian_sol_prop, trend_donchian_xrp_4h, xrp_pullback_2h. Rule (plan s2a, unchanged): PASS iff LB > -0.01 R/trade AND advice rate
+    <= 15% AND no leg < -0.05 R/trade. Measured: mean dR -0.0057, LB95 -0.0554 (fails), advice rate 0.717 on 2,361 acted trades (fails, cap
+    0.15), per-leg trend_donchian_xrp_4h -0.0541 (n 66; fails the -0.05 floor; others eth_prop -0.0233, eth_4h -0.0068, ada_pullback +0.0172,
+    xrp_pullback -0.0262, sol_prop +0.0480). FAIL on all three clauses. DIAGNOSIS (not graded): the head acts on 72% of trades at the 0.15 R
+    margin, so it is not selective; its mean is near zero with a wide CI, i.e. the per-action value heads do not separate actions from hold
+    beyond noise. REGISTERED FAIL ACTION: back to diagnosis (margin vs features): filed as PI-20261119-RIMARY12-0005.'
