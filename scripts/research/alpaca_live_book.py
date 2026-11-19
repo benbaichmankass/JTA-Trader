@@ -651,6 +651,7 @@ def load_trades(path: Path) -> List[Dict[str, Any]]:
         rows = rows.get("trades") or []
     out = []
     for r in rows:
+        # provenance: picks -- `score` is the regressed net R the live pick order sorts on (ml_pool_scoring.picks), carried through
         out.append({"symbol": r["symbol"], "entry_time": pd.Timestamp(r["entry_time"]), "exit_time": pd.Timestamp(r["exit_time"]),
                     "entry": float(r["entry"]), "sl": float(r["sl"]), "net_r": float(r["net_r"]),
                     "direction": r.get("direction", "long"), "score": float(r.get("score") or 0.0), "leg": r.get("leg")})
@@ -861,6 +862,7 @@ def _self_test() -> int:
         fp.write_text(json.dumps({"symbol": "Q", "entry_time": "2024-01-02T15:30:00Z", "exit_time": "2024-01-03T20:00:00Z",
                                   "entry": 10, "sl": 9.5, "net_r": 0.5, "score": 0.3}) + "\n")
         lt = load_trades(fp)
+        # provenance: picks -- the round-tripped regressed net R (ml_pool_scoring.picks order key), not a probability
         check("h2h: --trades-from jsonl loads in replay() shape", len(lt) == 1 and lt[0]["score"] == 0.3 and replay(lt)["n_taken"] == 1)
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0

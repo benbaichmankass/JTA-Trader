@@ -110,12 +110,13 @@ lands:
   assert_field: read_state
   min_rows: 1
 ml_consumer:
-  consumer: alpaca_live roster (Foxhound-4 = ml_entry_eq_struct, artifact ml-entry-eq-struct-ens5-v1)
+  consumer: src/runtime/ml_pool_scoring.py
   decision: whether the one-slot cash book keeps Foxhound-4, replaces it, or shares the slot
   legs:
   - ml_entry_eq_struct
   - slv_trend_1h
   - tqqq_trend_long_1d
+  book: money
 intervention_controls:
   not_applicable: a book replay comparison of two trade lists, not an in-trade action
 what_it_does_not_do: Changes no roster, config or account; places no order. A PASS is a Tier-3 proposal input that still needs the s
