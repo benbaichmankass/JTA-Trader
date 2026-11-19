@@ -646,8 +646,9 @@ def test_the_research_stuck_window_is_configured_and_read():
 
 # ── repo-queued exempt backends (lane QUEUE-FILL-STANDING-W47, manager 2026-11-18 22:52Z) ──
 
-def _saturated_cycle(tmp_path, monkeypatch, units, exempt):
-    """12 fresh queued CI runs (over the cap of 10), floor off, committed config with `exempt` for the limit. Returns fired cmds."""
+def _saturated_cycle(tmp_path, monkeypatch, units, exempt, floor=False, queued_runs=None):
+    """12 fresh queued CI runs (over the cap of 10), floor off unless `floor`, committed config with `exempt` for the limit.
+    `queued_runs` replaces the queued rows (e.g. to add fresh infra runs). Returns fired cmds."""
     from scripts.research import compute_router as cr
     real = cr.load_config()
     cfg = dict(real, limits=dict(real["limits"], repo_queued_exempt_backends=list(exempt)))
@@ -667,13 +668,14 @@ def _saturated_cycle(tmp_path, monkeypatch, units, exempt):
             fired.append(cmd)
         return P()
 
-    queued = _evruns([("pytest-run", "pull_request")] * 12)
+    queued = queued_runs if queued_runs is not None else _evruns([("pytest-run", "pull_request")] * 12)
     monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: queued if status == "queued" else [])
     monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: {"research_unit", "power_state"})
     from scripts.research import script_run
     monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
     monkeypatch.setattr(dq.subprocess, "run", fake_run)
-    assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0"]) == 0
+    argv = ["--queue-dir", str(q), "--fire", "--ref", "main", "--json"] + ([] if floor else ["--starvation-hours", "0"])
+    assert dq.main(argv) == 0
     return fired
 
 
@@ -695,3 +697,32 @@ def test_without_the_exemption_a_saturated_repo_queue_fires_nothing(tmp_path, mo
 def test_the_committed_config_exempts_kaggle_cpu_and_trainer_only():
     from scripts.research import compute_router as cr
     assert cr.load_config()["limits"]["repo_queued_exempt_backends"] == ["kaggle_cpu", "trainer"]
+
+
+# ── the floor's one-fire cap vs exempt backends (lane ML-PRIMARY-10, row RESEARCH-DISPATCH-EXEMPT-FLOOR-1119) ──
+
+def test_a_floor_lifted_repo_queued_cycle_fires_the_pool_unit_and_the_exempt_backend(tmp_path, monkeypatch):
+    """Before the fix the floor cleared the block (so soft_block went False) and capped the cycle at inflight+1, deferring the
+    exempt unit soft_block would have passed. Now the pool gets exactly one floor fire and the exempt backend fires too."""
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _fired_workflows(_saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"], floor=True))
+    assert sorted(fired) == ["research-script-run-kaggle-cpu.yml", "research-script-run.yml"], fired
+
+
+def test_the_measured_infra_floor_cycle_of_2026_11_19_fires_the_exempt_backend(tmp_path, monkeypatch):
+    """MEASURED run 44492257802 (09:19Z): 2 fresh infra runs (yield at 2), floor lifted the infra block, cap inflight+1:
+    one runner unit fired and the trainer/kaggle_cpu units were deferred on 'research compute cap N reached'."""
+    from scripts.research import compute_router as cr
+    infra = list(cr.load_config()["limits"]["infra_workflows"])[:2]
+    queued = _evruns([(n, "workflow_dispatch") for n in infra])
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-002", "research-script-run.yml"),
+             ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired = _fired_workflows(_saturated_cycle(tmp_path, monkeypatch, units, ["kaggle_cpu", "trainer"], floor=True,
+                                              queued_runs=queued))
+    assert sorted(fired) == ["research-script-run-kaggle-cpu.yml", "research-script-run.yml"], fired
+
+
+def test_without_the_exemption_the_floor_still_fires_exactly_one(tmp_path, monkeypatch):
+    units = [("RQ-20300101-001", "research-script-run.yml"), ("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    assert len(_saturated_cycle(tmp_path, monkeypatch, units, [], floor=True)) == 1
