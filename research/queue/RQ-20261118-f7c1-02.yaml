@@ -5,7 +5,7 @@ id: RQ-20261118-f7c1-02
 title: 'ml-exit-head-donchian-1h on KAGGLE CPU, BACKTEST-SOURCE ROWS ONLY: rebuilt in-run from the published market_raw 1h shards, does the
   holding_pays_neg25 target beat the holding_pays champion by +0.01 R/trade on BTC/ETH/SOL donchian 1h trades (aadc-11 replicated on a
   market-only corpus)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -148,3 +148,17 @@ related:
 - ML-EXITHEAD-ROWS-KAGGLE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; publishes nothing.
 last_dispatched_at: '2026-11-18T23:02:05+00:00'
+grading:
+  attested: RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25
+  evidence:
+  - research/results/RQ-20261118-f7c1-02/44417157132.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
