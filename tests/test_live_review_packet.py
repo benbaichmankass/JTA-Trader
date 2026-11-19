@@ -1029,3 +1029,32 @@ def test_an_unfilled_prop_ticket_keeps_open_r_null_with_the_reason():
     note = [m for m in p["missing_inputs"] if m["field"] == "state.open_r"][0]["reason"]
     assert "no filled prop ticket" in note
     assert any(d.get("reason") == "context_null:state.open_r" for d in p["packet_health"].get("defects", []))
+
+
+def test_desk_rows_fetches_the_branch_tip_and_flags_when_it_cannot(tmp_path, monkeypatch):
+    """DESK-HANDOFF-BRANCH-FETCH: the desk/decisions tip is fetched before it is read, so a row that has reached the
+    branch but not main's mirror is found; when the tip cannot be read, DESK_BRANCH_READ says so."""
+    import json as _json
+    import subprocess as _sp
+    (tmp_path / "comms" / "desk").mkdir(parents=True)
+    (tmp_path / "comms" / "desk" / "decisions.jsonl").write_text(_json.dumps({"decision_id": "DD-OLD"}) + "\n")
+    monkeypatch.setattr(L, "REPO", tmp_path)
+    calls = []
+
+    class R:
+        def __init__(self, rc, out=""):
+            self.returncode, self.stdout, self.stderr = rc, out, ""
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        if "fetch" in cmd:
+            return R(0)
+        return R(0, _json.dumps({"decision_id": "DD-NEW"}) + "\n")
+
+    monkeypatch.setattr(_sp, "run", fake_run)
+    rows = L._desk_rows()
+    assert {r["decision_id"] for r in rows} == {"DD-OLD", "DD-NEW"} and L.DESK_BRANCH_READ is True
+    assert any("fetch" in c for c in calls), "the branch tip must be fetched before it is read"
+    monkeypatch.setattr(_sp, "run", lambda cmd, **kw: R(128))          # no such ref / fetch failed
+    rows = L._desk_rows()
+    assert [r["decision_id"] for r in rows] == ["DD-OLD"] and L.DESK_BRANCH_READ is False

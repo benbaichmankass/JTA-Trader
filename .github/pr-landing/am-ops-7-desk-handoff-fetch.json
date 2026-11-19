@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "DESK-HANDOFF-BRANCH-FETCH (manager 2026-11-19): the 09:20Z live review of the bybit_1 claude_desk ADA short (pkg-2b1d7f5ebfa5445d) read desk_handoff could_not_look, 'opening desk row DD-20261119T0802Z-scan-1h-1 not found'. The package meta's decision_id IS DD-... and the row exists, so there was no id mismatch (DI- is a separate meta field). The row reached desk/decisions at 08:08Z but main only at 09:21:06Z (#27221). live_review_packet._desk_rows read origin/desk/decisions via git show WITHOUT fetching it; a fresh session clone has no such ref, so only main's lagging mirror was searched. Fix (read path only): fetch the branch tip (depth 1) before reading it, and when the tip still cannot be read, the desk_handoff miss says so instead of 'row not found'. Test added; 84 packet/handoff tests pass. Gates this adds or changes: none."
+}

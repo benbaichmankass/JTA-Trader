@@ -1,0 +1,194 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF, Tier 1 research), dispatched by the JTA Trader
+# manager (session_01AFoLuHbhd9wFuGJfWRqyoV; 08:24Z: re-run RQ-20261117-aadc-12 on fresh data, blocked on the 1h refresh). Rule = RQ-20261117-aadc-12's,
+# registered 2026-11-17 BEFORE its first run, unchanged. Gates this adds or changes: none.
+id: RQ-20261119-a10d-08
+title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h CONFIRMATION (held-out symbols): does the holding_pays_neg25 target, trained on the BTC/ETH/SOL
+  rows only, beat the holding_pays champion by +0.01 R/trade on donchian 1h trades of 10 perps the head never saw?'
+status: blocked
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-12
+  verdict_read: pass
+  diagnosis: 'RQ-20261117-aadc-12 PASSED on data ending ~mid-2026 (rows built 2026-07-12; replay candles frozen ~06-15/18). The original measured
+    only 5 of its 10 held-out symbols (XRP, ADA, AVAX, LINK, BNB); the other five had no 1h file. One factor: the data window (fresh candles and
+    rebuilt rows); legs, folds, embargo, lookback, shape, arm, rule and thresholds are the original''s.'
+  search: 'none: the arm (holding_pays_neg25), recipe, shape, folds, embargo and lookback are fixed at aadc-11''s; only the TEST population changes
+    (10 held-out perps, trend_donchian 1h parameters), with every training row from BTC/ETH/SOL'
+  levers:
+  - labels
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#manifest.labels
+  attempt: 6
+  due_by: '2026-11-30'
+question: Same recipe as aadc-11, ONE ARM (holding_pays_neg25) vs the holding_pays champion, trained per fold on rows.jsonl rows of BTC/ETH/ SOL
+  only (--exclude-train-symbol for each test symbol, verified by rows_by_symbol), tested on trend_donchian 1h harness trades of XRPUSDT, ADAUSDT,
+  AVAXUSDT, DOGEUSDT, LINKUSDT, BNBUSDT, LTCUSDT, DOTUSDT, TRXUSDT and NEARUSDT. Is the paired per-trade replayed R >= +0.01 with a CI lower bound
+  > 0?
+why_this_matters: A retrain of exit-head-donchian-1h on the new target is a Tier-3 proposal; aadc-11's pass was reached by a sequential search
+  on the same rows, so it needs one read on trades the head and the search never saw. A PASS sends a data-backed retrain proposal to the manager;
+  a FAIL keeps the champion and records the label result as in-sample only.
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 11000
+  min_detectable_effect: 0.0134
+  effect_units: r_multiple
+  sd: 0.535
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED sd from aadc-11 (SE 0.00507 at n 11,160, so sd ~0.535 R per trade). expected_n is an ESTIMATE: BTC trend_donchian 1h gave 1,389
+    harness trades, ~1,155 out of sample over 5 folds, so 10 perps give ~11,000 if every symbol has candles on the trainer (a symbol without candles
+    is producer_failed for that leg only and lowers n). At n 11,000 the z 1.96 half-width is ~0.010, so PASS needs the mean above ~+0.010; if
+    the true lift is aadc-11''s +0.0134, power is ~0.75. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the trainer corpus (rows.jsonl, BTC/ETH/SOL) and trainer-resolved 1h candles; nothing accrues.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold
+    training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported
+    as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py --arms holding_pays_neg25 --z 1.96 --pass-dr 0.01, with every test symbol passed to
+    --exclude-train-symbol: pooled over the 10 held-out legs and 5 folds, per OOS trade d = replayed_r(neg25) - replayed_r(champion) on identical
+    trades, replay and cost; mean, SE (one trade = one cluster), CI at z 1.96 (one confirmation read, no further arms). Reported: rows_by_symbol
+    (before exclusion), each arm vs hold, firing counts, per-leg read_state.'
+  rule: PASS iff n_oos >= 3000 AND mean d >= +0.01 R/trade AND CI lower bound > 0. FAIL iff n_oos >= 3000 AND CI upper bound < +0.01. INDETERMINATE
+    otherwise (n below 3000, or between the bars). Training never includes a test symbol (dropped by --exclude-train-symbol; rows_by_symbol and
+    train_rows_after_exclusion are reported). Thresholds, symbols, arm, folds (5), embargo (7 d), lookback (500) and shape are not changed after
+    any result.
+  pass_action: 'A data-backed Tier-3 PROPOSAL to the manager: retrain exit-head-donchian-1h on holding_pays_neg25 (same features and hyper-parameters),
+    with aadc-11 and this record; the new artifact is promoted on its offline evidence by the manager / operator, never by this lane.'
+  fail_action: The neg25 lift is in-sample only (it does not carry to unseen symbols). Keep the champion; record the label lever on the map as
+    in-sample positive / out-of-sample flat, and the head goes to the family review aadc-04's fail_action describes.
+  what_it_does_not_do: Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result under
+    the head's own judge, then a confirmation, then a Tier-3 proposal. Places no order; adds no gate.
+  min_n: 3000 pooled OOS trades; per fold MIN_FOLD_TEST_N test trades and the multifold training floor
+  rerun_of: RQ-20261117-aadc-12
+  rerun_note: 'Re-run of RQ-20261117-aadc-12''s registered rule, unchanged, on fresh data; the rule id is the original''s so the two reads are
+    comparable. The original PASS stands as evidence on truncated data; #26906 waits on this read.'
+practice_precedent: M1 (label what the decision is paid on; a trail-shaped label conflates the exit rule with the forecast), one-factor ablation
+  against a baseline control (docs/reference/trading-and-model-practice-principles.md)
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context
+      only: hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_neg25 (fixed by aadc-11)
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: one demo-floor leg acts on the head; the value is mainly the decision to retire or keep spending trainer time.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in the trainer
+    venv.
+  basis: 'MEASURED basis: aadc-11 (3 legs x 2 arms, same corpus) took ~34 min dispatch to result (13:59:56Z -> 14:33:46Z); 10 legs here, ~3.3x,
+    so ~115 min; the 330-min cap (the dispatcher preflight maximum) leaves room for candle resolution.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 330
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+  - --legs
+  - trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT,trend_donchian:DOGEUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:LTCUSDT,trend_donchian:DOTUSDT,trend_donchian:TRXUSDT,trend_donchian:NEARUSDT
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --arms
+  - holding_pays_neg25
+  - --z
+  - '1.96'
+  - --pass-dr
+  - '0.01'
+  - --exclude-train-symbol
+  - XRPUSDT
+  - --exclude-train-symbol
+  - ADAUSDT
+  - --exclude-train-symbol
+  - AVAXUSDT
+  - --exclude-train-symbol
+  - DOGEUSDT
+  - --exclude-train-symbol
+  - LINKUSDT
+  - --exclude-train-symbol
+  - BNBUSDT
+  - --exclude-train-symbol
+  - LTCUSDT
+  - --exclude-train-symbol
+  - DOTUSDT
+  - --exclude-train-symbol
+  - TRXUSDT
+  - --exclude-train-symbol
+  - NEARUSDT
+  - --unit
+  - RQ-20261119-a10d-08
+  - --rule-id
+  - RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM
+  - --registered-at
+  - '2026-11-17'
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261119-a10d-08
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: close or annotate on trend_donchian, trend_donchian_eth and trend_donchian_sol (exit_head_model exit-head-donchian-1h-v1)
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261117-aadc-12.yaml
+- scripts/research/exit_head_label_bakeoff.py
+- scripts/research/m20_exit_head_round.py
+blocked_on:
+- what: 'The trainer''s crypto 1h candle files froze at ~2026-06-15/18 (AM-OPS-7, 2026-11-19) and the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl)
+    were built 2026-07-12, so the original read covers history only to about mid-2026. This re-run needs (a) #27214 merged and deployed, so ict-candle-refresh
+    extends data/<SYM>_1h.csv; (b) the exit-head rows REBUILT from the refreshed candles into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+    (m20_exit_head_round / build_exit_head_dataset, donchian 1h legs, the July build''s inputs; rebuilt rows carry peak_is_in natively); and (c)
+    the held-out symbols covered: #27214 refreshes 1h only for ADA, AVAX, BTC, ETH, SOL and XRP, so LINKUSDT and BNBUSDT 1h must be added to the
+    refresher, and data/<SYM>_1h.csv must be CREATED for DOGE, LTC, DOT, TRX and NEAR (the refresher extends, never creates; the original run
+    was producer_failed on those five).'
+  ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
+  kind: build
+  clears_when: every symbol this unit replays has data/<SYM>_1h.csv with a last bar within 3 days of the run (trainer-vm-diag read, quoted in
+    the move commit), AND datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with rows whose last bar_t is past 2026-11-01; then git mv
+    this file to research/queue/ and set status queued (rule unchanged).

@@ -141,7 +141,8 @@ nodes:
   value:
     usd_at_stake_per_month: 600
     confidence: 0.4
-  needs_authoring: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
+  authoring_closed: '2026-11-19 lane PROGRAMME-REPLAN-20261119: answered. LIVE-BT-STAGE-B landed (#18870, live_bt_trade_join.py) and its 2026-10-18 run (comms/research/live_bt_join/2026-10-18/) named the gap: the largest component on BOTH legs is ENTRY (live-only entries the closed-bar backtest never took): xrp_pullback_2h entry -5.79 R vs exit +0.66 / execution 0.00; ada_pullback_2h entry -3.89 vs exit -0.26 / execution +0.04. That is the forming-bar finding the decision-bar line now owns (RQ-20261113-f251-01, forming_evidence_regen.py, the 2026-10-18-decision-bar join). Do not re-author; a rerun on later closes is the f251 line''s re-measure, not a new question.'
+  authoring_closed_ask: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
     BELOW_BACKTEST (8bbc-01: -8.84 R over 16, 3.4th pct; 8bbc-02: -7.04 R over 15, 4.7th pct). Stage B: register
     ONE unit that joins each live close to its config-exact backtest counterpart over the same bars and splits the
     gap into cost (fee/slippage/funding vs the harness stack), missed/extra signals, exit-path differences and regime;
@@ -5729,3 +5730,140 @@ nodes:
     - research/queue/RQ-20261117-b2f1-01.yaml
     - research/queue/RQ-20261118-abab-20.yaml
     - research/levers/gdx_pullback_1d.yaml
+# --- PROGRAMME-REPLAN-2026-11-19 (lane PROGRAMME-REPLAN-20261119, session_01AFoLuJ2Mx5E1JEVEWziCcb): next pre-registered
+# iterations from results graded 2026-11-17..19; each node names the result and diagnosis that opened it.
+- id: P3-RP1119-trend-donchian-session
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION of trend_donchian (BTC 1h, long-only) after three exit families came back flat (MS b2f1-24, SE b2f2-13, TA b2f2-32)
+      and the direction read measured nothing (abab-47 dead lever): does a session skip beat the declared leg?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On BTCUSDT 1h (binance USD-M) over 2020-07-01..2026-10-15, the window and folds of the b2f* cells, does S_LATE (skip 20-23
+      UTC) or S_ASIA (skip 0-7 UTC) beat the declared trend_donchian by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: trend_donchian''s lever map after this week. Exits are flat on three families at n 458.
+      The leg is long_only, so the direction family cannot be read on it (abab-47 was a dead lever, mis-graded FAIL; grader fixed in
+      batch 2), and session is the remaining untested family the harness models. PASS -> confirmation on a symbol twin, then a declare
+      case; FAIL -> session tested at power, and the leg''s untested families are timeframe and symbol_set only. A lever-exhaustion
+      family review becomes possible once those are read, never on attempt count.'
+    iteration:
+      subject: trend_donchian
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-b2f2-32
+      verdict_read: fail
+      diagnosis: 'n(A) 458, A +51.40 R. MS8 +2.80 / MS12 -4.35 (3 of 6), SE8 -11.08 / SE12 -25.74, TA20 -11.82 / TA25 -42.43. Every
+        exit that cuts a trade earlier costs R, so the declared trail already captures this leg''s trends, and the exit family is not
+        where the remaining edge is. On the sibling trend_donchian_1h, session skips failed (abab-49: S_ASIA -7.99, S_LATE -14.58),
+        a weak prior against. But that leg is two-sided with different params, and here the family is simply unread.'
+      search: session (UTC hour skips), the two blocks of the sibling read; same window and folds as the flat exit cells.
+      levers:
+      - session
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/trend_donchian.yaml
+    power:
+      expected_n: 458
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED n(A) 458 on this window (b2f1-24 / b2f2-13 / b2f2-32). A session skip removes <= 1/3 of entries.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-trend-donchian-session
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian --grade replace, 2020-07-01..2026-10-15, 6 folds, net
+        of the venue-aware cost stack. Arms fixed now: A, S_LATE, S_ASIA.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) S_LATE, S_ASIA pass: the best
+        by net R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the
+        lever FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Thresholds and arms are not
+        changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: ONE
+        confirmation on a symbol twin, then a Tier-3 declare PROPOSAL (the manager''s).'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian
+      - --arm
+      - A=
+      - --arm
+      - S_LATE=--skip-hours=20,21,22,23
+      - --arm
+      - S_ASIA=--skip-hours=0,1,2,3,4,5,6,7
+      - --days
+      - '2330'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-15 23:59
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: ONE confirmation
+      on a symbol twin, then a Tier-3 declare PROPOSAL (the manager''s).'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b2f2-32.yaml
+    - research/queue/RQ-20261118-abab-47.yaml
+    - research/queue/RQ-20261118-abab-49.yaml
+    - research/levers/trend_donchian.yaml
