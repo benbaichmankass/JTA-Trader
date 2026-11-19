@@ -4,7 +4,7 @@
 id: RQ-20261117-aadc-12
 title: 'ml-exit-head-donchian-1h CONFIRMATION (held-out symbols): does the holding_pays_neg25 target, trained on the BTC/ETH/SOL rows only,
   beat the holding_pays champion by +0.01 R/trade on donchian 1h trades of 10 perps the head never saw?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -201,5 +201,21 @@ grading:
   graded_at: '2026-11-18'
   grader: scripts/research/queue_grade.py
   reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM
+  evidence:
+  - research/results/RQ-20261117-aadc-12/44170813134.jsonl
+  - comms/research/RQ-20261117-aadc-12/44170813134/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF), HELD for the manager
+  reason: 'row measured (run 44170813134, 2026-11-17T20:49Z; landed on main in #27075) -> PASS by the registered rule: on the 10 held-out donchian
+    symbols (ADA AVAX BNB DOGE DOT LINK LTC NEAR TRX XRP, each dropped from training by --exclude-train-symbol) holding_pays_neg25 minus the champion
+    +0.01596 R/trade, se 0.00494, CI (z 1.96) [+0.00628, +0.02564], n_oos 18,649 >= 3,000 (also >= 12,512, the floor quoted in the ML-9 handover),
+    mean >= +0.01 and CI lower > 0. Not ACCRUING. pass_action: a data-backed Tier-3 proposal to retrain exit-head-donchian-1h on holding_pays_neg25;
+    that proposal is #26906 (HELD), and with aadc-11 these two records are its evidence. Promotion stays the manager''s / operator''s act, not
+    this lane''s.'
   rows: 1
   verdict: pass
