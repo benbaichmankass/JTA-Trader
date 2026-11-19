@@ -4,7 +4,7 @@
 id: RQ-20261119-a10d-05
 title: 'D2 Collie learner lever at the LIVE cadence: does CatBoost beat LightGBM on the range-vol (yz) feature set for the 15m regime label on
   BTCUSDT / SOLUSDT (the two served 15m heads) and ETHUSDT log-loss, as it did at 1h (dc44-02)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -223,3 +223,17 @@ related:
 - research/queue/RQ-20261117-dc44-03.yaml
 - scripts/research/ml_bakeoff.py
 last_dispatched_at: '2026-11-19T11:24:09+00:00'
+grading:
+  attested: RULE-RQ20261119-a10d-05-D2-CB-YZ-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261119-a10d-05-D2-CB-YZ-15M
+  evidence:
+  - research/results/RQ-20261119-a10d-05/44514545747.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
