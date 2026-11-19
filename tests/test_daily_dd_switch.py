@@ -317,8 +317,19 @@ def test_tick_without_a_signal_writes_day_start_equity(tick_env):
     assert "acct_off" not in tick_env["state"]() and not tick_env["alerts"]
 
 
-def test_loss_between_signals_trips_on_the_tick_once_and_evaluate_refuses(tick_env):
-    now = datetime.now(timezone.utc)
+def test_loss_between_signals_trips_on_the_tick_once_and_evaluate_refuses(tick_env, monkeypatch):
+    # A FROZEN mid-day clock: on the wall clock this test failed whenever it ran in
+    # the first ~2 min after the daily reset (the -2 min reading then belongs to
+    # yesterday, so today awaits its first reading and nothing trips; seen in CI on
+    # #27023 at ~00:2xZ). Every datetime.now() in the switch module reads this instant.
+    now = _ts(9, 12, 0)
+
+    class _Frozen(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now if tz is not None else now.replace(tzinfo=None)
+
+    monkeypatch.setattr(dd, "datetime", _Frozen)
     tick_env["snap"]({"acct_tick": 10_000.0}, now - timedelta(minutes=2))
     tick_env["tick"]()
     tick_env["snap"]({"acct_tick": 9_650.0}, now - timedelta(minutes=1))   # -3.5%, no signal
