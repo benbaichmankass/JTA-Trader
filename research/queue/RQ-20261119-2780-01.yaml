@@ -1,7 +1,7 @@
 # Authored 2026-11-19 by lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), Tier 1. D8 give-back static exit grid; rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261119-2780-01
 title: 'D8 give-back: registered static exit grid on trend_donchian_eth (5 exit levers x 4 values, one lever per arm) vs the declared exit, 2020-07-01..2026-10-15, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -193,3 +193,22 @@ amendments:
     ran on SUB-HOURLY bars (PI-20261119-RIMARY13-0001, fix PR #27491), so it is not a 1h measurement. The give-back case rests on the census of the 1h incumbent books (abab-47/50/52
     arm A, same legs, window and cost stack): of trades reaching 1 R MFE, 37% ETH (136 of 367) / 36% SOL (71 of 197) / 45% BTC (111 of 244) end at gross <= 0. This unit''s harness (exit_lever_ablation.py) passes --resample
     through the CLI and is not affected.'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-2780-D8-GIVEBACK-STATIC-GRID
+  evidence:
+  - comms/research/RQ-20261119-2780-01/44622358322/verdict.json
+  - research/results/RQ-20261119-2780-01/44622358322.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), HELD for the manager
+  rows: 1
+  verdict: fail
+  reason: 'run 44622358322 (research-script-run, landed on main), B argv carries --resample 1h (verified). B = trend_donchian_eth as declared: n 742, net 38.98 R, maxDD 34.92 R, ETHUSDT
+    1h 2020-07-01..2026-10-15, full cost stack. Bar: dR >= 0.03 R x n(B) = 22.3 R AND >= 5/6 folds AND maxDD <= 1.35 x B. No candidate passes -> FAIL (incumbent_stands). Best three:
+    TM35 dR +11.73 R, folds>=B 4/6; GB15 dR +1.62 R, folds>=B 4/6; TP8 dR -3.61 R, folds>=B 4/6. Per lever (dR in R): trail_mult [TM25 -14.7, TM30 -11.9, TM35 +11.7, TM40 -9.3]; tp_r
+    [TP3 -39.6, TP4 -15.6, TP6 -11.4, TP8 -3.6]; giveback [GB05 -57.9, GB075 -53.4, GB10 -34.2, GB15 +1.6]; trail_decay [TD10 -61.1, TD20 -34.6, TD30 -23.1, TD40 -12.4]; bank [BK10 -37.6,
+    BK15 -28.5, BK20 -23.0, BK30 -14.7]. Arms with lever_fired false (identical to B): none. READING (not graded): no arm comes within the bar; arms above B at all: TM35 +11.7, GB15
+    +1.6; within each lever, net R generally rises toward the declared, looser setting; tightening the exit to capture give-back truncates the few large winners that carry these trend
+    legs, so the MFE give-back is the price of the trail, not a free lever, on this window and cost stack. This also supports tp_intent none on these legs (every real tp_r 3-8 R is worse
+    or within noise). REGISTERED FAIL ACTION: these 20 settings are closed on this leg and window (honest negative for the configurations tested; lever families stay open); the floor
+    for the D8 exit head is the declared exit, recorded on PI-20261119-RIMARY12-0004.'
