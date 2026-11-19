@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wiring: systemd - deploy/trainer/ict-keeper-dispatch.{service,timer} (trainer VM, hourly).
+# wiring: systemd - deploy/trainer/ict-keeper-dispatch.{service,timer} (trainer VM, hourly) and deploy/trainer/ict-ltr-wake-dispatch.{service,timer} (15 min, live-review-wake.yml, skip-if-active).
 # scripts/ops/keeper_dispatch.sh — KEEPER-VM-FLOOR (2026-11-01).
 #
 # WHY: GitHub drops ~77% of this repo's scheduled runs (measured 2026-11-01: 13 of ~56
@@ -45,6 +45,34 @@ fi
 if [ -f "$LATCH" ] && { [ ! -e "$ENV_FILE" ] || [ "$LATCH" -nt "$ENV_FILE" ]; }; then
   log "latched: an earlier call was refused (401/403); replace $ENV_FILE to retry"
   exit 0
+fi
+
+# SKIP-IF-ACTIVE (ict-ltr-wake-dispatch, manager 2026-11-19): with KEEPER_DISPATCH_SKIP_IF_ACTIVE=1, do not
+# dispatch while a run of $WORKFLOW is already queued or in progress, so a 15-min clock never stacks runs into
+# a deep queue. An unreadable count is logged and the dispatch goes ahead (one extra run beats a silent skip).
+# Off by default: the hourly schedule-keeper floor is unchanged.
+if [ "${KEEPER_DISPATCH_SKIP_IF_ACTIVE:-0}" = "1" ]; then
+  active=0
+  for st in queued in_progress; do
+    body="$(
+      printf 'Authorization: Bearer %s\n' "$GH_DISPATCH_TOKEN" | curl -sS --max-time 30 \
+        -H @- \
+        -H 'Accept: application/vnd.github+json' \
+        -H 'X-GitHub-Api-Version: 2022-11-28' \
+        "$API/repos/$REPO/actions/workflows/$WORKFLOW/runs?status=$st&per_page=1" 2>/dev/null
+    )" || body=""
+    n="$(printf '%s' "$body" | sed -n 's/.*"total_count"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n 1)"
+    if [ -z "$n" ]; then
+      log "could not read $st runs of $WORKFLOW; dispatching anyway"
+      continue
+    fi
+    active=$((active + n))
+  done
+  if [ "$active" -gt 0 ]; then
+    unset GH_DISPATCH_TOKEN
+    log "skip: $active run(s) of $WORKFLOW already queued or in progress; nothing dispatched"
+    exit 0
+  fi
 fi
 
 status="$(

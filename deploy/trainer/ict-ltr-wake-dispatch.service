@@ -1,0 +1,31 @@
+# ============================================
+# LTR-GH-WAKE-CRON-THROTTLED / HOURLY-CRON-SCHEDULE-DROP (manager 2026-11-19): a 15-minute
+# workflow_dispatch of live-review-wake.yml from the trainer VM. GitHub ran that workflow's
+# */5 cron 4 times in 24 h (MEASURED, Actions API event=schedule, to 10:38Z), so the
+# in-trade review wake was effectively ~4/day. Same script and token as ict-keeper-dispatch;
+# KEEPER_DISPATCH_SKIP_IF_ACTIVE=1 skips the dispatch while a live-review-wake run is already
+# queued or in progress, so the clock never stacks runs into the deep Actions queue.
+#
+# **TRAINER VM ONLY** - lives in deploy/trainer/ so the live-VM unit installer never picks it
+# up. No order path, no DB. Revert: sudo systemctl disable --now ict-ltr-wake-dispatch.timer
+# Install: sudo bash scripts/ops/install_trainer_keeper_dispatch.sh
+# ============================================
+
+[Unit]
+Description=ICT trainer: dispatch live-review-wake.yml (15-min floor, skip if active)
+After=network-online.target
+Wants=network-online.target
+OnFailure=ict-notify-failure@%n.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+EnvironmentFile=-/etc/ict/gh-dispatch.env
+Environment=KEEPER_DISPATCH_WORKFLOW=live-review-wake.yml
+Environment=KEEPER_DISPATCH_SKIP_IF_ACTIVE=1
+Environment=KEEPER_DISPATCH_LATCH=/home/ubuntu/.local/state/ict/ltr-wake-dispatch.denied
+TimeoutStartSec=120
+ExecStart=/bin/bash scripts/ops/keeper_dispatch.sh
+StandardOutput=journal
+StandardError=journal

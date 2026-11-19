@@ -85,3 +85,53 @@ def test_other_status_never_fails(tmp_path):
     p, _, latch = _run(tmp_path, "500")
     assert p.returncode == 0 and "not confirmed" in p.stdout
     assert not latch.exists()
+
+
+def _run_active(tmp_path: Path, queued: str, in_progress: str, *, skip: bool = True, status: str = "204"):
+    """A curl that answers the runs?status= reads with a total_count body and the dispatch with ``status``."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir(exist_ok=True)
+    calls = bindir / "calls.log"
+    curl = bindir / "curl"
+    curl.write_text(
+        "#!/usr/bin/env bash\n"
+        'url="${@: -1}"; for a in "$@"; do case "$a" in http*) url="$a";; esac; done\n'
+        f'echo "$url" >> "{calls}"\n'
+        "cat >/dev/null\n"
+        f'case "$url" in *status=queued*) printf \'{{"total_count": {queued}, "workflow_runs": []}}\';;\n'
+        f'  *status=in_progress*) printf \'{{"total_count": {in_progress}}}\';;\n'
+        f'  *) printf "%s" "{status}";; esac\n'
+    )
+    curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
+    env_file = tmp_path / "gh-dispatch.env"
+    env_file.write_text(f"GH_DISPATCH_TOKEN={FAKE_TOKEN}\n")
+    env = {"PATH": f"{bindir}:{os.environ['PATH']}", "HOME": str(tmp_path),
+           "KEEPER_DISPATCH_ENV_FILE": str(env_file), "KEEPER_DISPATCH_LATCH": str(tmp_path / "state" / "denied"),
+           "KEEPER_DISPATCH_WORKFLOW": "live-review-wake.yml"}
+    if skip:
+        env["KEEPER_DISPATCH_SKIP_IF_ACTIVE"] = "1"
+    p = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=30)
+    return p, (calls.read_text().splitlines() if calls.exists() else [])
+
+
+def test_skip_if_active_skips_when_a_run_is_queued(tmp_path):
+    p, calls = _run_active(tmp_path, "1", "0")
+    assert p.returncode == 0 and "skip: 1 run(s) of live-review-wake.yml" in p.stdout
+    assert not any(c.endswith("/dispatches") for c in calls), "no dispatch while one is queued"
+    assert FAKE_TOKEN not in p.stdout + p.stderr
+
+
+def test_skip_if_active_dispatches_when_idle(tmp_path):
+    p, calls = _run_active(tmp_path, "0", "0")
+    assert p.returncode == 0 and "dispatched live-review-wake.yml (HTTP 204)" in p.stdout
+    assert sum(c.endswith("/actions/workflows/live-review-wake.yml/dispatches") for c in calls) == 1
+
+
+def test_skip_if_active_unreadable_count_still_dispatches(tmp_path):
+    p, calls = _run_active(tmp_path, "x", "x")
+    assert "could not read queued runs" in p.stdout and "HTTP 204" in p.stdout
+
+
+def test_default_never_reads_active_runs(tmp_path):
+    p, calls = _run_active(tmp_path, "5", "5", skip=False)
+    assert "HTTP 204" in p.stdout and not any("runs?status=" in c for c in calls)
