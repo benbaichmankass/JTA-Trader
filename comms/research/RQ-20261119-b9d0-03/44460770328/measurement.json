@@ -1,0 +1,75 @@
+{
+  "unit": "RQ-20261119-b9d0-03",
+  "rule": "RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE",
+  "exit_w_min": 1,
+  "exit_peg": "mid",
+  "features": [
+    "dir",
+    "hour",
+    "tick_bps",
+    "ret1",
+    "ret5",
+    "ret15",
+    "ret60",
+    "rv15",
+    "rng5_ticks",
+    "pos60"
+  ],
+  "n_dev_time_stop": 16769,
+  "n_dev_exits": 16764,
+  "n_held_time_stop": 2788,
+  "n_held_exits": 2786,
+  "n_held_symbols": 53,
+  "u_hat_bps_dev": -12.053836521845852,
+  "dev_fill_rate": 0.8277857313290384,
+  "skip_share": 0.18521177315147164,
+  "matched_random_skip": {
+    "draws": 1000,
+    "n_skip": 516,
+    "mean_of_means": -0.0011091056684009253,
+    "p95": -0.0006822938947965008,
+    "p_value": 0.000999000999000999
+  },
+  "base_rate_gate_reported": {
+    "skip_share": 0.0,
+    "mean_d_r": 0.0,
+    "model_minus_base_rate_d_r": 0.00047920284012826413
+  },
+  "mean_d_r": 0.00047920284012826413,
+  "deflated_ci_d_r": [
+    -0.0006668310735024901,
+    0.0016877861911845338
+  ],
+  "ci_lo_percentile": 0.4211,
+  "gated_mean_r": 0.006506367770473335,
+  "deflated_ci_gated_r": [
+    0.004301269497995244,
+    0.008661580537228078
+  ],
+  "always_post_mean_r": 0.00602716493034507,
+  "deflated_ci_always_r": [
+    0.0030640043868210196,
+    0.008842672613435968
+  ],
+  "held_fill_rate": 0.7537688442211056,
+  "held_fill_rate_posted": 0.7942731277533039,
+  "held_fill_rate_skipped": 0.5755813953488372,
+  "auc_p_fill_held": 0.7023399972233791,
+  "brier_held": 0.16413943665424013,
+  "brier_const_held": 0.19107987327983283,
+  "mean_d_bps": 0.14482753206616125,
+  "by_side": {
+    "long": {
+      "n": 873,
+      "mean_d_r": -8.20042233402932e-05
+    },
+    "short": {
+      "n": 1913,
+      "mean_d_r": 0.0007353104022861577
+    }
+  },
+  "verdict": "fail",
+  "why": "gated - always-post +0.00048 R/exit, deflated lower bound -0.00067; gated vs taker +0.00651 R/exit; skips 0.185, matched-random p 0.000999000999000999, n=2786",
+  "git_sha": "4ac283e35a5a018bcc9a9a7b894c31a8ca9c494b",
+  "elapsed_s": 439
+}

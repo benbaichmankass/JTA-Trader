@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits .github/workflows/research-queue-dispatch.yml (adds one land-job step and a condition on the batch landing) and scripts/research/collect_runner_results.py; manager merges after green CI",
+  "why": "Dispatcher cycles landed the same runs twice (PRs 27097, 27103, 27111, 27119 closed unmerged, 2026-11-19). The open-batch check ran at collect time, ~12 min before the land job, and the previous cycle's batch PR opened in between. New --prune-pending re-asks at landing time and drops staged runs already in an open results-batch PR; the batch landing is skipped when none remain. The utilization receipt is not lost: the receipt step lands comms/research/utilization separately. Fails open. Gates this adds or changes: none."
+}

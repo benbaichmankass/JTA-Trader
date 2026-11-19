@@ -4,7 +4,7 @@
 id: RQ-20261119-b9d0-01
 title: 'D10 Basset ORDER-NULL re-read: graded against a shuffled-order null instead of 0.5, does aadc-14''s learned degradation score
   (or the CUSUM baseline) rank leg decay better than chance?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -118,3 +118,15 @@ related:
 - ML-D10-BASSET-BASELINE
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
 last_dispatched_at: '2026-11-19T03:19:00+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-b9d0-01-D10-ORDER-NULL
+  evidence:
+  - comms/research/RQ-20261119-b9d0-01/44449459292/verdict.json
+  - comms/research/RQ-20261119-b9d0-01/44450607058/verdict.json
+  - research/results/RQ-20261119-b9d0-01/44449459292.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7), HELD for the manager
+  reason: 'FAIL by the registered rule, graded BY HAND because both result rows are producer_failed: the harness wrote verdict "report" (outside the result contract), so the collector marked the runs NOT GRADED and its non-verdict retry ran the unit twice (runs 44449459292 and 44450607058, byte-identical outputs; harness fixed in this PR to emit the rule''s verdict). Floors met: 675 labelled points (>= 200), legs >= 3, 40 learned null draws (>= 30). Learned pooled AUC 0.4305 vs order-null mean 0.4412: excess -0.0107, one-sided p 0.5122 >= 0.20 -> FAIL (no learned skill over the order null; pooled it is EMPTY, not inverted). Reported, never gating: CUSUM pooled 0.6555 vs null 0.515, excess +0.1405 (p 0.005); CUSUM within-leg 0.5498 vs null 0.3438, excess +0.206 (p 0.005), so the CUSUM''s skill is real beyond the design''s null; learned WITHIN-LEG 0.318 vs null 0.5692, excess -0.2512 (p 1.0, all 40 draws above): the within-leg inversion of this feature set is REAL, not a null artifact (the pooled below-chance part was the null). fail_action: the D10 learned lever is recorded as empty pooled / inverted within-leg for this feature set; the CUSUM (with its order-null excess) stays the D10 reference; the next D10 lever is the feature family, graded by order-null excess on a fresh window.'
+  rows: 1
+  verdict: fail

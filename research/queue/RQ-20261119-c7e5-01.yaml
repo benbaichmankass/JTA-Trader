@@ -1,0 +1,96 @@
+# Hand-authored 2026-11-19 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, manager GO 04:17Z. Row IB-GROSS-NO-CAP-FIX follow-up (b);
+# rule RULE-IB-GROSS-CAP-S0 registered before any run. Gates this adds or changes: none.
+id: RQ-20261119-c7e5-01
+title: 'IB-GROSS-CAP-S0: on the 141 committed Stage-0 trades of the four IB futures legs, does a gross-notional cap of G x equity (G 2.5 and 1.5,
+  applied at entry as the live cap acts) cost more than 20% of the dollar edge?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-OPS
+kind: experiment
+question: Replaying the committed net-of-cost Stage-0 trades of mgc_trend_1h, mhg_pullback_1d, mgc_pullback_1d and mes_trend_long_1d on one compounding
+  equity path, with each entry sized to the headroom left under a gross cap of G x equity (G 2.5 and 1.5; a trade takes f = clip(headroom / desired
+  notional, 0, 1) of its size, f = 0 a refusal; the stop and so each taken trade's net R unchanged), is there a largest G for which (a) the 80%
+  bootstrap lower bound of M2(C_G)/M2(A) >= 0.80, (b) M3(C_G) >= 0.90 x M3(A), and (c) at least 60 trades keep f > 0?
+why_this_matters: 'RQ-20261119-b9a4-01 (the ATR-floor test) was vacuous: the floor never binds on this corpus (0% reweighted) and its peak gross
+  of 3.53x equity is CONCURRENCY across legs at 1.5% risk each, not tight stops. The live IB cap (1.5x) bricks ib_paper (sized_qty=0 refusals).
+  This unit measures what a cap actually costs on the corpus that does exist. PASS -> a data-backed Tier-3 proposal to keep a gross cap at the
+  passing G; FAIL -> a cap at these G costs more than 20% of the Stage-0 dollar edge and the concurrency driver needs another lever (per-leg risk_pct,
+  staggering). It says nothing about ict_scalp_mgc_15m (no committed per-trade rows).'
+power:
+  expected_n: 141
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'n = 141 MEASURED (committed per-trade rows: 118 + 10 + 8 + 5). The power table is a PROXY: the test is a PAIRED reweighting (the same
+    trades in every arm, only each trade''s fraction f changes), so the per-trade sd of net R (1.856 R, MEASURED over the 141) cancels in the
+    ratio M2(C_G)/M2(A); the registered bar is the 80% bootstrap lower bound >= 0.80 of that ratio, not a mean test. alpha 0.1 is the nearest
+    tabulated level to that one-sided 80% bound; d 0.25 needs about 99 trades at that level, inside 141. INDETERMINATE if fewer than 60 trades
+    keep f > 0 under both caps.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed per-trade rows; nothing accrues. The corpus is fixed at 141 trades by the registered rule (ict_scalp_mgc_15m
+      has no committed per-trade rows and is excluded); the n >= 60 ATR-computable floor decides INDETERMINATE.
+evidence_class:
+  holdout: dev_folds
+  claim: sizing
+decision_rule:
+  id: RULE-IB-GROSS-CAP-S0
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  baseline: 'A = current sizing: risk 1.5% of equity over |entry-sl|, no cap, on the same trades and the same compounding equity path.'
+  statistic: M1 = max concurrent gross notional / equity; M2 = sum(f_i x net_r_i) and the ratio M2(C_G)/M2(A) with its 80% bootstrap lower bound
+    (one-sided 20th percentile, 10,000 trade resamples, each trade's realised f held fixed, seed 20261119); M3 = return / max drawdown on the
+    path; skipped and scaled shares reported.
+  rule: PASS for the LARGEST G in {2.5, 1.5} where the 80% bootstrap lower bound of M2(C_G)/M2(A) >= 0.80 AND M3(C_G) >= 0.90 x M3(A) AND at least
+    60 trades keep f > 0. FAIL if neither G passes. INDETERMINATE if fewer than 60 of the 141 trades keep f > 0 under BOTH caps. Thresholds, G
+    grid, corpus and seed are fixed now and not changed after any result. A PASS is a Stage-0 result on one corpus, not actionable without the
+    operator-gated Tier-3 decision.
+  pass_action: 'data-backed Tier-3 PROPOSAL: keep a gross cap at the passing G (config is not edited here); re-read whether the live 1.5x binds
+    on ib_paper; read exposure from the venue, not the journal.'
+  fail_action: a cap at these G costs more than 20% of the Stage-0 dollar edge on this corpus; the concurrency driver needs a different lever
+    (per-leg risk_pct or staggering), not a cap. The live ict_scalp_mgc_15m leg is not covered.
+  what_it_does_not_do: Changes no sizer, no cap, no config; places no order; adds no gate. Says nothing about ict_scalp_mgc_15m. Smoke tests ran
+    on planted data only (the harness self-test); no verdict statistic was previewed.
+  min_n: 60 trades keeping f > 0 of the 141
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'planning stand-in, not a measurement: ib_paper is bricked by the cap today (sized_qty=0 refusals on trades 6892-6895).'
+practice_precedent: RQ-20261119-b9a4-01 (the paired-reweighting form this follows) and docs/research/mgc-sizing-oversize-2026-10-24.md; comms/strategy_evidence/runs/2026-09-24-e55
+  (the corpus).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 3
+  basis: 'ESTIMATE: 141 trades x 3 paths on one event sequence plus 2 x 10,000 bootstrap resamples of 141 values; no network, no candles.'
+run:
+  command:
+  - python3
+  - scripts/research/ib_gross_cap_replay.py
+  - run
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261119-c7e5-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IB-GROSS-NO-CAP-FIX
+- RQ-20261119-b9a4-01
+- scripts/research/ib_gross_cap_replay.py
+- docs/research/mgc-sizing-oversize-2026-10-24.md
+population: the 141 committed Stage-0 per-trade rows of mgc_trend_1h (118), mhg_pullback_1d (10), mgc_pullback_1d (8) and mes_trend_long_1d (5),
+  net of the full cost stack.
+last_dispatched_at: '2026-11-19T06:04:19+00:00'
