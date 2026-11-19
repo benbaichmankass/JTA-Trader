@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "The polluting test (or time dependency) is named and fixed, OR 10 consecutive full pytest-run jobs on main/PRs pass this test (count the runs).",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-JTQED344-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-UI session_01AFoLuMr5RixbuwJtqED344, 2026-11-13, CI on #25595",
+    "rerun": "List pytest-run.yml runs and grep failing jobs for test_mgc_ib_stop_and_target_match; locally: pytest -n logical --dist loadfile tests/ and check whether it reproduces, then bisect that worker's preceding files."
+  },
+  "state": "killed",
+  "what": "tests/test_live_review_packet.py::test_mgc_ib_stop_and_target_match fails intermittently in CI pytest-run (`assert 'mismatch' == 'match'`), on unrelated PRs: run 43356399433 (research-watchdog ledger, 03:15Z 2026-11-13) and run 43357655726 (#25595, 03:45Z). It passes locally on origin/main 96c52800d, on #25595's head, and on their merge, alone and with its sibling live_review_packet test files; other PR runs between 03:21Z and 03:43Z are green. CI runs `-n logical --dist loadfile`, so the file shares a worker process with earlier files -> leaked global state is the leading hypothesis (the IB branch of _venue_view reads the account config via src.config.accounts_loader, which honours ACCOUNTS_YAML_PATH). Not found yet: no test sets ACCOUNTS_YAML_PATH outside monkeypatch (grep, 2026-11-13).",
+  "why_it_matters": "A test that goes red on unrelated PRs blocks Tier-2 merges and trains reviewers to wave reds through as flakes; RULE ONE says find the root cause, not re-run."
+}

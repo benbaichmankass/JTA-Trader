@@ -1,0 +1,23 @@
+{
+  "id": "RESEARCH-QUEUE-ML-STARVATION",
+  "title": "Fix: ML/ai_trader research units starve behind the github_runner refill set. The dispatcher's value ranking (dispatch_queue.py) leaves them unreachable while the runner is pinned at 4/4. Measured 2026-11-14 ~22:05Z in a local full dry run: would_dispatch=46; the RQ-20261105/06 refill set scores 2.4; RQ-20261112-8d20-02 (ai_trader, conf 0.1, 2.5h) scores 1.4, ranks last and never got a slot (hand-fired as run 43646720569). Operator standing rule: ML research is top priority.",
+  "state": "done",
+  "owner": "ML-PRIMARY",
+  "lane": "ML-PRIMARY",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed by AM-OPS on the manager's ask (Manager Session 2026-11-13a, 22:18Z). Proposed fixes for ML-PRIMARY to decide: an ML lane share or reserved github_runner slot, or an ML weight in the value score. Config-level, no new gate. Done when a full dispatcher dry run with the runner at capacity shows ML/ai_trader units reaching a slot within one cycle of becoming due. MEASURED STATE (2026-11-14 ~22:05Z, local full dispatcher dry run): github_runner at capacity 4/4 in flight; would_dispatch=46, all backend=github_runner; 44 refill units (RQ-20261105-028.. / RQ-20261106-*) score 2.4 (prio3 default, conf 0.3, bucket own_losses 0.53, 1h); the 2 below them are RQ-20261112-8d20-02 (ai_trader, 1.4: $50 x conf 0.1 x 0.77 x hand 1.25 / (1+2.5h)) and RQ-20261113-62e3-04 (structural, 0.9: $40 x conf 0.05). OLDEST STARVED WAIT: 8d20-02 was due from its unblock (#25107, 2026-11-12 04:47Z) until the hand fire at 2026-11-14 22:10Z = ~65.4 h without a slot; 62e3-04 due since 2026-11-13 04:41Z (~42 h at 22:40Z, still waiting). Priority does not feed the value score. CLEARS_WHEN: {check: full dispatch_queue.py dry run with github_runner at 4/4, condition: every due ai_trader/ML unit reaches a slot within <= 1 dispatcher cycle (or a stated max wait) of becoming due, observed on the first cycle after the fix lands}. FIX OPTIONS (not chosen; ML-PRIMARY decides): (a) age-based score boost so waiting units rise; (b) a reserved github_runner slot / lane share for ML units; (c) re-scoring (ML bucket weight or confidence floor). Config-level; no new gate; SLO thresholds and the scorer untouched by AM-OPS. Ranked in the ML band (rank 4) per Manager Session 2026-11-14a (22:19Z). [2026-11-15 07:50Z ML-PRIMARY-2] CLEARS_WHEN OBSERVED (first ML unit due after #26181): dispatcher run 43687905403, Grade-and-dispatch step 07:02:41Z: 'RQ-20261115-a474-01 dispatched research-script-run.yml ... score 33.1 ... | pick=programme:P2'. a474-01 became due at its not_before 07:00:00Z and got the github_runner slot on the FIRST cycle (2 min). Population: that cycle's deferred lines (36): 0 ai_trader / programme:P2 units deferred; all 36 are pick=value (34 refill). One observation, one cycle; the condition is met as written ('observed on the first cycle after the fix lands'). Proposing close as done.",
+  "phase": null,
+  "terminal_reason": "clears_when observed: RQ-20261115-a474-01 dispatched pick=programme:P2 on the first cycle after becoming due (run 43687905403, 07:02:41Z); no ML unit deferred that cycle. Fix #26181.",
+  "updated_at": "2026-11-15T07:46:34Z",
+  "updated_by": "session_01AFoLuHnp85DHQ4PWMQy8LM"
+}

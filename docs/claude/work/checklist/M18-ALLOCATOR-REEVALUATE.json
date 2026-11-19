@@ -1,0 +1,22 @@
+{
+  "id": "M18-ALLOCATOR-REEVALUATE",
+  "title": "Re-evaluate M18 portfolio allocator: is the arbitration-soak dependency still real, or retire/re-scope?",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "M18"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Operator 2026-11-11 12:50Z: does not recognise 'arbitration soak', thinks it is legacy, wants the item re-evaluated. Facts: milestone M18 'next' says observe arbitration_fanout_soak writing again (E50) before reopening the allocator proposal; that soak logs what happens when several strategies want the same symbol at once. Task: check whether that log is still written and still needed, what the allocator would decide today (overlap, concentration, sizing vs contribution \u2014 overlaps perf-followup Track 4), then propose keep / re-scope / retire. General lane, planning-size.",
+  "phase": null,
+  "updated_at": "2026-11-11T12:50:38Z",
+  "updated_by": "Manager Session 2026-11-09a",
+  "week_lane": "throttle"
+}

@@ -1,0 +1,22 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "clears_when": "Both the equity-forming regen and the generation-path guard have landed (see conditions).",
+    "conditions": [
+      "operator_answer:AM-ML-stale-faithful-forming-scope-20261113",
+      "manual:the 19 stale forming-faithful records are regenerated on the forming bar (crypto RQ-20261113-f251-01, daily ETF RQ-20261113-f251-02, intraday phase B incl. real-money slv_trend_1h; futures need a 1m source decision)"
+    ],
+    "kind": "event",
+    "owner": "FRONTIER-RESEARCH lane (session_01AFoLuMfGoUaVmVtfzXaKEK) -> AM-ML session_01AFoLuJkXEM1EigH9mSfz1F"
+  },
+  "id": "PI-20261113-TFZXAKEK-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK; CRYPTO-FORMING-RDM-FORWARD follow-through 2026-11-13",
+    "rerun": "python3 - <<'PY'\nimport glob,json,yaml,sys;sys.path.insert(0,'scripts/research');import regime_debt_matrix as rdm\nc=yaml.safe_load(open('config/strategies.yaml'));c=c.get('strategies',c)\nfor p in glob.glob('comms/strategy_evidence/*.json'):\n r=json.load(open(p));l=p.split('/')[-1][:-5];cf=c.get(l)\n if not isinstance(cf,dict):continue\n fm=str(cf.get('decision_bar') or 'forming').lower()!='closed'\n if r.get('fidelity')=='faithful' and fm and rdm.classify(cf) in ('trend','pullback') and 'forming' not in json.dumps(r.get('reproduce') or {}):\n  print(l,rdm.resolve_feed(cf['symbols'][0],cf['timeframe'])['source'])\nPY"
+  },
+  "routed_to": "checklist row CRYPTO-FORMING-EQUITY-REGEN (+ CRYPTO-FORMING-RDM-FORWARD for the crypto subset)",
+  "state": "routed",
+  "what": "16 equity/yahoo forming-decision trend/pullback evidence records read fidelity=faithful but their reproduce command measured the CLOSED bar (no --decision-bar forming, no 1m source). Several production (spy/qqq/iwm_trend_long_1d). PLUS a generation path still stamps forming legs faithful without the decision_bar lever check (2 records regenerated 2026-11-12: slv_trend_1h, trend_donchian_sol_prop). The crypto subset (5 legs) is handled by RQ-20261113-f251-01 / PR #25751. PLAN pending AM-ML scope (asked 13:31Z): (1) an equity-forming regen unit for the 16 yahoo legs, modelled on RQ-20261113-f251-01 + eq_forming_bar_replay's US-session mode, per-leg RULE-D1; (2) a guard/row for the mislabelling generation path. Default if no answer by the 15:30Z checkpoint: file both as checklist rows under the CRYPTO-FORMING-RDM-FORWARD lane and start the equity unit (Tier-1); hold any change to a generation-path file in src/. || CORRECTION 2026-11-13 ~14:05Z (filer's re-check): 19 stale records, not 21 -- trend_donchian_sol_prop and trend_donchian_eth_4h were re-based on the forming bar by #25228 (decision_bar: forming). The 'generation path stamps faithful without the check' claim is FALSE: every stale record predates #25228 (slv_trend_1h 10:54Z on sha 0c783de9e, without #25228), none was generated after, and tqqq_trend_long_1d generated after #25228 by the same path read approximate [decision_bar]. Row FORMING-FIDELITY-LABEL-FIX dropped with that evidence. Real-money stale leg: slv_trend_1h only."
+}

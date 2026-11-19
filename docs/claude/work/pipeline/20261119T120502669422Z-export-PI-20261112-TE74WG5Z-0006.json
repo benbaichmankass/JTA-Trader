@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "recollect_orphans reports 0 refused runs, or each refused run has a recorded disposition",
+    "kind": "event"
+  },
+  "id": "PI-20261112-TE74WG5Z-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z), AM-ML stuck-units scope",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'.');from pathlib import Path;from scripts.research import collect_runner_results as c;c.recollect_orphans(Path('.').resolve(),repo_slug='x')\" 2>&1 | grep refused (run in a throwaway worktree: it writes research/results)"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "9 OTHER stranded runs refused by research_result on every recollect cycle (MEASURED 2026-11-12 on main + #25292): 38747768830 (verdict not in vocabulary), 38663651638, 39707652763, 40809912795, 41963398081, 43155372298 (non-measured row carrying a verdict: 'Use verdict=not_applicable'), 41567569662, 42101993187 (inadmissible record), 42134900236 (population without its basis). Each unit sits stamped with no result row. Diagnose per run (unit id from comms/research/*/<run>/), fix the producer or disposition the unit."
+}

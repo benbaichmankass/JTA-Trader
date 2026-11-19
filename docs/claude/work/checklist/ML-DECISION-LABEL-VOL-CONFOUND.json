@@ -1,0 +1,25 @@
+{
+  "id": "ML-DECISION-LABEL-VOL-CONFOUND",
+  "title": "ml_decision_entry: is the served model selecting symbols by cost-per-R (volatility) rather than direction? FEATURE-IMPACT M2 shows net_long ranks on atr_pct (+0.49) while raw 24h return ranks the opposite way (-0.08)",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 16,
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-15",
+  "note": "MEASURED 2026-11-11 (scratch run of feature_impact.py --m2, PR #24996; 60 symbols, 2020-07..2026-09, 13,650 decision timestamps): rank_ic_xs vs net_long: atr_pct +0.486, vol24 +0.423, ret_24 +0.048; vs raw fwd_ret_24h: atr_pct -0.084, vol24 -0.078, ret_24 -0.025. net_long is in R and cost in R = cost_bps / stop distance, so wider-ATR symbols pay less cost per R. INFERRED, not tested: part of the model's selection is a cost-per-R tilt, not a directional signal. That may be legitimate money under per-R sizing, but it is a different claim from direction. NEXT (ml-review): decompose the served model's held-out net R into a vol-bucket tilt vs within-bucket ranking; check whether the gross-R label shows the same feature ranking. DONE WHEN a committed read answers it either way. [2026-11-12 13:37Z AM-ML] Dispatched lane session_01AFoLuN3NqAyN57d4J8H7fH (claude-sonnet-5-5, fresh, $10) for the 11-15 surge slot, a day early. The brief carries the row text and the operator's 11:45Z no-new-gates line verbatim. [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D3-FOXHOUND-1 in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "terminal_reason": "MEASURED, #25347 (be5c6704) R3 COST-ARTIFACT: rank IC of atr_pct vs the NET label +0.497 but vs the GROSS label +0.003 (60 symbols, 2020-07..2026-09). With a7e8-03 (tilt share 0.06), the net-label vol ranking is cost-per-R arithmetic, not a served-model tilt. No label change needed; read net-label vol importance as cost structure.",
+  "updated_at": "2026-11-12T22:10:40Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "week_lane": "surge"
+}

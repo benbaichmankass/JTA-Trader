@@ -1,0 +1,29 @@
+{
+  "id": "PROP-CANDLE-FEED-FIX",
+  "title": "Prop trail read Bybit TESTNET candles (unset BYBIT_TESTNET defaulted to testnet in market_data); fix the source",
+  "state": "done",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25382
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-12T16:55:33Z",
+      "lane": "PROP-CANDLE-FEED-FIX"
+    }
+  ],
+  "note": "MEASURED 2026-11-11 21:03Z-11-12 15:53Z trail_plan journal: SOLUSD refused 'candle feed implausible' on 218/222 plans (tradeify_1) and 222/225 (velotrade_1); feed SOLUSDT 4h min_low 22.93 / max_high 172.22 vs mainnet ~81. Cause (code read): scripts/ops/prop_executor_tick.sh does not export BYBIT_TESTNET; market_data._build_exchange_client defaulted unset to testnet. Fix PR #25382 (HELD, Tier 2): unset = mainnet via market_data.bybit_testnet(). Same process's prop_sl_tp_alert / invalidation_prompt / fill_inference / overview / phone_trail and tradeify ETHUSD trail were also on testnet. Live trader unaffected (journal 83/83 'mainnet'). Not observed directly: the testnet bars (api-testnet geo-blocked from the session). OBSERVE after merge + ict-git-sync: curl /api/diag/journalctl?unit=ict-prop-executor@tradeify_1.service&grep=trail_plan -> a SOLUSD trail_plan whose why is NOT 'candle feed implausible'. OBSERVED 2026-11-12 16:43Z (first tick after the 16:41Z merge of #25382): tradeify_1 and velotrade_1 SOLUSD trail_plan = tighten 'replayed trail tightens the resting SL', bars 22, SL 86.2 -> 85.253 (replay 85.252); 16:48Z and 16:53Z re-read resting_sl 85.253, hold. No 'candle feed implausible' after the merge.",
+  "phase": "E",
+  "updated_at": "2026-11-12T16:55:33Z",
+  "updated_by": "session_01AFoLuLBLzzL7P2FCnhPoAa"
+}

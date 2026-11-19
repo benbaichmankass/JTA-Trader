@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261110-LRP-C5F97202",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ada_pullback_2h:dropped_no_package",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "not reproduced: ada_pullback_2h dropped_no_package was 1 at filing, 0 in the latest live-vs-replay window | evidence: comms/live_parity/2026-11-12.json legs[ada_pullback_2h].by_class.dropped_no_package=0, state=checked, bars_checked=83, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `ada_pullback_2h` — dropped_no_package ×1 (REAL-MONEY roster) in window 2026-11-03T07:15:00+00:00..2026-11-10T07:15:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-10.json. Examples: [{\"class\": \"dropped_no_package\", \"bar\": \"2026-11-09T02:00:00+00:00\", \"t\": \"2026-11-09T04:03:05+00:00\", \"detail\": {\"class\": \"dropped_no_package\", \"packages\": [], \"gates\": []}}]\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: not reproduced: ada_pullback_2h dropped_no_package was 1 at filing, 0 in the latest live-vs-replay window EVIDENCE: comms/live_parity/2026-11-12.json legs[ada_pullback_2h].by_class.dropped_no_package=0, state=checked, bars_checked=83, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run"
+}

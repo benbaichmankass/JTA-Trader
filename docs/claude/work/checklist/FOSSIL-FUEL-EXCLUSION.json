@@ -1,0 +1,25 @@
+{
+  "id": "FOSSIL-FUEL-EXCLUSION",
+  "title": "No fossil fuels on real money: ml_entry_eq_struct drops its nine oil/gas names; values_exclusions.yaml + CI test (operator 2026-11-17)",
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuKdqv7sRrnLSFhbH4a",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator values exclusion (2026-11-17 'In general, I ask that we not trade fossil fuels.'), not a roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26618
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-17: #26618 merged ~08:10Z as 50184098 (RESTART). Closes on: (a) trader restarted onto 50184098 or a descendant, SL/TP read clean; (b) open USO pkg-0a89fcdbe96b4169 still SL 137.99 / TP 144.62 on alpaca_live (trade 7615) and alpaca_portfolio (trade 7616) after the restart; (c) the next ml_entry_eq_struct decision close shows scored=162 and no fossil symbol (USO UCO UNG XLE XOP OIH GUSH AMLP NFX) in its dispatch: journalctl ict-trader-live grep 'pool_scored' for bar 2026-11-17T16:00Z (logged ~16:04Z; 20:00Z as fallback). Scheduled reads: ~08:23Z (a, b), 16:10Z (c). Before this, on 2026-11-16 20:03:51Z the same leg's top picks included XOP:0.362. The open USO package closes on its own bracket. 2026-11-18 16:13Z closing read (c), the one allowed read: journalctl ict-trader-live grep pool_scored since 15:30Z. ml_entry_eq_struct (real-money leg) bar 2026-11-18T16:00Z: scored=162 packages=0 top=- refusals symbol_not_in_snapshot 5, below_tau 157 -> 162 scored, no fossil symbol in a dispatch (the leg's own population holds, same scored=162 as the 11-17 expected). Population: one decision close. Noted, not an exclusion breach: the separate TESTING paper leg ml_entry_eq (alpaca_paper only) scored 10 and dispatched 1 package with top=USO:0.217 on the same bar; USO on paper is research-only per accounts.yaml (operator 2026-08-29), so the exclusion scope is real money. Not read: whether that ml_entry_eq paper package is on a paper account only (trade-level read not done, usage hold).",
+  "phase": null,
+  "terminal_reason": "#26618 deployed; the 2026-11-17 16:00Z decision bar logged ml_entry_eq_struct pool_scored scored=162 packages=3 top=IWF:0.272,IVW:0.265,TZA:0.254 refusals={symbol_not_in_snapshot: 4, below_tau: 155} (journalctl ict-trader-live 16:07:33Z): 162 names scored and no fossil symbol in the 3 packages; the only USO line that bar is ml_entry_eq on alpaca_paper (paper-exempt)",
+  "updated_at": "2026-11-18T16:15:46Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

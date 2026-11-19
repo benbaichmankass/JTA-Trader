@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a gateway journal read shows no Stopping/Started pairs for ict-ib-gateway-watchdog.timer over a 30-min window that spans two git-sync ticks, or the manager kills it as benign with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261115-VRKMROCE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SEC-HOST-CHANGES-1112 session_01AFoLuN6jjQHLuQvRkmroCe; gateway-forensics issue #25178 (2026-11-12 08:40Z)",
+    "rerun": "ops exec channel (Tier 2, via AM-OPS): ssh ubuntu@10.0.0.251 'journalctl -u ict-ib-gateway-watchdog.timer --since -30min --no-pager'"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "IB gateway VM: ict-ib-gateway-watchdog.timer and ict-ib-gateway-reset.timer are STOPPED and RESTARTED every ~5 min (journal 2026-11-12 07:16Z..08:31Z, 15 cycles, read via gateway-forensics #25178). The cadence matches the ict-git-sync tick, which most likely re-installs the units each pass. The watchdog still fires and probes healthy (action=none), so nothing is broken. But a timer restart every tick can reset its schedule, and it floods the journal. Find which job restarts them (install_systemd_units.sh or the gateway's git-sync hook) and make the re-install idempotent: skip the restart when the unit file is unchanged. Note: the row that expected the watchdog timer to read INACTIVE is wrong; it reads active+enabled."
+}

@@ -1,0 +1,23 @@
+{
+  "id": "LTR-PACKET-DURING-RESTART",
+  "title": "ltr-wake poster built + posted EMPTY packets during a deploy restart (state sl/tp/open_r/bars_held null, packet_health could_not_look) and still woke reviewers",
+  "state": "queued",
+  "owner": "AM-OPS (Tier-2 runtime fix)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review plumbing defect; map at weekly pass",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-15: 10:07Z marker (comment 6892757673, PR #17895) for ETH/XRP/SOL bybit_2 packages carried packets LR-20261115T1007Z-pkg-{858c60dc674d418f,e20f6efc4b0b4bab,ec406687dc6d449f} on live-review/rows @194db153, all with every state field null and context_null on chart/htf/live_vs_backtest/open_r (1/1 each). Web-api returned 502 at 10:08:21Z and 200 from 10:08:42Z (curl /api/bot/config), i.e. the deploy of #26248 (6a8cb825) restarted services while the poster ran. A further 3 packets at 11537499 (pkg-00ba2112, 4072f8c1, 41cd0e67) were committed in the same window; not inspected. Fix wanted: when packet_health is could_not_look on the state block, retry the build after the restart (or defer the marker one cycle) instead of posting a reviewer-wake on an empty packet. Done when: a deploy restart during a wake cycle produces either a healthy packet or a deferred marker, never a posted marker with null state. 10:22Z manager 15a: 1 of 3 real-money packages handled via the repo-lane rebuild. The XRP lane ran live_review_packet.py from origin/main f440f67d, packet_health ok, sha 5498f567..., committed at 2ba2a511 on live-review/rows. XRP close applied 10:20:55Z, verified_readback true on bybit_2 and bybit_portfolio. The VM poster had NOT rebuilt a healthy packet for the package by ~10:18Z, so the empty 10:07Z packets were not superseded on their own. Same-window packets 00ba2112/4072f8c1/41cd0e67 (11537499) still uninspected.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:22:59Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

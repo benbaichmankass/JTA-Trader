@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261115-LRP-797334FA",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:control:planted_defect:unproven",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "control 'unproven', not failed: 2 of 3 plants flagged; the third (live_signal_replay_none) could not be planted on a quiet bar | evidence: comms/live_parity/2026-11-15.json (window 2026-11-08T07:00Z..11-15T07:00Z) controls.planted_defect.state=partial: replay_signal_live_none flagged=true, lost_bar flagged=true, live_signal_replay_none flagged=null reason 'no robust no-signal window in the quiet bar'; the same plant was flagged on 2026-11-12 (comms/live_parity/2026-11-12.json)",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: the parity run — control_planted_defect_unproven (REAL-MONEY roster) in window 2026-11-08T07:00:00+00:00..2026-11-15T07:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-15.json. Examples: {\"state\": \"partial\", \"plants\": [{\"plant\": \"replay_signal_live_none\", \"leg\": \"slv_trend_1h\", \"window\": \"2026-11-13T15:30:00+00:00\", \"flagged\": true}, {\"plant\": \"lost_bar\", \"leg\": \"slv_trend_1h\", \"bar\": \"2026-11-13T14:00:00+00:00\", \"flagged\": true}, {\"plant\": \"live_signal_replay_none\", \"leg\": \"slv_trend_1h\", \"flagged\": null, \"reason\": \"no robust no-signal window in the quiet bar\"}]}\n\n[2026-11-15 BACKLOG-DRAIN-20261112] KILL: control 'unproven', not failed: 2 of 3 plants flagged; the third (live_signal_replay_none) could not be planted on a quiet bar EVIDENCE: comms/live_parity/2026-11-15.json (window 2026-11-08T07:00Z..11-15T07:00Z) controls.planted_defect.state=partial: replay_signal_live_none flagged=true, lost_bar flagged=true, live_signal_replay_none flagged=null reason 'no robust no-signal window in the quiet bar'; the same plant was flagged on 2026-11-12 (comms/live_parity/2026-11-12.json)"
+}

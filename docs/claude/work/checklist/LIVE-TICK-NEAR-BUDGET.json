@@ -1,0 +1,20 @@
+{
+  "id": "LIVE-TICK-NEAR-BUDGET",
+  "title": "LIVE TRADER TICK RUNS AT ~92% OF ITS 60 s INTERVAL (order-path latency, real money). MEASURED /api/diag/tick_cost read 2026-11-18 22:30Z over 136 ticks since the 20:10:57Z restart: tick mean 55.3 s, max 98.3 s vs TICK_INTERVAL_SECONDS=60; the main tick spends mean 23.8 s (max 31.0 s, 43% of tick) in journal_sync.wait for the off-loop reconciliation loop, which HOLDS the journal lock mean 37.0 s (max 57.5 s). Inside the hold: reconcile_open_trades 10.5 s, check_broker_naked_equity_positions 8.5 s, reconcile_orphan_exchange_positions 6.5 s, check_broker_naked_bybit_positions 3.9 s, watchdog_stuck_strategies 3.6 s, reconcile_netting_partial_closes 3.2 s. Also OCI daily CPU p95 99.8-100% every day 11-09..11-17 on the 2-OCPU live VM (compute_util ledger). Effect: a tick that overruns delays signal->order for every leg (consistent with, not proven to cause, the ~15.6 min late equity ML entries, ML-EQ-ENTRY-TIMING). FIX DIRECTION (Tier 2): narrow the journal lock to the DB writes only (do venue reads outside the hold), and profile the three biggest sweeps (venue calls per open row?). CLOSES WHEN: tick mean < 30 s and journal_sync.wait mean < 2 s over >= 100 ticks. Gates this adds: none.",
+  "state": "queued",
+  "owner": "AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-21"
+}

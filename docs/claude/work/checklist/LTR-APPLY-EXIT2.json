@@ -1,0 +1,24 @@
+{
+  "id": "LTR-APPLY-EXIT2",
+  "title": "Direct-route live-review trade actions never apply: evidence path not materialized (exit 2 before any account), and the refusal is silent",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuLkuqvTHTWHHMvug7M",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DESK"
+  ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26258
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "11:11:12Z DEPLOYED on disk: diag version git_sha_on_disk=8027175072, which contains merge 174be73e09; per-row dispatcher subprocesses now run the fix. NOT yet in the trader process: trader_git_sha=46b0364f4e, restart_pending=true, so out_tail logging waits on an ict-trader-live restart (Tier 2, manager). OBSERVE: when=the next direct-route trade action; how=GET /api/diag/log_file?name=live_review_rows_watch&grep=direct shows exit 0 with per-account >>> lines. Then remove the interim REVIEWER-BRIEF \u00a7 4a note (#26260). 11:40Z manager 15a: #26258 is deployed, but the first two direct-route rows after it hit a SECOND defect: the evidence lookup does not consult live-review/rows, so they return could_not_look/exit 3, which is not the old exit 2. Filed as LTR-DIRECT-EVIDENCE-SOURCE (rank 1). The interim REVIEWER-BRIEF 4a note (#26260) stays until that lands. 11:44Z OBSERVED, part 3 of #26258: SOL LR-20261115T1141Z-pkg-ec406687dc6d449f went by the branch route and closed on all 4 accounts, bybit_2, bybit_portfolio, tradeify_1 and velotrade_1 (exit 0, approve within_bounds, verified_readback true, applied_at 11:43:36Z). MD-LTR-PROP-AUTO no longer narrows a real-money leg. ETH LR-20261115T1141Z-pkg-858c60dc674d418f closed on bybit_2 and bybit_portfolio at 11:43:21Z; its prop tickets had been suppressed at entry (opposite_direction_blocked). Still open: the direct-route evidence lookup (LTR-DIRECT-EVIDENCE-SOURCE).",
+  "phase": null,
+  "updated_at": "2026-11-15T11:44:59Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

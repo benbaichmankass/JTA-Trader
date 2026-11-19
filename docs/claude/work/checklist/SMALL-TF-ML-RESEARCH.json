@@ -1,0 +1,22 @@
+{
+  "id": "SMALL-TF-ML-RESEARCH",
+  "title": "Research small-timeframe MLs for scalping, breakout and VWAP-style strategies (M27)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuJZrY6GWADKpoSgrGj",
+  "model": "claude-sonnet-5-5",
+  "tier": null,
+  "roadmap": [
+    "M27"
+  ],
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "Operator 2026-11-11 12:49Z (plan-page comment): important, part of the ML surge, lower down than M23. Start with the never-dispatched HTF-bias unit RQ-20260928-001 for the ict_scalp family, then author pre-registered units for small-TF (1m-15m) ML entry/filter models on scalp, breakout and VWAP setups, net of the full cost stack (fees and slippage dominate at small TF). [2026-11-11 ~20:30Z ML lane session_01AFoLuJzKhDBzvqyKJM6emw] CORRECTION to the starting point: RQ-20260928-001 (ict_scalp HTF-bias filter) is NOT never-dispatched. research/queue/RQ-20260928-001.yaml reads status done, last_dispatched_at 2026-10-25T11:00Z, grading verdict PASS 2026-10-25 (attested RULE-RQ0928-001-ICTSCALP-HTF-FILTER-WIRE): 6 of 7 legs pass (n>=175, ON net-R > OFF); mgc_15m no_data (no 15m feed). The PASS is loss-cutting only: ON is still net-negative on 5 of 6 legs. Evidence: research/results/RQ-20260928-001/session_01BzTTXpd6ik4TCL1czrLdtS.jsonl. NEXT (this row, not started): author pre-registered 1m-15m ML entry/filter units for scalp/breakout/VWAP, net of the full cost stack. Start from the fact that the HTF filter does not make ict_scalp profitable, so a small-TF ML must beat the HTF-ON leg (its net-negative baseline), not take-all. [2026-11-11 19:10Z ML lane session_01AFoLuJzKhDBzvqyKJM6emw] CORRECTION: the clock times in this lane's notes today ('~19:00Z' to '~20:40Z') were estimates, not readings. System clock at close-out: 19:10Z. Commit/PR timestamps are the record (e.g. #24897 merged 18:57:15Z). [2026-11-11 ~21:55Z ML lane session_01AFoLuJzKhDBzvqyKJM6emw] PRIOR EVIDENCE READ before authoring (MEASURED from committed results). The pooled ENTRY pipeline (v1 recipe, 60 perps, 8 dev folds, full cost stack) was already run at small timeframes: RQ-20261101-b621-01 (15m, bar scaling) FAIL; b622-01 (15m, clock scaling) FAIL; b623-01 (5m, bar) and b624-01 (5m, clock) INDETERMINATE only on the n floor. Economically negative: b623-01 run 42175819399 has an ungated seed-mean net R per decision of -0.071 at tau 0.10, 2 of 8 folds positive, 1 of 4 years; with v2's cost gate -0.059, 0 of 4 years (comms/research/RQ-20261101-b623-01/42175819399/RQ-20261101-b623-01_result.json). The ict_scalp HTF filter (RQ-20260928-001 PASS) is loss-cutting only. READING: at 5m-15m the cost stack, not the model, is the binding constraint. Another LightGBM entry/filter on the same features is low value. PROPOSED NEXT UNIT (not authored; needs the programme review's ranking): a cost-breakeven census per (symbol, tf) of the gross R per trade a small-TF entry must reach to clear fee + slippage + funding at the observed hit rates, and whether ANY leg or recipe (maker-entry fills, wider TP) gets there, before more model training. The VWAP/breakout small-TF ML ask stays open behind that. [2026-11-12 10:18Z AM-ML session_01AFoLuJkXEM1EigH9mSfz1F] Dispatched lane session_01AFoLuJZrY6GWADKpoSgrGj (claude-sonnet-5-5, fresh, $12) ahead of the 11-14 slot (surge, no capacity limit); brief carries the row text verbatim. Reports to AM-ML. [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D2-XRP-5M-FROZEN, MLP-D2-VOLCOMP-FEATURE, MLP-D3-SMALL-TF (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. The owner was the label 'FRONTIER', which has no session behind it; ML-PRIMARY-2 confirmed none of the FRONTIER rows (10:38Z).",
+  "phase": null,
+  "updated_at": "2026-11-15T10:54:11Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

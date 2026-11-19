@@ -1,0 +1,23 @@
+{
+  "id": "ML-EXITHEAD-ROWS-FRESH-REBUILD",
+  "title": "Rebuild the donchian 1h exit-head rows from fresh candles into datasets-out/exit_head/1h/donchian_fresh/ (unblocks RQ-20261119-a10d-07/-08; #26906 waits on them)",
+  "state": "queued",
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF); successor ML-PRIMARY lane inherits",
+  "lane": "ML-PRIMARY-10",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    27226
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "WHY: aadc-11/12 PASSED on rows built 2026-07-12 (trainer-vm-diag #27191: build_report.generated_at 2026-07-12T10:37Z, 34,919 rows, donchian harness 1,662 + live 15 trades) replayed on data/<SYM>_1h.csv frozen ~06-15/18 (AM-OPS-7). TRIGGER (start only when all hold): #27214 merged AND deployed on the trainer AND data/{BTC,ETH,SOL,XRP,ADA,AVAX}USDT_1h.csv last bar within 3 days (read via trainer-vm-diag). STEP: (1) recover the July build's inputs: datasets-out/exit_head/1h/build_report.json + the donchian harness emit files (m20_exit_head_round.py builds rows via scripts/ml/build_exit_head_dataset.py --tf 1h with --trades <harness emit JSONL> --db data/trade_journal.db --legs <donchian legs> --candles SYM=data/SYM_1h.csv); (2) re-emit the donchian harness trades on the refreshed candles and run the builder with --out datasets-out/exit_head/1h/donchian_fresh_build, then place donchian/rows.jsonl at datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (the builder takes the heavy queue); (3) confirm build_report generated_at today and last bar_t per symbol past 2026-11-01; (4) git mv research/queue/blocked/RQ-20261119-a10d-07.yaml to research/queue/ (status queued). a10d-08 also needs LINK/BNB 1h refreshed + DOGE/LTC/DOT/TRX/NEAR 1h created (note filed on TRAINER-1D-STALE-ROSTERED, AM-OPS-7). Do NOT overwrite datasets-out/exit_head/1h/donchian/rows.jsonl (queued units 04a5-04, aadc-13, a10d-06 read it).",
+  "phase": null,
+  "updated_at": "2026-11-19T10:01:16Z",
+  "updated_by": "session_01AFoLuMq6PeudHur3tmBVgF"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "ML-RETIRE-WAVES-20261111",
+  "title": "Execute ML retirement waves 1+2 (operator 2026-11-11): archive the 28 no-manifest RETIRE models now; git mv the 44 active manifests to ml/configs/retired/ then archive them; wave-2 retire 4 (btc/sol fc-pcv-v1, btc-5m-yz-v1, execution-quality-baseline-v0); 11 held for the D2 bake-off",
+  "state": "landed_unproven",
+  "owner": "ML standing lane (session_01AFoLuKb21Yrn8KPRSpF5Us)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Thursday-planning 2026-11-11 decision; weekly pass maps it",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25001,
+    25051
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "[operator decision 2026-11-11, Thursday-planning doc] a1 verbatim \"Retire the 28 with no active manifest now; the 44 after their manifests are removed\"; a2 verbatim \"Accept as proposed\". The lists are docs/plans/ML-CONSOLIDATION-2026-11-11.md (RETIRE table, active-manifest column; addendum wave-2 table). Steps per that plan: (1) PR moving manifests to ml/configs/retired/ + README rows; (2) registry archive via a system-action, Tier 2, approved by these answers. DONE WHEN GET /api/bot/ml/registry shows the 76 models archived/candidate and the trainer cycle no longer builds the 44. [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-INFRA-TRAINER-CYCLE (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "phase": null,
+  "updated_at": "2026-11-12T14:49:56Z",
+  "updated_by": "session_01AFoLuKCLkLbWaDfBPBBWPy"
+}

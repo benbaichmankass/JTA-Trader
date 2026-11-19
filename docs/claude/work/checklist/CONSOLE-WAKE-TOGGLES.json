@@ -1,0 +1,28 @@
+{
+  "id": "CONSOLE-WAKE-TOGGLES",
+  "title": "Console wake-notification switches (+ research queue tab, connector reply-size caps): merged, not yet observed",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24113,
+    24117
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-09",
+  "note": "Merged: #24117 (connector reply caps, research_queue, wake_toggles read, GET route; live connector verified 8.9 KB vs 163 KB) and #24113 (posters obey switches, POST route, set_wake_toggle). Open: (1) console flip needs a token on the trainer connector host: the harness classifier denied copying DASHBOARD_API_TOKEN there; operator picks (a) copy it, (b) a dedicated WAKE_TOGGLES_TOKEN accepted only by POST /api/bot/wake-toggles (recommended), or (c) curl-only. (2) Not observed: paper-ltr and desk wakes stop posting to #17895 while real-money/prop still post. (3) Not confirmed: the operator's console shows live data (v24). [2026-11-08 07:42Z Manager 2026-11-07a] OBSERVED end to end: the operator reconnected the connector, then flipped ltr_paper from the console. GET /api/bot/wake-toggles recent_flips shows 07:41:03Z false->true and 07:41:05Z true->false, by 'console (operator Google sign-in)'; final state ltr_paper off. #24148 desk poster honours desk_wake. Lane archived.",
+  "observe": {
+    "how": "GET https://ict-bot.duckdns.org/api/bot/wake-toggles (8 defaults, then one flip logged in recent_flips); read /api/diag/log_file wake_toggle_suppressed for suppressed_by_wake_toggle receipts; confirm no desk-wake or paper ltr-wake comment lands on PR #17895 while a real-money/prop ltr-wake still does; operator reloads the console and reports live data",
+    "when": "after the operator picks the token option; next hourly desk wake"
+  },
+  "phase": null,
+  "updated_at": "2026-11-08T07:41:39Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

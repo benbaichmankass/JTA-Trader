@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "all six tests pass on origin/main, with each failure either fixed in the code/config or its test expectation updated by a recorded decision",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-NKFC1WTV-0004",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "run the rerun command on a clean origin/main checkout",
+    "what": "the six tests still fail on origin/main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane UI-SPA-BACKEND-ROUTES, PR #25231 pytest-run on abf3457be (session_01AFoLuHn6DPjiMUNkfC1wTV)",
+    "rerun": "python3 -m pytest tests/test_breakout_prop_wiring.py::test_prop_account_config tests/test_unit_c_prop_exit_variants.py::test_routed_to_breakout_2_and_breakout_1_retired tests/test_ml_entry_all_accounts.py::test_live_config_declares_no_profile_for_the_bybit_symbols tests/test_roster_promotion_evidence.py tests/test_live_review_due.py::test_prop_package_in_live_review_due_payload_and_due_with_accounts -q   # on a clean origin/main checkout"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed on main by b785d8b9f (#25306 follow-up); the six tests pass on origin/main d72d920a6 and on PR #25231 head bab6f89d4.",
+  "what": "MAIN IS RED (6 tests), most likely from #25306 'breakout_2 on ice: empty roster, drop from MD-LTR-PROP-AUTO and live-review floor' [Tier 3, merged]: the tests still assert the OLD breakout_2 roster. Failing on a clean checkout of origin/main d7a03bcec: tests/test_breakout_prop_wiring.py::test_prop_account_config and tests/test_unit_c_prop_exit_variants.py::test_routed_to_breakout_2_and_breakout_1_retired (expect breakout_2 to carry trend_donchian_eth_4h/trend_donchian_sol_4h/ml_entry, get []); tests/test_ml_entry_all_accounts.py::test_live_config_declares_no_profile_for_the_bybit_symbols (expects breakout_2 in the set); tests/test_roster_promotion_evidence.py::test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots (expects ('breakout_2','trend_donchian_sol_4h')) and ::test_fingerprint_agrees_with_every_committed_record (1/56 committed records STALE); tests/test_live_review_due.py::test_prop_package_in_live_review_due_payload_and_due_with_accounts (KeyError 'pkg-prop'). Not a test to skip: each test either needs its expectation updated to the on-ice roster by whoever owns #25306, or has caught a real inconsistency (the STALE record and the missing pkg-prop due entry should be read before assuming a stale test). Every open PR's pytest-run goes red on these until fixed. Found while driving PR #25231, whose diff touches no config. || RESOLVED 2026-11-12: main's 'Fix all main red left by #25306 (breakout_2 on ice)' (b785d8b9f) fixed it, and confirmed #25306 as the cause. Observed: all six tests pass on origin/main d72d920a6 (31 passed on the six test targets) and on PR #25231's head bab6f89d4 after merging main (216 passed locally incl. these)."
+}

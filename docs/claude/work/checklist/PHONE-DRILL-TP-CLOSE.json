@@ -1,0 +1,34 @@
+{
+  "id": "PHONE-DRILL-TP-CLOSE",
+  "title": "Phone executor: prove TP amend + close on the device (one rehearsal drill each, test position)",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": "session_01AFoLuJzdJ1pqfWMuANiJ1w",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "PHONE-SELF-DIAGNOSE follow-up; manager maps at the weekly pass",
+  "priority_rank": 65,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25226,
+    25227
+  ],
+  "blocked_on": [
+    {
+      "clears_when": "manual",
+      "kind": "manual",
+      "owner": "AM-TRADING",
+      "ref": "operator reactivates breakout_2"
+    }
+  ],
+  "next_action": null,
+  "due_by": "2026-11-17",
+  "note": "[2026-11-12 ~09:20Z OPERATOR via Manager 2026-11-11a] SURGE, verbatim: \"The system needs to be able to do that on its own. I'm not doing it manually anymore. Enough is enough.\" Goal: the system carries out a decided close / partial close / tighten on every prop account (breakout_2 via the phone executor; tradeify_1, velotrade_1 via their adapters) with no operator at a terminal. Mandate proposal MD-LTR-PROP-AUTO: PR #25214 (proposed only). Spawn requested by AM-TRADING. [2026-11-12 09:45Z lane session_01AFoLuJzdJ1pqfWMuANiJ1w] MEASURED (phone_steps): Positions moved to CARDS; sheetTarget answered no_grid, so tighten amends 09:00Z/09:05Z stopped at sheet_not_open, and close (same sheetRead) is blocked too. PR #25226 (Tier 2, stacked on #25197): exec.js opens the sheet from the card's [Details] button, no APK. PR #25227 (Tier 2): a reduce is served only to an app declaring 'reduce' (the installed build's measure-click could make a reduce a full close once the sheet opens). LANDED_UNPROVEN after merge+deploy: observation that closes it = ONE Tier-1 phone-drill rehearsal on breakout_2 (no symbol) whose steps show sheet opened_by child_entry/native + details_match + modal_open. Partial close needs ONE batched APK (Kotlin reduce is hard-coded measure-and-dismiss): claim declares reduce, Kotlin calls exec.js reduceFill/reduceConfirm, Positions qty re-read; blocked on measuring the close dialog (the drill shows it). Cells: close / tighten = code-ready pending deploy+drill; partial = APK pending; TP amend / cancel = not yet exercised. [2026-11-12 09:47Z AM-TRADING] Lane session_01AFoLuJzdJ1pqfWMuANiJ1w (spawned by the manager on AM-TRADING's request). MEASURED: on the cards layout __ex.sheetTarget returns no_grid, so the position sheet never opens; the 09:00Z/09:05Z trail tightens stopped at target_child_entry no_grid -> sheet_not_open, and any close is blocked twice (Positions read #25197 + sheet). PR #25226 (Tier 2, exec.js only, stacked on #25197): the card's 'Open position details' button opens the sheet. PR #25227 (Tier 2): a REDUCE is served only to an app declaring 'reduce' (else refused with one ping), so an auto reduce can never become a full close. APK named UP FRONT for partial close (Kotlin hard-codes reduce as measure-and-dismiss); not started; needs the close dialog measured first. [2026-11-12 11:35Z lane session_01AFoLuJzdJ1pqfWMuANiJ1w] #25227 MERGED (f85ed296b): reduce served only to an app declaring 'reduce'. Merged, deploy not yet observed by me. #25197 merged; #25212/#25217 not yet; #25226 (head e4df16a9) waiting on phone-executor-apk 'check' re-run (queued since 11:05Z, first run cancelled unrun by pending-job eviction). [2026-11-12 11:53Z lane session_01AFoLuJzdJ1pqfWMuANiJ1w] MEASURED: phone runs exec_js 2026-11-11.1 bundled, js_refresh=signature_mismatch; #25197 not on the phone. phone-exec-js-sign run 17 (0091bd9, contains #25197) queued for a runner since 11:30Z (runner backlog; single concurrency group). #25287 (manager) supersedes #25226 (exec.js byte-identical but version .5; fixtures 8/60/0). Close contract sent to PROP-VM-CLOSE (request_close full closes; not plan_cancels). Observation that closes the sheet cell: heartbeat exec_js 2026-11-12.5 then a phone-drill rehearsal with sheet opened_by child_entry/native. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session); state stays blocked. still blocked: operator reactivates breakout_2 (#25227 merged, #25226 closed unmerged).",
+  "updated_at": "2026-11-15T11:31:19Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

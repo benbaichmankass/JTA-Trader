@@ -1,0 +1,26 @@
+{
+  "id": "SYSTEMD-WATCH-KNOWS-INSTALLER",
+  "title": "The systemd file-integrity watch paged '[RED FLAG] systemd file CHANGED on ict-bot-arm: /etc/systemd/system/ict-web-api.service.d/venv.conf (not a deploy/ copy)' at 10:21Z on 2026-11-12 for an APPROVED deploy edit: scripts/install_systemd_units.sh sed-rewrites --host 0.0.0.0 to 127.0.0.1 in that drop-in during git-sync's install (SEC-8001 #25185, operator m3). The watch must recognise changes made by install_systemd_units.sh (installer writes a receipt/hash of what it wrote, and the watch treats a matching receipt as expected), so a sanctioned deploy edit does not page as a red flag while a foreign edit still does. No new gate.",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuMBna38VjYvJUbVnXS",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25475
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-20",
+  "note": "Filed by AM-OPS 10:35Z on the manager instruction (10:31Z). Owner lane: SEC-8001-LOCKDOWN. Check: after the fix, an install_systemd_units.sh rewrite produces no RED FLAG, and a planted foreign edit to the same drop-in still does (positive control). DRAIN 2026-11-15: waiting on an event. The closing observation needs an install_systemd_units.sh rewrite (a deploy that changes a unit drop-in) producing NO red flag, plus a planted foreign edit still flagging (positive control). No such installer run has been identified since #25475; re-dated. If none occurs naturally, the positive control can be run deliberately on the next unit-touching deploy.",
+  "updated_at": "2026-11-15T06:09:55Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "throttle"
+}

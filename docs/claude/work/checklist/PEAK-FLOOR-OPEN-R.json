@@ -1,0 +1,22 @@
+{
+  "id": "PEAK-FLOOR-OPEN-R",
+  "title": "Live-review telemetry bug: peak_r (closed-bar extreme) is never floored at open_r (live price), so open_r > peak_r and giveback reads negative; it mis-prices hold/tighten options and delays new_peak wakes",
+  "state": "done",
+  "owner": "manager",
+  "lane": "PEAK-FLOOR-OPEN-R",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-money review bug fix under the throttle, operator-approved 2026-11-10",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-11",
+  "note": "Manager diagnosis 2026-11-10 ~13:50Z from the ADA review (pkg-3de13868d406447a, bybit_2). The packets on live-review/rows show peak_r 0.3345 constant since 06:01Z. At 13:33Z open_r was 0.6356, giveback -0.3011. /api/bot/positions at 13:46Z: openR 0.3513, peakR 0.3345, givebackR -0.0167. Cause: src/runtime/position_telemetry.py computes open_r from current_price (live), but peak_r from trail_decay.since_entry_peak over CLOSED bars (bar lows for shorts), with no floor at open_r. The reviewer's 'last close 0.1781' was the 12:00Z closed 2h bar, not the live price. Operator popup: 'Fix now + re-review ADA (Recommended)'. Lane session_01AFoLuNM8vNioywvTZZbxjT: fix + test + Tier-2 self-land + deploy + verify that peakR >= openR on the positions read, then re-review ADA on a fresh packet. Done = deployed AND the ADA positions row shows giveback >= 0 AND the ADA re-review row is written. 2026-11-10: PR #24684 merged bb0127194, deployed (trader_git_sha bb0127194 on /api/diag/version). Positions ADA bybit_2 15:04Z: openR 0.0836 peakR 0.736 givebackR 0.6523 (peak>=open, giveback>=0). ADA re-review LR-20261110T1506Z hold (rows-branch 08aceac0c): hold n=139 +1.334R beats all tightens (cheapest costs 0.354R > 0.25R bound; tighten advice-only). Landed, observed once; unmeasured case: a forming-bar new extreme on a later pass. x 2026-11-10 15:12Z: MERGED #24684 (bb0127194), DEPLOYED (trader_git_sha bb0127194, restart_pending false; manager-verified), OBSERVED once: ADA bybit_2 at 15:04Z openR 0.0836, peakR 0.736, givebackR 0.6523 (peak >= open). ADA re-review LR-20261110T1506Z on a fresh packet (health ok): HOLD, ev_positive. Priced 139/406: hold +1.334R vs breakeven tighten r:0 +0.980 (cost 0.354R, outside the 0.25R apply bound), atr:2.0 +0.955, close +0.028. Not applied. Remaining unproven: a live pass where a forming-bar extreme sets peak = open (closes on the first such telemetry row). 2026-11-10 15:21Z OBSERVED the forming-bar case: ADA bybit_2 openR 0.9032 = peakR 0.9032 (giveback 0.0) during the fast move; XRP openR 2.4667 = peakR. The floor works live; this closes the remaining unproven part.",
+  "phase": null,
+  "updated_at": "2026-11-10T15:44:58Z",
+  "updated_by": "Manager Session 2026-11-09a"
+}

@@ -1,0 +1,25 @@
+{
+  "due_when": {
+    "clears_when": "all five reads return 200 well under 30 s in one parallel burst after #25557 is deployed; if any still 502s, measure per-route latency and decide on worker count (Tier 2)",
+    "conditions": [
+      "deployed:#25557"
+    ],
+    "kind": "observation"
+  },
+  "id": "PI-20261113-4HKQYBX8-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "UI lane session_01AFoLuMw1bWyUmi4HkqYBX8, PR #25557",
+    "rerun": "curl -w %{http_code} %{time_total} https://ict-bot.duckdns.org/api/bot/research/catalog, /research/registry, /ml/registry?runs_tail=5, /order-packages, /trades/closed in parallel (an SPA Models+Overview burst)"
+  },
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "After #25557 deploys: re-measure web-api 502s under an SPA page-load burst (single uvicorn worker)"
+}

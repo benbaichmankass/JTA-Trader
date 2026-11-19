@@ -1,0 +1,24 @@
+{
+  "id": "VENUE-PNL-ORDERID-MATCH",
+  "title": "Closed-pnl on demo netting rows: why exit_from_fills misses 7054 (6h NULL), and holds over 7d go venue_unmatched (6788)",
+  "state": "landed_unproven",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-21",
+  "clears_when": "7054 carries pnl from its venue record (venue_net) and no bybit closed row older than 1h sits at pnl NULL with still_pending, after the fix is deployed",
+  "note": "MEASURED 2026-11-14 19:37-19:41Z, after #26098 deployed. Population: bybit_* closed in the last 7d = 97 rows, of which 95 venue_net, 1 venue_unmatched, 1 NULL. (a) STUCK PNL ON NETTING ACCOUNTS: trade 7054 (bybit_1 XRPUSDT short, entry 11-11 12:02, closed tp 11-14 16:46) still has pnl NULL ~3h later. _sweep_pending_pnl_from_bybit logs still_pending=1 every pass (17:22Z, 19:26Z), and the venue sweep selects only pnl IS NOT NULL, so it never sees the row. Cause: the pending sweep's account_closed_pnl_for_trade filters records by entry_price within 10 bps, and on the netting account bybit_1 the Bybit record carries the POSITION average entry 1.03192707 against the row's 1.058 (2.5%), so it never matches. The exact key exists: the Bybit record's order_id 084e4c9f-... IS the row's tp_order_id (7216 likewise: record 819ec93a == its tp_order_id). FIX: match a closed-pnl record by order_id in (tp_order_id, sl_order_id) first, then fall back to the qty/price heuristics; the stored pnl is then the record's closed_pnl (for 7054, 1408.86) with pnl_basis venue_net. (b) HOLDS OVER 7 DAYS: trade 6788 (bybit_1 SOLUSDT, entry 10-29, closed 11-08) is venue_unmatched because the read window is clamped to Bybit's 7-day span, so the record created at entry (10-29) lies outside. FIX: walk back in 7-day windows to entry, bounded (e.g. 3 windows), or look the record up by order id. Tier 2 (src/runtime/order_monitor.py and src/units/accounts/clients.py are in the trader import closure). 2026-11-15 ~00:40Z observation read (diag journal trades, 1,600 newest rows, ids 5650-7249). (a) OBSERVED: 7054 pnl = 1408.857, which is the venue record's closed_pnl (1408.86). (b) NOT YET OBSERVABLE: the fix needs a bybit hold longer than 7d that closes after the 465cc20b deploy (20:38Z 11-14). In the window the only bybit close with a hold over 7d is 6788 (10-29 to 11-08), which closed before the fix and stays as is by operator decision ('Leave 6788'). The 15 open bybit rows are all younger than 7d; the oldest is 7167 (bybit_1 ETHUSDT trend_donchian_eth_4h, opened 2026-11-13 03:25Z), which turns 7d on 2026-11-20 03:25Z. So (b) cannot be observed before 2026-11-20; re-read after the first bybit close of a hold over 7d after that date (pnl venue_net, not venue_unmatched). Row stays landed_unproven.",
+  "updated_at": "2026-11-15T00:30:33Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

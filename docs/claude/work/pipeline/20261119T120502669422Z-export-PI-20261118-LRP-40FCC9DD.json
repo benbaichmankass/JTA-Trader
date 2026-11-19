@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-LRP-40FCC9DD",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ict_scalp_eth_15m:could_not_check",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `ict_scalp_eth_15m` — could_not_check (REAL-MONEY roster) in window 2026-11-11T06:45:00+00:00..2026-11-18T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-18.json. Examples: unit 'ict_scalp' not supported by the replay"
+}

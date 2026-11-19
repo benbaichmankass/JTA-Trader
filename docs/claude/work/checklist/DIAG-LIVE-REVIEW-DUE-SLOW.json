@@ -1,0 +1,32 @@
+{
+  "id": "DIAG-LIVE-REVIEW-DUE-SLOW",
+  "title": "/api/diag/live_review_due takes ~19 s; find and fix the slow read",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops latency defect",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25234,
+    25302
+  ],
+  "blocked_on": [
+    {
+      "clears_when": "merged",
+      "kind": "pull_request",
+      "ref": "25302"
+    }
+  ],
+  "due_by": "2026-11-17",
+  "note": "Measured 2026-11-12 01:46Z: 19.1 s wall time for one call (8 due of 18 open). The 01:45Z live-review wake hit diag_fetch's 10 s budget and reported could_not_look while 8 packages were due. Stopgap #25064 sets DIAG_FETCH_MAX_TIME=45 in live-review-wake.yml. Done when the route answers under 5 s (profile it: per-package broker reads? journal scans?) with the same output. [2026-11-12 09:35Z AM-TRADING] Bundled with RM-AM-DUE-COULDNOTLOOK into ONE lane (same route; spawn requested 09:31Z). Re-measured 09:2xZ: 10 s timeout then HTTP 502 after ~31 s.",
+  "phase": null,
+  "updated_at": "2026-11-12T09:56:33Z",
+  "updated_by": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "week_lane": "surge"
+}

@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-RXABACKP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-LIVE-ACTIVITY-ML / docs/research/alpaca-promotion-inventory-2026-11-01.md",
+    "rerun": "for l in spy_trend_long_1d qqq_trend_long_1d iwm_trend_long_1d qld_trend_long_1d gdx_pullback_1d; do python3 scripts/ops/mandate_resolver.py --leg $l --from S1 --to S2 --account alpaca_live | head -1; done"
+  },
+  "routed_to": "STAGE0-LONGER-WINDOW-1D",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[alpaca promotion / Stage-0 refresh] spy/qqq/iwm/qld_trend_long_1d and gdx_pullback_1d clear every MD-PROMOTE-S1-S2 clause up to R-N but their Stage-0 records cover 365 days (n_trades_oos 8-11 < 30). The PROMO-EVIDENCE-REFRESH precedent (#19671, tqqq/tlt/scha at --days 6200 --folds 8) is the fix: run scripts/ops/build_strategy_evidence.py --strategy <leg> --days 6200 --folds 8 for each, commit records + source_runs, then queue a holdout re-run unit per leg (holdout_rerun.leg, the RQ-20261023-be01-02 shape). Operator 2026-11-01: 'we also need to try and get more of the shadowing startegies on alpaca turned on to live money'. Inventory: docs/research/alpaca-promotion-inventory-2026-11-01.md.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Exact scope: full-history Stage-0 for 1d legs. EVIDENCE: Row STAGE0-LONGER-WINDOW-1D (queued) title: \"Stage-0 records for 1d legs over full history (beyond 365d) so min_n_closed 30...\"."
+}

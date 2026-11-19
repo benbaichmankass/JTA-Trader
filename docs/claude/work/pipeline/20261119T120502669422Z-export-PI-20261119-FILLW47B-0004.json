@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a landed result row and manifest from a kaggle_cpu run both carry backend=kaggle_cpu on main, and check_research_queue_throughput.py --json prints the per-backend per-day producer_failed share",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19; manager: file the backend field as a small build unless one exists (none found in work.py list)",
+    "rerun": "python3 -c \"import json;print(json.load(open('comms/research/RQ-20261118-abab-33/44446272811/run-manifest.json')).keys())\"   # no backend key = still missing"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "state": "queued",
+  "what": "RESULT ROWS CARRY NO BACKEND: PI-20261118-EFILLW47-0003's closing criterion is the kaggle_cpu producer_failed share per day, but neither research/results/<unit>/<run>.jsonl nor comms/research/<unit>/<run>/run-manifest.json records which backend ran the unit (the manifest has only the runner CPU model; checked abab-33 run 44446272811), so the share cannot be computed from landed data; workflow-level conclusion (research-script-run-kaggle-cpu.yml) is not the criterion. BUILD (small): write the executing backend (github_runner | kaggle_cpu | kaggle_gpu | trainer) into run-manifest.json and into the E5 record's provenance at emit time (scripts/research/script_run.py / research_result.py), additive and nullable ('unknown' for legacy rows), with a test that an old row without it reads 'unknown', never a backend. Then add the per-backend per-day producer_failed share to check_research_queue_throughput.py."
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the three ungraded 2026-11-16 ml_entry closes (SOL pkg-09c923d9, SOL pkg-0da0e016, XRP pkg-a2c1ef8b) have a graded outcomes.jsonl close row (hold resolved at its 24h time exit), and the attention_watch ltr_grade probe is not breached for trade 6789 (ADA, 2026-11-05, live_review_close with NO review row) after it is explained or recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261116-JFWRQYOV-0001-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LTR-CLOSE-AUDIT-20261116 (session_01AFoLuJTA00000000000000 PR for comms/research/ltr_close_audit/2026-11-16/VERDICT.md)",
+    "rerun": "python3 scripts/ops/attention_watch.py  # probe ltr_grade; and python3 scripts/research/ltr_close_audit.py --live --reviews <main reviews.jsonl + rows-branch rows> --out /tmp/audit.json"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "LTR close audit leftovers: (1) three 2026-11-16 applied ml_entry closes have holds still open (marked +2.25 R vs close +1.02 R in real money, ESTIMATED): regrade once each hold resolves; (2) trade 6789 (ADA trend_donchian_ada_4h bybit_1, closed 2026-11-05T04:07Z, exit_reason live_review_close) has no close review row within 900 s: find who applied it (applied.jsonl on the VM) and record it; (3) prop closes (tradeify_1 / velotrade_1) have no journal trades row so no applied close there can be graded: decide where prop realised R lives; (4) 39 reviews exist only on the live-review/rows branch (oldest 2026-10-30), not mirrored to main: find why the mirror skips them."
+}

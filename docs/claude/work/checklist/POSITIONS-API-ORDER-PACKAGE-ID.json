@@ -1,0 +1,22 @@
+{
+  "id": "POSITIONS-API-ORDER-PACKAGE-ID",
+  "title": "Expose orderPackageId on /api/bot/positions so status_move_positions.py matches siblings exactly (MEASURED) instead of on leg + symbol + side (ESTIMATED)",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "read-path enabler for STATUS-MOVE-OPEN-POSITIONS; no milestone owns API field additions",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "From STATUS-MOVE-OPEN-POSITIONS (lane session_01AFoLuMm8mdmV1JgmwFHKEU, 2026-11-12). trades.order_package_id already exists in the journal (src/units/db/database.py migration), and the positions payload drops it (verified on the live payload 2026-11-12: no package field). scripts/ops/status_move.py already reads order_package_id when present. Web-api change plus deploy (Tier 2). CORS-load-bearing SPA consumer: additive field only.",
+  "phase": null,
+  "updated_at": "2026-11-14T11:15:09Z",
+  "updated_by": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)"
+}

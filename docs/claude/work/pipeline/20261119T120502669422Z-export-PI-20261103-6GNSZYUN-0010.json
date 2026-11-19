@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0010",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # ml_entry_v2 must read covered; and python3 scripts/ops/mandate_resolver.py --leg ml_entry_v2 --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "killed",
+  "terminal_reason": "Its own close condition is met: iteration_orphans now reads ml_entry_v2 covered by a queued iteration unit. The wrong-record lookup it mentions (ml_entry_v2 reads ml_entry.json) stays open as PI-20261106-Y7JEXUWW-0003 (routed RESEARCH-ITERATE in this slice). | evidence: python3 scripts/research/iteration_orphans.py --json run 2026-11-12 on checkout 3 commits behind origin/main 30b5cd919 (population: 59 strategy_leg / 10 ml_model / 7 ltr_class subjects; strategy_leg orphan 7, covered 50): ml_entry_v2 state=covered, iterations=[RQ-20261105-002 queued].",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ITERATION ORPHAN ml_entry_v2 (Stage-0 verdict none): no queued research unit carries an iteration: block for it (programme-review rule). No committed comms/strategy_evidence/ml_entry_v2.json (resolver R-RECORD-MISSING) — iteration_orphans reads ml_entry.json for it (n=907, +24.6R), a mismatch to resolve. First iteration: produce its own Stage-0 record (build_strategy_evidence.py) under RULE-D1. Close when a unit with iteration.subject=ml_entry_v2 is queued (iteration_orphans reads covered).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Its own close condition is met: iteration_orphans now reads ml_entry_v2 covered by a queued iteration unit. The wrong-record lookup it mentions (ml_entry_v2 reads ml_entry.json) stays open as PI-20261106-Y7JEXUWW-0003 (routed RESEARCH-ITERATE in this slice). EVIDENCE: python3 scripts/research/iteration_orphans.py --json run 2026-11-12 on checkout 3 commits behind origin/main 30b5cd919 (population: 59 strategy_leg / 10 ml_model / 7 ltr_class subjects; strategy_leg orphan 7, covered 50): ml_entry_v2 state=covered, iterations=[RQ-20261105-002 queued]."
+}

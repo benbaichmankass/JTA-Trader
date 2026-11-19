@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261106-WSDS4-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AFoLuKRfwDfF3esJNvcS31 / PR #23962",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/work/items?limit=1 | jq .canonical,.note; curl -s -o /dev/null -w %{time_total} https://ict-bot.duckdns.org/api/bot/work/brief"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent WSD-S4-READERS-FLIP state landed_unproven: OPS backlog drain (BACKLOG-DRAIN-20261112, after HEALTH-20261111-EXPORT-READS-STALE per operator p4) [weekly planning 2026-11-12]",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "WSD-S4 follow-ups: (a) GET /api/bot/work/items still says canonical:false + stale 'S1: files stay canonical' note (src/web/api/routers/work_items.py) -- flip to canonical:true now the register is frozen into the store; (b) checklist.py prints 'wrote docs/.../<id>.json' after a write-through to the store -- say 'wrote work_store item <id>'; (c) /work/brief first call 502 at the proxy's 30s, retry 18s -- measure cold build time vs pre-S4 (F10)"
+}

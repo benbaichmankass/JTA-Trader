@@ -1,21 +1,24 @@
 {
   "id": "UI-UPGRADE-1-AUTH-HARDEN",
   "title": "Harden the site sign-in before SITE_AUTH_ENFORCE is flipped (8 review findings a-h)",
-  "phase": "W41",
-  "state": "dropped",
-  "owner": "build lane (manager dispatch)",
+  "state": "landed_unproven",
+  "owner": "manager",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Hardening findings from the security review of #17624 (Manager Session 2026-10-11, MERGE-WITH-NITS). EACH MUST BE DONE BEFORE SITE_AUTH_ENFORCE IS FLIPPED. (a) a ws_ session can add a passkey with no step-up, and there is no passkey list/revoke route; session revoke leaves passkeys in place. (b) require_site_session is a sync dependency, so it costs a threadpool hop per request even with the gate off; make it async (keep the sqlite lookup off the event loop, e.g. run_in_threadpool only when the gate is on). (c) register/finish does not re-check that a via-session begin still has a live session. (d) the assertion challenge is not bound to the pre-auth ticket that began it. (e) the WS ticket path skips the ALLOWED_EMAIL check. (f) _fail_log in web_sessions.py grows without bound. (g) the enrol code is burned at begin, so a cancelled ceremony wastes it. (h) 'testclient' is in the trusted-proxy host list in runtime code (src/web/api/routers/auth_google.py::_client_ip). Related rows: PI-20261011-CFUJ7YFR-0001 (Caddy access log + 24h consumer check), -0002 (service-bearer retrofit). Parent: UI-UPGRADE-1-AUTH. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
-  "updated_at": "2026-10-29T11:31:37Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "M6"
   ],
-  "_seq": 414
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25245
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "_seq": 414,
+  "note": "Hardening findings from the security review of #17624 (Manager Session 2026-10-11, MERGE-WITH-NITS). EACH MUST BE DONE BEFORE SITE_AUTH_ENFORCE IS FLIPPED. (a) a ws_ session can add a passkey with no step-up, and there is no passkey list/revoke route; session revoke leaves passkeys in place. (b) require_site_session is a sync dependency, so it costs a threadpool hop per request even with the gate off; make it async (keep the sqlite lookup off the event loop, e.g. run_in_threadpool only when the gate is on). (c) register/finish does not re-check that a via-session begin still has a live session. (d) the assertion challenge is not bound to the pre-auth ticket that began it. (e) the WS ticket path skips the ALLOWED_EMAIL check. (f) _fail_log in web_sessions.py grows without bound. (g) the enrol code is burned at begin, so a cancelled ceremony wastes it. (h) 'testclient' is in the trusted-proxy host list in runtime code (src/web/api/routers/auth_google.py::_client_ip). Related rows: PI-20261011-CFUJ7YFR-0001 (Caddy access log + 24h consumer check), -0002 (service-bearer retrofit). Parent: UI-UPGRADE-1-AUTH. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known. [2026-11-12 UI-OAUTH-SIGNIN lane session_01AFoLuJA5JJsYH5J3BdwfYw] Re-queued: the value is now known (prerequisite for the operator-requested UI-OAUTH-SIGNIN flip). All 8 items (a)-(h) were still open in the code on origin/main; all built with tests in PR #25245 (HELD Tier 2). Closes landed_unproven on merge+deploy; observation = anonymous GET /api/auth/passkeys returns 401 on the VM (route exists) and a >10-min-old session's register/begin returns 401 stepup_required. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner 'build lane (manager dispatch)' has no live session. #25245 merged 11-13 02:43Z. Partial observation 10:40Z today: GET /api/auth/passkeys returns 401. Caveat: this session's proxy injects credentials for the host, so the read was not strictly anonymous. Not checked: the stepup_required 401 on an old session.",
+  "phase": "W41",
+  "updated_at": "2026-11-15T10:35:09Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
 }

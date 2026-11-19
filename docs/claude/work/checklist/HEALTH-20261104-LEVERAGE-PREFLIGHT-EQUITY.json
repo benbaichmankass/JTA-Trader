@@ -1,22 +1,23 @@
 {
   "id": "HEALTH-20261104-LEVERAGE-PREFLIGHT-EQUITY",
   "title": "set_leverage pre-flight sends 17 non-crypto symbols (SPY, QQQ, TLT, MES...) to Bybit on every boot via ml_entry/claude_desk symbol lists: 68 failed calls in 27 min today at 21 restarts/day; filter by venue",
-  "phase": "floor",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "[HEALTH-REVIEW-20261104] MEASURED: journalctl ict-trader-live 18:56-19:23Z: 68 'set_leverage pre-flight ... symbol invalid' WARNINGs (bybit_2 26, bybit_portfolio 26, bybit_1 16). Cause (code, p0.95): src/main.py _apply_per_account_leverage -> _symbols_for_account takes the union of every rostered strategy's symbols; ml_entry (bybit_2, bybit_portfolio) and claude_desk (bybit_1) list equity/futures symbols. Wasted Bybit REST calls per boot; one 'Too many visits' rate-limit line in the same window (correlation, not shown causal). Exact fix: in the preflight loop, skip symbols the account's venue does not list (e.g. not endswith('USDT') for market_type linear), leaving _resolve_tick_symbols untouched unless it also pulls them. Closing observation: 0 such WARNINGs over one boot.",
-  "due_by": "2026-11-13",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-04T19:32:21Z",
-  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ",
-  "_seq": 916
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "_seq": 916,
+  "note": "HEALTH-REVIEW-20261118 observed on the 2026-11-18 04:05Z boot: 19 pre-flight lines, 0 'symbol invalid'; non-Bybit symbols skipped.",
+  "phase": "floor",
+  "updated_at": "2026-11-18T18:23:20Z",
+  "updated_by": "session_01AFoLuK2LjVstJhrbRyYqmu",
+  "week_lane": "surge"
 }

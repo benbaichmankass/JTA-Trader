@@ -1,0 +1,25 @@
+{
+  "due_when": {
+    "clears_when": "the manager decides how a follow-up is linked (e.g. research-ops writes iteration.from_result or grading.disposition when it acts on a verdict) and none_recorded starts falling for new verdicts, or the manager records that the link is not needed",
+    "conditions": [
+      "pr_merged:25562"
+    ],
+    "kind": "observation"
+  },
+  "id": "PI-20261113-4HKQYBX8-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "UI lane session_01AFoLuMw1bWyUmi4HkqYBX8, GET /api/bot/research/runs (#25562)",
+    "rerun": "GET https://ict-bot.duckdns.org/api/bot/research/runs?limit=1 -> counts.by_what_we_did (acted / recorded / none_recorded) over total"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "Research follow-through is rarely linked on the record: 1,807 of 1,959 graded runs (92%) carry no follow-up link"
+}

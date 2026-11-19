@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-ETFHIST-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ETF-HISTORY-PIPELINE, docs/research/options-iv-history-sources-2026-11-01.md section B",
+    "rerun": "On the LIVE VM (gateway subnet only), clientId 450, paced: adapt scripts/ops/pull_mes_ibkr_history.sh / ml/datasets/adapters/ibkr_offvm.py to whatToShow=OPTION_IMPLIED_VOLATILITY for the 7 underlyings; read first/last/rows per symbol."
+  },
+  "routed_to": "OPTIONS-IV-HISTORY-GAP",
+  "severity": "medium",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Measure IB-gateway option-IV history for the options underlyings (SPY QQQ IWM GLD TLT SLV USO): reqHistoricalData whatToShow=OPTION_IMPLIED_VOLATILITY and HISTORICAL_VOLATILITY, first bar / rows per symbol; and whether any expired option contract bars are retrievable (IB documents none).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Exact scope: option-IV history sources. EVIDENCE: Row OPTIONS-IV-HISTORY-GAP (queued): \"no keyless option-chain or IV-surface history\"; item origin docs/research/options-iv-history-sources-2026-11-01.md."
+}

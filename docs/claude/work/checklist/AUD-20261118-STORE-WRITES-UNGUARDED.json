@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261118-STORE-WRITES-UNGUARDED",
+  "title": "Since the S4 freeze, work-store writes bypass the file-based CI guards: the store accepted a non-milestone roadmap ref (NEWS-VETO-ARMB-READ 'L-NEWS', 11-15), and 528 of 977 build items updated since 11-10 have no file export for roadmap-map-guard / soak / pipeline guards to read; the weekly export (D5) is deferred to S7 (11-30)",
+  "state": "queued",
+  "owner": "AM-OPS-7",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "EVIDENCE: roadmap_map.py --check (reads the store) FAIL 'row NEWS-VETO-ARMB-READ: roadmap ref L-NEWS is not a milestone' at 18:20Z; fixed in the store by this audit (set roadmap=[M28], the family of NEWS-ALPHA-*), re-run ok. docs/claude/work/checklist/ last touched 11-15; no workflow runs 'work.py export --to-files' (grep .github/workflows: 0 hits). WORK-STORE-DESIGN \u00a7 7 says guards read 'the weekly export, or GET /api/bot/work/items; a failed read is could_not_look', and that was not done in S4. So roadmap-map-guard, soak-*-guard, pipeline-guard, operator-owed-guard and the rest pass in CI over a stale export. PROPOSED: (1) validate the guard rules that are field checks (roadmap ref in milestones.yaml, due_rule present, soak n_needed <= 2) at write time in the store API, so a bad write is refused where it happens; (2) until S7, the existing ict-work-digest timer runs roadmap_map --check + soak contract check against the store and raises one alert on failure. Check WSD-S4-FOLLOWUPS before building. DETECTOR: (1) is itself the detector. CHECK {command: 'roadmap_map.py --check against the store; work.py add with roadmap=[\"L-BOGUS\"]', rule: 'check ok AND the bogus write is refused', resolves_when: 'both hold'}. 2026-11-19 AM-OPS-7 takes this row (manager). CHECKLIST-EXPORT-STORE-DRIFT is folded in here: 106 of 217 compared rows differ export vs store, because no export has run since the S4 freeze (11-12); CI guards read the export by design (run_guards.py:2901 WORK_READ_SOURCE=export); raw-file readers check_shadowed_features, pr_landing_hold_alarm, check_research_queue_ml_consumer. Approved plan (manager 10:17Z): daily export workflow (D5 pulled forward from S7) after #27153/#27214; dry-run on a branch, report every guard that flips on the true states as a finding; HELD PR for the workflow; catch-up export as its own data commit; the stale 'canonical: False / S1' string at src/web/api/routers/work_items.py:317 as its own small Tier-2 PR. Gates this adds: none.",
+  "phase": null,
+  "updated_at": "2026-11-19T10:18:12Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

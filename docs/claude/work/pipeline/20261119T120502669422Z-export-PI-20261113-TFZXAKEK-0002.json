@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "tests/test_live_replay_parity_ml.py passes on main.",
+    "conditions": [
+      "operator_answer:AM-ML-live-replay-parity-ml-red-20261113",
+      "manual:tests/test_live_replay_parity_ml.py passes on main"
+    ],
+    "kind": "event",
+    "owner": "AM-ML session_01AFoLuJkXEM1EigH9mSfz1F (route to the #25255 owner)"
+  },
+  "id": "PI-20261113-TFZXAKEK-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK; #25756 post-merge pytest-run 2026-11-13",
+    "rerun": "python3 -m pytest -q tests/test_live_replay_parity_ml.py"
+  },
+  "routed_to": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "state": "done",
+  "what": "tests/test_live_replay_parity_ml.py is RED on main since the commit that added it (#25255, 5005a687, merged 2026-11-13 13:25Z): 5 failures in CI (6 locally, +1 from missing fastapi). Verified red at 5005a687 itself, at 558f05f (parent of #25756) and at current main; nothing under the test changed since. Proximate cause: analyse_ml_entry returns state=could_not_check, reason 'nothing comparable: no (symbol, decision bar) held both a live record and a replay' for the fixture built from leg.cfg['symbols'] and the served model's xs_reference (ml/served/ENTRY_SERVED.json -> ml_decision_entry_v1r20261106); the other 4 failures cascade from the same empty pairing. Surfaced by #25756's post-merge pytest-run (job 131966907525), which it did not cause. Owner: the #25255 session / AM-ML."
+}

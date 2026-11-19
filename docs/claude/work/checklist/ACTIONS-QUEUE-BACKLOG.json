@@ -1,0 +1,22 @@
+{
+  "id": "ACTIONS-QUEUE-BACKLOG",
+  "title": "Actions queue: 461 queued runs = 395 zombies from <=11-11 (oldest 05-15) + 66 live today; live jobs wait p50 ~10 min, p90 ~24 min",
+  "state": "queued",
+  "owner": "AM-OPS-7",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 ~10:50Z by AM-OPS-7 (manager: file with measured numbers; cancel nothing). MEASURED (Actions API status=queued, 6 pages, 461 runs at 10:44Z): created <= 2026-11-11: 395 (oldest 2026-05-15T07:45Z), 11-12..11-18: 0, today 11-19: 66. By event: issues 288, push 88, pull_request 69, workflow_run 5, issue_comment 5, workflow_dispatch 3, schedule 3. Top workflows overall: pr-landing hold-merge alarm 41, pytest-run 23, Guards 22, pytest-collect 20, claude-pr-automerge 8, vm-web-api-recover 8. Today's 66: pr-landing hold-merge alarm 35 (more than half the live backlog), pytest-run 6, Guards 5, pytest-collect 4, pytest-rerun 3. In progress at the same time: 19-21. LATENCY (job created_at -> started_at, 15 jobs from runs completed since 07:00Z; small sample): p50 10.2 min, p90 24.1 min, max 31.5 min, 8 of 15 waited > 10 min. The run-level run_started_at reads 0 wait and is NOT a measure of queueing (it is set at trigger). Example: a manual counterfactual-grade-closed dispatch (44507023137) sat queued 10:35Z -> >= 10:44Z. NOT established: whether the 395 zombies consume any runner capacity (GitHub's concurrency limit counts running jobs; a run queued since May may simply never be scheduled); a bulk cancel was refused by the classifier earlier today and is not proposed here. Worth separating: (1) the live backlog's single biggest source is the pr-landing hold-merge alarm (35 queued today); (2) zombie cleanup is an operator/classifier decision. Related: HOURLY-CRON-SCHEDULE-DROP (dropped schedules, a different cause). 2026-11-19 10:46Z manager APPROVED the pr-landing hold-merge alarm fix (AM-OPS-7 builds it AFTER the work-store export workflow): (1) each run grades every PR merged into main in the last 6 h, not only its own push; (2) a per-PR dedupe marker so a re-grade never pages twice; (3) one concurrency group pr-landing-hold-merge-alarm, cancel-in-progress false (at most 1 running + 1 pending). Required tests: a dropped push's PR is still graded by the next run; a second grade does not page twice. Root cause measured: trigger push:[main] on every push (~1,610 runs/wk) with a per-sha concurrency group, so nothing dedupes (35 queued today). Alarm policy unchanged; unreadable stays red.",
+  "phase": null,
+  "updated_at": "2026-11-19T10:46:59Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

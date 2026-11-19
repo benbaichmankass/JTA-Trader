@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 7712's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-CSINTAKE-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:7712 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 7712"
+  },
+  "state": "done",
+  "what": "mechanics fault on trade 7712 (alpaca_paper/qqq_pullback_1h QQQ, exit_reason='exchange_flat_reconciled'): exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded"
+}

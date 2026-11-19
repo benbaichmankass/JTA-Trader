@@ -1,0 +1,31 @@
+{
+  "id": "AUD-20261111-RESEARCH-OPS-NO-RECORD",
+  "title": "research-ops trigger fires but no pass record lands: newest comms/research/ops record 2026-11-10T03:25Z (38.7h at 18:04Z 11-11); research_ops_age_h / research_ops_not_run breached 5 of 7 days",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    {
+      "clears_when": [
+        "date:2026-11-16"
+      ],
+      "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+      "reason": "diagnosis done (lane session_01AFoLuLdoijyu9BUecW5Vxn); fix is the manager update_trigger on trig_01UnRpzN513KbMjvJWFAf911 (sent 19:15Z). Close on 3 consecutive days research_ops_age_h<=8 in comms/research/health/<day>.json",
+      "since": "2026-11-12"
+    }
+  ],
+  "due_by": "2026-11-16",
+  "note": "WEEKLY-AUDIT-20261111. MEASURED: trig_01UnRpzN513KbMjvJWFAf911 enabled, last_fired 2026-11-11T11:20Z, cron 47 2,8,14,20; comms/research/health/2026-11-11.json research_ops_age_h 38.66 > 8 (newest 20261110T0325Z.json). The trigger fires into an assistant-manager session that must dispatch a lane; fires are not observed as records. H0 usage cut (operator 11-07, ended 11-11 18:00Z) explains it vs H1 the dispatch step silently drops: the trigger stayed enabled and fired through the cut, and the ML-lane routine says research-ops 'stays enabled', so H1 p0.6 INFERRED. DETECTOR: research_slo research_ops_age_h (exists, fires). CHECK: {command: python3 -c read comms/research/health/<today>.json research_ops_age_h, rule: <= 8, resolves_when: 3 consecutive days}. next_action: manager confirms the assistant-manager session behind the trigger is alive and dispatches. [2026-11-12 16:09Z AM-ML] Dispatched lane session_01AFoLuLdoijyu9BUecW5Vxn (claude-sonnet-5-5, fresh, $6). The manager said breadth over waiting (16:02Z). The brief carries the row text, the operator decision and the 11:45Z no-new-gates line verbatim. [2026-11-12 16:40Z lane] MECHANISM (MEASURED unless marked): trigger trig_01UnRpzN513KbMjvJWFAf911 fires every slot (last_fired 11-12T14:48Z SUCCEEDED; walkthrough 11-12 records 02:48Z succeeded) into persistent session_011c3qoaBvGBioDWkPVToQSb (Assistant Manager Sonnet, idle, context 769k of 784k autocompact). Its stored PROMPT (updated_at 11-11T18:01Z, cron edited but text not) still opens 'RESEARCH-OPS dispatch (scheduled, once a day at 14:47Z while pacing...)'. Record timeline (comms/research/ops finished_at): since 10-29 the only slot that yields a pass record is 14:47 (10-29..11-06 daily 15:2-15:4Z, 11-09, 11-12 15:30Z); 02:47/08:47/20:47 yield none except ad hoc lanes (11-07 10:00Z, 11-10 03:25Z step-E-only, 11-11 21:20Z after pacing ended). Records 10-26..10-28 had all 4 slots, before the once-a-day text took hold. With one record/day newest-record age peaks near 24h, so research_ops_age_h<=8 is unmeetable by design; the 38.7h was the H0 usage cut (no 14:47 pass 11-10 or 11-11) on top. H1 (dispatch drops) refined: not dropped, SKIPPED by prompt text. INFERRED (not observed): the assistant session transcript is not readable from a lane (no list_events), so 'it read the text and skipped' is the best fit to the record pattern, not seen. FIX = trigger prompt (manager's, no tooling change; research_slo reads records correctly): update_trigger(trig_01UnRpzN513KbMjvJWFAf911, prompt=<current prompt with first paragraph replaced by>) 'RESEARCH-OPS dispatch (scheduled, 4x/day at 02:47/08:47/14:47/20:47Z; EVERY fire dispatches a lane, there is no once-a-day pacing since 2026-11-11 18:00Z; the research pipeline always needs to be full, running, in shape and producing valuable results; a pass that finds nothing still writes its comms/research/ops record). The self-running routine form failed (its fresh session had no git repo or GitHub access), so you dispatch it instead.' Rest of prompt unchanged; lane title/row use the actual slot HHMM. No gate added. OBSERVATION closing the row: 3 consecutive days research_ops_age_h<=8 in comms/research/health/<day>.json, expected first after manager applies + next slot. Also noted: assistant session near autocompact and source repo still 'Metis-Insights' (redirects, harmless). 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'FRONTIER', no live session); state stays blocked. still blocked: clears on date 2026-11-16.",
+  "phase": "ops",
+  "updated_at": "2026-11-15T11:31:29Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

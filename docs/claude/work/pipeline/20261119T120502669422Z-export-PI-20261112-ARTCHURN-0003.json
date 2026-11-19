@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "both tests pass on main",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-ARTCHURN-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "python3 -m pytest -q tests/test_console_reads.py tests/test_wake_toggles.py -k replies_stay_small",
+    "what": "both connector reply-size tests green on main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane TRADER-RESTART-CHURN, PR #25457 pytest-run job 131472314397",
+    "rerun": "python3 -m pytest -q tests/test_console_reads.py::test_replies_stay_small_for_the_pages_calls tests/test_wake_toggles.py::test_connector_replies_stay_small_for_the_pages_calls"
+  },
+  "state": "done",
+  "what": "RED ON MAIN (found by lane TRADER-RESTART-CHURN in PR #25457's CI, and reproduced locally on origin/main 376705e7a): tests/test_console_reads.py::test_replies_stay_small_for_the_pages_calls and tests/test_wake_toggles.py::test_connector_replies_stay_small_for_the_pages_calls fail because the console connector's system_catalog reply is 48,960 bytes against REPLY_BUDGET = 40,000. Page or trim system_catalog (src/console_connector/server.py), or revisit the budget. Every PR's pytest-run is red until this is fixed."
+}

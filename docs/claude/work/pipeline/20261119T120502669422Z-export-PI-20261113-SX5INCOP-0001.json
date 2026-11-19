@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the 5 units no longer appear in `result_disposition_check.py --list` as needs_review_unowned and the producers emit verdict/read_state/population/n in the script_run.py contract (or each is hand-graded with a grading block)",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-SX5INCOP-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-20",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list | grep needs_review_unowned",
+    "what": "unowned needs_review count from result_disposition_check.py --list reads 0 for these five unit ids"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261113-1545 (session_01AFoLuLs9enz3u3SX5incoP)",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list | grep needs_review_unowned"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "PRODUCER CONTRACT DEFECTS leave 5 landed results UNOWNED needs_review (script_run.py grades producer_failed): RQ-20261111-207f-04 (verdict.json lacks population/n), RQ-20261112-09d2-05 (read_state 'complete' not in READ_STATES; verdict fail), RQ-20261112-e4a7-01 (verdict 'S3_NOT_CLEARED' not in VERDICTS, no n), RQ-20261111-9b09-01 (script exited 0, wrote no verdict.json), RQ-20261105-025 (generated 'family None_1h': template emitted family None). The content of the first three is real and hand-gradable; each is owned by this item until its producer writes the contract shape."
+}

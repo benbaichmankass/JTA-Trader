@@ -1,0 +1,25 @@
+{
+  "id": "WORK-INFLIGHT-STALE-OWNERS",
+  "title": "'In flight now' card overstates live work: ~1/3 of in_flight rows are owned by archived/finished sessions",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "register hygiene",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26276
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-15T10:30Z, live store (work.py list --state in_flight): 65 in_flight rows (the Overview card showed 47). Owner sessions checked with get_session: AM-UI session_01AFoLuMr5RixbuwJtqED344 ARCHIVED (10 rows incl. UI-REDESIGN-2026-11, UI-CHART-CRYPTO-LIVE); AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk idle/completed since 11-14 (7); AM-DEVOPS session_01AFoLuMr7uensVVinDEwryw idle/completed since 11-12 (2); SESSION-TRIGGER-HYGIENE session_01AFoLuKu5TM3gGQzsssywSw ARCHIVED (1); old manager 11-11a (1 row, DEMOTION-NOT-BAN). 15 more are owner 'FRONTIER' with no session (a label, not a lane). 29 rows were last updated on 11-12. Fix (Tier 1): (a) sweep: each row whose owner session is archived/completed goes to queued with owner manager, or done/dropped with a terminal reason if its PR landed; (b) structural: the in-flight card / work_report should mark a row whose owner session is not working, not count it as in flight. Done when the card's count equals rows with a working owner session. 2026-11-15 10:52Z AM-OPS: (a) sweep: in_flight went from 64 (10:19Z read) to 43 (10:45Z). The 21 rows with archived or finished owners went 13 to queued/manager and 8 to landed_unproven/manager (each note names its closing observation); DEMOTION-NOT-BAN closed done (#25277 merged). The ML rows (15 FRONTIER + FRONTIER-Q-RESID-ENTRY + 4 bare ML-PRIMARY) wait on ML-PRIMARY-2's confirmation, asked 10:37Z, with a 12:30Z fallback. (b) structural: PR #26276 (hold, unvouchable_paths) adds openNow quiet/quietHours and openNowCounts to /api/bot/work/snapshot; the basis is row activity (48 h), because the VM cannot see session status. 13 of 43 were quiet at 10:45Z. SPA card follow-up: the dashboard should show openNowCounts.active. Done when the ML rows are resolved and #26276 is merged, deployed and the card is observed. 2026-11-15 11:00Z AM-OPS: part (a) COMPLETE. ML-PRIMARY-2 replied 10:38Z: it confirmed ML-LIVE-PARITY-ML-LEGS and MLP-D3-FOXHOUND-1 (owner now ML-PRIMARY-2); MLP-D2-REVIEW-HEADS and MLP-D2-ADVISORY-NO-CONSUMER went to queued/manager; all 15 FRONTIER rows went to queued/manager; FRONTIER-Q-RESID-ENTRY closed done (RQ-20261112-4654-01 graded FAIL, verified on main). MEASURED, live store, all 5 pages (4,694 items): in_flight went from 64 (10:19Z) to 25 (11:00Z), every one owned by a working session (AM-OPS 18, manager 5, ML-PRIMARY-2 2). Part (b) remains: #26276 (snapshot quiet flag) in CI, hold; then the SPA card. 2026-11-15 11:33Z AM-OPS: blocked-row sweep (manager 15a 11:28Z, 'same rules') done, 90/90 writes OK. blocked went from 50 to 29, all with live owners. Of the 45 rows with dead or label owners: 12 went to landed_unproven/manager (blocker PR merged), 24 stayed blocked with owner manager (blocker still real), 9 went to queued/manager (blocked with an empty blocked_on). in_flight is 24, all with live owners. Remaining: #26283 + #26276 joint deploy window, then observe the card. 2026-11-15 11:57Z AM-OPS: #26276 merged 11:48Z (006559a0) and DEPLOYED (web-api git_sha 006559a0). OBSERVED live: GET /api/bot/work/snapshot openNowCounts = {total 25, active 13, quiet 5, unknown 7, quietAfterHours 48}. The 7 unknown (BALANCE-TIP-SCRUB-2, CF-GRADES-EQUITY-COMMITTED, CI-SPARSE-BOOTSTRAP-FLAKE, DESK-TRIGGER-SCAN-TIMEOUT, DIAG-RELAY-EQUITY-LEAK, LIVE-VM-CPU-SATURATION-1112, UI-SPA-BACKEND-ROUTES) have no updated_at on the mapped row: work_store_import.to_row takes updated_at from item.extra only, and those items carry it only at item level. That is reported as unknown, never as active. Remaining: (1) the SPA card renders openNowCounts.active (dashboard repo, not done); (2) small follow-up: the snapshot could fall back to the store item's updated_at (the console's data._fresh does this) to shrink 'unknown'.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:07:14Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "PI-20261118-EFILLW47-0005",
+  "title": "STAMP PRs GO DIRTY AND NOTHING EVER REFRESHES OR CLOSES THEM (2026-11-18). Four research-queue-stamp PRs (#26904, #26908, #26916, #26920) sat open 3-4 h, mergeable_state dirty, no CI (GitHub runs no pull_request checks on a conflicting PR, so the auto-merge never has a green check to wait for). Measured disposal (main 141b706349 vs each stamp line): Of 25 stamps across the four PRs, 17 were already <= main's value; 6 were newer than main but belong to units that already read not_due on main (cadence=once, ran at ...); 2 (abab-04, abab-26; main has no stamp) landed producer_failed and MUST stay unstamped so they remain due. Nothing was lost by closing all four. CAUSE: the stamp PR is cut from main at fire time (commit-to-main refreshes it ONCE at creation) and edits the single last_dispatched_at line of unit files that a later cycle's stamp PR, a re-arm or a PR touching that unit also edits; when any of them merges first the rest conflict, and no job re-merges main into a bot branch or closes a superseded one. The watchdog heal only re-fires a dispatch (stranded_stamp_adoptions adopts the stamp; it does not touch the stale PR). FIX (Tier-1, research_watchdog.py + a tested helper): for an open automation/research-queue-stamp-* PR that is dirty > 30 min, per unit compare stamp vs main last_dispatched_at; all main >= stamp -> close as superseded; else merge main into the branch resolving each unit file to max(stamp, main) and let auto-merge run; NEVER land a stamp for a unit whose main value is absent while its latest result is producer_failed (deliberate re-arm). Also assert in a test that two stamp PRs touching the same unit resolve to the max.",
+  "state": "queued",
+  "owner": "research-ops",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "M40"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-25"
+}

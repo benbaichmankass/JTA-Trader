@@ -1,0 +1,24 @@
+{
+  "id": "EVIDENCE-FORMING-ARMS-REALMONEY",
+  "title": "Forming-arm Stage-0 records for trend_donchian_sol_prop (bybit_2/portfolio) and tqqq_trend_long_1d (alpaca_live/portfolio) so they grade on the bar they trade, then land the eth_4h/sol_prop decision_bar relabel",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuL81KwmFYQmJu7vuNE",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "priority_rank": 18,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    "ETF-HISTORY-PIPELINE"
+  ],
+  "due_by": "2026-11-16",
+  "note": "Opened by lane TRADING-T1-BATCH 2026-11-12 on the AM decision 'run the forming arms' (operator p2: no demotion lands without the operator looking). After PR #25228 an absent decision_bar grades approximate on rebuild, so these two real-money legs fail roster C5 on their next rebuild unless a forming-arm record exists. Committed records are unchanged and read faithful today (check_roster_promotion_evidence clean). DO: run scripts/research/as_traded_stage0.py (wraps decision_bar_holdout.py; Binance 1m proxy, so sol_prop is direct; tqqq is an equity and needs a non-Binance feed, so check the harness supports it first, otherwise file that gap) on the runner via research-script-run.yml; write the forming-arm records; then land the relabel of trend_donchian_eth_4h / trend_donchian_sol_prop decision_bar (text prepared in commit f4d356fb28 on branch lane/trading-t1-batch). A FAIL on a real forming-arm record is a demotion CANDIDATE to report to the AM, never written into a doc or config. Known live risk meanwhile: exit-cell-mandate.yml rebuilds evidence for a fired leg and opens a HELD PR, so a rebuild of sol_prop there would show approximate. Gates this adds or changes: none. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. owner AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk is completed (idle since 11-14). No PR on the row.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:36:37Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

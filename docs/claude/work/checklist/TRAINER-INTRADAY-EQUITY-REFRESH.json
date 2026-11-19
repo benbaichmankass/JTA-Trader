@@ -1,0 +1,22 @@
+{
+  "id": "TRAINER-INTRADAY-EQUITY-REFRESH",
+  "title": "Nothing refreshes the trainer's equity/futures INTRADAY files (e.g. USO_1h frozen 2026-06-18): add a refresh source",
+  "state": "queued",
+  "owner": "AM-OPS-7",
+  "lane": "GENERAL",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "data-pipeline freshness defect; sibling of TRAINER-1D-STALE-ROSTERED",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Manager 2026-11-19 07:55Z (decision 3). Read from code: deploy/trainer/ict-candle-refresh.service refreshes crypto intraday only (scripts/ops/refresh_candle_history.py = Bybit pairs), and the lake extender (#27214) is 1d only. So rostered equity/futures legs' own-timeframe trainer files are never refreshed. Reported frozen: data/USO_1h.csv at 2026-06-18 (unit text + 11-18 audit; not yet read by me). Rostered timeframes (rostered_symbols(), 177 symbols): e.g. USO/SLV/GDX/SCHA 1h, MGC 15m+1h. Steps: (1) read the trainer's intraday file freshness (the extended --alert-rostered in #27214 reports it on each refresh); (2) add an extend-only refresh for rostered non-crypto intraday files from a source matching the file's basis (Alpaca bars for equities, the lake/IB for MGC; basis check as in extend_data_from_lake.py); (3) unblock RQ-20261119-a7f1-03..06 once USO_1h is current. Done = the alert reads no stale rostered intraday file. PRIORITY: REAL-MONEY FIRST (manager 2026-11-19 08:21Z). TLT_1h (tlt_pullback_1h: SHIPPED trail_decay on alpaca_live) and SLV_1h (slv_trend_1h: RXABACKP-0002 SLV part on hard hold) come before every paper leg; they unblock RQ-20261119-a7f1-09 and -11. Crypto 1h/2h/4h is handled separately in #27214 (Bybit refresher). 2026-11-19 11:34Z manager scope additions (AM-OPS-7 owns; high priority after the #27214 lake shortcut): (a) MEASURED frozen at 2026-06-18 (trainer listing, diag 44484889017): GC_F_1h 16:00Z, GLD/IEF/IWM/QQQ/SLV/SPY/TLT/USO _1h 19:00Z; the --alert-rostered ping now names them. Real-money exposure: slv_trend_1h and tlt_pullback_1h on alpaca_live (m20 exit evidence stale; re-runs a7f1-11 / a7f1-09 blocked on these files). (b) FOLD IN BTC 5m: data/backtest_BTCUSDT_5m.csv (647,586 rows, last 2026-05-21) is read by fit_calibrators.sh (daily cycle), the walkforward_vol_* evidence behind the live regime-router OFF cells, and the m20 exact-tf fallback for ict_scalp_5m/vwap. EXTEND IT IN PLACE; do NOT create a native BTCUSDT_5m (that would silently move the m20 resolver basis for the BTC 5m legs). If in-place is impossible, list every reader that would move BEFORE building. (c) After the refresh lands: file ONE re-run unit re-validating the live regime-router OFF cells on fresh data with the existing harness + registered rule; report only, no config change. (d) Calibrators (observe-only conviction stamp) re-fit naturally on the next daily cycle after the refresh: no unit needed. (e) ml_entry_eq_struct / ml_entry training basis: the manager is asking ML-10, not this row. 2026-11-19 ~12:00Z AM-OPS-7, design inputs. PROVENANCE (repo read, Explore agent; no committed writer exists for any of these): (a) SPY/QQQ/GLD/IEF/IWM/SLV/TLT/USO _1h = Dukascopy ETF-CFD, BID side, RTH-only, a one-off June batch (docs/research/expansion-backtesting-research-2026-06-20.md:248; the likely writer is scripts/ops/fetch_dukascopy_ohlcv.py --interval 1h --rth-only, inferred); (b) GC_F_1h = yfinance GC=F ad-hoc pull 2026-06-18 (docs/research/recombination-sweep-2026-06-18.md:110); (c) backtest_BTCUSDT_5m = Bybit linear BTC/USDT:USDT via an uncommitted ccxt loop (session-handoff-m15-soak-2026-06-11.md:65). No in-place extend path exists for any of them; the market_raw lake has no equity 1h. MEASURED FORMATS (trainer-vm-diag run 44519075671): equity 1h header timestamp,open,high,low,close,volume, stamps 'YYYY-MM-DD HH:MM:SS+00:00' at bar open, RTH hours 15:00..19:00 UTC in June (fractional CFD volumes), first bars 2017-02/03 (IEF/SLV 2018-02), last 2026-06-18 19:00; GC_F_1h header timestamp,open,high,low,close (NO volume), ~24h, 2024-01-26 -> 2026-06-18 16:00; backtest_BTCUSDT_5m header timestamp,open,high,low,close,volume, stamps ISO 'YYYY-MM-DDTHH:MM:SSZ', 2020-03-25 -> 2026-05-21 23:55. Source-parity check (does each original source reproduce the existing tail bars) in flight as trainer-vm-diag #27293; build only on a parity pass.",
+  "phase": null,
+  "updated_at": "2026-11-19T12:00:01Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

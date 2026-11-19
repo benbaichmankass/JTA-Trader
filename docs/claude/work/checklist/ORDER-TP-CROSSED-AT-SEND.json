@@ -1,0 +1,22 @@
+{
+  "id": "ORDER-TP-CROSSED-AT-SEND",
+  "title": "Bybit rejects a market entry whose TP the price has already crossed (ict_scalp_xrp_5m on bybit_1, ErrCode 10001)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 6,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[2026-11-15 06:36Z Manager 15a] MEASURED from alert 06:32:20Z (alerts ledger): bybit_1 (demo floor) ict_scalp_xrp_5m BUY XRPUSDT, market, qty 430996.7, SL 0.9592, TP 0.9600, tpslMode Partial. Bybit rejected it: 'PartialTakeProfit 0.9600 set for Buy position should be higher than base_price 0.9602 (LastPrice)'. Price had moved through the TP between signal and send, so the order never placed. No real money: bybit_1 is the demo floor; whether the same leg is rostered on a real-money book was not checked. First occurrence found in the alerts ledger since 11-08 (n=1, ledger population 4030 rows). Fix: a pre-send bracket sanity check against the last price. If the TP or SL is already crossed, skip the entry with a logged reason (or re-base, if the strategy's evidence supports it). Never send a doomed order. Also check whether a 0.0010 stop (about 0.1%) on a 5m scalp is intended, given that it drives qty 430,996. Done when the check is merged and a crossed-bracket signal logs a skip instead of a venue reject.",
+  "phase": null,
+  "updated_at": "2026-11-15T06:36:04Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

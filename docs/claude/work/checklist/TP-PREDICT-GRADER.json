@@ -1,22 +1,29 @@
 {
   "id": "TP-PREDICT-GRADER",
   "title": "Build the verdict grader that applies RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP to ml2_bracket_train_eval output, then unblock RQ-20261009-900",
-  "phase": "research",
-  "state": "queued",
-  "owner": "unassigned",
+  "state": "done",
+  "owner": "AM-ML",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Lever for blocked units RQ-20261009-900/-901. Corpus RQ-20261014-736c-01 landed (verdict pass, corpus at comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl). Remaining: a small script that runs ml2_bracket_train_eval.py --outcome mfe_r --per-leg --per-stratum at splits .55/.65/.75 and writes verdict.json per the unit's registered rule (S1 eval n ~74 < 88 so S1 will grade INDETERMINATE under the rule as written; decide window before promoting; rule not edited). Then git mv the unit out of blocked/ and set run.workflow research-script-run.yml + lands.store. Tier-1.",
-  "due_by": "2026-11-10",
   "roadmap": [
     "L-PROGRAMMES"
   ],
-  "updated_at": "2026-11-03T14:54:30Z",
-  "updated_by": "session_01AFoLuLHh13MHv4KBYRkKbS",
-  "_seq": 899
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25630
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "_seq": 899,
+  "note": "Lever for blocked units RQ-20261009-900/-901. Corpus RQ-20261014-736c-01 landed (verdict pass, corpus at comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl). Remaining: a small script that runs ml2_bracket_train_eval.py --outcome mfe_r --per-leg --per-stratum at splits .55/.65/.75 and writes verdict.json per the unit's registered rule (S1 eval n ~74 < 88 so S1 will grade INDETERMINATE under the rule as written; decide window before promoting; rule not edited). Then git mv the unit out of blocked/ and set run.workflow research-script-run.yml + lands.store. Tier-1.  [2026-11-12 RESEARCH-OPS-20261112-2050] Overdue since 11-10 with owner unassigned; re-owned to manager and re-dated 11-19. Still the sole lever behind blocked RQ-20261009-900/-901 (34 d old). Scope check: grader must implement the unit's registered rule (S1-S3 strata, 5 quantiles, splits .55/.65/.75, B1-B4 baselines with shuffled-label null p95, per-leg sign check); not a wrapper around one call, so not built in a research-ops pass.  | [RESEARCH-OPS-20261113-0250] still unassigned and past due_by 2026-11-10; re-dated 2026-11-20, escalated to the manager for a build lane.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13] Built: PR #25630 (self-land on green guards). scripts/research/tp_predict_grader.py + tests/test_tp_predict_grader.py (9 pass). RQ-20261009-900 moved out of blocked/: run.workflow research-script-run.yml, grader command on corpus RQ-20261014-736c-01/38738465656, lands.store research/results/. dispatch_queue._is_due = (True, never dispatched). Rule NOT edited, window NOT changed (S1 n 74 < 88 -> INDETERMINATE as written). -901 stays blocked (needs a -900 PASS + the tp-policy-overlay lever). Sandbox smoke 4m07s graded HONEST_NEGATIVE (not the record). Closes when the dispatched run's record lands under research/results/RQ-20261009-900/.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13] Reconciled with the FRONTIER draft (branch claude/tp-predict-grader @7b90fed55, no PR): same clause mapping. Ported its stricter sign-check reading (a quantile is reversed if ANY baseline flips), its practice_precedent + ml_consumer unit fields (the base-aware guards require them on a promoted unit) and a capability-index row into #25630. #25630 supersedes that branch: it should NOT be opened as a PR (it reuses the slug tp-predict-grader.json). Branch left in place for AM-ML to delete.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 06:10Z] #25630 all checks green (guards, pytest-collect, pytest-run on d7ddc91), marked ready, landing:self -- NOT merged yet: the claude-pr-automerge job has not run on it (it ran on #25626 only). If it does not pick it up, AM-ML please merge.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 06:3xZ] MERGED #25630 (da7b406f0). RQ-20261009-900 is in research/queue/ on main. State landed_unproven: closes when its dispatched record lands under research/results/RQ-20261009-900/. FRONTIER branch claude/tp-predict-grader is superseded; AM-ML may delete it.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 08:45Z] HANDOFF TO FRONTIER. State landed_unproven (#25630 merged). LEFT: one observation -- research/results/RQ-20261009-900/<run>.jsonl lands from the dispatched research-script-run (grader on corpus RQ-20261014-736c-01/38738465656), read_state measured; then close the row done and grade the unit (S1 indeterminate at n 74 by the rule as written). RQ-20261009-901 stays blocked: needs a -900 PASS AND the tp-policy-overlay lever (unbuilt). The FRONTIER branch claude/tp-predict-grader is superseded by #25630 and can be deleted.",
+  "observation": {
+    "due_by": "2026-11-15T00:00Z",
+    "what": "research/results/RQ-20261009-900/<run>.jsonl lands from the dispatched research-script-run (git ls-tree origin/main research/results/RQ-20261009-900/), read_state measured"
+  },
+  "phase": "research",
+  "updated_at": "2026-11-13T10:52:27Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK",
+  "week_lane": "throttle"
 }

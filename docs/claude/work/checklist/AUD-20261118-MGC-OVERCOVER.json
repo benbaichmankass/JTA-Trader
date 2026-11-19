@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261118-MGC-OVERCOVER",
+  "title": "ib_paper MGC trade 7737: short 27 with 70 resting stop qty across 4 OCA groups (over-covered by 43): a stop fill would flip the book to long 43",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "EVIDENCE: system_invariants.py INV-PROTECT-OVERCOVER FAIL 18:12Z (ib_open_orders + exchange_positions, ib_paper read clean, n=3 IB positions). Journal qty 27 = venue 27 (INV-JOURNAL-EXCHANGE pass for this pair), so this is a protection-leg leak, not a journal drift; 4 groups suggest repair or rescale passes that added a group without cancelling the old one (the TLT double-cover class of 11-04). Demo floor (paper), so no money at risk, but the mechanism is the same on real money IB. ACTION: cancel the excess groups (Tier 2 system-action), then find the code path that adds a group without cancelling (protection_repairs on row 7737). DETECTOR: INV-PROTECT-OVERCOVER exists; nothing runs it on schedule (see AUD-20261111-RELAY-INVARIANTS-BRIDGE). CHECK {command: 'system_invariants.py --payloads <dir>', rule: 'INV-PROTECT-OVERCOVER pass on ib_paper', resolves_when: 'pass on 2 reads >= 24 h apart'}.",
+  "phase": null,
+  "updated_at": "2026-11-19T01:01:47Z",
+  "updated_by": "session_01AFoLuMqma5FZ2WpXNqAxxz"
+}

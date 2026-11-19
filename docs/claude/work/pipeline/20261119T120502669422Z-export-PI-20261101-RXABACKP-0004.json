@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261101-RXABACKP-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-LIVE-ACTIVITY-ML",
+    "rerun": "grep -l '47a9-01' research/queue/*.yaml"
+  },
+  "routed_to": "ALPACA-LIVE-ACTIVITY-ML",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[alpaca roster screen / follow-up never authored] RQ-20261025-bda2-01 graded PASS 2026-10-26 (arm T30 pooled n=277 +57.5 R) with NO Holm survivor, so it nominated nothing; 4 of 12 cells (SPLG, XLF, XLP, XLU) unmeasured (fetch fault). Its confirmation RQ-20261026-47a9-01 graded INDETERMINATE 2026-10-28. The registered rule says INDETERMINATE -> 'extend the window or add instruments, never lower a floor'; no unit does that (grep 47a9-01 in research/queue: only itself). Author it (re-measure the 4 unmeasured cells + add instruments), or kill with a reason.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The INDETERMINATE follow-up for the alpaca roster screen is still unauthored; it belongs to the alpaca activity row. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): grep -l \"47a9-01|bda2-01\" research/queue -> only RQ-20261025-bda2-01.yaml and RQ-20261026-47a9-01.yaml themselves."
+}

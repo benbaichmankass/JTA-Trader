@@ -1,0 +1,22 @@
+{
+  "id": "AUTOMATION-DATACOMMIT-CONFLICT",
+  "title": "Automation data-commit PRs strand on merge conflict: 8 of 12 automation PRs open > 80 min conflict with main (48 h); the merge refresh gives up on conflict",
+  "state": "queued",
+  "owner": "AM-OPS-7",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 ~11:25Z by AM-OPS-7 (manager: one row for the class, measure 48 h, propose the smallest fix, do not build). MEASURED (search head:automation/ created in the 48 h to ~11:20Z): 340 automation PRs: 284 merged, 43 closed unmerged, 13 open (12 open > 80 min). Local git merge-tree of the 11 stale open ones vs origin/main: 8 CONFLICT, 3 clean but unmerged (#27229 replenish, #27042 desk mirror, #26833 research-slo: stuck for another reason, not conflict). Conflicting: research-queue dispatch-stamp PRs #27247, #27245, #27211, #27159, #27126, #27121, #27116 (8-14 conflicted research/queue/RQ-*.yaml each: the same units re-stamped last_dispatched_at by a later run), and results batch #27244 (1 file, research/results/RQ-20261119-f2a4-01/44483451363.jsonl: two PRs land the same per-run file). Today's two lost runs: research-queue-grade 44480035240 (#27213, closed, superseded by run 44497735317/#27255) and trainer-capture-watch 44481308912 (#27239: its 09:14Z receipt was newer than main's 07:51Z, so not superseded; AM-OPS-7 merged main into it keeping the newer whole-file receipt, pushed e27feca2). The 43 closed-unmerged were not classified (some are superseded by design: stamps re-derived by the next run). MECHANISM: commit-to-main opens the PR, waits up to 80 min, and on a stale base runs a merge refresh that fails on conflict (REFRESH_STATE failed_conflict), then the job fails and the rows stay on the branch. PROPOSED (smallest, not built): (1) for idempotent/re-derivable producers (dispatch stamps, grading, receipts): on conflict, REGENERATE on fresh main instead of merge-refresh -- reset the branch to origin/main, re-run the producer step, force-push the automation branch (it is the bot's own) -- so the PR always carries the producer's output against current main; (2) for whole-file receipts (TRAINER-CAPTURE-WATCH.json and similar), conflicts are trivially 'take the newer' -- or write per-run receipt files so two runs never touch one path; (3) a superseded stamp PR (a later stamp PR covers the same units) should close itself with a pointer rather than sit. Related: ACTIONS-QUEUE-BACKLOG (queue latency lengthens the 80-min window's exposure).",
+  "phase": null,
+  "updated_at": "2026-11-19T11:18:27Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

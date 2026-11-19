@@ -1,0 +1,22 @@
+{
+  "id": "ML-VOL-SHADOW-SOURCE-COLLAPSE",
+  "title": "regime_ml_vol_shadow: ml_source='unavailable' collapses 'no advisory head' and 'scoring error' (collapsed-states rule)",
+  "state": "done",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed 2026-11-17 on the manager's order (found by ML-PRIMARY-5). WRITER: src/runtime/regime/ml_vol_verdict.py, two functions (ml_vol_regime ~L296-340 and the symbol-level variant ~L380-412) each return source 'unavailable' for ALL of: missing symbol/timeframe, no advisory head for the market, uncomputable P(volatile) (cache cold and no inline score), and the bare except (a scoring error). Logged by src/runtime/intents.py ~L1053 as event regime_ml_vol_shadow field ml_source. Existing tests pin the literal 'unavailable' (tests/runtime/test_ml_vol_verdict.py:166, test_aggregate_intents_ml_vol_shadow.py:146, test_regime_ml_vol_use_substitution.py:81/123, test_regime_vol_gate_advisory_only.py:89). PLAN: split the label (no_advisory_head / p_volatile_uncomputable / scoring_error) with NO behaviour change beyond the label (vol_regime stays unknown, p_volatile None, fail-permissive). Tier 2 (runtime): PR green, tell the manager before merging. 2026-11-17 11:25Z #26647 MERGED (not yet deployed or observed). landed_unproven: closes on the first regime_ml_vol_shadow audit row carrying ml_source 'unavailable:<reason>' (one of no_symbol_or_timeframe / no_advisory_head / p_volatile_uncomputable / scoring_error) after the trader restarts onto the merge commit. HOW to observe: /api/diag/journalctl?unit=ict-trader-live filtered on regime_ml_vol_shadow, only fires when REGIME_ML_VERDICT_MODE is shadow or use (default off short-circuits before any ML work, so if the mode is off there will be no rows and that is the explanation, not a defect). Restart impact RESTART (committed closure); label-only, can ride the next restart window.",
+  "phase": null,
+  "terminal_reason": "#26647 deployed (trader restarted ~11:30Z onto 8a183fc4f4, a descendant of 7651a77f); post-restart ETHUSDT regime_ml_vol_shadow rows read unavailable:no_advisory_head (model_id null) and SOLUSDT rows read ml-advisory:sol-regime-15m-lgbm-fc-pcv-v2; no plain 'unavailable' stamped after the restart",
+  "updated_at": "2026-11-17T12:28:06Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

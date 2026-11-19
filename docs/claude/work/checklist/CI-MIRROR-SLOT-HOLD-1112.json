@@ -1,0 +1,24 @@
+{
+  "id": "CI-MIRROR-SLOT-HOLD-1112",
+  "title": "live-review-rows-mirror and desk-decisions-mirror hold a hosted-runner slot up to 80 min in verify-merged (timeout-minutes 110), waiting for their own PR to merge, which needs required checks queued behind them: a self-reinforcing queue loop (MEASURED 2026-11-12: runs 43182360937 and 43182714971 held slots about 90 min). Stop holding a runner while waiting for a merge (verify in a later short job or the next run), keeping the verify-merged guarantee (tests/test_commit_to_main_callers.py).",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuHgb4azeFBsuXnJwWP",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "note": "Filed by AM-OPS from the Actions-queue diagnosis 2026-11-12 09:55Z. Check: no mirror job runs longer than 10 min over the next 24 h, and verify-merged still fires on a non-merged PR (positive control). 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. owner AM-DEVOPS session_01AFoLuMr7uensVVinDEwryw is completed (idle since 11-12). No PR on the row.",
+  "updated_at": "2026-11-15T10:36:33Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

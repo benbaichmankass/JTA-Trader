@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "cc86-02 has a dispatchable run block (or a named weekly owner recorded on the unit) AND a VM read shows the EV challenger's per-package multiplier is being logged",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZFRREVN5-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ITERATION-REFILL-20261117 (session_01AFoLuL9Wd1b7YqZfrRevn5), 2026-11-17; slot table docs/research/ml-slot-iteration-2026-11-17.md",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | grep -A3 cc86-02"
+  },
+  "owner": "manager",
+  "state": "killed",
+  "terminal_reason": "Withdrawn by its author the same day: wrong premise. RQ-20261116-cc86-02 is session-local BY DESIGN (read once at n=60 disagreement packages by the ML lane); the EV challenger is shadow-logged beside Beagle-1 by src/runtime/overlay_shadow.py (CHALLENGER_DIR, log-only, on main) via #26513 per ML-PRIMARY-4 (row ML-DEV-PLAN note 2026-11-17 09:25Z). The dispatcher's 'not a workflow file' reason is expected for a session-local unit, not a defect.",
+  "what": "[ml] D4 Beagle-1 challenger forward read RQ-20261116-cc86-02 is status queued but UNDISPATCHABLE: run.workflow 'session-local' is not a workflow file (dispatcher reason, 2026-11-17 dry run). It also reads live TD packages from the challenger's deploy onward; this lane did not check on the VM whether overlay_td_ev.json is being logged. So D4's only live iteration may silently never run. Fix: give it a trainer/diag-relay run block (overlay_shadow.jsonl + journal trades, the 0f87-02 join) or record the weekly /ml-review C11 as its named owner, and confirm the EV challenger's per-package multiplier is logged."
+}

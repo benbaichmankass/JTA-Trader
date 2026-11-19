@@ -1,0 +1,24 @@
+{
+  "id": "UI-OAUTH-SIGNIN",
+  "title": "UI: OAuth sign-in page required before the overview page",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuJA5JJsYH5J3BdwfYw",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "M6"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25245
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "OAuth sign-in (operator account) gating the SPA before the overview. The API routes the SPA calls must also check the session, since the UI calls the API from the browser through Caddy (CORS is load-bearing), so a UI-only gate is not enough. Prerequisite for SECRETS-UI-SCOPE reveal. Tier 2 (touches the web API) (operator 2026-11-11 ~08:15Z, queued for after the 17:59Z reset) Design: docs/design/ui-workplan-2026-11.md (PR #24818) Consumer inventory landed: docs/design/site-auth-consumer-inventory-2026-11.md. 4 POST routes (alerts, work/decision, work/items*, wake-toggles) would 401 under the gate even with a service token; ~25 GET callers need the DASHBOARD_API_TOKEN bearer; Caddy has no access log and its warn lines leak X-Diag-Token plaintext (rotate + redact). probe Consumer inventory landed: docs/design/site-auth-consumer-inventory-2026-11.md (PR #24855). Retrofits needed before enforce include the console MCP wake-toggles POST/GET; security finding filed as DIAG-TOKEN-LOG-REDACT. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'AM-UI (session_01AFoLuMr5RixbuwJtqED344)', no live session). blocker #25245 merged 2026-11-13 02:43Z. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:30:34Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

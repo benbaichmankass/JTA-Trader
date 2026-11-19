@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-AMEND-REPLACE-RACE",
+  "title": "Alpaca stop amend reports a false apply_failed: src/units/accounts/alpaca_amend.py _verify reads back IMMEDIATELY after the PATCH. Alpaca's replace is asynchronous: the PATCH returns a NEW order id while the old leg still reads as resting for a few seconds, so _verify returns 'the old stop leg <id> still rests (PATCH accepted, not replaced)'. order_monitor then logs ERROR 'exchange modify failed - leaving DB unchanged' and raises a high alert, although the amend lands. MEASURED (journalctl ict-trader-live 2026-11-12 00:00Z..11-13 21:05Z, read_state complete, 417k lines): Alpaca trail modifies = 10, all alpaca_paper (6 applied, 2 apply_failed, 2 noop_already_at_or_tighter). Both apply_failed are SLV trade 7114: 17:00:18Z (wanted 45.68; the next tick applied it at 17:00:48Z) and 21:00:20Z (wanted 45.49; the 21:01:18Z tick read venue_sl 45.49 = noop_already_at_or_tighter, so the PATCH HAD landed). alpaca_live / alpaca_portfolio made 0 trail modifies in the window: the real-money path is unexercised, not proven safe. The position is never naked: the old, looser stop rests until the replace completes. Fix (Tier 2): when the read-back shows the old leg still resting and the PATCH returned new_id != old_id, poll GET /v2/orders/{new_id} (and/or re-read the legs) for a bounded window, e.g. 0.5 s steps up to ~5 s, until the new leg is accepted/new and the old one replaced; only then judge. Keep apply_failed + the alarm for a real failure (new id rejected/absent, or the old leg still resting after the window). Tests: a fake venue whose first read shows the old leg and a later read shows the replacement.",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25856
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-17"
+}

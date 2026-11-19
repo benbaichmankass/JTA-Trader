@@ -1,0 +1,25 @@
+{
+  "id": "ALPACA-PARTIAL-TP-BREACH-EXIT",
+  "title": "Alpaca partial-TP remainder with its stop already crossed: no exit path. After #25790 cancels a partially filled target, the venue holds fewer shares than the row journals, so _alpaca_rearm_preflight takes its deficit branch BEFORE _breach_state. If the row stop is through the market by then, that branch returns all_stops_breached (page only): neither the partial-TP pending retry nor the exit_breached trade-scoped close runs, so the remainder sits unprotected with a page every tick and no exit. Fix (Tier 2): for a row in _ALPACA_PARTIAL_TP_PENDING (or a single attributable row) whose stop is marketable, hand over to the exit_breached flow (confirmed fresh trade -> _exit_alpaca_row reason=sl; unconfirmed -> the bounded deferral). Due before the first real-money partial TP.",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25820
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-19",
+  "note": "DRAIN 2026-11-15: waiting on an event: an Alpaca partial-TP fill whose remainder's stop is already crossed (#25820 path). None seen since landing; re-dated. Equity market weekend: the first chance is Mon 11-16 RTH.",
+  "updated_at": "2026-11-15T06:09:58Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

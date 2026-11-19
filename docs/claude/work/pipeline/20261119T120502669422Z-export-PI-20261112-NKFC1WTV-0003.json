@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "both tests pass on origin/main (system_catalog reply <= REPLY_BUDGET, or the budget/paging is changed by a recorded decision)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-NKFC1WTV-0003",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "run the two tests above on a clean origin/main checkout",
+    "what": "both tests still fail on origin/main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane UI-SPA-BACKEND-ROUTES, PR #25231 pytest-run on ed40a0103 (session_01AFoLuHn6DPjiMUNkfC1wTV)",
+    "rerun": "python3 -m pytest tests/test_console_reads.py::test_replies_stay_small_for_the_pages_calls tests/test_wake_toggles.py::test_connector_replies_stay_small_for_the_pages_calls -q   # on a clean origin/main checkout"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed on main by #25458; both reply-budget tests pass on origin/main f9f0b1d07 and on the PR #25231 head abf3457be.",
+  "what": "MAIN IS RED: tests/test_console_reads.py::test_replies_stay_small_for_the_pages_calls and tests/test_wake_toggles.py::test_connector_replies_stay_small_for_the_pages_calls fail with `assert (48955 <= 40000)` on the console connector's `system_catalog` reply (src/console_connector/server.py REPLY_BUDGET = 40_000; reply_bytes 48,854-48,960). MEASURED 2026-11-12: identical 48,960 on a clean worktree of origin/main at 621f9c30c AND at 4f3927452, so it is not caused by any PR branch (found while driving PR #25231, whose diff touches none of src/console_connector). Cause not investigated: the system_catalog reply grows with repo content (its provenance register etc.), so either the reply must page/trim or the budget is reviewed by a recorded decision; not a test to skip. Every open PR's pytest-run goes red on these two until fixed. || RESOLVED 2026-11-12: main's #25458 (8548be6ee, 'system_catalog per-leg mechanics behind mechanics=true (reply budget; main red since #25398)') fixed it. Observed: both tests pass on origin/main f9f0b1d07 (test_console_reads::test_replies_stay_small_for_the_pages_calls 1 passed) and on PR #25231's head abf3457be after merging main (test_console_reads + test_wake_toggles, 105 passed locally)."
+}
