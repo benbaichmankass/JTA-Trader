@@ -192,9 +192,9 @@ legs), b3aa-01..08, and the LTR screens 43b6-01..04, abab-64..68 and c9d2-01. No
 | P1-RP1119-ltr-partial-close-newpeak | orphan class ltr-partial-close | real-TP holdout read | move to action_bounds | a half-bank still cuts too little |
 | P1-RP1119-ltr-close-newpeak | ltr-close trigger family | real-TP holdout read | timing family next | a full close at new_peak gives up the trend |
 
-**Blocked:** P1-RP1119-desk-levelbreak-fade-decluster. The level-break FADE has a small positive edge (lb > 0, p 1e-4) below
-the +0.15 R bar, and half the firings are clustered. The next test needs a `--decluster-bars` flag in desk_trigger_replay.py
-(DESK-ENTRY-REVIEW-REDESIGN).
+**Authored (closed node):** P1-RP1119-desk-levelbreak-fade-decluster. The level-break FADE has a small positive edge (lb > 0,
+p 1e-4) below the +0.15 R bar, and half the firings are clustered. The `--decluster-bars` flag landed in desk_trigger_replay.py
+(#27165), and the declustered FADE tests are RQ-20261119-f2a4-01 (level_break_break) and -02 (level_break_sweep).
 
 **Grader fix:** exit_lever_ablation's replace grade now returns INDETERMINATE / lever_never_fired when every arm reproduces A.
 abab-47 was a dead lever graded FAIL.
