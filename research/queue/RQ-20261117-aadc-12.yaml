@@ -214,9 +214,10 @@ grading:
   reason: 'row measured (run 44170813134, 2026-11-17T20:49Z; landed on main in #27075) -> PASS by the registered rule, ON 5 OF THE 10 HELD-OUT
     SYMBOLS: XRP, ADA, AVAX, LINK and BNB were measured (each dropped from training by --exclude-train-symbol); DOGE, LTC, DOT, TRX and NEAR were
     producer_failed (no candle file resolve_data finds on the trainer). On the measured five, holding_pays_neg25 minus the champion +0.01596 R/trade, se
-    0.00494, CI (z 1.96) [+0.00628, +0.02564], n_oos 18,649 >= 3,000, mean >= +0.01 and CI lower > 0; not accruing. DATA-WINDOW (CORRECTED ~10:00Z by trainer-vm-diag #27224/#27238): the TRAINING rows (datasets-out/exit_head/1h/donchian/rows.jsonl, built
-    2026-07-12) end BTC 2026-07-10, ETH 07-07, SOL 07-05; the REPLAY candles are FRESH (resolve_data reads data/<SYM>_15m/_5m.csv resampled,
-    last bar 2026-11-19), so the out-of-sample test trades run to the run date and only the training side is handicapped (later folds
-    trained on fewer rows; still causal). Fresh-rows re-run: RQ-20261119-a10d-07/-08.'
+    0.00494, CI (z 1.96) [+0.00628, +0.02564], n_oos 18,649 >= 3,000, mean >= +0.01 and CI lower > 0; not accruing. DATA-WINDOW (corrected ~10:20Z; trainer-vm-diag #27224/#27238): the TRAINING rows (datasets-out/exit_head/1h/donchian/rows.jsonl,
+    built 2026-07-12) end BTC 2026-07-10, ETH 07-07, SOL 07-05. The REPLAY candles come from resolve_data, which TODAY picks
+    data/BTCUSDT_15m.csv and data/<SYM>_5m.csv (last bar 2026-11-19); whether those files were current on the 2026-11-17 run date is
+    NOT yet established (BTC 15m and the 5m files had no refresh owner as of 2026-09-30; trainer-vm-diag #27252 reads when refreshing
+    began). Until then the test window may also end ~mid-2026. Fresh re-run: RQ-20261119-a10d-07/-08.'
   rows: 1
   verdict: pass
