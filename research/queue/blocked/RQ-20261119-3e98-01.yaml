@@ -78,7 +78,11 @@ decision_rule:
     with >= 30 rows, (e) <= 20% of the filtered population excluded for lacking an initial-risk basis.'
   rule: PASS iff (a) AND (b) AND (c) AND (d) AND (e). FAIL iff n_eval >= 200 AND ((a) fails OR (b) fails). INDETERMINATE otherwise (n_eval
     < 200, (d) not computable, (e) fails, or the unit_fallback share > 10%). The real-money rows of ROSTER_59 are reported with the same
-    statistics as CONTEXT and never change the verdict.
+    statistics as CONTEXT and never change the verdict. OUTCOME PROVENANCE (src/runtime/provenance.py; added 2026-11-19 before any run,
+    manager 18:44Z), the eval population is the label-grade trustworthy rows (MEASURED + ESTIMATED; the loader drops FABRICATED /
+    UNVERIFIED); the record states pnl_provenance_counts. The same rule is also read on the MEASURED-only rows (--measured-only); if
+    that read has n_eval >= 200 and its verdict differs from the primary verdict, the unit is INDETERMINATE (the result depends on
+    estimated outcomes). If MEASURED-only n_eval < 200, the primary verdict stands and the measured share is stated beside it.
   pass_action: 'ONE confirmation on a disjoint in-hand window (the paper rows after the run''s data cut are not in hand, so: a time split of
     the same population, earlier half train / later half eval, registered then), then a data-backed Tier-3 proposal to the manager to set the
     head advisory on the demo-floor legs in its population.'
@@ -125,7 +129,7 @@ blocked_on:
     live_paper, include_paper true) and a run: block.'
   clears_when: '(1)-(3) are merged with tests (PR #27430); the run is then one trainer relay as for v023 (build v024 include_paper=true,
     ml train --no-register, p1_costnet_grade.py --eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt
-    --lb-pct 0.833), graded from its record; rule unchanged'
+    --lb-pct 0.833, then again with --measured-only), graded from its records; rule unchanged'
 lands:
   store: research/results/
   assert_field: read_state
