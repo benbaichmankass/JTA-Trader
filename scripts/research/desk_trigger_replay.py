@@ -274,16 +274,36 @@ def fwd_sign(ser: gr.Series, i: int) -> float:
     return 1.0 if ser.c[j] >= ser.o[k] else -1.0
 
 
+def decluster(fires: List[dict], bars: int) -> List[dict]:
+    """Keep the first firing per symbol, then only firings more than `bars` bars after the last KEPT one (same symbol).
+
+    CAUSAL: whether a firing is kept depends only on earlier firings of its own symbol, so the truncated-history
+    (no-lookahead) control still holds on the declustered list. bars <= 0 returns the input unchanged (the
+    registered d7c3 behaviour, byte-identical). Built for PI-20261119-VEWZICCB-0001: in RQ-20261119-d7c3-01
+    15,407 of 30,175 atr_burst firings fell within 12 bars of the previous same-symbol firing."""
+    if bars <= 0:
+        return fires
+    last: Dict[str, int] = {}
+    out = []
+    for f in sorted(fires, key=lambda x: (x["sym"], x["j"])):
+        k = last.get(f["sym"])
+        if k is None or f["j"] - k > bars:
+            out.append(f)
+            last[f["sym"]] = f["j"]
+    return out
+
+
 def rule_fn(rule: str):
     return (lambda f, s, i: float(f["side"])) if rule == "continuation" else (lambda f, s, i: -float(f["side"]))
 
 
 def run_family(mkt: Dict[str, gr.Series], family: str, window: Tuple[datetime, datetime], m: int = M_CELLS,
-               controls: bool = True) -> Dict[str, Any]:
+               controls: bool = True, decluster_bars: int = 0) -> Dict[str, Any]:
     if family not in FAMILIES:
         raise SystemExit(f"family must be one of {FAMILIES} (near_signal/calendar are recorded unscored: {UNSCORED})")
     with five_minute_engine():
-        fires = [f for s_ in SYMS for f in detect(mkt[s_])[family]]
+        raw = [f for s_ in SYMS for f in detect(mkt[s_])[family]]
+        fires = decluster(raw, decluster_bars)
         lo, hi = gr._epoch(window[0]), gr._epoch(window[1])
         inwin = sorted((f for f in fires if lo <= f["cutoff"] < hi), key=lambda f: (f["sym"], f["cutoff"]))
         overlap = sum(1 for a, b in zip(inwin, inwin[1:]) if a["sym"] == b["sym"] and b["j"] - a["j"] <= HORIZON)
@@ -291,6 +311,9 @@ def run_family(mkt: Dict[str, gr.Series], family: str, window: Tuple[datetime, d
                                "firings_detected": len(fires), "firings_in_window": len(inwin),
                                "firings_within_12_bars_of_previous_same_symbol": overlap, "m_cells": m,
                                "unscored_families": UNSCORED}
+        if decluster_bars > 0:
+            res["decluster_bars"] = decluster_bars
+            res["firings_dropped_by_decluster"] = len(raw) - len(fires)
         cells = {}
         for r in RULES:
             x = score_family(mkt, fires, window, side_of=rule_fn(r), m=m)
@@ -307,7 +330,7 @@ def run_family(mkt: Dict[str, gr.Series], family: str, window: Tuple[datetime, d
             res["controls_ok"] = bool(ctl["oracle"].get("clears")) and ((ctl["anti_oracle"].get("S3") or {}).get("mean") or 0) < 0 \
                 and not ctl["random_side"].get("clears")
         cut = int(np.median([f["cutoff"] for f in fires])) if fires else 0
-        pre = {s_: detect(mkt[s_], upto=cut)[family] for s_ in SYMS}
+        pre = {s_: decluster(detect(mkt[s_], upto=cut)[family], decluster_bars) for s_ in SYMS}
         res["no_lookahead_prefix_identical"] = all(
             [f for f in fires if f["sym"] == s_ and f["cutoff"] <= cut] == pre[s_] for s_ in SYMS)
     res["verdict"], res["verdict_reason"] = verdict(res)
@@ -431,6 +454,14 @@ def self_test() -> int:
         orc = score_family(mkt, fires, (lo, hi), side_of=lambda f_, s_, i: fwd_sign(s_, i), draws=30, m=1)
         anti = score_family(mkt, fires, (lo, hi), side_of=lambda f_, s_, i: -fwd_sign(s_, i), draws=30, m=1)
     assert orc["n"] > 20 and orc["S3"]["mean"] > 0 > anti["S3"]["mean"], (orc["S3"]["mean"], anti["S3"]["mean"])
+    # 3b. decluster: off is identity; on keeps the first of a planted cluster, is causal, and drops what it says
+    assert decluster(f["atr_burst"], 0) is f["atr_burst"]
+    planted = [{"sym": "X", "j": j} for j in (10, 12, 20, 23, 40)] + [{"sym": "Y", "j": 11}]
+    kept = decluster(planted, 12)
+    assert [(x["sym"], x["j"]) for x in kept] == [("X", 10), ("X", 23), ("X", 40), ("Y", 11)], kept
+    dc = decluster(f["atr_burst"], 12)
+    assert 0 < len(dc) <= len(f["atr_burst"])
+    assert [x for x in dc if x["cutoff"] <= cut] == decluster(pre["atr_burst"], 12), "decluster broke the no-lookahead prefix"
     # 4. holm: one tiny p clears, a large one does not
     fake = [{"family": "a", "cells": {"continuation": {"n": 200, "S3": {"p_one_sided": 1e-6, "mean": 0.2}},
                                       "fade": {"n": 200, "S3": {"p_one_sided": 0.4, "mean": 0.0}}}}]
@@ -453,6 +484,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--reader", default="desk_trigger_replay")
     ap.add_argument("--results", nargs="*", help="holm: per-family DEV result jsons")
     ap.add_argument("--fetch", action="store_true", help="run/holdout: fetch the 5m candles first (a runner starts with an empty cache)")
+    ap.add_argument("--decluster-bars", type=int, default=0,
+                    help="run: keep the first firing per symbol, then only firings > N bars after the last kept one (0 = off, the d7c3 behaviour)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -476,8 +509,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         res = run_holdout(root, a.family, Path(a.dev_result), a.unit, a.reader, None)
         name = f"trigger_replay_{a.family}_holdout.json"
     else:
-        res = run_family(load(root), a.family, DEV, m=a.m_cells)
-        name = f"trigger_replay_{a.family}_dev.json"
+        res = run_family(load(root), a.family, DEV, m=a.m_cells, decluster_bars=a.decluster_bars)
+        name = f"trigger_replay_{a.family}_dev{f'_dc{a.decluster_bars}' if a.decluster_bars > 0 else ''}.json"
     out.mkdir(parents=True, exist_ok=True)
     (out / name).write_text(json.dumps(res, indent=1, default=str))
     best = res.get("better_rule")
