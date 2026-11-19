@@ -1,0 +1,193 @@
+# Hand-authored 2026-11-18 by lane ML-PRIMARY-5 (Tier 1 research), dispatched by Manager Session 2026-11-15a (week plan
+# docs/plans/ml-week-plan-2026-11-19.md section 4 #5). Lean spec, one factor. Decision rule registered BEFORE any run.
+# Gates this adds or changes: none.
+id: RQ-20261118-aadc-13
+title: 'ml-exit-head-donchian-1h POPULATION WIDENING (4h legs): does the holding_pays_neg25 target, trained on the 1h BTC/ETH/SOL rows, beat the
+  holding_pays champion by +0.01 R/trade on the five live 4h donchian legs, each replayed with its own parameters?'
+status: blocked
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261117-aadc-12
+  verdict_read: pass
+  diagnosis: aadc-12 PASSED on five held-out 1h perps (+0.0160 R/trade, CI [+0.0063, +0.0256], n 18,649; vs hold +0.026), after the aadc-11 dev
+    pass. The retrain to neg25 for the three 1h legs is in flight under a data-backed manager GO. The head acts on no 4h leg today. The 4h donchian
+    legs include real-money legs (trend_donchian_eth_4h, _xrp_4h), so an exit head that pays on them is the larger prize. Whether a head trained
+    on 1h trade paths carries to 4h paths (bar-count features change meaning) is untested; a474-03 (a POOLED 4h head trained on 4h rows) failed,
+    which does not answer it.
+  search: 'none: arm (holding_pays_neg25), recipe, shape, folds, embargo and lookback fixed at aadc-12''s; only the TEST population changes (the
+    five 4h donchian legs on their own config parameters); every training row stays from the 1h corpus'
+  levers:
+  - universe
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#manifest.universe
+  attempt: 6
+  due_by: '2026-11-25'
+question: Same recipe as aadc-12, ONE ARM (holding_pays_neg25) vs the holding_pays champion, trained per fold on the 1h rows.jsonl rows (BTC/ETH/SOL),
+  tested on the 4h harness trades of trend_donchian_eth_4h, trend_donchian_sol_4h, trend_donchian_xrp_4h, trend_donchian_ada_4h and trend_donchian_avax_4h
+  (each on its own strategies.yaml parameters). Is the paired per-trade replayed R >= +0.01 with a CI lower bound > 0?
+why_this_matters: A pass is the evidence for a data-backed Tier-3 proposal to put the neg25 exit head on the 4h legs, two of them real money.
+  A fail keeps the head on the 1h demo legs and records that the 1h trade-path label does not carry across timeframes.
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.034
+  effect_units: r_multiple
+  sd: 0.535
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'sd MEASURED from aadc-11/12 (~0.535 R per trade on 1h). expected_n is an ESTIMATE: a 4h donchian leg trades roughly a quarter as often
+    as a 1h leg (~1,100 harness trades, ~900 out of sample over 5 folds), so five legs give a few thousand at most if every leg has 4h candles
+    on the trainer. At n 2,000 the z 1.96 half-width is ~0.023 R, so this unit is powered only for an effect near +0.03 R: a sub-bar positive
+    mean is INDETERMINATE, stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the trainer corpus (1h rows.jsonl) and trainer-resolved 4h candles; nothing accrues.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold
+    training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported
+    as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261118-aadc-13-EXITHEAD-NEG25-4H
+  registered_at: '2026-11-17'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py --timeframe 4h --arms holding_pays_neg25 --z 1.96 --pass-dr 0.01: pooled over the five
+    4h legs and 5 folds, per OOS trade d = replayed_r(neg25) - replayed_r(champion) on identical trades, replay and cost; mean, SE (one trade
+    = one cluster), CI at z 1.96. Reported: per-leg read_state, each arm vs hold, firing counts, rows_by_symbol.'
+  rule: PASS iff n_oos >= 1000 AND mean d >= +0.01 R/trade AND CI lower bound > 0. FAIL iff n_oos >= 1000 AND CI upper bound < +0.01. INDETERMINATE
+    otherwise (n below 1000, or between the bars). A leg without 4h candles is producer_failed for that leg only. Thresholds, legs, arm, folds
+    (5), embargo (7 d), lookback (500) and shape are not changed after any result.
+  pass_action: 'A data-backed Tier-3 PROPOSAL to the manager: an exit head for the 4h donchian legs (a 4h-scoped artifact of the neg25 recipe,
+    exit_head_model pinned per leg, exit_head_action close), demo legs first where the leg runs on both books; with this record.'
+  fail_action: 'The 1h trade-path label does not carry to 4h paths; record the universe lever (timeframe) as flat for this head and keep it on
+    the 1h legs. Next lever for 4h: a head trained on 4h rows with the neg25 label (a474-03 used the champion label).'
+  what_it_does_not_do: Edits no config, registry, artifact or exit_head_action; promotes and demotes nothing. A PASS is an offline result under
+    the head's own judge, then a confirmation, then a Tier-3 proposal. Places no order; adds no gate.
+  min_n: 1000 pooled OOS trades; per fold MIN_FOLD_TEST_N test trades and the multifold training floor
+practice_precedent: M1 (label what the decision is paid on; a trail-shaped label conflates the exit rule with the forecast), one-factor ablation
+  against a baseline control (docs/reference/trading-and-model-practice-principles.md)
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context
+      only: hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_neg25 (fixed by aadc-11)
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: one demo-floor leg acts on the head; the value is mainly the decision to retire or keep spending trainer time.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  why_runner: rows.jsonl (datasets-out/exit_head/1h/donchian/rows.jsonl) and the 1h candle resolver are trainer-resident; LightGBM is in the trainer
+    venv.
+  basis: 'MEASURED basis: aadc-12 (10 legs requested, 5 measured, n 18,649) ran ~15 min on the trainer; 5 4h legs with fewer trades are shorter.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 330
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+  - --timeframe
+  - 4h
+  - --legs
+  - trend_donchian_eth_4h:ETHUSDT,trend_donchian_sol_4h:SOLUSDT,trend_donchian_xrp_4h:XRPUSDT,trend_donchian_ada_4h:ADAUSDT,trend_donchian_avax_4h:AVAXUSDT
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --arms
+  - holding_pays_neg25
+  - --z
+  - '1.96'
+  - --pass-dr
+  - '0.01'
+  - --unit
+  - RQ-20261118-aadc-13
+  - --rule-id
+  - RULE-RQ20261118-aadc-13-EXITHEAD-NEG25-4H
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261118-aadc-13
+ml_consumer:
+  book: money
+  consumer: src/runtime/exit_head_apply.py
+  decision: whether the neg25 exit head is extended to the 4h donchian legs (eth_4h, xrp_4h on real money; sol_4h, ada_4h, avax_4h)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_ada_4h
+  - trend_donchian_avax_4h
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261117-aadc-12.yaml
+- research/queue/RQ-20261117-aadc-11.yaml
+- research/queue/RQ-20261117-aadc-04.yaml
+- research/queue/RQ-20261116-d5a7-06.yaml
+- research/queue/RQ-20261112-0bc8-02.yaml
+- research/queue/RQ-20261115-a474-03.yaml
+- scripts/research/volcomp_exit_head_bakeoff.py
+- scripts/ml/train_exit_head.py
+- scripts/ml/exit_head_replay.py
+amendments:
+- at: '2026-11-18'
+  before_any_run: false
+  by: lane ML-PRIMARY-7 (session_01AFoLuMjpeknPJNAUAQoFMN)
+  text:
+  - 'PRE-FIX HARNESS (PI-20261118-MANAYJZO-0001): the 2026-11-18T19:04Z dispatch ran before the exit-head replay predict_proba fix (#26911, deployed
+    20:10Z), so its row research/results/RQ-20261118-aadc-13/44376672320.jsonl (generated 19:38:31Z, PASS: holding_pays_neg25 - champion +0.0203
+    R/trade, deflated LB +0.0120) scored a P < 0.5 class-label policy, not the served P < 0.10 head, and is INVALIDATED as evidence about the
+    served head (ML-PRIMARY-6 graded it INVALID). RE-ARMED once after #26915 (the aadc-11/12 re-arm) merged, on the fixed replay; rule, arms,
+    folds, thresholds and cost stack unchanged. Counted as a new try in the holdout ledger if it reads held-out symbols.'
+- at: '2026-11-19'
+  before_any_run: false
+  by: lane ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)
+  text:
+  - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
+    its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
+    to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged. before_any_run is false
+    only because the 2026-11-18 pre-fix run (44376672320) exists and was already graded INVALID; no valid outcome of this unit has been read.'
+last_dispatched_at: '2026-11-18T19:38:31+00:00'
+rearmed_at: '2026-11-18T22:05:00+00:00'
+blocked_on:
+- what: 'The exit-head rows these units read (datasets-out/exit_head/1h/donchian/rows.jsonl) were built 2026-07-12 and the replay reads the trainer
+    data/<SYM>_1h.csv files frozen ~06-15/18 (AM-OPS-7; RQ-20261118-04a5-01 read n=0 trades after 2026-07-14). A run now would grade July data.
+    Needs #27214 deployed and the rows rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD, ML-PRIMARY
+    lane).'
+  ref: ML-EXITHEAD-ROWS-FRESH-REBUILD
+  kind: build
+  clears_when: data/<SYM>_1h.csv for every replayed symbol has a last bar within 3 days of the run AND datasets-out/exit_head/1h/donchian_fresh/rows.jsonl
+    exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the move commit); then git mv this file to research/queue/ and set
+    status queued (rule unchanged).
