@@ -27,14 +27,21 @@ timeframe: 5m              # the detectors' bars AND the triggered packet's time
 horizons: [3, 6, 12]       # the packet's base-rate horizons on that timeframe (12 x 5m = 1 h: the short-hold cap)
 candles: 120               # closed bars read per pass
 
+# LABEL-ONLY (wake: false): still detected and logged as labels, never wakes a desk session. Operator D8 2026-11-18
+# "Adopt it (Recommended)" (desk-entry-review-redesign § 6 Q4): these produced 0 propose_entry in 72 wakes (atr_burst 28,
+# liquidity_sweep 23, level_break 14, momentum_burst 7; design doc § 2). Re-admitted only by a passing trigger-replay
+# unit (row DESK-ENTRY-REVIEW-REDESIGN). REVERT: delete the `wake: false` lines.
 detectors:
   atr_burst:               # the last closed bar's range is a multiple of ATR14
     range_atr: 2.0
+    wake: false
   momentum_burst:          # net move over the last `bars` closed bars, in ATR14 (3 x 5m = 15m)
     bars: 3
     move_atr: 2.5
+    wake: false
   level_break:             # close beyond the high/low of the prior `lookback` bars (48 x 5m = 4 h) -> break;
-    lookback: 48           # a wick beyond it that closes back inside -> sweep
+    lookback: 48           # a wick beyond it that closes back inside -> sweep (both follow this block's wake flag)
+    wake: false
   near_signal: {}          # a strategy near-signal on the symbol in the newest hourly scan packet's system_book
   calendar:                # an economic-calendar event named in the newest hourly packet for the symbol
     minutes_before: 15
