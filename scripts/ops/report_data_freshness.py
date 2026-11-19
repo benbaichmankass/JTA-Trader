@@ -86,16 +86,21 @@ ALERT_COOLDOWN_S = 24 * 3600
 _STEM = {"MGC": "GC_F", "MHG": "HG_F", "MES": "ES_F", "SPYM": "SPLG"}
 
 
+def _strategies(repo: Path) -> dict:
+    """``strategies.yaml``'s ``strategies:`` map (raises on an unreadable file; the caller reports it)."""
+    import yaml  # noqa: PLC0415
+    return (yaml.safe_load((repo / "config" / "strategies.yaml").read_text()) or {}).get("strategies") or {}
+
+
 def rostered_symbols(repo: Path = REPO_ROOT) -> dict[str, set[str]] | None:
     """{symbol: {timeframes its rostered legs trade}} for every enabled leg on a configured account's roster;
     None = could not look. A symbol's 1d file is always watched too (HTF filters and daily harnesses read it)."""
     try:
-        import yaml  # noqa: PLC0415
         if str(repo) not in sys.path:
             sys.path.insert(0, str(repo))
-        from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415
+        from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415  (the canonical accounts.yaml reader)
         accounts = load_accounts_dict(repo / "config" / "accounts.yaml")
-        strategies = (yaml.safe_load((repo / "config" / "strategies.yaml").read_text()) or {}).get("strategies") or {}
+        strategies = _strategies(repo)
     except (ImportError, OSError, ValueError, AttributeError) as exc:
         print(json.dumps({"alert": "rostered_symbols_unreadable", "error": repr(exc)[:200]}))
         return None
