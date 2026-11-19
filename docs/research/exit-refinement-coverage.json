@@ -2012,7 +2012,15 @@
     "status": "honest_negative",
     "ref": "fleet sweep 2026-07-12 (runtime_logs/m20_fleet) — ALL 1d equities legs fail every lever — existing trails already capture the exit value || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || LEG RENAMED 2026-08-12: the row was keyed `scha_trend_1d`, a name `config/strategies.yaml` does NOT declare (it declares `scha_trend_long_1d`). Field beats comment — config is authoritative, so the row is re-keyed to match. This was not cosmetic: `m20-exit-lever-sweep`'s plan job resolves every leg against strategies.yaml and FAILS on an unknown name, so these 7 legs could not be swept AT ALL under the old key. That is the most likely reason their cells sat `pending`. Mapping verified on (symbol, tf), which matched exactly for all 7. || LIVE-PARITY COUNTER-EVIDENCE ALREADY IN THE CORPUS: cell trail5 = path_b_wf_pass, wf 4/6, base_trades_OOS=36 (IS=38), delta netR +4.2879 IS / +1.8743 OOS, delta maxDD -1.34 IS / +0.0583 OOS (slightly worse), OOS headroom +0.846. Run 2026-10-04 ~17:53Z (lane RESEARCH-RUN, unit RQ-20261004-774), live-parity TP 0.099, split_mode oos-trades. STATUS DELIBERATELY UNCHANGED: a passing CELL is not a passing LEVER disposition, this leg is LIVE, so any change is Tier-3 and the operator's. Not yet run: the exit-refinement live-parity check. Multiplicity caveat: about 77 cells were tried across five legs in this run and 6 cleared a gate. WALK-FORWARD COVERAGE CAVEAT: the folds start in 2021 but the OOS split is 2017-11-21, so OOS years 2017-2020 were never examined (tests/test_corpus_fold_coverage.py pins it). Sources: research/queue/RQ-20261004-774.yaml result note; docs/research/m20-sweep-corpus.jsonl.",
     "base_is": 38,
-    "base_oos": 36
+    "base_oos": 36,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20261004-774"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (SCHA_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-01"
+    }
    },
    "stale_stop": {
     "status": "honest_negative",
@@ -2049,7 +2057,15 @@
     "status": "honest_negative",
     "ref": "M20 vol_trail re-sweep 2026-08-13 (relay #8980, split-mode=oos-trades target=25, PR #8965 resolve_split) — MEASURED, all 3 cells is_oos_fail on a DERIVED boundary 2019-11-01 (lifetime 63, no fallback). Was blocked on 'OOS n=5 at the fixed split'; now graded and negative. || LIVE-PARITY COUNTER-EVIDENCE ALREADY IN THE CORPUS: cell vt_hot90_t2 = PASS, wf 6/6, base_trades_OOS=36 (IS=38), delta netR +1.569 IS / +1.71 OOS, delta maxDD -1.4705 IS / -0.2027 OOS. Run 2026-10-04 ~17:53Z (lane RESEARCH-RUN, unit RQ-20261004-774), live-parity TP 0.099, split_mode oos-trades. STATUS DELIBERATELY UNCHANGED: a passing CELL is not a passing LEVER disposition, this leg is LIVE, so any change is Tier-3 and the operator's. Not yet run: the exit-refinement live-parity check. Multiplicity caveat: about 77 cells were tried across five legs in this run and 6 cleared a gate. WALK-FORWARD COVERAGE CAVEAT: the folds start in 2021 but the OOS split is 2017-11-21, so OOS years 2017-2020 were never examined (tests/test_corpus_fold_coverage.py pins it). Sources: research/queue/RQ-20261004-774.yaml result note; docs/research/m20-sweep-corpus.jsonl. || LIVE-PARITY CHECK 2026-10-07 (lane EXIT-PARITY-CHECK): KILLED, no Tier-3 proposal. vt_hot90_t2 wf 6/6 is ALL INERT (wf_wins_effective 0/6, wf_inert_wins 6, every 2021-2026 fold d_net_r = d_max_dd = 0.0 exactly): the lever never changed a single exit in the six years the walk-forward covers, so the whole OOS +1.71R sits in 2017-2020, the years the folds never examined, and is not shown to fire in the live era. The unit is runnable (trend_donchian implements resolve_vol_trail_mult) but a lever with no demonstrated live-era firing is an orphaned declare in effect. Status honest_negative stands. Revive only if the sweep's FOLDS are extended back to cover 2017-2020 AND the lever fires in 2021+.",
     "base_is": 38,
-    "base_oos": 36
+    "base_oos": 36,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20261004-774"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (SCHA_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-01"
+    }
    },
    "bracket_geometry": {
     "status": "shipped",
@@ -2383,21 +2399,45 @@
    "trail_geometry": {
     "status": "honest_negative",
     "ref": "fleet sweep 2026-07-12 (runtime_logs/m20_fleet) — ALL 1d equities legs fail every lever — existing trails already capture the exit value || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || RE-MEASURED 2026-09-28 (RQ-20260928-006, m20-exit-lever-sweep run 36434140504, research/results/_unattributed/36434140504.jsonl PR #13653, split_mode oos-trades, tp_cap_pct 0.099, harness-default fee): 0 cells on this lever cleared the IS/OOS gate.",
-    "denominator_unstated": true
+    "denominator_unstated": true,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20260928-006"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (GDX_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-02"
+    }
    },
    "stale_stop": {
     "status": "honest_negative",
     "ref": "fleet sweep 2026-07-12 (runtime_logs/m20_fleet) — ALL 1d equities legs fail every lever — existing trails already capture the exit value || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || RE-SWEPT AT LIVE PARITY 2026-08-15 (run 2026-08-15T22:24:41Z, tp_cap_pct=0.099 APPLIED — `pullback` is in `m20_fleet_exit_sweep.LIVE_TP_CAPPED_FAMILIES`, and this row carries a MEASURED live-TP-reach distribution (median 1.856R over n=55 IS trades), which the sweep emits ONLY when the cap actually applies — so the geometry is declared from a measurement, not from the request). Cells: stale12_lt0R=is_oos_fail, stale8_lt0R=is_oos_fail. base n IS=55 OOS=32. Split **2022-12-06**, DERIVED per leg (split_mode=oos-trades, targeting 35 OOS trades) — NOT the 2025-07-01 boundary the pre-cutover evidence used, so this is a different partition of the same book and legs in this run do not share a cut. The re-sweep REPRODUCES the negative under the geometry production actually places — status unchanged, and that is the finding. || RE-MEASURED 2026-09-28 (RQ-20260928-006, m20-exit-lever-sweep run 36434140504, research/results/_unattributed/36434140504.jsonl PR #13653, split_mode oos-trades, tp_cap_pct 0.099, harness-default fee): 0 cells on this lever cleared the IS/OOS gate.",
     "tp_geometry": "live_parity",
     "base_is": 55,
-    "base_oos": 32
+    "base_oos": 32,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20260928-006"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (GDX_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-02"
+    }
    },
    "giveback_stop": {
     "status": "honest_negative",
     "ref": "fleet sweep 2026-07-12 (runtime_logs/m20_fleet) — ALL 1d equities legs fail every lever — existing trails already capture the exit value || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || RE-SWEPT AT LIVE PARITY 2026-08-15 (run 2026-08-15T22:24:41Z, tp_cap_pct=0.099 APPLIED — `pullback` is in `m20_fleet_exit_sweep.LIVE_TP_CAPPED_FAMILIES`, and this row carries a MEASURED live-TP-reach distribution (median 1.856R over n=55 IS trades), which the sweep emits ONLY when the cap actually applies — so the geometry is declared from a measurement, not from the request). Cells: gb1R_afterMFE1R=is_oos_fail, gb1R_afterMFE2R=is_oos_fail. base n IS=55 OOS=32. Split **2022-12-06**, DERIVED per leg (split_mode=oos-trades, targeting 35 OOS trades) — NOT the 2025-07-01 boundary the pre-cutover evidence used, so this is a different partition of the same book and legs in this run do not share a cut. The re-sweep REPRODUCES the negative under the geometry production actually places — status unchanged, and that is the finding. || RE-MEASURED 2026-09-28 (RQ-20260928-006, m20-exit-lever-sweep run 36434140504, research/results/_unattributed/36434140504.jsonl PR #13653, split_mode oos-trades, tp_cap_pct 0.099, harness-default fee): 0 cells on this lever cleared the IS/OOS gate.",
     "tp_geometry": "live_parity",
     "base_is": 55,
-    "base_oos": 32
+    "base_oos": 32,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20260928-006"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (GDX_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-02"
+    }
    },
    "exit_ladder": {
     "status": "honest_negative",
@@ -2414,7 +2454,15 @@
    "trail_decay": {
     "status": "honest_negative",
     "ref": "PASS: scha arm2R tight2 wf 6/6 (+stall10 4/6), slv stall6 tight2 5/6, iwm stall10 tight2 4/6, gld stall10 tight2 4/6, splg stall6 tight2 4/6, iaum stall10 tight2 4/6 — Tier-3 declares proposed in #6251. FAIL: spy (stall6 3/6 best), qqq, tqqq, qld, tlt_1d, ief, gdx. P4.1 fleet decay sweep (2026-07-12, m20_fleet_exit_sweep --levers trail_decay, trainer relay #6253; runtime_logs/m20_fleet_decay/2026-07-12). Cells: arm2R / stall6 / stall10 / arm1.5R+stall6, tight = max(1.5, base_trail/2). Gate: config-exact IS+OOS beat on net_R AND maxDD + yearly walk-forward >= 4/6. || P4.4 UPDATE: qqq p80 arm 3.56R PASS 5/6 (OOS thin, 3 trades); gld p80 arm 5.06R PASS 5/6 measured ON TOP of its declared stall10 (additive combo; OOS thin, 3 trades) — both proposed (batch 2). p80 skipped (<30 IS winners): scha, iaum, gdx. P4.4 p80 winner-MFE sweep (2026-07-13, m20_fleet_exit_sweep --p80-only, relay #6271/#6272; runtime_logs/m20_fleet_p80/2026-07-13). Arm = P80 of the leg's own IS-window winner-MFE; tight = base/2; same IS/OOS + wf gate. || RECONCILED 2026-07-14 (session_01SDLWbfLGV4WYHgC2ugzedf): the proposed declares MERGED (#6229 2026-07-12 / #6251 2026-07-13 / P4.4 batch-2 live @ c4b103b) and verified present in config/strategies.yaml — cell flipped passed_unshipped -> shipped. || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || RE-MEASURED 2026-09-28 (RQ-20260928-006, m20-exit-lever-sweep run 36434140504, research/results/_unattributed/36434140504.jsonl PR #13653, split_mode oos-trades, tp_cap_pct 0.099, harness-default fee): 0 cells on this lever cleared the IS/OOS gate.",
-    "denominator_unstated": true
+    "denominator_unstated": true,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20260928-006"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (GDX_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-02"
+    }
    },
    "regime_flip_exit": {
     "status": "honest_negative",
@@ -2425,7 +2473,15 @@
    "vol_trail": {
     "status": "passed_unshipped",
     "ref": "M20-X vol_trail #6510: gld/tlt/ief/slv/gdx/iaum pullback-1d all honest_negative; the 1d TREND legs (spy/qqq/tqqq/qld/iwm/splg/scha) are a separate trend-fleet vol_trail round (not in #6510's pullback sweep) || EXPLODED 2026-08-09 from bundled row 'equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; g' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || LIVE-PARITY COUNTER-EVIDENCE ALREADY IN THE CORPUS (run 2026-08-15T22:49:25Z, docs/research/m20-sweep-corpus.jsonl). Cell vt_hot90_t2 verdict=PASS wf=5/6 base_trades_OOS=32 (dnetR IS 1.3336 / OOS 0.9922; dmaxDD IS -0.2915 / OOS 0.0). THE STATUS IS DELIBERATELY NOT FLIPPED: a passing cell is not a passing lever disposition, and a live-leg status change is Tier-3 — queued for the operator, not decided here. CAVEATS, measured from the row rather than inferred: (1) THE WIN TOTAL IS NOT A COUNT OF WINS: 5 of 6 walk-forward folds (2021, 2022, 2023, 2024, 2026) are inert — the lever never fired, d_net_r=0 and d_max_dd=0 — and an inert fold still counts ok. So 5/6 is really 0 real win(s). (2) DIFFERENT PARTITION, NOT A RERUN: split 2022-12-06, derived per leg (split_mode=oos-trades) — the pre-cutover evidence this contradicts was cut elsewhere, so the two are different partitions of the same book. || RE-MEASURED 2026-09-28 (RQ-20260928-006, m20-exit-lever-sweep run 36434140504, research/results/_unattributed/36434140504.jsonl PR #13653, split_mode oos-trades, tp_cap_pct 0.099, harness-default fee): cell(s) vt_hot90_t2 cleared the IS/OOS gate; Tier-3 declare proposal pending (pipeline item), nothing shipped by RQ-RUN.",
-    "denominator_unstated": true
+    "denominator_unstated": true,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "RQ-20260928-006"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (GDX_1d); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-02"
+    }
    },
    "bracket_geometry": {
     "status": "honest_negative",
@@ -2915,7 +2971,15 @@
     "ref": "PATH A **PASS** on `trail3` — M20 trail_geometry sweep 2026-08-13 (PR #8849, run 31655901999), LIVE-PARITY geometry tp_cap_pct=0.099, split 2025-07-01, base n IS=197 OOS=27 (clears MIN_OOS_TRADES=25, so graded not thin). trail3 improves BOTH terms in BOTH windows: net_R +5.2853 IS / +3.0358 OOS, maxDD -3.0103 IS / -1.5484 OOS (negative = shallower drawdown). Sibling cell trail5 is is_oos_fail, so the pass is specific to trail3, not a direction-of-travel artifact. CONSISTENT WITH THE FLEET: trail3 already passed and shipped for TLT-1h (Tier-3 PR #6229, 2026-07-12) — same lever, same 1h equities/commodities family. AWAITING OPERATOR APPROVAL: this changes a live exit on a real-money leg (Tier-3); queued 2026-08-13, NOT enacted. || RE-SWEPT AT LIVE PARITY 2026-08-15 (run 2026-08-15T22:56:13Z, tp_cap_pct=0.099 APPLIED — the family is in `LIVE_TP_CAPPED_FAMILIES` AND this row carries a MEASURED live-TP-reach distribution (median 4.692R over n=190 IS trades), which the sweep emits ONLY when the cap actually applies — so the geometry is declared from a measurement, not the request). Cells: trail3=PASS, trail5=is_oos_fail. base n IS=190 OOS=34. Split **2025-04-22**, DERIVED per leg (split_mode=oos-trades, targeting 35 OOS) — a different partition from the pre-cutover evidence, not a rerun. ⚠️ DOES NOT REPRODUCE THE NEGATIVE on trail3 — see the counter-evidence segment on this cell; status unchanged because a passing cell is not a passing lever disposition (Tier-3).",
     "tp_geometry": "live_parity",
     "base_is": 197,
-    "base_oos": 27
+    "base_oos": 27,
+    "stale_basis": {
+     "since": "2026-11-19",
+     "cites": [
+      "31655901999"
+     ],
+     "why": "the cited run read a FROZEN trainer data file (USO_1h); its sample ends months before the run (TRAINER-1D-STALE-ROSTERED)",
+     "rerun": "RQ-20261119-a7f1-03"
+    }
    },
    "stale_stop": {
     "status": "honest_negative",
@@ -4166,6 +4230,10 @@
    {
     "id": "BL-20260912-TP-GEOMETRY-HAS-NO-VALUE-FOR-A-FAMILY-THE-LIVE-CLAMP-DOES-NOT-APPLY-TO",
     "why": "READ EVERY ict_scalp CELL'S ABSENT tp_geometry AS A FOURTH CONDITION, NOT AS A GAP. The legend offers exactly two values - `live_parity` (measured WITH the live TP clamp) and `no_take_profit` (measured on a book with NO take-profit) - and NEITHER is true of ict_scalp: m20_fleet_exit_sweep.py applies --tp-cap-pct only to LIVE_TP_CAPPED_FAMILIES (donchian, pullback, fade, squeeze) and ict_scalp is not in that set, while these legs plainly DO carry a take-profit (`tp_at_r`, the parameter MI-278 swept). So an ict_scalp cell is permanently unstampable and its absence is a COMPLETE answer with nowhere to be written, not 'nobody looked'. This conditions the tp_geometry column across every ict_scalp row here, and it BOUNDS BL-20260814-TP-GEOMETRY-RECORDED-ON-2-PERCENT-OF-CELLS-SO-ABSENCE-CANNOT-MEAN-ANYTHING: part of that 98% can never be closed by stamping work."
+   },
+   {
+    "id": "TRAINER-1D-STALE-ROSTERED",
+    "why": "CELL-LEVEL, marked per cell as `stale_basis`. Cells for gdx_pullback_1d, scha_trend_long_1d, splg_trend_long_1d and uso_trend_1h cite M20 runs that read trainer data/<SYM>_1d.csv (GDX frozen 2026-07-10, SCHA 07-07, SPLG 07-02) or data/USO_1h.csv (frozen 06-18), so their OOS spans end at the freeze, months before the run. A stale_basis cell's status (incl. GDX vol_trail and USO trail_geometry passed_unshipped) may not feed a Tier-3 proposal until its re-run unit (RQ-20261119-a7f1-01/02/03) lands on current data. Fix: #27214. Measured 2026-11-19 (trainer-vm-diag 44470111874; blast-radius audit over ~210 artifacts)."
    }
   ],
   "reviewed_not_conditioning": [
