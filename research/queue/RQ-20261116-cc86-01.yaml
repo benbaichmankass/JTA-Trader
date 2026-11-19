@@ -6,7 +6,7 @@
 id: RQ-20261116-cc86-01
 title: 'Beagle-1 CHALLENGER (EV-thresholded reduce) vs the LIVE baseline (shipped overlay_td.json, bottom-20% reduce): does
   cutting only entries with negative predicted net R beat the live baseline on the same TD trades, cost stack and holdouts?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -164,19 +164,16 @@ ml_consumer:
   book: money
 last_dispatched_at: '2026-11-19T02:07:32+00:00'
 grading:
-  attested: RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV
-  auto: true
-  awaiting: more_data
-  decision_rule_id: RULE-RQ20261116-cc86-01-BEAGLE1-CHALLENGER-EV
+  auto: false
+  decision_rule_id: RULE-ML-OVERLAY-NONINFERIOR-V2
   evidence:
-  - research/results/RQ-20261116-cc86-01/43849787455.jsonl
-  graded_at: '2026-11-16'
-  grader: scripts/research/queue_grade.py
-  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
-    NOT a kill'
-  reason: 1 row(s), all measured, all indeterminate
+  - research/results/RQ-20261116-cc86-01/44434324980.jsonl
+  - comms/research/RQ-20261116-cc86-01/44434324980/verdict.json
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7), HELD for the manager
+  reason: 'NOT A WIN by the registered rule (re-run on the 04a5-06 re-pinned reference corpus; graded as FAIL = not a win). (4) baseline sha256 matches the registered one (26a55f1ab050...), and holdout A has n 541 >= 300, so not INDETERMINATE. (1) holdout A (spot 2017-09-01..2020-06-23, eth_prop 379 / eth_4h 130 / xrp_4h 32; sol_prop harness_failed: no pre-2020-09 SOL candles): delta_ch_vs_base mean +0.0241 R, lb95 +0.0053, but deflated LB -0.0002, NOT > 0 -> fails. (2) holdout B (perp 2019-12..2020-06, n 95): delta mean -0.0321 R, direction disagrees -> fails. (3) maxdd ch 10.72 vs base 11.29 x1.10, cvar5 -1.0846 vs -1.0852 -0.05 -> holds. Routing: ITERATION INPUT; Beagle-1 keeps trading unchanged; no swap is proposed. Diagnosis: the EV threshold disagrees with Beagle-1 on only 8.7% (A) / 7.4% (B) of trades, so a small edge on A sits inside the deflation and flips sign on B''s 95 trades; the threshold lever is close to exhausted on this feature set (aadc-03 above reaches the same place via the target). The first run''s grading (INDETERMINATE on parity) is superseded by this one.'
   rows: 1
-  verdict: indeterminate
+  verdict: fail
 amendments:
 - at: '2026-11-19'
   before_any_run: false
