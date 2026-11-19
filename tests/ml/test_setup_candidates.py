@@ -1072,3 +1072,37 @@ def test_signal_meta_risk_refuses_absent_or_nonpositive():
     assert _signal_meta_risk('{"entry_price": 100.0, "stop_loss": 100.0}') is None
     assert _signal_meta_risk('{"sl_distance": -1}') is None
     assert _signal_meta_risk({"entry_price": 100.0, "stop_loss": 97.5}) == 2.5
+
+
+def test_package_meta_joins_by_linked_trade_id_when_order_package_id_is_null(tmp_path: Path):
+    """The vwap book links trade -> package only through order_packages.linked_trade_id
+    (trades.order_package_id NULL); the loader must still read that package's meta."""
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "link.db"
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        "CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT, direction TEXT, "
+        "timestamp TEXT, status TEXT, pnl REAL, pnl_percent REAL, "
+        "entry_price REAL, stop_loss REAL, position_size REAL, "
+        "is_backtest INT, is_demo INT, order_package_id TEXT)"
+    )
+    conn.execute("CREATE TABLE order_packages (order_package_id TEXT PRIMARY KEY, symbol TEXT, "
+                 "created_at TEXT, linked_trade_id INTEGER, meta TEXT)")
+    ts = (base + timedelta(hours=50)).isoformat()
+    conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 (7, "BTCUSDT", "buy", ts, "closed", 12.0, 0.12, 100.0, 99.5, 3.0, 0, 0, None))
+    # a package for ANOTHER symbol with the same linked id must not be read
+    conn.execute("INSERT INTO order_packages VALUES (?,?,?,?,?)",
+                 ("x", "ETHUSDT", "2025-12-31T00:00:00", 7, '{"entry_price": 100.0, "stop_loss": 90.0}'))
+    conn.execute("INSERT INTO order_packages VALUES (?,?,?,?,?)",
+                 ("v", "BTCUSDT", "2026-01-03T01:00:00", 7, '{"entry_price": 100.0, "stop_loss": 98.0}'))
+    conn.commit()
+    conn.close()
+    live = [r for r in SetupCandidatesBuilder().iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8, cusum_threshold_mult=0.5,
+        live_trades_db=db, live_r_basis="initial_only") if r["is_live_trade"]]
+    assert len(live) == 1
+    assert live[0]["r_multiple_source"] == "initial_risk_signal"
+    assert math.isclose(live[0]["r_multiple"], 2.0, rel_tol=1e-9)

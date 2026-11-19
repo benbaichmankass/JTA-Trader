@@ -289,11 +289,31 @@ def _load_live_trades(
                 "AND name='order_packages'").fetchone())
         except sqlite3.OperationalError:
             has_pkg = False
-        if has_pkg and "order_package_id" in have:
+        # The package can be linked from EITHER side: `trades.order_package_id`
+        # or `order_packages.linked_trade_id` (the vwap book, 2026-05, carries
+        # only the second -- relay #27384). The id link is tried first; the
+        # reverse link is the fallback, the earliest package for that trade on
+        # the same symbol.
+        pkg_cols: set[str] = set()
+        if has_pkg:
+            try:
+                pkg_cols = {r[1] for r in conn.execute("PRAGMA table_info(order_packages)")}
+            except sqlite3.OperationalError:
+                pkg_cols = set()
+        by_id = ("(SELECT p.meta FROM order_packages p "
+                 "WHERE p.order_package_id = trades.order_package_id)"
+                 if has_pkg and "order_package_id" in have else None)
+        by_link = None
+        if has_pkg and "linked_trade_id" in pkg_cols and "id" in have:
+            sym_pred = " AND p.symbol = trades.symbol" if "symbol" in pkg_cols else ""
+            order = " ORDER BY p.created_at" if "created_at" in pkg_cols else ""
+            by_link = ("(SELECT p.meta FROM order_packages p "
+                       f"WHERE p.linked_trade_id = trades.id{sym_pred}{order} LIMIT 1)")
+        parts = [x for x in (by_id, by_link) if x]
+        if parts:
             select_cols.append(
-                "(SELECT p.meta FROM order_packages p "
-                "WHERE p.order_package_id = trades.order_package_id) "
-                "AS package_meta")
+                (parts[0] if len(parts) == 1 else f"COALESCE({', '.join(parts)})")
+                + " AS package_meta")
         # account_class-authoritative real filter (mirrors build_research_panel.py):
         # a row is real only if account_class isn't 'paper' AND is_demo is 0.
         # Guarded on column presence so an old-schema journal (no account_class)
