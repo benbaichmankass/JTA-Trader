@@ -254,3 +254,49 @@ def test_every_killed_row_states_a_reason_and_what_supersedes_it():
     assert doc["killed"]
     for k in doc["killed"]:
         assert k["review_id"].startswith("LR-") and len(k["reason"]) > 40 and k["superseded_by"].startswith("LR-")
+
+
+# ── LTR-GRADE-APPLIED (2026-11-19): a dispatchable row the schema refuses is still graded ─────────────────────────────
+REAL_REFUSED = json.loads((ROOT / "tests/fixtures/ltr_refused_applied_row_20261105.json").read_text())
+
+
+def test_the_real_applied_close_the_schema_refuses_goes_to_the_sidecar_not_reviews(tmp_path):
+    """LR-20261105T0402Z-pkg-bba44210885c4180: route recommended, mechanics match, action close (APPLIED on bybit_1,
+    trade 6789 closed live_review_close) but refused for an old forecast shape and a level-less trigger."""
+    line = json.dumps(REAL_REFUSED, separators=(",", ":"))
+    assert lrm.dispatchable(REAL_REFUSED)
+    assert rules.row_problems(REAL_REFUSED, "reviews", json.loads(rules.SCHEMA.read_text()))
+    res = lrm.mirror(tmp_path, branch([line, row("LR-20261026T1200Z-pkg-D", False, False)], {}))
+    assert res["review_ids"] == ["LR-20261026T1200Z-pkg-D"]
+    assert res["refused_dispatchable"] == [REAL_REFUSED["review_id"]]
+    assert "written to" in res["skipped"][0]["why"]
+    side = [json.loads(x) for x in (tmp_path / lrm.REFUSED_DISPATCHABLE).read_text().splitlines()]
+    assert [s["review_id"] for s in side] == [REAL_REFUSED["review_id"]] and side[0]["schema_problems"]
+    assert REAL_REFUSED["review_id"] not in (tmp_path / lrm.REVIEWS).read_text()
+    again = lrm.mirror(tmp_path, branch([line], {}))  # idempotent by review_id
+    assert again["refused_dispatchable"] == [] and len((tmp_path / lrm.REFUSED_DISPATCHABLE).read_text().splitlines()) == 1
+
+
+def test_a_refused_non_dispatchable_row_is_only_skipped(tmp_path):
+    hold = dict(REAL_REFUSED, recommendation={**REAL_REFUSED["recommendation"], "action": "hold"})
+    not_routed = dict(REAL_REFUSED, disposition={**REAL_REFUSED["disposition"], "route": "operator_ask"})
+    mismatch = dict(REAL_REFUSED, mechanics={**REAL_REFUSED["mechanics"], "verdict": "mismatch"})
+    for r in (hold, not_routed, mismatch):
+        assert not lrm.dispatchable(r)
+        res = lrm.mirror(tmp_path, branch([json.dumps(r)], {}))
+        assert res["refused_dispatchable"] == [] and res["skipped"]
+    assert not (tmp_path / lrm.REFUSED_DISPATCHABLE).exists()
+
+
+def test_the_records_guard_accepts_an_outcome_for_a_sidecar_review(tmp_path):
+    lr = tmp_path / "comms/live_review"
+    lr.mkdir(parents=True)
+    (lr / "reviews.jsonl").write_text("")
+    (lr / "reviews_refused_dispatchable.jsonl").write_text(json.dumps(REAL_REFUSED) + "\n")
+    outcome = {"review_id": REAL_REFUSED["review_id"]}
+    (lr / "outcomes.jsonl").write_text(json.dumps(outcome) + "\n")
+    f = rules.findings(reviews=lr / "reviews.jsonl", outcomes=lr / "outcomes.jsonl")
+    assert not any("has no row in reviews" in x for x in f), f
+    (lr / "reviews_refused_dispatchable.jsonl").unlink()
+    f = rules.findings(reviews=lr / "reviews.jsonl", outcomes=lr / "outcomes.jsonl")
+    assert any("has no row in reviews" in x for x in f)  # control: without the sidecar it is still flagged

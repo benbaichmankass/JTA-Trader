@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Grading/read path only (mirror sidecar + grader + records-guard cross-ref). No trader restart (decide: SKIP). Manager asked for a HELD PR (2026-11-19 06:08Z, drain 2c). Revert: git revert.",
+  "why": "An APPLIED live-review row can be refused by main's schema and then never graded (pkg-bba44210885c4180, trade 6789, 14 d). Dispatchable rows the schema refuses now go to comms/live_review/reviews_refused_dispatchable.jsonl with schema_problems, and the graders price them. Gates this adds or changes: none (the records guard only gains accepted ids)."
+}

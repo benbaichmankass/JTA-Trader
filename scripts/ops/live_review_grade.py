@@ -368,8 +368,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     reviews = cf.read_jsonl(Path(a.reviews))
     if a.since:
         reviews = [r for r in reviews if r["reviewed_at"] >= a.since]
-    packages, trades = cf.load_live_sources(reviews)
+    side = [] if a.since else cf.read_refused_dispatchable(skip_ids=[r.get("review_id") for r in reviews])
+    packages, trades = cf.load_live_sources(reviews + side)
     results = cf.price_all(reviews, packages, trades, cf.fetch_candles_live)
+    # LTR-GRADE-APPLIED: dispatchable rows main's schema refused are priced too (outcomes only, contained per row).
+    results += cf.price_contained(side, packages, trades, cf.fetch_candles_live)
     if a.write_outcomes:
         print(f"outcomes appended: {cf.append_outcomes(results)}", file=sys.stderr)
     g = grade(reviews, results)

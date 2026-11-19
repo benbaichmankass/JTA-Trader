@@ -57,6 +57,13 @@ if str(ROOT) not in sys.path:
 import check_live_review_records as rules  # noqa: E402
 from src.runtime import live_review_rows as rows_lib  # noqa: E402
 REVIEWS = "comms/live_review/reviews.jsonl"
+#: LTR-GRADE-APPLIED (2026-11-19): a row the VM may have APPLIED (dispatchable: route recommended/auto_applied, mechanics
+#: match, an altering action) that fails main's schema is still a trade action that must be graded. It is NOT appended to
+#: reviews.jsonl (main's schema-valid record) but to this sidecar, with its ``schema_problems``, so the grader prices it.
+#: Measured case: LR-20261105T0402Z-pkg-bba44210885c4180 (applied close, trade 6789) was refused here and sat ungraded 14 d.
+REFUSED_DISPATCHABLE = "comms/live_review/reviews_refused_dispatchable.jsonl"
+DISPATCHABLE_ROUTES = ("recommended", "auto_applied")
+NON_ALTERING_ACTIONS = ("hold", "no_recommendation", None)
 #: how many earlier versions of the branch's legacy reviews.jsonl the shrink check compares against
 HISTORY_DEPTH = 20
 PACKETS = "comms/live_review/packets"
@@ -160,6 +167,18 @@ def _branch_lines(read_rows: Callable[[str], Optional[bytes]], row_files: List[s
     return legacy + [(r["review_id"], json.dumps(r, separators=(",", ":"), ensure_ascii=False)) for r in extra]
 
 
+def dispatchable(row: object) -> bool:
+    """True when the VM's dispatcher could have applied this row: a dispatchable route, mechanics match, an action
+    that changes the trade. Mirrors live_review_dispatch's route/mechanics clauses (read, not imported: the mirror
+    runs on a bare checkout)."""
+    if not isinstance(row, dict):
+        return False
+    route = (row.get("disposition") or {}).get("route") if isinstance(row.get("disposition"), dict) else None
+    verdict = (row.get("mechanics") or {}).get("verdict") if isinstance(row.get("mechanics"), dict) else None
+    action = (row.get("recommendation") or {}).get("action") if isinstance(row.get("recommendation"), dict) else None
+    return route in DISPATCHABLE_ROUTES and verdict == "match" and action not in NON_ALTERING_ACTIONS
+
+
 def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
            row_files: Optional[List[str]] = None, history: Optional[List[bytes]] = None,
            history_unreadable: bool = False) -> Dict[str, object]:
@@ -178,6 +197,10 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
     schema = json.loads(rules.SCHEMA.read_text())
     killed = load_killed(root)
     killed_seen: List[Dict[str, object]] = []
+    side_path = root / REFUSED_DISPATCHABLE
+    side_text = side_path.read_text() if side_path.exists() else ""
+    side_have = {rid for rid, _ in _ids(side_text) if rid}
+    side_lines: List[str] = []
     for rid, line in branch:
         if not rid:
             skipped.append({"review_id": None, "why": "row without a review_id / not JSON"})
@@ -190,7 +213,13 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
         row = json.loads(line)
         bad = rules.row_problems(row, "reviews", schema) if isinstance(row, dict) else ["row is not an object"]
         if bad:
-            skipped.append({"review_id": rid, "why": "schema: " + "; ".join(bad)})
+            if dispatchable(row) and rid not in side_have:
+                side_have.add(rid)
+                side_lines.append(json.dumps({**row, "schema_problems": bad}, separators=(",", ":"), ensure_ascii=False))
+                skipped.append({"review_id": rid, "why": "schema: " + "; ".join(bad)
+                                + f" (dispatchable: written to {REFUSED_DISPATCHABLE} for grading)"})
+            else:
+                skipped.append({"review_id": rid, "why": "schema: " + "; ".join(bad)})
             continue
         want: Dict[str, bytes] = {}
         why = None
@@ -225,8 +254,13 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
         sep = "" if (not main_text or main_text.endswith("\n")) else "\n"
         main_path.parent.mkdir(parents=True, exist_ok=True)
         main_path.write_text(main_text + sep + "\n".join(new_lines) + "\n")
+    if side_lines:
+        sep = "" if (not side_text or side_text.endswith("\n")) else "\n"
+        side_path.parent.mkdir(parents=True, exist_ok=True)
+        side_path.write_text(side_text + sep + "\n".join(side_lines) + "\n")
     return {"state": "ok", "mirrored": len(new_lines), "files": sorted(files),
-            "review_ids": [json.loads(x)["review_id"] for x in new_lines], "skipped": skipped, "killed": killed_seen}
+            "review_ids": [json.loads(x)["review_id"] for x in new_lines], "skipped": skipped, "killed": killed_seen,
+            "refused_dispatchable": [json.loads(x)["review_id"] for x in side_lines]}
 
 
 def load_killed(root: Path) -> Dict[str, str]:
