@@ -26,7 +26,9 @@ def test_the_record_it_reproduces_is_the_committed_one():
 def test_the_unit_runs_this_script_with_the_same_window():
     import yaml
     repo = Path(__file__).resolve().parents[1]
-    u = yaml.safe_load((repo / "research" / "queue" / "blocked" / "RQ-20261119-f1a7-01.yaml").read_text())
+    path = next(q for q in (repo / "research" / "queue" / "RQ-20261119-f1a7-01.yaml",
+                            repo / "research" / "queue" / "blocked" / "RQ-20261119-f1a7-01.yaml") if q.exists())
+    u = yaml.safe_load(path.read_text())
     assert u["run"]["command"][:3] == ["python3", "scripts/research/forming_arm_validation.py", "run"]
     assert u["kind"] == "deterministic" and u["decision_rule"]["registered_before_run"] is True
     text = u["decision_rule"]["statistic"]
