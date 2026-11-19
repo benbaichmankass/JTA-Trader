@@ -302,3 +302,35 @@ def test_predicates_match_the_guard_messages():
     assert cb.new_row_failure("Z", {"title": BAD_CLAIM}, "p") == \
         cb.check_new_rows("{}", json.dumps({"items": [{"id": "Z", "title": BAD_CLAIM}]}), "p")[0]
     assert cb.new_row_failure("Z", {"title": GOOD_CLAIM}, "p") is None
+
+
+# ── the workflow's post-export validation failure: ONE filing, deduplicated ───────────────
+
+
+def test_validation_failure_files_once(api):
+    r1 = work_cli.file_validation_failure(["pipeline-guard"], "FAIL: x", [], today=date(2026, 11, 20))
+    assert r1["filed"] == "EXPORT-VALIDATION-20261120" and len(api) == 1
+    body = api[0][2]
+    assert body["title"].startswith("EXPORT VALIDATION FAILED [2026-11-20]")
+    assert "pipeline-guard" in body["title"] and "FAIL: x" in body["title"]
+    assert body["kind"] == "observation" and body["origin"]["by"] == "work-export"
+    open_one = {**body, "state": "queued"}
+    r2 = work_cli.file_validation_failure(["pytest"], "y", [open_one], today=date(2026, 11, 21))
+    assert r2["skipped_open"] is True and len(api) == 1                    # an open one exists: none filed
+    closed = {**body, "state": "done"}
+    assert work_cli.file_validation_failure(["pytest"], "y", [closed], today=date(2026, 11, 21))["filed"]
+
+
+def test_validation_filing_passes_the_guard_row_checks(tmp_path, api):
+    root = _root(tmp_path, PAST)
+    work_cli.file_validation_failure(["claim-basis-guard"], "42.9% of rows broke", [], today=date(2026, 11, 20))
+    item = {**api[0][2], "state": "queued", "updated_at": NOW}
+    out = work_cli.export_to_files(root, [item])
+    assert out["held"] == [] and out["records_written"] == 1
+
+
+def test_validation_failure_never_raises(monkeypatch):
+    def down(*a, **k):
+        raise work_cli.Unreachable("store not reached: test")
+    monkeypatch.setattr(work_cli, "http", down)
+    assert work_cli.file_validation_failure(["x"], "", [])["error"]

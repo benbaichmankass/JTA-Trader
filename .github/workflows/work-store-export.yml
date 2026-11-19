@@ -24,8 +24,18 @@
 # diff-scoped checks, identified through docs/claude/work/EXPORT-STAMPS.json (store updated_at + sha256
 # of every file the last export wrote; a hand-edited file is never exempt).
 #
+# VALIDATE BEFORE LANDING -- IT MUST NEVER PUSH RED TO MAIN. After the export writes files and BEFORE
+# anything is committed or pushed, the exported tree is committed LOCALLY (never pushed), and these run
+# against it exactly as CI runs them (scripts/ci/run_guards.py, WORK_READ_SOURCE=export, origin/main as
+# the base): roadmap-map-guard, soak-contract-guard, claim-basis-guard, checklist-readers-guard,
+# pipeline-guard; plus `pytest -q tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py`.
+# If ANY fails: NOTHING is committed or pushed that run, ONE observation "EXPORT VALIDATION FAILED
+# [<date>] ..." is filed (failing checks + log tail; not again while an open one exists), and the run
+# exits 0 -- no red run, no halt; the next scheduled run retries. This enforces the existing
+# never-merge-red rule; adds no gate.
+#
 # NO HALTING: a failed run (store unreachable, PR not merged) goes red -- the ONE flag -- and the next
-# day's run tries again from the current main.
+# day's run tries again from the current main. A failed VALIDATION is not a red run (above).
 name: work-store-export
 
 on:
@@ -56,9 +66,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
-      - name: Install deps
-        run: pip install -q pyyaml
+      - name: Install runtime + test dependencies (as pytest-run.yml does)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          pip install -r requirements-dev.txt
 
       - name: Export the work store into the files (pre-checked)
         id: export
@@ -74,7 +89,58 @@ jobs:
           cat summary.txt
           { echo "### work-store-export"; echo; echo '```'; cat summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate the exported tree (guards + tests) BEFORE anything is committed or pushed
+        id: validate
+        env:
+          WORK_READ_SOURCE: export   # as CI's guard harness reads the files, never the live store
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}   # only for the one failure filing
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -uo pipefail   # no -e: a failing check is recorded, never a red run
+          PATHS="docs/claude/work/checklist docs/claude/work/pipeline docs/claude/work/EXPORT-STAMPS.json"
+          if [ -z "$(git status --porcelain -- $PATHS)" ]; then
+            echo "nothing exported changed -- nothing to validate or land"
+            echo "land=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # origin/main = the commit this run exported onto, so the diff-scoped guards see exactly the export.
+          git fetch -q --no-tags --depth=1 origin "+${GITHUB_SHA}:refs/remotes/origin/main"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- $PATHS
+          git commit -qm "work-store export (LOCAL validation commit, never pushed)"
+          LOG="${RUNNER_TEMP:-/tmp}/validate.log"; DIFF="${RUNNER_TEMP:-/tmp}/export.diff"
+          git diff origin/main...HEAD > "$DIFF"
+          GUARDS="roadmap-map-guard soak-contract-guard claim-basis-guard checklist-readers-guard pipeline-guard"
+          checks=()
+          only=(); for g in $GUARDS; do only+=(--only "$g"); done
+          # --all: run the named guards whatever relevance says (--only alone exits 1 on a skipped guard).
+          if ! python3 scripts/ci/run_guards.py --all --base-ref main --event-name pull_request --pr-diff "$DIFF" "${only[@]}" \
+              > "$LOG" 2>&1; then
+            for g in $GUARDS; do grep -q -- "--- $g: PASS" "$LOG" || checks+=(--check "$g"); done
+            [ ${#checks[@]} -gt 0 ] || checks+=(--check run_guards)
+          fi
+          if ! python3 -m pytest -q tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py \
+              >> "$LOG" 2>&1; then
+            checks+=(--check "pytest tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py")
+          fi
+          # Back to uncommitted: commit-to-main stages and commits the same paths itself.
+          git reset -q --soft HEAD~1
+          tail -60 "$LOG"
+          if [ ${#checks[@]} -gt 0 ]; then
+            echo "::warning::export validation FAILED (${checks[*]}): NOTHING is committed or pushed this run; the next run retries."
+            { echo; echo "**Validation FAILED -- nothing landed:** ${checks[*]}"; } >> "$GITHUB_STEP_SUMMARY"
+            python3 scripts/ops/work.py export-validation-failed --log "$LOG" "${checks[@]}" \
+              --run-ref "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              || echo "::warning::filing the validation failure did not complete (printed above)"
+            echo "land=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "validation passed"
+            echo "land=true" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+
       - name: Land the changed export files (self-landing Tier-1 data PR)
+        if: steps.validate.outputs.land == 'true'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}

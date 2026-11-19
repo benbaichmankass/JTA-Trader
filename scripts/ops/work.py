@@ -514,6 +514,47 @@ def file_holds(held: list[dict], items: list[dict], *, run_ref: str = "", today=
     return out
 
 
+VALIDATION_PREFIX = "EXPORT VALIDATION FAILED ["
+
+
+def file_validation_failure(checks: list[str], log_tail: str, items: list[dict], *, run_ref: str = "",
+                            today=None) -> dict:
+    """The workflow's post-export validation (guards + tests on the exported tree) failed, so that run
+    committed NOTHING. File ONE observation titled ``EXPORT VALIDATION FAILED [<date>] ...`` naming the
+    failing checks and a log tail -- unless an open one with that prefix already exists (whatever its
+    date). Best-effort like ``file_holds``: never raises."""
+    from datetime import timedelta
+    today = today or datetime.now(timezone.utc).date()
+    if any(i.get("kind") == "observation" and i.get("state") not in ("done", "dropped")
+           and str(i.get("title") or "").startswith(VALIDATION_PREFIX) for i in items):
+        return {"filed": None, "skipped_open": True, "error": None}
+    due = (today + timedelta(days=2)).isoformat()
+    oid = f"EXPORT-VALIDATION-{today.strftime('%Y%m%d')}"
+    tail = (log_tail or "").strip()[-2000:]
+    what = (f"{VALIDATION_PREFIX}{today.isoformat()}] the work-store export was NOT landed: validation of "
+            f"the exported tree failed from the work-store export of {today.isoformat()} -- failing: "
+            f"{', '.join(checks) or 'unknown'}. Log tail: {tail}")
+    body = {
+        "id": oid, "kind": "observation", "title": what, "owner": "manager", "roadmap": ["unmapped"],
+        "roadmap_unmapped_reason": "export hygiene: the daily work-store export failed its own validation "
+                                   "and landed nothing; the fix is in the failing check or the store data",
+        "due_rule": {"kind": "date", "due_date": due}, "next_action": "check_observation",
+        "origin": {"kind": "audit", "by": HOLD_BY,
+                   "ref": f".github/workflows/work-store-export.yml {run_ref}".strip(),
+                   "rerun": "dispatch .github/workflows/work-store-export.yml (or run scripts/ops/work.py "
+                            "export --to-files then the guards/tests it lists); it lands once validation passes"},
+        "extra": {"observation": {"what": "a work-store-export run validates clean and lands its PR",
+                                  "how_to_check": "the latest work-store-export run summary shows validation passed",
+                                  "due_by": due}},
+    }
+    try:
+        res = apply_direct(make_op("create", oid, body, HOLD_BY, f"work-export:validation:{oid}"))
+        return {"filed": oid, "skipped_open": False, "error": None, "replayed": res.get("replayed", False)}
+    except Exception as exc:  # noqa: BLE001 -- best-effort: a failed filing is printed, never raised
+        print(f"work-export: filing the validation failure FAILED: {exc}", file=sys.stderr)
+        return {"filed": None, "skipped_open": False, "error": str(exc)}
+
+
 def export_summary(out: dict) -> str:
     """One human line per count, for the workflow log / step summary."""
     f = out.get("filing") or {}
@@ -639,6 +680,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="write every differing item, skipping the guards' row checks (the byte-exact rollback)")
     pe.add_argument("--no-file", action="store_true", help="do not file observations for held-back items")
     pe.add_argument("--run-ref", default=None, help="who ran the export (e.g. a workflow run url), for filings")
+    pv = sub.add_parser("export-validation-failed",
+                        help="(workflow) file ONE 'EXPORT VALIDATION FAILED' observation, deduplicated")
+    pv.add_argument("--check", action="append", default=[], help="a failing check name, repeatable")
+    pv.add_argument("--log", default=None, help="a log file; its tail goes into the filing")
+    pv.add_argument("--run-ref", default=None)
     for sp in (pa, ps, pn, pc, pr, po):
         sp.add_argument("--by")
         sp.add_argument("--op-id")
@@ -677,6 +723,21 @@ def main(argv: list[str] | None = None) -> int:
             if out["held"] and not a.no_file:
                 out["filing"] = file_holds(out["held"], items, run_ref=a.run_ref or "")
             print(export_summary(out), file=sys.stderr)
+        elif a.cmd == "export-validation-failed":
+            tail = ""
+            if a.log:
+                try:
+                    with open(a.log, encoding="utf-8", errors="replace") as fh:
+                        tail = fh.read()[-4000:]
+                except OSError as exc:
+                    tail = f"(log unreadable: {exc})"
+            try:
+                items = _all_items(None)
+            except WorkError as exc:  # cannot dedup without the listing: say so, do not file blind
+                print(f"work-export: cannot list the store to dedup, NOT filing: {exc}", file=sys.stderr)
+                items = None
+            out = (file_validation_failure(a.check, tail, items, run_ref=a.run_ref or "")
+                   if items is not None else {"filed": None, "error": "store listing failed"})
         elif a.cmd == "drain":
             if not a.issue:
                 raise WorkError("drain needs --issue (or WORK_STORE_OUTBOX_ISSUE)")
