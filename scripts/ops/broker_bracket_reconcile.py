@@ -66,6 +66,11 @@ decision-time geometry: the level must be READ from ``trades.take_profit_1``,
 never invented. So a position whose trade declares NO target is reported as
 ``target_absent_undeclared`` -- an INFO state, not a finding. Imposing a target
 on a strategy that never chose one is a Tier-3 strategy question, not a repair.
+Re-arm the DECLARED target; never invent one (BRACKETS-ALWAYS item 4, manager
+2026-11-19): when the trade DOES declare ``take_profit_1`` and no target rests,
+the equity sweep (``order_monitor._alpaca_restore_declared_target``) restores
+exactly that declared level beside the resting stop, on a cooldown; an
+undeclared target stays report-only here.
 This mirrors the rule already applied by
 ``order_monitor._check_broker_naked_ib_positions``.
 
