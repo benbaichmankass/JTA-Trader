@@ -287,6 +287,15 @@ def cancel_stale_legs(account_id: str, symbol: str, *, apply: bool) -> Dict[str,
         out["detail"] = decision["reason"]
         return out
 
+    # BRACKETS-ALWAYS (2026-11-19): REPORTED, never a refusal. The stop side refuses an under-covering cancel
+    # (decide_stale_legs); the target side only warns, so an operator sees a TP-naked result before applying it.
+    target_warning = ""
+    if decision.get("target_undercover_after_cancel"):
+        target_warning = (f" WARNING: after this cancel the OPEN rows' own take-profit legs cover "
+                          f"{decision.get('target_qty_kept')} of a {size} position, so the position would be "
+                          "TP-NAKED (BRACKETS-ALWAYS); re-arm the open rows' TP first.")
+        out["target_warning"] = target_warning.strip()
+
     if not apply:
         out["action"] = "dry_run"
         out["ok"] = True
@@ -294,7 +303,7 @@ def cancel_stale_legs(account_id: str, symbol: str, *, apply: bool) -> Dict[str,
                          f"rows for {symbol} on {account_id}, keeping "
                          f"{len(decision['keep_legs'])} leg(s) owned by OPEN rows "
                          f"({decision['stop_qty_kept']} of stop against a {size} position). "
-                         "Re-run with --apply to execute.")
+                         "Re-run with --apply to execute." + target_warning)
         return out
 
     cancel_results = []
@@ -317,6 +326,8 @@ def cancel_stale_legs(account_id: str, symbol: str, *, apply: bool) -> Dict[str,
                          "tp": [_summarize(o) for o in after_tp]}
 
     n_failed = sum(1 for r in cancel_results if not r.get("ok"))
+    if after_sl and not after_tp:
+        out["target_naked_after"] = True   # reported: the position kept its stop but holds no take-profit leg
     if not after_sl:
         out["action"] = "cancel_left_naked"
         out["ok"] = False
@@ -332,7 +343,9 @@ def cancel_stale_legs(account_id: str, symbol: str, *, apply: bool) -> Dict[str,
         out["action"] = "cancelled"
         out["ok"] = True
         out["detail"] = (f"cancelled {len(stale)} stale leg(s); {len(after_sl)} SL leg(s) + "
-                         f"{len(after_tp)} TP leg(s) remain live for {symbol} on {account_id}.")
+                         f"{len(after_tp)} TP leg(s) remain live for {symbol} on {account_id}."
+                         + (" WARNING: ZERO TP legs remain, so the position is TP-naked (BRACKETS-ALWAYS)."
+                            if not after_tp else ""))
     return out
 
 
