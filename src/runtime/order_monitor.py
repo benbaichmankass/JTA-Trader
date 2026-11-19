@@ -4254,6 +4254,56 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
+def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
+    """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
+
+    PI-20261118-JFWRQYOV-0004 (root cause). A flat position read says nothing about an
+    entry order that has not filled yet: an Alpaca bracket sent outside the regular
+    session is ACCEPTED and QUEUED until the open, so the symbol reads flat for hours
+    while the order is alive. Closing the row then frees the strategy-monocle gate, the
+    same signal re-fires, and every queued order fills at the open into one netted
+    position (alpaca_paper QQQ: journal 2 vs venue 1981 = 1182 + 735 + 55 + 7 + 2;
+    alpaca_portfolio SLV: 6 vs 877). #26862 held only the snapshot path, and only on a
+    POSITIVE "still pending"; an unreadable order read still closed the row, and the
+    stuck-strategy watchdog (30 min, flat x2) had no check at all.
+
+    Keyed on the entry order's venue state, for every flat-close path:
+
+      * ``"pending"``    - the venue says the order is still working -> hold.
+      * ``"unreadable"`` - the integration CAN answer but this read failed -> hold
+                           ("could not look" is never "gone"); retried next pass.
+      * ``None``         - proceed with the caller's own flat logic: no real entry
+                           order id (``rejected-*`` / ``dry-*`` / missing), an
+                           integration that cannot answer (IB, OANDA, Bybit - the
+                           Bybit forward reconciler keys on order status already),
+                           or the order is terminal / unknown to the venue (404).
+
+    Never raises: an exception is treated as ``"unreadable"`` on a supported account.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return None
+    try:
+        from src.units.accounts.clients import (
+            account_entry_order_pending,
+            supports_entry_order_state,
+        )
+        if not supports_entry_order_state(cfg):
+            return None
+    except Exception:  # noqa: BLE001 — import/cfg shape problem: cannot answer
+        return None
+    try:
+        state = account_entry_order_pending(cfg, oid)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_order_hold: order %s read raised: %s", oid, exc)
+        state = None
+    if state is True:
+        return "pending"
+    if state is None:
+        return "unreadable"
+    return None
+
+
 def _reverify_reset_suspect_row(
     db, r, *, state: Dict[str, Any], aid: str, cfg: Any, sym: str,
     canonical: str, exchange_positions: set, now_dt: datetime, now_iso: str,
@@ -4311,6 +4361,18 @@ def _reverify_reset_suspect_row(
                 summary.get("snapshot_reset_suspect", 0) + 1
             )
             return "suspect"
+    # PI-20261118-JFWRQYOV-0004: an entry order still working (or unreadable) means
+    # this flat read is not evidence of a close. Break the streak, keep the row open.
+    _entry_oid = r["broker_order_id"] if "broker_order_id" in r.keys() else None
+    _hold = _entry_order_hold(cfg, _entry_oid)
+    if _hold is not None:
+        _reset_suspect_break_streak(state)
+        _reset_suspect_bump(tid_int, state, f"entry_order_{_hold}",
+                            failed=(_hold == "unreadable"))
+        summary["snapshot_reset_suspect"] = (
+            summary.get("snapshot_reset_suspect", 0) + 1
+        )
+        return "suspect"
     last_flat = state.get("last_flat_at")
     if (
         last_flat is not None
@@ -4579,7 +4641,6 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         return summary
 
     from src.units.accounts.clients import (
-        account_entry_order_pending,
         account_open_positions,
         account_position_present,
         account_supports_management,
@@ -5006,25 +5067,27 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 # re-fired every ~7 min (SLV x7 on alpaca_portfolio, QQQ x4 on
                 # alpaca_paper), every queued order filling at the open. Where the
                 # integration can say so, an entry order that is still working is NOT
-                # flat. ``None`` (cannot tell) keeps the prior behaviour; only a
-                # positive "still pending" holds the row open.
+                # flat. 2026-11-19 (AM-OPS-7): an UNREADABLE order read also holds
+                # ("could not look" is never "gone"); see _entry_order_hold.
                 _entry_oid = (
                     r["broker_order_id"] if "broker_order_id" in r.keys() else None
                 )
-                if _entry_oid and not str(_entry_oid).startswith("rejected-"):
-                    if account_entry_order_pending(cfg, str(_entry_oid)) is True:
-                        summary["snapshot_order_pending"] = (
-                            summary.get("snapshot_order_pending", 0) + 1
-                        )
-                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
-                        logger.info(
-                            "_reconcile_orphan_exchange_positions: NOT closing "
-                            "trade_id=%s account=%s symbol=%s side=%s — flat at the "
-                            "venue but its entry order %s is still pending (queued "
-                            "for the open / not yet filled).",
-                            tid_int, aid, sym, canonical, _entry_oid,
-                        )
-                        continue
+                _hold = _entry_order_hold(cfg, _entry_oid)
+                if _hold is not None:
+                    _hold_key = (
+                        "snapshot_order_pending" if _hold == "pending"
+                        else "snapshot_order_unreadable"
+                    )
+                    summary[_hold_key] = summary.get(_hold_key, 0) + 1
+                    _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                    logger.info(
+                        "_reconcile_orphan_exchange_positions: NOT closing "
+                        "trade_id=%s account=%s symbol=%s side=%s — flat at the "
+                        "venue but its entry order %s is %s (queued for the open "
+                        "/ not yet filled, or its state could not be read).",
+                        tid_int, aid, sym, canonical, _entry_oid, _hold,
+                    )
+                    continue
                 # Defer the close: collect it and decide reset-vs-single AFTER
                 # the whole account's open_rows are scanned (below).
                 _snapshot_to_close.append((r, tid_int, sym, canonical))
@@ -7488,7 +7551,8 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                 db_conn.row_factory = __import__("sqlite3").Row
                 trade_row = db_conn.execute(
                     "SELECT id, status, notes, account_id, symbol, "
-                    "       direction, position_size, entry_price, created_at "
+                    "       direction, position_size, entry_price, created_at, "
+                    "       broker_order_id "
                     "FROM trades WHERE id=?",
                     (trade_id,),
                 ).fetchone()
@@ -7604,6 +7668,31 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
             # to let a stale package linger one more cycle than to
             # force-clear blind on an exchange we can't see.
             summary["skipped_position_read_failed"] += 1
+            continue
+
+        # PI-20261118-JFWRQYOV-0004: flat at the venue is not "closed" while the
+        # row's ENTRY ORDER is still working. An Alpaca bracket placed after the
+        # close (alpaca_paper QQQ 7712: sent 21:01Z, filled 14:34Z next day) sits
+        # queued for hours with no package update, so this 30-min watchdog was the
+        # next path to close it once the snapshot reconciler held it (#26862).
+        # Pending or unreadable -> defer, and restart the flat confirm.
+        _wd_hold = _entry_order_hold(
+            cfg,
+            trade_row["broker_order_id"]
+            if trade_row is not None and "broker_order_id" in trade_row.keys()
+            else None,
+        )
+        if _wd_hold is not None:
+            if trade_id is not None:
+                _PENDING_WATCHDOG_FLAT_CONFIRM.pop(int(trade_id), None)
+            _wd_key = f"deferred_entry_order_{_wd_hold}"
+            summary[_wd_key] = summary.get(_wd_key, 0) + 1
+            logger.info(
+                "_watchdog_stuck_strategies: %s/%s/%s reads flat but entry order "
+                "%s is %s — not finalizing (trade_id=%s)",
+                aid, symbol, direction, trade_row["broker_order_id"], _wd_hold,
+                trade_id,
+            )
             continue
 
         # Position reads flat at the exchange. BUT a SINGLE flat read is not
@@ -10967,6 +11056,105 @@ def _alpaca_protect_after_target_cancel(db, client, account_id: str, symbol: str
     return "unprotected"
 
 
+#: BRACKETS-ALWAYS item 4 (manager pick B, 2026-11-19): restore the row's DECLARED target beside a resting stop.
+_ALPACA_TP_RESTORE: Dict[Tuple[str, str, Any], Dict[str, Any]] = {}
+_ALPACA_TP_RESTORE_COOLDOWN_S = 900.0     # >= 15 min between attempts (manager)
+_ALPACA_TP_RESTORE_MAX_ATTEMPTS = 4       # capped; one red flag when exhausted, the target-naked page keeps firing
+#: A refusal about the PRICE relation (TP/SL vs the market or each other) is not transient: re-sending the same levels
+#: cannot succeed, so it is reported with its reason and not retried until the row's declared TP changes.
+_PRICE_REFUSAL_MARKERS = ("limit_price", "stop_price", "must be greater", "must be less", "must be higher",
+                          "must be lower", "invalid price", "price must", "sub-penny", "take_profit", "stop_loss")
+
+
+def _alpaca_restore_declared_target(db, client, account_id: str, symbol: str, row, rows: list,
+                                    now: Optional[float] = None) -> str:
+    """Re-arm the row's DECLARED target beside its resting stop; never invent one (BRACKETS-ALWAYS item 4).
+
+    The documented rule is "a target is decision-time geometry a repair must READ rather than invent": this reads
+    ``trades.take_profit_1`` (the field active management and live review write) and restores exactly that level.
+    Scope: ONE open row on the symbol, ONE resting plain (``simple``) stop sized to the position; anything else is
+    ``not_restorable`` and stays alert-only. Sequence: cancel the stop CONFIRMED -> OCO at the row's stop and TP ->
+    immediate stop-only fallback if the OCO is refused (never longer unprotected than that). Retry: transient
+    refusals only, on a >= 15-min cooldown, capped; a price-relation refusal is reported and not retried.
+    Returns the outcome; the caller's target-naked page keeps firing until the target rests.
+    """
+    now = time.monotonic() if now is None else now
+    tid = row["id"]
+    key = (account_id, symbol.upper(), tid)
+    tp = _safe_float(row["take_profit_1"])
+    sl = _safe_float(row["stop_loss"])
+    if not tp or tp <= 0 or not sl or sl <= 0:
+        return "undeclared"
+    st = _ALPACA_TP_RESTORE.get(key) or {}
+    if st.get("price_refused_tp") == tp:
+        return "price_refused"                      # reported once; waits for a new declared TP
+    if st and now < float(st.get("next_at") or 0):
+        return "cooldown"
+    if int(st.get("attempts") or 0) >= _ALPACA_TP_RESTORE_MAX_ATTEMPTS:
+        if not st.get("flagged"):
+            st["flagged"] = True
+            _ALPACA_TP_RESTORE[key] = st
+            _page_rearm_refusal("target_restore_exhausted", account_id, symbol, tid,
+                                f"{st.get('attempts')} attempts to re-arm the declared TP {tp} failed "
+                                f"(last: {st.get('last_reason')}); the stop rests, the target does not")
+        return "exhausted"
+    same = [r for r in rows if str(r["account_id"] or "") == account_id
+            and str(r["symbol"] or "").upper() == symbol.upper()]
+    if len(same) != 1:
+        return "not_restorable"
+    legs = client._open_orders_for_symbol(symbol)
+    if legs is None:
+        return "unread"
+    stops = [o for o in legs if "stop" in str(o.get("type") or o.get("order_type") or "").lower()]
+    if len(stops) != 1 or str(stops[0].get("order_class") or "simple").lower() not in ("simple", ""):
+        return "not_restorable"
+    stop = stops[0]
+    try:
+        qty = int(math.floor(float(stop.get("qty")) + 1e-9))
+    except (TypeError, ValueError):
+        return "not_restorable"
+    if qty < 1:
+        return "not_restorable"
+    side = str(row["direction"] or "")
+    cancel = client.cancel_order_confirmed(stop.get("id"))
+    if cancel.get("state") == "filled":
+        _ALPACA_TP_RESTORE.pop(key, None)
+        return "stop_filled"
+    if cancel.get("state") != "canceled":
+        st.update(attempts=int(st.get("attempts") or 0) + 1, next_at=now + _ALPACA_TP_RESTORE_COOLDOWN_S,
+                  last_reason=f"stop cancel {cancel.get('state')}")
+        _ALPACA_TP_RESTORE[key] = st
+        return "cancel_unconfirmed"                 # the stop may still rest: nothing else this attempt
+    oco = client.place_protective({"symbol": symbol, "direction": side, "qty": qty, "sl": sl, "tp": tp,
+                                   "additive": True, "oca_key": str(tid), "account_id": account_id})
+    if oco and oco.get("retCode") == 0:
+        _ALPACA_TP_RESTORE.pop(key, None)
+        _alpaca_partial_tp_log({"step": "restore_declared_tp", "account_id": account_id, "symbol": symbol,
+                                "trade_id": tid, "outcome": "oco_placed", "qty": qty, "sl": sl, "tp": tp})
+        return "restored"
+    reason = str((oco or {}).get("retMsg") or "no response")
+    fb = client.place_stop_only(symbol, side, qty, sl)
+    fb_ok = bool(fb and fb.get("retCode") == 0)
+    _alpaca_partial_tp_log({"step": "restore_declared_tp", "account_id": account_id, "symbol": symbol,
+                            "trade_id": tid, "outcome": "oco_refused", "ret_msg": reason,
+                            "fallback_stop": "placed" if fb_ok else "refused", "qty": qty, "sl": sl, "tp": tp})
+    if not fb_ok:
+        _page_rearm_refusal("target_restore_unprotected", account_id, symbol, tid,
+                            f"the stop was cancelled to re-arm the declared TP, the OCO was refused ({reason}) "
+                            f"and the stop fallback was refused too: {qty} share(s) have NO STOP until the naked "
+                            "sweep re-arms them", no_cooldown=True)
+    if any(m in reason.lower() for m in _PRICE_REFUSAL_MARKERS):
+        _ALPACA_TP_RESTORE[key] = {"price_refused_tp": tp, "last_reason": reason}
+        _page_rearm_refusal("target_restore_price_refused", account_id, symbol, tid,
+                            f"the venue refused the declared TP {tp} on price ({reason}); not retried until the "
+                            "row's TP changes", verb="price_refused")
+        return "price_refused"
+    st.update(attempts=int(st.get("attempts") or 0) + 1, next_at=now + _ALPACA_TP_RESTORE_COOLDOWN_S,
+              last_reason=reason)
+    _ALPACA_TP_RESTORE[key] = st
+    return "oco_refused_transient"
+
+
 def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row,
                                    rows: list, side: str, sl: Optional[float],
                                    tp: Optional[float]) -> str:
@@ -11795,10 +11983,11 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                 )
             elif state.get("target") is False and row["take_profit_1"] not in (None, 0):
                 # TARGET-naked while the journal DECLARES a take-profit. Alert,
-                # do NOT re-arm: a missing stop is a safety gap worth closing
-                # blind, but a target is decision-time geometry a repair must
-                # read rather than invent, and placing one is an order the
-                # strategy did not ask for at this instant. Same split the IB
+                # and re-arm the DECLARED target; never invent one (BRACKETS-ALWAYS
+                # item 4, manager pick B 2026-11-19): a target is decision-time
+                # geometry a repair must READ (trades.take_profit_1) rather than
+                # invent, so _alpaca_restore_declared_target restores exactly that
+                # level beside the resting stop, on a cooldown, and nothing else. Same split the IB
                 # sweep makes; the repair wire is the `attach-ib-target`
                 # action's Alpaca analogue, not this sweep.
                 summary["target_naked"] += 1
@@ -11821,6 +12010,14 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     trade_id=row["id"],
                     venue="alpaca",
                 )
+                # BRACKETS-ALWAYS item 4 (manager pick B): re-arm the DECLARED target; never invent one.
+                if state.get("stop"):
+                    try:
+                        _rt = _alpaca_restore_declared_target(db, client, account_id, symbol, row, rows)
+                        summary[f"target_restore_{_rt}"] = summary.get(f"target_restore_{_rt}", 0) + 1
+                    except Exception as _rexc:  # noqa: BLE001 -- the restore never breaks the sweep
+                        logger.warning("target restore failed for %s/%s trade %s: %s",
+                                       account_id, symbol, row["id"], _rexc)
             if state.get("stop"):
                 # A confirmed resting stop refills this row's re-arm budget
                 # (REVIEW-14241 item 4).
