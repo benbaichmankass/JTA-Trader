@@ -170,6 +170,10 @@ DECLARED_LIGHT = {
         "TM-BENCH trade-management bench: fits LightGBM / logit action-value heads on harness paths replayed from "
         "public Binance Vision candles in a lane container or a GitHub runner. Its queue units declare compute "
         "cpu_long (backend github_runner), never needs_vm_data, so it is never routed to the 6 GB trainer.",
+    "scripts/research/exit_holdbias.py":
+        "ML-HOLDBIAS-EXIT-MODEL exit-holdbias-v1 harness (RQ-20261101-78fc-05): fits 13 LightGBM value heads x 6 "
+        "folds on the committed action-grid labels (~118k check-ins) on a GitHub runner (research-script-run.yml, "
+        "compute cpu_long, needs_trainer_resident_data false); never needs_vm_data, never routed to the trainer.",
     "scripts/ml/export_exit_head.py":
         "reads a trained model and writes an artifact; fits nothing. Its heavy "
         "work happens inside train_exit_head.py, which locks.",
