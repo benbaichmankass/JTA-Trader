@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T13:55:00Z",
- "bar_close": "2026-11-19T14:00:00Z",
- "built_at": "2026-11-19T14:01:30Z",
+ "bar": "2026-11-19T14:00:00Z",
+ "bar_close": "2026-11-19T14:05:00Z",
+ "built_at": "2026-11-19T14:06:28Z",
  "closed": false,
  "order_package_id": "pkg-2b1d7f5ebfa5445d",
  "packet": {
@@ -139,21 +139,21 @@
     "forecast": {
      "direction": "with_trade",
      "evidence": [
-      "chart.swings highs 0.1544/0.1552, lows 0.1496/0.148",
-      "chart.htf ADX 33.5 swings high 0.1565",
-      "exit_plan sl_now 0.1562 tp_now 0.151",
-      "book other ADA shorts"
+      "previous_review.forecast carried (target 0.1510, invalidation 0.1552)",
+      "chart.since_entry high 0.1548 (0.6 ATR) < 0.1552",
+      "chart.swings highs 0.1544 / 0.1552, lows 0.1496",
+      "regime.trend_now chop adx 13.3; chart.htf 4h ADX 32"
      ],
      "horizon_bars": 8,
      "invalidation_px": 0.1552,
-     "p_target": 0.4,
+     "p_target": 0.35,
      "target_px": 0.151,
-     "thesis": "ADA rally of six 1h bars stalls under the 0.1544-0.1552 swing highs and the short resumes toward the 0.1510 TP; a 1h close above 0.1552 proves the fade wrong.",
+     "thesis": "ADA short from 0.1539 stalls under the 0.1544-0.1552 swing highs; the fade toward the 0.1510 TP resumes while price stays under 0.1552. Carried forward unchanged from the previous review.",
      "timeframe": "1h"
     },
-    "reason": "No priced table (no Stage-0 evidence for claude_desk) and no telemetry, so judgement. Short from 0.1539 sits near 0 R at 0.1540; price rallied six 1h bars from 0.1503 but stays under the 0.1544/0.1552 swing highs and the stop 0.1562 is 1.4 ATR above, below the 2h swing high 0.1565. The TP 0.151 is 1.26 R away and the 1h trend is chop (ADX 13) against a 2h ADX 33, so the view is a fade of the rall\u2026",
-    "review_id": "LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d",
-    "reviewed_at": "2026-11-19T09:40:00Z",
+    "reason": "Hand-off CONFIRM against LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d. Its forecast (target 0.1510, invalidation 0.1552, p 0.40) neither hit nor failed: price 0.1539 is flat, the high since entry 0.1548 stayed under 0.1552 and 0.1510 was not reached, inside its 8-bar horizon. Carried forward, p lowered 0.40 to 0.35 for the 3 bars of drift. No priced table and no open_r, so judgement. Stop 0.1562 is 1.5\u2026",
+    "review_id": "LR-20261119T1229Z-pkg-2b1d7f5ebfa5445d",
+    "reviewed_at": "2026-11-19T14:03:00Z",
     "route": null
    },
    "symbol": "ADAUSDT"
@@ -164,13 +164,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     -0.0047
+     0.0049
     ],
     [
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.573
+     -0.58
     ],
     [
      "SLV",
@@ -188,7 +188,7 @@
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     -0.0989
+     -0.164
     ],
     [
      "SLV",
@@ -218,13 +218,13 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.261
+     0.203
     ],
     [
      "SOLUSDT",
      "long",
      "ict_scalp_sol_15m",
-     1.24
+     1.25
     ],
     [
      "TLT",
@@ -242,13 +242,13 @@
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.725
+     -0.706
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     -0.924
+     -0.908
     ],
     [
      "SLV",
@@ -260,13 +260,13 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     1.47
+     1.45
     ],
     [
      "ADAUSDT",
      "short",
      "ada_pullback_2h",
-     -0.404
+     -0.362
     ],
     [
      "SLV",
@@ -278,7 +278,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.0409
+     0.0353
     ],
     [
      "XRPUSDT",
@@ -320,7 +320,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.0353
+     0.0297
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -648,7 +648,7 @@
    "basis": null
   },
   "desk_handoff": {
-   "chain_length": 1,
+   "chain_length": 2,
    "chain_tail": [
     {
      "action": "hold",
@@ -663,6 +663,21 @@
      "reason": "No priced table (no Stage-0 evidence for claude_desk) and no telemetry, so judgement. Short from 0.1539 sits near 0 R at 0.1540; price rallied six 1h bars from 0.1503 but stays under the 0.1544/0.1552 swing highs and the stop 0.1562 is 1.4 ATR above, below the 2h swing high 0.1565. The TP 0.151 is 1.26 R away and the 1h trend is chop (ADX 13) against a 2h ADX 33, so the view is a fade of the rally that has not failed or confirmed. HOLD already runs the desk bracket; no bracket move beats it.",
      "review_id": "LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d",
      "reviewed_at": "2026-11-19T09:40:00Z",
+     "verdict": "confirm"
+    },
+    {
+     "action": "hold",
+     "forecast": {
+      "direction": "with_trade",
+      "horizon_bars": 8,
+      "invalidation_px": 0.1552,
+      "p_target": 0.35,
+      "target_px": 0.151,
+      "timeframe": "1h"
+     },
+     "reason": "Hand-off CONFIRM against LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d. Its forecast (target 0.1510, invalidation 0.1552, p 0.40) neither hit nor failed: price 0.1539 is flat, the high since entry 0.1548 stayed under 0.1552 and 0.1510 was not reached, inside its 8-bar horizon. Carried forward, p lowered 0.40 to 0.35 for the 3 bars of drift. No priced table and no open_r, so judgement. Stop 0.1562 is 1.5 ATR above; HOLD already runs the plan.",
+     "review_id": "LR-20261119T1229Z-pkg-2b1d7f5ebfa5445d",
+     "reviewed_at": "2026-11-19T14:03:00Z",
      "verdict": "confirm"
     }
    ],
@@ -694,7 +709,7 @@
     "timeframe": "1h",
     "tp": 0.151
    },
-   "prior_decision_id": "LR-20261119T0922Z-pkg-2b1d7f5ebfa5445d",
+   "prior_decision_id": "LR-20261119T1229Z-pkg-2b1d7f5ebfa5445d",
    "protocol": "DESK-HANDOFF-PROTOCOL",
    "read_state": "read"
   },
@@ -708,10 +723,10 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "5f161fb550",
+   "head": "da2923e319",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T14:01:42Z",
+  "info_cutoff_at": "2026-11-19T14:06:41Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: ADAUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-677720b13ee54dc3); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
@@ -782,25 +797,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261119T1401Z-pkg-2b1d7f5ebfa5445d",
+  "review_id": "LR-20261119T1406Z-pkg-2b1d7f5ebfa5445d",
   "short_hold": {
-   "atr": 0.0004142857142857182,
-   "bar": "2026-11-19T13:55:00Z",
-   "bar_close": "2026-11-19T14:00:00Z",
+   "atr": 0.00042857142857143294,
+   "bar": "2026-11-19T14:00:00Z",
+   "bar_close": "2026-11-19T14:05:00Z",
    "entry": 0.1539,
-   "mark": 0.1556,
-   "minutes_held": 352.3,
-   "open_r_at_mark": -0.7391,
+   "mark": 0.1554,
+   "minutes_held": 357.2,
+   "open_r_at_mark": -0.6522,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 0.1545,
-     "high": 0.155,
-     "low": 0.1545,
-     "open": 0.1548,
-     "t": "2026-11-19T13:00:00Z"
-    },
     {
      "close": 0.1552,
      "high": 0.1556,
@@ -877,6 +885,13 @@
      "low": 0.1554,
      "open": 0.1554,
      "t": "2026-11-19T13:55:00Z"
+    },
+    {
+     "close": 0.1554,
+     "high": 0.1557,
+     "low": 0.1553,
+     "open": 0.1556,
+     "t": "2026-11-19T14:00:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -895,25 +910,18 @@
    "tp": 0.151
   }
  },
- "packet_sha": "ad64c5be8bc1ff03e99c922a40d4275434d780b5982c39d59a9326afc794d36c",
+ "packet_sha": "38ed791c45f544ec3a066223cbb2e40b4b05316d1a5ccee171c7266051f48ce0",
  "short_hold": {
-  "atr": 0.0004142857142857182,
-  "bar": "2026-11-19T13:55:00Z",
-  "bar_close": "2026-11-19T14:00:00Z",
+  "atr": 0.00042857142857143294,
+  "bar": "2026-11-19T14:00:00Z",
+  "bar_close": "2026-11-19T14:05:00Z",
   "entry": 0.1539,
-  "mark": 0.1556,
-  "minutes_held": 352.3,
-  "open_r_at_mark": -0.7391,
+  "mark": 0.1554,
+  "minutes_held": 357.2,
+  "open_r_at_mark": -0.6522,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 0.1545,
-    "high": 0.155,
-    "low": 0.1545,
-    "open": 0.1548,
-    "t": "2026-11-19T13:00:00Z"
-   },
    {
     "close": 0.1552,
     "high": 0.1556,
@@ -990,6 +998,13 @@
     "low": 0.1554,
     "open": 0.1554,
     "t": "2026-11-19T13:55:00Z"
+   },
+   {
+    "close": 0.1554,
+    "high": 0.1557,
+    "low": 0.1553,
+    "open": 0.1556,
+    "t": "2026-11-19T14:00:00Z"
    }
   ],
   "risk_per_unit": null,
