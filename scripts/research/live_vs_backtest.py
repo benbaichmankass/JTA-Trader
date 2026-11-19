@@ -336,8 +336,8 @@ def _is_shallow_repo() -> bool:
         out = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--is-shallow-repository"],
                              capture_output=True, text=True, timeout=10, check=False).stdout.strip()
         return out == "true"
-    except Exception:  # noqa: BLE001
-        return False
+    except (OSError, subprocess.SubprocessError):
+        return False  # no git / timeout: the warning cannot be decided, the verdicts still print
 
 
 def shallow_cut_warning(cuts: Dict[str, Dict[str, Any]], shallow: bool) -> str:
