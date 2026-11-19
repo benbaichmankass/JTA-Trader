@@ -53,6 +53,8 @@ no policy of its own. ``tests/test_monitor_verdict.py`` pins that equivalence.
 """
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -176,13 +178,21 @@ def interpret_verdict(verdict: Any, *,
     # Modification — sl / tp, INDEPENDENTLY (never elif). Other keys ignored,
     # except ``tp_reason``, which annotates a surviving ``tp`` (never acts).
     updates: Dict[str, float] = {}
+    unpriced = []
     for key in ("sl", "tp"):
         if key in verdict:
             parsed = _as_float(verdict[key])
+            # BRACKETS-ALWAYS (2026-11-19): a stop or target is a PRICE. 0, a negative or a
+            # non-finite value is not a level to move to, and at the venue it can REMOVE the leg
+            # (Bybit set_trading_stop takeProfit=0 clears the TP; IB re-arms without it). Such a
+            # key is dropped here, so the other key still applies and nothing is removed.
+            if parsed is not None and not (math.isfinite(parsed) and parsed > 0):
+                unpriced.append(key)
+                continue
             if parsed is not None:
                 updates[key] = parsed
     if not updates:
-        return _none("unknown_verdict_shape")
+        return _none("non_positive_price" if unpriced else "unknown_verdict_shape")
 
     for key, current in (("sl", current_sl), ("tp", current_tp)):
         if key not in updates:
