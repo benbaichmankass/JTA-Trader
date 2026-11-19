@@ -1,0 +1,146 @@
+# Hand-authored 2026-11-19 by lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC, Tier 1 research), dispatched by the JTA Trader manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV; 18:18Z "iterate, don't retire the P1 head ... Author iteration 2 with an n-adequate design"). ITERATION unit
+# authored from a written diagnosis of RQ-20261101-78fc-02. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261119-3e98-01
+title: 'ITERATION 2 of ml-setup-metalabel-p2pool (78fc-02 FAIL, retired-book dominated): on the DEMO-FLOOR book it acts on, restricted to
+  rostered strategies, does setup-candidates-metalabel-p2pool beat take-all, take-none and a matched random take net of realized cost?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: 'On the PAPER-book (event_source live_paper) closed trades of strategies on a current roster (the frozen 59-strategy set below),
+  with the same v023 recipe retrained on a dataset that carries each live/paper row''s strategy, does the head pass P1 (a)-(e) on >= 200 eval
+  rows? The real-money live rows of the same strategies are read as context only.'
+why_this_matters: 'The head''s consumer is the demo floor (ml_consumer.book demo_floor: skip or downsize entries on the bybit_1 donchian /
+  squeeze / htf legs). 78fc-02 read only the real-money book, and 240 of its 308 BTC eval rows were the retired vwap strategy (enabled:false,
+  on no roster). Retirement follows lever exhaustion (manager 2026-11-19 18:18Z), and that FAIL is not evidence about the head on what it
+  would actually filter.'
+iteration:
+  subject: ml-setup-metalabel-p2pool
+  subject_kind: ml_model
+  from_result: RQ-20261101-78fc-02
+  verdict_read: fail
+  diagnosis: 'comms/ml-plan/p1_costnet_verdict_v023.json (n_eval 434): (a) FAIL, value -0.0035 R/opp vs take-none 0; (b) LB +0.0137 ok, (c)
+    take 0.180 ok, (d) ETH +0.134 (n 45), XRP +0.079 (n 37), BTC -0.085 (n 308). 240 of the 308 BTC rows are the vwap book (2026-05,
+    initial_risk_signal), whose take-all is the -0.527 R that drags the gate. Removing them from the real-money book leaves 434 - 240 = 194
+    rows < the P1 floor of 200, so a live-only re-read is INDETERMINATE by construction. The dataset already emits 1,061 paper rows
+    (event_source live_paper, never eval), which are the demo floor the consumer acts on.'
+  search: 'one factor, the EVAL POPULATION: real-money book (all strategies) -> paper book of rostered strategies. Model recipe, features,
+    threshold and P1 criteria are the v023 ones; the only data change is a strategy field on live/paper rows (outcome metadata, never a
+    feature).'
+  levers:
+  - universe
+  map_entries:
+  - research/levers/ml-setup-metalabel-p2pool.yaml
+  attempt: 2
+  due_by: '2026-11-30'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.05
+  effect_units: r_multiple
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: 1,061 paper rows in v023 across all strategies; the rostered share is unknown until the strategy field exists, so expected_n
+    600 is an estimate. The rule''s own n >= 200 floor governs; below it the read is INDETERMINATE and states its n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the trainer journal copy and the v023 recipe; nothing accrues.
+baseline:
+  definition: take-all, take-none (0) and a matched random take at the head's own take rate, on the identical eval rows, each net of realized
+    cost (journal pnl).
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261119-3e98-01-P1-ROSTERED-PAPER
+  registered_at: '2026-11-19'
+  registered_before_run: true
+  population_filter: 'FIXED BEFORE THE RUN. Eval rows: event_source == live_paper AND strategy in ROSTER_59 (the union of every config/accounts.yaml
+    roster at main 82ae722a1, 2026-11-19, all enabled): ada_pullback_2h, avax_pullback_2h, claude_desk, e4_oi_shock_1h, eth_pullback_2h,
+    eth_pullback_prop_2h, fade_breakout_4h, fvg_range_15m, gdx_pullback_1d, gld_pullback_1d, htf_pullback_trend_2h, iaum_pullback_1d,
+    ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_eth_15m, ict_scalp_mgc_15m, ict_scalp_sol_15m, ict_scalp_sol_5m, ict_scalp_xrp_15m,
+    ict_scalp_xrp_5m, ief_pullback_1d, iwm_trend_long_1d, mes_trend_long_1d, mgc_pullback_1d, mgc_trend_1h, mhg_pullback_1d, ml_entry,
+    ml_entry_eq, ml_entry_eq_struct, ml_entry_v2, qld_trend_long_1d, qqq_pullback_1h, qqq_trend_long_1d, scha_trend_long_1d, slv_pullback_1d,
+    slv_trend_1h, sol_pullback_2h, splg_trend_long_1d, spy_pullback_1h, spy_trend_long_1d, squeeze_breakout_4h, tlt_pullback_1d,
+    tlt_pullback_1h, tqqq_trend_long_1d, trend_donchian, trend_donchian_1h, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth,
+    trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_sol_prop, trend_donchian_xrp_4h,
+    trend_donchian_xrp_adx25, turtle_soup, uso_trend_1h, xrp_pullback_2h. A row with no strategy is excluded and counted. The list is not
+    changed after any result, even if a roster changes.'
+  statistic: 'P1 (docs/plans/ml-live-promotion-plan-2026-10-29.md s3) on the filtered PAPER population, with (a) recomputed on it exactly as
+    ml/promotion/cost_gate.py does (value_r = sum of taken R / n must exceed max(take_all, take_none 0, matched_random)), (b) the trade
+    bootstrap of value - matched random (10,000 resamples, seed 42) read at a DEFLATED lower percentile of 0.833 (two-sided alpha 0.05 / 3,
+    this being the third read of the head: ML-P1 gross, 78fc-02, this), (c) take rate in [0.05, 0.60], (d) value > 0 in >= 2 of the symbols
+    with >= 30 rows, (e) <= 20% of the filtered population excluded for lacking an initial-risk basis.'
+  rule: PASS iff (a) AND (b) AND (c) AND (d) AND (e). FAIL iff n_eval >= 200 AND ((a) fails OR (b) fails). INDETERMINATE otherwise (n_eval
+    < 200, (d) not computable, (e) fails, or the unit_fallback share > 10%). The real-money rows of ROSTER_59 are reported with the same
+    statistics as CONTEXT and never change the verdict.
+  pass_action: 'ONE confirmation on a disjoint in-hand window (the paper rows after the run''s data cut are not in hand, so: a time split of
+    the same population, earlier half train / later half eval, registered then), then a data-backed Tier-3 proposal to the manager to set the
+    head advisory on the demo-floor legs in its population.'
+  fail_action: 'Configuration closed: the head on the rostered paper book. The universe lever is then read on both books; the next lever is
+    the label (the head is trained on synthetic + backtest rows and evaluated on real fills; a realized-R-trained arm) via a new unit, or a
+    family-review record if the lever map is exhausted (research/family_reviews/, family_retirement_policy.yaml).'
+  min_n: 200 filtered paper eval rows
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no config, registry stage or roster; places no order; adds no gate.
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md): evaluate on the population the decision acts on,
+  matched-random control, a population filter fixed before the run, a deflated bar for a re-read.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: an entry filter; a skipped trade contributes 0 R, a taken one its realized R
+  matched_random:
+    draws: 10000
+    note: the matched random take is the take rate times the take-all mean, as in cost_gate.py; the bootstrap resamples trades
+  best_static:
+    grid:
+    - take_all
+    - take_none
+    - matched_random
+    excludes_test_folds: true
+    note: the eval rows are held out of training by the live_holdout split (live_flag_column event_source, live_flag_true_value live_paper)
+  bootstrap_group: trade
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: ESTIMATE from the v023 rebuild/train/grade on the trainer (relay #27390).
+  why_runner: the journal copy and datasets-out are trainer-resident; never leaves the trainer but aggregates (journal-derived data is ours).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight carried from 78fc-02; an estimate, not a measurement
+blocked_on:
+- kind: work_item
+  ref: PI-20261119-RIMARY12-0001
+  what: '(1) ml/datasets/families/setup_candidates.py: carry strategy_name on live and live_paper rows as outcome metadata (never a feature),
+    new dataset version; (2) scripts/ml/p1_costnet_grade.py: --eval-source live|live_paper and --strategies-file, recomputing (a) on the
+    filtered rows and reading (b) at --lb-pct; (3) a paper manifest of the v023 recipe (live_flag_column event_source, live_flag_true_value
+    live_paper, include_paper true) and a run: block.'
+  clears_when: (1)-(3) are merged with tests; then git-mv to research/queue/ with the run block, rule unchanged
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/runtime/advisory_sizing.py
+  decision: skip or downsize an entry on the 5 bybit_1 1h/2h/4h BTC/ETH/SOL legs
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+  - squeeze_breakout_4h
+  - htf_pullback_trend_2h
+  book: demo_floor
+related:
+- research/queue/RQ-20261101-78fc-02.yaml
+- comms/ml-plan/p1_costnet_verdict_v023.json
+- scripts/ml/p1_costnet_grade.py
+- ml/datasets/families/setup_candidates.py
+- PI-20261119-RIMARY12-0001
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.

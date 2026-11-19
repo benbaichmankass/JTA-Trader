@@ -711,7 +711,7 @@ lines:
   row: MLP-D4-SETUP-METALABEL
   carried_by: [ML-KEEP-ITERATION-COVERAGE]
   state:
-    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 (rostered strategies only, n-adequate design) to author: PI-20261119-RIMARY12-0001.'
+    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 authored (manager 18:18Z: iterate, do not retire): RQ-20261119-3e98-01, the rostered-strategies PAPER book the consumer acts on; blocked on its build (PI-20261119-RIMARY12-0001).'
     evidence:
       - {record: research/queue/RQ-20261101-78fc-02.yaml, provenance: MEASURED}
       - {record: comms/ml-plan/p1_costnet_verdict_v023.json, provenance: MEASURED}
@@ -720,7 +720,7 @@ lines:
     - {lever: declared-initial-risk basis rebuild (v023), then P1 re-read, ref: RQ-20261101-78fc-02, verdict: 'FAIL (cost gate a: value -0.0035 R/opp vs take-none 0; b/c/d ok; n_eval 434; BTC -0.085 n 308 of which 240 retired vwap rows)'}
   levers_ahead:
     - lever: population filter fixed before the run (drop strategies on no roster), n-adequate design (live rows alone would be 194 < 200)
-      ref: PI-20261119-RIMARY12-0001
+      ref: RQ-20261119-3e98-01
       baseline: take-all on the same legs, and same-rate random skip, net of cost
       pass: a reduce/annotate proposal for the legs in its population (Tier 3)
       fail: a family-review record (retirement only via family_retirement_policy.yaml)
