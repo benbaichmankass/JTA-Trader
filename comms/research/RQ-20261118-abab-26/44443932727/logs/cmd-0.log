@@ -1,0 +1,16 @@
+candle dataset: served binance__AVAXUSDT__5 (218881 rows, last 2026-11-17 23:55:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261118-abab-26/44443932727/arms/A__trades.jsonl --json comms/research/RQ-20261118-abab-26/44443932727/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --start 2024-10-05 --end 2026-10-04 23:59
+[LONG] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol AVAXUSDT --timeframe 5m --strategy-name ict_scalp_avax_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261118-abab-26/44443932727/arms/LONG__trades.jsonl --json comms/research/RQ-20261118-abab-26/44443932727/arms/LONG__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --side-filter long --start 2024-10-05 --end 2026-10-04 23:59
+ERROR: arm LONG harness exit 2:                       [--sim-breakeven] [--stale-exit-bars N]
+                             [--stale-exit-below-r R] [--giveback-min-mfe-r R]
+                             [--bank-frac F] [--bank-at-r R] [--tp-at-r R]
+                             [--atr-sl-buffer-mult M] [--giveback-r R]
+                             [--session-flat-et HH:MM]
+                             [--contract-cost-usd-rt USD] [--point-value USD]
+                             [--tick-size PTS] [--slip-ticks-per-fill N]
+                             [--entry-mode {market,limit}]
+                             [--limit-expire-bars N]
+                             [--maker-fee-bps MAKER_FEE_BPS]
+                             [--taker-fee-bps TAKER_FEE_BPS]
+backtest_ict_scalp.py: error: unrecognized arguments: --side-filter long
+
