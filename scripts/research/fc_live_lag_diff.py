@@ -24,7 +24,7 @@ Reported: the class shares, the lag distribution, the run length of lag-1 streak
 class (does a late score get the fresh forecast?), and per-column |diff| quantiles for near_only / none.
 
 Registered rule (RULE-RQ20261119-ef40-02-FC-LIVE-LAG), per head:
-  INDETERMINATE  matched rows < 200, or the rebuilt dataset is missing (could_not_look);
+  INDETERMINATE  matched rows < 200, or the rebuilt dataset is missing (read_state no_data);
   LAG_EXPLAINS   share(exact_k0) + share(exact at the single most common nonzero k) >= 0.98;
   RESIDUAL       otherwise (the none / near_only rows name what else differs).
 Unit verdict: LAG_EXPLAINS only if both heads are; RESIDUAL if any head is; else INDETERMINATE.
@@ -142,7 +142,7 @@ def diff_symbol(sym: str, rebuilt: Path, snapshot: Path) -> Dict[str, Any]:
 
     res: Dict[str, Any] = {"symbol": sym, "rebuilt": str(rebuilt), "snapshot": str(snapshot)}
     if not rebuilt.is_file():
-        res["read_state"] = "could_not_look"
+        res["read_state"] = "no_data"
         res["error"] = f"rebuilt dataset missing: {rebuilt}"
         return res
     live = [json.loads(x) for x in snapshot.read_text().splitlines() if x.strip()]
@@ -236,8 +236,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     unit_v = ("RESIDUAL" if "RESIDUAL" in vs else "LAG_EXPLAINS" if vs and all(v == "LAG_EXPLAINS" for v in vs)
               else "INDETERMINATE")
     rs = "measured" if all(h.get("read_state") == "measured" for h in heads.values()) else (
-        "could_not_look" if any(h.get("read_state") == "could_not_look" for h in heads.values()) else "producer_failed")
-    verdict = {"unit": a.unit, "rule_id": RULE_ID, "verdict": unit_v.lower(), "verdict_label": unit_v,
+        "no_data" if any(h.get("read_state") == "no_data" for h in heads.values()) else "producer_failed")
+    # script_run.VERDICTS vocabulary: LAG_EXPLAINS -> pass, RESIDUAL -> fail, else indeterminate (label kept).
+    vmap = {"LAG_EXPLAINS": "pass", "RESIDUAL": "fail", "INDETERMINATE": "indeterminate"}
+    verdict = {"unit": a.unit, "rule_id": RULE_ID, "verdict": vmap[unit_v], "verdict_label": unit_v,
                "read_state": rs, "heads": heads,
                "data_inputs": [a.rebuilt_template, str(Path(a.snapshot_dir).relative_to(REPO))
                                if Path(a.snapshot_dir).is_relative_to(REPO) else a.snapshot_dir],
@@ -267,7 +269,9 @@ def _self_test() -> int:
     m = {"read_state": "measured", "n_matched": 1000, "class_share": {"exact_k0": 0.55, "exact_k-1": 0.40, "none": 0.05}}
     assert grade(m)[0] == "RESIDUAL"
     assert grade({"read_state": "measured", "n_matched": 150, "class_share": {}})[0] == "INDETERMINATE"
-    assert grade({"read_state": "could_not_look"})[0] == "INDETERMINATE"
+    assert grade({"read_state": "no_data"})[0] == "INDETERMINATE"
+    import script_run as SR
+    assert {"pass", "fail", "indeterminate"} <= set(SR.VERDICTS) and {"measured", "no_data", "producer_failed"} <= set(SR.READ_STATES)
     print("self-test OK")
     return 0
 

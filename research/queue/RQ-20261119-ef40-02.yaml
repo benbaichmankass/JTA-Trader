@@ -34,9 +34,10 @@ decision_rule:
   statistic: 'scripts/research/fc_live_lag_diff.py: per matched row, class exact_k0 / exact_k<k> (exactly one nonzero offset within 1e-6
     relative-or-absolute on all six fc_*) / exact_ambiguous / near_only (best offset within 1e-3) / none; shares over matched rows.
     Reported: lag -1 streak lengths, scoring second-into-bar by class, per-column |diff| quantiles of near_only and none rows.'
-  rule: 'Per head: INDETERMINATE if matched rows < 200 or the rebuilt dataset is missing (could_not_look); LAG_EXPLAINS iff
+  rule: 'Per head: INDETERMINATE if matched rows < 200 or the rebuilt dataset is missing (read_state no_data); LAG_EXPLAINS iff
     share(exact_k0) + share(the single most common nonzero exact_k) >= 0.98; RESIDUAL otherwise. Unit: LAG_EXPLAINS only if both heads
-    are; RESIDUAL if any head is; else INDETERMINATE. Tolerances, offsets and the 0.98 bar are fixed now.'
+    are; RESIDUAL if any head is; else INDETERMINATE. verdict.json carries LAG_EXPLAINS as pass, RESIDUAL as fail, INDETERMINATE as
+    indeterminate (verdict_label keeps the name). Tolerances, offsets and the 0.98 bar are fixed now.'
   pass_action: 'LAG_EXPLAINS: (1) re-grade the a10d-01 parity with each live row matched to the rebuilt fc_* at its measured lag (a
     re-run unit on the same snapshot); a PASS there unblocks a10d-02. (2) File a D2 build row for the train/serve skew: either the
     scorer waits for its own bar''s forecast, or the heads train on the served lag; each choice is its own pre-registered test. No
