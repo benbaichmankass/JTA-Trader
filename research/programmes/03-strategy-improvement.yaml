@@ -4627,3 +4627,1103 @@ nodes:
     - research/queue/RQ-20261118-abab-48.yaml
     - research/queue/RQ-20261118-abab-72.yaml
     - research/levers/trend_donchian_1h.yaml
+# --- PROGRAMME-REPLAN-2026-11-19 (lane PROGRAMME-REPLAN-20261119, session_01AFoLuJ2Mx5E1JEVEWziCcb): next pre-registered
+# iterations from results graded 2026-11-17..19; each node names the result and diagnosis that opened it.
+- id: P3-RP1119-trend-long-family-vh-spy
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'REGIME family test on spy_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index trend legs (scha VH90 9e1a-08,
+      splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the declared leg, net of cost'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On SPY 1d (yfinance lane) over the 7300 days to 2026-10-27, the exact window and folds of 9e1a-08/-09, does VH80 or VH90
+      (--vol-skip-above-pctl 0.8 / 0.9) beat the declared spy_trend_long_1d by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the regime family moves for the whole long-only index trend book at once or leg
+      by leg. PASS -> a confirmation unit on a symbol twin, then a family declare case; FAIL -> regime_gating is recorded tested at
+      power for spy_trend_long_1d and its lever map moves to timeframe / sizing_vs_cost. Family rule (registered now, read by the iteration
+      pass over the four units P3-RP1119-trend-long-family-vh-{spy,qqq,iwm,qld}): the top-vol skip is a FAMILY property of the long-only
+      daily index trend legs iff >= 3 of 4 pass (each then needs its own confirmation before a declare); <= 1 of 4 records the scha/splg
+      passes as leg-specific.'
+    iteration:
+      subject: spy_trend_long_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-09
+      verdict_read: pass_unconfirmed
+      diagnosis: 'spy_trend_long_1d: DI/DS (b2f1-09), MS (b2f2-11 SE), TA (b2f2-30) all failed on 2018-26. Its regime family is untested
+        (iteration_orphans --levers: regime_gating ''.''). Its two nearest siblings (same long-only Donchian trend config shape on US
+        index ETFs) both improved when the top vol decile was skipped (scha +3.22 R 6 of 6 folds, splg +2.21 R 4 of 6), and both deteriorated
+        or stayed flat at VH80. That is a threshold response shared across two legs. The family read is the highest-information next
+        test for this leg; the exit family is flat.'
+      search: regime_gating (top-vol entry skip) at the two thresholds the siblings read; identical window and folds.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/spy_trend_long_1d.yaml
+    power:
+      expected_n: 66
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: sibling n 78-103 on 7300 d; SPY yfinance history covers the window. Below 39 INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-trend-long-family-vh-spy
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg spy_trend_long_1d --grade replace, 7300 days to 2026-10-27, 6 folds,
+        net of the harness cost stack. Arms fixed now: A, VH80, VH90.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) VH80, VH90 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. This unit is 1 of 4 in a family
+        read (why_this_matters). Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - spy_trend_long_1d
+      - --arm
+      - A=
+      - --arm
+      - VH80=--vol-skip-above-pctl=0.8
+      - --arm
+      - VH90=--vol-skip-above-pctl=0.9
+      - --days
+      - '7300'
+      - --end
+      - '2026-10-27'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-08.yaml
+    - research/queue/RQ-20261117-9e1a-09.yaml
+    - research/levers/spy_trend_long_1d.yaml
+- id: P3-RP1119-trend-long-family-vh-qqq
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'REGIME family test on qqq_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index trend legs (scha VH90 9e1a-08,
+      splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the declared leg, net of cost'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On QQQ 1d (yfinance lane) over the 7300 days to 2026-10-27, the exact window and folds of 9e1a-08/-09, does VH80 or VH90
+      (--vol-skip-above-pctl 0.8 / 0.9) beat the declared qqq_trend_long_1d by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the regime family moves for the whole long-only index trend book at once or leg
+      by leg. PASS -> a confirmation unit on a symbol twin, then a family declare case; FAIL -> regime_gating is recorded tested at
+      power for qqq_trend_long_1d and its lever map moves to timeframe / sizing_vs_cost. Family rule (registered now, read by the iteration
+      pass over the four units P3-RP1119-trend-long-family-vh-{spy,qqq,iwm,qld}): the top-vol skip is a FAMILY property of the long-only
+      daily index trend legs iff >= 3 of 4 pass (each then needs its own confirmation before a declare); <= 1 of 4 records the scha/splg
+      passes as leg-specific.'
+    iteration:
+      subject: qqq_trend_long_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-09
+      verdict_read: pass_unconfirmed
+      diagnosis: 'qqq_trend_long_1d: MS (b2f1-19), SE (b2f2-07), TA (b2f2-26) failed; DS passed thin (b2f1-07). Its regime family is
+        untested (iteration_orphans --levers: regime_gating ''.''). Its two nearest siblings (same long-only Donchian trend config shape
+        on US index ETFs) both improved when the top vol decile was skipped (scha +3.22 R 6 of 6 folds, splg +2.21 R 4 of 6), and both
+        deteriorated or stayed flat at VH80. That is a threshold response shared across two legs. The family read is the highest-information
+        next test for this leg; the exit family is flat.'
+      search: regime_gating (top-vol entry skip) at the two thresholds the siblings read; identical window and folds.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/qqq_trend_long_1d.yaml
+    power:
+      expected_n: 42
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: sibling n 78-103 on 7300 d; QQQ yfinance history covers the window. Below 39 INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-trend-long-family-vh-qqq
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg qqq_trend_long_1d --grade replace, 7300 days to 2026-10-27, 6 folds,
+        net of the harness cost stack. Arms fixed now: A, VH80, VH90.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) VH80, VH90 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. This unit is 1 of 4 in a family
+        read (why_this_matters). Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - qqq_trend_long_1d
+      - --arm
+      - A=
+      - --arm
+      - VH80=--vol-skip-above-pctl=0.8
+      - --arm
+      - VH90=--vol-skip-above-pctl=0.9
+      - --days
+      - '7300'
+      - --end
+      - '2026-10-27'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-08.yaml
+    - research/queue/RQ-20261117-9e1a-09.yaml
+    - research/levers/qqq_trend_long_1d.yaml
+- id: P3-RP1119-trend-long-family-vh-iwm
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'REGIME family test on iwm_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index trend legs (scha VH90 9e1a-08,
+      splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the declared leg, net of cost'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On IWM 1d (yfinance lane) over the 7300 days to 2026-10-27, the exact window and folds of 9e1a-08/-09, does VH80 or VH90
+      (--vol-skip-above-pctl 0.8 / 0.9) beat the declared iwm_trend_long_1d by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the regime family moves for the whole long-only index trend book at once or leg
+      by leg. PASS -> a confirmation unit on a symbol twin, then a family declare case; FAIL -> regime_gating is recorded tested at
+      power for iwm_trend_long_1d and its lever map moves to timeframe / sizing_vs_cost. Family rule (registered now, read by the iteration
+      pass over the four units P3-RP1119-trend-long-family-vh-{spy,qqq,iwm,qld}): the top-vol skip is a FAMILY property of the long-only
+      daily index trend legs iff >= 3 of 4 pass (each then needs its own confirmation before a declare); <= 1 of 4 records the scha/splg
+      passes as leg-specific.'
+    iteration:
+      subject: iwm_trend_long_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-09
+      verdict_read: pass_unconfirmed
+      diagnosis: 'iwm_trend_long_1d: no graded regime read; filter family tested, exits live-declared. Its regime family is untested
+        (iteration_orphans --levers: regime_gating ''.''). Its two nearest siblings (same long-only Donchian trend config shape on US
+        index ETFs) both improved when the top vol decile was skipped (scha +3.22 R 6 of 6 folds, splg +2.21 R 4 of 6), and both deteriorated
+        or stayed flat at VH80. That is a threshold response shared across two legs. The family read is the highest-information next
+        test for this leg; the exit family is flat.'
+      search: regime_gating (top-vol entry skip) at the two thresholds the siblings read; identical window and folds.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/iwm_trend_long_1d.yaml
+    power:
+      expected_n: 80
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: sibling n 78-103 on 7300 d; IWM yfinance history covers the window. Below 39 INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-trend-long-family-vh-iwm
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg iwm_trend_long_1d --grade replace, 7300 days to 2026-10-27, 6 folds,
+        net of the harness cost stack. Arms fixed now: A, VH80, VH90.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) VH80, VH90 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. This unit is 1 of 4 in a family
+        read (why_this_matters). Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - iwm_trend_long_1d
+      - --arm
+      - A=
+      - --arm
+      - VH80=--vol-skip-above-pctl=0.8
+      - --arm
+      - VH90=--vol-skip-above-pctl=0.9
+      - --days
+      - '7300'
+      - --end
+      - '2026-10-27'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-08.yaml
+    - research/queue/RQ-20261117-9e1a-09.yaml
+    - research/levers/iwm_trend_long_1d.yaml
+- id: P3-RP1119-trend-long-family-vh-qld
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'REGIME family test on qld_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index trend legs (scha VH90 9e1a-08,
+      splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the declared leg, net of cost'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On QLD 1d (yfinance lane) over the 7300 days to 2026-10-27, the exact window and folds of 9e1a-08/-09, does VH80 or VH90
+      (--vol-skip-above-pctl 0.8 / 0.9) beat the declared qld_trend_long_1d by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the regime family moves for the whole long-only index trend book at once or leg
+      by leg. PASS -> a confirmation unit on a symbol twin, then a family declare case; FAIL -> regime_gating is recorded tested at
+      power for qld_trend_long_1d and its lever map moves to timeframe / sizing_vs_cost. Family rule (registered now, read by the iteration
+      pass over the four units P3-RP1119-trend-long-family-vh-{spy,qqq,iwm,qld}): the top-vol skip is a FAMILY property of the long-only
+      daily index trend legs iff >= 3 of 4 pass (each then needs its own confirmation before a declare); <= 1 of 4 records the scha/splg
+      passes as leg-specific.'
+    iteration:
+      subject: qld_trend_long_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-09
+      verdict_read: pass_unconfirmed
+      diagnosis: 'qld_trend_long_1d: no graded regime read; exit and filter specs handed to QUEUE-FILL (W47). Its regime family is untested
+        (iteration_orphans --levers: regime_gating ''.''). Its two nearest siblings (same long-only Donchian trend config shape on US
+        index ETFs) both improved when the top vol decile was skipped (scha +3.22 R 6 of 6 folds, splg +2.21 R 4 of 6), and both deteriorated
+        or stayed flat at VH80. That is a threshold response shared across two legs. The family read is the highest-information next
+        test for this leg; the exit family is flat.'
+      search: regime_gating (top-vol entry skip) at the two thresholds the siblings read; identical window and folds.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/qld_trend_long_1d.yaml
+    power:
+      expected_n: 80
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: sibling n 78-103 on 7300 d; QLD yfinance history covers the window. Below 39 INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-trend-long-family-vh-qld
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg qld_trend_long_1d --grade replace, 7300 days to 2026-10-27, 6 folds,
+        net of the harness cost stack. Arms fixed now: A, VH80, VH90.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) VH80, VH90 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. This unit is 1 of 4 in a family
+        read (why_this_matters). Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - qld_trend_long_1d
+      - --arm
+      - A=
+      - --arm
+      - VH80=--vol-skip-above-pctl=0.8
+      - --arm
+      - VH90=--vol-skip-above-pctl=0.9
+      - --days
+      - '7300'
+      - --end
+      - '2026-10-27'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-08.yaml
+    - research/queue/RQ-20261117-9e1a-09.yaml
+    - research/levers/qld_trend_long_1d.yaml
+- id: P3-RP1119-mgc-pullback-1d-htf
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION of mgc_pullback_1d after both vol skips LOST (9e1a-02, 9e1b-02): does an HTF trend gate (longs only above the
+      100 / 200-day SMA) beat the declared leg, net of cost?'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On GC=F 1d over 2018-06-01..2026-11-12 (the 9e1a/9e1b window and folds), does H100 or H200 (--htf-long-sma-days) beat
+      the declared leg A by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: which regime axis, if any, conditions mgc_pullback_1d. PASS -> confirmation on pre-dev history,
+      then a declare case; FAIL -> regime_gating is tested at power on two axes (vol, trend) and the map moves to entry geometry. The
+      vol result says the axis is not volatility. A pullback leg''s classic failure is buying dips in a downtrend, which a trend gate
+      tests directly.'
+    iteration:
+      subject: mgc_pullback_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-02
+      verdict_read: fail
+      diagnosis: 'Skipping the top vol deciles cost 13-17 R (VH90 0 of 6 folds) and skipping the cold deciles cost 3-4 R, so the leg''s
+        edge lives across vol states and especially in high vol. AX50 passed marginally (+1.79 R). The remaining regime hypothesis that
+        fits a pullback leg is TREND state, not vol: dip-buys against the 100/200-day trend are the expected losers. The pullback harness
+        models it (--htf-long-sma-days).'
+      search: regime_gating (HTF trend state) at two pre-declared lookbacks; same window and folds as the failed vol cells.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/mgc_pullback_1d.yaml
+    power:
+      expected_n: 59
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED n(A) 59 on this exact window (9e1a-02). Above the 39 floor; the gate can only remove entries, so arms may fall
+        below it -> INDETERMINATE for that arm, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-mgc-pullback-1d-htf
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg mgc_pullback_1d --grade replace, 2018-06-01..2026-11-12, 6 folds, net
+        of the harness cost stack. Arms fixed now: A, H100, H200.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) H100, H200 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Thresholds and arms are not
+        changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - mgc_pullback_1d
+      - --arm
+      - A=
+      - --arm
+      - H100=--htf-long-sma-days=100
+      - --arm
+      - H200=--htf-long-sma-days=200
+      - --days
+      - '3090'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-11-12 23:59
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-02.yaml
+    - research/queue/RQ-20261117-9e1b-02.yaml
+    - research/levers/mgc_pullback_1d.yaml
+- id: P3-RP1119-uso-trend-1h-adx-ceiling
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION of uso_trend_1h after the vol-skip cells failed on both tails (9e1a, 9e1b): does an ADX ceiling AX40 / AX50 beat
+      the declared leg, net of cost?'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On USO 1h (dukascopy) over 2018-06-01..2026-10-15, the 9e1a/9e1b window and folds, does AX40 or AX50 (--adx-max) beat
+      the declared uso_trend_1h by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the ADX-ceiling configurations AX40 / AX50 join uso_trend_1h''s declare case or
+      are recorded as failed on this window (then the map''s next read is session / sizing_vs_cost) or carries a trend-strength ceiling
+      into its declare case. The ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read
+      on uso_trend_1h.'
+    iteration:
+      subject: uso_trend_1h
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-07
+      verdict_read: fail
+      diagnosis: 'n(A) 272, A net positive. Top-vol skip: VH80 -6.98 (3 of 6), VH90 -8.45 (1 of 6); cold-vol skip: VL20 -16.11, VL30
+        -12.05. Removing either vol tail costs R, so volatility is not the axis. The untested regime axis is trend strength, and blow-off
+        ADX (> 40-50) is where trend and pullback entries meet exhaustion. On the metals, AX50 helped mgc_pullback_1d (+1.79) and AX40
+        helped mhg (+1.10, 6 of 6 folds, under the R bar), a weak but consistent sign.'
+      search: regime_gating (ADX ceiling) at the two thresholds of the 9e1c batch; same window and folds as the failed vol cells.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/uso_trend_1h.yaml
+    power:
+      expected_n: 272
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED n(A) 272 on this window (9e1a/9e1b). Arms below 39 grade INDETERMINATE, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-uso-trend-1h-adx-ceiling
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg uso_trend_1h --non-crypto-source dukascopy --grade replace, 2018-06-01..2026-10-15,
+        6 folds, net of the harness cost stack. Arms fixed now: A, AX40, AX50.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) AX40, AX50 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Thresholds and arms are not
+        changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - uso_trend_1h
+      - --arm
+      - A=
+      - --arm
+      - AX40=--adx-max=40
+      - --arm
+      - AX50=--adx-max=50
+      - --days
+      - '3080'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-10-15 23:59
+      - --non-crypto-source
+      - dukascopy
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-07.yaml
+    - research/queue/RQ-20261117-9e1b-06.yaml
+    - research/levers/uso_trend_1h.yaml
+- id: P3-RP1119-tlt-pullback-1h-adx-ceiling
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION of tlt_pullback_1h after the vol-skip cells failed on both tails (9e1a, 9e1b): does an ADX ceiling AX40 / AX50
+      beat the declared leg, net of cost?'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On TLT 1h (dukascopy) over 2018-06-01..2026-10-26, the 9e1a/9e1b window and folds, does AX40 or AX50 (--adx-max) beat
+      the declared tlt_pullback_1h by the replace grade, net of cost?
+    why_this_matters: 'Decision it changes: whether the ADX-ceiling configurations AX40 / AX50 join tlt_pullback_1h''s declare case
+      or are recorded as failed on this window (then the map''s next read is session / sizing_vs_cost) or carries a trend-strength ceiling
+      into its declare case. The ADX-ceiling cells were only run on the three metals legs (9e1c-02..04), so this axis was never read
+      on tlt_pullback_1h.'
+    iteration:
+      subject: tlt_pullback_1h
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261117-9e1a-10
+      verdict_read: fail
+      diagnosis: 'n(A) 273, A net positive. Top-vol skip: VH80 -1.23 (4 of 6), VH90 -1.63 (4 of 6); cold-vol skip: VL20 -23.85, VL30
+        -25.48. Removing either vol tail costs R, so volatility is not the axis. The untested regime axis is trend strength, and blow-off
+        ADX (> 40-50) is where trend and pullback entries meet exhaustion. On the metals, AX50 helped mgc_pullback_1d (+1.79) and AX40
+        helped mhg (+1.10, 6 of 6 folds, under the R bar), a weak but consistent sign.'
+      search: regime_gating (ADX ceiling) at the two thresholds of the 9e1c batch; same window and folds as the failed vol cells.
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/tlt_pullback_1h.yaml
+    power:
+      expected_n: 273
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: MEASURED n(A) 273 on this window (9e1a/9e1b). Arms below 39 grade INDETERMINATE, never FAIL.
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-tlt-pullback-1h-adx-ceiling
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg tlt_pullback_1h --non-crypto-source dukascopy --grade replace, 2018-06-01..2026-10-26,
+        6 folds, net of the harness cost stack. Arms fixed now: A, AX40, AX50.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 2 candidate arm(s) AX40, AX50 pass: the best by net
+        R is named, the denominator is 2. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the lever
+        FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Thresholds and arms are not
+        changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - tlt_pullback_1h
+      - --arm
+      - A=
+      - --arm
+      - AX40=--adx-max=40
+      - --arm
+      - AX50=--adx-max=50
+      - --days
+      - '3080'
+      - --start
+      - '2018-06-01'
+      - --end
+      - 2026-10-26 23:59
+      - --non-crypto-source
+      - dukascopy
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-9e1a-10.yaml
+    - research/queue/RQ-20261117-9e1b-08.yaml
+    - research/levers/tlt_pullback_1h.yaml
+- id: P3-RP1119-gdx-pullback-1d-vol
+  goal: G1
+  theme: regime
+  roadmap:
+  - L-REGIME
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.15
+  after: []
+  unit:
+    title: 'ITERATION of gdx_pullback_1d after the direction family failed on both shapes (b2f1-01 DI/DS, abab-20 LONG/SHORT): does
+      a vol-percentile skip beat the declared leg on the long yfinance history, net of cost?'
+    cadence: once
+    theme: regime
+    priority: 2
+    kind: experiment
+    question: On GDX 1d (yfinance lane) over the 7300 days to 2026-10-27, does VH80, VH90 or VL20 beat the declared leg A by the replace
+      grade, net of cost?
+    why_this_matters: 'Decision it changes: gdx_pullback_1d''s lever map has regime_gating untested and every direction arm failed at
+      n 46 on the 2021-26 dukascopy window. PASS -> confirmation on a symbol twin (GDXJ) and a declare case; FAIL -> regime_gating is
+      tested at power and the leg''s remaining families are timeframe and sizing. The long window also lifts n well above the 39 floor
+      that left the direction reads thin.'
+    iteration:
+      subject: gdx_pullback_1d
+      subject_kind: strategy_leg
+      from_result: research/results/RQ-20261118-abab-20
+      verdict_read: fail
+      diagnosis: 'On 2021-07..2026-10 (n(A) 46, A +8.80 R): DI -6.79, DS -1.49 (b2f1-01), LONG +0.42 at 3 of 4 folds, SHORT -11.96 (abab-20).
+        The short side loses, the long side carries the edge, and no direction gate improves it. Gold miners are a 2x-beta vol instrument,
+        so the untested question is whether entries in the extreme vol states lose. That needs more trades than 46, hence the 20-year
+        yfinance history.'
+      search: 'regime_gating (vol percentile skips): both tails, one window, the long history for power.'
+      levers:
+      - regime_gating
+      attempt: 1
+      due_by: '2026-11-26'
+      map_entries:
+      - research/levers/gdx_pullback_1d.yaml
+    power:
+      expected_n: 150
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'INFERRED: 46 entries in 5.3 y on 2021-26; ~20 y of GDX should hold ~150. Below 39 INDETERMINATE. Source differs from the
+        dukascopy reads (yfinance), stated.'
+      feasibility:
+        source: none
+        accrual_basis: Replays a pinned in-hand window (or a committed corpus); nothing accrues.
+    decision_rule:
+      id: RULE-P3-RP1119-gdx-pullback-1d-vol
+      registered_at: '2026-11-19'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg gdx_pullback_1d --grade replace, 7300 days to 2026-10-27 (yfinance),
+        6 folds, net of the harness cost stack. Arms fixed now: A, VH80, VH90, VL20.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired) or the producer failed.
+        A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C)
+        <= maxDD(A) x 1.35 (the harness replace grade). PASS IF one or more of the 3 candidate arm(s) VH80, VH90, VL20 pass: the best
+        by net R is named, the denominator is 3. FAIL IF none passes with n(A) >= 39: THIS configuration is closed on this window; the
+        lever FAMILY is not retired (scripts/research/family_retirement_policy.yaml). The per-fold table is reported; the absolute Stage-0
+        regime-robustness clause (net positive in >= 3 of 4 calendar years, no year above 50% of net, long and short reported separately)
+        is read from the same fold rows at any Tier-3 proposal, not graded here on a relative lever read. Thresholds and arms are not
+        changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its
+        next step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never
+        a config edit.'
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 100
+      confidence: 0.15
+      basis: planning weight for a lever read on a rostered or testing leg; an estimate, not a measurement
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 20
+      basis: Comparable exit_lever_ablation runs of the 9e1a / b2f2 batches (10-40 min); the first run replaces it.
+      why_runner: Fetches public candles (binance / yfinance / dukascopy lane) for a pinned window; the kaggle CPU kernel has no internet
+        and the unit reads no published dataset; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - gdx_pullback_1d
+      - --arm
+      - A=
+      - --arm
+      - VH80=--vol-skip-above-pctl=0.8
+      - --arm
+      - VH90=--vol-skip-above-pctl=0.9
+      - --arm
+      - VL20=--vol-skip-below-pctl=0.2
+      - --days
+      - '7300'
+      - --end
+      - '2026-10-27'
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    ml_consumer:
+      not_applicable: 'Not an ML unit: a rule-based lever read through the harness.'
+    intervention_controls:
+      not_applicable: a harness ablation of a declared lever vs the declared config, not an in-trade action
+    what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS is a discovery lead: its next
+      step is ONE confirmation on a disjoint in-hand window or symbol, then a Tier-3 declare PROPOSAL (the manager''s); never a config
+      edit.'
+    practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted,
+      baseline = the declared leg; select on one window, confirm once on data not used for selection.'
+    related:
+    - PROGRAMME-REPLAN-2026-11-19
+    - research/queue/RQ-20261117-b2f1-01.yaml
+    - research/queue/RQ-20261118-abab-20.yaml
+    - research/levers/gdx_pullback_1d.yaml
