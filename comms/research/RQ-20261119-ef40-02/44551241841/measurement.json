@@ -1,0 +1,142 @@
+{
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "rebuilt": "/home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/BTCUSDT/15m/v002/data.jsonl",
+    "snapshot": "/home/ubuntu/ict-trading-bot/comms/live_parity/vol_serve_rows_20261118/BTCUSDT.jsonl",
+    "read_state": "measured",
+    "n_live": 1000,
+    "n_matched": 983,
+    "n_unmatched": 17,
+    "class_counts": {
+      "none": 363,
+      "exact_k0": 542,
+      "exact_k-1": 78
+    },
+    "class_share": {
+      "none": 0.3693,
+      "exact_k0": 0.5514,
+      "exact_k-1": 0.0793
+    },
+    "score_second_into_bar_p50_by_class": {
+      "none": 508,
+      "exact_k0": 487,
+      "exact_k-1": 90
+    },
+    "lag_minus1_streak_lengths": {
+      "1": 86,
+      "2": 9,
+      "3": 3,
+      "4": 1,
+      "5": 2,
+      "6": 2
+    },
+    "unexplained_abs_diff_quantiles": {
+      "fc_ret_med": {
+        "p50": 0.00057539,
+        "p90": 0.00260822,
+        "n": 363
+      },
+      "fc_range_rel": {
+        "p50": 0.00231482,
+        "p90": 0.00816593,
+        "n": 363
+      },
+      "fc_up_prob": {
+        "p50": 0.0,
+        "p90": 1.0,
+        "n": 363
+      },
+      "fc_skew": {
+        "p50": 0.07905722,
+        "p90": 0.20889175,
+        "n": 363
+      },
+      "fc_q10_rel": {
+        "p50": 0.00140142,
+        "p90": 0.00518462,
+        "n": 363
+      },
+      "fc_q90_rel": {
+        "p50": 0.00116088,
+        "p90": 0.00425173,
+        "n": 363
+      }
+    },
+    "dataset_last_bar": "2026-11-18T19:30",
+    "lag_explained_share": 0.6307,
+    "dominant_lag_class": "exact_k-1",
+    "verdict": "RESIDUAL",
+    "reason": "exact_k0 + exact_k-1 = 0.6307 < 0.98"
+  },
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
+    "rebuilt": "/home/ubuntu/ict-trading-bot/runtime_logs/research/fc_stride1/datasets/market_features/SOLUSDT/15m/v002/data.jsonl",
+    "snapshot": "/home/ubuntu/ict-trading-bot/comms/live_parity/vol_serve_rows_20261118/SOLUSDT.jsonl",
+    "read_state": "measured",
+    "n_live": 1000,
+    "n_matched": 895,
+    "n_unmatched": 105,
+    "class_counts": {
+      "none": 362,
+      "near_only": 2,
+      "exact_k0": 467,
+      "exact_k-1": 64
+    },
+    "class_share": {
+      "none": 0.4045,
+      "near_only": 0.0022,
+      "exact_k0": 0.5218,
+      "exact_k-1": 0.0715
+    },
+    "score_second_into_bar_p50_by_class": {
+      "none": 522,
+      "near_only": 242,
+      "exact_k0": 476,
+      "exact_k-1": 124
+    },
+    "lag_minus1_streak_lengths": {
+      "1": 70,
+      "2": 19,
+      "3": 4,
+      "4": 1,
+      "6": 1
+    },
+    "unexplained_abs_diff_quantiles": {
+      "fc_ret_med": {
+        "p50": 0.00036381,
+        "p90": 0.00183109,
+        "n": 363
+      },
+      "fc_range_rel": {
+        "p50": 0.00145136,
+        "p90": 0.00551622,
+        "n": 363
+      },
+      "fc_up_prob": {
+        "p50": 0.0,
+        "p90": 1.0,
+        "n": 363
+      },
+      "fc_skew": {
+        "p50": 0.03903314,
+        "p90": 0.23143125,
+        "n": 363
+      },
+      "fc_q10_rel": {
+        "p50": 0.00082101,
+        "p90": 0.00361347,
+        "n": 363
+      },
+      "fc_q90_rel": {
+        "p50": 0.00084631,
+        "p90": 0.00334767,
+        "n": 363
+      }
+    },
+    "dataset_last_bar": "2026-11-17T22:30",
+    "lag_explained_share": 0.5933,
+    "dominant_lag_class": "exact_k-1",
+    "verdict": "RESIDUAL",
+    "reason": "exact_k0 + exact_k-1 = 0.5933 < 0.98"
+  }
+}

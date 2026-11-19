@@ -1,0 +1,195 @@
+{
+ "schema": "desk_lifecycle/action_grid/1",
+ "verdict": "not_applicable",
+ "read_state": "measured",
+ "n": 76427,
+ "population": "1040 filled trades, 6289 check-ins, 81757 (check-in x action) rows of which 76427 feasible; corpus desk",
+ "what_it_is": "label producer: one-step action-vs-hold counterfactuals on the desk replay engine; grades nothing",
+ "stated_limits": [
+  "value_r is one step: the rest of the path is hold-to-bracket, never a sequence of moves",
+  "Binance Vision 1h USD-M perp klines; stop-first inside a bar; gaps fill at the open",
+  "corpus stage0: the harness's INITIAL bracket on 1h candles, NOT the leg's own trail; the hold horizon is the leg's longest Stage-0 hold; iaum_pullback_1d (equity) is out of scope"
+ ],
+ "summary": {
+  "trades": 1040,
+  "trades_filled": 1040,
+  "trades_not_filled": {
+   "filled": 1040
+  },
+  "checkins": 6289,
+  "label_rows": 81757,
+  "feasible_label_rows": 76427,
+  "by_action": {
+   "close": {
+    "class": "close",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": -0.31638,
+    "share_value_gt_0": 0.4255,
+    "trades_feasible": 881
+   },
+   "partial_close": {
+    "class": "partial",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": -0.15819,
+    "share_value_gt_0": 0.4255,
+    "trades_feasible": 881
+   },
+   "tighten_sl_0p25r": {
+    "class": "tighten",
+    "rows": 6289,
+    "feasible": 6123,
+    "infeasible": 166,
+    "mean_value_r": -0.00727,
+    "share_value_gt_0": 0.3464,
+    "trades_feasible": 854
+   },
+   "tighten_sl_0p5r": {
+    "class": "tighten",
+    "rows": 6289,
+    "feasible": 5711,
+    "infeasible": 578,
+    "mean_value_r": -0.07247,
+    "share_value_gt_0": 0.3208,
+    "trades_feasible": 808
+   },
+   "tighten_sl_1r": {
+    "class": "tighten",
+    "rows": 6289,
+    "feasible": 4228,
+    "infeasible": 2061,
+    "mean_value_r": -0.18303,
+    "share_value_gt_0": 0.2817,
+    "trades_feasible": 679
+   },
+   "widen_sl_0p25r": {
+    "class": "widen",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": 0.0368,
+    "share_value_gt_0": 0.049,
+    "trades_feasible": 881
+   },
+   "widen_sl_0p5r": {
+    "class": "widen",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": 0.03667,
+    "share_value_gt_0": 0.0762,
+    "trades_feasible": 881
+   },
+   "sl_to_structure": {
+    "class": "sl_structure",
+    "rows": 6289,
+    "feasible": 5784,
+    "infeasible": 505,
+    "mean_value_r": -0.05088,
+    "share_value_gt_0": 0.3013,
+    "trades_feasible": 801
+   },
+   "tp_pull_in_0p5r": {
+    "class": "tp_pull_in",
+    "rows": 6289,
+    "feasible": 5943,
+    "infeasible": 346,
+    "mean_value_r": -0.07096,
+    "share_value_gt_0": 0.0934,
+    "trades_feasible": 875
+   },
+   "tp_pull_in_1r": {
+    "class": "tp_pull_in",
+    "rows": 6289,
+    "feasible": 4952,
+    "infeasible": 1337,
+    "mean_value_r": -0.16022,
+    "share_value_gt_0": 0.17,
+    "trades_feasible": 841
+   },
+   "tp_extend_1r": {
+    "class": "tp_extend",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": 0.05413,
+    "share_value_gt_0": 0.3228,
+    "trades_feasible": 881
+   },
+   "tp_extend_2r": {
+    "class": "tp_extend",
+    "rows": 6289,
+    "feasible": 6289,
+    "infeasible": 0,
+    "mean_value_r": 0.11873,
+    "share_value_gt_0": 0.2775,
+    "trades_feasible": 881
+   },
+   "tp_to_structure": {
+    "class": "tp_structure",
+    "rows": 6289,
+    "feasible": 5952,
+    "infeasible": 337,
+    "mean_value_r": -0.16372,
+    "share_value_gt_0": 0.1841,
+    "trades_feasible": 879
+   }
+  }
+ },
+ "source": {
+  "schema": "desk_lifecycle/action_grid/1",
+  "corpus": "desk",
+  "actions": [
+   "close",
+   "partial_close",
+   "tighten_sl_0p25r",
+   "tighten_sl_0p5r",
+   "tighten_sl_1r",
+   "widen_sl_0p25r",
+   "widen_sl_0p5r",
+   "sl_to_structure",
+   "tp_pull_in_0p5r",
+   "tp_pull_in_1r",
+   "tp_extend_1r",
+   "tp_extend_2r",
+   "tp_to_structure"
+  ],
+  "levels": {
+   "tighten_r": [
+    0.25,
+    0.5,
+    1.0
+   ],
+   "widen_r": [
+    0.25,
+    0.5
+   ],
+   "pull_in_r": [
+    0.5,
+    1.0
+   ],
+   "extend_r": [
+    1.0,
+    2.0
+   ],
+   "structure_bars": 12,
+   "widen_floor_r": -2.0,
+   "tp_cap_r": 10.0,
+   "min_gap_r": 0.1
+  },
+  "policy": "C4E",
+  "entries": "/home/user/JTA-Trader/comms/research/desk_lifecycle/full-c4e/entries.jsonl",
+  "candles": [
+   "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+   "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+   "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+   "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+   "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+   "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ]
+ },
+ "generated_at": "2026-11-19T15:37:45Z"
+}
