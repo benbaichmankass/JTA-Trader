@@ -562,3 +562,17 @@ def test_the_zero_pnl_demotion_is_not_skipped_by_the_partial_markers():
     row = _trade(pnl=0.0)
     row["reduce_leg_absorbed"] = 1
     assert P.classify_pnl(row)[0] == P.UNVERIFIED
+
+
+
+def test_pnl_bucket_reports_the_split_pnl_is_trustworthy_admits():
+    """RQ-20261119-3e98-01: the paper-book eval states measured vs estimated."""
+    from src.runtime.provenance import ESTIMATED, MEASURED, UNVERIFIED, pnl_bucket, pnl_is_trustworthy
+
+    assert pnl_bucket('{"exit_price_source": "bybit_closed_pnl"}') == MEASURED
+    assert pnl_bucket({"exit_price_source": "candle_at_close"}) == ESTIMATED
+    for blob in (None, "", "junk", {}):
+        assert pnl_bucket(blob) == UNVERIFIED
+    for blob in ('{"exit_price_source": "bybit_closed_pnl"}', {"exit_price_source": "candle_at_close"},
+                 '{"exit_price_source": "local_markprice"}', None):
+        assert pnl_is_trustworthy(blob) == (pnl_bucket(blob) in (MEASURED, ESTIMATED))
