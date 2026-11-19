@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_service_change",
+  "hold_text": "ict-web-api: /api/health becomes async def (touches nothing). Needs a web-api restart after merge. Manager merges; AM-OPS-4 restarts and observes the watchdog wedge rate vs the 9-in-68h baseline. Revert: git revert.",
+  "why": "WEBAPI-WEDGE-RECURRING: the sync health handler shares the AnyIO threadpool with every sync diag/broker route, so under CPU saturation one probe can queue past the watchdog's 10 s timeout while the loop is alive. Gates this adds or changes: none."
+}
