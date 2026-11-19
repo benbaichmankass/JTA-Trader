@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Unblocks RQ-20261119-a7f1-01 (scha_trend_long_1d re-run of RQ-20261016-d37f-06) and -02 (gdx_pullback_1d re-run of RQ-20261016-d37f-02). Their blocked_reason was data freshness: 'unblock when trainer data/SCHA_1d.csv / GDX_1d.csv has last bar >= the previous trading day'. MEASURED (trainer-vm-diag run 44517369362, 2026-11-19 ~11:44Z, after the #27214 lake build): GDX_1d.csv last 2026-11-18 (spliced 92 bars from 2026-07-10, ratio 1.00000), SCHA_1d.csv last 2026-11-18 (spliced 95 bars from 2026-07-07, ratio 1.00504). 11-18 is the previous trading day, so the condition is met. a7f1-04..06 stay blocked (USO_1h), and a7f1-09 / -11 stay blocked (TLT_1h / SLV_1h: TRAINER-INTRADAY-EQUITY-REFRESH). Research records only; HELD because the landing guard does not vouch for edits to existing queue units. Gates this adds or changes: none."
+}
