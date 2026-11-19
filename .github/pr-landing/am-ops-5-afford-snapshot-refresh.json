@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "AFFORD-SNAPSHOT-REFRESH: a daily workflow runs scripts/ops/snapshot_account_for_mandate.py for the resolver Stage-2 accounts (read-only diag read; per-leg answers only, no balance), and both snapshots are refreshed by hand today (bybit_2 was 12.2 d and alpaca_live 17.6 d old vs a 7 d limit). Touches .github, scripts/ci, docs and comms data only, so it restarts nothing. Gates this adds or changes: none."
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_path",
+  "hold_text": "Touches scripts/deploy_pull_restart.sh: comms/mandate_evidence/ and comms/live_bar/ are added to the non-runtime list, so the two DAILY bot data commits (this workflow at 06:17Z and the #27058 live-bar feed at 05:47Z) stop restarting the live trader. No src/ reader of either directory (grep 2026-11-19). Lands after the #27013 tick read; the manager merges. Revert: git revert.",
+  "why": "AFFORD-SNAPSHOT-REFRESH: a daily writer for the R-AFFORD snapshots (both were 12-18 d stale vs a 7 d limit), plus the restart-gate fix the manager found in review. Gates this adds or changes: none."
 }
