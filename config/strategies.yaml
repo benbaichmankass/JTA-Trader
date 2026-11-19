@@ -1464,14 +1464,6 @@ strategies:
     # is RQ-20261103-5e04-01 (revert clause inside). Revert: delete this line.
     structure_exit: "pivot=5;sl_only"
     decision_bar: closed
-    # MAKER TIME-STOP EXIT (row D9-MAKER-EXIT-BUILD, data-backed Tier 3 under the standing rule): the 24h max_hold
-    # close is worked post-only at the passive mid with a 1-minute Market fallback (src/units/accounts/maker_exit.py).
-    # Evidence: RQ-20261118-04a5-05 PASS (+0.0060 R/exit, n 2,786) + fresh-window RQ-20261118-e8a1-01 PASS (+0.0066 R/exit,
-    # CI [+0.0059, +0.0073], n 16,764, 60 perps). STAGED: maker_exit.account_admitted admits the demo floor only (Bybit,
-    # account_class paper, demo true, not a portfolio mirror). ml_entry rosters no such account today (bybit_2 real money,
-    # bybit_portfolio mirror), so it keeps the Market exit until the widening; the demo exits are observed on ml_entry_v2/bybit_1.
-    # The widening to real money is a one-line PR after 1-2 clean demo exits. ROLLBACK: delete this line (taker Market exit).
-    time_stop_exit_order: post_only_mid
     symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT, SPY, QQQ, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]
     # 2026-11-01 ALPACA PAPER (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z verbatim "Paper now, v2 for
     # live (Rec.)"): the SAME frozen model on alpaca_paper (Stage-1 floor, paper money, both sides), NOT on alpaca_live
@@ -1522,11 +1514,14 @@ strategies:
     # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
     structure_exit: "pivot=5"
     decision_bar: closed
-    # MAKER TIME-STOP EXIT, DEMO-FLOOR MECHANICS CHECK (row D9-MAKER-EXIT-BUILD): ml_entry (the leg the evidence was
-    # measured on) trades no demo-floor Bybit account (bybit_1 rosters THIS leg), so the 1-2 clean exits the staging needs
-    # are observed here, on bybit_1, through the same 24h max_hold_verdict. Mechanics only; the replays' matched-random
-    # read puts the gain on the clock exit, not on v1's side picks. See ml_entry's line for the evidence and the fence.
-    # ROLLBACK: delete this line.
+    # MAKER TIME-STOP EXIT, DEMO-FLOOR MECHANICS CHECK (row D9-MAKER-EXIT-BUILD, data-backed Tier 3 under the standing
+    # rule; manager 2026-11-19 "keep the ml_entry_v2 line"): the 24h max_hold close is worked post-only at the passive mid
+    # with a 1-minute Market fallback (src/units/accounts/maker_exit.py). Evidence: RQ-20261118-04a5-05 PASS + fresh-window
+    # RQ-20261118-e8a1-01 PASS, both measured on ml_entry's exits. ml_entry trades no demo-floor Bybit account (bybit_1
+    # rosters THIS leg), so the 1-2 clean mechanical exits are observed here; maker_exit.account_admitted limits the path to
+    # the demo floor (bybit_1). ml_entry is NOT declared yet: its line changes its config_fingerprint and would leave its
+    # committed evidence record comms/strategy_evidence/ml_entry.json STALE, so it lands with the real-money widening
+    # (PR 2), where re-vouching that record is part of the decision. ROLLBACK: delete this line (taker Market exit).
     time_stop_exit_order: post_only_mid
     symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]
     atr_period: 14

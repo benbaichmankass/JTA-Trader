@@ -83,13 +83,20 @@ def test_the_live_config_admits_the_demo_floor_only():
     for name, _leg in admitted:
         a = accs[name]
         assert a.get("account_class") == "paper" and a.get("demo") is True and a.get("paper_role") != "portfolio"
-    assert ("bybit_2", "ml_entry") in refused_real and ("bybit_portfolio", "ml_entry") in refused_real
+    # ml_entry (real money + its mirror) is not declared in PR 1: its line would make its committed evidence record
+    # STALE, so it lands with the widening. Even if it were declared, the fence would refuse both books.
+    assert mx.leg_exit_order("ml_entry") == mx.MARKET
+    for acct in ("bybit_2", "bybit_portfolio"):
+        a = accs[acct]
+        cfg = {"account_id": acct, "exchange": a.get("exchange"), "market_type": a.get("market_type"),
+               "demo": a.get("demo", False), "mode": "live"}
+        assert mx.resolve_exit_order("ml_entry", "max_hold", cfg, cfg_loader=_legs)[0] == mx.MARKET
 
 
 def test_the_leg_field_is_read_from_the_whole_yaml_block():
     """``strategy_registry._strategy_cfg`` drops every leg key but five; the leg read must not go through it."""
-    assert mx.full_leg_cfg("ml_entry").get("time_stop_exit_order") == "post_only_mid"
-    assert mx.leg_exit_order("ml_entry") == mx.POST_ONLY_MID
+    assert mx.full_leg_cfg("ml_entry_v2").get("time_stop_exit_order") == "post_only_mid"
+    assert mx.leg_exit_order("ml_entry_v2") == mx.POST_ONLY_MID
 
 
 # --- price parity with the harness ----------------------------------------------------------------------------

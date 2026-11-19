@@ -187,16 +187,16 @@ _FENCE_KEYS = ("account_class", "demo", "paper_role")
 
 
 def _declared_account(account_id: Optional[str], *, path: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """The account's own block in ``config/accounts.yaml``; ``None`` when it cannot be read (the fence then refuses)."""
+    """The account's own block in ``config/accounts.yaml`` (via the canonical loader); ``None`` when unreadable."""
     if not account_id:
         return None
     try:
-        import yaml
-        from pathlib import Path
-        p = Path(path) if path else Path(__file__).resolve().parents[3] / "config" / "accounts.yaml"
-        doc = yaml.safe_load(p.read_text()) or {}
-        accs = doc.get("accounts", doc) if isinstance(doc, dict) else {}
-        blk = accs.get(str(account_id)) if isinstance(accs, dict) else None
+        from src.config.accounts_loader import load_accounts_dict
+        errors: list = []
+        accs = load_accounts_dict(path, errors=errors) if path else load_accounts_dict(errors=errors)
+        if errors and not accs:
+            return None
+        blk = (accs or {}).get(str(account_id))
         return blk if isinstance(blk, dict) else None
     except Exception as exc:  # noqa: BLE001
         logger.warning("maker_exit: accounts.yaml read failed for %s: %s", account_id, exc)
