@@ -4,7 +4,7 @@
 # Gates this adds or changes: none.
 id: RQ-20261119-c5e8-01
 title: 'POOLED 1d-ETF pullback DIRECTION (cells IEF, TLT, SLV, GLD, GDX; arms BOTH / LONG-only / SHORT-only): does restricting the pullback family to one side beat both sides pooled, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -43,7 +43,7 @@ iteration:
   subject: ief_pullback_1d
   subject_kind: strategy_leg
   from_result: RQ-20261118-abab-38
-  verdict_read: indeterminate
+  verdict_read: fail
   diagnosis: 'abab-38 (direction on ief_pullback_1d) INDETERMINATE: incumbent n 33 < floor 39 on 2021-07-01..2026-10-15 (run 44387493913); the 1d sibling legs share the window, so more trades come from pooling cells, not from waiting.'
   search: 'direction family on the pooled 1d-ETF population: arms LONG, SHORT, one factor each against both sides, one shared parameter set.'
   levers:
@@ -125,4 +125,26 @@ related:
 - RQ-20261018-ef5d-03
 - research/levers/ief_pullback_1d.yaml
 population: daily bars of IEF, TLT, SLV, GLD, GDX (Dukascopy), 2021-07-01..2026-10-15; the pullback family at harness-declared parameters, all trades the harness emits per arm.
-last_dispatched_at: '2026-11-19T19:00:35+00:00'
+last_dispatched_at: '2026-11-19T19:24:52+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-C5E8-01-POOLED-1D-ETF-DIRECTION
+  evidence:
+  - comms/research/RQ-20261119-c5e8-01/44589971319/verdict.json
+  - comms/research/RQ-20261119-c5e8-01/44589971319/measurement.json
+  graded_at: '2026-11-19'
+  grader: lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), decided by the manager 2026-11-19 21:01Z
+  rows: 1
+  verdict: fail
+  reason: 'run 44589971319 (15 of 15 cells measured). The HARNESS wrote INDETERMINATE ("0 powered cells", a breadth test this rule did not register);
+    the registered rule applied verbatim gives FAIL and wins (PI-20261119-FILLW47B-0005). LONG: pooled n 68 >= 60, net R +34.89, +0.513 R/trade
+    (A +0.198, margin +0.315 >= 0.02) but 2 of 6 calendar folds positive (4 required) -> fails. SHORT: pooled net R -9.89, 2/6 folds -> fails. A (both
+    sides): n 125, +24.74 R, 2/6 folds. Neither arm meets the INDETERMINATE condition (pooled n < 60 or fewer than half the cells measured), so
+    both candidates fail -> FAIL. Calendar-fold net R, LONG: -0.03 -2.83 -3.61 +9.43 +40.98 -9.04; A: -3.48 -6.05 -4.24 +3.55 +38.07 -3.10;
+    SHORT: -3.45 -4.04 +1.43 -6.77 -5.33 +8.26.'
+  caveats:
+  - '(a) The registered cell-breadth clause (at least half of the cells with n >= 20 must pass their own rule) could never pass for a one-sided arm: LONG and SHORT
+    have 12-16 trades per cell. PASS was unreachable on that clause by construction. LONG fails independently on folds (2/6), so the FAIL does not rest on it.'
+  - '(b) In every arm one fold (fold 5, +38 to +41 R) supplies more than the whole pooled net R (LONG +34.89 pooled, fold 5 alone +40.98). The pooled LONG
+    figure is a single-period result, not a lead; by cell it is carried by SLV (+20.3) and GLD (+18.7) with IEF and TLT negative. No LONG follow-up on SLV or GLD is authored from this (manager).'
+  fail_action_applied: 'recorded as a direction entry in research/levers/{ief,tlt,slv,gld,gdx}_pullback_1d.yaml (tested_at_power false: the family is NOT closed); RQ-20261118-abab-38 retired by record; the per-cell-breadth design gap is PI-20261119-FILLW47B-0010. Closes this configuration only (pooled five-cell population, one shared parameter set, arms LONG and SHORT) (family_retirement_policy.yaml).'

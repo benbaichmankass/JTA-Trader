@@ -8,7 +8,7 @@
 id: RQ-20261118-04a5-04
 title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the head (holding_pays_neg25,
   and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -156,3 +156,25 @@ amendments:
   - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
+grading:
+  attested: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
+  auto: false
+  decision_rule_id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
+  evidence:
+  - comms/research/RQ-20261118-04a5-04/44572560928/verdict.json
+  - research/results/RQ-20261118-04a5-04/44572560928.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager; scripts/research/queue_grade.py auto-grade on main concurs (verdict fail, all rows measured)
+  rows: 2
+  verdict: fail
+  reason: 'run 44572560928 (trainer, landed on main). Cell rule: n_oos >= 300 AND dR/trade >= 0 AND 95% LB > -0.02 R AND pooled recovered R
+    > the random-truncation control p95. neg25 cells: trend_donchian (BTC) n 1,235, dR +0.0160, LB -0.0384 -> fails the LB clause (and
+    recovered 19.75 R vs control p95 169.59); trend_donchian_eth n 7,845, dR +0.0183, LB -0.0022, judge ok BUT recovered 143.57 R vs control
+    p95 951.75 (pct rank 0.0) -> fails the control clause; trend_donchian_sol n 2,935, dR +0.0203, LB -0.0108, judge ok BUT recovered 59.67 R
+    vs control p95 416.25 (pct rank 0.0) -> fails the control clause. Every leg''s neg25 cell is measured and none passes: unit FAIL.
+    holding_pays cells (reported, never gate): BTC -0.0154, ETH -0.0084, SOL -0.0122, each pct rank 0.0. READING (not graded): a10d-07''s
+    PASS (neg25 beats the champion label, paired) and this FAIL are compatible: both heads recover far less R than closing the same number
+    of trades at random points, so neither earns close authority; the control''s size (random truncation recovering 4-7x the head''s R
+    on every cell) is itself a diagnosis input (the legs give back a lot after entry). REGISTERED FAIL ACTION: keep annotate on all three
+    legs; back to diagnosis on the fixed harness, next levers per-symbol heads and the exhaustion feature block (--features extended):
+    filed with the control finding as PI-20261119-RIMARY12-0004.'

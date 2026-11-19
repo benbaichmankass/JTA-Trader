@@ -1406,6 +1406,11 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         "priced_options_state": priced_state(priced, why, bool(price and direction)),
         "regime": {"adx_now": adx, "atr_now_over_entry": atr_ratio, "cell_entry": cell_entry, "cell_now": None, "trend_now": trend},
         "review_id": review_id,
+        # LTR-PACKET-READ-REACH (2026-11-19): the 20:10Z lane matched journal trade 8031 to pkg-d0743cad43c9449b by
+        # inference. Every journal row of the package is named here: one per account the package reached.
+        "trades": sorted(({"account_id": t.get("account_id"), "trade_id": t.get("id"), "status": t.get("status")}
+                          for t in (view["trades"] or []) if t.get("id") is not None),
+                         key=lambda r: (str(r["account_id"]), str(r["trade_id"]))),
         "state": {"atr_now_over_entry": atr_ratio, "bars_held": bars_held, "giveback_r": giveback, "open_r": open_r,
                   "peak_provenance": provenance, "peak_r": peak_r, "regime_cell_entry": cell_entry, "regime_cell_now": None,
                   "sl": sl, "tp": tp},

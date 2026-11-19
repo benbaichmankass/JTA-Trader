@@ -68,6 +68,8 @@ run:
   - AX40=--adx-max=40
   - --arm
   - AX50=--adx-max=50
+  - --non-crypto-source
+  - dukascopy
   - --days
   - '2900'
   - --start
@@ -106,3 +108,17 @@ value:
 why_this_matters: research/levers/ict_scalp_mgc_15m.yaml lists no adx-max (regime) family for this TESTING leg; sibling legs carry the same arms (RQ-20261017-ae17 / RQ-20261031-7b6f
   families). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
 last_dispatched_at: '2026-11-19T18:20:55+00:00'
+grading:
+  attested: RULERQ202611179e1c12
+  auto: true
+  decision_rule_id: RULERQ202611179e1c12
+  evidence:
+  - research/results/RQ-20261117-9e1c-12/44452281735.jsonl
+  - research/results/RQ-20261117-9e1c-12/44583685963.jsonl
+  - research/results/RQ-20261117-9e1c-12/44586895817.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null
