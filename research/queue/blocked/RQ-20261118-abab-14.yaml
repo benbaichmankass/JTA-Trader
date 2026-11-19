@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-14
 title: 'FILTER lever family on squeeze_breakout_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of VH90/VL20/AX40 (FILTER) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: blocked
 cadence: once
 theme: live_strategy
 priority: 2
@@ -115,3 +115,10 @@ roadmap:
 related:
 - RQ-20261106-014
 - research/levers/squeeze_breakout_4h.yaml
+blocked_on:
+- kind: harness
+  ref: scripts/backtest_squeeze.py
+  owner: PI-20261119-FILLW47B-0003
+  what: 'scripts/backtest_squeeze.py declares none of --adx-max, --vol-skip-above-pctl, --vol-skip-below-pctl: the arm dies at argparse (unrecognized arguments). Found by check_queue_harness_flags.py --audit.'
+  clears_when: 'the harness accepts every flag this unit passes (default byte-identical, golden test), merged on main (PI-20261119-FILLW47B-0003); then git-mv this file back to research/queue/ with status queued, rule unchanged'
+  due_by: '2026-11-26'
