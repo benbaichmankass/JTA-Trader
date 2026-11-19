@@ -9,7 +9,7 @@ id: RQ-20261119-a10d-06
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL target): does the more_mfe target (1 - peak_is_in: is there still > 0.25 R of new favourable
   excursion ahead), aadc-04s second registered arm that could not be read, improve the heads out-of-sample replayed R per trade over the holding_pays
   champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -172,3 +172,17 @@ amendments:
   - 'manager-approved 2026-11-19 (session_01AFoLuHbhd9wFuGJfWRqyoV, 08:31Z), data freshness: blocked before the dispatcher picks it up, because
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
+last_dispatched_at: '2026-11-19T18:20:42+00:00'
+grading:
+  attested: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
+  auto: true
+  decision_rule_id: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
+  evidence:
+  - research/results/RQ-20261119-a10d-06/44582558646.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

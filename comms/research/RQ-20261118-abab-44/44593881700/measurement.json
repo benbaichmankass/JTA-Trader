@@ -1,0 +1,477 @@
+{
+  "leg": "spy_pullback_1h",
+  "label": "no_reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "S_OPEN": {
+        "delta_net_r": 2.5264,
+        "delta_max_drawdown_r": -2.5376,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "S_CLOSE": {
+        "delta_net_r": -9.0736,
+        "delta_max_drawdown_r": 0.0504,
+        "fold_wins": 1,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0974,
+      "n": 154,
+      "net_r": -24.3343,
+      "net_r_fee_only": -9.8212,
+      "max_drawdown_r": 45.8054,
+      "by_outcome": {
+        "stop": 110,
+        "trail_stop": 40,
+        "take_profit": 2,
+        "timeout": 2
+      },
+      "mean_bars_held": 21.481,
+      "net_r_per_capital_day": -0.1765,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2024-01-08 15:00:00+00:00",
+      "data_end": "2026-11-18 21:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-01-08 14:30:00+00:00",
+          "end": "2024-09-25 22:00:00+00:00",
+          "trades": 28,
+          "net_r": 17.4274
+        },
+        {
+          "fold": 2,
+          "start": "2024-09-25 22:00:00+00:00",
+          "end": "2025-06-14 05:30:00+00:00",
+          "trades": 46,
+          "net_r": -19.4152
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 05:30:00+00:00",
+          "end": "2026-03-02 13:00:00+00:00",
+          "trades": 39,
+          "net_r": -18.8212
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-02 13:00:00+00:00",
+          "end": "2026-11-18 20:30:00+00:00",
+          "trades": 41,
+          "net_r": -3.5249
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "S_OPEN": {
+      "reach_ge_6r": 0.0974,
+      "n": 154,
+      "net_r": -21.8079,
+      "net_r_fee_only": -7.1499,
+      "max_drawdown_r": 43.2678,
+      "by_outcome": {
+        "stop": 109,
+        "trail_stop": 41,
+        "take_profit": 2,
+        "timeout": 2
+      },
+      "mean_bars_held": 21.357,
+      "net_r_per_capital_day": -0.1591,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "skip_hours": "13,14"
+      },
+      "data_start": "2024-01-08 15:00:00+00:00",
+      "data_end": "2026-11-18 21:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-01-08 14:30:00+00:00",
+          "end": "2024-09-25 22:00:00+00:00",
+          "trades": 28,
+          "net_r": 17.4161
+        },
+        {
+          "fold": 2,
+          "start": "2024-09-25 22:00:00+00:00",
+          "end": "2025-06-14 05:30:00+00:00",
+          "trades": 45,
+          "net_r": -18.3595
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 05:30:00+00:00",
+          "end": "2026-03-02 13:00:00+00:00",
+          "trades": 40,
+          "net_r": -19.755
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-02 13:00:00+00:00",
+          "end": "2026-11-18 20:30:00+00:00",
+          "trades": 41,
+          "net_r": -1.1094
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_OPEN__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_OPEN__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "13,14"
+      ]
+    },
+    "S_CLOSE": {
+      "reach_ge_6r": 0.1,
+      "n": 140,
+      "net_r": -33.4079,
+      "net_r_fee_only": -20.1381,
+      "max_drawdown_r": 45.8558,
+      "by_outcome": {
+        "stop": 104,
+        "trail_stop": 34,
+        "timeout": 1,
+        "take_profit": 1
+      },
+      "mean_bars_held": 21.764,
+      "net_r_per_capital_day": -0.2631,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "skip_hours": "19,20"
+      },
+      "data_start": "2024-01-08 15:00:00+00:00",
+      "data_end": "2026-11-18 21:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-01-08 14:30:00+00:00",
+          "end": "2024-09-25 22:00:00+00:00",
+          "trades": 29,
+          "net_r": 6.9395
+        },
+        {
+          "fold": 2,
+          "start": "2024-09-25 22:00:00+00:00",
+          "end": "2025-06-14 05:30:00+00:00",
+          "trades": 37,
+          "net_r": -12.7023
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 05:30:00+00:00",
+          "end": "2026-03-02 13:00:00+00:00",
+          "trades": 38,
+          "net_r": -21.6256
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-02 13:00:00+00:00",
+          "end": "2026-11-18 20:30:00+00:00",
+          "trades": 36,
+          "net_r": -6.0194
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_CLOSE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_CLOSE__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "19,20"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "SPY",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-01-08 14:30:00+00:00",
+      "2024-09-25 22:00:00+00:00",
+      "2025-06-14 05:30:00+00:00",
+      "2026-03-02 13:00:00+00:00",
+      "2026-11-18 20:30:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar",
+        "skip_hours"
+      ]
+    },
+    "S_OPEN": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_OPEN__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_OPEN__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "13,14"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "13,14"
+      ],
+      "omitted_levers_per_builder": [
+        "decision_bar",
+        "skip_hours"
+      ]
+    },
+    "S_CLOSE": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_CLOSE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-44/44593881700/arms/S_CLOSE__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "19,20"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "19,20"
+      ],
+      "omitted_levers_per_builder": [
+        "decision_bar",
+        "skip_hours"
+      ]
+    }
+  }
+}

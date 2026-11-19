@@ -2,7 +2,7 @@
 id: RQ-20261119-48ac-01
 title: 'ITERATION 3 of ltr-tp-pull-in (43b6-04 PASS@new_peak is a discovery): ONE confirmation of tp_pull_in@new_peak on the four real-TP legs never used to choose
   the trigger (RULE-AM-RISK-ADJUSTED-V1)'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -134,3 +134,16 @@ run:
   - --out
   - '{out_dir}'
 last_dispatched_at: '2026-11-19T17:12:14+00:00'
+grading:
+  attested: RULE-RQ-20261119-48ac-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261119-48ac-01
+  evidence:
+  - research/results/RQ-20261119-48ac-01/44569539032.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

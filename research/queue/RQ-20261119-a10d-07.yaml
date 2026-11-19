@@ -8,7 +8,7 @@
 id: RQ-20261119-a10d-07
 title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future
   R >= -0.25), improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -155,3 +155,26 @@ related:
 - research/queue/RQ-20261117-aadc-11.yaml
 - scripts/research/exit_head_label_bakeoff.py
 - scripts/research/m20_exit_head_round.py
+last_dispatched_at: '2026-11-19T18:20:55+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+  evidence:
+  - comms/research/RQ-20261119-a10d-07/44586889314/verdict.json
+  - research/results/RQ-20261119-a10d-07/44586889314.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-12 (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager
+  rows: 1
+  verdict: pass
+  reason: 'run 44586889314 (trainer, 18:21-18:42Z, success; commit fcc9e7ef, landed on main). FIXED harness verified at that commit:
+    exit_head_label_bakeoff.py scores predict_proba P(class=1) (the 2026-11-18 .predict fix) with the live shape below_half_r tau 0.10,
+    so the #26906 evidence caveat does not apply to this read. Rows: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (n 45,372, the
+    ef40-01 rebuild). Cost basis per symbol fee 7.5 bps + slippage 3 bps round trip + funding 1 bps / 8h. holding_pays_neg25 vs the
+    holding_pays champion, paired per OOS trade over trend_donchian / _eth / _sol 1h, 5 folds, 7 d embargo, lookback 500: n 12,015 (5 x
+    (247 + 1,569 + 587)) >= 300; mean d +0.02858 R/trade >= +0.01; deflated CI z 2.241 [+0.01234, +0.04483], LB > 0 (check 0.02858 -
+    2.241 x 0.00725 = 0.01233). PASS by the registered rule. Context, not graded: vs hold neg25 +0.01856 [+0.00220, +0.03492], champion
+    -0.01002 [-0.03117, +0.01112]; neg25 fires on 4,908 trades vs 9,253. The original aadc-11 PASS (truncated data, pre-fix harness) is
+    superseded as evidence by this read. PASS ACTION (registered): ONE confirmation on a held-out donchian 1h leg not in the three, claimed
+    in holdout_lock, before a data-backed Tier-3 proposal to retrain exit-head-donchian-1h on the winning target; filed as
+    PI-20261119-RIMARY12-0003. #26906 (annotate-only pin of v2-neg25 on the three legs) is the manager''s call on this record; no close
+    authority follows from it.'
