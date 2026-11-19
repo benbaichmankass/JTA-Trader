@@ -676,6 +676,220 @@ def main_frozen_book(a) -> Dict[str, Any]:
                            f"at cash {FROZEN_CASH_GRID}")}
 
 
+# ------------------------------------------------------------------------------------------------ slot policy (a10d-09)
+# RQ-20261119-a10d-09 (manager 2026-11-19 11:44Z, after a10d-04 graded INDETERMINATE): the one-slot book took 22 of 207 frozen
+# eq_struct signals (slot busy ~88%) and those 22 averaged below zero while the 207 average +0.49 R. Two questions, one read:
+# (1) is that gap the book's SELECTION or NOISE; (2) does a different slot policy carry the population's edge into the book.
+SLOT_POLICIES = ["first_signal", "score_gate_p50_30d", "slots_2", "slots_3"]
+SLOT_CHALLENGERS = ["score_gate_p50_30d", "slots_2", "slots_3"]
+SLOT_NULL_DRAWS = 2000
+SLOT_NULL_SEED = 20261119
+SLOT_NOISE_P = 0.10
+
+
+def replay_slots(trades: List[Dict[str, Any]], cash0: float, k: int, risk_pct: float = 0.02, wall: float = 0.9,
+                 roundup: float = 1.5, settle_bdays: int = 1, long_only: bool = True) -> Dict[str, Any]:
+    """The alpaca_live cash book with k concurrent positions (k >= 2). Same pick order, sizer and cost basis as replay(); the
+    cash ledger is explicit: an open position commits its notional, a closed one's proceeds are unsettled until T+settle_bdays
+    (NY dates), and a new position is capped at min(wall x equity / k, free settled cash) whole shares. P&L is booked at exit.
+    k == 1 is NOT routed here: the registered status quo is replay() itself, reproduced exactly."""
+    assert k >= 2, "k == 1 is replay(); this ledger is for the multi-slot arms"
+    # provenance: picks -- `score` is the regressed net R the live pick order sorts on (ml_pool_scoring.picks), not a probability
+    rows = sorted(trades, key=lambda t: (pd.Timestamp(t["entry_time"]), -float(t.get("score") or 0.0), str(t["symbol"])))
+    equity = float(cash0)
+    open_pos: List[Dict[str, Any]] = []      # {exit, notional, pnl, rec}
+    unsettled: List[tuple] = []              # (settle NY date, amount)
+    refused: Dict[str, int] = {}
+    taken: List[Dict[str, Any]] = []
+
+    def close_until(ts):
+        nonlocal equity
+        for pos in sorted([p_ for p_ in open_pos if p_["exit"] <= ts], key=lambda p_: p_["exit"]):
+            equity += pos["pnl"]
+            pos["rec"]["equity_after"] = round(equity, 4)
+            if settle_bdays:
+                unsettled.append(((_ny_date(pos["exit"]) + pd.offsets.BDay(settle_bdays)).normalize(), pos["notional"] + pos["pnl"]))
+            open_pos.remove(pos)
+
+    for t in rows:
+        et, xt = pd.Timestamp(t["entry_time"]), pd.Timestamp(t["exit_time"])
+        close_until(et)
+        today = _ny_date(et)
+        unsettled[:] = [(d, amt) for d, amt in unsettled if d > today]
+        committed = sum(p_["notional"] for p_ in open_pos)
+        free = equity - committed - sum(amt for _, amt in unsettled)
+        why = None
+        if long_only and str(t.get("direction", "long")).lower() not in ("long", "buy"):
+            why = "short_unexecutable"
+        elif len(open_pos) >= k:
+            why = "slot_busy"
+        rps = abs(float(t["entry"]) - float(t["sl"]))
+        if why is None and not (rps > 0 and float(t["entry"]) > 0):
+            why = "bad_risk"
+        q = 0
+        if why is None:
+            budget = equity * risk_pct
+            q = math.floor(budget / rps)
+            if q < 1:
+                q = 1 if rps <= roundup * budget else 0
+            if q < 1:
+                why = "risk_roundup_refused"
+            else:
+                cap = math.floor(min(wall * equity / k, free) / float(t["entry"]))
+                if cap < 1:
+                    why = "unsettled_t1" if math.floor(wall * equity / k / float(t["entry"])) >= 1 else "unaffordable_whole_share"
+                else:
+                    q = min(q, cap)
+        if why:
+            refused[why] = refused.get(why, 0) + 1
+            continue
+        pnl = q * rps * float(t["net_r"])
+        rec = {"symbol": t["symbol"], "entry_time": str(et), "exit_time": str(xt), "qty": q, "risk_usd": round(q * rps, 4),
+               "notional_usd": round(q * float(t["entry"]), 2), "net_r": float(t["net_r"]), "pnl_usd": round(pnl, 4),
+               "equity_after": None, "score": t.get("score")}   # provenance: picks -- regressed net R, not a probability
+        taken.append(rec)
+        open_pos.append({"exit": xt, "notional": q * float(t["entry"]), "pnl": pnl, "rec": rec})
+    if open_pos:
+        close_until(max(p_["exit"] for p_ in open_pos))
+    # book_summary walks equity_after in taken order; for overlapping positions that is the equity at each one's exit
+    return book_summary(rows, taken, refused, cash0)
+
+
+def score_gate_p50_30d(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Keep a candidate only if its score >= the median score of the candidates whose entry is in the PRIOR 30 days (causal; a
+    candidate with fewer than 5 prior-30-day candidates is kept). Reserves the one slot for the stronger signals."""
+    rows = sorted(trades, key=lambda t: pd.Timestamp(t["entry_time"]))
+    ts = [pd.Timestamp(t["entry_time"]) for t in rows]
+    # provenance: picks -- `score` is the regressed net R (ml_pool_scoring.picks order key), not a probability
+    sc = [float(t.get("score") or 0.0) for t in rows]
+    out = []
+    for i, t in enumerate(rows):
+        prior = [sc[j] for j in range(i) if ts[i] - pd.Timedelta(days=30) <= ts[j] < ts[i]]
+        if len(prior) < 5 or sc[i] >= float(np.median(prior)):
+            out.append(t)
+    return out
+
+
+def slot_book(trades: List[Dict[str, Any]], policy: str, cash0: float, **kw) -> Dict[str, Any]:
+    if policy == "first_signal":
+        return replay(trades, cash0, **kw)
+    if policy == "score_gate_p50_30d":
+        b = replay(score_gate_p50_30d(trades), cash0, **kw)
+        b["gated_out"] = len(trades) - b.get("n_candidates", 0)
+        return b
+    if policy.startswith("slots_"):
+        return replay_slots(trades, cash0, int(policy.split("_")[1]), **kw)
+    raise ValueError(policy)
+
+
+def selection_null(trades: List[Dict[str, Any]], cash0: float, draws: int = SLOT_NULL_DRAWS, seed: int = SLOT_NULL_SEED,
+                   **kw) -> Dict[str, Any]:
+    """Is the status-quo book's taken mean explained by WHICH trades the one slot picks (selection) or by chance (noise)?
+    Null: shuffle net_r across the candidates (times, prices and scores kept), replay the status quo, record the taken mean.
+    p_low = share of null draws with taken mean <= the observed taken mean."""
+    obs = replay(trades, cash0, **kw)
+    m_obs = obs.get("taken_mean_net_r")
+    rng = np.random.default_rng(seed)
+    r = np.array([float(t["net_r"]) for t in trades])
+    vals = []
+    for _ in range(draws):
+        perm = rng.permutation(r)
+        sh = [dict(t, net_r=float(x)) for t, x in zip(trades, perm)]
+        m = replay(sh, cash0, **kw).get("taken_mean_net_r")
+        if m is not None:
+            vals.append(m)
+    vals = np.array(vals)
+    p_low = float(np.mean(vals <= m_obs)) if len(vals) and m_obs is not None else None
+    return {"observed_taken_mean": m_obs, "n_taken": obs.get("n_taken"), "null_mean": float(vals.mean()) if len(vals) else None,
+            "null_sd": float(vals.std(ddof=1)) if len(vals) > 1 else None, "p_low": p_low, "draws": int(len(vals)), "seed": seed}
+
+
+def selection_verdict(nulls: Dict[str, Dict[str, Any]], alpha: float) -> tuple:
+    """Registered: SELECTION if p_low < alpha (the claim's Sidak alpha at N) at EVERY cash level; NOISE if p_low >= 0.10 at every
+    cash level; UNRESOLVED otherwise."""
+    ps = [v.get("p_low") for v in nulls.values()]
+    if any(p_ is None for p_ in ps):
+        return "unresolved", "a null could not be scored"
+    if all(p_ < alpha for p_ in ps):
+        return "selection", f"p_low {ps} all < alpha {alpha}"
+    if all(p_ >= SLOT_NOISE_P for p_ in ps):
+        return "noise", f"p_low {ps} all >= {SLOT_NOISE_P}"
+    return "unresolved", f"p_low {ps} between alpha {alpha} and {SLOT_NOISE_P}"
+
+
+def slot_unit_verdict(arm_v: Dict[str, Dict[str, str]], reproduces: bool) -> tuple:
+    """Registered: INDETERMINATE unless the population AND the first_signal book reproduce a10d-04 exactly. PASS iff some challenger
+    policy PASSES at every cash level; FAIL iff every challenger FAILS at every cash level; INDETERMINATE otherwise."""
+    if not reproduces:
+        return "indeterminate", "the population or the first_signal book did not reproduce a10d-04: not the graded book"
+    passing = [p_ for p_ in SLOT_CHALLENGERS if set(arm_v[p_].values()) == {"pass"}]
+    if passing:
+        return "pass", "challenger(s) carrying the edge at every cash level: " + ", ".join(passing)
+    if all(set(arm_v[p_].values()) == {"fail"} for p_ in SLOT_CHALLENGERS):
+        return "fail", "every challenger slot policy loses at every cash level"
+    return "indeterminate", "no challenger passes at every cash level: " + "; ".join(
+        f"{p_} " + ",".join(f"{c}={v}" for c, v in arm_v[p_].items()) for p_ in SLOT_CHALLENGERS)
+
+
+A10D04_FIRST_SIGNAL = {"cash_250": (22, -0.03453278230010933), "cash_1000": (22, -0.19676036273692965),
+                       "cash_5000": (22, -0.08179399402889383)}
+
+
+def main_slot_book(a) -> Dict[str, Any]:
+    import holdout_lock as HL
+    import ml_entry_equity as M
+    from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip
+    sizer = _live_sizer_constants()
+    slip, _ = resolve_cost_policy("SPY")
+    fee = resolve_fee_bps_roundtrip("SPY")
+    art = json.loads((REPO / a.artifact).read_text())
+    pool = list(art["pool_symbols"])
+    feats, tau, predict, model_id = M._artifact_scorer(a.artifact)
+    claim = HL.claim_read(f"{FROZEN_FAMILY}-{model_id}-SLOTPOLICY", a.start, a.end, a.unit, a.where, train_end=M.TRAIN_END,
+                          family=FROZEN_FAMILY)
+    bar = claim["bar"]
+    bar_ch = HL.bar_for(int(bar["n_tries"]) + len(SLOT_CHALLENGERS) - 1)   # three challengers in one read: +2 tries
+    bars, client = M._pinned_pool_and_bars(a, a.end, pool)
+    tab = M.build_table(bars, pool, slip, fee, struct=art.get("structure_exit") or M.STRUCT_SPEC)
+    rep, tk0 = M.reproduce_frozen(tab, a.artifact, a.start, a.end, int(a.expect_n), float(a.expect_mean), pool, bars.keys())
+    tab = attach_prices(tab, bars)
+    hs, he = pd.Timestamp(a.start, tz="UTC"), pd.Timestamp(a.end, tz="UTC") + pd.Timedelta(days=1)
+    test = tab[(tab.ts >= hs) & (tab.ts < he)].dropna(subset=feats + ["net_long"])
+    test = test[M.session_mask(test.ts)]
+    test = test.assign(fold=pd.to_datetime(test.ts, utc=True).dt.year * 100 + pd.to_datetime(test.ts, utc=True).dt.month)
+    tk = take(test, predict(test), tau)   # provenance: predict -- mean regressed LONG net R of the frozen boosters, not a probability
+    tr = _trades(tk)
+    kw = dict(risk_pct=sizer["risk_pct"], wall=sizer["wall"], roundup=sizer["roundup"])
+    books: Dict[str, Dict[str, Any]] = {}
+    arm_v: Dict[str, Dict[str, str]] = {}
+    for pol in SLOT_POLICIES:
+        books[pol], arm_v[pol] = {}, {}
+        for c in FROZEN_CASH_GRID:
+            b = slot_book(tr, pol, c, **kw)
+            v_, why_ = frozen_arm_verdict(b, bar_ch if pol in SLOT_CHALLENGERS else bar)
+            b["verdict"], b["reason"] = v_, why_
+            books[pol][f"cash_{int(c)}"], arm_v[pol][f"cash_{int(c)}"] = b, v_
+    fs_ok = all(books["first_signal"][k].get("n_taken") == n and books["first_signal"][k].get("taken_mean_net_r") is not None
+                and abs(books["first_signal"][k]["taken_mean_net_r"] - m) < 1e-9 for k, (n, m) in A10D04_FIRST_SIGNAL.items())
+    reproduces = bool(rep["reproduction"]["reproduces"]) and len(tk) == len(tk0) and fs_ok
+    nulls = {f"cash_{int(c)}": selection_null(tr, c, **kw) for c in FROZEN_CASH_GRID}
+    sel, sel_why = selection_verdict(nulls, float(bar["alpha_one_sided"]))
+    v, why = slot_unit_verdict(arm_v, reproduces)
+    note = (f"{why}; selection-vs-noise: {sel} ({sel_why}); frozen {model_id}, {len(pool)}-ETF pool, {a.start}..{a.end}, unconstrained n "
+            f"{len(tk)}; first_signal reproduces a10d-04: {fs_ok}; " + "; ".join(
+                f"{p_}: " + ", ".join(f"{c} n {books[p_][c].get('n_taken')} mean {books[p_][c].get('taken_mean_net_r')} -> {arm_v[p_][c]}"
+                                      for c in books[p_]) for p_ in SLOT_POLICIES)
+            + f"; bar N={bar['n_tries']} (status quo), challengers N={bar_ch['n_tries']} (t_min {bar_ch['point_t_min']}, ci_z {bar_ch['ci_z']})")
+    return {"verdict": v, "note": note, "n": int(len(tk)), "books": books, "arm_verdicts": arm_v, "selection_null": nulls,
+            "selection_verdict": sel, "first_signal_reproduces_a10d04": fs_ok, "reproduction": rep,
+            "holdout_claim": {k: claim[k] for k in ("model_id", "family", "n_tries", "bar", "read_at")}, "challenger_bar": bar_ch,
+            "sizer": sizer, "cash_grid": FROZEN_CASH_GRID, "cash0_source": "grid (the live balance is never committed)",
+            "costs": {"slippage_bps": slip, "fee_bps": fee}, "alpaca_calls": client.calls,
+            "population": (f"FROZEN {model_id} (no refit) restricted-LONG decisions on its pinned {len(pool)}-ETF pool_symbols, {a.start}..{a.end}, "
+                           f"net of the Alpaca cost stack, walked through the alpaca_live whole-share T+1 cash book under slot policies "
+                           f"{SLOT_POLICIES} at cash {FROZEN_CASH_GRID}")}
+
+
 # ------------------------------------------------------------------------------------------------ challenger legs
 def leg_trades(name: str, workdir: Path, days: int) -> tuple:
     cmd = [sys.executable, str(REPO / "scripts/ops/build_strategy_evidence.py"), "--strategy", name, "--workdir", str(workdir),
@@ -961,6 +1175,58 @@ def _self_test() -> int:
     check("frozen unit: mixed is indeterminate", frozen_unit_verdict({"a": "pass", "b": "fail"}, True)[0] == "indeterminate")
     check("frozen unit: all fail", frozen_unit_verdict({"a": "fail", "b": "fail"}, True)[0] == "fail")
     check("frozen unit: no reproduction is indeterminate", frozen_unit_verdict({"a": "pass"}, False)[0] == "indeterminate")
+    # slot policy (RQ-20261119-a10d-09)
+    def tr_(sym, e, x, net, score=0.1, entry=10.0, sl=9.0):
+        return {"symbol": sym, "entry_time": e, "exit_time": x, "entry": entry, "sl": sl, "net_r": net, "direction": "long", "score": score}
+    ov = [tr_("A", "2025-01-06 15:00Z", "2025-01-10 15:00Z", 1.0), tr_("B", "2025-01-07 15:00Z", "2025-01-09 15:00Z", 1.0),
+          tr_("C", "2025-01-08 15:00Z", "2025-01-09 15:00Z", 1.0)]
+    check("slots: one slot takes 1 of 3 overlapping", replay(ov, 10000.0)["n_taken"] == 1)
+    b2 = replay_slots(ov, 10000.0, 2)
+    check("slots: k=2 takes 2 of 3 overlapping and refuses the third as slot_busy",
+          b2["n_taken"] == 2 and b2["refused"].get("slot_busy") == 1)
+    check("slots: k=3 takes all 3", replay_slots(ov, 10000.0, 3)["n_taken"] == 3)
+    capped = replay_slots([tr_("A", "2025-01-06 15:00Z", "2025-01-10 15:00Z", 1.0, entry=100.0, sl=99.9)], 1000.0, 2)
+    check("slots: a position is capped at wall x equity / k whole shares (1000 x 0.9 / 2 / 100 = 4)", capped["taken_head"][0]["qty"] == 4)
+    # cash 600, k 2: each slot caps at floor(0.9 x 600 / 2 / 250) = 1 share; A and B commit 500, so after A exits on day 2 its
+    # 250 is unsettled until day 3 and free cash is 100 < 250 -> C refused unsettled_t1 (the wall would allow 1 share)
+    t1 = [tr_("A", "2025-01-06 15:00Z", "2025-01-07 15:00Z", 0.0, entry=250.0, sl=249.0),
+          tr_("B", "2025-01-06 16:00Z", "2025-01-08 15:00Z", 0.0, entry=250.0, sl=249.0),
+          tr_("C", "2025-01-07 16:00Z", "2025-01-09 15:00Z", 0.0, entry=250.0, sl=249.0)]
+    bt = replay_slots(t1, 600.0, 2)
+    check("slots: proceeds of a same-day exit are unsettled until T+1 (C refused while A's cash settles)",
+          bt["refused"].get("unsettled_t1") == 1 and bt["n_taken"] == 2)
+    gate_in = [tr_(f"S{i}", f"2025-01-{6 + i:02d} 15:00Z", f"2025-01-{6 + i:02d} 18:00Z", 0.0, score=float(i)) for i in range(6)]
+    gate_in.append(tr_("LOW", "2025-01-13 15:00Z", "2025-01-13 18:00Z", 0.0, score=0.5))
+    gate_in.append(tr_("HIGH", "2025-01-14 15:00Z", "2025-01-14 18:00Z", 0.0, score=9.0))
+    kept = {t["symbol"] for t in score_gate_p50_30d(gate_in)}
+    check("slots: the score gate drops a weak signal and keeps a strong one once 5 prior-30d candidates exist",
+          "LOW" not in kept and "HIGH" in kept and "S0" in kept)
+    # selection null: the one slot always takes the FIRST of each overlapping pair; make those the losers -> selection
+    pairs = []
+    for i in range(40):
+        d = pd.Timestamp("2025-02-03") + pd.Timedelta(days=3 * i)
+        pairs.append(tr_(f"F{i}", str(d + pd.Timedelta(hours=15)), str(d + pd.Timedelta(days=1, hours=15)), -1.0))
+        pairs.append(tr_(f"L{i}", str(d + pd.Timedelta(hours=16)), str(d + pd.Timedelta(days=1, hours=14)), 1.0))
+    ns = selection_null(pairs, 1e6, draws=200, settle_bdays=0)
+    check("slots: the null flags a book that systematically takes the losers (p_low < 0.01)", ns["p_low"] is not None and ns["p_low"] < 0.01)
+    rng_ = np.random.default_rng(1)
+    for t_ in pairs:
+        t_["net_r"] = float(rng_.choice([-1.0, 1.0]))
+    nn = selection_null(pairs, 1e6, draws=200, settle_bdays=0)
+    check("slots: the null does not flag a book whose picks are unrelated to outcome (p_low >= 0.05)", nn["p_low"] >= 0.05)
+    check("slots: selection verdict needs every cash level under alpha",
+          selection_verdict({"a": {"p_low": 0.001}, "b": {"p_low": 0.001}}, 0.004)[0] == "selection"
+          and selection_verdict({"a": {"p_low": 0.001}, "b": {"p_low": 0.2}}, 0.004)[0] == "unresolved"
+          and selection_verdict({"a": {"p_low": 0.3}, "b": {"p_low": 0.2}}, 0.004)[0] == "noise")
+    allc = {c: "indeterminate" for c in ("cash_250", "cash_1000", "cash_5000")}
+    av = {p_: dict(allc) for p_ in SLOT_POLICIES}
+    av["slots_3"] = {c: "pass" for c in allc}
+    check("slots: unit PASS when one challenger passes at every cash level", slot_unit_verdict(av, True)[0] == "pass")
+    check("slots: unit INDETERMINATE without reproduction", slot_unit_verdict(av, False)[0] == "indeterminate")
+    av2 = {p_: {c: "fail" for c in allc} for p_ in SLOT_POLICIES}
+    check("slots: unit FAIL when every challenger fails everywhere", slot_unit_verdict(av2, True)[0] == "fail")
+    av2["slots_2"]["cash_250"] = "indeterminate"
+    check("slots: one non-fail cell keeps the unit INDETERMINATE", slot_unit_verdict(av2, True)[0] == "indeterminate")
     import holdout_lock as HL
     bb = HL.bar_for(5)
     check("registered N=5 bar matches holdout_lock", bb["point_t_min"] == b5["point_t_min"] and bb["ci_z"] == b5["ci_z"])
@@ -972,7 +1238,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
-    for name in ("foxhound", "legs", "h2h", "frozen-book"):
+    for name in ("foxhound", "legs", "h2h", "frozen-book", "slot-book"):
         p = sub.add_parser(name)
         p.add_argument("--out", required=True)
         p.add_argument("--unit", required=True)
@@ -990,7 +1256,7 @@ def main(argv=None) -> int:
             p.add_argument("--strategy", action="append", required=True, help="challenger leg (repeatable)")
             p.add_argument("--book-leg", default="tqqq_trend_long_1d", help="the current book's other leg, in the combined replay")
             p.add_argument("--days", type=int, default=1460)
-        elif name == "frozen-book":
+        elif name in ("frozen-book", "slot-book"):
             p.add_argument("--cache", required=True)
             p.add_argument("--artifact", default=FROZEN_ARTIFACT)
             p.add_argument("--start", default="2025-07-15")
@@ -1011,7 +1277,7 @@ def main(argv=None) -> int:
     if a.cmd == "h2h" and not (a.trades_from or a.cache):
         ap.error("h2h needs --cache (refit Foxhound-4) or --trades-from")
     r = (main_foxhound(a) if a.cmd == "foxhound" else main_h2h(a) if a.cmd == "h2h"
-         else main_frozen_book(a) if a.cmd == "frozen-book" else main_legs(a))
+         else main_frozen_book(a) if a.cmd == "frozen-book" else main_slot_book(a) if a.cmd == "slot-book" else main_legs(a))
     row = {"schema_version": 1, "schema": SCHEMA, "research_unit": a.unit, "read_state": "measured", "verdict": r["verdict"],
            "n": r.get("n"), "note": r["note"], "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
