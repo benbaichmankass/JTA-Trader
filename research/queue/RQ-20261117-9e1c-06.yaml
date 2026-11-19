@@ -102,7 +102,7 @@ run:
   inputs:
     research_unit: RQ-20261117-9e1c-06
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'REGIME lever family never tested on uso_trend_1h: ADX ceiling AX40/AX50 (--adx-max 40/50) vs the declared leg, net of cost?'
 value:
@@ -113,3 +113,16 @@ value:
 why_this_matters: research/levers/uso_trend_1h.yaml lists no adx-max (regime) family for this TESTING leg; sibling legs carry the same arms (RQ-20261017-ae17 / RQ-20261031-7b6f
   families). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
 last_dispatched_at: '2026-11-19T03:39:23+00:00'
+grading:
+  attested: RULERQ202611179e1c06
+  auto: true
+  decision_rule_id: RULERQ202611179e1c06
+  evidence:
+  - research/results/RQ-20261117-9e1c-06/44451374002.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

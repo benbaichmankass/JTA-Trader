@@ -3,7 +3,7 @@
 # event 16945 (2026-11-19 01:00Z), registered before the harness existed. Gates this adds or changes: none.
 id: RQ-20261119-d7c3-01
 title: 'DESK TRIGGER REPLAY, family atr_burst: when the live desk trigger fires (the last closed 5m bar range is >= 2.0 x ATR14 (live atr_burst)), does entering (continuation or fade, one fixed 1.5 ATR SL / 3.0 ATR TP / 12-bar bracket) beat a same-symbol, same-ATR%-decile random entry by S3 >= +0.15 R net of the full cost stack on the DEV window?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -79,3 +79,16 @@ related:
 - config/desk_triggers.yaml
 population: closed 5m bars, BTC/ETH/SOL/XRP/ADA/AVAX USDT perps, 2025-11-01..2026-09-15 (DEV); every firing of the atr_burst detector in that window.
 last_dispatched_at: '2026-11-19T02:32:17+00:00'
+grading:
+  attested: RULE-RQ20261119d7c301-DESK-TRIGGER-ATR-BURST
+  auto: true
+  decision_rule_id: RULE-RQ20261119d7c301-DESK-TRIGGER-ATR-BURST
+  evidence:
+  - research/results/RQ-20261119-d7c3-01/44442050816.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

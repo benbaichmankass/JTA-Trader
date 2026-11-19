@@ -3,7 +3,7 @@
 id: RQ-20261119-c9d2-01
 title: 'ITERATION 4 of ltr-close (abab-68 near_target PASS needs a real-TP holdout): does a FULL close at the first near_target trigger clear
   RULE-AM-RISK-ADJUSTED-V1 on four legs that carry a REAL take-profit and were never used to choose the trigger?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -154,3 +154,16 @@ related:
 population: 'committed Stage-0 per-trade corpora of tlt_pullback_1d (49), tqqq_trend_long_1d (136), scha_trend_long_1d (78), slv_trend_1h (98):
   361 trades, a real TP declared on every leg and reached by 17-56% of its Stage-0 trades.'
 last_dispatched_at: '2026-11-19T02:50:53+00:00'
+grading:
+  attested: RULE-RQ20261119C9D2-01-LTR-CLOSE-NEAR-TARGET-REALTP
+  auto: true
+  decision_rule_id: RULE-RQ20261119C9D2-01-LTR-CLOSE-NEAR-TARGET-REALTP
+  evidence:
+  - research/results/RQ-20261119-c9d2-01/44446265899.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

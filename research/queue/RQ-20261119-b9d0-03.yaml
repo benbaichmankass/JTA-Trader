@@ -4,7 +4,7 @@
 id: RQ-20261119-b9d0-03
 title: 'D9 Whippet spec B, a LEARNED P(fill) GATE on the mid-peg time-stop exit: fit on the dev out-of-fold exits, graded on the held-out
   year, does posting only when P(fill) x filled gain + (1 - P(fill)) x unfilled cost > 0 beat ALWAYS posting at the mid, in R per exit?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -156,3 +156,16 @@ related:
 - ML-D9-MAKER-EXIT-HARNESS
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing.
 last_dispatched_at: '2026-11-19T04:47:37+00:00'
+grading:
+  attested: RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE
+  auto: true
+  decision_rule_id: RULE-RQ20261119-b9d0-03-MAKER-EXIT-FILL-GATE
+  evidence:
+  - research/results/RQ-20261119-b9d0-03/44460770328.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
