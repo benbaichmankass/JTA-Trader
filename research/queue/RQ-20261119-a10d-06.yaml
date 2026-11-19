@@ -174,6 +174,7 @@ amendments:
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
 last_dispatched_at: '2026-11-19T18:20:42+00:00'
 grading:
+  caveat: 'VALIDITY (ML-PRIMARY-13, 2026-11-19): this run replayed the 1h config on SUB-HOURLY bars. exit_head_label_bakeoff.py dropped Resolution.resample and the trainer resolves ETH/SOL to 5m and BTC to 15m files, so the harness trades are not the 1h leg''s (n_oos 12,015 over three legs). The verdict stands as the record of this run only. It is NOT evidence about the 1h legs until re-read on the fixed harness (PR #27491, PI-20261119-RIMARY13-0001).'
   attested: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
   auto: false
   decision_rule_id: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
