@@ -1126,18 +1126,34 @@ DESK_LEG = "claude_desk"
 DESK_DECISIONS = "comms/desk/decisions.jsonl"
 
 
+#: whether the last _desk_rows() call read the desk/decisions BRANCH tip (not only main's lagging mirror).
+DESK_BRANCH_READ: Optional[bool] = None
+
+
 def _desk_rows() -> Optional[List[dict]]:
-    """Every desk decision row: main's mirror plus the ``desk/decisions`` branch tip (newer). None = could not look."""
+    """Every desk decision row: main's mirror plus the ``desk/decisions`` branch tip (newer). None = could not look.
+
+    DESK-HANDOFF-BRANCH-FETCH (2026-11-19): the branch tip is FETCHED first. A fresh session clone has no
+    ``origin/desk/decisions`` ref, so ``git show`` failed silently and only main's mirror was read; main trails the
+    branch by up to an hour (DD-20261119T0802Z-scan-1h-1 hit the branch 08:08Z, main 09:21Z), and the 09:20Z review
+    of the desk ADA short read "opening desk row not found" instead of its thesis. ``DESK_BRANCH_READ`` records
+    whether the tip was read so the miss names the real cause."""
+    global DESK_BRANCH_READ
     texts = []
     try:
         texts.append((REPO / DESK_DECISIONS).read_text())
     except OSError:
         pass
+    DESK_BRANCH_READ = False
     try:
+        subprocess.run(["git", "-C", str(REPO), "fetch", "-q", "--depth", "1", "origin",
+                        "+refs/heads/desk/decisions:refs/remotes/origin/desk/decisions"],
+                       capture_output=True, text=True, timeout=60)
         out = subprocess.run(["git", "-C", str(REPO), "show", f"origin/desk/decisions:{DESK_DECISIONS}"],
                              capture_output=True, text=True, timeout=30)
         if out.returncode == 0:
             texts.append(out.stdout)
+            DESK_BRANCH_READ = True
     except (OSError, subprocess.SubprocessError):
         pass
     if not texts:
@@ -1359,7 +1375,10 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
         from src.runtime import desk_handoff as _dh
         handoff = _dh.handoff_block(pkg, meta, _desk_rows(), all_reviews)
         if handoff["read_state"] != "read":
-            miss("desk_handoff", "; ".join(handoff["missing"]) or "could not look")
+            why = "; ".join(handoff["missing"]) or "could not look"
+            if DESK_BRANCH_READ is False:
+                why += " (desk/decisions branch tip NOT read: only main's lagging mirror was searched)"
+            miss("desk_handoff", why)
 
     reads = [t for k, t in s.read_at.items()]
     cutoff = max(reads) if reads else now.strftime("%Y-%m-%dT%H:%M:%SZ")
