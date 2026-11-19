@@ -1,0 +1,468 @@
+{
+  "leg": "ict_scalp_sol_5m",
+  "label": "candidate_replaces_incumbent",
+  "grade": {
+    "verdict": "pass",
+    "label": "candidate_replaces_incumbent",
+    "best": "S_ASIA",
+    "baseline": "A",
+    "candidates": {
+      "S_LATE": {
+        "net_r": -47.6547,
+        "delta_net_r": 8.73,
+        "max_drawdown_r": 61.5767,
+        "max_drawdown_cap": 90.4743,
+        "folds_ge_incumbent": 4,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "S_ASIA": {
+        "net_r": -44.6936,
+        "delta_net_r": 11.6911,
+        "max_drawdown_r": 49.3903,
+        "max_drawdown_cap": 90.4743,
+        "folds_ge_incumbent": 4,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.004,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 7.68,
+    "why": "S_ASIA beats the incumbent A (net R -44.6936 vs -56.3847) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0026,
+      "n": 384,
+      "net_r": -56.3847,
+      "net_r_fee_only": -39.926,
+      "max_drawdown_r": 67.018,
+      "by_outcome": {
+        "sl_hit": 130,
+        "timeout": 157,
+        "tp_hit": 83,
+        "be_stop": 14
+      },
+      "mean_bars_held": 16.76,
+      "net_r_per_capital_day": -2.5231,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2024-10-18 23:55:00+00:00",
+      "data_end": "2026-10-04 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-18 23:55:00+00:00",
+          "end": "2025-02-15 07:55:40+00:00",
+          "trades": 65,
+          "net_r": 4.1925
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-15 07:55:40+00:00",
+          "end": "2025-06-14 15:56:20+00:00",
+          "trades": 63,
+          "net_r": -14.8126
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 15:56:20+00:00",
+          "end": "2025-10-11 23:57:00+00:00",
+          "trades": 71,
+          "net_r": -11.8924
+        },
+        {
+          "fold": 4,
+          "start": "2025-10-11 23:57:00+00:00",
+          "end": "2026-02-08 07:57:40+00:00",
+          "trades": 74,
+          "net_r": -12.3143
+        },
+        {
+          "fold": 5,
+          "start": "2026-02-08 07:57:40+00:00",
+          "end": "2026-06-07 15:58:20+00:00",
+          "trades": 59,
+          "net_r": -10.9097
+        },
+        {
+          "fold": 6,
+          "start": "2026-06-07 15:58:20+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 52,
+          "net_r": -10.6484
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "S_LATE": {
+      "reach_ge_6r": 0.0,
+      "n": 316,
+      "net_r": -47.6547,
+      "net_r_fee_only": -35.0398,
+      "max_drawdown_r": 61.5767,
+      "by_outcome": {
+        "timeout": 133,
+        "sl_hit": 106,
+        "tp_hit": 64,
+        "be_stop": 13
+      },
+      "mean_bars_held": 16.93,
+      "net_r_per_capital_day": -2.5653,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2024-10-18 23:55:00+00:00",
+      "data_end": "2026-10-04 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-18 23:55:00+00:00",
+          "end": "2025-02-15 07:55:40+00:00",
+          "trades": 47,
+          "net_r": 9.194
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-15 07:55:40+00:00",
+          "end": "2025-06-14 15:56:20+00:00",
+          "trades": 53,
+          "net_r": -11.0739
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 15:56:20+00:00",
+          "end": "2025-10-11 23:57:00+00:00",
+          "trades": 58,
+          "net_r": -11.0246
+        },
+        {
+          "fold": 4,
+          "start": "2025-10-11 23:57:00+00:00",
+          "end": "2026-02-08 07:57:40+00:00",
+          "trades": 65,
+          "net_r": -12.3508
+        },
+        {
+          "fold": 5,
+          "start": "2026-02-08 07:57:40+00:00",
+          "end": "2026-06-07 15:58:20+00:00",
+          "trades": 48,
+          "net_r": -9.6186
+        },
+        {
+          "fold": 6,
+          "start": "2026-06-07 15:58:20+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 45,
+          "net_r": -12.7809
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_LATE__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "20,21,22,23",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "S_ASIA": {
+      "reach_ge_6r": 0.004,
+      "n": 250,
+      "net_r": -44.6936,
+      "net_r_fee_only": -34.0861,
+      "max_drawdown_r": 49.3903,
+      "by_outcome": {
+        "sl_hit": 91,
+        "timeout": 97,
+        "tp_hit": 53,
+        "be_stop": 9
+      },
+      "mean_bars_held": 16.696,
+      "net_r_per_capital_day": -3.0838,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2024-10-18 23:55:00+00:00",
+      "data_end": "2026-10-04 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-18 23:55:00+00:00",
+          "end": "2025-02-15 07:55:40+00:00",
+          "trades": 46,
+          "net_r": 1.203
+        },
+        {
+          "fold": 2,
+          "start": "2025-02-15 07:55:40+00:00",
+          "end": "2025-06-14 15:56:20+00:00",
+          "trades": 41,
+          "net_r": -13.2826
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-14 15:56:20+00:00",
+          "end": "2025-10-11 23:57:00+00:00",
+          "trades": 44,
+          "net_r": -10.3719
+        },
+        {
+          "fold": 4,
+          "start": "2025-10-11 23:57:00+00:00",
+          "end": "2026-02-08 07:57:40+00:00",
+          "trades": 45,
+          "net_r": -7.8547
+        },
+        {
+          "fold": 5,
+          "start": "2026-02-08 07:57:40+00:00",
+          "end": "2026-06-07 15:58:20+00:00",
+          "trades": 35,
+          "net_r": -3.5614
+        },
+        {
+          "fold": 6,
+          "start": "2026-06-07 15:58:20+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 39,
+          "net_r": -10.8263
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_ASIA__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "fetch_days": 760,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "5",
+      "resample": "5m"
+    },
+    "fold_edges": [
+      "2024-10-18 23:55:00+00:00",
+      "2025-02-15 07:55:40+00:00",
+      "2025-06-14 15:56:20+00:00",
+      "2025-10-11 23:57:00+00:00",
+      "2026-02-08 07:57:40+00:00",
+      "2026-06-07 15:58:20+00:00",
+      "2026-10-04 23:59:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "S_LATE": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_LATE__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "20,21,22,23",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "20,21,22,23"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "S_ASIA": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_sol_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-33/44529619539/arms/S_ASIA__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
