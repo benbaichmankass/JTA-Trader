@@ -279,3 +279,87 @@ def test_walker_packet_masked_and_incremental():
     pk1, _ = lc.build_packet_v2(s, e, p1, p0.j)
     assert [b[0] for b in pk1["new_bars"]] == [p1.j - (e.i + 1)]           # only the bar since the last check-in
     assert pk1["trade"]["actions_so_far"] == ["hold"] and pk1["packet_id"] != pk0["packet_id"]
+
+
+# ----------------------------------------------------------------------------- action grid (ML-EXIT-ACTIONGRID-LABELS)
+def test_action_grid_enum_is_the_plan_section_2a_enum():
+    assert len(lc.GRID_ACTIONS) == 13 and len(set(lc.GRID_ACTIONS)) == 13
+    assert set(lc.GRID_CLASS.values()) == {"close", "partial", "tighten", "widen", "sl_structure", "tp_pull_in",
+                                           "tp_extend", "tp_structure"}
+    assert "--action-grid" not in lc.GRID_ACTIONS
+
+
+def test_action_grid_labels_are_one_step_counterfactuals_on_the_engine():
+    """value_r == net R(action at k, hold elsewhere) - net R(hold), each re-derived here by its own replay; an
+    infeasible move is named, never priced as a hold; close at k fills at the next bar's open."""
+    hits = 0
+    for seed in range(3):
+        s = _walk(seed=seed)
+        for i in (40, 120):
+            for side in (1.0, -1.0):
+                c = float(s.c[i])
+                e = _entry(i=i, side=side, level=c, stop=c - side * 1.5, tp=c + side * 3.0, eid=f"E-{seed}-{i}-{side}")
+                rows, summ = lc.grid_trade(s, e, lc.clock_policy(4, False), "desk")
+                if summ["state"] != "filled":
+                    continue
+                hold = lc.run(s, e)[0].net_r
+                assert abs(summ["net_r_hold"] - hold) < 1e-12
+                assert len(rows) == summ["checkins"] * len(lc.GRID_ACTIONS)
+                for r in rows:
+                    if not r["feasible"]:
+                        assert r["value_r"] is None and r["infeasible_reason"]
+                        continue
+                    d = {"action": r["engine_action"]}
+                    if r["level_r"] is not None:
+                        d["level_r"] = r["level_r"]
+                    alt = lc.run(s, e, lc._one_step(r["k"], d), lc.clock_policy(4, False))[0].net_r
+                    assert abs(r["value_r"] - (alt - hold)) < 1e-12
+                    hits += 1
+                closes = [r for r in rows if r["action"] == "close"]
+                assert len(closes) == summ["checkins"] and all(r["feasible"] for r in closes)
+    assert hits > 100
+
+
+def test_action_grid_levels_and_legality():
+    rows = [(100.0, 100.2, 99.8, 100.0)] + [(100.0 + 0.5 * k, 100.6 + 0.5 * k, 99.9 + 0.5 * k, 100.5 + 0.5 * k)
+                                            for k in range(12)]
+    s = _series(rows)
+    e = _entry(i=19, side=1.0, level=100.0, stop=98.0, tp=110.0)
+    out, summ = lc.grid_trade(s, e, lc.clock_policy(4, False), "desk")
+    assert summ["state"] == "filled"
+    first = {r["action"]: r for r in out if r["k"] == 0}
+    st = first["close"]
+    risk = 2.0
+    assert abs(first["tighten_sl_0p25r"]["level_r"] - (st["stop_r"] + 0.25)) < 1e-9
+    assert abs(first["widen_sl_0p5r"]["level_r"] - (st["stop_r"] - 0.5)) < 1e-9
+    assert first["widen_sl_0p5r"]["beyond_entry_risk"] is True
+    assert abs(first["tp_extend_2r"]["level_r"] - (st["tp_r"] + 2.0)) < 1e-9
+    assert abs(first["tp_pull_in_1r"]["level_r"] - (st["tp_r"] - 1.0)) < 1e-9
+    # structure = the prior 12-bar swing low (long stop) / high (long target), in R from the fill
+    sl = first["sl_to_structure"]
+    assert sl["feasible"] and sl["engine_action"] in ("tighten_sl", "widen_sl") and sl["level_r"] < sl["now_r"]
+    assert risk > 0
+
+
+def test_action_grid_cli_alias_and_stage0_side(tmp_path):
+    assert lc._side_of({"trade_key": "leg|XRPUSDT|2024-01-01 00:00:00+00:00|short"}) == -1.0
+    assert lc._side_of({"trade_key": "leg|XRPUSDT|2024-01-01 00:00:00+00:00|long"}) == 1.0
+    with pytest.raises(ValueError):
+        lc._side_of({"trade_key": "leg|XRPUSDT|2024-01-01"})
+    with pytest.raises(SystemExit):
+        lc.main(["--action-grid", "--help"])
+
+
+def test_action_grid_compact_layout_round_trips():
+    s = _walk(seed=7)
+    c = float(s.c[60])
+    e = _entry(i=60, side=1.0, level=c, stop=c - 1.5, tp=c + 3.0)
+    rows, summ = lc.grid_trade(s, e, lc.clock_policy(4, False), "desk")
+    comp = lc.grid_compact(rows)
+    assert len(comp) == summ["checkins"]
+    assert all(set(x["labels"]) == set(lc.GRID_ACTIONS) for x in comp)
+    flat = {(r["k"], r["action"]): r["value_r"] for r in rows}
+    for x in comp:
+        for a, lab in x["labels"].items():
+            v = flat[(x["k"], a)]
+            assert (v is None and lab["value_r"] is None) or abs(v - lab["value_r"]) < 1e-6
