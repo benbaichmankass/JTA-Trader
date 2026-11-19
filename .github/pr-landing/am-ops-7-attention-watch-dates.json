@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Test-only fix, second date-bomb in tests/test_attention_watch.py: test_report_route_since_returns_sent_digest_blocks appended a digest-log entry dated 2026-10-05, and work_report.append_digest_log prunes entries older than KEEP=45 days, so on 2026-11-19 the entry was pruned and digestLog[0] raised IndexError. Red on #27153's pytest-run (job 135412955694, 1 failed / 30,065 passed) and on main (reproduced locally: FAIL before, PASS after). Dates are now relative to now. Sibling of #27203 (work_report self-test). Gates this adds or changes: none."
+}
