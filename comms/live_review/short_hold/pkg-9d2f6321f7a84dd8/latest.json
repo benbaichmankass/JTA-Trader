@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-19T20:20:00Z",
- "bar_close": "2026-11-19T20:25:00Z",
- "built_at": "2026-11-19T20:25:53Z",
+ "bar": "2026-11-19T20:25:00Z",
+ "bar_close": "2026-11-19T20:30:00Z",
+ "built_at": "2026-11-19T20:30:51Z",
  "closed": false,
  "order_package_id": "pkg-9d2f6321f7a84dd8",
  "packet": {
@@ -16,16 +16,16 @@
      "tighten",
      "widen_sl"
     ],
-    "evidence": "bybit_orders: SL 64067.7 / TP 62018.2, position True, matched by order_id, 1 sibling package(s) on BTCUSDT; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "evidence": "bybit_orders: SL None / TP None, position False, matched by order_id, 1 sibling package(s) on BTCUSDT; this package is closed, the venue BTCUSDT position belongs to pkg-59c2157f01fb407c; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
     "mechanics": {
      "by_design": null,
-     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: this package's own TP leg 52f91cb0-7628-4570-b9f0-74fefc5e90d0 FILLED at the venue at 2026-11-19T20:29:49Z (trigger 62018.2, avg 62015.6); its SL leg Deactivated (CancelByOCOSlCanceledByTpTriggered); the bracket closed the package at the venue, the journal close lags this read; bybit_1: venue holds BTCUSDT for sibling package(s) pkg-59c2157f01fb407c; this package's trade row is not open",
      "verdict": "match"
     },
-    "own_position": true,
+    "own_position": false,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -124,9 +124,9 @@
    "direction": "short",
    "funding": null,
    "news": {
-    "adjustment": -0.076038,
+    "adjustment": -0.068947,
     "decision": "reduce",
-    "ts": "2026-11-19T20:19:05.583733+00:00",
+    "ts": "2026-11-19T20:31:04.863466+00:00",
     "veto": false
    },
    "previous_review": {
@@ -159,7 +159,7 @@
      "SOLUSDT",
      "short",
      "sol_pullback_2h",
-     -0.144
+     -0.012
     ],
     [
      "SLV",
@@ -171,13 +171,13 @@
      "SLV",
      "short",
      "slv_trend_1h",
-     0.681
+     0.741
     ],
     [
      "AVAXUSDT",
      "short",
      "trend_donchian_avax_4h",
-     0.309
+     0.424
     ],
     [
      "SLV",
@@ -207,31 +207,31 @@
      "AVAXUSDT",
      "short",
      "avax_pullback_2h",
-     0.608
+     0.716
     ],
     [
      "XRPUSDT",
      "short",
      "ict_scalp_xrp_15m",
-     0.465
+     0.505
     ],
     [
      "BTCUSDT",
      "short",
      "trend_donchian_1h",
-     -0.0291
+     0.275
     ],
     [
      "TLT",
      "long",
      "tlt_pullback_1d",
-     0.407
+     0.412
     ],
     [
      "ADAUSDT",
      "short",
      "trend_donchian_ada_4h",
-     -0.348
+     -0.271
     ],
     [
      "SLV",
@@ -243,7 +243,7 @@
      "MGC",
      "short",
      "mgc_trend_1h",
-     2.65
+     2.53
     ],
     [
      "ADAUSDT",
@@ -261,7 +261,7 @@
      "ETHUSDT",
      "short",
      "eth_pullback_2h",
-     0.452
+     0.535
     ],
     [
      "XRPUSDT",
@@ -273,25 +273,25 @@
      "GLD",
      "short",
      "gld_pullback_1d",
-     2.51
+     2.52
     ],
     [
      "IEF",
      "long",
      "ief_pullback_1d",
-     0.267
+     0.276
     ],
     [
      "QQQ",
      "short",
      "qqq_pullback_1h",
-     1.07
+     1.11
     ],
     [
      "ETHUSDT",
      "short",
      "eth_pullback_prop_2h",
-     0.444
+     0.527
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -694,17 +694,17 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "98785d3db4",
+   "head": "c94be0b78d",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-19T20:26:13Z",
+  "info_cutoff_at": "2026-11-19T20:31:20Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+   "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: this package's own TP leg 52f91cb0-7628-4570-b9f0-74fefc5e90d0 FILLED at the venue at 2026-11-19T20:29:49Z (trigger 62018.2, avg 62015.6); its SL leg Deactivated (CancelByOCOSlCanceledByTpTriggered); the bracket closed the package at the venue, the journal close lags this read; bybit_1: venue holds BTCUSDT for sibling package(s) pkg-59c2157f01fb407c; this package's trade row is not open",
    "per_account": {
     "bybit_1": {
      "by_design": null,
-     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone",
+     "evidence": "bybit_1: BTCUSDT is NETTED across 2 open packages on this account (per side) (this one + pkg-59c2157f01fb407c); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; bybit_1: this package's own TP leg 52f91cb0-7628-4570-b9f0-74fefc5e90d0 FILLED at the venue at 2026-11-19T20:29:49Z (trigger 62018.2, avg 62015.6); its SL leg Deactivated (CancelByOCOSlCanceledByTpTriggered); the bracket closed the package at the venue, the journal close lags this read; bybit_1: venue holds BTCUSDT for sibling package(s) pkg-59c2157f01fb407c; this package's trade row is not open",
      "verdict": "match"
     }
    },
@@ -764,25 +764,18 @@
    "cell_now": null,
    "trend_now": "transitional"
   },
-  "review_id": "LR-20261119T2025Z-pkg-9d2f6321f7a84dd8",
+  "review_id": "LR-20261119T2030Z-pkg-9d2f6321f7a84dd8",
   "short_hold": {
-   "atr": 162.09285714285787,
-   "bar": "2026-11-19T20:20:00Z",
-   "bar_close": "2026-11-19T20:25:00Z",
+   "atr": 194.9000000000004,
+   "bar": "2026-11-19T20:25:00Z",
+   "bar_close": "2026-11-19T20:30:00Z",
    "entry": 63070.7,
-   "mark": 62283.4,
-   "minutes_held": 245.6,
-   "open_r_at_mark": 0.7897,
+   "mark": 61858.8,
+   "minutes_held": 250.5,
+   "open_r_at_mark": 1.2155,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 62796.8,
-     "high": 62888.4,
-     "low": 62750.3,
-     "open": 62750.3,
-     "t": "2026-11-19T19:25:00Z"
-    },
     {
      "close": 62613.7,
      "high": 62817.9,
@@ -859,6 +852,13 @@
      "low": 62180.0,
      "open": 62355.5,
      "t": "2026-11-19T20:20:00Z"
+    },
+    {
+     "close": 61858.8,
+     "high": 62320.0,
+     "low": 61779.4,
+     "open": 62283.4,
+     "t": "2026-11-19T20:25:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -877,25 +877,18 @@
    "tp": 62018.2
   }
  },
- "packet_sha": "7bdcd9b26c43716a52b64ece2e4af01834ce3f33f185a2b9428f8e99d3beceb6",
+ "packet_sha": "4370672825cea56054849786b37397831c482a8e4b22f6d94761a6b7376c780a",
  "short_hold": {
-  "atr": 162.09285714285787,
-  "bar": "2026-11-19T20:20:00Z",
-  "bar_close": "2026-11-19T20:25:00Z",
+  "atr": 194.9000000000004,
+  "bar": "2026-11-19T20:25:00Z",
+  "bar_close": "2026-11-19T20:30:00Z",
   "entry": 63070.7,
-  "mark": 62283.4,
-  "minutes_held": 245.6,
-  "open_r_at_mark": 0.7897,
+  "mark": 61858.8,
+  "minutes_held": 250.5,
+  "open_r_at_mark": 1.2155,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 62796.8,
-    "high": 62888.4,
-    "low": 62750.3,
-    "open": 62750.3,
-    "t": "2026-11-19T19:25:00Z"
-   },
    {
     "close": 62613.7,
     "high": 62817.9,
@@ -972,6 +965,13 @@
     "low": 62180.0,
     "open": 62355.5,
     "t": "2026-11-19T20:20:00Z"
+   },
+   {
+    "close": 61858.8,
+    "high": 62320.0,
+    "low": 61779.4,
+    "open": 62283.4,
+    "t": "2026-11-19T20:25:00Z"
    }
   ],
   "risk_per_unit": null,
