@@ -35,7 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ops"))
-import resolve_stamp_conflicts as rsc
+import resolve_stamp_conflicts as rsc  # noqa: E402
 
 PREFIX = "automation/research-queue-stamp"
 _BOT = ("-c", "user.name=github-actions[bot]", "-c", "user.email=github-actions[bot]@users.noreply.github.com")
