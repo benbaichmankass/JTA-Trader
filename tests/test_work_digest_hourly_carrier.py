@@ -40,6 +40,9 @@ def _load(monkeypatch, tmp_path):
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     monkeypatch.setattr(mod, "RECEIPT", tmp_path / "work_digest_receipt.json")
+    # These tests run on the wall clock; the :10 build floor (LIVE-VM-HOURLY-BURST)
+    # has its own test below, so it is off here to keep them clock-independent.
+    monkeypatch.setattr(mod, "DIGEST_EARLIEST_MINUTE", 0)
     monkeypatch.setattr(mod, "RESEARCH_CURSOR", tmp_path / "research_digest_cursor.json")
     monkeypatch.setattr(mod, "WORK_CURSOR", tmp_path / "work_section_cursor.json")
     monkeypatch.setenv("TELEGRAM_SETTINGS_PATH", str(tmp_path / "telegram_settings.json"))
@@ -303,3 +306,16 @@ def test_trim_policy_still_sends_new_actionable_items_only(monkeypatch, tmp_path
     assert "new decision(s) for you" in body and "&lt;a&gt;" in body
     assert "daily ranked summary" not in body and "research unit" not in body
     assert kw["target"] == "manager" and kw["priority"] == "high"
+
+
+def test_hourly_build_waits_until_minute_10_and_latches_nothing(monkeypatch, tmp_path):
+    """LIVE-VM-HOURLY-BURST: before :10 the run returns without building or latching,
+    so the hour's digest is still sent by a later 5-min run; --force ignores the floor."""
+    mod = _load(monkeypatch, tmp_path)
+    monkeypatch.setattr(mod, "DIGEST_EARLIEST_MINUTE", 61)  # every minute is "before the floor"
+    built = []
+    monkeypatch.setattr(mod, "_cadence_gate", lambda force: built.append(force) or (False, "test"))
+    assert mod.run() == 0
+    assert built == [] and not mod.RECEIPT.exists()
+    assert mod.run(force=True) == 0
+    assert built == [True]
