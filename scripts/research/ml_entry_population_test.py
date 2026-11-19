@@ -260,6 +260,26 @@ def verdict(m: dict, n_pop: int, n_ref: int, missing: float, bar: dict) -> tuple
 
 
 @contextlib.contextmanager
+def _sl_horizon(sl_atr: float, horizon_h: int):
+    """ml-brackets SL / time-stop levers (iteration after RQ-20261118-04a5-02). label_symbol reads mde.SL_ATR (risk = SL x ATR, so
+    gross R AND cost per R move with the stop) and mde.HORIZON_H (time stop, forward-bar contiguity and the window's outcome cut) at call
+    time; bracket_outcome's sl_atr default is bound at definition, so it is passed explicitly. At the base values it is a no-op."""
+    if sl_atr == mde.SL_ATR and horizon_h == mde.HORIZON_H:
+        yield
+        return
+    o_sl, o_h, o_bo = mde.SL_ATR, mde.HORIZON_H, mde.bracket_outcome
+    mde.SL_ATR, mde.HORIZON_H = float(sl_atr), int(horizon_h)
+
+    def _bo(*a, sl_atr=None, **k):  # noqa: ARG001 -- the patched module SL is the single source
+        return o_bo(*a, sl_atr=mde.SL_ATR, **k)
+    mde.bracket_outcome = _bo
+    try:
+        yield
+    finally:
+        mde.SL_ATR, mde.HORIZON_H, mde.bracket_outcome = o_sl, o_h, o_bo
+
+
+@contextlib.contextmanager
 def _tp_bracket(tp_atr: float):
     """Relabel at TP = tp_atr ATR with SL unchanged. ml_decision_entry.label_symbol calls bracket_outcome at call time, so it is swapped
     for the duration and restored after (the same mechanism as ml_entry_cost_levers.bracket). At the base TP it is a no-op."""
@@ -267,7 +287,7 @@ def _tp_bracket(tp_atr: float):
         yield
         return
     orig = mde.bracket_outcome
-    mde.bracket_outcome = functools.partial(orig, sl_atr=mde.SL_ATR, tp_atr=tp_atr)
+    mde.bracket_outcome = functools.partial(orig, tp_atr=tp_atr)  # SL comes from the caller / _sl_horizon, never re-bound here
     try:
         yield
     finally:
@@ -393,6 +413,8 @@ def run(args) -> int:
         tau = float(args.tau)
     unit, rule_id = getattr(args, "unit", None) or UNIT, getattr(args, "rule_id", None) or RULE_ID
     tp_atr = float(args.tp_atr) if getattr(args, "tp_atr", None) is not None else mde.TP_ATR
+    sl_atr = float(args.sl_atr) if getattr(args, "sl_atr", None) is not None else mde.SL_ATR
+    horizon_h = int(args.horizon_h) if getattr(args, "horizon_h", None) is not None else mde.HORIZON_H
     ref = _xs_ref()
     syms = sorted(set(pop) | set(ref))
     with cf.ThreadPoolExecutor(8) as ex:
@@ -403,15 +425,15 @@ def run(args) -> int:
         fund = dict(zip(pop_ok, ex.map(fetch_funding, pop_ok)))
     print(f"fetched: population {len(pop_ok)}/{len(pop)} reference {len(ref_ok)}/{len(ref)} t={time.time()-t0:.0f}s", flush=True)
     quant = (getattr(args, "tp_model", None) or "fixed") == "quantile"
-    if quant and tp_atr != mde.TP_ATR:
-        raise SystemExit("--tp-model quantile is one factor vs the fixed TP; do not combine it with --tp-atr")
-    with _tp_bracket(tp_atr), (_mfe_labels() if quant else contextlib.nullcontext()):
+    if quant and (tp_atr != mde.TP_ATR or sl_atr != mde.SL_ATR or horizon_h != mde.HORIZON_H):
+        raise SystemExit("--tp-model quantile is one factor vs the fixed bracket; do not combine it with --tp-atr / --sl-atr / --horizon-h")
+    with _sl_horizon(sl_atr, horizon_h), _tp_bracket(tp_atr), (_mfe_labels() if quant else contextlib.nullcontext()):
         tab = mde.build_table(cache, sorted(set(pop_ok) | set(ref_ok)), xs_symbols=ref_ok, recost_inputs=True)
     tab = tab[tab.symbol.isin(pop_ok)]
     tab_all = tab if quant else None
     ws, we = pd.Timestamp(WIN_START, tz="UTC"), pd.Timestamp(WIN_END, tz="UTC") + pd.Timedelta(days=1)
-    # a decision is in the window iff its 24h outcome also ends inside it
-    tab = tab[(tab.ts >= ws) & (tab.ts < we - pd.Timedelta(hours=mde.HORIZON_H + 1))].reset_index(drop=True)
+    # a decision is in the window iff its outcome (this arm's horizon) also ends inside it
+    tab = tab[(tab.ts >= ws) & (tab.ts < we - pd.Timedelta(hours=horizon_h + 1))].reset_index(drop=True)
     costs = {s: symbol_costs(pd.read_pickle(cache / f"{s}.pkl"), spec[s], fund.get(s, {})) for s in pop_ok}
     sc = recost(tab, costs)
     missing = float((~sc.cost_ok).mean()) if len(sc) else 1.0
@@ -480,7 +502,7 @@ def run(args) -> int:
                                                       for v in costs.values())),
     }
     res = {"schema": "ml_entry_population_test/1", "unit": unit, "rule_id": rule_id, "verdict": v, "why": why, "tau": tau,
-           "bracket_atr": {"sl": mde.SL_ATR, "tp": tp_atr},
+           "bracket_atr": {"sl": sl_atr, "tp": tp_atr, "horizon_h": horizon_h},
            "window": [WIN_START, WIN_END], "population_frozen": len(pop), "population_scored": len(pop_ok),
            "population_unscorable": sorted(set(pop) - set(pop_ok)), "xs_reference_used": len(ref_ok),
            "cost_missing_share": missing, "pooled": m, "reported": reported, "holdout_claim": claim,
@@ -488,7 +510,7 @@ def run(args) -> int:
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     tk.to_csv(out / "decisions.csv.gz", index=False)
     vj = {"verdict": v, "read_state": "measured", "n": (qres["paired"]["n"] if qres else m.get("n")), "note": why,
-          "population": (f"frozen ml_decision_entry_v1 (tau {tau}, SL {mde.SL_ATR} / TP {tp_atr} ATR) decisions {WIN_START}..{WIN_END} on the {len(pop_ok)} scorable symbols of the "
+          "population": (f"frozen ml_decision_entry_v1 (tau {tau}, SL {sl_atr} / TP {tp_atr} ATR / {horizon_h}h time stop) decisions {WIN_START}..{WIN_END} on the {len(pop_ok)} scorable symbols of the "
                          f"{len(pop)}-symbol frozen Bybit USDT-perp population (F1-F5), each re-costed with its own fee 11 + max(3, quoted spread "
                          f"+ sqrt impact Q {Q_USD:.0f}) + its own |funding| per 8h"),
           "measurement": {"pooled": m, "holdout_claim": claim, "cost_missing_share": missing,
@@ -579,6 +601,22 @@ def _self_test() -> None:
         for k in (1.0, 2.5, 4.0):
             _, _, reason = mde.bracket_outcome(o, h, lo, c, entry, atr, side, tp_atr=np.full(n, k))
             assert np.array_equal(reason == 2, mf >= k), (side, k)
+    # ml-brackets SL / horizon levers: a no-op at the live values; at SL 3 the stop sits further away (fewer SL exits); restored after
+    n, H = 300, 48
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, (n, H)), 1))
+    o = np.c_[np.full(n, 100.0), c[:, :-1]]
+    h, lo = np.maximum(o, c) * 1.002, np.minimum(o, c) * 0.998
+    entry, atr = o[:, 0], np.full(n, 1.0)
+    base = mde.bracket_outcome(o, h, lo, c, entry, atr, 1)[2]
+    with _sl_horizon(mde.SL_ATR, mde.HORIZON_H):
+        assert mde.bracket_outcome(o, h, lo, c, entry, atr, 1)[2].tolist() == base.tolist()
+    with _sl_horizon(3.0, 48):
+        assert mde.SL_ATR == 3.0 and mde.HORIZON_H == 48
+        wide = mde.bracket_outcome(o, h, lo, c, entry, atr, 1)[2]
+        with _tp_bracket(4.0):
+            both = mde.bracket_outcome(o, h, lo, c, entry, atr, 1)[2]
+    assert (wide == 1).sum() <= (base == 1).sum() and (both == 2).sum() <= (wide == 2).sum()
+    assert mde.SL_ATR == 2.0 and mde.HORIZON_H == 24 and mde.bracket_outcome(o, h, lo, c, entry, atr, 1)[2].tolist() == base.tolist()
     print("self-test ok")
 
 
@@ -595,6 +633,10 @@ def main(argv=None) -> int:
     ap.add_argument("--ledger", default="")
     ap.add_argument("--tau", type=float, default=None, help="override the frozen artifact's tau (same boosters); default = model.json tau")
     ap.add_argument("--tp-atr", dest="tp_atr", type=float, default=None, help="relabel the same decisions at this TP (ATR); SL unchanged")
+    ap.add_argument("--sl-atr", dest="sl_atr", type=float, default=None,
+                    help="relabel the same decisions at this stop (ATR); risk = SL x ATR, so cost per R moves with it (ml-brackets lever)")
+    ap.add_argument("--horizon-h", dest="horizon_h", type=int, default=None,
+                    help="relabel the same decisions at this time stop (hours); default the live 24 (ml-brackets lever)")
     ap.add_argument("--rule-id", dest="rule_id", default="", help="the calling unit's registered rule id (default: 2e3b-01's)")
     ap.add_argument("--tp-model", dest="tp_model", choices=["fixed", "quantile"], default="fixed",
                     help="fixed (default, byte-identical) or quantile: per-decision TP from a LightGBM quantile head of forward MFE (D6, 04a5-02)")
