@@ -1,0 +1,138 @@
+{
+  "verdict": "fail",
+  "note": "no challenger, alone or combined, clears s 5.2 against Foxhound-4 on the common window",
+  "grades": {
+    "slv_trend_1h": {
+      "paired_monthly": {
+        "n_months": 18,
+        "mean_diff_pct": 0.3908166666666666,
+        "se": 0.7556521454900134,
+        "t": 0.5171912354106214
+      },
+      "n_taken": 39,
+      "n_taken_incumbent": 50,
+      "max_drawdown_usd": 25.4585,
+      "max_drawdown_usd_incumbent": 19.2201,
+      "clauses": {
+        "materiality": true,
+        "paired_t": false,
+        "n_taken_both": true,
+        "drawdown": true
+      },
+      "clears": false
+    },
+    "combined": {
+      "paired_monthly": {
+        "n_months": 18,
+        "mean_diff_pct": -0.32937222222222223,
+        "se": 0.5790215483480244,
+        "t": -0.5688427713302494
+      },
+      "n_taken": 65,
+      "n_taken_incumbent": 50,
+      "max_drawdown_usd": 28.5023,
+      "max_drawdown_usd_incumbent": 19.2201,
+      "clauses": {
+        "materiality": false,
+        "paired_t": false,
+        "n_taken_both": true,
+        "drawdown": true
+      },
+      "clears": false
+    }
+  },
+  "replace": [],
+  "join": false,
+  "bar": {
+    "n_tries": 2,
+    "alpha_one_sided": 0.012579,
+    "ci_level": 0.974842,
+    "ci_z": 2.239,
+    "ci_lo_percentile": 1.2579,
+    "point_t_min": 0.5198,
+    "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "n": 576,
+  "common_window": [
+    "2024-01-22 15:00:00+00:00",
+    "2025-06-03 16:00:00+00:00"
+  ],
+  "overlaps_entry_eq_confirm_window": false,
+  "books": {
+    "incumbent": {
+      "n_candidates": 503,
+      "n_taken": 50,
+      "taken_mean_net_r": 0.061637251675816476,
+      "return_pct_per_month": 0.025224999999999994,
+      "return_t_month_clustered": 0.0604772192378189,
+      "max_drawdown_usd": 19.2201,
+      "refused": {
+        "slot_busy": 418,
+        "unsettled_t1": 31,
+        "unaffordable_whole_share": 3,
+        "risk_roundup_refused": 1
+      },
+      "months": 18
+    },
+    "slv_trend_1h": {
+      "n_candidates": 64,
+      "n_taken": 39,
+      "taken_mean_net_r": 0.20665128205128205,
+      "return_pct_per_month": 0.41604166666666675,
+      "return_t_month_clustered": 0.5615612377865464,
+      "max_drawdown_usd": 25.4585,
+      "refused": {
+        "short_unexecutable": 24,
+        "unsettled_t1": 1
+      },
+      "months": 18
+    },
+    "combined": {
+      "n_candidates": 576,
+      "n_taken": 65,
+      "taken_mean_net_r": -0.022067404423217103,
+      "return_pct_per_month": -0.3041527777777778,
+      "return_t_month_clustered": -0.6024483437741985,
+      "max_drawdown_usd": 28.5023,
+      "refused": {
+        "short_unexecutable": 24,
+        "slot_busy": 426,
+        "unsettled_t1": 60,
+        "unaffordable_whole_share": 1
+      },
+      "months": 18
+    }
+  },
+  "slot_priority": "Foxhound-4 first (score = its regressed net R; leg trades score 0), then symbol",
+  "book_leg": "tqqq_trend_long_1d",
+  "foxhound": {
+    "n_pool": 173,
+    "dev_rows": 378440
+  },
+  "harness_runs": {
+    "slv_trend_1h": {
+      "returncode": 0,
+      "rows": 139,
+      "usable": 139,
+      "evidence_error": null,
+      "stderr_tail": "keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).\nSee https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.\n  data.rename(columns=ctx.isins, inplace=True)\n/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).\nSee https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.\n  data.sort_index(level=0, axis=1, inplace=True)\n"
+    },
+    "tqqq_trend_long_1d": {
+      "returncode": 0,
+      "rows": 45,
+      "usable": 45,
+      "evidence_error": null,
+      "stderr_tail": "keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).\nSee https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.\n  data.rename(columns=ctx.isins, inplace=True)\n/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).\nSee https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.\n  data.sort_index(level=0, axis=1, inplace=True)\n"
+    }
+  },
+  "sizer": {
+    "wall": 0.9,
+    "roundup": 1.5,
+    "source": "src/units/accounts/risk.py",
+    "risk_pct": 0.02,
+    "side_filter": "long"
+  },
+  "cash0_source": "synthetic-default",
+  "population": "Foxhound-4 DEV OOF trades (tau 0.25) and the Stage-0 trades of ['slv_trend_1h'] (+ tqqq_trend_long_1d in the combined book), clipped to their common window 2024-01-22..2025-06-03, replayed through the alpaca_live cash book",
+  "runtime_s": 5018.5
+}
