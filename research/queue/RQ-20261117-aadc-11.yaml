@@ -186,7 +186,9 @@ grading:
     CI lower > 0; target coverage 1.0. The margin lever reaches the bar at -0.25 (aadc-04: 0 gave +0.00687, INDETERMINATE). pass_action: the held-out-symbol
     confirmation is RQ-20261117-aadc-12 (PASS, graded in the same PR), then the data-backed Tier-3 proposal, which is #26906 (pin trend_donchian/_eth/_sol
     exit_head_model to exit-head-donchian-1h-v2-neg25, HELD). Graded so the dispatcher stops listing it as would_dispatch (status was still queued).
-    DATA-WINDOW CAVEAT (manager question ~08:22Z): training rows built 2026-07-12; replay candles are the trainer data/<SYM>_1h.csv files found
-    frozen near 2026-06-15, so the read covers history only to about mid-2026 (exact last bars: trainer-vm-diag #27224).'
+    DATA-WINDOW (CORRECTED ~10:00Z by trainer-vm-diag #27224/#27238): the TRAINING rows (datasets-out/exit_head/1h/donchian/rows.jsonl, built
+    2026-07-12) end BTC 2026-07-10, ETH 07-07, SOL 07-05; the REPLAY candles are FRESH (resolve_data reads data/<SYM>_15m/_5m.csv resampled,
+    last bar 2026-11-19), so the out-of-sample test trades run to the run date and only the training side is handicapped (later folds
+    trained on fewer rows; still causal). Fresh-rows re-run: RQ-20261119-a10d-07/-08.'
   rows: 1
   verdict: pass
