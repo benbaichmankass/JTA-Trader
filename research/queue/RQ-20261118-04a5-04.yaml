@@ -157,6 +157,7 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged.'
 grading:
+  caveat: 'VALIDITY (ML-PRIMARY-13, 2026-11-19): this run replayed the 1h config on SUB-HOURLY bars. exit_head_eth_oos_control.py dropped Resolution.resample and the trainer resolves ETH/SOL to 5m and BTC to 15m files, so the harness trades are not the 1h leg''s (cells n ETH 7,845 / SOL 2,935 / BTC 1,235 vs about 118 / 60 / 73 trades a year on the 1h harness). The verdict stands as the record of this run only. It is NOT evidence about the 1h legs until re-read on the fixed harness (PR #27491, PI-20261119-RIMARY13-0001).'
   attested: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
   auto: false
   decision_rule_id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
