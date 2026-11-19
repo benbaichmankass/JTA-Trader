@@ -1,0 +1,75 @@
+# RQ-20261119-3e98-01: P1 meta-label iteration 2 on the rostered PAPER book (lane ML-PRIMARY-12, 2026-11-19).
+# Derived from ml/configs/setup-candidates-metalabel-p2pool-v2.yaml (recipe unchanged) and the paper hold-out form of
+# ml/configs/setup-candidates-metalabel-paper-v1.yaml. Gates this adds or changes: none.
+manifest_version: v1
+model_id: setup-candidates-metalabel-rostered-paper-v1
+description: 'RQ-20261119-3e98-01 (iteration 2 of ml-setup-metalabel-p2pool): the v023 p2pool recipe (features, params, threshold) evaluated on
+  the PAPER-book cohort (event_source live_paper), which is the demo floor the head acts on. Dataset v024 = v023 build params + include_paper=true
+  + the strategy field on live/paper rows. Train = cusum/signal_log/backtest/real live (the paper-v1 precedent); eval = the paper cohort only.
+  The rostered-strategies filter is applied by the grader (scripts/ml/p1_costnet_grade.py --eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt
+  --lb-pct 0.833).'
+model_family: regression_lightgbm
+trainer: ml.trainers.lightgbm_regression.LightGBMRegressionTrainer
+trainer_config:
+  target_column: won
+  feature_columns:
+  - direction
+  - symbol
+  - rolling_log_return_vol
+  - log_return
+  - vol_bucket
+  - momentum
+  - hour_of_day
+  - dayofweek
+  - log_return_lag_1
+  - log_return_lag_2
+  categorical_columns:
+  - direction
+  - symbol
+  - vol_bucket
+  - hour_of_day
+  - dayofweek
+  forbidden_features:
+  - won
+  - won_r
+  - label
+  - r_multiple
+  - r_multiple_source
+  - ret
+  - barrier_touched
+  - is_live_trade
+  - event_source
+  - entry_price
+  - signal_vol
+  - holding_bars
+  - strategy
+  seed: 42
+  n_iter: 200
+  lgbm_params:
+    learning_rate: 0.05
+    num_leaves: 15
+    min_data_in_leaf: 50
+    feature_fraction: 0.9
+    bagging_fraction: 0.9
+    lambda_l2: 1.0
+dataset:
+  family: setup_candidates
+  symbol_scope: all
+  timeframe: all
+  version: v024
+evaluator: ml.evaluators.classification.ClassificationEvaluator
+evaluator_config:
+  target_column: won
+  threshold: 0.5
+  split_strategy: live_holdout
+  live_flag_column: event_source
+  time_column: ts
+  live_flag_true_value: live_paper
+target_deployment_stage: research_only
+notes: "RESEARCH-ONLY manifest, kept OUT of ml/configs/ so the nightly run_training_cycle.sh never trains it. Run once on the trainer for RQ-20261119-3e98-01:\n\
+  \  python3 -m ml.datasets build setup_candidates --output-dir datasets-out --version v024 --source market_raw --symbol-scope all --timeframe\
+  \ all --overwrite -- \"market_raw_paths=<the v023 shards>\" backtest_trades_db=<the v023 harness db> live_trades_db=data/trade_journal.db include_cusum=false\
+  \ include_paper=true live_r_basis=initial_only\n  python3 -m ml train research/manifests/setup-candidates-metalabel-rostered-paper-v1.yaml --no-register\n\
+  \  python3 scripts/ml/p1_costnet_grade.py --manifest <this> --model-state <exp>/model_state.json --dataset datasets-out/setup_candidates/all/all/v024/data.jsonl\
+  \ --cost-gate <exp>/cost_gate.json --journal data/trade_journal.db --symbols <the eval symbols> --eval-source live_paper --strategies-file research/manifests/roster59-20261119.txt\
+  \ --lb-pct 0.833 --out <record>\nPromotion past research_only is Tier-3.\n"

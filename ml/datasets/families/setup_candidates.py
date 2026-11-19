@@ -259,6 +259,10 @@ def _load_live_trades(
         risk_cols = [c for c in ("entry_price", "stop_loss", "position_size")
                      if c in have]
         select_cols = ["timestamp", "direction", "pnl", "pnl_percent", *risk_cols]
+        # The emitting strategy (outcome metadata for population filters such as
+        # RQ-20261119-3e98-01's rostered-strategies read; never a feature).
+        if "strategy_name" in have:
+            select_cols.append("strategy_name")
         # P0.1 (2026-07-31 audit): this loader feeds the M23 real-money
         # holdout / EV gate, whose target derives from `pnl` — a fabricated
         # pnl is a WRONG holdout outcome. Judge each row's provenance via
@@ -388,6 +392,9 @@ def _load_live_trades(
                 ),
                 "symbol": symbol,
                 "is_paper": is_paper,
+                "strategy": (
+                    str(r["strategy_name"] or "") if "strategy_name" in keys else ""
+                ),
             })
     total_excluded = sum(excluded_untrusted.values())
     if total_excluded:
@@ -965,6 +972,10 @@ class SetupCandidatesBuilder(DatasetBuilder):
         # meta-label can be re-evaluated when the training distribution matches
         # real setups instead of CUSUM momentum events.
         "event_source": str,
+        # the strategy that emitted a `live` / `live_paper` row (journal
+        # trades.strategy_name; absent on synthetic and backtest rows). Outcome
+        # metadata for population filters, NEVER a feature (RQ-20261119-3e98-01).
+        "strategy": str,
     }
 
     def iter_rows(
@@ -1392,4 +1403,5 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "label_cost_basis": "realized",
                     "is_live_trade": not is_paper,
                     "event_source": "live_paper" if is_paper else "live",
+                    **({"strategy": tr["strategy"]} if tr.get("strategy") else {}),
                 }
