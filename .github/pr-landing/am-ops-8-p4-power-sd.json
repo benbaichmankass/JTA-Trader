@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Fixes main red: research/programmes/04-macro-sleeve.yaml plus the two generated units RQ-20261119-031/032 (research queue, no live path); the manager merges.",
+  "why": "WHY: #27507 (replenish run 44621967111, merged 22:30:41Z) turned main red. tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable fails on RQ-20261119-031 with power=unverifiable: effect_units is in the metric's own units, so power.sd is required. 032 has the same gap. Both also declared power 0.5, which is outside the grader's table (_Z_POWER: 0.80/0.90/0.95), so neither unit could ever run. The source is the two P4 programme nodes (P4-Q2-ppi-rty-econ, P4-Q2-ppi-ym-tilt-holdout). WHAT: in both nodes and both generated units the power block now reads sd 0.0144, power 0.8, min_detectable_effect 0.0038, and the basis says why. sd is DERIVED, not measured: the sibling results (7769-20/-22) carry mean, n and t only, so sd = mean*sqrt(n)/t, which gives 0.0110 (7769-20) and 0.0144 (7769-22); the larger is used, which is conservative. MDE = 2.8016*0.0144/sqrt(117) = 0.0037, rounded up to 0.0038 so the requirement clears n 117. The basis states plainly that the siblings' 0.0019-0.0027 is below the detectable excess. The decision rules (t >= 2.0 at n >= 100) are unchanged; the units are unrun. Node power == unit power for both. tests/test_research_queue.py: 92 passed (the failing test now passes). queue_replenish --verify OK. Gates this adds or changes: none."
+}

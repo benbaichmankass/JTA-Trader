@@ -459,8 +459,15 @@ def rows_from_verdicts(doc: dict, run_id: str) -> list[dict]:
         if not isinstance(v, dict):
             continue
         if "levers" not in v:
+            # A leg refused before any cell (split_beyond_holdout) still carries its OWN boundary and why it was
+            # chosen; keep both, or the corpus row reads split null / why null (RQ-20261119-a7f1-08, run 44517905271).
+            why = v.get("error")
+            if why is None and v.get("status") == "split_beyond_holdout":
+                why = (f"split {v.get('split')} "
+                       + (f"fell back ({v.get('split_fallback')})" if v.get("split_fallback") else "derived")
+                       + f" past last discovery day {(v.get('holdout') or {}).get('last_discovery_day')}")
             out.append({"kind": "leg_status", "run_id": run_id,
-                        "sweep_generated_at": gen, "split": split,
+                        "sweep_generated_at": gen, "split": v.get("split") or split,
                         "tp_cap_pct": tp_cap, "leg": leg, "cell": None,
                         "regime_router": regime_router,
                         "min_oos_trades_floor": min_oos_floor,
@@ -469,7 +476,7 @@ def rows_from_verdicts(doc: dict, run_id: str) -> list[dict]:
                         "regime_gate_delta": _gate_delta(
                             leg, v.get("regime_gate_delta")),
                         "leg_status": v.get("status") or "no_levers",
-                        "leg_status_why": v.get("error"),
+                        "leg_status_why": why,
                         **_holdout_fields(v.get("holdout"))})
             continue
 
