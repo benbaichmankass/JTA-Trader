@@ -181,5 +181,14 @@ amendments:
     its inputs end ~mid-2026 (trainer 1h/4h candles frozen ~06-15/18; exit-head rows built 2026-07-12). --rows re-pointed from datasets-out/exit_head/1h/donchian/rows.jsonl
     to datasets-out/exit_head/1h/donchian_fresh/rows.jsonl. Rule, arms, thresholds, legs, folds and cost stack unchanged. before_any_run is false
     only because the 2026-11-18 pre-fix run (44376672320) exists and was already graded INVALID; no valid outcome of this unit has been read.'
+  - at: '2026-11-19'
+    before_any_run: false
+    by: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk)
+    text:
+    - 'HARNESS DEFECT (PI-20261119-RIMARY13-0001, fixed in PR #27491): the driver loaded the resolved candle file at its native grain and dropped Resolution.resample; on the trainer ETH/SOL
+      resolve to 5m and BTC to 15m files, so the ''1h'' replay ran the 1h config on sub-hourly bars while the head was trained on 1h rows. MEASURED from this unit''s own run record: n_total_trades
+      ETH 9,842 / SOL 8,512 / XRP 8,480 / ADA 9,572 / AVAX 8,359 vs ~118 (ETH) / 60 (SOL) / 73 (BTC) trades a year on the 1h harness (abab-50/52/47). NOT re-armed: superseded by later
+      units on the same question (a10d-07 / a10d-08 / 04a5-04, re-armed on the fixed harness) or a closed family. This unit''s verdict is a record of that run only, NOT evidence about
+      the 1h legs; revisit through PI-20261119-RIMARY13-0001 if a later read needs it.'
 last_dispatched_at: '2026-11-18T19:38:31+00:00'
 rearmed_at: '2026-11-18T22:05:00+00:00'

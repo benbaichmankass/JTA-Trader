@@ -4,7 +4,7 @@
 id: RQ-20261119-a10d-08
 title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h CONFIRMATION (held-out symbols): does the holding_pays_neg25 target, trained on the BTC/ETH/SOL
   rows only, beat the holding_pays champion by +0.01 R/trade on donchian 1h trades of 10 perps the head never saw?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -179,14 +179,14 @@ related:
 - research/queue/RQ-20261117-aadc-12.yaml
 - scripts/research/exit_head_label_bakeoff.py
 - scripts/research/m20_exit_head_round.py
-blocked_on:
-- what: 'CORRECTED 2026-11-19 ~10:00Z (trainer-vm-diag #27238): the replay resolver (m20_fleet_exit_sweep.resolve_data) reads FRESH data/<SYM>_15m.csv
-    (BTC) or data/<SYM>_5m.csv (ETH SOL XRP ADA AVAX LINK BNB) resampled to 1h/4h, last bar 2026-11-19; no data/<SYM>_1h.csv exists, so the earlier
-    1h-file clause could never clear. The real gate is the exit-head training rows (datasets-out/exit_head/1h/donchian/rows.jsonl), built 2026-07-12
-    with last bars BTC 07-10 / ETH 07-07 / SOL 07-05: they must be rebuilt into datasets-out/exit_head/1h/donchian_fresh/rows.jsonl (row ML-EXITHEAD-ROWS-FRESH-REBUILD).'
-  ref: '#27214 + TRAINER-1D-STALE-ROSTERED (AM-OPS-7)'
-  kind: build
-  clears_when: 'datasets-out/exit_head/1h/donchian_fresh/rows.jsonl exists with last bar_t past 2026-11-01 (trainer-vm-diag read quoted in the
-    move commit); then git mv this file to research/queue/ and set status queued (rule unchanged). ALSO: DOGEUSDT, LTCUSDT, DOTUSDT, TRXUSDT and
-    NEARUSDT must have a candle file resolve_data finds (the original run was producer_failed on those five; LINK and BNB resolve to fresh 5m
-    files).'
+amendments:
+- at: '2026-11-19'
+  before_any_run: true
+  by: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk)
+  text:
+  - 'UNBLOCKED. Gate 1 (fresh rows) is MET: datasets-out/exit_head/1h/donchian_fresh/rows.jsonl was built by the ef40-01 rebuild and read by run 44586889314 (RQ-20261119-a10d-07, rows_by_symbol
+    BTC 12,217 / ETH 23,605 / SOL 9,550, n 45,372). Gate 2 (candle files for DOGE/LTC/DOT/TRX/NEAR) is NOT met; the registered power block already states that a symbol without candles
+    is producer_failed for that leg only and lowers n, so the read proceeds on the resolvable symbols and the rule is unchanged. HARNESS: runs only on the fixed driver (PR #27491, the
+    same PR as this move), which replays at 1h (candle_source.resampled_to). POWER NOTE, stated before the run: the expected_n basis (BTC 1,389 harness trades) was itself measured on
+    15m bars by the defective driver; at 1h the five resolvable symbols should give roughly 2,000-3,000 OOS trades, so INDETERMINATE (n < 3000) is a likely outcome and is a power shortfall,
+    not evidence against the label. Thresholds unchanged.'
