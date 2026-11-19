@@ -39,12 +39,12 @@ iteration:
   - research/levers/ml-entry-eq-struct.yaml
 power:
   expected_n: 60
-  min_detectable_effect: 0.25
-  effect_units: '% of the book per month'
-  design: paired_monthly
+  min_detectable_effect: 0.36
+  effect_units: sd
+  design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'INFERRED: 207f-01 took 97 Foxhound-4 trades on the book over ~30 dev months; 207f-04 qualified slv_trend_1h at n_taken >=
+  basis: 'Standardised: d = 2.8 / sqrt(60) = 0.36 sd of the paired MONTHLY difference at alpha 0.05 / power 0.8 (the monthly sd is not measured before the run, so the detectable effect is stated in sd; the rule''s +0.25 %/month materiality bar is unchanged). INFERRED: 207f-01 took 97 Foxhound-4 trades on the book over ~30 dev months; 207f-04 qualified slv_trend_1h at n_taken >=
     30 over 700 days. The common window is MEASURED at run time and printed; under n_taken 30 on the incumbent or the combined book
     the unit grades INDETERMINATE, never FAIL.'
   feasibility:
