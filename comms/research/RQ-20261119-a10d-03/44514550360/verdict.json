@@ -1,0 +1,132 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 676,
+ "population": "aadc-14's (leg, trade) points: closed live/paper trades on 49 legs with a measured Stage-0 record, label mean net R of the next 20 trades < 0, out of fold by 5 leg groups; null = each leg's trade records permuted",
+ "note": "newinfo pooled excess +0.0829 (p 0.1463), within-leg excess -0.2036, paired AUC(newinfo) - AUC(base) 0.0722 CI95 [-0.0134, 0.1903]: between the bars",
+ "measurement": {
+  "rule": "RULE-RQ20261119-a10d-03-D10-NEWINFO",
+  "null": {
+   "pooled": {
+    "observed": 0.5013,
+    "null_mean": 0.4184,
+    "null_sd": 0.0644,
+    "excess": 0.0829,
+    "p_one_sided": 0.1463,
+    "draws": 40
+   },
+   "within_leg": {
+    "observed": 0.3608,
+    "null_mean": 0.5644,
+    "null_sd": 0.0962,
+    "excess": -0.2036,
+    "p_one_sided": 0.9756,
+    "draws": 40
+   }
+  },
+  "paired_newinfo_minus_base": {
+   "n": 676,
+   "legs": 24,
+   "delta": 0.0722,
+   "ci95": [
+    -0.0134,
+    0.1903
+   ]
+  },
+  "arms": {
+   "learned_newinfo": {
+    "n": 676,
+    "legs": 24,
+    "decay_rate": 0.605,
+    "auc": 0.5013,
+    "ci95": [
+     0.3791,
+     0.6115
+    ]
+   },
+   "learned_base": {
+    "n": 676,
+    "legs": 24,
+    "decay_rate": 0.605,
+    "auc": 0.4292,
+    "ci95": [
+     0.3092,
+     0.544
+    ]
+   },
+   "cusum": {
+    "n": 676,
+    "legs": 24,
+    "decay_rate": 0.605,
+    "auc": 0.6554,
+    "ci95": [
+     0.5507,
+     0.7504
+    ]
+   }
+  },
+  "within_leg_auc": {
+   "learned_newinfo": {
+    "auc": 0.3608,
+    "legs": 12,
+    "pairs": 5307
+   },
+   "learned_base": {
+    "auc": 0.3119,
+    "legs": 12,
+    "pairs": 5307
+   },
+   "cusum": {
+    "auc": 0.5499,
+    "legs": 12,
+    "pairs": 5307
+   }
+  },
+  "coverage": {
+   "per_feature": {
+    "volreg_z": 0.9645,
+    "volreg_z5": 0.9645,
+    "vol_tag10": 0.2959,
+    "cost10": 1.0,
+    "cost_drift": 0.6997,
+    "slip10": 1.0
+   },
+   "core_volreg_and_cost": 0.9645
+  },
+  "features_base": [
+   "cusum",
+   "mean5",
+   "mean10",
+   "mean20",
+   "std10",
+   "win10",
+   "dd",
+   "gap_mu",
+   "n_seen",
+   "mu"
+  ],
+  "features_new": [
+   "volreg_z",
+   "volreg_z5",
+   "vol_tag10",
+   "cost10",
+   "cost_drift",
+   "slip10"
+  ],
+  "params": {
+   "K": 0.25,
+   "CLIP": 3.0,
+   "N_NEXT": 20,
+   "folds": 5
+  },
+  "trades_in": 7985,
+  "excluded": {
+   "not_closed": 5216,
+   "no_leg_record": 1196,
+   "no_contract_multiplier": 52,
+   "degenerate_risk_basis": 47,
+   "no_net_r": 145,
+   "backtest": 0
+  }
+ }
+}
