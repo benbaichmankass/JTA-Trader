@@ -647,6 +647,32 @@ def _stamp_decision_time_regime(
         pass
 
 
+def _parse_skip_hours(raw: str) -> set:
+    """CSV of UTC hours (0-23) -> set. Empty = off. Anything else is refused: a typo must not silently mean 'no gate'."""
+    out = set()
+    for tok in str(raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            h = int(tok)
+        except ValueError:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}") from None
+        if not 0 <= h <= 23:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}")
+        out.add(h)
+    return out
+
+
+def _skip_hours_arg(raw: str) -> str:
+    """argparse `type=`: refuse a malformed CSV at parse time (exit 2), keep the raw string for run_backtest."""
+    try:
+        _parse_skip_hours(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+    return raw
+
+
 def run_backtest(
     df: pd.DataFrame,
     *,
@@ -683,9 +709,11 @@ def run_backtest(
     adx_max: Optional[float] = None,
     session_flat_et: Optional[str] = None,
     side_filter: str = "both",
+    skip_hours: str = "",
 ) -> Dict[str, Any]:
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
+    skip_hour_set = _parse_skip_hours(skip_hours)
     tp_geom = tp_geometry or _tpg.TPGeometrySpec()
     _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
     if _refused:
@@ -745,6 +773,17 @@ def run_backtest(
             continue
         if no_entry is not None and no_entry[i]:
             continue
+        # TIME-OF-DAY GATE (PI-20261119-FILLW47B-0002): skip a signal whose SIGNAL bar's UTC hour is in --skip-hours. Same semantics as
+        # scripts/backtest_trend.py --skip-hours (the signal bar is the decision anchor; an unparseable timestamp never skips). It sits BEFORE
+        # order_package because a skipped bar mutates no state there (no cooldown, no entry), so the result is the same as gating after it,
+        # and S_ASIA/S_LATE skip 8/4 of 24 hours. The live ict_scalp builder reads no skip_hours today: a PASS still needs a live producer.
+        # Default "" = no gate = byte-identical to before (tests/data/ict_scalp_side_filter_golden.json).
+        if skip_hour_set:
+            try:
+                if pd.Timestamp(df["timestamp"].iloc[i]).hour in skip_hour_set:
+                    continue
+            except (TypeError, ValueError):
+                pass
         lo = max(0, i + 1 - window_size)
         window = df.iloc[lo : i + 1]
         # v2 HTF bias: read the pre-aligned htf_close + htf_ema for this bar
@@ -1486,6 +1525,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--side-filter", choices=["long", "short", "both"], default="both",
                    help="Directional gate, the shared live _side_filter_suppresses: long skips shorts, short skips longs, "
                         "both (default) = no gate, byte-identical. exit_lever_ablation passes it for the DIRECTION arms.")
+    p.add_argument("--skip-hours", default="", type=_skip_hours_arg, metavar="H,H,...",
+                   help="Time-of-day entry lever (empty = off, byte-identical): CSV of UTC hours (0-23) whose SIGNAL bars never enter. "
+                        "Same semantics as backtest_trend.py --skip-hours. exit_lever_ablation passes it for the SESSION arms.")
     p.add_argument("--adx-max", type=float, default=None, metavar="X",
                    help="Skip signals whose decision-time ADX-14 (live detect_regime, trailing 200 bars) is >= X. "
                         "Default off (no gate).")
@@ -1770,6 +1812,7 @@ def main(argv: List[str]) -> int:
         vol_spec=vol_spec,
         adx_max=(float(args.adx_max) if args.adx_max is not None else None),
         side_filter=str(args.side_filter),
+        skip_hours=str(args.skip_hours),
         stamp_regime=bool(args.stamp_regime),
         sim_breakeven=bool(args.sim_breakeven),
         be_arm_on_touch=bool(args.be_arm_on_touch),

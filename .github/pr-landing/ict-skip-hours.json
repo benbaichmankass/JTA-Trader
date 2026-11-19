@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "manager_decision",
+  "hold_text": "edits scripts/backtest_ict_scalp.py (evidence harness; one new default-off flag); manager merges after the FULL pytest-run is green",
+  "why": "PI-20261119-FILLW47B-0002 (manager GO 2026-11-19): adds --skip-hours H,H,... to backtest_ict_scalp.py with the same semantics as backtest_trend.py --skip-hours (UTC hour of the signal bar). Default empty is byte-identical, proved by the existing golden (tests/data/ict_scalp_side_filter_golden.json, generated from the untouched script). Unblocks the 7 ict_scalp SESSION units (abab-25/27/29/31/33/35/37), which are still in research/queue/ on main (so #27184 is obsolete). The live ict_scalp builder reads no skip_hours, so a PASS still needs a live producer. Gates this adds or changes: none."
+}
