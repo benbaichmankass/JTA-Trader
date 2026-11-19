@@ -20,8 +20,16 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from scripts.research.queue_grade import _parse_ts, health
-from scripts.research.queue_replenish import existing_units
+import sys
+
+# PI-20261112-ZZU98A5J-0001: run as a script (python3 scripts/research/queue_throughput.py) it crashed with
+# ModuleNotFoundError: scripts, because only the script's own directory is on sys.path. Put the repo root there.
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from scripts.research.queue_grade import _parse_ts, health  # noqa: E402
+from scripts.research.queue_replenish import existing_units  # noqa: E402
 
 #: Alarm when runnable units exist and nothing has FIRED for this long. 12 h was set when the cron
 #: was 6-hourly: cron 6 h + GitHub's measured 4-6 h scheduler lag (schedule_keeper.py docstring) is

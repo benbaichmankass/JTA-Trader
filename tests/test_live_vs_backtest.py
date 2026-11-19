@@ -167,3 +167,35 @@ def test_shallow_clone_with_unknown_cut_warns_loudly():
     assert "SHALLOW" in w and "tlt_pullback_1h" in w and "ml_entry" not in w and "--shallow-since" in w
     assert lvb.shallow_cut_warning(cuts, shallow=False) == ""
     assert lvb.shallow_cut_warning({"ml_entry": cuts["ml_entry"]}, shallow=True) == ""
+
+
+# --block-by-entry-bar (PI-20261118-PREP1118-0004): clustered legs resample whole entry-bar blocks.
+def test_entry_bar_blocks_group_same_bar_and_keep_unkeyed_rows_alone():
+    blocks = lvb.entry_bar_blocks([1.0, 2.0, 3.0, 4.0], ["t1", "t1", None, "t2"])
+    assert sorted(map(sorted, blocks)) == [[1.0, 2.0], [3.0], [4.0]]
+
+
+def test_block_bootstrap_covers_exactly_n_trades_and_is_seeded():
+    blocks = [[1.0] * 5, [1.0]]
+    assert set(lvb.block_bootstrap_sums(blocks, 7, draws=50)) == {7.0}   # every draw sums exactly n unit trades
+    assert lvb.block_bootstrap_sums(blocks, 7, draws=50) == lvb.block_bootstrap_sums(blocks, 7, draws=50)
+
+
+def test_clustering_widens_the_band_versus_iid():
+    xs, bars = [], []
+    for k in range(100):                       # 100 bars of 5 perfectly co-moving trades: +1 or -1 together
+        v = 1.0 if k % 2 else -1.0
+        xs += [v] * 5
+        bars += [f"b{k}"] * 5
+    iid = lvb.judge(0.0, xs, 25, draws=4000)
+    blk = lvb.judge_block(0.0, lvb.entry_bar_blocks(xs, bars), 25, draws=4000)
+    assert (blk["p95"] - blk["p5"]) > 1.5 * (iid["p95"] - iid["p5"])
+    assert blk["n_entry_bars"] == 100 and blk["max_trades_per_bar"] == 5
+
+
+def test_unclustered_block_band_matches_iid_band():
+    xs = [(-1.0) ** k * (1 + k % 3) for k in range(300)]
+    bars = [f"b{k}" for k in range(300)]       # one trade per bar: the block bootstrap IS the i.i.d. bootstrap
+    iid = lvb.judge(0.0, xs, 20, draws=4000)
+    blk = lvb.judge_block(0.0, lvb.entry_bar_blocks(xs, bars), 20, draws=4000)
+    assert abs((blk["p95"] - blk["p5"]) - (iid["p95"] - iid["p5"])) < 0.25 * (iid["p95"] - iid["p5"])
