@@ -83,17 +83,51 @@ def _recent(conn: sqlite3.Connection, since_iso: str) -> tuple:
     return trades, pk
 
 
-def _live_trades(limit: int) -> List[Dict[str, Any]]:
-    """Closed trades via the diag read surface (the CI runner has no journal DB). Raises on a failed read:
-    could-not-look is an error exit, never an empty list."""
-    out = subprocess.run([str(REPO / "scripts/ops/diag_fetch.sh"), f"journal?table=trades&limit={limit}"],
+#: Paging for the --live read (PI-20261119-IXACGZFL-0002). The diag journal is newest-first BY ID, but the
+#: window is by closed_at, and a trade opened long ago can close inside it. So pages are read until the oldest
+#: row read OPENED before the cut minus MAX_HOLD_DAYS (no trade still open past that is expected to close in the
+#: window), or history runs out. A fixed 300-row read let faults age out unfiled: 2026-11-19 a 72 h re-run read
+#: 26 closed trades against 29 read by an earlier 48 h run.
+PAGE = 1000
+MAX_PAGES = 20
+MAX_HOLD_DAYS = 14.0
+
+
+def _fetch_page(offset: int) -> List[Dict[str, Any]]:
+    out = subprocess.run([str(REPO / "scripts/ops/diag_fetch.sh"),
+                          f"journal?table=trades&limit={PAGE}&offset={offset}"],
                          capture_output=True, text=True, timeout=120)
     if out.returncode != 0:
         raise RuntimeError(f"diag_fetch rc={out.returncode}: {out.stderr.strip()[-200:]}")
     rows = json.loads(out.stdout)
     if not isinstance(rows, list):
         raise RuntimeError("diag journal read returned a non-list payload")
-    return [r for r in rows if r.get("status") == "closed" and not r.get("is_backtest")]
+    return rows
+
+
+def _live_trades(cut_iso: str, fetch=_fetch_page) -> tuple:
+    """Closed trades via the diag read surface (the CI runner has no journal DB), paged until the window is
+    covered. Returns ``(closed_rows_in_window, coverage)``; ``coverage`` names rows read, pages and whether the
+    read reached the horizon (``complete``), ran out of history (``exhausted``) or hit the page cap
+    (``truncated`` -- the count then may be LOW, never read it as complete). Raises on a failed read:
+    could-not-look is an error exit, never an empty list."""
+    horizon = (datetime.fromisoformat(cut_iso) - timedelta(days=MAX_HOLD_DAYS)).isoformat()
+    rows: List[Dict[str, Any]] = []
+    state = "truncated"
+    pages = 0
+    for pages in range(1, MAX_PAGES + 1):
+        page = fetch((pages - 1) * PAGE)
+        rows.extend(page)
+        if len(page) < PAGE:
+            state = "exhausted"
+            break
+        opened = [str(r.get("timestamp") or "") for r in page if r.get("timestamp")]
+        if opened and min(opened) < horizon:
+            state = "complete"
+            break
+    closed = [r for r in rows if r.get("status") == "closed" and not r.get("is_backtest")
+              and str(r.get("closed_at") or "") >= cut_iso]
+    return closed, {"rows_read": len(rows), "pages": pages, "state": state, "horizon": horizon}
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -109,10 +143,15 @@ def main(argv: List[str] | None = None) -> int:
         try:
             now = datetime.now(timezone.utc)
             cut = (now - timedelta(hours=a.since_hours)).isoformat()
-            trades = [t for t in _live_trades(300) if str(t.get("closed_at") or "") >= cut]
+            trades, cov = _live_trades(cut)
         except Exception as exc:  # noqa: BLE001 — could not look is loud, not zero
             print(f"mechanics-fault-intake: could not look ({exc})", file=sys.stderr)
             return 3
+        print(f"mechanics-fault-intake: coverage {cov['state']}: {cov['rows_read']} journal row(s) in "
+              f"{cov['pages']} page(s), horizon opened < {cov['horizon']}")
+        if cov["state"] == "truncated":
+            print(f"::warning::mechanics-fault-intake: page cap ({MAX_PAGES} x {PAGE}) hit before the horizon; "
+                  "the closed-trade count may be LOW (we could not look at all of it)")
         return _file(a, trades, {}, now)
     path = soak_state._db_path()
     if not path or not Path(path).exists():
