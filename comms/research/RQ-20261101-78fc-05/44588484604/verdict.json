@@ -1,0 +1,263 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 2554,
+ "population": "2554 held-out trades (117732 check-ins) over 6 calendar folds, legs ['ada_pullback_2h', 'trend_donchian_eth_4h', 'trend_donchian_eth_prop', 'trend_donchian_sol_prop', 'trend_donchian_xrp_4h', 'xrp_pullback_2h']; labels grid_labels.jsonl.gz sha256 66a209386d2f79fb",
+ "rule": "RULE-RQ-20261101-78fc-05 (plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a sanity rule), unchanged",
+ "clauses": {
+  "a_lb_gt_floor": {
+   "value": -0.05535821018010963,
+   "floor": -0.01,
+   "ok": false
+  },
+  "b_advice_rate": {
+   "value": 0.7174175245472769,
+   "max": 0.15,
+   "ok": false
+  },
+  "c_no_leg_below": {
+   "worst_leg": [
+    "trend_donchian_xrp_4h",
+    -0.054078545454545456
+   ],
+   "floor": -0.05,
+   "ok": false
+  }
+ },
+ "measurement": {
+  "mean_dR_per_trade": -0.005739478856695381,
+  "lb95": -0.05535821018010963,
+  "ub95": 0.04407008902701644,
+  "advice_rate": 0.7174175245472769,
+  "acted_trades": 2361,
+  "per_leg_mean_dR": {
+   "trend_donchian_eth_prop": -0.023271776328052184,
+   "trend_donchian_eth_4h": -0.006764502202643162,
+   "ada_pullback_2h": 0.017241723880597023,
+   "trend_donchian_xrp_4h": -0.054078545454545456,
+   "xrp_pullback_2h": -0.026172101522842637,
+   "trend_donchian_sol_prop": 0.04795241836734695
+  },
+  "per_leg_trades": {
+   "trend_donchian_eth_prop": 1073,
+   "trend_donchian_eth_4h": 227,
+   "ada_pullback_2h": 402,
+   "trend_donchian_xrp_4h": 66,
+   "xrp_pullback_2h": 394,
+   "trend_donchian_sol_prop": 392
+  },
+  "action_mix": {
+   "tighten_sl_1r": 280,
+   "tp_extend_2r": 475,
+   "tp_pull_in_1r": 168,
+   "tp_pull_in_0p5r": 227,
+   "sl_to_structure": 78,
+   "widen_sl_0p25r": 199,
+   "widen_sl_0p5r": 189,
+   "tp_extend_1r": 273,
+   "close": 241,
+   "tighten_sl_0p5r": 110,
+   "tighten_sl_0p25r": 29,
+   "tp_to_structure": 92
+  },
+  "per_fold": {
+   "0": {
+    "trades": 423,
+    "checkins": 14355,
+    "advice_rate": 0.593521421107628,
+    "acted_trades": 367,
+    "mean_dR": 0.005654683215130014,
+    "matched_random_mean_dR": -0.005982906749408987,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1593702000,
+      1624964400
+     ],
+     "purged_trades": 19,
+     "train_trades": 2112,
+     "test_trades": 423
+    }
+   },
+   "1": {
+    "trades": 419,
+    "checkins": 16416,
+    "advice_rate": 0.6786062378167641,
+    "acted_trades": 382,
+    "mean_dR": 0.026798978520286395,
+    "matched_random_mean_dR": -0.00828495465393795,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1624971600,
+      1658293200
+     ],
+     "purged_trades": 41,
+     "train_trades": 2094,
+     "test_trades": 419
+    }
+   },
+   "2": {
+    "trades": 425,
+    "checkins": 20921,
+    "advice_rate": 0.730414416136896,
+    "acted_trades": 393,
+    "mean_dR": -0.028247910588235295,
+    "matched_random_mean_dR": 0.04491756919999999,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1658120400,
+      1692298800
+     ],
+     "purged_trades": 49,
+     "train_trades": 2080,
+     "test_trades": 425
+    }
+   },
+   "3": {
+    "trades": 431,
+    "checkins": 22523,
+    "advice_rate": 0.7263686009856591,
+    "acted_trades": 414,
+    "mean_dR": -0.04845545939675178,
+    "matched_random_mean_dR": 0.02027453828306264,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1692126000,
+      1727514000
+     ],
+     "purged_trades": 58,
+     "train_trades": 2065,
+     "test_trades": 431
+    }
+   },
+   "4": {
+    "trades": 425,
+    "checkins": 20266,
+    "advice_rate": 0.7145465311358926,
+    "acted_trades": 394,
+    "mean_dR": -0.018327051764705865,
+    "matched_random_mean_dR": -0.004894893952941179,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1726416000,
+      1759417200
+     ],
+     "purged_trades": 45,
+     "train_trades": 2084,
+     "test_trades": 425
+    }
+   },
+   "5": {
+    "trades": 431,
+    "checkins": 23251,
+    "advice_rate": 0.8034493140079997,
+    "acted_trades": 411,
+    "mean_dR": 0.02876874709976798,
+    "matched_random_mean_dR": 0.0030752993619489553,
+    "heads_fit": 13,
+    "purge": {
+     "embargo_s": 1429200,
+     "window": [
+      1759150800,
+      1793149200
+     ],
+     "purged_trades": 24,
+     "train_trades": 2099,
+     "test_trades": 431
+    }
+   }
+  },
+  "matched_random": {
+   "draws": 200,
+   "mean_dR": 0.008250294224745497,
+   "p_random_ge_model": 0.77,
+   "graded": false
+  }
+ },
+ "config": {
+  "tau_r": 0.15,
+  "lgbm": {
+   "n_estimators": 200,
+   "learning_rate": 0.05,
+   "num_leaves": 15,
+   "min_child_samples": 100,
+   "subsample": 0.8,
+   "subsample_freq": 1,
+   "colsample_bytree": 0.9,
+   "reg_lambda": 1.0,
+   "verbose": -1
+  },
+  "seed": 20261101,
+  "n_boot": 10000,
+  "features": [
+   "now_r",
+   "stop_r",
+   "tp_r",
+   "mfe_r",
+   "mae_r",
+   "bars_held",
+   "bars_left",
+   "dist_sl_r",
+   "dist_tp_r",
+   "atr_r",
+   "dist_sl_atr",
+   "dist_tp_atr",
+   "atr_ratio",
+   "mom3_r",
+   "tag:atr_down",
+   "tag:atr_norm",
+   "tag:atr_up",
+   "tag:break_down_against",
+   "tag:break_down_with",
+   "tag:break_up_against",
+   "tag:break_up_with",
+   "tag:clock",
+   "tag:mom_against",
+   "tag:mom_with",
+   "tag:r+0.5",
+   "tag:r+1.0",
+   "tag:r+1.5",
+   "tag:r+2.0",
+   "tag:r-0.5",
+   "leg:ada_pullback_2h",
+   "leg:trend_donchian_eth_4h",
+   "leg:trend_donchian_eth_prop",
+   "leg:trend_donchian_sol_prop",
+   "leg:trend_donchian_xrp_4h",
+   "leg:xrp_pullback_2h"
+  ],
+  "actions": [
+   "close",
+   "partial_close",
+   "sl_to_structure",
+   "tighten_sl_0p25r",
+   "tighten_sl_0p5r",
+   "tighten_sl_1r",
+   "tp_extend_1r",
+   "tp_extend_2r",
+   "tp_pull_in_0p5r",
+   "tp_pull_in_1r",
+   "tp_to_structure",
+   "widen_sl_0p25r",
+   "widen_sl_0p5r"
+  ],
+  "labels": "comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz",
+  "labels_sha256": "66a209386d2f79fbd972a2e09a7ea07fe22bd6690643ecf05008e00136c0d76d"
+ },
+ "stated_limits": [
+  "one intervention per trade: after the first action the path is hold-to-bracket (one-step labels)",
+  "corpus B = harness Stage-0 trades on their INITIAL bracket on 1h candles, not live paths and not the leg's own trail; iaum_pullback_1d is out of scope",
+  "matched random is reported, not graded (the registered rule has no random clause)"
+ ],
+ "what_it_does_not_do": "Trains nothing persistent; registers, serves, promotes or applies nothing; changes no config.",
+ "generated_at": "2026-11-19T18:35:02Z"
+}
