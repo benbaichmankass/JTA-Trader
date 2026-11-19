@@ -101,7 +101,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-04
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'SE lever family never tested on mgc_trend_1h: STALE-EXIT (--stale-exit-bars, peer-tested grid for this bar size) vs the declared leg, net of cost?'
 value:
@@ -113,3 +113,17 @@ why_this_matters: 'Plan node: research/levers/mgc_trend_1h.yaml (testing leg; le
   on peer legs (slv_pullback_1d 3/6 bars, eth_pullback_2h 8/12/20 bars) and the lever map for this leg carries no stale_exit_bars family. One factor, 2 arms; a PASS is a lead
   for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
 last_dispatched_at: '2026-11-19T19:00:28+00:00'
+
+grading:
+  attested: RULERQ20261117b2f204
+  auto: true
+  decision_rule_id: RULERQ20261117b2f204
+  evidence:
+  - research/results/RQ-20261117-b2f2-04/44583693668.jsonl
+  graded_at: '2026-11-19'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
