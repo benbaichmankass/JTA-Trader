@@ -62,8 +62,20 @@ def test_entry_adx_labels_nearest_prior_bar():
         {"entry_time": "not-a-date", "direction": "short", "net_r": -1.0},
     ]
     out = sweep._entry_adx(trades, adx, df)
-    # unparseable entry dropped; the 02:30 trade takes the 02:00 bar's ADX (30.0).
+    # Unparseable entry dropped. The 02:30 entry is OFF the hourly grid (a finer ledger), so the 02:00 bar
+    # [02:00, 03:00) is still forming at entry: candle_io.entry_bar_locator (PR #27654, PI-20261120-7ITMUEB1-0006)
+    # reads the last bar CLOSED by then, the 01:00 bar (ADX 20.0). The old 30.0 read the forming bar (lookahead).
     assert len(out) == 1
+    assert out[0]["_adx"] == 20.0
+
+
+def test_entry_adx_on_grid_reads_the_decision_bar():
+    """A ledger on the bar grid (the documented --resample == live tf contract) reads its own decision bar,
+    closed at fill time -- the live regime stamp."""
+    ts = pd.date_range("2024-01-01", periods=5, freq="h", tz="UTC")
+    df = pd.DataFrame({"timestamp": ts})
+    adx = pd.Series([10.0, 20.0, 30.0, 40.0, 50.0])
+    out = sweep._entry_adx([{"entry_time": "2024-01-01T02:00:00Z", "direction": "long", "net_r": 1.0}], adx, df)
     assert out[0]["_adx"] == 30.0
 
 
