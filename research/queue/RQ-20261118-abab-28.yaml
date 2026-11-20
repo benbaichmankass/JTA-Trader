@@ -1,7 +1,7 @@
 id: RQ-20261118-abab-28
 title: 'DIRECTION lever family on ict_scalp_mgc_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost
   stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -130,14 +130,20 @@ last_dispatched_at: '2026-11-20T07:18:58+00:00'
 rearmed_at: '2026-11-20T05:40:00+00:00'
 grading:
   attested: RULERQ20261118abab28
-  auto: true
+  auto: false
   decision_rule_id: RULERQ20261118abab28
   evidence:
-  - research/results/RQ-20261118-abab-28/44593871371.jsonl
-  - research/results/RQ-20261118-abab-28/44598156200.jsonl
+  - research/results/RQ-20261118-abab-28/44686486438.jsonl
   graded_at: '2026-11-20'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'ict_scalp_mgc_15m, DIRECTION lever family, Dukascopy 15m feed, window 2019-01-01..2026-10-30, 6 folds,
+    re-graded from raw trades under the unit''s rule: n(A) 526, net R -176.10, maxDD 176.73. LONG: n 279, net -68.73
+    (delta +107.37 vs bar 10.52), 6 of 6 folds, maxDD 69.23 -> PASS. SHORT: n 262, net -120.34 (delta +55.76), 6
+    of 6 folds, maxDD 120.96 -> PASS. Best by net R: LONG, denominator 2. Read before use: BOTH single-sided arms
+    pass and BOTH are net-negative, so most of the gain is fewer trades on a leg whose average trade loses,
+    not a direction edge; LONG is still -68.7 R. No window disjoint from 2019-2026 exists on this feed, so the rule''s
+    confirmation unit would change the corpus, not the dates. The leg''s own A net R of -176.10 at n 526 is itself
+    the finding.'
+  rows: 1
+  verdict: pass

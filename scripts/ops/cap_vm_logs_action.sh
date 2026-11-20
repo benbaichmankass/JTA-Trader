@@ -15,6 +15,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/ops/_lib.sh
 source "${SCRIPT_DIR}/_lib.sh"
+# DATA_DIR / RUNTIME_LOGS_DIR from the trader's own drop-in / unit (PI-20261120-CGNCTD2Z-0007). Without this,
+# src.utils.paths.runtime_logs_dir() fell back to the repo-relative runtime_logs (~87 MB) and the dry run of
+# 2026-11-20 (#27658) scanned it instead of /data/bot-data/runtime_logs, where the 12 GB live.
+load_runtime_env
 
 TARGET="${ACTION_TARGET:-}"
 APPLY="${ACTION_APPLY:-}"

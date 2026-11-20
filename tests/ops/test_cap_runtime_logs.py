@@ -51,3 +51,12 @@ def test_wrapper_syntax_and_dry_run_default():
     assert subprocess.run(["bash", "-n", str(w)]).returncode == 0
     src = w.read_text()
     assert 'APPLY}" != "true"' in src and "exit 4" in src
+
+
+def test_wrapper_loads_the_runtime_env_before_resolving_the_root():
+    """PI-20261120-CGNCTD2Z-0007: the 2026-11-20 dry run scanned the repo-relative
+    runtime_logs because the wrapper never exported DATA_DIR / RUNTIME_LOGS_DIR."""
+    src = (REPO / "scripts/ops/cap_vm_logs_action.sh").read_text()
+    code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
+    assert "load_runtime_env" in code
+    assert code.index("load_runtime_env") < code.index("cap_runtime_logs.py")
