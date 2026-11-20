@@ -1882,6 +1882,7 @@ def main(argv: List[str]) -> int:
 
     try:
         df = _load_candles(args.data)
+        df = _backtest_data_source.resample_open_stamped(df, _src.resample)  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
         df = _date_filter(df, args.start, args.end)
     except Exception as exc:
         print(f"ERROR: failed to load candles from {args.data}: {exc}", file=sys.stderr)
