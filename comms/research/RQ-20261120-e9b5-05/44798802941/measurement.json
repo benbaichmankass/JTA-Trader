@@ -1,0 +1,63 @@
+{
+  "unit": "RQ-20261120-e9b5-05",
+  "symbol": "SOLUSDT",
+  "legs": [
+    "trend_donchian_sol_4h",
+    "trend_donchian_sol_prop"
+  ],
+  "accounts": [
+    "bybit_2"
+  ],
+  "n_by_arm": {
+    "solo:trend_donchian_sol_4h": 92,
+    "solo:trend_donchian_sol_prop": 119,
+    "together": 176
+  },
+  "arms": {
+    "solo:trend_donchian_sol_4h": {
+      "n_oos": 92,
+      "n_skipped_zero_risk": 0,
+      "net_r": 31.6731,
+      "capital_days": 224.6146,
+      "net_r_per_capital_day": 0.141011
+    },
+    "solo:trend_donchian_sol_prop": {
+      "n_oos": 119,
+      "n_skipped_zero_risk": 0,
+      "net_r": 7.5105,
+      "capital_days": 145.0208,
+      "net_r_per_capital_day": 0.051789
+    },
+    "together": {
+      "n_oos": 176,
+      "n_skipped_zero_risk": 0,
+      "net_r": 24.3499,
+      "capital_days": 249.6667,
+      "net_r_per_capital_day": 0.09753
+    }
+  },
+  "cost_policy": {
+    "source": "execution_costs.resolve_cost_policy",
+    "symbol": "SOLUSDT",
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0,
+    "term_sources": {
+      "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+      "funding": "venue_default",
+      "slippage": "venue_default"
+    },
+    "fee_only_arm_declared": false,
+    "prop_declared": {}
+  },
+  "risk_pct": 1.5,
+  "oos_start": "2025-01-01",
+  "verdict": "pass",
+  "reason": "all arms measured; per-leg inputs reported, no exclusion",
+  "per_leg_net_r_per_capital_day": {
+    "trend_donchian_sol_4h": 0.141011,
+    "trend_donchian_sol_prop": 0.051789
+  },
+  "combined_book_net_r_per_capital_day": 0.09753
+}
