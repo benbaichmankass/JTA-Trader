@@ -134,8 +134,38 @@ def norm_rule(rule: str) -> str:
 
 
 def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
-    """Right-labelled, right-closed OHLC resample (the harness convention)."""
+    """OPEN-stamped OHLC resample: buckets [T, T+rule) labelled T, the grid of the native exchange files and of the
+    harnesses since #27566 (PI-20261120-7ITMUEB1-0006; right/right grouped the sub-bars opened in (T-rule, T]).
+
+    Open stamps are causal for SAME-FRAME consumers and for an entry lookup when the ledger's entry grain equals the
+    rule (the decision bar is closed at fill time). A consumer that maps a FINER ledger onto these bars must not read
+    the bar an entry sits inside: use :func:`entry_bar_locator`, which detects that case and falls back to the last
+    bar that closed at or before the entry."""
     return (df.set_index('timestamp')
-            .resample(norm_rule(rule), label='right', closed='right')
+            .resample(norm_rule(rule), label='left', closed='left')
             .agg({'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'})
             .dropna().reset_index())
+
+
+def entry_bar_locator(bar_ts, entry_times):
+    """Causal index of the OPEN-stamped bar a trade entry may read (PI-20261120-7ITMUEB1-0006).
+
+    ``bar_ts``: the bars' open stamps (sorted). ``entry_times``: every parseable entry time of the ledger.
+    * Every entry ON the bar grid (ledger grain == bar grain, the regime taggers' documented contract): the entry's
+      own decision bar (stamp <= entry), which is closed at fill time -- the live stamp.
+    * ANY entry OFF the grid (a finer ledger): for ALL entries, the last bar whose close (stamp + bar period) is
+      <= the entry -- never the bar the entry sits inside.
+    Returns ``(locate, mode)``; ``locate(et)`` -> int index (-1 if none) and ``mode`` in {"aligned", "finer_ledger",
+    "empty"}. The bar period is the modal stamp spacing."""
+    ts = pd.DatetimeIndex(pd.to_datetime(pd.Series(bar_ts), utc=True, errors="coerce").dropna())
+    ets = [pd.Timestamp(e) for e in entry_times if e is not None and not pd.isna(e)]
+    if len(ts) == 0:
+        return (lambda et: -1), "empty"
+    grid = set(ts)
+    aligned = all(e in grid for e in ets)
+    if aligned:
+        return (lambda et: int(ts.searchsorted(et, side="right")) - 1), "aligned"
+    period = pd.Series(ts).diff().mode()
+    step = period.iloc[0] if len(period) else pd.Timedelta(0)
+    return (lambda et: int(ts.searchsorted(et - step, side="right")) - 1), "finer_ledger"
+
