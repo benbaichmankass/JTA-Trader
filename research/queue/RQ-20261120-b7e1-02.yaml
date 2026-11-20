@@ -1,0 +1,136 @@
+id: RQ-20261120-b7e1-02
+title: 'BYBIT-NATIVE CONFIRMATION of the trail-decay removal on avax_pullback_2h (AVAXUSDT 2h): does OFF still beat the leg as declared on the bars it trades?
+  (RQ-20261120-75e6-09 PASS follow-up)'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): confirmation after a one-window discovery, here by a second corpus
+  because the first used the whole available span.'
+question: 'RQ-20261120-75e6-09 found on 2020-07-01..2026-10-15 (Binance Vision candles) that removing the shipped trail decay beats avax_pullback_2h as
+  declared in 4 of 4 folds. That span is the whole of the evidence feed, so no time-disjoint window exists to confirm on; this unit changes the CORPUS instead:
+  on the trainer''s resident Bybit linear files (the live venue), aggregated to 2h by scripts/research/bybit_native_csv.py, 2023-02-01..2026-10-15 23:59
+  (60 days of warm-up after the file starts 2022-12-03), does OFF beat A by >= 0.02 R/trade on net R in >= 3 of 4 calendar folds within the drawdown bar?
+  A PASS says the effect is not an artefact of the Binance feed; it is NOT out-of-time evidence, because 2023-02..2026-10 lies inside the span the discovery
+  used.'
+why_this_matters: 'RQ-20261120-75e6-09 passed on one window and its own rule asks for ONE confirmation before any Tier-3 proposal to remove a shipped lever
+  on a real-money or testing leg. Manager direction 2026-11-20 (06:06Z): use the Bybit-native corpus (venue-gap method, 03:52Z), Binance as robustness only.
+  The Binance read of this span is already in the 75e6 record. Relationship to RQ-20261016-006 (programme note: the eth_4h stall-decay arm beat the then-incumbent
+  on 2022-10..2026-10): its arms differ from this unit''s A/OFF pair, so the two do not contradict, but a PASS here would sit awkwardly with it and the
+  manager should read them together.'
+power:
+  alpha: 0.05
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades. expected_n ESTIMATE 270: the venue-gap run (comms/research/VENUE-GAP-20261120/legs.jsonl)
+    matched the full Stage-0 argv on the Bybit corpus at n 283 trades over the Bybit span; this unit''s window starts 2023-02-01, a little later. Below
+    the floor the unit grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 270
+  min_detectable_effect: 0.45
+  power: 0.8
+  feasibility:
+    accrual_basis: Replays history on the trainer's resident Bybit files for a pinned window; nothing accrues.
+    source: none
+decision_rule:
+  id: RULE-RQ20261120b7e102-BYBIT-DECAY-CONFIRM
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39, or IF OFF is byte-identical to A (the lever never fired). OFF PASSES iff net_r(OFF) > net_r(A) AND delta >= 0.02 R
+    x n(A) AND folds_ge >= 3 of 4 AND maxDD(OFF) <= maxDD(A) x 1.35. PASS (removal beats keeping on the live venue''s bars): the effect is not a Binance-feed
+    artefact; it is not out-of-time evidence, and a Tier-3 proposal to remove the lever still goes to the manager and needs its own review of the 2020-2022
+    span the Bybit files do not cover. FAIL: the shipped lever stands on the Bybit-native bars for this window; the family is not retired. Thresholds are
+    not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on avax_pullback_2h, window 2023-02-01 .. 2026-10-15 23:59 on the Bybit-native candles
+    built by bybit_native_csv.py (--data-csv) (4 equal calendar folds, a trade binned by entry time), net of the full cost stack the harness resolves per
+    venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Thresholds are copied unchanged from RQ-20261120-75e6-09. Arms fixed now:
+    A = the leg as declared in config/strategies.yaml; OFF = A with trail_decay_tight_mult, trail_decay_arm_r, trail_decay_stall_bars unset. Per arm: n,
+    net_total_r, max_drawdown_r, net R per fold. delta = net_r(OFF) - net_r(A); folds_ge = folds with net_r(OFF) >= net_r(A). No result of this leg on this
+    window or corpus was read before registration beyond the committed 75e6-09 record.'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: exit lever on a live leg; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.15
+  usd_at_stake_per_month: 250
+routing:
+  basis: 'ESTIMATE: one 5m->2h aggregation plus one harness pass per arm; the venue-gap relay #27588 ran 14 such passes inside one 60-minute relay.'
+  est_minutes: 20
+  needs_gpu: false
+  needs_trainer_resident_data: true
+  peak_memory_gb: 2.0
+  why_runner: The Bybit linear candle files are trainer-resident (data/, refreshed by deploy/trainer/ict-candle-refresh); no keyless public source serves
+    them for this window.
+run:
+  workflow: research-script-run-trainer.yml
+  commands:
+  - - python3
+    - scripts/research/bybit_native_csv.py
+    - --symbol
+    - AVAXUSDT
+    - --timeframe
+    - 2h
+    - --data-dir
+    - data
+    - --out-csv
+    - /tmp/{unit}-{run_id}/bybit_AVAXUSDT_2h.csv
+    - --provenance
+    - '{out_dir}/bybit_csv_provenance.json'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - avax_pullback_2h
+    - --arm
+    - A=
+    - --arm
+    - OFF=-trail_decay_tight_mult;-trail_decay_arm_r;-trail_decay_stall_bars
+    - --start
+    - '2023-02-01'
+    - --end
+    - 2026-10-15 23:59
+    - --data-csv
+    - /tmp/{unit}-{run_id}/bybit_AVAXUSDT_2h.csv
+    - --grade
+    - replace
+    - --baseline
+    - A
+    - --delta-r
+    - '0'
+    - --delta-r-per-trade
+    - '0.02'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '3'
+    - --dd-tol-frac
+    - '0.35'
+    - --n-floor
+    - '39'
+    - --out
+    - '{out_dir}'
+    - --research-unit
+    - RQ-20261120-b7e1-02
+  inputs:
+    research_unit: RQ-20261120-b7e1-02
+  timeout_minutes: 60
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- PI-20261120-7ITMUEB1-0001
+- PI-20261120-7ITMUEB1-0005
+- 'PR #27566'
+- RQ-20261120-4f03-01
+- RQ-20261120-75e6-09
+- comms/research/VENUE-GAP-20261120/record.json
+- scripts/research/bybit_native_csv.py
+- scripts/research/exit_lever_ablation.py
+programme_node:
+  programme: P1
+  node: P1-Q5-avaxpb2h-decay-removal-bybit-confirm
+  goal: G1
+  after: []
