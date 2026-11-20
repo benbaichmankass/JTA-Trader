@@ -134,7 +134,7 @@ def main(argv: List[str]) -> int:
 
     harness = _load_harness()
     cost_basis = _apply_venue_cost_policy(harness, a.symbol)
-    df = harness._load_candles(res.path)
+    df = backtest_data_source.load_resolved_frame(harness, res.path, res.resample)   # honour the resolver's grain
 
     trades: List[Any] = []
     baseline = harness.run_backtest(
