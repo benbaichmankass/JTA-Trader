@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Trader-closure change (src/utils/json_notes.py, RESTART): dump_capped keeps protected keys when they alone exceed the cap; the manager reads the diff and merges",
+  "why": "Row DUMP-CAPPED-DROPS-PROTECTED: live trade 7131 (alpaca_paper USO, 2026-11-16) stores notes of exactly {\"_truncated\": true}, so every protected provenance key was deleted at once. Now protected prose is shortened, ids/timestamps/stamps are never cut (kept or dropped whole), protected keys are shed one at a time with the close stamps last, and any protected loss logs a WARNING naming the keys. Gates this adds or changes: none."
+}

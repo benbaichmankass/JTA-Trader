@@ -149,6 +149,10 @@ def test_every_reconciliation_phase_takes_the_lock():
     from src.runtime import order_monitor as om
     src = inspect.getsource(om.run_reconciliation_tick)
     assert "with _phase(" not in src and src.count("with _recon_phase(") >= 25
+    # The ONE sanctioned unlocked phase: the equity sweep's READ-ONLY venue prefetch (#27669), whose reads
+    # the locked body trusts only while the venue generation is unchanged. Any other unlocked phase fails here.
+    import re
+    assert re.findall(r'with _unlocked_read_phase\("(\w+)"\)', src) == ["prefetch_equity_sweep_reads"]
 
 
 def test_lock_is_reentrant():

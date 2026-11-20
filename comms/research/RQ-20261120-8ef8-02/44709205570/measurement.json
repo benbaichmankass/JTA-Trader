@@ -1,0 +1,130 @@
+{
+  "label": "vol_target_does_not_clear",
+  "n_trades": 234,
+  "dsharpe": -0.0211,
+  "maxdd_baseline_r": 11.2909,
+  "maxdd_targeted_r": 5.64545,
+  "blocks_dsharpe_positive": 0,
+  "blocks": 4,
+  "clause_a_dsharpe": false,
+  "clause_b_maxdd": true,
+  "clause_c_blocks": false,
+  "overlay": {
+    "params": {
+      "target_vol_annualized": 0.1,
+      "short_lookback": 20,
+      "long_lookback": 60,
+      "blend": 0.5,
+      "cap_lo": 0.5,
+      "cap_hi": 1.5,
+      "retarget": "monthly",
+      "turnover_bps": 14.0,
+      "cost_policy": {
+        "cost_symbol": "SOLUSDT",
+        "is_perp": true,
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_windows_per_day": 3.0,
+        "held_exposure": 1.0,
+        "turnover_bps_charged": 14.0,
+        "turnover_bps_override": null,
+        "source": "execution_costs.resolve_cost_policy"
+      }
+    },
+    "data_start": "2023-02-07",
+    "data_end": "2026-10-20",
+    "baseline": {
+      "n_days": 233,
+      "total_return_r": 11.6698,
+      "sharpe_annualized": 0.5146,
+      "annualized_vol": 24.525845,
+      "max_drawdown_r": 11.2909
+    },
+    "vol_targeted": {
+      "n_days": 233,
+      "total_return_r": 5.7966,
+      "sharpe_annualized": 0.4935,
+      "annualized_vol": 12.704429,
+      "max_drawdown_r": 5.64545
+    },
+    "sharpe_delta": -0.0211,
+    "multiplier": {
+      "mean": 0.5129,
+      "min": 0.5,
+      "max": 1.0,
+      "n_periods": 45,
+      "n_periods_at_cap": 44,
+      "pct_periods_at_cap": 97.78
+    },
+    "total_turnover_cost_r": 0.0007,
+    "total_funding_cost_r": {
+      "baseline": 0.0699,
+      "vol_targeted": 0.03585
+    },
+    "run_date": "2026-11-20"
+  },
+  "block_detail": [
+    {
+      "block": 0,
+      "start": "2023-02-07",
+      "end": "2024-01-10",
+      "n_days": 66,
+      "sharpe_baseline": 0.7142,
+      "sharpe_targeted": 0.6298,
+      "dsharpe": -0.0844
+    },
+    {
+      "block": 1,
+      "start": "2024-01-10",
+      "end": "2024-12-13",
+      "n_days": 56,
+      "sharpe_baseline": 0.0648,
+      "sharpe_targeted": 0.0648,
+      "dsharpe": 0.0
+    },
+    {
+      "block": 2,
+      "start": "2024-12-13",
+      "end": "2025-11-16",
+      "n_days": 53,
+      "sharpe_baseline": 1.7311,
+      "sharpe_targeted": 1.7311,
+      "dsharpe": 0.0
+    },
+    {
+      "block": 3,
+      "start": "2025-11-16",
+      "end": "2026-10-20",
+      "n_days": 58,
+      "sharpe_baseline": -0.5477,
+      "sharpe_targeted": -0.5477,
+      "dsharpe": 0.0
+    }
+  ],
+  "source": {
+    "trades": "/tmp/RQ-20261120-8ef8-02-44709205570/trend_donchian_sol_prop__trades.jsonl",
+    "symbol": "SOLUSDT",
+    "timeframe": "1h",
+    "harness": "trend",
+    "faithful": false,
+    "omitted_levers": [
+      "decision_bar"
+    ],
+    "candle_source": {
+      "path": "data/SOLUSDT_5m.csv",
+      "venue": "bybit_linear (trainer data/)",
+      "proxy": false,
+      "resampled_to": "1h",
+      "bars": 44692,
+      "first": "2021-10-15 00:00:00+00:00",
+      "last": "2026-11-20 03:00:00+00:00"
+    }
+  },
+  "rule_thresholds": {
+    "dsharpe_bar": 0.1,
+    "n_floor": 100,
+    "blocks": 4,
+    "block_majority": 3
+  }
+}
