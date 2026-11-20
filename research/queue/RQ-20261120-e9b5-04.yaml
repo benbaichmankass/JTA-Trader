@@ -74,6 +74,7 @@ value:
   confidence: 0.3
   basis: 'stand-in: gates a candidate fifth crypto leg re-entry; estimate, not a measurement.'
 routing:
+  workflow: research-script-run.yml
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 3.0
@@ -81,6 +82,7 @@ routing:
   basis: Estimate, copied from RQ-20261015-1631-01 (same driver). UNVERIFIED whether the runner can obtain
     5m SOLUSDT candles; if not the driver lands producer_failed (a route fault to fix, never a verdict).
 run:
+  workflow: research-script-run.yml
   command:
   - python3
   - scripts/research/same_symbol_head_to_head.py
