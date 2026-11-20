@@ -1,0 +1,63 @@
+{
+  "n_off": 177,
+  "n_on": 73,
+  "net_r_off": -31.6072,
+  "net_r_on": -0.0667,
+  "net_r_delta_on_minus_off": 31.5405,
+  "mean_r_off": -0.1786,
+  "mean_r_on": -0.0009,
+  "net_r_off_ex_worst_trade": -29.9167,
+  "net_r_on_ex_worst_trade": 1.2504,
+  "folds": [
+    {
+      "fold": 1,
+      "off": -1.6401,
+      "on": 2.0433
+    },
+    {
+      "fold": 2,
+      "off": -3.6195,
+      "on": -1.1078
+    },
+    {
+      "fold": 3,
+      "off": -8.7617,
+      "on": -1.5956
+    },
+    {
+      "fold": 4,
+      "off": -2.2008,
+      "on": -0.7908
+    },
+    {
+      "fold": 5,
+      "off": -3.5685,
+      "on": -0.6219
+    },
+    {
+      "fold": 6,
+      "off": -11.8166,
+      "on": 2.0061
+    }
+  ],
+  "folds_on_ge_off": 6,
+  "conditions": {
+    "n_floor": true,
+    "net_on_gt_off": true,
+    "mean_not_worse_than_tol": true,
+    "ex_worst_on_gt_off": true
+  },
+  "verdict": "pass",
+  "note": "PASS: ON -0.07 R vs OFF -31.61 R (delta +31.54); mean -0.0009 vs -0.1786; ex-worst-trade ON 1.25 vs OFF -29.92; folds ON>=OFF 6/6",
+  "window": [
+    "2024-10-25",
+    "2025-10-24"
+  ],
+  "cost_policy": {
+    "fee_bps_roundtrip": 11.0,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+  },
+  "harness_faithful": true,
+  "omitted_cfg_keys": []
+}
