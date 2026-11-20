@@ -9,8 +9,9 @@ roadmap:
 theme: regime
 priority: 2
 kind: experiment
-practice_precedent: 'Volatility-managed portfolios (Moreira & Muir 2017; Harvey et al. 2018 ''The impact of volatility targeting''): scale exposure inversely to recent realized vol to
-  a constant budget; here one leg''s own daily book, net of turnover + funding.'
+practice_precedent: 'docs/research/idea-family-review-2026-10-16.md (family A: vol-SCALING, not gating, is where the documented momentum/trend gain lives -- Kim-Tse-Wald 2016, Cederburg
+  et al. 2020, Barroso-Detzel on costs; Moreira & Muir 2017 volatility-managed portfolios) and docs/research/P1-vol-target-result-2026-06-26.md (the book-level +0.10..0.20 dSharpe that
+  predates the full cost stack and was never pre-registered).'
 question: 'On the trainer''s Bybit linear ETHUSDT bars aggregated open-stamped to 1h, with trend_donchian_eth_prop as declared in config/strategies.yaml (its exact Stage-0 evidence argv)
   over 2023-02-01 .. 2026-10-31 23:59, does continuous vol-target sizing of the leg''s daily book (backtest_vol_target.run_vol_target: target 10% annualized, 20/60 lookback blend 0.5,
   multiplier capped 0.5..1.5, monthly retarget, trades binned by exit day, venue-aware turnover + funding costs) raise the net annualized Sharpe by >= 0.10 over the unscaled book, with
