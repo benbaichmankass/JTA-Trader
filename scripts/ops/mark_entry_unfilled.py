@@ -39,9 +39,10 @@ import argparse
 import json
 import sqlite3
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
@@ -55,7 +56,7 @@ UNMEASURED = "unmeasured"  # src.runtime.provenance.UNMEASURED_MARKER (pinned by
 PROTECTED = ("pnl_source", "unmeasured_reason", "pre_mark_exit_reason", "entry_unfilled_marked_at",
              "entry_unfilled_venue", "closed_at", "closed_by")
 
-VenueRead = Callable[[Dict[str, Any], str], Optional[bool]]
+VenueRead = Callable[[dict[str, Any], str], bool | None]
 
 
 def _db_path() -> str:
@@ -63,7 +64,7 @@ def _db_path() -> str:
     return str(trade_journal_db_path())
 
 
-def _dump_notes(notes: Dict[str, Any]) -> str:
+def _dump_notes(notes: dict[str, Any]) -> str:
     try:
         from src.utils.json_notes import _DEFAULT_PROTECTED, dump_capped
         return dump_capped(notes, 500, protected=set(_DEFAULT_PROTECTED) | set(PROTECTED))
@@ -71,7 +72,7 @@ def _dump_notes(notes: Dict[str, Any]) -> str:
         return json.dumps(notes)
 
 
-def _load_notes(raw: Any) -> Dict[str, Any]:
+def _load_notes(raw: Any) -> dict[str, Any]:
     try:
         n = json.loads(raw) if raw else {}
     except (TypeError, ValueError):
@@ -79,24 +80,24 @@ def _load_notes(raw: Any) -> Dict[str, Any]:
     return n if isinstance(n, dict) else {"_original_notes": raw}
 
 
-def _venue_read_default(cfg: Dict[str, Any], order_id: str) -> Optional[bool]:
+def _venue_read_default(cfg: dict[str, Any], order_id: str) -> bool | None:
     from src.units.accounts.clients import account_entry_order_unfilled
     return account_entry_order_unfilled(cfg, order_id)
 
 
-def _accounts_default() -> Dict[str, Dict[str, Any]]:
+def _accounts_default() -> dict[str, dict[str, Any]]:
     from src.config.accounts_loader import load_accounts_dict
     return load_accounts_dict() or {}
 
 
-def plan(conn: sqlite3.Connection, trade_ids: List[int], reason: str, *,
-         accounts: Dict[str, Dict[str, Any]], venue_read: VenueRead
-         ) -> Tuple[List[Dict[str, Any]], List[str], List[int]]:
+def plan(conn: sqlite3.Connection, trade_ids: list[int], reason: str, *,
+         accounts: dict[str, dict[str, Any]], venue_read: VenueRead
+         ) -> tuple[list[dict[str, Any]], list[str], list[int]]:
     """``(updates, refusals, skipped)``. A non-empty refusal list means write NOTHING."""
     conn.row_factory = sqlite3.Row
-    updates: List[Dict[str, Any]] = []
-    refusals: List[str] = []
-    skipped: List[int] = []
+    updates: list[dict[str, Any]] = []
+    refusals: list[str] = []
+    skipped: list[int] = []
     now = datetime.now(timezone.utc).isoformat()
     for tid in trade_ids:
         r = conn.execute(
@@ -167,7 +168,7 @@ def backup(db_path: str) -> str:
     return dest
 
 
-def apply(conn: sqlite3.Connection, updates: List[Dict[str, Any]]) -> int:
+def apply(conn: sqlite3.Connection, updates: list[dict[str, Any]]) -> int:
     """One transaction; any failure rolls back everything."""
     with conn:
         for u in updates:
@@ -194,6 +195,8 @@ def _self_test() -> int:
     with tempfile.TemporaryDirectory() as d:
         db = str(Path(d) / "j.db")
         c = sqlite3.connect(db)
+        # data-wiring: throwaway self-test fixture mirroring the canonical trade_journal.db columns
+        # this script reads; no new table is created in any real store.
         c.executescript(
             "CREATE TABLE trades (id INTEGER PRIMARY KEY, account_id TEXT, symbol TEXT, status TEXT,"
             " exit_reason TEXT, pnl REAL, notes TEXT, broker_order_id TEXT, order_package_id TEXT,"
@@ -218,9 +221,10 @@ def _self_test() -> int:
         venue = {"oid-unfilled": True, "oid-filled": False, "oid-unknown": None}
 
         def read(cfg, oid):
+            assert cfg.get("account_id") == "alpaca_x"  # the row's own account is what the venue is asked
             return venue.get(oid)
         acc = {"alpaca_x": {"exchange": "alpaca", "mode": "live"}}
-        up, ref, sk = plan(c, [1], "test", accounts=acc, venue_read=read)
+        up, ref, _sk = plan(c, [1], "test", accounts=acc, venue_read=read)
         ck("an unfilled terminal entry on a flat-detector close is planned", len(up) == 1 and not ref)
         for tid, why in ((2, "filled"), (3, "could not tell"), (4, "not a flat-detector label"),
                          (5, "had a position"), (6, "not closed"), (7, "no real entry order id"),
@@ -252,7 +256,7 @@ def _self_test() -> int:
     return 0 if ok else 1
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--trade-ids", default="")
     ap.add_argument("--reason", default="")

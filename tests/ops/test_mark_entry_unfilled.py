@@ -8,7 +8,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import mark_entry_unfilled as meu  # noqa: E402
+import mark_entry_unfilled as meu
 
 
 def test_self_test_passes():
