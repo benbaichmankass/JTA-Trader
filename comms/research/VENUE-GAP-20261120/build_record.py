@@ -2,6 +2,7 @@
 import json
 from math import comb
 from pathlib import Path
+
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
@@ -12,7 +13,7 @@ d = np.array([r["dr_per_trade"] for r in meas])
 w = np.array([r["n_binance"] for r in meas], float)
 neg, pos = int((d < 0).sum()), int((d > 0).sum())
 m = neg + pos
-p_two = min(1.0, 2 * sum(comb(m, k) for k in range(0, min(neg, pos) + 1)) / 2 ** m)
+p_two = min(1.0, 2 * sum(comb(m, k) for k in range(min(neg, pos) + 1)) / 2 ** m)
 rng = np.random.default_rng(42)
 idx = [rng.integers(0, len(d), len(d)) for _ in range(10000)]
 b_unw = [d[i].mean() for i in idx]
@@ -52,14 +53,14 @@ for x in margins:
 rec = {
     "record": "VENUE-GAP-20261120",
     "question": "Does Stage-0 evidence built on Binance-vision USD-M candles overstate what the same leg earns on the Bybit linear bars it trades?",
-    "method": "Each leg's exact Stage-0 evidence argv (regime_debt_matrix.build_harness_cmd) run twice on the trainer, same window, once on the trainer's Bybit linear file and once on the Binance-vision USD-M native file, both aggregated OPEN-stamped to the leg timeframe (venue_gap_measure.py, this directory). dR/trade = (sum_r_bybit - sum_r_binance) / n_binance.",
+    "method": "Each leg's exact Stage-0 evidence argv (regime_debt_matrix.build_harness_cmd) run twice on the trainer, same window, once on the trainer's Bybit linear file and once on the Binance-vision USD-M native file, both aggregated OPEN-stamped to the leg timeframe (venue_gap_measure.py.txt in this directory: the script exactly as the three relays ran it, kept as text so it is never imported or linted as repo code). dR/trade = (sum_r_bybit - sum_r_binance) / n_binance.",
     "relays": [{"issue": 27588, "run": 44663389824}, {"issue": 27603, "run": 44666388564}, {"issue": 27615, "run": 44669544524}],
     "read_state": "measured",
     "measured_vs_estimated": "21 of 21 legs measured; ml_entry's penalty is ESTIMATED (the pooled figure), never measured",
     "pooled": pooled, "real_money_margins": margins,
     "not_measured": "5m/15m legs (ict_scalp, fvg_range, turtle_soup) and every ML leg; Binance per-trade rows were not kept (only per-leg sums)",
     "decision": "manager 2026-11-20 03:52Z: new crypto Stage-0 units for Bybit-traded legs use the trainer's Bybit files as primary corpus (Binance = robustness arm). No existing evidence, promotion bar, config or live state changed. Making it binding doctrine is put to the operator as a proposal.",
-    "follow_ups": ["PI-20261120-7ITMUEB1-0005", "PI-20261120-7ITMUEB1-0007"],
+    "follow_ups": ["PI-20261120-7ITMUEB1-0005", "PI-20261120-7ITMUEB1-0007", "RQ-20261120-4f03-01 (trend_donchian_sol_prop Bybit-native Stage-0 re-run)", "RQ-20261120-4f03-02 (ml_entry measured venue penalty)"],
 }
 (HERE / "record.json").write_text(json.dumps(rec, indent=1) + "\n")
 print(json.dumps(pooled, indent=1)); [print(json.dumps(x)) for x in margins]

@@ -20,7 +20,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 for _p in (str(REPO), str(REPO / "scripts" / "research")):
@@ -28,10 +28,11 @@ for _p in (str(REPO), str(REPO / "scripts" / "research")):
         sys.path.insert(0, _p)
 
 
-def build(symbol: str, timeframe: str, data_dir: Path, out_csv: Path, since: Optional[str] = None,
-          provenance: Optional[Path] = None) -> Dict[str, Any]:
+def build(symbol: str, timeframe: str, data_dir: Path, out_csv: Path, since: str | None = None,
+          provenance: Path | None = None) -> dict[str, Any]:
     import pandas as pd
     from m20_fleet_exit_sweep import resolve_data
+
     from scripts.ops.backtest_data_source import resample_open_stamped
     path, proxy, resample = resolve_data(symbol, timeframe, data_dir)
     if not path:
@@ -47,7 +48,7 @@ def build(symbol: str, timeframe: str, data_dir: Path, out_csv: Path, since: Opt
     prov = {"ok": True, "symbol": symbol, "timeframe": timeframe, "source_file": Path(path).name,
             "venue": "bybit_linear (trainer data/, refreshed by deploy/trainer/ict-candle-refresh)",
             "proxy": bool(proxy), "resampled_from_finer": bool(resample), "grid": "open-stamped (label/closed left)",
-            "bars": int(len(d)), "first": str(d["timestamp"].min()) if len(d) else None,
+            "bars": len(d), "first": str(d["timestamp"].min()) if len(d) else None,
             "last": str(d["timestamp"].max()) if len(d) else None, "out_csv": str(out_csv)}
     pp = Path(provenance) if provenance else Path(str(out_csv) + ".provenance.json")
     pp.parent.mkdir(parents=True, exist_ok=True)
@@ -57,6 +58,7 @@ def build(symbol: str, timeframe: str, data_dir: Path, out_csv: Path, since: Opt
 
 def _self_test() -> int:
     import tempfile
+
     import pandas as pd
     fails = []
 
