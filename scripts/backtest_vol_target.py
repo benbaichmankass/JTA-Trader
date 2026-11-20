@@ -293,7 +293,8 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
                    target_vol: float, short: int, long: int, blend: float,
                    cap_lo: float, cap_hi: float, retarget: str,
                    turnover_bps: Optional[float] = None,
-                   costs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                   costs: Optional[Dict[str, Any]] = None,
+                   return_series: bool = False) -> Dict[str, Any]:
     """Baseline vs vol-targeted comparison over the daily book series.
 
     ``costs`` is :func:`resolve_overlay_costs`'s output; when omitted it is
@@ -334,6 +335,9 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
         "baseline": baseline,
         "vol_targeted": targeted,
         "sharpe_delta": sharpe_delta,
+        # return_series (vol_target_verdict.py, 2026-11-20): the per-day arms, for block-level reads. Off = unchanged.
+        **({"series": {"dates": [str(d) for (d, _r, _n) in daily], "baseline_r": baseline_r,
+                       "scaled_r": scaled_r, "multiplier": list(mult)}} if return_series else {}),
         "multiplier": {
             "mean": round(statistics.fmean(mult), 4) if mult else None,
             "min": round(min(mult), 4) if mult else None,

@@ -1,0 +1,118 @@
+# Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1. Node P2-R5 / row IR-VOL-TARGET-SIZING-STAGE0, Bybit-native corpus (manager 2026-11-20 03:52Z). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-8ef8-02
+title: 'Continuous vol-TARGET sizing on trend_donchian_sol_prop (SOLUSDT 1h), Bybit-native Stage-0 trades: does it lift net Sharpe by >= 0.10 without a worse drawdown, in >= 3 of 4 calendar
+  blocks? (P2-R5)'
+status: queued
+cadence: once
+roadmap:
+- L-REGIME
+theme: regime
+priority: 2
+kind: experiment
+practice_precedent: 'Volatility-managed portfolios (Moreira & Muir 2017; Harvey et al. 2018 ''The impact of volatility targeting''): scale exposure inversely to recent realized vol to
+  a constant budget; here one leg''s own daily book, net of turnover + funding.'
+question: 'On the trainer''s Bybit linear SOLUSDT bars aggregated open-stamped to 1h, with trend_donchian_sol_prop as declared in config/strategies.yaml (its exact Stage-0 evidence argv)
+  over 2023-02-01 .. 2026-10-31 23:59, does continuous vol-target sizing of the leg''s daily book (backtest_vol_target.run_vol_target: target 10% annualized, 20/60 lookback blend 0.5,
+  multiplier capped 0.5..1.5, monthly retarget, trades binned by exit day, venue-aware turnover + funding costs) raise the net annualized Sharpe by >= 0.10 over the unscaled book, with
+  targeted maxDD <= baseline maxDD and a positive Sharpe delta in >= 3 of 4 equal calendar blocks, at >= 100 trades?'
+why_this_matters: 'trend_donchian_sol_prop trades on bybit_2 + bybit_portfolio (real money). The regime programme''s on/off SKIP units are predicted to fail on trend legs (IDEA-REVIEW-1016
+  s11; the 11 donchian skip units were dropped before merge), so the open regime question for these legs is continuous SIZING, node P2-R5 and row IR-VOL-TARGET-SIZING-STAGE0. The corpus
+  is Bybit-native per the manager''s 2026-11-20 03:52Z method decision (comms/research/VENUE-GAP-20261120/record.json: Binance-fed evidence overstates the Bybit book by a trade-weighted
+  0.0185 R/trade, 21 legs). Sizing is the RiskManager''s (MECE s 2.1): a PASS is evidence for a Tier-3 sizing proposal, never a config edit from this unit. The node asked for pairing
+  with skip verdicts on the same window; no skip unit exists for this leg (the 65ff skip units cover pullback legs and trend_donchian_sol over 2022-10..2024-10, before the Bybit file
+  starts), so this unit stands alone.'
+power:
+  alpha: 0.05
+  power: 0.8
+  design: one_sample
+  effect_units: sd
+  expected_n: 235
+  min_detectable_effect: 0.183
+  basis: 'expected_n = the leg''s Bybit trade count over 2023-02-01 .. 2026-11-15 in the venue-gap run (comms/research/VENUE-GAP-20261120/legs.jsonl: n_bybit 235); MDE (1.96 + 0.8416)
+    / sqrt(235) = 0.183 sd on per-trade R, reported for scale only. The registered rule is a point rule on the Sharpe delta plus a 3-of-4 calendar block majority, which carries the consistency
+    requirement; below 100 trades the unit grades INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on the trainer's resident Bybit files for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202611208ef802-VOLTARGET-SIZING
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'Row IR-VOL-TARGET-SIZING-STAGE0 / node P2-R5''s rule, thresholds unchanged: INDETERMINATE IF n_trades < 100 or the Sharpe delta or a drawdown is unmeasurable. PASS iff (a) dSharpe
+    = Sharpe(targeted) - Sharpe(baseline) >= +0.10 net of the overlay''s costs, AND (b) maxDD(targeted) <= maxDD(baseline) (positive R magnitudes), AND (c) dSharpe > 0 in >= 3 of 4 equal
+    calendar blocks of the daily book. FAIL otherwise. PASS: evidence for ONE Tier-3 sizing proposal for this leg (operator/RiskManager), after a confirmation on a disjoint span; never
+    a config edit from this unit. FAIL: vol-target sizing is not the lever for this leg at these settings; closes this configuration, not the family. Thresholds are not changed after
+    any result.'
+  statistic: 'scripts/research/vol_target_verdict.py: the trainer''s Bybit file (finest file <= the timeframe, m20_fleet_exit_sweep.resolve_data) aggregated open-stamped to the leg timeframe;
+    the leg''s Stage-0 argv (regime_debt_matrix.build_harness_cmd) with --emit-trades and --start/--end; backtest_vol_target.build_book -> run_vol_target(return_series) with resolve_overlay_costs(<symbol>);
+    Sharpe = portfolio_combine.sharpe_annualized per arm and per block. Stated limit: the book series holds only days with >= 1 closed trade (portfolio_combine.combine_daily), so Sharpe
+    and the 20/60 lookbacks are in trade-day units; both arms share them. Overlay settings are the row''s (IR-VOL-TARGET-SIZING-STAGE0 note: --basis exit --short 20 --long 60 --retarget
+    monthly --cap-lo 0.5 --cap-hi 1.5); target vol 0.10 is the overlay''s own default (the row names none).'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: a sizing lever on a trend leg; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.2
+  usd_at_stake_per_month: 300
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: The Bybit linear candle files are trainer-resident (data/, refreshed by deploy/trainer/ict-candle-refresh).
+  basis: 'ESTIMATE: one aggregation + one trend-harness pass + the overlay; the venue-gap relay ran 14 trend/pullback passes inside one 60-minute relay; locally a 34k-bar synthetic run
+    took 3.4 s.'
+run:
+  command:
+  - python3
+  - scripts/research/vol_target_verdict.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --data-dir
+  - data
+  - --work
+  - /tmp/{unit}-{run_id}
+  - --start
+  - '2023-02-01'
+  - --end
+  - 2026-10-31 23:59
+  - --target-vol
+  - '0.10'
+  - --short
+  - '20'
+  - --long
+  - '60'
+  - --blend
+  - '0.5'
+  - --cap-lo
+  - '0.5'
+  - --cap-hi
+  - '1.5'
+  - --retarget
+  - monthly
+  - --basis
+  - exit
+  - --dsharpe-bar
+  - '0.10'
+  - --n-floor
+  - '100'
+  - --blocks
+  - '4'
+  - --block-majority
+  - '3'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-8ef8-02
+  timeout_minutes: 60
+  workflow: research-script-run-trainer.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- IR-VOL-TARGET-SIZING-STAGE0
+- research/programmes/02-ai-trader.yaml#P2-R5-voltarget-sizing
+- scripts/research/vol_target_verdict.py
+- scripts/backtest_vol_target.py
+- comms/research/VENUE-GAP-20261120/record.json
