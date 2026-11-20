@@ -692,6 +692,7 @@ def main(argv: List[str]) -> int:
     wilder = not a.atr_simple
     try:
         df = _load_candles(a.data)
+        df = _backtest_data_source.resample_open_stamped(df, _src.resample)  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
         df = _date_filter(df, a.start, a.end)
         df_rth = _to_rth(df, _parse_hhmm(a.session_start), _parse_hhmm(a.session_end))
     except Exception as exc:  # noqa: BLE001

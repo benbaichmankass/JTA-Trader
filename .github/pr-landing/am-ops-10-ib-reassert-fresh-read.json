@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 order-path change (the IB protective price re-assert in src/runtime/order_monitor.py); the manager reviews and pairs it into a trader-restart window.",
+  "why": "WHY: row IB-TRAIL-AMEND-MISSED. _check_broker_naked_ib_positions reads every open trade row ONCE before its loop; on ib_paper MGC trade 7737 (paper) a trail amend landed on the monitor thread at 00:00:23.47Z on 11-20 (stop 3683.4 -> 3654.1, IB ack OK) and the sweep, grading the new venue stop against its stale snapshot, re-asserted 3683.4 at 00:00:24.68Z; the 1 h cooldown then held the looser stop. WHAT: immediately before _reassert_from_divergence decides, the row is re-read fresh; the re-assert stands down (logged, soak row 'skipped_row_changed_mid_sweep', new counter stop_price_reassert_skipped_row_changed, cooldown NOT spent) when the fresh read fails, the trade is no longer open, stop_loss/take_profit_1/position_size changed since the snapshot, or the linked package's sl/tp changed since the snapshot (keyed on level columns only, never updated_at, so a metadata-only package write cannot silence the re-assert). A genuinely diverged unchanged row re-asserts exactly as before. Scope is IB only: _reassert_from_divergence has no other caller, and the Bybit and Alpaca sweeps have no price re-assert (they re-protect only naked positions, and both venues amend in place). Gates this adds or changes: none."
+}

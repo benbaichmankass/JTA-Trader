@@ -70,13 +70,43 @@ def _isolate(tmp_path, monkeypatch):
     om._REASSERT_STATE.clear()
 
 
+class _JournalDb:
+    """A real SQLite journal holding the row the sweep read.
+
+    IB-TRAIL-AMEND-MISSED: the re-assert now re-reads the row fresh before it
+    decides and stands down when the read fails, so a ``db=None`` stand-in
+    would make every path below a stand-down. The row is written exactly as the
+    sweep saw it, so these tests exercise an UNCHANGED row.
+    """
+
+    def __init__(self, row):
+        import sqlite3
+        import tempfile
+        self.path = tempfile.mkstemp(suffix=".db")[1]
+        c = sqlite3.connect(self.path)
+        c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT, "
+                  "stop_loss REAL, take_profit_1 REAL, position_size REAL, "
+                  "order_package_id TEXT, notes TEXT)")
+        c.execute("CREATE TABLE order_packages (order_package_id TEXT, updated_at TEXT)")
+        c.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?)",
+                  (row["id"], "open", row["stop_loss"], row["take_profit_1"],
+                   row["position_size"], None, None))
+        c.commit()
+        c.close()
+
+    def connect(self):
+        import sqlite3
+        return sqlite3.connect(self.path)
+
+
 def _run(client, *, row=None, verdict=None, summary=None):
     summary = summary if summary is not None else {
         "stop_price_reasserted": 0, "stop_price_reassert_failed": 0,
         "stop_price_reassert_annotated": 0}
+    row = row or _row()
     om._reassert_from_divergence(
-        db=None, client=client, account_id="ib_paper", protect_symbol="MES",
-        row=row or _row(), price_verdict=verdict or _verdict(), summary=summary)
+        db=_JournalDb(row), client=client, account_id="ib_paper", protect_symbol="MES",
+        row=row, price_verdict=verdict or _verdict(), summary=summary)
     return summary
 
 

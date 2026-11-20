@@ -1,0 +1,71 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 515,
+  "population": "ict_scalp_sol_5m 2024-10-25..2025-10-24: 379 OFF + 136 ON trades; HTF trend filter forced OFF vs ON; net of the harness's full cost stack (fee + slippage + funding passed explicitly)",
+  "measurement": {
+    "n_off": 379,
+    "n_on": 136,
+    "net_r_off": -61.2996,
+    "net_r_on": -23.5796,
+    "net_r_delta_on_minus_off": 37.72,
+    "mean_r_off": -0.1617,
+    "mean_r_on": -0.1734,
+    "net_r_off_ex_worst_trade": -44.8557,
+    "net_r_on_ex_worst_trade": -19.7944,
+    "folds": [
+      {
+        "fold": 1,
+        "off": -6.5007,
+        "on": -2.1871
+      },
+      {
+        "fold": 2,
+        "off": -14.6253,
+        "on": 2.5105
+      },
+      {
+        "fold": 3,
+        "off": -2.6476,
+        "on": -3.2521
+      },
+      {
+        "fold": 4,
+        "off": -18.8128,
+        "on": -9.4429
+      },
+      {
+        "fold": 5,
+        "off": -4.0726,
+        "on": -1.1826
+      },
+      {
+        "fold": 6,
+        "off": -14.6406,
+        "on": -10.0254
+      }
+    ],
+    "folds_on_ge_off": 5,
+    "conditions": {
+      "n_floor": true,
+      "net_on_gt_off": true,
+      "mean_not_worse_than_tol": true,
+      "ex_worst_on_gt_off": true
+    },
+    "verdict": "pass",
+    "note": "PASS: ON -23.58 R vs OFF -61.30 R (delta +37.72); mean -0.1734 vs -0.1617; ex-worst-trade ON -19.79 vs OFF -44.86; folds ON>=OFF 5/6",
+    "window": [
+      "2024-10-25",
+      "2025-10-24"
+    ],
+    "cost_policy": {
+      "fee_bps_roundtrip": 11.0,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0
+    },
+    "harness_faithful": true,
+    "omitted_cfg_keys": []
+  },
+  "note": "PASS: ON -23.58 R vs OFF -61.30 R (delta +37.72); mean -0.1734 vs -0.1617; ex-worst-trade ON -19.79 vs OFF -44.86; folds ON>=OFF 5/6",
+  "decision_rule_id": "RULE-RQ20261120-3B7C-01-HTF-CONFIRM-SOL_5M"
+}

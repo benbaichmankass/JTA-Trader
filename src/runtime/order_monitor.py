@@ -12364,6 +12364,85 @@ def _reassert_soak_path():
     return os.path.join(runtime_logs_dir(), "protection_reassert_soak.jsonl")
 
 
+def _reassert_row_changed_mid_sweep(db, row) -> Optional[str]:
+    """Why a re-assert must NOT act on this sweep's snapshot of *row*, or ``None``.
+
+    IB-TRAIL-AMEND-MISSED (2026-11-20, ib_paper MGC trade 7737, paper): the IB
+    sweep reads every open row ONCE, before its loop. A trail amend landed on the
+    monitor thread at 00:00:23.47Z (stop 3683.4 -> 3654.1, IB ack OK); this sweep
+    graded the venue's NEW stop against its OLD snapshot (3683.39), called that a
+    divergence, and re-placed 3683.4 at 00:00:24.68Z. The 1 h cooldown then
+    locked the reverted level in. So, immediately before deciding, the row and
+    its package are re-read fresh, and the re-assert stands down when:
+
+      * the fresh read fails (fail closed: never act on what could not be read);
+      * the trade is no longer open;
+      * its stop_loss / take_profit_1 / position_size differ from the snapshot;
+      * its linked package's sl / tp differ from the snapshot (``pkg_sl`` /
+        ``pkg_tp``, read with the row): the trail writes the package first, so
+        this catches a trade-row write that has not landed yet.
+
+    Keyed on LEVEL COLUMNS ONLY, never on ``updated_at`` (manager review of
+    #27545): ``update_order_package`` bumps ``updated_at`` on every write, so a
+    future metadata-only write would otherwise make a genuinely diverged row
+    stand down on every sweep and the re-assert would silently stop working. A
+    package touched without a level change still re-asserts.
+
+    A genuinely diverged, unchanged row passes all checks and re-asserts exactly
+    as before. Never raises.
+    """
+    def _same(a: Any, b: Any) -> bool:
+        if a is None or b is None:
+            return a is None and b is None
+        try:
+            return abs(float(a) - float(b)) <= 1e-9 * max(1.0, abs(float(a)))
+        except (TypeError, ValueError):
+            return str(a) == str(b)
+
+    def _has(key: str) -> bool:
+        try:
+            return key in row.keys()
+        except AttributeError:
+            return key in row
+
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            try:
+                fresh = conn.execute(
+                    "SELECT t.status, t.stop_loss, t.take_profit_1, t.position_size, "
+                    "p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id WHERE t.id = ?",
+                    (row["id"],),
+                ).fetchone()
+            except __import__("sqlite3").OperationalError:
+                # A journal without the package link: the trade-level checks still run.
+                fresh = conn.execute(
+                    "SELECT status, stop_loss, take_profit_1, position_size, "
+                    "NULL AS pkg_sl, NULL AS pkg_tp FROM trades WHERE id = ?",
+                    (row["id"],),
+                ).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001 -- fail closed, never raise into the sweep
+        return f"fresh row read failed: {exc}"
+    if fresh is None:
+        return "trade row no longer readable"
+    if str(fresh["status"] or "") != "open":
+        return f"trade status is now {fresh['status']!r}"
+    for col in ("stop_loss", "take_profit_1", "position_size"):
+        if not _same(fresh[col], row[col]):
+            return (f"{col} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
+    for col in ("pkg_sl", "pkg_tp"):
+        if _has(col) and not _same(fresh[col], row[col]):
+            return (f"order package {col[4:]} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
+    return None
+
+
 def _reassert_from_divergence(
     db, *, client, account_id: str, protect_symbol: str, row,
     price_verdict: Dict[str, Any], summary: Dict[str, int],
@@ -12374,10 +12453,40 @@ def _reassert_from_divergence(
     trader, so it must never raise into it. Every path writes a soak row, so
     ``annotate`` produces the exact list to review before the ``apply`` flip —
     the ``NETTING_ATTRIBUTION_MODE`` staging shape.
+
+    IB-TRAIL-AMEND-MISSED: first re-reads the row fresh
+    (:func:`_reassert_row_changed_mid_sweep`); a row that changed after the
+    sweep's snapshot is never re-asserted from that snapshot.
     """
     import json as _json
     import time as _time
     try:
+        _changed = _reassert_row_changed_mid_sweep(db, row)
+        if _changed is not None:
+            summary["stop_price_reassert_skipped_row_changed"] = int(
+                summary.get("stop_price_reassert_skipped_row_changed", 0)) + 1
+            logger.info(
+                "_check_broker_naked_ib_positions: re-assert STOOD DOWN for "
+                "%s/%s trade=%s -- %s; the next sweep grades it from fresh data",
+                account_id, protect_symbol, row["id"], _changed,
+            )
+            try:
+                path = _reassert_soak_path()
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "a", encoding="utf-8") as fh:
+                    fh.write(_json.dumps({
+                        "at": datetime.now(timezone.utc).isoformat(),
+                        "account_id": account_id, "symbol": protect_symbol,
+                        "trade_id": row["id"], "declared_sl": row["stop_loss"],
+                        "resting_stop": price_verdict.get("nearest_resting"),
+                        "exposure": price_verdict.get("exposure"),
+                        "decision": "skipped_row_changed_mid_sweep",
+                        "reason": _changed, "acted": False,
+                    }, default=str) + "\n")
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("protection re-assert soak write failed: %s", exc)
+            return
+
         from src.runtime.protection_reassert import (
             MODE_APPLY, STATE_REASSERT, account_may_apply, decide_reassert,
             resolve_mode,
@@ -12635,6 +12744,11 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
         "stop_price_reassert_unverified": 0,  # could not re-read the venue
         "stop_price_reassert_failed": 0,      # the modify itself was rejected
         "stop_price_reassert_annotated": 0,
+        # IB-TRAIL-AMEND-MISSED: the row (or its package) changed after this
+        # sweep read it, so the divergence may be the sweep's own stale read
+        # of a trail amend that just landed. Not acted on; the next sweep
+        # grades again from fresh data.
+        "stop_price_reassert_skipped_row_changed": 0,
     }
     interval = _ib_broker_naked_check_interval_seconds()
     if interval <= 0:
@@ -12663,11 +12777,25 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
-            rows = conn.execute(
-                "SELECT id, account_id, symbol, direction, position_size, "
-                "stop_loss, take_profit_1, created_at, notes "
-                "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
-            ).fetchall()
+            try:
+                # IB-TRAIL-AMEND-MISSED: snapshot the linked package's LEVELS with
+                # the row, so a re-assert can tell a level move that landed after
+                # this read (the trail amend) from a mere touch of the package.
+                rows = conn.execute(
+                    "SELECT t.id, t.account_id, t.symbol, t.direction, "
+                    "t.position_size, t.stop_loss, t.take_profit_1, t.created_at, "
+                    "t.notes, p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id "
+                    "WHERE t.status='open' AND COALESCE(t.is_backtest,0)=0"
+                ).fetchall()
+            except __import__("sqlite3").OperationalError:
+                # A journal without the package link: the trade-level checks still run.
+                rows = conn.execute(
+                    "SELECT id, account_id, symbol, direction, position_size, "
+                    "stop_loss, take_profit_1, created_at, notes "
+                    "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
+                ).fetchall()
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001

@@ -733,6 +733,9 @@ def main(argv: List[str]) -> int:
             file=sys.stderr)
         return 2
     args.data = _src.path
+    # the resolver picked a FINER file than --timeframe: aggregate to the leg's bar unless --resample was given
+    # (PI-20261119-RIMARY13-0002; before this a --timeframe 1h run replayed on 5m/15m bars)
+    args.resample = _backtest_data_source.effective_resample(_src, args.resample)
     args.symbol = args.symbol or "BTCUSDT"
     print(_src.provenance_line(), file=sys.stderr)
     FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)

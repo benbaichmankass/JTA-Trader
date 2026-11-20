@@ -662,6 +662,7 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(args.data)
+    df = _backtest_data_source.resample_open_stamped(df, _src.resample)  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
     split = pd.Timestamp(args.split, tz="UTC")
     is_csv = out / "slice_is.csv"

@@ -4,7 +4,7 @@ id: RQ-20261118-a5b3-02
 title: 'Event-class weights from our own markets: is the absolute 2 h move and realized vol of BTC / ETH / SOL (1h, 5m) and MGC / SPY
   after an fomc DECISION larger than after fomc MINUTES, cpi and nfp, against matched non-event hours? Sets the evidence for the impact
   weights in config/economic_calendar.yaml'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: macro
@@ -118,3 +118,14 @@ amendments:
     now before any run.'
   - No threshold, window, baseline definition or pass clause changes.
 last_dispatched_at: '2026-11-19T20:57:18+00:00'
+grading:
+  attested: RULE-RQ-20261118-a5b3-02-EVENT-CLASS-WEIGHTS
+  auto: true
+  decision_rule_id: RULE-RQ-20261118-a5b3-02-EVENT-CLASS-WEIGHTS
+  evidence:
+  - research/results/RQ-20261118-a5b3-02/44613919562.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

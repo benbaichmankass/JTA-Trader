@@ -5,7 +5,7 @@ id: RQ-20261118-001
 title: 'ITERATION of qqq_pullback_1h (orphan; last iterations PASS on entry, filter, direction and exit
   families): does ONE session skip (first RTH hour 13-14 UTC, or last two hours 19-20 UTC) selected on
   the discovery span survive the held-back latest 25%?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROGRAMMES
@@ -168,3 +168,13 @@ generated:
   params:
     node: P3-ITER-qqq-pullback-1h-session-holdout
 last_dispatched_at: '2026-11-19T21:54:51+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-ITER-qqq-pullback-1h-session-holdout
+  evidence:
+  - research/results/RQ-20261118-001/44616470203.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

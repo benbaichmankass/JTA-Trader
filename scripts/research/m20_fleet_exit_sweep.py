@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -200,7 +201,22 @@ def tp_geometry_for(families, tp_cap_pct: float) -> str:
 
 PROXY_DATA = {"MGC": "GC_F", "XAUUSD": "GC_F", "MES": "ES_F", "MHG": "HG_F"}
 DATA_GRAIN = ["5m", "15m", "1h", "1d"]
-TF_MINUTES = {"5m": 5, "15m": 15, "1h": 60, "2h": 120, "4h": 240, "1d": 1440}
+TF_MINUTES = {"1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "6h": 360,
+              "8h": 480, "12h": 720, "1d": 1440}
+
+
+def _tf_minutes(tf: str) -> int:
+    """Minutes in a timeframe token. PI-20261119-RIMARY13-0002 (ML-PRIMARY-14, 2026-11-20): this used to be
+    ``TF_MINUTES.get(tf, 60)`` over a table without 1m/3m/30m, so a 1m leg was treated as 60 minutes and resolved
+    to a COARSER file (BTCUSDT 1m -> BTCUSDT_15m.csv with resample='1m', i.e. an upsample) and a 30m leg could take
+    a 1h file. Tokens outside the table are parsed (``<n>m|h|d|w``); only an unparseable token keeps the 60 default."""
+    t = str(tf or "").strip().lower()
+    if t in TF_MINUTES:
+        return TF_MINUTES[t]
+    m = re.fullmatch(r"(\d+)(m|min|h|d|w)", t)
+    if not m:
+        return 60
+    return int(m.group(1)) * {"m": 1, "min": 1, "h": 60, "d": 1440, "w": 10080}[m.group(2)]
 
 # Per-harness-run subprocess cap. 1800s, matching run_census, NOT the 900s this
 # used to carry: the 2026-08-10 census measured a single full-history
@@ -265,7 +281,7 @@ def _resolve_one(sym: str, tf: str, data_dir: Path) -> tuple[str | None, str | N
     Extracted from `resolve_data` so the native and proxy spellings can be
     tried in order; the body is unchanged.
     """
-    leg_min = TF_MINUTES.get(tf, 60)
+    leg_min = _tf_minutes(tf)
     # native grain first (a 1d archive usually has YEARS more history than
     # the 1h file it would otherwise be resampled from), then finest
     native = data_dir / f"{sym}_{tf}.csv"
