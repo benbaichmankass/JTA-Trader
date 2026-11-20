@@ -266,7 +266,9 @@ def _resample(df, rule: str):
     r = rule.strip().lower()
     if r.endswith("m") and not r.endswith("min"):
         rule = r[:-1] + "min"
-    out = (df.set_index("timestamp").resample(rule, label="right", closed="right")
+    # Native OPEN-stamped grid [T, T+rule) labelled T (PI-20261120-7ITMUEB1-0006): right/right mis-grouped by one sub-bar.
+    # Same-frame consumer (no as-of join on this output), so open stamps are causal here.
+    out = (df.set_index("timestamp").resample(rule, label="left", closed="left")
              .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
              .dropna(subset=["open", "high", "low", "close"]).reset_index())
     return out
