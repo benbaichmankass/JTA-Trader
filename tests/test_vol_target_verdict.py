@@ -18,7 +18,7 @@ for _p in (str(REPO), str(REPO / "scripts" / "research")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import vol_target_verdict as vtv
+import vol_target_verdict as vtv  # noqa: E402
 
 RULE = ["--dsharpe-bar", "0.10", "--n-floor", "100", "--block-majority", "3"]
 
