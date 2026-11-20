@@ -4315,6 +4315,32 @@ def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     return None
 
 
+#: Close label for a row whose ENTRY ORDER ended at the venue without ever filling
+#: (ENTRY-UNFILLED-LABEL, 2026-11-19; alpaca_options_paper SLV trade 8034: a DAY mleg
+#: limit that expired unfilled, closed as exchange_flat_reconciled and then graded a
+#: close fault). Not a trade decision of the leg: neutral in soak_state, a
+#: not-strategy-exit in close attribution, never priced by the local-PnL sweep.
+ENTRY_UNFILLED_EXIT_REASON = "entry_unfilled"
+
+
+def _entry_never_filled(cfg: Any, entry_order_id: Any) -> bool:
+    """True only on a POSITIVE venue read: terminal entry order, ``filled_qty`` exactly 0.
+
+    Fails closed: no real order id, an integration that cannot answer, a read failure,
+    an unknown (404) order, an ambiguous status, or any fill at all -> ``False`` (the
+    caller keeps its existing label). Never raises.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return False
+    try:
+        from src.units.accounts.clients import account_entry_order_unfilled
+        return account_entry_order_unfilled(cfg, oid) is True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_never_filled: order %s read raised: %s", oid, exc)
+        return False
+
+
 def _reverify_reset_suspect_row(
     db, r, *, state: Dict[str, Any], aid: str, cfg: Any, sym: str,
     canonical: str, exchange_positions: set, now_dt: datetime, now_iso: str,
@@ -4596,6 +4622,8 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         # SUCCESSFUL exchange snapshot and closed (snapshot_closed), or absent
         # this pass but inside the 2-observation confirm window (snapshot_pending).
         "snapshot_closed": 0,
+        # Sub-count of snapshot_closed: the entry order ended unfilled (ENTRY-UNFILLED-LABEL).
+        "snapshot_closed_entry_unfilled": 0,
         # RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE): kept at 0 for
         # back-compat — a wholesale RESET is NEVER mass-closed on the detection
         # read. A mass vanish ALERTS (snapshot_reset_alerted) and marks the rows
@@ -5167,25 +5195,47 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 )
                 for (r, tid_int, sym, canonical) in _snapshot_to_close:
                     try:
+                        # ENTRY-UNFILLED-LABEL: a row whose entry order ended without
+                        # ever filling never held a position. Asked only here, after
+                        # _entry_order_hold found the order neither working nor
+                        # unreadable; fails closed to the existing label.
+                        _entry_oid_c = (
+                            r["broker_order_id"] if "broker_order_id" in r.keys() else None
+                        )
+                        _unfilled = _entry_never_filled(cfg, _entry_oid_c)
+                        _close_label = (
+                            ENTRY_UNFILLED_EXIT_REASON if _unfilled
+                            else "exchange_flat_reconciled"
+                        )
                         db.update_trade(tid_int, {
                             "status": "closed",
-                            "exit_reason": "exchange_flat_reconciled",
+                            "exit_reason": _close_label,
                             "closed_at": now_iso,
                             "notes": dump_capped({
                                 "closed_at": now_iso,
                                 "closed_by": "position_snapshot_reconciler",
                                 "reset_event": False,
-                                "closed_reason": _reset_note,
+                                "closed_reason": (
+                                    f"entry order {_entry_oid_c} ended at the venue "
+                                    "(canceled/expired/rejected) with filled_qty 0: "
+                                    "no position was ever held. PnL left null, not "
+                                    "priced."
+                                    if _unfilled else _reset_note
+                                ),
                             }, 500),
                         })
                         # Cascade-close the linked order package, like every other
                         # reconciler close path.
                         _cascade_close_linked_package(
                             db, tid_int,
-                            close_reason="exchange_flat_reconciled",
+                            close_reason=_close_label,
                             caller="_reconcile_orphan_exchange_positions(snapshot)",
                         )
                         summary["snapshot_closed"] += 1
+                        if _unfilled:
+                            summary["snapshot_closed_entry_unfilled"] = (
+                                summary.get("snapshot_closed_entry_unfilled", 0) + 1
+                            )
                         # Sweep resting protective legs now the position is
                         # confirmed flat (this snapshot reconcile never went
                         # through IBClient.close) so a stale IB OCA stop can't fire
@@ -16135,6 +16185,9 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                 # time, not the exit time, so a close-time bar would be a price
                 # for the wrong moment. Never price it here.
                 "   AND COALESCE(exit_reason, '') != 'exchange_reset_flat' "
+                # ENTRY-UNFILLED-LABEL: the entry never filled, so there is no
+                # position to price; a mark-to-market here would fabricate one.
+                "   AND COALESCE(exit_reason, '') != 'entry_unfilled' "
                 # MI-128: the window keys on the CLOSE, not the OPEN.
                 # `created_at` is when the position was OPENED; the value this
                 # sweep exists to recover is a property of the CLOSE. Keyed on

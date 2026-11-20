@@ -1287,6 +1287,51 @@ class AlpacaClient:
         )
         return None
 
+    #: Terminal statuses after which an order with ``filled_qty`` 0 never opened a
+    #: position. ``replaced`` (a successor order carries on) and ``done_for_day`` (some
+    #: order types resume next session) are deliberately absent: they never read unfilled.
+    _ORDER_UNFILLED_TERMINAL_STATUSES = frozenset({"canceled", "cancelled", "expired", "rejected"})
+
+    def order_entry_unfilled(self, order_id: str) -> Optional[bool]:
+        """Did the entry order ``order_id`` end WITHOUT ever filling? Three-valued, fails closed.
+
+        ENTRY-UNFILLED-LABEL (2026-11-19, trade 8034): a DAY entry that expires unfilled
+        leaves a row that never held a position. The flat close must not book it as an
+        exchange_flat_reconciled exit.
+
+          * ``True``  - the venue says the order is terminal (canceled / expired /
+                        rejected) AND its ``filled_qty`` is exactly 0.
+          * ``False`` - the venue says some quantity filled (``filled_qty`` > 0, or
+                        status ``filled``).
+          * ``None``  - anything else: no creds, a read failure, 404 (unknown order),
+                        a non-terminal or ambiguous status, or an unparseable
+                        ``filled_qty``. The caller keeps its existing label.
+        """
+        oid = str(order_id or "").strip()
+        if not oid:
+            return None
+        try:
+            self._require_creds("order_entry_unfilled")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", f"/v2/orders/{oid}")
+        if env.get("retCode") != 0 or not isinstance(env.get("result"), dict):
+            return None
+        result = env["result"]
+        st = str(result.get("status") or "").strip().lower()
+        try:
+            filled = float(result.get("filled_qty"))
+        except (TypeError, ValueError):
+            return None
+        if filled != filled or filled < 0:      # NaN / negative: ambiguous
+            return None
+        if filled > 0 or st == "filled":
+            return False
+        if st in self._ORDER_UNFILLED_TERMINAL_STATUSES:
+            return True
+        return None
+
     def _await_qty_available(self, symbol: str, want_qty: float, deadline: float) -> Optional[float]:
         """Poll until the position's ``qty_available`` reaches ``want_qty``.
 

@@ -141,7 +141,10 @@ CLEAN_EXITS = frozenset({"sl", "tp", "sl_cross", "tp_cross", "exit_head", "stale
 #: the live trade review closing the package (scripts/ops/live_review_apply.py
 #: LIVE_REVIEW_CLOSE), a decision taken over the leg, like ``manual``.
 NEUTRAL_EXITS = frozenset({"intent_reduce", "intent_reduce_executed", "manual",
-                           "operator_flatten_reconciled", "live_review_close"})
+                           "operator_flatten_reconciled", "live_review_close",
+                           # the entry order ended at the venue without filling: no
+                           # position, so no exit to grade (ENTRY-UNFILLED-LABEL)
+                           "entry_unfilled"})
 #: A TP further than this many R from entry is a sentinel, not a prediction
 #: (TP doctrine: ``tp_r: 50.0`` is non-compliant).
 MAX_TP_R = 20.0
