@@ -126,9 +126,16 @@ jobs:
             # Only run_guards' own closing "FAILING GUARDS" block names guards; a guard's output can
             # carry its own ::error:: lines, which are not guard names.
             mapfile -t failed < <(awk '/^FAILING GUARDS/{f=1; next} f && /::error::/{sub(/.*::error::/, ""); sub(/:.*/, ""); print}' "$LOG" | sort -u)
-            for g in "${failed[@]}"; do checks+=(--check "$g"); done
-            # Exit 1 with no failing guard named = a guard COULD NOT RUN; CI would be red too.
-            [ ${#checks[@]} -gt 0 ] || checks+=(--check "run_guards (a guard could not run)")
+            # EXCLUDED, and why: pr-landing-guard checks the PR's .github/pr-landing/<slug>.json, which
+            # .github/actions/commit-to-main WRITES after this step; here it can only report R11
+            # "undeclared" (dry run on #27549's tree, 2026-11-20: PASS 58, FAIL 1 = exactly this). The
+            # bot PR's own CI runs it on the real declaration.
+            EXCLUDED="pr-landing-guard"
+            for g in "${failed[@]}"; do
+              case " $EXCLUDED " in *" $g "*) echo "validation: $g excluded (see the comment above)";; *) checks+=(--check "$g");; esac
+            done
+            # Exit 1 with NO "FAILING GUARDS" block = a guard COULD NOT RUN; CI would be red too.
+            grep -q '^FAILING GUARDS' "$LOG" || checks+=(--check "run_guards (a guard could not run)")
           fi
           # Every test file that reads the register (derived, so a new reader is covered automatically).
           if ! mapfile -t TESTS < <(python3 scripts/ci/register_reader_tests.py) || [ ${#TESTS[@]} -eq 0 ]; then
