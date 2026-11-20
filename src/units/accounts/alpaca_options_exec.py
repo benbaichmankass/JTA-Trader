@@ -197,6 +197,18 @@ class AlpacaOptionsExecutor:
             )
 
     def _request(self, method: str, path: str, json_body: Optional[dict] = None) -> dict:
+        # Venue generation (src/runtime/journal_sync.py): any non-GET may change venue state, so a
+        # reconciliation prefetch made before or during this call must not be trusted after it.
+        _mutating = str(method).upper() != "GET"
+        if _mutating:
+            _bump_venue_generation()
+        try:
+            return self._request_http(method, path, json_body)
+        finally:
+            if _mutating:
+                _bump_venue_generation()
+
+    def _request_http(self, method: str, path: str, json_body: Optional[dict] = None) -> dict:
         headers = {
             "APCA-API-KEY-ID": self.api_key,
             "APCA-API-SECRET-KEY": self.api_secret,
@@ -342,3 +354,11 @@ class AlpacaOptionsExecutor:
             params.append(f"after={after}")
         path = "/v2/account/activities?" + "&".join(params)
         return self._request("GET", path)
+
+
+def _bump_venue_generation() -> None:
+    try:
+        from src.runtime.journal_sync import bump_venue_generation
+        bump_venue_generation()
+    except Exception:  # noqa: BLE001 — never breaks a venue call
+        pass
