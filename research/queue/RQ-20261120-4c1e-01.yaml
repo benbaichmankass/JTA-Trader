@@ -3,7 +3,7 @@
 # Gates this adds or changes: none.
 id: RQ-20261120-4c1e-01
 title: 'DIRECTION lever family on trend_donchian_xrp_4h (production leg, declared short-only): does either BOTH sides or LONG-only beat the declared short-only leg A over the full XRP perp history 2020-02-01..2026-10-12, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -117,3 +117,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-11-20T05:56:22+00:00'
+grading:
+  attested: RULE-RQ20261120-4C1E-01-XRP4H-DIRECTION
+  auto: true
+  decision_rule_id: RULE-RQ20261120-4C1E-01-XRP4H-DIRECTION
+  evidence:
+  - research/results/RQ-20261120-4c1e-01/44684353219.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
