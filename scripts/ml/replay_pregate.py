@@ -74,9 +74,11 @@ def _load_candles(path: str) -> pd.DataFrame:
 
 
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    # Native OPEN-stamped grid [T, T+rule) labelled T (PI-20261120-7ITMUEB1-0006): right/right mis-grouped by one sub-bar.
+    # Same-frame consumer (no as-of join on this output), so open stamps are causal here.
     return (
         df.set_index("timestamp")
-        .resample(rule, label="right", closed="right")
+        .resample(rule, label="left", closed="left")
         .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
         .dropna()
         .reset_index()
