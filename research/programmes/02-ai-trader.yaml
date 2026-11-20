@@ -1464,7 +1464,12 @@ nodes:
     value: {usd_at_stake_per_month: 100, confidence: 0.25}
     after: []
     authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `unit_result:RQ-20261117-c21d-01` -- D2 cross-asset already tested (c4f1-01..06). For D3, a feature family on an entry model that loses its cost waits until the model is non-negative'
-    needs_authoring: >-
+    authoring_closed: '2026-11-20 ML-PRIMARY-14 with the manager (03:50Z order; agreed 04:25Z): kill: configuration closed FAIL -- rung 1 (cross-asset features on the 1h/15m regime
+      learner, log-loss) is the same family and head as RQ-20261110-c4f1-01..04, all FAIL (c4f1-01 BTC 1h + ETH return/vol: delta -0.0040, 95% CI -0.015..+0.007, 5 folds; c4f1-03
+      SOL 1h + BTC and ETH: delta -0.0049, CI -0.009..-0.001); the only cross-asset pass, c4f1-06, is HAR-RV on top of BTC context, not the peer block. Estimated build: about half
+      a day (a new ml_bakeoff correlation/PC1 feature block plus a point-in-time ES/DXY/gold data check). RE-ENTRY: the rolling correlation / basket-PC1 block ONLY (no macro join),
+      and only if a new regime-learner result shows headroom over the shared six features.'
+    authoring_closed_ask: >-
       OPERATOR IDEA (IDEAS.md 2026-10-21): cross-symbol and cross-asset CORRELATION features beyond
       FRONTIER-LEVER-LEADLAG (which covers only BTC->alt 5m lead-lag). Candidates, each fixed before the run: rolling 1h
       correlation of the symbol to BTC and to the alt basket (24 / 168 bars), its change, the basket's first principal
