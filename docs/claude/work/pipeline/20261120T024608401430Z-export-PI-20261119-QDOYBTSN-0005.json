@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261119-QDOYBTSN-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "session_01AFoLuHwqqyiix4qDoybTSN",
+    "kind": "review",
+    "ref": "manager decision 2026-11-19 20:30Z on c8e2-01/c8e2-03 lever-off FAILs; research/results/RQ-20261119-c8e2-01/44561874575.jsonl",
+    "rerun": "git show origin/claude/m20-sweep-corpus:docs/research/m20-sweep-corpus.jsonl | grep shipped_trail_decay | python3 -c \"import sys,json; [print(r[\\\"leg\\\"],r[\\\"cell\\\"],r.get(\\\"d_net_r_IS\\\"),r.get(\\\"d_net_r_OOS\\\"),r.get(\\\"d_max_dd_IS\\\"),r.get(\\\"d_max_dd_OOS\\\"),r.get(\\\"gate_reason_IS\\\"),r.get(\\\"gate_reason_OOS\\\")) for r in map(json.loads,sys.stdin)]\""
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "PROPOSAL for the next programme review (no change made): RULE-EXIT-REFINEMENT-P2-GATE fails a cell on ANY drawdown worsening, with no materiality threshold, so a net-positive lever can fail. Case 2026-11-19: trend_donchian_eth_4h shipped trail_decay lever-off arm (RQ-20261119-c8e2-01, run 44561874575) had d net_R IS +4.775 / OOS +0.767 (better both windows) and FAILED on d maxDD IS +0.073 alone; the manager retained the lever. Proposal to evaluate: a materiality floor on the drawdown leg of Path A (e.g. worse by > x% of the base book's D_b, or > a stated R amount) so a negligible drawdown move cannot overturn a net-R improvement. Any change to the registered rule is the operator's/manager's call with its own record."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "RQ-470A-11-EMIT-REFUSED",
+  "title": "RQ-20261014-470a-11 run 43155372298: result record refused (non-measured read_state with a real verdict); dispatcher job red on 'collector lost a run's rows'",
+  "state": "queued",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Seen by lane RESEARCH-DISPATCH-STALL-1112 in research-queue-dispatch run 43156812754 (2026-11-12 04:50Z). collect_runner_results reported landed=0 skipped=296 lost=1, and research_result.py --emit refused: 'read_state=<non-measured> with verdict=<...>: a run that did not produce a measurement cannot carry a verdict about the world. Use verdict=not_applicable.' (scripts/research/research_result.py:266). The run's files (measurement.json, verdict.json, records.jsonl, logs/cmd-0.log) are still bundled in the landing payload under comms/research/RQ-20261014-470a-11/43155372298/, so the data is kept but there is no record. The dispatch job ends red on every cycle that collects this run. Fix: correct the unit's producer (verdict=not_applicable when not measured, or measured with an integer population.n), then re-emit. Close on a dispatcher cycle with lost=0.",
+  "phase": "research-ops",
+  "updated_at": "2026-11-12T04:55:35Z",
+  "updated_by": "Lane RESEARCH-DISPATCH-STALL-1112",
+  "week_lane": "throttle"
+}

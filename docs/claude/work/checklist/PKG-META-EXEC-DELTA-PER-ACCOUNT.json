@@ -1,0 +1,21 @@
+{
+  "id": "PKG-META-EXEC-DELTA-PER-ACCOUNT",
+  "title": "order_packages.meta.execution_delta is one key overwritten by every account in the multi_account_execute loop (only the last account's delta survives)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Found 2026-11-12 by lane session_01AFoLuJqeJcceGxEK7itN3y (PKG-SIZED-QTY-2X-PLACED-BYBIT1). MEASURED: across the newest 400 order_packages, 78 had sized_qty_by_account for more than one account. On those, slice_admission (now also kept per account in slice_admission_by_account, #25294) and execution_delta held ONE account's value; e.g. pkg-ed61482e66184c7d's bybit_2 entry showed another account's 31669.2. execution_delta is still single-key on main. Fix (Tier 2, meta only, same pattern as #25294): add execution_delta_by_account[account.name] beside the existing key in src/core/coordinator.py where pkg.meta['execution_delta'] is set, plus a two-account test like tests/test_sized_qty_meta_placed.py::test_two_slice_accounts_each_keep_their_admission. Readers of execution_delta that assume it describes a specific account are wrong on multi-account packages until then.",
+  "phase": null,
+  "updated_at": "2026-11-12T23:02:24Z",
+  "updated_by": "session_01AFoLuJqeJcceGxEK7itN3y"
+}

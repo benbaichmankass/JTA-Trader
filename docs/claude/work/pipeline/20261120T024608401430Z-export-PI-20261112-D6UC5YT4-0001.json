@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research/results row exists for a registered Stage-0 unit naming each of slv_trend_1h, uso_trend_1h, gld_pullback_1h, gld_pullback_1d on a spot/CFD series at Velotrade costs (any verdict)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-D6UC5YT4-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROP-FRONTIER-RESEARCH (Manager Session 2026-11-11a), docs/research/prop-frontier-2026-11-12.md",
+    "rerun": "python3 scripts/research/prop_frontier_ev6m.py --out /tmp/pfev6m ; read comms/research/prop_frontier/ev6m-20261112/verdict.json"
+  },
+  "owner": "manager (research lane)",
+  "state": "done",
+  "terminal_reason": "VELO-CFD-STAGE0 ran twice under rules registered before each run, both FAIL 0/4: (a) PROP-FRONTIER RULE-VELO-CFD-STAGE0-20261112 (commit 1f4d346a7; verdict comms/research/prop_frontier/velo-cfd-stage0-20261112/verdict.json, PR #25304); (b) VELO-CFD-STAGE0 lane (rule commit 861825d00; comms/research/velo_cfd_stage0/run-20261112/verdict.json, PR #25338). Velotrade CFDs NOT buyable; overnight fee 0.05%/night dominates. Iteration filed as PI-20261112-PMWTVA2I-0001 VELO-CFD-ITERATE.",
+  "what": "VELO-CFD-STAGE0: re-run Stage 0 for the Velotrade-book legs that carry the RULE-PROP-FRONTIER-EV6M-20261112 pass (slv_trend_1h, uso_trend_1h, gld_pullback_1h, gld_pullback_1d) on the CFD underlying's own price series (spot XAGUSD / XAUUSD / WTI proxies, e.g. Dukascopy) at Velotrade's 1P cost stack (commission 0.01%/side commodities, overnight fee 0.05% of notional per 00:30 UTC rollover incl. weekends). Buy-point condition 1 for a Velotrade CFD account (memo section 6). The EV pass is marginal: dropping any one of five legs turns the book edge CI lower bound negative, and the edge sits in the commodity legs."
+}

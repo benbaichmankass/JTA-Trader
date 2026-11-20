@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "RQ-20261119-a10d-04 (PR #27180, frozen-artifact pinned-pool live-cash-book replay on the confirm window, rule registered 2026-11-19 before any run) lands its result and it is graded and put to the operator with the demotion question; or killed with a reason",
+    "due_date": "2026-11-21",
+    "kind": "date"
+  },
+  "id": "PI-20261119-K7ZSW5Z7-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-PRIMARY-9 reconciliation 98e3-06 vs 207f-01, manager ask 04:42Z",
+    "rerun": "python3 -c \"import json;print(json.load(open(\\\"comms/research/RQ-20261111-207f-01/44387485084/measurement.json\\\"))[\\\"unconstrained\\\"])\""
+  },
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "The deciding live-book replay ran and is graded: RQ-20261119-a10d-04 INDETERMINATE (run 44493850432; #27282 merged 2026-11-19 12:02Z). Reproduction exact (n 207, mean 0.4922); every cash arm n_taken 22 < 30, taken means -0.035/-0.197/-0.082 R. Registered meaning: no data-backed case to demote or clear; the operator decides. Follow-on slot-policy read RQ-20261119-a10d-09 (#27290) carries the remaining question.",
+  "tier": null,
+  "what": "[ml/eq REAL MONEY] Settle the ml_entry_eq_struct (alpaca_live) demotion QUESTION with data: replay the FROZEN artifact ml/candidates/ml_entry_eq_v3_struct_ens5 on its PINNED 173 pool_symbols through the live one-slot cash book (alpaca_live_book.py book section + ml_entry_equity._pinned_pool_and_bars from e8a1-04) on the CONFIRM window 2025-07-15..2026-10-31, rule registered before the run. Why: 98e3-06 confirm +0.492 R n 207 reproduces exactly (e8a1-04 run 44439340946), but 207f-01 (run 44387485084, 11-18 snapshot) dev unconstrained reads -0.0015 R n 1016 and its live-book arm -0.0576 R n 97, while c21d-06 (11-17, same harness, 172-ETF pool) dev baseline reads +0.0845 R n 1628 and 98e3-06 dev +0.132 n 1691 -> run-time pool/bar snapshot instability; the cash-book result on the held-out window was never measured. Reconciliation and the operator question sent to the manager 2026-11-19 ~05:45Z (demotions are the operator's; nothing changed; alpaca_live held 0 positions)."
+}

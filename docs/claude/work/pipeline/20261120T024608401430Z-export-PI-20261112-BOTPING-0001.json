@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-14",
+    "kind": "date"
+  },
+  "id": "PI-20261112-BOTPING-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "GENERAL lane session_01AFoLuKoQkQBLzCSoiyyoMo, observed during #25035 verification",
+    "rerun": "grep -n GH_TOKEN .github/workflows/pr-landing-hold-merge-alarm.yml"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "OBSERVED 2026-11-12 03:21-03:48Z after PR #25078 (merged 03:00:02Z): 4 hold-merge alarms delivered — send-ping issues #25094 (PR #25022), #25097 (#25087), #25102 (#25045), #25108 (#25089), all authored by benbaichmankass (PAT), each ran system-actions to success. Before the fix the same alarms (#25058/#25061/#25062/#25065) created 0 runs. All 4 PRs carry no PR-body decision citation and no operator-approved label, so they are true alarms under the rule; tonight's cited merges (#25001/#24988/#24991) grade clean.",
+  "tier": null,
+  "what": "[ci] send-ping issues opened by github-actions[bot] with GITHUB_TOKEN trigger NO workflow (GitHub does not fire events from GITHUB_TOKEN). pr-landing-hold-merge-alarm.yml:71 uses GH_TOKEN: github.token for 'gh issue create --label system-action' (line 141), so its JC-CA-04 hold-merge alarms are never delivered. Observed 2026-11-12: #25058 #25061 #25062 #25065 created 0 runs. Fix: create the issue with BRANCH_PROTECTION_TOKEN (PAT) or call the ping path directly."
+}

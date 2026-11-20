@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261118-MGC-OVERCOVER-STRAY",
+  "title": "ib_paper MGC over-covered 27 short vs 70 resting stop (4 OCA groups): cancel the excess groups and root-cause why old groups survive a new entry/flip",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Evidence on PI-20261117-LSFHBH4A-0006 (HEALTH-REVIEW-20261118). system_invariants INV-PROTECT-OVERCOVER FAIL at 18:10Z. The previous over-cover (6 vs 16) already became the stray 5-lot long, trade 7735 (INV-3). Closes when: INV-PROTECT-OVERCOVER passes for ib_paper on two consecutive reads and the cause is named at file/line. Gates this adds: none. 2026-11-18 18:55Z AM-OPS-2: NOT PRESENT AT THE BROKER (stale read). Two fresh reads at 18:52Z: (1) cancel-ib-order DRY-RUN on a fresh client (issue #26881, run 44372596862): orders_on_account=6 for the whole ib_paper account; order 1342 (STP BUY 5 @3860.1, group 7569) 'not_found, confirmed clean account-wide read'. (2) the trader's own venue_protection_snapshot, read_at 18:52:44Z: trade 7737 MGC short n_stop_legs=1 n_target_legs=1, venue SL 3793.9 / TP 3398.7 = ref levels. The 6 orders are one STP+LMT pair each on MGC (7737), TLT (7586), GLD (6951). The '70 lots across 4 OCA groups' came from /api/diag/ib_open_orders, whose own stale_read_caveat says it can serve cancelled orders (BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW). The 11-17 15:52Z ib_stop_over_cover alert was real then and was cleared by the 11-18 07:42-07:46Z events (watchdog close of 7569, orphan long 7735 closed, re-entry 7737 with a fresh bracket). Nothing cancelled. NOT checked: why the 7569/6673 snapshot rows (2 stop legs, last read 07:38Z) are not refreshed after their packages closed; the stale diag route is the real defect and is next.",
+  "phase": null,
+  "terminal_reason": "Not present at the broker, stale read (AM-OPS-2, 2026-11-18 18:55Z): fresh-client dry-run (#26881) orders_on_account=6 and order 1342 not_found; trader's own venue_protection_snapshot 7737 n_stop_legs=1 n_target_legs=1. The 70-lot figure came from the stale /api/diag/ib_open_orders. Follow-up: fix that route (BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW).",
+  "updated_at": "2026-11-18T19:05:10Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

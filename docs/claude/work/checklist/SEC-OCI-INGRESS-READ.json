@@ -1,0 +1,22 @@
+{
+  "id": "SEC-OCI-INGRESS-READ",
+  "title": "Read-only lister for the OCI security lists and NSG ingress on the live trader and IB gateway",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-12, SECURITY-HARDENING-AUDIT lane 2. No read-only path exists: scripts/ops/cloud_open_port.py and oci_console_ingress.py both WRITE ingress rules. The posture report (#25070) shows ufw inactive and iptables INPUT policy ACCEPT on both VMs, so whatever binds 0.0.0.0 is fenced only by the OCI security list and NSG, which no tool can read today. The sandbox cannot probe from outside (it blocks non-HTTPS egress; port 22 control failed). Build: a Tier-1 system-action or workflow using the existing OCI_CLI_* secrets that lists ingress rules (protocol, port range, source CIDR, description) for every security list and NSG on both VNICs. Output only ports and whether the source is 0.0.0.0/0 or private; mask other CIDRs. Close test: one run lists the rules and says, for each of 22/80/443/8001/2019/111/4002, open-to-world yes/no.",
+  "phase": null,
+  "updated_at": "2026-11-12T02:19:05Z",
+  "updated_by": "SECURITY-HARDENING-AUDIT lane 2 session_01AFoLuJr75uZpqoU94Ptw7g",
+  "week_lane": "throttle"
+}

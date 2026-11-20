@@ -1,0 +1,22 @@
+{
+  "id": "STATUS-MOVE-AUTO-PAPER-CLOSE",
+  "title": "Automatic paper-copy close inside the promotion path, including a per-row Bybit close for bybit_1's netted symbols (the third-version close that the status-move rule, held PR #25251, prescribes)",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-on from STATUS-MOVE-OPEN-POSITIONS; the L-LADDER mapping is decided when the held rule #25251 lands",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "From STATUS-MOVE-OPEN-POSITIONS (lane session_01AFoLuMm8mdmV1JgmwFHKEU, 2026-11-12). Today the close is manual: run scripts/ops/status_move_positions.py after a roster PR merges, then flatten-<venue>-position and mark-operator-flattened. GAP: bybit_1 nets symbols across legs (live 2026-11-12: #7004 eth_pullback_2h and #7000 eth_pullback_prop_2h both short ETHUSDT), and flatten-bybit-position closes the whole symbol, so a close_netted row has no per-row close action. Scope: a reduce-only per-row Bybit close sized to the row's qty, plus an automatic close step after the promotion merge (order path, Tier 2). Depends on #25251 landing (operator confirmation).",
+  "phase": null,
+  "updated_at": "2026-11-19T06:07:07Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

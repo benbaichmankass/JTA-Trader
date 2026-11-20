@@ -1,0 +1,57 @@
+{
+  "id": "FORMING-VS-CLOSED-ETH4H-SOL4H",
+  "title": "Forming vs closed decision bar for trend_donchian_eth_4h and trend_donchian_sol_4h (prop + bybit_1), net of the full cost stack. Answers PROP-FORMING-BAR-REEMIT (manager 2026-11-13, data-missing, not a popup)",
+  "state": "done",
+  "owner": "FRONTIER",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "next_action": null,
+  "due_by": "2026-11-17",
+  "decision_requests": [
+    {
+      "allowsFreeText": true,
+      "answer": {
+        "acted": "Read back 2026-11-13 21:17Z (submitted twice, 21:16:06Z and 21:16:10Z, both both_closed). AM-ML/FRONTIER prepares the Tier-3 config PR switching trend_donchian_eth_4h and trend_donchian_sol_4h to decision_bar: closed, with recorded_decision citing this answer, a C5 re-measure on the closed basis and a prop-survival check; the manager merges at the reviewed head on a full green pytest-run.",
+        "chosen": "both_closed",
+        "committed_by": "Manager Session 2026-11-13a",
+        "submission_id": "47e833d4e5c741aa8648da976589a3c2",
+        "submitted_at": "2026-11-13T21:16:10.685853Z",
+        "submitted_by": "telegram"
+      },
+      "askedOn": "2026-11-13T17:45:00Z",
+      "evidence": "MEASURED 2026-11-13, committed comms/research/RQ-20261113-f251-03/43451968959/verdict.json (rule RULE-FORMING-VS-CLOSED-4H-20261113 registered before the run; full cost stack; Binance 1m as a labelled proxy for Bybit). eth_4h full history: closed +97.9R n300 vs forming +104.4R n450 (no material difference); record window closed +30.8R vs forming +28.2R. sol_4h full history: closed +64.4R n267 vs forming +76.6R n422 (no material difference); record window closed +41.1R vs forming +46.2R. Both arms pass RULE-D1 on both legs; the pre-registered tie-break picks CLOSED. NEW FACT since 10-22: on the forming bar both legs re-emit an order package about every 60 s inside one bar (AM-OPS, 03:25-04:01Z today: 34 and 33 packages, drifting entries, one prop order cancelled and re-ticketed) \u2014 a cost the backtest does not model. Closed also roughly halves trade count, cutting fee drag on prop. Cost of switching: eth -6.5R / sol -12.2R over 6+ years in-sample. Routings: bybit_1 (paper) + tradeify_1 + velotrade_1 (prop, on the roster by your 2026-11-05 baseline exception). No real-money book carries either leg. Nothing changes until you answer.",
+      "id": "FORMING-VS-CLOSED-4H-PROP",
+      "options": [
+        {
+          "key": "both_closed",
+          "label": "Switch both to closed (recommended by AM-ML and the manager)"
+        },
+        {
+          "key": "sol_only",
+          "label": "Switch sol_4h only; keep eth_4h on forming"
+        },
+        {
+          "key": "keep_forming",
+          "label": "Keep both on forming"
+        }
+      ],
+      "question": "Switch trend_donchian_eth_4h and trend_donchian_sol_4h from deciding on the forming 4h bar to the closed 4h bar? On 2026-10-22 you kept eth_4h on forming (\"Split: 3 to closed, 2 stay\"); this reopens that call because of a new measured cost.",
+      "recommended": "both_closed",
+      "urgency": "routine"
+    }
+  ],
+  "note": "WHY: AM-OPS measured both legs re-emitting a package about every 60 s inside one forming 4h bar (03:25-04:01Z 2026-11-13: 34 + 33 packages, drifting entries; tradeify_1 SOL cancelled and re-ticketed at 03:58Z; no duplicate fill). Control: trend_donchian_eth_prop (decision_bar: closed) emitted once. Switching either leg to closed is Tier 3. The operator's analogue (TQQQ-DECISION-BAR = build_replay) says MEASURE first, so this is data work.\nPRIOR EVIDENCE (read, not re-derived): docs/research/evidence/decision-bar-match-2026-10-22.json (DECISION-BAR-MATCH, operator 2026-10-22 'Split: 3 to closed, 2 stay').\n- trend_donchian_eth_4h, window to 2026-10-17: better=NO_MATERIAL_DIFFERENCE, verdict SWITCH_TO_CLOSED (preferred_passes_d1); forming +143.32 R (n 446) vs closed +130.92 R (n 295); forming wins 4/6 folds. The operator KEPT it on forming.\n- trend_donchian_sol_4h was NOT in that run. Its record (2026-10-28) reads approximate, i.e. forming is not modelled. So for sol_4h this is new data; for eth_4h it adds the window since 10-17.\nPRE-REGISTERED RULE (written 2026-11-13 ~14:45Z, before any run), RULE-FORMING-VS-CLOSED-4H-20261113:\n- Per leg, scripts/research/decision_bar_match.py with its existing grading UNCHANGED (the same tool as 2026-10-22, for comparability). Arms: forming (4h decision replayed from Binance USD-M 1m) vs closed, the same leg config, the full cost stack, on each leg's committed record window extended to the run date.\n- Outcomes: verdict SWITCH_TO_CLOSED, or better=NO_MATERIAL_DIFFERENCE, means closed >= forming within the tool's band, so propose decision_bar: closed to the manager as Tier 3, with the record.\n- Ties go to closed on purpose: the backtest does not model the live re-emit and entry-chasing cost, which only the forming bar incurs.\n- Forming MATERIALLY better (the tool's better=FORMING) means keep forming, and propose to AM-OPS an entry-hold / no-re-ticket fix for the chasing.\n- Nothing changes config without the manager.\n- Fixed now; not changed after any result.\nLANE: FRONTIER, AFTER its current item (phase B intraday forming for slv_trend_1h).\nFOLDS IN PI-20261113-AMML-0002: its sol_prop half is already satisfied (faithful forming record since #25228); its slv half is FRONTIER's phase B. 2026-11-13 14:53Z AM-ML: PRE-RUN AMENDMENT to RULE-FORMING-VS-CLOSED-4H-20261113 (no result exists; unit RQ-20261113-f251-03 not dispatched; PR #25763 unmerged). (1) Window: accepted as the tool computes it -- improvement folds over full fetched history to 2026-11-12 23:59 (same basis as 10-22), RULE-D1 on the committed record window 2023-10-29..2026-10-27. No tool change. (2) The tie-to-closed branch now requires CLOSED TO PASS RULE-D1: SWITCH_TO_CLOSED, or NO_MATERIAL_DIFFERENCE with closed passing RULE-D1 -> propose decision_bar: closed (Tier 3). NO_MATERIAL_DIFFERENCE with closed failing RULE-D1 -> no closed proposal; report the tool's KEEP_FORMING_REBASE_RECORD (forming passes) or DEMOTE_CANDIDATE (neither passes) to the manager as-is. Forming materially better -> unchanged (keep forming, entry-hold fix to AM-OPS). Reason: ties go to closed only because the backtest omits the re-emit cost, which presumes closed is itself a viable leg. 2026-11-13 17:35Z AM-ML: RESULT f251-03 run 43451968959 (comms/research/RQ-20261113-f251-03/43451968959/verdict.json): both legs better=NO_MATERIAL_DIFFERENCE, both arms pass RULE-D1 on the record window -> tool verdict SWITCH_TO_CLOSED on both = 'propose closed' under the pre-run amended rule. eth_4h full-history closed +97.87R n300 vs forming +104.39R n450 (folds 2/4); record window closed +30.84 n135 vs forming +28.20 n209. sol_4h closed +64.40 n267 vs forming +76.56 n422 (folds 3/2/1); record window closed +41.07 n117 vs forming +46.21 n195. PROPOSED to manager as Tier 3 (17:34Z): routings bybit_1 + tradeify_1 + velotrade_1 (prop); both FAIL prop gate V3 and are rostered only by operator_exception 2026-11-05; operator kept eth_4h forming 2026-10-22 -> re-opens an operator call. No config change until decided. AM-ML recommends closed. 2026-11-13 21:35Z AM-ML: OPERATOR both_closed (21:16Z) -> config PR #25853 by FRONTIER (Tier-3 HOLD, head efd08d211; manager merges after full pytest-run). Diff: 2 lines decision_bar: closed (eth_4h, sol_4h). C5 records regenerated faithful on closed basis: eth_4h +28.95R n135 3/4 folds (2023-10-29..2026-10-27); sol_4h +36.42R n115 3/4 folds (2023-11-14..2026-11-12); forming records kept in rebaseline_history; roster-promotion check clean. Prop operator_exception 2026-11-05 unedited, not bar-tied (V3 gate retest ledgers don't state a decision bar -- optional closed-basis prop regrade available). CORRECTION requested: PR hold_text said 'real money bybit_2 ... breakout_2'; config/accounts.yaml on main (re-parsed 21:33Z) rosters both legs on bybit_1 + tradeify_1 + velotrade_1 only. Follow-up: the strategies.yaml comment on trend_donchian_eth_4h ('LIVE on REAL-MONEY bybit_2') is stale -- comment-only fix in a later Tier-3-file PR.",
+  "phase": null,
+  "updated_at": "2026-11-14T06:20:58Z",
+  "updated_by": "Manager Session 2026-11-13a"
+}

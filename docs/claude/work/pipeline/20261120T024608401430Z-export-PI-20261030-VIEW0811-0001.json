@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-VIEW0811-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "live-review LR-20261030T0811Z-pkg-d76f1b15923e4282",
+    "rerun": "python3 scripts/ops/live_review_packet.py pkg-d76f1b15923e4282  # check mechanics.evidence: ib_paper venue SL vs package SL (package may be closed by then; then read a newer mgc_trend_1h package)"
+  },
+  "routed_to": "PAPER-STOP-MISMATCH-ROOTCAUSE",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ib_paper mgc_trend_1h short (trade 6803): venue SL 4255.7 != package SL 4028.03 (venue stop ~0.9R wider than package), venue TP matches. Seen 2026-10-30 08:11Z on a 1-bar-old position. No existing owner (PI-20260930-ZPDIPMDA-0001 is the alpaca_paper GLD case). First step: read ib_open_orders vs order_packages for this and other recent ib_paper packages to see whether the IB bracket builder uses a different stop (e.g. entry-time ATR stop vs package SL) on every ib_paper leg; then fix or document. Paper account; order-path owner decides.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Exact scope: the row title names the ib_paper MGC bracket SL mismatch. EVIDENCE: Row PAPER-STOP-MISMATCH-ROOTCAUSE (queued) title: \"Paper venue-stop vs package-stop mismatches: root-cause and fix (ib_paper MGC bracket SL 4...\"."
+}

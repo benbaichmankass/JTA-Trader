@@ -1,0 +1,22 @@
+{
+  "id": "LTR-IMPULSE-HARNESS",
+  "title": "Build the impulse-conditioned pricing arm (live_review_outcomes.py --condition impulse + giveback frequency count) that RQ-20261112-2dd5-01 needs",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 17,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Spawned by LTR-FAST-MOVE-LOCKIN (lane TRADING-T1-BATCH, 2026-11-12). Build, Tier 1, offline research tooling only, no live change. SCOPE: add --condition impulse to scripts/research/live_review_outcomes.py so the comparable state is the FIRST closed bar of a trade whose running favourable extreme advanced >= --impulse-r (default 0.75 R) beyond the previous bar's running extreme while the running peak is >= 1.0 R; price HOLD / tighten atr:1.0,1.5 / r:0.0,0.5 / --move-tp pull-in and extend on that bar, net of the full cost stack plus --stop-fill-slip-r 0.05; emit one row per trade (paired dR vs the recorded exit) with leg, fold index and bars-to-impulse so intervention_controls.control_set can compute B2 matched-random (same action at random bars of the same trade with peak >= 1R that are NOT impulse bars) and B3 best-static leave-one-fold-out. ALSO emit the giveback frequency table (operator question 4): per leg, share of trades whose peak >= 1R gave back >= 0.5 R within 6 bars, as a DESCRIPTIVE count with its population, never a graded result. Tests on synthetic paths. CLEARS: RQ-20261112-2dd5-01 moves from research/queue/blocked/ to research/queue/ with run.command filled and status queued. Gates this adds or changes: none.",
+  "phase": null,
+  "updated_at": "2026-11-12T09:43:08Z",
+  "updated_by": "lane TRADING-T1-BATCH"
+}

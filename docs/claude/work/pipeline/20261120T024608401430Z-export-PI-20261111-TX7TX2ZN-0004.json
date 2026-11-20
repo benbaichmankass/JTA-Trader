@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "0 new lifecycle_red_flag serve_parity lines for the BTC-5m plans over 7 days, OR those plans are retired by record (ML-CONSOLIDATION wave 1), OR the failure is root-caused with its tail captured",
+    "kind": "observation"
+  },
+  "id": "PI-20261111-TX7TX2ZN-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-11 (lane ML-FRONTIER-PREP-20261111)",
+    "rerun": "trainer-vm-diag: grep lifecycle_red_flag runtime_logs/training_cycle.jsonl | tail"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 2026-11-12 (superseded): OPS backlog drain decides (observation still owed or reasoned close) [weekly planning 2026-11-12]",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "routed_to": "ML-HYGIENE (trainer serve_parity job)",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml] The trainer serve_parity lifecycle job has failed 3 times running for the BTC-5m shadow heads. MEASURED trainer-vm-diag #24903 (run 43082654333), runtime_logs/training_cycle.jsonl: 4 lifecycle_red_flag lines on 2026-11-11 (09:20Z btc-regime-5m-lgbm-flow-v1, 09:20Z btc-regime-5m-lgbm-v2, 15:20Z btc-regime-5m-lgbm-yz-v1, 15:20Z plan btc-regime-5m), job=serve_parity, consecutive_failures 3, last_tail empty. Retries continue (no halt). These heads change 0 rostered legs (C3) and 3 of them are proposed RETIRE by ML-CONSOLIDATION (#24897); the empty last_tail means the failure cause is not captured."
+}

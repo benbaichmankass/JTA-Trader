@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261118-SCOREBOARD-PAPER-SWING",
+  "title": "Scoreboard paper book moved from -2.80% / PF 0.91 (n 1759) on 11-11 to +0.94% / PF 1.01 (n 1855) on 11-18, and trailing-30d PF 0.27 -> 0.96: explain the jump (new trades vs a basis or backfill change) before any review reads it",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "EVIDENCE: GET /api/bot/work/scoreboard 11-11 18:49Z (from docs/reviews/2026-11-11-weekly-audit.md \u00a7 S) vs 11-18 18:11Z (paper.inception pct_basis 'net of 1753 trades / sum broker equity at start'). 96 new closed paper trades would need a large net gain to move inception by +3.7 pts; the Alpaca falsely-closed rows (AUD-20261118-ALPACA-FLAT-CLOSE-LEAVES-ENTRY) carry pnl NULL and are excluded, so they don't explain it. H0: real P&L in the week (QQQ/IEF/TLT shorts and longs paid). H1: a backfill or reprice of old rows (sweep_local_pnl_for_unpriced, PnL corrections). TEST: diff the per-trade pnl of trades closed before 11-11 between the two dates (journal re-read). DETECTOR: scoreboard publishes an inception-to-date checksum of pre-window pnl, so a restatement shows. CHECK {command: 'journal pnl sum for closed_at < 2026-11-11T18:49Z, paper accounts, now vs the 11-11 figure', rule: 'equal within 1%, or the restatement is named', resolves_when: 'named'}.",
+  "phase": null,
+  "updated_at": "2026-11-18T18:23:24Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9"
+}

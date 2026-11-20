@@ -1,0 +1,21 @@
+{
+  "id": "EVENT-SPAN-HISTORY",
+  "title": "Lever (Tier-1 research data): a committed point-in-time US release history 2021-01..now (fomc_decision, fomc_minutes, cpi, nfp; UTC time stamps, source per row) that corpus harnesses can join; unblocks RQ-20261118-a5b3-01/-02",
+  "state": "in_flight",
+  "owner": "PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-DATA"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "Filed 2026-11-18 by PRACTICE-REFRESH-20261118 (docs/research/practice-review-2026-11-18.md \u00a7 T-G1). MEASURED: comms/macro/econ_calendar_snapshots.jsonl holds 9 fomc event ids, all 2026-06-17 onward; econ_calendar_snapshots_backfill.jsonl holds 0 fomc rows, so no corpus trade before 2026-06 can be tagged as spanning a release. Build: reconstruct from the Fed's published meeting/minutes calendar and BLS release schedules (public), one row per release with kind, scheduled_at UTC, source URL; decision and minutes are separate kinds. Re-entry test: RQ-20261118-a5b3-01 moves from blocked/ to queued with run.workflow set. Check scripts/macro/econ_calendar_snapshot_backfill.py first (it may extend).",
+  "phase": "build",
+  "updated_at": "2026-11-19T06:51:54Z",
+  "updated_by": "session_01AFoLuJ2Mx5E1JEVEWziCcb"
+}

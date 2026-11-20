@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 8,
+    "clears_when": "the next commit touching comms/perf_followup lands on main (expected: the W48 perf-followup, about Wed 2026-11-25) and the VM has deployed it",
+    "conditions": [
+      "date:2026-11-25",
+      "manual:the next comms/perf_followup commit is on main and deployed on the VM (git_sha_on_disk includes it)"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-19",
+    "owner": "AM-OPS-7"
+  },
+  "id": "PI-20261119-IXACGZFL-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "by": "session_01AFoLuHfPPZwEceiXaCGZfL",
+    "kind": "audit",
+    "ref": "#27220 post-state item (3), manager 2026-11-19 11:05Z",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/commits?path=comms/perf_followup&since=2026-11-19T10:55:00Z' ; then read the ict-git-sync journal for 'Non-runtime commit' at that sha and scripts/ops/diag_fetch.sh status (bot_uptime_s across that deploy)"
+  },
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "redate": {
+    "evidence": "mcp github list_commits path=comms/perf_followup since=2026-11-19T10:55:00Z -> []; without since -> 35b1b759, aeafa9fa, d6ac75eb",
+    "observation": "NOT YET OBSERVABLE, not failed (AM-OPS-9 2026-11-19 22:00Z). GitHub commits on path comms/perf_followup since 2026-11-19T10:55Z: 0. Probe positive control: the same query without since returns 35b1b759 (08:01Z, the commit that caused the morning restart) and the W42/W43 commits, so the query works. The path changes weekly with perf-followup (W42 10-15, W43 10-22, W47 11-19 08:01Z); the next expected is W48 about 11-26.",
+    "observed_at": "2026-11-19"
+  },
+  "state": "queued",
+  "what": "#27220 (merged 998f7c8, deployed 3a43535 at 10:54:58Z) added comms/perf_followup to the deploy gate's non-runtime set. LANDED_UNPROVEN: merged and deployed, not yet observed. Code-level proof done 2026-11-19 11:05Z: the 08:01Z commit 35b1b759 (the one that caused this morning's unneeded trader restart, 11 paths) leaves 0 runtime paths through main's scripts/deploy_pull_restart.sh:573 regex, and trader_import_closure decide says SKIP. OBSERVATION OWED: on the next comms/perf_followup commit to main, the VM deploy log (ict-git-sync) prints '>>> Non-runtime commit (<base> -> <sha>)' for it and the trader's bot_uptime_s does NOT reset at that deploy. Then close done with both readings, or reopen #27220's gate if it restarted."
+}

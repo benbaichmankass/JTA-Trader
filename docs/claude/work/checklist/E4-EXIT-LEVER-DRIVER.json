@@ -1,0 +1,21 @@
+{
+  "id": "E4-EXIT-LEVER-DRIVER",
+  "title": "desk_event_entry_replay.py: expose the E4 exit levers (sl_atr, tp ATR, horizon_bars) as arms so e4_oi_shock_1h can be iterated (unblocks RQ-20261117-b3aa-06)",
+  "state": "queued",
+  "owner": "unowned",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed by RESEARCH-OPS-20261117-1006. e4_oi_shock_1h is an orphan with NO lever-capable driver: scripts/research/desk_event_entry_replay.py takes only {fetch,run,confirm} --root --out --window (no arm/override flags) and exit_lever_ablation.py covers trend/pullback/ict_scalp/turtle_soup only. Diagnosis wanting the lever: RELATIVE entry edge PASS (e18g-02: +0.184 R vs same-model random entry, CI +0.092..+0.274) but ABSOLUTE Stage 0 FAIL (e18g-03: +0.022 R/trade, CI -0.072..+0.110, n 856) => the entry carries information that the frozen 1.5/3.0 ATR bracket + 24-bar time stop does not convert. clears_when: the replay accepts --sl-atr/--tp-atr/--horizon-bars (defaults = the frozen rule, byte-identical) with a self-test, and RQ-20261117-b3aa-06 is git mv'd to research/queue/ with run.command filled.",
+  "phase": "research",
+  "updated_at": "2026-11-17T10:19:16Z",
+  "updated_by": "session_01AFoLuMNJLaELyLniVCjP7T"
+}

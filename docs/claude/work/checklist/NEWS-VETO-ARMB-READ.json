@@ -1,0 +1,30 @@
+{
+  "id": "NEWS-VETO-ARMB-READ",
+  "title": "Confirm the news-veto result: grade Arm B (vetoed-signal counterfactual net R) of RQ-20261009-902 once distinct vetoed signals reach its floor of 25; the read that unparks WEPE-BUILDOUT",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M28"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": 1.42,
+  "prs": [],
+  "blocked_on": [
+    {
+      "clears_when": "date:2027-02-08",
+      "kind": "data_wait",
+      "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+      "reason": "2026-11-12 recount from the live news_decisions log (155 UTC days, 2026-06-11..2026-11-12, 15,346 rows): 26 veto rows = 16 distinct vetoed signals (strategy+symbol+side, 1h dedupe; 13 on the loosest key) over 8 veto days, below the Arm B floor of 25. Measured distinct rate 16/155 = 0.103/day -> 9 more at that rate = 87 days -> 2027-02-08. Vetoes are bursty (news events), so this is an estimate not a promise. Arm B is not gradable; WEPE-BUILDOUT stays parked.",
+      "set_by": "NEWS-VETO-ARMB-READ",
+      "since": "2026-11-12"
+    }
+  ],
+  "due_by": "2027-02-08",
+  "note": "decision: 2026-11-12 operator decisions page w7 \"Park it until the news-veto result is confirmed\" (relayed by the manager 10:38Z). WHAT: RQ-20261009-902 (G1 of the WEPE gate) graded Arm A FAIL on 2026-10-12 (Spearman IC -0.014, n=634 distinct taken trades, docs/research/news-veto-eval-2026-10-12.json); Arm B (the veto itself: counterfactual net R of vetoed signals, rebuilt from the strategy harness at ts) was UNDERPOWERED: 13 veto log rows over 124 days, floor 25. DUE: computed from the measured rate 0.107/day -> floor no earlier than ~2027-02-04 (an upper bound: rows repeat per tick, so distinct signals accrue slower). FIRST STEP when worked (any time, no need to wait for the date): re-count distinct vetoed signals with scripts/research/news_veto_eval.py against the live log (diag-data); if n >= 25, grade Arm B under the unit's registered rule (RULE-RQ1009-902-NEWS-VETO-NET-R; G1 PASS needs Arm A PASS and Arm B not FAIL, so with Arm A FAIL, G1 stays RETIRE_OR_REPLACE unless the operator rules otherwise); if n < 25, write the count and recompute this due date. Unparks WEPE-BUILDOUT only via the operator: the result goes to the manager. Rerun: python3 scripts/research/news_veto_eval.py. clears_when: distinct vetoed signals counted by scripts/research/news_veto_eval.py >= 25 (RQ-20261009-902 Arm B floor). owner: AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F). (Field to move into the structured clears_when once UNBLOCK-WATCH lands.) [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-N-NEWS-VETO (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none. [2026-11-12 NEWS-VETO-ARMB-READ] RECOUNT: 16 distinct vetoed signals (26 rows, 8 veto days, 155 UTC days) < 25 -> Arm B UNDERPOWERED, not graded. Rate 0.103/day -> floor ~2027-02-08. blocked_on set (date:2027-02-08, owner AM-ML). Record docs/research/news-veto-armb-recount-2026-11-12.json. WEPE-BUILDOUT stays parked. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'FRONTIER', no live session); state stays blocked. still blocked: data wait until 2027-02-08.",
+  "phase": null,
+  "updated_at": "2026-11-18T18:16:38Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9"
+}

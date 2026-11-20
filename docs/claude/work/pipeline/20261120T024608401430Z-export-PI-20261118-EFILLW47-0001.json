@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "RQ-20261118-abab-68 has a graded result in research/results/ AND either (a) a near_target PASS names a holdout population that carries a real TP (a queue unit or a build row exists for it), or (b) a FAIL / INDETERMINATE is recorded on research/levers/ltr-close.yaml with near_target marked tested at power or untestable for lack of a real-TP population",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EFILLW47-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-11-18, from RQ-20261117-43b6-02 row partial_close@near_target n_fired 0; manager instruction to file it",
+    "rerun": "python3 -c \"import yaml; s=yaml.safe_load(open('config/strategies.yaml')); st=s.get('strategies',s); print({l:(st[l].get('tp_r'),(st[l].get('tp_intent') or {}).get('mode')) for l in ['eth_pullback_2h','sol_pullback_2h','trend_donchian_ada_4h','trend_donchian_avax_4h']})\"  # all four print (50.0, 'none'); then: ls research/results/RQ-20261118-abab-68 2>/dev/null"
+  },
+  "owner": "research-ops",
+  "state": "queued",
+  "what": "LTR-CLOSE TRIGGER QUESTION (design defect, 2026-11-18). RQ-20261117-43b6-02 (ITERATION 2 of ltr-close, a full close at the first near_target or stall trigger on four holdout legs eth_pullback_2h / sol_pullback_2h / trend_donchian_ada_4h / trend_donchian_avax_4h, n=1,094) read INDETERMINATE because partial_close@near_target had n_fired = 0: the lever never fired. VERIFIED cause (config/strategies.yaml, 2026-11-18): all four legs declare tp_r 50.0 with tp_intent mode none, the fictional take-profit sentinel, so a NEAR-TARGET trigger, which needs a real TP, cannot fire on them. The test chose a trigger its population cannot produce, so it says nothing about ltr-close at near_target. The trigger question that must not be lost: which committed population carries a REAL TP (only the selection legs: e.g. xrp_pullback_2h tp 3.0, ada_pullback_2h, ml_entry) and on which holdout population can near_target be read at all, so a near_target PASS can get its one disjoint-window read. RQ-20261118-abab-68 (held) runs the first FULL close (partial_frac 1.0) at near_target and stall on the 8 selection legs. Its result decides whether a holdout population with a real TP must be built (a harness/corpus build: build_ltr_corpus.py --mode harness over legs with tp_r < the fictional bound) or the near_target trigger is closed for ltr-close."
+}

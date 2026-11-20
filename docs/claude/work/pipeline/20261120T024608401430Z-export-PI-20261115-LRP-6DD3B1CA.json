@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261115-LRP-6DD3B1CA",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:tlt_pullback_1h:live_only_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "PROMOTE-TLT-1H-REAL-MONEY",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `tlt_pullback_1h` — live_only_signal ×38 (REAL-MONEY roster) in window 2026-11-08T07:00:00+00:00..2026-11-15T07:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-15.json. Examples: [{\"class\": \"live_only_signal\", \"bar\": \"2026-11-11T18:00:00+00:00\", \"t\": \"2026-11-11T18:08:19+00:00\", \"live\": {\"side\": \"short\", \"adx\": 28.5124, \"close\": 80.86, \"reason\": null}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [28.5124, 28.5124], \"candidates\": [\"2026-11-11T18:00:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 28.5124, \"closed_only_199\": 28.5702, \"closed_only_200\": 28.5702, \"next_bar_200\": 28.159}, \"fine_candle\": {\"time\": 1794420000, \"low\": 80.845, \"high\": 80.88}}}, {\"class\": \"live_only_signal\", \"bar\": \"2026-11-11T18:00:00+00:00\", \"t\": \"2026-11-11T18:09:46+00:00\", \"live\": {\"side\": \"short\", \"adx\": 28.5124, \"close\": 80.86, \"reason\": null}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [28.5124, 28.5124], \"candidates\": [\"2026-11-11T18:00:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 28.5124, \"closed_only_199\": 28.5702, \"closed_only_200\": 28.5702, \"next_bar_200\": 28.159}, \"fine_candle\": {\"time\": \n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: live-only signals on the leg promoted to real money 11-12 belong to its promotion row's mechanics observation EVIDENCE: comms/live_parity/2026-11-15.json (window 2026-11-08T07:00Z..11-15T07:00Z) legs[tlt_pullback_1h].by_class.live_only_signal=38, real_money, alpaca_live+alpaca_portfolio"
+}

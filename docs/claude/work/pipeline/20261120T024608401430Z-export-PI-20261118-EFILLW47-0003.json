@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the kaggle_cpu results that ran after 2026-11-18T21:25Z are read: either they are measured (candle dataset served) and the fix is confirmed, or the failing routes are pinned to the runner / fixed; and the producer_failed share of results landed per day is <= 5% for two consecutive days (python3 scripts/ci/check_research_queue_throughput.py --json, research/results read_state)",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EFILLW47-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-11-18, results RQ-20261118-abab-26/-27 and the 11 earlier Kaggle units named above; runs 44387502105, 44390825559, 44394901639",
+    "rerun": "python3 - <<'PY'\nimport json,glob\nfor f in sorted(glob.glob('research/results/RQ-2026111[78]-*/*.jsonl')):\n    for l in open(f):\n        r=json.loads(l)\n        if r.get('read_state')=='producer_failed': print(f.split('/')[2], str(r.get('note'))[:90])\nPY\n# then: grep -h 'candle dataset\\|NameResolution' comms/research/<unit>/<run>/logs/cmd-0.log"
+  },
+  "owner": "research-ops",
+  "state": "queued",
+  "what": "KAGGLE-CPU ROUTE LANDS producer_failed ON NETWORK-FETCH UNITS (2026-11-18). A sample of 11 earlier units that ran on the kaggle_cpu kernel and every one of my units that ran there landed read_state producer_failed (cmd 0 exit=1): RQ-20261117-9e1c-05/-10/-11/-13, b2f1-03/-11/-14/-28, b2f2-02/-21/-36, RQ-20261118-abab-26, abab-27 (twice). Two causes read from the logs: (a) Binance feeds: 'NameResolutionError ... data.binance.vision' from fetch_backtest_candles.py (9e1c-05 XRPUSDT 4h --days 2330; abab-26/27 AVAXUSDT 5m --days 760): the kernel has no internet and no candle dataset line ('candle dataset: served ...') appears in the log, i.e. the published candle dataset was not served; (b) Yahoo feeds: 'yfinance returned no rows for ES=F ... venue_state=refusing_us ... HTTP 429' (b2f1-03, b2f2-21). The workflow run still concludes success, so the Kaggle slot (max_concurrent 1, ~1 run/h) is consumed by runs that produce no verdict. All results since 2026-11-17: 142, of which 24 producer_failed. SUSPECTED CAUSE (not verified): the committed comms/research/candle_dataset/coverage.json (2026-11-02, 30 feeds, last bars 2026-10-31) said the dataset covered feeds the mounted dataset did not serve, so compute_router.candle_dataset_covers released units to kaggle_cpu that then fetched from the network. The dataset was rebuilt and republished 2026-11-18 20:54Z (run 44382589303, 44 feeds, last bars 2026-11-17/18) and the new coverage.json merged at d47aa41d (~21:21Z); the failures above all ran BEFORE that. TO VERIFY: the first kaggle_cpu results that ran after 21:25Z (RQ-20261118-abab-* units, workflow research-script-run-kaggle-cpu) must show 'candle dataset: served <feed>' in logs/cmd-0.log or a measured verdict. If they still fail: pin the failing units with routing.runner_only (they cannot use Kaggle), make candle_dataset.covers check the window (--end vs the feed last_ts) and Yahoo feeds (the kernel has no internet), and make research-script-run-kaggle-cpu fail the job (not 'success') when script_run exits 1."
+}

@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the four alpaca_live legs each have a stated net expectancy at 26 and 53 bps round trip, or the unit is killed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/realized_slippage.py pull --out-dir D && python3 scripts/research/realized_slippage.py analyze --in-dir D --out D/s.json"
+  },
+  "owner": "perf-followup (PERF-FOLLOWUP lane after the 2026-11-18 review lands)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 3,
+  "what": "[performance][cost] Alpaca fills measure far above the 5 bps round trip the cost policy (src/runtime/execution_costs.py DEFAULT_SLIPPAGE_BPS_ROUNDTRIP) charges: realized_slippage.py 2026-11-18 (4448 fills) alpaca_paper round trip 26.1 bps (CI95 5.1-52.7; entry n=72 0.6 bps, exit_sl n=43 34.5 bps), alpaca_portfolio 33.9 bps (CI -0.8-79.7). alpaca_live real money is below min n (entry 4, exit 2). Paper fills are the broker's simulator, so the script does not reprice on them; but the four real-money alpaca legs (slv_trend_1h, tlt_pullback_1h, tqqq_trend_long_1d, ml_entry_eq_struct) were promoted on 5 bps. Reprice each Stage-0 record at 26 and 53 bps; any leg whose net expectancy <= 0 at 26 bps is a Tier-3 proposal to the operator."
+}

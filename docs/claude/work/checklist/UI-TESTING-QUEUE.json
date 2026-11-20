@@ -1,0 +1,23 @@
+{
+  "id": "UI-TESTING-QUEUE",
+  "title": "Testing/research queue on the overview: deployed read route, detail cards, and drag-and-drop priority the research dispatcher honours",
+  "state": "queued",
+  "owner": "manager (deferred until after the 2026-11-18 18:00Z weekly reset)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator UI request 2026-11-15; console tooling, no milestone",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Operator 2026-11-15 13:55Z (chat): the overview 'Testing queue' panel reads 'could not look - the testing-queue route is not deployed on the bot yet'. Wants the same queue style as the work queue: reorder tests by priority (drag-and-drop) and open cards to see each test/research unit's details. Scope: (1) backend GET route listing research/queue units in dispatch order with read_state (Tier 1 read path); (2) a priority overlay store written by a POST reorder route that scripts/research/dispatch_queue.py READS when ordering would_dispatch (Tier 2: changes research dispatch order; YAML on the VM is read-only, pulled from main, so the overlay must live in a VM-side store, not the yaml); (3) dashboard cards + DnD reusing the UI-WORK-QUEUE-DND components. Deferred for capacity (73% weekly at 13:16Z). Done when: the panel shows the queue live, a drag changes the next dispatcher pass's order (observed in dispatch_queue --json), cards show question/rule/power/status. 14:13Z also in scope for the post-reset backend lane (from UI-WORK-QUEUE-DND, dashboard #277): an ordered queued-work route (display_key order, cap >= all open queued rows; 416 at 14:12Z) so the whole Queued list is draggable, and a notes-history field on work items for the card. 15:03Z also take over draft PR #26310 (display-key dedupe: one checklist_store.order_key for dispatch queue + Overview reorder, behaviour unchanged; author lane WORK-REORDER-ROUTE is archived). It is RESTART (src/runtime/checklist_store.py is in the trader closure) and guards fail on head 568c9d65: api-tier-policy, diagnostic-provenance, pr-landing (state=undeclared). Deferred: no behaviour gain, costs a trader restart; fold into the post-reset backend batch.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:02:00Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "RESEARCH-GRADE-LAND-HANG",
+  "title": "Research grade job: 'Land the dispositions on main' step hung 82 min then failed (run 43689172680), and the loss detector's check C cannot see trainer-store landings, so it re-flags every grade run",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx), after the reset unless it repeats",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research pipeline reliability (operator top priority: keep the queue running while Claude is offline)",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Found by RESEARCH-OPS-20261115-2247 (report 23:11Z, record comms/research/ops/20261115T2320Z.json). (1) Grade run 43689172680: step 'Land the dispositions on main' hung 82 min then failed; its research-store-bundle was dispositioned safe to lose (trainer-store ship job succeeded; grades re-derived by later runs; docs/research/loss-disposition-research-store-bundle-43689172680.md). Find why the landing step hangs (push contention? lock? missing timeout) and add a timeout + retry so a hung land never silently drops a bundle. (2) research loss detector check C_expiring_unlanded_artifacts reads only repo landings, so bundles shipped to the trainer store re-flag on every grade run: teach it the trainer-store landing (or the dispositions ledger RESEARCH-LOSS-DISPOSITIONS.json) so a dispositioned bundle stops alerting. Done when a grade run lands within its timeout and the detector reports C clean for a trainer-store-landed bundle. Escalate to now if the hang repeats.",
+  "phase": null,
+  "updated_at": "2026-11-15T23:12:14Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

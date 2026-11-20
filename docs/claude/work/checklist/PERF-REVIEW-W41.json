@@ -1,31 +1,31 @@
 {
   "id": "PERF-REVIEW-W41",
   "title": "/performance-review W41 (2026-10-10): grade trading + strategy performance since the 2026-10-04 review; pipeline dispositions; grade velotrade_1 ticket prop-manual-6fbebc711fa6 when closed",
-  "phase": "review",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": "PERF-REVIEW-W41",
   "model": "claude-sonnet-5-5",
+  "tier": 1,
   "ceiling_usd": 12,
   "spend_usd": 3,
-  "tier": 1,
   "prs": [
     17442
   ],
   "blocked_on": [],
+  "_seq": 376,
   "note": "Dispatched 19:05Z by the manager: claude-sonnet-5-5, ceiling $12, bounded to grading + pipeline dispositions, no build work. Prior review comms/reviews/performance-review-20261004-103845.json.  | [2026-10-10T19:40Z lane session_01LZL3YVtBKGpvYKwqApZd8b] Review done: comms/reviews/performance-review-20261010-191000.json. landed_unproven: closes when the PR merges AND prop-manual-6fbebc711fa6 (velotrade ETH long, OPEN) closes and is graded. Spend ~$3 is an ESTIMATE (no meter in-session). Gate not met: 62 of 70 open performance/research pipeline rows not walked; 26 unread research units not dispositioned. Filed PI-20261010-WQAPZD8B-0001..0004. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. Ticket prop-manual-6fbebc711fa6 HAS closed (fill 97) but is not gradable: exit_price and pnl null (PI-20261011-MJ5KSFIO-0001). Next observable: after that item clears or the next velotrade_1 close; due 2026-10-17. | [BACKLOG-DRAIN 2026-11-01] PENDING: Ticket prop-manual-6fbebc711fa6 is not in GET /api/bot/prop/fills (no match in the returned page), so its close/grade could not be shown. PR 17442 not checked.",
-  "updated_at": "2026-11-01T11:45:56Z",
-  "updated_by": "BACKLOG-DRAIN-20261101",
   "observation": {
-    "what": "PR 17442 merged AND velotrade ticket prop-manual-6fbebc711fa6 (ETH long, OPEN) has closed and is graded",
-    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/fills | python3 -c \"import json,sys; [print(x[\\\"ticket_id\\\"],x[\\\"status\\\"],x[\\\"exit_price\\\"],x[\\\"pnl\\\"]) for x in json.load(sys.stdin)[\\\"fills\\\"] if x[\\\"ticket_id\\\"]==\\\"prop-manual-6fbebc711fa6\\\"]\"",
     "due_by": "2026-11-08",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/fills | python3 -c \"import json,sys; [print(x[\\\"ticket_id\\\"],x[\\\"status\\\"],x[\\\"exit_price\\\"],x[\\\"pnl\\\"]) for x in json.load(sys.stdin)[\\\"fills\\\"] if x[\\\"ticket_id\\\"]==\\\"prop-manual-6fbebc711fa6\\\"]\"",
     "redated": {
-      "on": "2026-11-01",
-      "from": "2026-10-31",
       "by": "BACKLOG-DRAIN-20261101",
+      "from": "2026-10-31",
+      "on": "2026-11-01",
       "reason": "Ticket prop-manual-6fbebc711fa6 is not in GET /api/bot/prop/fills (no match in the returned page), so its close/grade could not be shown. PR 17442 not checked."
-    }
+    },
+    "what": "PR 17442 merged AND velotrade ticket prop-manual-6fbebc711fa6 (ETH long, OPEN) has closed and is graded"
   },
-  "_seq": 376
+  "phase": "review",
+  "updated_at": "2026-11-01T11:45:56Z",
+  "updated_by": "BACKLOG-DRAIN-20261101"
 }

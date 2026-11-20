@@ -1,22 +1,24 @@
 {
   "id": "ML-VOL-LABEL-LIVE-VERIFY",
   "title": "Run ml_vol_label_replay verify for the BTC advisory vol head (fc-pcv-v2) against live VM audit rows: B3's replayed vol labels are NOT verified vs the live gate; also note ETH labels end 2026-07-18 (v901 frozen) and both ETH heads label ~78% of bars volatile",
-  "phase": null,
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)",
+  "lane": "session_01AFoLuMFLP9yi6gZzUfKM1F",
   "model": "sonnet",
-  "ceiling_usd": 4,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Basis: 78% = share of labelled bars marked volatile by each ETH head over its label window ending 2026-07-18 (per B3 report); denominator not restated here, to be measured by this row.",
-  "priority_rank": 5,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "_seq": 799
+  "priority_rank": 126,
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "_seq": 799,
+  "note": "Basis: 78% = share of labelled bars marked volatile by each ETH head over its label window ending 2026-07-18 (per B3 report); denominator not restated here, to be measured by this row. [2026-11-17 10:30Z ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)] Took the row (AM-ML archived). MEASURED via /api/diag/audit_query event=regime_ml_vol_shadow, all rows 06-27..11-17: BTCUSDT 2,619 rows (2,214 from btc-regime-15m-lgbm-fc-pcv-v2, 166 volatile); SOLUSDT 1,737 (1,541 from sol fc-pcv-v2, 854 volatile); MES 24 (23 from mes v2, last 10-06); ETHUSDT 2,610, ALL ml_source unavailable / unknown: no ETH head has ever served a live label, so the ETH part of 0f87-01 cannot be verified (needs a serving head). Built scripts/research/vol_label_live_verify.py + unit RQ-20261117-aadc-01 (trainer; per-head replay vs live rows of the same model_id, alignments asof/prev_bar, agreement>=0.90 AND kappa>=0.60 AND median|dp|<=0.10 at >=100 bars; rule registered before run). Audit snapshot committed under comms/live_parity/vol_label_audit_20261117/. PR #26641 (self-land). Closes when aadc-01 lands and is graded. [2026-11-17 11:20Z ML-PRIMARY-5] CORRECTION to my 10:30Z note: the all-unknown ETHUSDT regime_ml_vol_shadow rows are BY DESIGN, not a data-path defect. ml_vol_regime_for_symbol resolves ADVISORY-stage regime heads only (src/runtime/regime/ml_vol_verdict.py _advisory_entry_for_symbol), and eth-regime-1h-lgbm-xasset-v1 is SHADOW (comms/ml_consolidation/2026-11-11.json bucket SHADOW). The ETH head DOES score live: runtime_logs/shadow_predictions.jsonl (89 MB, 92,390 lines) carries eth-regime-1h-lgbm-xasset-v1 rows (11 in the last 1,000 lines, MEASURED 11:15Z via log_file). So the ETH part of 0f87-01 is verifiable against shadow_predictions feature_row (predict_proba on the logged row; NOT the 'score' field, which is max(proba) for a multiclass head). Residual, minor: regime_ml_vol_shadow writes ml_source 'unavailable' both for 'no advisory head for this symbol' and for a scoring error (a collapsed state); flagged to the manager for AM-OPS-2. [2026-11-17 10:54Z ML-PRIMARY-5, CLOCK CORRECTION] The HH:MMZ stamps on my earlier notes today (10:30, 10:40, 11:00, 11:05, 11:20, 11:55, 12:25Z) were hand-typed estimates and ran AHEAD of the clock; date -u read 10:53:30Z at the time of this note. The content is unchanged; read those notes as written between ~10:00Z and 10:53Z. The D10 evidence dir was renamed to comms/research/RQ-20261117-aadc-05/local-20261117T1045Z. 2026-11-18T12:35Z ML-PRIMARY-5: RQ-20261117-aadc-01 ran (run 44263063258) -> FAIL (BTC kappa 0.24; SOL kappa 0.51 / agreement 0.77; MES 23 bars indeterminate; ETH no live labels). Replayed fc-pcv-v2 labels are NOT the live labels. Grading HELD for the manager; bcd2-01 / b819-01 carry population_note 'replay population, not live'. Next: serve-path diff (pipeline item filed, a build after the reset).",
+  "phase": null,
+  "updated_at": "2026-11-18T12:35:31Z",
+  "updated_by": "session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "week_lane": "throttle"
 }

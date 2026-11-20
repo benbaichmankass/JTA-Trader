@@ -1,0 +1,22 @@
+{
+  "id": "LTR-GRADE-ALWAYS-ON",
+  "title": "LTR grading + counterfactual replay run automatically after closes, plus a red-flag freshness alarm (operator 2026-11-16)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuJMXsaDMyYp7nrUKtr",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-16 ~08:30Z OPERATOR DIRECTIVE (binding, paraphrased from voice): grading and the counterfactual replay of live-review calls are part of the performance review; they must run as soon as trades close and can be judged, and at minimum once a week in the performance review; a gap is a red flag the manager must see and raise with the operator: 'we can't be missing out on grading our most important tool'. MEASURED at 08:20Z: comms/live_review/outcomes.jsonl prices only 5 applied closes, the newest from 2026-11-05; every applied close since is ungraded. Lane LTR-CLOSE-AUDIT-20261116 does the root cause, the automated grader workflow, an ltr_grade expected-signal alarm in the daily report, and a mandatory performance-review CHECK. Closing observation: a fresh applied close is graded within 24 h with no manual step, and the daily report shows ltr_grade ok. 2026-11-16 09:05Z manager: data gap seen on the operator-approved pkg-fe0c close. bybit_portfolio trade 7550 (22.0 ETH short, exit 1809.27, closed 08:48:29Z) has realizedPnl null and journalTrust 'no_record', so mirror P&L for a directed close isn't journaled. It may affect mirror grading; check whether directed-action closes on the mirror skip the pnl write, or whether the existing backfill-closed-null-pnl action covers it. 2026-11-16 10:28Z: #26480 merged 8d921f4d (grader fixes: max_hold_min hold replay, \u00b1900s close attribution, paged package read; 35 outcomes rows; ltr_grade probe in attention_watch; performance-review C6b). Restart decide: SKIP. landed_unproven until (1) the ltr_grade probe appears in the next daily attention/brief output with a read-state, and (2) the next applied LTR close is priced in outcomes.jsonl within a day. Lane LTR-CLOSE-AUDIT archived. 2026-11-16 12:36Z AM-OPS-2: the ltr_grade probe's 1-of-13 ungraded applied close (pkg-bba44210885c4180, closed 2026-11-05 04:07:12Z) is a bybit_1 PAPER package. Its review rows (7 on origin/live-review/rows: LR-20261031T0004Z, 0046Z, 0411Z, 0804Z, 20261101T1432Z, 20261103T0021Z, 20261104T1508Z + 1808Z) are all hold / no_recommendation with route none; none recommended or applied a close, and outcomes.jsonl carries only no_path_change hold/no_recommendation rows for it (exit_reason live_review_close, net_r -0.632, pnl_provenance estimated). So it is NOT a grader miss and not a prop could_not_look: the probe counts exit_reason == live_review_close from outcomes.jsonl, and this package's close reason is mislabelled (the 11-04 18:08Z review had the stop 0.15R away, so a stop-out is likely; UNVERIFIED which path closed it). Probe fix candidate: count a package only when a review row with an applied close exists (disposition.applied_at / account_reads), else report it as a close-reason label question. Same label family as LTR-PROP-CLOSE-FALSE-APPLIED (reason attribution). 2026-11-16 12:46Z PROBE FIX FILED (manager, low priority): probe_ltr_grade (scripts/ops/attention_watch.py) should count a package as an APPLIED live-review close only when a review row for it recommended+applied a close (a close-action review row with disposition.applied_at / accounts_applied), not from exit_reason == live_review_close in outcomes.jsonl alone; a package whose close reason says live_review_close with no such row is reported as a close-reason label question (pkg-bba44210885c4180 is the one case, 11-05 04:07Z, bybit_1 paper). Re-entry test: probe over outcomes.jsonl + the review rows reports ok for pkg-bba4 and still BREACHED for an applied close with no graded close row.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:05:37Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

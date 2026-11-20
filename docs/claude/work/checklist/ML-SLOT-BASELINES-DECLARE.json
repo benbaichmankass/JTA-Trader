@@ -1,0 +1,21 @@
+{
+  "id": "ML-SLOT-BASELINES-DECLARE",
+  "title": "[MODEL] Declare a slot baseline per decision slot (D3, D4, D7, D8 have none; D2 Mutts are majority-class floors) and a demotion signal per served artifact",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": 2.11,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "#25456 MERGED 2026-11-12 20:31Z (merged, not observed). Closes when: the next ml-review run prints slot+baseline per C3 line and --slot-map exits 0 on main. Note: pytest-run/pytest-collect/watch showed cancelled (guards passed); my new test passed locally only. [2026-11-17 11:00Z ML-PRIMARY-5] Observe half 1 MEASURED: python3 scripts/ops/ml_order_changers.py --slot-map exits 0 on main (D2/D3/D4/D7/D8 declared, undeclared []). Half 2 (an ml-review run printing slot+baseline per C3 line) NOT verified: newest comms/ml-review/*.json is ml-review-2026-06-30.json, so no weekly output to read here. 0f87-02 (blocked on this row) really waits on >=30 closed reduced TD trades: MEASURED join today (overlay_cusum_join over overlay_shadow 10-29..11-15 x journal trades 09-11..11-17) = 24 TD trades joined, 6 at multiplier 0.5. D4 faster lever authored instead: RQ-20261117-aadc-03 (target-variant challengers tail1r/evweight, paired vs Beagle-1 on CPCV, >=20% disagreement), PR #26644. [2026-11-17 10:54Z ML-PRIMARY-5, CLOCK CORRECTION] The HH:MMZ stamps on my earlier notes today (10:30, 10:40, 11:00, 11:05, 11:20, 11:55, 12:25Z) were hand-typed estimates and ran AHEAD of the clock; date -u read 10:53:30Z at the time of this note. The content is unchanged; read those notes as written between ~10:00Z and 10:53Z. The D10 evidence dir was renamed to comms/research/RQ-20261117-aadc-05/local-20261117T1045Z.",
+  "phase": null,
+  "updated_at": "2026-11-17T10:54:00Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

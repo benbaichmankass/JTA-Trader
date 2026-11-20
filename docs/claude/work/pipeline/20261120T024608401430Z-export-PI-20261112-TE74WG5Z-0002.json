@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "theme_share_min_ratio >= 0.5 in comms/research/health/<date>.json, or a research-ops pass records a reasoned re-weight of research/THEMES.yaml",
+    "kind": "event"
+  },
+  "id": "PI-20261112-TE74WG5Z-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z)",
+    "rerun": "python3 scripts/research/research_slo.py --no-gh --json | python3 -c \"import json,sys; t=json.load(sys.stdin)['table']; print([r['evidence'].get('per_theme') for r in t if r['slo']=='theme_share_min_ratio'])\""
+  },
+  "routed_to": "AUD-20261019-RESEARCH-SLO-RED",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "theme_share_min_ratio 0.14 (7 d to 2026-11-12, MEASURED over 318 themed fires): measurement correct, breach real. (1) timeframes (weight 1/22) has 0 queued units -> can never fire; macro 8 queued, 3 fires (ratio 0.21); regime 0.25; new_strategy_prop 0.39. (2) infra took 99 fires = 31% vs 9% weight (ratio 3.42) while dispatch was throttled to ~1 unit/cycle by the Actions backlog: daily infra self-tests crowd out research when capacity is scarce. Route: research-ops step E authors valuable units in timeframes/macro/regime; research-ops decides whether daily infra self-tests should yield under throttle (dispatcher ranking) -- no new gate.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: theme_share is one of the three red SLOs that row owns EVIDENCE: Row AUD-20261019-RESEARCH-SLO-RED title 'Research SLOs red ... (grade latency, theme share, research-ops not run)'; item MEASURED ratio 0.14 over 318 themed fires"
+}

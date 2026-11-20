@@ -1,0 +1,26 @@
+{
+  "id": "TM-BENCH-EXIT-ARM",
+  "title": "TM-BENCH exit-head learner arm + one registered unit per live leg",
+  "state": "dropped",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": "sonnet",
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE",
+    "L-ATM"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 9,
+  "ceiling_usd": 10.0,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": [],
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-14",
+  "note": "[2026-11-12 09:30Z AM-ML] Held one step: sequenced after lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG) reports whether Q-TM1b needs this arm, to avoid two lanes editing tm_bench at once. Dispatch by the 11-13 slot. clears_when: lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG) posts the Q-TM1b verdict on row ML-AM-NEXT-LIVE, or 2026-11-13T00:00Z, whichever first. owner: AM-ML. [2026-11-12 11:35Z AM-ML] Lane ML-AM-NEXT-LIVE says Q-TM1b does not need this arm. Offered to the manager as a kill candidate with data (6 negative in-trade/exit ML reads: d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, 78fc-04, 0bc8-02). AM-ML recommendation: hold unstarted until RQ-20261112-3144-01 reads. clears_when: row ML-AM-NEXT-LIVE carries the 3144-01 verdict, or a manager decision on this row. owner: AM-ML. [2026-11-12 15:10Z AM-ML] clears_when MET: unit_result RQ-20261112-3144-01 = FAIL (merged #25250). Now 7 negative in-trade/exit ML reads on this state family: d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, 78fc-04, 3144-01, 0be0-01, plus 0bc8-02 on the exit head. The audit (docs/research/ml-deep-audit-2026-11-12.md rank 6) says no further policy units over the R1 state. AM-ML proposes a DROP with this reason and data. The decision goes to the manager (kill candidate, operator call). Held until then. decision: manager 2026-11-12 15:28Z: TM-BENCH-EXIT-ARM drop APPROVED. Dropped by manager decision 2026-11-12 15:28Z on AM-ML's proposal. Reason + data: 7 negative reads on the in-trade state family (d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, 78fc-04 0/6 folds, 3144-01 0/6 folds, 0be0-01 held-out -0.0070 R/trade), plus 0bc8-02 exit-head FAIL; the Donchian exit heads replay ~-0.106 R/trade vs hold. A further learner arm on this state is not the lever (docs/research/ml-deep-audit-2026-11-12.md rank 6). Next in-trade step: a feature-value test on the action-value labels, scheduled via ML-DEV-PLAN from the ML-AM-NEXT-LIVE lever table.",
+  "terminal_reason": "Dropped by manager decision 2026-11-12 15:28Z on AM-ML's proposal. Reason + data: 7 negative reads on the in-trade state family (d6e7-06, RQ-20260927-002, a7e1-01, 7294-02, 78fc-04 0/6 folds, 3144-01 0/6 folds, 0be0-01 held-out -0.0070 R/trade), plus 0bc8-02 exit-head FAIL; the Donchian exit heads replay ~-0.106 R/trade vs hold. A further learner arm on this state is not the lever (docs/research/ml-deep-audit-2026-11-12.md rank 6). Next in-trade step: a feature-value test on the action-value labels, scheduled via ML-DEV-PLAN from the ML-AM-NEXT-LIVE lever table.",
+  "updated_at": "2026-11-12T15:34:15Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "week_lane": "surge"
+}

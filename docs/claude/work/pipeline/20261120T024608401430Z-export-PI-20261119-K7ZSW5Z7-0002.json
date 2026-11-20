@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "a fix option is chosen and shipped (builder rebuilt with stride 1 + heads retrained, or the live path serves stride anchors), and a re-run of the serve-path diff on fresh bars shows forecast_fc no longer the flip driver (agreement >= 0.98, kappa >= 0.8), then aadc-01 is re-run; or killed with a reason",
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "PI-20261119-K7ZSW5Z7-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-PRIMARY-9 grading RQ-20261118-04a5-03 (PASS, named block forecast_fc), 2026-11-19 04:45Z",
+    "rerun": "python3 -c \"import json;d=json.load(open(\\\"comms/research/RQ-20261118-04a5-03/44451377227/verdict.json\\\"));print(d[\\\"note\\\"])\""
+  },
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml/D2] fc_* SERVE-PATH PARITY BREAK, named by RQ-20261118-04a5-03 PASS (run 44451377227): on 983 BTC / 895 SOL matched 15m bars (2026-11-09..18) the fc-pcv-v2 heads agree 0.955 / 0.872 (kappa 0.76 / 0.70) and the forecast_fc block ALONE reproduces 100% of the 44 / 115 label flips; ~84% of rows differ in fc_ret_med/range/skew/q10/q90. CAUSE (MEASURED): both sides use forecast_features DEFAULT_STRIDE 4, but the TRAINING side-stream (build_trainer_datasets.sh build_forecast_sidestream -> scripts.ml.build_forecasts) computes a forecast only at stride anchors and market_features _align_asof CARRIES it forward (~75% of training rows stale by construction), while the LIVE publisher (publish_live_forecasts: _strided_indices always includes the last bar; run every bar) serves a FRESH forecast per bar (committed live snapshot comms/live_parity/vol_serve_rows_20261118: only 11.6% / 12.5% of consecutive rows repeat). The heads were trained on mostly-stale fc features and score fresh ones live. FIX OPTIONS (one to choose): (A) rebuild the v002 forecast side-stream with --stride 1 and retrain the fc-pcv-v2 heads (4x Chronos-tiny CPU on the trainer; the honest-information fix); (B) make the live path serve the most recent stride-anchor forecast (cheap, matches training, staler features). Then re-run RQ-20261117-aadc-01 (ml-week-plan #8, D2 live labels) per 04a5-03's pass_action."
+}

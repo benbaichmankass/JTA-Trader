@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "RQ-20261119-b9d0-02 (forward read of v1r20261115 on the fresh windows A [2026-10-24,11-01) + B [2026-11-15,run-2d], bybit_2 symbols) is graded under its registered rule with n >= 60, or INDETERMINATE re-dated, or killed with a reason",
+    "due_date": "2026-12-03",
+    "kind": "date"
+  },
+  "id": "PI-20261118-JX6BUNMV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager request 2026-11-18T23:38Z after #26970 merge; lane ML-PRIMARY-8",
+    "rerun": "python3 -c \"import json;print(json.load(open(\\\"ml/served/ml_decision_entry_v1r20261115/model.json\\\"))[\\\"train_end_exclusive\\\"])\"; python3 scripts/research/ml_entry_samebar_cap.py --help"
+  },
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml/D3] FORWARD READ of the SERVED refit ml-decision-entry-v1r20261115 (real money on bybit_2 since #26288 merged 22:59Z): score its post-train decisions (train_end_exclusive 2026-10-23T19:00Z, from ml/served/ml_decision_entry_v1r20261115/model.json) on the 5 bybit_2 symbols with the fixed c692-01 bracket, holdout-ledger claim first, rule registered before the run (INDETERMINATE if n < 60). Why: f7c1-08 (#26970) read the OLD frozen v1 forward at -0.058 R/decision (n 118, 2026-10-01..11-15); that is not the model now serving. ESTIMATED accrual from f7c1-08's rate (~18 decisions/week): n 60 near 2026-11-16, so due 2026-11-20. Owner authors a research unit (harness: ml_entry_samebar_cap.py forward, extended to load the served pointer) when due."
+}

@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "PR #27175 is merged AND every scripts/backtest_*.py main() that assigns module-level globals either restores them in finally or is shown to touch none",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), 2026-11-19; manager asked for this item",
+    "rerun": "grep -n '^    global ' scripts/backtest_*.py   # then, per file, check main() restores what it assigns; python3 -m pytest tests/test_ict_scalp_main_restores_cost_globals.py"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "routed_to": "QUEUE-FILL-STANDING-W47b",
+  "state": "done",
+  "terminal_reason": "Done 2026-11-19. main() global-leak (assigned module cost globals never restored, #27149: net_total_r -14.7793 -> -17.1766 on identical trades) fixed at source for backtest_ict_scalp (#27175, merged 940914b1) and for the 11 sibling harness entry points (#27179, merged 534352d) via src/backtest/module_globals.restores_globals; sweep population = every scripts/backtest_*.py + run_backtest_vwap.py (15 files; turtle_soup, vol_target, xsec_momentum assign none). Tests lock it (14 + 2, fail on the undecorated code). OBSERVED: #27179's full pytest-run was SUCCESS on head 22693927, a tree containing #27175 and main as of 09:5xZ (30k+ tests). LIMIT, stated: main has no pytest-run on push, so there is no post-merge main run to cite; research tooling, nothing deployed.",
+  "what": "TEST-ISOLATION HAZARD: scripts/backtest_ict_scalp.py main() assigns module-level cost globals (FEE/SLIPPAGE/FUNDING/FUNDING_WINDOW_HOURS/CONTRACT_COST) and never restored them, so an in-process test that calls main() leaked venue-aware slippage/funding into later in-process runs (#27149: net_total_r -14.7793 -> -17.1766, identical trades). Fixed for backtest_ict_scalp in PR #27175 (decorator + test that fails on the old code). OPEN: the same assign-globals-in-main pattern may exist in the sibling harnesses (backtest_trend, backtest_squeeze, backtest_fade, ...); check each and apply the same restore."
+}

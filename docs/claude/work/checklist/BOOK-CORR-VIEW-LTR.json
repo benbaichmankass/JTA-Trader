@@ -1,22 +1,22 @@
 {
   "id": "BOOK-CORR-VIEW-LTR",
   "title": "Live-review packet has no cross-package correlation view: four open bybit_1 shorts (BTC, ETH, SOL, ADA) read as four independent decisions, one crypto-beta bet",
-  "phase": "build",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Filed 2026-11-01 by LTR-PACKET-FIXES (E). MEASURED 2026-11-01 ~14:32Z: bybit_1 held four open shorts in BTCUSDT/ETHUSDT/SOLUSDT/ADAUSDT (packets pkg-4e74f4bdc6d44735, pkg-dc7c0c141d2c42c9, pkg-f76bb92289d143e5, pkg-bba44210885c4180 on live-review/rows a72036811). What exists (searched src/ scripts/ for 'correlat'): src/runtime/portfolio_conflicts.py grades correlated OPPOSITION only (opposite sides), not same-direction concentration; src/runtime/allocator_corr.py computes correlation-aware exposure (pure, observe-only) but only at allocator decision time and nothing in the packet calls it; the packet's context.correlated_open_packages is a same-direction id list and context_v3.book a symbol/direction/open_r list, neither carries a measured correlation or a combined exposure. Build: a packet block (or book-level view) that feeds the held book through allocator_corr (measured return correlation, combined same-direction risk in R and in $ per account), unmeasured pairs named, never assumed. Re-entry test: a packet for any of the four shorts names the other three with a measured correlation and the combined open risk. [2026-11-03 06:08Z manager] Recurring in live reviews (LR-0021Z x2, LR-0304Z, LR-0602Z): the open book is one beta bet: 7 crypto shorts (BTC/ETH/SOL/XRP/2x ADA/claude_desk ETH) + 3 metals shorts (MGC/IAUM/MHG); REAL MONEY on bybit_2 = 3 ml_entry crypto shorts (ADA, SOL, XRP). Every reviewer flags it and can only say 'for the account risk layer', which has no correlated-exposure input. Scope this row to also produce a research question (perf-followup Track 4 / portfolio): does same-direction crypto concentration change net P&L or drawdown clustering in our own history, net of cost, and would a correlated-exposure cap have helped? Any cap is a Tier-3 risk change and needs that evidence first.",
-  "updated_at": "2026-11-03T06:08:49Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "roadmap": [
     "L-ATM"
   ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
   "due_by": "2026-11-10",
-  "_seq": 879
+  "_seq": 879,
+  "note": "Filed 2026-11-01 by LTR-PACKET-FIXES (E). MEASURED 2026-11-01 ~14:32Z: bybit_1 held four open shorts in BTCUSDT/ETHUSDT/SOLUSDT/ADAUSDT (packets pkg-4e74f4bdc6d44735, pkg-dc7c0c141d2c42c9, pkg-f76bb92289d143e5, pkg-bba44210885c4180 on live-review/rows a72036811). What exists (searched src/ scripts/ for 'correlat'): src/runtime/portfolio_conflicts.py grades correlated OPPOSITION only (opposite sides), not same-direction concentration; src/runtime/allocator_corr.py computes correlation-aware exposure (pure, observe-only) but only at allocator decision time and nothing in the packet calls it; the packet's context.correlated_open_packages is a same-direction id list and context_v3.book a symbol/direction/open_r list, neither carries a measured correlation or a combined exposure. Build: a packet block (or book-level view) that feeds the held book through allocator_corr (measured return correlation, combined same-direction risk in R and in $ per account), unmeasured pairs named, never assumed. Re-entry test: a packet for any of the four shorts names the other three with a measured correlation and the combined open risk. [2026-11-03 06:08Z manager] Recurring in live reviews (LR-0021Z x2, LR-0304Z, LR-0602Z): the open book is one beta bet: 7 crypto shorts (BTC/ETH/SOL/XRP/2x ADA/claude_desk ETH) + 3 metals shorts (MGC/IAUM/MHG); REAL MONEY on bybit_2 = 3 ml_entry crypto shorts (ADA, SOL, XRP). Every reviewer flags it and can only say 'for the account risk layer', which has no correlated-exposure input. Scope this row to also produce a research question (perf-followup Track 4 / portfolio): does same-direction crypto concentration change net P&L or drawdown clustering in our own history, net of cost, and would a correlated-exposure cap have helped? Any cap is a Tier-3 risk change and needs that evidence first. [2026-11-18 PRACTICE-REFRESH-20261118] Operator Ideas-inbox: 12+ same-direction shorts carried into tonight's 19:00Z 'fomc' entry (which is the FOMC MINUTES, see CALENDAR-FOMC-RELEASE-SPLIT). Add an event clock to this view: the combined same-direction risk (R and $ per account, measured correlation) at the next high-impact release. The research question this row asked for is now RQ-20261118-a5b3-01 (blocked on EVENT-SPAN-HISTORY). 2026-11-19 AM-OPS-7, the same failure class on equities (alpaca_paper, paper, no real money). MEASURED, venue fills (/api/bot/pnl/exchange/fills, 337 fills since 08-24, FIFO): realized 11-13..11-19 = -40,532.83 (manager's broker figure -39,462.65). Clean ~-1R stops (journal R on signal-time risk, n=7 large losers), not a defect in any one leg. TLT tlt_pullback_1d -14,293 (11-13); USO uso_trend_1h -13,087 (11-16, -1.26R, computed_estimate basis); SPY spy_pullback_1h -11,818 (11-16). Then 11-17: ml_entry_eq opened FOUR simultaneous equity longs on 11-16 (TQQQ -13,706, QLD -6,795, GDX -4,657, USO -1,490; each ~13-14k signal-time risk), ~41k correlated risk on one Nasdaq-beta day; that day was -26,603 realized. Offsets: iaum_pullback_1d +17,297 and gdx_pullback_1d +12,610. The QQQ/SLV stacking is ~18% of the window: QQQ -8,317 realized (qqq_pullback_1h), with the stacked -1981 short now +2,631 unrealized; SLV +1,036. The SLV stacking losses (-26k) fall 10-29..11-12, before this window. Per-package correlation is the gap this row names: the book carried 5-6 same-direction equity-beta legs at full per-trade risk with no portfolio view.",
+  "phase": "build",
+  "updated_at": "2026-11-19T10:10:27Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
 }

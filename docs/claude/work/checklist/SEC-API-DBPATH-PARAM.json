@@ -1,0 +1,24 @@
+{
+  "id": "SEC-API-DBPATH-PARAM",
+  "title": "Security: unauthenticated db_path query parameter opens any SQLite file (positions/net, attribution)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25005
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "CODE READ 2026-11-11: src/web/api/routers/attribution.py:60 and :247 accept db_path from the query string (include_in_schema=False) and pass it to sqlite3.connect without mode=ro (attribution.py:75-77, src/runtime/positions.py:326-331). No auth on either route while the site gate is off. Effect: a file-existence probe and a query against any SQLite file the web-api user can open. UNVERIFIED live (not exercised, on purpose). Fix: delete the parameter; tests inject the path another way. Tier 2 (web-api). Same sweep: training_center.py:50 _SAFE_ID accepts '..' (untested traversal on /api/bot/ml/runs).",
+  "parent": "SECURITY-HARDENING-AUDIT"
+}

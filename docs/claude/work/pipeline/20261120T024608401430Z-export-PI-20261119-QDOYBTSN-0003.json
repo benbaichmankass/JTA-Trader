@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261119-QDOYBTSN-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "session_01AFoLuHwqqyiix4qDoybTSN",
+    "kind": "audit",
+    "ref": "manager 2026-11-19 15:25Z; packet live-review/rows comms/live_review/packets/LR-20261119T1437Z-pkg-c2d9a660f6a14fce.json; PR #27365",
+    "rerun": "git fetch origin live-review/rows && for f in $(git log origin/live-review/rows --since=24.hours --name-only --format= | grep packets/ | sort -u); do git show origin/live-review/rows:$f | grep -o \"No module named .yfinance.\\|bars from Alpaca\" | head -1; done | sort | uniq -c   # non-zero = the live VM still lacks yfinance"
+  },
+  "owner": "AM-OPS-8",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "Live-review pricer on the LIVE VM has no yfinance (requirements.txt omits it; only requirements-backtest/test carry yfinance>=1.7.0), so scripts/research/live_review_outcomes.py prices every equity/ETF leg from Alpaca SIP bars instead of the corpus's Yahoo source (stderr: 'No module named yfinance' / 'WARNING IEF 1d: bars from Alpaca (sip), not the corpus Yahoo source'). Options still price (after #27365's stdout fix) but on a different source than the corpus they are compared to. Fix options: (a) add yfinance>=1.7.0 to the live VM's requirements (Tier 2: live-VM dependency, installs on deploy) or (b) accept Alpaca bars and record the source mismatch per packet. Decide, then act."
+}

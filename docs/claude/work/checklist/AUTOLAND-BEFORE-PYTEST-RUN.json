@@ -1,0 +1,23 @@
+{
+  "id": "AUTOLAND-BEFORE-PYTEST-RUN",
+  "title": "commit-to-main automation PRs merge on guards before pytest-run finishes: #27507 landed red and broke main",
+  "state": "dropped",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "landing-machinery correctness defect, not a roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 22:53Z by AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN). EVIDENCE (MEASURED, GitHub check runs on #27507 head 90caf0fd14): guards success at 22:30:38Z; the PR merged at 22:30:41Z (06dbd3ccce); pytest-run was still running and finished FAILURE at 22:39:08Z (run 44626495937). Main then failed tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable on RQ-20261119-031/032 (no power.sd, power 0.5 outside the grader's table), so every PR's pytest-run went red until the fix (#27519). CAUSE (not yet confirmed in code): .github/actions/commit-to-main verify-merged / auto-merge appears to merge once the REQUIRED checks pass, and pytest-run is either not required for these automation PRs or not awaited; its own notes record pytest-run taking 13-44 min against a 30-80 min wait. This is a GAP, not a new gate: the landing contract already says merge on full green including the full pytest-run (manager safety-check text). FIX SHAPE: before merging, commit-to-main waits for pytest-run's conclusion on the PR head (success, or the PR stays open and the job reports it), or the generators that produce research/queue units run tests/test_research_queue.py's power/route check on their output before opening the PR (cheap: about 3 s). The second closes this exact class at the source; the first covers all automation PRs. Touches landing machinery, so HELD. DONE WHEN: an automation PR with a failing pytest-run does not merge (a replayed or fixture case shows it), and queue_replenish refuses a unit that grade_power marks not runnable.  [2026-11-19 22:55Z AM-OPS-8] CLOSED AS DUPLICATE of AUTOMERGE-OVER-RED-PYTEST (owner AM-OPS-9, re-titled to producer validation, starting with queue_replenish). CORRECTION from the manager: waiting on pytest-run in commit-to-main is NOT an existing contract. The operator made pytest-run report-only on 2026-11-12 (PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY) and the required checks are [guards] only, so that option would be a new gate and is off the table. The producer-side check is the fix. The #27507 timing evidence above stays valid for that row.",
+  "phase": null,
+  "terminal_reason": "duplicate of AUTOMERGE-OVER-RED-PYTEST (AM-OPS-9, producer validation)",
+  "updated_at": "2026-11-19T22:52:15Z",
+  "updated_by": "session_01AFoLuHwqqyiix4qDoybTSN"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "CHECKLIST-EXPORT-STORE-DRIFT",
+  "title": "Checklist export and work store disagree on row state: 106 of 217 compared rows differ, and each side calls the other canonical",
+  "state": "dropped",
+  "owner": "AM-OPS-7",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 by AM-OPS-7 (manager ask). MEASURED: 'work.py list --limit 1000' returned 1000 of 4883 store items (readState read, canonical: False, note 'S1: the checklist + pipeline files stay canonical until S2 parity and the S4 reader flip'); of the 1398 export rows in docs/claude/work/checklist/*.json, 217 were on that page and 106 differ in state: 24 queued->done, 19 queued->dropped, 13 landed_unproven->done, 11 queued->landed_unproven, 10 landed_unproven->dropped, plus 29 others (export->store). Example that misled a reader today: BOOK-CORR-VIEW-LTR queued in the export, done in the store. Contradiction: the store says the files are canonical, but 'checklist.py note/add' writes ONLY to the store and prints 'frozen checklist ... is the export and is NOT changed by this write', so every write since the freeze widens the drift. The remaining 1181 export rows were not compared (store page cap 1000; page through with --since or the API). Done when: one surface is canonical by record, the other is regenerated from it (or deleted), and a guard fails CI when they differ; until then a reader cannot tell a row's state. Folded into AUD-20261118-STORE-WRITES-UNGUARDED (same root cause: no export since the S4 freeze); work continues there.",
+  "phase": null,
+  "updated_at": "2026-11-19T10:18:19Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

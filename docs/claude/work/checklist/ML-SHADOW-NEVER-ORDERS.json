@@ -1,21 +1,25 @@
 {
   "id": "ML-SHADOW-NEVER-ORDERS",
   "title": "[MODEL] I7: prove shadow-stage models never change an order (conviction stamp reads shadow models and resizes in CONVICTION_SIZING_MODE=apply) before any candidate->shadow move this week",
-  "phase": "W44",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
-  "model": "opus",
-  "ceiling_usd": 8,
-  "spend_usd": null,
+  "state": "done",
+  "owner": "FRONTIER",
+  "lane": "session_01AFoLuMJ8JwM8du98vMoR77",
+  "model": "claude-opus-5-5",
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 6 I7; audit section 1b (conviction stamp reads shadow-stage models). Live mode value from relay #21021. Blocks B5 (P1 to shadow) if apply mode is live on bybit_1.  [2026-10-29 00:20Z] MEASURED via get-env run 40775326133 (process env, process=declared): CONVICTION_SIZING_MODE=annotate (accounts bybit_1). Shadow models change no order today, so this row NO LONGER BLOCKS B5; it stays as a guard test against a later apply flip.",
-  "updated_at": "2026-10-29T00:15:54Z",
-  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
   "roadmap": [
     "M25"
   ],
-  "_seq": 767
+  "ceiling_usd": 14,
+  "spend_usd": null,
+  "prs": [
+    25260
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "_seq": 767,
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 6 I7; audit section 1b (conviction stamp reads shadow-stage models). Live mode value from relay #21021. Blocks B5 (P1 to shadow) if apply mode is live on bybit_1.  [2026-10-29 00:20Z] MEASURED via get-env run 40775326133 (process env, process=declared): CONVICTION_SIZING_MODE=annotate (accounts bybit_1). Shadow models change no order today, so this row NO LONGER BLOCKS B5; it stays as a guard test against a later apply flip. [2026-11-12 10:18Z AM-ML session_01AFoLuJkXEM1EigH9mSfz1F] Dispatched lane session_01AFoLuMJ8JwM8du98vMoR77 (claude-opus-5-5, fresh, $14) ahead of the 11-14 slot (surge, no capacity limit); brief carries the row text verbatim. Reports to AM-ML. [2026-11-12 14:36Z AM-ML] #25260 MERGED (5a0bd82b) as a REPORT-ONLY test, per operator Gates-tab decision CI-TEST-SHADOW-NEVER-ORDERS: MAKE REPORT-ONLY; it is not a required check anywhere. The structural guarantee is row ML-SHADOW-NO-ORDER-HANDLE. This row's test deliverable is done. [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-INFRA-SHADOW-NEVER-ORDERS (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "phase": "W44",
+  "updated_at": "2026-11-14T22:18:14Z",
+  "updated_by": "session_01AFoLuKuu4bMh6SG5oyAC9h",
+  "week_lane": "surge"
 }

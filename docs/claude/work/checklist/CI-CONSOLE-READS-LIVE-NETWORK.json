@@ -1,0 +1,24 @@
+{
+  "id": "CI-CONSOLE-READS-LIVE-NETWORK",
+  "title": "tests/test_console_reads.py::test_replies_stay_small_for_the_pages_calls reads the LIVE work store over the network in CI; stub RemoteWorkStore / FETCH",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "CI test hygiene",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26274
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Found 2026-11-15 on #25314 (head 073b5cd5): pytest-run failed with 1 test out of 29,552, KeyError 'closed_this_week' at tests/test_console_reads.py:47. The same file passes 5/5 on origin/main locally. Cause: since the S4 freeze, src/console_connector/data.py work_rows reads GET /api/bot/work/items through RemoteWorkStore (urllib, timeout 25 s). When that read fails or times out from the runner, the envelope has no closed_this_week. So every PR's pytest-run depends on the trader VM's API being reachable and fast. Fix (Tier 1, test only): monkeypatch data.RemoteWorkStore, or the register loader, with a fixture list in this test (and any sibling test that calls work_rows/workplan live), and assert there is no network call. Done = the test passes with network disabled. The failed job was re-run (run 43698867902).",
+  "phase": null,
+  "updated_at": "2026-11-15T10:54:42Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

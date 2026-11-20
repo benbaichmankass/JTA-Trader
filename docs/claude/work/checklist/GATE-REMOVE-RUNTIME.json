@@ -1,0 +1,32 @@
+{
+  "id": "GATE-REMOVE-RUNTIME",
+  "title": "Implement operator gate decisions 2026-11-12 (order path + prop/AM): remove/report-only per Gates tab",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator gate decisions 2026-11-12, order-path/prop gates",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25323,
+    25345,
+    25352
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-12T15:38:55Z",
+      "lane": "session_01AFoLuK5uJDCmcaKqXQagyz"
+    }
+  ],
+  "note": "Blocked on: CI (queued at 14:06Z) + AM-DEVOPS merge/deploy of #25323 (order path) and #25345 (prop/AM; supersedes closed #25223). #25233 got a comment commit for GATE-LIVE-MAXQTY-COULD-NOT-LOOK (already label-only). OBSERVE after deploy (merged != deployed != observed): signals ledger shows same_bar_reentry_observed / recent_refusal_observed / empty_sizing_repeat_reported / market_closed_report_only events and NO new same_bar_reentry_debounce / recent_refusal_cooldown / empty_sizing_refused skip rows (diag audit_query on signals, 24h); watch the real-money rejection-ping rate (operator_alerts) since refusals now retry every tick. OPEN DECISIONS (left as-is): (a) AM-PHONE-SHEET-DENYLIST-RECHECK REMOVE: built on origin branch gate-remove-phone-denylist, manager to choose ship-now vs at reactivation (AM-TRADING excluded phone files; notes on PHONE-EXECUTOR-ICE); (b) $75 flat cap resize + over-cap refusal in enforce_ticket_cap / VM executor kept as the 2026-09-27 sizing decision vs strict never-narrows; (c) leverage cap still follows breach_guards; (d) missing entry/sl/tp refusal pipeline.py ~1440 unchanged. KEEP comments still owed: AM-PROP-VM-CLOSE-REFUSALS (src/prop/vm_close.py, landed with #25230), POLICY-DEMOTION-KEEP-OPEN-BLOCK-NEW (only in #25251 doc). GATES OUTSIDE THE INVENTORY (untouched, for GATE-REGISTRY): strategy_signal_builders._fetch_session_frame session_bar_not_published skip; breakout_executor._opposite_direction_block_reason (emission-time twin of AM-PROP-CLAIM-TIME-BLOCKS); prop_executor one-bracket-per-symbol refusal ~1495; phone_trail request_* one-slot / test-ticket refusals. 14:40Z: open decision (a) is resolved. The manager chose ship-now, so AM-PHONE-SHEET-DENYLIST-RECHECK is PR #25352 (draft, Tier 3 hold). The other phone gates are recorded on PHONE-EXECUTOR-ICE as executing at reactivation. 14:45Z: AM-PROP-VM-CLOSE-REFUSALS KEEP comment added to #25345 (dda0be5, comment only). #25345 also gained the velotrade_1 regression tests (db439b6: unreadable snapshot means the ticket is placed with a cushion_unknown label; they fail on main). Still owed: only the POLICY-DEMOTION-KEEP-OPEN-BLOCK-NEW comment, which lives in #25251's doc and goes on when that lands. CI on 25323/25345/25352 is still queued (runner backlog, reported to the manager 14:37Z). 15:40Z: guards GREEN on all three PRs. #25323 head e5d1571 (guards + pytest-collect success, pytest-run cancelled); #25345 head dda0be5 (guards success, pytest cancelled); #25352 head d229ec1 (guards success, pytest cancelled). Cancelled is not failed. If pytest is still a required check, AM-DEVOPS re-runs it (no empty-commit retrigger). REMAINING: AM-DEVOPS merges and deploys all three, then OBSERVE per the note above (new *_observed / market_closed_report_only events and none of the old skip reasons in signals; the next velotrade_1 ticket after an unreadable snapshot is placed and alerted, not skipped). Lane session archived; owner AM-TRADING. DRAIN 2026-11-15: NOT YET OBSERVABLE, re-dated. journalctl 2026-11-14T06:00Z to 2026-11-15T06:20Z (complete, 336,406 lines) has 0 lines matching 'already acted this bar' / recent_refusal / empty_sizing / GATE-BAR-DEBOUNCE. The *_observed events go to the signals ledger via log_signal and the journal line accompanies them, so 0 here means no same-bar re-entry, refusal or empty-sizing event occurred in 24h. That is not a pass and not a fail. Closing observation unchanged: the first such event logs *_observed / 'dispatching anyway' with no old skip row. 2026-11-15 10:20Z AM-OPS criterion-2 recheck. (1) prop_ticket_risk_soak.jsonl, whole file (172 rows, 2026-08-30 to 2026-11-15T04:03Z): NO velotrade_1 cushion_unknown since 2026-11-12T18:33Z. In that window velotrade_1 had 5 rows, all within_cushion; tradeify_1 had 24 within_cushion; breakout_2 had 1 exceeds_cushion. The read can find the state: 12 cushion_unknown rows exist in the file, the latest breakout_2 at 2026-11-10T16:00Z. Criterion 2 therefore stays unobserved, not failed. Re-armed for 48h (2026-11-17 10:15Z). (2) Real-money rejections in the trades journal since 2026-11-14T10:00Z: 0, out of 14 real-money rows (all bybit_2; 10 closed, 4 open). Population: the last 500 trades rows (back to 2026-10-29). The query can find rejections: the last real-money rejection was bybit_2 at 2026-11-10T16:02Z; 11 rejected and 1 exchange_rejected real-money rows in the window.",
+  "phase": "ci",
+  "updated_at": "2026-11-15T10:17:41Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

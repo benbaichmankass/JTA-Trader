@@ -1,0 +1,25 @@
+{
+  "id": "UI-WQ-DECISIONS-ROUTE",
+  "title": "Work queue 'Decisions' backend: planning questions written as decision_requests on their work objects (so GET /work/decisions stops reading 0), plus POST /api/bot/work/decision/session behind require_session (Tier 2)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "M6"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25548
+  ],
+  "blocked_on": [],
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-16",
+  "note": "2026-11-12 UI lane: bot half on #25548 (branch claude/ui-wq-decisions-route, held Tier 2). Inbox reads extra.decision_requests on store items; POST /work/decision/session (require_session). Shapes in the PR body. Data half = manager writes planning questions via /work/items/<id>/set fields.decision_requests. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'AM-UI (session_01AFoLuMr5RixbuwJtqED344)', no live session). blocker #25548 merged 2026-11-13 01:17Z. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation.",
+  "updated_at": "2026-11-15T11:30:46Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

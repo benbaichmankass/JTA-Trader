@@ -1,0 +1,38 @@
+{
+  "id": "FRONTIER-Q-RESID-ENTRY",
+  "title": "Market-residual target for the crypto ENTRY model (Foxhound-1): train on the asset's move minus beta x BTC",
+  "state": "done",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25344
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "frontier": {
+    "baseline": "the same recipe refit on the RAW net-R target at the same 13 monthly origins over 2025-10..2026-09 (frozen v1 also reported); shuffled-market placebo arm",
+    "consumer": "src/units/strategies/ml_entry.py (D3) on bybit_2 (real money) + bybit_portfolio + 3 prop books",
+    "est_cost": "$0, free GitHub runner, ~1.5 h",
+    "family": "gbdt (target lever)",
+    "next_step": "PR #25344 self-lands; research-queue-dispatch fires it on research-script-run.yml; grade the verdict against RULE-RQ20261112-4654-01-RESID-TARGET",
+    "p_pass": 0.15,
+    "source": "arXiv 2611.13572 MC-JEPA, factor-conditioning argument (PRIMARY, abstract+intro); RQ-20261108-98e3-23 SIDE-DRIVER (served replay longs -0.90R n=51, shorts +0.017R n=266); frontier-scan-2026-11-11 K1",
+    "state": "authored",
+    "unit": "RQ-20261112-4654-01",
+    "why": "an entry model whose result flips with which way the market moved is pricing the common crypto factor; removing beta x BTC from the training target should isolate the asset-specific part, which is what survives costs"
+  },
+  "note": "[2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D3-FOXHOUND-1 in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "updated_at": "2026-11-15T10:54:41Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

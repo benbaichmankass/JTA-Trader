@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "abab-31/35/37 each have a registered-rule verdict applied (re-graded from their landed arms trades with 6 calendar folds, >=4 folds, delta >= 0.02 R x n(A), maxDD <= 1.35 x A), and the units still queued have run flags equal to their registered rule",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19, abab-25 landed",
+    "rerun": "python3 - <<< re-grade: load comms/research/RQ-20261118-abab-<n>/<run>/arms/*__trades.jsonl, 6 equal calendar folds by entry_time, compare with the registered rule in research/queue/RQ-20261118-abab-<n>.yaml; and compare run.command --grade/--folds/--fold-majority/--delta-r in each unit yaml with its rule text"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "abab SESSION units 25/31/35/37 run --grade sweep --folds 4 --fold-majority 3 --delta-r 4.0, but their REGISTERED decision rule is the replace rule (6 calendar folds, >=4 folds, delta >= 0.02 R x n(A), maxDD <= 1.35 x A). The harness verdict they land is therefore NOT the registered rule's verdict. abab-27/29/33 pass the matching flags (replace, 6, 4, 0.02, 0.35). First instance: abab-25 (ict_scalp_5m BTCUSDT, run 44539877475) landed harness PASS 'reachable_lever_beats_removed' (4 folds); re-graded from its arms/*__trades.jsonl under the registered rule (6 equal calendar folds over 2021-11-14..2026-11-17 23:55, entry-time folds): S_ASIA net R -149.32 vs A -226.11 (delta +76.79, bar 13.4), 6/6 folds >= A, DD 149.9 vs cap 306.0 = PASS; S_LATE delta +28.57, 6/6 folds, DD 197.8 = PASS; best S_ASIA. Same answer, but the registered rule must be applied from raw trades for 31/35/37 and a corrected command is needed for any re-run. Population: 670 baseline trades, net of fee+slippage+funding. Not a gate; fix is the run flags."
+}

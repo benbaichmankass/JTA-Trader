@@ -1,0 +1,24 @@
+{
+  "id": "WEB-API-STOP-SIGKILL-90S",
+  "title": "ict-web-api restart sometimes waits the full 90 s stop timeout then SIGKILLs: ~93 s of 502s for the SPA per such deploy",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "web-api deploy availability",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26283
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Found 2026-11-15 by AM-OPS. MEASURED (journalctl ict-web-api, diag relay, since 2026-11-12T00:00Z): 45 'Stopping' events, 5 of which hit \"State 'stop-sigterm' timed out. Killing.\" (11-14 20:45, 21:37; 11-15 00:52, 10:08, 10:56). The 10:55:21Z stop: uvicorn logs 'Shutting down' then 'Waiting for connections to close', and at 10:56:51 systemd SIGKILLs the main process plus 15 children. Startup completes 10:56:54, so every route returned 502 for ~93 s. Likely cause, not proven: long-lived connections (SSE /api/bot/stream, /ws/market) never close, and deploy/ict-web-api.service starts uvicorn with no --timeout-graceful-shutdown, so shutdown waits for systemd's 90 s default. Proposed fix (Tier 2, service unit): add --timeout-graceful-shutdown 5 to ExecStart (live streams reconnect; the SPA already retries). Verify: next deploy's stop-to-start gap is under 10 s, with no 'timed out. Killing.' line. 2026-11-15 11:20Z AM-OPS (rank 2, manager 15a): PR #26283 (Tier 2 hold) adds --timeout-graceful-shutdown 5 to the base unit, and install_systemd_units.sh appends it to any drop-in uvicorn ExecStart (venv.conf wins over the unit). Confirmed: the deploy runs the installer (deploy_pull_restart.sh line 584, then daemon-reload) before the unit restarts. Installer test 26/26, planted/clean shown. Closes when a deploy after the merge shows Stopping->Started within ~10 s and no 'timed out. Killing.' 2026-11-15 11:21Z AM-OPS: happened again at manager 15a's 11:12Z batch deploy. Stopping 11:11:57, 'stop-sigterm timed out. Killing.' 11:13:27, startup complete 11:13:33: every route 502 for ~96 s (store unreachable here 11:12:25 to 11:13:39). That is 6 of 46 stops since 11-12, and 2 of 2 restarts today. 2026-11-15 11:25Z AM-OPS: a 3rd today. Stopping 11:22:08, SIGKILL 11:23:38, startup complete 11:24:19: ~131 s of 502s. That is 7 of 47 stops since 11-12, and 3 of 3 today. 2026-11-15 11:57Z AM-OPS: #26283 merged 11:48Z (419aab28, manager 15a, joint window with #26276). DEPLOYED: web-api git_sha 006559a0 (read 11:56:00Z). The deploy's own restart was still the old process (expected): Stopping 11:53:54, 'stop-sigterm timed out. Killing.' 11:55:24, startup complete 11:55:29, so ~95 s (8 of 48 since 11-12). Not yet observed: the NEXT web-api stop under the new flag. It should take ~5-10 s with no Killing line; that closes the row. I cannot read the live ExecStart through diag (no route), so that next restart is the proof.",
+  "phase": null,
+  "updated_at": "2026-11-15T12:08:06Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the per-minute Alpaca bars request count around 13:00-13:30Z is measured, the source named, and a full US-session day on ict-trader-live shows 0 x HTTP 429; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-13"
+  },
+  "id": "PI-20261113-BMHG94FT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "VENUE-KLINE-RATE-LIMIT full-day read 2026-11-13 (session_01AFoLuJjAsFYGSvBMhg94ft)",
+    "rerun": "scripts/ops/diag_fetch.sh journalctl?unit=ict-trader-live.service&since=<day>T12:00:00Z&until=<day>T15:00:00Z&grep=alpaca%3A%20HTTP&lines=500"
+  },
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "severity": null,
+  "state": "killed",
+  "terminal_reason": "2026-11-13 19:50Z AM-ML (routed by AM-OPS 19:37Z under ML-EQ-ENTRY-TIMING): REFUTED as a steady-state defect; a one-off at #25512's first run. Evidence (ict-trader-live journalctl since 12:30Z, read_state complete): HTTP 429 = 75 lines 13:14-13:55Z + 3 lines at 17:13:54Z (one MainThread TLT/SPY event), ZERO otherwise. The refresher's own lines: polls at 13:13:09Z and 13:30:03Z read 'current' (no fetch); at 13:45-13:46Z its thread sat in the loop's time.sleep (db_lock_diag stacks, ml_entry_eq_refresher.py:_loop:383). Its bar cache is PERSISTED (pickle with seeded_at); at 13:11Z it was the FIRST run of the new cache code (nothing persisted), so a cold seed was possible but no 're-seeded' line appears before 17:57Z. Decisive: after the cache existed, the 14:49:28Z and 18:05:31Z restarts and a full paced 173-call re-seed (completed 17:57:15Z, {'seeded':173,'calls':173}) produced ZERO HTTP 429. The 13:14-13:55Z burst coincided with 3 trader restarts in 23 min (13:11:57/13:28:48/13:34:07Z), each starting the equity legs on cold caches on the same key (MainThread 31/39 per AM-OPS). No fix: PACE_S 0.6 is shown safe at full seed; adding a cold-cache pace rule would be a speculative change. Re-open if HTTP 429 recurs after a restart (rerun: diag journalctl grep=HTTP%20429). Restart churn itself stays on the manager's DEPLOY-RESTART-ON-DATA-MIRRORS.",
+  "tier": null,
+  "what": "Alpaca bars 429 burst 2026-11-13T13:14-13:30Z (sustained ~1/min, not bar-close): find the request-rate source and fix"
+}

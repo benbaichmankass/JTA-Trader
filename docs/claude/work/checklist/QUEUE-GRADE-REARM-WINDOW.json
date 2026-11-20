@@ -1,0 +1,24 @@
+{
+  "id": "QUEUE-GRADE-REARM-WINDOW",
+  "title": "queue_grade honours rearmed_at: a re-armed unit is graded only on results after the re-arm",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research grader defect from the 2026-11-15 research-queue-grade incident",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26256
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed 2026-11-15 by AM-OPS from the 08:56Z '[RUN failure] research-queue-grade' incident. The run failure was a transient race (one re-run succeeded). Separately, grade_unit_full counted result rows from before a unit's rearmed_at, so a re-armed unit could be graded on its pre-re-arm rows. Fix: #26256 (since = max(since, rearmed_at); planted/clean tests in tests/test_queue_grade_rearm_window.py), merged by manager 15a 2026-11-15 10:53Z as 3c6c61e3. Merged, not yet observed. Observation that closes it: the next research-queue-grade run on main passes, and a unit with rearmed_at has its grading.n count only rows generated after rearmed_at.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:02:33Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

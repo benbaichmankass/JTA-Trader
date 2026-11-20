@@ -1,37 +1,37 @@
 {
   "id": "ALPACA-LIVE-MECHANICS",
   "title": "alpaca_live real-money mechanics: why no trades/rejections; prove the order path with ONE small end-to-end trade, independent of any ML",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuMHf3S6p6a31nk3okj",
   "model": "claude-opus-5-5",
+  "tier": 3,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 1,
   "ceiling_usd": 12,
   "spend_usd": null,
-  "tier": 3,
   "prs": [
     23777,
     23784
   ],
   "blocked_on": [],
-  "note": "2026-11-06 21:57Z: #23946 MERGED (43522372b; accepted-but-not-flat with a closing order holding the whole position -> rung 2 then rung 3 in the same call). Merged only: NOT yet observed deployed, GLD directed close (pkg-8106d5eef6fc425c, alpaca_paper) not yet re-run. Closes this step on: GLD absent from /api/diag/alpaca_open_orders and journal trade 5209 closed (scope oco_target_reprice or account_reset).",
-  "due_by": "2026-11-07",
-  "roadmap": [
-    "L-ML-LIVE"
-  ],
-  "priority_rank": 1,
-  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
-  "updated_at": "2026-11-06T21:57:23Z",
-  "updated_by": "session_01AFoLuMHf3S6p6a31nk3okj",
-  "week_lane": "surge",
+  "due_by": "2026-11-17",
+  "_seq": 966,
+  "note": "2026-11-06 21:57Z: #23946 MERGED (43522372b; accepted-but-not-flat with a closing order holding the whole position -> rung 2 then rung 3 in the same call). Merged only: NOT yet observed deployed, GLD directed close (pkg-8106d5eef6fc425c, alpaca_paper) not yet re-run. Closes this step on: GLD absent from /api/diag/alpaca_open_orders and journal trade 5209 closed (scope oco_target_reprice or account_reset). 2026-11-09 15:08Z lane (Tier-2, operator OK: 11-07 'Close it now in RTH', 11-09 14:10Z, ~14:57Z popup 'Paper account reset'): GLD NOT flat. Trader sha ab5b99440 contains 43522372b (#23946) - MEASURED (git merge-base --is-ancestor). Issue #24542 (flatten-alpaca-position alpaca_paper GLD apply=true, run 42641090513, 15:06Z RTH) -> rung 1 cancel could not free shares, rung 2 'exiting through resting OCO target 2e843e04 repriced to 373.26', then confirm gate: GLD still 39.0 after 6s, retCode 1, NO escalation marker. Post-state 15:08Z (diag): alpaca_paper GLD long 39 + TLT long 632; TP 2e843e04 still limit 461.27 status new (the reprice was accepted but NOT visible: same accepted-but-ineffective wedge, now on replace); stop c928eda6 canceled -> GLD has NO STOP. ROOT CAUSE of no escalation (code read, alpaca_client.py ~L2129): after rung 2 reports 'repriced' the close falls through to the flat-confirm gate with result.scope=oco_target_reprice, and the gate only calls _escalate_not_flat when scope not in (oco_target_reprice, account_reset); so a repriced-but-ineffective rung 2 never reaches rung 3 (paper reset). Same skip applies at 14:40:52Z directed close. Also: order_monitor suppresses its own GLD close as 'evidenced broker wedge' (next probe ~60min). Rung 3a has NO runnable entry point without a code change (reset only runs inside AlpacaClient.close; flatten-alpaca-position goes through it) -> STOPPED per brief; nothing else closed; TLT untouched; trade 5209 still open in journal. Follow-up row ALPACA-CLOSE-REPRICE-NO-RESET filed. 2026-11-09 16:48Z lane: #24547 merged (b401164ff) and deployed (trader sha b401164ff, restart_pending false, 16:43Z). Re-ran flatten-alpaca-position alpaca_paper GLD apply=true (issue #24559, run 42657734779, 16:45Z RTH). NEW PATH RAN: rung 2 repriced TP (976ab9e1), position still open, then rung 3 close-all DELETE /v2/positions?cancel_orders=true was ACCEPTED (state reset). Post-state 16:48Z (diag): alpaca_paper TLT 632 is GONE (closed by the reset; its bracket orders gone) but GLD long 39 is STILL OPEN, TP 2e843e04 still limit 461.27 status new, stop c928eda6 canceled, so GLD still has NO STOP. So the broker ignores cancel, replace AND close-all for GLD: a broker-side wedge no API call clears. Because the close returned not-flat, journal_account_reset did NOT run: TLT journal row is still to be closed (reconciler close-on-disappear expected; NOT verified), trade 5209 still open. Remaining path is operator/Alpaca-only: reset the alpaca_paper account in the Alpaca paper dashboard (Account > Reset), or Alpaca support. Code follow-up (small): in _escalate_after_ineffective_reprice, when close-all accepted and a DIFFERENT symbol left but sym did not, still run journal_account_reset for the closed others (needs close result to carry closed_symbols on retCode 1); wording nit: marker reads 'account reset reset: not flat'. [2026-11-15 09:12Z AM-OPS backlog drain slice 2] STILL OPEN (waits): GLD step done (5209 closed 11-09 18:32Z). Observation = first tqqq_trend_long_1d alpaca_live fill (row due 12-04): not yet; alpaca_live 0 positions, all 272 of its journal rows are rejections. Note an unreconciled detail: slv_trend_1h on alpaca_live was rejected 11-13 'dry_run_no_order_placed' while /api/diag/status shows alpaca_live dry_run false (not reconciled). Earliest chance: next tqqq signal RTH Mon 11-16. Re-dated 11-17. 2026-11-16 23:50Z (AM-OPS-2): #26571 (53564474) MERGED and DEPLOYED (web-api and disk on it from 21:34Z; trader restarted 21:34:33Z onto 18f7dd9619d, a descendant): alpaca_portfolio is INDEPENDENT of alpaca_live's non-placement (mirror_pairs INDEPENDENT_MIRRORS, verdict mirror_independent:<primary>_not_placed:<error>), and an affordability-only all-failed round is downgraded to \u2139\ufe0f 'No account could size this signal (affordability: cash tied up)' (priority low, ring row route=affordability_downgrade). OBSERVED so far: SL/TP read after the restart (venue_protection_snapshot: every measured row on bybit_2, bybit_portfolio, alpaca_live, alpaca_portfolio has SL+TP; 162 venue_flat rows are closed positions; prop tickets are not in that snapshot). NOT OBSERVED, so landed_unproven: the first alpaca_live 'risk_refused: sized_qty=0 ... available_usd=' refusal that shows an alpaca_portfolio ATTEMPT in the coordinator log (INFO 'mirror_independent') instead of 'mirror_primary_not_placed', with NO '\ud83d\udea8 All accounts failed' alert for it. HOW to observe: /api/diag/journalctl?unit=ict-trader-live filtered on 'mirror_independent' and 'sized_qty=0' after the next alpaca_live refusal, plus /api/bot/alerts for the headline text. I did not find a dedicated checklist row for this build; if the manager has one, move this note there.",
   "observation": {
-    "what": "first tqqq_trend_long_1d alpaca_live fill: entry_price == broker filled_avg_price (notes.entry_price_source=alpaca_order_status, needs #23777 deployed), both bracket legs resting gtc at the broker, a venue leg exit, the matching close reason, a grade row",
+    "due_by": "2026-12-04",
     "how_to_check": "/api/diag/journal?table=trades (alpaca_live, strategy tqqq_trend_long_1d) vs /api/diag/alpaca_order_history?account_id=alpaca_live and /api/diag/alpaca_open_orders?account_id=alpaca_live; grade in comms/claude_strategy_scores.jsonl",
-    "due_by": "2026-12-04"
+    "what": "first tqqq_trend_long_1d alpaca_live fill: entry_price == broker filled_avg_price (notes.entry_price_source=alpaca_order_status, needs #23777 deployed), both bracket legs resting gtc at the broker, a venue leg exit, the matching close reason, a grade row"
   },
+  "phase": null,
+  "updated_at": "2026-11-16T23:33:03Z",
+  "updated_by": "AM-OPS-2",
+  "week_lane": "surge",
   "writeback": {
-    "roadmap": "none: mechanics probe, no milestone line changes until the trade is graded",
-    "arch": "none: no architecture change; the entry-fill read is documented in #23777 and config/mechanics_paths.yaml"
-  },
-  "_seq": 966
+    "arch": "none: no architecture change; the entry-fill read is documented in #23777 and config/mechanics_paths.yaml",
+    "roadmap": "none: mechanics probe, no milestone line changes until the trade is graded"
+  }
 }

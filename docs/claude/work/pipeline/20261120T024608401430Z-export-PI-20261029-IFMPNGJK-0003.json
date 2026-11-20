@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "matched_random_intervention (and the two lane drivers) draw a causal control with a self-test showing a uniform-over-own-length draw is refused or flagged, and the affected landed records are re-graded",
+    "kind": "event"
+  },
+  "id": "PI-20261029-IFMPNGJK-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK), RQ-20261029-a7e1-02 local-v1-20261029",
+    "rerun": "grep -n 'rng.integers(0, len(arr))' scripts/research/intervention_controls.py"
+  },
+  "routed_to": "RESEARCH-INTERVENTION-CONTROL-SET",
+  "severity": "high",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "NON-CAUSAL MATCHED-RANDOM CONTROL. Drawing the random intervention's bar/check-in UNIFORMLY among a trade's own decision points uses the trade's final length (future information), so the control is not a policy a trader could run and its dR is biased. MEASURED in RQ-20261029-a7e1-02 (TD n=1831 trades, 2020-07..2026-10, 2000 draws): the uniform-bar random 50% partial close scored median +0.014..+0.026 R/trade and beat every fixed-bar variant in 100% of draws (beat fraction 0.0 for k=3/6/12/24); the a7e1-01 random arm (+0.0146 R, 29% maxDD cut) is the same artifact. Affected code: scripts/research/ml_am_partial_noninferior.py::random_arm, scripts/research/am_static_partial.py::random_books, and the SHARED scripts/research/intervention_controls.py::matched_random_intervention (B2: arr[rng.integers(0, len(arr))] over a trade's valid check-ins), which feeds desk_replay_driver and every unit declaring intervention_controls.matched_random. Fix: draw a causal policy -- at each check-in fire with the intervention's per-check-in hazard (or draw an offset from the intervention's own offset distribution and fire only if the trade is still open). Then re-grade the landed records whose verdict used R4/the random control and say which change. The a7e1-01 and a7e1-02 FAIL verdicts stand without R4 (each family also fails non-inferiority, R1, R2 or R3).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The shared helper is fixed but both lane drivers named in the item still draw uniformly over the trade's own length; the control-set row owns intervention controls. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/research/intervention_controls.py:68-89 causal mode default since 2026-10-29 (fixed); still own-length: scripts/research/am_static_partial.py:105 `dfs[i][rng.integers(0, len(dfs[i]))]` and scripts/research/ml_am_partial_noninferior.py:210 `(rng.random(len(idx)) * lens)`."
+}

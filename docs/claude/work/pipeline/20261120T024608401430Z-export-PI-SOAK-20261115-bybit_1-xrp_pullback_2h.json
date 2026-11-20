@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "last_checked": "2026-11-15",
+    "soak": {
+      "declared_at": "2026-11-06",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "bybit_1/xrp_pullback_2h"
+    }
+  },
+  "id": "PI-SOAK-20261115-bybit_1-xrp_pullback_2h",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "redate": {
+    "evidence": "due_when.check_every_days=7, filed 2026-11-15; leg on bybit_1 roster",
+    "observation": "[2026-11-15 BACKLOG-DRAIN-20261112] DATE: filed today; the mechanical soak (1-2 clean trades) is graded by the weekly soak grade EVIDENCE: due_when.check_every_days=7, filed 2026-11-15; leg on bybit_1 roster",
+    "observed_at": "2026-11-15"
+  },
+  "state": "done",
+  "terminal_reason": "Mechanical soak passed: docs/claude/work/soak-state.json on origin/main 9aaf26a617 reads bybit_1/xrp_pullback_2h = 'ready' (OPERATING-PLAN § 2: the soak is mechanical, 1-2 clean trades). Closed by BACKLOG-DRAIN-20261112 follow-up pass 2026-11-15; an earlier re-date to 11-22 was wrong, because soak items are due on their grade, not on a date.",
+  "what": "SOAK (stage1): bybit_1/xrp_pullback_2h — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing."
+}

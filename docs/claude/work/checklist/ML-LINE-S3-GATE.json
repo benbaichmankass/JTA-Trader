@@ -1,22 +1,23 @@
 {
   "id": "ML-LINE-S3-GATE",
   "title": "[MODEL] ML line S3: gate an overlay under RULE-ML-OVERLAY-NONINFERIOR-V1 + RULE-AM-RISK-ADJUSTED-V1 (net P&L first, risk second) per leg and pooled, vs take-all, take-none, champion and a DRAWN same-rate random arm",
-  "phase": null,
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 1.3, section 2 S3). MEASURED: ml/promotion/cost_gate.py passes only on STRICT superiority of mean net R/opportunity; no risk term (max DD, worst-5%), pooled only, matched_random is an expectation (take_rate x mean R), not draws. So a conservative overlay that matches take-all and cuts drawdown fails today. Reuses the two rules; invents none. Depends on ML-REAL-MONEY-OVERLAY registering RULE-ML-OVERLAY-NONINFERIOR-V1 (on no branch at 2026-10-29 ~07Z) and AM-RISK-ADJUSTED-RULE landing RULE-AM-RISK-ADJUSTED-V1. Generalises the overlay's hand gate; does not rebuild it. Station metric: false-pass rate on a permuted-label null <= the rule's alpha; rule timestamp precedes the run. CLOSES WHEN: the gate grades a candidate under both rules per leg and pooled with >= 1000 random draws and its self-test shows the null passing at <= alpha.",
-  "priority_rank": 3,
-  "updated_at": "2026-10-29T07:08:47Z",
-  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "_seq": 783
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "_seq": 783,
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 1.3, section 2 S3). MEASURED: ml/promotion/cost_gate.py passes only on STRICT superiority of mean net R/opportunity; no risk term (max DD, worst-5%), pooled only, matched_random is an expectation (take_rate x mean R), not draws. So a conservative overlay that matches take-all and cuts drawdown fails today. Reuses the two rules; invents none. Depends on ML-REAL-MONEY-OVERLAY registering RULE-ML-OVERLAY-NONINFERIOR-V1 (on no branch at 2026-10-29 ~07Z) and AM-RISK-ADJUSTED-RULE landing RULE-AM-RISK-ADJUSTED-V1. Generalises the overlay's hand gate; does not rebuild it. Station metric: false-pass rate on a permuted-label null <= the rule's alpha; rule timestamp precedes the run. CLOSES WHEN: the gate grades a candidate under both rules per leg and pooled with >= 1000 random draws and its self-test shows the null passing at <= alpha. [2026-11-15 ML-PRIMARY-3] CORRECTION to PI-20261030-0261030B-0001's 2026-11-12 ROUTE note ('Follow-up (1) is fixed for -03/-04'): FALSE. Its probe counted '--refine' anywhere in the YAML (the prose in statistic/grading). research/queue/RQ-20261029-5785-0{3,4}.yaml run.command still omits --refine (read 2026-11-15 on main), so no runner has produced the refine statistic. Fix path: reproduction unit RQ-20261115-7e18-03 (--refine nested, same registered statistic; HELD PR, branch claude/beagle1-refine-repro). 5785-03 (calibration) and 5785-05 (blocked) still carry the omission. [2026-11-15 18:35Z ML-PRIMARY-4] 7e18-03 graded NOT REPRODUCED (see ML-DEV-PLAN / MLP-D4-BEAGLE-1); the shipped Beagle-1 C0.1/q0.2 stays. DISCREPANCY vs local run 5785-04/local-nested-20261029, filed here per the rule. (1) Holdout: the runner never built it, because --refine hard-coded build False. Fixed in #26384, so the 5785-03/-05 nested/calibration units can now get a real holdout on the runner. (2) Main corpus: TD n_gate is 1588 on the runner vs 1830 locally. The local run reused the V2 corpora; the runner rebuilt fresh candles for the same argv. Cause not yet traced (candidate: per-leg trade counts from different candle sources). (3) Modal configs differ (C1.0/q0.1 at 0.333 vs C1.0/q0.2 at 0.267). Selection is unstable across runs, so no grid config has a reproducible claim over the primary. No re-run of 7e18-03 is needed: a holdout would not change the modal mismatch.",
+  "phase": null,
+  "updated_at": "2026-11-15T18:31:54Z",
+  "updated_by": "session_01AFoLuJazEnEQNP6MeVfuv3"
 }

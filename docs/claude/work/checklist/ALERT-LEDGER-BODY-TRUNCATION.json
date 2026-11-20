@@ -1,0 +1,20 @@
+{
+  "id": "ALERT-LEDGER-BODY-TRUNCATION",
+  "title": "The alerts ledger truncates every alert body to 1024 chars (src/runtime/alerts_ledger.py BODY_MAX = 1024, row shape body[:1024]), so the manager reading /api/bot/alerts cannot see the problem lines of a long alert. MEASURED 2026-11-19: the 04:09:13Z trader restart report headline read '1 problem(s) need attention'. The problem line ('qty mismatch: alpaca_paper QQQ short: journal 2 / venue 1981') sat past char 1024 in the ~2,900-char body, so the manager could not see it and held two merges until a session read the trader journal. FIX (Tier 1/2, read path): either raise BODY_MAX for kind=restart (bounded, e.g. 8 KiB), or have boot_audit put the problem lines FIRST in the body (headline -> problems -> sections), or both. Keep a 'truncated: true' flag beside a cut body so a reader knows. No new gate. Done when a restart report with a problem line beyond the first 1024 chars shows it in /api/bot/alerts.",
+  "state": "queued",
+  "owner": "AM-OPS-5 (session_01AFoLuJoiTZn52nfU7Q2ynt)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-21"
+}

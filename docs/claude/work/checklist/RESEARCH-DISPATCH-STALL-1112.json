@@ -1,0 +1,23 @@
+{
+  "id": "RESEARCH-DISPATCH-STALL-1112",
+  "title": "Research dispatcher halted 5h+ on a frozen infra backlog (infra-yield block nothing lifted)",
+  "state": "done",
+  "owner": "lane RESEARCH-DISPATCH-STALL-1112",
+  "lane": "RESEARCH-DISPATCH-STALL-1112",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25088
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "OBSERVED 2026-11-12 03:30Z, run 43148249357 (workflow_dispatch fire=true on main after #25088 merged 03:13Z). backpressure line: 'infra queued 0 fresh (yield at 2; 37 stuck > 1 h not yielded to)'. Starvation floor lifted the repo_queued block (200 queued > 10, nothing dispatched for 3.3 h). Result: deferred=32 \u00b7 dispatched=1 \u00b7 not_due=2046, with RQ-20261111-203c-01 dispatched to research-script-run.yml (route=runner). Pre-fix, 02:57Z run 43144536356 had still deferred on '37 infra run(s) queued'. My 03:13Z hand dispatch 43146775418 had no fire input, so it was a dry run. FOLLOW-UP (not fixed here): the same line counts 'research compute in flight 8 (cap 8)'. Those are fresh (<24 h) research runs, likely queued in the same backlog. Until the backlog drains, the inflight cap plus the 0.75 h starvation floor hold research to about one fire per floor interval.",
+  "phase": "research-ops",
+  "updated_at": "2026-11-12T03:40:19Z",
+  "updated_by": "Lane RESEARCH-DISPATCH-STALL-1112"
+}

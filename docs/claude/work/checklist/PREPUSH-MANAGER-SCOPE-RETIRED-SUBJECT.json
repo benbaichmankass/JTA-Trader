@@ -1,0 +1,22 @@
+{
+  "id": "PREPUSH-MANAGER-SCOPE-RETIRED-SUBJECT",
+  "title": "prepush.py runs check_manager_scope.py, which exits 2 identity_unresolved on every lane branch (subject files MANAGER-LEASE.json/SESSIONS.json retired 2026-09-21): retire the guard from prepush or re-point it",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "CI hygiene; no milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Found 2026-11-12 by FUT-INTRADAY-DUKA-LANE. Repro: on any branch with commits ahead of origin/main, python3 scripts/ci/check_manager_scope.py --base origin/main -> exit 2, 'IDENTITY: lease retired, dispatch live, union roster EMPTY'. On origin/main itself it exits 0 (empty diff). Not referenced in .github/workflows, so CI is unaffected; prepush.py reports FAIL, which teaches lanes to ignore prepush. Done when prepush.py on a lane branch no longer lists manager-scope-guard as failing.",
+  "phase": null,
+  "updated_at": "2026-11-12T12:31:59Z",
+  "updated_by": "session_01AFoLuM4o8Pd4R6xczg9eWA"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "RESEARCH-PRODUCER-ROW-DEFECTS",
+  "title": "5 orphan research runs whose records research_result --emit REFUSES for producer-row defects: results invisible until each producer is fixed + --recollect-orphans re-run",
+  "state": "done",
+  "owner": "AM-ML",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research-pipeline hygiene",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25626,
+    25627
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "Found 2026-11-13 03:34Z by the ML overnight lane (--recollect-orphans in #25606). Refused records: RQ bf56-02 and bf56-03 (row no_data carrying an n); b623-01 and d256-03 (measured with n null); RQ-20261105-025 (producer_failed carrying verdict=indeterminate). Fix each producer's per-row status/n/verdict consistency (same class as desk_gen_replay_driver fix in #25606), then run scripts/research --recollect-orphans so the 5 records land. Done when: all 5 records land and research_result --emit refuses none of them.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13] PRs #25626 (producer fixes + 3 records, self-land) and #25627 (re-arm 4 units, HOLD E57, stacked on #25626). Landed: RQ-20261105-025/42101993187, RQ-20261014-470a-11/38663651638 and 39707652763. Re-run lands: bf56-02, bf56-03, d256-03 (+e535-03). b623-01/41567569662 superseded by landed re-run 42175819399 (producer already fixed). 470a-11 runs 40809912795/41963398081/43155372298: n on no_data rows, so the weekly re-run lands. Also seen: RQ-20261007-080/38747768830 (tp_revision_sweep rows lack n) \u2014 outside this row, flagged to AM-ML. RQ-20261105-025 is mis-specified (the ml_entry leg has no harness in this ablation), so re-runs will keep landing producer_failed \u2014 flagged to AM-ML.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 05:2xZ] UPDATE: #25292 (another lane) fixed the desk producers + added collector n-nulling on main meanwhile. #25626 merged main, chains both normalizers, and now lands 9 orphan records (025/42101993187; 470a-11 x5; bf56-02/40710666532; bf56-03/40733370814; e535-03/40603772459). #25627 narrowed to ONE re-arm (d256-03: rows have no n, only a re-run lands it). Of the original 5: bf56-02, bf56-03, 025 land in #25626; b623-01 superseded (re-run 42175819399 landed); d256-03 lands on its #25627 re-run. #25630 / #25634 green and marked ready.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 06:10Z] #25626 all checks green on bcd8a7e (incl. open-and-automerge), marked ready. #25627 (HOLD E57, d256-03 re-arm only) checks green on 59fb763, needs AM-ML merge after #25626.  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 06:3xZ] MERGED #25626 + #25627. VERIFIED on origin/main: all 9 records present (025/42101993187; 470a-11/38663651638,39707652763,40809912795,41963398081,43155372298; bf56-02/40710666532; bf56-03/40733370814; e535-03/40603772459); d256-03 re-armed (last_dispatched_at null; note rearmed_at reads 07:00Z, ~30 min after merge -- harmless, the unit has no result rows so it is due as 'never dispatched'). State landed_unproven: closes when d256-03's re-run record lands. Residual, unowned by this row: RQ-20261007-080/38747768830 (tp_revision_sweep rows lack n) and RQ-20261105-025 mis-specified (ml_entry has no harness in that ablation).  | [session_01AFoLuJZ69XcyrjnD8na8ao 2026-11-13 08:45Z] HANDOFF TO FRONTIER. State landed_unproven. LEFT: one observation -- research/results/RQ-20261105-d256-03/<new run>.jsonl lands from the re-armed run on the fixed fidelity_remeasure (git ls-tree origin/main research/results/RQ-20261105-d256-03/). If that run lands producer_failed or the dispatcher has not fired it by 11-15, check dispatch_queue._is_due on the unit and the run's logs. Then close the row done. Out of scope, unowned: RQ-20261007-080 run 38747768830 (tp_revision_sweep rows lack n/population -> needs a producer fix + re-run) and RQ-20261105-025 mis-specified (ml_entry leg has no harness in leg_corpus_s1's ablation; re-author or retire).",
+  "observation": {
+    "due_by": "2026-11-15T00:00Z",
+    "what": "research/results/RQ-20261105-d256-03/<new run>.jsonl lands from the re-armed run on the fixed fidelity_remeasure (git ls-tree origin/main research/results/RQ-20261105-d256-03/); the other 9 orphan records are already on main via #25626"
+  },
+  "phase": "ML",
+  "updated_at": "2026-11-13T10:52:27Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK"
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-21",
+    "kind": "date"
+  },
+  "id": "PI-20261119-IXACGZFL-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "session_01AFoLuHfPPZwEceiXaCGZfL",
+    "kind": "audit",
+    "ref": "SOAK-FAULT-INTAKE close-out, #27170 proof run 44507023137",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py --live --since-hours 72   # compare 'N closed trade(s) read' with the journal's closed count in that window"
+  },
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "state": "queued",
+  "what": "mechanics_fault_intake --live under-reads: it pulls only the 300 most recent journal rows (diag journal?table=trades&limit=300, _live_trades(300)) and then filters closed_at >= now-since_hours. When more than ~300 trade rows open after a fault, that fault falls off the cap and is never filed. MEASURED 2026-11-19: the 03:44Z run (44452854714) read 29 closed trades with 12 unfiled faults; the 10:35Z run (44507023137) read 26 closed trades with 5 unfiled faults, and a 72 h dry re-run also read only 26 closed trades: the window widened but the population shrank, so up to 7 of the 12 aged out unfiled. Fix (small, Tier 1): page the diag journal (or filter server-side by closed_at) until the window is covered, and print rows_read vs window coverage so a truncated read is visible (a count that reads lower may mean we could not look)."
+}

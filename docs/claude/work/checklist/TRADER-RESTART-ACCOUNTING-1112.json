@@ -1,0 +1,24 @@
+{
+  "id": "TRADER-RESTART-ACCOUNTING-1112",
+  "title": "ict-trader-live restarted ~10 times in 18.5 h (distinct PIDs in its journal, 2026-11-11T14:59Z..11-12T09:30Z; MEASURED by lane VENUE-KLINE-RATE-LIMIT). Account for every restart: map each PID start to its cause (git-sync deploy restart with sha, operator/system-action restart, crash/OOM/exit code, systemd watchdog). Any restart without a deploy or sanctioned action behind it is a defect to fix. Also measure the cost per restart (startup to first tick, bars missed at a boundary). Read-only diagnosis is Tier 1; any fix that changes restart behaviour is Tier 2.",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuMVCKRtDna1LrA2Ddy",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25273
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "Filed by AM-OPS 10:40Z from the VENUE-KLINE-RATE-LIMIT report. Today alone saw many merges deploying via git-sync restarts (e.g. the trader restarted 10:19:22Z for the 8a6feab8b deploy), so most may be deploys; that is UNVERIFIED. Check: a table of all restarts in the window with cause; unexplained = 0, or each unexplained one has its own row.",
+  "week_lane": "surge"
+}

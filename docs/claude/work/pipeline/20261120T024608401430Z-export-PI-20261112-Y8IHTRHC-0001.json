@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the SPA halves are dispatched or dropped by the manager/operator, and /api/bot/brackets/history is observed returning levels[] for a fill with a recorded bracket history and /api/bot/feature-impact/detail answers",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-Y8IHTRHC-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-15",
+    "how_to_check": "run origin.rerun, then curl /api/bot/brackets/history?prop_fill_id=<a fill with amendments> and /api/bot/feature-impact/detail?family=<family>",
+    "what": "routes answer with read_state measured and non-empty levels/cells where data exists"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "UI standing lane, row LANE-STRUCTURE-WEEK, dispatch from Manager Session 2026-11-09a; PRs #24873 #24924 #24893 #24919 #24927 #24926",
+    "rerun": "for r in performance/categories?window=7d performance/pnl-series?window=7d work/ledger work/topics feature-impact/heatmap 'brackets/history?prop_fill_id=1'; do curl -s -o /dev/null -w \"$r %{http_code}\\n\" \"https://ict-bot.duckdns.org/api/bot/$r\"; done"
+  },
+  "routed_to": "UI-REDESIGN-2026-11",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "UI-SURGE BACKEND HALVES landed_unproven (lane LANE-STRUCTURE-WEEK, UI standing lane, 2026-11-11/12): routes merged #24873 (prop /fills bracket), #24924 (/strategies status), #24893 (/brackets/history, /performance/categories, /performance/pnl-series; carried #24886/#24888, closed superseded), #24919 (/work/ledger + insight validation), #24927 (/work/topics), #24926 (/feature-impact/heatmap|detail|invest). OBSERVED live 2026-11-12 ~01:05Z (one request each, status+read_state only): categories, pnl-series, work/ledger (0 insights, no kind:insight items exist), work/topics 200; feature-impact/heatmap read_state measured. NOT observed: /brackets/history for a fill WITH a recorded bracket history (only prop_fill_id=1 -> no_record probed); feature-impact detail/invest; acceptance spot-checks vs raw live queries (diag token rotated 2026-11-11, /api/diag/* 401). NOT BUILT (SPA halves of surge items 1,3-9: need a dispatched SPA lane, repo benbaichmankass/ict-trader-dashboard, add_repo was denied in the UI lane). Flagged backend gaps: strategies `perf` block, TP-doctrine column, prop evaluation-size capital base, asset_class filter test for pnl-series, unit/pipeline indexing for /work/topics. NEW GATES NOT BUILT (need operator permission per 'No new gates'): insight-link-guard, topic-map-guard. Container leftover: lane container holds stash@{0} (earlier ledger WIP, content is on main via #24919); dropping it was denied, harmless.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The unbuilt SPA halves and the unobserved backend routes of the UI surge belong to the dashboard redesign row. EVIDENCE: Row UI-REDESIGN-2026-11 (operator spec 2026-11-09). Item lists routes #24873/#24924/#24893/#24919/#24927/#24926 merged, SPA halves not built."
+}

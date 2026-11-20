@@ -1,0 +1,21 @@
+{
+  "id": "API-TIER-COUNT-DRIFT",
+  "title": "docs/api-tier-policy.md hand-stated route coverage count goes stale on every route PR and turns main red",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "[2026-11-12 lane CI-SUITE-SLOWDOWN] MEASURED: tests/test_check_api_tier_policy.py::TestStatedCoverageIsTrue compares the doc's '**Coverage...: N of N routes**' line with scripts/check_api_tier_policy.py. On 2026-11-12 it went red on clean main at least twice: doc 189 vs code 191 (routes added e.g. #25173, #25227), then #25241 restated 190 while main's code computed 192. Every full-suite PR fails on it meanwhile (#25262, #25285, #25296 all failed only on this test). Restated to 192 in #25262 (head 34f53ae2). FIX OPTIONS (manager's choice): (a) generate the count line (check_api_tier_policy.py --write) and run it in the route-adding workflow/guards; (b) make the test assert coverage = 100% without a hand-typed N; (c) keep it and require route PRs to restate it. Recommend (b) or (a): a hand-typed derived number is a recurring red-main source.",
+  "phase": "ci",
+  "updated_at": "2026-11-12T15:19:18Z",
+  "updated_by": "session_01AFoLuHgb4azeFBsuXnJwWP"
+}

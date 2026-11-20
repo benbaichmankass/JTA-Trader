@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-HOLE-REPAIR",
+  "title": "ml_entry serving: repair a 1h bar hole by re-fetching before regrid, and alert on an anchor NaN window (anchor hole blacks out the whole bybit_2 leg ~25h)",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up filed from ML-ENTRY-SERVING-HOLE-GUARD (#25563)",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "2026-11-13 15:45Z AM-ML, from manager 2026-11-13a. LATENT (0 holes over 57 feeds x 1000 bars on 2026-11-12). After #25563 (eff582589) a 1h hole is regridded to NaN. MEASURED from src/runtime/ml_decision_features.py at origin/main: (a) a hole in a symbol's OWN frame -> that symbol skips ~168+168 bars (MIN_BARS windows, ~8-14 d); (b) a hole in the ANCHOR's (BTCUSDT) REFERENCE slice (fr.iloc[-200:]) -> ret24_raw/vol24 NaN for ~25 ticks (24-bar windows + the hole) -> btc_ret24/btc_vol24 non-finite -> decision_row None for EVERY symbol -> the whole real-money ml_entry leg on bybit_2 takes no entries for ~25h (the manager's 8-day figure applies to (a), not (b)). Build: (1) before regrid_hourly, re-fetch the missing bar(s) from the venue (bounded backfill, one retry, never a loop); a repaired frame is contiguous and byte-identical to a clean one; regrid stays as the fallback when the venue also lacks the bar; (2) a freshness/hole check (health.py) that flags when any reference frame -- the anchor first -- has a NaN window at the decision bar, with read_state. No new gate: a skip stays per-tick. Done = tests (hole -> refetch -> identical row; venue-missing -> NaN fallback), deploy, and the check reading ok live. Sibling 15m measurement: ml_decision_shadow 0 stale_bar rows over 11-06..11-13 (~70.6k rows; 308 fetch_failed, which re-fetch the tail next tick) -> 15m-bin drop rate 0/7d, below the 1/symbol/week threshold, no fix filed.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:18:01Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

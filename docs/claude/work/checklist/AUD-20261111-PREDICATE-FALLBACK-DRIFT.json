@@ -1,0 +1,28 @@
+{
+  "id": "AUD-20261111-PREDICATE-FALLBACK-DRIFT",
+  "title": "scripts/research/build_research_panel.py fallback exclude_reconciler_predicate drops setup_type='adopted_orphan'; the canonical src/web/api/_clean_trades.py drops strategy_name IN ('orphan_adopt') -- a different population whenever the import fails",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-18T18:19:41Z",
+      "lane": "session_01AFoLuJkXEM1EigH9mSfz1F"
+    }
+  ],
+  "note": "WEEKLY-AUDIT-20261111 deep pass 2 MODULARITY. MEASURED: 4 files define exclude_reconciler/superseded predicates (canonical + 3 fallbacks); component_edge_report.py fallback matches canonical; build_research_panel.py does not (line ~97). Fix (Tier 1): delete the fallbacks, or fail loudly (could_not_look) when _clean_trades cannot import. DETECTOR: extend the single-owner pattern (check_cost_model_single_owner.py) to the predicate names, report-only (operator 11-06: non-blocking detectors OK). CHECK: {command: grep -rn 'def exclude_reconciler_predicate' scripts src, rule: 1 definition or all byte-equal, resolves_when: true}.",
+  "phase": "ops",
+  "updated_at": "2026-11-18T18:19:43Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "week_lane": "throttle"
+}

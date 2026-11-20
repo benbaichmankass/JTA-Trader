@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a committed serve-path diff names the feature block(s) that move the BTC and SOL fc-pcv-v2 p across 0.5 on the disagreeing bars, and either the replay is fixed to match (re-run of aadc-01 passes) or the live path is filed as the defect; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-ZZUFKM1F-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), grading RQ-20261117-aadc-01 run 44263063258",
+    "rerun": "git show origin/main:comms/research/RQ-20261117-aadc-01/44263063258/measurement.json (heads[].alignments)"
+  },
+  "owner": "ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F); a build, after the 2026-11-18 18:00Z reset",
+  "state": "queued",
+  "what": "[ml/D2] SERVE-PATH DIFF for the live D2 vol heads (RQ-20261117-aadc-01 FAIL fail_action). The trainer-replayed labels do not reproduce the live gate's: BTC fc-pcv-v2 kappa 0.24 (agreement 0.937, median |dp| 0.012; live 3.3% vs replay 5.3% volatile, n 1,111 bars), SOL fc-pcv-v2 kappa 0.51 / agreement 0.77 / median |dp| 0.119 (n 676), better at prev_bar on both. Build: for the disagreeing bars, rebuild the live feature row from the audit snapshot (comms/live_parity/vol_label_audit_20261117) and diff it against the replayed v002 row, p delta attributed by feature block (fc_* forecast features first, then candle-derived), naming which block moves p across the 0.5 threshold. Until it closes, every D2 cell verdict on replayed labels is 'replay population, not live' (population_note on bcd2-01, b819-01)."
+}

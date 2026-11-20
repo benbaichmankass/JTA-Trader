@@ -1,0 +1,20 @@
+{
+  "id": "LIVE-BAR-LADDER-FEED",
+  "title": "Feed the operator's LIVE BAR (2026-11-17, OPERATING-PLAN \u00a7 2 'Live-performance promotion path', PR #27000) into the ladder automatically: scripts/research/live_bar.py (PR #27001) computes per-leg PASS/FAIL/n-short on declared_initial-basis R (demo + real pooled; venue-measured-pnl and stop-never-moved subsets reported). Build: a daily job writes comms/live_bar/latest.json; mandate_resolver reads it as an alternative S1->S2 path (a live-bar PASS satisfies the Stage-0 clauses and drafts the fidelity unit) and the performance review lists each leg's state; the demotion signal (PERF-F1-DEMOTION-SIGNAL) reads the same file for real-money FAILs. No new gate (adds a way up). CLOSES WHEN: the resolver cites live_bar for at least one leg in a dry run and the daily job's file is < 26 h old.",
+  "state": "queued",
+  "owner": "AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-24"
+}

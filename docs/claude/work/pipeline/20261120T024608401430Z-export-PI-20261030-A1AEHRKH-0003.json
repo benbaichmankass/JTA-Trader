@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-A1AEHRKH-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR row f87dbb1 (LR-20261030T0031Z) on live-review/rows; Manager Session 2026-10-29d",
+    "rerun": "grep -n 'bybit_open_orders' scripts/ops/live_review_packet.py | head -3"
+  },
+  "state": "killed",
+  "terminal_reason": "Same root cause as PI-20261031-9KC5G3FG-0001 (10 s cap on the ~10 s bybit_open_orders read), fixed, and no bybit order read has failed in recent packets. | evidence: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/ops/diag_fetch.sh:130-142 per-path 45 s timeout for *_open_orders; population 400 packets LR-20261110*/LR-20261111* on origin/live-review/rows: 279 bybit, 0 \"unreachable\".",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "VM packet builder's bybit_orders read for bybit_1 fails intermittently: diag bybit_open_orders exit 3, ict-bot.duckdns.org unreachable FROM THE VM (packets LR-20261030T0031Z and LR-20261030T0135Z for pkg-dc7c; the 0134Z pkg-591f read worked). Effect: live reviews end could_not_look on mechanics. Root-cause why the VM's own call to its public host fails (hairpin/DNS/Caddy) and read locally instead.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Same root cause as PI-20261031-9KC5G3FG-0001 (10 s cap on the ~10 s bybit_open_orders read), fixed, and no bybit order read has failed in recent packets. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/ops/diag_fetch.sh:130-142 per-path 45 s timeout for *_open_orders; population 400 packets LR-20261110*/LR-20261111* on origin/live-review/rows: 279 bybit, 0 \"unreachable\"."
+}

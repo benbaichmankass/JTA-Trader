@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research/results row exists for a registered Stage-0 unit naming MGC or SIL with the gld_pullback_1h or slv_trend_1h logic (any verdict)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-D6UC5YT4-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROP-FRONTIER-RESEARCH (Manager Session 2026-11-11a), docs/research/prop-frontier-2026-11-12.md section 5b",
+    "rerun": "python3 scripts/research/velo_cfd_stage0.py --work /tmp/vw --out /tmp/vo  # then re-cost with swap_daily 0 (descriptive)"
+  },
+  "owner": "research-ops (next pass)",
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "GOLD-SILVER-FUT-STAGE0 (lead from docs/research/prop-frontier-2026-11-12.md section 5b): on Dukascopy spot 2019-26 with NO overnight financing, gld_pullback_1h logic nets +0.358R/trade (n=441, 7/8 years positive) and slv_trend_1h +0.206R (n=321, 7/8); Velotrade's 0.05%/night fee is what failed them. Register and run Stage 0 for that logic on CME MGC / SIL continuous series at IB futures costs (commission + slippage, no financing; roll handled by the series). Descriptive numbers above are post-hoc and are NOT evidence; this unit is the test. Real-money/IB ladder, not prop (every futures prop is session-flat; these hold ~3 days)."
+}

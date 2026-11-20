@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "python3 scripts/research/iteration_orphans.py shows ORPHAN 0 and OVERDUE 0, or each remaining subject has a retirement record in research/family_reviews/",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-20261119-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261119-1448 (dispatched by manager session_01AFoLuHbhd9wFuGJfWRqyoV)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --levers"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "RESEARCH-OPS 2026-11-19 ORPHANS WITH NO RUNNABLE NEXT TEST (population: iteration_orphans.py 2026-11-19, 5 orphans left of 8 after this pass authored RQ-20261119-48ac-01/02/03 for ltr-tp-pull-in, ltr-sl-to-structure, ltr-partial-close). (1) ltr-close: att4 RQ-20261119-c9d2-01 FAILED the real-TP holdout (near_target full close, n_fired 66, maxDD cut 0.0, R2/R3/R4 fail) after abab-68 PASS on selection; with 7c1a-01 (stall time-stop FAIL) and 7c1a-02 (weak-leg close INDETERMINATE) the trigger and time-stop families are read. Next = a lever-exhaustion family review (family_retirement_policy.yaml, six items) or a power extension of 7c1a-02; needs a lane. (2) xsec-crypto, movement-capture, cost-levers-live-legs: 3 attempts each, every edge_portfolio_discovery --grid arm (d1f3, 62e3) spent; a 4th attempt needs a NEW pre-registered grid in scripts/research/edge_portfolio_discovery.py (xsec: regime gate and short-leg treatment; movement-capture: maker-fill horizon; cost-levers: signal-level data). (3) ml-btc-router-cells (D2, FAIL macro-F1 lift -0.0001, cells still veto 3 bybit_1 legs): next = money-grade the cells (veto vs take-all on the 3 legs) via regime_cell_walkforward.py; no queue unit and no workflow takes a research_unit input. Overdue ML iterations ml-brackets, ml-setup-metalabel-p2pool, ml-holdbias-exit (RQ-20261101-78fc-01/02/05) belong to ML-PRIMARY-11. Not iterated here: each needs code or a family review, none is authorable from existing drivers."
+}

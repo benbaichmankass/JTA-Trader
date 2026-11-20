@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261113-AMML-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "operator decision MLENTRY-V1R-GRADE-FLIP keep_watch 2026-11-13T07:00Z, relayed by Manager Session 2026-11-11a 07:03Z; registered by AM-ML session_01AFoLuJkXEM1EigH9mSfz1F",
+    "rerun": "python3 scripts/ops/work.py get ML-ENTRY-HOLE-SAFE-ADOPT (the note carries the full registered rule). Check that #25507 (build_table hole_safe default) is merged, then run scripts/research/ml_entry_candidate_grade.py-style scoring of both artifacts over the fixed window."
+  },
+  "state": "queued",
+  "what": "Run the PRE-REGISTERED hole-safe re-grade of the served ml_entry v1r20261106 vs ml_decision_entry_v1 (rule RULE-ENTRY-REGRADE-V1R-20261113, registered on row ML-ENTRY-HOLE-SAFE-ADOPT 2026-11-13T07:20Z). Window 2026-10-25..2026-11-23 23:00 UTC, hole_safe=True, tau 0.1, full cost stack. KEEP iff >=100 taken per model, >=10 symbols, and mean net R(v1r) >= v1. Otherwise a revert proposal goes to the operator via the manager. The absolute read is reported, with the demote question back to the operator if mean < 0 at n>=300. Insufficient n: extend once to 11-30 (run >=12-02).",
+  "why_it_matters": "ml_entry v1r20261106 trades the real-money Bybit book and its mirror. Its promotion grade flips PASS->FAIL on gap-free data. The operator chose keep_watch (2026-11-13 07:00Z) pending this re-grade, and #25535 waits on its verdict."
+}

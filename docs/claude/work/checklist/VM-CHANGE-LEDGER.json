@@ -1,0 +1,22 @@
+{
+  "id": "VM-CHANGE-LEDGER",
+  "title": "VM change ledger on the ops jobs store + fold-back + exec write ping + ops token rotation dual-accept",
+  "state": "done",
+  "owner": "lane VM-CHANGE-LEDGER",
+  "lane": "VM-CHANGE-LEDGER",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops-channel infrastructure (MANAGER-VM-DIRECT-OPS follow-on), not a roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "Operator popup ~21:10Z 2026-11-12 'Build it' (relayed by Manager Session 2026-11-11a). Ledger = <ops>/ledger.jsonl on the existing jobs store (no second register); GET /api/bot/ops/ledger; brief \u00a70 via pipeline.vm_ledger_due; syslog cap folded to deploy/logrotate/ict-syslog-cap + scripts/ops/install_syslog_cap.sh (VM file md5 == repo file, measured 21:23Z); PROP_PHONE_MODE_* documented in env-vars.md; exec/set-env write ping (system_action, never a gate); WORK_STORE_TOKEN_PREV dual-accept + stage-token-rotation action + docs/runbooks/ops-token-rotation.md (full automation impossible: GitHub secret + claude.ai credential are operator-only; proposed cadence 90 d). After deploy: backfill today's VM changes into the ledger and fold e9f0f4. 2026-11-12 ~21:44Z operator popup (relayed by Manager 2026-11-11a), verbatim: \"Every 90 days\" -- token rotation cadence. Schedule = pipeline item PI-20261112-B8YKRFCY-0001 (observation, check_every_days 90, last_checked 2026-11-12, dispatch_lane; live in work_store via pipeline.append, read back 21:53Z). No cron. Runbook docs/runbooks/ops-token-rotation.md updated. 2026-11-12 22:33Z post-deploy (#25500 at 8b5f10942, both units): GET /api/bot/ops/ledger 200 OBSERVED; write ping OBSERVED delivered=telegram_ok (OPS-20261112T223332Z-exec-6324d1); syslog-cap install no-op OBSERVED. FOUND: 13 back-to-back backfills tripped systemd start-limit-hit on ict-ops-runner (22:36:42Z) -> channel stalled, 6 jobs queued (5 backfills + e9f0f4 fold). Fix + self-healing deploy: PR #25525 (OPS-RUNNER-START-LIMIT). Close this row after #25525 deploys and the queue drains (ledger 14 entries, e9f0f4 folded). CLOSE 2026-11-13 01:25Z. MERGED: #25500 (8b5f10942), #25525 (263b9c76). DEPLOYED: both units at 4d595c350 (contains both). OBSERVED: GET /api/bot/ops/ledger read_state measured, 14 entries (13 not_needed, 1 folded: OPS-20261112T204454Z-exec-e9f0f4 -> deploy/logrotate/ict-syslog-cap), 0 pending; write ping delivered=telegram_ok; syslog-cap install no-op on VM (md5 match); 6 stalled jobs drained (done); burst of 8 status-check jobs all done, no new start-limit-hit; live StartLimitIntervalUSec=0 on ict-ops-runner.service and .path. Token rotation cadence 90 d = pipeline item PI-20261112-B8YKRFCY-0001 (due computed). Note: the burst produced only 2 runner starts (the runner drains several jobs per start), so the >5-starts case is covered by the setting, not re-provoked.",
+  "phase": null,
+  "updated_at": "2026-11-13T01:23:41Z",
+  "updated_by": "session_01AFoLuMkz6BPns6B8ykrfCy"
+}

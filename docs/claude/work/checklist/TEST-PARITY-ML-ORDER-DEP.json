@@ -1,0 +1,22 @@
+{
+  "id": "TEST-PARITY-ML-ORDER-DEP",
+  "title": "tests/test_live_replay_parity_ml.py ml_entry half fails intermittently in the full xdist suite (main red 3 of last 6 pytest-run runs) but passes in isolation",
+  "state": "done",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-16",
+  "clears_when": "main pytest-run green on 5 consecutive runs with this file unchanged, or the polluting test found and fixed with a test that runs both in order",
+  "note": "MEASURED 2026-11-14 16:40Z: the same 5 tests (test_clean_entry_control_checks_and_reports_zero, _planted_feature_defect_, _planted_flipped_decision_, _lost_decision_, _run_dispatches_) fail on main pytest-run runs 43566289895 (06:25Z), 43577170608 (08:43Z), 43596309589 (12:44Z) and on #25270 run 43611236089, while 43587972063/43606469302/43608345616 are green; locally the file passes alone (18/18 on main and on #25270). Failure shape: the ml_entry fixture produces rows with no feat= reason and analyse_ml_entry returns could_not_check, i.e. the replay and the fixture disagree, which points at state left by an earlier file in the same xdist worker (pytest -n logical --dist loadfile). Suspects: ml_entry._CACHE keyed by path+mtime (src/units/strategies/ml_entry.py:40), and module-attribute patches of live_replay_parity_ml (served_epoch) restored by another module-scoped fixture. Next: reproduce by running each test file that loads ml_entry before this file in one process, then make the fixture independent of that state. Not a skip or quarantine."
+}

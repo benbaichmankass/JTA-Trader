@@ -1,0 +1,22 @@
+{
+  "id": "SPY-PULLBACK-1H-PREOPEN-LOOP-1116",
+  "title": "spy_pullback_1h opens and closes ~9 min apart in a loop before the open (trades 7583-7585, alpaca_paper); separate defect from the wedge reset",
+  "state": "queued",
+  "owner": "AM-OPS-2 (session_01AFoLuKdqv7sRrnLSFhbH4a)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "paper-book entry/exit churn",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed 2026-11-16 from ALPACA-PAPER-BRACKETS-GONE-1116. Cause unestablished: read trades 7583-7585 entry/exit reasons and the pre-open re-entry guard; fix is Tier 2 (order path). Manager 2026-11-16 14:43Z: the fix is the reconciler must not close an entry row whose entry order is still resting unfilled (pre-open); build after #26522. Demo-floor data gap: the 14:32:33Z PAPER close-all (#26522 cause) flattened alpaca_paper. Legs with an open row in the 14:32:47-14:32:49Z order_monitor window (population: trader journal lines 14:32-14:33, NOT filtered to alpaca_paper, so ib_paper rows may be in it): uso_trend_1h (the closing leg), gdx_pullback_1d, iaum_pullback_1d, gld_pullback_1d, slv_trend_1h (2 rows), spy_pullback_1h, qqq_pullback_1h, mhg/mgc pullback+trend. Exact per-account closed_symbols list still to read from the broker order history (alpaca_order_history after=14:32Z) before the data gap is final. MEASURED data gap (alpaca_order_history alpaca_paper captured 14:41Z, 13 orders, not truncated): the 14:32:33Z close-all FILLED market closes on QQQ sell 1093, SLV buy 383 (short cover), GDX buy 1869 (short cover), IAUM buy 9375, SPY sell 26, USO sell 4249 (the original close's own order also cancelled), and CANCELLED resting entries SLV buy 383 (14:00:21), SPY buy 101/12/2 (14:07-14:25, partial fills 24/1/1). So those six alpaca_paper legs lost their positions to the reset; their rows are the demo-floor gap. GLD/MGC/MHG are not in this window (not in the 13 orders): unverified. TLT buy 864 filled 14:33:34 afterwards (a later entry, not a reset order).",
+  "phase": "now",
+  "updated_at": "2026-11-19T06:01:55Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}
