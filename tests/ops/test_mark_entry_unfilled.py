@@ -2,13 +2,14 @@
 must pass in CI, and the INV-2 checker must accept what the script writes."""
 from __future__ import annotations
 
+import importlib
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import mark_entry_unfilled as meu
+meu = importlib.import_module("mark_entry_unfilled")
 
 
 def test_self_test_passes():
