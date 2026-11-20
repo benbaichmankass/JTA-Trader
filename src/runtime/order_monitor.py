@@ -12260,9 +12260,88 @@ def _reassert_soak_path():
     return os.path.join(runtime_logs_dir(), "protection_reassert_soak.jsonl")
 
 
+def _reassert_row_changed_mid_sweep(
+    db, row, sweep_started_at: Optional[datetime],
+) -> Optional[str]:
+    """Why a re-assert must NOT act on this sweep's snapshot of *row*, or ``None``.
+
+    IB-TRAIL-AMEND-MISSED (2026-11-20, ib_paper MGC trade 7737, paper): the IB
+    sweep reads every open row ONCE, before its loop. A trail amend landed on the
+    monitor thread at 00:00:23.47Z (stop 3683.4 -> 3654.1, IB ack OK); this sweep
+    graded the venue's NEW stop against its OLD snapshot (3683.39), called that a
+    divergence, and re-placed 3683.4 at 00:00:24.68Z. The 1 h cooldown then
+    locked the reverted level in. So, immediately before deciding, the row is
+    re-read fresh, and the re-assert stands down when:
+
+      * the fresh read fails (fail closed: never act on what could not be read);
+      * the trade is no longer open;
+      * its stop_loss / take_profit_1 / position_size differ from the snapshot;
+      * its linked order package was updated at or after the snapshot was taken.
+
+    A genuinely diverged row passes all four and re-asserts exactly as before.
+    Never raises.
+    """
+    def _same(a: Any, b: Any) -> bool:
+        if a is None or b is None:
+            return a is None and b is None
+        try:
+            return abs(float(a) - float(b)) <= 1e-9 * max(1.0, abs(float(a)))
+        except (TypeError, ValueError):
+            return str(a) == str(b)
+
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            try:
+                fresh = conn.execute(
+                    "SELECT status, stop_loss, take_profit_1, position_size, "
+                    "order_package_id FROM trades WHERE id = ?",
+                    (row["id"],),
+                ).fetchone()
+            except __import__("sqlite3").OperationalError:
+                # A journal without order_package_id: the level checks still run.
+                fresh = conn.execute(
+                    "SELECT status, stop_loss, take_profit_1, position_size, "
+                    "NULL AS order_package_id FROM trades WHERE id = ?",
+                    (row["id"],),
+                ).fetchone()
+            pkg_updated = None
+            if fresh is not None and fresh["order_package_id"]:
+                p = conn.execute(
+                    "SELECT updated_at FROM order_packages WHERE order_package_id = ?",
+                    (fresh["order_package_id"],),
+                ).fetchone()
+                pkg_updated = p["updated_at"] if p is not None else None
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001 -- fail closed, never raise into the sweep
+        return f"fresh row read failed: {exc}"
+    if fresh is None:
+        return "trade row no longer readable"
+    if str(fresh["status"] or "") != "open":
+        return f"trade status is now {fresh['status']!r}"
+    for col in ("stop_loss", "take_profit_1", "position_size"):
+        if not _same(fresh[col], row[col]):
+            return (f"{col} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
+    if sweep_started_at is not None and pkg_updated:
+        try:
+            pu = datetime.fromisoformat(str(pkg_updated).replace("Z", "+00:00"))
+            if pu.tzinfo is None:
+                pu = pu.replace(tzinfo=timezone.utc)
+            if pu >= sweep_started_at:
+                return (f"order package updated at {pkg_updated}, after this "
+                        f"sweep's snapshot ({sweep_started_at.isoformat()})")
+        except (TypeError, ValueError):
+            pass  # an unparseable stamp does not block; the level checks above still ran
+    return None
+
+
 def _reassert_from_divergence(
     db, *, client, account_id: str, protect_symbol: str, row,
     price_verdict: Dict[str, Any], summary: Dict[str, int],
+    sweep_started_at: Optional[datetime] = None,
 ) -> None:
     """Decide, record, and (only at ``apply`` on an allowlisted account) act.
 
@@ -12270,10 +12349,40 @@ def _reassert_from_divergence(
     trader, so it must never raise into it. Every path writes a soak row, so
     ``annotate`` produces the exact list to review before the ``apply`` flip —
     the ``NETTING_ATTRIBUTION_MODE`` staging shape.
+
+    IB-TRAIL-AMEND-MISSED: first re-reads the row fresh
+    (:func:`_reassert_row_changed_mid_sweep`); a row that changed after the
+    sweep's snapshot is never re-asserted from that snapshot.
     """
     import json as _json
     import time as _time
     try:
+        _changed = _reassert_row_changed_mid_sweep(db, row, sweep_started_at)
+        if _changed is not None:
+            summary["stop_price_reassert_skipped_row_changed"] = int(
+                summary.get("stop_price_reassert_skipped_row_changed", 0)) + 1
+            logger.info(
+                "_check_broker_naked_ib_positions: re-assert STOOD DOWN for "
+                "%s/%s trade=%s -- %s; the next sweep grades it from fresh data",
+                account_id, protect_symbol, row["id"], _changed,
+            )
+            try:
+                path = _reassert_soak_path()
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "a", encoding="utf-8") as fh:
+                    fh.write(_json.dumps({
+                        "at": datetime.now(timezone.utc).isoformat(),
+                        "account_id": account_id, "symbol": protect_symbol,
+                        "trade_id": row["id"], "declared_sl": row["stop_loss"],
+                        "resting_stop": price_verdict.get("nearest_resting"),
+                        "exposure": price_verdict.get("exposure"),
+                        "decision": "skipped_row_changed_mid_sweep",
+                        "reason": _changed, "acted": False,
+                    }, default=str) + "\n")
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("protection re-assert soak write failed: %s", exc)
+            return
+
         from src.runtime.protection_reassert import (
             MODE_APPLY, STATE_REASSERT, account_may_apply, decide_reassert,
             resolve_mode,
@@ -12531,6 +12640,11 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
         "stop_price_reassert_unverified": 0,  # could not re-read the venue
         "stop_price_reassert_failed": 0,      # the modify itself was rejected
         "stop_price_reassert_annotated": 0,
+        # IB-TRAIL-AMEND-MISSED: the row (or its package) changed after this
+        # sweep read it, so the divergence may be the sweep's own stale read
+        # of a trail amend that just landed. Not acted on; the next sweep
+        # grades again from fresh data.
+        "stop_price_reassert_skipped_row_changed": 0,
     }
     interval = _ib_broker_naked_check_interval_seconds()
     if interval <= 0:
@@ -12556,6 +12670,10 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             return summary
         acc_by_id = {str(a.get("account_id")): a for a in accounts}
 
+        # IB-TRAIL-AMEND-MISSED: the moment this sweep's row snapshot is taken.
+        # Anything that changes a row after it (a trail amend landing on the
+        # monitor thread) makes the snapshot stale for a re-assert.
+        sweep_started_at = datetime.now(timezone.utc)
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
@@ -12743,6 +12861,7 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                         db, client=client, account_id=account_id,
                         protect_symbol=protect_symbol, row=row,
                         price_verdict=_pv, summary=summary,
+                        sweep_started_at=sweep_started_at,
                     )
                     _gap = abs(_pv["diff"]) * contract_value_usd_for(
                         protect_symbol) * size
