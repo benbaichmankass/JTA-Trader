@@ -1,0 +1,20 @@
+{
+ "schema": 1,
+ "decided_at": "2026-11-20T05:55:00Z",
+ "decided_by": "manager",
+ "source": "Manager Session cross-session direction to lane QUEUE-FILL-STANDING-W47b, 2026-11-20 (guard direction 2026-11-19, PROGRAMME-REVIEW). NOT an operator decision.",
+ "population": "one gate: CI-queue-harness-flags-guard, merged report-only in #27200",
+ "meaning": {
+  "REPORT-ONLY": "the guard runs and prints warnings; it never fails the guards job (run_guards.py mode: report)"
+ },
+ "decisions": [
+  {
+   "id": "CI-queue-harness-flags-guard",
+   "choice": "REPORT-ONLY",
+   "verbatim": "report-only by design (No new gates)",
+   "effect": "mode: report on the run_guards.py entry; the findings and the self-test are warnings only",
+   "cat": "ci-guard",
+   "where": "scripts/ci/run_guards.py (GUARDS name=queue-harness-flags-guard)"
+  }
+ ]
+}
