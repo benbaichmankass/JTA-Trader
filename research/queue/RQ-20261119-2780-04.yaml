@@ -1,7 +1,7 @@
 # Authored 2026-11-19 by lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), Tier 1. P1 iteration 3; rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261119-2780-04
 title: 'P1 iteration 3 (ml-setup-metalabel-p2pool): decision threshold read on TRAINING folds only, then ONE re-read on the MEASURED rostered paper book at that threshold (4th read, deflated)'
-status: blocked
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -111,8 +111,26 @@ related:
 - scripts/ml/p1_costnet_grade.py
 - PI-20261119-RIMARY12-0006
 what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order.
-blocked_on:
-- what: 'scripts/ml/p1_threshold_oof.py is on main (this unit''s PR); then ONE trainer-vm-diag relay runs STEP 1 and STEP 2 (the #27459 shape, a worktree of main, no dataset rebuild).'
-  kind: build
-  ref: PR claude/ml13-p1-iter3
-  clears_when: 'the PR is merged; the relay posts the OOF record and the measured grade, and the grading PR moves this file to research/queue/ with status done (the 3e98-01 precedent).'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-2780-04-P1-MEASURED-PAPER-THR
+  evidence:
+  - comms/ml-plan/p1_iter3_threshold_oof_v024.json
+  - comms/ml-plan/p1_iter3_measured_verdict_v024.json
+  - comms/ml-plan/p1_iter3_context_verdict_v024.json
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), HELD for the manager
+  rows: 3
+  verdict: pass
+  reason: 'relay #27546 (trainer, worktree 7c2085e845, 2026-11-20 00:49Z; re-post of #27524 after the disk fix, measurement unchanged). Preconditions: v024 data.jsonl
+    has 6,659 rows (sha256 prefix 49ffded31eb2449f); STEP 1 selected 0.48 from the training-side OOF grid (2,799 OOF rows over 5 expanding folds; OOF take rate 245
+    of 2,799; OOF value +0.0106 R/opp vs take_all -0.0901, matched random -0.0079). STEP 2, measured-only rostered paper (live_paper AND ROSTER_59 AND pnl_provenance
+    measured; n_eval 698 = 698 measured, 0 estimated; 8 of 1,061 rows off-list): (a) value +0.0362 R/opp > max(take_all -0.0304, take_none 0, matched random -0.0018)
+    PASS; (b) bootstrap of value minus matched random, 10,000 resamples, seed 42, lower percentile 0.625 = +0.0012 (point +0.0380, upper +0.0789) > 0 PASS; (c) take
+    rate 41 of 698 = 5.87% in [5%, 60%] PASS; (d) value > 0 in 5 of the 6 symbols with >= 30 rows (ADA, BTC, ETH, SOL, XRP; AVAX -0.0008) PASS; (e) excluded share
+    0.73% (about 5 of 698) <= 20% PASS; unit_fallback share 0. n_eval 698 >= 200. VERDICT PASS. Reported, never graded: measured+estimated read at 0.48 n_eval 1,053
+    (698 measured, 355 estimated) PASS, value +0.0657 vs take_all +0.0056, lower bound +0.0214; OOF take rate 8.75% (245 of 2,799) vs paper take rate 5.87% (41 of
+    698). CAVEATS (reading, not grade): the edge rests on 41 taken trades (3 to 10 per counted symbol); the deflated lower bound clears 0 by 0.0012 R; this is the
+    fourth read of this head (deflation applied as registered). REGISTERED PASS ACTION: ONE confirmation on a disjoint in-hand window (time split of the same population,
+    earlier half train, later half eval, registered before it runs), then a data-backed Tier-3 proposal to the manager to set the head advisory on the demo-floor
+    legs in its population. Nothing changes on any book from this grade.'
