@@ -21,8 +21,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/ops/_lib.sh
 source "${SCRIPT_DIR}/_lib.sh"
 
-cd "${REPO_DIR}"
+# Secrets FIRST, then the DB path: the same order as every working DB wrapper
+# (grade_closed_trades, backfill_closed_null_pnl, ...). The first live run
+# (issue #27636) resolved the path the other way round, behind an early cd,
+# and both reads then opened a file that is not the journal.
+load_runtime_secrets
 DB_PATH="$(runtime_db_path)"
+cd "${REPO_DIR}"
 PY_SCRIPT="${REPO_DIR}/scripts/ops/mark_entry_unfilled.py"
 PY="${REPO_DIR}/.venv/bin/python3"
 [ -x "${PY}" ] || PY="python3"
@@ -44,8 +49,7 @@ printf '%s' "${TRADE_IDS}" | grep -Eq '^[0-9]+(,[0-9]+)*$' \
 
 # The venue check reads the entry order from Alpaca, so authenticate exactly like
 # the live services (same pattern as rearm_alpaca_protective_action.sh). Presence
-# diagnostics only; never echoes a value.
-load_runtime_secrets
+# diagnostics only; never echoes a value. (load_runtime_secrets ran above.)
 WEBAPI_ENV="/etc/ict-trader/web-api.env"
 if sudo test -r "${WEBAPI_ENV}" 2>/dev/null; then
   for _v in ALPACA_API_KEY_ID_LIVE ALPACA_API_SECRET_KEY_LIVE \
@@ -67,6 +71,30 @@ else
 fi
 
 echo
+echo "===== DB: ${DB_PATH} ====="
+ls -la "${DB_PATH}" || true
+# Read-only forensics for the first live run (issue #27636): what the OLD order (cd first, path
+# before secrets) resolves to in a clean shell, and whether a stray journal sits there or at the
+# known CWD-fallback locations. Prints and lists only; never writes or removes anything.
+OLD_ORDER_PATH="$(env -i HOME="${HOME}" PATH="${PATH}" bash -c \
+    "source '${SCRIPT_DIR}/_lib.sh' >/dev/null 2>&1; cd '${REPO_DIR}'; runtime_db_path" 2>/dev/null || true)"
+echo ">>> old-order path (issue #27636 ordering, clean shell): ${OLD_ORDER_PATH:-<unresolved>}"
+# WAL hypothesis (manager, 04:47Z): a mode=ro open of a WAL journal needs write access to the
+# -wal/-shm sidecars or the directory. Show who we are and the modes involved.
+echo ">>> id: $(id)"
+ls -ld "$(dirname "${DB_PATH}")" 2>/dev/null || true
+ls -l "${DB_PATH}" "${DB_PATH}-wal" "${DB_PATH}-shm" 2>&1 || true
+for _p in "${OLD_ORDER_PATH}" "${REPO_DIR}/trade_journal.db" "${REPO_DIR}/src/bot/trade_journal.db"; do
+    [ -n "${_p}" ] && { ls -la "${_p}" 2>/dev/null || echo ">>> absent: ${_p}"; }
+done
+# Fail fast, before anything else reads it: the resolved file must be the journal.
+# A read-write open (never creating), the way grade_closed_trades' python opens it; NOT db_read's
+# mode=ro, which on a WAL journal also needs the sidecars and may be the #27636 failure itself.
+if ! python3 -c 'import sqlite3,sys; sqlite3.connect("file:"+sys.argv[1]+"?mode=rw", uri=True, timeout=30).execute("SELECT COUNT(*) FROM trades").fetchone()' "${DB_PATH}"; then
+    fail "${DB_PATH} has no readable trades table; refusing (not the trade journal)." "db not the journal"
+fi
+
+echo
 echo "===== PRECONDITION: mark_entry_unfilled.py --self-test ====="
 "${PY}" "${PY_SCRIPT}" --self-test
 
@@ -81,7 +109,7 @@ python3 "${_DBR}" --table "${DB_PATH}" "${SHOW}" || true
 echo
 echo "===== DRY-RUN plan ====="
 set +e
-TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}"
+TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}"
 dry_code=$?
 set -e
 if [ "${dry_code}" -ne 0 ]; then
@@ -94,7 +122,7 @@ fi
 echo
 echo "===== APPLY ====="
 set +e
-TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --apply
+TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --apply
 exit_code=$?
 set -e
 

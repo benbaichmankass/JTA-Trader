@@ -260,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--trade-ids", default="")
     ap.add_argument("--reason", default="")
+    ap.add_argument("--db", default="", help="journal path (default: the canonical resolver)")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -273,8 +274,14 @@ def main(argv: list[str] | None = None) -> int:
     if not ids or not a.reason.strip():
         print("--trade-ids and --reason are both required (targets are named, never derived)", file=sys.stderr)
         return 2
-    db = _db_path()
-    conn = sqlite3.connect(db, timeout=30)
+    db = a.db.strip() or _db_path()
+    try:
+        # mode=rw never CREATES a file: a wrong path is an error, not a fresh empty journal.
+        conn = sqlite3.connect(f"file:{db}?mode=rw", uri=True, timeout=30)
+        conn.execute("SELECT 1 FROM trades LIMIT 1")
+    except sqlite3.Error as exc:
+        print(f"REFUSE: {db} is not a readable trade journal ({exc}); nothing written.", file=sys.stderr)
+        return 1
     try:
         updates, refusals, skipped = plan(conn, ids, a.reason.strip(), accounts=_accounts_default(),
                                           venue_read=_venue_read_default)

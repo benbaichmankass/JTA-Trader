@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 fix to the mark-entry-unfilled DB writeback wrapper (no trader file); the manager merges, then the lane re-dispatches trade 8034.",
+  "why": "WHY: the first live run (issue #27636, run 44675204966) passed its self-test but both DB reads failed: db_read 'unable to open database file' and the python step 'no such table: trades', so it refused and wrote nothing. The wrapper resolved runtime_db_path behind an early cd and BEFORE load_runtime_secrets, the reverse of every working DB wrapper (grade_closed_trades, backfill_closed_null_pnl, rebuild_pnl_from_bybit, ...). The exact wrong path was not printed, so this is the one structural difference, not a proven root cause. WHAT: secrets first, then the path (proven order); print the resolved path and ls it; fail fast unless it has a readable trades table; pass --db explicitly; the python opens with mode=rw so a wrong path refuses instead of creating an empty journal. trader_import_closure: SKIP. Gates this adds or changes: none (a fail-fast on a path that is certainly wrong)."
+}
