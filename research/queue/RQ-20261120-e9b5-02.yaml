@@ -4,7 +4,7 @@
 # Gates this adds or changes: none.
 id: RQ-20261120-e9b5-02
 title: 'RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261015-1631-01: Same-symbol allocation input, ETHUSDT: per-leg OOS net R per capital-day (solo vs shared slot) for trend_donchian_eth_4h, trend_donchian_eth_prop'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -113,3 +113,14 @@ iteration:
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, run 2026-10-30, OOS from 2025-01-01): solo trend_donchian_eth_4h +2.54 R n125 (+0.0267 R/capital-day); solo trend_donchian_eth_prop -21.28 R n359 (-0.1705). Reported at grading: per-arm before/after and whether any arm crosses min_oos_trades or changes sign. The legs are read from config/strategies.yaml at run time, so config drift since 2026-10-30 is a second source of change, reported separately.'
 last_dispatched_at: '2026-11-20T15:26:03+00:00'
+grading:
+  attested: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT-RERUN-27655
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT-RERUN-27655
+  evidence:
+  - research/results/RQ-20261120-e9b5-02/44756281497.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

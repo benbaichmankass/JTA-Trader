@@ -123,3 +123,15 @@ iteration:
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, run 2026-10-30, OOS from 2025-01-01): solo trend_donchian_sol_4h +37.59 R n87 (+0.1811 R/capital-day); solo trend_donchian_sol_prop +22.07 R n124 (+0.1876); together +44.84 R n177 (+0.2018). Reported at grading: per-arm before/after, sign changes, and config drift since 2026-10-30 separately.'
 last_dispatched_at: '2026-11-20T15:33:22+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q8-SOL4H-OVERLAP-REPORT-RERUN-27655
+  evidence:
+  - research/results/RQ-20261120-e9b5-04/44756276933.jsonl
+  - research/results/RQ-20261120-e9b5-04/44764484871.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null
