@@ -42,7 +42,7 @@ def _load(path: str) -> pd.DataFrame:
 
 def _resample_close_stamped(df: pd.DataFrame, rule: str) -> pd.DataFrame:
     """Native grouping [T, T+rule) labelled at the CLOSE T+rule: the backward-as-of-join form (PI-20261120-7ITMUEB1-0006).
-    The strategy frame and the clock still use _resample (right/right) pending the engine pass on that item."""
+    The strategy frame and the clock use the open-stamped _resample; signals map at their bar close."""
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
         agg["volume"] = "sum"
@@ -51,10 +51,12 @@ def _resample_close_stamped(df: pd.DataFrame, rule: str) -> pd.DataFrame:
 
 
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """OPEN-stamped native grid [T, T+rule) labelled T, shared by the strategy frame and the clock (PI-20261120-7ITMUEB1-0006;
+    units read the bar hour, fitted on open-stamped bars). Signals map at their bar close (simulate); HTF joins at the close."""
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
         agg["volume"] = "sum"
-    return (df.set_index("timestamp").resample(rule, label="right", closed="right")
+    return (df.set_index("timestamp").resample(rule, label="left", closed="left")
             .agg(agg).dropna().reset_index())
 
 
@@ -82,8 +84,9 @@ def gen_signals(name: str, module: str, tf: str, base5m: pd.DataFrame, *,
         htf = _resample_close_stamped(base5m, htf_tf)   # close-stamped: the backward merge_asof sees closed HTF bars only
         htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
         htf = htf.dropna(subset=["ema"])
+        bar_close = (df["timestamp"] + pd.Timedelta(_PANDAS_TF[tf])).rename("timestamp").to_frame()   # the decision time
         merged = pd.merge_asof(
-            df[["timestamp"]].sort_values("timestamp"),
+            bar_close.sort_values("timestamp"),
             htf[["timestamp", "close", "ema"]].rename(
                 columns={"close": "_hc", "ema": "_he"}).sort_values("timestamp"),
             on="timestamp", direction="backward")
@@ -115,12 +118,15 @@ def gen_signals(name: str, module: str, tf: str, base5m: pd.DataFrame, *,
 
 def simulate(signals: pd.DataFrame, clock: pd.DataFrame, *, monitor_fn=None,  # inert: monitor_fn — vestigial hook; this replay applies its exits inline and never calls a monitor
              cfg: Optional[dict] = None, signal_ttl_bars: int = 1,  # inert: cfg — vestigial; every knob this replay honours is an explicit keyword above
-             be_after_1r: bool = False) -> Dict[str, Any]:
+             be_after_1r: bool = False, signal_tf: Optional[str] = None) -> Dict[str, Any]:
     """Solo single-position replay on the clock grid (mirrors the engine).
 
+    ``signal_tf`` (required): the strategy frame's pandas rule; signals are mapped at their bar close.
     Returns per-trade R list + summary. R = pnl / initial_risk (sizing-
     independent). Fees folded in as an R-equivalent at entry+exit.
     """
+    if not signal_tf:
+        raise ValueError("simulate: signal_tf is required (the strategy frame's rule) -- signals map at their bar close")
     ts = clock["timestamp"].values
     h = clock["high"].to_numpy(float)
     lo = clock["low"].to_numpy(float)
@@ -129,7 +135,8 @@ def simulate(signals: pd.DataFrame, clock: pd.DataFrame, *, monitor_fn=None,  # 
 
     sig_at: Dict[int, dict] = {}
     for _, r in signals.iterrows():
-        idx = int(np.searchsorted(ts, np.datetime64(pd.Timestamp(r["ts"])), side="right"))
+        # a signal on the OPEN-stamped strategy bar [T, T+tf) acts from the first clock bar opening at/after T+tf
+        idx = int(np.searchsorted(ts, np.datetime64(pd.Timestamp(r["ts"]) + pd.Timedelta(signal_tf)), side="left"))
         if idx < n:
             sig_at[idx] = r.to_dict()  # last signal on a bar wins (rare collision)
 
@@ -238,7 +245,7 @@ def main(argv):
     sigs = gen_signals(args.name, args.module, args.tf, base5m,
                        start=args.start, end=args.end, overrides=overrides)
     clock = _date_filter(_resample(base5m, _PANDAS_TF[args.clock_tf]), args.start, args.end)
-    out = simulate(sigs, clock, be_after_1r=args.be_after_1r)
+    out = simulate(sigs, clock, be_after_1r=args.be_after_1r, signal_tf=_PANDAS_TF[args.tf])
     # trades/day
     days = max((pd.Timestamp(args.end or base5m['timestamp'].iloc[-1]) -
                 pd.Timestamp(args.start or base5m['timestamp'].iloc[0])).days, 1)

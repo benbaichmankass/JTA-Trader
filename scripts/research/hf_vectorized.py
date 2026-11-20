@@ -328,7 +328,8 @@ def build_htf(df5: pd.DataFrame, base5m: pd.DataFrame, ema_period: int, htf_tf="
     htf = _resample_close_stamped(base5m, rule)   # close-stamped: the merge_asof below sees only closed HTF bars
     htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
     htf = htf.dropna(subset=["ema"])
-    merged = pd.merge_asof(df5[["timestamp"]].sort_values("timestamp"),
+    bar_close = (df5["timestamp"] + pd.Timedelta("5min")).rename("timestamp").to_frame()   # the 5m bar's decision time
+    merged = pd.merge_asof(bar_close.sort_values("timestamp"),
                            htf[["timestamp", "close", "ema"]].rename(columns={"close": "_hc", "ema": "_he"}).sort_values("timestamp"),
                            on="timestamp", direction="backward")
     return merged["_hc"].to_numpy(), merged["_he"].to_numpy()
