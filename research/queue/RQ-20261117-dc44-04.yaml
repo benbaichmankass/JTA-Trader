@@ -3,7 +3,7 @@
 id: RQ-20261117-dc44-04
 title: 'fade_breakout_4h: on the donchian 30 lead, does a stricter chop gate (adx_max 15 / 17.5 vs the configured 20) remove the
   fold-3 stop streak that failed d5a7-14 on maxDD, net of the full cost stack (iteration, one factor on top of donchian 30)?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -126,3 +126,16 @@ iteration:
   due_by: '2026-11-24'
 follow_up: Grader applies the rule mechanically; a PASS goes to a holdout-read confirmation unit (M13), a FAIL moves the next iteration to the next untested family.
 last_dispatched_at: '2026-11-19T19:24:50+00:00'
+grading:
+  attested: RULE-RQ20261117-dc44-04-D30-ADX-GATE
+  auto: true
+  decision_rule_id: RULE-RQ20261117-dc44-04-D30-ADX-GATE
+  evidence:
+  - research/results/RQ-20261117-dc44-04/44589966218.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

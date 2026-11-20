@@ -1,0 +1,124 @@
+{
+  "rows": [
+    {
+      "horizon_days": 3,
+      "n": 111,
+      "ic": -0.214513,
+      "ic_t": -2.293,
+      "overlap_factor": 1.0,
+      "n_eff": 111.0,
+      "ic_t_eff": -2.293,
+      "pearson": -0.264791,
+      "sign_hit_rate": 0.410526,
+      "mean_fwd_return": 0.001901
+    }
+  ],
+  "summary": {
+    "max_n": 111,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": true,
+    "any_flagged_horizon_overlap_corrected": true,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.214513,
+    "strongest_ic_t": -2.293,
+    "strongest_ic_t_eff": -2.293,
+    "t_flag": 2.0,
+    "verdict": "surprise_predicts_forward_return"
+  },
+  "meta": {
+    "kind": "ppi_mom",
+    "symbol": "RTY=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 141,
+    "releases_with_value": 141,
+    "price_bars": 2359,
+    "first_release": "2015-01-15",
+    "last_release": "2026-11-13",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 141,
+    "rows": [
+      {
+        "horizon_days": 3,
+        "n": 111,
+        "ic": -0.214513,
+        "ic_t": -2.293,
+        "overlap_factor": 1.0,
+        "n_eff": 111.0,
+        "ic_t_eff": -2.293,
+        "pearson": -0.264791,
+        "sign_hit_rate": 0.410526,
+        "mean_fwd_return": 0.001901
+      }
+    ],
+    "summary": {
+      "max_n": 111,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": true,
+      "any_flagged_horizon_overlap_corrected": true,
+      "strongest_ic_horizon_days": 3,
+      "strongest_ic": -0.214513,
+      "strongest_ic_t": -2.293,
+      "strongest_ic_t_eff": -2.293,
+      "t_flag": 2.0,
+      "verdict": "surprise_predicts_forward_return"
+    },
+    "rule": {
+      "primary": [
+        3
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 3,
+        "n": 111,
+        "ic": -0.214513,
+        "ic_t_eff": -2.293,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ],
+    "rank_tilt": {
+      "horizon_days": 3,
+      "cost_frac_roundtrip": 0.00125,
+      "rank_warmup": 24,
+      "tilt_excess_net": {
+        "n": 111,
+        "mean": 0.00218738,
+        "t": 1.466
+      },
+      "mean_weight": 0.985957,
+      "cost_stack": {
+        "cost_symbol": "M2K",
+        "fee_bps_roundtrip": 7.5,
+        "fee_source": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP (venue rate unset)",
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0,
+        "funding_applied": false,
+        "total_bps_roundtrip": 12.5,
+        "cost_frac": 0.00125
+      }
+    },
+    "ic_grade": {
+      "verdict": "fail",
+      "note": "no pre-registered horizon reached the t-bar in the expected sign"
+    },
+    "trade_rule": {
+      "book": "rank_tilt",
+      "horizon": 3,
+      "min_n": 100,
+      "t_bar": 2.0,
+      "rank_warmup": 24
+    }
+  }
+}

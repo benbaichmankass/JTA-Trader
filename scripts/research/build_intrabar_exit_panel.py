@@ -491,6 +491,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     adapter_opts = {
         "data_path": args.data,
+        "resample": _src.resample,  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
         "symbol": args.symbol,
         "timeframe": args.timeframe,
         "stamp_regime": bool(args.stamp_regime),

@@ -1,0 +1,89 @@
+{
+  "unit": "RQ-20261119-031",
+  "run_id": "44649906139",
+  "commit_sha": "e89ea60f4f9b79efe4ec0ef7f0d9dbdb1eeaa0a8",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/44649906139",
+  "timeout_minutes": 60,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1016-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261111.82.6",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "ppi_mom",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "RTY=F",
+        "--horizons",
+        "3",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "negative",
+        "--trade-horizon",
+        "3",
+        "--cost-symbol",
+        "M2K",
+        "--trade-t-bar",
+        "2.0",
+        "--book",
+        "rank_tilt",
+        "--rank-warmup",
+        "24",
+        "--population",
+        "ppi_mom releases after a 24-release warm-up; rank-weighted long tilt on RTY=F vs all-long, M2K cost stack",
+        "--out",
+        "comms/research/RQ-20261119-031/44649906139"
+      ],
+      "log": "comms/research/RQ-20261119-031/44649906139/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.5
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
