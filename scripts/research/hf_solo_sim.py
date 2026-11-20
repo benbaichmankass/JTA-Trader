@@ -40,6 +40,16 @@ def _load(path: str) -> pd.DataFrame:
     return df.dropna(subset=["timestamp"]).reset_index(drop=True)
 
 
+def _resample_close_stamped(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """Native grouping [T, T+rule) labelled at the CLOSE T+rule: the backward-as-of-join form (PI-20261120-7ITMUEB1-0006).
+    The strategy frame and the clock still use _resample (right/right) pending the engine pass on that item."""
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
+    if "volume" in df.columns:
+        agg["volume"] = "sum"
+    return (df.set_index("timestamp").resample(rule, label="right", closed="left")
+            .agg(agg).dropna().reset_index())
+
+
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
@@ -69,7 +79,7 @@ def gen_signals(name: str, module: str, tf: str, base5m: pd.DataFrame, *,
     if name in ("ict_scalp_5m", "hf_displacement_cont") and bool(cfg.get("htf_trend_filter_enabled", True)):
         htf_tf = _PANDAS_TF.get(str(cfg.get("htf_filter_timeframe") or "1h"), "1h")
         ema_period = int(cfg.get("htf_filter_ema_period") or 50)
-        htf = _resample(base5m, htf_tf)
+        htf = _resample_close_stamped(base5m, htf_tf)   # close-stamped: the backward merge_asof sees closed HTF bars only
         htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
         htf = htf.dropna(subset=["ema"])
         merged = pd.merge_asof(
