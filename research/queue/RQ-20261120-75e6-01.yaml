@@ -15,9 +15,10 @@ question: Over 2020-07-01 .. 2026-10-15 23:59 on trend_donchian (BTCUSDT 1h, liv
   3 of 4 calendar folds within the drawdown bar (maxDD(OFF) <= maxDD(A) x 1.35)? R is on the full initial position's risk.
 why_this_matters: 'The trail decay on trend_donchian was chosen by M20 trainer sweeps, which replay the trainer''s BTCUSDT 5m/15m files resampled to 1h. Two defects make those
   sweeps a different measurement from the leg we trade: (1) the harness _resample used label/closed right, a one-sub-bar phase shift of every resampled bar (left/left reproduces
-  199,185 of 199,259 native ETHUSDT 15m bars, right/right 4; relay #27551; fixed in PR #27566), and (2) the trainer crypto files are a different price series from the evidence
-  feed (0 of 34,008 ETHUSDT 1h bars identical, relay #27560; PI-20261120-7ITMUEB1-0005). On trend_donchian_eth the shifted trainer grid read n 465 -35.73 R vs n 451 +4.26 R
-  on native 1h. This unit re-reads the lever on the series the evidence and the live leg use; it changes nothing by itself.'
+  199,185 of 199,259 native ETHUSDT 15m bars, right/right 4; relay #27551; fixed in PR #27566), and (2) the trainer crypto files are a different venue''s series (trainer files
+  = Bybit linear perp, the live venue; evidence feed = Binance USD-M perp: close diff median 0.88 bps, p99 6.1, max 76.5 bps over 34,032 ETH 1h bars, no time offset; on trend_donchian_eth
+  the venue alone moves the book from +4.26 R to -2.61 R, 422 of 451 trades matched by entry time; relay #27576) (PI-20261120-7ITMUEB1-0005). On trend_donchian_eth the shifted
+  trainer grid read n 465 -35.73 R vs n 451 +4.26 R on native 1h. This unit re-reads the lever on the series the evidence and the live leg use; it changes nothing by itself.'
 power:
   alpha: 0.05
   basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades, as in RQ-20261023-a1f3-06; below it the unit grades indeterminate, never FAIL. Trade sequences autocorrelate:

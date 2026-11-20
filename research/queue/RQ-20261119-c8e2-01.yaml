@@ -69,6 +69,7 @@ follows_from:
 last_dispatched_at: '2026-11-19T16:03:36+00:00'
 retired_reason: '2026-11-20 ML-PRIMARY-14 on the manager''s decision (01:49Z): SUPERSEDED by RQ-20261120-75e6-02, the same lever-off question on trend_donchian_eth_4h
   asked on the NATIVE evidence feed. This unit''s harness path (m20-exit-lever-sweep.yml) scps the trainer''s data/, where ETHUSDT 4h resolves to ETHUSDT_5m.csv +
-  resample (relay #27567): that replay ran on the one-sub-bar-shifted grid of the old harness _resample (PI-20261120-7ITMUEB1-0001, fix PR #27566) and on a trainer
-  price series that matches 0 of 34,008 Binance-vision native ETH 1h bars (relay #27560, PI-20261120-7ITMUEB1-0005). Its one landed row (run 44561874575, no_action_warranted,
-  base_trades_OOS 48) is therefore not evidence for the real-money leg and is not graded. It must not run again on that path.'
+  resample (relay #27567): that replay ran on the one-sub-bar-shifted grid of the old harness _resample (PI-20261120-7ITMUEB1-0001, fix PR #27566) and on the trainer''s
+  Bybit linear series rather than the Binance USD-M evidence feed (close diff median 0.88 bps, max 76.5 bps over 34,032 ETH 1h bars; on trend_donchian_eth the venue
+  alone moves the book from +4.26 R to -2.61 R; relay #27576, PI-20261120-7ITMUEB1-0005). Its one landed row (run 44561874575, no_action_warranted, base_trades_OOS
+  48) is therefore not evidence for the real-money leg and is not graded. It must not run again on that path.'
