@@ -62,9 +62,13 @@ def _graft_stamp(theirs: str, ours: str) -> str:
     m = _STAMP.search(ours)
     if m is None:
         return _STAMP.sub("", theirs)
+    # `_STAMP`'s trailing `\s*$` swallows the line break when the stamp is the LAST line of the file, so group(0) can end in "\n".
+    # Grafting that into main's text (which has more after the stamp) added a blank line after every such stamp, the extra "+" line
+    # made check_pr_landing refuse the stamp PR as not stamp-only, and #27528 stranded (2026-11-20). Graft the stamp LINE only.
+    line = m.group(0).rstrip()
     if _STAMP.search(theirs) is not None:
-        return _STAMP.sub(lambda _m: m.group(0), theirs, count=1)
-    return theirs + ("" if theirs.endswith("\n") else "\n") + m.group(0) + "\n"
+        return _STAMP.sub(lambda _m: line, theirs, count=1)
+    return theirs + ("" if theirs.endswith("\n") else "\n") + line + "\n"
 
 
 def resolve(path: str, ours: str, theirs: str, base: str | None = None) -> str | None:

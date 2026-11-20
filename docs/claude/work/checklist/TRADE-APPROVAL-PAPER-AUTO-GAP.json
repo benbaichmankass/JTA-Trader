@@ -1,0 +1,23 @@
+{
+  "id": "TRADE-APPROVAL-PAPER-AUTO-GAP",
+  "title": "Trade approvals: a row dispatched under MD-LTR-PAPER-AUTO executes only its paper legs; its real-money/prop legs get no Approve ask",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up of TRADE-ACTION-DIRECT-PATH (operator instruction 2026-11-12)",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Found by lane TRADE-ACTION-DIRECT-PATH (session_01AFoLuJRcgEM7nWVNbrYHgx) building phase 1 (PR #25039). live_review_rows_watch.run_pass calls trade_approvals.offer only when dispatchable() returns a reason (the VM did not execute the row). A row covered by an account_scope ltr_auto_apply entry (MD-LTR-PAPER-AUTO) is dispatched, so it executes on bybit_1/alpaca_paper/ib_paper legs only, and the same call on the real-money and prop legs of that package is never offered to the operator. Fix: after a paper-scoped dispatch, offer an ask scoped to the remaining accounts (a directed record with scope per account, or package scope; the paper legs then refuse as already done). Re-entry test: a unit test with a paper-auto row on a package also carried by bybit_2 produces one ask; rerun: grep 'offer(row' src/runtime/live_review_rows_watch.py.",
+  "phase": "next",
+  "updated_at": "2026-11-12T00:17:56Z",
+  "updated_by": "session_01AFoLuJRcgEM7nWVNbrYHgx",
+  "week_lane": "surge"
+}

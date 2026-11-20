@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261030-JSBB8Q9X-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-AM-REFOCUS (session_01AFoLuLYH6B5e8LJSBB8q9x), manager dispatch 2026-10-30c",
+    "rerun": "python3 scripts/ops/live_review_packet.py --all-open 2>/dev/null | python3 -c \"import json,sys;d=json.load(sys.stdin);print([(e['packet']['leg'],[r.get('verdict') for r in (e['packet']['context_v3']['live_vs_backtest'] or {}).get('rows',[])]) for e in d])\"  # expect testing (paper) legs to read NO_LIVE_TRADES on both books"
+  },
+  "routed_to": "LTR-FOLLOWUPS-1028",
+  "severity": "medium",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "context_v3.live_vs_backtest (packet v3, DESK-AM-REFOCUS) reuses scripts/research/live_vs_backtest.py, which judges only the realMoney/mirror books. MEASURED 2026-10-30 ~23:10Z over 15 open packages: 13 read NO_LIVE_TRADES/NO_BACKTEST on both books because they are testing legs on paper (bybit_1/alpaca_paper/ib_paper). The judgement desk therefore sees no live-vs-backtest read for most of what it manages. Fix: add a paper/testing-book row (the performance/recent payload's paper section, or the journal) to live_vs_backtest.run, keeping read_state explicit.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: live_vs_backtest still judges only the realMoney and mirror books, so testing legs on paper get no read; no row owns it. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/research/live_vs_backtest.py:28 and :178-181 iterate (\"realMoney\", \"mirror\") only; `git grep -i paper` in that file: 0 hits. | owner row opened by this drain"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "TRADER-DEPLOY-RESTART-BOUNDARY-AWARE",
+  "title": "Deploy restarts of ict-trader-live leave the trader blind ~75 s each (MEASURED by TRADER-RESTART-ACCOUNTING-1112: 36 restarts 2026-11-11T14:59Z..11-12T10:45Z, 34 git-sync deploys + 2 racing system-actions, stop-to-first-tick mean 75 s, min 47, max 132, n=35, ~45 min blind in 18.5 h; 1 of 36 windows spanned a 15m boundary). Make git-sync's trader restart boundary-aware: defer a restart that would overlap the window around the next bar close of any rostered timeframe (e.g. close-30 s .. close+90 s) until just after that bar is processed, and coalesce pending deploys into one restart. Never skip a deploy indefinitely: a deferral is bounded (next safe slot), and the Prime Directive holds (no halting, no new gate). Confirm boot catch-up for the bar spanned at 06:30Z.",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "Filed by AM-OPS 11:05Z from docs/reviews/2026-11-12-trader-restart-accounting.md (PR #25273). Sibling of TRADER-DEPLOY-DOUBLE-RESTART (one restarter); same deploy-path owner. Check: over 24 h after deploy, 0 restarts inside a boundary window, and restarts per day <= number of deploy batches.",
+  "week_lane": "surge"
+}

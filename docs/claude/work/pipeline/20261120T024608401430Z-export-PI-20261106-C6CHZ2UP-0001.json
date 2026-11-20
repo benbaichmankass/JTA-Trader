@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261106-C6CHZ2UP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-05b, GATEWAY-DISK-CLEANUP lane final report 04:23Z + FLATTEN lane report 02:00Z",
+    "rerun": "gh api repos/OWNER/REPO/actions/workflows/system-actions.yml/runs?status=cancelled --jq '.workflow_runs[]|[.id,.created_at,.display_title]' ; grep -n -A3 concurrency .github/workflows/system-actions.yml"
+  },
+  "routed_to": "SYSTEM-ACTIONS-SKIP-DISPLACES-PENDING",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "system-actions concurrency group displaces PENDING runs: a queued system-action is cancelled when the next one is dispatched (GitHub keeps one pending run per group). Observed 2026-11-06: #23563 mark-operator-flattened 4935 cancelled before running (re-filed #23604); #23606 gateway swap-status cancelled before running; pull-exchange-funding 42136833028 cancelled. With the hosted-runner backlog (system-action jobs queued 5-75 min), any two dispatches inside the queue window lose the first silently, and only a '[RUN cancelled]' page shows it. Fix candidates: a per-action concurrency group key (action+target) with cancel-in-progress false, or a queue/retry in the relay; never silently drop a mutation request.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Same mechanism (the system-actions concurrency group drops a pending run), and that row owns the fix. EVIDENCE: Row SYSTEM-ACTIONS-SKIP-DISPLACES-PENDING note: resume-autoheal #22985 displaced in the concurrency queue. This item adds #23563 / #23606 / 42136833028 (2026-11-06)."
+}

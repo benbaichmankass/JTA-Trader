@@ -1,0 +1,23 @@
+{
+  "id": "ML-EQ-NOPKG-AUDIT",
+  "title": "ml_entry_eq_struct (real money): audit a per-close pool decision row so live-replay parity can confirm no-package closes",
+  "state": "queued",
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-21",
+  "note": "[2026-11-15 07:55Z AM-OPS, scheduled read] comms/live_parity/latest.json at c1176041 (generatedAt 11-15 07:31Z, window 11-08 07:00..11-15 07:00): ml_entry_eq_struct is STILL could_not_check. Reason: 4 decision closes replayed (11-12 16:00/20:00, 11-13 16:00/20:00), 0 packages on either side, agreed_none 0 on all 4. EXPECTED, not a defect: all 4 closes predate #25994 (e0ba5948, deployed 11-14 ~11:10Z, a SATURDAY). There has been no US-equity decision close since (11-14 Sat, 11-15 Sun; the live log on Sat shows every symbol refused with pool_snapshot_stale and snapshot_bar_close stuck at 11-13 20:00, which is weekend-correct). Correction to the trigger's premise: 11-14 was Saturday, so Friday's session was 11-13. First closes the fix can audit are Mon 11-16 16:00Z/20:00Z. Re-read the 11-17 ~07:30Z parity run; expect state checked with agreed_none>0. historical_positive (#25992): state fail, 174/176 matched, packages_unmatched 2: pkg-512a5dbf711b4d85 (trend_donchian_eth_prop, bar 11-12 11:00, divergent) and pkg-4f323222a6484ee4 (trend_donchian_avax_4h, bar 11-09 12:00, divergent); plus pkg-48c5cfab364e430c (trend_donchian_eth_4h, bar 11-14 20:00) matched_signal with downstream dropped_no_order. planted_defect: still PARTIAL, not pass: replay_signal_live_none and lost_bar flagged, but live_signal_replay_none unflagged ('no robust no-signal window in the quiet bar').",
+  "updated_at": "2026-11-19T06:10:41Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

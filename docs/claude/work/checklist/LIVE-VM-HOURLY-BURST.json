@@ -1,0 +1,20 @@
+{
+  "id": "LIVE-VM-HOURLY-BURST",
+  "title": "Live VM: two jobs fire on the hour on top of the trader's 1h bar-close work. MEASURED vm-cpu-sample #27025 (one 30 s window ~23:58Z 11-18): machine 99.9% of 2 CPUs; ict-hourly-snapshot 34% + ict-work-digest 32% of one CPU (its hourly digest build; its other 5-min runs take ~1 s, journal 00:15/00:20Z). Off the hour, #27035 (~00:10Z): 34.9%. FIX (Tier 2, timers only, reversible): move ict-hourly-snapshot OnCalendar off :00 (e.g. *:07) and make the work digest's hourly build fire at >= :10, so neither competes with bar-close signal/order work. ACCEPTANCE: 3 vm-cpu-sample windows at :00-:01 read machine busy < 90%, and trader tick_cost max at :00 drops vs the pre-change ticks. Gates this adds: none.",
+  "state": "queued",
+  "owner": "AM-OPS-4 (session_01AFoLuMqma5FZ2WpXNqAxxz)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-22"
+}

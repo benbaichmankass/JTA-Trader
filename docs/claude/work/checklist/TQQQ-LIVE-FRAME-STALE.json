@@ -1,0 +1,22 @@
+{
+  "id": "TQQQ-LIVE-FRAME-STALE",
+  "title": "tqqq_trend_long_1d (REAL MONEY, forming-bar) decides on stale candle frames 89% of evals (parity 11-06..11-13): p50 542s, p90 4032s, max 5.2h",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up filed from live-replay-parity LRP-14C7570F",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-13 17:10Z AM-ML. MEASURED comms/live_parity/2026-11-13.json (window 11-06T07..11-13T07, scripts/ops/live_replay_parity.py): tqqq_trend_long_1d evals_checked 1531, stale_frames n=1370 (live decided on a frame older than STALE_S=330s that an older 15m state reproduces exactly), p50 542s p90 4032s max 18864s; residual candle_mismatch 161 (all live side none = replay side none; adx_gap_max 0.0265); side_mismatch / missed_signal / live_only_signal ALL 0 over 4 bars. OUTLIER: every other forming-bar 1d/1h leg in the same artifact is 0-15% stale (slv_trend_1h 12/1881, qqq_trend_long_1d 7/1530, spy_trend_long_1d 10/1520, iaum 224/1415 next worst). Journal 14:30Z+ shows tqqq evaluating ~1/min and NO fetch error, so it is what the feed returns, not a failed fetch. WHY IT MATTERS: the faithful record (RQ D20 PASS, net 12.77 R n54) is graded on a 1m forming replay; a frame up to 67 min old at p90 can delay or move the FIRST live D20 entry (row TQQQ-D20-PROMOTE, first signal still pending). Diagnose (Tier 1, read-only): which candle source/route tqqq's 1d forming bar uses vs qqq_trend_long_1d (same venue, 1% stale); Alpaca IEX vs SIP sparsity for TQQQ; cache TTL per timeframe. Fix, if runtime: Tier 2. Done = cause named with evidence + stale share at peer level (<15%) on a fresh parity run, or a stated reason it cannot be. 2026-11-13 17:45Z AM-ML: re-run 43469233791 (window 11-06T16:45..11-13T16:45) unchanged: evals 1531, stale_frames 1370 (89%), p90 4032s, candle_mismatch 161, 0 decision divergence. Still the outlier.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:18:00Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

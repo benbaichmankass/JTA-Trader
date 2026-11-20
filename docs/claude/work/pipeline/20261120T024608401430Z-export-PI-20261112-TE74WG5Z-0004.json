@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "RQ-20261026-e535-04 and -e535-03 each carry a verdict from a run whose re-derived packets match the judged export (or a recorded decision to re-judge on a fresh export / retire)",
+    "kind": "event"
+  },
+  "id": "PI-20261112-TE74WG5Z-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z), AM-ML stuck-units scope",
+    "rerun": "tail -1 comms/research/RQ-20261026-e535-04/40658829510/logs/cmd-0.log"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "DESK e535 export cannot reproduce: re-run 40658829510 (fixed desk_gen_replay_driver) failed exit 2, '1498 re-derived packet(s) differ from what the judge saw (candle drift or a changed builder)' -- 1498 of 1498 packets of the judged-1 export. RQ-20261026-e535-04 set needs_review owner RESEARCH-OPS (#25293). RQ-20261026-e535-03 reads the same export; its run 40603772459 lands via #25292 and auto-grades indeterminate, but its reason (stopping rule broken) is defect (2) the DESK-E535-04 driver fix addressed, so that verdict reflects a driver defect. Decide: pin export candles in the driver, or re-judge on a fresh export, then re-run both."
+}

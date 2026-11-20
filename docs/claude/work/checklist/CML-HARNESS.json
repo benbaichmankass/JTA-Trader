@@ -1,0 +1,27 @@
+{
+  "id": "CML-HARNESS",
+  "title": "Instruments for the cross-model-learning units RQ-20261116-089f-01/-02/-03: cj4_blind_validation.py (journal-host run), ml_entry_managed_target.py, bracket_cond lever in ml_entry_cost_levers.py",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-23",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-16T11:51:08Z",
+      "lane": "session_01AFoLuMXDNb8cNVjNMyTwAi"
+    }
+  ],
+  "note": "Filed by lane CROSS-MODEL-LEARNING 2026-11-16. Units sit in research/queue/blocked/ naming this row as blocked_on. Build order by value: (1) cj4_blind_validation.py first (n 707 exists, runs where the journal is; unlocks or closes the CJ-4/5/DESK-19 chain); (2) bracket_cond lever (dev table, folds, cost stack already in ml_entry_cost_levers.py); (3) ml_entry_managed_target.py only after RQ-20261116-7c1a-01/-02 show a management hold gap >= 0.05 R/trade (otherwise the target equals the raw target). Each needs a --self-test; promote a unit with git mv out of blocked/ and fill run.workflow/command + lands.store. Map: comms/research/cross_model_learning/2026-11-16/MAP.md. Built scripts/research/cj4_blind_validation.py (self-test ok; run host = trainer VM, holds the journal) and the bracket_cond lever (self-test ok); promoted RQ-20261116-089f-01 (research-script-run-trainer.yml) and -03 (research-script-run.yml) out of blocked/; -02 left blocked on 7c1a-01/-02. PR #26495 draft, HELD for the manager (landing: hold/unvouchable_paths). Neither unit has been RUN: research-ops runs them after merge. Not observed: guards passed locally only, CI on the PR not yet read. Built scripts/research/cj4_blind_validation.py (self-test ok; run host = trainer VM, holds the journal) and the bracket_cond lever (self-test ok); promoted RQ-20261116-089f-01 (research-script-run-trainer.yml) and -03 (research-script-run.yml) out of blocked/; -02 left blocked on 7c1a-01/-02. PR #26495 draft, HELD for the manager (landing hold/unvouchable_paths). Neither unit has been RUN: research-ops runs them after merge. Guards passed locally only; PR CI not yet read. Manager 2026-11-16: accepted lane interpretations (cj4: non-T0 blind rows excluded as the family builder does, count reported; T1 control next-3 same-leg; bracket_cond: base decisions fixed, lookup on same (symbol,ts,side), best-static on prior folds only \u2014 stricter than 'dev'). Follow-up gap: persist the claude_judgments population line (stderr only today) into runtime_logs/trainer/dataset_builds.jsonl so CJ closes are readable directly. 2026-11-16 11:51Z: #26495 merged cc12bccf (cj4_blind_validation.py + bracket_cond lever; units 089f-01 (trainer, 1 GB measured 71 MB) and -03 (runner) promoted to research/queue/; -02 stays blocked on 7c1a-01/-02 hold gap). 089f-03 power field set 0.8 (nearest tabulated; 0.5 ungradeable) with original basis kept \u2014 manager accepted; result must re-measure per-fold sd and state under-power if > ~0.028. landed_unproven until research-ops lands a result for 089f-01 and -03. Remaining sub-item: ml_entry_managed_target.py (after 7c1a hold-gap verdict); persist the claude_judgments population line. Lane archived.",
+  "phase": null,
+  "updated_at": "2026-11-16T11:51:10Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

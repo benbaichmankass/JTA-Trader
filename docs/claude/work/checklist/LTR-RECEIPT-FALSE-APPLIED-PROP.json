@@ -1,0 +1,22 @@
+{
+  "id": "LTR-RECEIPT-FALSE-APPLIED-PROP",
+  "title": "Live-review receipt reports prop close APPLIED verified_readback=true while the executor's vm_close is only retrying",
+  "state": "dropped",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review receipt fidelity defect",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "MEASURED 2026-11-15: the tradeify_1 SOLUSD close (11:43Z review) receipt says APPLIED/verified_readback true; the prop executor journal shows vm_close vmc-a2ad1dce4531 result=retrying (modal refused) from 11:44Z, and the position is still open at 12:48Z. The receipt must key verified_readback on the venue_terminal position being gone (or the vm_close result=closed), not on the queued request. Re-entry test: a refused prop close shows APPLIED=false/pending in its receipt.",
+  "phase": null,
+  "updated_at": "2026-11-15T13:06:01Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

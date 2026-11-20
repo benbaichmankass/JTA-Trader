@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "(a) a closed-row path cancels a still-working entry and is observed once; (b) the cause of the unrefreshed snapshot rows is stated with evidence; (c) /api/diag/ib_open_orders no longer serves a cancelled order, or the route is marked non-authoritative; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-LSFHBH4A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane AM-OPS-2 (GENERAL) close-out 2026-11-18",
+    "rerun": "python3 scripts/ops/work.py get PI-20261117-LSFHBH4A-0006"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "[ib/alpaca order path] (a) Cancel the WORKING ENTRY order when a position row truly closes (alpaca entries queued until the open; #26862 only stops the early close, it does not cancel the resting entry). (b) IB snapshot rows 7569/6673 were not refreshed after close, and stuck_strategy_watchdog closed 7569 in the journal while its short was held at the broker (see PI-20261117-LSFHBH4A-0006). (c) /api/diag/ib_open_orders can serve cancelled orders from a stale monotonic cache (BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW is state=dropped but the staleness was seen again 2026-11-18); authoritative reads are the cancel-ib-order dry-run on a fresh client and the trader's venue_protection_snapshot. Filed by AM-OPS-2 at close-out; AM-OPS-3 to pick up or the manager to re-lane."
+}

@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-STRUCT-LEDGER",
+  "title": "ml_entry_tp_revision.py evidence-extend-only --structure-sl: emit ledger_ethsol.jsonl for the structure-SL arm (the LIVE ml_entry exit) so the P5 prop gate can read it (unblocks RQ-20261117-f5b4-01)",
+  "state": "queued",
+  "owner": "unowned",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed by RESEARCH-OPS-20261117-1006 (fork E, manager ask on node P5-MLV-GATE-STRUCT). The served ml_entry exit since 2026-11-04 is arm F of RQ-20261103-5e04-01 (structure_exit 'pivot=5;sl_only' + extend-only ml_first_passage TP; config/strategies.yaml ml_entry), Stage-0 PASS. But the only prop-gate read of ml_entry (comms/prop_survival/ml_entry.json, RQ-20261102-5e1a-01, FAIL all three firms) used the PRE-structure exit (population: 'served ENTRY v1 (extend-only TP)'). The arm-F code path (ml_entry_tp_revision.py ~L1192-1245) writes verdict.json and --trades-jsonl rows (no entry/exit times or sl) but NOT ledger_ethsol.jsonl; the run path already emits one via ml_variant_ledger.ledger_from_walks with a walk() spy (~L815-830). clears_when: the structure-SL arm path emits <out>/ledger_ethsol.jsonl via the same spy + MVL.ledger_from_walks pattern (ledger_state reported, the arm's verdict byte-identical), --self-test passing; then git mv RQ-20261117-f5b4-01 to research/queue/. [RESEARCH-OPS-20261117-1006] clears_when also needs the driver to emit the intervention controls RQ-20261117-f5b4-01 declares: 200 matched-random SL placements, the best_static grid read on dev folds only, trade-level bootstrap.",
+  "phase": "research",
+  "updated_at": "2026-11-17T10:42:31Z",
+  "updated_by": "session_01AFoLuMNJLaELyLniVCjP7T"
+}

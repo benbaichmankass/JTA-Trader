@@ -1,0 +1,23 @@
+{
+  "id": "SEC-GITLEAKS-BASELINE-1116",
+  "title": "gitleaks-history-weekly red since 2026-11-02: 387 new generic-api-key findings (research artifact hashes) beyond the 2026-09-29 baseline",
+  "state": "in_flight",
+  "owner": "AM-OPS-2 (session_01AFoLuKdqv7sRrnLSFhbH4a)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "security scan hygiene",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "2026-11-16 14:05Z MEASURED run 43878123590 (scheduled 13:41Z, failed 13:47Z): job healthy; 387 findings beyond the baseline, ALL rule generic-api-key (0 vendor-token rules), paths: comms/research/RQ-* 367, research/results/RQ-* 16, comms/research/broad_paths/bp2 manifest 1, config/prop_phone_devices.yaml:18 (token_sha256 hash), tests/test_prop_platform_dxtrade_api.py:23 (tok-SECRET-123 fixture), docs/claude/work/checklist/E61.json:14 (prose). Key shape sampled with values masked: trade_key_sha256 (content hash). CLASSIFICATION: false positives; no live credential, nothing for the operator to rotate. Red every Monday since run 7 (11-02). FIX: regenerate .gitleaks-baseline.json per docs/security/gitleaks-baseline.md (pinned gitleaks 8.24.3 sha256-verified; a full-history clone is cloning in the scratchpad), keep the 4 known-revoked rows, update the triage table; Tier 1 PR. OPEN: durable path+rule allowlist for comms/research/ and research/results/ (generic-api-key only) would stop the weekly regrowth but narrows the scan: needs the manager's OK. Closing observation: the next scheduled gitleaks-history-weekly run (Mon 2026-11-23 05:17Z) is green or fails only on findings created after the baseline. 2026-11-16 14:35Z BUILT as HOLD PR #26521 (Tier 2, manager approved baseline refresh + scoped allowlist). Exact split corrected: 387 = 384 research artifacts + 3 others (not 383 + 4). .gitleaks.toml: generic-api-key ONLY for comms/research/ and research/results/ ONLY; baseline 352 unchanged + 7 appended (3 'other' + 4 test/workflow strings not in the CI log; why CI matched them and the local scan did not is UNVERIFIED, baselined and documented). PROOF: full-history scan of main (gitleaks 8.24.3 sha-verified) with the new config + baseline = 0 findings; 59 gitleaks/pytest-filter tests pass with the binary incl. planted ghp_-shaped token under comms/research/ still caught. pytest-run.yml filter gains .gitleaks.toml. Closing observation: the Monday 2026-11-23 05:17Z gitleaks-history-weekly run is green or fails only on findings created after this baseline. Rule: PROPOSE for the future - an attention_watch probe on this workflow's conclusion so a red run is seen the day it happens (it was red 3 Mondays unseen).",
+  "phase": null,
+  "updated_at": "2026-11-16T14:32:51Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

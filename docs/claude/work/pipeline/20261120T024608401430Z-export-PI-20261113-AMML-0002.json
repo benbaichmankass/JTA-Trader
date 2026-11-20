@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "No leg on a real-money or mirror roster runs on the forming bar while its committed record reads faithful without forming being modelled.",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-AMML-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-ML session_01AFoLuJkXEM1EigH9mSfz1F, 2026-11-13 ~08:00Z, fixing main red after #25671",
+    "rerun": "For each leg rostered on the 4 real-money/mirror accounts in config/accounts.yaml: decision_bar absent or forming in config/strategies.yaml AND comms/strategy_evidence/<leg>.json fidelity == faithful. Clears when that list is empty."
+  },
+  "routed_to": "checklist row CRYPTO-FORMING-EQUITY-REGEN (slv_trend_1h) + RQ-20261113-f251-01 (trend_donchian_sol_prop)",
+  "state": "routed",
+  "what": "Two more real-money legs decide on the FORMING bar (no decision_bar in config/strategies.yaml) while their committed evidence records still read 'faithful' from before #25228. Since #25228, an absent decision_bar grades as forming, an omitted lever. The legs are slv_trend_1h (equity; the trend harness has no equity forming replay, so it cannot be faithful) and trend_donchian_sol_prop (crypto; forming is replayable from Binance 1m). Population: the 8 legs rostered on alpaca_live, alpaca_portfolio, bybit_2 and bybit_portfolio, read 2026-11-13. The next config change or regeneration flips each record to 'approximate' and turns main red on test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots, exactly as tqqq_trend_long_1d did after #25671 (fixed in #25691 by decision_bar: closed). Per leg: either a Tier-3 decision_bar: closed (live matches its closed-bar Stage-0 evidence), or a faithful forming re-measure (sol: --decision-bar forming --klines-1m-dir).",
+  "why_it_matters": "A routine config change on a real-money leg turns main red, and live currently trades on a decision bar its evidence never measured."
+}

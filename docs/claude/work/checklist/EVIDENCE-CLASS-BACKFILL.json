@@ -1,0 +1,22 @@
+{
+  "id": "EVIDENCE-CLASS-BACKFILL",
+  "title": "Declare evidence_class (holdout + claim) on the research units that PASSed in the last 30 d, so heldout_registered_passes_30d stops reading 314 unknown; templates and programme unit_defaults carry it for new units",
+  "state": "queued",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "[2026-11-11 ML lane] Split from RESEARCH-SLO-HELDOUT-SURVIVORS (PR #24983). MEASURED: 314 of 382 registered-rule passes since 2026-10-12 have no structured held-out class. Biggest groups: hand-authored live_strategy 86, new_strategy_prop 63, regime 48, ml_health 17, macro 12; generated programme:P1 28, m20-exit-lever 22, P3 11, roster-walkforward 9. Templates (research/templates/*.yaml) and programme unit_defaults can carry it for new units at no per-unit cost. Backfilling existing units is a research/queue edit (stamp-only surface, so held PRs) and needs a per-unit read of the decision rule. Owner proposed: the weekly programme review. DONE WHEN unknown_holdout in comms/research/health/ is below 25% of registered passes.",
+  "phase": "W46",
+  "updated_at": "2026-11-11T21:33:29Z",
+  "updated_by": "session_01AFoLuJzKhDBzvqyKJM6emw",
+  "week_lane": "standing"
+}

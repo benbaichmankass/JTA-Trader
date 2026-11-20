@@ -1,0 +1,24 @@
+{
+  "id": "DESK-BUILD-SURVIVOR-ADOPT",
+  "title": "After #25335 moves the desk scan builder into its own unit, a build that survives a trader restart is labelled 'interrupted' but its packet is never committed or posted, because commit + wake post still run in the trader thread that died. On startup, the trader should adopt a finished survivor's result.json (same bar, packet complete) and commit + post it, so a deploy mid-build no longer loses the wake. No gate, no delay; Prime Directive (keep trying, one red flag on repeated failure).",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuN8W9UCAhWmW48kGkM",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DESK"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25356
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "Filed by AM-OPS 14:48Z from lane DESK-TRIGGER-SCAN-TIMEOUT limit (1). Depends on #25331 + #25335. Check: restart the trader mid-build; the survivor packet posts on PR 17895 within the bar.",
+  "week_lane": "surge"
+}

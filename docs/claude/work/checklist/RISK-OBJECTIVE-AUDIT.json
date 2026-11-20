@@ -1,24 +1,26 @@
 {
   "id": "RISK-OBJECTIVE-AUDIT",
   "title": "Audit every decision rule and review metric that grades on mean net R alone (exit-lever gate RULE-M20-EXIT-LEVER-IS-OOS-GATE, promotion rules, perf-review headline, LTR hold-vs-option, desk lifecycle) and propose the risk-adjusted form under the operator's 2026-10-29 objective (net P&L first, risk second; a big risk cut for a small R cost wins)",
-  "phase": null,
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": "claude-sonnet-5-5",
-  "ceiling_usd": 8,
-  "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [
-    "AM-RISK-ADJUSTED-RULE"
-  ],
-  "note": "Widened per SYSTEM-CONFORMANCE-AUDIT (#21197): the audit also covers the Stage-0 promotion rule, the Stage-2 demotion test (Tier 3), the desk_grade gate and the prop gate (RULE-P5-GATE-BRK-PER-LEG-V2): each graded against the operator objective (absolute net P&L $/% per account and book; risk reduction the tie-breaker).",
-  "priority_rank": 2,
-  "updated_at": "2026-10-29T08:14:11Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "_seq": 783
+  "priority_rank": 163,
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "prs": [
+    25290
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "_seq": 783,
+  "note": "Widened per SYSTEM-CONFORMANCE-AUDIT (#21197): the audit also covers the Stage-0 promotion rule, the Stage-2 demotion test (Tier 3), the desk_grade gate and the prop gate (RULE-P5-GATE-BRK-PER-LEG-V2): each graded against the operator objective (absolute net P&L $/% per account and book; risk reduction the tie-breaker). [2026-11-12 11:35Z AM-TRADING, UNBLOCK-WATCH triage] Blocker NOT real: AM-RISK-ADJUSTED-RULE is landed_unproven (the rule exists in scripts/research/am_risk_adjusted.py / RULE-AM-RISK-ADJUSTED-V1); an audit of rules grading on mean net R alone can run now. Cleared blocked_on; runnable; lane requested via the manager. [2026-11-12 lane] Delivered: docs/research/risk-objective-audit-2026-11-12.md + docs/proposals/risk-objective-tier3-proposals-2026-11-12.md (PR #25290, draft, Tier-1 self-land). Proposals P1-P4 are Tier-3, none applied; P5 Tier-1. Open question (demotion DD trigger) clears_when: committed bootstrap record under comms/research/ for legs n>=40; owner AM-TRADING. Row state left for the manager to close. [2026-11-12 11:51Z AM-TRADING] Audit delivered in PR #25290 (Tier 1, docs): docs/research/risk-objective-audit-2026-11-12.md + docs/proposals/risk-objective-tier3-proposals-2026-11-12.md. Findings: Stage-0 bar admits point-estimate edge (13/54 pass; of 11 readable, 9 have CI lower bound <=0, 2 have DD > net); exit-lever gate, LTR tighten bound and Stage-2 demotion are mean-R-led; prop gate already risk-adjusted. P1-P4 are Tier-3 PROPOSALS (none applied; any that ADD a limitation go to the operator as questions per the 11:45Z no-new-gates rule); P5 Tier 1. Open: demotion DD-trigger needs a bootstrap record (clears_when: committed record under comms/research for legs n>=40; owner AM-TRADING). Row closes when #25290 merges. [2026-11-15 07:14Z AM-OPS] #25290 (audit doc + Tier-3 proposal list, proposals NOT applied) self-landed after the manager-15a refresh (main merged, landing file renamed to the branch slug). The proposals still need the operator; this row's report half is on main. [2026-11-15 08:26Z Manager 15a] Operator 2026-11-15 ~08:24Z, verbatim: \"3. You have to give those to me\": the risk-objective audit's Tier-3 proposals go to the operator as a decision doc (with GATE-AUDIT's). The manager owns it. [2026-11-15 GATE-RISK-DECISION-DOC] P1-P4 are 4 of 249 questions on the decision page https://claude.ai/artifact/JtbYvhHupxYMgngxBHa7Bs . P5 filed as row RISK-OBJECTIVE-P5-PERF-REPORTING (performance-review, Tier 1). [2026-11-15 09:03Z Manager 15a] OPERATOR DECISIONS by popup (~09:02Z, verbatim choices): P1 \"Report-only column (Recommended)\": drawdown vs net shown beside every promotion, no clause. P2 \"Grant (Recommended)\": the exit-lever gate uses RULE-AM-RISK-ADJUSTED-V1 R1-R4 in place of R-NET-R. P3 \"Grant (Recommended)\": the LTR tighten auto-bound becomes ev_delta >= -0.05R, or >= -0.25R with a measured >=15% drawdown cut, and worst case judged on p05_r where the cell is measured. P4 \"Grant (Recommended)\": the registration template requires V1 for exit/in-trade units and DD + weekly p5 reporting for entry units. P3 changes config/mandates.yaml bounds (Tier 3, operator-granted here). Implementation joins GATE-DECISIONS-20261115-IMPLEMENT.",
+  "phase": null,
+  "updated_at": "2026-11-15T09:04:57Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV",
+  "week_lane": "throttle"
 }

@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "Gate 1: a committed Stage-0 evidence record clearing its registered rule → flip to live, else kill (evidence record ABSENT)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-05-24",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "vwap"
+    }
+  },
+  "id": "PI-SOAK-20261101-vwap",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "state": "killed",
+  "terminal_reason": "The soak's own exit says \"else kill\": vwap is disabled, has no Stage-0 evidence record, and the soak grades it dead. | evidence: docs/claude/work/soak-state.json on origin/main 30b5cd919 (generated 2026-11-08T03:49Z, grade comms/research/soak_book_grade/2026-11-08.json, grade_usable true; population 48 stage1 subjects: 6 ready, 40 accruing, 1 could-not-look): vwap verdict dead \"enabled: false - the shadow soak runs nothing and logs nothing\". config/strategies.yaml origin/main: vwap enabled False, execution shadow. comms/strategy_evidence/vwap.json absent (git cat-file fails; 65 other files present). vwap is on no account roster and has no shadowed-features.yaml entry.",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "SOAK (shadow): vwap — execution: shadow strategy. Exit: Gate 1: a committed Stage-0 evidence record clearing its registered rule → flip to live, else kill (evidence record ABSENT). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: The soak's own exit says \"else kill\": vwap is disabled, has no Stage-0 evidence record, and the soak grades it dead. EVIDENCE: docs/claude/work/soak-state.json on origin/main 30b5cd919 (generated 2026-11-08T03:49Z, grade comms/research/soak_book_grade/2026-11-08.json, grade_usable true; population 48 stage1 subjects: 6 ready, 40 accruing, 1 could-not-look): vwap verdict dead \"enabled: false - the shadow soak runs nothing and logs nothing\". config/strategies.yaml origin/main: vwap enabled False, execution shadow. comms/strategy_evidence/vwap.json absent (git cat-file fails; 65 other files present). vwap is on no account roster and has no shadowed-features.yaml entry."
+}

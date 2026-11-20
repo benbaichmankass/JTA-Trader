@@ -1,0 +1,22 @@
+{
+  "id": "PROP-VM-PARTIAL-JOURNAL-QTY",
+  "title": "prop VM partial close: the journal fill row keeps the pre-partial qty",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-12 (CAP-PROP-VM-CLOSE surge); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "After vm_close.run_close_step reduces a position, nothing posts the new size to /api/bot/prop/report (the reconcile compares only SL/TP). The final close's exit is read from venue history (unaffected), but the open row's qty / risk display is stale and the partial's realised P&L is not its own row. Build: post a partial-close fill report (closed qty, venue fill from read_history). Re-entry: a test that a reduce posts one report with the closed qty. [2026-11-12 10:40Z lane CAP-PROP-VM-CLOSE] DESIGN HAZARD (MEASURED, prop_executor.open_from_fills): a position's open/closed state is the NEWEST prop_fills row per (account, symbol, direction). A partial-close row posted as status 'closed' would make the remaining open position read CLOSED, and the reconcile would then call the live remainder an orphan. Build instead: a distinct status (e.g. 'partial_close') that open_from_fills, find_open_prop_positions, unpriced_closes_from_fills and the P&L readers skip when choosing the newest row, plus a qty update on the open row. Every reader of prop_fills.status must be listed and tested first. Coordinated with JOURNAL-TRUTH (session_01AFoLuLaFeiQpKFjyffLkxw): trades rows use their partial_close_journal.book_partial_close; prop_fills uses this. PR #25230 posts NOTHING for a partial, so it is safe as merged. [2026-11-12 14:42Z handoff] Not started; design hazard recorded above (a 'closed' partial row would mark the remainder closed). clears_when: a distinct partial status that open_from_fills / find_open_prop_positions / unpriced_closes_from_fills skip + open-row qty update, merged with tests over every prop_fills.status reader.",
+  "phase": null,
+  "updated_at": "2026-11-12T14:41:08Z",
+  "updated_by": "session_01AFoLuLZif73NzCZEY27pKE"
+}

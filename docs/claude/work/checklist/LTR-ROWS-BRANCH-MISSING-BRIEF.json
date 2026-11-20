@@ -1,0 +1,22 @@
+{
+  "id": "LTR-ROWS-BRANCH-MISSING-BRIEF",
+  "title": "live-review/rows branch lacks .claude/skills/live-trade-review/REVIEWER-BRIEF.md, so every reviewer dispatched there runs without its brief",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Found 2026-11-15 16:09Z by reviewer LR-20261115T1605Z (ADA bybit_2). VERIFIED: origin/main has the brief; origin/live-review/rows (tip b1f6db9e) has only SKILL.md under .claude/skills/live-trade-review/; the rows tree is slimmed (56,590 files vs 94,235 on main); merge-base f9b060aa (main 15:13Z) has the brief, so whatever builds/mirrors rows drops it. Interim (manager): every reviewer dispatch prompt now says read it via git show origin/main:.claude/skills/live-trade-review/REVIEWER-BRIEF.md. Fix: make the rows branch carry the brief (and AMENDMENTS.md), or have the wake recipe point at main. Done when a fresh reviewer on live-review/rows reads the brief from its own checkout. Same report: check_live_review_records.py fails on ~8 older rows (handoff.verdict keep/carry/none not in confirm|revise|exit, rows ~193-202) - check and fix or file. Packet pricing defect (could_not_price 1/1; open_r/peak_r/atr_stop_mult null on a 1-bar-old package) goes to LTR-GRADER-COVERAGE. 2026-11-16 00:25Z manager: a second rows-branch defect. Reviewer row LR-20261116T0012Z-pkg-09c923d9af344d2a (SOL close, real money) was pushed TRUNCATED, as invalid JSON (commit 71e9943b): the writer cut off the last string field. Create-only meant the reviewer stopped and the close sat unapplied for about 8 min. The manager authorized a one-time overwrite of the reviewer's own corrupt file (ea5f8ba0). The VM applied the close at 00:21:09Z on bybit_2 and bybit_portfolio. Fix candidates: the REVIEWER-BRIEF should require a json.load check of the local file before pushing, plus a read-back parse after; and/or the rows mirror or watcher should flag an unparseable row as an incident instead of silently skipping it.",
+  "phase": null,
+  "updated_at": "2026-11-16T00:21:37Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

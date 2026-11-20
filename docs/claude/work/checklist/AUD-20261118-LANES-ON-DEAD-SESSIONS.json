@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261118-LANES-ON-DEAD-SESSIONS",
+  "title": "271 of 855 open work items (243 of 436 queued) are laned to three assistant-manager sessions that are archived or disconnected (AM-OPS archived 11-15, AM-ML archived 11-13, AM-TRADING idle/disconnected since 11-15); no lane works them and the runnable queue does not offer them",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "EVIDENCE: work.py list --kind build --state {queued,in_flight,blocked,landed_unproven} --limit 1000 at ~18:25Z 11-18 (855 open), lanes counted; get_session on session_01AFoLuJUGfpon2bNgwFbFmx (ARCHIVED 11-15T23:53Z), session_01AFoLuJkXEM1EigH9mSfz1F (ARCHIVED 11-13T22:20Z, its summary says its ML work was reassigned to FRONTIER, but the rows still name it), session_01AFoLuMroLtrU2biw4ZDoBk (IDLE, disconnected, last 11-15T10:53Z). Split: queued 243/436, blocked 13/25, landed_unproven 12/362, in_flight 3/32. This is why 15 of 16 open audit rows did not move from 11-12 to 11-18; WEEKLY-AUDIT-2026-11-18 released those 15 (archive-lane, owner=manager). REMAINING: 256 non-audit rows, for tonight's week plan to re-lane or release. DETECTOR (proposed, report-only, no gate): the work brief lists open rows whose lane is a session in ARCHIVED state or disconnected > 48 h (WSD-S5-STATE-VIEWS covers stale in_flight only, not queued rows with a dead lane). CHECK {command: 'the same lane count', rule: 'open rows on archived/disconnected lanes <= 10', resolves_when: 'next weekly audit'}.",
+  "phase": null,
+  "updated_at": "2026-11-18T18:22:46Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9"
+}

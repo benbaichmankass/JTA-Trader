@@ -1,0 +1,22 @@
+{
+  "id": "DB-LOCK-SIGNAL-DUALWRITE-HOLDER",
+  "title": "Reconcile-loop sweeps hit 'database is locked' 8x/24h; the in-process signal-dual-write thread (Database.insert_signal) is inside a write in 8/8",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "MEASURED 2026-11-14T04:54Z to 2026-11-15T04:54Z (journalctl db_lock_diag, 8 events; 0 dual-write failures). Waiter: reconciliation-loop in order_monitor._sweep_package_close_reason_from_trade (6) / _sweep_stuck_linked_packages (2); contained, retried next pass, no money path. Thread tagged [db] at the moment of the lock: [signal-dual-write] at database.py:insert_signal in 8 of 8 (lines 1751/1808/1811 across deploys); once also MainThread journal_sync.py:journal_sync. Other processes with the journal open: none (4), web-api uvicorn (3; different pids across restarts), a 'python3 -c import sqlite3 ... backup' snapshot one-liner (1, 00:37:34Z). The desk-build subprocess (the DB-LOCK-HOLDERS-DESK-BUILD suspect) was never named. Database connection busy_timeout is 3000 ms (database.py:529). NEXT (holder fix, no new gate): measure how long the signal-dual-write insert holds its write transaction (commit per insert vs batched; WAL checkpoint on that connection?), then either shorten it (commit immediately, no long-lived txn) or give the reconcile sweeps a longer busy_timeout. Then re-read 24h with a target of 0 db_lock_diag from the sweeps.",
+  "phase": "build",
+  "updated_at": "2026-11-15T05:12:00Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

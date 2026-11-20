@@ -1,0 +1,31 @@
+{
+  "based_on": "work_store:v6",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "resolution_criteria: RESTORE (close) if at the next weekly read stage-guard no longer lists the model in summary.demote AND labelled macro_f1 >= 0.57; SOFT-OFF proposal stands if it is listed again (persistent: apply the drift-remediation skill and file DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2); 3 attempts without re-gate -> retire to candidate (refine-not-abandon).",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261111-TX7TX2ZN-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-11 (lane ML-FRONTIER-PREP-20261111)",
+    "rerun": "trainer: .venv/bin/python -m ml stage-guard --db data/trade_journal.db | summary.demote; GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 2026-11-12 (superseded): OPS backlog drain decides (observation still owed or reasoned close) [weekly planning 2026-11-12]",
+  "redate": {
+    "evidence": "trainer-vm-diag #26859; GET /api/bot/shadow/drift",
+    "observation": "2026-11-18 re-read: trainer stage-guard summary.demote still lists btc-regime-15m-lgbm-fc-pcv-v2 and now sol-regime-15m-lgbm-fc-pcv-v2 (issue #26859). /shadow/drift BTC KS 0.552 PSI 0.871; SOL KS 0.246. Labelled macro-F1 0.585 still >= 0.57. Live-vs-replay label parity FAILs (aadc-01; BTC kappa 0.24), so the stage-guard read rests on replayed labels. Driven by row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2 and PI-20261118-ZZUFKM1F-0001.",
+    "observed_at": "2026-11-18"
+  },
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "routed_to": "DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2 (checklist row, filed by ML-REVIEW-20261118)",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[refinement] btc-regime-15m-lgbm-fc-pcv-v2 (ADVISORY, Collie-5a): the trainer stage-guard proposes DEMOTE (trainer-vm-diag #24903, run 43082654333, summary.demote = [this model], 97 others hold). MEASURED same day: /api/bot/shadow/drift KS 0.236 significant / PSI 0.206 (no_change 0.029 on 11-04); score mean 0.976 -> 0.936, sd 0.057 -> 0.106; labelled macro_f1 0.582 on the 11-11 cycle (stable 0.577-0.582 since 11-04). All 5 regime heads read moderate+ the same week, so a common input shift is likely. Hypothesis: transient regime-mix drift, not capability loss. Soft-off (advisory -> shadow) is a Tier-3 operator call (ml-review P8; this lane recommends HOLD one weekly read). It changes at most 2 bybit_1 demo trend_vol cell pairs (if REGIME_ML_VERDICT_MODE=use)."
+}

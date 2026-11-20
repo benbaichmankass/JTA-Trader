@@ -1,0 +1,25 @@
+{
+  "id": "HEALTH-20261112-JOURNAL-BAK-RETENTION",
+  "title": "Cap the journal-backup writers: ~12 Tier-2 helpers each copy the whole 2.6 GB journal and nothing prunes at the writer",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuL258tHykcEaADf8rE",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops hygiene: live-VM disk retention, no roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25239
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[lane HEALTH-20261111-LIVE-DISK-REGROWTH 2026-11-12 ~07:15Z] MEASURED (disk-usage-report #25142): / 77% used, 12G free of 52G; two backups left, trade_journal.db.bak-prop-report-close-1794330728 (11-10 17:15Z, 2.69 GB) and -1794464708 (11-12 06:27Z, 2.76 GB); live DB 2.76 GB. WRITER: each of ~12 Tier-2 helpers (prop_report_close/open/skip, prop_ticket_expire/reissue, prop_fix_mislinked_close, repair_prop_fill_direction, backfill_*, supersede_*) takes a full sqlite online backup to <db>.bak-<what>-<epoch> before each APPLY; nothing prunes at the writer; prune-db-backups is manual only. Observed 11-05, 11-10, 11-12: about one 2.6 GB copy per prop apply. FIX (Tier 2, not done): shared helper in the writers keeping only the newest N per prefix, plus a scheduled prune-db-backups. NO deletion by this lane (keep-set rule kept both files; on-VM .bak integrity NOT checked, no allowlisted action does it). Off-VM backup verified 11-12 06:50Z: trade_journal-20261112.db.gz 299.75 MB, integrity ok, restore ok mismatches 0, trades 7090=7090, bucket ict-journal-backups, 31 consecutive dailies. Workflow bugs: journal-offvm-backup ignores 'mode:' from repository_dispatch (restore-test ran as backup) and posts no issue comment for repository_dispatch.",
+  "phase": "build",
+  "updated_at": "2026-11-13T09:53:29Z",
+  "updated_by": "AM-OPS",
+  "week_lane": "surge"
+}

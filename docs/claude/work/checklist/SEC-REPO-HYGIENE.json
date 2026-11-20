@@ -1,0 +1,23 @@
+{
+  "id": "SEC-REPO-HYGIENE",
+  "title": "Security: no secret scan on push or PR, no CODEOWNERS, no dependabot, 1 of 595 action uses SHA-pinned",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 122,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "REPO READ 2026-11-11 (166 workflows): the only secret scan is gitleaks-history-weekly (schedule + dispatch), red for 3 weeks on false positives (row GITLEAKS-HISTORY-FALSE-POSITIVES); no .gitleaks.toml; no CODEOWNERS; no dependabot.yml; first-party actions are tag-pinned. 50 workflows hold contents:write. No workflow alerts when a file under .github/workflows changes on main (detector D4). UNVERIFIED: GitHub native secret scanning and push protection (repo setting). Good news from the same sweep: 0 workflows use pull_request_target, 0 lack a permissions block, all 79 issue-triggered workflows require the issue author to be the repo owner, 0 inline attacker-controlled text into a shell.",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "throttle"
+}

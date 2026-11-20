@@ -1,0 +1,22 @@
+{
+  "id": "ML-EQ-STRUCT-EVIDENCE-SOURCE",
+  "title": "Commit a per-trade source_run for comms/strategy_evidence/ml_entry_eq_struct.json so r4_demotion_gate can grade ml_entry_eq_struct (alpaca_live, real money); today it cites a run URL and abstains no_evidence",
+  "state": "dropped",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "found by lane ML-SERVING-HYGIENE 2026-11-12; sibling of ML-ENTRY-EVIDENCE-SOURCE; AM-ML maps it",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-19",
+  "note": "[2026-11-12 ML-SERVING-HYGIENE session_01AFoLuMJ8JwM8du98vMoR77] MEASURED: scripts/ops/r4_demotion_gate.py dry run on GET /api/bot/performance/recent?n=40 read 2026-11-12T10:34Z: ml_entry_eq_struct (alpaca_live) abstain no_evidence because source_run = the Actions run URL 42432561069, not a committed file; the run (RQ-20261107-98e3-06) committed only aggregates + holdout_reads.jsonl, no per-trade net_r rows. Fix = re-run the 98e3-06 confirming read on the research runner (Alpaca data) with a per-trade writer, check it reproduces n 207 / mean +0.4922 R, commit the ledger under comms/strategy_evidence/runs/<date>/ and repoint source_run (pattern: ML-ENTRY-EVIDENCE-SOURCE). DONE WHEN r4_demotion_gate reads ml_entry_eq_struct with a resolvable source (abstaining only on n < 40).",
+  "week_lane": "surge"
+}

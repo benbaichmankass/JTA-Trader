@@ -1,0 +1,22 @@
+{
+  "id": "DISPATCH-RESULT-LOST-NO-REJECTION-ROW",
+  "title": "A dispatch can end with no result and no rejection row: pkg-3d3925fdd57c4bfb (sol_pullback_2h, bybit_1) entered multi_account_execute and was later orphaned with nothing journaled",
+  "state": "queued",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "dispatch/journal fidelity defect",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "MEASURED 2026-11-15 (trader pid 656844, code f80c245c). 15:41:11.332Z: coordinator.dispatch trace_id=dcb61d0ad68c435084199f0d0e22ee54, eligible_accounts=1. 15:41:11.757Z: multi_account_execute read linear balances for bybit_1. After that: no 'slice refused', no 'Pipeline result', no trades row. Population: the 300 newest trades rows (0 rows for this package) and the trader journal 15:41:11-15:47:30Z, grepped for slice/reject/result/traceback/timeout (none). Every neighbouring sol_pullback_2h dispatch (29 between 15:30 and 16:05Z) logged 'slice refused ... slice_budget_exhausted' and a rejected row. The package sat open with no holder, blocked re-dispatch through strategy_monocle (open_package_exists) for 5.5 min, and _sweep_unlinked_packages orphaned it at 15:46:44Z ('0 relabelled from journalled rejection, 1 orphaned'). The operator wants refusals LOGGED for reviews and training, so a refusal path that ends silently loses a training row. Next: find the exit path in Coordinator.multi_account_execute between the balance read and the slice check that returns or raises without calling log_rejection_to_journal (possibly a swallowed exception or an early return), add a test that every path out of the per-account loop journals a row, and fix (Tier 2, coordinator). Re-entry test: a forced exception after the balance read still yields a rejected row.",
+  "phase": null,
+  "updated_at": "2026-11-15T16:07:03Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "DIAG-TOKEN-LOG-REDACT",
+  "title": "Security: Caddy journal logs the X-Diag-Token header in plaintext; redact in the Caddyfile and rotate DIAG_READ_TOKEN",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Found 2026-11-11 by the OAUTH-INVENTORY lane (docs/design/site-auth-consumer-inventory-2026-11.md line 48, PR #24855). Caddy warn lines log request headers; Authorization is redacted but X-Diag-Token is not, so the diag read credential sits in caddy.service's journal, which is readable through the diag relay (exposure limited to holders of diag access, and the journal itself). Fix: (1) Caddyfile log redaction of request>headers>X-Diag-Token (Tier-2 deploy via vm-caddy-deploy), plus a proper access log with redaction (also wanted for the consumer inventory); (2) rotate DIAG_READ_TOKEN via the set-diag-token system action after the redaction is live. Operator OK needed (Tier 2). Value deliberately not copied anywhere.",
+  "phase": null,
+  "updated_at": "2026-11-11T15:42:36Z",
+  "updated_by": "Manager Session 2026-11-09a"
+}

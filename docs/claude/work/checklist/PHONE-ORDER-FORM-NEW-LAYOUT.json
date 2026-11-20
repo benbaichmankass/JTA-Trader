@@ -1,0 +1,24 @@
+{
+  "id": "PHONE-ORDER-FORM-NEW-LAYOUT",
+  "title": "Phone executor: measure the new-layout ORDER FORM, then lift the order-path fence (ORDER_PATH_VERIFIED_ON_NEW_LAYOUT)",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 60,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "ask_operator",
+  "due_by": "2026-11-17",
+  "note": "[2026-11-12 09:30Z AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk] MEASURED: the order path is NOT refusing tickets today. /api/bot/prop/status phone_events: 08:03:40Z submitted '(bg:overlay) placed Buy 0.61 ETHUSD lim 2050.56 (seen in open orders)' ticket prop-manual-feb50ae29826; 08:04:59Z submitted 'placed Buy 11.81 SOLUSD lim 82.96 (seen in open orders)' ticket prop-manual-f4c3fab02c11. WHY (code, exec.js:1299-1302): orderPathFenced() is true only when there is NO submit button AND no control matching ORDER_RE /^order( form)?$/i; the live page now shows an 'Order form' control (phone_positions_diag controls 09:06:46Z), so the fence does not fire even though ORDER_PATH_VERIFIED_ON_NEW_LAYOUT=false. No operator capture is needed for the order path to work. Remaining: decide whether to set the flag true / delete the fence now that live submits are measured (Tier 2, phone lane).",
+  "updated_at": "2026-11-12T09:16:18Z",
+  "updated_by": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "week_lane": "surge"
+}

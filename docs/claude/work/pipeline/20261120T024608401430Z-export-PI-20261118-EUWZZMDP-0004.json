@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each of the three heads is in plumbing.tracked with an owning row, retired by a recorded stage decision, or seen again in shadow_predictions; and plumbing.expected_registry_stages matches the registry",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EUWZZMDP-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-18 (ML-REVIEW-20261118, lane ML-FRONTIER-PREP-20261118, session_01AFoLuMhxGuKUegEUWZzMdp)",
+    "rerun": "python3 scripts/ops/ml_plan_status.py --plumbing | grep -E 'SILENT|STAGES'"
+  },
+  "routed_to": "ML lanes (manager to dispatch)",
+  "state": "routed",
+  "what": "[ml] Three shadow heads went silent 2026-11-12 and are untracked (ml_plan_status.py --plumbing SILENT(UNTRACKED)): Chihuahua-2a btc-regime-5m-lgbm-yz-v1, Collie-4a btc-regime-15m-lgbm-fc-pcv-v1, Collie-4b sol-regime-15m-lgbm-fc-pcv-v1 (last_seen 2026-11-12T01:50-01:55Z). Either superseded (fc-pcv-v2 live) and to be retired to candidate with a recorded decision, or serving dropped them. Also REGISTRY-STAGES-CHANGED: shadow 16 vs plan 21, candidate 80 vs 72, with no recorded decision."
+}

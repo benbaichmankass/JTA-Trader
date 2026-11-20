@@ -1,0 +1,28 @@
+{
+  "id": "PHONE-SELF-DIAGNOSE",
+  "title": "Phone executor closes its own loop: full action coverage + a screenshot of every step sent back to lanes, so diagnosis and fixes need no operator relay",
+  "state": "landed_unproven",
+  "owner": "lane PHONE-SELF-DIAGNOSE",
+  "lane": "session_01AFoLuNKBqP9ZUzNpxRdMAU",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11; manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24977,
+    25141
+  ],
+  "blocked_on": [
+    "manager merge + web-api deploy of #25141",
+    "operator APK install from the #25141 merge-commit run + screenshot"
+  ],
+  "due_by": "2026-11-18",
+  "note": "Operator 2026-11-11 ~21:20Z, verbatim: 'the phone app being able, first of all, me being able to take screenshots and the app being able to A, do all the actions without limitations and B, take screenshots of everything that it's doing so that it can send it back to a lane so that the lane can understand what's going on. Like this back and forth cannot keep going on between me and the app and you. Like the, we need to close this loop and give it the capabilities that it needs so that you can do the diagnostics and fixes without asking me all the time what's the app actually doing right now.' Trigger: breakout_2 tickets de7e925668af (SOL) and c54b2229aa1c (ETH) journaled PLACED-unverified while the app could not read Positions (no_table); the operator confirmed by hand that the ETH long IS open (21:20Z). Absorbs PHONE-SCREENSHOTS (FLAG_SECURE, operator screenshots). Done = (1) the operator can screenshot the terminal; (2) a coverage table of every venue action the executor needs, each proven on the device or with a named blocker; (3) every executor step uploads a real screenshot (not blank) + page state, readable by a lane through a diag route, so a lane diagnoses a mismatch without asking the operator; (4) fixes ship via signed remote exec.js wherever possible, so APK installs are rare. Operator chose NOT to cancel queued Actions runs; exec.js #24887 (no_table fix) waits for the queue.",
+  "phase": "now",
+  "updated_at": "2026-11-11T21:09:33Z",
+  "updated_by": "Manager Session 2026-11-11a"
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "A Kaggle dataset carrying the frozen ENTRY decision panel (and/or the exit-path corpus) is published and listed in published-data.json, and one ml_bakeoff GPU unit reads it. Or the manager kills this with a stated reason (e.g. the D3/D8 sequence lever is judged not worth the build).",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZQKSKUGH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ITERATION-REFILL-2-20261117 session_01AFoLuJTQqWT5KwZQksKUgh, 2026-11-17, PR #26678",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json (count units whose backend is kaggle_gpu); grep -l 'compute: gpu' research/queue/*.yaml; read research/results/RQ-20261117-c21d-05/*.jsonl and RQ-20261014-65cc-0[678] arm_status."
+  },
+  "state": "queued",
+  "what": "Kaggle GPU has no diagnosis-backed ML work (measured 2026-11-17 by lane ML-ITERATION-REFILL-2-20261117). The GPU backend can only run ml_bakeoff learners over the published metis-market-data shards, and every GPU-shaped family is closed or blocked there. (1) Sequence/GRU on D2 regime is CLOSED at power: c21d-05 GRU is worse than lgbm_yz by 0.018 / 0.025 / ~0.02 nats on BTC / ETH / SOL 1h, CI excluding 0 (torch_devices cuda). (2) Tabular foundation models on D2 read as a TIE at full n: ff8f-02 TabICL vs LightGBM gave deltas of about 1e-4. On Kaggle, tabicl/tabpfn arms have only ever reported unavailable (65cc-06/-07/-08): the kernel has no internet for weights, and row ML-NONGBDT-RUNNERS is landed_unproven. (3) The diagnosed D3/D8 questions, entry (Foxhound; c21d-02 gross +0.082 R vs net -0.058 R on the held-out year, so cost-dominated) and the exit head, need the ENTRY decision panel and the exit-path corpus as published Kaggle datasets. Today ml_entry_population_test.py fetches bars live on the runner, so no GPU unit can read them.",
+  "why_it_matters": "The operator wants every backend to hold meaningful work through the reset. Without a published decision panel, Kaggle GPU can only be filled with floor-filler, which STOP-GENERATED-AUTHORING bans. The build that unlocks diagnosed GPU work is: publish the frozen ml_decision_entry_v1 decision/feature panel (and the corpus_v2 exit paths) to a Kaggle dataset, plus an ml_bakeoff group spec for them. The lane is the manager's to dispatch (Tier 1)."
+}

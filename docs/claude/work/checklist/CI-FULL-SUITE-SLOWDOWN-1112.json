@@ -1,0 +1,24 @@
+{
+  "id": "CI-FULL-SUITE-SLOWDOWN-1112",
+  "title": "Full pytest-run suite (27,925 tests) takes 40-53 min per run vs 14.4 min measured at CI-DIET (10-13); each full run holds 1 of the 20 hosted-runner slots 3-4x longer, saturating Actions (MEASURED 2026-11-12: jobs 131070147506 2397s, 131060816113 3209s, image ubuntu-26.04 20261101.186.1; scoped runs ~3.2k tests still 7-12 min). Find the cause with a --durations compare (slow files, xdist worker count, network or sleep in tests); fix it in the tests, never by deselecting.",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuHgb4azeFBsuXnJwWP",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "note": "Filed by AM-OPS from the Actions-queue diagnosis 2026-11-12 09:55Z (sent to the manager as trig_016oeh3oFSD4U27SAwDLMWU2). Check: the median full-suite pytest-run is under 20 min over the next 10 full runs. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. owner AM-DEVOPS session_01AFoLuMr7uensVVinDEwryw is completed (idle since 11-12). Still real: today's pytest-run took 45 min (#25389 run 43698905997).",
+  "updated_at": "2026-11-15T10:36:31Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

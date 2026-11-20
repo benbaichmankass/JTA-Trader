@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a failed m20-exit-lever-sweep run lands a read_state=producer_failed E5 row for its unit (m20_sweep_result.py on SWEEP_RESULT=failure), verified on one failed run",
+    "kind": "event"
+  },
+  "id": "PI-20261112-TE74WG5Z-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z), AM-ML stuck-units scope",
+    "rerun": "grep -n 'no verdicts.json under sweep_out' scripts/research/m20_corpus_extract.py scripts/research/m20_sweep_result.py"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "m20-exit-lever-sweep: a failed sweep writes NO E5 row. On SWEEP_RESULT=failure the research_result job runs m20_sweep_result.py, which exits 1 ('no verdicts.json under sweep_out') instead of emitting producer_failed. The unit then stays stamped 'ran' with nothing to grade: RQ-20261016-d37f-04 (run 38967815725) and -13 (run 39015656806) sat 26 days; re-armed by hand in #25293. Fix: emit a producer_failed record naming the failed stage, so the grader routes it (needs_review / re-queue) like every other producer."
+}

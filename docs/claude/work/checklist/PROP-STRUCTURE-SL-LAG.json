@@ -1,0 +1,26 @@
+{
+  "id": "PROP-STRUCTURE-SL-LAG",
+  "title": "Prop trail held a closed-bar leg's stop at the entry stop until a bar closed, and replayed from the package's current stop (velotrade_1 ETH pkg-fe0c0d8875b142f6)",
+  "state": "done",
+  "owner": "AM-OPS-2 (session_01AFoLuKdqv7sRrnLSFhbH4a)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "prop executor stop-path defect, money path",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26422
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "2026-11-16 01:13Z. #26422 merged 01:12Z (squash efd3a6ab): (1) plan_trail no longer holds structure/sl_floor plans at n==0; (2) the trail replays from ticket_sl (emitted stop), not the package's current stop. MEASURED before: venue SL 1871.94 held 00:08-01:03Z (executor trail_plan 'no closed bar since the signal bar', atr 7.39 vs 18.79). Moved only after the 01:00Z close: 1858.21 (01:03:52Z), 1847.72 (01:08:19Z). CLOSING OBSERVATION (merged, not yet deployed at 01:12Z): after deploy, the next ml_entry prop fill shows trail_plan atr from ticket_sl (~ATR, not 0.4x) and a tighten plan at bars=0 (stop at the package stop within one executor tick of fill). Verification check-in 01:26Z; closes done on that observation, else re-date. Related: LTR-PROP-CLOSE-FALSE-APPLIED (vm_close must cancel a working entry, deferred). 2026-11-16 01:27Z DEPLOYED + PARTLY OBSERVED. Deploy: diag version trader_git_sha efd3a6ab82 (restart_pending false); prop executor code_sha efd3a6ab8 from the 01:18Z tick (both accounts). OBSERVED (fix 2, emitted stop): velotrade_1 ETH trail_plan at 01:18:17Z and 01:23:21Z: atr 18.794 (was 7.389), replay_sl 1849.1286 = the package stop (was 1846.28); resting 1846.28 is already tighter so the plan holds ('replayed stop does not tighten'), never loosens. OBSERVED: SOL entries gone: tradeify_1 orders 0 (cancel 01:04:28Z), velotrade_1 orders 2 = ETH SL/TP after the 01:08:07Z cancel; tickets reported skipped (tradeify 01:13:41Z, velotrade 01:18:07Z). NOT YET OBSERVED (fix 1, n==0): a structure-exit prop fill whose first trail_plan tighten comes at bars=0, before a bar closes. Closing observation: the next ml_entry prop fill on tradeify_1/velotrade_1 (executor journal trail_plan bars=0 action=tighten within ~1 executor tick, stop at the package stop). Re-date 2026-11-18; close done on that observation. 2026-11-16 04:33Z OBSERVED fix 1 on a fresh fill (closing observation met). ml_entry ETHUSDT short pkg-f24f786324ab4b37, tradeify_1 prop-manual-0c34bf90d4d9, 1.23 @1826.79, SL 1867.161 / TP 1766.233 at fill. Executor tick after the fill read it at 04:28:31Z; 04:28:46Z trail_plan action=tighten, bars=0, atr 20.186 (the true ETH ATR, from ticket_sl), replay_sl 1849.4764, resting 1867.161, no 'no closed bar since the signal bar' hold; trail_amend sl 1857.805 (one bounded rollout step toward 1849.477), result ok. Before the fix the same situation held 55 min (pkg-fe0c). Code sha efd3a6ab8. The status feed at 04:28:31Z still showed 1867.161 (it precedes the amend). Package SL for f24f was still the entry stop 1867.16 at 04:30Z, so the 'stop at the package stop' comparison does not apply; the prop stop is moving to its own structure replay.",
+  "phase": null,
+  "terminal_reason": "fix 1 and fix 2 observed on live fills: velotrade_1 ETH atr 7.39->18.79 (01:18Z); tradeify_1 ETH pkg-f24f first tick after fill tightened at bars=0, atr 20.19, no hold (04:28:46Z)",
+  "updated_at": "2026-11-16T04:31:13Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "CRED-ARGV-RESIDUE",
+  "title": "Two scripts still pass a bearer on curl argv (process-list visible; output suppressed): post_alert.sh:24, deploy_pull_restart.sh:1077",
+  "state": "queued",
+  "owner": "health-review (Tier-1 hygiene; the deploy_pull_restart.sh edit is Tier 2)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "security hygiene; map at weekly pass",
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Manager 15a, 2026-11-15T10:20Z, on the PI-20261111-PREP1111-0002 relay: realized_slippage.py is FIXED on main (the header goes in through curl --config on stdin, and the stderr tail is redacted; see the PREP1111-0002 docstring at L95-103). The token the 11-11 session saw was pre-rotation and is dead. The only runner caller is soak-book-grade-weekly.yml (Sun 03:00Z). It reads DIAG_READ_TOKEN as a repo secret, which GitHub masks in Actions logs, so a public-log leak of the live token was not the realistic path. No rotation is needed on this evidence. Residue: a grep for curl -H bearer headers built from a shell variable finds 2 argv uses, post_alert.sh:24 (DASHBOARD_API_TOKEN) and deploy_pull_restart.sh:1077 (DIAG_TOKEN, VM-local). Both send their output to /dev/null, so the exposure is the host process list only. Fix: switch both to the '-H @-' stdin pattern already used in relink_orphan_trade_5209_action.sh:48. Done when that grep finds 0 argv bearer headers and a guard or test pins it (the F6 check in docs/reviews/2026-11-11-weekly-walkthrough.md).",
+  "phase": null,
+  "updated_at": "2026-11-15T10:13:24Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

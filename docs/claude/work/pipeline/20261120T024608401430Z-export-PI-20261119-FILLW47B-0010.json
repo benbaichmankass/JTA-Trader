@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the unit-authoring guidance used by the research lanes states the single-sided-arm breadth rule, or the manager records why not; no new gate",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0010",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19, c5e8-01 grade, manager instruction 21:01Z",
+    "rerun": "python3 -c \"import json,subprocess; m=json.loads(subprocess.run([\\\"git\\\",\\\"show\\\",\\\"origin/main:comms/research/RQ-20261119-c5e8-01/44589971319/measurement.json\\\"],capture_output=True,text=True).stdout); print({a:{c:v[\\\"n\\\"] for c,v in x[\\\"cells\\\"].items()} for a,x in m[\\\"arms\\\"].items()})\"   # per-cell n per arm: LONG/SHORT 12-16 < the 20 cell floor"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "A registered per-cell breadth clause that a one-sided arm cannot meet makes PASS unreachable by construction. MEASURED 2026-11-19 on RQ-20261119-c5e8-01 (pooled 1d-ETF pullback direction): the rule required at least half of the cells with n >= 20 to pass their own cell rule, but the LONG and SHORT arms have 12-16 trades per cell (66-68 pooled over five cells), so the clause had no cell to apply to. LONG failed independently on folds (2/6) so the verdict stands, but the design was flawed and the harness wrote INDETERMINATE for the same reason (0 powered cells). Rule for future units (manager 2026-11-19): when an arm is single-sided (direction, side-filter) or otherwise splits the sample, register breadth on the POOLED population or on cells whose expected n per arm is at least the cell floor, and state expected n per cell per arm in the power block; do not copy the both-sides breadth clause. Applies to the authoring checklist for pooled-population units (STRUCTURE-EXITS-DEFAULT doctrine). No CI check and no new refusal is proposed (no new gates)."
+}

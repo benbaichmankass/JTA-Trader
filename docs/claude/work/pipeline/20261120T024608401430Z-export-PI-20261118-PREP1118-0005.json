@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "on a shallow clone live_vs_backtest.py either deepens history or prints a non-verdict for cut=unknown, with a test",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "git rev-parse --is-shallow-repository && python3 scripts/research/live_vs_backtest.py --leg slv_trend_1h --leg tlt_pullback_1h"
+  },
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[performance][tooling] live_vs_backtest.py in a shallow clone (the default cloud checkout) cannot derive config_since: every leg prints cut=unknown and is banded on ALL its closes, pre-config included, without a warning. Measured 2026-11-18: the shallow run gave slv_trend_1h mirror CONSISTENT n=9 -5.01R pct 9.6 and tlt_pullback_1h mirror BELOW_BACKTEST n=10 pct 5.0; after git fetch --unshallow both read on post-config closes only (slv INSUFFICIENT_N n=1 +2.40R; tlt NO_LIVE_TRADES). A reader of the shallow output sees a demotion-shaped verdict on a config that no longer trades. Fix: on a shallow repo, deepen history or return a non-verdict for cut=unknown."
+}

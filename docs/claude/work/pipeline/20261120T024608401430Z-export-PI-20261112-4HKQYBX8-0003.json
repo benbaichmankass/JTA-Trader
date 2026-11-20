@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "from a cloud session, mint_id twice in one day with an append in between returns two distinct ids, both absent from /api/bot/work/items before the append",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-4HKQYBX8-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "UI lane p2 session_01AFoLuMw1bWyUmi4HkqYBX8, C3 probe write",
+    "rerun": "python3 -c \"import sys; sys.path[:0]=['scripts/ops','.']; import pipeline as P; print(P.mint_id('session_01AFoLuMw1bWyUmi4HkqYBX8'))\"  # from a cloud session; collides if it prints an id already in /api/bot/work/items"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "MINT-ID-POST-FREEZE: scripts/ops/pipeline.py mint_id() reads read_log(store), which after the WORK-STORE S4 freeze reads work_store.db only where that file exists (the live VM) and otherwise the FROZEN export files. From a cloud session it therefore cannot see items written since the freeze and re-mints a taken id. MEASURED 2026-11-12 16:28Z: mint_id('session_01AFoLuMw1bWyUmi4HkqYBX8') returned PI-20261112-4HKQYBX8-0001 again, an id written to the store at 15:04:41Z, and append(intent='new') refused it (the guard works; nothing was displaced). Effect: every cloud session's second new pipeline item of a day fails until the id is hand-picked. Fix: when frozen and there is no local DB, mint against the live store, e.g. GET /api/bot/work/items?kind=observation filtered to the session tag, the same RemoteWorkStore paging src/console_connector/data.py uses."
+}

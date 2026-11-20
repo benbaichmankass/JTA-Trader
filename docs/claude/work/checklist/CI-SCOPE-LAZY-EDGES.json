@@ -1,0 +1,21 @@
+{
+  "id": "CI-SCOPE-LAZY-EDGES",
+  "title": "pytest-run affected mode: 73% of PR heads still run the full suite; lazy-import edges make half the repo reach half the tests",
+  "state": "landed_unproven",
+  "owner": "lane",
+  "lane": "lane/ci-scope-lazy-edges",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "[2026-11-12 15:05Z lane] MERGED #25296 (17fe66957c, AM-DEVOPS merge) = merged, not observed. Its full pytest-run had failed ONLY on test_check_api_tier_policy (red on main; 28,062 passed). OBSERVE (by 2026-11-15): over the next 24 h of PR pytest-runs, the scope step's 'mode=' distribution (expect FULL share ~54% or lower vs 73% on 2026-11-12 09:30-11:19Z) and no main-backstop red that an affected-mode PR run missed. HOW: GitHub Actions pytest-run job logs, lines 'mode=' / 'reason=' in 'Determine relevant changed files'.",
+  "phase": "ci",
+  "updated_at": "2026-11-12T15:05:00Z",
+  "updated_by": "session_01AFoLuHgb4azeFBsuXnJwWP"
+}

@@ -1,31 +1,32 @@
 {
   "id": "LEDGER-REFRESH",
   "title": "broker_truth_ledger ~77 days stale (bybit_2 SUB is CSV-only); bybit_1/bybit_portfolio daily journal-vs-wallet delta",
-  "phase": "W6",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuLMSxrMGBVwzzrWa1s",
   "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
   "ceiling_usd": null,
   "spend_usd": 1.5,
-  "tier": 2,
   "prs": [
-    17469
+    17469,
+    25281
   ],
   "blocked_on": [],
-  "note": "CLOSES WHEN (after PR #17469 merges+deploys): (1) curl /api/bot/pnl/broker-truth shows accounts[bybit_2].live.state=measured_api and declared_gaps; (2) the 'Broker-truth ledger freshness' issue (label broker-truth-freshness) exists with Last checked <6h and bybit_2 graded declared_gap. OPEN, needs operator: bybit_2 SUB (-261.01 frozen 2026-07-13) has no API path -> either a fresh operator UM export or SUB-credential lane; bybit_1/bybit_portfolio still have NO ledger record (journalTrust no_record = unreconciled, not clean). Deltas measured 2026-10-10 (bybit_1 14d: wallet -5335 vs journal -3433, delta -1902, wallet fees 2279 explains it with +377 unexplained, 9 null-pnl + 85 estimated rows of 304; bybit_portfolio 14d n=9 journal rows vs 50 wallet rows, delta -72, fees 242). [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. /api/bot/pnl/broker-truth bybit_2.live.state=measured_api (latest_row_age 4.6h) observed; ledger as_of 2026-07-13 (90d stale, SUB declared_gap). No broker-truth-freshness issue found by GitHub label search (0 results), so the freshness-issue clause is unobserved. Next 2026-10-17. | [BACKLOG-DRAIN 2026-11-01] REOPEN: FAILED. GET /api/bot/pnl/broker-truth at 2026-11-01: bybit_2 as_of 2026-07-13, as_of_age_days 111, stale true, source bybit_um_export_stitched, with a declared SUB gap; not measured_api and not <6h. The freshness issue was not read (no issue-label read in this lane).",
-  "updated_at": "2026-11-01T11:45:56Z",
-  "updated_by": "BACKLOG-DRAIN-20261101",
+  "due_by": "2026-11-19",
+  "_seq": 233,
+  "note": "CLOSES WHEN (after PR #17469 merges+deploys): (1) curl /api/bot/pnl/broker-truth shows accounts[bybit_2].live.state=measured_api and declared_gaps; (2) the 'Broker-truth ledger freshness' issue (label broker-truth-freshness) exists with Last checked <6h and bybit_2 graded declared_gap. OPEN, needs operator: bybit_2 SUB (-261.01 frozen 2026-07-13) has no API path -> either a fresh operator UM export or SUB-credential lane; bybit_1/bybit_portfolio still have NO ledger record (journalTrust no_record = unreconciled, not clean). Deltas measured 2026-10-10 (bybit_1 14d: wallet -5335 vs journal -3433, delta -1902, wallet fees 2279 explains it with +377 unexplained, 9 null-pnl + 85 estimated rows of 304; bybit_portfolio 14d n=9 journal rows vs 50 wallet rows, delta -72, fees 242). [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. /api/bot/pnl/broker-truth bybit_2.live.state=measured_api (latest_row_age 4.6h) observed; ledger as_of 2026-07-13 (90d stale, SUB declared_gap). No broker-truth-freshness issue found by GitHub label search (0 results), so the freshness-issue clause is unobserved. Next 2026-10-17. | [BACKLOG-DRAIN 2026-11-01] REOPEN: FAILED. GET /api/bot/pnl/broker-truth at 2026-11-01: bybit_2 as_of 2026-07-13, as_of_age_days 111, stale true, source bybit_um_export_stitched, with a declared SUB gap; not measured_api and not <6h. The freshness issue was not read (no issue-label read in this lane). [2026-11-12 10:15-10:22Z OPERATOR decisions page, relayed by Manager 2026-11-11a] w13 bybit_2 ledger (122 d stale): choice \"Keep the CSV exports\" but the note is the instruction: \"This doesn't make sense, why can't the current key read that? This is an unacceptable gap and I don't think you're correctly understanding whats going on here.\" => find why the existing bybit_2 key is not used to pull closed P&L + executions daily; fix with the existing key or show the exact API error; do not ask for a new key. [2026-11-12 LEDGER-REFRESH lane session_01AFoLuLMSxrMGBVwzzrWa1s] ROOT CAUSE: not an access gap. The bybit_2 key (BYBIT_API_KEY_2, the trader's own) is pulled hourly from /v5/account/transaction-log: 1082 rows, newest <3h, a row every trading day since 2026-06-29 (diag bybit_wallet_truth, measured 2026-11-12). The ledger only looked stale because the read path never added that figure to the hand record. SUB -261.01 is CLOSED history: the key's account has no rows 2026-05-01..06-28 (the bot traded SUB on another key then); the API reproduces MAIN -1.52 to the cent; 90/90 journal fill days since 06-29 have a TRADE row under the key. Key = master UID (query-api parentUid empty/0, inferred). FIX PR #25281 (read path: current = hand + live API since window_end+1d; journalTrust uses it; landing hold unvouchable_paths, the manager merges). CLOSES WHEN /api/bot/pnl/broker-truth bybit_2.current.state=measured, realized_usd ~ -364, as_of <2h old. [2026-11-12 LEDGER-REFRESH lane session_01AFoLuLMSxrMGBVwzzrWa1s] ROOT CAUSE: not an access gap. The bybit_2 key (BYBIT_API_KEY_2, the trader's own) is pulled hourly from /v5/account/transaction-log: 1082 rows, newest <3h, a row every trading day since 2026-06-29 (diag bybit_wallet_truth, measured 2026-11-12). The ledger only looked stale because the read path never added that figure to the hand record. SUB -261.01 is CLOSED history: the key's account has no rows 2026-05-01..06-28 (the bot traded SUB on another key then); the API reproduces MAIN -1.52 to the cent; 90/90 journal fill days since 06-29 have a TRADE row under the key. Key = master UID (query-api parentUid empty/0, inferred). FIX PR #25281 (read path: current = hand + live API since window_end+1d; journalTrust uses it; landing hold unvouchable_paths, the manager merges). CLOSES WHEN /api/bot/pnl/broker-truth bybit_2.current.state=measured, realized_usd ~ -364, as_of <2h old. [2026-11-15 08:20Z AM-OPS] #25281 merged b9f95b44, DEPLOYED: deeb95a contains it; boot_audit 08:13:09Z clean_stop, 27/27 SL+TP. /api/bot/pnl/broker-truth bybit_2.current (MEASURED 08:14Z): state=measured, realized_usd -375.32 (hand -262.52 to 2026-07-13 + live -112.80 since; the -364 target was the 11-12 figure, the -11 since is plausibly the 11-12..11-15 fills; not reconciled per trade), as_of 2026-11-15T04:04:32Z = 4.2h old. 2 of 3 close clauses met. as_of is the NEWEST LEDGER ROW (last fill/funding), not the read time, so '<2h' depends on trading activity. Re-check after the next hourly pull: does as_of advance past the 08:00Z funding settlement (bybit_2 has open positions)? If yes, close done.",
   "observation": {
-    "what": "broker-truth freshness issue exists, Last checked <6h, bybit_2 graded declared_gap, and /api/bot/pnl/broker-truth bybit_2.live.state=measured_api",
-    "how_to_check": "curl https://ict-bot.duckdns.org/api/bot/pnl/broker-truth and open the issue labelled broker-truth-freshness",
-    "due_by": "2026-11-05",
-    "redated": {
-      "on": "2026-10-24",
-      "from": "2026-10-17",
-      "by": "REGISTER-SWEEP-W43",
-      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
-    }
+    "due_by": "2026-11-14",
+    "how_to_check": "curl https://ict-bot.duckdns.org/api/bot/pnl/broker-truth after PR #25281 merges and web-api pulls",
+    "what": "bybit_2 current.state=measured with computed lifetime realized (~-364) and as_of <2h"
   },
-  "_seq": 233
+  "phase": "W6",
+  "updated_at": "2026-11-15T08:33:28Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "throttle"
 }

@@ -1,0 +1,23 @@
+{
+  "id": "BACKLOG-DRAIN-20261115",
+  "title": "Backlog drain 2026-11-15 (manager daily review 05:52Z): AM-OPS is the drain lane; measure, rank (money/order-path > ML-supporting > risk > grading > rest oldest-first), work after the current Tier-2 items, report inflow vs outflow",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 12,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "BASELINE, measured 2026-11-15 06:10Z from /api/bot/work/items (all 4,662 items, 5 pages, read_state read). By kind/state: build 1,853 (done 834, dropped 209, landed_unproven 331, queued 363, in_flight 64, blocked 52); observation 2,809 (done 558, dropped 1,478, queued 773). Overdue open (due_at < now, queued/in_flight/blocked): 758 (observations 667, builds 91). landed_unproven 331, of which 282 past due. 24h inflow 40 created vs outflow 22 closed (done/dropped/killed): net +18, the backlog is GROWING. research/queue: 277 units status queued (1,848 done, 70 retired, 14 blocked); the per-unit not_run count is in research_ops_checks, not measured here. Overdue builds by class (keyword classifier, coarse): money/order-path 25, ML 21, risk 3, grading 2, rest 40. Overdue observations: money 341, rest 180, ML 90, grading 40, risk 16. Ranked head of overdue builds: ML-AM-NEXT-LIVE, PROP-PHONE-AMEND-REPORT (blocked), ML-FS-BRACKETS-HOLD (blocked), ML-DECISION-MODELS, PERF-F1-DEMOTION-SIGNAL, ML-PROP-ITERATE, ML-ENTRY-PROP, ACCOUNT-SNAPSHOT-BALANCE-HISTORY (mine, Tier 3, waits on BALANCE-TIP-PRESCRUB + the operator's history-rewrite call), DESK-V1-NO-PERBAR, DESK-V1-SOAK, ALPACA-CLOSE-BROKER-TRUTH (blocked). Several are owned by archived lanes (AM-TRADING, AM-UI); the drain gives each a disposition (rebase owner / re-date with clears_when / kill with reason + data). PLAN: after the open Tier-2 items (#26209), drain in rank order, starting with the 282 landed_unproven past due (each either observed -> done, or re-dated with its observation). PROGRESS 06:35Z, slice 1 = AM-OPS-owned landed_unproven past due (9 rows). Closed: BACKLOG-DRAIN-20261112 (superseded). Corrected: WORK-ROW-AGE-STALE was wrongly landed_unproven (no PR, still reproduces: served updated_at 11-12 08:08 vs store 12:48) -> queued, due 11-18. Re-dated with evidence: GATE-REMOVE-RUNTIME (0 trigger events in 24h, 336k lines; not observable yet), SYSTEMD-WATCH-KNOWS-INSTALLER (needs an installer run), ALPACA-PARTIAL-TP-BREACH-EXIT and ALPACA-PARTIAL-TP-STOP-GAP (need an RTH partial-TP event; Mon 11-16), WORK-STORE-IMPORTER-RACE (indirect evidence that tonight's native writes survived; literal history check pending). Left as is (fresh): PROPOSAL-ALERT-ROUTING, CONFLICTING-EXPOSURE-ALERT. Observed this session (closed done): DIAG-EXCHANGE-POSITIONS-SLOW, ENTRY-FILL-WRITEBACK, DIAG-BYBIT-OPEN-ORDERS-SLOW, ENTRY-FILL-OPEN-R-BASIS, TREND-ALIGN-LABEL-ALL, DB-LOCK-HOLDERS-DESK-BUILD. NEXT SLICE: the 153 manager-owned landed_unproven past due, oldest first, money/order-path class first.",
+  "phase": "build",
+  "queue_pos": 1000001.0,
+  "updated_at": "2026-11-19T06:07:11Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

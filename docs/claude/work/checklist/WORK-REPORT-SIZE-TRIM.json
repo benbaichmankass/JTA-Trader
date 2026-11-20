@@ -1,0 +1,22 @@
+{
+  "id": "WORK-REPORT-SIZE-TRIM",
+  "title": "Daily work report exceeds its 64 KB readability bound (WR-20261114 67 KB, WR-20261115 66 KB): trim scripts/ops/work_report.py output, no new gate",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 8,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "DAILY REVIEW 2026-11-15 (manager): attention_watch probe_report flags 'report' BREACHED because the report is over REPORT_MAX_BYTES = 64_000 (scripts/ops/attention_watch.py:756; 'a report nobody can read in one sitting'). WR-20261114-0530Z was 67 KB and WR-20261115-0530Z 66 KB; no owner row existed (WORK-SYSTEM is done). The report file lives on the VM (runtime_logs/work_reports/<id>.json), not in the repo. Hint, measured on the /api/bot/work/report envelope 05:58Z (145,606 B total; not the report file itself): brief 60 KB, soaks 16 KB, due 3.9 KB, alarms 3.4 KB, so the brief/soak blocks dominate. FIX (Tier 1, no new gate, keep the bound): cap the long lists in work_report.py (e.g. soaks top-N by severity plus a count, brief referenced by id or capped), with a test that a fixture over the cap renders under 64 KB with the dropped counts stated (never silently). Rank: the rest.",
+  "phase": "build",
+  "updated_at": "2026-11-19T05:57:36Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

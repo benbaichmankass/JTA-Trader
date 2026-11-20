@@ -1,0 +1,38 @@
+{
+  "id": "FRONTIER-Q-SIGNATURE-INTRADE",
+  "title": "Path-signature features as a new state for the in-trade (TP-revision / exit) heads",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25545
+  ],
+  "blocked_on": [],
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "frontier": {
+    "baseline": "R1 + path_state block (78fc-04) on the same TM-BENCH corpus, folds, label and seed; graded by tm_bench --rule stage_a_folds vs the within-trade permutation control",
+    "consumer": "ml-tm-action-value (TM-BENCH) -> scripts/ops/live_review_apply.py advice on the six money legs (trend_donchian_eth_4h/xrp_4h, xrp/ada_pullback_2h, two prop donchian legs); NOT D7, which already PASSED (RQ-20261101-383f-01)",
+    "est_cost": "$0 runner; one harness flag to add a feature block",
+    "family": "ssl_representation-adjacent (feature transform; learner stays gbdt)",
+    "next_step": "harness block built: tm_bench --feature-block signature|path_state+signature (PR #25545, selfcheck PASS). Register iteration 4 (R1+path_state+signature vs R1+path_state, stage_a_folds, same corpus/folds/seed) the moment RQ-20261112-3144-02 grades FAIL; AM-ML assigned this (overnight item 2).",
+    "p_pass": 0.08,
+    "source": "Chevyrev & Kormilitzin, A Primer on the Signature Method in Machine Learning, arXiv 1603.03788 (PRIMARY); iisignature (pip, CPU, MIT). Audit docs/research/ml-deep-audit-2026-11-12.md item 6: five in-trade negatives on ONE state representation (R1), hindsight ceiling 0.86 R/trade",
+    "state": "triaged",
+    "unit": null,
+    "why": "the value exists (0.86R ceiling) but the R1 features do not select it; a truncated signature of the in-trade path (price, time, MAE/MFE) is a principled, order-aware summary we have never tried, cheap on CPU and servable inline (no torch)"
+  },
+  "note": "2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'lane FRONTIER-RESEARCH (AM-ML)', no live session). its PR #25545 merged 2026-11-12 23:51Z; blocked_on was empty. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation. [2026-11-15 23:40Z ML-PRIMARY-4, owner now] The row's trigger never fired: 3144-02 graded PASS (Stage A, path_state: close + partial_close_50 on 4 of 6 folds), not FAIL. The action-value line instead closed on 7e18-01 Stage B FAIL (+0.0033 R/trade, CI [-0.007, +0.013]). The signature test therefore needs TWO units. (1) Stage A as in 3144-02 but with --feature-block path_state+signature, a new rule registered first: which classes pass >= 4 of 6 folds. (2) Only if (1) passes a class: Stage B as in 7e18-01, restricted to the passing classes, with --feature-block path_state+signature, under the same s_offline rule. Baseline: the same arms on path_state alone, same corpus, folds and seed. p_pass 0.08 per the frontier triage. Authoring (1) is my next item after grading 5785-05. [2026-11-17 09:50Z ML-PRIMARY-4] Correction to my 11-15 plan note: the signature block already FAILED Stage B in d5a7-03 and -04 (per ML-ITERATION-REFILL-20261117). The two-unit plan is superseded; not authored; the programme review decides.",
+  "updated_at": "2026-11-17T09:46:06Z",
+  "updated_by": "session_01AFoLuJazEnEQNP6MeVfuv3",
+  "week_lane": "surge"
+}

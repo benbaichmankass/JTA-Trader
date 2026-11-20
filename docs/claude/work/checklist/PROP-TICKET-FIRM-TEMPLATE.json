@@ -1,0 +1,25 @@
+{
+  "id": "PROP-TICKET-FIRM-TEMPLATE",
+  "title": "Prop ticket text ignores the firm: every tradeify_1/velotrade_1 ml_entry ETH ticket (11-11 20:03Z, 11-12 08:02Z) says 'BREAKOUT TRADE SETUP \u2014 place a BRACKET order on the Breakout terminal' (src/prop/breakout_ticket.py:220). The 'Prop context' footer also hardcodes '1-Step Classic', daily 3% and static DD 6% (lines 144-145, 243), wrong for velotrade_1 (7% / 4%). Key the text on the account's firm and its accounts.yaml risk limits. Check: the next tradeify_1 and velotrade_1 ticket names its own venue and limits.",
+  "state": "landed_unproven",
+  "owner": "AM-TRADING",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25343
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "[2026-11-12 PROP-TICKET-TRUTH] decision: manager 2026-11-12 \u2014 prop ticket text keyed on firm (correctness). TicketConfig gains venue_name/plan_label/daily_loss_pct/max_drawdown_pct (repr=False so the breakout_1 golden stays byte-identical), filled from the account's backtest_ruleset by multi_account_ticket._firm_fields; breakout_1 (breakout/1-step-classic) keeps the legacy text. Test: tests/test_prop_breakout_ticket.py::test_ticket_names_own_firm_and_limits (tradeify_1 -> Tradeify 247 3%/6%; velotrade_1 -> Velotrade 4%/7%). Related ticket tests: the same 11 failures before and after my change (fastapi absent in the sandbox). Landing: hold, AM-DEVOPS merges. Closes when a new velotrade_1 ticket in GET /api/bot/prop/tickets reads 'VELOTRADE TRADE SETUP' with (4%)/(7%) after deploy. PR #25343 (draft, hold, branch lane/prop-ticket-firm-template; the earlier header-only branch lane/prop-ticket-truth is superseded). Not merged/deployed/observed. [2026-11-15 07:15Z AM-OPS] #25343 merged 3b97bc78 (manager); #25328 closed as superseded. landed_unproven; observed when the next velotrade_1/tradeify_1 ticket shows its own firm name and limits (not 'BREAKOUT TRADE SETUP'/'1-Step Classic').",
+  "updated_at": "2026-11-15T07:13:02Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

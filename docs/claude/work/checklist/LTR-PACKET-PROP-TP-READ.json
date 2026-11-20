@@ -1,0 +1,22 @@
+{
+  "id": "LTR-PACKET-PROP-TP-READ",
+  "title": "Live-review packet marks prop mechanics 'match' without reading the venue TP (velotrade_1 TP 76.477 vs package 78.964 went unflagged by the packet)",
+  "state": "done",
+  "owner": "GENERAL lane",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "packet defect found 2026-11-12",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "LR-20261112T0002Z-pkg-50f5eed272f64197 (row e1c6fa4b5): the packet said mechanics match for the SOL 4h prop shorts, but did not read the venue TP. The reviewer found velotrade_1 TP 76.477 vs package 78.96364 itself. Same packet: priced_options could_not_price and state.open_r null for the prop package (pricing goes to LTR-GRADER-COVERAGE). Fix: scripts/ops/live_review_packet.py reads both brackets from /api/bot/prop/status venue_terminal for prop accounts, and fills account_bounds (empty for this package).",
+  "phase": "now",
+  "updated_at": "2026-11-12T00:10:23Z",
+  "updated_by": "Manager Session 2026-11-11a"
+}

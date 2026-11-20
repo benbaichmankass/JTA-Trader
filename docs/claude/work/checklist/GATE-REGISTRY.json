@@ -1,0 +1,34 @@
+{
+  "id": "GATE-REGISTRY",
+  "title": "Gate registry: DB in the live system (trade_journal.db::gate_registry) + GET/POST /api/bot/gates + Admin \u2192 Gates panel (operator 2026-11-12)",
+  "state": "landed_unproven",
+  "owner": "AM-UI",
+  "lane": "session_01AFoLuMuyahDZgPg6aU3fac",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator ask 2026-11-12 (visibility tool for the gate audit); no milestone carries gate governance",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25322,
+    25528
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "2026-11-12 lane GATE-REGISTRY (Manager Session 2026-11-11a): backend JTA-Trader #25322 (Tier 2, landing hold, web-api restart; AM-DEVOPS merges) + SPA ict-trader-dashboard #247 (AM-UI reviews; merge after #25322 is deployed). Seeded from GATE-AUDIT #25300 (297 rows) + operator decisions a040d7aa0 (53). Local seed run: 298 rows, 40 pending implementation, 1 drift (AM-PROP-VM-CLOSE-REFUSALS cites a file only in open #25230). hits_14d null for every row (not measurable; comms/gates/hit_probes.json mechanism). Gates: none. Done when GET https://ict-bot.duckdns.org/api/bot/gates serves the rows with the decisions AND the Admin tab shows them live. 2026-11-12 21:38Z: #25322 MERGED by manager (31526ad7f, 21:30Z), DEPLOYED (web-api restarted on 31526ad7f ~21:35Z per /api/diag/version), OBSERVED: GET /api/bot/gates 200, readState=read, 299 rows (298 seeded + CI-w9-gate-reports found unregistered by the drift scan, 1 alert sent), decisions 13 keep / 11 remove / 29 report_only / 246 undecided, refresh read at 31526ad7f; GET /gates/{id} 200, bad filter 400, POST without session 401. implemented=0 is correct (no main commit names a decided id yet). No 'database is locked' in web-api/trader journal 21:35-21:38Z (grep probe positive-controlled); re-check ~22:40Z. Remaining: SPA #247 (waits AM-UI stack #238-#246) then Admin tab live. 2026-11-12 22:50Z: first-hour lock watch FOUND contention from the registry refresh (write txn held ~7 s across scans; trader signal_audit dual-write 'database is locked' at 21:46:28 and 22:41:27 aligned with gates refreshes; 1/0/0 per hour before deploy vs 6 after, 4 of them at 22:00-22:01 not attributable here). Fix PR #25528 (Tier 2 hold): scans before any write, alerts outside transactions, regression test (fails on old module, passes new). SPA #247 merged 22:29Z (2f140f9); Pages run queued; bundle verification pending. 2026-11-12 23:00Z: SPA DEPLOYED: Pages serves index-Cr68pXP2.js (first seen 22:59:06Z; was index-CzrVFsqg.js). Bundle grep: /api/bot/gates 3, 'flagged row' 1, report_only 1, 'pinned on top' 2, 'Live gate registry' 1, 'Could not look: the gate registry' 1; negative control 0 (all four were 0 in CzrVFsqg per AM-UI 22:33Z). State: backend merged+deployed+observed; SPA merged+deployed (bundle verified). OPEN on: (e) human browser load of Admin -> Gates showing rows (on the operator's list); and #25528 (refresh lock fix) merge+deploy+observe no 'database is locked' aligned with gates refreshes. 2026-11-12 23:28Z: lock fix #25528 MERGED (dc27ef5d2, 23:16:54Z), DEPLOYED (web-api on 0915b3332, which contains dc27ef5d2), OBSERVED on one post-fix refresh: GET /api/bot/gates at 23:27:25 triggered a refresh (HEAD moved) and returned in 1.36 s (pre-fix ~7 s); ict-trader-live 'SQL dual-write failed' since 23:15Z = 0 (control: 248 trader lines since 23:27:00). Remaining open observation: (e) a human browser load of Admin -> Gates (bundle index-Cr68pXP2.js) showing rows. Lane GATE-REGISTRY closing; follow-ups PI-20261112-G6AU3FAC-0001 (hit probes) and -0002 (22:00Z lock cluster, owner manager). 2026-11-13 00:27Z: post-fix lock hour OBSERVED: ict-trader-live 'SQL dual-write failed' 23:20Z-00:26Z = 0 (grep window positive-controlled: 'WARNING' matched 104 lines 23:30-00:08); gates requests in window 23:27:26, 23:44:02 (+30-min background loop), 0 coincident locks. Pre-fix: 2 locks aligned with refreshes in the prior hour. Lock fix #25528 closed as merged+deployed+observed. Row stays landed_unproven only on (e) human browser load of Admin -> Gates. Lane GATE-REGISTRY archived.",
+  "observation": {
+    "due_by": "2026-11-14",
+    "how_to_check": "after ict-trader-dashboard #247 merges and Pages redeploys: fetch the live bundle and grep for the Gates panel strings (+ a negative control), then a human load of Admin -> Gates",
+    "what": "The SPA Admin tab shows the live gate registry (Admin -> Gates lists the rows from GET /api/bot/gates, decision buttons record via POST)"
+  },
+  "observe": {
+    "how": "Admin -> Gates lists rows from GET /api/bot/gates (299 at 2026-11-12) with decision buttons; journalctl ict-trader-live shows no SQL dual-write database-is-locked within seconds of a /api/bot/gates refresh after #25528 deploys",
+    "when": "after a human loads Admin -> Gates on https://benbaichmankass.github.io/ict-trader-dashboard/ (bundle index-Cr68pXP2.js or later) AND #25528 is deployed"
+  },
+  "phase": null,
+  "updated_at": "2026-11-13T00:27:20Z",
+  "updated_by": "session_01AFoLuMuyahDZgPg6aU3fac"
+}

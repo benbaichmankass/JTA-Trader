@@ -1,22 +1,26 @@
 {
   "id": "REGIME-VOL-SPEC-ADVISORY-ONLY",
   "title": "[STRUCTURAL FIX, Tier-2/3 held] vol_detector.resolve_vol_specs must read ADVISORY-stage heads only, so a shadow head can never change an order through the trend_vol router (PI-20261029-Q17QWHDZ-0003)",
-  "phase": "W45",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": "session_01AFoLuJZg7SryMjAubE1zXo",
+  "model": "claude-opus-5-5",
   "tier": 3,
-  "prs": [],
-  "blocked_on": [],
-  "note": "OPERATOR 2026-11-05 (JTA Console note on PI-20261029-Q17QWHDZ-0003), verbatim: \"this seems like it needs a structural fix more than a decision - we shouldn't need exceptions to allow expected system behavior, and if its not expected, it needs to be fixed\". IS THE BEHAVIOUR EXPECTED? NO. Under the ladder a shadow-stage head is observe-only; src/runtime/regime/vol_detector.py::resolve_vol_specs (read 2026-11-05) builds its frozen vol-bucket edges from discover_shadow_stage_model_ids, and intents._decision_vol_regime keeps that frozen label when no advisory head answers, so a candidate->shadow promotion for a symbol with authored trend_vol cells starts those cells gating. FIX (no recorded exception, no SKILL.md carve-out): gate path takes edges only from advisory heads or the config-declared fit-time edges; the shadow-sourced edges stay for the observe-only regime_ml_vol_shadow row. Needs: a test that promoting a shadow head to existing-cell symbol leaves gate decisions unchanged; before/after count of intents whose gate label changes (population: live trend_vol cells, current registry). Tier-2/3: order path, so a held PR needing operator OK or a committed evidence record. Closes PI-20261029-Q17QWHDZ-0003.",
-  "due_by": "2026-11-12",
   "roadmap": [
     "L-REGIME"
   ],
-  "updated_at": "2026-11-05T11:04:32Z",
-  "updated_by": "session_01AFoLuKMSCYK8SPEYVeekJn",
-  "_seq": 944
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "prs": [
+    25235
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "_seq": 944,
+  "next_action": "observe after the next ict-trader-live restart carrying 00285627fe: scripts/ops/diag_fetch.sh /api/diag/log_file?name=audit&lines=1000&grep=regime_hard_gate -> every row logged after the restart with vol_label_source=frozen has vol_regime=unknown and vol_gated=false (ML-sourced rows unchanged). Then state=done and close PI-20261029-Q17QWHDZ-0003.",
+  "note": "OPERATOR 2026-11-05 (JTA Console note on PI-20261029-Q17QWHDZ-0003), verbatim: \"this seems like it needs a structural fix more than a decision - we shouldn't need exceptions to allow expected system behavior, and if its not expected, it needs to be fixed\". IS THE BEHAVIOUR EXPECTED? NO. Under the ladder a shadow-stage head is observe-only; src/runtime/regime/vol_detector.py::resolve_vol_specs (read 2026-11-05) builds its frozen vol-bucket edges from discover_shadow_stage_model_ids, and intents._decision_vol_regime keeps that frozen label when no advisory head answers, so a candidate->shadow promotion for a symbol with authored trend_vol cells starts those cells gating. FIX (no recorded exception, no SKILL.md carve-out): gate path takes edges only from advisory heads or the config-declared fit-time edges; the shadow-sourced edges stay for the observe-only regime_ml_vol_shadow row. Needs: a test that promoting a shadow head to existing-cell symbol leaves gate decisions unchanged; before/after count of intents whose gate label changes (population: live trend_vol cells, current registry). Tier-2/3: order path, so a held PR needing operator OK or a committed evidence record. Closes PI-20261029-Q17QWHDZ-0003. [2026-11-12 09:30Z AM-ML session_01AFoLuJkXEM1EigH9mSfz1F] Dispatched lane session_01AFoLuJZg7SryMjAubE1zXo (claude-opus-5-5, fresh, $12) a day ahead of its 11-13 slot (surge, no capacity limit); brief carries the row text and operator spec verbatim. Reports to AM-ML. [2026-11-12 lane session_01AFoLuJZg7SryMjAubE1zXo] RE-READ main ce4af2fc7: vol_detector.resolve_vol_specs still shadow-sourced; BUT _hard_regime_gate already refused to ENFORCE a vol cell on a non-ML label (guard vol_enforced = vol_gated and vol_is_ml, present at least since 2026-10-29, the shallow-history floor) - the 11-05 read missed it, so no order changed on a frozen label. Remaining structural gap: the frozen shadow-head label was still FED to the enforcing would_gate verdict + its audit row. FIX (branch lane/regime-vol-spec-advisory-only): hard gate takes vol label = advisory ML label (mode use, concrete) else 'unknown'; frozen label kept only for observe-only rows. Planted/clean test pair tests/test_regime_vol_gate_advisory_only.py (6/9 fail on old code, 9/9 pass). MEASURED (signal_audit full scan 658,989 lines, rows 2026-11-03..11-12): 82 hard-gate rows all ML-sourced, 9 vol-enforced drops all ML; 788 regime_ml_vol_shadow candidates, 29 on live trend_vol-cell strategies (all BTCUSDT, all concrete ML) -> 0 label changes, 0 decision changes. Registry 09:33Z: 3 advisory regime heads (btc 15m fc-pcv, mes 5m, sol 15m), 16 shadow. Held PR, Tier 3. [2026-11-12] Held draft PR #25235 opened, head 2288035891b2300f7b837dacae94832bb0f67dd2, Tier 3 landing:hold; prepush 74 pass/0 fail. Awaiting CI then manager merge call. landed_unproven until merged+deployed+first regime_hard_gate row with vol_regime from advisory only observed. [2026-11-12 11:18Z] PR #25235 head 2288035891b2300f7b837dacae94832bb0f67dd2: CI GREEN (guards, pytest-collect, pytest-run full suite), mergeable clean. Held for manager merge call (Tier 3). Lane closes as handoff: remaining = manager merge -> deploy -> observe a regime_hard_gate row whose vol_regime is advisory-sourced or unknown (never frozen). Then close row + PI-20261029-Q17QWHDZ-0003. [2026-11-12 11:36Z] #25235 MERGED to main as 00285627fe (verified: gate_vol line present on origin/main). Merged != deployed != observed: deploy not checked by this lane. landed_unproven; observe step in next_action. [2026-11-12 11:40Z AM-ML] MERGED by the manager: #25235 (00285627) under 'Data-backed Tier-2/3 decisions'. NOT yet deployed/observed: takes effect on the next trader restart. Observation that closes it: one regime_hard_gate audit row after the restart whose vol label comes from the advisory head, with vol_regime_frozen kept on the row. State -> landed_unproven. [2026-11-12 11:41Z AM-ML] Lane session_01AFoLuJZg7SryMjAubE1zXo archived; final spend $5.76 of $12. The post-restart observation is AM-ML's to read (clears_when: a regime_hard_gate row dated after the next ict-trader-live restart, with its vol label from the advisory head and vol_regime_frozen present). OBSERVED 2026-11-15 (reviewer LIVE-REVIEW-20261115-0005, XRP bybit_2): regime.cell_entry vol_regime='unknown' at entry, 2/2 packets. This matches this row's design: a frozen-sourced label reads unknown when no advisory head answers. It is evidence for the closing check, not a new defect. Filed here, the existing owner, rather than as a new pipeline item.",
+  "phase": "W45",
+  "updated_at": "2026-11-15T00:16:25Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
 }

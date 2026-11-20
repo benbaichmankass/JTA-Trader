@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-23",
+    "kind": "date"
+  },
+  "id": "PI-20261119-Q8HCWKL1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane PERF-FOLLOWUP-2026W47 (PR #27202); RQ-20261118-abab-56",
+    "rerun": "python3 scripts/research/ict_scalp_fidelity.py --leg ict_scalp_eth_15m --account bybit_1 --live-start 2026-07-24 --cost-start 2025-10-04 --cost-end 2026-10-01 --out <dir>"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "DECIDED by the manager 2026-11-19: HOLD (no revert). Basis: gap CI includes 0 (abab-56 arm A [-0.60,+0.84]; arm B CIs span 0). Rerun = RQ-20261119-e11f-01 (blocked on ICT-SCALP-FORMING-BAR-ARM).",
+  "tier": 3,
+  "updated_by": "session_01AFoLuJQHZnwtERq8HCwKL1",
+  "what": "[performance][real-money][tier-3 proposal] ict_scalp_eth_15m on bybit_2 + bybit_portfolio (since 2026-11-17). RQ-20261118-abab-56 graded FAIL and its registered action is 'PROPOSE a revert to the operator'. proposed_tweaks shape: {scope: config/accounts.yaml bybit_2 + bybit_portfolio roster entry ict_scalp_eth_15m (mirror equality), current_value: rostered live, proposed_value: revert to the demo floor (bybit_1) = the rule's action, evidence: [research/results/RQ-20261118-abab-56/44385139200.jsonl, comms/strategy_evidence/ict_scalp_eth_15m.json (net_r_oos -2.93, n 76, fail), comms/perf_followup/perf-followup-20261118-190000.json L1], risk_note: see below, tier: 3}. READING: the FAIL is bar timing (match rate 0.065; 43 of 47 live trades are forming-bar entries with no closed-bar twin; gross gap CI [-0.60,+0.84] contains 0), so it neither supports nor refutes edge; the cost arm reads expectancy -0.013..+0.035 R/trade with every 95% CI spanning 0 (n 78). No as-traded record exists: RQ-20261119-e11f-01 is blocked on ICT-SCALP-FORMING-BAR-ARM. The leg went to real money on the live-performance path, whose demotion signal is the real-money mirror window (0 closes so far). RECOMMENDATION (not applied): hold, and decide on e11f-01's as-traded result or the first >= 20 real-money closes, whichever lands first; revert now only if the operator prefers the rule's literal action. Nothing changed by this item.\n\n[2026-11-19 DECIDED by the manager (session_01AFoLuHbhd9wFuGJfWRqyoV), relayed to PERF-FOLLOWUP-2026W47] HOLD the ict_scalp_eth_15m rule; no revert. Basis: the gap CI includes 0 and every cost-arm CI spans 0, so the data leaves it open and the answer is a test, not a question. Rerun: RQ-20261119-e11f-01 once ICT-SCALP-FORMING-BAR-ARM is built."
+}

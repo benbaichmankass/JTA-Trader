@@ -1,0 +1,53 @@
+{
+  "id": "ML-ENTRY-HOLE-SAFE-ADOPT",
+  "title": "Adopt build_table(hole_safe=True) (from #25460) in every ml_decision_entry consumer: the grade, the diag and the retrain/dataset scripts. Positional rolling features/ATR spanning a bar hole corrupt 168 bars after it. MEASURED: one 2026-10-28 hole moved a 14-day grade from -0.2127 to -0.1316 (n 373 -> 317). Steps: (1) census the historic bar holes in the crypto 1h lake (count, symbols, dates); (2) switch the default to hole-safe and re-grade the affected committed records, recording old vs new; (3) for training sets, rebuild hole-safe and record the feature diff. A served-model retrain follows the normal evidence path. NOT a refusal: a window with a gap is regridded and graded, never refused (operator 2026-11-12, no new gates). Done when the census is committed and every consumer builds hole-safe by default. Gates: none.",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": 2.28,
+  "prs": [
+    25507
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "decision_requests": [
+    {
+      "answer": {
+        "chosen": "keep_watch",
+        "committed_at": "2026-11-13T07:00Z",
+        "committed_by": "Manager Session 2026-11-11a",
+        "submission_id": "d342bd3df1e9462e869e9c69cb32296a",
+        "submitted_at": "2026-11-13T06:52:37.515779Z",
+        "submitted_by": "operator-spa"
+      },
+      "evidence": "Re-grading ml_entry v1r20261106 with bar gaps handled (hole_safe, #25507/#25460) flips its promotion grade from PASS to FAIL. It currently trades the real-money Bybit book and its mirror. Separate test 2e3b-01: across 51 coins it loses ~0.07R per decision after real costs, though it picks better than random. Demotion moves it to the demo floor (bybit_1), where it keeps generating data.",
+      "id": "MLENTRY-V1R-GRADE-FLIP",
+      "options": [
+        {
+          "key": "demote",
+          "label": "Demote to the demo floor now; iterate on it there"
+        },
+        {
+          "key": "keep_watch",
+          "label": "Keep it live; re-grade on more data before deciding"
+        },
+        {
+          "key": "reduce",
+          "label": "Keep it live at reduced size while it is re-tested"
+        }
+      ],
+      "recommended": null,
+      "title": "The served ML entry model's promotion grade FAILS on gap-free data - demote it?"
+    }
+  ],
+  "note": "PR #25507 (draft). Census: 24/60 syms, 2 windows (2022, 72h+48h), none after 2022-04-03; 10-28 hole was transient. build_table default hole_safe=True. Training table -0.26% rows. REGRADE: 42257779569 (promotion grade of served v1r20261106) pass flips to FAIL on complete data (cand -0.1403 vs served -0.1081) and hole-safe (-0.3083 vs +0.0412); Tier-3 question for manager. 42473814600 cand not committed, refit indicative only. Serving path has no contiguity check: filed ML-ENTRY-SERVING-HOLE-GUARD (Tier 2). PRE-REGISTERED 2026-11-13T07:20Z, BEFORE any run: HOLE-SAFE RE-GRADE of the served ml_entry (operator 07:00Z keep_watch: 'Keep it live; re-grade on more data before deciding'; manager 07:03Z). RULE-ENTRY-REGRADE-V1R-20261113. SUBJECT: served ml_decision_entry_v1r20261106 (incumbent) vs ml_decision_entry_v1 (the revert target), both scored on the SAME rows. BUILD: build_table hole_safe=True (needs #25507 merged), on a complete archive fetch at run time. WINDOW: 2026-10-25 00:00..2026-11-23 23:00 UTC (30 d). Registered policy at tau 0.1. Full cost stack: fee 11.0 bps rt, slippage 3.0, funding 1.0 bps/8h. RUN ON/AFTER 2026-11-25, to allow for archive lag. EXPECTED n: 360-800 taken decisions for v1r (ESTIMATE: the hole-safe 14 d read had n 167 on the damaged table; complete data runs about 12-27/day). FLOORS: KEEP/REVERT read needs >=100 taken per model and >=10 symbols (the RULE-ENTRY-PROMOTE Amendment 3 replacement floor); the absolute read needs >=300. RULE: KEEP v1r iff both floors are met AND mean net R(v1r) >= mean net R(v1); otherwise REVERT PROPOSAL to the operator via the manager, never auto. ABSOLUTE: mean net R + bootstrap CI reported; if mean < 0 at n>=300, the demote question goes back to the operator with the number. No demotion without the operator. INSUFFICIENT_N: extend the end ONCE by 7 d (to 11-30 23:00, run >=12-02), then report as is. CAVEAT, declared: 10-25..11-07 was already read (grade 42473814600 + regrade 42257779569), so only 11-08..11-23 is fresh; the fresh sub-window is reported separately as information, not gating. #25535 waits on this verdict (manager 07:03Z, after_grade). 09:38Z: #25507 MERGED 07:31Z (62691cfc0); build_table defaults to hole_safe=True on main (verified). Re-grade prerequisite met; it runs >= 2026-11-25 (PI-20261113-AMML-0001). DONE 09:40Z, evidence: the census is committed (#25507). build_table defaults to hole_safe=True on main. The grade calls E.build_table(cache, E.universe()) with the default, and git grep finds no hole_safe=False caller under scripts/. Lane spend $2.28 recorded. The pre-registered re-grade continues as PI-20261113-AMML-0001 (>= 11-25); #25535 waits on it.",
+  "phase": "build",
+  "updated_at": "2026-11-13T09:37:17Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

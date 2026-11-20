@@ -1,0 +1,25 @@
+{
+  "id": "TRAINER-RELAY-WT-DISK",
+  "title": "Trainer relays check out main's whole tree (6.5 GB each, 5.7 GB of it comms/research) into /tmp/<name>_wt and never clean up after themselves, and nothing checks disk before a run: two stale worktrees (p1v023_wt, p1v024_wt) filled the 97 GB root disk to 99% and relay #27524 failed ENOSPC. Fix: (1) a shared relay helper (e.g. scripts/ops/trainer_worktree.sh) that adds a SPARSE worktree (no comms/, or only the paths the job names) with a trap that removes it on exit, plus a stale-worktree sweep (any /tmp/*_wt older than N h with no process inside, preserving untracked files first); (2) a free-disk precheck in the trainer-vm-diag workflow that refuses with a clear message below a floor and pages once; (3) teach the helper in docs/claude/trainer-vm-mode.md so lanes stop hand-rolling git worktree add.",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "due_rule": {
+    "due_date": "2026-11-21",
+    "kind": "date"
+  },
+  "note": "[2026-11-20 00:30Z AM-OPS-10] Filed at the manager's direction (00:21Z). EVIDENCE (MEASURED): trainer-vm-diag #27541 (run 44645309082, 00:22Z): / 96G of 97G used, 1.1G free; /tmp/p1v024_wt 6.5G (20:19Z 11-19) and /tmp/p1v023_wt 6.5G (16:47Z 11-19), both detached worktrees of the repo; the next largest /tmp entry is 11M. Relay #27524's body shows the pattern: git worktree add /tmp/p1it3_wt FETCH_HEAD, removing only its own name. Local measurement of main: comms/ 6.1G, of which comms/research 5.7G, whole checkout 6.6G. Cleanup of the two worktrees in #27542. Other large but legitimate holders, not touched: repo data/ 27G, datasets-out 12G, ml 9.8G, runtime_logs 4.4G (m20_exit_head 2.5G), .git 2.6G, swapfile 8G, /opt/actions-runner 3.1G. [2026-11-20 00:35Z AM-OPS-10] CLEANUP DONE via trainer-vm-diag #27542: removed /tmp/p1v023_wt and /tmp/p1v024_wt. For each: 0 open files, 0 processes with cwd inside, 0 changed or untracked paths, so nothing needed preserving (status.txt kept in runtime_logs/wt_preserve/<name>/). git worktree prune ran; the worktree list is now main only. df /: 96G used, 1.1G free (99%) -> 83G used, 14G free (86%). Headroom is still thin: ONE more full relay worktree is 6.5G, so this row's fix is still needed. [2026-11-20 00:50Z AM-OPS-10] MANAGER DECISIONS 00:25Z: (1) Priority moved up: next after the restart pair (#27535 + #27537) lands, not 11-24. Build the sparse-worktree helper with trap cleanup FIRST; it matters most. (2) The free-disk precheck must NOT become a halt. On low disk the relay first runs the stale-worktree sweep, then re-checks. Only if it is still below the floor does it refuse THAT ONE run, with a named reason and ONE page; the next run tries again. Per-item containment, never a pipeline stop. The PR must state 'Gates this adds or changes: none (fail-fast on a guaranteed failure)'.",
+  "phase": null,
+  "updated_at": "2026-11-20T00:30:01Z",
+  "updated_by": "session_01AFoLuJvENzG66GcgnCTd2z"
+}

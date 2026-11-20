@@ -1,0 +1,26 @@
+{
+  "id": "TP-PREDICT-HEAD-GRADER",
+  "title": "grader for RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP over the landed live-leg corpus (3 splits, B1-B4, per-leg reversal) writing verdict.json",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed once by RESEARCH-OPS-20261111-2049. RQ-20261014-736c-01 landed measured/pass (comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl exists on main), so RQ-20261009-900's requires_result is MET. Remaining lever: a small script that runs ml2_bracket_train_eval at splits 0.55/0.65/0.75 --outcome mfe_r --per-leg --per-stratum and applies the registered rule (sharper than ALL of B1-B4 at >=3 of 5 quantiles at every split, no leg sign reversal, eval n>=88), writing verdict.json; then git mv RQ-20261009-900 to research/queue with run.workflow research-script-run.yml. 901 additionally needs the tp-policy-overlay script.",
+  "phase": null,
+  "updated_at": "2026-11-11T21:01:37Z",
+  "updated_by": "session_RO2049",
+  "week_lane": "throttle",
+  "writeback": {
+    "arch": "none",
+    "roadmap": "none: lever row"
+  }
+}

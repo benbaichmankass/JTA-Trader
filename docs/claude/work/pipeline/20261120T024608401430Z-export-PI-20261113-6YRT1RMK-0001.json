@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "RQ-20261111-ce01-01 carries a session grading verdict, a re-registered tqqq d20 confirmation unit exists with an in-hand window, and iteration_orphans.py no longer lists ml_entry_v2 / ml_entry_eq as orphan",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-6YRT1RMK-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-17",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list; python3 scripts/research/iteration_orphans.py | grep -E 'orphan.*(ml_entry_v2|ml_entry_eq)'",
+    "what": "ce01-01 graded, tqqq d20 confirmation re-registered, ml_entry_v2/ml_entry_eq orphans cleared"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261113-0250",
+    "rerun": "python3 scripts/research/iteration_orphans.py --levers | grep -E '^orphan'"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "RESEARCH-OPS-20261113-0250 follow-ups (research/queue work no lane owns yet): (1) hand-grade RQ-20261111-ce01-01 against RULE-CE-OPPOSED-NEWCOMER-01 from the raw outputs at comms/research/RQ-20261111-ce01-01/43172978800/ (producer wrote no verdict.json; fix the producer to grade its own output); (2) re-register the tqqq_trend_long_1d donchian=20 confirmation (RQ-20261103-5a03-03, retired: empty forward window) on an in-hand window (pre-dev history, symbol holdout or another venue) per RESEARCH-NO-WAIT; (3) iterate the new orphans ml_entry_v2 (fresh-window read RQ-20261101-b610-01 FAILED: v2 -0.0443 R at n=948 vs v1 +0.0245) and ml_entry_eq from a diagnosis of that result, via an iteration unit citing map_entries."
+}

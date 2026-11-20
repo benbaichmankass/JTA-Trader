@@ -1,0 +1,21 @@
+{
+  "id": "LTR-DIRECT-ROWS-NOT-MIRRORED",
+  "title": "Live-review rows submitted DIRECT to the VM (POST /api/bot/live-review/rows, TRADE-ACTION-DIRECT-PATH phase 2) are not mirrored into comms/live_review/rows/ or reviews.jsonl, so every reader of the rows (graders, performance review, coverage counts) misses them",
+  "state": "queued",
+  "owner": "AM-OPS-8",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 by AM-OPS-8 from the manager's correction.\nMEASURED: the VM's live_review_rows_watch log (diag log_file, 827 records 10-26..11-19, read_state complete) holds 99 records with source=direct that appear in no row file.\nExample: SLV pkg-2616d7fbc5134e2e, reviewed direct 11-18 14:37Z and 18:03Z (hold). The VM returned 409 'already handled' to a later reviewer.\nImpact: my own rows-only coverage join reported 16 missed real-money/prop reviews this week. With the direct records the true count is 0. Any rows-only reader is undercounting.\nFix direction: mirror direct rows into the same rows store (live-review-rows-mirror), or make every reader union the watch log. Pick one store; no second path.\nDone when: a direct row appears in comms/live_review/reviews.jsonl within one mirror cycle.",
+  "phase": "ops",
+  "updated_at": "2026-11-19T14:17:25Z",
+  "updated_by": "session_01AFoLuHwqqyiix4qDoybTSN"
+}

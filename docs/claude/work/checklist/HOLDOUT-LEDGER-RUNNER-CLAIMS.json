@@ -1,0 +1,23 @@
+{
+  "id": "HOLDOUT-LEDGER-RUNNER-CLAIMS",
+  "title": "Holdout claims made by runner jobs never reach comms/research/holdout_reads.jsonl, so n_tries (and the deflated bar) undercount re-reads",
+  "state": "done",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26301
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "[2026-11-15 ML-PRIMARY-3, finding from ML-PRIMARY-2 handoff 12:25Z lesson 1] MECHANISM (read from code): holdout_lock.claim_read appends to LEDGER = <checkout>/comms/research/holdout_reads.jsonl. research-script-run.yml uploads ONLY comms/research/<unit>/<run_id> as the artifact and collect_runner_results.py lands only that dir, so a claim written to the default path dies with the runner workspace. Readers that claim against an out-dir COPY (prop_ml_leg, ml_decision_manage, ml_entry_equity, ml_entry_eq_htf_split) land the copy under the run dir, but nothing merges it into the main ledger either. Effect: holdout_lock.next_bar / bar_for(N) see fewer prior tries, so the deflated bar is too lenient (the integrity rule of HOLDOUT-DEFLATED-REUSE). MEASURED 2026-11-15 on main (population: 15 committed run-copy ledgers under comms/research/RQ-*/; main ledger 33 rows): 7 distinct claims sit in run copies and are ABSENT from the main ledger: ENTRY-CRYPTO-STRUCT (98e3-22), ENTRY-EQ-H2H (ef4c-09), ENTRY-EQ (8d20-02), MANAGE x2 (c692-13, c692-14), PROPML-bv (7d41-02), PROPML-tradeify_es (98e3-35). LOWER BOUND: a claim written to the default path leaves no copy at all. Upper bound: 60 landed units run a claiming reader and have no main-ledger row (includes dev-fold runs that never claim). FIX PLAN: (1) script_run.execute snapshots the ledger line count before the commands and writes any appended lines to <out_dir>/holdout_claims.jsonl (same for the trainer / kaggle runner variants); (2) collect_runner_results merges holdout_claims.jsonl AND any <run>/**/holdout_reads.jsonl copy into the main ledger, deduped on (model_id, unit, start, end), in the same batch commit; (3) backfill the 7 known claims with backfilled: true; (4) re-print holdout_lock families and re-check every grade since 11-05 on an affected family against the corrected bar, recording any grade that flips; (5) test: a fake run that claims via the default path lands its claim through the collector. DONE = a runner claim observed in the main ledger after a dispatcher cycle, with no hand append. Gates this adds: none. [2026-11-15 ML-PRIMARY-3] Fix PR #26301 (Tier-1 self-land): plan steps 1-3 and 5 built. Correction to the count above: 5 claims lost, not 7 (c692-13/-14 were already on main as hand backfills with start 2020-07-01). Step 4 (re-grade): no grade flips. 4 of the 5 were first reads on their family/window; 8d20-02 graded in-run against a copy holding main's history (n_tries 4). Only the next bar was understated (ENTRY-EQ next read now N=5). Closes on observe: a runner claim in the main ledger via a results batch, with no hand append. [2026-11-15 12:49Z ML-PRIMARY-3] #26301 MERGED (self-land, CI green). Merged, not observed. OBSERVE TO CLOSE: the first research-results batch that collects a runner run whose reader claims a holdout read shows a 'holdout claim landed from <run>' line in the collect step and the claim row in comms/research/holdout_reads.jsonl, with no hand append. Then PI-20261115-PWMQY8LM-0001 (#26300) closes against this row. [2026-11-15 13:32Z ML-PRIMARY-3] First observation candidate: RQ-20261101-383f-02 (merged via #26313, queued) claims TPREV-RQ-20261101-383f-02 on the runner through holdout_lock with an out-dir copy. When its results batch lands, that claim row must show up in comms/research/holdout_reads.jsonl with no hand append. That observation closes this row. [2026-11-15 16:36Z ML-PRIMARY-3] OBSERVED: runner run 43724363250 (RQ-20261101-383f-02) claimed TPREV-RQ-20261101-383f-02 on the runner (read_at 14:45:10Z, out-dir copy). The row reached comms/research/holdout_reads.jsonl through the dispatcher's batch commit 1249a5424f (#26358, 'research: batch-land 4 runner result(s)') with NO hand append. #26301 works end to end; row DONE.",
+  "phase": null,
+  "updated_at": "2026-11-15T16:37:49Z",
+  "updated_by": "session_01AFoLuMkZYvbttnmb2gtVcA"
+}

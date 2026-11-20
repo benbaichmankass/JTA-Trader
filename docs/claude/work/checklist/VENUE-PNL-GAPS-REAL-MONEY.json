@@ -1,0 +1,22 @@
+{
+  "id": "VENUE-PNL-GAPS-REAL-MONEY",
+  "title": "Real-money venue-vs-computed P&L gaps: each gap or venue_unmatched row is its own diagnosis item (operator w11)",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "clears_when": "scripts/ops/venue_pnl_gaps.py --mode real --max-age-days 7 --check exits 0 (no real-money gap or unmatched item closed in the last 7 days without its own diagnosis item)",
+  "note": "Created 2026-11-12 by lane JOURNAL-TRUTH on manager decision (#25270): for REAL-MONEY accounts (bybit_2, alpaca_live, ib_live) every gap above tolerance (max 0.25 USD, 1%) and every venue_unmatched row gets ITS OWN diagnosis item. Source: scripts/ops/venue_pnl_gaps.py --mode real --json (one item per row, id VPG-<trade_id>). Whoever works this row files each VPG item as its own pipeline item with the diagnosis; this row is the owner of that intake, not a bucket. Nothing is populated until #25270 is merged and deployed.",
+  "phase": null,
+  "updated_at": "2026-11-12T11:01:51Z",
+  "updated_by": "session_01AFoLuLaFeiQpKFjyffLkxw"
+}
