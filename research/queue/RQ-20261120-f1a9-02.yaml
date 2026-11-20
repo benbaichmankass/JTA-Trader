@@ -1,0 +1,188 @@
+# Hand-authored 2026-11-20 by lane ML-PRIMARY-17 (Tier 1 research), dispatched by Manager Session 2026-11-20a
+# (session_01AFoLuHkCcFAd2Nbdp56peq). Programme review 2026-11-18 P2 next-units row 4 ("ml-tm-action-value action-set lever";
+# d5a7 diagnosis: a noisy per-action advantage target, variant = close-vs-hold only, or a realised-path label) and
+# RQ-20261119-b9d0-04 FAIL (learner class closed). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-f1a9-02
+title: 'ml-tm-action-value ITERATION 9b (action-set lever x realised-path label): does a CLOSE-vs-HOLD-only policy trained on the FULL realised-path
+  label (not the horizon-12 censored label) pass S-OFFLINE on the in-trade management bench?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): change one factor against the
+  incumbent on the incumbent''s harness, folds and cost stack; a learner-class step is tried only after the label and feature levers it competes
+  with were tested.'
+question: 'Incumbent command of RQ-20261115-7e18-01 / 04a5-07 / b9d0-04 (test corpus tmb-73f5c3660014, train corpus v2 bp2-f4271084b120 x4 sample,
+  seed 11, path_state feature block, every-bar check-ins, LightGBM mean-target action-value heads, act margin chosen on 3 inner folds from the
+  registered grid, 6 folds, 2000 bootstrap, 200 random draws). TWO FACTORS vs the incumbent, ONE vs 9a (RQ-20261120-f1a9-01, run in parallel):
+  actions {close} only AND --label full (the realised remaining-path value to the trade''s own exit, so the arm delta IS a net-of-cost policy
+  value; the horizon label''s arm deltas are not, per tm_bench''s own label note). Read against 9a, this isolates the label lever on the close-only
+  set. Does the arm pass S-OFFLINE?'
+why_this_matters: 'Labrador-1b (TP extend-only) is the only live in-trade model; every learned management arm has failed S-OFFLINE (tm-action-value
+  iterations 1-8: horizon/feature-block d5a7, quantile target 04a5-07 INDETERMINATE, CatBoost learner b9d0-04 FAIL). The 11-18 programme review
+  names the action set as the untested lever and the per-action target noise as the likely cause. A PASS is pending a fresh window (S-OFFLINE''s
+  own verdict), never a live change; a FAIL records this action-set configuration as closed.'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261119-b9d0-04
+  verdict_read: fail
+  diagnosis: 'b9d0-04 (CatBoost) FAIL and 04a5-07 (quantile) INDETERMINATE on the same 2,627 test trades; the best learned arm so far is 7e18-01
+    lgbm +0.0033 R/trade vs B0, far below the 0.03 bar, while the oracle close saving is 0.78 R/trade (b9d0-04 census): the headroom exists, the
+    learned heads do not reach it. Learner and target-quantile levers are tested; the action set {close, partial_close_50} has been held fixed
+    in every iteration since 7e18-01.'
+  search: 'none: one fixed action set and one fixed label; every other argument byte-identical to b9d0-04 except the learner (lgbm, the incumbent)'
+  attempt: 9
+  due_by: '2026-11-27'
+  map_entries:
+  - research/levers/ml-tm-action-value.yaml
+levers:
+- name: tm_action_set
+  values:
+  - close,partial_close_50
+  - close
+  hypothesised_effect: the realised-path close label is the less noisy target named in the 11-18 review; with close-only it clears S-OFFLINE
+- name: tm_label
+  values:
+  - horizon_12
+  - full
+  hypothesised_effect: the realised-path label is less noisy than the 12-bar censored label
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: test n MEASURED (v1, 2,627 trades, b9d0-04 verdict n); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE ~0.0088
+    R, MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. One arm.
+  feasibility:
+    source: none
+    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+baseline:
+  definition: B0 hold (the trade's own exit) and B1 the best static management rule chosen on train folds, on identical folds; the incumbent 2-action
+    lgbm arm (7e18-01, +0.0033 R/trade) is reported as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261120-f1a9-02-TM-ACTIONSET-CLOSE_ONLY_FULL
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'tm_bench score --rule s_offline on the one lgbm_action_value arm with --actions close --label full: delta vs B0 per trade, trade-clustered
+    bootstrap CI95, folds positive of 6, per-leg max drawdown vs B0, net R per capital-day vs B0, delta vs B2, B4 matched-random margin CI, Holm-adjusted
+    p (tm_bench.s_offline).'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for the arm: gain >= 0.03 R/trade over max(B0,
+    B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2, beats its own matched random B4 (margin
+    CI lower > 0), Holm p < 0.05. FAIL iff its CI95 upper < max(B0, B1) + 0.03. INDETERMINATE otherwise, or if the arm is not measured, actions_allowed
+    in verdict.json differs from [close], the label kind is not full, the test corpus is not tmb-73f5c3660014, the train corpus is not bp2-f4271084b120
+    with >= 10,000 de-duplicated trades after purge, or the selfcheck fails. Thresholds, actions, label and grid are fixed now and not changed
+    after any result.'
+  pass_action: 'pass_pending_fresh_window: author the fresh-window confirmation on a corpus disjoint from tmb-73f5c3660014 before any live proposal;
+    record the action-set response on research/levers/ml-tm-action-value.yaml.'
+  fail_action: Record this action set x label as tested on research/levers/ml-tm-action-value.yaml; if 9a, 9b and 9c all FAIL, the D7 line goes
+    to a family review (fitted-Q is the only untested family left and needs a harness build), never a re-run of these configurations.
+  what_it_does_not_do: Trains nothing persistent, registers, serves or promotes nothing; changes no config; places no order.
+  min_n: 2000 test trades
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and mix as the catboost policy on each test fold, random eligible check-ins, sequential'
+  best_static:
+    grid:
+    - be_at_1r
+    - lock1_at_2r
+    - be_lock_ladder
+    - chandelier_2atr
+    - chandelier_3atr
+    - channel_10
+    - channel_20
+    excludes_test_folds: true
+    how: 'tm_bench B1: the static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.12
+  bucket: ai_trader
+  basis: planning weight carried from 7e18-01 / c21d-04 / 04a5-07; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 90
+  why_runner: corpus v2 is an Actions artifact / regenerable on a runner (the workflow's corpus_v2 step); CPU only; lightgbm only.
+  basis: 'ESTIMATE: 04a5-07 (lgbm, same data) est 90 min; one action head instead of two, so <= 90 min; timeout 240.'
+run:
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - full
+  - --learners
+  - lgbm_action_value
+  - --checkins
+  - every_bar
+  - --actions
+  - close
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261120-f1a9-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: whether ml-tm-action-value with action set [close] proceeds to a fresh-window confirmation on the money legs
+  legs:
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+related:
+- RQ-20261119-b9d0-04
+- RQ-20261118-04a5-07
+- RQ-20261115-7e18-01
+- RQ-20261120-f1a9-01
+- RQ-20261120-f1a9-03
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
