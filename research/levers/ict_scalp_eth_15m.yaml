@@ -147,3 +147,25 @@ levers:
       best_delta_r_per_trade: -0.031
       fold_stability: 0.5
       reading: every tested value is worse than the baseline
+  other:
+    decision_bar:
+      tests:
+      - value: 'off'
+        baseline_value: forming
+        arm: CLOSED
+        unit: RQ-20261119-e11f-01
+        window: 2025-10-28..2026-10-27
+        n: 76
+        net_r: -2.9247
+        baseline_n: 102
+        baseline_net_r: -8.3511
+        delta_net_r: 5.4264
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.9885
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.0532
+      fold_stability: 0.5
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'

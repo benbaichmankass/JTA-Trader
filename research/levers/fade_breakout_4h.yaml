@@ -105,10 +105,38 @@ levers:
         max_drawdown_r: 33.3971
         verdict: fail
         joint_change: false
+      - value: '30'
+        baseline_value: '20'
+        arm: d30_adx15
+        unit: RQ-20261117-dc44-04
+        window: 2021-11-15..2026-11-18
+        n: 43
+        net_r: 5.4708
+        baseline_n: 136
+        baseline_net_r: 1.5265
+        delta_net_r: 3.9443
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 17.1984
+        verdict: fail
+        joint_change: true
+      - value: '30'
+        baseline_value: '20'
+        arm: d30_adx17p5
+        unit: RQ-20261117-dc44-04
+        window: 2021-11-15..2026-11-18
+        n: 74
+        net_r: 11.3866
+        baseline_n: 136
+        baseline_net_r: 1.5265
+        delta_net_r: 9.8601
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 26.2051
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.1071
-      fold_stability: 0.375
+      fold_stability: 0.438
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   filter:
     adx_max:
@@ -141,8 +169,36 @@ levers:
         max_drawdown_r: 23.073
         verdict: fail
         joint_change: false
+      - value: '15.0'
+        baseline_value: '20.0'
+        arm: d30_adx15
+        unit: RQ-20261117-dc44-04
+        window: 2021-11-15..2026-11-18
+        n: 43
+        net_r: 5.4708
+        baseline_n: 136
+        baseline_net_r: 1.5265
+        delta_net_r: 3.9443
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 17.1984
+        verdict: fail
+        joint_change: true
+      - value: '17.5'
+        baseline_value: '20.0'
+        arm: d30_adx17p5
+        unit: RQ-20261117-dc44-04
+        window: 2021-11-15..2026-11-18
+        n: 74
+        net_r: 11.3866
+        baseline_n: 136
+        baseline_net_r: 1.5265
+        delta_net_r: 9.8601
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 26.2051
+        verdict: fail
+        joint_change: true
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.078
-      fold_stability: 0.25
+      fold_stability: 0.375
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'

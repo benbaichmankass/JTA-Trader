@@ -75,7 +75,7 @@ manifest:
   timeframe: untested
   symbol_set: untested
   direction: tested
-  session: untested
+  session: tested
   sizing_vs_cost: untested
 levers:
   direction:
@@ -734,3 +734,67 @@ levers:
       best_delta_r_per_trade: -0.3465
       fold_stability: 0.0
       reading: every tested value is worse than the baseline
+  session:
+    skip_hours:
+      tests:
+      - value: 19,20
+        baseline_value: 'off'
+        arm: S_CLOSE
+        unit: RQ-20261118-abab-44
+        window: 2024-01-08..2026-11-18
+        n: 140
+        net_r: -33.4079
+        baseline_n: 154
+        baseline_net_r: -24.3343
+        delta_net_r: -9.0736
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 45.8558
+        verdict: fail
+        joint_change: false
+      - value: 19,20
+        baseline_value: 'off'
+        arm: S_CLOSE
+        unit: RQ-20261118-abab-44
+        window: 2024-01-08..2026-11-18
+        n: 140
+        net_r: -33.4079
+        baseline_n: 154
+        baseline_net_r: -24.3343
+        delta_net_r: -9.0736
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 45.8558
+        verdict: fail
+        joint_change: false
+      - value: 13,14
+        baseline_value: 'off'
+        arm: S_OPEN
+        unit: RQ-20261118-abab-44
+        window: 2024-01-08..2026-11-18
+        n: 154
+        net_r: -21.8079
+        baseline_n: 154
+        baseline_net_r: -24.3343
+        delta_net_r: 2.5264
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 43.2678
+        verdict: fail
+        joint_change: false
+      - value: 13,14
+        baseline_value: 'off'
+        arm: S_OPEN
+        unit: RQ-20261118-abab-44
+        window: 2024-01-08..2026-11-18
+        n: 154
+        net_r: -21.8079
+        baseline_n: 154
+        baseline_net_r: -24.3343
+        delta_net_r: 2.5264
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 43.2678
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 4
+      best_delta_r_per_trade: 0.0164
+      fold_stability: 0.375
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'

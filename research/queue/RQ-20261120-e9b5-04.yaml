@@ -74,6 +74,7 @@ value:
   confidence: 0.3
   basis: 'stand-in: gates a candidate fifth crypto leg re-entry; estimate, not a measurement.'
 routing:
+  workflow: research-script-run.yml
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 3.0
@@ -81,6 +82,7 @@ routing:
   basis: Estimate, copied from RQ-20261015-1631-01 (same driver). UNVERIFIED whether the runner can obtain
     5m SOLUSDT candles; if not the driver lands producer_failed (a route fault to fix, never a verdict).
 run:
+  workflow: research-script-run.yml
   command:
   - python3
   - scripts/research/same_symbol_head_to_head.py
@@ -120,4 +122,4 @@ iteration:
   from_result: research/results/RQ-20261018-001/40148578991.jsonl
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, run 2026-10-30, OOS from 2025-01-01): solo trend_donchian_sol_4h +37.59 R n87 (+0.1811 R/capital-day); solo trend_donchian_sol_prop +22.07 R n124 (+0.1876); together +44.84 R n177 (+0.2018). Reported at grading: per-arm before/after, sign changes, and config drift since 2026-10-30 separately.'
-last_dispatched_at: '2026-11-20T14:43:41+00:00'
+last_dispatched_at: '2026-11-20T15:33:22+00:00'

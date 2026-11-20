@@ -293,9 +293,37 @@ levers:
         max_drawdown_r: 7.4397
         verdict: pass
         joint_change: false
-      shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.0688
+      - value: '0.8'
+        baseline_value: 'off'
+        arm: VH80
+        unit: RQ-20261119-024
+        window: 2000-05-26..2026-10-27
+        n: 106
+        net_r: 31.6062
+        baseline_n: 118
+        baseline_net_r: 22.8198
+        delta_net_r: 8.7864
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 8.6848
+        verdict: pass
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261119-024
+        window: 2000-05-26..2026-10-27
+        n: 113
+        net_r: 26.1563
+        baseline_n: 118
+        baseline_net_r: 22.8198
+        delta_net_r: 3.3365
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 7.9648
+        verdict: pass
+        joint_change: false
+      shape: peaked
+      points: 4
+      best_delta_r_per_trade: 0.0745
       fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     cooldown_bars:
