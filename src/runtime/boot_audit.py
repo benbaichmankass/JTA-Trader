@@ -152,12 +152,15 @@ def _open_journal_trades(account_id: str, db_path: str) -> Optional[List[Dict[st
     try:
         with sqlite3.connect(db_path, timeout=5) as conn:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                "SELECT id, symbol, direction, strategy_name, position_size FROM trades "
-                "WHERE account_id = ? AND status = 'open' "
-                "AND COALESCE(is_backtest, 0) = 0",
-                (account_id,),
-            ).fetchall()
+            _cols = "id, symbol, direction, strategy_name, position_size"
+            _where = (" FROM trades WHERE account_id = ? AND status = 'open' "
+                      "AND COALESCE(is_backtest, 0) = 0")
+            try:
+                rows = conn.execute(f"SELECT {_cols}, broker_order_id{_where}",
+                                    (account_id,)).fetchall()
+            except sqlite3.OperationalError:
+                # no broker_order_id column: no entry-order state, every flat row stays a ghost
+                rows = conn.execute(f"SELECT {_cols}{_where}", (account_id,)).fetchall()
         return [dict(r) for r in rows]
     except Exception as exc:  # noqa: BLE001  # allow-silent: None renders "could not read" and counts as a problem
         logger.warning("boot_reconcile: journal query failed for account=%s: %s", account_id, exc)
@@ -283,6 +286,9 @@ class AccountReport:
     tracked: int = 0
     journal_open: Optional[int] = None          # None = could not read
     ghosts: List[str] = field(default_factory=list)
+    # VENUE-FLAT-PENDING-ENTRY-LABELS: journal open, broker flat BECAUSE the
+    # entry order is still working (e.g. queued for the open). Shown, not a problem.
+    entry_pending: List[str] = field(default_factory=list)
     untracked: List[str] = field(default_factory=list)
     # BOOT-AUDIT-PER-QTY-TRACKING: a broker position the journal holds for a DIFFERENT size is not "tracked".
     qty_mismatch: List[str] = field(default_factory=list)
@@ -384,7 +390,13 @@ def reconcile_account(cfg: Dict[str, Any], db_path: str,
         sym, side = str(t.get("symbol") or "").upper(), _side(t.get("direction"))
         at_broker = (sym, side) in b_keys if side and any(s for _, s in b_keys) else sym in b_syms
         if not at_broker:
-            rep.ghosts.append(f"trade #{t.get('id')} {sym} {side or ''}".strip())
+            label = f"trade #{t.get('id')} {sym} {side or ''}".strip()
+            if _entry_pending(cfg, t.get("broker_order_id")):
+                rep.entry_pending.append(label)
+                logger.info("boot_reconcile: ENTRY PENDING account=%s trade_id=%s symbol=%s "
+                            "(broker flat, entry order still working)", aid, t.get("id"), sym)
+                continue
+            rep.ghosts.append(label)
             logger.warning("boot_reconcile: GHOST TRADE account=%s trade_id=%s symbol=%s",
                            aid, t.get("id"), sym)
     if rep.broker:
@@ -408,6 +420,23 @@ def reconcile_account(cfg: Dict[str, Any], db_path: str,
                     miss = "+".join(k for k, lbl in (("SL", "stop"), ("TP", "target")) if not g[lbl])
                     rep.missing_bracket.append(f"{label}: no {miss} at broker")
     return rep
+
+
+def _entry_pending(cfg: Dict[str, Any], entry_order_id: Any) -> bool:
+    """True only on a POSITIVE venue read that the entry order is still working.
+
+    The same ``_entry_order_hold`` check the flat-close paths use
+    (PI-20261118-JFWRQYOV-0004). An unreadable or unsupported read stays a
+    ghost: "could not look" must not hide one. Never raises.
+    """
+    if not entry_order_id:
+        return False
+    try:
+        from src.runtime.order_monitor import _entry_order_hold
+        return _entry_order_hold(cfg, entry_order_id) == "pending"
+    except Exception as exc:  # noqa: BLE001  # allow-silent: falls back to the ghost line
+        logger.warning("boot_reconcile: entry-order read failed for %s: %s", entry_order_id, exc)
+        return False
 
 
 def build_restart_report(*, cause=None) -> Dict[str, Any]:
@@ -478,6 +507,8 @@ def _section_for(group: str, accts: List[AccountReport]):
         body.append(_account_line(a))
         for g in a.ghosts:
             body.append(f"  ❌ ghost: {g} (journal open, broker flat)")
+        for e in a.entry_pending:
+            body.append(f"  · entry pending: {e} (entry order still working at the venue)")
         for u in a.untracked:
             body.append(f"  ❌ untracked: {u} (broker open, no journal row)")
         for q in a.qty_mismatch:

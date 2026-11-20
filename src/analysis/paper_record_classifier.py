@@ -79,6 +79,10 @@ _TRUNCATING_EXIT_REASONS = frozenset({
 _MONITOR_EXIT_REASON_SOURCES = frozenset({"rearm_preflight"})
 
 # Closes that are themselves a technical artifact regardless of bracket levels.
+# The entry order ended at the venue without filling (ENTRY-UNFILLED-LABEL): no
+# position was ever held, so there is nothing to grade OR reconstruct.
+_NEVER_FILLED_EXIT_REASONS = frozenset({"entry_unfilled"})
+
 _ARTIFACT_EXIT_REASONS = frozenset({
     "adopted_orphan_disappeared", "exit_coverage_no_strategy",
     "exchange_flat_reconciled",
@@ -213,6 +217,11 @@ def classify_record(rec: Dict[str, Any]) -> ClassifiedRecord:
     if rec.get("is_backtest") or setup_type == "smoke_test" or notes.get("is_test"):
         return out("B", "backtest_or_smoke", False, False,
                    "backtest/smoke-test row — not a live strategy trade")
+
+    # 0.5. The entry order never filled — no position existed (ENTRY-UNFILLED-LABEL).
+    if exit_reason in _NEVER_FILLED_EXIT_REASONS:
+        return out("B", "entry_unfilled", False, False,
+                   "entry order ended unfilled at the venue — no position, not graded")
 
     # 1. Orphan-adopt / re-adopt flap and reconcile artifacts.
     if (

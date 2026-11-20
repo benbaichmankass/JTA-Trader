@@ -2233,6 +2233,31 @@ def account_entry_order_pending(
         return None
 
 
+def account_entry_order_unfilled(
+    account: Dict[str, Any], order_id: str
+) -> Optional[bool]:
+    """Did the entry order ``order_id`` end without ever filling? Three-valued, fails closed.
+
+    ``True`` only when the venue says terminal (canceled / expired / rejected) with
+    ``filled_qty`` exactly 0; ``False`` when anything filled; ``None`` = could not tell
+    (unsupported integration, dry account, read failure, unknown order, ambiguous
+    status). Same support rule as :func:`supports_entry_order_state`. Never raises.
+    """
+    if not supports_entry_order_state(account) or not order_id:
+        return None
+    try:
+        client = alpaca_client_for(account)
+        if client is None:
+            return None
+        return client.order_entry_unfilled(str(order_id))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "account_entry_order_unfilled(%s, %s): %s",
+            account.get("account_id") or "unknown", order_id, exc,
+        )
+        return None
+
+
 # ---------------------------------------------------------------------------
 # BL-20260820-PROTECTION-COVERAGE-IS-PRICE-BLIND, criterion 5.
 #

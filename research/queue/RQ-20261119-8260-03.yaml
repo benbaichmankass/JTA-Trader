@@ -2,7 +2,7 @@
 id: RQ-20261119-8260-03
 title: 'CONFIRMATION of RQ-20261118-abab-31 on a DISJOINT window: does S_ASIA (--skip-hours=0..7) on ict_scalp_sol_15m beat the declared leg A again, on 2020-09-15..2021-11-13, net of the harness
   cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -120,3 +120,18 @@ related:
 - RQ-20261118-abab-31
 - research/levers/ict_scalp_sol_15m.yaml
 last_dispatched_at: '2026-11-19T23:14:12+00:00'
+
+grading:
+  attested: RULERQ20261119826003
+  auto: true
+  decision_rule_id: RULERQ20261119826003
+  evidence:
+  - research/results/RQ-20261119-8260-03/44598175450.jsonl
+  - research/results/RQ-20261119-8260-03/44622370454.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

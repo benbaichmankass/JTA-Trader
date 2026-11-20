@@ -5,7 +5,7 @@ id: RQ-20261119-016
 title: 'ITERATION 5 of ltr-close: the near_target full close passed on the selection legs (abab-68) and
   FAILED on the real-TP holdout with a 0% risk cut (c9d2-01). Does a full close at new_peak, a trigger
   that sits away from the TP, cut risk?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -142,3 +142,16 @@ generated:
   params:
     node: P1-RP1119-ltr-close-newpeak
 last_dispatched_at: '2026-11-19T23:14:17+00:00'
+
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-ltr-close-newpeak
+  evidence:
+  - research/results/RQ-20261119-016/44632825825.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

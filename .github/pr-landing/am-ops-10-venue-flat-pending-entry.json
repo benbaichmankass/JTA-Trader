@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime change (src/runtime/order_monitor.py naked sweep + re-arm preflight, src/runtime/boot_audit.py); the manager merges and deploys (trader restart).",
+  "why": "WHY: row VENUE-FLAT-PENDING-ENTRY-LABELS. Three venue-flat readers mislabel a row whose ENTRY ORDER is still working: the boot audit prints it as a ghost, the Alpaca re-arm preflight pages CRITICAL alpaca_rearm_refused 'flat', and the naked sweep grades it target_flat 'stop already filled'. Measured case alpaca_options_paper SLV trade 8034 (paper; DAY mleg limit entry still 'new'). WHAT: each reader now calls the same _entry_order_hold() check the flat-close paths already use (PI-20261118-JFWRQYOV-0004). Only a POSITIVE 'still working' read changes the label: the boot audit shows 'entry pending' (not a problem), the sweep counts a new per-row outcome entry_pending and skips the row, and the preflight returns entry_pending with no page. An unreadable or terminal read keeps every existing label and page. No order is placed, cancelled or closed differently: the flat refusal already posted nothing. Gates this adds or changes: none."
+}

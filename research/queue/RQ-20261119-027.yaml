@@ -5,7 +5,7 @@ id: RQ-20261119-027
 title: 'REGIME family test on spy_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index
   trend legs (scha VH90 9e1a-08, splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the
   declared leg, net of cost'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -159,4 +159,16 @@ generated:
   key: programme:P3-RP1119-trend-long-family-vh-spy
   params:
     node: P3-RP1119-trend-long-family-vh-spy
-last_dispatched_at: null
+last_dispatched_at: '2026-11-19T23:33:12+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RP1119-trend-long-family-vh-spy
+  evidence:
+  - research/results/RQ-20261119-027/44638658226.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

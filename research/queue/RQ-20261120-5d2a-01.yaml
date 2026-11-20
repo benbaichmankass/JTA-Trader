@@ -1,0 +1,132 @@
+# Authored 2026-11-20 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, from programme node P5-RG1025-trend-pooled (manager 2026-11-19 23:58Z).
+# Pooled paired read of D55 vs B across the 1h, 2h and 4h cells of the six prop-pace perps, from the per-trade emits the three landed units kept. Rule registered BEFORE the pooled statistic was computed.
+# Gates this adds or changes: none.
+id: RQ-20261120-5d2a-01
+title: 'POOLED paired read, Donchian-55 / trail 6.0 (D55) vs Donchian-20 (B) on SOL/BNB/ETH/XRP/LINK/AAVE across the 1h, 2h and 4h bars as ONE test: does D55 beat B by >= 0.05 R per baseline trade?'
+status: queued
+cadence: once
+roadmap:
+- L-PROP
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: 'Reading the kept per-trade emits of RQ-20261026-f679-02 (1h), RQ-20261022-4b82-05 (2h) and RQ-20261026-f679-03 (4h) over the same six Binance USD-M perps and window (2020-06-01..2026-10-25), arms paired on (cell, entry_time, direction), does the pooled paired difference D55 - B reach 0.05 R per baseline trade with a bootstrap CI lower bound above zero, at least 4 of 6 calendar folds D55 >= B and pooled maxDD within 1.35x of B?'
+why_this_matters: 'Node P5-RG1025-trend-pooled: the three per-bar tests each sit below their own minimum detectable effect (per-trade sd 1.25-2.3 R; a 0.05 R bar needs n_B 4.7k-17.7k per arm). Per-bar grades are known and mixed (1h FAIL, 2h FAIL, 4h PASS); the pooled paired statistic is not yet computed. Registered here first. COUNTED before registering (descriptive row counts only, no net R, no difference): pooled n_B = 15,828 and n_D55 = 6,969 over the 18 cells, so the node''s n_B >= 18k target is NOT reachable from these emits; this unit registers min-n 15,000 and lets the MDE rule decide whether the pool can resolve the bar. Decision changed: PASS -> ONE confirmation unit on a disjoint population (perps outside these six), never a config edit; FAIL -> D55 is closed at this pooled population and these three bars; INDETERMINATE -> the realised n and the MDE are recorded and the question is n-bound.'
+power:
+  expected_n: 15828
+  min_detectable_effect: 0.05
+  effect_units: R per trade
+  sd: 1.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n(B) = 15,828 COUNTED from the kept emits (1h 8,977 + 2h 4,520 + 4h 2,331). sd 1.8 R is an ESTIMATE, not a measurement: the midpoint of the per-trade sd range 1.25-2.3 R the node P5-RG1025-trend-pooled quotes for these candidates; the PAIRED sd of D55 - B is NOT computed before registering. The script reports MDE = 2.487 x paired_sd / sqrt(n(B)) = 0.0198 x paired_sd and the unit is INDETERMINATE when it exceeds the 0.05 bar, i.e. when the paired sd is above 2.53 R. INDETERMINATE (n-bound) is therefore a live outcome and is read as such, never as no edge.'
+  feasibility:
+    source: none
+    accrual_basis: Re-reads kept emits of three landed units on a pinned window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261120-5D2A-01-POOLED-D55-VS-B
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'scripts/research/pool_arm_diff.py (cells layout, PI-20261119-FILLW47B-0012): for each of the 18 cells (SOLUSDT, BNBUSDT, ETHUSDT, XRPUSDT, LINKUSDT, AAVEUSDT x 1h, 2h, 4h) the kept emits comms/research/<unit>/<run>/cells/*_<SYMBOL>_<tf>_<ARM>__trades.jsonl of the unit for that bar; arms paired on (cell, entry_time, direction), a side missing from one arm counts 0 R; pooled diff per baseline trade, month-block bootstrap CI (4000 resamples, seed 20261120), 6 calendar folds by entry, pooled maxDD, MDE 2.487 x paired sd / sqrt(n(B)). Baseline B, candidate D55, no controls. Net R is the harness''s own full venue-aware cost stack, as kept in the emits.'
+  rule: 'INDETERMINATE (read_state unmeasured: re-fire, not a verdict) IF any cell emit is missing; INDETERMINATE IF pooled n(B) < 15000 OR the MDE exceeds the bar 0.05 R/trade. PASS IF pooled D55 - B >= 0.05 R per baseline trade AND the bootstrap CI lower bound > 0 AND >= 4 of 6 pooled folds D55 >= B AND pooled maxDD(D55) <= 1.35 x maxDD(B). FAIL IF the CI upper bound of (D55 - B) < 0.05. OTHERWISE INDETERMINATE (unresolved; the rule has no third outcome, so none is invented). Thresholds, cells, arms and window are not changed after any result.'
+  pass_action: 'ONE confirmation unit on a disjoint POPULATION (perps outside SOL/BNB/ETH/XRP/LINK/AAVE; all history for these six is used), then a live-producer check and a Tier-3 proposal; never a config edit, and no roster change from a read this thin.'
+  fail_action: 'record D55 vs B as tested at this pooled population (six perps, 1h+2h+4h, 2020-06..2026-10) in the trend lever maps; the lever family is not retired (scripts/research/family_retirement_policy.yaml).'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, fetches no data, is not a promotion case. It does not re-run or edit f679-02, f679-03 or 4b82-05; their per-bar rules stand and this is their pooled reader. The per-cell breadth clause of the per-bar units (at least half of the powered cells pass) is NOT part of this rule: pool_arm_diff grades the pooled paired difference, its CI, folds and drawdown. The in-sample window is shared with the per-bar units, so a PASS is a lead, not a holdout.'
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pooled paired read of landed per-leg emits (RQ-20261025-d7e6-01 same reader); pre-registered arm, baseline = the declared base arm'
+intervention_controls:
+  not_applicable: a pooled read of closed historical backtest trades, not an in-trade action or active-management intervention
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the pooled read is the only design that can resolve a 0.05 R/trade bar on the prop-pace trend candidates; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 5
+  basis: 'Reads 36 small jsonl files (18 cells x 2 arms, 22.8k trades) and bootstraps 4000 month-block resamples; seconds on a runner.'
+  why_runner: 'reads committed emits from the repo checkout; no network, no trainer data; CPU only, minutes.'
+run:
+  command:
+  - python3
+  - scripts/research/pool_arm_diff.py
+  - --unit
+  - SOLUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - BNBUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - ETHUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - XRPUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - LINKUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - AAVEUSDT_1h=RQ-20261026-f679-02
+  - --unit
+  - SOLUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - BNBUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - ETHUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - XRPUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - LINKUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - AAVEUSDT_2h=RQ-20261022-4b82-05
+  - --unit
+  - SOLUSDT_4h=RQ-20261026-f679-03
+  - --unit
+  - BNBUSDT_4h=RQ-20261026-f679-03
+  - --unit
+  - ETHUSDT_4h=RQ-20261026-f679-03
+  - --unit
+  - XRPUSDT_4h=RQ-20261026-f679-03
+  - --unit
+  - LINKUSDT_4h=RQ-20261026-f679-03
+  - --unit
+  - AAVEUSDT_4h=RQ-20261026-f679-03
+  - --baseline
+  - B
+  - --candidate
+  - D55
+  - --bar
+  - '0.05'
+  - --min-n
+  - '15000'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-mult
+  - '1.35'
+  - --seed
+  - '20261120'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261120-5d2a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- RQ-20261026-f679-02
+- RQ-20261022-4b82-05
+- RQ-20261026-f679-03
+- scripts/research/pool_arm_diff.py
+- tests/test_pool_arm_diff.py
+programme_node:
+  programme: P5
+  node: P5-RG1025-trend-pooled
+  goal: G2
+  after: []
+last_dispatched_at: null

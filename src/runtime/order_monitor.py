@@ -4255,6 +4255,16 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
+def _row_field(row: Any, key: str) -> Any:
+    """``row[key]`` for a sqlite3.Row or dict, ``None`` when the column is absent."""
+    try:
+        if hasattr(row, "keys") and key not in row.keys():
+            return None
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
 
@@ -4303,6 +4313,32 @@ def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     if state is None:
         return "unreadable"
     return None
+
+
+#: Close label for a row whose ENTRY ORDER ended at the venue without ever filling
+#: (ENTRY-UNFILLED-LABEL, 2026-11-19; alpaca_options_paper SLV trade 8034: a DAY mleg
+#: limit that expired unfilled, closed as exchange_flat_reconciled and then graded a
+#: close fault). Not a trade decision of the leg: neutral in soak_state, a
+#: not-strategy-exit in close attribution, never priced by the local-PnL sweep.
+ENTRY_UNFILLED_EXIT_REASON = "entry_unfilled"
+
+
+def _entry_never_filled(cfg: Any, entry_order_id: Any) -> bool:
+    """True only on a POSITIVE venue read: terminal entry order, ``filled_qty`` exactly 0.
+
+    Fails closed: no real order id, an integration that cannot answer, a read failure,
+    an unknown (404) order, an ambiguous status, or any fill at all -> ``False`` (the
+    caller keeps its existing label). Never raises.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return False
+    try:
+        from src.units.accounts.clients import account_entry_order_unfilled
+        return account_entry_order_unfilled(cfg, oid) is True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_never_filled: order %s read raised: %s", oid, exc)
+        return False
 
 
 def _reverify_reset_suspect_row(
@@ -4586,6 +4622,8 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         # SUCCESSFUL exchange snapshot and closed (snapshot_closed), or absent
         # this pass but inside the 2-observation confirm window (snapshot_pending).
         "snapshot_closed": 0,
+        # Sub-count of snapshot_closed: the entry order ended unfilled (ENTRY-UNFILLED-LABEL).
+        "snapshot_closed_entry_unfilled": 0,
         # RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE): kept at 0 for
         # back-compat — a wholesale RESET is NEVER mass-closed on the detection
         # read. A mass vanish ALERTS (snapshot_reset_alerted) and marks the rows
@@ -5157,25 +5195,47 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 )
                 for (r, tid_int, sym, canonical) in _snapshot_to_close:
                     try:
+                        # ENTRY-UNFILLED-LABEL: a row whose entry order ended without
+                        # ever filling never held a position. Asked only here, after
+                        # _entry_order_hold found the order neither working nor
+                        # unreadable; fails closed to the existing label.
+                        _entry_oid_c = (
+                            r["broker_order_id"] if "broker_order_id" in r.keys() else None
+                        )
+                        _unfilled = _entry_never_filled(cfg, _entry_oid_c)
+                        _close_label = (
+                            ENTRY_UNFILLED_EXIT_REASON if _unfilled
+                            else "exchange_flat_reconciled"
+                        )
                         db.update_trade(tid_int, {
                             "status": "closed",
-                            "exit_reason": "exchange_flat_reconciled",
+                            "exit_reason": _close_label,
                             "closed_at": now_iso,
                             "notes": dump_capped({
                                 "closed_at": now_iso,
                                 "closed_by": "position_snapshot_reconciler",
                                 "reset_event": False,
-                                "closed_reason": _reset_note,
+                                "closed_reason": (
+                                    f"entry order {_entry_oid_c} ended at the venue "
+                                    "(canceled/expired/rejected) with filled_qty 0: "
+                                    "no position was ever held. PnL left null, not "
+                                    "priced."
+                                    if _unfilled else _reset_note
+                                ),
                             }, 500),
                         })
                         # Cascade-close the linked order package, like every other
                         # reconciler close path.
                         _cascade_close_linked_package(
                             db, tid_int,
-                            close_reason="exchange_flat_reconciled",
+                            close_reason=_close_label,
                             caller="_reconcile_orphan_exchange_positions(snapshot)",
                         )
                         summary["snapshot_closed"] += 1
+                        if _unfilled:
+                            summary["snapshot_closed_entry_unfilled"] = (
+                                summary.get("snapshot_closed_entry_unfilled", 0) + 1
+                            )
                         # Sweep resting protective legs now the position is
                         # confirmed flat (this snapshot reconcile never went
                         # through IBClient.close) so a stale IB OCA stop can't fire
@@ -11222,7 +11282,8 @@ def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row
 
 
 def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
-                            sym_rows: List[Any], sl: float) -> Tuple[str, Dict[str, Any]]:
+                            sym_rows: List[Any], sl: float,
+                            cfg: Any = None) -> Tuple[str, Dict[str, Any]]:
     """Decide what the naked sweep may do for *row*: ``(verdict, info)``.
 
     PI-20260929-PR6YRTQY-0005 (+ REVIEW-14241). Measured 2026-09-24,
@@ -11237,6 +11298,11 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
     * ``ok`` — re-arm the row's own OCO.
     * ``could_not_look`` — position or price unreadable; counted, streaked on
       the ``preflight`` channel and paged when it persists.
+    * ``entry_pending`` — the fresh read is flat because the row's ENTRY
+      ORDER is still working at the venue (needs *cfg*; same
+      :func:`_entry_order_hold` check as the flat-close paths). Nothing to
+      protect yet: refused, logged, never paged
+      (VENUE-FLAT-PENDING-ENTRY-LABELS).
     * ``flat`` / ``side_mismatch`` / ``row_shares_gone`` — this row's shares
       are not at the venue (gone, or the book is on the other side). Refused
       and paged: a re-arm would open exposure or sell a sibling's shares.
@@ -11272,6 +11338,13 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
         pass
     if q.get("state") == "flat":
         _clear_protection_unreadable(account_id, symbol, "preflight")
+        if cfg is not None and _entry_order_hold(
+                cfg, _row_field(row, "broker_order_id")) == "pending":
+            logger.info(
+                "_alpaca_rearm_preflight: %s/%s trade_id=%s flat because its "
+                "entry order %s is still working — entry_pending, not refused-flat",
+                account_id, symbol, row["id"], _row_field(row, "broker_order_id"))
+            return "entry_pending", {}
         _in_confirm = _row_in_flat_confirm(row["id"])
         _page_rearm_refusal("flat", account_id, symbol, row["id"],
                             "no venue position — the row's shares are gone; a "
@@ -11627,6 +11700,11 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # its flat-detector close (ML-ENTRY-WATCHDOG-EXIT, 2026-11-05). Logged,
         # not paged.
         "target_flat": 0,
+        # The symbol reads FLAT because this row's ENTRY ORDER has not filled
+        # yet (VENUE-FLAT-PENDING-ENTRY-LABELS, 2026-11-19): not a filled stop,
+        # not naked, nothing to re-arm. Logged, never paged. Same
+        # _entry_order_hold check the flat-close paths use.
+        "entry_pending": 0,
         # ── QUANTITY coverage (BL-20260908-ALPACA-COVERAGE-IS-SIDES-NOT-QUANTITY).
         # Declared here, not created on first use: a sweep that found no
         # partial coverage must report 0 rather than omit the key, or "we
@@ -11651,6 +11729,7 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # item 6): declared at 0 so "none happened" reads as 0, not absent.
         "rearm_refused_could_not_look": 0,
         "rearm_refused_flat": 0,
+        "rearm_refused_entry_pending": 0,
         "rearm_refused_side_mismatch": 0,
         "rearm_refused_row_shares_gone": 0,
         "rearm_refused_all_stops_breached": 0,
@@ -11720,11 +11799,16 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
-            rows = conn.execute(
-                "SELECT id, account_id, symbol, direction, position_size, "
-                "stop_loss, take_profit_1, created_at, notes "
-                "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
-            ).fetchall()
+            _cols = ("id, account_id, symbol, direction, position_size, "
+                     "stop_loss, take_profit_1, created_at, notes")
+            _where = " FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
+            try:
+                rows = conn.execute(
+                    "SELECT " + _cols + ", broker_order_id" + _where).fetchall()
+            except __import__("sqlite3").OperationalError:
+                # A journal without broker_order_id: no entry-order state to read
+                # (_row_field -> None -> the existing flat grading).
+                rows = conn.execute("SELECT " + _cols + _where).fetchall()
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001
@@ -11938,6 +12022,25 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     elif _size > 0:
                         summary["covered"] += 1
 
+            if isinstance(_cov, dict) and _cov.get("source") == "flat":
+                # VENUE-FLAT-PENDING-ENTRY-LABELS: a flat symbol says nothing about
+                # an entry order that has not filled yet (alpaca_options_paper SLV
+                # trade 8034, 2026-11-19: DAY mleg limit still `new`, graded
+                # target_flat "stop already filled" and refused-flat CRITICAL).
+                # Only a POSITIVE "still working" changes the label; an
+                # unreadable order read keeps the existing grading.
+                if _entry_order_hold(acc_by_id.get(account_id),
+                                     _row_field(row, "broker_order_id")) == "pending":
+                    summary["entry_pending"] += 1
+                    logger.info(
+                        "_check_broker_naked_equity_positions: %s/%s trade_id=%s "
+                        "venue holds no position because the row's entry order "
+                        "%s is still working (not yet filled) — graded "
+                        "entry_pending, nothing to re-arm",
+                        account_id, symbol, row["id"],
+                        _row_field(row, "broker_order_id"),
+                    )
+                    continue
             _released_age = _iso_age_seconds(state.get("stop_released_at"), now)
             if (state.get("target") is False
                     and row["take_profit_1"] not in (None, 0)
@@ -12069,6 +12172,7 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                  if str(r["account_id"] or "") == account_id
                  and str(r["symbol"] or "").upper() == symbol.upper()],
                 a_sl,
+                cfg=acc_by_id.get(account_id),
             )
             _pf, _pf_info = _pf
             if _pf in ("exit_breached", "cap"):
@@ -12260,6 +12364,85 @@ def _reassert_soak_path():
     return os.path.join(runtime_logs_dir(), "protection_reassert_soak.jsonl")
 
 
+def _reassert_row_changed_mid_sweep(db, row) -> Optional[str]:
+    """Why a re-assert must NOT act on this sweep's snapshot of *row*, or ``None``.
+
+    IB-TRAIL-AMEND-MISSED (2026-11-20, ib_paper MGC trade 7737, paper): the IB
+    sweep reads every open row ONCE, before its loop. A trail amend landed on the
+    monitor thread at 00:00:23.47Z (stop 3683.4 -> 3654.1, IB ack OK); this sweep
+    graded the venue's NEW stop against its OLD snapshot (3683.39), called that a
+    divergence, and re-placed 3683.4 at 00:00:24.68Z. The 1 h cooldown then
+    locked the reverted level in. So, immediately before deciding, the row and
+    its package are re-read fresh, and the re-assert stands down when:
+
+      * the fresh read fails (fail closed: never act on what could not be read);
+      * the trade is no longer open;
+      * its stop_loss / take_profit_1 / position_size differ from the snapshot;
+      * its linked package's sl / tp differ from the snapshot (``pkg_sl`` /
+        ``pkg_tp``, read with the row): the trail writes the package first, so
+        this catches a trade-row write that has not landed yet.
+
+    Keyed on LEVEL COLUMNS ONLY, never on ``updated_at`` (manager review of
+    #27545): ``update_order_package`` bumps ``updated_at`` on every write, so a
+    future metadata-only write would otherwise make a genuinely diverged row
+    stand down on every sweep and the re-assert would silently stop working. A
+    package touched without a level change still re-asserts.
+
+    A genuinely diverged, unchanged row passes all checks and re-asserts exactly
+    as before. Never raises.
+    """
+    def _same(a: Any, b: Any) -> bool:
+        if a is None or b is None:
+            return a is None and b is None
+        try:
+            return abs(float(a) - float(b)) <= 1e-9 * max(1.0, abs(float(a)))
+        except (TypeError, ValueError):
+            return str(a) == str(b)
+
+    def _has(key: str) -> bool:
+        try:
+            return key in row.keys()
+        except AttributeError:
+            return key in row
+
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            try:
+                fresh = conn.execute(
+                    "SELECT t.status, t.stop_loss, t.take_profit_1, t.position_size, "
+                    "p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id WHERE t.id = ?",
+                    (row["id"],),
+                ).fetchone()
+            except __import__("sqlite3").OperationalError:
+                # A journal without the package link: the trade-level checks still run.
+                fresh = conn.execute(
+                    "SELECT status, stop_loss, take_profit_1, position_size, "
+                    "NULL AS pkg_sl, NULL AS pkg_tp FROM trades WHERE id = ?",
+                    (row["id"],),
+                ).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001 -- fail closed, never raise into the sweep
+        return f"fresh row read failed: {exc}"
+    if fresh is None:
+        return "trade row no longer readable"
+    if str(fresh["status"] or "") != "open":
+        return f"trade status is now {fresh['status']!r}"
+    for col in ("stop_loss", "take_profit_1", "position_size"):
+        if not _same(fresh[col], row[col]):
+            return (f"{col} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
+    for col in ("pkg_sl", "pkg_tp"):
+        if _has(col) and not _same(fresh[col], row[col]):
+            return (f"order package {col[4:]} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
+    return None
+
+
 def _reassert_from_divergence(
     db, *, client, account_id: str, protect_symbol: str, row,
     price_verdict: Dict[str, Any], summary: Dict[str, int],
@@ -12270,10 +12453,40 @@ def _reassert_from_divergence(
     trader, so it must never raise into it. Every path writes a soak row, so
     ``annotate`` produces the exact list to review before the ``apply`` flip —
     the ``NETTING_ATTRIBUTION_MODE`` staging shape.
+
+    IB-TRAIL-AMEND-MISSED: first re-reads the row fresh
+    (:func:`_reassert_row_changed_mid_sweep`); a row that changed after the
+    sweep's snapshot is never re-asserted from that snapshot.
     """
     import json as _json
     import time as _time
     try:
+        _changed = _reassert_row_changed_mid_sweep(db, row)
+        if _changed is not None:
+            summary["stop_price_reassert_skipped_row_changed"] = int(
+                summary.get("stop_price_reassert_skipped_row_changed", 0)) + 1
+            logger.info(
+                "_check_broker_naked_ib_positions: re-assert STOOD DOWN for "
+                "%s/%s trade=%s -- %s; the next sweep grades it from fresh data",
+                account_id, protect_symbol, row["id"], _changed,
+            )
+            try:
+                path = _reassert_soak_path()
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "a", encoding="utf-8") as fh:
+                    fh.write(_json.dumps({
+                        "at": datetime.now(timezone.utc).isoformat(),
+                        "account_id": account_id, "symbol": protect_symbol,
+                        "trade_id": row["id"], "declared_sl": row["stop_loss"],
+                        "resting_stop": price_verdict.get("nearest_resting"),
+                        "exposure": price_verdict.get("exposure"),
+                        "decision": "skipped_row_changed_mid_sweep",
+                        "reason": _changed, "acted": False,
+                    }, default=str) + "\n")
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("protection re-assert soak write failed: %s", exc)
+            return
+
         from src.runtime.protection_reassert import (
             MODE_APPLY, STATE_REASSERT, account_may_apply, decide_reassert,
             resolve_mode,
@@ -12531,6 +12744,11 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
         "stop_price_reassert_unverified": 0,  # could not re-read the venue
         "stop_price_reassert_failed": 0,      # the modify itself was rejected
         "stop_price_reassert_annotated": 0,
+        # IB-TRAIL-AMEND-MISSED: the row (or its package) changed after this
+        # sweep read it, so the divergence may be the sweep's own stale read
+        # of a trail amend that just landed. Not acted on; the next sweep
+        # grades again from fresh data.
+        "stop_price_reassert_skipped_row_changed": 0,
     }
     interval = _ib_broker_naked_check_interval_seconds()
     if interval <= 0:
@@ -12559,11 +12777,25 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
-            rows = conn.execute(
-                "SELECT id, account_id, symbol, direction, position_size, "
-                "stop_loss, take_profit_1, created_at, notes "
-                "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
-            ).fetchall()
+            try:
+                # IB-TRAIL-AMEND-MISSED: snapshot the linked package's LEVELS with
+                # the row, so a re-assert can tell a level move that landed after
+                # this read (the trail amend) from a mere touch of the package.
+                rows = conn.execute(
+                    "SELECT t.id, t.account_id, t.symbol, t.direction, "
+                    "t.position_size, t.stop_loss, t.take_profit_1, t.created_at, "
+                    "t.notes, p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id "
+                    "WHERE t.status='open' AND COALESCE(t.is_backtest,0)=0"
+                ).fetchall()
+            except __import__("sqlite3").OperationalError:
+                # A journal without the package link: the trade-level checks still run.
+                rows = conn.execute(
+                    "SELECT id, account_id, symbol, direction, position_size, "
+                    "stop_loss, take_profit_1, created_at, notes "
+                    "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
+                ).fetchall()
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001
@@ -16081,6 +16313,9 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                 # time, not the exit time, so a close-time bar would be a price
                 # for the wrong moment. Never price it here.
                 "   AND COALESCE(exit_reason, '') != 'exchange_reset_flat' "
+                # ENTRY-UNFILLED-LABEL: the entry never filled, so there is no
+                # position to price; a mark-to-market here would fabricate one.
+                "   AND COALESCE(exit_reason, '') != 'entry_unfilled' "
                 # MI-128: the window keys on the CLOSE, not the OPEN.
                 # `created_at` is when the position was OPENED; the value this
                 # sweep exists to recover is a property of the CLOSE. Keyed on

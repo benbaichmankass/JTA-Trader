@@ -5,7 +5,7 @@ id: RQ-20261119-024
 title: 'REGIME family test on iwm_trend_long_1d: the top-vol skip passed on BOTH sibling long-only index
   trend legs (scha VH90 9e1a-08, splg VH90 9e1a-09). Is it a property of the family? VH80 / VH90 vs the
   declared leg, net of cost'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -159,4 +159,14 @@ generated:
   key: programme:P3-RP1119-trend-long-family-vh-iwm
   params:
     node: P3-RP1119-trend-long-family-vh-iwm
-last_dispatched_at: '2026-11-19T23:25:31+00:00'
+last_dispatched_at: '2026-11-19T23:33:02+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RP1119-trend-long-family-vh-iwm
+  evidence:
+  - research/results/RQ-20261119-024/44637585525.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
