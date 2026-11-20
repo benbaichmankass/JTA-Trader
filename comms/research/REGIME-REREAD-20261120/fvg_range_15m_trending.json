@@ -1,0 +1,85 @@
+{
+  "strategy": "fvg_range_15m",
+  "regime": "trending",
+  "folds": 4,
+  "days": 740,
+  "cell": "trending",
+  "symbol": "BTCUSDT",
+  "timeframe": "15m",
+  "harness": "fvg_range",
+  "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "15",
+    "resample": "15m"
+  },
+  "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 70081
+  },
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "walkforward": {
+    "label": "fvg_range_15m:trending",
+    "sources": [
+      "<workdir>/w2_fvg_range_15m_trending/fvg_range_15m__wf_trending.jsonl"
+    ],
+    "total_trades": 0,
+    "folds": 4,
+    "error": "no trades"
+  },
+  "cell_verdict": {
+    "target_regime": "trending",
+    "target_vol": null,
+    "cell": "trending",
+    "regime_trades": 0,
+    "long_trades": 0,
+    "short_trades": 0,
+    "fold_panel": [
+      3,
+      4,
+      5
+    ],
+    "per_fold_count": {
+      "3": {
+        "short_folds_negative": 0,
+        "long_folds_negative": 0,
+        "of_folds": 3,
+        "short_populated_folds": 0,
+        "long_populated_folds": 0,
+        "short_majority_negative": false,
+        "long_majority_negative": false
+      },
+      "4": {
+        "short_folds_negative": 0,
+        "long_folds_negative": 0,
+        "of_folds": 4,
+        "short_populated_folds": 0,
+        "long_populated_folds": 0,
+        "short_majority_negative": false,
+        "long_majority_negative": false
+      },
+      "5": {
+        "short_folds_negative": 0,
+        "long_folds_negative": 0,
+        "of_folds": 5,
+        "short_populated_folds": 0,
+        "long_populated_folds": 0,
+        "short_majority_negative": false,
+        "long_majority_negative": false
+      }
+    },
+    "pooled_short_r": null,
+    "pooled_long_r": null,
+    "min_direction_trades": 10,
+    "long_insufficient_n": true,
+    "short_insufficient_n": true,
+    "long_verdict": "no_trades",
+    "short_verdict": "no_trades",
+    "short_stable_drag": false,
+    "long_stable_drag": false,
+    "short_fold_sensitive": false,
+    "long_fold_sensitive": false
+  }
+}

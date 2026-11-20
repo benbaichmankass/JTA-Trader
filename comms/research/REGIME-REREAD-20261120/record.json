@@ -1,0 +1,237 @@
+{
+ "id": "REGIME-REREAD-20261120",
+ "item": "PI-20261120-7ITMUEB1-0008",
+ "read_state": "measured",
+ "tier": 1,
+ "population": "every 1-D OFF cell in config/regime_policy.yaml whose strategy is on a live roster (all bybit_1 only, none real-money); 8 regime runs; BTCUSDT Binance-vision",
+ "tool": "scripts/research/regime_cell_walkforward.py @ main b0f2a3727 (open-stamped resample #27654, harness grids #27566)",
+ "verdict_rule": "stable_drag = pooled<0 AND strict majority-negative under every member of FOLD_PANEL (3,4,5)",
+ "changes_nothing": true,
+ "runs": [
+  {
+   "file": "fade_breakout_4h_trending.json",
+   "strategy": "fade_breakout_4h",
+   "regime": "trending",
+   "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 4381
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "240",
+    "resample": "4h"
+   },
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "long_trades": 0,
+   "short_trades": 0,
+   "pooled_long_r": null,
+   "pooled_short_r": null,
+   "long_verdict": "no_trades",
+   "short_verdict": "no_trades",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": false
+  },
+  {
+   "file": "fvg_range_15m_chop.json",
+   "strategy": "fvg_range_15m",
+   "regime": "chop",
+   "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 70081
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "15",
+    "resample": "15m"
+   },
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "long_trades": 16,
+   "short_trades": 14,
+   "pooled_long_r": -9.533,
+   "pooled_short_r": 4.7806,
+   "long_verdict": "no_stable_drag",
+   "short_verdict": "no_stable_drag",
+   "long_fold_sensitive": true,
+   "short_fold_sensitive": false
+  },
+  {
+   "file": "fvg_range_15m_trending.json",
+   "strategy": "fvg_range_15m",
+   "regime": "trending",
+   "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 70081
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "15",
+    "resample": "15m"
+   },
+   "fidelity": "faithful",
+   "omitted_levers": [],
+   "long_trades": 0,
+   "short_trades": 0,
+   "pooled_long_r": null,
+   "pooled_short_r": null,
+   "long_verdict": "no_trades",
+   "short_verdict": "no_trades",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": false
+  },
+  {
+   "file": "htf_pullback_trend_2h__chop.json",
+   "strategy": "htf_pullback_trend_2h",
+   "regime": "chop",
+   "window": {
+    "start": "2024-08-04",
+    "end": "2026-07-27",
+    "rows": 8665
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "fidelity": "approximate",
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "long_trades": 11,
+   "short_trades": 6,
+   "pooled_long_r": 3.4049,
+   "pooled_short_r": 0.5683,
+   "long_verdict": "no_stable_drag",
+   "short_verdict": "insufficient_n",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": true
+  },
+  {
+   "file": "htf_pullback_trend_2h__transitional.json",
+   "strategy": "htf_pullback_trend_2h",
+   "regime": "transitional",
+   "window": {
+    "start": "2024-08-04",
+    "end": "2026-07-27",
+    "rows": 8665
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "fidelity": "approximate",
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "long_trades": 13,
+   "short_trades": 12,
+   "pooled_long_r": 7.5932,
+   "pooled_short_r": -2.1686,
+   "long_verdict": "no_stable_drag",
+   "short_verdict": "no_stable_drag",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": true
+  },
+  {
+   "file": "htf_pullback_trend_2h__trending.json",
+   "strategy": "htf_pullback_trend_2h",
+   "regime": "trending",
+   "window": {
+    "start": "2024-08-04",
+    "end": "2026-07-27",
+    "rows": 8665
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "120",
+    "resample": "2h"
+   },
+   "fidelity": "approximate",
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "long_trades": 44,
+   "short_trades": 58,
+   "pooled_long_r": -12.3936,
+   "pooled_short_r": 8.75,
+   "long_verdict": "stable_drag",
+   "short_verdict": "no_stable_drag",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": false
+  },
+  {
+   "file": "trend_donchian_transitional.json",
+   "strategy": "trend_donchian",
+   "regime": "transitional",
+   "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 17521
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "fidelity": "approximate",
+   "omitted_levers": [
+    "decision_bar",
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+   ],
+   "long_trades": 41,
+   "short_trades": 0,
+   "pooled_long_r": -15.0659,
+   "pooled_short_r": 0,
+   "long_verdict": "stable_drag",
+   "short_verdict": "no_trades",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": false
+  },
+  {
+   "file": "trend_donchian_trending.json",
+   "strategy": "trend_donchian",
+   "regime": "trending",
+   "window": {
+    "start": "2024-11-15",
+    "end": "2026-11-15",
+    "rows": 17521
+   },
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT",
+    "interval": "60",
+    "resample": "1h"
+   },
+   "fidelity": "approximate",
+   "omitted_levers": [
+    "decision_bar",
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+   ],
+   "long_trades": 46,
+   "short_trades": 0,
+   "pooled_long_r": 13.5725,
+   "pooled_short_r": 0,
+   "long_verdict": "no_stable_drag",
+   "short_verdict": "no_trades",
+   "long_fold_sensitive": false,
+   "short_fold_sensitive": false
+  }
+ ],
+ "see": "README.md"
+}
