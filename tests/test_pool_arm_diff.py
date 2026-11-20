@@ -121,3 +121,32 @@ def test_missing_emits_are_unmeasured(tmp_path):
         and rec["verdict"] == "indeterminate"
         and rec["read_state"] == "unmeasured"
     )
+
+
+def _write_cell(root, unit, run, cell, arm, rows):
+    d = root / "comms" / "research" / unit / run / "cells"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"trend_{cell}_{arm}__trades.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
+    )
+
+
+def test_cells_layout_is_read_when_there_is_no_arms_dir(tmp_path):
+    """PI-20261119-FILLW47B-0012: a harness_stage0 unit keeps trades per CELL (cells/<family>_<SYM>_<tf>_<ARM>__trades.jsonl)."""
+    t = "2021-01-01 00:00:00+00:00"
+    row = {"entry_time": t, "exit_time": "2021-01-02 00:00:00+00:00", "direction": "long", "net_r": 0.5}
+    for arm in ("B", "D40", "D40A"):
+        _write_cell(tmp_path, "RQ-U", "run1", "AAVEUSDT_4h", arm, [row])
+    got = p.find_arm_file("RQ-U", "D40", tmp_path, "AAVEUSDT_4h")
+    assert got is not None and got.name == "trend_AAVEUSDT_4h_D40__trades.jsonl"   # exact suffix: D40 never matches D40A
+    assert p.find_arm_file("RQ-U", "B", tmp_path, "AAVEUSDT_4h").name == "trend_AAVEUSDT_4h_B__trades.jsonl"
+    assert p.find_arm_file("RQ-U", "B", tmp_path, "AAVEUSDT_2h") is None             # another timeframe's cell is not this leg
+    assert p.find_arm_file("RQ-U", "B", tmp_path) is None                            # no leg label, no cells fallback (old behaviour)
+
+
+def test_arms_dir_still_wins_over_cells(tmp_path):
+    d = tmp_path / "comms" / "research" / "RQ-U" / "run1" / "arms"
+    d.mkdir(parents=True)
+    (d / "B__trades.jsonl").write_text("{}\n", encoding="utf-8")
+    _write_cell(tmp_path, "RQ-U", "run1", "AAVEUSDT_4h", "B", [])
+    assert p.find_arm_file("RQ-U", "B", tmp_path, "AAVEUSDT_4h").parent.name == "arms"

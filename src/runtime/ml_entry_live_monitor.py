@@ -68,6 +68,7 @@ OPERATIONAL_EXIT_REASONS = frozenset({
     "netting_attributed", "netting_phantom_reconciled", "netted_misattributed", "adopted_orphan_disappeared",
     "operator_flatten_reconciled", "manual_closeall", "intent_reduce_executed", "intent_reduce",
     "stuck_strategy_watchdog", "exit_coverage_no_strategy", "pairs_half_open_cleanup", "exchange_reset_flat",
+    "entry_unfilled",
 })
 
 #: One page per account per CHECKPOINT at most (the checkpoint already rate-limits); the cooldown only guards a
