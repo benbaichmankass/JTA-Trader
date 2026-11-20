@@ -254,7 +254,7 @@ def load_resolved_frame(harness, path: str, resample: str | None):
     return df
 
 
-def effective_resample(res: "Resolution", explicit: Optional[str] = None) -> Optional[str]:
+def effective_resample(res: Resolution, explicit: str | None = None) -> str | None:
     """The resample rule a harness CLI must apply: the caller's explicit ``--resample`` wins, else the resolver's
     instruction (``Resolution.resample``, set only when a FINER file than the leg's timeframe was picked).
 
@@ -268,7 +268,7 @@ def effective_resample(res: "Resolution", explicit: Optional[str] = None) -> Opt
     return getattr(res, "resample", None) or None
 
 
-def resample_open_stamped(df, rule: Optional[str], ts_col: str = "timestamp"):
+def resample_open_stamped(df, rule: str | None, ts_col: str = "timestamp"):
     """Aggregate an OPEN-stamped OHLC(V) frame to ``rule`` keeping the OPEN-stamp convention of the native files
     (``label='left', closed='left'``): a resampled 15m frame is the same series a native ``<SYM>_15m.csv`` would be.
     For harnesses with no ``_resample`` of their own (ict_scalp, orb, system and the drivers that load raw).

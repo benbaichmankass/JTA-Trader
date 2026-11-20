@@ -147,7 +147,7 @@ def _adapter_ict_scalp(
     htf_ema_period: int = 20,
     vol_spec: Optional[Dict[str, Any]] = None,
     sim_breakeven: bool = False,
-    resample: Optional[str] = None,
+    resample: str | None = None,
     **_ignored: Any,
 ) -> Tuple[Any, List[SimTrade], Dict[str, Any]]:
     """Run scripts/backtest_ict_scalp.py in-process and normalize its trades.
