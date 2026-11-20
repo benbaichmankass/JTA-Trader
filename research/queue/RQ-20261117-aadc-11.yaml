@@ -161,6 +161,15 @@ amendments:
   by: lane ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)
   text:
   - 'HARNESS DEFECT (PI-20261118-MANAYJZO-0001): the replay scored train_exit_head.train_model()''s LGBMClassifier with .predict(vec)[0] = the 0/1 CLASS LABEL into would_exit_for(score < tau 0.10), so it evaluated a P < 0.5 exit policy, not the served P < 0.10 head (MEASURED: aadc-12 fired on 16,739 of 18,649 trades). Fixed to predict_proba (branch claude/ml6-exithead-proba-fix, regression test tests/test_exit_head_replay_scores_probability.py). RE-ARMED once on the fixed harness: the earlier result predates the fix and measured a different policy; rule, arms, folds, thresholds and cost stack unchanged. For a held-out read this is a SECOND look at the same held-out symbols and is counted as a new try in the holdout ledger / deflation. The v2-neg25 pin (#26906) cites the pre-fix result; this re-run is its evidence of record.'
+  - at: '2026-11-19'
+    before_any_run: false
+    by: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk)
+    text:
+    - 'HARNESS DEFECT (PI-20261119-RIMARY13-0001, fixed in PR #27491): the driver loaded the resolved candle file at its native grain and dropped Resolution.resample; on the trainer ETH/SOL
+      resolve to 5m and BTC to 15m files, so the ''1h'' replay ran the 1h config on sub-hourly bars while the head was trained on 1h rows. MEASURED from this unit''s own run record: n_total_trades
+      BTC 1,389 / ETH 8,769 / SOL 3,243 vs ~118 (ETH) / 60 (SOL) / 73 (BTC) trades a year on the 1h harness (abab-50/52/47). NOT re-armed: superseded by later units on the same question
+      (a10d-07 / a10d-08 / 04a5-04, re-armed on the fixed harness) or a closed family. This unit''s verdict is a record of that run only, NOT evidence about the 1h legs; revisit through
+      PI-20261119-RIMARY13-0001 if a later read needs it.'
 last_dispatched_at: null
 rearmed_at: '2026-11-18T20:30:00+00:00'
 grading:

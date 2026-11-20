@@ -1,7 +1,7 @@
 # Authored 2026-11-19 by lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), Tier 1. D8 give-back static exit grid; rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261119-2780-03
 title: 'D8 give-back: registered static exit grid on trend_donchian (5 exit levers x 4 values, one lever per arm) vs the declared exit, 2020-07-01..2026-10-15, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -184,3 +184,31 @@ iteration:
 follow_up: PASS -> author the registered paired confirmation for the selected arm (pre-window 2017-09-01..2020-06-30; SOL via the ETH/BTC windows). FAIL -> record the floor on PI-20261119-RIMARY12-0004
   and proceed to the D8 head levers.
 last_dispatched_at: '2026-11-19T23:14:10+00:00'
+
+amendments:
+- at: '2026-11-19'
+  before_any_run: false
+  by: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk)
+  text:
+  - 'MOTIVATION CAVEAT (rule, arms, window unchanged): the why_this_matters figure ''random truncation recovers 4-7x the exit head''s R'' comes from RQ-20261118-04a5-04, whose replay
+    ran on SUB-HOURLY bars (PI-20261119-RIMARY13-0001, fix PR #27491), so it is not a 1h measurement. The give-back case rests on the census of the 1h incumbent books (abab-47/50/52
+    arm A, same legs, window and cost stack): of trades reaching 1 R MFE, 37% ETH (136 of 367) / 36% SOL (71 of 197) / 45% BTC (111 of 244) end at gross <= 0. This unit''s harness (exit_lever_ablation.py) passes --resample
+    through the CLI and is not affected.'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-2780-D8-GIVEBACK-STATIC-GRID
+  evidence:
+  - comms/research/RQ-20261119-2780-03/44622364682/verdict.json
+  - research/results/RQ-20261119-2780-03/44622364682.jsonl
+  graded_at: '2026-11-19'
+  grader: lane ML-PRIMARY-13 (session_01AFoLuMHzd4un5tGXEsknNk), HELD for the manager
+  rows: 1
+  verdict: fail
+  reason: 'run 44622364682 (research-script-run, landed on main), B argv carries --resample 1h (verified). B = trend_donchian as declared: n 458, net 51.40 R, maxDD 29.46 R, BTCUSDT
+    1h 2020-07-01..2026-10-15, full cost stack. Bar: dR >= 0.03 R x n(B) = 13.7 R AND >= 5/6 folds AND maxDD <= 1.35 x B. No candidate passes -> FAIL (incumbent_stands). Best three:
+    TP8 dR -3.11 R, folds>=B 3/6; TD40 dR -10.51 R, folds>=B 4/6; TP6 dR -14.59 R, folds>=B 1/6. Per lever (dR in R): trail_mult [TM25 -41.6, TM30 -57.1, TM35 -24.4, TM40 -22.6]; tp_r
+    [TP3 -60.1, TP4 -22.2, TP6 -14.6, TP8 -3.1]; giveback [GB05 -47.3, GB075 -31.6, GB10 -39.8, GB15 -19.9]; trail_decay [TD10 -51.2, TD20 -49.7, TD30 -38.5, TD40 -10.5]; bank [BK10
+    -40.2, BK15 -27.2, BK20 -40.4, BK30 -32.3]. Arms with lever_fired false (identical to B): none. READING (not graded): no arm comes within the bar; arms above B at all: none; within
+    each lever, net R generally rises toward the declared, looser setting; tightening the exit to capture give-back truncates the few large winners that carry these trend legs, so the
+    MFE give-back is the price of the trail, not a free lever, on this window and cost stack. Narrow scope on TPs: a FIXED-R take-profit at 3-8 R, read as one static lever, costs net R or sits within noise on these legs; this grid did not test a predictive TP that moves with the forecast, so it is not evidence against the TP doctrine and not a case for tp_intent none. REGISTERED FAIL ACTION: these 20 settings are closed on this leg and window (honest negative for the configurations tested; lever families stay open); the floor for the D8
+    exit head is the declared exit, recorded on PI-20261119-RIMARY12-0004.'

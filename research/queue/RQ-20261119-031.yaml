@@ -24,14 +24,15 @@ why_this_matters: 'Decision it changes: whether the PPI surprise becomes a macro
   RTY carries the strongest parent IC of the three.'
 power:
   expected_n: 117
-  min_detectable_effect: 0.0019
+  min_detectable_effect: 0.0038
   effect_units: fractional return per 3-day window (tilt minus floor)
+  sd: 0.0144
   design: one_sample
   alpha: 0.05
-  power: 0.5
+  power: 0.8
   basis: 'MEASURED on the siblings: n 117 after warm-up with the same snapshot files (7769-20/-22); excess
     0.0019-0.0027 at t 1.9-2.0, so the test is near its detection limit, said plainly. Under n 100 the
-    unit grades INDETERMINATE.'
+    unit grades INDETERMINATE. POWER (corrected 2026-11-19 by AM-OPS-8: power 0.5 is outside the grader''s table and there was no sd, so the unit could never run): sd 0.0144 per 3-day window is DERIVED, not measured, as mean*sqrt(n)/t from the larger-variance sibling 7769-22 (0.00266812*sqrt(117)/2.009; 7769-20 gives 0.0110). At power 0.8, alpha 0.05, n 117 the detectable excess is 0.0038, above the siblings'' 0.0019-0.0027, so a sibling-sized true effect will often not reach t 2.0. The decision rule is unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays committed release snapshots and daily closes; nothing accrues.

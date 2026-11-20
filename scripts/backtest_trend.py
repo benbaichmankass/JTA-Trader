@@ -332,10 +332,39 @@ def _parse_hhmm(s: Optional[str]) -> Optional[int]:
     return v
 
 
+
+_GRAIN_MIN = {"1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "6h": 360, "8h": 480,
+              "12h": 720, "1d": 1440}
+
+
+def _assert_bar_grain(df: pd.DataFrame, timeframe: Optional[str]) -> None:
+    """Refuse a frame FINER than the declared ``timeframe`` (PI-20261119-RIMARY13-0001, manager 2026-11-19).
+
+    ``run_backtest`` never resamples; the CLI resamples before calling it. Four exit-head research drivers called it
+    directly on a resolved 5m/15m file with ``timeframe='1h'``, so a 1h config ran on sub-hourly bars and every
+    bar-count parameter (donchian, ATR, timeout, lookback) silently meant something else. Equal or COARSER bars pass
+    (a coarser frame is the caller's explicit choice); an unknown timeframe string or a frame without a usable
+    ``timestamp`` column is not judged. Fix for a refusal: resample first (``_resample`` /
+    ``scripts.ops.backtest_data_source.load_resolved_frame``)."""
+    want = _GRAIN_MIN.get(str(timeframe or "").strip().lower())
+    if want is None or "timestamp" not in getattr(df, "columns", ()) or len(df) < 3:
+        return
+    ts = pd.to_datetime(df["timestamp"].iloc[:501], utc=True, errors="coerce").dropna()
+    if len(ts) < 3:
+        return
+    step_min = ts.diff().dropna().median().total_seconds() / 60.0
+    if step_min > 0 and step_min < 0.9 * want:
+        raise ValueError(f"run_backtest: bars are {step_min:g} min apart but timeframe={timeframe!r} ({want} min) -- "
+                         "resample the frame to the leg's timeframe first (backtest_trend._resample or "
+                         "scripts.ops.backtest_data_source.load_resolved_frame); refusing to run a "
+                         f"{timeframe} config on finer bars")
+
+
 def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  atr_stop_mult: float, trail_mult: float, timeout_bars: int,
                  cooldown_bars: int, timeframe: str, symbol: str,
                  emit_path: Optional[str] = None,
+                 grain_check: bool = True,
                  strategy_name: str = "trend_donchian",
                  min_confidence: float = 0.0,
                  long_only: bool = False,
@@ -429,6 +458,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     # with the RQ-20260929-301/-302 replays — and feeds it through
     # `entry_override`. The unit already applied every entry gate, so the
     # harness's own copies are switched off; exits and costs are unchanged.
+    if grain_check:   # the CLI passes False: its --timeframe is a label unless --resample is given (PI-20261119-RIMARY13-0002)
+        _assert_bar_grain(df, timeframe)
     decision_bar = str(decision_bar or "closed").lower()
     if decision_bar == "forming":
         if decision_1m is None or decision_cfg is None:
@@ -2141,7 +2172,7 @@ def main(argv: List[str]) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: load failed: {exc}", file=sys.stderr)
         return 1
-    bt_kwargs = dict(donchian=args.donchian, atr_period=args.atr_period,
+    bt_kwargs = dict(grain_check=False, donchian=args.donchian, atr_period=args.atr_period,
                      atr_stop_mult=args.atr_stop_mult, trail_mult=args.trail_mult,
                      timeout_bars=args.timeout_bars, cooldown_bars=args.cooldown_bars,
                      # the bar the run actually traded: --resample wins over the --timeframe resolver hint

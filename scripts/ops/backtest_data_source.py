@@ -237,6 +237,23 @@ def resolve_or_refuse(symbol: Optional[str], timeframe: Optional[str],
                       tried=(str(ddir),))
 
 
+def load_resolved_frame(harness, path: str, resample: str | None):
+    """Load ``path`` with ``harness._load_candles`` AT THE RESOLVED GRAIN: resample to ``resample`` when the
+    resolver picked a finer file than the leg's timeframe (``Resolution.resample``), else return the frame as read.
+
+    WHY (ML-PRIMARY-13, 2026-11-19, PI filed with this fix): ``resolve_or_refuse`` returns the FINEST grain <= the
+    requested timeframe plus a resample instruction, and ``run_backtest`` never resamples (only the harness CLI's
+    ``--resample`` does). Four exit-head research drivers called ``harness._load_candles(res.path)`` and dropped the
+    instruction, so on the trainer (no ``<SYM>_1h.csv``; ETH/SOL resolve to 5m, BTC to 15m) a "1h" replay ran the 1h
+    config on 5m/15m bars: RQ-20261119-a10d-07 counted 9,418 ETH harness trades where the 1h harness gives ~118/yr.
+    Every caller that resolves through this module and drives ``run_backtest`` directly must load through here.
+    """
+    df = harness._load_candles(path)
+    if resample:
+        df = harness._resample(df, resample)
+    return df
+
+
 def refusal_message(res: Resolution, *, harness: str,
                     legacy_default: Optional[str] = None,
                     env_var: str = DEFAULT_ENV_VAR) -> str:
