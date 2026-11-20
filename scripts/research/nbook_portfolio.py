@@ -84,7 +84,6 @@ for _p in (str(_REPO_ROOT), str(_SCRIPTS)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 import backtest_system as bs  # noqa: E402  (the ONE portfolio harness)
@@ -262,9 +261,11 @@ def run_nbook(base5m: pd.DataFrame, *, books: Sequence[Book], start, end,
 
         sig_at: Dict[int, Dict[str, dict]] = {}
         for name, s in streams.items():
+            # Same mapping as the one-book engine (PI-20261120-7ITMUEB1-0006): a signal on the OPEN-stamped
+            # strategy bar [T, T+tf) acts from the first clock bar opening at/after its close.
+            _tf = bs._PANDAS_TF[bs.ROSTER[name]["tf"]]
             for _, r in s.iterrows():
-                idx = int(np.searchsorted(
-                    clock_ts, np.datetime64(pd.Timestamp(r["ts"])), side="right"))
+                idx = bs._signal_clock_index(clock_ts, r["ts"], _tf)
                 if idx >= n:
                     continue
                 sig_at.setdefault(idx, {})[name] = r.to_dict()
