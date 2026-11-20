@@ -5,7 +5,7 @@ id: RQ-20261119-017
 title: 'ITERATION 3 of ltr-partial-close (orphan): every trigger tried so far failed R2 at frac 0.5 (ed2b-01
   r_milestone / near_target / stall; 43b6-03 adverse / structure / momentum_flip). Does banking half at
   NEW_PEAK, the trigger that passed for the TP class, cut risk?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -142,3 +142,15 @@ generated:
   params:
     node: P1-RP1119-ltr-partial-close-newpeak
 last_dispatched_at: '2026-11-19T22:53:27+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-ltr-partial-close-newpeak
+  evidence:
+  - research/results/RQ-20261119-017/44632829547.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
