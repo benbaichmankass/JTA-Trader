@@ -15,7 +15,10 @@ Steps (one leg per run):
 3. Overlay. ``backtest_vol_target.build_book`` -> ``run_vol_target(..., return_series=True)`` with the venue-aware
    cost policy for the leg's symbol (turnover + funding; never a silent zero).
 4. Rule (registered on the unit, thresholds passed as flags, never defaults chosen here):
-   INDETERMINATE if n_trades < --n-floor. Otherwise PASS iff
+   INDETERMINATE if n_trades < --n-floor, or (opt-in --max-cap-share) if more than that share of re-target periods sit
+   at a multiplier cap (the overlay is then a constant scale, not vol targeting: Sharpe is scale-invariant, so its
+   dSharpe ~0 is mechanical; MEASURED on 8ef8-01/02, 44 of 45 periods at cap_lo, PI-20261120-H58PIBEE-0003).
+   Otherwise PASS iff
      (a) dSharpe = Sharpe(targeted) - Sharpe(baseline) >= --dsharpe-bar   (net of the overlay's costs), AND
      (b) maxDD(targeted) <= maxDD(baseline)                               (drawdowns are positive R magnitudes), AND
      (c) dSharpe > 0 in >= --block-majority of --blocks equal calendar blocks of the daily series;
@@ -66,15 +69,19 @@ def block_sharpes(dates: Sequence[str], base: Sequence[float], scaled: Sequence[
 
 
 def decide(n_trades: int, overlay: dict[str, Any], blocks: list[dict[str, Any]], *, dsharpe_bar: float, n_floor: int,
-           block_majority: int) -> dict[str, Any]:
+           block_majority: int, max_cap_share: float | None = None) -> dict[str, Any]:
     ds = overlay.get("sharpe_delta")
     dd_b = (overlay.get("baseline") or {}).get("max_drawdown_r")
     dd_t = (overlay.get("vol_targeted") or {}).get("max_drawdown_r")
     pos = sum(1 for b in blocks if b.get("dsharpe") is not None and b["dsharpe"] > 0)
     m = {"n_trades": n_trades, "dsharpe": ds, "maxdd_baseline_r": dd_b, "maxdd_targeted_r": dd_t,
          "blocks_dsharpe_positive": pos, "blocks": len(blocks)}
+    cap_pct = (overlay.get("multiplier") or {}).get("pct_periods_at_cap")
+    m["pct_periods_at_cap"] = cap_pct
     if n_trades < n_floor:
         return {"verdict": "indeterminate", "label": "underpowered", **m}
+    if max_cap_share is not None and cap_pct is not None and cap_pct > 100.0 * max_cap_share:
+        return {"verdict": "indeterminate", "label": "overlay_degenerate", **m}
     if ds is None or dd_b is None or dd_t is None:
         return {"verdict": "indeterminate", "label": "unmeasurable", **m}
     a, b, c = ds >= dsharpe_bar, dd_t <= dd_b, pos >= block_majority
@@ -137,15 +144,18 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
     daily, _summary = vt.build_book([trades], basis=a.basis)
     costs = vt.resolve_overlay_costs(sym or vt.DEFAULT_COST_SYMBOL)
     overlay = vt.run_vol_target(daily, target_vol=a.target_vol, short=a.short, long=a.long, blend=a.blend,
-                                cap_lo=a.cap_lo, cap_hi=a.cap_hi, retarget=a.retarget, costs=costs, return_series=True)
+                                cap_lo=a.cap_lo, cap_hi=a.cap_hi, retarget=a.retarget, costs=costs, return_series=True,
+                                target_mode=a.target_mode)
     series = overlay.pop("series")
     blocks = block_sharpes(series["dates"], series["baseline_r"], series["scaled_r"], a.blocks)
-    v = decide(n_trades, overlay, blocks, dsharpe_bar=a.dsharpe_bar, n_floor=a.n_floor, block_majority=a.block_majority)
+    v = decide(n_trades, overlay, blocks, dsharpe_bar=a.dsharpe_bar, n_floor=a.n_floor, block_majority=a.block_majority,
+               max_cap_share=a.max_cap_share)
     pop = (f"{a.leg}: {n_trades} Stage-0 trades on {src.get('candle_source', {}).get('venue', 'a supplied ledger')}, "
            f"{overlay.get('data_start')}..{overlay.get('data_end')} ({len(daily)} book days)")
     return {"verdict": v.pop("verdict"), "read_state": "measured", "population": pop, "n": n_trades,
             "measurement": {**v, "overlay": overlay, "block_detail": blocks, "source": src,
-                            "rule_thresholds": {k: getattr(a, k) for k in RULE_FIELDS}}}
+                            "rule_thresholds": {k: getattr(a, k) for k in RULE_FIELDS},
+                            "overlay_mode": {"target_mode": a.target_mode, "max_cap_share": a.max_cap_share}}}
 
 
 def _self_test() -> int:
@@ -164,6 +174,11 @@ def _self_test() -> int:
     chk("dsharpe below bar -> fail", decide(150, {**ov, "sharpe_delta": 0.05}, blocks, dsharpe_bar=0.1, n_floor=100, block_majority=3)["verdict"] == "fail")
     chk("worse drawdown -> fail", decide(150, {**ov, "vol_targeted": {"max_drawdown_r": 6.0}}, blocks, dsharpe_bar=0.1, n_floor=100, block_majority=3)["verdict"] == "fail")
     chk("2 of 4 blocks -> fail", decide(150, ov, [{"dsharpe": x} for x in (0.1, -0.2, -0.1, 0.3)], dsharpe_bar=0.1, n_floor=100, block_majority=3)["verdict"] == "fail")
+    pinned = {**ov, "multiplier": {"pct_periods_at_cap": 97.78}}
+    chk("pinned overlay + max_cap_share -> indeterminate overlay_degenerate",
+        decide(150, pinned, blocks, dsharpe_bar=0.1, n_floor=100, block_majority=3, max_cap_share=0.5)["label"] == "overlay_degenerate")
+    chk("pinned overlay without max_cap_share -> unchanged (pass here)",
+        decide(150, pinned, blocks, dsharpe_bar=0.1, n_floor=100, block_majority=3)["verdict"] == "pass")
     chk("missing sharpe -> indeterminate", decide(150, {**ov, "sharpe_delta": None}, blocks, dsharpe_bar=0.1, n_floor=100, block_majority=3)["verdict"] == "indeterminate")
     rnd = random.Random(1)
     dates = [f"2024-{1 + i // 28:02d}-{1 + i % 28:02d}" for i in range(336)]
@@ -187,6 +202,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--end", default=None)
     ap.add_argument("--basis", choices=["entry", "exit", "auto"], default="auto")
     ap.add_argument("--target-vol", type=float, default=0.10)
+    ap.add_argument("--target-mode", choices=["annualized", "trailing_median"], default="annualized",
+                    help="trailing_median for an R-unit leg book (see backtest_vol_target.TARGET_MODES)")
+    ap.add_argument("--max-cap-share", type=float, default=None,
+                    help="INDETERMINATE (overlay_degenerate) if more than this share of periods sit at a cap; unset = off")
     ap.add_argument("--short", type=int, default=20)
     ap.add_argument("--long", type=int, default=60)
     ap.add_argument("--blend", type=float, default=0.5)

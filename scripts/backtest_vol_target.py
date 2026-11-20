@@ -14,6 +14,14 @@ Overlay logic (memo P1 spec):
     through t-1 (a 1-day shift; NO look-ahead).
   - Target vol is ANNUALIZED (``--target-vol``, e.g. 0.10 = 10%/yr); converted
     to a daily budget via ÷sqrt(252). multiplier = target_daily / vol_est.
+    ⚠️ That target is in the SAME units as the book's daily returns. A book in R
+    (a single leg's ``--emit-trades``) has realised vol of tens of R/yr, so a 0.10
+    target pins the multiplier at ``--cap-lo`` on every period (MEASURED
+    2026-11-20, RQ-20261120-8ef8-01/02: 44 of 45 periods at cap; PI-20261120-
+    H58PIBEE-0003). ``--target-mode trailing_median`` is the unit-free form: the
+    daily target is the expanding median of the book's OWN vol estimates seen at
+    period starts (past returns only), so the multiplier moves around 1 and
+    scales down when vol is high relative to the book's norm.
   - The multiplier is capped to [--cap-lo, --cap-hi].
   - Re-target cadence (``--retarget {daily,weekly,monthly}``): the multiplier is
     chosen at the START of each period and HELD constant within it (memo: target
@@ -141,7 +149,8 @@ def _vol_est(history: Sequence[float], short: int, long: int, blend: float
 
 def compute_multipliers(daily: Sequence[Tuple[date, float, int]], *,
                         target_vol: float, short: int, long: int, blend: float,
-                        cap_lo: float, cap_hi: float, retarget: str
+                        cap_lo: float, cap_hi: float, retarget: str,
+                        target_mode: str = "annualized",
                         ) -> Tuple[List[float], List[bool]]:
     """Per-day exposure multiplier with NO look-ahead.
 
@@ -157,7 +166,10 @@ def compute_multipliers(daily: Sequence[Tuple[date, float, int]], *,
     n = len(daily)
     mult = [1.0] * n
     at_cap = [False] * n
+    if target_mode not in TARGET_MODES:
+        raise ValueError(f"unknown target_mode: {target_mode!r} (one of {TARGET_MODES})")
     target_daily = target_vol / math.sqrt(TRADING_DAYS_PER_YEAR)
+    seen_ve: List[float] = []   # trailing_median: vol estimates at past period starts (each from returns[:t])
 
     current_mult = 1.0
     current_at_cap = False
@@ -174,6 +186,9 @@ def compute_multipliers(daily: Sequence[Tuple[date, float, int]], *,
                 # Warm-up / degenerate: no scaling yet.
                 current_mult, current_at_cap = 1.0, False
             else:
+                if target_mode == "trailing_median":
+                    seen_ve.append(ve)
+                    target_daily = statistics.median(seen_ve)
                 raw = target_daily / ve
                 capped = min(max(raw, cap_lo), cap_hi)
                 current_mult = capped
@@ -215,6 +230,9 @@ def _turnover_drag(mult: Sequence[float], turnover_bps: float
 
 
 DEFAULT_COST_SYMBOL = "BTCUSDT"
+#: "annualized": --target-vol in the book's return units / yr (the memo-P1 form, for a book in equity fractions).
+#: "trailing_median": unit-free; target = expanding median of the book's own past vol estimates (for books in R).
+TARGET_MODES = ("annualized", "trailing_median")
 FUNDING_WINDOWS_PER_DAY = 24.0 / execution_costs.FUNDING_WINDOW_HOURS
 
 
@@ -294,7 +312,8 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
                    cap_lo: float, cap_hi: float, retarget: str,
                    turnover_bps: Optional[float] = None,
                    costs: Optional[Dict[str, Any]] = None,
-                   return_series: bool = False) -> Dict[str, Any]:
+                   return_series: bool = False,
+                   target_mode: str = "annualized") -> Dict[str, Any]:
     """Baseline vs vol-targeted comparison over the daily book series.
 
     ``costs`` is :func:`resolve_overlay_costs`'s output; when omitted it is
@@ -305,7 +324,7 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
     baseline_r = [r for (_d, r, _n) in daily]
     mult, at_cap = compute_multipliers(
         daily, target_vol=target_vol, short=short, long=long, blend=blend,
-        cap_lo=cap_lo, cap_hi=cap_hi, retarget=retarget)
+        cap_lo=cap_lo, cap_hi=cap_hi, retarget=retarget, target_mode=target_mode)
     drag, total_turnover = _turnover_drag(mult, turnover_bps)
     fund_base, fund_tgt = _funding_drag(mult, costs)
     baseline_r = [baseline_r[t] - fund_base[t] for t in range(len(daily))]
@@ -325,6 +344,7 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
     return {
         "params": {
             "target_vol_annualized": target_vol,
+            "target_mode": target_mode,
             "short_lookback": short, "long_lookback": long, "blend": blend,
             "cap_lo": cap_lo, "cap_hi": cap_hi, "retarget": retarget,
             "turnover_bps": turnover_bps,
@@ -393,6 +413,10 @@ def main(argv: List[str]) -> int:
                    help="Day-attribution basis when --trades is used. Default auto.")
     p.add_argument("--target-vol", type=float, default=0.10,
                    help="Annualized vol budget (0.10 = 10%%/yr). Default 0.10.")
+    p.add_argument("--target-mode", choices=list(TARGET_MODES), default="annualized",
+                   help="annualized (default): --target-vol in the book's return units per year. "
+                        "trailing_median: unit-free, target = the book's own trailing median vol "
+                        "(use for books in R, where 0.10 pins the multiplier at --cap-lo).")
     p.add_argument("--short", type=int, default=20, help="Short vol lookback (days).")
     p.add_argument("--long", type=int, default=60, help="Long vol lookback (days).")
     p.add_argument("--blend", type=float, default=0.5,
@@ -446,7 +470,7 @@ def main(argv: List[str]) -> int:
     out = run_vol_target(
         daily, target_vol=a.target_vol, short=a.short, long=a.long,
         blend=a.blend, cap_lo=a.cap_lo, cap_hi=a.cap_hi, retarget=a.retarget,
-        costs=costs)
+        costs=costs, target_mode=a.target_mode)
     print(_fmt(out))
 
     if a.json_out:

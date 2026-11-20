@@ -2,7 +2,7 @@
 id: RQ-20261120-8ef8-03
 title: 'Continuous vol-TARGET sizing on trend_donchian_eth_prop (ETHUSDT 1h), Bybit-native Stage-0 trades: does it lift net Sharpe by >= 0.10 without a worse drawdown, in >= 3 of 4 calendar
   blocks? (P2-R5)'
-status: queued
+status: retired
 cadence: once
 roadmap:
 - L-REGIME
@@ -117,3 +117,6 @@ related:
 - scripts/research/vol_target_verdict.py
 - scripts/backtest_vol_target.py
 - comms/research/VENUE-GAP-20261120/record.json
+retired_reason: '2026-11-20 ML-PRIMARY-15 on the manager''s decision (11:06Z): CANCELLED before dispatch. Same argv as 8ef8-01/02; target_vol 0.10 compared
+  against the R-unit book vol pins the multiplier at its floor (44 of 45 periods on 8ef8-01/02), so it would measure a constant 0.5x size, not vol targeting
+  (PI-20261120-H58PIBEE-0003). The unit-free variant is RQ-20261120-7d49-05.'
