@@ -69,6 +69,8 @@ def find_arm_file(
     hits = sorted(glob.glob(str(base / "arms" / f"{arm}__trades.jsonl")))
     if not hits and leg:
         hits = sorted(glob.glob(str(base / "cells" / f"*_{leg}_{arm}__trades.jsonl")))
+    if len(hits) > 1:   # several runs kept an emit: say which one is read (the newest), never pick silently
+        print(f"pool_arm_diff: {unit} {leg or '-'} {arm}: {len(hits)} kept emits, reading the newest {hits[-1]}", file=sys.stderr)
     return Path(hits[-1]) if hits else None
 
 
