@@ -13,11 +13,11 @@ practice_precedent: 'none: an unchanged-lever re-read on the evidence feed of a 
 question: Over 2020-07-01 .. 2026-10-15 23:59 on trend_donchian_eth_4h (ETHUSDT 4h, live), on the NATIVE 4h candles of the Stage-0 evidence feed (keyless Binance Vision, the
   grid the leg trades), does removing the shipped trail decay (trail_decay_tight_mult 1.8, trail_decay_stall_bars 10) beat the leg as declared (A) by >= 0.02 R/trade on net
   R in >= 3 of 4 calendar folds within the drawdown bar (maxDD(OFF) <= maxDD(A) x 1.35)? R is on the full initial position's risk.
-why_this_matters: 'The trail decay on trend_donchian_eth_4h was chosen by M20 trainer sweeps, which replay the trainer''s ETHUSDT 5m/15m files resampled to 4h. Two defects
-  make those sweeps a different measurement from the leg we trade: (1) the harness _resample used label/closed right, a one-sub-bar phase shift of every resampled bar (left/left
-  reproduces 199,185 of 199,259 native ETHUSDT 15m bars, right/right 4; relay #27551; fixed in PR #27566), and (2) the trainer crypto files are a different price series from
-  the evidence feed (0 of 34,008 ETHUSDT 1h bars identical, relay #27560; PI-20261120-7ITMUEB1-0005). On trend_donchian_eth the shifted trainer grid read n 465 -35.73 R vs
-  n 451 +4.26 R on native 1h. This unit re-reads the lever on the series the evidence and the live leg use; it changes nothing by itself.'
+why_this_matters: 'This is the CURRENT-DATA lever-off read on the real-money leg that RQ-20261119-c8e2-01 asked for; c8e2-01 is retired as superseded because its harness path
+  (m20-exit-lever-sweep.yml) replays the trainer''s ETHUSDT_5m file resampled to 4h: the old harness _resample shifted that grid by one sub-bar (PI-20261120-7ITMUEB1-0001,
+  fixed in PR #27566) and the trainer ETH series matches 0 of 34,008 Binance-vision native 1h bars (relay #27560, PI-20261120-7ITMUEB1-0005). The shipped decay already has
+  NATIVE-feed evidence: RQ-20261016-006 (exit_lever_ablation --grade replace vs this incumbent, PASS), so this unit re-reads it on the evidence feed over 2020-07..2026-10;
+  it changes nothing by itself.'
 power:
   alpha: 0.05
   basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades, as in RQ-20261023-a1f3-06; below it the unit grades indeterminate, never FAIL. Trade sequences autocorrelate:
@@ -104,3 +104,4 @@ related:
 - PI-20261120-7ITMUEB1-0005
 - 'PR #27566'
 - RQ-20261119-c8e2-01
+- RQ-20261016-006
