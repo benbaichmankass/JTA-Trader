@@ -76,7 +76,13 @@ def test_both_consumers_read_the_env_and_not_inputs():
     """
     job = _job()
     land = _land()
-    assert _stamp_step(land)["if"].strip() == "env.FIRE == 'true'"
+    # AM-OPS-9 (2026-11-19): the ONE permitted extra conjunct is the producer-side validation verdict of the step
+    # before it, whose own `if:` is the same `env.FIRE == 'true'` (pinned in tests/test_validate_before_land.py).
+    # An exact allowlist, not a prefix match: any other shape (inputs.fire, event_name) is still refused.
+    assert _stamp_step(land)["if"].strip() in (
+        "env.FIRE == 'true'",
+        "env.FIRE == 'true' && steps.validate_stamps.outputs.ok == 'true'",
+    )
     # the land job must read the dispatch job's decision, never re-derive it
     assert land["env"]["FIRE"].strip() == "${{ needs.dispatch.outputs.fire }}"
     assert "fire" in job["outputs"]

@@ -181,25 +181,39 @@ def _row_text(row: dict) -> str:
     return " ".join(str(row.get(k, "")) for k in _ROW_TEXT_FIELDS)
 
 
-def check_new_rows(base_text: str, head_text: str, path: str) -> list[str]:
+def new_row_failure(rid: str, row: dict, path: str) -> str | None:
+    """The per-row predicate of ``check_new_rows`` / ``check_new_pipeline_rows``, for a row whose id
+    is NEW: its message, or None when it passes. Also imported by the work-store export's pre-check
+    (scripts/ops/work.py), so the export and this guard run ONE check."""
+    text = _row_text(row)
+    claims = _CLAIM_RE.findall(text)
+    if not claims:
+        return None
+    if any(rx.search(text) for rx in _BASIS_RES):
+        return None
+    return (
+        f"{path}: NEW row '{rid}' asserts quantitative evidence "
+        f"({', '.join(claims[:3])}) with NO parseable basis — state the "
+        f"population/denominator/window in the row (canonical rule: "
+        f"'Always state the population'). A number without its basis "
+        f"is not a finding."
+    )
+
+
+def check_new_rows(base_text: str, head_text: str, path: str,
+                   exempt_ids: frozenset = frozenset()) -> list[str]:
+    """``exempt_ids``: rows the work-store export cutover exempts (store updated_at <=
+    export_base_at; scripts/ops/work_export_cutover.py). Empty = every new row is graded."""
     base_ids = set(_rows(base_text))
     failures = []
     for rid, row in _rows(head_text).items():
         if rid in base_ids:
             continue  # diff-scoped: only NEW rows are held to the guard
-        text = _row_text(row)
-        claims = _CLAIM_RE.findall(text)
-        if not claims:
+        if rid in exempt_ids:
             continue
-        if any(rx.search(text) for rx in _BASIS_RES):
-            continue
-        failures.append(
-            f"{path}: NEW row '{rid}' asserts quantitative evidence "
-            f"({', '.join(claims[:3])}) with NO parseable basis — state the "
-            f"population/denominator/window in the row (canonical rule: "
-            f"'Always state the population'). A number without its basis "
-            f"is not a finding."
-        )
+        f = new_row_failure(rid, row, path)
+        if f:
+            failures.append(f)
     return failures
 
 
@@ -260,12 +274,16 @@ def _pipeline_ids_at_ref(ref: str, pipeline_dir: str) -> set[str]:
     return names
 
 
-def check_new_pipeline_rows(base_ref: str, pipeline_dir: str) -> list[str]:
+def check_new_pipeline_rows(base_ref: str, pipeline_dir: str,
+                            exempt: frozenset = frozenset()) -> list[str]:
     """The directory-store equivalent of `check_new_rows()`: an id absent
     from `base_ref`'s fold, whose CURRENT (folded) row asserts a claim with
     no basis, fails. Graded per id, not per file -- an id that picked up a
     second record in the same PR (a `new` file, then an `update` file) is
     graded once, on its latest content, matching `pipeline.py::load()`.
+
+    ``exempt``: record paths (``<pipeline_dir>/<file>``) the work-store export
+    cutover exempts; an id whose CURRENT record is one of them is skipped.
     """
     base_ids = _pipeline_ids_at_ref(base_ref, pipeline_dir)
     head = _pipeline.read_log(Path(pipeline_dir))
@@ -273,19 +291,11 @@ def check_new_pipeline_rows(base_ref: str, pipeline_dir: str) -> list[str]:
     for rid, row in head.items.items():
         if rid in base_ids:
             continue  # diff-scoped: only ids NEW since base are held to it
-        text = _row_text(row)
-        claims = _CLAIM_RE.findall(text)
-        if not claims:
+        if exempt and f"{pipeline_dir}/{head.sources.get(rid)}" in exempt:
             continue
-        if any(rx.search(text) for rx in _BASIS_RES):
-            continue
-        failures.append(
-            f"{pipeline_dir}: NEW row '{rid}' asserts quantitative evidence "
-            f"({', '.join(claims[:3])}) with NO parseable basis — state the "
-            f"population/denominator/window in the row (canonical rule: "
-            f"'Always state the population'). A number without its basis "
-            f"is not a finding."
-        )
+        f = new_row_failure(rid, row, pipeline_dir)
+        if f:
+            failures.append(f)
     return failures
 
 
@@ -591,6 +601,11 @@ def main() -> int:
     scanned = 0
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    from scripts.ops import work_export_cutover as _cut  # noqa: PLC0415
+    # Work-store export cutover (STORE-EXPORT-BACKFILL-258): exported files whose store
+    # updated_at <= export_base_at are pre-cutover debt and are skipped here.
+    exempt = frozenset(_cut.exempt_paths(Path(".")))
+    exempt_rows = frozenset(Path(p).stem for p in exempt if p.startswith(str(_ck.STORE) + "/"))
     for path in BACKLOGS:
         is_ck = _ck.is_checklist_path(path)  # monolith, or per-row store once cut over
         try:
@@ -607,12 +622,12 @@ def main() -> int:
             base_text = json.dumps(base_doc) if base_doc is not None else "{}"
         else:
             base_text = _git_show(args.base, path)
-        failures.extend(check_new_rows(base_text, head, path))
+        failures.extend(check_new_rows(base_text, head, path, exempt_ids=exempt_rows if is_ck else frozenset()))
         failures.extend(check_status_enum(head, path))
 
     if Path(PIPELINE_DIR).is_dir():
         scanned += 1
-        failures.extend(check_new_pipeline_rows(args.base, PIPELINE_DIR))
+        failures.extend(check_new_pipeline_rows(args.base, PIPELINE_DIR, exempt=exempt))
 
     for f in failures:
         print(f"::error::{f}")

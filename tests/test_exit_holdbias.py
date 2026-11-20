@@ -96,3 +96,52 @@ def test_cli_writes_verdict(tmp_path):
     assert eh.main(["--labels", str(lab), "--out", str(tmp_path / "o"), "--n-boot", "100", "--draws", "5"]) == 0
     v = json.loads((tmp_path / "o" / "verdict.json").read_text())
     assert v["read_state"] == "measured" and v["verdict"] == "indeterminate"
+
+
+# ---- PI-20261119-RIMARY12-0005: tau chosen per outer fold on training data only (--tau-grid) ----
+GRID = (0.15, 0.3, 0.5, 0.8)
+
+
+def test_tau_grid_off_is_byte_identical_to_the_fixed_rule(tmp_path):
+    c = _corpus(tmp_path / "p.jsonl.gz", True, n_trades=600)
+    a = eh.run(c, n_boot=200, draws=5)
+    b = eh.run(c, n_boot=200, draws=5, tau_grid=None)
+    for k in ("verdict", "n", "clauses"):
+        assert a[k] == b[k]
+    assert b["config"]["tau_r"] == 0.15 and b["config"]["tau_grid"] is None
+
+
+def _rare_edge(path: Path) -> Path:
+    """The planted corpus with the close edge only at now_r > 1.6 (~8% of check-ins), so a tau under the 15% advice
+    cap exists; on the base corpus (edge on ~24% of check-ins) the cap is unreachable by construction."""
+    src = _corpus(path.with_suffix(".src.gz"), True)
+    rows = eh.read_labels(src)
+    rng = np.random.default_rng(11)
+    for r in rows:
+        r["labels"]["close"]["value_r"] = (0.6 if r["now_r"] > 1.6 else -0.3) + float(rng.normal(0, 0.05))
+    with gzip.open(path, "wt") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+    return path
+
+
+def test_tau_inner_selection_respects_the_advice_cap_and_keeps_the_planted_edge(tmp_path):
+    v = eh.run(_rare_edge(tmp_path / "r.jsonl.gz"), n_boot=200, draws=5, tau_grid=GRID)
+    for f, pf in v["measurement"]["per_fold"].items():
+        sel = pf["tau_selection"]
+        assert sel["selected_tau"] in GRID and int(f) not in sel["inner_folds"], "the outer test fold is never an inner fold"
+        chosen = next(r for r in sel["table"] if r["tau"] == sel["selected_tau"])
+        assert sel["cap_unreachable"] or chosen["advice_rate"] <= eh.ADVICE_RATE_MAX
+    assert not any(pf["tau_selection"]["cap_unreachable"] for pf in v["measurement"]["per_fold"].values())
+    assert v["measurement"]["mean_dR_per_trade"] > 0.05 and v["measurement"]["advice_rate"] <= eh.ADVICE_RATE_MAX
+
+
+def test_tau_selection_never_reads_the_outer_test_fold(tmp_path, monkeypatch):
+    """Poison the outer test fold's labels AFTER the matrix is built: the selection table for that fold must not move."""
+    rows = eh.read_labels(_corpus(tmp_path / "p.jsonl.gz", True))
+    M = eh.build_matrix(rows)
+    mask, _ = eh.purged_train_mask(M, 2)
+    s1 = eh.select_tau_inner(M, mask, 2, GRID, eh.SEED)
+    M["V"][M["fold"] == 2] = 99.0
+    s2 = eh.select_tau_inner(M, mask, 2, GRID, eh.SEED)
+    assert s1["table"] == s2["table"] and s1["selected_tau"] == s2["selected_tau"]

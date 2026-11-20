@@ -436,7 +436,9 @@ GUARDS: List[Dict[str, Any]] = [
         "name": "roadmap-map-guard",
         "when": {"globs": ["docs/roadmap/**", "ROADMAP.md", "docs/claude/work/checklist/**",
                             "research/queue/**", "scripts/ops/roadmap_map.py",
-                            "docs/ARCHITECTURE-CANONICAL.md"]},
+                            "docs/ARCHITECTURE-CANONICAL.md",
+                            # the export cutover's exemption inputs (AM-OPS-9)
+                            "scripts/ops/work_export_cutover.py", "docs/claude/work/EXPORT-STAMPS.json"]},
         "steps": [["python3", "scripts/ops/roadmap_map.py", "--self-test"],
                   ["python3", "scripts/ops/roadmap_map.py", "--check", "--base", "origin/main"]],
     },

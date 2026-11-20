@@ -269,26 +269,33 @@ def static_problems(spec: dict, built: dict, arch_text: str, roadmap_text: str |
     return bad
 
 
+def row_problems(spec: dict, rid: str, r: dict, old: dict | None, seq) -> list[str]:
+    """The per-row predicate of ``diff_problems``: ``r`` is the row now, ``old`` the row at base
+    (None = new), ``seq`` its ``_seq``. Also imported by the work-store export's pre-check
+    (scripts/ops/work.py ``export_precheck``), so the export and this guard run ONE check."""
+    bad: list[str] = []
+    if int(seq or 0) < int(spec.get("enforce_from_seq", 10**9)):
+        return bad
+    if old is not None and old.get("state") == r.get("state") and old.get("roadmap") == r.get("roadmap"):
+        return bad
+    if not as_list(r.get("roadmap")):
+        bad.append(f"row {rid}: new/changed row carries no `roadmap` milestone ref (docs/roadmap/milestones.yaml)")
+    closing = r.get("state") in CLOSED_ROW and (old is None or old.get("state") != r.get("state"))
+    if closing:
+        w = r.get("writeback")
+        if not (isinstance(w, dict) and str(w.get("roadmap") or "").strip() and str(w.get("arch") or "").strip()):
+            bad.append(f"row {rid}: closing to {r['state']} needs `writeback` = "
+                       '{"roadmap": "<milestone line you updated | none: reason>", '
+                       '"arch": "<ARCHITECTURE section you updated | none: reason>"}')
+    return bad
+
+
 def diff_problems(spec: dict, head_rows: dict, base_rows: dict, head_units: dict,
                   base_units: dict, seqs: dict) -> list[str]:
     """Enforcement is on what THIS diff touches, so an old row cannot redden an unrelated PR."""
     bad: list[str] = []
-    floor = int(spec.get("enforce_from_seq", 10**9))
     for rid, r in head_rows.items():
-        if int(seqs.get(rid, 0)) < floor:
-            continue
-        old = base_rows.get(rid)
-        if old is not None and old.get("state") == r.get("state") and old.get("roadmap") == r.get("roadmap"):
-            continue
-        if not as_list(r.get("roadmap")):
-            bad.append(f"row {rid}: new/changed row carries no `roadmap` milestone ref (docs/roadmap/milestones.yaml)")
-        closing = r.get("state") in CLOSED_ROW and (old is None or old.get("state") != r.get("state"))
-        if closing:
-            w = r.get("writeback")
-            if not (isinstance(w, dict) and str(w.get("roadmap") or "").strip() and str(w.get("arch") or "").strip()):
-                bad.append(f"row {rid}: closing to {r['state']} needs `writeback` = "
-                           '{"roadmap": "<milestone line you updated | none: reason>", '
-                           '"arch": "<ARCHITECTURE section you updated | none: reason>"}')
+        bad += row_problems(spec, rid, r, base_rows.get(rid), seqs.get(rid, 0))
     ufloor = str(spec.get("enforce_units_from", "99999999"))
     for uid, u in head_units.items():
         m = re.match(r"RQ-(\d{8})", uid)
@@ -303,11 +310,15 @@ def _git(*a: str) -> str:
     return subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True, check=False).stdout
 
 
-def _diff_inputs(base: str):
+def _diff_inputs(base: str, exempt: frozenset | set = frozenset()):
+    """``exempt``: exported row files the work-store export cutover exempts (store updated_at <=
+    export_base_at; scripts/ops/work_export_cutover.py) -- skipped as if the diff had not touched them."""
     changed = [p for p in _git("diff", "--name-only", base, "--", STORE_REL, "research/queue").split("\n") if p]
     head_rows, base_rows, seqs, head_units, base_units = {}, {}, {}, {}, {}
     for p in changed:
         f = REPO / p
+        if p in exempt:
+            continue
         if p.startswith(STORE_REL) and p.endswith(".json") and not Path(p).name.startswith("_"):
             if f.exists():
                 d = json.loads(f.read_text(encoding="utf-8"))
@@ -336,7 +347,8 @@ def check(base: str | None) -> int:
     built = build(spec, load_rows(), load_units())
     bad = static_problems(spec, built, ARCH.read_text(encoding="utf-8"), ROADMAP.read_text(encoding="utf-8"))
     if base:
-        bad += diff_problems(spec, *_diff_inputs(base))
+        from scripts.ops import work_export_cutover as _cut  # noqa: PLC0415
+        bad += diff_problems(spec, *_diff_inputs(base, _cut.exempt_paths(REPO)))
     else:
         print("note: no --base given; diff-scoped enforcement skipped")
     for b in bad:
