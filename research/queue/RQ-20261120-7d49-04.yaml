@@ -4,7 +4,7 @@
 id: RQ-20261120-7d49-04
 title: 'VARIANT (unit-free target): does vol-target SIZING with a trailing-median target improve trend_donchian_sol_prop''s net Sharpe by >= +0.10 without
   a worse drawdown, in >= 3 of 4 calendar blocks?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -140,3 +140,19 @@ iteration:
     changed: --target-mode trailing_median (target = the book''s own expanding median vol estimate at period starts, past returns only), so the multiplier
     moves around 1. Leg, window, overlay lookbacks, caps, retarget, costs and all thresholds are unchanged (PI-20261120-H58PIBEE-0003).'
 last_dispatched_at: '2026-11-20T12:11:10+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611208ef802-VOLTARGET-SIZING-TRAILMED
+  evidence:
+  - comms/research/RQ-20261120-7d49-04/44733700673/verdict.json
+  - research/results/RQ-20261120-7d49-04/44733700673.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'PASS by the registered rule (all three clauses). Run 44733700673 (generated 2026-11-20T12:17:42Z, commit 345b5a71c), trend_donchian_sol_prop
+    on Bybit bars, n_trades 234 (>= 100). (a) dSharpe +0.2249 (Sharpe 0.5146 -> 0.7395) >= +0.10; (b) maxDD targeted 10.56 R <= baseline 11.29 R; (c) dSharpe
+    > 0 in 4 of 4 blocks (+0.270, +0.175, +0.264, +0.220). A PASS on one window is a DISCOVERY: pass_action = evidence for ONE Tier-3 sizing proposal for
+    this leg AFTER a confirmation on a disjoint in-hand span; never a config edit from this unit. The confirmation is filed as PI-20261120-H58PIBEE-0004.
+    The fix held: target_mode trailing_median, multiplier off its caps in 45 of 45 periods (cap share 0.0%; mean 1.000, range 0.869..1.205), so this is
+    a real vol-targeting read, unlike the degenerate 8ef8-02. Multiple-testing denominator: 3 legs tested in this variant family (7d49-03/04/05), one PASS.'
+  rows: 1
+  verdict: pass

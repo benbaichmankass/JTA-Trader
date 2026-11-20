@@ -4,7 +4,7 @@
 id: RQ-20261120-7d49-03
 title: 'VARIANT (unit-free target): does vol-target SIZING with a trailing-median target improve trend_donchian_eth_4h''s net Sharpe by >= +0.10 without
   a worse drawdown, in >= 3 of 4 calendar blocks?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -140,3 +140,18 @@ iteration:
     changed: --target-mode trailing_median (target = the book''s own expanding median vol estimate at period starts, past returns only), so the multiplier
     moves around 1. Leg, window, overlay lookbacks, caps, retarget, costs and all thresholds are unchanged (PI-20261120-H58PIBEE-0003).'
 last_dispatched_at: '2026-11-20T12:11:04+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611208ef801-VOLTARGET-SIZING-TRAILMED
+  evidence:
+  - comms/research/RQ-20261120-7d49-03/44732586732/verdict.json
+  - research/results/RQ-20261120-7d49-03/44732586732.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'FAIL by the registered rule. Run 44732586732 (generated 2026-11-20T12:11:04Z, commit 345b5a71c), trend_donchian_eth_4h on Bybit bars, n_trades
+    169 (>= 100). (a) dSharpe +0.1313 (Sharpe 1.8872 -> 2.0185) >= +0.10 -> true; (b) maxDD targeted 23.87 R > baseline 21.98 R -> FALSE; (c) dSharpe >
+    0 in 3 of 4 blocks (+0.737, +0.171, -0.026, +0.938) -> true. Fails on drawdown only: the overlay scaled up into a drawdown period. The fix held: target_mode
+    trailing_median, multiplier off its caps in 44 of 45 periods (cap share 2.22%; mean 0.926, range 0.511..1.5), so this is a real vol-targeting read,
+    unlike the degenerate 8ef8-01. Multiple-testing denominator: 3 legs tested in this variant family (7d49-03/04/05), one PASS.'
+  rows: 1
+  verdict: fail
