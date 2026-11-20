@@ -62,9 +62,15 @@ def test_entry_adx_labels_nearest_prior_bar():
         {"entry_time": "not-a-date", "direction": "short", "net_r": -1.0},
     ]
     out = sweep._entry_adx(trades, adx, df)
-    # unparseable entry dropped; the 02:30 trade takes the 02:00 bar's ADX (30.0).
+    # Unparseable entry dropped. 02:30 is OFF the hourly grid, so the causal locator (candle_io.entry_bar_locator,
+    # #27654) takes the last bar CLOSED by the entry: the 01:00 bar (closes 02:00, ADX 20.0). The 02:00 bar the
+    # entry sits inside closes at 03:00, so reading its ADX (30.0, the pre-#27654 expectation) was lookahead.
     assert len(out) == 1
-    assert out[0]["_adx"] == 30.0
+    assert out[0]["_adx"] == 20.0
+    # ON the grid (ledger grain == bar grain) the entry's own decision bar is closed at fill time: 02:00 -> 30.0.
+    on_grid = sweep._entry_adx(
+        [{"entry_time": "2024-01-01T02:00:00Z", "direction": "long", "net_r": 1.0}], adx, df)
+    assert on_grid[0]["_adx"] == 30.0
 
 
 def _adx_trades(entries):
