@@ -1,0 +1,158 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "ict_scalp_mgc_15m: 61 trades in the baseline arm 'A' on MGC 15m candles 2026-02-25 .. 2026-08-13 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 61,
+  "measurement": {
+    "leg": "ict_scalp_mgc_15m",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "A",
+      "net_r": -11.8938,
+      "n": 61,
+      "max_drawdown_r": 15.6903,
+      "folds_positive": 1,
+      "n_folds": 4,
+      "fold_majority": 1,
+      "n_floor": 25,
+      "control": null,
+      "why": "net_r=-11.8938 with 1/4 positive folds (needs > 0 and >= 1)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 61,
+        "net_r": -11.8938,
+        "net_r_fee_only": -4.6976,
+        "max_drawdown_r": 15.6903,
+        "by_outcome": {
+          "timeout": 19,
+          "sl_hit": 24,
+          "tp_hit": 17,
+          "be_stop": 1
+        },
+        "mean_bars_held": 14.967,
+        "net_r_per_capital_day": -1.2506,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": null,
+        "data_start": "2026-02-25 23:15:00+00:00",
+        "data_end": "2026-08-13 23:45:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2026-02-25 23:15:00+00:00",
+            "end": "2026-04-09 05:22:30+00:00",
+            "trades": 16,
+            "net_r": -3.8899
+          },
+          {
+            "fold": 2,
+            "start": "2026-04-09 05:22:30+00:00",
+            "end": "2026-05-21 11:30:00+00:00",
+            "trades": 11,
+            "net_r": -6.0507
+          },
+          {
+            "fold": 3,
+            "start": "2026-05-21 11:30:00+00:00",
+            "end": "2026-07-02 17:37:30+00:00",
+            "trades": 20,
+            "net_r": -4.274
+          },
+          {
+            "fold": 4,
+            "start": "2026-07-02 17:37:30+00:00",
+            "end": "2026-08-13 23:45:00+00:00",
+            "trades": 14,
+            "net_r": 2.3209
+          }
+        ],
+        "argv": [
+          "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+          "/home/ubuntu/ict-trading-bot/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--timeframe",
+          "15m",
+          "--strategy-name",
+          "ict_scalp_mgc_15m",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261120-b2f6-01/44720631311/ib/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261120-b2f6-01/44720631311/ib/arms/A__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2026-02-25",
+          "--end",
+          "2026-08-13 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2026-02-25",
+      "end": "2026-08-13 23:59",
+      "fetch_days": 740,
+      "feed": {
+        "resample": "15m",
+        "source": "explicit --data-csv"
+      },
+      "fold_edges": [
+        "2026-02-25 23:15:00+00:00",
+        "2026-04-09 05:22:30+00:00",
+        "2026-05-21 11:30:00+00:00",
+        "2026-07-02 17:37:30+00:00",
+        "2026-08-13 23:45:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+          "/home/ubuntu/ict-trading-bot/scripts/backtest_ict_scalp.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--timeframe",
+          "15m",
+          "--strategy-name",
+          "ict_scalp_mgc_15m",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261120-b2f6-01/44720631311/ib/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261120-b2f6-01/44720631311/ib/arms/A__bt.json",
+          "--htf-rule",
+          "1h",
+          "--htf-ema-period",
+          "20",
+          "--sim-breakeven",
+          "--start",
+          "2026-02-25",
+          "--end",
+          "2026-08-13 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-11.8938 with 1/4 positive folds (needs > 0 and >= 1)"
+}
