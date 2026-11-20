@@ -165,3 +165,22 @@ def test_disposition_requires_a_reason_and_is_counted(tmp_path):
     got = rld.load_dispositions(tmp_path)
     assert set(got) == {"1"}
     assert rld.load_dispositions(tmp_path / "missing") == {}
+
+
+# ---- PI-20261120-FILLW47B-0015: transport artifacts are never "unlanded" ----
+def test_research_store_bundle_is_a_transport_artifact_not_a_finding():
+    """The shadow dual-write bundle is built from files the run commits to git, so its run id never
+    appears on main by construction; it must not count as an expiring unlanded result. A real result
+    artifact from the same research run must still be flagged (negative control)."""
+    arts = [
+        {"id": 1, "name": "research-store-bundle", "expired": False, "expires_at": "2026-11-06T12:00:00Z",
+         "workflow_run": {"id": 44480035240}},
+        {"id": 2, "name": "unit-results", "expired": False, "expires_at": "2026-11-06T12:00:00Z",
+         "workflow_run": {"id": 44480035240}},
+    ]
+    with mock.patch.object(rld, "_paged", return_value=arts), \
+            mock.patch.object(rld, "_api", return_value={"path": ".github/workflows/research-queue-grade.yml"}), \
+            mock.patch.object(rld, "run_ids_mentioned", return_value=set()):
+        q = rld.q_expiring("o/r", _NOW, 72, "HEAD")
+    assert [f["artifact"] for f in q["findings"]] == ["unit-results"]
+    assert "1 transport artifact(s) skipped by design" in q["population"]
