@@ -164,21 +164,23 @@ def test_the_fixed_ladder_no_longer_produces_that_envelope():
         assert k in out, f"{k} was collateral damage before the fix"
 
 
-def test_protecting_the_big_dict_alone_would_have_been_WORSE():
-    """Why the fix is a flag/detail SPLIT and not just a protected key.
+def test_a_big_protected_value_no_longer_takes_closed_at_down():
+    """Why the fix was a flag/detail SPLIT, and why it is now also belt-and-braces.
 
-    Protect the 217-char marker as-is and the protected set itself overflows
-    500, so `_shrink_dict` falls all the way to the barest `{"_truncated":true}`
-    marker — losing `closed_at`, which `closed_flat_invariant` reads via
-    `json_extract` and which is the whole reason the protected set exists.
-
-    A protected key must be SMALL. This is the control for that claim.
+    Until 2026-11-20 a protected 217-char marker made the protected set itself
+    overflow 500, and `_shrink_dict` fell to the barest `{"_truncated":true}`
+    marker, losing `closed_at` (read by `closed_flat_invariant` via
+    `json_extract`). DUMP-CAPPED-DROPS-PROTECTED made that fallback gradual:
+    protected prose is shortened first and protected keys are shed one at a
+    time with the close stamps last, so `closed_at` now survives this blob too.
+    A protected key should still be SMALL: the split below remains the design.
     """
     blob = _blob(operator_flatten_intent=MARKER)
-    out = json.loads(dump_capped(blob, 500))
-    assert out == {"_truncated": True}, (
-        "protecting a large value moves the overflow INTO the envelope"
-    )
+    raw = dump_capped(blob, 500)
+    out = json.loads(raw)
+    assert len(raw) <= 500
+    assert out != {"_truncated": True}
+    assert out["closed_at"] == CLOSE_UPDATE["closed_at"]
     # And the shipped split does not have that problem:
     split = json.loads(dump_capped(
         _blob(operator_flatten_intent=True,
