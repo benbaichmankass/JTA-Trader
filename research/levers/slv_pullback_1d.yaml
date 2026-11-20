@@ -976,6 +976,8 @@ manifest_notes:
     pivot=5, and scripts/backtest_pullback.py discarded the break-even floor whenever a structure exit was set (PI-20261114-TFZXAKEK-0001, fixed
     in #25887). The generated levers.exit.be_floor_r entry ("no response at the tested values", delta 0.0R) therefore means UNTESTED, not flat.
     Read be_floor_r on this leg as untested until a run on the fixed harness.'
+units:
+- RQ-20261119-c5e8-01
 levers_tested:
 - family: direction (pooled 1d-ETF pullback, LONG/SHORT vs both sides)
   varied: --side-filter long / short vs both sides at the harness-declared pullback parameters, pooled IEF/TLT/SLV/GLD/GDX 1d, 2021-07-01..2026-10-15,
@@ -1009,5 +1011,3 @@ levers_tested:
   tested_at_power: false
   unit: RQ-20261119-c5e8-01
   lever_family: direction
-units:
-- RQ-20261119-c5e8-01

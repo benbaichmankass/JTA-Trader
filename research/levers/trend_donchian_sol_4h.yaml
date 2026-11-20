@@ -1138,10 +1138,38 @@ levers:
         max_drawdown_r: 19.4952
         verdict: fail
         joint_change: true
-      shape: noisy
-      points: 9
-      best_delta_r_per_trade: -0.008
-      fold_stability: 0.407
+      - value: 'off'
+        baseline_value: '5.57'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-03
+        window: 2020-07-01..2026-10-15
+        n: 267
+        net_r: 66.3386
+        baseline_n: 267
+        baseline_net_r: 66.3386
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.029
+        verdict: indeterminate
+        joint_change: true
+      - value: 'off'
+        baseline_value: '5.57'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-03
+        window: 2020-07-01..2026-10-15
+        n: 267
+        net_r: 66.3386
+        baseline_n: 267
+        baseline_net_r: 66.3386
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.029
+        verdict: indeterminate
+        joint_change: true
+      shape: monotone
+      points: 11
+      best_delta_r_per_trade: 0.0
+      fold_stability: 0.515
       reading: every tested value is worse than the baseline
     stale_exit_bars:
       tests:
@@ -1404,10 +1432,38 @@ levers:
         max_drawdown_r: 19.4952
         verdict: fail
         joint_change: true
+      - value: 'off'
+        baseline_value: '2.5'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-03
+        window: 2020-07-01..2026-10-15
+        n: 267
+        net_r: 66.3386
+        baseline_n: 267
+        baseline_net_r: 66.3386
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.029
+        verdict: indeterminate
+        joint_change: true
+      - value: 'off'
+        baseline_value: '2.5'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-03
+        window: 2020-07-01..2026-10-15
+        n: 267
+        net_r: 66.3386
+        baseline_n: 267
+        baseline_net_r: 66.3386
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.029
+        verdict: indeterminate
+        joint_change: true
       shape: noisy
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.0382
-      fold_stability: 0.5
+      fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     trail_decay_stall_bars:
       tests:

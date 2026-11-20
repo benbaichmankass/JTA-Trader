@@ -151,3 +151,5 @@ iteration:
   from_result: research/results/RQ-20261119-029/44635986724.jsonl
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, 2021-11-15..2026-11-18 23:45, BTCUSDT 15m native Binance): A -176.46 R n710 maxDD 177.11; ATR05 -115.34 n640; LB180 -115.47 n423; ATR05_LB180 -71.33 n378 (best, PASS, delta +105.12, 3/4 folds). The base 15m frame is native, so the old right/right resample was an identity on it; what can move is backtest_system''s close-mapped clock / HTF mapping (#27655). Reported at grading: per-arm net R before/after and whether the PASS still clears its bar. Strategy config is read from config/strategies.yaml at run time; any drift since 2026-11-19 is reported, not hidden.'
+  due_by: '2026-11-27'
+  search: 'the turtle_soup atr_stop_mult 0.5 and extended sweep, re-run on the fixed backtest_system engine; only the engine changed, the lever family and grid are those of the original unit'

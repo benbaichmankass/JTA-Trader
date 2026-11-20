@@ -1,0 +1,115 @@
+# Hand-authored 2026-11-20 by RESEARCH-OPS-20261120-1448 (Tier 1 research): iteration of an ORPHAN subject, diagnosed from its committed evidence record.
+# Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-ca49-02
+title: 'ITERATION 1 of qqq_pullback_1h (pass_unconfirmed): one-factor atr_stop_mult sweep (2.0, 3.0 vs configured) net of cost - does the exit-stop family move the
+  leg fold-stably?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations. Template: RQ-20261106-011.'
+question: On QQQ 1h (Dukascopy closed bars, ~540 days, the harness cost stack for the venue), does any atr_stop_mult variant beat the configured qqq_pullback_1h by
+  >= 4.0 R net of cost, with maxDD no worse and >= 3 of 4 calendar folds, at the control n >= 39?
+why_this_matters: qqq_pullback_1h is a real-money-adjacent ETF leg whose PASS is fragile (t ~0.34); a fold-stable stop width would either strengthen it or show the
+  pass depends on the 2.5 choice.
+power:
+  expected_n: 73
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 -> 39 trades (the E35 floor) for the control reading; the committed record holds n~73 on a comparable window (MEASURED, comms/strategy_evidence/qqq_pullback_1h.json).
+    Each variant is graded against the control on the same trades with a 3-of-4 fold bar and a 4.0 R materiality bar; arms counted in iteration.multiple_testing;
+    a best-of-k pass is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the
+    full cost stack; the control n, net R and fold signs are reported.'
+  rule: PASS (a LEAD for a Tier-3 setting proposal after a holdout read, never applied here) IF some variant beats A by >= 4.0 R, with maxDD no worse and >= 3 of
+    4 folds, at A's n >= 39. FAIL IF none does at n >= 39 (these settings are not better than the configured ones; the lever FAMILY stays open until its map is flat/noisy
+    at adequate power). INDETERMINATE IF A's n < 39 or the producer failed. Thresholds are not changed after any result. Regime-robustness reporting (per-year table,
+    long/short split) is attached to the result, not a graded clause.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, 1+2 arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261106-011).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a small real-money ETF leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - stop20=atr_stop_mult=2.0
+  - --arm
+  - stop30=atr_stop_mult=3.0
+  - --days
+  - '540'
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-ca49-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared: &id001
+- exit
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/qqq_pullback_1h.json
+  verdict_read: pass_unconfirmed
+  diagnosis: 'qqq_pullback_1h: n 73, net R +5.4886 (3 of 4 folds positive; fold 2 -9.29 R, fold 3 +12.29 R), max drawdown 13.1 R, best trade +9.69 R vs worst -1.08
+    R: the P&L is a few large winners (trail 5.0) with a thin per-trade expectancy (+0.075 R), so the pass is fragile (t ~0.34 in the lever map). db1a-11 already
+    measured the direction/trail_mult family (T1 long+trail 4.0 earned LESS than the live config on the live feed). atr_stop_mult has never been varied on this leg;
+    it sets the risk unit R itself, so it changes every trade size in R.'
+  search: exit family, atr_stop_mult 2.0/3.0 around the configured 2.5 (the stop is the one exit lever db1a-11 did not touch)
+  levers: *id001
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.exit.atr_stop_mult
+  - research/levers/qqq_pullback_1h.yaml#units
+  attempt: 1
+  due_by: '2026-11-27'
+  multiple_testing:
+    arms_counted: 3
+    variants_vs_control: 2
+    correction: Holm
+    note: every variant fixed before the run; a best-of-k pass is a LEAD that needs a holdout read

@@ -71,7 +71,7 @@ manifest:
   timeframe: untested
   symbol_set: untested
   direction: tested
-  session: untested
+  session: tested
   sizing_vs_cost: untested
 levers:
   direction:
@@ -681,6 +681,42 @@ levers:
       best_delta_r_per_trade: -0.0442
       fold_stability: 0.5
       reading: every tested value is worse than the baseline
+  session:
+    skip_hours:
+      tests:
+      - value: 19,20
+        baseline_value: 'off'
+        arm: S_CLOSE
+        unit: RQ-20261118-001
+        window: 2018-06-01..2026-10-26
+        n: 268
+        net_r: 56.4227
+        baseline_n: 277
+        baseline_net_r: 50.8359
+        delta_net_r: 5.5868
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 10.7126
+        verdict: pass
+        joint_change: false
+      - value: 13,14
+        baseline_value: 'off'
+        arm: S_OPEN
+        unit: RQ-20261118-001
+        window: 2018-06-01..2026-10-26
+        n: 271
+        net_r: 38.3343
+        baseline_n: 277
+        baseline_net_r: 50.8359
+        delta_net_r: -12.5016
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 15.5075
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 2
+      best_delta_r_per_trade: 0.0202
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
 units:
 - RQ-20261114-db1a-11
 levers_tested:

@@ -71,7 +71,7 @@ manifest:
   timeframe: untested
   symbol_set: untested
   direction: tested
-  session: untested
+  session: tested
   sizing_vs_cost: untested
 levers:
   direction:
@@ -364,6 +364,216 @@ levers:
       best_delta_r_per_trade: -0.0258
       fold_stability: 0.417
       reading: every tested value is worse than the baseline
+    trail_decay_arm_r:
+      tests:
+      - value: '1.5'
+        baseline_value: '6.49'
+        arm: UT
+        unit: RQ-20261026-ed1c-10
+        window: 2020-07-01..2026-10-15
+        n: 519
+        net_r: 26.3526
+        baseline_n: 458
+        baseline_net_r: 72.8249
+        delta_net_r: -46.4723
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 31.538
+        verdict: pass
+        joint_change: false
+      - value: '1.5'
+        baseline_value: '6.49'
+        arm: UT
+        unit: RQ-20261029-006
+        window: 2017-09-01..2020-06-30
+        n: 43
+        net_r: 25.9311
+        baseline_n: 39
+        baseline_net_r: 29.3424
+        delta_net_r: -3.4113
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 5.5327
+        verdict: fail
+        joint_change: false
+      - value: '1.0'
+        baseline_value: '6.49'
+        arm: TD10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 0.185
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -51.2132
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.9114
+        verdict: fail
+        joint_change: false
+      - value: '1.0'
+        baseline_value: '6.49'
+        arm: TD10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 0.185
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -51.2132
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.9114
+        verdict: fail
+        joint_change: false
+      - value: '2.0'
+        baseline_value: '6.49'
+        arm: TD20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 503
+        net_r: 1.7015
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -49.6967
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 36.8437
+        verdict: fail
+        joint_change: false
+      - value: '2.0'
+        baseline_value: '6.49'
+        arm: TD20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 503
+        net_r: 1.7015
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -49.6967
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 36.8437
+        verdict: fail
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '6.49'
+        arm: TD30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 484
+        net_r: 12.9109
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -38.4873
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 22.8604
+        verdict: fail
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '6.49'
+        arm: TD30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 484
+        net_r: 12.9109
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -38.4873
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 22.8604
+        verdict: fail
+        joint_change: false
+      - value: '4.0'
+        baseline_value: '6.49'
+        arm: TD40
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 467
+        net_r: 40.8931
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -10.5051
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 28.6895
+        verdict: fail
+        joint_change: false
+      - value: '4.0'
+        baseline_value: '6.49'
+        arm: TD40
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 467
+        net_r: 40.8931
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -10.5051
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 28.6895
+        verdict: fail
+        joint_change: false
+      - value: 'off'
+        baseline_value: '6.49'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-01
+        window: 2020-07-01..2026-10-15
+        n: 454
+        net_r: 51.567
+        baseline_n: 457
+        baseline_net_r: 52.656
+        delta_net_r: -1.089
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.4511
+        verdict: fail
+        joint_change: true
+      - value: 'off'
+        baseline_value: '6.49'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-01
+        window: 2020-07-01..2026-10-15
+        n: 454
+        net_r: 51.567
+        baseline_n: 457
+        baseline_net_r: 52.656
+        delta_net_r: -1.089
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.4511
+        verdict: fail
+        joint_change: true
+      shape: monotone
+      points: 12
+      best_delta_r_per_trade: -0.0024
+      fold_stability: 0.389
+      reading: every tested value is worse than the baseline
+    trail_decay_tight_mult:
+      tests:
+      - value: 'off'
+        baseline_value: '2.5'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-01
+        window: 2020-07-01..2026-10-15
+        n: 454
+        net_r: 51.567
+        baseline_n: 457
+        baseline_net_r: 52.656
+        delta_net_r: -1.089
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.4511
+        verdict: fail
+        joint_change: true
+      - value: 'off'
+        baseline_value: '2.5'
+        arm: 'OFF'
+        unit: RQ-20261120-75e6-01
+        window: 2020-07-01..2026-10-15
+        n: 454
+        net_r: 51.567
+        baseline_n: 457
+        baseline_net_r: 52.656
+        delta_net_r: -1.089
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.4511
+        verdict: fail
+        joint_change: true
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: -0.0024
+      fold_stability: 0.5
+      reading: no response at the tested values
     stale_exit_bars:
       tests:
       - value: '12'
@@ -777,41 +987,6 @@ levers:
       best_delta_r_per_trade: 0.0278
       fold_stability: 0.625
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
-    trail_decay_arm_r:
-      tests:
-      - value: '1.5'
-        baseline_value: '6.49'
-        arm: UT
-        unit: RQ-20261026-ed1c-10
-        window: 2020-07-01..2026-10-15
-        n: 519
-        net_r: 26.3526
-        baseline_n: 458
-        baseline_net_r: 72.8249
-        delta_net_r: -46.4723
-        folds_ge_baseline: 1/6
-        max_drawdown_r: 31.538
-        verdict: pass
-        joint_change: false
-      - value: '1.5'
-        baseline_value: '6.49'
-        arm: UT
-        unit: RQ-20261029-006
-        window: 2017-09-01..2020-06-30
-        n: 43
-        net_r: 25.9311
-        baseline_n: 39
-        baseline_net_r: 29.3424
-        delta_net_r: -3.4113
-        folds_ge_baseline: 3/6
-        max_drawdown_r: 5.5327
-        verdict: fail
-        joint_change: false
-      shape: monotone
-      points: 2
-      best_delta_r_per_trade: -0.0875
-      fold_stability: 0.333
-      reading: every tested value is worse than the baseline
     be_floor_r:
       tests:
       - value: '0.75'
@@ -860,6 +1035,720 @@ levers:
       points: 3
       best_delta_r_per_trade: -0.0192
       fold_stability: 0.444
+      reading: every tested value is worse than the baseline
+    bank_frac:
+      tests:
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.158
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.2402
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 29.539
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.158
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.2402
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 29.539
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 24.203
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -27.1952
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 29.5109
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 24.203
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -27.1952
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 29.5109
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.0082
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.39
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 31.506
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.0082
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.39
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 31.506
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 19.0484
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -32.3498
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 25.9028
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: BK30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 19.0484
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -32.3498
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 25.9028
+        verdict: fail
+        joint_change: true
+      shape: monotone
+      points: 8
+      best_delta_r_per_trade: -0.0594
+      fold_stability: 0.083
+      reading: every tested value is worse than the baseline
+    bank_at_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BK10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.158
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.2402
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 29.539
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BK10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.158
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.2402
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 29.539
+        verdict: fail
+        joint_change: true
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: BK15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 24.203
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -27.1952
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 29.5109
+        verdict: fail
+        joint_change: true
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: BK15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 24.203
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -27.1952
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 29.5109
+        verdict: fail
+        joint_change: true
+      - value: '2.0'
+        baseline_value: 'off'
+        arm: BK20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.0082
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.39
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 31.506
+        verdict: fail
+        joint_change: true
+      - value: '2.0'
+        baseline_value: 'off'
+        arm: BK20
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 11.0082
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -40.39
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 31.506
+        verdict: fail
+        joint_change: true
+      - value: '3.0'
+        baseline_value: 'off'
+        arm: BK30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 19.0484
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -32.3498
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 25.9028
+        verdict: fail
+        joint_change: true
+      - value: '3.0'
+        baseline_value: 'off'
+        arm: BK30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 19.0484
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -32.3498
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 25.9028
+        verdict: fail
+        joint_change: true
+      shape: peaked
+      points: 8
+      best_delta_r_per_trade: -0.0594
+      fold_stability: 0.083
+      reading: every tested value is worse than the baseline
+    giveback_min_mfe_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB05
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 570
+        net_r: 4.1074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -47.2908
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3794
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB05
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 570
+        net_r: 4.1074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -47.2908
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3794
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB075
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 552
+        net_r: 19.8451
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -31.5531
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 29.5269
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB075
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 552
+        net_r: 19.8451
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -31.5531
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 29.5269
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 11.6165
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -39.7817
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.6539
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 11.6165
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -39.7817
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.6539
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 493
+        net_r: 31.4544
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -19.9438
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3655
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 493
+        net_r: 31.4544
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -19.9438
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3655
+        verdict: fail
+        joint_change: true
+      shape: monotone
+      points: 8
+      best_delta_r_per_trade: -0.0435
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
+    giveback_r:
+      tests:
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: GB05
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 570
+        net_r: 4.1074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -47.2908
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3794
+        verdict: fail
+        joint_change: true
+      - value: '0.5'
+        baseline_value: 'off'
+        arm: GB05
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 570
+        net_r: 4.1074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -47.2908
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3794
+        verdict: fail
+        joint_change: true
+      - value: '0.75'
+        baseline_value: 'off'
+        arm: GB075
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 552
+        net_r: 19.8451
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -31.5531
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 29.5269
+        verdict: fail
+        joint_change: true
+      - value: '0.75'
+        baseline_value: 'off'
+        arm: GB075
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 552
+        net_r: 19.8451
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -31.5531
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 29.5269
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 11.6165
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -39.7817
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.6539
+        verdict: fail
+        joint_change: true
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: GB10
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 536
+        net_r: 11.6165
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -39.7817
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 38.6539
+        verdict: fail
+        joint_change: true
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: GB15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 493
+        net_r: 31.4544
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -19.9438
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3655
+        verdict: fail
+        joint_change: true
+      - value: '1.5'
+        baseline_value: 'off'
+        arm: GB15
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 493
+        net_r: 31.4544
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -19.9438
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 30.3655
+        verdict: fail
+        joint_change: true
+      shape: peaked
+      points: 8
+      best_delta_r_per_trade: -0.0435
+      fold_stability: 0.333
+      reading: every tested value is worse than the baseline
+    trail_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: '5.0'
+        arm: TM25
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 553
+        net_r: 9.7925
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -41.6057
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 37.694
+        verdict: fail
+        joint_change: false
+      - value: '2.5'
+        baseline_value: '5.0'
+        arm: TM25
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 553
+        net_r: 9.7925
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -41.6057
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 37.694
+        verdict: fail
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '5.0'
+        arm: TM30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 528
+        net_r: -5.7074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -57.1056
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 35.4635
+        verdict: fail
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '5.0'
+        arm: TM30
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 528
+        net_r: -5.7074
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -57.1056
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 35.4635
+        verdict: fail
+        joint_change: false
+      - value: '3.5'
+        baseline_value: '5.0'
+        arm: TM35
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 498
+        net_r: 26.9988
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -24.3994
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 25.4122
+        verdict: fail
+        joint_change: false
+      - value: '3.5'
+        baseline_value: '5.0'
+        arm: TM35
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 498
+        net_r: 26.9988
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -24.3994
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 25.4122
+        verdict: fail
+        joint_change: false
+      - value: '4.0'
+        baseline_value: '5.0'
+        arm: TM40
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 482
+        net_r: 28.7734
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -22.6248
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 32.5092
+        verdict: fail
+        joint_change: false
+      - value: '4.0'
+        baseline_value: '5.0'
+        arm: TM40
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 482
+        net_r: 28.7734
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -22.6248
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 32.5092
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 8
+      best_delta_r_per_trade: -0.0494
+      fold_stability: 0.292
+      reading: every tested value is worse than the baseline
+    tp_r:
+      tests:
+      - value: '3'
+        baseline_value: '50.0'
+        arm: TP3
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 494
+        net_r: -8.6889
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -60.0871
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 36.1574
+        verdict: fail
+        joint_change: false
+      - value: '3'
+        baseline_value: '50.0'
+        arm: TP3
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 494
+        net_r: -8.6889
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -60.0871
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 36.1574
+        verdict: fail
+        joint_change: false
+      - value: '4'
+        baseline_value: '50.0'
+        arm: TP4
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 472
+        net_r: 29.2119
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -22.1863
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 24.8655
+        verdict: fail
+        joint_change: false
+      - value: '4'
+        baseline_value: '50.0'
+        arm: TP4
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 472
+        net_r: 29.2119
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -22.1863
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 24.8655
+        verdict: fail
+        joint_change: false
+      - value: '6'
+        baseline_value: '50.0'
+        arm: TP6
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 457
+        net_r: 36.8085
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -14.5897
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 24.8719
+        verdict: fail
+        joint_change: false
+      - value: '6'
+        baseline_value: '50.0'
+        arm: TP6
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 457
+        net_r: 36.8085
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -14.5897
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 24.8719
+        verdict: fail
+        joint_change: false
+      - value: '8'
+        baseline_value: '50.0'
+        arm: TP8
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 48.2856
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -3.1126
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 27.8234
+        verdict: fail
+        joint_change: false
+      - value: '8'
+        baseline_value: '50.0'
+        arm: TP8
+        unit: RQ-20261119-2780-03
+        window: 2020-07-01..2026-10-15
+        n: 458
+        net_r: 48.2856
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -3.1126
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 27.8234
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 8
+      best_delta_r_per_trade: -0.0068
+      fold_stability: 0.292
       reading: every tested value is worse than the baseline
   filter:
     adx_min:
@@ -1038,6 +1927,42 @@ levers:
       best_delta_r_per_trade: 0.0343
       fold_stability: 0.889
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  session:
+    skip_hours:
+      tests:
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261119-021
+        window: 2020-07-01..2026-10-15
+        n: 379
+        net_r: 49.1465
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: -2.2517
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 28.7051
+        verdict: fail
+        joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261119-021
+        window: 2020-07-01..2026-10-15
+        n: 417
+        net_r: 55.7439
+        baseline_n: 458
+        baseline_net_r: 51.3982
+        delta_net_r: 4.3457
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 30.4396
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0095
+      fold_stability: 0.667
+      reading: no response at the tested values
 units:
 - RQ-20261114-db1a-02
 - RQ-20261114-db1a-03

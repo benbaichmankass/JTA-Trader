@@ -267,11 +267,25 @@ levers:
         max_drawdown_r: 6.3939
         verdict: pass
         joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261119-012
+        window: 2003-05-01..2026-10-27
+        n: 113
+        net_r: 19.7675
+        baseline_n: 113
+        baseline_net_r: 18.7375
+        delta_net_r: 1.03
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 4.0706
+        verdict: fail
+        joint_change: false
       shape: monotone
-      points: 2
+      points: 3
       best_delta_r_per_trade: 0.0214
-      fold_stability: 0.417
-      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+      fold_stability: 0.556
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     vol_skip_below_pctl:
       tests:
       - value: '0.2'

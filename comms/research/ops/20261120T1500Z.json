@@ -1,0 +1,44 @@
+{
+  "run": "RESEARCH-OPS-20261120-1448", "finished_at": "2026-11-20T15:05:00Z", "by": "research-ops pass dispatched by session_01AFoLuHbhd9wFuGJfWRqyoV",
+  "floor": 127, "floor_basis": "computed_floor(fired_24h 160) - diagnostic only (STOP-GENERATED-AUTHORING)", "authoring_queue_depth": 17,
+  "idle_backends": ["github_runner", "github_runner_data", "kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 0, "needs_review_left": 125,
+  "throughput": {"runnable_before": 24, "runnable_after": 26, "queued": 288, "fired_24h": 160, "hours_since_last_dispatch": 0.5, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok (last dispatch 14:28Z)", "collector": "tree_only", "stranded_stamp_prs": [], "incident": null, "read_state": "tree_only"},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": []},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["RQ-20261120-ca49-01", "RQ-20261120-ca49-02"],
+  "followups_filed": [],
+  "authoring": {"queue_depth": 17, "nodes_drafted": 0, "skipped_on_purpose": true, "nodes": [], "reason": "usage throttle (operator 2026-11-20): one lean pass; the iteration loop took the budget"},
+  "iteration": {
+    "results_attributed": {"count": 2, "of": 2, "note": "only the two orphan subjects' committed evidence records were opened (spy_pullback_1h, qqq_pullback_1h); today's ML-lane results were NOT re-graded per dispatch"},
+    "map_entries_added": 0, "next_tests_from_map": 2,
+    "orphans_before": {"strategy_leg": 7, "ml_model": 3, "ltr_class": 4, "total": 14},
+    "orphans_after": {"strategy_leg": 4, "ml_model": 2, "ltr_class": 4, "total": 10},
+    "results_iterated": [
+      {"result": "comms/strategy_evidence/spy_pullback_1h.json", "verdict": "fail", "subject": "spy_pullback_1h", "next": "RQ-20261120-ca49-01", "attempt": 1},
+      {"result": "comms/strategy_evidence/qqq_pullback_1h.json", "verdict": "pass_unconfirmed", "subject": "qqq_pullback_1h", "next": "RQ-20261120-ca49-02", "attempt": 1}
+    ],
+    "repaired_malformed": ["RQ-20261120-d7c2-01 (ml-btc-router-cells)", "RQ-20261120-e9b5-01 (turtle_soup)"],
+    "advanced": 2, "survivors": [], "overdue": ["avax_pullback_2h", "eth_pullback_2h", "gdx/gld/iaum/ief_pullback_1d", "ict_scalp_eth/sol/xrp variants"]
+  },
+  "ml_slots": {
+    "D1": "named block: none on purpose; re-entry test = >= 30 legs with committed Stage-0 records on one cost basis (ML-ROADMAP-MECE s3 D1)",
+    "D2": "RQ-20261120-d7c2-01 (queued, ML-PRIMARY-16)",
+    "D3": "RQ-20261119-b9d0-02 / RQ-20261118-f7c1-04 (other lane)",
+    "D4": "no queued unit found by keyword in this pass (c3a7-01 is vol-target sizing, not D4); NOT verified further - handoff",
+    "D5": "same as D4 - handoff",
+    "D6": "named block: RQ-20261105-af07-01 blocked on a pointer-v0 subcommand in scripts/research/ml_entry_tp_revision.py (build, unowned in this pass); RQ-20261119-ef40-05/06 blocked on a D3 positive-net entry model",
+    "D7": "RQ-20261118-04a5-07 queued; RQ-20261112-2dd5-01, RQ-20261029-7294-01 blocked",
+    "D8": "named block: RQ-20261105-17bf-01 blocked on checklist row EXIT-VOLTRAIL-TRAINSET-DRIVER (driver absent)",
+    "D9": "RQ-20261030-f18f-01 queued",
+    "D10": "NO next unit and no queued/blocked unit exists (10 done); rows ML-D10-BASSET-BASELINE / MLP-D10-BASSET are the owners; the join harness is the missing lever - WAKE MANAGER"
+  },
+  "not_run": ["C needs_review triage (125 left, UNOWNED 7, UNGRADED 5): throttle, one lean pass", "E plan-node authoring: throttle"],
+  "limits": ["pytest/guards run before push only", "no hand-grading: ML lane auto-grade check not done", "slot coverage D4/D5/D9 is keyword-based, not verified by reading units"],
+  "handoff": [
+    "ORPHANS WITH NO RUNNABLE NEXT TEST (10): claude_desk (no evidence file exists; not a backtestable leg), ml-exit-head-donchian-1h (needs EXIT-VOLTRAIL-TRAINSET-DRIVER), ml-holdbias-exit (blocked on ML-EXIT-ACTIONGRID-LABELS), ltr-close/ltr-partial-close/ltr-sl-to-structure/ltr-tp-pull-in (awaiting lane LTR-CLASS-GRADE), xsec-crypto, cost-levers-live-legs, movement-capture (each names untested families but needs signal-level data or a driver)",
+    "runnable 24 vs computed floor 127 with every backend idle: diagnostic, not authored to (STOP-GENERATED-AUTHORING)",
+    "UNPROVEN_OVERDUE 248 blocker_watch rows and 753 due pipeline items: manager routes",
+    "PI-20261119-20261119-0001 (prior orphan list) is still open"
+  ]
+}
