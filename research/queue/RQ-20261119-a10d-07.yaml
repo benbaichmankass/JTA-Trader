@@ -8,7 +8,7 @@
 id: RQ-20261119-a10d-07
 title: 'FRESH-DATA RE-RUN: ml-exit-head-donchian-1h ITERATION (LABEL margin): does continuing the margin lever past 0, holding_pays_neg25 (future
   R >= -0.25), improve the head''s out-of-sample replayed R per trade over the holding_pays champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -174,3 +174,23 @@ amendments:
     #27551): trend_donchian_eth on the shifted grid n 465, -35.73 R vs native 1h n 451, +4.26 R. Any row landed before this rearmed_at ran on that grid and is not
     evidence for this unit.'
 rearmed_at: '2026-11-20T01:19:00+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261117-aadc-11-EXITHEAD-MARGIN
+  evidence:
+  - comms/research/RQ-20261119-a10d-07/44707087672/verdict.json
+  - research/results/RQ-20261119-a10d-07/44707087672.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'INDETERMINATE by the registered rule (between the bars). Post-rearm run 44707087672 (generated 2026-11-20T09:07:46Z, commit ba32d2043; candle_source.resampled_to
+    1h on every leg: BTC 15m, ETH/SOL 5m files). holding_pays_neg25 vs the holding_pays champion: n_oos 550 (>= 300), mean d -0.01984 R/trade, SE 0.02546,
+    deflated CI z 2.241 [-0.07689, +0.03721]: not PASS (mean < +0.01, LB < 0), not FAIL (CI upper +0.0372 >= +0.01). POPULATION: 1 of 3 legs measured. ETH
+    660 harness trades, 5 folds of 110 (all measured); BTC 377 trades (folds of 62) and SOL 288 (folds of 48) are unestablishable, every fold under MIN_FOLD_TEST_N
+    64, so n_oos is ETH only. Fired: champion 404, neg25 262. The pre-fix PASS (+0.0286, n 12,015, sub-hourly bars) does NOT reproduce at 1h: the point
+    estimate is negative. LABEL: trained on the MISALIGNED corpus (donchian_fresh, built 2026-11-19 14:07Z, pre-#27566/#27676; PI-20261120-7ITMUEB1-0004),
+    so this read is confounded and is not evidence for or against #26906. POWER (MEASURED on this run): realised sd per trade 0.597 R vs the registered
+    basis 0.2 R; the registered expected_n (11,000) and sd were measured on the sub-hourly-bar defect (PI-20261119-RIMARY13-0001) and do not hold at the
+    1h grain. A +0.01 R MDE at 80% power needs ~33,900 OOS trades; donchian 1h gives ~100 trades/yr/symbol, so this design cannot answer at its registered
+    bar on in-hand data. Next: a power-feasible redesign (PI-20261120-H58PIBEE-0001), not a same-design re-run on the aligned corpus.'
+  rows: 1
+  verdict: indeterminate
