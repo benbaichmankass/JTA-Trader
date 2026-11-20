@@ -1,0 +1,112 @@
+# Hand-authored 2026-11-20 by lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE, Tier 1 research), dispatched by the JTA Trader manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV). Item PI-20261120-7ITMUEB1-0004. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-7d49-01
+title: 'BUILD: rebuild the donchian 1h exit-head training rows on the ALIGNED grid (post-#27566 harness emit + PR #27676 live-fill anchor) into
+  datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+compute: needs_vm_data
+question: 'Re-run the ef40-01 recipe (m20_exit_head_round.py --build-only via exit_head_fresh_rows.py, journal live arm via --db) on main at or
+  after PR #27676. Is build_report.generated_at from this run, is build_report.entry_alignment == live_fill_bar_v2, and is the last bar_t of
+  BTCUSDT, ETHUSDT and SOLUSDT each after 2026-11-01? If so the rows are published to a NEW path.'
+why_this_matters: 'The corpus a10d-06/07/08 and 04a5-04 train on (donchian_fresh, built 2026-11-19 14:07Z) predates #27566: its harness trades
+  were emitted on 5m/15m files resampled right/right, and its live rows used the pre-#27676 anchor. MEASURED (ef40-01 verdict.json): 45,372
+  rows = 43,513 harness + 1,859 live (73 of 1,426 trades). On it every row sits one bar late against serving (exit_head_shadow anchors on
+  signal+1): the first in-trade bar is the entry reference and is missing from the rows. The post-rearm grades of those units are therefore
+  trained on a misaligned corpus; this builds the aligned one so their reads can be confirmed (or not) on it. Not lookahead; magnitude unmeasured.'
+why_not_inferential: 'This estimates no effect. It builds a dataset and checks structural facts about its own output (the report is from this
+  run, carries the fixed anchor, and every required symbol reaches past a fixed date). Row counts are reported, not graded.'
+decision_rule:
+  id: RULE-RQ20261120-7d49-01-EXITHEAD-ALIGNED-ROWS
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_head_fresh_rows.py: runs m20_exit_head_round.py --legs trend_donchian,trend_donchian_eth,trend_donchian_sol
+    --tf 1h --build-only --db data/trade_journal.db --out datasets-out/exit_head/1h/donchian_aligned_fresh_build; reads its rows.jsonl and
+    build_report.json; reports per symbol rows, trades, sources and last bar_t (UTC), and the build_report (including entry_alignment).'
+  rule: 'PASS iff the script''s own verdict is pass (report from this run; each of BTCUSDT, ETHUSDT, SOLUSDT last bar_t after 2026-11-01T00:00Z)
+    AND verdict.json build_report.entry_alignment == "live_fill_bar_v2" AND produced_by.commit_sha is a main commit at or after PR #27676''s merge.
+    FAIL otherwise, with the reasons named. A harness, build or missing-rows failure is producer_failed, never a FAIL. The script refuses the
+    frozen path and publishes only to datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl (a FAIL publishes nothing; a script pass
+    whose entry_alignment check fails is graded FAIL and its published file is not read). Legs, date and paths are fixed now.'
+  pass_action: 'Report to the manager with the per-symbol rows and the live/harness split, and author ONE confirmation unit per post-rearm
+    exit-head verdict that a10d-07 / a10d-08 / 04a5-04 produced (same rule, arm, folds, thresholds; --rows pointed at the aligned corpus). A
+    PASS of a10d-07/08 or 04a5-04 feeds the held #26906 pin only after its aligned-corpus confirmation also passes.'
+  fail_action: 'Fix the named reason on PI-20261120-7ITMUEB1-0004 and re-run this unit (same rule).'
+  what_it_does_not_do: 'Trains, registers and serves nothing (--build-only); overwrites no existing corpus; edits no config; publishes nothing off
+    the trainer (journal-derived rows stay there); places no order; adds no gate.'
+blocked_on:
+- kind: build
+  ref: PR #27676 (build_exit_head_dataset live-fill anchor)
+  what: the builder fix and entry_alignment stamp on main
+  owner: ML-PRIMARY lane
+  clears_when: 'pr_merged:27676; then git mv this file to research/queue/, set status queued (rule unchanged)'
+practice_precedent: 'Train on features computed exactly as serving computes them: a one-bar anchor skew between the training rows and the live
+  scorer is train/serve skew (docs/reference/trading-and-model-practice-principles.md).'
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.5
+  bucket: ai_trader
+  basis: 'planning weight inherited from a10d-07 (the exit-head pin it confirms); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: 'MEASURED precedent: ef40-01 (same recipe) ran in one trainer dispatch on 2026-11-19 (run 44539864523).'
+  why_runner: 'The 5m/15m candles and data/trade_journal.db are trainer-resident, and the rows must stay there (journal-derived).'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_head_fresh_rows.py
+  - --legs
+  - trend_donchian,trend_donchian_eth,trend_donchian_sol
+  - --tf
+  - 1h
+  - --family
+  - donchian
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT
+  - --after
+  - '2026-11-01'
+  - --db
+  - data/trade_journal.db
+  - --build-out
+  - datasets-out/exit_head/1h/donchian_aligned_fresh_build
+  - --publish
+  - datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-7d49-01
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: none directly; supplies the aligned corpus on which the post-rearm a10d-07 / a10d-08 / 04a5-04 reads are confirmed before any feeds the held #26906 exit-head neg25 pin
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- PI-20261120-7ITMUEB1-0004
+- research/queue/RQ-20261119-ef40-01.yaml
+- research/queue/RQ-20261119-a10d-07.yaml
+- research/queue/RQ-20261119-a10d-08.yaml
+- research/queue/RQ-20261118-04a5-04.yaml
+- research/queue/RQ-20261119-a10d-06.yaml
+- scripts/research/exit_head_fresh_rows.py
+- scripts/ml/build_exit_head_dataset.py
+population: trend_donchian (BTCUSDT), trend_donchian_eth, trend_donchian_sol harness trades on the trainer's 1h-resampled (left/left) candles plus
+  their closed journal trades, 1h exit-head rows.

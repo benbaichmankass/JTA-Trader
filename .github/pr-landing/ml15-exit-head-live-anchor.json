@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research ML dataset-builder fix (no live path); manager merges after the FULL pytest-run is green",
+  "why": "Tier-1 ML tooling fix for PI-20261120-7ITMUEB1-0004: build_exit_head_dataset.py anchored LIVE journal fills one bar late (the fill time sits inside the first in-trade bar), so the first in-trade bar became the entry reference and dropped out of the rows; serving (exit_head_shadow) anchors on signal+1. Harness rows unchanged. Adds an entry_alignment stamp to build_report.json, parity tests, and a BLOCKED corpus-rebuild unit (clears on this merge) that rebuilds the donchian 1h rows on post-#27566 main into a new path. Not lookahead. Edits no config, serves nothing. Gates this adds or changes: none."
+}
