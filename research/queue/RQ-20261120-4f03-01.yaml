@@ -1,7 +1,7 @@
 # Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1, on the manager's 03:52Z decision (VENUE-GAP-20261120, re-test (a)). Rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261120-4f03-01
 title: 'BYBIT-NATIVE re-run of trend_donchian_sol_prop''s Stage-0 evidence argv, original holdout boundary kept: does the leg stay net-positive on the bars it trades? (VENUE-GAP-20261120)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -122,3 +122,21 @@ related:
 - scripts/research/bybit_native_csv.py
 - PI-20261120-7ITMUEB1-0005
 last_dispatched_at: '2026-11-20T09:22:27+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611204f0301-BYBIT-NATIVE-SOLPROP
+  evidence:
+  - comms/research/RQ-20261120-4f03-01/44710202899/verdict.json
+  - research/results/RQ-20261120-4f03-01/44710202899.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'PASS by the registered rule (both clauses net R > 0, n >= 25 each). Run 44710202899 (generated 2026-11-20T09:56:15Z, commit 81cdda93e) on Bybit-native
+    SOLUSDT 1h bars (bybit_SOLUSDT_1h.csv via scripts/research/bybit_native_csv.py, bybit_linear), trend_donchian_sol_prop params (donchian 20, atr_stop
+    2.5, trail 4.5, min_conf 0.8), net of fee 11 + slippage 3 bps round trip + funding 1 bps/window. Discovery 2023-02-01..2025-04-15: n 139, net R +8.4668,
+    expectancy +0.0609 R/trade; folds reported, never graded: 2 of 4 net-positive (-0.09, +6.76, -4.89, +6.70). Holdout 2025-04-16..2026-10-15 (the 077e-05
+    boundary): n 94, net R +4.3368, expectancy +0.0461 R/trade. 0 trades straddle the boundary. Whole span n 233, net R +12.80 (fee-only +18.45), maxDD
+    11.28 R. The leg''s evidence holds on its own venue; the venue-gap record''s "thin" flag for this leg (binding margin 1.08x the pooled Bybit penalty)
+    is answered by a Bybit-native holdout expectancy of +0.0461 R/trade. Written back to comms/research/VENUE-GAP-20261120/record.json and PI-20261120-7ITMUEB1-0005.
+    No config or roster change.'
+  rows: 1
+  verdict: pass

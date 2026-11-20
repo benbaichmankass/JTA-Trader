@@ -1,7 +1,7 @@
 # Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1, on the manager's 03:52Z decision (VENUE-GAP-20261120, re-test (b)). Rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261120-4f03-02
 title: 'ml_entry''s own VENUE PENALTY: its Stage-0 held-out population re-scored on Bybit bars, net of the full cost stack. Does the live exit stay > 0? (VENUE-GAP-20261120)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -103,3 +103,20 @@ related:
 - PI-20261120-7ITMUEB1-0005
 - PI-20261120-7ITMUEB1-0007
 last_dispatched_at: '2026-11-20T09:56:20+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611204f0302-MLENTRY-BYBIT-PENALTY
+  evidence:
+  - comms/research/RQ-20261120-4f03-02/44714968454/verdict.json
+  - research/results/RQ-20261120-4f03-02/44714968454.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'INDETERMINATE by the registered rule (control_failed): the CONTROL run on Binance bars gave arm F mean net R/decision +0.02862 (n 907) vs the
+    record''s expectancy_r_oos 0.0371, off by 0.0085 > the 0.005 tolerance, so the penalty cannot be attributed to venue alone. Run 44714968454 (generated
+    2026-11-20T10:23:59Z, commit b99a9bc92). Reported, never graded: BYBIT arm F mean +0.04417 R/decision (n 905; per symbol BTC +0.030, ETH -0.050, XRP
+    +0.042, ADA +0.132, SOL +0.034); penalty (Bybit - control) +0.0156 R/decision, i.e. Bybit BETTER here, the opposite sign to the pooled harness gap.
+    No traded symbol lacks a Bybit file (missing_traded_symbols []); BCH and ETC rows stay Binance but are not traded symbols. Next: reconcile the control
+    with the record (the control differs from the record by 0.0085, larger than the measured penalty would need to be explained) before any venue claim;
+    filed on PI-20261120-7ITMUEB1-0005.'
+  rows: 1
+  verdict: indeterminate

@@ -4,7 +4,7 @@
 id: RQ-20261120-7d49-02
 title: 'ml-exit-head-donchian-1h REDESIGN (power-feasible, ALIGNED corpus): over 8 pooled donchian 1h legs with 3-fold blocks, does the holding_pays_neg25
   target beat the holding_pays champion by a decision-relevant +0.03 R per OOS trade, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -155,3 +155,21 @@ related:
 population: trend_donchian 1h harness trades of BTC, ETH, SOL, LINK, BNB, XRP, ADA and AVAX USDT perps on trainer-resolved 1h candles; heads trained on
   the aligned BTC/ETH/SOL exit-head rows.
 last_dispatched_at: '2026-11-20T10:42:57+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261120-7d49-02-EXITHEAD-NEG25-POWERED
+  evidence:
+  - comms/research/RQ-20261120-7d49-02/44718948379/verdict.json
+  - research/results/RQ-20261120-7d49-02/44718948379.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'FAIL by the registered rule (n_oos >= 1500 AND CI upper < +0.03). Run 44718948379 (generated 2026-11-20T10:35:49Z, commit 36c092b38), rows =
+    the ALIGNED corpus donchian_aligned_fresh. 8 of 8 legs measured, 24 of 24 folds measured (3 per leg; blocks 72-165, all >= MIN_FOLD_TEST_N 64), candle_source.resampled_to
+    1h on every leg. neg25 vs champion: n_oos 2,403 (BTC 282, ETH 495, SOL 216, LINK 300, BNB 297, XRP 273, ADA 276, AVAX 264); mean d -0.01577 R/trade,
+    SE 0.01521 (sd 0.746 R), 95% CI [-0.04559, +0.01404]. Upper +0.014 < +0.03, so a decision-sized lift is ruled out; the point estimate is negative. Fired:
+    champion 1,632, neg25 879. The registered power forecast (n ~2,400, sd 0.70) matched the realised n (2,403) and sd (0.75). fail_action: configuration
+    closed: neg25 vs holding_pays, aligned rows, 8 donchian 1h legs, 3 folds, at +0.03 R/trade. Family ml-exit-head stays open; the next exit-head levers
+    are feature-side (--features extended) and per-symbol heads, on this same powered design. #26906 (pin v2-neg25) is unsupported by every 1h read and
+    is proposed WITHDRAWN to the manager.'
+  rows: 1
+  verdict: fail

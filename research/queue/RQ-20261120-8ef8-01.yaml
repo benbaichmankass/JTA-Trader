@@ -2,7 +2,7 @@
 id: RQ-20261120-8ef8-01
 title: 'Continuous vol-TARGET sizing on trend_donchian_eth_4h (ETHUSDT 4h), Bybit-native Stage-0 trades: does it lift net Sharpe by >= 0.10 without a worse drawdown, in >= 3 of 4 calendar
   blocks? (P2-R5)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -118,3 +118,20 @@ related:
 - scripts/backtest_vol_target.py
 - comms/research/VENUE-GAP-20261120/record.json
 last_dispatched_at: '2026-11-20T09:22:22+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611208ef801-VOLTARGET-SIZING
+  evidence:
+  - comms/research/RQ-20261120-8ef8-01/44708139349/verdict.json
+  - research/results/RQ-20261120-8ef8-01/44708139349.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'FAIL by the registered rule. Run 44708139349 (generated 2026-11-20T09:15:16Z, commit 616339ba6), trend_donchian_eth_4h, n_trades 169 (>= 100).
+    (a) dSharpe +0.0914 < +0.10 -> false; (b) maxDD targeted 10.99 R <= baseline 21.98 R -> true; (c) dSharpe > 0 in 1 of 4 blocks (+0.434, 0.0, ...) ->
+    false. DESIGN DEFECT (MEASURED, read before use): the overlay multiplier sat at cap_lo 0.5 in 44 of 45 monthly periods (97.78%; mean multiplier 0.506).
+    scripts/backtest_vol_target.py compares target_vol (0.10, read as an annual vol in the same units as the daily book returns) against the book''s realised
+    vol in R units (32.08 R/yr), so target/realised is ~0.003 and always clips to the floor. This configuration therefore measured a CONSTANT 0.5x size,
+    not vol targeting: Sharpe is scale-invariant, so dSharpe ~0 is mechanical. Configuration closed: target_vol 0.10 on an R-unit book. Vol-target sizing
+    itself is UNTESTED; the variant (target expressed in the book''s R units, e.g. its trailing median realised vol, so the multiplier straddles 1) is PI-20261120-H58PIBEE-0003.'
+  rows: 1
+  verdict: fail

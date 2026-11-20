@@ -110,5 +110,21 @@
   "PI-20261120-7ITMUEB1-0007",
   "RQ-20261120-4f03-01 (trend_donchian_sol_prop Bybit-native Stage-0 re-run)",
   "RQ-20261120-4f03-02 (ml_entry measured venue penalty)"
+ ],
+ "follow_up_results": [
+  {
+   "unit": "RQ-20261120-4f03-01",
+   "verdict": "pass",
+   "graded_at": "2026-11-20",
+   "run": "44710202899",
+   "summary": "trend_donchian_sol_prop on Bybit-native SOLUSDT 1h: discovery n 139 net +8.47 R (exp +0.0609); holdout n 94 net +4.34 R (exp +0.0461). The thin-margin flag is answered on its own venue."
+  },
+  {
+   "unit": "RQ-20261120-4f03-02",
+   "verdict": "indeterminate",
+   "graded_at": "2026-11-20",
+   "run": "44714968454",
+   "summary": "control_failed: the Binance control arm F gave +0.0286 vs the record 0.0371 (off 0.0085 > 0.005). Reported only: Bybit arm F +0.0442 (n 905), penalty +0.0156 (Bybit better). Reconcile the control before any venue claim."
+  }
  ]
 }
