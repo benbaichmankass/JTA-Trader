@@ -1,7 +1,7 @@
 {
   "id": "PI-20261120-7ITMUEB1-0004",
   "title": "[research/D8 exit-head] POSSIBLE one-bar leak + grid skew in build_exit_head_dataset (UNVERIFIED, read from code 2026-11-20): (1) rows_for_trade takes 'bars strictly before entry' as candles[:bisect_right(open_stamps, t_open)], so if the harness entry_time is the ENTRY bar's open time, the bar that opens AT entry (closes one bar later) is inside atr_entry / vol_entry -> entry-reference features see up to one bar past entry; (2) the builder buckets OPEN-stamped (floor, = native grid) while the scoring side (harness _resample / exit_head_replay, label=right closed=right) uses the phase-shifted grid -> train/score grid mismatch in every trainer exit-head bakeoff. Do: read what each harness's entry_time denotes (signal bar close vs entry bar open), then measure atr_entry/vol_entry with i0-1 vs i0-2 on one built dataset; fix + list affected exit-head units (a10d-06/07/08, 04a5-04, D8 heads) if confirmed.",
-  "state": "queued",
+  "state": "done",
   "owner": "ML-PRIMARY lane (successor inherits)",
   "lane": null,
   "model": null,
@@ -13,8 +13,13 @@
   "priority_rank": null,
   "ceiling_usd": null,
   "spend_usd": null,
-  "prs": null,
+  "prs": [
+    27676
+  ],
   "blocked_on": null,
   "next_action": null,
-  "due_by": "2026-11-23"
+  "due_by": "2026-11-23",
+  "note": "2026-11-20 ML-PRIMARY-15: READ. (1) NOT lookahead: every row uses only bars closed by its own decision time. Harness entry_time = decision bar OPEN stamp with entry at its close (backtest_trend/pullback/fade: entry_i=i, entry=close[i]); on an open-stamped frame the builder anchors correctly. (2) CONFIRMED one-bar MISALIGNMENT vs serving (exit_head_shadow anchors on signal+1): (a) LIVE rows on any grid (the fill time sits inside the first in-trade bar), fixed in PR #27676 with a parity test and a build_report entry_alignment stamp; (b) HARNESS rows emitted on the pre-#27566 right/right resample. MEASURED from ef40-01 verdict.json: donchian_fresh/rows.jsonl (built 2026-11-19 14:07Z, which a10d-06/07/08 + 04a5-04 train on) = 45,372 rows, 43,513 harness (5m/15m resampled right/right) + 1,859 live (73 of 1,426 trades), so all of it is misaligned. The grid half is fixed on main (#27566/#27645/#27654: harness, exit_head_replay and replay_pregate are left/left). Rebuild = RQ-20261120-7d49-01 (blocked, clears_when pr_merged:27676). Effect on verdicts: NOT measured. Corpus that trained the v2-neg25 artifact: UNVERIFIED. 2026-11-20 ~06:58Z ML-15, manager-approved sequence (manager 06:27Z): (1) the post-rearm a10d-06/07/08 + 04a5-04 run in the 07:00Z window and are graded verbatim, labelled 'trained on the misaligned corpus'; a FAIL is confounded, a PASS provisional. (2) PR #27676 aligns live rows; its test pins age 0, first-bar MFE/MAE and the decision-bar entry ref, and fails 3 of 8 on main's builder. (3) RQ-20261120-7d49-01 rebuilds at a NEW path (donchian_aligned_fresh; the old corpus stays reproducible). (4) Confirming re-runs on the rebuilt corpus. DEPENDENCY: HELD #26906 (v2-neg25 pin) needs a PASS on the REBUILT corpus, not on donchian_fresh. Training corpus of the v2-neg25 artifact: relay #27680 in flight (by timing it was exported ~2026-11-18 18:56Z, before ef40-01's 11-19 14:07Z build, which points to the July corpus; UNVERIFIED until the relay reads the artifact metadata). 2026-11-20 ~09:45Z ML-15: the misaligned-corpus grades of a10d-06/07/08 + 04a5-04 are all INDETERMINATE (PR #27745). The aligned corpus is BUILT: 7d49-01 PASS, datasets-out/exit_head/1h/donchian_aligned_fresh, 45,626 rows. Same-design confirmations on it are NOT authored, because every read is underpowered at 1h (sd 0.6-0.9 R, n ~550 ETH only); the redesign is PI-20261120-H58PIBEE-0001. This item can close when #27745 merges. 2026-11-20 10:33Z ML-15: CLOSED. Live-row alignment fixed (#27676). Aligned corpus built (7d49-01 PASS; donchian_aligned_fresh, 45,626 rows). Misaligned-corpus grades recorded as INDETERMINATE (#27745, merged). The powered confirmation on the aligned corpus is RQ-20261120-7d49-02 (#27747, merged; owner row PI-20261120-H58PIBEE-0001).",
+  "updated_at": "2026-11-20T10:33:35Z",
+  "updated_by": "session_01AFoLuL7nvseG9Hh58PibeE"
 }

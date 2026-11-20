@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "the five rows read exit_reason=account_reset on /api/diag/journal and the three soaks no longer cite 7031/7029/7114 on /api/bot/soak/mechanics; or the manager kills it with a reason",
+    "conditions": [
+      "pr_merged:27697"
+    ],
+    "due_date": "2026-11-24",
+    "kind": "event",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "the readers must know account_reset before rows carry it"
+  },
+  "id": "PI-20261120-XGESYDCD-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS-11 session_01AFoLuHd7TmmwRCXgeSYdCd, backlog 2a 2026-11-20",
+    "rerun": "/api/diag/journal?table=trades&limit=1000&offset=1000 rows 7029,7031,7114,7202,7131 exit_reason; /api/bot/soak/mechanics"
+  },
+  "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+  "severity": "low",
+  "state": "done",
+  "terminal_reason": "[2026-11-20 10:33Z AM-OPS-11] APPLIED and OBSERVED. #27714 merged (b0184f4a); dry run #27741 refused 4/5 on the notes cap (pre-#27704); after #27704 + the 10:04Z restart, dry run #27749 planned 5/5; the manager OK'd the apply 10:19Z; #27753 (run 44718365578) applied: row backup /data/bot-data/trade_journal.db.rows-mark-account-reset-20261120T102106Z.json, AFTER 7029/7031/7114/7131/7202 exit_reason=account_reset, pnl unchanged. VERIFIED via /api/diag/journal: all 5 carry closed_by_account_reset=true and pre_mark_exit_reason (stuck_strategy_watchdog x4, sl x1). account_reset_at was shed on 1 row (7202) by the #27704 cap, as designed (WARNING logged; the write time is in the row backup). Soak re-grade (/api/bot/soak/mechanics 10:32:58Z): gdx_pullback_1d, iaum_pullback_1d, slv_trend_1h now 'passed'; mechanical_fail 7 -> 4 (53 soaks).",
+  "tier": 2,
+  "what": "Relabel alpaca_paper trades 7029, 7031, 7114, 7202, 7131 to exit_reason='account_reset' (Tier-2 journal writeback, keep the old label in notes.pre_label_exit_reason, no monetary field touched). All five were liquidated by the 2026-11-16 14:32:33Z PAPER close-all (venue order history: one batch, 6 market closes), not by their own legs; today they read stuck_strategy_watchdog / sl, which holds SOAK-stage1-alpaca_paper-{gdx_pullback_1d,iaum_pullback_1d,slv_trend_1h} at mechanical_fail and keeps collateral P&L in per-strategy KPIs (the open PI-20261117-LSFHBH4A-0003). No allowlisted action writes that label: mark-operator-flattened writes operator_flatten_reconciled (false cause). Needs a narrow option (e.g. mark_operator_flattened.py --exit-reason account_reset, named ids only) or a new action, then a dry-run, the manager's OK, and apply. After it lands, the three soaks re-grade on their previous trade; that is correct because the faulted trade was not the leg's own."
+}

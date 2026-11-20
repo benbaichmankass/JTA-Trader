@@ -1,0 +1,24 @@
+{
+  "id": "PI-20261120-H58PIBEE-0001",
+  "title": "[research/D8 exit-head] POWER-FEASIBLE REDESIGN of the exit-head label/control units at the 1h grain (from the 2026-11-20 post-rearm grades of a10d-06/07/08 + 04a5-04, all INDETERMINATE)",
+  "state": "done",
+  "owner": "ML-PRIMARY lane (successor inherits)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    27745,
+    27747
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-23",
+  "note": "MEASURED 2026-11-20 by ML-15: at the 1h grain the realised paired sd per OOS trade is 0.60 R (a10d-07 neg25), 0.72 R (a10d-08) and 0.90 R (a10d-06 more_mfe), against the registered basis of 0.2 R. pooled n_oos is 550 (ETH only), because the BTC (62/fold) and SOL (48/fold) folds sit under MIN_FOLD_TEST_N 64. The registered sd and expected_n 11,000 came from the sub-hourly-bar defect. A +0.01 R MDE at 80% power needs ~34k-77k OOS trades; donchian 1h gives ~100 trades/yr/symbol, so the registered bars cannot be met on in-hand data and same-design re-runs on the aligned corpus would be INDETERMINATE again. DO (author, rules registered before any run, rows = datasets-out/exit_head/1h/donchian_aligned_fresh): (a) pick an MDE that a decision actually needs (e.g. what moves annotate->close or a retrain), and size n from sd ~0.6-0.9; (b) pool every donchian 1h symbol with trainer candles (BTC/ETH/SOL + LINK/BNB/XRP/ADA/AVAX; DOGE/LTC/DOT/TRX/NEAR need candles first, TRAINER-1D-STALE-ROSTERED); (c) use folds that clear the 64-trade floor per leg (e.g. 3 folds or pooled-fold blocks). Point estimates so far (misaligned corpus, confounded): neg25 -0.020 (n 550), more_mfe -0.061 (n 550), held-out neg25 -0.007 (n 665), ETH per-leg neg25 vs leg exits +0.004 (LB -0.083). #26906 stays held: no PASS exists at the 1h grain. Scope / compute spend is a manager decision. 2026-11-20 ~09:50Z ML-15: the manager chose (a). Authored RQ-20261120-7d49-02 (PR #27747, held): aligned corpus, 8 pooled donchian 1h legs, 3 folds (blocks 72-165, all >= 64), neg25 vs champion, PASS bar +0.03 R at z 1.96 plus an unseen-symbol sign check. Power registered pre-run: sd 0.70 R (measured 0.60/0.72), n ~2,400, MDE ~0.040 at 80%, power at +0.03 ~0.38. Queued behind 4f03/8ef8. This item closes when 7d49-02 is graded. 2026-11-20 ML-15: 7d49-02 graded FAIL (n_oos 2,403, 8 of 8 legs, 24 of 24 folds; mean -0.0158, CI [-0.0456, +0.0140], upper < +0.03). The redesign answered its question: the neg25 label lever is closed at +0.03 R/trade on donchian 1h. #26906 proposed WITHDRAWN to the manager. CLOSED. 2026-11-20 11:10Z ML-15: WITHDRAWAL RECORDED. The manager closed #26906 ([WITHDRAWN], 2026-11-20 ~11:06Z) on the registered fail_action of RULE-RQ20261120-7d49-02-EXITHEAD-NEG25-POWERED, run 44718948379 (n_oos 2,403, CI [-0.0456, +0.0140] < +0.03; grade in PR #27767). Live is unchanged: exit_head_model exit-head-donchian-1h-v1, exit_head_action annotate.",
+  "phase": null,
+  "updated_at": "2026-11-20T11:12:10Z",
+  "updated_by": "session_01AFoLuL7nvseG9Hh58PibeE"
+}

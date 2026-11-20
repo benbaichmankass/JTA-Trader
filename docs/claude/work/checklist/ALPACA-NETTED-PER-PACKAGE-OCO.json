@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-NETTED-PER-PACKAGE-OCO",
+  "title": "Netted Alpaca symbol: hold EVERY package's SL+TP as one per-package OCO, never standalone legs, so no sibling TP is ever released (design for PI-20261117-LSFHBH4A-0002)",
+  "state": "queued",
+  "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "order-path bracket integrity on netted Alpaca symbols (BRACKETS-ALWAYS family)",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "DESIGN (AM-OPS-11 2026-11-20, from PI-20261117-LSFHBH4A-0002). PROBLEM: AlpacaClient.place_protective, on an OCO refused while sibling STANDALONE take-profit legs rest on the reducing side, DELETEs those sibling targets and retries. If the retry succeeds the sibling keeps its stop but loses its TP, a TP-doctrine / BRACKETS-ALWAYS gap. WHY THE CLASH EXISTS (code-read, src/units/accounts/alpaca_client.py @ main 683171926): a standalone stop and a standalone limit for the same shares EACH reserve the shares, while an OCO/bracket pair reserves them once. Standalone legs are created only by fallbacks: _restore_cancelled_protection (only-stop -> plain stop, only-target -> plain limit, released sibling target -> plain limit) and place_stop_only (stop alone when an OCO is refused). Per-package OCOs DO coexist on one netted position as long as their sizes sum to the netted qty. MEASURED by FIX-SA-03 2026-09-29: alpaca_paper SPY 8+11 shares, 20/20 per-package brackets resting together. OPTIONS. (1) RECOMMENDED: the per-package OCO invariant. Each journal package's protection is exactly ONE GTC OCO sized to its own qty with its own SL/TP. The restore path re-places a full OCO whenever both prices are known (from the trade row / package when the cancelled set lacked one). A stop-only fallback is followed by OCO re-assembly on the next sweep (cancel the lone stop, place the OCO in one call) once the reservation allows. The sibling-target release is DELETED, because under the invariant a refusal means the sizes do not sum (a journal_qty_divergent case) and that goes to the reconciler, not to stripping a sibling. No strategy-semantic change: every package keeps its own geometry. (2) One merged OCO per symbol sized to the net qty. It can carry only ONE SL and ONE TP, so it must pick the tightest stop / nearest target and changes every other package's exits. That is a strategy-semantic change; rejected unless the per-package invariant proves unworkable at the venue. (3) Status quo plus restore-on-retry-failure (#26611). It still loses the sibling TP when the retry succeeds. OPEN QUESTIONS, verify before build: (a) opposite-direction packages on one symbol (net = difference). Per-package protection is impossible there, and today's behaviour must be read first. (b) the 'additive' qty top-up path (PI-20260929-PR6YRTQY-0003) must place an OCO for the uncovered qty, not a lone leg. BUILD: Tier-3 order-path change (RESTART), tests: two packages on one symbol, a refused OCO never releases a sibling TP; restore always yields OCO when prices are known. CLOSES WHEN: the operator/manager chooses an option. If (1): a merged PR, plus an observation that no 'releasing %s and retrying once' line occurs after deploy (journalctl ict-trader-live grep 'releasing'). 2026-11-20 AM-OPS-11, MEASURED (journalctl ict-trader-live 11-19 16:00:16-16:00:23Z), a SECOND symptom of the same identity problem, on a non-paper book. alpaca_portfolio SLV short, 877 sh netted over many packages. The trail amend for trades 7758, 7766, 7770 (2 sh each) was refused: 'alpaca stop read-back refused: ambiguous_legs: 3 stop / 3 target leg(s) of qty=2.0'; order_monitor logged 'exchange modify failed \u2014 leaving DB unchanged'. Same-size sibling legs cannot be attributed by size, so those rows' stops do NOT trail. The per-package OCO invariant needs a per-package leg identity: stamp the OCO's stop/target order ids on the trade row at placement (as the Bybit path does), and amend by id instead of by size. Add that to option (1)'s build.",
+  "phase": null,
+  "updated_at": "2026-11-20T07:30:53Z",
+  "updated_by": "session_01AFoLuHd7TmmwRCXgeSYdCd"
+}

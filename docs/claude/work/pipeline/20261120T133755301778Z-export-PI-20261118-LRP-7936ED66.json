@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-LRP-7936ED66",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ml_entry_eq_struct:ml_live_only_package",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "checklist row ML-LIVE-PARITY-ML-LEGS",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `ml_entry_eq_struct` — ml_live_only_package ×5 (REAL-MONEY roster) in window 2026-11-11T06:45:00+00:00..2026-11-18T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-18.json. Examples: [{\"class\": \"ml_live_only_package\", \"bar\": \"2026-11-16T20:00:00+00:00\", \"t\": \"2026-11-16T20:09:15.724503+00:00\", \"symbol\": \"OIH\", \"detail\": {\"live_entry\": 363.52, \"snapshot_built_at\": \"2026-11-16T20:02:30.002023+00:00\"}}, {\"class\": \"ml_live_only_package\", \"bar\": \"2026-11-16T20:00:00+00:00\", \"t\": \"2026-11-16T20:09:24.023376+00:00\", \"symbol\": \"UCO\", \"detail\": {\"live_entry\": 49.46, \"snapshot_built_at\": \"2026-11-16T20:02:30.002023+00:00\"}}, {\"class\": \"ml_live_only_package\", \"bar\": \"2026-11-16T20:00:00+00:00\", \"t\": \"2026-11-16T20:03:51.334209+00:00\", \"symbol\": \"USO\", \"detail\": {\"live_entry\": 140.13, \"snapshot_built_at\": \"2026-11-16T20:02:30.002023+00:00\"}}] || [2026-11-20 AM-OPS-11 2e] Still present: 2026-11-19 parity run reads ml_entry_eq_struct ml_live_only_package 5 (bars_checked 10). Examples show snapshot_built_at 20:02:30 vs live entries 20:03-20:09, a likely snapshot-timing cause, unverified. Owner of the ML replay: ML-LIVE-PARITY-ML-LEGS (in_flight); related ML-EQ-NOPKG-AUDIT."
+}

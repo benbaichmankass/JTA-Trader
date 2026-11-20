@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LNGQ5KFO-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "PITCH-DECK-V2 lane session_01AFoLuKQM4RmRCwLNGq5kfo, 2026-11-17; v1 went stale in 13 days (11-04 -> 11-17: soak step retired, advice-only ended, fossil exclusion, ML D1-D10)",
+    "rerun": "python3 docs/pitch/build_deck.py && git diff --stat docs/pitch/  # then grep the week's merged docs/plans + ARCHITECTURE-CANONICAL changes for slide topics"
+  },
+  "owner": "manager",
+  "routed_to": "checklist row PITCH-DECK-V2",
+  "state": "routed",
+  "what": "STANDING WEEKLY DECK REFRESH. Operator 2026-11-17 (relayed by manager session_01AFoLuHbhd9wFuGJfWRqyoV, verbatim): \"For now, just update it once and give it to me like as an artifact that I can leave you comments on, and then after the reset, we'll add it to the UI with regular review to keep it updated.\" Add a step to the weekly review/planning sessions (Wed review prep / Thu planning) that re-runs python3 docs/pitch/build_deck.py on main, reads the week's changes (operating plan, ARCHITECTURE canonical, milestones.yaml, mandates, values exclusions, ML plan) for any slide whose TEXT is now stale (numbers refresh themselves), updates the builder, lands the rebuilt .md/.pptx/slides.json, and republishes the operator's commentable artifact (https://claude.ai/artifact/JBrDT1RujYPh5WkdCbVm6u). Owning skill/routine chosen by the manager (e.g. programme-review or the Thursday planning step). No new gate. || [2026-11-20 AM-OPS-11 2e] Standing weekly refresh of the same deck; PITCH-DECK-V2 (in_flight) references this item and names the owning routine choice as the manager's."
+}

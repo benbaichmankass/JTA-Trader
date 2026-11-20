@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "each listed unit has landed and been graded under its registered rule (or killed with a stated reason), and PRs #27706 and #27715 are merged or closed",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-FILLW47B-0016",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b close-out 2026-11-20 07:55Z (manager directive 07:48Z)",
+    "rerun": "python3 -c \"import sys; sys.path.insert(0,'scripts/ops'); import work_report as w; d=w.session_debt(); print(d['session_debt'], d['scheduled_count'])\""
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "HANDOFF from lane QUEUE-FILL-STANDING-W47b (parked 2026-11-20 07:55Z, operator one-lane throttle). Units this lane authored or re-armed whose results still need a read and a hand grade under their own registered rule when they land (none has a grade yet): RQ-20261031-7b6f-27 and RQ-20261118-abab-26 (re-armed, dispatched 06:53Z to kaggle_cpu / kaggle, no result landed at 07:50Z; their rows should also show whether the router sends an uncovered no-why_runner exit_lever_ablation unit to github_runner, which closes PI-20261119-FILLW47B-0009); RQ-20261120-4c1e-01 (xrp_4h direction, dispatched 05:56Z, no result at 07:50Z; its pass_action is ONE Bybit-native confirmation unit via scripts/research/bybit_native_csv.py after #27630, window 2023-02-01..2026-10-12); RQ-20261120-b7e1-01 and -b7e1-02 (Bybit-native confirmations of the 75e6-02 / 75e6-09 trail-decay removal PASSes, merged #27667, queued for the trainer; note the eth unit's disclosure: a Binance smoke over the same dates read OFF >= A in only 2 of 4 folds); RQ-20261120-b2f6-01 (IB-vs-Dukascopy feed adequacy, PR #27715 queued for merge; result goes on PI-20261120-FILLW47B-0014). Also: RQ-20261105-031 (generated weekly) is graded by the mechanical grader. OPEN PRs of the lane at the time of parking: #27706 (grades for the three mgc_15m units, manager merging) and #27715. PARKED, not done: PI-20261119-FILLW47B-0007 (first-signal check for the two session filters, now also ict_scalp_5m), PI-20261120-FILLW47B-0015 (expiring research artifacts, earliest deadline 2026-11-22 07:33Z), PI-20261120-FILLW47B-0014 (mgc proxy evidence). STANDING: PI-20261119-FILLW47B-0010 (single-sided-arm breadth clause), -0011 (watchdog vs replenish mismatch), -0012 (pooled D55 follow-through), -0013 (exit_lever_ablation arm keys do not reach the backtest). Session debt on main after #27659 and #27668: re-read work_report.session_debt() rather than quoting a count. Not done on purpose: no corpus-change confirmation for ict_scalp_mgc_15m, no Tier-3 proposal of any kind."
+}

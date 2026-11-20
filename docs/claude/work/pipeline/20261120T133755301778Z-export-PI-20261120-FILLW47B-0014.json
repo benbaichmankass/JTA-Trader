@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the next measured weekly RQ-20261105-031 result lands (Gate-2 demotion input read 2 of 2 or not), and the manager records whether the mgc_15m evidence is accepted as a proxy or an IB-bar comparison is run; or the operator retires the leg",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-FILLW47B-0014",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-20, manager instruction 07:39Z",
+    "rerun": "python3 scripts/research/pipeline_noop.py 2>/dev/null; git show origin/main:comms/research/RQ-20261118-abab-28/44686486438/arms/A__trades.jsonl | wc -l   # 526 incumbent trades; sum net_r there = -176.10"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "ict_scalp_mgc_15m (testing, ib_paper) incumbent is net-negative over 7 years: n 526, net R -176.10, maxDD 176.73 R, Dukascopy 15m, 2019-01-01..2026-10-30, harness cost stack (fee 7.5 bps roundtrip + MGC policy slippage), measured 2026-11-20 by RQ-20261117-9e1c-12 / abab-28 / abab-29 (raw trades re-graded). RQ-20261105-031 (weekly lever sweep) read 1 of 2: its rule says the control A net R <= 0 at n >= 39 on TWO CONSECUTIVE units is a Gate-2 demotion INPUT (never a demotion by the unit); the earlier 031 rows were producer_failed, so the next measured weekly 031 completes the input. The leg is already on the demo floor, so 'demotion' stops there; the real question is retirement, which is the operator's. The passing arms (AX40 -145.38, LONG -68.73, SHORT -120.34, S_LATE -160.61) are LOSS-CUTTING, not edge: all are still net-negative and both single-sided arms pass, so the gain is mostly fewer trades on a leg whose average trade loses. FEED MATCH (measured 2026-11-20): the evidence feed is Dukascopy INSTRUMENT_FX_METALS_XAU_USD (spot gold), adjudicated REL_PROXY for the leg's live CME MGC futures (scripts/ops/dukascopy_instruments.py): no roll, 24x5 session vs the Globex daily break, and the run log prints relation=proxy. So the 7-year corpus is a PROXY, not an MGC record. Check against the only committed MGC 15m futures file (comms/research/RQ-20261018-ef5d-02/39121078158/data/MGC_15.csv, 2026-08-23..2026-10-16, source not recorded in the file; float32-looking prices suggest a Yahoo-style continuous series, NOT the leg's IB bars): 3564 common 15m bars, 4 only in futures, 106 only in spot; 15m log-return correlation 0.9929, median |return difference| 0.50 bps, p99 4.74 bps; but the level basis (futures/spot - 1) has median +87.7 bps and wanders 52 to 121 bps (p5 to p95) over those 54 days. The leg's live stop is 0.26-0.40% of price (26-40 bps), so a p99 15m return gap of 4.7 bps is 12-18% of a stop. Not measured: the IB MGC bars the leg actually trades (the trainer's market_raw IBKR dataset, MGC 5m), roll gaps over 7 years (the futures sample is 54 days), and any trade-level comparison. Until the IB series is compared, this evidence counts as a proxy read on a tightly tracking underlying, not a Stage-0 record for MGC futures. No corpus-change confirmation unit authored (manager decision pending the feed finding)."
+}

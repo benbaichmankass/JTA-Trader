@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the 29 s maxima are explained (venue + cause) and either fixed (max fetch under ~5 s over >=100 ticks) or killed with a stated reason",
+    "conditions": [
+      "pr_merged:27669",
+      "manual:a PR making the signal-build IB fetch pre-trip on _ib_link_down is merged; then tick_cost shows fetchvenue.interactive_brokers max < 5 s across the next 05:15-05:20Z IBKR reset window"
+    ],
+    "kind": "event",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "cause explained; the fix is a small Tier-2 trader change, sequenced after #27669 on the same row"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "LIVE-TICK-NEAR-BUDGET tick_cost read 2026-11-20 05:57Z (AM-OPS-10)",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'tick_cost'  # hooks fetch.*/fetchvenue.* max_ms and max_at_utc; then journalctl around max_at_utc"
+  },
+  "routed_to": "checklist row LIVE-TICK-NEAR-BUDGET",
+  "state": "routed",
+  "tier": 2,
+  "what": "[live-tick] A data-fetch timeout tail inflates the trader tick: in tick_cost after the 04:41:12Z restart (76 ticks, read 2026-11-20 05:56:43Z), fetch.1d, fetchvenue.interactive_brokers and fetchby.signal_build each show max 29.0s (29000.4 ms), fetch.15m 24.7s and pipeline.signal_build max 29.0s, against means of 118-528 ms. One fetch hits a ~29 s timeout inside the main tick (not the journal_sync contention, which is a separate fix on LIVE-TICK-NEAR-BUDGET). Find which venue/timeframe times out (IB is the likely candidate: fetchvenue.interactive_brokers max 29000.4 ms = the fetch.1d max), how often, and whether the timeout should be shorter or the fetch moved off the tick. || [2026-11-20 AM-OPS-11] EXPLAINED (MEASURED, journalctl ict-trader-live). 05:17:12Z: IBKR Error 1100 'Connectivity between IBKR and TWS has been lost', which is IBKR's daily server reset. Over 2026-11-19 05:16Z..2026-11-20 05:19Z (398,025 lines scanned, read_state complete) there were 2 Error-1100 episodes, both at ~05:16-05:19Z, and exactly 1 'waited 29.0s'. The monitor path pre-trips its IB breaker on _ib_link_down (src/main.py:836-850, 'IB breaker PRE-TRIPPED on MGC/1h'), but the SIGNAL-BUILD path does not: intent_multiplexer -> mes_trend_long_1d -> IBMarketData.get_ohlcv(MES, 1d) 'timed out waiting for the pinned IB thread ... waited 29.0s — another IB request is still in flight' (a reqPositions that also timed out). That one wait is the fetch.1d / fetchvenue.interactive_brokers / fetchby.signal_build / pipeline.signal_build 29.0 s max at 05:17:41Z; fetch.15m 24.7 s at 05:18:07Z falls in the same window. Impact: about one inflated tick per day, at the reset. FIX (Tier 2, RESTART): consult the same _ib_link_down pre-trip in the signal-build fetch (candles=None, could not look, retried next tick), as the monitor path already does. Sequence it after #27669 on LIVE-TICK-NEAR-BUDGET."
+}

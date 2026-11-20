@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 45,
+    "clears_when": "Operator has exported the full account history from each real-money exchange AND Claude has ingested the historical closed trades into trade_journal.db (status/exit_price/pnl/closed_at) with provenance — OR the operator explicitly decides the pre-window historical gap is not worth backfilling and says to close this item.",
+    "kind": "observation",
+    "last_checked": "2026-10-05"
+  },
+  "id": "BL-20260621-ACCOUNT-HISTORY-PULL",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": " Operator exports history and ingestion into trade_journal.db with provenance, or an explicit operator decision to close. | evidence: Item needs operator-originated exchange CSV exports or an explicit operator waiver; no waiver found. LEDGER-REFRESH (bybit_2 SUB CSV-only ledger) relates to ledger staleness, not the journal backfill, and is queued.",
+    "what": "Operator has exported the full account history from each real-money exchange AND Claude has ingested the historical closed trades into trade_journal.db (status/exit_price/pnl/closed_at) with provenance — OR the operator explicitly decides the pre-window historical gap is not worth backfilling and says to close this item."
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json#BL-20260621-ACCOUNT-HISTORY-PULL",
+    "rerun": "python3 -c \"import json; d=json.load(open('docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json')); items=d['items'] if isinstance(d, dict) else d; print(json.dumps(next(i for i in items if i.get('id')=='BL-20260621-ACCOUNT-HISTORY-PULL'), indent=2))\""
+  },
+  "state": "killed",
+  "terminal_reason": "[2026-11-20 AM-OPS-11 2e] Not workable as filed. (1) It asks the operator to export history by hand; under the before-asking-the-operator skill that is runner work, since the Bybit v5 closed-pnl / execution endpoints serve history a workflow can page. (2) It names no MEASURED gap: no count of real-money venue closes missing from trade_journal.db before 2026-06-21. (3) Unowned for 152 days. Since it was filed, the broker-truth sweeps (Bybit closed-pnl, Alpaca broker-leg) price and label closes from the venue. RE-ENTRY TEST: if a real-money journal-vs-venue reconciliation shows venue closes missing from the journal, file a runner backfill with that count as its population.",
+  "triage_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] still applies at HEAD (no live owner / owner does not cover it). NEXT OBSERVATION: Operator exports history and ingestion into trade_journal.db with provenance, or an explicit operator decision to close. | evidence: Item needs operator-originated exchange CSV exports or an explicit operator waiver; no waiver found. LEDGER-REFRESH (bybit_2 SUB CSV-only ledger) relates to ledger staleness, not the journal backfill, and is queued.",
+  "what": "[health] ASK OPERATOR: manually export FULL exchange account history (bybit_2 + all real-money accounts) so pre-7-day-window orphaned/missing trades can be entered into trade_journal.db"
+}

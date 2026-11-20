@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 8032's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-CSINTAKE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8032 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8032"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 8032 (bybit_1/ict_scalp_xrp_15m XRPUSDT, exit_reason='sl_cross'): bracket_real_at_venue: TP 20R from entry is a sentinel, not a prediction; fill_and_fees: pnl or fee not recorded"
+}

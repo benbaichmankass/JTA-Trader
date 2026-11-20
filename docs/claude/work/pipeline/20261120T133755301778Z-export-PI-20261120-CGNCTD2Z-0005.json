@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "both writers go through journal_backup.py (or write row-level backups), and a disk-usage-report shows <= 2 journal backups after the next writer run",
+    "conditions": [
+      "pr_merged:27710",
+      "manual:disk-usage-report shows <= 2 journal backups after the next reopen/partial-close writer run"
+    ],
+    "kind": "event",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "writer fix in PR #27710"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "AM-OPS-10 disk read 2026-11-20 (issue #27653); related PI-20261017-VSMHZYHF-0001",
+    "rerun": "git grep -nE '\\.bak-|\\.backup\\(' -- 'scripts/*.py' | grep -v journal_backup.py   # then check each hit imports journal_backup"
+  },
+  "routed_to": "PR #27710 (AM-OPS-11)",
+  "state": "routed",
+  "tier": 2,
+  "what": "[disk] Journal-backup retention is bypassed. Root fs under the live trader reached 94% / 3.3 GB free on 2026-11-20 with 5 full ~3 GB journal backups (disk-usage-report run 44681992412), although journal_backup.py caps writers at 2 total. Writers that copy the whole journal WITHOUT journal_backup.py: scripts/ops/reopen_filled_closed_rows.py (.bak-reopen-*, 3 copies on 11-19), scripts/ops/backfill_partial_close_children.py (.bak-partial-close-*), and scripts/ops/mark_entry_unfilled.py (fixed in #27652: row-level JSON backup). Second gap: journal-offvm-backup.yml prunes with days 1, so same-day backups survive until the next daily run (the 11-19 11:52Z run left the 11:23Z/11:34Z reopen copies). Fix: route both writers through journal_backup.py (or row-level backups), and consider a free-space fail-fast before any full copy. Related to PI-20261017-VSMHZYHF-0001. || [2026-11-20 AM-OPS-11] PR #27710: both writers call journal_backup.take_backup (online, iso stamp). Root cause of the survivors: the reopen backup name never matched _STAMP_RE, so prune_total could not see it. The days-1 prune is left unchanged now that every whole-journal writer is capped at the writer."
+}

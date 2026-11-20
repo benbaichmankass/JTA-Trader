@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "XRP/ADA 'no candle data' for ml_entry_v2 explained and fixed (0 such warnings over a day), and the decision line names the strategy; or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "D9-MAKER-EXIT-BUILD observation 2026-11-20 06:31Z (AM-OPS-10, manager ask)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<ts>&grep=ml_entry_v2&lines=400'  and  grep=ml_entry_decision / grep=ml_entry_refs"
+  },
+  "state": "queued",
+  "what": "[ml/data] ml_entry_v2 on bybit_1 (testing, demo floor) has had no entry since 11-19 06:04Z. Read 2026-11-20 06:40Z (trader journal since 11-19 06:04Z): mostly abstaining as designed. ml_entry_decision outcomes: 142 no_decision_bar, 56 no_signal (below tau), 17 transient pending (Bybit cooldown; the reference set recovers to 52/60 >= min 40, with 8 delisted refs given up: BAL, BLZ, DEFI, FLM, FTM, ICX, MKR, OMG), 0 evaluated. Two defects: (1) 74 WARNINGs 'intent_multiplexer: strategy ml_entry_v2 raised no candle data for symbol=XRPUSDT/ADAUSDT -- skipping this tick', although both are in bybit_1's symbols pull list, so v2 cannot decide XRP/ADA on those ticks; (2) the ml_entry_decision INFO line does not name the strategy, and ml_entry (bybit_2, bybit_portfolio, props) and ml_entry_v2 (bybit_1) share it in one process, so their abstention rates cannot be separated. Also: 8 reference symbols are delisted on Bybit (permanent 52/60)."
+}

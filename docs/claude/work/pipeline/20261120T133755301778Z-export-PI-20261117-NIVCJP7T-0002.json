@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "lever_map.py --backfill no longer writes net_r 0.0 / cost_r 0.0 attribution for e4_oi_shock_1h (it writes a could_not_look read_state or the real net), and a grep of research/levers/*.yaml finds no attribution with net_r 0.0 and gross_r != 0",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-NIVCJP7T-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261117-1006 (session_01AFoLuMNJLaELyLniVCjP7T): orphan diagnosis of e4_oi_shock_1h",
+    "rerun": "python3 scripts/research/lever_map.py --backfill && grep -A6 '^attribution' research/levers/e4_oi_shock_1h.yaml"
+  },
+  "owner": "manager",
+  "routed_to": "routine research-ops (next pass 2026-11-20 08:47Z or later): fix lever_map.py's 0.0 fold to a could_not_look read_state and grep research/levers/*.yaml for net_r 0.0 with gross_r != 0",
+  "state": "routed",
+  "what": "LEVER-MAP ATTRIBUTION COLLAPSED STATE: research/levers/e4_oi_shock_1h.yaml attribution reads n 1619, net_r 0.0, cost_r 0.0, gross_r 182.6 with verdict_hint 'cost erases a gross edge' -- net_r and cost exactly 0.0 on every row means the per-trade net field was absent and was folded to 0 (CLAUDE.md rule 2: a 0 that means 'could not look'). The leg's committed record (comms/strategy_evidence/e4_oi_shock.json) is n 856 net +18.79 R, so the attribution also reads a different population. lever_map.py must publish read_state could_not_look for a missing net field and never emit a verdict_hint from it; then check every other map for the same pattern (net_r == 0.0 with gross != 0). || [2026-11-20 AM-OPS-11 2e] Not fixed: research/levers/e4_oi_shock_1h.yaml on main still reads attribution net_r 0.0, cost_r 0.0, gross_r 182.593, verdict_hint 'cost erases a gross edge'. lever_map.py --backfill is run by research-ops every pass (its core mandate), so the collapsed-state fix and the grep of all maps belong there."
+}

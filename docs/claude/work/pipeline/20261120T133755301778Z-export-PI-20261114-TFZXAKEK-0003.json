@@ -1,0 +1,17 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-16",
+    "kind": "date"
+  },
+  "id": "PI-20261114-TFZXAKEK-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK, 2026-11-14: tlt_pullback_1h real-money promotion PR #26094 merged 19:11Z (78bc7879), operator popup 'Promote long-only 3.5R (Recommended)'",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/config (tlt_pullback_1h: side_filter long, tp_r 3.5; alpaca_live + alpaca_portfolio rosters include it, alpaca_paper does not); then scripts/ops/diag_fetch.sh trades/orders filtered to strategy tlt_pullback_1h on alpaca_live: the first live entry is a BUY (never a sell), carries a bracket with TP = entry + 3.5 R, and fills."
+  },
+  "routed_to": "checklist row PROMOTE-TLT-1H-REAL-MONEY",
+  "state": "routed",
+  "what": "Observe the FIRST live alpaca_live tlt_pullback_1h trade after #26094 (long only, tp_r 3.5, builder side_filter gate). Closes the TLT-1H-PROMOTE soak (1-2 clean trades, OPERATING-PLAN § 2): verify (1) the deployed config/rosters, (2) no short is ever sent (the new builder gate), (3) the entry bracket TP sits at 3.5 R, (4) the mirror alpaca_portfolio takes the same trade. Row PROMOTE-1H-SURVIVORS-20261104 stays landed_unproven until this is observed. TLT trades the US cash session, so the earliest possible fill is Monday 2026-11-16. || [2026-11-20 AM-OPS-11 2e] Observation still pending: journal read 2026-11-20 (diag journal?table=trades limit 1000, rows since 2026-11-11T13:18Z) holds NO tlt_pullback_1h trade on alpaca_live/alpaca_portfolio (only tlt_pullback_1d on alpaca_paper/ib_paper). PROMOTE-1H-SURVIVORS-20261104 is done; the live owner of the first-trade observation is PROMOTE-TLT-1H-REAL-MONEY (landed_unproven, PR #26094)."
+}

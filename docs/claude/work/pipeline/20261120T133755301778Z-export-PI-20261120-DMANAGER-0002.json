@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_review_packet.py on a bybit package with partial SL/TP pairs reports mechanics match, pinned by a test reproducing the 8058 shape",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-DMANAGER-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-20 03Z: LIVE-REVIEW lane session_01AFoLuMHBWpX7CuUrvgqvbA rows on live-review/rows 55c7e936 (trade 8058)",
+    "rerun": "git show origin/live-review/rows:comms/live_review/packets/LR-20261120T0323Z-pkg-56e68721271242f3.json | python3 -m json.tool | grep -A8 -E 'mechanics|packet_defects'"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "live_review_packet.py MECHANICS FALSE POSITIVE on Bybit shared partial SL/TP pairs: the generator reports a mechanics mismatch for a bybit_1 package whose venue carries partial (split) SL/TP orders shared across a position, which hand verification shows MATCH (trade 8058 ict_scalp_xrp_5m, packet LR-20261120T0323Z-pkg-56e68721271242f3, mechanics.evidence + packet_defects). A false mismatch trains reviewers to ignore the field. Related but distinct: PI-20261031-TD4QC5GP-0004 (a real venue-vs-package level gap). Fix the comparison to aggregate partial pairs before matching; add a planted test."
+}

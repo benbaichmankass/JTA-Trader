@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-LRP-C6FBECE4",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ml_entry:ml_feature_mismatch",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "checklist row ML-LIVE-PARITY-ML-LEGS",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `ml_entry` — ml_feature_mismatch ×1 (REAL-MONEY roster) in window 2026-11-10T06:45:00+00:00..2026-11-17T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-17.json. Examples: [{\"class\": \"ml_feature_mismatch\", \"bar\": \"2026-11-16T23:00:00+00:00\", \"t\": \"2026-11-17T00:01:04.786088+00:00\", \"symbol\": \"XRPUSDT\", \"detail\": {\"what\": \"n_ref\", \"live\": 40, \"replay\": 52}}] || [2026-11-20 AM-OPS-11 2e] Real-money ML leg. 2026-11-19 parity run reads ml_entry ml_feature_mismatch 0 over bars_checked 2 only (n_ref live 40 vs replay 52 is the ref-set coverage gap). Owner of the ML replay: ML-LIVE-PARITY-ML-LEGS (in_flight)."
+}

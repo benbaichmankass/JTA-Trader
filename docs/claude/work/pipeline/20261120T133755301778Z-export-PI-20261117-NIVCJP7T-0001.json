@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a committed note states whether live turtle_soup scales out at TP1 (read the order_monitor path + one live bybit_1 turtle_soup close), and either backtest_system.py models the TP1 partial + TP2 roll (a re-run of d5a7-10 shows nonzero deltas) or tp2_at_r/partial_close_pct are recorded dead config on the leg's row",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-NIVCJP7T-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261117-1006 (session_01AFoLuMNJLaELyLniVCjP7T): reading RQ-20261116-d5a7-10 rows",
+    "rerun": "python3 -c \"import json;d=json.loads(open(sorted(__import__('glob').glob('research/results/RQ-20261116-d5a7-10/*.jsonl'))[-1]).readlines()[-1]);print(d['measurement']['grade']['candidates'])\"  # both deltas 0.0 = the defect"
+  },
+  "owner": "manager",
+  "routed_to": "checklist row DEMO-FLOOR-ITER-20261113",
+  "state": "routed",
+  "what": "TURTLE_SOUP TP2 / PARTIAL IS DEAD CONFIG IN THE HARNESS: RQ-20261116-d5a7-10 (tp2_at_r 2.0 / 4.0 vs 3.0) landed delta net R exactly 0.0 and delta maxDD 0.0 on both arms over 708 trades. Cause read in scripts/backtest_system.py ~L1270-1331: the intrabar venue check closes the WHOLE position when the bar crosses pos.tp (= TP1 at entry) BEFORE the owner monitor() can return its TP1 partial close + next_tp roll, so tp2_at_r and partial_close_pct never act. Open question: is the live path the same (exchange TP order full-qty at TP1 fills before the order_monitor's tp_cross partial), in which case tp2_at_r / partial_close_pct are dead config live too (a TP-doctrine fact: the real TP is TP1 1.0 R), or does live scale out, in which case the harness is unfaithful and every turtle_soup Stage-0 read understates the runner. Decide which, then either fix the harness (partial at TP1 then roll) or record the params as dead config (Tier-3 cleanup proposal). || [2026-11-20 AM-OPS-11 2e] turtle_soup is a bybit_1 testing leg; row DEMO-FLOOR-ITER-20261113 (queued) owns its lever-family census (entry, exit/TP, ...) before any retirement proposal. Whether tp2_at_r/partial_close_pct are dead config is part of the exit/TP family there."
+}

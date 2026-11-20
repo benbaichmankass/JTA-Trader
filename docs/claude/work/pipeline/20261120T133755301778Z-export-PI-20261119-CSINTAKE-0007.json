@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 8034's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-20"
+  },
+  "id": "PI-20261119-CSINTAKE-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8034 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8034"
+  },
+  "redate": {
+    "observation": "[2026-11-20 05:55Z AM-OPS-10] Disk: the journal shares the trader root fs /dev/sda1, 3.3 GB free / 94% used (disk-usage-report run 44681992412), with 5 full journal backups (15 GB). New UNPROVEN hypothesis for the unexplained #27636 failure: a near-full filesystem at 04:41Z ('unable to open database file' even though -f passed). The repair re-dispatch is held until #27652 (now a row-level JSON backup, no full copy) merges and the manager decides on prune-db-backups. Keep bak-mark-entry-unfilled-20261120T052650Z: 8034's pre-write notes live only there.",
+    "observed_at": "2026-11-20"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed and verified. Trade 8034 (alpaca_options_paper SLV, paper) never held a position: its DAY mleg entry expired unfilled. The close-time label is fixed going forward by #27537 (entry_unfilled). This row was relabelled by the #27611 action (issue #27646, run 44679734517; venue confirmed terminal, filled_qty 0) and its notes were restored by #27652 (issue #27670, run 44687400795, 06:43:44Z) from the pre-write backup: pnl_source=unmeasured, pre_mark_exit_reason=exchange_flat_reconciled. OBSERVED: the db-integrity run at 2026-11-20 07:09:11Z shows INV-2 recent=0 with 8034 absent, and INV-2b counting 8034. The FIRST run's failure (issue #27636, 04:41:06Z: 'unable to open database file' / 'no such table: trades') stays UNEXPLAINED: canonical path, perms fine, a coincident 04:41:07Z restart, near-full-disk hypothesis unproven. Grader neutrality for entry_unfilled shipped in #27537.",
+  "what": "mechanics fault on trade 8034 (alpaca_options_paper/slv_trend_1h SLV, exit_reason='exchange_flat_reconciled'): exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded"
+}

@@ -1,0 +1,17 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "PI-20261112-IXCFGFWB-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-DEEP-AUDIT-FABLE 2026-11-12, docs/research/ml-deep-audit-2026-11-12.md section 7",
+    "rerun": "python3 -c \"import yaml,glob,collections;c=collections.Counter();[c.update(['bakeoff' if isinstance((d:=yaml.safe_load(open(f))).get('ml_bakeoff'),dict) else 'other']) for f in glob.glob('research/queue/RQ-20261[01]*.yaml')];print(c)\" ; python3 scripts/ops/ml_plan_status.py --diversity"
+  },
+  "routed_to": "frontier-research weekly scan (ML-FRONTIER-PREP lane, 2026-11-25)",
+  "state": "routed",
+  "what": "FRONTIER INPUTS from the ML deep audit, for the next weekly frontier scan (frontier-research skill; lane ML-FRONTIER-PREP). MEASURED 2026-11-12: 150 of 234 ML research units authored since 2026-10-01 are regime/direction classifier bake-offs with no real-money consumer; the scan's kept D3 ideas (K1 market-residual target, taker-flow ENTRY, LambdaRank ENTRY) are unregistered. F1 search where the money is: methods that raise BREADTH or EFFECT SIZE of a pooled cross-sectional entry model (ranking targets, market-residual targets, cost-aware universe selection). F2 register last week's keeps (K1, taker-flow, LambdaRank) in the scan's own PR, each with a power line. F3 prop: large-effect low-frequency signals on ETH and SOL (funding extremes, liquidation clusters, basis); the population detects only edges above about 0.14 R per trade at n=381, so price-feature arms are exhausted. F4 in-trade: state FEATURES, not policies (five negatives on the R1 state; RQ-20261030-c7a1-01 Stage-A FAIL). F5 stop scanning learner families for the regime label until row ML-D2-CONSUMER-TEST reads. F6 every candidate states the smallest effect its population can detect (sd about 1.09 R per decision on the entry line); an idea that cannot be measured on our data is dropped at triage. Done when the next frontier scan record (comms/ml-plan/*ML-FRONTIER-PREP.json) dispositions F1-F6 by name. || [2026-11-20 AM-OPS-11 2e] Routed to the weekly frontier scan. The 11-18 scan has run; these inputs (F1-F4, register K1 / taker-flow / LambdaRank with power lines) are for the next ML-FRONTIER-PREP lane, Wed 2026-11-25."
+}

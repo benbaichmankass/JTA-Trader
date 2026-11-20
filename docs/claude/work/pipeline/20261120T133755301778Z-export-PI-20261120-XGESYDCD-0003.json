@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "an etf-history-pipeline run concludes success with the fetch step run (not skipped as lowdisk), or the manager kills it with a reason",
+    "conditions": [
+      "row_state:TRAINER-RELAY-WT-DISK=done",
+      "manual:an etf-history-pipeline run concludes success with fetch=success"
+    ],
+    "due_date": "2026-11-22",
+    "kind": "event",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "the trainer disk is under the 15 GB start floor"
+  },
+  "id": "PI-20261120-XGESYDCD-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS-11, manager bounded task 2026-11-20 12:08Z (alert run-failure etf-history-pipeline 10:03Z)",
+    "rerun": "GitHub Actions etf-history-pipeline.yml runs list; failed job log line 'fetch=skipped verify=success lowdisk=1'; trainer-vm-diag 'df -BG /'"
+  },
+  "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+  "routed_to": "checklist row TRAINER-RELAY-WT-DISK",
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "[2026-11-20 12:44Z AM-OPS-11] CLEARED. Manager-approved one-off (option a-gzip): trainer-vm-diag #27776 gzipped 146 runtime_logs/m20_exit_head/**/rows.jsonl older than 7d (reversible), m20_exit_head 2552 -> 337 MB, trainer df / 14G -> 16G free. etf-history-pipeline run #506 (44735961811, workflow_dispatch refresh) concluded SUCCESS: disk preflight passed; 'Fetch the 1m base' ran 12:29:14-12:37:25Z (success, not skipped); 'Verify (depth, gaps, freshness)' success; the low-disk red-flag step skipped. Headroom is thin (16G vs the 15G floor): the durable fix stays on TRAINER-RELAY-WT-DISK.",
+  "tier": 1,
+  "what": "[data freshness] etf-history-pipeline has failed 7 runs in a row (#499 2026-11-19 19:15Z through #505 2026-11-20 10:01Z; last success #498 2026-11-19 13:10Z), every one on the trainer-disk preflight: 'etf-history: fetch=skipped verify=success lowdisk=1' (run 44715675772). The workflow skips the 1m ETF pull whenever trainer free disk is below 15 GB (.github/workflows/etf-history-pipeline.yml:144-160). The latest trainer measurement is 14 GB free (86%), after AM-OPS-10's 00:35Z worktree cleanup (row TRAINER-RELAY-WT-DISK), still under the floor. So the ETF 1m history store has had NO refresh for ~21 h, and it stays stale until about 1 GB more is freed on the trainer. Off the trade path is not off the data path: the store feeds ETF research and its freshness checks. Owner of the cause: TRAINER-RELAY-WT-DISK (sparse relay worktrees with trap cleanup; the stale-worktree sweep). Not a workflow bug; the preflight is doing its job. A one-off option for the owner: a trainer-vm-diag cleanup of another reclaimable holder (the row lists runtime_logs 4.4G incl. m20_exit_head 2.5G, datasets-out 12G), then re-run the pipeline once."
+}

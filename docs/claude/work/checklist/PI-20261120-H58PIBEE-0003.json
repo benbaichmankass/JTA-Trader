@@ -1,0 +1,23 @@
+{
+  "id": "PI-20261120-H58PIBEE-0003",
+  "title": "[research/sizing] vol-target SIZING was never actually tested: backtest_vol_target target_vol is compared in R units, so the multiplier pins at cap_lo (fix the units, re-run 8ef8-01/02/03 as variants)",
+  "state": "done",
+  "owner": "ML-PRIMARY lane (successor inherits)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    27768
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "MEASURED 2026-11-20 (8ef8-01 run 44708139349, 8ef8-02 run 44709205570): the multiplier sat at cap_lo 0.5 in 44 of 45 monthly periods (97.8%; mean 0.506 / 0.513). Book realised annual vol was 32.08 R (eth_4h) and 24.53 R (sol_prop) against target_vol 0.10, which compute_multipliers reads in the same units as the daily R returns (target_daily = target_vol / sqrt(252)). So both units measured a constant 0.5x size (Sharpe is scale-invariant, dSharpe ~0 is mechanical) and FAILED for that reason. 8ef8-03 (eth_prop) has the same argv and will do the same. DO: (a) make the target meaningful in R units (e.g. --target-vol-mode trailing_median: target = the book's own trailing median realised vol, so the multiplier straddles 1; or an explicit R/yr value) with a self-test that FAILS when >50% of periods sit at a cap; (b) author ONE variant unit per leg with the same dSharpe/maxDD/blocks bars, registered before the run. Gates this adds or changes: none. 2026-11-20 ML-15: BUILT in PR #27768 (held): trailing_median target mode, opt-in --max-cap-share degeneracy clause, tests; variants RQ-20261120-7d49-03/04/05 authored with rules registered pre-run; 8ef8-03 retired (manager 11:06Z). Closes when the three variants are graded. 2026-11-20 13:05Z ML-15: all 3 variants GRADED (trailing_median, cap share 0-2.2%): 7d49-03 eth_4h FAIL (dSharpe +0.131, 3/4 blocks, but maxDD 23.87 > 21.98), 7d49-04 sol_prop PASS (dSharpe +0.225, maxDD 10.56 <= 11.29, 4/4), 7d49-05 eth_prop FAIL (dSharpe +0.066, maxDD 27.46 > 26.76). The unit fix is proven (the multiplier moved). Confirmation of the PASS: PI-20261120-H58PIBEE-0004. CLOSED.",
+  "phase": null,
+  "updated_at": "2026-11-20T13:03:00Z",
+  "updated_by": "session_01AFoLuL7nvseG9Hh58PibeE"
+}
