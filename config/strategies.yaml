@@ -569,12 +569,14 @@ strategies:
     # at entry, so Bybit's round-trip taker fees don't turn the
     # protective close into a scratch loss. See vwap section above.
     be_offset_bps: 15
-    # Session filter — disabled by default; crypto runs 24/7. Operator
-    # can scope to London + NY kill-zones (07-17 UTC) by flipping
-    # session_filter_enabled→true.
-    session_filter_enabled: false
-    session_start_hour: 7
-    session_end_hour: 17
+    # Session filter — crypto runs 24/7, so it was disabled by default.
+    # SESSION LEVER (Tier-3 PROPOSAL, HELD): skip signal bars at UTC hours 0-7 == allowed window [8, 24). Evidence: RQ-20261118-abab-25 (S_ASIA PASS,
+    # net R -149.32 vs -226.11, n(A) 670, 6/6 folds, 2021-11-14..2026-11-17) and its disjoint-window confirmation RQ-20261119-8260-02 (PASS, -23.28 vs
+    # -42.46, n(A) 265, 6/6 folds, 2019-12-31..2021-11-13). The leg STILL LOSES NET on both windows: this cuts losses, it is not an edge. Evidence is
+    # Binance-fed (the venue-gap work puts Binance evidence ~0.019 R/trade above Bybit for legs traded on Bybit). Demo floor only (bybit_1). ROLLBACK = false.
+    session_filter_enabled: true
+    session_start_hour: 8
+    session_end_hour: 24
     # shadow_model_ids omitted (2026-05-19): auto-wire every model
     # whose target_deployment_stage == "shadow" on this strategy's
     # signals. Set `shadow_model_ids: []` to opt out entirely or

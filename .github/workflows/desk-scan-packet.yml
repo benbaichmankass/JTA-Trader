@@ -98,7 +98,10 @@ jobs:
             if git push origin desk/decisions; then exit 0; fi
             sleep $((2 ** i))
             git fetch --no-tags origin desk/decisions
-            git rebase origin/desk/decisions
+            # comms/desk/latest_scan.json is a pointer every writer rewrites; on a race the packet
+            # being replayed (this run's, the newest) wins it. Per-packet files never collide.
+            # -X theirs = the replayed commit's side during a rebase. 3 of 26 runs (11-19..20) died here.
+            git rebase -X theirs origin/desk/decisions || { git rebase --abort; continue; }
           done
           echo "::error::could not push the packet to desk/decisions after 4 tries"; exit 1
       - name: Wake the desk (the packet has landed; this step IS the trigger)
