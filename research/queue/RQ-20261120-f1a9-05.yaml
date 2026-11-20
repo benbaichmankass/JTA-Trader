@@ -1,0 +1,176 @@
+# Hand-authored 2026-11-20 by lane ML-PRIMARY-17 (Tier 1 research), dispatched by Manager Session 2026-11-20a
+# (session_01AFoLuHkCcFAd2Nbdp56peq; 21:20Z "build the smallest Tier-1 harness change that unblocks the most runway, then author its units").
+# Uses the FEATURE arms added to scripts/research/exit_head_label_bakeoff.py in the same PR. Rule and power registered BEFORE any run.
+# Gates this adds or changes: none.
+id: RQ-20261120-f1a9-05
+title: 'ml-exit-head-donchian-1h FEATURE lever (ablations): on the powered 8-leg aligned design, does REMOVING the calendar columns, the volume
+  ratio, or everything but the trade-path columns beat the champion by +0.03 R per OOS trade, net of cost?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261120-7d49-02
+  verdict_read: fail
+  diagnosis: 'RQ-20261120-7d49-02 FAIL (pooled n_oos 2,403, CI [-0.0456, +0.0140] < +0.03): the label-margin lever is closed at +0.03 R/trade
+    on donchian 1h, and its registered fail_action names the next exit-head lever as feature-side. research/levers/ml-exit-head-donchian-1h.yaml
+    lists `features: untested` for this head (earlier volume-composition reads changed the corpus, not the feature list on the powered design).
+    One factor changed vs 7d49-02: the FEATURE LIST (the champion target holding_pays, hyper-parameters, rows, legs, folds 3, embargo 7 d, lookback
+    500, live predicate and cost stack are identical).'
+  search: 'none: fixed arm list feat_no_calendar, feat_no_volume, feat_path_only; nothing tuned'
+  attempt: 1
+  due_by: '2026-11-27'
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#features
+question: 'On datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl (7d49-01), with the same 8 trend_donchian 1h legs (BTC, ETH, SOL trained;
+  LINK, BNB, XRP, ADA, AVAX unseen-symbol), 3 sequential walk-forward folds, 7-day embargo, lookback 500, champion target holding_pays: is the
+  pooled paired per-trade replayed R of the arm feat_no_calendar (drop hour_of_day, dayofweek), feat_no_volume (drop vol_ratio_vs_entry), feat_path_only
+  (age_bars, open_r, mfe_r, mae_r, giveback_r, dist_to_stop_r, is_long) vs the shipped-feature champion >= +0.03 R with the CI lower bound > 0?'
+why_this_matters: The exit head is the only learned close-path model on the demo-floor donchian 1h legs (annotate-only). The label lever is closed
+  (7d49-02). If no feature list moves it by a decision-sized amount either, the head has no in-hand lever left at 1h and trainer time leaves this
+  subject; a PASS is the first exit-head improvement that is not a label artefact.
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 2400
+  min_detectable_effect: 0.04
+  effect_units: r_multiple
+  sd: 0.7
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'sd 0.70 R carried from the measured neg25 paired sd (a10d-07 0.597, a10d-08 0.717); a feature arm differs from the champion on the same
+    trades, so the same order is assumed (ESTIMATE). n MEASURED on 7d49-02: pooled n_oos 2,403. At n 2,400, sd 0.70: SE 0.0143; half-width at
+    z 2.394 0.034, MDE at 80% ~0.046 R. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the aligned trainer corpus and trainer-resolved 1h candles; nothing accrues.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold
+    training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported
+    as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py --arms '''' --feature-arms feat_no_calendar,feat_no_volume,feat_path_only --num-folds
+    3 --z 2.394 --pass-dr 0.03 on the aligned rows: pooled over the 8 legs and 3 folds, per OOS trade d = replayed_r(arm) - replayed_r(champion)
+    on identical trades, replay and cost; mean, SE (one trade = one cluster), three arms graded, CI at the Bonferroni z 2.394 (two-sided alpha
+    0.05 / 3). Reported: per-leg read_state and n_oos, candle_source.resampled_to, fired counts, hold context, measurement.arm_features and target_coverage
+    per arm.'
+  rule: Graded by hand from verdict.json. An arm is could_not_look (INDETERMINATE for that arm) if its target_coverage < 0.90 or it trained in
+    no fold. PASS iff some arm has pooled n_oos >= 1500 AND mean d >= +0.03 R/trade AND CI lower bound > 0 AND the unseen-symbol legs (LINK/BNB/XRP/ADA/AVAX)
+    pooled have mean d > 0 for that arm (the best such arm by mean is named; denominator 3). FAIL iff every arm has pooled n_oos >= 1500 AND CI
+    upper bound < +0.03. INDETERMINATE otherwise. A leg that is producer_failed or unestablishable lowers n only; a leg whose candle_source.resampled_to
+    is not 1h is excluded and named. Thresholds, legs, arms, folds, embargo, lookback, rows path and shape are not changed after any result.
+  pass_action: 'ONE confirmation before any proposal: the passing arm on the 10-perp held-out-symbol design (aadc-12 pattern) or a disjoint window;
+    only then a data-backed Tier-3 proposal (export + annotate-only pin) to the manager.'
+  fail_action: 'Record the arm(s) as tested on research/levers/ml-exit-head-donchian-1h.yaml (features family). If f1a9-04 and -05 both FAIL,
+    the head has no in-hand feature or label lever at +0.03 R on donchian 1h: the next step is a family review (per-symbol heads need a harness
+    build), never a re-run of these configurations.'
+  what_it_does_not_do: Edits no config, exports or serves nothing, places no order, adds no gate. No close authority for any exit model.
+practice_precedent: 'Size the test to the decision: a pre-registered minimum effect with power computed from the measured variance, rather than
+  a bar the data cannot reach (docs/reference/trading-and-model-practice-principles.md).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context
+      only: hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, shipped features, fixed)
+    - feat_no_calendar
+    - feat_no_volume
+    - feat_path_only
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.25
+  basis: 'stand-in inherited from 7d49-02: three demo-floor legs annotate on the head; the main value is the keep / retire decision on the exit
+    head''s levers.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 180
+  why_runner: The aligned rows.jsonl and the 1h candle resolver are trainer-resident; LightGBM is in the trainer venv.
+  basis: 'ESTIMATE: 7d49-02 (same design, 1 extra head per fold) est 120; three extra heads per fold, ~2x the training time; replay dominates.
+    Timeout 240.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl
+  - --legs
+  - trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT
+  - --num-folds
+  - '3'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --arms
+  - none
+  - --feature-arms
+  - feat_no_calendar,feat_no_volume,feat_path_only
+  - --z
+  - '2.394'
+  - --pass-dr
+  - '0.03'
+  - --unit
+  - '{unit}'
+  - --rule-id
+  - RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
+  - --registered-at
+  - '2026-11-20'
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261120-f1a9-05
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: which exit_head_model feature list (annotate-only) the three donchian 1h legs carry
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261120-7d49-02.yaml
+- research/queue/RQ-20261120-7d49-01.yaml
+- scripts/research/exit_head_label_bakeoff.py
+- research/levers/ml-exit-head-donchian-1h.yaml
+- research/queue/RQ-20261120-f1a9-04.yaml
+population: trend_donchian 1h harness trades of BTC, ETH, SOL, LINK, BNB, XRP, ADA and AVAX USDT perps on trainer-resolved 1h candles; heads trained
+  on the aligned BTC/ETH/SOL exit-head rows.
+levers:
+- name: exit_head_feature_list
+  values:
+  - shipped FEATURES (14)
+  - feat_no_calendar
+  - feat_no_volume
+  - feat_path_only
+  hypothesised_effect: the calendar / volume columns are noise that overfits across symbols; a leaner head generalises better to the 5 unseen-symbol
+    legs
