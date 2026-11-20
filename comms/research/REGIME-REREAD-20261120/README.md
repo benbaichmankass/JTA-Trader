@@ -6,7 +6,8 @@
 ## What was run
 
 `scripts/research/regime_cell_walkforward.py` on main `b0f2a3727`. That tree includes the open-stamped `candle_io.resample_ohlcv`
-and the causal `entry_bar_locator` (#27654), plus the harness grids (#27566). Both were verified in `scripts/candle_io.py`.
+and the causal `entry_bar_locator` (#27654); both were read in `scripts/candle_io.py`. The harness grids (#27566) are included per the
+queue item's text; that part was NOT separately verified (corrected 2026-11-20 at close-out).
 The verdict is the fixed fold panel (3, 4, 5): `stable_drag` = pooled < 0 AND a strict majority of folds negative at every panel size.
 The feed is Binance-vision BTCUSDT, the same feed as the July evidence, so the comparison is like for like. A Bybit-native re-read is not part of this record.
 The runs were made in the lane sandbox. Each `*.json` holds the full argv-reproducible result and each `*.log` holds the text verdict.
@@ -14,7 +15,8 @@ Local paths are scrubbed to `<workdir>`.
 
 - **htf_pullback_trend_2h** (BTCUSDT 2h): window pinned to the July A5 record's window, 2024-08-04 .. 2026-07-27,
   `--days 900`. Fidelity `approximate`: the omitted lever is `decision_bar`, a config lever the harness does not model.
-  The July record read `faithful` before that lever existed.
+  The July record read `faithful`; why it now reads `approximate` (e.g. whether `decision_bar` was added to the leg config after July) is
+  UNVERIFIED (corrected 2026-11-20 at close-out: the earlier wording asserted it).
 - **trend_donchian / fvg_range_15m / fade_breakout_4h**: window 2024-11-15 .. 2026-11-15 (`--days 740`). These cells have only
   matrix comments as evidence, no walk-forward record, so this run is their first Rule-2 gate.
 
