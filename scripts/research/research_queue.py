@@ -96,6 +96,7 @@ the entry.
 """
 from __future__ import annotations
 
+import json
 import logging
 import math
 import re
@@ -290,7 +291,13 @@ def required_n(effect_size_d: float, *, design: str = "one_sample",
 #: How a job may ground its ``expected_n``. ``corpus`` is checked against real
 #: observed rows; ``none`` is the honest answer for a leg with no history and
 #: REQUIRES the accrual declaration, so it cannot become a free pass.
-FEASIBILITY_SOURCES = ("corpus", "none")
+FEASIBILITY_SOURCES = ("corpus", "none", "replay")
+
+#: ``source: replay`` (lane ML-PRIMARY-17, manager 2026-11-20): OPT-IN for a unit that re-reads a FIXED in-hand corpus
+#: through a harness that already ran on it. ``feasibility.verdict`` points at that prior run's committed verdict.json
+#: (or a research/results/*.jsonl row) whose measured ``n`` grounds expected_n. Without it, every fixed-corpus replay
+#: could only declare ``source: none`` and graded ``accruing`` (do-not-read-as-a-test) however large its measured n.
+#: Gates this adds or changes: none — it is a new opt-in value; ``none`` and ``corpus`` grade exactly as before.
 
 #: Which order statistic over the corpus's per-leg achieved n the author is
 #: claiming. Declaring it is the point: "50 is achievable" is ambiguous until
@@ -362,6 +369,37 @@ def _feasibility_statistic(values: List[float], statistic: str) -> Optional[floa
     if len(ordered) % 2:
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def observed_n_from_verdict(ref: str) -> Tuple[str, Optional[float], str]:
+    """(state, n, detail) from a prior run's verdict, for ``feasibility.source: replay``.
+
+    state is ``read`` only when the file is inside the repo, parses, says ``read_state: measured`` and carries a
+    positive numeric ``n``; anything else is ``could_not_look`` with the reason, never a silent 0."""
+    ref = str(ref or "").strip()
+    if not ref:
+        return "could_not_look", None, "`feasibility.verdict` is empty"
+    root = Path(__file__).resolve().parents[2]
+    path = (root / ref).resolve()
+    if root not in path.parents:
+        return "could_not_look", None, f"{ref!r} is outside the repository"
+    if not path.is_file():
+        return "could_not_look", None, f"{ref!r} does not exist in this tree"
+    try:
+        text = path.read_text(encoding="utf-8")
+        if path.suffix == ".jsonl":
+            rows = [json.loads(x) for x in text.splitlines() if x.strip()]
+            row = rows[0] if rows else {}
+        else:
+            row = json.loads(text)
+    except (OSError, ValueError) as exc:
+        return "could_not_look", None, f"{ref!r} did not parse: {type(exc).__name__}"
+    if not isinstance(row, dict) or str(row.get("read_state") or "") != "measured":
+        return "could_not_look", None, f"{ref!r} is not a measured verdict (read_state {row.get('read_state') if isinstance(row, dict) else None!r})"
+    n = _as_float(row.get("n"))
+    if n is None or n <= 0:
+        return "could_not_look", None, f"{ref!r} carries no positive measured n"
+    return "read", n, f"{ref} n={n:g}"
 
 
 def grade_power(entry: Dict[str, Any]) -> PowerVerdict:
@@ -539,6 +577,24 @@ def grade_power(entry: Dict[str, Any]) -> PowerVerdict:
                             f"as research_unit={entry_id})")
 
     # --- corpus-grounded: go and LOOK ----------------------------------
+    if source == "replay":
+        state, measured, detail = observed_n_from_verdict(feasibility.get("verdict"))
+        if state != "read":
+            return PowerVerdict(UNVERIFIABLE, need, n, d,
+                                f"`feasibility.source: replay` could not look: {detail} — a replay is grounded "
+                                f"only by a committed, measured prior verdict of the same harness and corpus")
+        if n > measured + 1e-9:
+            return PowerVerdict(INFEASIBLE, need, n, d,
+                                f"expected_n={n:g} exceeds the n the prior replay MEASURED ({detail}); a fixed "
+                                f"corpus cannot deliver more rows on a re-read — declare expected_n <= {measured:g}")
+        if n + 1e-9 < need:
+            return PowerVerdict(UNDERPOWERED, need, n, d,
+                                f"declared n={n:g} (grounded by {detail}) is below the floor {need:.1f} for "
+                                f"d={d:.4g} ({design}, alpha={alpha}, power={power})")
+        return PowerVerdict(CLEARED, need, n, d,
+                            f"n={n:g} >= floor {need:.1f} (d={d:.4g}, {design}), grounded by replay {detail}; "
+                            "FLOOR ONLY — the iid assumption makes the true requirement higher")
+
     corpus = str(feasibility.get("corpus") or "").strip()
     statistic = str(feasibility.get("statistic") or "").strip().lower()
     if statistic not in FEASIBILITY_STATISTICS:

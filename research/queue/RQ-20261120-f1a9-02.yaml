@@ -62,8 +62,9 @@ power:
   basis: test n MEASURED (v1, 2,627 trades, b9d0-04 verdict n); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE ~0.0088
     R, MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. One arm.
   feasibility:
-    source: none
-    accrual_basis: Replays committed / regenerable corpora; nothing accrues.
+    source: replay
+    verdict: comms/research/RQ-20261119-b9d0-04/44515648087/verdict.json
+    basis: Same harness, same fixed test corpus as the pointed run (its measured n); a re-read of an in-hand corpus, nothing accrues.
 baseline:
   definition: B0 hold (the trade's own exit) and B1 the best static management rule chosen on train folds, on identical folds; the incumbent 2-action
     lgbm arm (7e18-01, +0.0033 R/trade) is reported as context.

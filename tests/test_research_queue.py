@@ -1112,3 +1112,67 @@ def test_a_new_queued_unit_must_not_carry_a_dispatch_stamp():
     # only `queued` is refused: a done unit legitimately carries its stamp.
     done = _entry(status="done", last_dispatched_at="2026-10-01T07:29:51+00:00")
     assert not any("last_dispatched_at" in e for e in validate(done, is_new=True))
+
+
+# --- feasibility.source: replay (opt-in; lane ML-PRIMARY-17, 2026-11-20) -----------------------------------------
+
+def _replay_entry(tmp_rel, expected_n=400, mde=0.3):
+    return _entry(id="RQ-20260827-998", power={
+        "expected_n": expected_n, "min_detectable_effect": mde, "basis": "b",
+        "feasibility": {"source": "replay", "verdict": tmp_rel}})
+
+
+def _write_verdict(name, payload):
+    import json as _json
+    d = REPO / "comms" / "research" / "_test_replay_source"
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / name
+    p.write_text(_json.dumps(payload) if not isinstance(payload, str) else payload, encoding="utf-8")
+    return p, str(p.relative_to(REPO))
+
+
+def test_replay_source_clears_when_measured_n_covers_expected_n():
+    p, rel = _write_verdict("ok.json", {"read_state": "measured", "n": 500})
+    try:
+        v = grade_power(_replay_entry(rel, expected_n=400))
+        assert v.state == CLEARED and "grounded by replay" in v.reason
+    finally:
+        p.unlink()
+
+
+def test_replay_source_refuses_expected_n_above_measured():
+    p, rel = _write_verdict("small.json", {"read_state": "measured", "n": 300})
+    try:
+        assert grade_power(_replay_entry(rel, expected_n=400)).state == INFEASIBLE
+    finally:
+        p.unlink()
+
+
+def test_replay_source_underpowered_is_still_underpowered():
+    p, rel = _write_verdict("ok2.json", {"read_state": "measured", "n": 500})
+    try:
+        assert grade_power(_replay_entry(rel, expected_n=50, mde=0.3)).state == UNDERPOWERED
+    finally:
+        p.unlink()
+
+
+def test_replay_source_could_not_look_is_unverifiable():
+    assert grade_power(_replay_entry("comms/research/does-not-exist/verdict.json")).state == UNVERIFIABLE
+    assert grade_power(_replay_entry("../outside.json")).state == UNVERIFIABLE
+    assert grade_power(_replay_entry("")).state == UNVERIFIABLE
+    p, rel = _write_verdict("unmeasured.json", {"read_state": "producer_failed", "n": 500})
+    q, rel2 = _write_verdict("non.json", "not json")
+    try:
+        assert grade_power(_replay_entry(rel)).state == UNVERIFIABLE
+        assert grade_power(_replay_entry(rel2)).state == UNVERIFIABLE
+    finally:
+        p.unlink()
+        q.unlink()
+
+
+def test_replay_jsonl_reads_first_row():
+    p, rel = _write_verdict("row.jsonl", '{"read_state": "measured", "n": 450}\n')
+    try:
+        assert grade_power(_replay_entry(rel, expected_n=400)).state == CLEARED
+    finally:
+        p.unlink()
