@@ -73,6 +73,15 @@ fi
 echo
 echo "===== DB: ${DB_PATH} ====="
 ls -la "${DB_PATH}" || true
+# Read-only forensics for the first live run (issue #27636): what the OLD order (cd first, path
+# before secrets) resolves to in a clean shell, and whether a stray journal sits there or at the
+# known CWD-fallback locations. Prints and lists only; never writes or removes anything.
+OLD_ORDER_PATH="$(env -i HOME="${HOME}" PATH="${PATH}" bash -c \
+    "source '${SCRIPT_DIR}/_lib.sh' >/dev/null 2>&1; cd '${REPO_DIR}'; runtime_db_path" 2>/dev/null || true)"
+echo ">>> old-order path (issue #27636 ordering, clean shell): ${OLD_ORDER_PATH:-<unresolved>}"
+for _p in "${OLD_ORDER_PATH}" "${REPO_DIR}/trade_journal.db" "${REPO_DIR}/src/bot/trade_journal.db"; do
+    [ -n "${_p}" ] && { ls -la "${_p}" 2>/dev/null || echo ">>> absent: ${_p}"; }
+done
 # Fail fast, before anything else reads it: the resolved file must be the journal.
 if ! python3 "${_DBR}" "${DB_PATH}" "SELECT COUNT(*) FROM trades;" >/dev/null 2>&1; then
     fail "${DB_PATH} has no readable trades table; refusing (not the trade journal)." "db not the journal"
