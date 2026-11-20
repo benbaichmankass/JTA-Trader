@@ -4,7 +4,7 @@
 id: RQ-20261119-018
 title: 'ITERATION 4 of ltr-sl-to-structure: the structure-buffer response is monotone (0.2 FAIL R3, 0.1
   near-miss 3 of 6, 0.05 PASS 4 of 6). Does buffer 0.0 ATR keep improving the fold count?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -146,3 +146,13 @@ generated:
   params:
     node: P1-RP1119-ltr-sl-to-structure-buf000
 last_dispatched_at: '2026-11-19T23:25:17+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-ltr-sl-to-structure-buf000
+  evidence:
+  - research/results/RQ-20261119-018/44633873737.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
