@@ -264,7 +264,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--candles-dir", default=None, help="local override: <dir>/<SYM>_<tf>.csv instead of the trainer resolver")
-    ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}")
+    ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}; 'none' = feature arms only")
     ap.add_argument("--feature-arms", default="", help=f"feature arms vs the champion (champion target), from {sorted(FEATURE_ARMS)}")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--exclude-train-symbol", action="append", default=[],
@@ -282,7 +282,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _self_test()
     if not a.json_out:
         ap.error("--json is required")
-    label_arms = [x for x in a.arms.split(",") if x]
+    label_arms = [] if a.arms.strip().lower() == "none" else [x for x in a.arms.split(",") if x]
     unknown = [x for x in label_arms if x not in TARGETS]
     if unknown:
         ap.error(f"unknown arm(s) {unknown}; known {sorted(TARGETS)}")
@@ -396,10 +396,11 @@ def _self_test() -> int:
     seen = {}
     class _TT(_T):
         @staticmethod
-        def train_model(r):
-            seen["f"] = list(_TT.FEATURES)
+        def train_model(train_rows):
+            seen["f"], seen["n"] = list(_TT.FEATURES), len(train_rows)
             return "booster"
-    assert train_with_features(_TT, [], ["open_r"]) == "booster" and seen["f"] == ["open_r"] and _TT.FEATURES == _T.FEATURES
+    assert train_with_features(_TT, [{}, {}], ["open_r"]) == "booster" and seen == {"f": ["open_r"], "n": 2}
+    assert _TT.FEATURES == _T.FEATURES
     assert judge({"feat_exh": [0.03] * 400})["chosen"] == "feat_exh"
     print("exit_head_label_bakeoff self-test OK")
     return 0
