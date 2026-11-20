@@ -1,0 +1,141 @@
+# Hand-authored 2026-11-20 by lane ML-PRIMARY-16 (Tier 1 research), dispatched by the JTA Trader manager (session_01AFoLuHbhd9wFuGJfWRqyoV),
+# queue item PI-20261120-H58PIBEE-0004: confirm the RQ-20261120-7d49-04 PASS on a DISJOINT span before any sizing proposal. Same leg, overlay, costs
+# and thresholds as 7d49-04; the design changes are the window (2021-11-15 .. 2023-01-31, ending before 7d49-04's 2023-02-01 start) and, because that
+# span is ~1.2 years instead of ~3.7, the trade floor (60, not 100). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-c3a7-01
+title: 'CONFIRMATION (disjoint span): does the trailing-median vol-target overlay that passed on trend_donchian_sol_prop 2023-02..2026-10 (RQ-20261120-7d49-04)
+  also raise its net Sharpe by >= +0.10 without a worse drawdown, in >= 3 of 4 calendar blocks, on 2021-11-15 .. 2023-01-31?'
+status: queued
+cadence: once
+roadmap:
+- L-REGIME
+theme: regime
+priority: 2
+kind: experiment
+practice_precedent: 'RQ-20261120-7d49-04 (the discovery PASS this unit confirms; its rule names "a confirmation on a disjoint span" as the step before
+  any Tier-3 sizing proposal) and docs/research/idea-family-review-2026-10-16.md (family A: vol SCALING, Moreira & Muir 2017; Barroso-Detzel on costs).'
+question: 'On the trainer''s Bybit linear SOLUSDT bars aggregated open-stamped to 1h, with trend_donchian_sol_prop as declared in config/strategies.yaml
+  (its exact Stage-0 evidence argv) over 2021-11-15 .. 2023-01-31 23:59, a span that does not overlap RQ-20261120-7d49-04''s 2023-02-01 .. 2026-10-31,
+  does the SAME overlay (backtest_vol_target.run_vol_target, target_mode trailing_median, 20/60 lookback blend 0.5, multiplier capped 0.5..1.5, monthly
+  retarget, trades binned by exit day, venue-aware turnover + funding costs) raise the net annualized Sharpe by >= 0.10 over the unscaled book, with targeted
+  maxDD <= baseline maxDD and a positive Sharpe delta in >= 3 of 4 equal calendar blocks, at >= 60 trades?'
+why_this_matters: 'trend_donchian_sol_prop trades real money (bybit_2 + bybit_portfolio). 7d49-04 PASSED (dSharpe +0.2249, maxDD 10.56 <= 11.29 R, 4/4
+  blocks, n 234) but it is 1 PASS of the 3 legs tested in that family (7d49-03, 7d49-05), and the trailing-median mode was introduced after the 8ef8 configurations
+  pinned at cap, so the PASS was found after a design iteration and needs out-of-sample confirmation before it can support a sizing proposal. The span
+  2021-11..2023-01 (the 2022 crypto bear market and the FTX collapse, when SOL fell over 90%) is a different regime from the discovery window, which makes
+  it a harder test. No sizing change is made until this passes (manager dispatch 2026-11-20).'
+power:
+  alpha: 0.05
+  power: 0.8
+  design: one_sample
+  effect_units: sd
+  expected_n: 75
+  min_detectable_effect: 0.323
+  basis: 'expected_n = the leg''s Bybit trade rate on the discovery window (234 trades over 2023-02-07 .. 2026-10-20, 3.70 y = 63/y; RQ-20261120-7d49-04
+    result) x 1.21 y for 2021-11-15 .. 2023-01-31 = ~76, rounded down to 75 (ESTIMATED; trade rate in a bear-market year may differ). MDE (1.96 + 0.8416)
+    / sqrt(75) = 0.323 sd on per-trade R, reported for scale only. The floor is 60, not 7d49-04''s 100, because the disjoint Bybit span cannot reach 100
+    (the Bybit SOLUSDT file starts 2021-10-15, MEASURED in 7d49-04''s candle_source.first); a 100 floor would make this unit INDETERMINATE by construction.
+    The registered rule is the same point rule on the Sharpe delta plus the 3-of-4 block majority; below 60 trades the unit grades INDETERMINATE, never FAIL.
+    Stated limit: with ~75 trade-days and monthly retargeting (~15 periods), the first period is un-scaled (warm-up) and the second sits at exactly 1.0
+    (the trailing-median target equals the only past estimate), so the overlay acts on ~13 periods; each calendar block holds ~19 trade-days, so block
+    Sharpes are noisy and clause (c) is demanding.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on the trainer's resident Bybit files for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261120c3a701-VOLTARGET-CONFIRM-DISJOINT
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'Thresholds are RULE-RQ202611208ef802-VOLTARGET-SIZING-TRAILMED''s (RQ-20261120-7d49-04), with the trade floor set to 60 for the shorter span:
+    INDETERMINATE IF n_trades < 60, or the Sharpe delta or a drawdown is unmeasurable, or more than 50% of re-target periods sit at a multiplier cap (overlay_degenerate).
+    PASS (CONFIRMED) iff (a) dSharpe = Sharpe(targeted) - Sharpe(baseline) >= +0.10 net of the overlay''s costs, AND (b) maxDD(targeted) <= maxDD(baseline)
+    (positive R magnitudes), AND (c) dSharpe > 0 in >= 3 of 4 equal calendar blocks of the daily book. FAIL (NOT CONFIRMED) otherwise. PASS: the 7d49-04
+    PASS is confirmed out of sample and is evidence for ONE Tier-3 sizing proposal for this leg (manager/operator, RiskManager scope); never a config edit
+    from this unit. FAIL: the 7d49-04 PASS does not generalise to a disjoint span; no sizing proposal on this evidence. INDETERMINATE: no confirmation;
+    no sizing proposal. Thresholds are not changed after any result.'
+  statistic: 'scripts/research/vol_target_verdict.py, unchanged from RQ-20261120-7d49-04: the trainer''s Bybit file (m20_fleet_exit_sweep.resolve_data)
+    aggregated open-stamped to 1h; the leg''s Stage-0 argv (regime_debt_matrix.build_harness_cmd) with --emit-trades and --start/--end (the harness reads
+    the full file, so indicators warm up on bars before --start); backtest_vol_target.build_book -> run_vol_target(return_series, target_mode trailing_median)
+    with resolve_overlay_costs(SOLUSDT); Sharpe = portfolio_combine.sharpe_annualized per arm and per block. The book holds only days with >= 1 closed trade,
+    so Sharpe and the lookbacks are in trade-day units; both arms share them.'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: confirmation gate for a sizing lever on a real-money trend leg; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.2
+  usd_at_stake_per_month: 300
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  why_runner: The Bybit linear candle files are trainer-resident (data/, refreshed by deploy/trainer/ict-candle-refresh).
+  basis: 'ESTIMATE: the same pipeline as RQ-20261120-7d49-04 on a third of the window.'
+run:
+  command:
+  - python3
+  - scripts/research/vol_target_verdict.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --data-dir
+  - data
+  - --work
+  - /tmp/{unit}-{run_id}
+  - --start
+  - '2021-11-15'
+  - --end
+  - 2023-01-31 23:59
+  - --target-mode
+  - trailing_median
+  - --max-cap-share
+  - '0.5'
+  - --target-vol
+  - '0.10'
+  - --short
+  - '20'
+  - --long
+  - '60'
+  - --blend
+  - '0.5'
+  - --cap-lo
+  - '0.5'
+  - --cap-hi
+  - '1.5'
+  - --retarget
+  - monthly
+  - --basis
+  - exit
+  - --dsharpe-bar
+  - '0.10'
+  - --n-floor
+  - '60'
+  - --blocks
+  - '4'
+  - --block-majority
+  - '3'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-c3a7-01
+  timeout_minutes: 60
+  workflow: research-script-run-trainer.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- RQ-20261120-7d49-04
+- RQ-20261120-7d49-03
+- RQ-20261120-7d49-05
+- IR-VOL-TARGET-SIZING-STAGE0
+- research/programmes/02-ai-trader.yaml#P2-R5-voltarget-sizing
+- scripts/research/vol_target_verdict.py
+- scripts/backtest_vol_target.py
+- PI-20261120-H58PIBEE-0004
+iteration:
+  subject: trend_donchian_sol_prop
+  subject_kind: strategy_leg
+  from_result: RQ-20261120-7d49-04
+  verdict_read: pass
+  diagnosis: 'RQ-20261120-7d49-04 PASSED on 2023-02..2026-10 (dSharpe +0.2249, 4/4 blocks, multiplier 0.87..1.21, 0 periods at cap). Its rule requires
+    a confirmation on a disjoint span before a sizing proposal. The overlay, costs and thresholds are unchanged; only the window and the trade floor change.'
