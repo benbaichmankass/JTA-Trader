@@ -59,6 +59,24 @@ Safety:
   * Records the prior label in ``notes.pre_mark_exit_reason``, so it is
     reversible per row.
   * Single transaction; partial failure rolls back.
+
+``--exit-reason account_reset`` (PI-20261120-XGESYDCD-0002, 2026-11-20). The same
+named-ids tool, for rows the PAPER close ladder's rung-3 close-all
+(``DELETE /v2/positions?cancel_orders=true``) liquidated as collateral of ANOTHER
+leg's close, where ``execute.journal_account_reset`` never ran (the trigger was
+not flat within ALPACA_CLOSE_CONFIRM_S), so detectors labelled them. MEASURED
+2026-11-16 14:32:33Z (alpaca_order_history, alpaca_paper): one batch of six
+market closes. Extra preconditions, ALL rows, or nothing is written:
+  * paper only (``account_class='paper'`` or ``is_demo=1``) -- the close-all is
+    never automated on real money, so a real-money row cannot be its collateral;
+  * one account, one episode: every ``closed_at`` within
+    ``RESET_EPISODE_WINDOW_S`` of the others, and every row OPENED before the
+    earliest of them;
+  * the prior label is a detector / sweep label (``RESET_REPLACEABLE``), never a
+    decision such as ``live_review_close``;
+  * a row-only JSON backup of the named rows is written before ``--apply``;
+  * the written notes must still carry the flag and ``pre_mark_exit_reason``
+    after the cap, or nothing is written.
 """
 from __future__ import annotations
 
@@ -70,6 +88,14 @@ from typing import Any, Dict, List, Tuple
 
 EXIT_REASON = "operator_flatten_reconciled"
 NOTE_FLAG = "closed_by_operator"
+
+ACCOUNT_RESET = "account_reset"
+RESET_FLAG = "closed_by_account_reset"
+#: Labels a FLAT DETECTOR or a later price sweep writes; only these may be replaced by account_reset.
+RESET_REPLACEABLE = frozenset({"stuck_strategy_watchdog", "exchange_flat_reconciled", "reconciler_filled",
+                               "sl", "tp", ""})
+#: One close-all episode: every named row closed within this many seconds of the others.
+RESET_EPISODE_WINDOW_S = 1800
 
 
 def _db_path() -> str:
@@ -206,12 +232,108 @@ def plan(conn: sqlite3.Connection, trade_ids: List[int], reason: str
     return updates, refusals
 
 
-def apply(conn: sqlite3.Connection, updates: List[Dict[str, Any]]) -> int:
+def _ts(v: Any):
+    try:
+        t = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def _dump_reset_notes(notes: dict[str, Any]) -> str:
+    try:
+        from src.utils.json_notes import _DEFAULT_PROTECTED, dump_capped
+        return dump_capped(notes, 500, protected=set(_DEFAULT_PROTECTED) | {RESET_FLAG, "account_reset_at"})
+    except Exception:  # noqa: BLE001 -- outside the repo only; named, not implicit
+        return json.dumps(notes)
+
+
+def plan_account_reset(conn: sqlite3.Connection, trade_ids: list[int], reason: str
+                       ) -> tuple[list[dict[str, Any]], list[str]]:
+    """``--exit-reason account_reset``: (updates, refusals); any refusal means write NOTHING."""
+    conn.row_factory = sqlite3.Row
+    rows, refusals = [], []
+    for tid in trade_ids:
+        r = conn.execute("SELECT id, status, exit_reason, notes, is_backtest, is_demo, account_class, "
+                         "symbol, account_id, created_at, closed_at FROM trades WHERE id = ?", (tid,)).fetchone()
+        if r is None:
+            refusals.append(f"id={tid}: no such trade row")
+            continue
+        if int(r["is_backtest"] or 0):
+            refusals.append(f"id={tid}: is a backtest row")
+            continue
+        if str(r["status"] or "") != "closed":
+            refusals.append(f"id={tid}: status={r['status']!r}, not 'closed'")
+            continue
+        if not (str(r["account_class"] or "").lower() == "paper" or int(r["is_demo"] or 0)):
+            refusals.append(f"id={tid}: not a paper row (account_class={r['account_class']!r}); the close-all "
+                            f"is never automated on real money")
+            continue
+        rows.append(r)
+    pending = []
+    for r in rows:
+        notes = _load_notes(r["notes"])
+        if notes.get(RESET_FLAG) or str(r["exit_reason"] or "") == ACCOUNT_RESET:
+            continue  # idempotent: already marked
+        if str(r["exit_reason"] or "") not in RESET_REPLACEABLE:
+            refusals.append(f"id={r['id']}: exit_reason={r['exit_reason']!r} is a decision, not a detector/sweep "
+                            f"label; refusing to overwrite it")
+            continue
+        pending.append((r, notes))
+    if rows:
+        accts = {r["account_id"] for r in rows}
+        if len(accts) != 1:
+            refusals.append(f"rows span {len(accts)} accounts {sorted(accts)}; one close-all is one account")
+        closes = [_ts(r["closed_at"]) for r in rows]
+        opens = [_ts(r["created_at"]) for r in rows]
+        if any(t is None for t in closes + opens):
+            refusals.append("a named row has an unreadable created_at/closed_at; cannot prove one episode")
+        else:
+            first, last = min(closes), max(closes)
+            if (last - first).total_seconds() > RESET_EPISODE_WINDOW_S:
+                refusals.append(f"closes span {(last - first).total_seconds():.0f}s > {RESET_EPISODE_WINDOW_S}s; "
+                                f"not one close-all episode")
+            late = [r["id"] for r, o in zip(rows, opens) if o >= first]
+            if late:
+                refusals.append(f"id(s) {late} opened at/after the earliest close {first.isoformat()}; "
+                                f"they cannot be collateral of it")
+    if refusals:
+        return [], refusals
+    now = datetime.now(timezone.utc).isoformat()
+    updates = []
+    for r, notes in pending:
+        prior = str(r["exit_reason"] or "")
+        notes.update({RESET_FLAG: True, "account_reset_at": now, "operator_close_reason": reason,
+                      "pre_mark_exit_reason": prior, "pre_mark_exit_reason_source": "trades.exit_reason"})
+        blob = _dump_reset_notes(notes)
+        back = _load_notes(blob)
+        if not (back.get(RESET_FLAG) is True and back.get("pre_mark_exit_reason") == prior):
+            refusals.append(f"id={r['id']}: the marker or pre_mark_exit_reason would not survive the notes cap")
+            continue
+        updates.append({"id": int(r["id"]), "symbol": r["symbol"], "account_id": r["account_id"],
+                        "prior_exit_reason": prior, "notes": blob})
+    return ([], refusals) if refusals else (updates, [])
+
+
+def row_backup(db_path: str, conn: sqlite3.Connection, trade_ids: list[int]) -> str:
+    """The named rows' writable fields (exit_reason, notes) to a small JSON file beside the DB, so the
+    write is reversible row by row with no ~3 GB full copy on the trader's root filesystem."""
+    conn.row_factory = sqlite3.Row
+    rows = [dict(r) for r in conn.execute(
+        f"SELECT id, exit_reason, notes FROM trades WHERE id IN ({','.join('?' * len(trade_ids))})",
+        tuple(trade_ids))]
+    dest = f"{db_path}.rows-mark-account-reset-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
+    with open(dest, "w") as fh:
+        json.dump({"written_at": datetime.now(timezone.utc).isoformat(), "rows": rows}, fh, indent=1)
+    return dest
+
+
+def apply(conn: sqlite3.Connection, updates: list[dict[str, Any]], exit_reason: str = EXIT_REASON) -> int:
     with conn:
         for u in updates:
             conn.execute(
                 "UPDATE trades SET exit_reason = ?, notes = ? WHERE id = ?",
-                (EXIT_REASON, u["notes"], u["id"]))
+                (exit_reason, u["notes"], u["id"]))
     return len(updates)
 
 
@@ -321,6 +443,8 @@ def main(argv=None) -> int:
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--db", default=None)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--exit-reason", default=EXIT_REASON, choices=(EXIT_REASON, ACCOUNT_RESET),
+                    help="account_reset: paper close-all collateral (named ids, one episode; see docstring)")
     ap.add_argument("--from-intent", action="store_true",
                     help="DERIVE the targets from the operator_flatten_intent "
                          "marker the flatten script wrote itself, instead of "
@@ -358,6 +482,26 @@ def main(argv=None) -> int:
             ap.error("--trade-ids and --reason are both required "
                      "(or use --from-intent)")
         ids = [int(x) for x in a.trade_ids.split(",") if x.strip()]
+    if a.exit_reason == ACCOUNT_RESET:
+        if a.from_intent:
+            ap.error("--from-intent is for operator flattens, not account_reset")
+        ups, refs = plan_account_reset(conn, ids, a.reason)
+        for r in refs:
+            print(f"REFUSED {r}")
+        if refs:
+            print("Nothing written — resolve every refusal first.")
+            return 2
+        for u in ups:
+            print(f"  id={u['id']} {u['account_id']}/{u['symbol']} {u['prior_exit_reason']!r} -> {ACCOUNT_RESET!r}")
+        if not ups:
+            print("No changes (already marked).")
+            return 0
+        if not a.apply:
+            print(f"DRY-RUN: {len(ups)} row(s) would be marked {ACCOUNT_RESET}. Re-run with --apply.")
+            return 0
+        print(f"row backup: {row_backup(a.db or _db_path(), conn, [u['id'] for u in ups])}")
+        print(f"APPLIED: {apply(conn, ups, ACCOUNT_RESET)} row(s) marked {ACCOUNT_RESET}.")
+        return 0
     ups, refs = plan(conn, ids, a.reason)
     for r in refs:
         print(f"REFUSED {r}")

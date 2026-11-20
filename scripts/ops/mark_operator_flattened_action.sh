@@ -42,6 +42,14 @@ PY_SCRIPT="${REPO_DIR}/scripts/ops/mark_operator_flattened.py"
 
 TRADE_IDS="${ACTION_TRADE_ID:-}"
 REASON_TEXT="${ACTION_REASON:-}"
+# `target: account_reset` selects the paper close-all collateral mode (PI-20261120-XGESYDCD-0002): it is
+# DRY-RUN unless `apply: true`, so the plan is read before the write. The default mode is unchanged.
+MODE="${ACTION_TARGET:-}"
+case "${MODE}" in
+    ""|operator_flatten_reconciled) MODE="" ;;
+    account_reset) ;;
+    *) log "ERROR: target '${MODE}' invalid (allowed: account_reset, or empty)."; exit 1 ;;
+esac
 
 if [ -z "${TRADE_IDS// }" ]; then
     log "ERROR: ACTION_TRADE_ID is empty — this action never derives its targets."
@@ -83,6 +91,35 @@ echo "===== BEFORE (the rows as they stand) ====="
 python3 "${_DBR}" --table "${DB_PATH}" \
     "SELECT id, account_id, symbol, status, exit_reason, pnl \
      FROM trades WHERE id IN (${TRADE_IDS});" || true
+
+if [ "${MODE}" = "account_reset" ]; then
+    echo
+    echo "===== account_reset plan (dry-run) ====="
+    TRADE_JOURNAL_DB="${DB_PATH}" python3 "${PY_SCRIPT}" --db "${DB_PATH}" \
+        --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --exit-reason account_reset
+    if [ "${ACTION_APPLY:-}" != "true" ]; then
+        echo "DRY-RUN: nothing written. Re-dispatch with apply: true after the plan is read."
+        record_audit "mark-operator-flattened" "dry_run" "{\"trade_ids\": \"${TRADE_IDS}\", \"mode\": \"account_reset\"}" >/dev/null || true
+        exit 0
+    fi
+    echo
+    echo "===== APPLY (account_reset; row-only JSON backup first) ====="
+    set +e
+    TRADE_JOURNAL_DB="${DB_PATH}" python3 "${PY_SCRIPT}" --db "${DB_PATH}" \
+        --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --exit-reason account_reset --apply
+    exit_code=$?
+    set -e
+    echo
+    echo "===== AFTER ====="
+    python3 "${_DBR}" --table "${DB_PATH}" \
+        "SELECT id, account_id, symbol, status, exit_reason, pnl FROM trades WHERE id IN (${TRADE_IDS});" || true
+    if [ "${exit_code}" -ne 0 ]; then
+        record_audit "mark-operator-flattened" "failed" "{\"trade_ids\": \"${TRADE_IDS}\", \"mode\": \"account_reset\", \"exit_code\": ${exit_code}}" >/dev/null || true
+        exit "${exit_code}"
+    fi
+    record_audit "mark-operator-flattened" "ok" "{\"trade_ids\": \"${TRADE_IDS}\", \"mode\": \"account_reset\"}" >/dev/null || true
+    exit 0
+fi
 
 echo
 echo "===== DRY-RUN plan ====="
