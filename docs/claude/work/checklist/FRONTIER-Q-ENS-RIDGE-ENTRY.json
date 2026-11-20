@@ -1,0 +1,35 @@
+{
+  "id": "FRONTIER-Q-ENS-RIDGE-ENTRY",
+  "title": "LightGBM + ridge blend for the crypto ENTRY model: does a heterogeneous ensemble beat the booster alone net of cost (ensemble_stack family)",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25559
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "frontier": {
+    "baseline": "LightGBM alone on the raw net-R target, same 13 monthly origins, graded on actual net R of outright trades at the canonical cost stack",
+    "consumer": "src/units/strategies/ml_entry.py (D3) on bybit_2 real money + mirror + prop",
+    "est_cost": "$0 runner (~1.5 h)",
+    "family": "ensemble_stack (+ linear_logit component)",
+    "next_step": "unit RQ-20261112-4654-07 (RULE-RQ20261112-4654-07-ENS-RIDGE, decide_vs_raw on ens; ridge reported) rides PR #25559; grade when it lands",
+    "p_pass": 0.1,
+    "source": "Gu, Kelly and Xiu 2020 RFS (doi 10.1093/rfs/hhaa009; SECONDARY, known before this pass); ml_plan_status.py --diversity 2026-11-13: ensemble_stack 0 open items, gbdt 14/23",
+    "state": "unit_authored",
+    "unit": "RQ-20261112-4654-07",
+    "why": "cheapest under-covered-family lever on the real-money ENTRY recipe: a ridge component beside the booster; same harness, same rows, same cost stack"
+  },
+  "week_lane": "surge"
+}

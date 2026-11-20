@@ -1,0 +1,26 @@
+{
+  "id": "PHONE-CANCEL-FILLED-AS-SKIPPED",
+  "title": "Phone stale-entry cancel marks a FILLED ticket skipped: check Positions before skipping on not_found",
+  "state": "landed_unproven",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuK7LNskMkynxgJmJ5s",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "prop risk-book defect found in incident",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25194
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "next_action": "manager merges #25194 (Tier 2 hold, operator OK m11) once CI green; then observe the first live not_found carrying meta.phone_cancel.position_check",
+  "note": "Found 2026-11-12 by lane PHONE-FILL-ENTRY-KEY (row BREAKOUT2-ETH-RISKBOOK-GAP): ticket prop-manual-c54b2229aa1c (breakout_2 ETH long) was placed and its limit FILLED into a position, then the stale-entry cancel run at 21:06Z (valid_until 21:03Z) read Open orders, found no match, returned not_found, and src/prop/phone_cancel.py:261 moved the ticket placed->skipped. A filled position therefore left the risk book; its later SL close went unrecorded. Fix: on not_found, read Positions (or the fills journal) before skipping; if a position exists, keep it placed/filled. Test with the c54b shape. Same class as the SOL de7e gap. decision: 2026-11-12 operator decisions page m11 \"Build it now (a server-side fix, no app install)\". Case: breakout_2 ETH long c54b filled, cancel found no open order, ticket marked skipped, stop-out unrecorded. Record: docs/plans/thursday-planning-2026-11-12-answers.md. LANE 2026-11-12 (session_01AFoLuK7LNskMkynxgJmJ5s): PR #25194 [Tier 2, HOLD], branch claude/phone-cancel-filled-as-skipped. not_found now runs resolve_not_found: journal fill -> filled; clean Positions read shows sym+side -> MEASURED open, ticket filled; candles through limit -> ESTIMATED open in fill_inference format (its pass records the SL/TP close); skipped only if price never reached the limit, or a flat read after the cancel with no through; else the ticket stays placed (risk book), ONE alert, re-check every 10 min in plan_cancels. Replayed c54b on REAL bot-feed 5m bars: filled_estimated, then SL close 2043.70 at 23:10Z (matches hand-recorded fill 250). Status: merged NO / deployed NO / observed NO. Closing observation: the first live not_found after deploy has meta.phone_cancel.position_check with a verdict that matches the terminal. Revert: revert #25194 (that alone restores the old placed->skipped behaviour). LANE 2026-11-12 09:06Z, report to AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk (create_trigger refused: this lane is at lineage depth 8/8, so it cannot create or fire tasks). PR #25194 is TIER 2 (phone/ticket server path + prop fill journaling), landing HOLD; NOT self-landed, the manager merges. CI at 09:05Z: pytest-collect success, watch success, pytest-run in_progress, guards queued. Left: CI green -> manager merge -> deploy -> observe the first live not_found with meta.phone_cancel.position_check. [2026-11-12 AM-TRADING] Absorbed duplicate PHONE-CANCEL-NOTFOUND-SKIPS-FILLED. Its extra cosmetic item: scripts/ops/prop_report_close.py does not copy sl/tp from the open fill onto the close row (fill 250 sl/tp NULL): fold in or file separately. LANE 2026-11-12 09:45Z: PR #25194 CI ALL GREEN on head 751259c07 (pytest-collect, pytest-run, guards, watch all success), mergeable_state clean, no review comments. Ready for the manager merge (Tier 2 hold, still draft). merged NO / deployed NO / observed NO. LANE 2026-11-12 10:36Z: MERGED #25194 as 3c02b4935 (10:29:44Z, manager). DEPLOYED (trader): /api/bot/runtime-config git_sha c37c5f84c includes 3c02b4935 at 10:35:01Z. The web-api process (where phone record_report / plan_cancels run) sha was NOT verified: /api/diag/version needs the diag token. OBSERVED: no. 0 placed tickets across prop accounts at 10:36Z (/api/bot/prop/tickets?status=placed), so no stale-entry cancel is pending. observe: when = the next phone stale-entry cancel that reports not_found; how = GET /api/bot/prop/tickets?account_id=breakout_2 and check that ticket's meta.phone_cancel.position_check.verdict (filled_* -> ticket filled, never_filled -> skipped, unverified -> placed + one alert), plus /api/diag/version git_sha includes 3c02b4935. Revert: revert #25194.",
+  "phase": null,
+  "updated_at": "2026-11-12T10:35:25Z",
+  "updated_by": "session_01AFoLuK7LNskMkynxgJmJ5s",
+  "week_lane": "surge"
+}

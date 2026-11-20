@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "PI-20261119-QDOYBTSN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "session_01AFoLuHwqqyiix4qDoybTSN",
+    "kind": "audit",
+    "ref": "manager 2026-11-19 15:11Z; alerts ledger 14:35-14:38Z; journal trades 7780-7783; row ALPACA-CLOSE-BROKER-TRUTH",
+    "rerun": "curl -sS \"https://ict-bot.duckdns.org/api/diag/journal?table=trades&limit=300\" | jq -r \".[] | select(.exit_reason==\\\"exchange_reset_flat\\\") | [.id,.account_id,.symbol,.exit_price,.pnl,.closed_at]|@tsv\"   # a fill-explained vanish closing as exchange_reset_flat with NULL price = the defect recurring"
+  },
+  "owner": "AM-OPS-8",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "alpaca 'Account RESET suspected' false positive: at 2026-11-19 14:35:40Z it fired on alpaca_paper because 6 SPY/QQQ positions vanished in one snapshot. They were the US-open stop-outs (venue SL fills), not a reset, and it pushed QQQ 7780/7781/7782 onto the exchange_reset_flat path with exit_price and pnl NULL (7783 via stuck_strategy_watchdog likewise). The reset detector must check for venue fills or closed orders on the vanished symbols before calling a vanish a reset; a fill-explained vanish must close through the normal fill-priced path (exit_reason sl/tp, MEASURED pnl). Paper only today; the same path would mis-close real-money rows."
+}

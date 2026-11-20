@@ -1,0 +1,30 @@
+{
+  "id": "CAP-PROP-LIVE-DRILL",
+  "title": "Prove every prop capability that is code-only on the venue, once each: tradeify_1 SL amend; velotrade_1 TP amend, cancel, close; breakout_2 widen, TP amend, close, cancel",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": "session_01AFoLuJzdJ1pqfWMuANiJ1w",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11 (CAPABILITY-MATRIX-LIVE); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    {
+      "clears_when": "manual",
+      "kind": "manual",
+      "owner": "AM-TRADING",
+      "ref": "operator reactivates breakout_2"
+    }
+  ],
+  "due_by": "2026-11-17",
+  "note": "MEASURED gap: these cells have code + a unit test but no recorded live event (matrix \u00a7 2). Done = one small-trade drill per cell, each with a journal event or system-action run id written into the matrix, or the cell marked gap. Tier 2: needs an operator OK in chat per OPERATING-PLAN \u00a7 2 (new mechanics prove on ONE small trade). Includes TRADEIFY-MODIFY-PANEL's missing observation (fix 228bb073 deployed-not-observed). Lane CAPABILITY-MATRIX-LIVE 2026-11-11; matrix docs/reference/account-capability-matrix.md (cell refs in \u00a7 2). Filed from the matrix; roadmap mapped by the manager at the weekly pass. [2026-11-12 ~09:20Z OPERATOR via Manager 2026-11-11a] SURGE, verbatim: \"The system needs to be able to do that on its own. I'm not doing it manually anymore. Enough is enough.\" Goal: the system carries out a decided close / partial close / tighten on every prop account (breakout_2 via the phone executor; tradeify_1, velotrade_1 via their adapters) with no operator at a terminal. Mandate proposal MD-LTR-PROP-AUTO: PR #25214 (proposed only). Spawn requested by AM-TRADING. [2026-11-12 09:45Z lane session_01AFoLuJzdJ1pqfWMuANiJ1w] MEASURED (phone_steps): Positions moved to CARDS; sheetTarget answered no_grid, so tighten amends 09:00Z/09:05Z stopped at sheet_not_open, and close (same sheetRead) is blocked too. PR #25226 (Tier 2, stacked on #25197): exec.js opens the sheet from the card's [Details] button, no APK. PR #25227 (Tier 2): a reduce is served only to an app declaring 'reduce' (the installed build's measure-click could make a reduce a full close once the sheet opens). LANDED_UNPROVEN after merge+deploy: observation that closes it = ONE Tier-1 phone-drill rehearsal on breakout_2 (no symbol) whose steps show sheet opened_by child_entry/native + details_match + modal_open. Partial close needs ONE batched APK (Kotlin reduce is hard-coded measure-and-dismiss): claim declares reduce, Kotlin calls exec.js reduceFill/reduceConfirm, Positions qty re-read; blocked on measuring the close dialog (the drill shows it). Cells: close / tighten = code-ready pending deploy+drill; partial = APK pending; TP amend / cancel = not yet exercised. [2026-11-12 lane CAP-PROP-VM-CLOSE] new cells from PR #25230 need one small-trade drill each: velotrade_1 close, velotrade_1 partial_close, tradeify_1 close (plus the existing tradeify_1 SL amend). Drill plan sent to AM-TRADING; nothing placed. [2026-11-12 14:42Z handoff] Drills now tradeify_1/velotrade_1 only (breakout_2 on ice). clears_when: matrix \u00a7 2 carries a journal line / run id for velotrade_1 close, velotrade_1 partial_close, tradeify_1 close (and tradeify_1 TP move after #25272). Watch owner: AM-TRADING. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session); state stays blocked. still blocked: operator reactivates breakout_2.",
+  "phase": "now",
+  "updated_at": "2026-11-15T11:31:12Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

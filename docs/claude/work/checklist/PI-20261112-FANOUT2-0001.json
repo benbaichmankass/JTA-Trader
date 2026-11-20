@@ -1,0 +1,21 @@
+{
+  "id": "PI-20261112-FANOUT2-0001",
+  "title": "[ci] issue fan-out phase 2: route the 15 'labeled'/'opened+labeled'/'reopened' issue workflows (arm-candidate-diag, cutover-live, deploy-candidate, provision-live-vm, reserve-live-ip, reset-instance, terminate-instance, vm-bybit-diag, vm-fix-devnull, vm-ib-gateway-live-login-test, etf-history-pipeline, hf-lake-storage, kaggle-backups, options-snapshot-capture, external-issue-alert) through issue-router so a 1-label issue creates ~6 runs instead of 34 (measured 34 on #25067 after phase 1, #25035). Needs: router also on issues:labeled dispatching only the ADDED label (github.event.label.name) for labels added after open, so create-with-label is not double-dispatched; rewrite of github.event.label.name / github.event.action reads in those workflows; title-prefix workflows (alpaca-options-probe, branch-protection-report, delete-merged-branches, vwap-backtest) need a title->event_type map; self-hosted ones stay on issues (operator trigger allowlist). Tier 1. Tool: scripts/ops/issue_router_migrate.py.",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 150,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "check_observation",
+  "due_by": "2026-11-18",
+  "week_lane": "throttle"
+}

@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the 00:01:27Z caller is named from journal evidence, or a later day shows another restart with intent=None and no deploy/system-action match (investigate that one instead)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-ARTCHURN-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": "journalctl for ict-ops-runner / ict-desk-build@* / ict-liveness-watchdog around 2026-11-12T00:01Z",
+    "what": "caller of the 00:01:27Z restart"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane TRADER-RESTART-CHURN (AM-ML / Manager Session 2026-11-11a), PR #25457",
+    "rerun": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-ops-runner&since=2026-11-11%2023:55:00&until=2026-11-12%2000:03:00&lines=200'"
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "Unattributed trader restart 2026-11-12T00:01:27Z: a clean systemctl stop and start, with no ict-git-sync run between 23:45Z and 00:02Z, no system-action issue (only a send-ping at 23:55Z), and no boot_audit restart report for that PID. Find the caller (candidates: the ict-ops-runner path unit, ops_actions, a desk-build oneshot) and make it write the restart-intent marker."
+}

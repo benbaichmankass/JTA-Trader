@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "security-posture-report outside probe (external_port_probe.py) shows trader-public 8001 CLOSED, https://ict-bot.duckdns.org/api/health 200, the SPA loads browser-direct, and /api/diag/version shows ict-web-api and the trader on the deployed sha",
+    "kind": "event"
+  },
+  "id": "PI-20261112-VJUBVNXS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SEC-8001-LOCKDOWN (session_01AFoLuMBna38VjYvJUbVnXS)",
+    "rerun": "dispatch system-action security-posture-report and read the 'trader-public 8001' line; curl -s -o /dev/null -w '%{http_code}' https://ict-bot.duckdns.org/api/health"
+  },
+  "routed_to": "SEC-8001-LOCKDOWN",
+  "state": "done",
+  "terminal_reason": "Cleared 2026-11-12 20:35Z, all clears_when legs observed: outside probe vm-net-diag run 43295719636 raw :8001 curl exit 28 (closed; security-posture-report #25353 at 15:13Z also read tcp/8001 TIMEOUT) after OCI ingress rule removal (run 43288323346, removed=1, left=0); https://ict-bot.duckdns.org/api/health 200; WS /ws/market 101; SPA loaded browser-direct (13 API responses, 0 failed); /api/diag/version web-api 04a8fcd9 + trader 376705e7a, both past #25185.",
+  "what": "SEC-8001-LOCKDOWN (operator decisions page m3, 2026-11-12) is landed_unproven until it is observed from outside. Chain: #25182 (clients to HTTPS, Tier 1 self-land), then #25185 (uvicorn bind 127.0.0.1, HELD, manager merges; MEASURED: its deploy also restarts the trader per trader_import_closure decide), then #25190 (system-action close-api-port, HELD; dispatch after #25185 deploys, it refuses unless :8001 is loopback-only), then the step-4 outside verification in clears_when. Kill condition: the operator reverses m3.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: the outside verification of the :8001 lockdown chain EVIDENCE: Row SEC-8001-LOCKDOWN (queued, operator decisions page m3 2026-11-12); chain #25182 -> #25185 -> #25190 named in the item\n\n[2026-11-12 20:35Z SEC-8001 lane] DONE: see terminal_reason."
+}

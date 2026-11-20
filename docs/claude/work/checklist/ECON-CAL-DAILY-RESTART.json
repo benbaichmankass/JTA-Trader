@@ -1,0 +1,22 @@
+{
+  "id": "ECON-CAL-DAILY-RESTART",
+  "title": "Daily econ-calendar PIT snapshot commit edits config/economic_calendar.yaml and restarts the live trader (unbatched)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 7,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "2026-11-16 02:40Z manager. MEASURED: #26438 (automation econ-calendar run 43791570520, merged 02:32:53Z) touched config/economic_calendar.yaml. trader_import_closure says non_py_runtime, so it RESTARTS. The trader restarted at 02:34Z: 21/21 positions tracked, SL+TP 21/21, so the restart was clean. The same automation touched the file on 11-15 at 02:14Z (#26180), so this is about one unbatched restart a day, outside any sync window. Fix options: (a) the snapshot job stops rewriting config/economic_calendar.yaml (write only comms/macro/*); (b) the trader hot-reloads that file instead of restarting; (c) the deploy treats calendar-only diffs as reload, not restart. Closing observation: a daily snapshot merge with no trader restart. Not urgent; after the reset.",
+  "phase": null,
+  "updated_at": "2026-11-16T02:36:36Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

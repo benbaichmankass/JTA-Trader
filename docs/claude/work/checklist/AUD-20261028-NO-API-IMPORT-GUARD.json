@@ -1,22 +1,29 @@
 {
   "id": "AUD-20261028-NO-API-IMPORT-GUARD",
   "title": "Nothing detects a new Anthropic SDK importer; 3 exist (canonical names 2), and the operator decision on them has no row",
-  "phase": null,
   "state": "queued",
   "owner": "manager",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "WEEKLY-AUDIT-2026-10-28 (CLAUDE.md 'Nothing spends Anthropic API credits', 2026-10-27). MEASURED: grep '^import anthropic|^from anthropic' over src scripts ml -> src/runtime/insights/generator.py, src/prop/screenshot_parse.py, scripts/research/desk_judge_api.py. Canonical text names the first two as 'reported to the operator for a decision'; desk_judge_api.py is unnamed; no checklist row carries that decision (grep of checklist for screenshot_parse|insights/generator: 0 rows). Fix (Tier 1): CI guard allowlisting exactly these 3 importers (fail on a 4th) + this row holds the operator's keep/disable decision for each. Detector: the guard + self-test. next_action: ask_operator for the decision part. [DEEP-AUDIT-20261104 L0] call HIT; risk REMOVED: all 3 named importers now hard-refuse (insights/generator.py _call_anthropic, prop/screenshot_parse.py _call_vision_anthropic, desk_judge_api.py make_client raises SystemExit); grep for import anthropic over the repo: 0 hits. Remaining = the detector, which is a CI guard and so needs the operator under No new gates: see AUD-20261104-DETECTOR-IS-A-GATE.",
-  "updated_at": "2026-11-04T18:47:02Z",
-  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
   "roadmap": [
     "L-OPS"
   ],
-  "due_by": "2026-11-06",
-  "_seq": 760
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "_seq": 760,
+  "lane_history": [
+    {
+      "archived_at": "2026-11-18T18:19:15Z",
+      "lane": "session_01AFoLuJUGfpon2bNgwFbFmx"
+    }
+  ],
+  "note": "WEEKLY-AUDIT-20261111 L0: UNRESOLVED, STALLED: risk still removed (0 importers per prior grep, not re-run); the detector is now unblocked as report-only (operator 11-06). Re-dated.",
+  "phase": null,
+  "updated_at": "2026-11-18T18:19:17Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "week_lane": "throttle"
 }

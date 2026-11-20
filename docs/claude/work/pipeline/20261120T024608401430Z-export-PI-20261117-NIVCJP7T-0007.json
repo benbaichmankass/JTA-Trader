@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "scripts/research/pool_arm_diff.py accepts harness_stage0 cells/ input with a self-test, or node P5-RG1025-trend-pooled is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-NIVCJP7T-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261117-1006 (session_01AFoLuMNJLaELyLniVCjP7T), authoring-queue triage (fork C) and orphan pass (fork A)",
+    "rerun": "python3 scripts/research/pool_arm_diff.py --help | grep -i cells"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "pool_arm_diff.py needs a --cells mode: it cannot read harness_stage0's cells/ output, which blocks P5-RG1025-trend-pooled (pooled paired read over f679-02/-03 + 4b82-05; pooled n 15.8k vs the node's 18k target). Build it (Tier 1) or re-point the node at a reader that exists."
+}

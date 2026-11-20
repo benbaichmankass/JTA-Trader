@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "python3 - <<'X'\nimport sys; sys.path.insert(0,'.')\nfrom pathlib import Path\nfrom scripts.research import queue_replenish as q\nf=q.repo_facts(Path('.')); from scripts.research.regime_debt_matrix import classify\nprint([l for l in f['legs'] if not classify(f['configs'].get(l) or {})])\nX"
+  },
+  "routed_to": "RESEARCH-TEMPLATE-LEG-GAPS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[research templates] live roster legs with NO structured walk-forward design: claude_desk, e4_oi_shock_1h, turtle_soup (regime_debt_matrix.classify returns None, so exit_lever_ablation cannot route them; the old E7 harness dispatch did not cover them either). Each needs a harness class in classify (or its own sweep wrapper) before roster-walkforward can emit a control+variant design for it.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Legs with no harness class are the \"unrunnable legs\" class of this row. EVIDENCE: Row RESEARCH-TEMPLATE-LEG-GAPS note: roster-walkforward emits legs exit_lever_ablation cannot run (turtle_soup-class); claude_desk / e4_oi_shock_1h / turtle_soup still on bybit_1 roster (config/accounts.yaml:230)."
+}

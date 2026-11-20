@@ -1,0 +1,23 @@
+{
+  "id": "ML-PLAN-STATUS-STALE-SOURCE",
+  "title": "ml_plan_status.py reads the frozen WSD-S4 checklist export, not the work store, so ML plan ref_states and UNPLANNED flags are stale",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJGorYstW93VXnnqtM",
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "prs": [
+    25268
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Found 2026-11-12 by AM-ML. MEASURED: scripts/ops/ml_plan_status.py:72 globs docs/claude/work/checklist/*.json directly; src/runtime/checklist_store.py (read_row/load, WSD-S4) reads the live work store after the freeze. Symptom on main 2026-11-12 ~09:10Z: the tool showed ML-LIVE-FIRST / ML-TIMEFRAME / ML-UNIVERSE-RULE in_flight and FRONTIER-LEVER-HARNESS-COSTS queued, while the store said queued/queued/queued/done. Lane OPDEC-P7-LEVERS (#25218 body) confirmed the files are the frozen export, not git-sync lag. Fix: read rows via checklist_store (checklist-readers-guard names the sanctioned reader), with a test that a store/file disagreement resolves to the store. Also check for any other ML tool that globs the frozen files. Tier 1.",
+  "phase": null,
+  "updated_at": "2026-11-13T12:49:40Z",
+  "updated_by": "session_01AFoLuJGorYstW93VXnnqtM"
+}

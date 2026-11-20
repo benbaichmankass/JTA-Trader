@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~09:50Z",
+    "rerun": "python3 scripts/ops/strategy_status.py | grep gld_pullback_1h; /api/diag/open_packages (pkg-8106d5eef6fc425c); /api/diag/exchange_positions alpaca_paper GLD"
+  },
+  "state": "killed",
+  "terminal_reason": "Superseded: the GLD position is gone; the operator deleted and recreated the paper account on 2026-11-09, and alpaca_paper held no GLD on 2026-11-11. | evidence: Row GLD-WEDGE-RETRO note: wedge 08-27 to 11-09, operator \"i had to delete that paper account and create a new one\"; config/pairs.yaml:77 \"MEASURED 2026-11-11 ~22:30Z via /api/diag/exchange_positions: no GLD leg on alpaca_paper\".",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "gld_pullback_1h is INACTIVE per scripts/ops/strategy_status.py (2026-11-03, population 60 legs: inactive 3), yet its package pkg-8106d5eef6fc425c / trade 5209 (GLD LONG, 39 sh on alpaca_paper, entry 2026-08-29) is still OPEN: venue SL 416.09 / TP 461.27 resting, unrealised about -2,391 USD (/api/diag/exchange_positions 07:44Z). A retired leg still holding a position: confirm which monitor manages it now (is its monitor() still ticking after retirement?), and decide close vs keep under its retirement record.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Superseded: the GLD position is gone; the operator deleted and recreated the paper account on 2026-11-09, and alpaca_paper held no GLD on 2026-11-11. EVIDENCE: Row GLD-WEDGE-RETRO note: wedge 08-27 to 11-09, operator \"i had to delete that paper account and create a new one\"; config/pairs.yaml:77 \"MEASURED 2026-11-11 ~22:30Z via /api/diag/exchange_positions: no GLD leg on alpaca_paper\"."
+}

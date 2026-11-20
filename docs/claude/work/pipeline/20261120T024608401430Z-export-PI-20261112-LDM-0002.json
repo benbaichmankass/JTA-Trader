@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "live_decay_cusum.py --coverage reports monitorable for ml_entry, ml_entry_eq_struct and the prop legs, or each is killed with a stated reason",
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261112-LDM-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LIVE-DECAY-MONITOR (AM-TRADING, 2026-11-12)",
+    "rerun": "python3 scripts/research/live_decay_cusum.py --coverage"
+  },
+  "state": "queued",
+  "what": "LIVE-DECAY-MONITOR coverage gaps (MEASURED 2026-11-12 by live_decay_cusum.py --coverage over config/accounts.yaml): (1) ml_entry (bybit_2 + prop) and ml_entry_eq_struct (alpaca_live) have NO committed Stage-0 per-trade series (the evidence record cites a source_run that is not a committed file), so the CUSUM cannot run on them; (2) prop-only legs trend_donchian_eth_4h and trend_donchian_sol_4h (breakout_2, tradeify_1, velotrade_1) have a Stage-0 series but their live closes are in the prop VM prop_fills, not on a public route, so we could not look. These legs are not minted by the live-decay template (a unit that can only say could-not-look is noise). Close by committing the per-trade series for (1) and exposing a read-only prop live series for (2); the template then picks them up with no edit."
+}

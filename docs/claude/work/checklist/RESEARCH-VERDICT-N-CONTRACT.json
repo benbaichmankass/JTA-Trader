@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-VERDICT-N-CONTRACT",
+  "title": "Research producers keep landing producer_failed on 'n must be present': add a shared verdict writer (or a CI self-test that every scripts/research producer's verdict.json carries top-level n) so the class stops recurring",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "[2026-11-18 PROGRAMME-REVIEW-20261118] Second instance in two weeks: alpaca_baseline_affordability.py (fixed 2026-11-04, run 42145318852) and alpaca_live_book.py (fixed in PR #26874; 207f-01/-04 and c21d-06 x2 producer_failed since 2026-11-13, masked because siblings were hand-graded). Contract enforced in scripts/research/script_run.py:605. Done when: one shared writer is used by both, or a guard fails a producer whose verdict dict lacks n. No new gate on trading; a CI check on research tooling only, needs the manager's OK per 'No new gates'. 2026-11-18 manager: this adds a research-tooling CI check, so it is a NEW GATE. Under the binding no-new-gates rule only the operator can permit it; the manager cannot. Not built. Put to the operator in the 2026-11-19 email. Until they answer, fix the producer defect class without a gate: each producer self-test asserts a top-level n.",
+  "phase": "W47",
+  "updated_at": "2026-11-18T19:40:21Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

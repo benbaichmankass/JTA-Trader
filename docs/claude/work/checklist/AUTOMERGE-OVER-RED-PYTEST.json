@@ -1,0 +1,23 @@
+{
+  "id": "AUTOMERGE-OVER-RED-PYTEST",
+  "title": "Self-landing research producers validate their own output (run the tests that read what they write) before opening or landing a PR; respects the operator 2026-11-12 PYTEST-RUN-REQUIRED: REPORT-ONLY decision",
+  "state": "in_flight",
+  "owner": "AM-OPS-10",
+  "lane": "session_01AFoLuJvENzG66GcgnCTd2z",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    27529
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-21",
+  "note": "Filed by AM-OPS-9 on manager dispatch 2026-11-19 22:40Z (Manager Session 2026-11-15a), before any fix. INCIDENT (manager-reported, to be verified): replenish PR #27507 (from run 44621967111) merged 22:30:41Z with pytest-run = FAILURE while guards and pytest-collect were green; main went red on test_research_queue (RQ-20261119-031 is missing power.sd; AM-OPS-8 owns the unit fix). TASK: (1) find which path merged it (claude-pr-automerge, a research landing workflow, or the replenish workflow's own merge step) and which checks it waits for; (2) make an automated research PR never land over a red pytest-run. That enforces the existing rule 'never merge over a red guard/test', so it adds no gate. Tier 1 if it is CI/workflow config only. [2026-11-19 22:55Z AM-OPS-9] DIAGNOSED (MEASURED). #27507 merged 22:30:41Z, 3 s after guards completed (22:30:38Z), while pytest-run was still running (22:25:13 to 22:39:08Z, then failure). Path: research-queue-replenish.yml -> .github/actions/commit-to-main -> GitHub native auto-merge, which waits for REQUIRED checks only. Required = ['guards'] (branch-protection-sync.yml:167), per the operator's 2026-11-12 decision PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY (lane GATE-CI-LANDING, .github/pr-landing/gate-ci-landing-bp.json, docs/claude/ci-status-checks.md:43). No malfunction: the merge followed the operator's choice. A merge-side pytest-run wait for automation would re-add a gate the operator removed, so it is NOT built. Proposed to the manager: (P) producer-side validation, where replenish and the other self-landing research producers run the tests that read what they write BEFORE opening the PR, and on failure open nothing, file one item and retry. That adds no gate. (Q) If a merge-side rule is wanted, put it to the operator. Awaiting the manager's choice. [2026-11-19 22:46Z AM-OPS-9] Manager chose P (22:43Z): producer-side validation, NOT a merge-side gate. It respects the operator's 2026-11-12 decision PYTEST-RUN-REQUIRED: MAKE REPORT-ONLY. Scope, in order: research-queue-replenish, then batch-land results, then dispatch stamps. Each runs, on its generated tree before opening or landing anything, the tests that read what it writes. On failure it lands nothing that run, files one pipeline item (deduped) and retries next run. Tier 1. Not Q: the manager will not ask the operator for a merge gate. Build in progress (AM-OPS-9). [2026-11-19 23:45Z AM-OPS-9] Built and reviewed: held PR #27529, head 9c952d88fab5c307c6a248d85a8f252a5e39526f. scripts/ci/validate_before_land.py plus wiring. Replenish runs profile research-queue, strict. Dispatch runs results and stamps profiles with --baseline-ref, where pre-existing main-red failures are forgiven so a stamp cannot loop on re-fire. Each landing is gated on its validation ok. On failure: one deduped item, exit 0. Two points put to the manager: the baseline forgiveness (it masks a new failure on a test id already red on main) and the edited fire-gate test assertion, which now accepts exactly one extra if-string. Locally I re-ran 55 tests plus the self-test. Not yet observed: the first real runner run of each producer, and the first real filing. [2026-11-19 23:40Z AM-OPS-9] Rotated to AM-OPS-10 (session_01AFoLuJvENzG66GcgnCTd2z) on manager instruction; full state is in the handoff message. [2026-11-20 00:43Z AM-OPS-10] PR #27529 (producer-side validation) MERGED at about 00:42Z by the manager, head 9c952d88fab5c307c6a248d85a8f252a5e39526f, all CI green. Merged, not yet observed. Closes when (1) each producer's first real run (research-queue-replenish, the research-queue-dispatch results batch, and the dispatch stamps) logs a validate_before_land pass and then lands, and (2) the first real failure files exactly one 'PRODUCER VALIDATION FAILED [<producer>]' item. The live filing path is unverified until then.",
+  "phase": null,
+  "updated_at": "2026-11-20T00:42:43Z",
+  "updated_by": "session_01AFoLuJvENzG66GcgnCTd2z"
+}

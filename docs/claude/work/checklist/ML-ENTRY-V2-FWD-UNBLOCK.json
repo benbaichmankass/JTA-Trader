@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-V2-FWD-UNBLOCK",
+  "title": "[MODEL] Unblock RQ-20261101-b610-01 (ENTRY v2 forward read vs v1): the harness reads window S instead of the count-closed fresh window",
+  "state": "done",
+  "owner": "AM-ML",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Found by ML-PROGRAMME-CONSOLIDATION step 3 D3 (2026-11-12). research/queue/blocked/RQ-20261101-b610-01.yaml blocked_on harness: scripts/research/ml_entry_v2_run.py levers --window symbol-holdout reads window S rather than waiting for 1,100 label-free candidates since 2026-11-01; clears when it lands with a self-test that the count-closed window is not used. This is the ONLY forward v1-vs-v2 read; the W1 read (b609-01) already failed v2 (-0.1161 at n 320 vs frozen v1 -0.0405). v2 is a TESTING leg on bybit_1 (demo floor), not live, so no live demotion is implied. [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D3-FOXHOUND-2 in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none. [2026-11-12 ~20:10Z lane ML-DECISION-MODELS session_01AFoLuHrh2txGoKFBMCuhC9] SETTLED by PR #25278 (head bda8ff1a3, hold; manager merges). Built scripts/research/ml_entry_v2_symholdout.py instead of a levers --window option; self-test proves the window is fixed by constants (never count-closed) and that holdout_lock rule 4 refuses the registered 2022-01 S window (it overlaps v2 training dates, GEXSLEAK). Amendment (pushed c757d428c before any run): S read on its time-disjoint slice 2026-09-24..2026-10-31, first 100 S symbols. READ DONE: FAIL, frozen v2 -0.0443 R/decision (n=948, 73 symbols) vs frozen v1 reference +0.0245 (n=1,857) on the same rows; record research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl; unit moved out of blocked/. Nothing left for this row except the merge: CLOSES when #25278 is on main (then done). [2026-11-12 ~21:00Z lane ML-DECISION-MODELS] CLOSED: #25278 merged; verified on origin/main: scripts/research/ml_entry_v2_symholdout.py, research/queue/RQ-20261101-b610-01.yaml (out of blocked/), the result research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl (FAIL, v2 -0.0443 n=948 vs v1 +0.0245) and both symholdout ledger claims. Nothing left.",
+  "phase": null,
+  "terminal_reason": "b610-01 unblocked and read via PR #25278 (merged): FAIL",
+  "updated_at": "2026-11-12T20:57:51Z",
+  "updated_by": "session_01AFoLuHrh2txGoKFBMCuhC9"
+}

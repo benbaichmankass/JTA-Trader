@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "compute_router routes an uncovered fetch unit to github_runner without a hand-written why_runner, with a test, or the manager records why not",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0009",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19 3h check-in, runs 44593885761 and 44598175450",
+    "rerun": "python3 -c \"import yaml,sys; sys.path[:0]=[\\\".\\\",\\\"scripts/research\\\"]; import candle_dataset as cd; print(cd.covers(yaml.safe_load(open(\\\"research/queue/RQ-20261119-8260-02.yaml\\\"))))\"   # False means the dataset cannot serve it"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "Router default sends an exit_lever_ablation unit to the no-internet Kaggle kernel when the candle dataset does not cover its fetch and the unit has no routing.why_runner. MEASURED 2026-11-19: 8260-02 (BTC 5m, --days 2610) and 8260-03 (SOL 15m, --days 2290) ran on Kaggle and failed with a DNS error on data.binance.vision; candle_dataset.covers() was False for both (days_built 1830 < days). Runner pins added by hand in the PR for those two units. The same shape cost the four mgc_15m units 11 failed runs (yfinance, a separate cause, fixed by the dukascopy flag). Proposed fix: in compute_router.runner_only_reason, treat a unit for which candle_dataset.unit_feed() returns a feed and covers() is False as runner-only without needing why_runner; covers() stays the single source. Not a gate: it removes a guaranteed failure and sends the unit to a backend that can run it."
+}

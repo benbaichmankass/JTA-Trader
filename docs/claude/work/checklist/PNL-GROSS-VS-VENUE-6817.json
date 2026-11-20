@@ -1,22 +1,27 @@
 {
   "id": "PNL-GROSS-VS-VENUE-6817",
   "title": "Journal pnl is gross local compute (-786.10) vs venue closed_pnl (-888.30) on trade 6817: which is stored as pnl, should every close take venue closed_pnl",
-  "phase": "research",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": "CLOSE-REASON-XRP-1220",
+  "lane": "JOURNAL-TRUTH",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Links to COST-BROKER-SOURCED. Trade 6817 (bybit_1 XRPUSDT long, 74160 qty): journal pnl -786.096 (pnl_source local_compute = (1.2476-1.2582)*74160, no fees) vs Bybit closed_pnl -888.3026 (venue figure, includes fees; journal fee_taker_usd estimate 102.64 + 786.10 = 888.74 vs 888.30). Questions: (1) is journal pnl meant to be gross with fees held separately in fee_*_usd, or net; (2) should every close take venue closed_pnl where the venue serves a trustworthy one (demo closed-pnl is deliberately untrusted, BL-20260608-DEMOPNL, so for bybit_1 the gap is by design); (3) which figure do graders and promotion records read. Measure over closed bybit rows: sum(pnl) vs sum(venue closed_pnl) per account before deciding. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-13. Tier 3 question. The journal diag surface exposes no venue closed_pnl column (checked 1000 newest trades), so sum(pnl) vs closed_pnl cannot be measured from it; cost_source=broker now on most closed rows (bybit_1 296 broker/151 estimate of 458 closed in newest 1000). Needs a lane with the closed-pnl store; relates to COST-BROKER-SOURCED.",
-  "updated_at": "2026-11-06T06:00:00Z",
-  "updated_by": "lane-BACKLOG-DRAIN-20261106",
-  "due_by": "2026-11-13",
   "roadmap": [
     "L-OPS"
   ],
-  "_seq": 878
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25247,
+    25270
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "_seq": 878,
+  "clears_when": "PR #25270 merged, then landed_unproven with observe = closed Bybit rows carry pnl_basis=venue_net with pnl equal to the venue closed_pnl, and scripts/ops/venue_pnl_gaps.py --mode real --json runs against the live journal",
+  "note": "Links to COST-BROKER-SOURCED. Trade 6817 (bybit_1 XRPUSDT long, 74160 qty): journal pnl -786.096 (pnl_source local_compute = (1.2476-1.2582)*74160, no fees) vs Bybit closed_pnl -888.3026 (venue figure, includes fees; journal fee_taker_usd estimate 102.64 + 786.10 = 888.74 vs 888.30). Questions: (1) is journal pnl meant to be gross with fees held separately in fee_*_usd, or net; (2) should every close take venue closed_pnl where the venue serves a trustworthy one (demo closed-pnl is deliberately untrusted, BL-20260608-DEMOPNL, so for bybit_1 the gap is by design); (3) which figure do graders and promotion records read. Measure over closed bybit rows: sum(pnl) vs sum(venue closed_pnl) per account before deciding. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-13. Tier 3 question. The journal diag surface exposes no venue closed_pnl column (checked 1000 newest trades), so sum(pnl) vs closed_pnl cannot be measured from it; cost_source=broker now on most closed rows (bybit_1 296 broker/151 estimate of 458 closed in newest 1000). Needs a lane with the closed-pnl store; relates to COST-BROKER-SOURCED. 2026-11-12 lane JOURNAL-TRUTH MEASURED (evidence docs/research/pnl-gross-vs-venue-6817-2026-11-12.md; 157 closed bybit rows, closed_at 2026-10-28..2026-11-12T09Z, matched to raw /v5/position/closed-pnl): bybit_2 journal pnl == venue NET on 23/24 rows (sum -2.92 vs -2.94). bybit_1 is GROSS: 104 matched, sum 2682.82 vs venue -2544.16, gap 5226.98 = 4544.97 fees+funding + 682.01 entry basis; 79/104 differ on entry (INFERRED netting: venue avg_entry is a position average). bybit_portfolio: gap 727.98 = 1120.22 fees - 392.24 entry basis. Journal cost columns match venue-implied fees within 1-2% on all three. DEFECT: net_r_label.net_r_for_trade treats pnl as gross and subtracts costs, so bybit_2 (pnl already net) is costed twice: over 15 bybit_2 ml_entry closes mean net R reads 0.2193 against 0.2994 correct (-0.08 R/trade), and ml_entry_live_monitor reads it. PROPOSAL (Tier 3, operator decides): store pnl NET on every account as own-fill gross minus the row's own fee/funding columns, stamp notes.pnl_basis=net, never store venue closed_pnl on a netting account, and have net_r_label add costs back when pnl_basis=net. Alternative: GROSS everywhere. Awaiting the operator's choice via the manager. [2026-11-12 10:15-10:22Z OPERATOR decisions page, relayed by Manager 2026-11-11a] w11: \"Yes: store the venue's net closed P&L where trusted\"; note \"Store the venue's always, it is the single source of truth and if we have a gap we need to understand why\". => store the venue figure ALWAYS; every gap vs our computed figure is a diagnosis item. 2026-11-12 lane JOURNAL-TRUTH: operator decision w11 built as PR #25270 (Tier 2, hold). trades.pnl = venue net closed P&L on every Bybit account (demo included), IB venue_net, Alpaca venue_fills_net; pnl_computed + pnl_gap_usd beside it; gap tolerance max(0.25 USD, 1%); scripts/ops/venue_pnl_gaps.py lists gaps and unmatched rows; net_r_label no longer double-costs venue-net rows. Not yet merged/deployed/observed. Done-condition: closed Bybit rows carry pnl_basis=venue_net with pnl equal to the venue closed_pnl, and venue_pnl_gaps.py reports the gap population. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session). blockers #25247 (2026-11-12) and #25270 (2026-11-14 17:35Z) merged. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation.",
+  "phase": "research",
+  "updated_at": "2026-11-15T11:30:32Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
 }

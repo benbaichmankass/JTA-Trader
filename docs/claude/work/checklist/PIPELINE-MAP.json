@@ -1,0 +1,21 @@
+{
+  "id": "PIPELINE-MAP",
+  "title": "Trading pipeline map: one generated map of the trading pipeline (technical and trading halves side by side) on the Work tab, from sources of truth, plus the live route GET /api/bot/work/pipeline-map (operator request 2026-11-14)",
+  "state": "landed_unproven",
+  "owner": "AM-OPS",
+  "lane": "AM-OPS",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed by AM-OPS 2026-11-15 ~02:10Z on the manager's handoff (no row existed in the store; the PIPELINE-MAP lane archived itself at 02:00Z). LANDED: #26143 (squash 05829538, 'pipeline map: generated from sources of truth + live route GET /api/bot/work/pipeline-map') and dashboard #270 (c6b15c8d), both merged. Manager verified live 02:04Z: the Pages bundle carries the view and the route returns 200 source=live; operator pinged 02:04Z. CLOSING OBSERVATION: the operator sees the map render on the Work tab. UPKEEP (verified by AM-OPS): weekly, via weekly-audit check C15 (.claude/skills/weekly-audit/SKILL.md line 118 -> doc-freshness 'Weekly core-doc currency': python3 scripts/ops/pipeline_map_numbers.py refreshes docs/reference/trading-pipeline-map.md). weekly-audit is dispatched by the Wednesday weekly reset at +31m (reset_protocol.py --plan 2026-11-18T18:00Z -> '18:31Z weekly-audit, lane:WEEKLY-AUDIT'). No new guard (operator). WRITEBACK (roadmap L-OPS): the trading pipeline map is live on the Work tab, generated from sources of truth and refreshed weekly by weekly-audit C15.",
+  "phase": null,
+  "updated_at": "2026-11-15T02:06:08Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

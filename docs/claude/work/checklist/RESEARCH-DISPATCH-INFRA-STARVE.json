@@ -1,0 +1,25 @@
+{
+  "id": "RESEARCH-DISPATCH-INFRA-STARVE",
+  "title": "Research dispatch fired 0 units 17:43Z..22:33Z on 2026-11-12 (infra yield always met: system-actions + phone-executor-apk kept >= 2 fresh infra runs queued). Manager decision 22:33Z: infra-yield starvation floor (2 h, one fire/cycle), drop phone-executor-apk from infra_workflows, research-queue-health idle page 12 h -> 4 h. PR #25526. Done when the first unit fires after deploy (dispatch run id + unit id recorded). Gates: none.",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research pipeline health",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25526
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "2026-11-12 23:58Z AM-ML: dispatch run 43321043706 (created 22:33Z on pre-merge sha 8b5f1094) started late in the saturated queue and finished 23:51Z: it deferred every fire on 3 fresh infra runs (system-actions, system-actions-cancel-guard). That run did NOT have #25526. Queued run 43324373219 is also pre-merge (d72d920). The first run carrying the floor is the 00:20Z hourly slot or later; observation still open.",
+  "phase": "build",
+  "terminal_reason": "OBSERVED 2026-11-13 00:27:42Z: research-queue-dispatch run 43333749697 (post-#25526 sha a2a9ee0) logged 'starvation floor: nothing dispatched for 3.8 h (>= 2 h) -- lifting the infra block (2 infra run(s) queued (system-actions))' and dispatched RQ-20261101-78fc-13 (research-script-run.yml, route=runner, pick=starved) at 00:27:47Z -- first research fire since 17:45Z. #25526 merged efcef05b.",
+  "updated_at": "2026-11-13T01:23:56Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "PI-20261120-RIMARY13-0001",
+  "title": "[infra/trainer] Trainer VM disk FULL: trainer-vm-diag relay #27524 (run 44637050222, 2026-11-19 23:22Z) failed at 'git worktree add' with 'No space left on device' while checking out comms/research/* candle CSVs into /tmp; RQ-20261119-2780-04 (P1 iteration 3) therefore did not run (not a grade). Free space (stale /tmp/*_wt worktrees, runtime_logs/research scratch) via vm-ops (Tier 2), then re-post the 2780-04 relay unchanged; consider sparse worktrees (exclude comms/) for relays.",
+  "state": "done",
+  "owner": "ML-PRIMARY lane (successor inherits) + manager for the Tier-2 cleanup",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-21",
+  "note": "[2026-11-20 00:48Z AM-OPS-10] Disk cleared, closed at the manager's direction (00:25Z: 'ML-13's PI item can close against #27542'). trainer-vm-diag #27541 (00:22Z) measured / at 96G of 97G (1.1G free). #27542 removed /tmp/p1v023_wt and /tmp/p1v024_wt (6.5G each; no process inside, 0 changed or untracked files), leaving 83G used and 14G free. The 2780-04 relay re-run named in clears_when is NOT yet observed; ML-PRIMARY-14 was told at 00:36Z to re-post #27524. The recurrence fix is row TRAINER-RELAY-WT-DISK.",
+  "terminal_reason": "Disk cleared via trainer-vm-diag #27542 (1.1G -> 14G free); 2780-04 re-run handed to ML-PRIMARY-14; recurrence fix on TRAINER-RELAY-WT-DISK.",
+  "updated_at": "2026-11-20T00:29:46Z",
+  "updated_by": "session_01AFoLuJvENzG66GcgnCTd2z"
+}

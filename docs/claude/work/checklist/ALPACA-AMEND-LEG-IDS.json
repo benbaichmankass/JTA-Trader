@@ -1,0 +1,27 @@
+{
+  "id": "ALPACA-AMEND-LEG-IDS",
+  "title": "Alpaca trail/amend scopes legs by entry order id, not share count (same-size sibling trades refused as ambiguous_legs)",
+  "state": "done",
+  "owner": "AM-OPS-9",
+  "lane": "session_01AFoLuMdfKSRmey33cVTNak",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    27494
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-21",
+  "note": "Filed by AM-OPS-9 on manager dispatch (Manager Session 2026-11-15a). NOT covered by AMEND-PARITY-ALPACA-TRAIL-READBACK (that row is the read-back; its leg selection is the qty rule this fixes). INCIDENT (MEASURED): 2026-11-19 21:09Z alpaca_portfolio SLV short trades 7758/7766/7770 (qty=2 each) refused 'ambiguous_legs: 3 stop / 3 target leg(s) of qty=2.0' by src/units/accounts/alpaca_amend.py read_trade_legs; the monitor retries every tick. EVIDENCE for the fix (MEASURED, /api/diag/alpaca_open_orders?account_id=alpaca_portfolio captured 2026-11-19T21:21:58Z, population = all 14 resting SLV orders on that account): all 7 held stop legs are nested under the entry order whose id is the trade row's broker_order_id (/api/diag/journal trades, newest 500 rows ids 7558-8057), including the 3 stops PATCH-replaced at 21:00Z. FIX (Tier 2, order path): alpaca_amend reads GET /v2/orders/{broker_order_id}?nested=true and picks legs by id; falls back to the prior qty rule (still refusing ambiguity) when no id / read fails / no own leg of that kind; refuses an own leg sized unlike the row. execute.modify_open_order and exec_trade_leg/dry_run thread broker_order_id. Needs a ict-trader-live restart window; manager merges. Close-out observation: the next alpaca_portfolio SLV trail on 7758/7766/7770 logs 'alpaca stop applied' (or a named refusal that is not ambiguous_legs) in the modify_open_order journal line. [2026-11-19 AM-OPS-9] PR #27494 head 937d379e590a5ad59a646ad3f2c3ed27b93fd0c4, landing hold (tier 2). Follow-up named in the PR: the TP-only branch of _alpaca_modify_with_readback still uses qty-scoped modify_protective and would refuse same-size siblings the same way. [2026-11-19 22:00Z AM-OPS-9] Manager follow-up check, venue_tp under ambiguous_unneeded: NO silent skip. In alpaca_amend (branch head b13b143f) venue_tp/target_leg are read only (a) to build out['venue_tp'] for reporting, (b) on the new_tp path (refuses 'no target leg of this trade's size rests' when None), (c) in _verify for kind='target' only, and (d) as oco_leg_ids/venue_tp_after in the result. No stop-vs-target sanity check exists anywhere in tighten/_verify, so a stop tighten with target_leg None skips nothing that ran before. INFERRED from reading the code (grep of venue_tp/target_leg on the branch); no follow-up PR needed. [2026-11-19 22:33Z AM-OPS-9] PR #27494 MERGED 22:32Z at head b13b143f (guards, pytest-collect, pytest-run green). Merged; deploy/restart is the manager's; NOT yet observed. Closing observation: after the ict-trader-live restart, the next alpaca_portfolio SLV trail on 7758/7766/7770 logs 'alpaca stop applied' (or a named refusal that is not ambiguous_legs) in the modify_open_order journal line. Revert: the merge commit. [2026-11-19 22:41Z AM-OPS-9] OBSERVED, closing done. Deploy 1d544f1 (restart 22:37:43Z, manager report). Journal ict-trader-live 22:30-22:50Z grep SLV (read_state complete, 2501 lines scanned, 347 matched, not truncated): through 22:37:15Z every SLV trail on 7758/7766/7770 refused ambiguous_legs; from 22:37:40Z 'alpaca stop applied, venue reads 40.28' on stop legs f6b0077f (parent c64f9ccc=7758) 22:37:40, d5e0e002 (aa1dff1a=7766) 22:37:44, 6d3cbb68 (51f4045b=7770) 22:37:49; 0 ambiguous_legs lines after the restart. Target legs a1200108/d60bb8ad/ff6db55a also resolved by entry scope, so the targets ARE nested under their entries. Venue (/api/diag/alpaca_open_orders alpaca_portfolio, captured 22:39:30Z, all 7 SLV stops): replacement stops cf2488ed (7758), c59f0abc (7766), 5a600655 (7770), each qty 2, stop 40.28, held; the 5/19/53/794 siblings also at 40.28 under their own entries.",
+  "phase": null,
+  "updated_at": "2026-11-19T22:39:47Z",
+  "updated_by": "session_01AFoLuMdfKSRmey33cVTNak",
+  "writeback": {
+    "arch": "none: modify_open_order contract unchanged; alpaca_amend.tighten gains an optional entry_order_id and before.leg_scope / ambiguous_unneeded keys",
+    "roadmap": "none: L-ATM status unchanged; the Alpaca amend now scopes legs by entry order id (PR #27494), recorded on this row"
+  }
+}

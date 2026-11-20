@@ -1,0 +1,23 @@
+{
+  "id": "ML-SHADOW-NO-ORDER-HANDLE",
+  "title": "Structural: a shadow-stage model gets no handle to the order path; filter conviction stamps to INFLUENCE_STAGES where the stamps are BUILT, so a shadow stamp never reaches the sizing function (no test or gate does the job)",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuMJ8JwM8du98vMoR77",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25340
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "decision: 2026-11-12 operator decisions page Gates tab, CI-TEST-SHADOW-NEVER-ORDERS: MAKE REPORT-ONLY. Operator note, verbatim: \"This should be handled through structuring the functionality correctly, not with a gate\" (record comms/gates/gate_decisions_2026-11-12.json, branch gate-decisions; relayed by lane GATE-CI-LANDING 13:35Z). The test (tests/runtime/test_shadow_never_orders.py, incl. #25260 planted cases) stays as a report. pytest-run is made non-required by #25318. THIS ROW: change the stamp construction so only INFLUENCE_STAGES models are passed to conviction sizing (filter at the source, not at the consumer), behaviour-preserving today (CONVICTION_SIZING_MODE=annotate on bybit_1, measured 2026-10-29 get-env run 40775326133). Order path, so Tier 2, landing: hold, manager merges; state the measured before/after (0 size changes expected). Adds no refusal: a structural narrowing of inputs that only removes a path the ladder already says must not exist. Assigned to lane ML-SERVING-HYGIENE (session_01AFoLuMJ8JwM8du98vMoR77) after its current items. 13:33Z: #25340 MERGED by the manager (e172fe951). Sizing and slice allocation now read meta.conviction_influencing, built from advisory+ scores only. OPEN OBSERVATION (AM-ML owns it): (a) the trader's deployed sha contains e172fe951; (b) the first allocated packages after the restart carry meta.conviction_influencing; compare their slice weights with the pre-deploy packages of the same legs, and record any leg whose weight moved because a shadow input dropped out. 14:28Z DEPLOYED + OBSERVED: trader 04fe0cfa2 contains e172fe951 (/api/diag/version 14:27Z, restart_pending false). The first 3 packages after the deploy (sol_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, 14:02-14:03Z) carry meta.conviction_influencing; no pre-deploy package does. Weight check: on all 3, influencing conviction == observed conviction (0.4337, 0.3865, 0.3865) because no shadow-stage model fed their blend, so their allocation did not move. A leg whose blend had a shadow input would differ; none appeared in this sample (n=3 packages, 3 legs).",
+  "phase": null,
+  "updated_at": "2026-11-13T14:28:23Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

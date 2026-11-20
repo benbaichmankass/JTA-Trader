@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the writers record mfe_r including the exit bar (or a documented exit-bar-inclusive companion field), the per-trade corpora that feed TP-reach / giveback / near_target are regenerated or flagged, and each consumer named in this item is checked for dependence on the biased field; or the bias is measured as immaterial per consumer and recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-OFUCR5NF-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), 2026-11-19, TP-reachability screen for RQ-20261119-c9d2-01",
+    "rerun": "python3 - <<'PY'\nimport json,glob,os,yaml\nst=yaml.safe_load(open('config/strategies.yaml')); st=st.get('strategies',st)\nfor f in sorted(glob.glob('comms/strategy_evidence/ltr_corpus*/*__trades.jsonl')):\n    leg=os.path.basename(f).split('__')[0]; tp=(st.get(leg) or {}).get('tp_r')\n    rows=[json.loads(l) for l in open(f) if l.strip()]\n    if tp is None or float(tp)>=50 or not rows: continue\n    tp=float(tp); print(leg,'tp_r',tp,'max mfe_r',max(r['mfe_r'] for r in rows),'take_profit exits',sum(r['exit_reason']=='take_profit' for r in rows),'mfe>=tp',sum(r['mfe_r']>=tp for r in rows))\nPY\n# a take_profit exit with max mfe_r < tp_r on every leg is the defect"
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "M40"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "mfe_r IN THE STAGE-0 PER-TRADE FILES EXCLUDES THE EXIT BAR, SO IT READS BELOW tp_r ON take_profit EXITS (2026-11-19, found by QUEUE-FILL-STANDING-W47b while screening TP-reachability for RQ-20261119-c9d2-01). MEASURED on the four real-TP corpora in comms/strategy_evidence/ltr_corpus_realtp: the maximum recorded mfe_r is below the declared tp_r in every one (tlt_pullback_1d max 3.472 vs tp 3.5; tqqq_trend_long_1d 1.478 vs 1.5; scha_trend_long_1d 1.499 vs 1.5; slv_trend_1h 5.934 vs 6.0), yet take_profit exits exist (12, 76, 29, 17), so mfe_r >= tp_r reads 0 of 49/136/78/98. One concrete trade: tlt_pullback_1d, a take_profit exit with gross_r 3.5 and mfe_r 3.472; tqqq_trend_long_1d take_profit rows with mfe_r 0.598 and gross_r 0.9012 at tp 1.5. MECHANISM (read in code, scripts/backtest_trend.py ~L960-1004): inside the bar loop the stop/target check (_stop_or_target) runs first and breaks on a hit BEFORE 'mfe = max(mfe, (ext - entry) / risk)' advances, so the exit bar's own excursion is never added; scripts/backtest_pullback.py has the same advance pattern (~L845-859; UNVERIFIED line for line). WRITERS: scripts/backtest_trend.py (mfe_r=round(mfe,3) at L1243), scripts/backtest_pullback.py (Trade.mfe_r); scripts/research/build_ltr_corpus.py copies the field. CONSUMERS to review (grep mfe_r in scripts/research): am_risk_adjusted.py, am_class_regrade.py, am_static_partial.py, be_floor_sweep.py, build_exit_panel.py, cf_core.py, cf_booksim.py, cf_harness.py, exit_census.py, exit_head_holdout.py, e35_bracket_geometry_sweep.py, desk_lifecycle_driver.py, and anything reading TP-reach, giveback or peak-R from the per-trade files: all biased low on the exit bar. NOT fixed in this lane (manager instruction). Gates this adds: none."
+}

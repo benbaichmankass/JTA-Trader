@@ -1,0 +1,23 @@
+{
+  "id": "JOURNAL-OFFVM-BACKUP-DISPATCH-MODE",
+  "title": "journal-offvm-backup ignores the mode: line on repository_dispatch (checks event_name == issues), and its Report step posts no issue comment for repository_dispatch",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops hygiene: backup workflow trigger parity",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Found by lane HEALTH-20261111-LIVE-DISK-REGROWTH 2026-11-12 06:55Z: a restore-test request (#25145) ran as a backup (run 43170004436); #25143/#25145 got no reply and stay open; results only in the job log. Fix: read mode: for both event types; post the report comment for repository_dispatch too; close the issues. Backup mode includes inline restore-verify, so today's evidence stands.",
+  "phase": null,
+  "updated_at": "2026-11-12T06:59:42Z",
+  "updated_by": "Manager Session 2026-11-11a",
+  "week_lane": "throttle"
+}

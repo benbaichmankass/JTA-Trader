@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "PR #22652 merged AND a green infra-runner-smoke at count 2 AND one system-action plus one research-queue-dispatch job on trainer-jta-infra-* with trainer free disk >= 15 GB afterwards",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-RAM7EH86-0004",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-05",
+    "how_to_check": "infra-runner-smoke issue comment; list_workflow_jobs runner_name on the next system-actions / research-queue-dispatch run; trainer df via trainer-diag-relay",
+    "what": "self-hosted re-armed safely"
+  },
+  "origin": {
+    "kind": "operator",
+    "ref": "operator popup ~14:28Z via Manager Session 2026-11-03b; incident system-actions run 41650362029 (No space left on device, trainer-jta-infra-4, 14:10Z)",
+    "rerun": "read vars.INFRA_RUNS_ON via an infra-runner-health run log; df on the trainer via trainer-diag-relay; systemctl is-enabled actions.runner.*"
+  },
+  "routed_to": "GH-CAPACITY-INFRA-RUNNER",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "RE-ARM GATE for the jta-infra self-hosted runners (operator popup ~14:28Z 2026-11-03 'Wait for the runner fix': self-hosted OFF until fix + green smoke). Runners are stopped+disabled on ict-trainer-vm; vars.INFRA_RUNS_ON = hosted since 14:38:57Z (health run 41654909138). Re-arm only after PR #22652 merges (absolute-path workspace wipe, 2 instances, disk-floor fallback), infra-runner-install re-runs at count 2, and an infra-runner-smoke passes; then observe one system-action and one research-queue-dispatch with the trainer disk staying above 15 GB.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The re-arm gate (operator: self-hosted OFF until fix + green smoke) is recorded on that row; re-arming now also depends on the fork-PR exposure on SEC-SELFHOSTED-RUNNER-PUBLIC. EVIDENCE: Row GH-CAPACITY-INFRA-RUNNER note: \"Operator (popup ~14:28Z): Wait for the runner fix -> self-hosted OFF until fix + green smoke (PI-...-0004)\"; open (d) is the fork-PR approval policy; row SEC-SELFHOSTED-RUNNER-PUBLIC (queued 2026-11-11)."
+}

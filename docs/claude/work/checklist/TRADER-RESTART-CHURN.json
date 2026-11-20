@@ -1,0 +1,25 @@
+{
+  "id": "TRADER-RESTART-CHURN",
+  "title": "Live trader restarts ~36x/day (MEASURED 2026-11-12: 36 distinct ict-trader-live PIDs logged an ml_entry_eq_refresher poll between 00:00 and 16:15Z); each restart drops in-process state (refresher pass, live-review suppressed markers, decided memo), e.g. the 16:00Z ml_entry_eq pass was killed at ~16:14Z and its snapshot landed +29.6 min. Diagnose (deploy restart gate on frequent merges vs crashes) and decide whether restarts should batch.",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": 8.91,
+  "prs": [
+    25457
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-19",
+  "note": "DIAGNOSED 2026-11-12 (MEASURED over 00:00-19:54Z, ict-trader-live + ict-git-sync journals, read_state=complete). 47 trader starts, all clean systemctl stops (0 crash, 0 OOM, 0 watchdog). Causes: ict-git-sync deploy gate=restart 42; pull-and-deploy #25091 1 (single); pull-and-deploy #25103 racing git-sync 1 (double restart 03:43:24 + 03:43:48 = the #25310 race); set-env #25364/#25367 2 (intent=None); unattributed 1 (00:01:27Z, PI-20261112-ARTCHURN-0002). Deploys dominate; no crash root cause to find. BATCHING DECISION: restarts already batch per deploy run (7-15 min each). Offline replay of the 42: 38 had genuine reasons (closure .py / config the trader reads); 4 were forced only by files the trader never loads. Time-batching beyond that delays code (incl. order-path fixes) and would be a new gate, so it is NOT proposed. Remaining cost goes to state persistence (#25342, #25423). PR #25457 (Tier 2, HOLD, draft): the trader gate skips *.sh, other units' deploy/ files and config/trader_import_closure.txt; set-env writes the restart intent. It complements #25310 and does not fork it. landed_unproven watch: PI-20261112-ARTCHURN-0001. PR #25457 MERGED 2026-11-12T21:27Z (not yet observed deployed). landed_unproven. Closes when either (1) the ict-git-sync journal shows 'Trader restart gate: skip' for a merge touching only *.sh, another unit's deploy/ file or config/trader_import_closure.txt, or (2) the next set-env aimed at the trader boots with intent=manual. Watch item: PI-20261112-ARTCHURN-0001. Separately: main is red on the console connector reply-size tests (PI-20261112-ARTCHURN-0003). This is not from this lane. 21:32Z AM-ML: #25457 merged as 778fe479. Not deployed as of 21:31Z (the last git-sync deploy finished 21:27:30Z at 4ebb4bb, before the merge). Supporting evidence for the change: the 21:26Z deploy restarted the trader for scripts/ops/vm_sparse_bootstrap.sh alone, which is the class #25457 now skips. Watching for the deploy. DEPLOYED 2026-11-12T21:35Z: the git-sync deploy ran 31526ad, which contains 778fe479 (git merge-base --is-ancestor). The new gate code made that run's decision, and its restart was correct (in_closure .py). Still needed to close: a 'Trader restart gate: skip' on a merge whose diff is only the newly-skipped class (*.sh, other units' deploy/ files, closure .txt). A background poll runs to about 23:35Z. CLOSE-OUT 23:22Z. MERGED 778fe479 (21:27Z) -> DEPLOYED 21:35Z (deploy ran 31526ad, which contains it) -> OBSERVED: only partly. RECOUNT (MEASURED, ict-trader-live journal 00:00-23:22Z, read complete): 59 trader starts today. After the deploy (21:35-23:22Z, 1.8 h): 5 starts. All 5 were gate-ordered with genuine reasons (config/mandates.yaml, comms/feature_impact, in_closure .py x3), plus 1 gate skip at 23:18Z (53dc931..22db4df). That skip came from the EXISTING non-closure .py rule, not the new class, so the closer is not met yet. 1.8 h is too short to compare a daily rate. Pre-deploy proof the class is real: at 21:26Z the trader restarted for scripts/ops/vm_sparse_bootstrap.sh alone. GAP NOTED: deploy/logrotate/ict-syslog-cap (a deploy/ SUBDIR) is still non_py_runtime, because the regex skips top-level deploy/ files only. It did not force anything at 22:31Z (in_closure .py did). A one-line follow-up is possible if a logrotate-only merge ever restarts the trader. Row stays landed_unproven. The closer is carried by PI-20261112-ARTCHURN-0001 (due 2026-11-19): a gate skip on an only-*.sh/deploy-unit/closure-txt diff, or a set-env trader boot with intent=manual. Spend: no Anthropic API credits; diag reads plus local replay; session cost not visible to me.",
+  "updated_at": "2026-11-13T22:19:36Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

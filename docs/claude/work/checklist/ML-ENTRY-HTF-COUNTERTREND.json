@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-HTF-COUNTERTREND",
+  "title": "Pre-registered test: does ml_entry lose when its 1h long/short is against a strong 4h trend (ADX>40)? Candidate filter or size cut, net of cost",
+  "state": "done",
+  "owner": "ML standing lane",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "lesson from the 2026-11-11 SOL/ETH/XRP ml_entry stop-outs",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-11: the 20:00Z ml_entry long wave (SOL, ETH, XRP on bybit_2 + mirror + prop copies) all stopped out by 23:14Z. Each was a 1h bounce call into a 4h downtrend (SOL donchian short re-break 11-10, ADX ~42; ETH 4h ADX 52). The live reviews found close beat hold at the pullback state (SOL +0.35R n=102; ETH +0.36R n=75). Question: in ml_entry's Stage-0 history, split by 4h trend alignment and ADX; if counter-trend entries in strong trends are net-negative, propose a filter or size cut (Tier 3 proposal). Rule fixed before the run. 2026-11-12 lane: pre-registered RQ-20261112-8d20-01 (rule RULE-RQ20261112-8d20-01-HTF-CT, 4h DMI dir x ADX bucket, clustered t<=-2 at n>=40 on held-out + same sign on dev OOS) on branch lane/ml-entry-htf-countertrend before any run; script scripts/research/ml_entry_htf_trend_split.py; run in progress (local, frozen v1 artifact).",
+  "phase": "now",
+  "updated_at": "2026-11-12T00:05:58Z",
+  "updated_by": "session_01AFoLuM7KvX8T8fNgUpci5h"
+}

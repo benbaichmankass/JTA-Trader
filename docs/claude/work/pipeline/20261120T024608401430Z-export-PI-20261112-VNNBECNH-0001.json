@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the trend_donchian block comment in config/strategies.yaml no longer says _eth/_sol keep close (all three Donchian legs carry exit_head_action: annotate on main)",
+    "kind": "event"
+  },
+  "id": "PI-20261112-VNNBECNH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML lane p5 2026-11-12 (session_01AFoLuL9wQf2T1AVnNBeCnh), RQ-20261112-0bc8-02",
+    "rerun": "git show origin/main:config/strategies.yaml | grep -n \"_eth/_sol keep\""
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "STALE CONFIG COMMENT (field beats comment): config/strategies.yaml trend_donchian block (~l.224-230) says 'Revert: set back to close. _eth/_sol keep close pending the fixed re-run (PI-20261029-IFMPNGJK-0001)', but on origin/main all three Donchian legs carry exit_head_action: annotate (l.231 / 1207 / 1296; _eth flipped by #25120 on RQ-20261101-78fc-03 FAIL). It misled a lane today (RQ-20261112-0bc8-02 context prose said SOL at close; corrected in PR #25252). Fix = comment-only edit to the trend_donchian block; config/strategies.yaml is a Tier-3 path, so it lands as a hold for the manager. No behaviour change."
+}

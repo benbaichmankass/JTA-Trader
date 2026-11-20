@@ -1,0 +1,21 @@
+{
+  "id": "CALENDAR-FOMC-RELEASE-SPLIT",
+  "title": "Calendar mislabels: 'FOMC Minutes' is mapped to kind fomc (impact 1.0, same as a rate decision), and decision-day releases share one event_id so config/economic_calendar.yaml keeps only the 19:30Z press conference (2026-12-09), not the 19:00Z statement",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DATA"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "Filed 2026-11-18 by PRACTICE-REFRESH-20261118 (docs/research/practice-review-2026-11-18.md \u00a7 T-G2). MEASURED on main e66d3b333: scripts/macro/econ_calendar_data.py _KIND_PATTERNS maps r'fed interest rate|fomc|...' -> fomc, so 'FOMC Minutes' (event evt-fomc-2026-11-18-us, impact_score 1.0, source bigdata:fxstreet) became tonight's config entry {class: fomc, time: 2026-11-18T19:00:00Z, impact: 1.0}. evt-fomc-2026-12-09-us carries four releases (Fed Interest Rate Decision 19:00Z, Monetary Policy Statement 19:00Z, Economic Projections 19:00Z, Press Conference 19:30Z) and the config has one line: fomc 2026-12-09T19:30:00Z, so event_risk at the 19:00Z decision is 0.5 under the 60-min ramp instead of 1.0. Evidence that minutes move markets less than statements: S80 (Rosa, NY Fed 2013), S81 (Nechio & Wilson, FRBSF 2016-37). Fix (Tier 2, feeds the trade path via news_influence; reduce-only, never a gate): (1) a fomc_minutes kind matched before fomc; (2) one event per release time, or keep the EARLIEST time per event_id; (3) the minutes weight stays at its current value until RQ-20261118-a5b3-02 supplies an evidenced one (Tier-3 proposal then). Re-entry test: a regenerated config lists 2026-12-09T19:00:00Z for fomc and the minutes as their own class. Also note: the same kind feeds macro event studies' PIT linkage, so FOMC studies mix minutes with decisions until fixed.",
+  "phase": "build",
+  "updated_at": "2026-11-18T18:20:23Z",
+  "updated_by": "PRACTICE-REFRESH-20261118"
+}

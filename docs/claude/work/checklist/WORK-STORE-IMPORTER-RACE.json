@@ -1,0 +1,24 @@
+{
+  "id": "WORK-STORE-IMPORTER-RACE",
+  "title": "VM work-store importer reverts a native write that lands during its run (snapshot in build_entries, no re-check in _migrate_one): 3 of 319 drain writes reverted 2026-11-12; fix in PR #25201 (Tier 2, HOLD)",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25201
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "MEASURED: work.py history PI-20261106-01AFOLUJ-0002 shows seq 10666 set (session) then seq 10668 migrate/reconcile (work-store-importer) 2 s later. Re-applied by hand. Close when #25201 is merged + deployed and a later drain write survives an import cycle (work.py history shows no importer event after it). DRAIN 2026-11-15: indirect evidence only. Tonight many native work-store writes by AM-OPS (e.g. CONFLICTING-EXPOSURE-ALERT, DIAG-BYBIT-OPEN-ORDERS-SLOW, ENTRY-FILL-* between 03:00 and 06:20Z) read back intact on /api/bot/work/items afterwards, across several ~5-min import cycles. The row's literal check (work.py history shows no importer event after a drain write) has not been run; next step: one 'work.py --via direct get' history read on a row written tonight.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:20:31Z",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "week_lane": "surge"
+}

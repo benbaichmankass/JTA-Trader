@@ -1,0 +1,22 @@
+{
+  "id": "ML-PARITY-COVERAGE",
+  "title": "Live-vs-replay parity still cannot check the 2 real-money ML legs: ml_entry ref set 33/60 (<40 floor) on the runner; ml_entry_eq_struct 'nothing comparable'",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": "FRONTIER",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up filed from PI-2026111x-LRP-A038E248 after #25782 + #25802",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "2026-11-13 18:55Z AM-ML. MEASURED parity run 43482314496 (on 5497f7d22 = #25802 lightgbm + #25782 full history; artifact comms/live_parity/latest.json, window 11-06T18:00..11-13T18:00). Progress: both ML legs now load the served artifact (ml_replay=True). Still could_not_check: (1) ml_entry: 'only 33/60 reference frames fetched (BALUSDT, BLZUSDT, DEFIUSDT: no_data ...)' -- the live trader reaches 52/60 (refs line at 16:01:47Z today), min_reference_symbols 40; the replay's candle source on the runner lacks 27 refs -> find which source the parity replay uses for refs vs the live trader's, and match it (or replay with the live bundle's ref frames). (2) ml_entry_eq_struct: 'nothing comparable: no (symbol, decision bar) held both a live record and a replay' -- diagnose: are live records for this leg refusals without a feature vector (pool_snapshot_stale / market_closes_before_max_hold dominate today), is the eq served epoch read from ENTRY_SERVED.json (crypto pointer) instead of the eq pointer, or do decision-bar keys differ (eq 1h session bars vs bundle bars)? No decision divergence on any real-money leg in this run. Done = both legs read 'checked' on a fresh parity run, then close PI-20261109/10/11/12/13-LRP-A038E248.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:17:59Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "FRONTIER-STATIC-MARKETS",
+  "title": "Frontier research: strategies and ML geared to profit from static / range-bound markets (replaces the retired M22 pairs sleeve as the market-neutral idea)",
+  "state": "queued",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Thursday-planning 2026-11-11 decision; weekly pass maps it",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[operator decision 2026-11-11, Thursday-planning doc] b3 Pairs strategy M22 -> verbatim choice \"Retire it\". Operator note, verbatim: \"We can retire it, but I want us to do some frontier research on strategies or MLs that are geared towards profiting from static markets\". Job (frontier-research skill): scan outside the repo for range/mean-reversion/volatility-selling/market-making-style strategies and ML (regime-conditional range models, range-bound detectors, grid / band reversion, options-premium style on paper), triage against our data, cost stack and latency, and turn each kept idea into a pre-registered research/queue unit with a baseline it must beat net of cost. Counts toward ML-QUEUE-DIVERSIFY. Lessons from M22: measure in honest R from the start, frozen hedge ratio, cost per leg. [2026-11-12 ML lane p3] First pass landed for review: PR #25101 (Tier-1 self-land). Units RQ-20261112-a7e8-01 (IBS daily mean reversion, 9 ETFs, vs every-day-long control; new instrument scripts/research/ibs_reversion_stage0.py) and RQ-20261112-a7e8-02 (fade family 1d on the same ETFs). Rules registered before any run. Scan record docs/research/frontier-static-markets-2026-11-12.md: dropped crypto xsec 1d reversal (primary evidence: reversal lives in illiquid coins, large caps show momentum), options premium (no data), grid/MM (L2 + latency); HMM range gate deferred until a mean-reversion leg passes; funding carry already queued (RQ-20260929-104, 9b09-03). Row stays open: next = read the two verdicts, then the sector-SPDR confirmation unit or a second idea round.",
+  "phase": null,
+  "updated_at": "2026-11-12T03:37:06Z",
+  "updated_by": "ML standing lane p3 (session_01AFoLuMDTXRAaebDXhfn3Wu)",
+  "week_lane": "throttle"
+}

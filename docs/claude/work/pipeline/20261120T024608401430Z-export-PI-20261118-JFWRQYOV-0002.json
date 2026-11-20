@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the writer of SLV venue SL 41.57 is named from the alpaca_portfolio order history and classified as by_design (with record) or a defect (with a row or fix)",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-JFWRQYOV-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, 2026-11-18 14:38Z, live review LR-20261118T1434Z-pkg-2616d7fbc5134e2e",
+    "rerun": "scripts/ops/diag_fetch.sh alpaca_order_history?account_id=alpaca_portfolio (filter SLV, newest) and compare the stop leg to order_packages pkg-2616d7fbc5134e2e"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "EXPLAINED 2026-11-18 by AM-OPS-2: venue SL 41.57 is the stop leg of the FIRST of 7 stacked SLV short orders on alpaca_portfolio (package pkg-0a04f063cddd486c, entry 40.96, SL 41.57, 13:03:43Z), not a writer on the last package. Cause = PI-20261118-JFWRQYOV-0004: the snapshot reconciler closed each row as exchange_flat_reconciled ~7 min after open while its entry order was still queued pre-open, the same signal re-fired, and the orders netted into one position at the open. Fix: PR #26862 (HOLD, Tier 2). Evidence: order_packages + trades rows (broker_order_id, closed_at 13:10:21..13:54:21Z). Not verified: Alpaca order history replaces-chain was not read.",
+  "tier": null,
+  "what": "SLV STOP MISMATCH, alpaca_portfolio pkg-2616d7fbc5134e2e (slv_trend_1h short, opened at the 2026-11-18 US open, entry 41.29): venue SL 41.57 vs package SL 41.9029 (1.5 ATR exit-plan stop). The venue stop is 0.33 TIGHTER, about 0.5 ATR above price. The 14:34Z reviewer (LR-20261118T1434Z) found no writer: no rows_watch, directed_actions, audit, orphan_events, vol_trail_shadow or live_review apply record, and the 4-ATR trail cannot produce 41.57 after one bar. Conservative direction (early stop-out risk, not uncovered risk). Paper mirror only; alpaca_live does not carry it. Find who set 41.57 from the alpaca order history (replaces/replaced_by chain on the SLV stop leg). Candidates: the #25856 amend race, restore-on-refusal #26611, or an affordability resize rounding the bracket. Gates this adds: none."
+}

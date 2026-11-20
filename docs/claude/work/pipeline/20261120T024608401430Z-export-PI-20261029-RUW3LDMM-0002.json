@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "root cause named (hairpin vs transient) with the receipt line, and either a fix PR merged or 24h of packets with 0 bybit_orders could_not_look",
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261029-RUW3LDMM-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-29a (session_01AFoLuKnBxnMFgVRUw3Ldmm), ltr-wake comment 6485823826 on #17895",
+    "rerun": "grep -c could_not_look over comms/live_review/packets/*.json on live-review/rows (last 24h); grep -n ict-bot.duckdns.org scripts/ops/live_review_packet.py scripts/ops/diag_fetch.sh"
+  },
+  "severity": "high",
+  "state": "killed",
+  "terminal_reason": "Root cause was the flat 10 s curl cap on a ~10 s endpoint, not hairpin; fixed with per-path timeouts, and 0 bybit order reads read unreachable in the last two days of packets. | evidence: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/ops/diag_fetch.sh:130-142 per-path timeout (open_orders 45 s, cites PI-20261031-9KC5G3FG-0001: \"the VM was answering the whole time\") and :168-173 timeout-vs-unreachable split; population 400 packets LR-20261110*/LR-20261111* on origin/live-review/rows: 279 carry a bybit account, 0 contain \"unreachable\", 1 could_not_look (non-bybit).",
+  "tier": 2,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[ltr] VM-side packet builder could not read Bybit open orders at 02:01Z 2026-10-29: 'diag bybit_open_orders: exit 3 ... https://ict-bot.duckdns.org -> unreachable' for bybit_2/bybit_1/bybit_portfolio (pkg-465a5d7d27644027, review LR-20261029T0201Z-pkg-465a5d7d27644027), so mechanics read could_not_look on a REAL-MONEY package. The same host answered 200 from a session at 02:03Z (/api/bot/config). Suspect VM self-call through its own public hostname (hairpin) or a transient. Fix: VM-local reads go to 127.0.0.1:8001; count could_not_look packets per day.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Root cause was the flat 10 s curl cap on a ~10 s endpoint, not hairpin; fixed with per-path timeouts, and 0 bybit order reads read unreachable in the last two days of packets. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/ops/diag_fetch.sh:130-142 per-path timeout (open_orders 45 s, cites PI-20261031-9KC5G3FG-0001: \"the VM was answering the whole time\") and :168-173 timeout-vs-unreachable split; population 400 packets LR-20261110*/LR-20261111* on origin/live-review/rows: 279 carry a bybit account, 0 contain \"unreachable\", 1 could_not_look (non-bybit)."
+}

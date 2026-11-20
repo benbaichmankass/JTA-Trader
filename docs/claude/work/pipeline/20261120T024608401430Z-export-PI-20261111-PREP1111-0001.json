@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_vs_backtest.py restricts each leg to closes whose package created_at >= the leg evidence record generated_at (or a stated --since), prints n_pre and n_post, and a test pins it",
+    "kind": "event",
+    "last_checked": "2026-11-11"
+  },
+  "id": "PI-20261111-PREP1111-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-11 (lane PERF-REVIEW-PREP-20261111, manager session_01AFoLuLyarNRcy3nziCep2U); docs/reviews/2026-11-11-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg trend_donchian_xrp_4h --leg ada_pullback_2h --leg trend_donchian_sol_prop"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent - state no parent: OPS backlog drain (BACKLOG-DRAIN-20261112, after HEALTH-20261111-EXPORT-READS-STALE per operator p4) [weekly planning 2026-11-12]",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "perf-review 2026-11-18 re-check: live_vs_backtest.py now cuts at config_since by default (cut=applied on all 10 real-money legs on a full-history clone). Residual shallow-clone trap filed as a new item by the 11-18 review.",
+  "tier": 1,
+  "what": "[performance][tooling] C2 compares old-config live trades with new-config bands. On 2026-11-06 (d8d60fa84) ada_pullback_2h, trend_donchian_xrp_4h and trend_donchian_sol_prop were re-promoted on holdout configs (e.g. xrp_4h atr_stop_mult 2.0->1.5, trail 5.0->4.0) and their comms/strategy_evidence records were rebuilt at 2026-11-06T19:2xZ. live_vs_backtest.py has no date cut, so its 2026-11-11 verdicts (xrp_4h CONSISTENT n=9, ada CONSISTENT n=18, sol_prop INSUFFICIENT_N n=4) band 30 real-money closes, 29 of them pre-change, against the post-change backtest; only 1 real-money close (6982) is post-change. The demotion signal for 3 of 6 real-money legs is measuring the wrong config."
+}

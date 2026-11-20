@@ -1,0 +1,22 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "clears_when": "scripts/research/ : join script emitting ts, features, target=sign(value(close)-value(hold)); then author the node's unit",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-IHFQDB3W-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Daily research authoring lane 2026-10-29",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py | grep 'H1-THEME ml_health'"
+  },
+  "routed_to": "ML-EXIT-ACTIONGRID-LABELS",
+  "severity": "medium",
+  "state": "killed",
+  "terminal_reason": "Parked on power by ML-PRIMARY-3 (2026-11-15, D8 author-or-retire call assigned by Manager 15a; PR #26320). full-c4e has 1,040 entries / 507 pairs / 6 symbols, at most 720 OOS trades walk-forward. The hold-vs-close per-trade delta sd ~0.85 R (from RQ-20261114-1ae8-01) gives MDE ~0.08 R, against exit-head effects within +/-0.06 R so far, so the read is INDETERMINATE by construction. Re-entry test (recorded on plan line MLP-D8-LABRADOR-2): desk labels on >= ~5,000 OOS trades, or a mechanical label source of that size. The join script is not built.",
+  "tier": 1,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[research-authoring] ML exit-head dataset join: desk lifecycle labels (comms/research/desk_lifecycle/full-c4e/labels.jsonl, 12,500 rows) carry value/counterfactual per check-in but no timestamp and no per-bar path state (peak, bars-since-peak, momentum, ADX slope, vol ratio); entries.jsonl has symbol + bar index i + week. A script must rebuild per-check-in features from the bars and emit a ts-indexed jsonl so an ml_bakeoff unit (node P2-desk-checkin-exit-head, ml_health, value 250) can run. Until then ml_health has 0 runnable units (H1-THEME short 6).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The per-check-in feature join for desk lifecycle labels is the input the exit-label row needs; no join script exists yet. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): `git grep -l \"desk-checkin|desk_checkin|checkin_exit\" scripts/research` returns nothing (probe matches no file; row ML-EXIT-ACTIONGRID-LABELS note owns desk_lifecycle_driver labels)."
+}

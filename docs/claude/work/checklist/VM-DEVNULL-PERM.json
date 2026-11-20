@@ -1,0 +1,24 @@
+{
+  "id": "VM-DEVNULL-PERM",
+  "title": "Live VM: '/dev/null: Permission denied' in install_systemd_units.sh during deploy -- check /dev/null is still a world-writable char device",
+  "state": "landed_unproven",
+  "owner": "manager (vm-ops lane on next dispatch)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "infra hygiene finding",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24992
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Seen 2026-11-11 in the pull-and-deploy log for #24889 (system-action #24969, run 43099930514; reported by the FULL-POOL lane): 'install_systemd_units.sh: line 85: /dev/null: Permission denied'. Line 85 is _read_vm_role's '2>/dev/null'. A normal /dev/null (crw-rw-rw- char 1,3) can never refuse a write, so HYPOTHESIS: /dev/null on the live VM was replaced by a regular file or had its mode changed (e.g. by a 'cmd > /dev/null' run as root after an rm). That silently breaks every '>/dev/null' in services and scripts. Check: 'ls -l /dev/null' via the vm-ops/diag relay; if wrong: 'rm -f /dev/null; mknod -m 666 /dev/null c 1 3' (Tier 2, needs an operator OK). Diag reads 401 until the DIAG token reset.",
+  "phase": "now",
+  "updated_at": "2026-11-11T21:16:39Z",
+  "updated_by": "Manager Session 2026-11-11a"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "PROP-TRADEIFY-WORKSPACE-SWITCHED",
+  "title": "tradeify_1 terminal is on workspace 'Trading Dashboard', not 'My Trading Account': watchlist and positions table unreadable from 13:21Z; executor reads and the SOL close are blocked",
+  "state": "done",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "prop execution incident",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "MEASURED 2026-11-15. 13:18:00Z executor tick: Page.goto on the firm terminal timed out at 45 s (exit 1). From 13:21:31Z the prop-feed layout canary reads the watchlist MISSING (0 Symbol/Bid/Ask tables) on every tick; it read ok n=7 on every tick 12:32-13:16Z. Executor ticks at 13:23 and 13:28 fail with 'LookupError: no positions table found', so vm_close vmc-a2ad1dce4531 and the trail are skipped. add-watchlist-widget run #26323 (13:29Z) refused with: workspace is 'Trading Dashboard', not 'My Trading Account'; one-click OFF. So the terminal's active workspace changed, most likely the firm reloading into a default tab after the timeout. No system-action mode switches the workspace: DXtradeAdapter._switch_workspace exists but is called only inside the ticket opener, which restores whichever tab was current. Both open positions keep their SL/TP at the firm (SOL SL 67.783 / TP 76.626; ETH SL 1850.505 / TP 1593.437 at the 13:00Z read). Fix options: (a) a new click-only mode 'select-workspace name: My Trading Account' (one click on the tab's name span, verified by the watchlist reading back); (b) the executor/feed re-selects 'My Trading Account' when the canary reads MISSING and that tab exists. Closing observation: the canary reads 'ok' again, then the vm_close closes SOLUSD. 13:29Z add-watchlist-widget (run 43719079210) refused: workspace 'Trading Dashboard'; one-click OFF; 0 Symbol/Bid/Ask tables. Confirms the workspace is still switched as of 13:29Z; the watchlist canary MISSING alerts (13:21/13:26Z) are this same cause. Unblocks on #26327 (pytest-run in progress 13:45Z) then select-workspace, or the operator clicking the 'My Trading Account' tab. 14:27Z #26327 pytest-run (run 43719635157) sat 51 min in the full-suite step (peer full suites today 10-17 min); diff has no loop/wait of its own (select_workspace = read_one_click/_workspaces/_switch_workspace/watchlist_symbols, existing helpers); manager cancelled and re-ran it ONCE (the one allowed re-run). If it hangs again, it is real: bisect the suite, do not re-run. 14:46Z CORRECTION (manager 15a): the 14:26Z cancel of #26327's pytest-run was premature. Full-suite pytest-run on main today takes ~35 min (runs 43715807184 12:49-13:25, 43705574949 10:45-11:20, 43687919586 06:59-07:35; one 84 min), not the 10-17 min of scoped PR runs I compared against. The original run was slow-but-normal; the cancel cost ~30 min. Re-run (attempt 2) test step started 14:26:10Z, expected done ~15:00-15:10Z; job timeout 75 min. Lesson: compare a full-suite run to full-suite runs.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:19:35Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

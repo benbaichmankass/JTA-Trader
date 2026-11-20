@@ -1,0 +1,22 @@
+{
+  "id": "MLP-D3-FOXHOUND-1",
+  "title": "[ML dev plan line MLP-D3-FOXHOUND-1] ml-decision-entry-v1 / v1r20261106 (Foxhound-1; one lineage, ml/served/ENTRY_SERVED.json serves the refit) -- stage production; consumer real_money",
+  "state": "queued",
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE",
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Mirror row for plan line MLP-D3-FOXHOUND-1 in docs/plans/ml-dev-plan.yaml (created by lane ML-DEV-PLAN, session_01AFoLuKCLkLbWaDfBPBBWPy, 2026-11-12; Gates: none). The plan file is the source of the line (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion, owner); this row carries its live state. Stage production. Summary: +0.0371 R/decision held-out (t about 1.0). Forward reads negative and inside noise. Breadth (60-perp population) graded FAIL today, so bybit_2 keeps 5 coins. Confirming +0.037 R live at t=2 needs about 3,470 closes; the weekly forward grade of the retrain workflow (n about 340 / 2 weeks) is the usable demotion read. Carried by: CRYPTO-ENTRY-RETRAIN-UNIT, ML-DECISION-LABEL-VOL-CONFOUND, FRONTIER-Q-RESID-ENTRY, ML-LEVER-PLAN, ML-ENTRY-POPULATION-TEST. W47: retrain-unit + vol-confound reads land (dispatched 11-12, due 11-15); RESID-ENTRY registered and run. Exhaustion: the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD \u00a7 \"Declared demotion signals\": mean < 0 at day-clustered t <= -2, n >= 100, refit not better on the same replay) AND no lever in levers_ahead passes its dev-fold read -- then the leg demotes to the demo floor (testi Read: python3 scripts/ops/ml_dev_plan.py. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): owner was 'ML-PRIMARY' -> ML-PRIMARY-2 (session_01AFoLuHnp85DHQ4PWMQy8LM), stays in_flight. ML-PRIMARY-2 confirmed at 10:38Z: unit RQ-20261115-a474-04 is on main and dispatching. [2026-11-15 ML-PRIMARY-3] POPULATION TEST is already run and graded: RQ-20261112-2e3b-01 FAIL (frozen v1, 51 Bybit USDT perps, filter frozen pre-run, own costs; pooled -0.0680 R/decision, se 0.0098, n 12,746; research/results/RQ-20261112-2e3b-01/43302779170.jsonl). By its registered routing the real-money set stays the c692-06 five coins, recorded as a population instead of the account map in Tier-3 PR #25535 (HELD, draft since 11-13, manager lands; it was stacked on #25462, which merged 11-12, so it may need a rebase). No new population test now: the SERVED refit v1r20261106 has train_end 2026-10-14, so its only clean window is about 1 month (~900 decisions on 51 symbols at the c692 rate of ~212 per symbol-year). Detecting +0.037 R at t=2 with sd ~1.3 needs n ~4,900, about 5 months, so not before ~2027-03. The demotion read stays the weekly forward grade plus the declared demotion signal (ML-D3-HEAD-TO-HEAD). The plan line's levers_ahead 'population test' entry should read 'done: 2e3b-01 FAIL; served-refit re-test when powered'; the edit follows once #26293 merges. [2026-11-15 16:36Z ML-PRIMARY-3] GRADE RQ-20261115-7e18-02 (decomposed gross-minus-cost score) = INDETERMINATE by rule. Paired gross-raw +0.0097 R/decision, CI95 [-0.0286, +0.0480], k 13 windows, sd 0.063; pooled gross +0.0159 (n 10,788) vs raw +0.0106 (n 10,835) vs frozen v1 +0.0080 (n 11,191). Shorts turn from -0.0030 to +0.0042. Positive but below the +0.06 bar, CI spans 0. The target family does not close; no candidate for the combined held-out read. Next ENTRY lever must add information (features / data).",
+  "phase": null,
+  "updated_at": "2026-11-19T06:10:42Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

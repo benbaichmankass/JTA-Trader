@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "pr_merged:25330 (comment-only accounts.yaml pointer; option (a) mechanism scripts/ops/account_reachable_set.py already merged in #25248 / 3b6928e51)",
+    "kind": "observation",
+    "last_checked": "2026-11-12"
+  },
+  "id": "BL-20260910-THE-ALPACA-LIVE-REACHABLE-SYMBOL-SET-IS-RECORDED-AS-A-CONSTANT-AND-GDX-HAS-SINCE-FALLEN-OUT-OF-IT",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json#BL-20260910-THE-ALPACA-LIVE-REACHABLE-SYMBOL-SET-IS-RECORDED-AS-A-CONSTANT-AND-GDX-HAS-SINCE-FALLEN-OUT-OF-IT",
+    "rerun": "python3 -c \"import json; d=json.load(open('docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json')); items=d['items'] if isinstance(d, dict) else d; print(json.dumps(next(i for i in items if i.get('id')=='BL-20260910-THE-ALPACA-LIVE-REACHABLE-SYMBOL-SET-IS-RECORDED-AS-A-CONSTANT-AND-GDX-HAS-SINCE-FALLEN-OUT-OF-IT'), indent=2))\""
+  },
+  "routed_to": "SMALL-ACCOUNT-RISK",
+  "state": "routed",
+  "terminal_reason": null,
+  "triage_2026_09_28": {
+    "checked": "Read the alpaca_live risk-comment block in config/accounts.yaml (~line 1517-1600): the 'reachable: TLT IEF SLV USO IAUM GDX' line is still written as a flat list with no re-derivation script and no explicit as-of/decay caveat attached to that specific line — nearby text is dated (2026-08-25/08-29) but the reachable-set line itself is not. Neither option (a) (a runnable reachability script) nor option (b) (dated+decay-caveated prose) has been built; the row's own instructions forbid closing this by hand-editing the GDX value.",
+    "date": "2026-09-28",
+    "disposition": "REROUTE",
+    "reroute_target": "dispatch_lane — build the option-(a) mechanism the row itself prefers: a script/workflow that runs RiskManager.position_size over the current alpaca_live roster at current balance and current prices, so 'reachable' is read on demand rather than quoted from a stale constant.",
+    "session": "session_01W8AKVjLw568KJoPkcwJcUY (TRIAGE-2 ops lane, dispatched by manager session_01KAQRJxRbRwpYTkPgBjNVyQ)"
+  },
+  "triage_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] still applies at HEAD (no live owner / owner does not cover it). NEXT OBSERVATION: A script/workflow running RiskManager.position_size over the current roster at current balance/prices, or an as-of-date plus decays-with-price caveat on both prose copies. | evidence: config/accounts.yaml:1565-1570 still records 'reachable : TLT IEF SLV USO IAUM GDX' measured 2026-08-25 as a constant; alpaca_live roster now ief/slv/iaum. No script re-derives it on demand (git grep scripts for reachable-set derivation: none).",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[health] config/accounts.yaml and the 2026-08-25 affordability sweep both record alpaca_live's reachable set as 'TLT IEF SLV USO IAUM GDX' as though it were a constant -- GDX no longer sizes, and the drift is in the permissive direction\n\n[TRIAGE 2026-09-28] REROUTE (dispatch_lane) — dispatch_lane — build the option-(a) mechanism the row itself prefers: a script/workflow that runs RiskManager.position_size over the current alpaca_live roster at current balance and current prices, so 'reachable' is read on demand rather than quoted from a stale constant.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The constant is still recorded, and the roster no longer matches it. EVIDENCE: origin/main 30b5cd919 (2026-11-12): config/accounts.yaml:1829 \"#   reachable : TLT IEF SLV USO IAUM GDX\" while the alpaca_live roster is tqqq_trend_long_1d + ml_entry_eq_struct. | owner row opened by this drain"
+}

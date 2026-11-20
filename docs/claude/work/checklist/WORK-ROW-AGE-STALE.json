@@ -1,0 +1,22 @@
+{
+  "id": "WORK-ROW-AGE-STALE",
+  "title": "Served checklist rows carry a stale updated_at: work.py/store writes do not refresh the row's own updated_at, so /api/bot/work/checklist (SPA Work page) and every staleness reader show ages days too old",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Found 2026-11-12 ~08:00Z by UI lane p2. EVIDENCE: MANAGER-VM-DIRECT-OPS: store item updated_at 2026-11-12T01:16:46Z (Lane MANAGER-VM-DIRECT-OPS); GET /api/bot/work/checklist fields.updated_at 2026-11-05T00:46:28Z. Cause: work_store_import.to_row projects extra.updated_at (the row's own field), which only changes when the writer sets it; the store's item-level updated_at moves on every write. Effect: the SPA Work page's 'updated' ages, and any reader through work_read.checklist_rows (attention_watch, blocker_watch, work_digest, staleness checks), see rows days older than they are. FIX (5 lines, Tier 2 runtime read path): in work_read.checklist_rows (or to_row), take max(item.updated_at, extra.updated_at) and the matching updated_by. The console connector already does this client-side (PR #25164 data._fresh). CLOSES WHEN GET /api/bot/work/checklist shows MANAGER-VM-DIRECT-OPS updated_at equal to the store item's. DRAIN 2026-11-15 06:20Z: still REPRODUCES. GET /api/bot/work/checklist MANAGER-VM-DIRECT-OPS fields.updated_at = 2026-11-12T08:08:11Z vs store item updated_at 2026-11-12T12:48:20Z. No PR was ever attached (prs []), so this was never landed: the state landed_unproven is WRONG. Moving to queued (the fix is unbuilt), re-dated 11-18.",
+  "phase": null,
+  "updated_at": "2026-11-15T06:07:54Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

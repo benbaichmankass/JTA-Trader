@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 ~07:55Z prop pipeline check",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/prop/tickets?account_id=breakout_2&limit=8 (pkg-591f76d3005e4cc8); /api/diag/journal?table=order_packages for that package's sl history"
+  },
+  "state": "killed",
+  "terminal_reason": "Not a wrong-side stop: the 2257.2575 SL is the post-entry trailed stop (tightened past entry into profit on a short), recorded by a sibling item. | evidence: PI-20261030-NLSZ8A5M-0004: \"pkg-591f's PACKAGE SL trails (2281.25 -> 2257.26 after a phone-amend tighten)\"; PI-20261030-A1AEHRKH-0002 records the original package SL 2281.2475 (above entry 2258.04, correct side). Population: the 3 prop tickets of pkg-591f76d3005e4cc8.",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Possible wrong-side stop on prop package pkg-591f76d3005e4cc8 (trend_donchian_eth_prop SHORT, 2026-10-29 21:02Z): every account's ticket has entry 2258.04, sl 2257.2575, i.e. the stop is BELOW entry on a short (population: the 3 prop tickets of that one package, breakout_2 / tradeify_1 / velotrade_1, read from /api/bot/prop/tickets at 2026-11-03 ~07:55Z; all three carry the same values; the gap is 0.78 USD = 0.035% of the 2258.04 entry, on the profit side). UNVERIFIED whether the signal emitted it or a trail rewrote the ticket after entry; if the signal emitted it, it is a stop-geometry bug on a prop money path.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Not a wrong-side stop: the 2257.2575 SL is the post-entry trailed stop (tightened past entry into profit on a short), recorded by a sibling item. EVIDENCE: PI-20261030-NLSZ8A5M-0004: \"pkg-591f's PACKAGE SL trails (2281.25 -> 2257.26 after a phone-amend tighten)\"; PI-20261030-A1AEHRKH-0002 records the original package SL 2281.2475 (above entry 2258.04, correct side). Population: the 3 prop tickets of pkg-591f76d3005e4cc8."
+}

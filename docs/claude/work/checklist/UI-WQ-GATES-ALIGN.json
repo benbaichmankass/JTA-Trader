@@ -1,0 +1,29 @@
+{
+  "id": "UI-WQ-GATES-ALIGN",
+  "title": "Work queue 'Gates' = Admin Gates panel: align bot #25322 + dashboard #247 (route sort key real-money+no-auth first, recommendation per row, no confirm() on bulk accept, hits null with hits_read_state)",
+  "state": "landed_unproven",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "M6"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 7,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25551
+  ],
+  "blocked_on": [],
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-16",
+  "note": "2026-11-12 UI lane: bot half on #25551 (held by R5, Tier-1 read): attention_rank + recommended_decision per row, ?sort=attention, counts.by_attention_rank. Asks 2 and 4 were already live on #25322. Ask 3 (no confirm() in #247) is dashboard-side, for the UI-SPA lane. 2026-11-13 00:34Z: #25551 MERGED (manager). Not yet deployed or observed. Closes on: after deploy, GET /api/bot/gates?sort=attention returns non-decreasing attention_rank and counts.by_attention_rank sums to population.total. The SPA half (link the Work tab to Admin -> Gates; bulk accept uses recommended_decision, no confirm()) goes to UI-SPA.",
+  "observe": {
+    "how": "GET https://ict-bot.duckdns.org/api/bot/gates?sort=attention returns sort=attention, gates[].attention_rank non-decreasing, counts.by_attention_rank summing to population.total",
+    "when": "after the next ict-web-api deploy that includes c2bfca9e4"
+  },
+  "updated_at": "2026-11-13T00:55:07Z",
+  "updated_by": "session_01AFoLuMw1bWyUmi4HkqYBX8 (UI lane close-out)"
+}

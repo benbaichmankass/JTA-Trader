@@ -1,0 +1,23 @@
+{
+  "id": "PROP-TRADEIFY-WORKSPACE-RECUR",
+  "title": "tradeify_1 terminal fell back to the 'Trading Dashboard' workspace again; feed and executor blind ~3.5 h until select-workspace",
+  "state": "landed_unproven",
+  "owner": "AM-OPS-2 (session_01AFoLuKdqv7sRrnLSFhbH4a)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "prop executor reliability, money surface",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-16 12:35Z AM-OPS-2. MEASURED: tradeify_1 feed failed 7 consecutive times (login ok, 'part of the read did not parse', backoff 1200 s) and the executor logged 42 consecutive 'terminal read failed: no positions table found' ticks (5 min cadence => blind since ~08:50Z; the executor halts each cycle: no entries, no trail, no vm_close). Feed 11:31Z: layout_watchlist MISSING (0 Symbol/Bid/Ask tables), tabs My Trading Account / Trading Dashboard / Trading Journal / Technical Analysis, account margin_used 974 with unrealized -2.73 (an open position existed while positions read UNPARSED; dashboard showed 0 open). Cause: the active workspace is 'Trading Dashboard' (same class as PROP-TRADEIFY-WORKSPACE-SWITCHED, 11-15 13:18Z). FIX APPLIED: ops via system-action breakout-login-check apply select-workspace (issue #26503, run 43866239987, 12:25:11Z exit 0): selected 'My Trading Account', watchlist_ok (7 symbols). OPEN: it RECURS (11-15 13:18Z, 11-16 ~08:50Z); select-workspace is a manual click. Real fix = the feed/executor re-select 'My Trading Account' whenever the watchlist canary reads MISSING and that tab exists (option (b) of the earlier row), one click, same refusal conditions as select-workspace. Not built (pacing); propose as a HOLD PR after the reset or earlier if it recurs. CLOSING OBSERVATION for the apply: the next feed and executor ticks read positions/orders again (feed ok, executor no 'terminal read failed'), and any position opened while blind has its SL/TP read back. 2026-11-16 12:45Z manager order: build now. BUILT as HOLD PR #26507 (Tier 2, RESTART; landing file + branch merge-slot claim committed): DXtradeAdapter.read_positions/read_orders re-select 'My Trading Account' once per tick via select_workspace's guards when a table is missing, then re-read; failure keeps the original LookupError (streak, single red flag, RECOVERED unchanged); each attempt emitted as an action line (+ alert on success). velotrade_1 is REST (dxtrade_api): not applicable. Tests tests/test_prop_workspace_reselect.py (9 + 1 browser test that skips without playwright). CLOSING OBSERVATION (after merge + deploy): the next fallback to another workspace shows an executor/feed 'workspace_reselect' action with selected=true and the table read succeeds in the same tick (no multi-tick blind period). Until then: landed_unproven after merge. 2026-11-16 12:54Z FEED SIDE RECOVERED. reset-feed (issue #26509, run 43869041701, 12:44:22Z) cleared the backoff ('8 consecutive failures'); feed tick 12:46:46Z ok (account_status posted), 12:51Z full read: login ok, layout_watchlist ok n=7, positions: 0, orders: 0, emit_status ok id=55253. Executor side recovered 12:29:32Z ('RECOVERED ... after 43 cycles'). The SOL short (fill 311, SL 73.13 / TP 68.591 resting) was CLOSED by the live-review close vmc-76ade9db6b8d at 12:43:55Z (executor vm_close result closed, 'flat, no orphan order'); balance 9615.86 -> 9630.07 (+14.21). Fill booking pending at 12:53Z (expect reason 'manual', the known label bug, see LTR-PROP-CLOSE-FALSE-APPLIED: add this fill, prop-manual-7c99387b16ae, to the backfill list). Remaining on this row: the auto re-select build, HOLD PR #26507 (head 5ad74d5b after the manager's review fix, awaiting CI + merge). 2026-11-16 13:35Z #26507 MERGED (0aa347e2, with #26504 a4189c08); deploy pending git-sync (one trader restart expected). State landed_unproven. CLOSING OBSERVATION: the next fallback to another workspace tab shows an executor/feed 'workspace_reselect' action with selected=true and the positions/orders read succeeding in the same tick (no multi-tick blind period).",
+  "phase": null,
+  "updated_at": "2026-11-16T13:31:27Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "MAIN-RED-DECISION-BAR-INERT-1112",
+  "title": "main is red: tests/test_decision_bar_closed_fingerprint_inert.py fails for xrp_pullback_2h / ada_pullback_2h / trend_donchian_eth_prop (every full pytest-run PR is red)",
+  "state": "queued",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "MEASURED 2026-11-12 ~17:25Z (lane OPDEC-SURVIVORS): on origin/main 4b7630f, pytest tests/test_decision_bar_closed_fingerprint_inert.py -> 3 failed / 9 passed; each param asserts (True, []) == (False, ['decision_bar']): the closed decision_bar key is no longer reported as declared-but-inert to the harness for those three legs. Same 3 failures in unrelated PR #25333 run 43258388742 and in PR #25267 run 43257478434, so every PR whose pytest-run takes the full suite is red until fixed. Not diagnosed (out of this lane's scope): find the main commit since ~2026-11-12 morning that changed those legs' decision_bar / fingerprint handling (config/strategies.yaml or scripts/ops/build_strategy_evidence.py lever/fidelity map) and fix the cause, never the assertion. Also seen alongside: 3x test_research_queue dispatcher dry-run 120s timeouts (local 81-87 s, runner speed) and 5x test_s053 ModuleNotFoundError send_hourly_now (passes locally). Gates this adds or changes: none. [2026-11-12 ~21:35Z lane OPDEC-SURVIVORS] Two MORE red tests on origin/main (eb461a7/c776ac2 era, MEASURED locally on a detached origin/main checkout): tests/test_roster_promotion_evidence.py::test_fingerprint_agrees_with_every_committed_record (1/56 records STALE: ml_entry -- its strategies.yaml block moved after comms/strategy_evidence/ml_entry.json was written) and ::test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots (FIDELITY_OPERATOR_WAIVER names breakout_2/trend_donchian_sol_4h, which is no longer an approximate risk-bearing slot -- stale waiver entry). Neither is caused by the slv/tlt PRs. Fix the cause (regenerate ml_entry's record or revert its drift; drop the stale waiver entry per its own rule), never the assertion. [2026-11-12 ~22:35Z lane OPDEC-SURVIVORS] main 8b5f109 now has 9 RED tests (measured locally on a detached origin/main): 7 assume breakout_2 still has a roster (it is [] on main): test_breakout_prop_wiring::test_prop_account_config, test_unit_c_prop_exit_variants::test_routed_to_breakout_2_and_breakout_1_retired, test_prop_ev_sim::test_book_resolver_matches_current_config + ::test_retired_breakout_1_book_name_still_resolves_to_breakout_2, test_live_review_wake::test_prop_package_carries_all_its_accounts_and_the_prop_label, test_live_review_due::test_prop_package_in_live_review_due_payload_and_due_with_accounts, test_ml_entry_all_accounts::test_live_config_declares_no_profile_for_the_bybit_symbols; plus test_roster_promotion_evidence C5 waiver (breakout_2/trend_donchian_sol_4h) and ml_entry STALE record. Whoever emptied breakout_2's roster owes the matching test/BOOKS/waiver updates (the decision_bar triple from the first note appears fixed on 8b5f109: not in this run's list). Every PR whose pytest-run takes the full suite is red until this lands.",
+  "phase": null,
+  "updated_at": "2026-11-12T22:30:53Z",
+  "updated_by": "session_01AFoLuLWn3eMSsJGMn4UYXX"
+}

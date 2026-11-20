@@ -1,0 +1,23 @@
+{
+  "id": "CHECKLIST-NOTE-NULLS-SUMMARY",
+  "title": "checklist.py note --append nulls the row summary (write-through to the work store)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops tooling defect",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Reported 2026-11-12 03:15Z by lane PHONE-FILL-ENTRY-KEY: scripts/ops/checklist.py note --append on row BREAKOUT2-ETH-RISKBOOK-GAP set summary=null at work-store seq 10184. The lane restored it from seq 10180. Fix: note must preserve summary; add a test that runs note --append and asserts summary is unchanged. Also: checklist.py add prints 'wrote docs/claude/work/checklist/<ID>.json', but no file is left in the tree; the row is written to the store directly. Make the message say where it actually wrote.",
+  "phase": null,
+  "updated_at": "2026-11-12T03:04:57Z",
+  "updated_by": "Manager Session 2026-11-11a",
+  "week_lane": "throttle"
+}

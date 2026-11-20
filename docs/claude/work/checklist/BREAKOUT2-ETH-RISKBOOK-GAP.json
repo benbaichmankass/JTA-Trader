@@ -1,0 +1,23 @@
+{
+  "id": "BREAKOUT2-ETH-RISKBOOK-GAP",
+  "title": "breakout_2 ETH long c54b2229aa1c open at venue but absent from open_risk (ticket skipped, fill placed only)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "PHONE-SELF-DIAGNOSE follow-up; manager maps at the weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "LANE 2026-11-12 (fix lane): PR #25089 [Tier 2, HOLD] head 1c4e61d94985212bcfa36fe624ee2c6d71783c16 -- ingest entry_price falls back to report['entry']; prop-report-close --from-placed accepts a skipped ticket with a placed fill row + --entry-price / system-action entry_price:. Backfill NOT built: over all 249 live prop_fills (4 accounts) exactly 1 row has entry NULL with 'entry' in raw = fill 244, covered by the c54b close. (e) WHY placed->skipped (noted, not fixed): NOT the claim watchdog (phone_executor.expire_stale_claims touches only status='claimed'). It was the stale-entry CANCEL: phone run cancel-prop-manual-c54b2229aa1c-c1-20261111T210600Z at 21:06Z (valid_until 21:03Z) read Open orders, match 0 -> result not_found -> src/prop/phone_cancel.py:261 transition_ticket_status(skipped, from placed). The limit had already FILLED into a position, so 'not in Open orders' != 'never filled'. Follow-up candidate: on not_found, check Positions before skipping (or move to awaiting_report), never straight to skipped. Close action pending merge+VM pull. LANE 2026-11-12 (fix lane): PR #25089 [Tier 2, HOLD] head 1c4e61d94985212bcfa36fe624ee2c6d71783c16 -- ingest entry_price falls back to report['entry']; prop-report-close --from-placed accepts a skipped ticket with a placed fill row + --entry-price / system-action entry_price:. Backfill NOT built: over all 249 live prop_fills (4 accounts) exactly 1 row has entry NULL with 'entry' in raw = fill 244, covered by the c54b close. (e) WHY placed->skipped (noted, not fixed): NOT the claim watchdog (phone_executor.expire_stale_claims touches only status='claimed'). It was the stale-entry CANCEL: phone run cancel-prop-manual-c54b2229aa1c-c1-20261111T210600Z at 21:06Z (valid_until 21:03Z) read Open orders, match 0 -> result not_found -> src/prop/phone_cancel.py:261 transition_ticket_status(skipped, from placed). The limit had already FILLED into a position, so 'not in Open orders' != 'never filled'. Follow-up candidate: on not_found, check Positions before skipping (or move to awaiting_report), never straight to skipped. Close action pending merge+VM pull.",
+  "updated_at": "2026-11-12T02:51:56Z",
+  "updated_by": "session_01AFoLuKqacBM3ue15e6qrw4"
+}

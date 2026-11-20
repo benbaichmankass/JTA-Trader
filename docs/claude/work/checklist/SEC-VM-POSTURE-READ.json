@@ -1,0 +1,23 @@
+{
+  "id": "SEC-VM-POSTURE-READ",
+  "title": "Security: no read path for host posture on the live VM and gateway (sshd, fail2ban, sudoers, patching, file modes)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 116,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "2026-11-11: the live VM has no arbitrary-bash relay by design, and no allowlisted action reports sshd effective config, fail2ban, authorized_keys counts, sudoers, pending security updates, service users or the modes of secret-bearing files. So those audit items are UNVERIFIED on the live VM and the IB gateway. The trainer read was dispatched (#24990) and sat queued behind 433 Actions runs; read its comment. Build: a Tier-1 read-only security-posture-report system-action that prints counts and modes only (no addresses, no key material), then file what it shows. Prior art: scripts/ops/list_listening_ports.sh and the 2026-06-28 intrusion-surface audit.",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "throttle"
+}

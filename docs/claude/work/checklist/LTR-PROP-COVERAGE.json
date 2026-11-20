@@ -1,0 +1,22 @@
+{
+  "id": "LTR-PROP-COVERAGE",
+  "title": "Live trade review never sees open PROP trades (prop ticket journal not scanned)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-09 11:52Z by manager 2026-11-07a. config/live_trade_review.yaml lists breakout_1/2, tradeify_1, velotrade_1 in scope and the console wake toggle ltr_prop is ON, but /api/diag/live_review_due (read_state looked, open_count 17, due 13) builds its open set from the trade journal only: due accounts = alpaca_paper, bybit_1, bybit_2, ib_paper. The one open prop package, pkg-50f5eed272f64197 (trend_donchian_sol_4h SOL short, filled on breakout_2, tradeify_1, velotrade_1 per /api/bot/prop/tickets?status=filled), appears NOWHERE in the payload (not open, not due, not could-not-look), so it is silently unreviewed - a collapsed state (missing reads as nothing due). Fix: live_review_due + the packet builder take open prop positions from the prop journal (filled tickets) as packages with their prop accounts, mark-price telemetry, the firm DD context, and a 'could not look' read where a prop venue read is unavailable; the apply side already has phone/tradeify/velotrade paths. Test: an open filled prop ticket appears in live_review_due with its accounts. DONE 2026-11-09 13:04Z (lane LTR-PROP-COVERAGE, #24508 e8b488f, deployed, no restart needed): /api/diag/live_review_due read_state looked, prop_open_state read; prop_open lists pkg-50f5eed272f64197 (trend_donchian_sol_4h SOL short, entry 87.64, SL 89.10, TP 78.96) with breakout_2 (phone: close/move_tp/reduce/tighten/widen_sl), tradeify_1 and velotrade_1 (prop_vm: tighten), each with ESTIMATED telemetry (mark 86.75, uPnL +6.08, cross-checked) and DD context; also in due with all 3 accounts. Follow-up noted: tradeify_1/velotrade_1 apply paths are tighten-only. FOLLOW-UP (first prop packet LR-20261109T1306Z-pkg-50f5eed272f64197, 13:06Z): the LTR packet for a prop package is DEGRADED - account_bounds is EMPTY, state.open_r null, priced_options could_not_price - although live_review_due's prop_open carries the accounts, the ESTIMATED mark telemetry and DD context. Fix: scripts/ops/live_review_packet.py builds account_bounds + state (open_r/peak from the mark estimate, provenance ESTIMATED) for prop packages from prop_open, and prices options from the leg's Stage-0 history like any package. Plus: tradeify_1/velotrade_1 apply paths are tighten-only (no close/reduce). After the reset unless a prop review needs it sooner.",
+  "phase": null,
+  "updated_at": "2026-11-09T13:09:05Z",
+  "updated_by": "x"
+}

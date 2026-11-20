@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261027-CKXOMXWD-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-14-EXTERNAL-CONTEXT (session_01AFoLuLB3eLyZ8GcKxoMxWd)",
+    "rerun": "git cat-file -e origin/main:comms/live_review/short_hold/feed_gaps.jsonl && echo mirrored || echo not-mirrored"
+  },
+  "routed_to": "DESK-14-LIVE-WEB-CONTEXT",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "DESK-14 follow-up: mirror the short-hold lane's comms/live_review/short_hold/external_context.jsonl and feed_gaps.jsonl from the live-review/rows branch to main and read external_context.jsonl in ml/datasets/families/claude_judgments.py (LTR rows are built from reviews.jsonl; the lane's external lines, flagged source_flag external, sit only on the branch). desk_feed_gaps.py already reads feed_gaps.jsonl once it is on main.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: A named DESK-14 follow-up. claude_judgments reads external_context from desk decisions but not the short-hold lane file. EVIDENCE: origin/main 30b5cd919 (2026-11-12): ml/datasets/families/claude_judgments.py:561 reads d[\"external_context\"] on decision rows; no short_hold/external_context.jsonl read (grep 0)."
+}

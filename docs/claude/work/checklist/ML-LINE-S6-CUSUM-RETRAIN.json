@@ -1,22 +1,24 @@
 {
   "id": "ML-LINE-S6-CUSUM-RETRAIN",
   "title": "[MODEL] ML line S6: daily CUSUM on each advisory overlay's realized decision value vs its Stage-0 expectation at a declared false-alarm rate (trip -> demote to shadow + cause-naming unit), and weekly rebuild + re-gate of the line's datasets as challenger vs champion",
-  "phase": null,
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 S6). MEASURED: no CUSUM monitor in src/ or scripts/ (git grep -il cusum hits only label event-sampling); LIVE-DECAY-MONITOR (queued) covers legs not models; setup_candidates datasets are never rebuilt by the daily cycle (PI-20261028-V8KBRR5H-0004). Ranked BEFORE the canary row on purpose: no canary without the alarm that demotes it (canonical 'A soak must carry its own alarm'). Monitor is Tier 1; the demotion action runs under the ladder / proposed MD-ML-OVERLAY-CANARY. Practice M10, R4, [PYS-2003-JPM], [Page-1954], [Gama-2014-CSUR]. Station metrics: ARL0 on Stage-0 replay, detection delay on planted decay, days since last re-gate. Coordinate with LIVE-DECAY-MONITOR and ML-TRAINER-TIMER-PROOF. CLOSES WHEN: a CUSUM per advisory overlay runs daily with measured ARL0, a planted decay trips it and writes a pipeline item, and the line's datasets were rebuilt and re-gated by the weekly cycle once.",
-  "priority_rank": 5,
-  "updated_at": "2026-10-29T07:08:48Z",
-  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "_seq": 785
+  "priority_rank": 121,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "_seq": 785,
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 S6). MEASURED: no CUSUM monitor in src/ or scripts/ (git grep -il cusum hits only label event-sampling); LIVE-DECAY-MONITOR (queued) covers legs not models; setup_candidates datasets are never rebuilt by the daily cycle (PI-20261028-V8KBRR5H-0004). Ranked BEFORE the canary row on purpose: no canary without the alarm that demotes it (canonical 'A soak must carry its own alarm'). Monitor is Tier 1; the demotion action runs under the ladder / proposed MD-ML-OVERLAY-CANARY. Practice M10, R4, [PYS-2003-JPM], [Page-1954], [Gama-2014-CSUR]. Station metrics: ARL0 on Stage-0 replay, detection delay on planted decay, days since last re-gate. Coordinate with LIVE-DECAY-MONITOR and ML-TRAINER-TIMER-PROOF. CLOSES WHEN: a CUSUM per advisory overlay runs daily with measured ARL0, a planted decay trips it and writes a pipeline item, and the line's datasets were rebuilt and re-gated by the weekly cycle once. [2026-11-15 ML-PRIMARY-3] PI-20261029-XME2GXW7-0001 (overlay CUSUM live join): BUILT in #25549 (scripts/ops/overlay_cusum_join.py, weekly /ml-review C11), but it had never been run. FIRST READ 2026-11-15 (PR #26355, comms/ml-review/c11/c11-2026-11-15.json): 116 shadow x 501 closed trades, 23 joined, 0 ambiguous; bybit_portfolio + bybit_2 n_reduced 1 each, S 0.0 / H 2.0, state ok, no alarm. Remaining for this row: S6 wants DAILY and automated with a measured ARL0; today it is weekly and manual (C11). The PI clears once a weekly read lands in the brief.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:29:25Z",
+  "updated_by": "session_01AFoLuMkZYvbttnmb2gtVcA",
+  "week_lane": "throttle"
 }

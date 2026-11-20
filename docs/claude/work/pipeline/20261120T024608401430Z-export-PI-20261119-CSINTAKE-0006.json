@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 7783's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-CSINTAKE-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:7783 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 7783"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 7783 (alpaca_paper/qqq_pullback_1h QQQ, exit_reason='stuck_strategy_watchdog'): exit_journaled: exit_reason='stuck_strategy_watchdog', no exit price; fill_and_fees: pnl or fee not recorded"
+}

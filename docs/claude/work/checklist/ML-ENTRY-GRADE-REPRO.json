@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-GRADE-REPRO",
+  "title": "Entry grade 42473814600 (n=317, -0.1316 R) does not reproduce on a fresh Binance fetch (n=375, -0.204): find why",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": 2.1,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Filed by CRYPTO-ENTRY-DIAG (PR #25347, comms/research/RQ-20261112-cd01-01/local-20261112T1500Z/verdict.json repro_check_not_graded). Same served v1r20261106, tau 0.1, window 2026-10-25..11-07: grade n=317 (longs 51 -0.90, shorts 266 +0.017); fresh fetch n=375 (longs 51 -0.89, shorts 324 -0.096); excluding 10-27/28 (days missing from the grade's table) n=355 -0.221. Longs match, shorts differ. Candidates: late-published or revised archive bars, sequential-policy state at the window start, table build differences. DONE WHEN the grade's table is rebuilt from its inputs and the difference is attributed. DONE-ish: grade 42473814600 reproduced exactly (n=317 -0.1316) by deleting the 2026-10-28 UTC bars from a fresh fetch; cause = positional rolling features/ATR span the bar hole (features corrupted through 11-04). 104 decisions A-only (18 on missing days, 86 shorts elsewhere), 48 B-only, 269 identical. Fix = opt-in build_table(hole_safe), PR #25460 draft. Note docs/research/entry-grade-42473814600-repro-2026-11-12.md",
+  "phase": null,
+  "terminal_reason": "MEASURED by lane session_01AFoLuKW1st5iuYeMhxFrX3, merged #25460 (797f876f), note docs/research/entry-grade-42473814600-repro-2026-11-12.md: deleting every symbol's 2026-10-28 bars from a fresh fetch reproduces grade 42473814600 exactly (n=317, -0.1316). Cause: positional rolling features/ATR in ml_decision_entry span a bar hole, corrupting rows for 168 bars (through 11-04). Complete bars: n=373, -0.2127. Row-by-row: 269 identical, 104 complete-only, 48 holed-only (373-104+48=317). Longs identical; the whole gap is shorts. CRYPTO-ENTRY-DIAG verdicts (complete table) stand. Opt-in fix build_table(hole_safe=False) landed, default off. Adoption filed as ML-ENTRY-HOLE-SAFE-ADOPT.",
+  "updated_at": "2026-11-12T21:25:55Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

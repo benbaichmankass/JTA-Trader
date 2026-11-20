@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 7735's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-CSINTAKE-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:7735 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 7735"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 7735 (ib_paper/orphan_adopt MGC, exit_reason='exit_coverage_no_strategy'): signal_fired: no order package; bracket_real_at_venue: SL or TP missing; exit_journaled: exit_reason='exit_coverage_no_strategy'"
+}

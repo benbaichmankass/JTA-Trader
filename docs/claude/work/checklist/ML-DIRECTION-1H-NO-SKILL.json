@@ -1,0 +1,22 @@
+{
+  "id": "ML-DIRECTION-1H-NO-SKILL",
+  "title": "1h direction head (default LightGBM) has no skill vs the class prior on BTC/ETH/SOL: check whether any deployed direction head shares it",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ml-review finding, maps at review",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-11",
+  "note": "Source: ML lane bake-off unit RQ-20261107-98e3-08, run 42434161072, 5-fold CV, 43,800 rows per shard, BTC/ETH/SOL 1h. MEASURED: the class prior beats default LightGBM by +0.0061/+0.0071/+0.0073 nats (CIs exclude 0), so no skill and slightly negative. HAR-RV does not help (FAIL). The lane first reported this with the sign inverted and corrected it at 01:51Z; it also reversed the 07 regime finding, where plain HGB BEATS the prior by 0.095-0.12 nats. NOT CHECKED: whether any deployed or shadow direction head (eth-direction-1h-lgbm-v1, -xasset-v1 are research_only; 15m btc direction configs, stage unread) is this recipe, and the live registry stage. NEXT: the Wed /ml-review reads the trainer registry and the lifecycle results; if a served direction head is a no-skill recipe, run drift-remediation (never just demote). Artifacts on branch claude/ml-lane-3.",
+  "phase": null,
+  "updated_at": "2026-11-08T01:52:03Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

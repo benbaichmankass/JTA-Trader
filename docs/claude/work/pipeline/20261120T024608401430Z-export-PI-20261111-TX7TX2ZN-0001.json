@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v6",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "iteration_subjects.yaml carries an ml_model subject for ml-entry-eq-struct (money: real_money) AND dsr_probation.py names at least one live unit for ml_entry_eq_struct",
+    "kind": "observation"
+  },
+  "id": "PI-20261111-TX7TX2ZN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-11 (lane ML-FRONTIER-PREP-20261111)",
+    "rerun": "python3 scripts/research/dsr_probation.py | grep ml_entry_eq_struct; grep -n eq.struct scripts/research/iteration_subjects.yaml"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-PROGRAMME-PLAN state landed_unproven: OPS backlog drain (BACKLOG-DRAIN-20261112, after HEALTH-20261111-EXPORT-READS-STALE per operator p4) [weekly planning 2026-11-12]",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "routed_to": "ML-ENTRY-EQ-STRUCT-LIVE (row; Foxhound-4 real-money equity ENTRY)",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml] The real-money equity ENTRY model (ml-entry-eq-struct-ens5-v1, Foxhound-4; strategies.yaml::ml_entry_eq_struct on alpaca_live + alpaca_portfolio) has NO iteration subject and NO live research unit. MEASURED 2026-11-11: scripts/research/dsr_probation.py prints 'ml_entry_eq_struct dsr=— units=— (NO LIVE UNIT)'; scripts/research/iteration_subjects.yaml ml_model lists ml-entry but no eq-struct subject, so iteration_orphans.py cannot flag it. Its promotion evidence is one confirm window (RQ-20261107-98e3-06 PASS, +0.49 R/decision, se 0.076, n=207, deflated bar met at N=2). Operating plan section 2 requires every live model to have a live iteration; a real-money model outside the orphan census is the gap."
+}

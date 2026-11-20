@@ -1,0 +1,21 @@
+{
+  "id": "PROP-BRACKET-APPLY",
+  "title": "VM-prop bracket apply path: set a position's TP/SL without the operator (system-action + live_review_apply prop_vm)",
+  "state": "done",
+  "owner": "PROP-VELOTRADE-TP-MISMATCH",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "note": "OPERATOR (chat 2026-11-11, relayed by manager 21:15Z, verbatim): \"For VeloTrade ... it has to be able to do it on its own. Just the way it is got to be. If we need to leave the structured exit on until then, that is fine. Yeah, we got to get this. These are the kind of things that are urgent builds. Like, these are basic system requirements.\" DESIGN: a ticket-meta request (meta.tp_target, beside the existing meta.sl_floor) that prop_trail applies through its OWN amend code (modify_bracket on the executor session, confirm, report) -- no second venue client or login. Entries: system-action amend-prop-bracket (dry default, apply: true) and live_review_apply prop_vm move_tp. Refuses with a stated reason for accounts that cannot amend (tradeify_1 browser dxtrade: TP_AMEND_SUPPORTED false; phone accounts use phone_trail). First use: velotrade_1 SOL TP -> 78.964 after PR for PROP-VELOTRADE-TP-MISMATCH deploys.",
+  "phase": "build",
+  "updated_at": "2026-11-11T21:16:40Z",
+  "updated_by": "session_01AFoLuMUh4kAHdRpdtz8qPL"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "BYBIT2-MARGIN-PREFLIGHT-SAME-TICK",
+  "title": "bybit_2 margin pre-flight sized a third same-tick order from a stale available balance (Bybit 110007)",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "runtime hardening of an existing risk path",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "2026-11-08 20:02Z (manager): ml_entry 20:00Z signal opened ETHUSDT SHORT 0.12 (20:01:17) and SOLUSDT SHORT 0.4 (20:01:52) on bybit_2 (+ mirror bybit_portfolio), then XRPUSDT SHORT 8.6 was refused by Bybit ErrCode 110007 'ab not enough' at 20:02:03 (alert ts 2026-11-08T20:02:03.787760Z). The margin pre-flight in src/units/accounts/risk.py (~L1250-1340, 2026-05-12) exists to turn 110007 into a RiskManager refusal; most likely the XRP order read available_usd before the ETH/SOL margin settled. Population: 1 occurrence of 110007 in alerts since 2026-11-01. Contained per trade (venue refusal, no orphan); the leg missed one trade. Fix candidates: re-read available balance per order within a tick, or decrement the cached available by each order's initial margin. Re-entry test: a 3-order same-tick test on a small-margin account sizes the third to fit or refuses it in RiskManager, not at the venue. Tier 2 (risk path): prepare+validate, then operator OK unless a committed evidence record settles it.",
+  "phase": null,
+  "updated_at": "2026-11-08T20:06:58Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx",
+  "week_lane": "surge"
+}

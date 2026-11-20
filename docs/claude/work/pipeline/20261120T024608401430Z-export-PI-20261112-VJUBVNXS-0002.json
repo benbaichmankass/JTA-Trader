@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v7",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each of the four items below is done, or killed with a reason",
+    "conditions": [
+      "pr_merged:25480",
+      "manual:cloud env DIAG_BASE_URL set to https://ict-bot.duckdns.org (operator approval via update_environment)",
+      "manual:Android client DEFAULT_BOT_URL moved to HTTPS or the app recorded retired"
+    ],
+    "kind": "event"
+  },
+  "id": "PI-20261112-VJUBVNXS-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SEC-8001-LOCKDOWN (session_01AFoLuMBna38VjYvJUbVnXS)",
+    "rerun": "grep -n 'default: \"8001\"' .github/workflows/vm-net-fix.yml; echo $DIAG_BASE_URL"
+  },
+  "routed_to": "SEC-8001-FOLLOWUPS",
+  "state": "done",
+  "terminal_reason": "All four leftovers closed 2026-11-12: (1) vm-net-fix no longer opens 8001 (#25480, 5526dbaf8, merged); (2) cloud env DIAG_BASE_URL already https://ict-bot.duckdns.org per Manager 2026-11-11a (update_environment 'nothing to change' 21:33Z; names-only read, not lane-verified); (3) Android client not_needed: operator uninstalled the phone app 2026-11-12 (per Manager); (4) OCI ingress rule removed (oci-close-api-port apply run 43288323346, removed=1, left=0). Row SEC-8001-FOLLOWUPS done.",
+  "what": "SEC-8001-LOCKDOWN leftovers (found 2026-11-12, MEASURED unless marked): (1) .github/workflows/vm-net-fix.yml still opens TCP/8001 by default and would undo the lockdown; retarget it (443) or retire it. (2) The claude.ai cloud environment variable DIAG_BASE_URL is http://<live-ip>:8001; set it to https://ict-bot.duckdns.org (an operator approval prompt through update_environment). exit_location_fidelity.py and bracket_calibration_report.py use it directly. (3) The shelved Android companion app (repo ict-trader-android) is UNVERIFIED: add_repo was refused by the classifier; check its default base URL and move it to HTTPS, or record it as retired. (4) The OCI security list still allows 8001 (the 04:21Z runner probe reached it); there is no write path; it is an operator OCI-console removal, harmless once nothing listens publicly. UPDATE 2026-11-12 08:45Z on (3), MEASURED by the UI-SPA lane (read-only): the Android app BREAKS after the bind. AppPrefs.kt:89 DEFAULT_BOT_URL = http://<live-VM-IP>:8001 is used by every screen and by /ws/market. network_security_config.xml:35 allowlists cleartext for that IP. The repo's .claude/settings.json DIAG_BASE_URL is also http://<ip>:8001. Fix (the app is frozen): DEFAULT_BOT_URL = https://ict-bot.duckdns.org, ship it through release.yml, and drop the IP from the cleartext allowlist. Workaround with no rebuild: Settings > Bot URL = https://ict-bot.duckdns.org.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: lockdown leftovers (vm-net-fix.yml reopens 8001, DIAG_BASE_URL env var, Android app) are that row's scope EVIDENCE: Row SEC-8001-LOCKDOWN (queued); item lists the four leftovers found 2026-11-12\n\n[2026-11-12 20:35Z SEC-8001 lane] (4) DONE, MEASURED: the OCI ingress rule was removed by oci-close-api-port (apply run 43288323346, removed=1, matching_8001_left=0) with the configured key, so no console step is needed. Still open: (1) vm-net-fix.yml still defaults to opening 8001 (read on main 884d20e72, line 35); (2) cloud env DIAG_BASE_URL; (3) the Android app (fix PR opened in another lane per AM-OPS). Row SEC-8001-LOCKDOWN closed at 20:35Z, so AM-OPS should re-route this item.\n\n[2026-11-12 21:00Z SEC-8001 lane] RE-ROUTED to row SEC-8001-FOLLOWUPS (AM-OPS, 20:46Z). (1) vm-net-fix: PR #25480 (no default port, 8001 refused, issue-path event fix). (2) DIAG_BASE_URL and (3) Android stay open on that row. (4) done."
+}

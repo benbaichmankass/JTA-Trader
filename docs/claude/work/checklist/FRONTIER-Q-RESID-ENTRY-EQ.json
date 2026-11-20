@@ -1,0 +1,36 @@
+{
+  "id": "FRONTIER-Q-RESID-ENTRY-EQ",
+  "title": "Same market-residual target for the ETF ENTRY model (Foxhound-4): train on the ETF's move minus beta x SPY",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-15",
+  "frontier": {
+    "baseline": "Foxhound-4 recipe on the raw target, same folds",
+    "consumer": "ml_entry_eq_struct on alpaca_live (real money) + alpaca_portfolio",
+    "est_cost": "$0 runner; needs the eq_struct harness read first",
+    "family": "gbdt (target lever)",
+    "next_step": "wait for the crypto K1 verdict; if PASS or INDETERMINATE-positive, author on the eq_struct harness",
+    "p_pass": 0.15,
+    "source": "as FRONTIER-Q-RESID-ENTRY; Foxhound-4 record +0.492R/trade n=207 with 75/207 trades in 2026-03 (comms/strategy_evidence/ml_entry_eq_struct.json) suggests a market-timing concentration",
+    "state": "idea",
+    "unit": null,
+    "why": "if one month carries a third of the trades, the edge may be equity beta; a residual target tests whether a market-neutral version keeps it"
+  },
+  "note": "[2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D3-FOXHOUND-4 in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none. [2026-11-15 ML-PRIMARY-3, ML design wave W47] Not authored this wave: ml_entry_equity.py has no residual target. BUILD NEEDED (W48): per-row market component m = beta_i x SPY return over the trade's OWN holding window (entry ts to the structure-exit / bracket exit ts) x entry / risk; beta = rolling OLS of the ETF's daily log return on SPY's, point-in-time; arms raw / resid / permuted-SPY placebo, paired over the ENTRY-EQ dev folds, the 4654-01 rule shape. Rationale: equities carry a much stronger market factor than crypto, so the crypto RESID FAIL (4654-01) does not transfer. Decision it changes: Foxhound-4's next lever.",
+  "updated_at": "2026-11-15T13:47:37Z",
+  "updated_by": "session_01AFoLuMkZYvbttnmb2gtVcA",
+  "week_lane": "surge"
+}
