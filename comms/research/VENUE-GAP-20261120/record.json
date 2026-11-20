@@ -1,0 +1,112 @@
+{
+ "record": "VENUE-GAP-20261120",
+ "question": "Does Stage-0 evidence built on Binance-vision USD-M candles overstate what the same leg earns on the Bybit linear bars it trades?",
+ "method": "Each leg's exact Stage-0 evidence argv (regime_debt_matrix.build_harness_cmd) run twice on the trainer, same window, once on the trainer's Bybit linear file and once on the Binance-vision USD-M native file, both aggregated OPEN-stamped to the leg timeframe (venue_gap_measure.py, this directory). dR/trade = (sum_r_bybit - sum_r_binance) / n_binance.",
+ "relays": [
+  {
+   "issue": 27588,
+   "run": 44663389824
+  },
+  {
+   "issue": 27603,
+   "run": 44666388564
+  },
+  {
+   "issue": 27615,
+   "run": 44669544524
+  }
+ ],
+ "read_state": "measured",
+ "measured_vs_estimated": "21 of 21 legs measured; ml_entry's penalty is ESTIMATED (the pooled figure), never measured",
+ "pooled": {
+  "population": "21 legs of 21 run (every leg with n_binance >= 20), 4810 Binance-side trades, window 2023-02-01..2026-11-15",
+  "legs_bybit_worse": 16,
+  "legs_bybit_better": 5,
+  "sign_test_p_two_sided": 0.0266,
+  "trade_weighted_dr_per_trade": -0.0185,
+  "trade_weighted_bootstrap95": [
+   -0.0279,
+   -0.0097
+  ],
+  "unweighted_mean_dr_per_trade": -0.014,
+  "unweighted_bootstrap95": [
+   -0.0304,
+   0.0031
+  ],
+  "median_dr_per_trade": -0.0164,
+  "bootstrap": "10,000 leg-level resamples, seed 42"
+ },
+ "real_money_margins": [
+  {
+   "leg": "ada_pullback_2h",
+   "evidence_record": "comms/strategy_evidence/ada_pullback_2h.json",
+   "expectancy_r_oos": 0.4043,
+   "n_trades_oos": 67,
+   "expectancy_r_holdout": 0.2364,
+   "n_holdout": 97,
+   "measured_dr_per_trade": -0.0166,
+   "penalty_basis": "measured (this record)",
+   "binding_margin_r": 0.2364,
+   "margin_over_penalty_x": 14.24,
+   "flag": null
+  },
+  {
+   "leg": "trend_donchian_eth_4h",
+   "evidence_record": "comms/strategy_evidence/trend_donchian_eth_4h.json",
+   "expectancy_r_oos": 0.2289,
+   "n_trades_oos": 135,
+   "expectancy_r_holdout": null,
+   "n_holdout": null,
+   "measured_dr_per_trade": -0.0173,
+   "penalty_basis": "measured (this record)",
+   "binding_margin_r": 0.2289,
+   "margin_over_penalty_x": 13.23,
+   "flag": null
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "evidence_record": "comms/strategy_evidence/trend_donchian_sol_prop.json",
+   "expectancy_r_oos": 0.0926,
+   "n_trades_oos": 538,
+   "expectancy_r_holdout": 0.0392,
+   "n_holdout": 96,
+   "measured_dr_per_trade": -0.0364,
+   "penalty_basis": "measured (this record)",
+   "binding_margin_r": 0.0392,
+   "margin_over_penalty_x": 1.08,
+   "flag": "thin: binding margin within 2.5x the Bybit penalty -> Bybit-native re-test"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "evidence_record": "comms/strategy_evidence/trend_donchian_xrp_4h.json",
+   "expectancy_r_oos": 0.0757,
+   "n_trades_oos": 46,
+   "expectancy_r_holdout": 0.1402,
+   "n_holdout": 25,
+   "measured_dr_per_trade": 0.0452,
+   "penalty_basis": "measured (this record)",
+   "binding_margin_r": 0.0757,
+   "margin_over_penalty_x": null,
+   "flag": null
+  },
+  {
+   "leg": "ml_entry",
+   "evidence_record": "comms/strategy_evidence/ml_entry.json",
+   "expectancy_r_oos": 0.0371,
+   "n_trades_oos": 907,
+   "expectancy_r_holdout": null,
+   "n_holdout": null,
+   "measured_dr_per_trade": null,
+   "penalty_basis": "pooled trade-weighted (ML leg: no harness argv to re-run)",
+   "binding_margin_r": 0.0371,
+   "margin_over_penalty_x": 2.0,
+   "flag": "thin: binding margin within 2.5x the Bybit penalty -> Bybit-native re-test"
+  }
+ ],
+ "not_measured": "5m/15m legs (ict_scalp, fvg_range, turtle_soup) and every ML leg; Binance per-trade rows were not kept (only per-leg sums)",
+ "decision": "manager 2026-11-20 03:52Z: new crypto Stage-0 units for Bybit-traded legs use the trainer's Bybit files as primary corpus (Binance = robustness arm). No existing evidence, promotion bar, config or live state changed. Making it binding doctrine is put to the operator as a proposal.",
+ "follow_ups": [
+  "PI-20261120-7ITMUEB1-0005",
+  "PI-20261120-7ITMUEB1-0007"
+ ]
+}
