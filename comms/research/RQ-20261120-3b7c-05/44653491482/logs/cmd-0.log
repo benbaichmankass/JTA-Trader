@@ -1,0 +1,66 @@
+Fetching ETHUSDT 15 candles 2024-10-11 -> 2026-11-20 (source=binance_vision) …
+  vision monthly 2024-10: 2976 bars (2016 kept)
+  vision monthly 2024-11: 2880 bars (4896 kept)
+  vision monthly 2024-12: 2976 bars (7872 kept)
+  vision monthly 2025-01: 2976 bars (10848 kept)
+  vision monthly 2025-02: 2688 bars (13536 kept)
+  vision monthly 2025-03: 2976 bars (16512 kept)
+  vision monthly 2025-04: 2880 bars (19392 kept)
+  vision monthly 2025-05: 2976 bars (22368 kept)
+  vision monthly 2025-06: 2880 bars (25248 kept)
+  vision monthly 2025-07: 2976 bars (28224 kept)
+  vision monthly 2025-08: 2976 bars (31200 kept)
+  vision monthly 2025-09: 2880 bars (34080 kept)
+  vision monthly 2025-10: 2976 bars (37056 kept)
+  vision monthly 2025-11: 2880 bars (39936 kept)
+  vision monthly 2025-12: 2976 bars (42912 kept)
+  vision monthly 2026-01: 2976 bars (45888 kept)
+  vision monthly 2026-02: 2688 bars (48576 kept)
+  vision monthly 2026-03: 2976 bars (51552 kept)
+  vision monthly 2026-04: 2880 bars (54432 kept)
+  vision monthly 2026-05: 2976 bars (57408 kept)
+  vision monthly 2026-06: 2880 bars (60288 kept)
+  vision monthly 2026-07: 2976 bars (63264 kept)
+  vision monthly 2026-08: 2976 bars (66240 kept)
+  vision monthly 2026-09: 2880 bars (69120 kept)
+  vision monthly 2026-10: 2976 bars (72096 kept)
+  vision daily 2026-11: 73824 bars kept so far
+Wrote 73824 rows (2024-10-11 -> 2026-11-18) to comms/research/RQ-20261120-3b7c-05/44653491482/ict_scalp_eth_15m__candles.csv
+  data source [explicit] comms/research/RQ-20261120-3b7c-05/44653491482/ict_scalp_eth_15m__candles.csv for symbol=ETHUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-05/44653491482/ict_scalp_eth_15m_off.json
+  data source [explicit] comms/research/RQ-20261120-3b7c-05/44653491482/ict_scalp_eth_15m__candles.csv for symbol=ETHUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-05/44653491482/ict_scalp_eth_15m_on.json
+ict_scalp_5m backtest — ETHUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 163
+  win_rate_pct   : 34.36%
+  expectancy_r   : 0.018
+  total_r (gross): 2.9405
+  net_total_r    : -13.6227 (exp -0.0836) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : -9.7583 (exp -0.0599) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.07791, 'slippage_r': 0.02125, 'funding_r': 0.00246, 'total_cost_r': 0.10161, 'funding_windows': 0.42945}
+  max_drawdown_r : 18.4166 [on net curve]
+  sharpe_r       : 0.0217
+  avg_win_r      : 0.9825
+  avg_loss_r     : -0.4867
+  by_outcome     : {'stale_stop': 72, 'sl_hit': 35, 'timeout': 25, 'tp_hit': 27, 'be_stop': 4}
+ict_scalp_5m backtest — ETHUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 75
+  win_rate_pct   : 34.67%
+  expectancy_r   : 0.0952
+  total_r (gross): 7.1379
+  net_total_r    : -0.4618 (exp -0.0062) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : 1.3514 (exp 0.018) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.07715, 'slippage_r': 0.02104, 'funding_r': 0.00313, 'total_cost_r': 0.10133, 'funding_windows': 0.49333}
+  max_drawdown_r : 5.6381 [on net curve]
+  sharpe_r       : 0.1122
+  avg_win_r      : 1.0966
+  avg_loss_r     : -0.4362
+  by_outcome     : {'stale_stop': 38, 'tp_hit': 16, 'sl_hit': 11, 'timeout': 8, 'be_stop': 2}
+{
+ "verdict": "pass",
+ "note": "PASS: ON -0.46 R vs OFF -13.62 R (delta +13.16); mean -0.0062 vs -0.0836; ex-worst-trade ON 0.74 vs OFF -12.28; folds ON>=OFF 5/6"
+}

@@ -1,0 +1,66 @@
+Fetching XRPUSDT 15 candles 2024-10-11 -> 2026-11-20 (source=binance_vision) …
+  vision monthly 2024-10: 2976 bars (2016 kept)
+  vision monthly 2024-11: 2880 bars (4896 kept)
+  vision monthly 2024-12: 2976 bars (7872 kept)
+  vision monthly 2025-01: 2976 bars (10848 kept)
+  vision monthly 2025-02: 2688 bars (13536 kept)
+  vision monthly 2025-03: 2976 bars (16512 kept)
+  vision monthly 2025-04: 2880 bars (19392 kept)
+  vision monthly 2025-05: 2976 bars (22368 kept)
+  vision monthly 2025-06: 2880 bars (25248 kept)
+  vision monthly 2025-07: 2976 bars (28224 kept)
+  vision monthly 2025-08: 2976 bars (31200 kept)
+  vision monthly 2025-09: 2880 bars (34080 kept)
+  vision monthly 2025-10: 2976 bars (37056 kept)
+  vision monthly 2025-11: 2880 bars (39936 kept)
+  vision monthly 2025-12: 2976 bars (42912 kept)
+  vision monthly 2026-01: 2976 bars (45888 kept)
+  vision monthly 2026-02: 2688 bars (48576 kept)
+  vision monthly 2026-03: 2976 bars (51552 kept)
+  vision monthly 2026-04: 2880 bars (54432 kept)
+  vision monthly 2026-05: 2976 bars (57408 kept)
+  vision monthly 2026-06: 2880 bars (60288 kept)
+  vision monthly 2026-07: 2976 bars (63264 kept)
+  vision monthly 2026-08: 2976 bars (66240 kept)
+  vision monthly 2026-09: 2880 bars (69120 kept)
+  vision monthly 2026-10: 2976 bars (72096 kept)
+  vision daily 2026-11: 73824 bars kept so far
+Wrote 73824 rows (2024-10-11 -> 2026-11-18) to comms/research/RQ-20261120-3b7c-04/44652094182/ict_scalp_xrp_15m__candles.csv
+  data source [explicit] comms/research/RQ-20261120-3b7c-04/44652094182/ict_scalp_xrp_15m__candles.csv for symbol=XRPUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-04/44652094182/ict_scalp_xrp_15m_off.json
+  data source [explicit] comms/research/RQ-20261120-3b7c-04/44652094182/ict_scalp_xrp_15m__candles.csv for symbol=XRPUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-04/44652094182/ict_scalp_xrp_15m_on.json
+ict_scalp_5m backtest — XRPUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 166
+  win_rate_pct   : 46.39%
+  expectancy_r   : -0.0364
+  total_r (gross): -6.0487
+  net_total_r    : -29.8062 (exp -0.1796) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : -24.3255 (exp -0.1465) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.1101, 'slippage_r': 0.03003, 'funding_r': 0.00299, 'total_cost_r': 0.14312, 'funding_windows': 0.54217}
+  max_drawdown_r : 34.3666 [on net curve]
+  sharpe_r       : -0.0397
+  avg_win_r      : 0.805
+  avg_loss_r     : -0.7644
+  by_outcome     : {'tp_hit': 30, 'timeout': 71, 'be_stop': 7, 'sl_hit': 58}
+ict_scalp_5m backtest — XRPUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 56
+  win_rate_pct   : 39.29%
+  expectancy_r   : -0.0271
+  total_r (gross): -1.5186
+  net_total_r    : -7.3427 (exp -0.1311) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : -5.9682 (exp -0.1066) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.07946, 'slippage_r': 0.02167, 'funding_r': 0.00287, 'total_cost_r': 0.104, 'funding_windows': 0.48214}
+  max_drawdown_r : 11.7946 [on net curve]
+  sharpe_r       : -0.0296
+  avg_win_r      : 0.9495
+  avg_loss_r     : -0.6591
+  by_outcome     : {'tp_hit': 12, 'sl_hit': 16, 'timeout': 27, 'be_stop': 1}
+{
+ "verdict": "pass",
+ "note": "PASS: ON -7.34 R vs OFF -29.81 R (delta +22.46); mean -0.1311 vs -0.1796; ex-worst-trade ON -5.84 vs OFF -26.22; folds ON>=OFF 5/6"
+}
