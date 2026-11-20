@@ -7,7 +7,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-legs = [json.loads(l) for l in (HERE / "legs.jsonl").read_text().splitlines() if l.strip()]
+legs = [json.loads(line) for line in (HERE / "legs.jsonl").read_text().splitlines() if line.strip()]
 meas = [r for r in legs if r["state"] == "measured" and r["n_binance"] >= 20]
 d = np.array([r["dr_per_trade"] for r in meas])
 w = np.array([r["n_binance"] for r in meas], float)
@@ -63,4 +63,6 @@ rec = {
     "follow_ups": ["PI-20261120-7ITMUEB1-0005", "PI-20261120-7ITMUEB1-0007", "RQ-20261120-4f03-01 (trend_donchian_sol_prop Bybit-native Stage-0 re-run)", "RQ-20261120-4f03-02 (ml_entry measured venue penalty)"],
 }
 (HERE / "record.json").write_text(json.dumps(rec, indent=1) + "\n")
-print(json.dumps(pooled, indent=1)); [print(json.dumps(x)) for x in margins]
+print(json.dumps(pooled, indent=1))
+for x in margins:
+    print(json.dumps(x))
