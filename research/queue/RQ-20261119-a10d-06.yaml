@@ -9,7 +9,7 @@ id: RQ-20261119-a10d-06
 title: 'ml-exit-head-donchian-1h ITERATION (LABEL target): does the more_mfe target (1 - peak_is_in: is there still > 0.25 R of new favourable
   excursion ahead), aadc-04s second registered arm that could not be read, improve the heads out-of-sample replayed R per trade over the holding_pays
   champion by +0.01 R, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -191,3 +191,22 @@ amendments:
     evidence for this unit.'
 rearmed_at: '2026-11-20T01:19:00+00:00'
 last_dispatched_at: '2026-11-20T09:07:45+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE
+  evidence:
+  - comms/research/RQ-20261119-a10d-06/44706199999/verdict.json
+  - research/results/RQ-20261119-a10d-06/44706199999.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'INDETERMINATE by the registered rule (between the bars). Post-rearm run 44706199999 (generated 2026-11-20T09:00:18Z, commit d2479162b; resampled_to
+    1h). more_mfe vs champion: n_oos 550, mean d -0.06116 R/trade, SE 0.03842, deflated CI z 2.241 [-0.14726, +0.02495]: not PASS, not FAIL (upper +0.025
+    >= +0.01). peak_is_in already labelled on 45,372 of 45,372 rows (100% >= 90%, derivable). POPULATION: 1 of 3 legs (ETH; BTC/SOL folds under the 64 floor,
+    as a10d-07). Fired: champion 404, more_mfe 397. The point estimate is the worst of the three label arms read. LABEL: trained on the MISALIGNED corpus
+    (donchian_fresh, built 2026-11-19 14:07Z, pre-#27566/#27676; PI-20261120-7ITMUEB1-0004), so this read is confounded and is not evidence for or against
+    #26906. POWER (MEASURED on this run): realised sd per trade 0.901 R vs the registered basis 0.2 R; the registered expected_n (11,000) and sd were measured
+    on the sub-hourly-bar defect (PI-20261119-RIMARY13-0001) and do not hold at the 1h grain. A +0.01 R MDE at 80% power needs ~77,100 OOS trades; donchian
+    1h gives ~100 trades/yr/symbol, so this design cannot answer at its registered bar on in-hand data. Next: a power-feasible redesign (PI-20261120-H58PIBEE-0001),
+    not a same-design re-run on the aligned corpus.'
+  rows: 1
+  verdict: indeterminate
