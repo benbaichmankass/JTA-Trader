@@ -53,6 +53,43 @@ TARGETS = {
     "holding_pays_neg25": ("future_r_delta", lambda v: 1 if float(v) >= -0.25 else 0),
 }
 DEFAULT_ARMS = ("holding_pays_0", "more_mfe")   # aadc-04's registered arms
+# FEATURE family (lane ML-PRIMARY-17, 2026-11-20; research/levers/ml-exit-head-donchian-1h.yaml `features: untested` after the
+# neg25 label lever closed): same champion TARGET and hyper-parameters, a different FEATURE LIST. Each arm is a pure function of
+# train_exit_head.FEATURES / FEATURES_EXH, resolved at run time. Every listed column is emitted by the live
+# src.runtime.exit_head_shadow._feature_row, so the replay scores each arm on the same rows the monitor would build.
+FEATURE_ARMS = {
+    "feat_exh": lambda base, exh: list(base) + list(exh),                                    # + M20 P4.3 exhaustion block
+    "feat_no_calendar": lambda base, exh: [f for f in base if f not in ("hour_of_day", "dayofweek")],
+    "feat_no_volume": lambda base, exh: [f for f in base if f != "vol_ratio_vs_entry"],
+    "feat_path_only": lambda base, exh: [f for f in base if f in ("age_bars", "open_r", "mfe_r", "mae_r", "giveback_r",
+                                                                   "dist_to_stop_r", "is_long")],
+}
+FEATURE_COVERAGE_MIN = 0.90   # an arm whose ADDED columns are non-null on fewer rows is could_not_look (not trained)
+
+
+def arm_features(teh, arm: str) -> List[str]:
+    """The feature list an arm trains and replays on: the shipped FEATURES for the champion and every label arm."""
+    if arm in FEATURE_ARMS:
+        return FEATURE_ARMS[arm](teh.FEATURES, getattr(teh, "FEATURES_EXH", []))
+    return list(teh.FEATURES)
+
+
+def feature_coverage(rows: List[dict], feats: List[str], base: List[str]) -> float:
+    """Share of rows on which every column the arm ADDS over the shipped list is non-null (1.0 for a pure ablation)."""
+    added = [f for f in feats if f not in base]
+    if not added or not rows:
+        return 1.0 if rows else 0.0
+    return sum(1 for r in rows if all(r.get(f) is not None for f in added)) / len(rows)
+
+
+def train_with_features(teh, rows: List[dict], feats: List[str]):
+    """train_exit_head.train_model on `feats` (its matrix() reads the module global FEATURES); the global is restored."""
+    saved = teh.FEATURES
+    teh.FEATURES = list(feats)
+    try:
+        return teh.train_model(rows)
+    finally:
+        teh.FEATURES = saved
 N_OOS_MIN = 300
 PASS_DR = 0.01
 Z_DEFLATED = 2.241   # two-sided Bonferroni over the 2 label arms (alpha 0.05 / 2 -> z 2.241)
@@ -108,7 +145,7 @@ def peak_derivable_share(src: Dict[str, Any]) -> float:
 
 def with_target(rows: List[dict], arm: str) -> Optional[List[dict]]:
     """Copies of `rows` carrying the arm's target under train_exit_head.TARGET's name; None if the source column is absent."""
-    if arm == CHAMPION:
+    if arm == CHAMPION or arm in FEATURE_ARMS:
         return rows
     src, fn = TARGETS[arm]
     have = [r for r in rows if r.get(src) is not None]
@@ -141,7 +178,7 @@ def judge(arm_d: Dict[str, List[float]], z: float = None, pass_dr: float = None)
         return {"verdict": "pass", "chosen": best, "why": f"{best} - champion {measured[best]['mean']:+.4f} R/trade, "
                 f"deflated CI LB {measured[best]['ci'][0]:+.4f} > 0", "arms": stats}
     if measured and len(measured) == len(stats) and all(s["ci"][1] < pass_dr for s in measured.values()):
-        return {"verdict": "fail", "chosen": None, "why": "every label arm's deflated CI upper bound < +0.01 R/trade",
+        return {"verdict": "fail", "chosen": None, "why": "every arm's deflated CI upper bound < +0.01 R/trade",
                 "arms": stats}
     return {"verdict": "indeterminate", "chosen": None,
             "why": "an arm is below n_oos or between the pass bar and the fail floor", "arms": stats}
@@ -192,8 +229,11 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
             tr = with_target(train, arm)
             if tr is None or len({int(r[CHAMPION]) for r in tr}) < 2:
                 continue
-            booster = teh.train_model(tr)
-            art = {"features": list(teh.FEATURES), "shape": SHAPE}
+            feats = arm_features(teh, arm)
+            if feature_coverage(tr, feats, teh.FEATURES) < FEATURE_COVERAGE_MIN:
+                continue   # could_not_look: the added columns are absent from these rows; never trained on NaN
+            booster = train_with_features(teh, tr, feats)
+            art = {"features": feats, "shape": SHAPE}
 
             def predict(vec, _b=booster):
                 # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) of the binary booster for this arm's target (holding_pays-shaped)
@@ -225,6 +265,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--candles-dir", default=None, help="local override: <dir>/<SYM>_<tf>.csv instead of the trainer resolver")
     ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}")
+    ap.add_argument("--feature-arms", default="", help=f"feature arms vs the champion (champion target), from {sorted(FEATURE_ARMS)}")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--exclude-train-symbol", action="append", default=[],
                     help="drop rows.jsonl rows of this symbol from every fold's training (a held-out-symbol read); repeatable")
@@ -241,6 +282,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _self_test()
     if not a.json_out:
         ap.error("--json is required")
+    label_arms = [x for x in a.arms.split(",") if x]
+    unknown = [x for x in label_arms if x not in TARGETS]
+    if unknown:
+        ap.error(f"unknown arm(s) {unknown}; known {sorted(TARGETS)}")
+    feat_arms = [x for x in a.feature_arms.split(",") if x]
+    unknown_f = [x for x in feat_arms if x not in FEATURE_ARMS]
+    if unknown_f:
+        ap.error(f"unknown feature arm(s) {unknown_f}; known {sorted(FEATURE_ARMS)}")
+    if not label_arms and not feat_arms:
+        ap.error("no arm to judge: pass --arms and/or --feature-arms")
     try:
         from scripts.ml._heavy_queue import take_heavy_queue
         _lock = take_heavy_queue("exit-head-label-bakeoff")   # noqa: F841 — held for the process lifetime
@@ -259,13 +310,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     excl = set(a.exclude_train_symbol)
     if excl:
         rows = [r for r in rows if str(r.get("symbol") or "unknown") not in excl]
-    label_arms = [x for x in a.arms.split(",") if x]
-    unknown = [x for x in label_arms if x not in TARGETS]
-    if unknown:
-        ap.error(f"unknown arm(s) {unknown}; known {sorted(TARGETS)}")
-    arms = [CHAMPION] + label_arms
+    arms = [CHAMPION] + label_arms + feat_arms
     coverage = {arm: (sum(1 for r in rows if r.get(TARGETS[arm][0]) is not None) / len(rows) if rows else 0.0)
                 for arm in label_arms}
+    coverage.update({arm: round(feature_coverage(rows, arm_features(teh, arm), teh.FEATURES), 4) for arm in feat_arms})
+    arm_feature_lists = {arm: arm_features(teh, arm) for arm in arms}
     conf = yaml.safe_load(open(os.path.join(_REPO_ROOT, "config/strategies.yaml"), encoding="utf-8"))
     legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
     out_legs, cost = [], {}
@@ -274,7 +323,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         cost[symbol] = _apply_venue_cost_policy(harness, symbol)
         out_legs.append(run_leg(strategy, symbol, rows, arms, a, harness, conf))
     recs = [r for lg in out_legs for r in lg.get("records", [])]
-    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms}
+    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms + feat_arms}
     j = judge(arm_d, a.z, a.pass_dr)
     context = {arm: paired([r[f"r_{arm}"] - r["baseline_r"] for r in recs if f"r_{arm}" in r]) for arm in arms}
     fired = {arm: sum(1 for r in recs if r.get(f"fired_{arm}")) for arm in arms}
@@ -291,6 +340,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                           f"bar_t <= fold start - {a.embargo_days} d; paired per-trade replayed R vs the holding_pays champion"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
            "measurement": {"judge": j, "arm_dr_vs_hold_context": context, "fired": fired, "target_coverage": coverage,
+                           "arm_features": arm_feature_lists,
                            "peak_is_in_source": peak_source,
                            "cost_basis": cost, "lookback": a.lookback,
                            "rows_by_symbol": rows_by_symbol, "excluded_train_symbols": sorted(excl),
@@ -329,6 +379,28 @@ def _self_test() -> int:
     assert judge({"holding_pays_neg25": [0.006, 0.004] * 200}, 1.96, 0.005)["verdict"] == "pass"
     assert judge({"holding_pays_neg25": [0.006, 0.004] * 200})["verdict"] == "fail"   # default bar +0.01
     assert judge({"holding_pays_0": [-0.01, 0.0] * 200, "more_mfe": [0.03] * 100})["verdict"] == "indeterminate"
+    # feature arms: champion target unchanged, feature lists derived from the shipped lists, coverage gates added columns only
+    class _T:
+        FEATURES = ["age_bars", "open_r", "mfe_r", "mae_r", "giveback_r", "dist_to_stop_r", "vol_ratio_vs_entry",
+                    "hour_of_day", "dayofweek", "is_long"]
+        FEATURES_EXH = ["bars_since_peak", "mom_8"]
+    assert with_target(rows, "feat_exh") is rows
+    assert arm_features(_T, CHAMPION) == _T.FEATURES and arm_features(_T, "more_mfe") == _T.FEATURES
+    assert arm_features(_T, "feat_exh") == _T.FEATURES + _T.FEATURES_EXH
+    assert "hour_of_day" not in arm_features(_T, "feat_no_calendar") and len(arm_features(_T, "feat_no_calendar")) == 8
+    assert arm_features(_T, "feat_no_volume") == [f for f in _T.FEATURES if f != "vol_ratio_vs_entry"]
+    assert arm_features(_T, "feat_path_only") == ["age_bars", "open_r", "mfe_r", "mae_r", "giveback_r", "dist_to_stop_r", "is_long"]
+    cov_rows = [{"bars_since_peak": 1, "mom_8": 0.1}, {"bars_since_peak": 2, "mom_8": None}, {}, {"bars_since_peak": 0, "mom_8": 0.0}]
+    assert feature_coverage(cov_rows, arm_features(_T, "feat_exh"), _T.FEATURES) == 0.5
+    assert feature_coverage(cov_rows, arm_features(_T, "feat_no_volume"), _T.FEATURES) == 1.0
+    seen = {}
+    class _TT(_T):
+        @staticmethod
+        def train_model(r):
+            seen["f"] = list(_TT.FEATURES)
+            return "booster"
+    assert train_with_features(_TT, [], ["open_r"]) == "booster" and seen["f"] == ["open_r"] and _TT.FEATURES == _T.FEATURES
+    assert judge({"feat_exh": [0.03] * 400})["chosen"] == "feat_exh"
     print("exit_head_label_bakeoff self-test OK")
     return 0
 
