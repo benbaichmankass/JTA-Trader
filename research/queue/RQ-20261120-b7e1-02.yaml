@@ -1,7 +1,7 @@
 id: RQ-20261120-b7e1-02
 title: 'BYBIT-NATIVE CONFIRMATION of the trail-decay removal on avax_pullback_2h (AVAXUSDT 2h): does OFF still beat the leg as declared on the bars it trades?
   (RQ-20261120-75e6-09 PASS follow-up)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -135,3 +135,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-11-20T08:39:14+00:00'
+grading:
+  attested: RULE-RQ20261120b7e102-BYBIT-DECAY-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261120b7e102-BYBIT-DECAY-CONFIRM
+  evidence:
+  - research/results/RQ-20261120-b7e1-02/44692889492.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
