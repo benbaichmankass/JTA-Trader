@@ -110,12 +110,14 @@ def test_close_stamped_bars_flatten_at_the_stamp_not_a_bar_early():
     assert late, "an entry moment of exactly 21:00 is allowed when the stamps are read as closes"
 
 
-def test_main_reads_resampled_bars_as_close_stamped_and_native_bars_as_open(tmp_path, monkeypatch):
+def test_main_reads_resampled_and_native_bars_as_open_stamped(tmp_path, monkeypatch):
+    """Since PI-20261120-7ITMUEB1-0001 (2026-11-20) `_resample` emits OPEN-stamped bars on the native grid, so main()
+    reads both a native frame and a resampled one as bar_label "open" (it used to read resampled bars as "close")."""
     seen = []
     monkeypatch.setattr(h, "run_backtest", lambda df, **kw: seen.append(kw) or {"total_trades": 0, "symbol": "X", "timeframe": "1h"})
     csv = tmp_path / "c.csv"
     _frame(breakout_at=40).rename(columns={"timestamp": "timestamp"}).to_csv(csv, index=False)
-    for extra, want in (([], "open"), (["--resample", "1h"], "close")):
+    for extra, want in (([], "open"), (["--resample", "1h"], "open")):
         h.main(["backtest_trend.py", "--data", str(csv), "--symbol", "ETHUSDT", "--timeframe", "1h",
                 "--flat-at-utc", "23:45", *extra])
         assert seen[-1]["bar_label"] == want, extra
@@ -144,7 +146,12 @@ def test_default_off_reproduces_the_stored_pre_lever_baseline(tmp_path):
     import json
     base = json.loads((h.Path(h.__file__).resolve().parents[1] / "tests/fixtures/trend_pre_dayflat_baseline.json")
                       .read_text())
-    df = h._resample(h._load_candles("data/backtest_candles.csv"), "5min")
+    # The baseline was generated on the PRE-2026-11-20 aggregation (label/closed right). This test guards the LEVERS
+    # being inert when unset, not the resample convention (PI-20261120-7ITMUEB1-0001 moved that to the native
+    # open-stamped grid; tests/test_resample_native_grid.py pins it), so the frame is built the way the baseline was.
+    _raw = h._load_candles("data/backtest_candles.csv")
+    df = (_raw.set_index("timestamp").resample("5min", label="right", closed="right")
+          .agg({"open": "first", "high": "max", "low": "min", "close": "last"}).dropna().reset_index())
     h.FEE_BPS_ROUNDTRIP, h.SLIPPAGE_BPS_ROUNDTRIP, h.FUNDING_BPS_PER_WINDOW = base["fees"]
     emit = tmp_path / "rows.jsonl"
     out = h.run_backtest(df.copy(), emit_path=str(emit), **base["kwargs"])

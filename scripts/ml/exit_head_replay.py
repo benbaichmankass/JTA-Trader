@@ -247,13 +247,16 @@ def _load_candles(path: str, resample: Optional[str]):
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
     df = df.dropna(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
     if resample:
+        # OPEN-stamped buckets [T, T+rule) labelled T, the grid of the native exchange files (PI-20261120-7ITMUEB1-0001,
+        # 2026-11-20). label/closed='right' put the sub-bars opened T-55m..T in the 1h bar labelled T (true close T+5m):
+        # left/left reproduced 199,185 of 199,259 native ETHUSDT 15m bars from 5m, right/right 4 (trainer relay #27551).
         rule = resample.strip().lower()
         if rule.endswith("m") and not rule.endswith("min"):
             rule = rule[:-1] + "min"
         agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
         if "volume" in df.columns:
             agg["volume"] = "sum"
-        df = (df.set_index("timestamp").resample(rule, label="right", closed="right")
+        df = (df.set_index("timestamp").resample(rule, label="left", closed="left")
               .agg(agg).dropna().reset_index())
     return df
 

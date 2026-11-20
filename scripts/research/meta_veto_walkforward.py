@@ -344,7 +344,12 @@ def market_state_asof(candles: Sequence[Tuple[datetime, float, float, float, flo
                       ts_sorted: Sequence[datetime], entry_time: datetime) -> Dict[str, Optional[float]]:
     """As-of market-state features at `entry_time`, using only candles closed at or
     before it. `ts_sorted` is `[c[0] for c in candles]`, passed in so a caller
-    scoring many trades against one candle series does not re-derive it per trade."""
+    scoring many trades against one candle series does not re-derive it per trade.
+
+    NOTE (PI-20261120-7ITMUEB1-0001): rows are harness trades whose `entry_time` is the DECISION bar's stamp; the
+    trend harness fills at that bar's CLOSE, so on the open-stamped grid (native files, and the harness `_resample`
+    since 2026-11-20) `t <= entry_time` admits exactly the decision bar, which is closed at the fill. A harness that
+    fills at the NEXT bar's open would make this read one bar late; that is audited under PI-20261120-7ITMUEB1-0004."""
     i = bisect.bisect_right(ts_sorted, entry_time) - 1
     out: Dict[str, Optional[float]] = {k: None for k in MARKET_FEATURES}
     if i < MARKET_STATE_MIN_HISTORY - 1:
@@ -1181,15 +1186,12 @@ def _self_test() -> int:
           and sz_from_file["missing_scores"] == 0)
 
     # --- resample fallback: never read a finer grain as the leg's own bars ---
-    # Starts at 00:15 (not 00:00) so every bucket is COMPLETE: pandas resample
-    # with label="right", closed="right" (the canonical backtest_trend.py
-    # convention this reuses) puts a bar timestamped exactly ON an hour
-    # boundary into the bucket ENDING there, so an 00:00-anchored series
-    # would open with a lone 1-bar partial bucket -- a real edge case, just
-    # not the one this test is checking.
-    fine = [(datetime(2024, 1, 1, 0, 15, tzinfo=timezone.utc) + timedelta(minutes=15 * k),
+    # The canonical backtest_trend.py `_resample` builds the NATIVE open-stamped grid since PI-20261120-7ITMUEB1-0001
+    # (buckets [T, T+1h) labelled T, as the exchange serves 1h bars), so 8 x 15m bars from 00:00 are exactly two
+    # complete 1h buckets labelled 00:00 and 01:00.
+    fine = [(datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc) + timedelta(minutes=15 * k),
             100.0 + k, 100.0 + k + 1.0, 100.0 + k - 1.0, 100.0 + k + 0.5, 10.0, None)
-           for k in range(8)]  # 8 x 15m bars, 00:15..02:00 = exactly two complete 1h buckets
+           for k in range(8)]  # 8 x 15m bars, 00:00..01:45 = exactly two complete 1h buckets
     rs = _resample_candles(fine, "1h")
     try:
         import pandas as _pd  # noqa: F401
@@ -1209,8 +1211,9 @@ def _self_test() -> int:
                   abs(rs[0][2] - max(b[2] for b in first_bucket)) < 1e-9)
             check("resample: bucket low is the MIN of sub-bar lows",
                   abs(rs[0][3] - min(b[3] for b in first_bucket)) < 1e-9)
-            check("resample: bucket is right-LABELED (01:00, not 00:15)",
-                  rs[0][0] == datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc))
+            check("resample: bucket is OPEN-stamped like the native files (00:00, then 01:00)",
+                  rs[0][0] == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
+                  and rs[1][0] == datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc))
     else:
         check("resample: pandas unavailable -> fails CLOSED (None), never a wrong-grain read",
               rs is None)

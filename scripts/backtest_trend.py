@@ -186,13 +186,16 @@ def _load_candles(path: str) -> pd.DataFrame:
 
 
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    # OPEN-stamped buckets [T, T+rule) labelled T, the grid of the native exchange files (PI-20261120-7ITMUEB1-0001,
+    # 2026-11-20). label/closed='right' put the sub-bars opened T-55m..T in the 1h bar labelled T (true close T+5m):
+    # left/left reproduced 199,185 of 199,259 native ETHUSDT 15m bars from 5m, right/right 4 (trainer relay #27551).
     # pandas 3.0 dropped the lowercase 'm' minutes alias (wants 'min'); normalise
     # so a minute timeframe like "5m"/"15m" still resamples (hours 'h' stay valid).
     r = rule.strip().lower()
     if r.endswith("m") and not r.endswith("min"):
         rule = r[:-1] + "min"
     return (df.set_index("timestamp")
-            .resample(rule, label="right", closed="right")
+            .resample(rule, label="left", closed="left")
             .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
             .dropna().reset_index())
 
@@ -583,9 +586,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     # flatten never pre-empts a stop that the same bar hit. A position with no bar left to
     # flatten on (the entry bar is already at or past the flatten bar) is NOT entered.
     #
-    # `bar_label` says what a row's timestamp MEANS: "open" (native exchange candles: the bar starts at the
-    # stamp, so it closes one bar later) or "close" (this harness's own `_resample`, which stamps each bar at
-    # its CLOSE: label="right"). main() sets "close" whenever --resample is used. Reading a close-stamped bar
+    # `bar_label` says what a row's timestamp MEANS: "open" (native exchange candles AND, since 2026-11-20,
+    # this harness's own `_resample`: the bar starts at the stamp and closes one bar later) or "close" (a caller's
+    # close-stamped frame). main() passes "open" (PI-20261120-7ITMUEB1-0001). Reading a close-stamped bar
     # as open-stamped would add one bar and flatten/cut EARLY by a whole bar (never late, but biased).
     # The day is always the UTC day: a tz-aware column in another zone is converted first.
     _flat_min = _parse_hhmm(flat_at_utc)
@@ -2214,7 +2217,7 @@ def main(argv: List[str]) -> int:
                      skip_hours=args.skip_hours,
                      flat_at_utc=args.flat_at_utc,
                      no_entry_after_utc=args.no_entry_after_utc,
-                     bar_label=("close" if args.resample else "open"),
+                     bar_label="open",  # _resample now emits OPEN-stamped bars like the native files (PI-20261120-7ITMUEB1-0001)
                      vol_skip_above_pctl=args.vol_skip_above_pctl,
                      vol_skip_below_pctl=args.vol_skip_below_pctl,
                      vol_pctl_window=args.vol_pctl_window,
