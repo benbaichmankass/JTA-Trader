@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "System-action wrapper fix (cap-vm-logs runtime_logs): loads the trader's runtime env so the tool targets /data/bot-data/runtime_logs; it can delete logs there on apply, so the manager merges",
+  "why": "PI-20261120-CGNCTD2Z-0007: the 2026-11-20 dry run (#27658, run 44684110819) printed root /home/ubuntu/ict-trading-bot/runtime_logs (~87 MB, 0 candidates) while the 12 GB live under /data/bot-data/runtime_logs; the wrapper never called load_runtime_env. Dry-run stays the default; no service touched. Gates this adds or changes: none."
+}
