@@ -3,7 +3,7 @@
 id: RQ-20261119-f2a4-03
 title: 'P8-Q4 HEAD-TO-HEAD on the alpaca_live cash book: does slv_trend_1h (the one leg 207f-04 qualified), alone or sharing the slot
   with Foxhound-4 (+ tqqq_trend_long_1d), beat Foxhound-4 alone by the P8 promotion rule s 5.2, on their common DEV window?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -128,3 +128,16 @@ related:
 - research/programmes/08-alpaca-live-book.yaml#P8-Q4-h2h
 - scripts/research/alpaca_live_book.py
 last_dispatched_at: '2026-11-19T19:56:53+00:00'
+grading:
+  attested: RULE-RQ20261119f2a403-P8-H2H
+  auto: true
+  decision_rule_id: RULE-RQ20261119f2a403-P8-H2H
+  evidence:
+  - research/results/RQ-20261119-f2a4-03/44576881277.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

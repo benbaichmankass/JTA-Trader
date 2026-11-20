@@ -4,7 +4,7 @@
 id: RQ-20261119-015
 title: SYMBOL HOLDOUT (LTCUSDT) for the ADX-below trail tighten TA20 that passed on htf_pullback_trend_2h
   (b2f2-20), the only exit lever that moved on this leg
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -153,3 +153,15 @@ generated:
   params:
     node: P1-RP1119-htf-pullback-trend-2h-ta20-ltc
 last_dispatched_at: '2026-11-19T23:25:21+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-htf-pullback-trend-2h-ta20-ltc
+  evidence:
+  - research/results/RQ-20261119-015/44633883473.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
