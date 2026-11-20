@@ -4,7 +4,7 @@
 id: RQ-20261119-013
 title: SYMBOL HOLDOUT (LTCUSDT) for replacing trend_donchian_eth_4h's LIVE trail-decay exit with the ADX-below
   tighten (b3aa-07 M_replace PASS, +27.1 R, 5 of 6; the combo added nothing)
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -155,3 +155,15 @@ generated:
   params:
     node: P1-RP1119-trend-donchian-eth-4h-mreplace-ltc
 last_dispatched_at: '2026-11-19T22:53:27+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-trend-donchian-eth-4h-mreplace-ltc
+  evidence:
+  - research/results/RQ-20261119-013/44632817372.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
