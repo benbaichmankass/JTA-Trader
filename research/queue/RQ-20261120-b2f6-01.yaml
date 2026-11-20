@@ -1,0 +1,99 @@
+id: RQ-20261120-b2f6-01
+title: 'IB-vs-DUKASCOPY FEED ADEQUACY for ict_scalp_mgc_15m: is the XAU_USD spot proxy adequate, measured on the leg''s own IB bars? (PI-20261120-FILLW47B-0014)'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'none: a measurement-basis check of an evidence feed against the leg''s own bars; the same kind as the venue-gap measurement (VENUE-GAP-20261120),
+  not a new method.'
+question: 'The 7-year read on ict_scalp_mgc_15m (A: n 526, net R -176.10 R) was measured on a Dukascopy XAU_USD 15m series, adjudicated a PROXY for the
+  CME micro-gold future the leg trades. On the span the trainer''s resident IB MGC 5m bars cover, built to open-stamped 15m, (1) how closely does the Dukascopy
+  series track them (15m return correlation, p99 |return difference|, level basis and its drift), and (2) does the incumbent arm A, replayed on BOTH corpora
+  over the SAME window net of the full cost stack, agree on net-R sign, on net R per trade within 0.05 R, and on at least 70% of its trades?'
+why_this_matters: 'Manager 2026-11-20 07:43Z: a retirement input for ict_scalp_mgc_15m (031 read 1 of 2 toward a Gate-2 demotion input) must rest on the
+  leg''s own bars, not a proxy. The verdict decides whether the Dukascopy 7-year corpus counts as evidence for MGC or only as a proxy read; it changes no
+  config and proposes no retirement.'
+power:
+  alpha: 0.05
+  design: one_sample
+  effect_units: sd
+  expected_n: 120
+  min_detectable_effect: 0.5
+  power: 0.8
+  basis: 'expected_n is an ESTIMATE of arm A''s trades on the IB span: the Dukascopy corpus makes 526 trades over 7.8 years (about 67 a year), so a 2-year
+    IB span gives about 130 and the 39-trade floor needs about 7 months. The floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 trades is the repo''s exit-refinement
+    floor; below it the unit grades INDETERMINATE, never FAIL. The IB span is NOT known before the run (the shard depth was not read), which is the main
+    way this unit lands INDETERMINATE.'
+  feasibility:
+    accrual_basis: Replays history on the trainer's resident IB shard and a Dukascopy fetch for the same dates; nothing accrues.
+    source: none
+decision_rule:
+  id: RULE-RQ20261120B2F601-MGC-IB-PROXY-ADEQUACY
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF the IB MGC 5m source is missing, or the IB 15m series has fewer than 500 complete bars, or the Dukascopy fetch fails, or n(A)
+    on the IB bars over the overlap window < 39. PROXY_ADEQUATE (verdict pass) iff ALL of: (F1) 15m log-return correlation >= 0.985; (F2) p99 |15m return
+    difference| <= 8.0 bps; (R1) sign(net R of A on IB) == sign(net R of A on Dukascopy) over the same window; (R2) |net R per trade (IB) - net R per trade
+    (Dukascopy)| <= 0.05 R; (R3) >= 70% of the IB trades have a same-direction Dukascopy trade with entry within one 15m bar. PROXY_INADEQUATE (verdict
+    fail) otherwise at n(A) >= 39. ROUTING: ADEQUATE -> the Dukascopy 7-year corpus is recorded as a usable proxy for ict_scalp_mgc_15m with these numbers;
+    INADEQUATE -> its results are recorded as proxy-only and the IB span is the evidence of record for this leg. Either way no config change, no retirement
+    proposal from this unit; the result goes on PI-20261120-FILLW47B-0014. Thresholds are not changed after any result. Level basis and its drift are reported,
+    not gated.'
+  statistic: 'scripts/research/mgc_feed_adequacy.py on the trainer: IB MGC 5m -> 15m (complete 3-bar bins), Dukascopy XAU_USD 15m via fetch_backtest_candles.py
+    --source dukascopy, overlap window; arm A of ict_scalp_mgc_15m via exit_lever_ablation.py --arm A= --grade stage0 on each corpus with the same --start/--end,
+    net of the harness''s resolved cost stack (execution_costs.resolve_cost_policy keyed on the leg''s own symbol MGC, not the data source).'
+  why_these_bars: 0.05 R per trade is the size of the lever effects the proxy has been used to read on the Dukascopy corpus (AX40 +0.058, S_LATE +0.029,
+    LONG +0.204 R per trade), so a proxy bias below it cannot by itself manufacture them; the leg's live stop is 0.26-0.40% of price, so a p99 15m gap of
+    8 bps is at most about a third of a stop.
+  disclosure: 'The thresholds were fixed AFTER the Dukascopy A-arm numbers (n 526, -176.10 R) and after a feed check of Dukascopy against the only committed
+    MGC 15m futures file (RQ-20261018-ef5d-02, a Yahoo-style series, 54 days, NOT the IB bars): return correlation 0.9929, p99 4.74 bps, basis median +87.7
+    bps wandering 52-121. No IB bar and no replay on IB bars was read before registration.'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: decides whether the 7-year evidence on a testing leg is an MGC record or a proxy; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.3
+  usd_at_stake_per_month: 150
+routing:
+  basis: 'ESTIMATE: one 5m->15m aggregation of a multi-year IB shard, one Dukascopy fetch of about the same span (the 120-day fetch took about a minute),
+    two harness passes of one arm.'
+  est_minutes: 25
+  needs_gpu: false
+  needs_trainer_resident_data: true
+  peak_memory_gb: 2.0
+  why_runner: 'The IB MGC 5m shard is trainer-resident (data/ibkr_datasets or trainer-data/ibkr_datasets); no keyless public source serves the leg''s own
+    IB bars. The trainer already runs Dukascopy fetches (ict-candle-refresh dk: lines).'
+run:
+  workflow: research-script-run-trainer.yml
+  commands:
+  - - python3
+    - scripts/research/mgc_feed_adequacy.py
+    - --out
+    - '{out_dir}'
+    - --rule-id
+    - RULE-RQ20261120B2F601-MGC-IB-PROXY-ADEQUACY
+    - --research-unit
+    - RQ-20261120-b2f6-01
+  inputs:
+    research_unit: RQ-20261120-b2f6-01
+  timeout_minutes: 60
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- PI-20261120-FILLW47B-0014
+- RQ-20261117-9e1c-12
+- RQ-20261118-abab-28
+- RQ-20261118-abab-29
+- RQ-20261105-031
+- scripts/ops/dukascopy_instruments.py
+- scripts/research/mgc_feed_adequacy.py
+programme_node:
+  programme: P3
+  node: P3-MGC15-proxy-adequacy
+  goal: G1
+  after: []

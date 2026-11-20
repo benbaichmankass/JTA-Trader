@@ -144,7 +144,13 @@ NEUTRAL_EXITS = frozenset({"intent_reduce", "intent_reduce_executed", "manual",
                            "operator_flatten_reconciled", "live_review_close",
                            # the entry order ended at the venue without filling: no
                            # position, so no exit to grade (ENTRY-UNFILLED-LABEL)
-                           "entry_unfilled"})
+                           "entry_unfilled",
+                           # the PAPER close ladder's rung-3 account-wide close-all
+                           # (alpaca_client._account_reset_close_all) liquidated this
+                           # row as collateral of ANOTHER leg's close: not this leg's
+                           # exit, so neither clean nor a fault (AM-OPS-11 2026-11-20,
+                           # 11-16 episode, PI-20261117-LSFHBH4A-0003)
+                           "account_reset"})
 #: A TP further than this many R from entry is a sentinel, not a prediction
 #: (TP doctrine: ``tp_r: 50.0`` is non-compliant).
 MAX_TP_R = 20.0

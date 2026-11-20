@@ -1,0 +1,156 @@
+# Hand-authored 2026-11-20 by lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE, Tier 1 research), dispatched by the JTA Trader manager
+# (session_01AFoLuHbhd9wFuGJfWRqyoV; scope decision (a) on PI-20261120-H58PIBEE-0001, 2026-11-20 09:38Z). Rule and power registered BEFORE any run.
+# Gates this adds or changes: none.
+id: RQ-20261120-7d49-02
+title: 'ml-exit-head-donchian-1h REDESIGN (power-feasible, ALIGNED corpus): over 8 pooled donchian 1h legs with 3-fold blocks, does the holding_pays_neg25
+  target beat the holding_pays champion by a decision-relevant +0.03 R per OOS trade, net of cost?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261119-a10d-07
+  verdict_read: indeterminate
+  diagnosis: 'The four post-rearm exit-head reads (a10d-06/07/08, 04a5-04; PR #27745) were INDETERMINATE and underpowered at the 1h grain. BTC (62/fold)
+    and SOL (48/fold) folds were under MIN_FOLD_TEST_N 64, so n_oos was ETH only (550). The realised paired sd per trade was 0.60-0.90 R against the registered
+    0.2 R, which was measured on the sub-hourly-bar defect. They also trained on the misaligned corpus (PI-20261120-7ITMUEB1-0004). Factors changed, all
+    pre-run: (1) rows -> the ALIGNED corpus (7d49-01 PASS); (2) population -> 8 legs pooled (every donchian 1h symbol with trainer candles); (3) folds 5
+    -> 3, so every leg clears the 64-trade floor; (4) pass bar re-sized to a decision-relevant +0.03 R with power computed from the measured sd. Arm, features,
+    hyper-parameters, embargo, lookback, live predicate and cost stack are unchanged.'
+question: 'On datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl (7d49-01; training rows exist for BTC/ETH/SOL only, so LINK/BNB/XRP/ADA/AVAX are
+  unseen-symbol legs by construction), with trend_donchian 1h harness trades of BTCUSDT, ETHUSDT, SOLUSDT, LINKUSDT, BNBUSDT, XRPUSDT, ADAUSDT and AVAXUSDT,
+  3 sequential walk-forward folds, 7-day embargo, lookback 500: is the pooled paired per-trade replayed R of the holding_pays_neg25 head vs the holding_pays
+  champion >= +0.03 R with a 95% CI lower bound > 0?'
+why_this_matters: 'HELD #26906 (pin exit-head-donchian-1h-v2-neg25, annotate-only) needs a PASS on the rebuilt corpus (manager, 2026-11-20). Every neg25
+  read so far is either sub-hourly (void) or underpowered at 1h. This is the first read that can tell a decision-sized effect from zero on in-hand data.
+  If it cannot, the D8 label lever is closed at that size and trainer time moves elsewhere.'
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 2400
+  min_detectable_effect: 0.04
+  effect_units: r_multiple
+  sd: 0.7
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED sd from the 2026-11-20 post-rearm 1h runs: 0.597 R (a10d-07 neg25, n 550), 0.717 R (a10d-08 neg25, n 665), 0.901 R (a10d-06 more_mfe,
+    a different arm); 0.70 R taken for the neg25 arm. expected_n is an ESTIMATE from the measured 1h harness trade counts (BTC 377, ETH 660, SOL 288, XRP
+    367, ADA 368, AVAX 352, LINK 402, BNB 399; total 3,213) x 3/4 OOS share at 3 folds = ~2,410. Per-leg fold blocks at 3 folds: 72-165 trades, all >= MIN_FOLD_TEST_N
+    64. At n 2,400, sd 0.70: SE 0.0143, 95% half-width 0.028, MDE at 80% power ~0.040 R. Power at the +0.03 bar is ~0.38: a PASS is strong evidence; a FAIL
+    (upper < +0.03) needs the mean below ~+0.002. Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the aligned trainer corpus and trainer-resolved 1h candles; nothing accrues.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold training rows
+    and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261120-7d49-02-EXITHEAD-NEG25-POWERED
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'scripts/research/exit_head_label_bakeoff.py --arms holding_pays_neg25 --num-folds 3 --z 1.96 --pass-dr 0.03 on the aligned rows: pooled over
+    the 8 legs and 3 folds, per OOS trade d = replayed_r(neg25) - replayed_r(champion) on identical trades, replay and cost; mean, SE (one trade = one cluster),
+    CI at z 1.96 (the one arm graded on this corpus). Reported: per-leg read_state and n_oos, candle_source.resampled_to per leg, fired counts, hold context.'
+  rule: Graded by hand from verdict.json. PASS iff pooled n_oos >= 1500 AND mean d >= +0.03 R/trade AND CI lower bound > 0 AND the unseen-symbol legs (LINK/BNB/XRP/ADA/AVAX)
+    pooled have mean d > 0. FAIL iff pooled n_oos >= 1500 AND CI upper bound < +0.03. INDETERMINATE otherwise (n below 1500, between the bars, or a PASS
+    whose unseen-symbol subset has mean d <= 0). A leg that is producer_failed or unestablishable lowers n only. Any leg whose candle_source.resampled_to
+    is not 1h is excluded and named. Thresholds, legs, arm, folds (3), embargo (7 d), lookback (500), rows path and shape are not changed after any result.
+  pass_action: 'A data-backed Tier-3 proposal to the manager: export a neg25 head trained on the ALIGNED corpus (same features and hyper-parameters) and
+    pin THAT artifact on the three donchian 1h legs, annotate-only. The v2-neg25 artifact was trained on the July corpus (relay #27680), which this unit
+    does not test; the choice of artifact is the manager''s (#26906).'
+  fail_action: 'The D8 label-margin lever is closed at a +0.03 R/trade effect on donchian 1h (configuration: neg25 vs holding_pays, aligned rows, 8 legs,
+    3 folds). Family ml-exit-head stays open. #26906 is withdrawn as unsupported. The next exit-head lever is feature-side (--features extended) or per-symbol
+    heads, scored on the same powered design.'
+  what_it_does_not_do: Edits no config, exports or serves nothing, places no order, adds no gate. No close authority for any exit model.
+practice_precedent: 'Size the test to the decision: a pre-registered minimum effect with power computed from the measured variance, rather than a bar the
+  data cannot reach (docs/reference/trading-and-model-practice-principles.md).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context only:
+      hold (no head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, fixed)
+    - holding_pays_neg25
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.25
+  basis: 'stand-in inherited from a10d-07: three demo-floor legs annotate on the head; the main value is the keep / retire decision on the D8 label lever.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: The aligned rows.jsonl and the 1h candle resolver are trainer-resident; LightGBM is in the trainer venv.
+  basis: 'ESTIMATE: a10d-07 (3 legs, 5 folds) ran in ~15 min of compute and a10d-08 (10 legs, 5 folds) similar; 8 legs at 3 folds is the same order. Timeout
+    set with margin.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_head_label_bakeoff.py
+  - --rows
+  - datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl
+  - --legs
+  - trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT
+  - --num-folds
+  - '3'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --arms
+  - holding_pays_neg25
+  - --z
+  - '1.96'
+  - --pass-dr
+  - '0.03'
+  - --unit
+  - '{unit}'
+  - --rule-id
+  - RULE-RQ20261120-7d49-02-EXITHEAD-NEG25-POWERED
+  - --registered-at
+  - '2026-11-20'
+  - --json
+  - '{out_dir}/verdict.json'
+  inputs:
+    research_unit: RQ-20261120-7d49-02
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: 'which exit_head_model (annotate-only) the three donchian 1h legs carry; HELD #26906'
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- PI-20261120-H58PIBEE-0001
+- PI-20261120-7ITMUEB1-0004
+- research/queue/RQ-20261119-a10d-07.yaml
+- research/queue/RQ-20261119-a10d-08.yaml
+- research/queue/RQ-20261120-7d49-01.yaml
+- scripts/research/exit_head_label_bakeoff.py
+population: trend_donchian 1h harness trades of BTC, ETH, SOL, LINK, BNB, XRP, ADA and AVAX USDT perps on trainer-resolved 1h candles; heads trained on
+  the aligned BTC/ETH/SOL exit-head rows.

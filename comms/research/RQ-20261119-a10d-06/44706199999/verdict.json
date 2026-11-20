@@ -1,0 +1,287 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261119-a10d-06",
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "note": "an arm is below n_oos or between the pass bar and the fail floor",
+ "n": 550,
+ "population": "OOS harness trades of ['trend_donchian', 'trend_donchian_eth', 'trend_donchian_sol'] (1h), 5-fold sequential walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n 45372) bar_t <= fold start - 7.0 d; paired per-trade replayed R vs the holding_pays champion",
+ "decision_rule": {
+  "id": "RULE-RQ20261119-a10d-06-EXITHEAD-MOREMFE",
+  "registered_at": "2026-11-19",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "indeterminate",
+   "chosen": null,
+   "why": "an arm is below n_oos or between the pass bar and the fail floor",
+   "arms": {
+    "more_mfe": {
+     "n": 550,
+     "mean": -0.06116,
+     "se": 0.03842,
+     "ci": [
+      -0.14726,
+      0.02495
+     ],
+     "z": 2.241
+    }
+   }
+  },
+  "arm_dr_vs_hold_context": {
+   "holding_pays": {
+    "n": 550,
+    "mean": 0.02377,
+    "se": 0.04687,
+    "ci": [
+     -0.06809,
+     0.11564
+    ],
+    "z": 1.96
+   },
+   "more_mfe": {
+    "n": 550,
+    "mean": -0.03738,
+    "se": 0.03232,
+    "ci": [
+     -0.10073,
+     0.02597
+    ],
+    "z": 1.96
+   }
+  },
+  "fired": {
+   "holding_pays": 404,
+   "more_mfe": 397
+  },
+  "target_coverage": {
+   "more_mfe": 1.0
+  },
+  "peak_is_in_source": {
+   "rows": 45372,
+   "already_labelled": 45372,
+   "derived": 0,
+   "not_derivable": 0,
+   "trades": 1426
+  },
+  "cost_basis": {
+   "BTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ETHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SOLUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+   "BTCUSDT": 12217,
+   "ETHUSDT": 23605,
+   "SOLUSDT": 9550
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 45372,
+  "z": 2.241,
+  "pass_dr": 0.01,
+  "legs": [
+   {
+    "leg": "trend_donchian",
+    "symbol": "BTCUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/BTCUSDT_15m.csv",
+     "resampled_to": "1h",
+     "bars": 46996
+    },
+    "read_state": "unestablishable",
+    "n_total_trades": 377,
+    "block_n": 62,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 62,
+      "train_rows_n": 9224,
+      "read_state": "unestablishable",
+      "reason": "test n 62 / train rows 9224 under floor"
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 62,
+      "train_rows_n": 14957,
+      "read_state": "unestablishable",
+      "reason": "test n 62 / train rows 14957 under floor"
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 62,
+      "train_rows_n": 21501,
+      "read_state": "unestablishable",
+      "reason": "test n 62 / train rows 21501 under floor"
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 62,
+      "train_rows_n": 28282,
+      "read_state": "unestablishable",
+      "reason": "test n 62 / train rows 28282 under floor"
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 62,
+      "train_rows_n": 35898,
+      "read_state": "unestablishable",
+      "reason": "test n 62 / train rows 35898 under floor"
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_eth",
+    "symbol": "ETHUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/ETHUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 49828
+    },
+    "read_state": "measured",
+    "n_total_trades": 660,
+    "block_n": 110,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 110,
+      "train_rows_n": 6007,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "more_mfe"
+      ],
+      "n_fired": {
+       "holding_pays": 95,
+       "more_mfe": 83
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 110,
+      "train_rows_n": 13837,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "more_mfe"
+      ],
+      "n_fired": {
+       "holding_pays": 87,
+       "more_mfe": 93
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 110,
+      "train_rows_n": 20307,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "more_mfe"
+      ],
+      "n_fired": {
+       "holding_pays": 77,
+       "more_mfe": 74
+      }
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 110,
+      "train_rows_n": 28122,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "more_mfe"
+      ],
+      "n_fired": {
+       "holding_pays": 72,
+       "more_mfe": 73
+      }
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 110,
+      "train_rows_n": 35338,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "more_mfe"
+      ],
+      "n_fired": {
+       "holding_pays": 73,
+       "more_mfe": 74
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_sol",
+    "symbol": "SOLUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 44692
+    },
+    "read_state": "unestablishable",
+    "n_total_trades": 288,
+    "block_n": 48,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 48,
+      "train_rows_n": 10214,
+      "read_state": "unestablishable",
+      "reason": "test n 48 / train rows 10214 under floor"
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 48,
+      "train_rows_n": 16315,
+      "read_state": "unestablishable",
+      "reason": "test n 48 / train rows 16315 under floor"
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 48,
+      "train_rows_n": 22384,
+      "read_state": "unestablishable",
+      "reason": "test n 48 / train rows 22384 under floor"
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 48,
+      "train_rows_n": 29737,
+      "read_state": "unestablishable",
+      "reason": "test n 48 / train rows 29737 under floor"
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 48,
+      "train_rows_n": 36270,
+      "read_state": "unestablishable",
+      "reason": "test n 48 / train rows 36270 under floor"
+     }
+    ]
+   }
+  ]
+ },
+ "generated_at": "2026-11-20T08:56:50Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/exit_head_label_bakeoff.py"
+ }
+}

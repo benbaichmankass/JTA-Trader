@@ -113,9 +113,14 @@ def exclude_reset_flat_predicate(prefix: str = "") -> str:
     Also drops ``exit_reason='entry_unfilled'`` (ENTRY-UNFILLED-LABEL,
     2026-11-19): a row whose entry order ended at the venue without filling never
     held a position, so it is not a trade at all and must not sit in a
-    per-strategy denominator."""
+    per-strategy denominator.
+
+    Also drops ``exit_reason='account_reset'`` (2026-11-20): a row the PAPER close
+    ladder's rung-3 account-wide close-all liquidated as collateral of ANOTHER
+    leg's close (``execute.journal_account_reset``). The account was reset under
+    it, so it is not the strategy's exit decision."""
     er = _col(prefix, "exit_reason")
-    return f" AND COALESCE({er},'') NOT IN ('exchange_reset_flat', 'entry_unfilled')"
+    return f" AND COALESCE({er},'') NOT IN ('exchange_reset_flat', 'entry_unfilled', 'account_reset')"
 
 
 def exclude_reduce_leg_predicate(prefix: str = "") -> str:

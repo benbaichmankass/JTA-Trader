@@ -3,7 +3,7 @@
 id: RQ-20261120-7d49-01
 title: 'BUILD: rebuild the donchian 1h exit-head training rows on the ALIGNED grid (post-#27566 harness emit + PR #27676 live-fill anchor) into
   datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -105,3 +105,20 @@ related:
 - scripts/ml/build_exit_head_dataset.py
 population: trend_donchian (BTCUSDT), trend_donchian_eth, trend_donchian_sol harness trades on the trainer's 1h-resampled (left/left) candles plus
   their closed journal trades, 1h exit-head rows.
+last_dispatched_at: '2026-11-20T08:46:35+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261120-7d49-01-EXITHEAD-ALIGNED-ROWS
+  evidence:
+  - comms/research/RQ-20261120-7d49-01/44699879421/verdict.json
+  - research/results/RQ-20261120-7d49-01/44699879421.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'PASS by the registered rule, all three clauses MEASURED: (1) the script verdict is pass (build_report generated 2026-11-20T08:32:58Z, this run;
+    last bar_t BTCUSDT 2026-11-05T14:00Z, ETHUSDT 2026-11-19T04:00Z, SOLUSDT 2026-11-05T14:00Z, each after 2026-11-01); (2) build_report.entry_alignment
+    == live_fill_bar_v2; (3) produced_by.commit_sha db72798e9 contains #27676 (ad4cbd98) and #27655. Published datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl:
+    45,626 rows = 43,672 harness + 1,954 live; 1,389 trades (1,305 harness + 84 live); per symbol BTC 12,680 / ETH 23,375 / SOL 9,571 rows; skipped no_candles
+    0, unresolvable 62. pass_action: the confirmation units it names are NOT authored as same-design re-runs, because every exit-head read above is underpowered
+    at the 1h grain (realised sd 0.6-0.9 R, n_oos ~550): the power-feasible redesign on THIS corpus is PI-20261120-H58PIBEE-0001 (manager decision on scope).'
+  rows: 1
+  verdict: pass

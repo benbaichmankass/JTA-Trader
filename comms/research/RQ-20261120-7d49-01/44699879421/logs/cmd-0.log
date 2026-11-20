@@ -1,0 +1,22 @@
+RUN /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/research/m20_exit_head_round.py --legs trend_donchian,trend_donchian_eth,trend_donchian_sol --tf 1h --out datasets-out/exit_head/1h/donchian_aligned_fresh_build --build-only --db data/trade_journal.db
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/BTCUSDT_15m.csv --symbol BTCUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 385 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/ETHUSDT_5m.csv --symbol ETHUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.6 --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian_eth --emit-trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian_eth.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian_eth: 677 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv --symbol SOLUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.8 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian_sol --emit-trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian_sol.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian_sol: 302 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/ml/build_exit_head_dataset.py --tf 1h --out datasets-out/exit_head/1h/donchian_aligned_fresh_build --instruments /home/ubuntu/ict-trading-bot/config/instruments.yaml --trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian.jsonl --trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian_eth.jsonl --trades datasets-out/exit_head/1h/donchian_aligned_fresh_build/emit/trend_donchian_sol.jsonl --candles BTCUSDT=/home/ubuntu/ict-trading-bot/data/BTCUSDT_15m.csv --candles ETHUSDT=/home/ubuntu/ict-trading-bot/data/ETHUSDT_5m.csv --candles SOLUSDT=/home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv --db data/trade_journal.db --legs trend_donchian,trend_donchian_eth,trend_donchian_sol
+candles BTCUSDT: 46996 1h bars
+candles ETHUSDT: 49828 1h bars
+candles SOLUSDT: 44692 1h bars
+donchian: 45626 rows, holding_pays 30.1%, trades {'harness': 1305, 'live': 84}
+report -> datasets-out/exit_head/1h/donchian_aligned_fresh_build/build_report.json
+ live source data/trade_journal.db: 8059 rows in `trades`, 2393 matched filters, 87 usable
+LOAD BY FAMILY:
+    donchian: loaded 1364 of 1364
+
+build-only: rows under datasets-out/exit_head/1h/donchian_aligned_fresh_build (emitted legs: ['trend_donchian', 'trend_donchian_eth', 'trend_donchian_sol'])
+ {"status": "heavy_lock_acquired", "label": "m20_exit_head_round"}
+
+published datasets-out/exit_head/1h/donchian_aligned_fresh_build/donchian/rows.jsonl -> datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl
+{"verdict": "pass", "read_state": "measured"}

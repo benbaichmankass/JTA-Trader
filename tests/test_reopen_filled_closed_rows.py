@@ -254,3 +254,23 @@ def test_apply_waits_for_the_traders_write_lock(tmp_path):
     assert time.monotonic() - t0 >= 5.5, "it really waited on the held lock"
     rows, _pk = _status(db)
     assert {i: rows[i] for i in (7712, 7780, 7781, 7782, 7783)} == {i: "open" for i in (7712, 7780, 7781, 7782, 7783)}
+
+
+def test_backup_names_are_seen_by_the_shared_retention(tmp_path):
+    """PI-20261120-CGNCTD2Z-0005: both whole-journal writers go through journal_backup.take_backup,
+    so their copies carry a stamp the total-retention prune recognises (and are capped at 2)."""
+    import sqlite3 as _sq
+    import sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from scripts.ops import backfill_partial_close_children as bp
+    from scripts.ops import journal_backup as jb
+    db = tmp_path / "j.db"
+    _sq.connect(db).execute("CREATE TABLE t (x)").connection.commit()
+    for name in ("j.db.bak-reopen-20261119T112300Z", "j.db.bak-other-20261118T000000Z",
+                 "j.db.bak-third-20261117T000000Z"):
+        (tmp_path / name).write_bytes(b"x")
+    fresh = bp._backup(str(db))
+    left = sorted(p.name for p in tmp_path.glob("j.db.bak-*"))
+    assert _P(fresh).name in left and len(left) == jb.KEEP_TOTAL, left
+    assert _P(fresh).name.startswith("j.db.bak-partial-close-")

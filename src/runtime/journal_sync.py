@@ -47,6 +47,33 @@ logger = logging.getLogger(__name__)
 
 _LOCK = threading.RLock()
 
+# VENUE GENERATION (row LIVE-TICK-NEAR-BUDGET, 2026-11-20). A counter that moves whenever anything in this
+# process may have changed venue state: every venue-mutating HTTP call (bumped inside the Alpaca clients'
+# `_request` for any non-GET, before AND after the call, so no caller can forget) and the release of an
+# entry dispatch / pairs tick. A reconciliation phase may read the venue WITHOUT the lock (a prefetch),
+# then take the lock and use those reads only if the generation has not moved; otherwise it re-reads the
+# venue under the lock, exactly as before. Process-local, like the lock itself: a manual system action in
+# a separate process bypasses both today, and still does.
+_GEN = 0
+_GEN_LOCK = threading.Lock()
+#: journal_sync holders whose release means "a dispatch may have placed orders".
+DISPATCH_HOLDERS = ("entry_dispatch", "pairs_tick")
+
+
+def venue_generation() -> int:
+    """The current venue generation (see above)."""
+    return _GEN
+
+
+def bump_venue_generation() -> None:
+    """Mark that venue state may have changed. Never raises."""
+    global _GEN
+    try:
+        with _GEN_LOCK:
+            _GEN += 1
+    except Exception:  # noqa: BLE001
+        pass
+
 # The exit-evaluation thread's name, set in src/main.py::_start_exit_loop.
 EXIT_LOOP_THREAD_NAME = "exit-evaluation-loop"
 
@@ -74,6 +101,8 @@ def journal_sync(holder: str) -> Iterator[None]:
     finally:
         try:
             _record("journal_sync.hold", (time.monotonic() - t1) * 1000.0)
+            if holder in DISPATCH_HOLDERS:
+                bump_venue_generation()
         finally:
             _LOCK.release()
 

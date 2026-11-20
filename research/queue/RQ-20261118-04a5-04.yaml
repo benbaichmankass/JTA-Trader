@@ -8,7 +8,7 @@
 id: RQ-20261118-04a5-04
 title: 'Exit head, per-leg OUT-OF-SAMPLE control on the FIXED replay: on trend_donchian (BTC), _eth and _sol 1h, does closing on the head (holding_pays_neg25,
   and v1''s holding_pays as a re-grade) beat the leg''s own exits AND a matched random-truncation control?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -173,3 +173,21 @@ amendments:
     #27551): trend_donchian_eth on the shifted grid n 465, -35.73 R vs native 1h n 451, +4.26 R. Any row landed before this rearmed_at ran on that grid and is not
     evidence for this unit.'
 rearmed_at: '2026-11-20T01:19:00+00:00'
+last_dispatched_at: '2026-11-20T09:00:15+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261118-04a5-04-EXITHEAD-OOS-CONTROL
+  evidence:
+  - comms/research/RQ-20261118-04a5-04/44704324152/verdict.json
+  - research/results/RQ-20261118-04a5-04/44704324152.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'INDETERMINATE by the registered rule (neg25 measured on 1 of 3 legs, none passing; FAIL needs every leg measured). Post-rearm run 44704324152
+    (generated 2026-11-20T08:53:35Z, commit 4b39449a7). trend_donchian_eth (n_oos 550): holding_pays_neg25 dR/trade vs the leg exits +0.0039, 95% LB -0.0829
+    (needs >= 0 and > -0.02) -> cell FAIL; holding_pays (reported, never gating) +0.0238, LB -0.0681 -> cell FAIL. trend_donchian (BTC) and trend_donchian_sol:
+    n_oos 0 (every fold of 62 / 48 trades under MIN_FOLD_TEST_N 64), producer_failed per cell, not FAIL. fail_action is not triggered (unit not FAIL); the
+    de-facto state is unchanged: exit_head_action stays annotate on all three legs and no close authority is proposed. LABEL: trained on the MISALIGNED
+    corpus (donchian_fresh, built 2026-11-19 14:07Z, pre-#27566/#27676; PI-20261120-7ITMUEB1-0004), so this read is confounded and is not evidence for or
+    against #26906. The per-leg design is floor-bound at 1h: BTC/SOL cannot reach the 64-trade fold floor with 5 folds (PI-20261120-H58PIBEE-0001).'
+  rows: 1
+  verdict: indeterminate

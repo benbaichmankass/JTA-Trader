@@ -5871,3 +5871,13 @@ nodes:
     - research/queue/RQ-20261118-abab-47.yaml
     - research/queue/RQ-20261118-abab-49.yaml
     - research/levers/trend_donchian.yaml
+- id: P3-MGC15-proxy-adequacy
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after: []
+  authoring_closed: '2026-11-20 lane QUEUE-FILL-STANDING-W47b (manager GO 07:43Z): AUTHORED as RQ-20261120-b2f6-01, the IB-bars vs Dukascopy XAU_USD feed-adequacy measurement for ict_scalp_mgc_15m (PI-20261120-FILLW47B-0014), on the trainer route with a pre-registered adequacy rule.'
+  authoring_closed_ask: 'After the verdict the result goes on PI-20261120-FILLW47B-0014. If PROXY_INADEQUATE or INDETERMINATE (the IB span is shorter than 39 trades), the 7-year Dukascopy read stays proxy-only and the next step is whether to replay the other mgc_15m arms on the IB span; if ADEQUATE, the weekly 031 read (Gate-2 demotion input, 2 of 2) can be read as an MGC record. No config change and no retirement proposal comes from this unit.'
