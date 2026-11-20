@@ -104,6 +104,10 @@ _DEFAULT_PROTECTED: tuple[str, ...] = (
     # ENTRY-FILL-WRITEBACK (2026-11-15): where entry_price came from (fill | plan), the plan it replaced, and the
     # short reason / pending marker the writeback sweep branches on. All three are small and must survive the shrink.
     "entry_price_source", "entry_price_source_reason", "package_entry",
+    # ORPHAN-ADOPT PROVENANCE (2026-11-20): when and by what a row was adopted. Measured on ib_paper MGC trade 7735:
+    # the exit-coverage resolver's close write trimmed both to "" and left a leak investigation without them.
+    # Short stamps only; the long `adopted_reason` prose stays trimmable.
+    "adopted_at", "adopted_by",
 )
 _ELLIPSIS = "…"
 # Hard stop on the trim loop so a pathological payload can never spin.
