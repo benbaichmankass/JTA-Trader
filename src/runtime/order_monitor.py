@@ -18928,6 +18928,20 @@ def _recon_phase(name: str):
             yield
 
 
+@contextlib.contextmanager
+def _unlocked_read_phase(name: str):
+    """A reconciliation phase timed into the tick-cost split but deliberately NOT under ``journal_sync``.
+
+    For READ-ONLY venue prefetches only (LIVE-TICK-NEAR-BUDGET, #27669): the equity sweep's reads are made
+    off the lock, and the locked body uses them only while the venue generation is unchanged
+    (src/runtime/venue_read_cache.py), so a write or dispatch in between forces live reads under the lock.
+    Nothing that places, amends, cancels or writes the journal may run here.
+    tests/test_reconcile_offtick.py allow-lists the names that may use it, so a new unlocked phase fails CI.
+    """
+    with _phase(name):
+        yield
+
+
 def run_reconciliation_tick(
     *,
     db_path: Optional[str] = None,
@@ -19281,7 +19295,7 @@ def run_reconciliation_tick(
         # Its own tick-cost phase, timed but NOT under journal_sync (`_phase`, not `_recon_phase`), so the AFTER
         # read shows what the prefetch costs off the lock (tests/test_order_monitor_phase_split.py).
         _eq_cache = None
-        with _phase("prefetch_equity_sweep_reads"):
+        with _unlocked_read_phase("prefetch_equity_sweep_reads"):
             _eq_cache = _prefetch_equity_sweep_reads(db)
         try:
             from src.runtime.venue_read_cache import active as _vrc_active
