@@ -2,7 +2,7 @@
 id: RQ-20261120-8ef8-03
 title: 'Continuous vol-TARGET sizing on trend_donchian_eth_prop (ETHUSDT 1h), Bybit-native Stage-0 trades: does it lift net Sharpe by >= 0.10 without a worse drawdown, in >= 3 of 4 calendar
   blocks? (P2-R5)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -118,3 +118,18 @@ related:
 - scripts/backtest_vol_target.py
 - comms/research/VENUE-GAP-20261120/record.json
 last_dispatched_at: '2026-11-20T10:43:07+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ202611208ef803-VOLTARGET-SIZING
+  evidence:
+  - comms/research/RQ-20261120-8ef8-03/44721625399/verdict.json
+  - research/results/RQ-20261120-8ef8-03/44721625399.jsonl
+  graded_at: '2026-11-20'
+  grader: lane ML-PRIMARY-15 (session_01AFoLuL7nvseG9Hh58PibeE), HELD for the manager
+  reason: 'FAIL by the registered rule, graded as a RECORD: the unit was dispatched at 10:43Z and ran (run 44721625399, generated 10:56:04Z) before the
+    manager''s 11:06Z cancellation reached the queue, so it is graded, not retired. trend_donchian_eth_prop, n_trades 521 (>= 100): (a) dSharpe -0.1148
+    < +0.10 -> false; (b) maxDD targeted 15.67 R <= baseline 26.76 R -> true; (c) dSharpe > 0 in 0 of 4 blocks -> false. DESIGN DEFECT (same as 8ef8-01/02):
+    the multiplier sat at cap_lo 0.5 in 44 of 45 periods (97.78%; mean 0.513), because target_vol 0.10 is compared against R-unit book vol, so this measured
+    a constant 0.5x size, not vol targeting. Configuration closed; the lever is untested. The unit-free variant is RQ-20261120-7d49-05 (PI-20261120-H58PIBEE-0003).'
+  rows: 1
+  verdict: fail
