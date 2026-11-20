@@ -201,7 +201,6 @@ def run(a: argparse.Namespace, *, source: Optional[Callable[[], Tuple[Optional[s
         return fail(f"IB MGC 15m series too short ({len(ib15)} complete bars)", ib_source=path)
     ib_csv = out / "ib_MGC_15m.csv"
     ib15.reset_index().rename(columns={"index": "timestamp"}).to_csv(ib_csv, index=False)
-    start, end = str(ib15.index.min().date()), f"{ib15.index.max().date()} 23:59"
     days = (pd.Timestamp.now(tz="UTC") - ib15.index.min()).days + 5
     dk_csv = out / "duka_MGC_15m.csv"
     if fetch_duka(days, dk_csv) != 0 or not dk_csv.exists():
