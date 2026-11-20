@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a cap-vm-logs runtime_logs dry run prints root /data/bot-data/runtime_logs",
+    "conditions": [
+      "pr_merged:27707",
+      "manual:re-dispatched cap-vm-logs runtime_logs dry run prints root /data/bot-data/runtime_logs"
+    ],
+    "kind": "event",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "wrapper fix is in PR #27707"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "AM-OPS-10 disk work 2026-11-20 (issues #27653, #27658)",
+    "rerun": "open a system-action issue: action: cap-vm-logs / target: runtime_logs / days: 30 (dry run) and read the 'runtime_logs root:' line"
+  },
+  "routed_to": "PR #27707 (AM-OPS-11)",
+  "state": "routed",
+  "tier": 2,
+  "what": "[disk] cap-vm-logs target runtime_logs scans the WRONG directory. Dry run 2026-11-20 (issue #27658, run 44684110819) reported 'runtime_logs root: /home/ubuntu/ict-trading-bot/runtime_logs' (~87 MB, 0 candidates), while the 12 GB of runtime logs live under /data/bot-data/runtime_logs (disk-usage-report run 44681992412). Cause: scripts/ops/cap_vm_logs_action.sh calls scripts/ops/cap_runtime_logs.py without load_runtime_env, so DATA_DIR / RUNTIME_LOGS_DIR are unset and src.utils.paths.runtime_logs_dir() falls back to the repo-relative dir (the same class as BL-20260717-FILLS-STORE-PATH-SPLIT). Fix: load_runtime_env (or pass --root from the canonical resolver) in the wrapper, plus a test; then re-dry-run against /data/bot-data/runtime_logs. Note the real 12 GB may be LIVE .jsonl files (bybit_coverage_soak.jsonl 253 MB, signal_audit.jsonl 218 MB), which need a writer-side cap, not this tool. || [2026-11-20 AM-OPS-11] Fix in PR #27707 (load_runtime_env + a test with a negative control). After merge: re-dispatch the dry run and read the root line before any apply. Live .jsonl writer caps are separate."
+}

@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "exit_lever_ablation.py measurement.json carries a by_year table per arm (net_r, n per calendar year) and RQ-20261117-b3aa-03/-04 are graded",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-NIVCJP7T-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261117-1006 (session_01AFoLuMNJLaELyLniVCjP7T): reading RQ-20261115-2411-01..03 rows",
+    "rerun": "python3 -c \"import json;m=json.load(open('comms/research/RQ-20261115-2411-02/43780288156/measurement.json'));print(m['grade'] if 'grade' in m else '', [ (k,a['max_drawdown_r'],'by_year' in a) for k,a in m['arms'].items()])\""
+  },
+  "owner": "manager",
+  "routed_to": "checklist row HOLDOUT-INCUMBENT-GRADE",
+  "state": "routed",
+  "what": "EXIT_LEVER_ABLATION SWEEP GRADE != REGISTERED CONFIRMATION RULES: RQ-20261115-2411-02 (qqq pullback_lookback 15) and -03 (spy trend_lookback 45) were graded FAIL by --grade sweep only because of its maxDD(C) <= maxDD(B) clause (deltas +0.81 R and +0.31 R), which their registered rules do not contain; both arms beat A in both folds. Meanwhile the rules' regime-robustness clause (>= 3 calendar years net positive, no year > 50%) was never computed for 2411-01/-02/-03 because the harness emits 2 folds and no by_year table, so 2411-01's PASS is also not fully attested. Authors must pick the grade whose clauses equal the rule (replace + --dd-tol-frac, or a rule that states the DD clause), and exit_lever_ablation.py should emit a per-calendar-year table per arm so the standard clause is mechanically gradable. Re-reads authored: RQ-20261117-b3aa-03/-04. || [2026-11-20 AM-OPS-11 2e] Half done: b3aa-03 and b3aa-04 are graded (PASS, research/results on main). Open: scripts/research/exit_lever_ablation.py has no by_year table (grep by_year = 0), so the regime-robustness clause is still not gradable. Same harness and class as row HOLDOUT-INCUMBENT-GRADE (grade clauses must match the registered rule)."
+}

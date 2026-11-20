@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a live_review_packet.py packet for an open ict_scalp package carries non-null priced_options from live_review_outcomes.py, or the leg declares a stated could_not_price reason that the skill accepts",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-DMANAGER-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-20 03Z: LIVE-REVIEW lane session_01AFoLuMHBWpX7CuUrvgqvbA rows on live-review/rows 55c7e936 (trades 8032, 8058)",
+    "rerun": "git show origin/live-review/rows:comms/live_review/reviews.jsonl | grep -E '\"trade_id\": (8032|8058)' ; grep -n atr_stop_mult scripts/research/live_review_outcomes.py"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "LIVE-REVIEW CANNOT PRICE ict_scalp LEGS: ict_scalp uses a structural stop plus ATR buffer and has no atr_stop_mult, so scripts/research/live_review_outcomes.py has no stop multiple and the packet carries priced_options null. Every open ict_scalp package (bybit_1 xrp_15m / xrp_5m / eth / sol ...) is reviewed with no table and no EV (seen 11-20 03Z on trades 8032 and 8058). Fix: let the outcomes harness price a structural-stop leg in R from the package's own entry/stop distance (tighten levels in R or ATR off the current stop), or declare per-leg why it cannot, so the review is not blind on a whole family."
+}

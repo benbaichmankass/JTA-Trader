@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261112-ZZU98A5J-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "WEEKLY-PLANNING pre-read 2026-11-12 (PR #25144)",
+    "rerun": "python3 scripts/research/queue_throughput.py"
+  },
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "roadmap": [
+    "M40"
+  ],
+  "severity": null,
+  "state": "killed",
+  "terminal_reason": "[2026-11-20 AM-OPS-11 2e] FIXED on main. scripts/research/queue_throughput.py:26-29 puts the repo root on sys.path before 'from scripts.research...'. VERIFIED 2026-11-20 at origin/main: run from /tmp with no PYTHONPATH, it exits 0 with no ModuleNotFoundError.",
+  "tier": 1,
+  "week_lane": "throttle",
+  "what": "scripts/research/queue_throughput.py crashes on import (ModuleNotFoundError: scripts); silent with PYTHONPATH=."
+}

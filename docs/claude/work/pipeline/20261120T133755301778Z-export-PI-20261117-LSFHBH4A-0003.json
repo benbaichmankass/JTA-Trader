@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "date:2026-11-18 (the Wednesday /performance-review reads it before grading); closes when the review's population excludes these trade ids with the stated reason, or the manager kills it with a stated reason",
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LSFHBH4A-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane session_01AFoLuKdqv7sRrnLSFhbH4a (AM-OPS-2), manager 2026-11-17 07:02Z (backlog item 2 diagnosis)",
+    "rerun": "journal trades id in (7029,7031,7114,7131,7202): closed_at 2026-11-16T14:35:52.198271 and notes.closed_by; /api/diag/journal?table=trades&limit=1000&offset=0&envelope=true"
+  },
+  "routed_to": "routine performance-review (next run Wed 2026-11-25 ~19:00Z): exclude trades 7029/7031/7114/7131/7202 (+SPY 7583-7585) as collateral of the 2026-11-16 false paper close-all unless PR #27697 relabel has landed",
+  "severity": "low",
+  "state": "routed",
+  "tier": 1,
+  "what": "Paper P&L of trades 7029/7031/7202/7131 on 2026-11-16 14:35:52Z is collateral (no strategy decision); exclude from grading. All four alpaca_paper rows (iaum_pullback_1d 7029 +17,296; gdx_pullback_1d 7031 +12,610; qqq_pullback_1h 7202 -6,422; uso_trend_1h 7131, tagged sl, computed_estimate) were finalised in one pass at 2026-11-16T14:35:52.198271Z after the false paper close-all #26522 fixed; slv_trend_1h 7114 (+990) and the SPY rows 7583/7584/7585 (exchange_flat_reconciled, the pre-open re-entry loop) are in the same episode. Exclude them from /performance-review leg grading, perf-followup and any soak or mechanics grade with the reason 'collateral of the 2026-11-16 false paper close-all'. || [2026-11-20 AM-OPS-11 2e] Due 11-18 review did not apply it: comms/reviews/performance-review-20261118-190000.json contains none of 7029/7031/7202 and no 'collateral' text. The mechanical fix (relabel to account_reset, PI-20261120-XGESYDCD-0002, PR #27697) is OPEN and held, so the next review must exclude these ids by hand unless the relabel has landed."
+}

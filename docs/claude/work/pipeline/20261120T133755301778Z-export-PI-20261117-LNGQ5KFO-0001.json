@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LNGQ5KFO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "PITCH-DECK-V2 lane session_01AFoLuKQM4RmRCwLNGq5kfo, 2026-11-17; deck PR #26648; artifact https://claude.ai/artifact/JBrDT1RujYPh5WkdCbVm6u",
+    "rerun": "python3 -c \"import json;d=json.load(open('docs/pitch/slides.json'));print(sum(s['live_refreshable'] for s in d['slides']), 'live-refreshable slides of', d['slide_count'])\"; grep -rn \"pitch\\|slides.json\" src/web/api/routers | head"
+  },
+  "owner": "manager",
+  "routed_to": "checklist row PITCH-DECK-V2",
+  "state": "routed",
+  "what": "INVESTOR DECK WORK-TAB SUB-TAB (deferred Part 2 of PITCH-DECK-V2). Operator 2026-11-17 (relayed by manager session_01AFoLuHbhd9wFuGJfWRqyoV, verbatim): \"For now, just update it once and give it to me like as an artifact that I can leave you comments on, and then after the reset, we'll add it to the UI with regular review to keep it updated.\" Earlier the same day: \"Keep that also like as a tab on the work page. Like on the work tab on the UI, there should be a sub tab for the investor deck with the slides so that I can go over them and leave comments for you.\" And the deck should be \"hardwired to a live source of information, so that I can like export it with the most up to date data, or show it like from the UI to somebody with the up to date data in it.\" Build: (1) a Tier-1 READ endpoint serving the committed docs/pitch/slides.json from the VM tree; (2) an \"Investor deck\" sub-tab under the Work tab in benbaichmankass/ict-trader-dashboard (slide viewer: title, bullets, table, provenance tags, notes toggle, prev/next); (3) per-slide comments as operator->manager messages (slide number, text, timestamp, status new/read/addressed), reusing the existing operator-input path first (Work Decisions inbox / work_decision_transit) before any new store, and surfaced on an endpoint the manager already polls; (4) live-data wiring: each numbers[] entry in slides.json carries `source` and `live_endpoint_candidate`; a slide with live_refreshable=true can refresh its numbers from those read routes (verify the field matches `source` first). New src/web routes are Tier 2 (merge+deploy on green pre-approved 2026-11-12, manager reads the diff first). No new gates. || [2026-11-20 AM-OPS-11 2e] Deferred Part 2 of PITCH-DECK-V2; that row (in_flight) already references this item. Operator words: after the reset, add it to the UI."
+}

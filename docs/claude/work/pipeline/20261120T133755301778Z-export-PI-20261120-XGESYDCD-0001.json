@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "a merged fix PR with a test where the close-all is accepted but the trigger is not flat within confirm_s still labels the other rows account_reset; or the manager kills it with a reason",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261120-XGESYDCD-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS-11 session_01AFoLuHd7TmmwRCXgeSYdCd, backlog 2a 2026-11-20",
+    "rerun": "grep -n '_account_reset_close_all\\|journal_account_reset' src/units/accounts/alpaca_client.py src/units/accounts/execute.py; /api/diag/alpaca_order_history?account_id=alpaca_paper&after=2026-11-16T14:31:00Z&until=2026-11-16T14:36:00Z"
+  },
+  "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "PAPER close ladder rung 3 fires but journal_account_reset is skipped when the trigger symbol is not flat within ALPACA_CLOSE_CONFIRM_S (default 6 s). MEASURED 2026-11-16 (/api/diag/alpaca_order_history alpaca_paper): close-all accepted 14:32:33Z, fills 14:33:36-14:35:28Z (USO, the trigger, 14:34:00Z = 87 s). _account_reset_close_all returned state=reset, _await_flat(USO, 6 s) was False, so the ladder returned retCode 1 and execute.close_open_position never ran journal_account_reset; the 5 collateral rows (7029/7031/7114/7202 stuck_strategy_watchdog, 7131 sl) were labelled by detectors 3 min later and graded mechanics FAULTS on 3 soaks. #26522 removed the false-wedge trigger of that episode, not this path: a TRUE paper wedge with slow paper fills repeats it. Fix (Tier 2, RESTART, paper only): once the close-all is accepted, journal the OTHER rows account_reset regardless of the trigger's flat-confirm (prices left to the broker-fill sweeps, as designed); add account_reset to src/runtime/ml_entry_live_monitor.OPERATIONAL_EXIT_REASONS (readers outside the trader: #27697). || [2026-11-20 AM-OPS-11] ALSO in that PR: add account_reset to scripts/research/real_money_close_attribution.NOT_STRATEGY_EXIT. tests/runtime/test_ml_entry_live_monitor.py::test_operational_set_equals_attribution_vocabulary requires it to equal OPERATIONAL_EXIT_REASONS, so the two must change together (removed from #27697 for that reason)."
+}

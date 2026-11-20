@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "PI-20261104-3UG8WZWK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNIVERSE-RULE (Manager Session 2026-11-04a), inventory row #16 of docs/audits/2026-11-04-per-symbol-config-inventory.md",
+    "rerun": "grep -n enabled_venue_symbols config/prop_platforms.yaml; grep -n PROP_EXECUTOR_SYMBOLS src/prop/prop_executor.py; cat config/mechanics_paths.yaml"
+  },
+  "state": "killed",
+  "terminal_reason": "[2026-11-20 AM-OPS-11 2e] No measured harm, and the purpose is allowed. The 2026-11-04 rule ('an account configures strategies, never symbols') allows a list of what the venue's automation can physically trade; the item itself says no live ticket is known to be wrongly skipped. Re-deriving the list from config/mechanics_paths.yaml is a refactor with no observed failure behind it. RE-ENTRY TEST: a prop ticket skipped by enabled_venue_symbols for a symbol whose mechanics ARE proven (prop_executor skip log vs mechanics_paths.yaml) reopens it as a bug.",
+  "what": "[per-symbol config, prop executor] config/prop_platforms.yaml::<acct>.executor.enabled_venue_symbols (+ env PROP_EXECUTOR_SYMBOLS*) is a hand-kept per-account symbol list the prop executor SKIPS tickets outside (src/prop/prop_executor.py ~L1317/1695/1921/1989). Under the operator's 2026-11-04 rule (an account configures strategies, never symbols) its PURPOSE is allowed (what the venue's automation can physically trade: symbol switching + measured lot specs), but its SHAPE is a hand list plus an env override. Fix: derive it from the measured mechanics record (config/mechanics_paths.yaml / the dry-run evidence) so it cannot drift from what was proven; keep fail-closed for unmeasured symbols. Not urgent: no live trade is wrongly skipped today that is known (unmeasured)."
+}

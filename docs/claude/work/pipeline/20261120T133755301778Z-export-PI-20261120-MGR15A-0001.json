@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a Stage-0 evidence record for e4_oi_shock_1h is named (path + harness + n), or a research/queue unit authoring one is on main",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-MGR15A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, from the LIVE-REVIEW 06Z lane report 2026-11-20",
+    "rerun": "grep -rn e4_oi_shock_1h research/queue docs/research comms/ | head"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "Live review 2026-11-20 06Z (lane LIVE-REVIEW-20261120-0620Z, session archived) found no Stage-0 evidence record for e4_oi_shock_1h, which has an open package on a paper book. Because of that, scripts/research/live_review_outcomes.py could not price any option and the package got no_recommendation / no_action. TO DECIDE: locate the leg's Stage-0 record (which harness, which n, net of the full cost stack). If none exists, the leg is on a book without a committed evidence record, which breaks OPERATING-PLAN § 2; then author a Stage-0 research unit for it (Bybit-native corpus) or flag it for retirement. Nothing has been investigated: the review lane only reported the gap."
+}

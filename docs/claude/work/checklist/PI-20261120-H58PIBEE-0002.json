@@ -1,0 +1,21 @@
+{
+  "id": "PI-20261120-H58PIBEE-0002",
+  "title": "[research tooling] Concurrent writers to research/queue/*.yaml strand PRs: dispatcher last_dispatched_at stamps and research-queue-grade blocks conflict with hand-grade PRs, and vice versa",
+  "state": "queued",
+  "owner": "research-ops tooling (manager assigns)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "MEASURED 2026-11-20: (1) hand-grade PR #27745 conflicted twice in ~40 min with dispatcher stamp commits (last_dispatched_at at 09:00Z and 09:07Z on 4 units); each needed a manual merge of main and a full CI cycle (~15 min). (2) research-queue-grade run 44697854258 failed: its output PR #27735 hit failed_conflict for 80 min because W47b's hand re-grades of 9e1c-12/abab-28/abab-29 landed in between. ML-15 fixed both by hand (merge main, keep the newer hand grade). Candidate fix: write last_dispatched_at and auto-grade blocks to a sidecar (e.g. research/queue/.state/<id>.json) that hand-grades never touch, or have the automation refresh step resolve stamp-only conflicts by taking both sides. Gates this adds or changes: none.",
+  "phase": null,
+  "updated_at": "2026-11-20T10:54:01Z",
+  "updated_by": "session_01AFoLuL7nvseG9Hh58PibeE"
+}

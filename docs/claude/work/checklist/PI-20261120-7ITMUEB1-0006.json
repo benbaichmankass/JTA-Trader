@@ -1,7 +1,7 @@
 {
   "id": "PI-20261120-7ITMUEB1-0006",
   "title": "[research tooling] Resample-convention audit for the paths NOT changed by PR #27566: backtest_system._resample (5m base -> signal + clock bars, fill mapping), candle_io.resample, hf_solo_sim, hf_vectorized, timeframe_breakeven, research_momentum, cointegration_stability, replay_pregate, meta_veto_walkforward still use label/closed='right' (one-sub-bar phase shift vs the native open-stamped grid). For each: does it aggregate finer->coarser on a graded or config-driving path; fix to left/left with a native-grid test, or record why it is safe.",
-  "state": "queued",
+  "state": "done",
   "owner": "ML-PRIMARY lane (successor inherits)",
   "lane": null,
   "model": null,
@@ -16,5 +16,8 @@
   "prs": null,
   "blocked_on": null,
   "next_action": null,
-  "due_by": "2026-11-25"
+  "due_by": "2026-11-25",
+  "note": "2026-11-20 07:45Z ML-15: CLOSED. Every right/right-resample site is on the open-stamped native grid on main: #27639 (chop_scalp HTF), #27645 (four same-frame _resample copies), #27649 (hf_solo_sim HTF), #27654 (candle_io resample + causal entry locator), #27661 (hf_solo_sim frame/clock), #27655 (backtest_system frame, clock and HTF, merged as d1a717d4; it also maps nbook_portfolio signals through bs._signal_clock_index and pins nbook parity on a fixed stream, 23 trades). The test that went stale after #27654 (regime ADX sweep) is fixed in #27695, pending merge. Evidence produced on the old engine: re-runs are owned by PI-20261120-7ITMUEB1-0009.",
+  "updated_at": "2026-11-20T07:44:28Z",
+  "updated_by": "session_01AFoLuL7nvseG9Hh58PibeE"
 }

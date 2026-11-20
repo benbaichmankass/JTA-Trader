@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "research/results/RQ-20261111-207f-03 holds a read_state: measured row (not producer_failed)",
+    "kind": "observation"
+  },
+  "id": "PI-20261115-JFWRQYOV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops pass RESEARCH-OPS-20261115-1447 (session_01AFoLuHbhd9wFuGJfWRqyoV dispatch)",
+    "rerun": "grep -h producer_failed research/results/RQ-20261111-207f-03/*.jsonl | head -c 400"
+  },
+  "owner": "manager",
+  "routed_to": "checklist row RESEARCH-VERDICT-N-CONTRACT",
+  "state": "routed",
+  "what": "RQ-20261111-207f-03 (Foxhound-4 diagnose, P8-Q3) landed producer_failed: verdict.json malformed (n must be present, null when not measured). Not a verdict; the producer script writes a verdict without n. Fix the producer so n is written (null when unmeasured), then re-fire the unit (last_dispatched_at: null). Owner of the unit's needs_review is checklist row RESEARCH-OPS-20261115-1447 until then. || [2026-11-20 AM-OPS-11 2e] Still open: research/results/RQ-20261111-207f-03/43551399631.jsonl is the only row, read_state producer_failed ('n must be present'); unit status done, never re-fired. The producer-class fix (shared verdict writer / n contract) is row RESEARCH-VERDICT-N-CONTRACT; re-fire 207f-03 once it lands."
+}

@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "duplicate",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-MGR15A-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, from ML-15's reports on #27745 and #27735, 2026-11-20",
+    "rerun": "search closed PRs for 'failed_conflict' in research-queue-grade / dispatcher stamp PRs; list research/queue merge commits by hand"
+  },
+  "owner": "manager",
+  "state": "killed",
+  "terminal_reason": "duplicate of PI-20261120-H58PIBEE-0002, filed by ML-15 within the same minute with the same two incidents and a sidecar fix candidate; that item carries the work.",
+  "what": "Research-queue unit files are edited by three writers: the dispatcher's last_dispatched_at stamps, the auto-grader's grading blocks, and hand grades. Their PRs keep conflicting on the same YAML files. MEASURED 2026-11-20: ML-15's #27745 was conflicted twice by dispatcher stamps (09:00Z and ~10:00Z), and grader PR #27735 (run 44697854258) stranded with failed_conflict and timed out at 80m because W47b's hand re-grades of 9e1c-12/abab-28/abab-29 landed first. Each case needed a manual merge of main. TO DECIDE: move the stamps (and/or the auto-grades) out of the unit files into a separate per-unit sidecar, or make the grader and dispatcher refresh via a structural YAML merge that keeps both sides' blocks. Whichever is chosen must add no new gate."
+}

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-LRP-9FAC217C",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:spy_pullback_1h:dropped_no_package",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `spy_pullback_1h` — dropped_no_package ×2 (paper roster) in window 2026-11-13T06:45:00+00:00..2026-11-20T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-20.json. Examples: [{\"class\": \"dropped_no_package\", \"bar\": \"2026-11-19T14:00:00+00:00\", \"t\": \"2026-11-19T14:42:17+00:00\", \"detail\": {\"class\": \"dropped_no_package\", \"packages\": [], \"gates\": []}}, {\"class\": \"dropped_no_package\", \"bar\": \"2026-11-19T15:00:00+00:00\", \"t\": \"2026-11-19T15:12:19+00:00\", \"detail\": {\"class\": \"dropped_no_package\", \"packages\": [], \"gates\": []}}]"
+}
