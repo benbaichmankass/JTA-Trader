@@ -1,0 +1,223 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "trend_donchian_sol_prop: 233 trades in the baseline arm 'A' on SOLUSDT 1h candles 2023-02-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 233,
+  "measurement": {
+    "leg": "trend_donchian_sol_prop",
+    "label": "stage0_edge_confirmed",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge_confirmed",
+      "boundary": "2025-04-15 23:59:15+00:00",
+      "end": "2026-10-15 23:59:00+00:00",
+      "discovery": {
+        "n": 139,
+        "net_r": 8.4668,
+        "expectancy_r": 0.0609,
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2023-02-01 00:00:00+00:00",
+            "end": "2023-08-21 05:59:48.750000+00:00",
+            "trades": 34,
+            "net_r": -0.0937
+          },
+          {
+            "fold": 2,
+            "start": "2023-08-21 05:59:48.750000+00:00",
+            "end": "2024-03-09 11:59:37.500000+00:00",
+            "trades": 45,
+            "net_r": 6.7573
+          },
+          {
+            "fold": 3,
+            "start": "2024-03-09 11:59:37.500000+00:00",
+            "end": "2024-09-26 17:59:26.250000+00:00",
+            "trades": 31,
+            "net_r": -4.8947
+          },
+          {
+            "fold": 4,
+            "start": "2024-09-26 17:59:26.250000+00:00",
+            "end": "2025-04-15 23:59:15+00:00",
+            "trades": 29,
+            "net_r": 6.6979
+          }
+        ],
+        "folds_positive": 2
+      },
+      "holdout": {
+        "n": 94,
+        "net_r": 4.3368,
+        "expectancy_r": 0.0461
+      },
+      "ci_z": null,
+      "discovery_ci_lower_r_per_trade": null,
+      "n_floor": 25,
+      "fold_majority": 1,
+      "n_folds": 4,
+      "holdout_min_n": 25,
+      "n_straddling_boundary": 0,
+      "control": null,
+      "why": "discovery net_r=8.4668 on n=139, 2/4 folds; holdout net_r=4.3368 on n=94"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 233,
+        "net_r": 12.8039,
+        "net_r_fee_only": 18.4458,
+        "max_drawdown_r": 11.2847,
+        "by_outcome": {
+          "stop": 90,
+          "trail_stop": 104,
+          "take_profit": 38,
+          "timeout": 1
+        },
+        "mean_bars_held": 28.425,
+        "net_r_per_capital_day": 0.0464,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.5,
+          "min_confidence": 0.8
+        },
+        "data_start": "2023-02-01 00:00:00+00:00",
+        "data_end": "2026-10-15 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2023-02-01 00:00:00+00:00",
+            "end": "2023-08-21 05:59:48.750000+00:00",
+            "trades": 34,
+            "net_r": -0.0937
+          },
+          {
+            "fold": 2,
+            "start": "2023-08-21 05:59:48.750000+00:00",
+            "end": "2024-03-09 11:59:37.500000+00:00",
+            "trades": 45,
+            "net_r": 6.7573
+          },
+          {
+            "fold": 3,
+            "start": "2024-03-09 11:59:37.500000+00:00",
+            "end": "2024-09-26 17:59:26.250000+00:00",
+            "trades": 31,
+            "net_r": -4.8947
+          },
+          {
+            "fold": 4,
+            "start": "2024-09-26 17:59:26.250000+00:00",
+            "end": "2025-04-15 23:59:15+00:00",
+            "trades": 29,
+            "net_r": 6.6979
+          }
+        ],
+        "argv": [
+          "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+          "/home/ubuntu/ict-trading-bot/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.5",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261120-4f03-01/44710202899/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261120-4f03-01/44710202899/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2023-02-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2023-02-01",
+      "end": "2026-10-15 23:59",
+      "fetch_days": 740,
+      "feed": {
+        "resample": "1h",
+        "source": "explicit --data-csv"
+      },
+      "fold_edges": [
+        "2023-02-01 00:00:00+00:00",
+        "2023-08-21 05:59:48.750000+00:00",
+        "2024-03-09 11:59:37.500000+00:00",
+        "2024-09-26 17:59:26.250000+00:00",
+        "2025-04-15 23:59:15+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+          "/home/ubuntu/ict-trading-bot/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.5",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261120-4f03-01/44710202899/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261120-4f03-01/44710202899/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2023-02-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "PASS / stage0_edge_confirmed: discovery net_r=8.4668 on n=139, 2/4 folds; holdout net_r=4.3368 on n=94"
+}
