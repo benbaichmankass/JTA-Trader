@@ -68,6 +68,11 @@
    "date": "2026-05-14",
    "ref": "PR #1156",
    "summary": "v2 promotion to enabled=true after pre-live gate cleared (issues #1153 + #1154): 59.3% win rate, +0.301 R expectancy, max DD 3.47R on 90 days of fresh BTCUSDT 5m candles. Strategy uses wick rejection + HTF 1h EMA-20 bias + displacement 1.3 × ATR"
+  },
+  {
+   "date": "2026-11-20",
+   "ref": "PROPOSAL (HELD, Tier-3, manager GO 03:48Z): session lever S_ASIA from RQ-20261118-abab-25 + confirmation RQ-20261119-8260-02",
+   "summary": "Enable the live session filter for ict_scalp_5m (BTCUSDT): session_filter_enabled true, session_start_hour 8, session_end_hour 24 (signal bar UTC hour in [8,24) == skip hours 0-7, the harness S_ASIA arm). Evidence: abab-25 (n(A) 670, 2021-11-14..2026-11-17) S_ASIA net R -149.32 vs declared leg -226.11, 6/6 folds; 8260-02 (n(A) 265, 2019-12-31..2021-11-13, disjoint) S_ASIA -23.28 vs -42.46, 6/6 folds; both net of fee+slippage+funding. The leg STILL LOSES NET on both windows: this cuts losses, it is not an edge. The evidence is Binance-fed (ML-14 venue-gap: Binance evidence sits ~0.019 R/trade above Bybit for legs traded on Bybit). Demo floor only (bybit_1); no roster or real-money change. Rollback: session_filter_enabled false."
   }
  ],
  "ict_scalp_sol_5m": [
