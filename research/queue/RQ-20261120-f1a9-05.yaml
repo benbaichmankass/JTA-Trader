@@ -53,8 +53,9 @@ power:
     2,289 <= 2,400). Corrected 2026-11-20 ~23:35Z (manager): the first draft declared 0.04 at alpha 0.05 (floor 2,403.7 > 2,400, and the alpha
     ignored the multiplicity); the decision rule and thresholds are unchanged.'
   feasibility:
-    source: none
-    accrual_basis: Replays the aligned trainer corpus and trainer-resolved 1h candles; nothing accrues.
+    source: replay
+    verdict: comms/research/RQ-20261120-7d49-02/44718948379/verdict.json
+    basis: Same harness, same fixed test corpus as the pointed run (its measured n); a re-read of an in-hand corpus, nothing accrues.
 baseline:
   definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold
     training rows and replayed on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported
