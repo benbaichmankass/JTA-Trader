@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "CI tooling fix (scripts/ops/resolve_stamp_conflicts.py, the stamp-conflict resolver used by the research-queue workflows): grafting a stamp that is the last line of a unit file added a blank line, which made the stamp-only vouching refuse the stamp PR and strand it (#27528). Graft the stamp line only. Two regression tests that fail without the change. No trader-path code, config or order path; no gate added."
+}

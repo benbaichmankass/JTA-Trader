@@ -186,3 +186,23 @@ def test_without_a_merge_base_or_when_the_branch_edited_more_than_the_stamp_it_i
     theirs = "id: RQ-1\nstatus: queued\nrun: fixed\nlast_dispatched_at: '2026-11-19T16:44:11+00:00'\n"
     assert rsc.resolve(_P, _unit("2026-11-19T15:07:11+00:00"), theirs) is None                    # no base
     assert rsc.resolve(_P, _unit("2026-11-19T15:07:11+00:00", "x: branch\n"), theirs, base) is None   # branch edited x
+
+
+def test_a_stamp_at_end_of_file_adds_no_blank_line_when_main_appended_after_it():
+    """#27528 (2026-11-20): `_STAMP`'s trailing `\\s*$` swallows the line break of a stamp that is the LAST line, so grafting group(0)
+    into main's text (a block appended AFTER the stamp) added a blank line; the extra '+' line made the stamp-only vouching refuse the
+    PR (R5) and it stranded. The graft must change the stamp line and nothing else."""
+    base = "id: RQ-1\nstatus: queued\nlast_dispatched_at: '2026-11-19T19:42:04+00:00'\n"
+    ours = base.replace("19:42:04", "23:14:07")
+    theirs = base.replace("'\n", "'\ngrading:\n  verdict: fail\n")
+    won = rsc.resolve(_P, ours, theirs, base)
+    assert won == "id: RQ-1\nstatus: queued\nlast_dispatched_at: '2026-11-19T23:14:07+00:00'\ngrading:\n  verdict: fail\n"
+    assert "\n\n" not in won
+
+
+def test_the_graft_into_a_main_without_a_stamp_is_one_clean_line():
+    base = "id: RQ-1\nstatus: queued\n"
+    ours = base + "last_dispatched_at: '2026-11-19T23:14:07+00:00'\n"
+    theirs = base + "grading:\n  verdict: fail\n"
+    won = rsc.resolve(_P, ours, theirs, base)
+    assert won == theirs + "last_dispatched_at: '2026-11-19T23:14:07+00:00'\n"
