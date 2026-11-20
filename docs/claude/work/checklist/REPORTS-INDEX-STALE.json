@@ -1,0 +1,21 @@
+{
+  "id": "REPORTS-INDEX-STALE",
+  "title": "Reports index has published nothing since 2026-09-09: /api/bot/reports newest generated_at 2026-09-09T17:15Z (44 reports total)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Found 2026-11-12 ~08:15Z by UI lane p2 while building the console Reports tab. GET /api/bot/reports: count 44, newest RPT-20260909-171500-audit. Either the review skills stopped writing to the reports index (artifacts/reports index on the VM) or reviews moved elsewhere and the index was abandoned. Decide: re-wire the writers (performance/health/ml reviews) into the index, or retire the index and point the console Reports tab at where reviews now live (docs/reviews/?). CLOSES WHEN the console Reports tab shows a report from this week, or the tab points at the new home.",
+  "phase": null,
+  "updated_at": "2026-11-12T08:16:31Z",
+  "updated_by": "UI lane p2 (session_01AFoLuMw1bWyUmi4HkqYBX8)"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "HEALTH-20261118-RECONCILE-LOCK-TICK",
+  "title": "Trader tick mean 55.5 s (max 126.6 s): reconciliation_loop holds journal_sync 40.7 s mean, and the main tick waits 15.9 s mean (36% of tick time). Hand to the Thu-Sun system audit",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "MEASURED from /api/diag/tick_cost at 18:08Z (819 ticks since the 04:05Z restart). Largest off-loop holders: reconcile_open_trades 11.1 s, check_broker_naked_equity_positions 8.1 s, reconcile_orphan_exchange_positions 6.6 s, check_broker_naked_bybit_positions 5.7 s, reconcile_netting_partial_closes 4.7 s, all under the journal lock. Also for the audit: the trader restarted 7 times on 2026-11-17 (restart alerts 05:02, 07:04, 08:14, 11:30, 13:26, 14:26, 18:14Z); each restart drops the reconciler's in-memory confirm state. And ict-web-api wedged twice (11-17 11:02Z, 14:25Z). Closes when: the audit names the cause and files a fix with a target tick time. Gates this adds: none.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:19:36Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

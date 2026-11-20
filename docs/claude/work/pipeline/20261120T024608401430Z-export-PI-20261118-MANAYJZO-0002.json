@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "data/ candles for the M21 legs reach within 2 days of now on the trainer (or resolve_data reads a maintained source) AND RQ-20261118-04a5-01 is re-armed and graded; or killed with a reason",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-MANAYJZO-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-6 grading RQ-20261118-04a5-01",
+    "rerun": "git show origin/main:research/results/RQ-20261118-04a5-01/44383743409.jsonl | python3 -c \"import sys,json;[print(k,v.get(\\\"data_last_bar\\\")) for l in sys.stdin for k,v in json.loads(l)[\\\"measurement\\\"][\\\"per_leg\\\"].items()]\""
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "redate": {
+    "observation": "2026-11-18 22:20Z AM-OPS-2 DEFECT RECORD + OWNERSHIP. The lake extender apply (trainer-diag #26966, 22:05Z) wrote MALFORMED timestamps on all 13 extended trainer data/*_1d.csv files: date-only files got appended rows spelled like '2026-11-16 00:00:00-07-07' (my tz detector read the date's '-07-07' as an offset; my tests covered only the '+00:00' spelling; found by reading the diag's last-row output). Existing rows were not modified; originals are backed up at /tmp/lake_extend_backup on the trainer (14 files, verified present by AM-OPS-3's #26972 inventory). Between the apply and now no m20-exit-lever-sweep or research-script-run-trainer run was created (checked: 0 runs since 21:30Z); other research workflows were not traced. Rollback #26976 (mine) is queued after AM-OPS-3's repair #26972 and has NOT reported; it would restore backup content and delete sidecars, i.e. undo #26972's re-apply, so AM-OPS-3 re-applies from main after its fix merges. Fix PRs: #26978 (mine, strict spelling + refuse unrecognised, auto-merge armed) vs #26971 (AM-OPS-3, mirrors the file's format); first to merge wins, the other owner closes. Funding refresher #26967 (+strict spelling, lint fix) pending CI; funding data itself is correct (#26958). OWNER FROM HERE: AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr) for the re-apply (#26972), wiring (#26973, Tier-2 hold), acceptance test = read the files back through the canonical loader (rows == lines-1, last rows spelled like the file), then splice continuity, then 03:2xZ journal. Open: 1h equities overlap comparison; 60 stale-end m20 units to programme review/ML-7. Lesson: every tool that writes into a file must reproduce the file's own spelling and be tested against EACH spelling present in data/, and its acceptance test is a read-back.",
+    "observed_at": "2026-11-18"
+  },
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[research/data] STALE TRAINER CANDLES under data/ (the M20/M21 resolver m20_fleet_exit_sweep.resolve_data reads data/{SYMBOL}_{grain}.csv): RQ-20261118-04a5-01 run 44383743409 recorded data_last_bar BTCUSDT 1h = 2026-07-10T23:45Z and AVAXUSDT 4h = 2026-06-18T07:15Z, so its fresh window (2026-07-14+) had 0 trades on both legs -> INDETERMINATE by rule (operator D5 Donchian 0.70 vs 0.60 re-test still unanswered; 0.70 unchanged). Every M20/M21 sweep on the trainer silently ends 4-5 months ago. Fix: refresh data/ candles (or point resolve_data at the maintained source) and re-arm 04a5-01."
+}

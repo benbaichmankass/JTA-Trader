@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 4,
+    "clears_when": "the random-side S3 on level_break_break is re-measured at finer ATR% matching and on gross (cost-free) R, and the result says cost-in-R geometry or a net timing edge; or the question is retired by record with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-OFUCR5NF-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20261119-d7c3-03 run 44442962409 (comms/research/RQ-20261119-d7c3-03 once landed), lane QUEUE-FILL-STANDING-W47b 2026-11-19",
+    "rerun": "python3 scripts/research/desk_trigger_replay.py run --family level_break_break --fetch --root /tmp/trig_cache --out /tmp/trig_out && python3 -c \"import json;m=json.load(open('/tmp/trig_out/trigger_replay_level_break_break_dev.json'));print(m['controls']['random_side'], m['cells']['fade']['mean_net_r'], m['cells']['fade']['mean_b3'])\" # the finer-bin and gross variants need a flag the harness does not yet have"
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "M40"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "DOES A DIRECTION-AGNOSTIC ENTRY AT 5m LEVEL BREAKS CARRY A NET TIMING EDGE, OR IS IT BRACKET/COST GEOMETRY UNDER A DRIFTING WINDOW? (2026-11-19, QUEUE-FILL-STANDING-W47b, from RQ-20261119-d7c3-03 run 44442962409). MEASURED, DEV 2025-11-01..2026-09-15, six USDT perps, 28,059 level_break_break firings: S3 is NET of the full cost stack as registered (fee 11 bps round trip + slippage 3 bps + funding 1 bp/window through execution_costs.roundtrip_cost_r in desk_gen_replay_driver.simulate; no separate spread term). The random-side control reads +0.078 R, fade +0.088 R (lb +0.051), continuation +0.067 R (lb +0.024), so direction adds about +0.01 R and the effect is WHEN, not WHICH WAY. BUT both arms are deeply negative in absolute terms: mean net R of the fade firings -0.446 vs B3 mean -0.533 (n 28,059): S3 is 'less negative than random', not a profit. Candidate mechanism, UNVERIFIED: cost in R = bps / (1.5 x ATR14 as bps of price), so a firing bar whose ATR% sits higher inside its ATR%-decile than the matched random cutoffs pays less cost per R; the decile match (10 bins) leaves that room. Same sign on synthetic driftless data (random-side +0.057), where no timing edge can exist. FALSIFIER: re-run the random-side test (a) at 20-50 ATR% bins, and (b) cost-free (gross R) S3; if S3 shrinks toward 0 with finer matching or the gross S3 is about 0, it is cost-in-R geometry and nothing is filed further; if the net timing S3 survives on a later window (2026-09-15 onward, once enough has accrued) and at symmetric brackets, it is a timing edge. Do not author a unit yet (manager instruction). Gates this adds: none."
+}

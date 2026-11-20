@@ -1,0 +1,21 @@
+{
+  "id": "STORE-EXPORT-BACKFILL-258",
+  "title": "Backfill the 258 work-store rows that fail the export guards: 116 closed without roadmap writeback, 115 landed_unproven without a soak/observe, 27 claim-basis gaps; mechanical parts first",
+  "state": "queued",
+  "owner": "AM-OPS-8",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "Filed 2026-11-19 by AM-OPS-8 under AUD-20261118-STORE-WRITES-UNGUARDED.\nManager decision, option (c): the three diff-scoped guards (roadmap-map, soak-contract, claim-basis) skip rows whose store version predates the export base. That is a loosening and adds no gate. This row repairs the rows the catch-up export would otherwise carry unchecked.\nCOUNTS are AM-OPS-7's measurement (2026-11-19, not re-run by AM-OPS-8): 116 + 115 + 27 = 258. RE-COUNT before work starts; never quote them as standing.\nOrder of work:\n- (1) mechanical writebacks derivable from the closing record;\n- (2) observe {when, how} on landed_unproven rows whose closing observation is already named in the note;\n- (3) the rest per row.\nWaits on #27308 (the exporter fix) and the daily export workflow PR.",
+  "phase": "ops",
+  "updated_at": "2026-11-19T14:10:45Z",
+  "updated_by": "session_01AFoLuHwqqyiix4qDoybTSN"
+}

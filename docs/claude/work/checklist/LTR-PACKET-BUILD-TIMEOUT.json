@@ -1,0 +1,22 @@
+{
+  "id": "LTR-PACKET-BUILD-TIMEOUT",
+  "title": "Live-review packet build hits the 180 s cap at the 4h bar-close burst (could_not_build TimeoutExpired, no stage recorded)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DESK"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[2026-11-15 08:22Z Manager 15a, from LIVE-REVIEW-20261115-0808-PROPETH] MEASURED: in the 08:00:33Z VM poster pass, 1 of 4 packages (pkg-48c5cfab364e430c, prop ETH 4h) hit build_bundle's 180 s PACKET_TIMEOUT_S, and the wake latency was 385.7 s. Re-run by hand at 08:11Z it took 48.6 s wall and ~3 s CPU, I/O-bound over ~15 sequential reads: bybit_open_orders 7.1 s, alpaca_open_orders 7.3 s, prop/status 0.7-9.4 s per account. Trader journal 08:00-08:04Z shows log gaps of 18 s and 22 s plus a 'database is locked' at 08:03:22, so this points at VM contention at the bar-close burst; no single read is proven. ROOT DEFECT (observability): live_review_wake.py build_bundle records only type(exc).__name__. FIX: (a) record per-read wall time inside collect() into the bundle and the could_not_build reason; (b) run the ~15 independent reads concurrently (~48 s to ~10 s); (c) build packages in parallel or raise the cap for the cadence pass. Also noted: context.funding has no diag route (1/1). Done when a cadence pass at a 4h close builds every package, and any failure names its stage.",
+  "phase": null,
+  "updated_at": "2026-11-15T08:21:23Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

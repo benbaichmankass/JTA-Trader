@@ -1,0 +1,24 @@
+{
+  "id": "ORDER-PATH-RESIDUE-2",
+  "title": "Order-path residue: close-side leg cancel at every close_open_position call site, orphan-adopt strategy attribution guard, demo-measured max_qty scoping, rearm-ib-bracket system-action",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuJoJfAsbJkD7sXrTaW",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25233
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "Opened by BACKLOG-DRAIN-20261112 (one decision per unowned item; operator 2026-11-12 p4) to own 4 pipeline item(s) that had no owning row: BL-20260823-NO-REARM-IB-BRACKET-ACTION, BL-20260825-CLOSE-SIDE-LEG-CANCEL-IS-WIRED-AT-1-OF-10-CALL-SITES, BL-20260903-AVAX-VENUE-MAX-CEILING-MEASURED-ON-DEMO-BUT-SYMBOL-SCOPED, BL-20260908-THE-ORPHAN-ADOPT-REATTACH-WRITES-A-STRATEGY-NAME-IT-CANNOT-SUPPORT-AND-THAT-STRATEGY-THEN-ACTS-ON-THE-ROW. Each item's record carries the evidence. [2026-11-12 lane session_01AFoLuJoJfAsbJkD7sXrTaW] PR #25233 (held Tier-2, NOT merged): (a) close-side leg cancel: all 10 call sites dispositioned; partial-close amend wired; MEASURED 0/122 closed Bybit rows' leg ids resting at 09:36Z (26 resting legs all open rows). (b) AVAX max_qty scoped max_qty_venue: demo + test. (c) orphan-adopt: rows 5448/5453 LEFT with strategy_name untrusted (work-store observation); live decline could_not_look (journalctl time budget). (d) rearm-ib: rearm-ib-protective + attach-ib-target exist (prior grep missed the name); mispriced/stop-naked one-shot repair still missing, narrowed not built. Remaining to done: merge+deploy #25233, observe one turtle_soup partial resize on bybit_1; a mispriced-IB-bracket repair design. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. owner AM-TRADING is completed. Vehicle #25233 (Tier 2 draft, all CI cancelled, merges clean) is in batch 3.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:36:43Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "PREPUSH-MANAGER-SCOPE-FALSE-RED",
+  "title": "scripts/ci/check_manager_scope.py (run by prepush.py) exits 2 identity_unresolved on every lane branch, because MANAGER-LEASE.json/SESSIONS.json were retired 2026-09-21. It is not in CI workflows, so it is a local pre-push false red only. Fix: drop it from prepush or re-key it on the current identity source. Check: prepush on a lane branch exits 0 for manager-scope. (Reported by FUT-INTRADAY-DUKA-LANE 12:43Z; the subagent also saw 'manager-scope empty roster' on #25203.)",
+  "state": "done",
+  "owner": "AM-TRADING",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-16"
+}

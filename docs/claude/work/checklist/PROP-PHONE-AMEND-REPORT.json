@@ -1,0 +1,30 @@
+{
+  "id": "PROP-PHONE-AMEND-REPORT",
+  "title": "Phone app reports every prop SL/TP amend to the prop journal (operator u4, high priority, Tier 2)",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": "session_01AFoLuMmYph1armQBUCeZzU",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": [
+    {
+      "clears_when": "manual",
+      "kind": "manual",
+      "owner": "AM-TRADING",
+      "ref": "operator reactivates breakout_2"
+    }
+  ],
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "note": "[2026-11-12 10:00Z AM-TRADING] Assigned to the phone feed lane session_01AFoLuMmYph1armQBUCeZzU, the same work as PHONE-LIVE-ACCOUNT-FEED. #25217 (APK-free) reads the venue SL/TP each pass and journals a level that differs from the journal as an amend, source phone_venue_read; that should cover the HAND-moved half. The lane must prove that (a) phone_venue_read amends and (b) amends the phone itself applies (phone_trail / live-review) BOTH land in prop_fills.amendments via prop_journal.amend_fill_levels. Done = the next hand-move AND the next phone-applied tighten each show in /api/bot/prop/fills amendments within one cadence. [2026-11-12 10:08Z lane] Code trace: (a) #25217 sync_venue_brackets -> ingest_report kind:amend -> prop_report._ingest_amend -> prop_journal.amend_fill_levels -> prop_fills.amendments (test test_a_venue_read_move_is_appended_to_prop_fills_amendments, head 6e0d2095). (b) phone-applied amends (phone_trail plan + live_review_apply request_sl_tighten/widen/request_tp_amend) all go app -> amend_result -> phone_trail.record_amend_result 'amended' -> ingest_report kind:amend (source phone_trail) -> amend_fill_levels. That write is best-effort (try/except) and is refused when the fill is not journaled open, which is how moves were lost; #25217's venue read is the backstop (next pass sees venue != journal and journals it). Known wrinkle: a phone amend can be journaled twice (venue read first, then amend_result) as a no-op second entry. Done-observation after #25197->#25212->#25217 deploy: next hand-move and next phone-applied tighten each in GET /api/bot/prop/fills amendments within one cadence. [2026-11-12 12:40Z lane session_01AFoLuMmYph1armQBUCeZzU] PARKED under PHONE-EXECUTOR-ICE (operator: breakout_2 breached, on ice; no more phone builds). State at stop: #25197 merged, NOT served (signature 2026-11-11.1; my phone-exec-js-sign dispatch run 43209770689 queued since 11:31Z, run 43203008869 attempt 2 pending). #25212 (head 50821a9) and #25217 (head 88468be, APK-free brackets channel + amendments test) parked as draft, both merged with main and green locally. Live at 12:22-12:33Z: rule_distance no_open_positions (0), phone bg_last 'posted' (clean Positions read), 12:07:56Z phone heartbeat shows a LIVE SOL SL amend from 81.48 attempted. Reactivation first step: confirm the signing landed (diag phone_exec_js served true), then resume the merge order #25212 -> #25217. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session); state stays blocked. still blocked: operator reactivates breakout_2.",
+  "updated_at": "2026-11-15T11:31:17Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261105-LRP-2AEFC109",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:sol_pullback_2h:missed_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "not reproduced: sol_pullback_2h missed_signal was 13 at filing, 0 in the latest live-vs-replay window | evidence: comms/live_parity/2026-11-12.json legs[sol_pullback_2h].by_class.missed_signal=0, state=checked, bars_checked=83, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `sol_pullback_2h` — missed_signal ×13 (paper roster) in window 2026-10-29T06:45:00+00:00..2026-11-05T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-05.json. Examples: [{\"class\": \"missed_signal\", \"bar\": \"2026-11-03T14:00:00+00:00\", \"t\": \"2026-11-03T14:07:23+00:00\", \"live\": {\"side\": \"none\", \"adx\": 29.9861, \"close\": 93.04, \"reason\": \"Strategy 'sol_pullback_2h': ADX 29.99 < adx_min 30.0 \\u2014 regime filter, non-actionable.\"}, \"replay\": {\"sides\": [\"short\"], \"adx_range\": [30.0519, 30.0519], \"candidates\": [\"2026-11-03T14:00:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 29.7819, \"closed_only_199\": 31.5568, \"closed_only_200\": 31.5566, \"next_bar_200\": 28.1342}, \"fine_candle\": {\"time\": 1793714400, \"low\": 92.79, \"high\": 93.32}}}, {\"class\": \"missed_signal\", \"bar\": \"2026-11-03T14:00:00+00:00\", \"t\": \"2026-11-03T14:10:13+00:00\", \"live\": {\"side\": \"none\", \"adx\": 29.9861, \"close\": 93.08, \"reason\": \"Strategy 'sol_pullback_2h': ADX 29.99 < adx_min 30.0 \\u2014 regime filter, non-actionable.\"}, \"replay\": {\"sides\": [\"short\"], \"adx_range\": [30.0519, 30.0519], \"candidates\": [\"202\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: not reproduced: sol_pullback_2h missed_signal was 13 at filing, 0 in the latest live-vs-replay window EVIDENCE: comms/live_parity/2026-11-12.json legs[sol_pullback_2h].by_class.missed_signal=0, state=checked, bars_checked=83, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run"
+}

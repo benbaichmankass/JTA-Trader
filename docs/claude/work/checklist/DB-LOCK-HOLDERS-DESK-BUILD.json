@@ -1,0 +1,26 @@
+{
+  "id": "DB-LOCK-HOLDERS-DESK-BUILD",
+  "title": "trade_journal.db 'database is locked': signal_audit dual-write and order_monitor sweeps lose writes about 10x/day; holders are the desk packet build subprocess (4/7) plus an unidentified out-of-process writer",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DATA"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25924
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-20",
+  "note": "Possible second symptom 2026-11-15 02:37-02:38Z: the trader process that had just launched ict-desk-build@1794710251-4076691 took 36 s to exit after its final exit pass (shutdown 42 s vs 3-4 s normally), giving an exit-eval restart gap of 58.7 s (near miss). Unproven link; see RESTART-GAP-EXIT-FIRST.",
+  "terminal_reason": "24h closing read 2026-11-14T04:54:43Z to 2026-11-15T04:54:43Z (4 x 6h journalctl windows, all read_state complete, ~334k lines scanned): 0 'SQL dual-write failed', PASS. 8 db_lock_diag events remain (reconcile-loop sweeps _sweep_package_close_reason_from_trade x6 / _sweep_stuck_linked_packages x2, contained and retried); the desk-build subprocess was never named as a holder. The remaining holder is filed as DB-LOCK-SIGNAL-DUALWRITE-HOLDER.",
+  "updated_at": "2026-11-15T05:12:00Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

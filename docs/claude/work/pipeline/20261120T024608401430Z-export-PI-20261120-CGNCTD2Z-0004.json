@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "IB-TRAIL-AMEND-MISSED investigation (PR #27545) / runtime_logs/protection_reassert_soak.jsonl",
+    "rerun": "scripts/ops/diag_fetch.sh 'log_file?name=protection_reassert_soak&lines=1000'  # look for repeated acted rows with an unchanged resting_stop"
+  },
+  "state": "queued",
+  "what": "IB price re-assert reports both_legs_resting but the resting stop level does not move (ib_paper, paper). MEASURED from protection_reassert_soak.jsonl (log_file diag, whole file, 35 rows): MGC 6740 re-asserted 4 times on 2026-10-26 (15:01Z, 17:06Z, 17:16Z, 17:22Z), declared 4040.81, resting_stop 4270.0 every time; MGC 7569 re-asserted 4 times between 11-16 and 11-18, declared 3891.71, resting 4137.2 then 4116.0. Every one has applied_state both_legs_resting. Candidate causes, both READ IN CODE, not confirmed against a venue trace: (1) _reassert_applied_state grades only that a stop and a target leg rest (stop_qty/target_qty), never their PRICE, so a stray stop at the wrong level passes; (2) IBClient.place_protective's keyed pre-cancel removes only oca-protect-t<this trade>, and its stray sweep cancels only NON-keyed groups, so a group keyed to another (older) trade on the same symbol survives as a second stop group. Likely the mechanism behind AUD-20261118-MGC-OVERCOVER (4 OCA groups on trade 7737). Fix candidates: verify the re-asserted stop PRICE in _reassert_applied_state, and treat a keyed group whose trade is closed or not this position as stray. Tier 2."
+}

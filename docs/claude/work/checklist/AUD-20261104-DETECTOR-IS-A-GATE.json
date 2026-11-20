@@ -1,22 +1,22 @@
 {
   "id": "AUD-20261104-DETECTOR-IS-A-GATE",
   "title": "Audit detectors proposed as CI guards stall: under No new gates (10-29) a failing guard needs operator permission, which nobody asked for (NO-API-IMPORT-GUARD, TP-BASELINE-GROWS)",
-  "phase": "ops",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "DEEP-AUDIT-20261104 (docs/reviews/2026-11-04-weekly-audit.md). INFERRED (p 0.7): both rows were filed 10-28 with a CI guard as the detector; No new gates landed 10-29; neither moved. Proposal for the operator (one popup): may audit detectors land as NON-BLOCKING reports (system_invariants-style, read by the audit and health review) without a per-detector permission? That closes the class without adding a gate. next_action: ask_operator. 2026-11-06 ~09:25Z operator popup (verbatim): 'Yes, non-blocking OK (Recommended)': standing rule, an audit detector that lands as a NON-BLOCKING report (system_invariants style, read by audit + health review, blocks nothing) needs no per-detector permission; anything that blocks a merge/deploy still goes to the operator. Unblocks NO-API-IMPORT-GUARD and TP-BASELINE-GROWS as report-only detectors. Gates this adds: none.",
-  "due_by": "2026-11-06",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-06T09:20:25Z",
-  "updated_by": "session_01AFoLuJk1UWVx895RmLTidH",
-  "_seq": 912
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-06",
+  "_seq": 912,
+  "note": "WEEKLY-AUDIT-20261111 L0: CLOSED: answered by the operator 2026-11-06 ~09:25Z popup 'Yes, non-blocking OK (Recommended)' (verbatim, recorded on AUD-20261104-FLATTEN-LABEL by manager 1106a). The row sat queued 5 d after the answer. Report-only detectors need no per-detector OK; blocking ones still go to the operator.",
+  "phase": "ops",
+  "updated_at": "2026-11-11T18:53:29Z",
+  "updated_by": "session_01AFoLuLZUWddKKncPqapt9k"
 }

@@ -1,0 +1,32 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "5 consecutive probes of /api/bot/ml/registry return 200 under 2 s, or the cause is named and fixed",
+    "kind": "observation",
+    "last_checked": "2026-11-12"
+  },
+  "id": "ML-REGISTRY-ROUTE-SLOW",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "UI-SPA lane session_01AFoLuK7JPLuVHFGNKbcoqt",
+    "rerun": "for i in 1 2 3 4 5; do curl -s -o /dev/null -w \"%{http_code} %{time_total}\\n\" -m 60 https://ict-bot.duckdns.org/api/bot/ml/registry; done"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent - state no parent: OPS backlog drain (BACKLOG-DRAIN-20261112, after HEALTH-20261111-EXPORT-READS-STALE per operator p4) [weekly planning 2026-11-12]",
+  "redate": {
+    "evidence": "item: 1x 502 then 200s at 6.2 s / 16.6 s / 2.1 s (UI-SPA lane probe 2026-11-12 ~08:30Z); due_when.check_every_days=3, clears_when 5 consecutive probes",
+    "observation": "[2026-11-12 BACKLOG-DRAIN-20261112] DATE: fresh single observation filed today by the UI-SPA lane; re-probe on its own 3-day cadence before building EVIDENCE: item: 1x 502 then 200s at 6.2 s / 16.6 s / 2.1 s (UI-SPA lane probe 2026-11-12 ~08:30Z); due_when.check_every_days=3, clears_when 5 consecutive probes",
+    "observed_at": "2026-11-12"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "UI-API-HEAVY-ROUTES-502",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "/api/bot/ml/registry slow and once 502 from the live web API: 1x 502 then 200s at 6.2 s / 16.6 s / 2.1 s (UI-SPA lane probe 2026-11-12 ~08:30Z); it backs the SPA Models page\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: the registry route's slowness and 502 are that row's heavy-route finding EVIDENCE: row UI-API-HEAVY-ROUTES-502: '/ml/registry ~8.9 MB per fetch; registry ... 502'"
+}

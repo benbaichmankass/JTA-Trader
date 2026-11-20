@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "comms/research/health/<date>.json written by the research-slo workflow on main AFTER #25184 merges shows survivors_per_month ok with evidence.window_keyed_on present, trials_per_survivor ok, grade_latency_p90_d <= 2 and undispositioned_24h <= 5 (after #25186 + one grader run)",
+    "due_date": "2026-11-19",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-TE74WG5Z-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z)",
+    "rerun": "python3 scripts/research/research_slo.py --no-gh --json | python3 -c \"import json,sys; t=json.load(sys.stdin)['table']; print({r['slo']:(r['state'],r['value']) for r in t if r['slo'] in ('survivors_per_month','trials_per_survivor','grade_latency_p90_d','undispositioned_24h')})\""
+  },
+  "routed_to": "AUD-20261019-RESEARCH-SLO-RED",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "OBSERVE the AUD-20261019-RESEARCH-SLO-RED fixes on main. Local run 2026-11-12: survivors_per_month 40 (held-out edge, distinct), trials_per_survivor 70.6; true grade latency p90 1 d (git, n=245) vs 6 d read; undispositioned 18 -> 4 with #25186, -> 0 after the next grader run under #25184. grade_latency_p90 heals as re-stamped units age out of the 7 d window (by 11-19). If it does not: graded_at is still being re-stamped -- check the grader PR diff for stamp-only edits.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: observation of that row's own fixes (#25184, #25186) EVIDENCE: Row AUD-20261019-RESEARCH-SLO-RED (in_flight); item clears_when comms/research/health/<date>.json from the research-slo workflow"
+}

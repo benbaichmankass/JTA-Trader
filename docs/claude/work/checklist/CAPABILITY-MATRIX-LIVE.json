@@ -1,0 +1,25 @@
+{
+  "id": "CAPABILITY-MATRIX-LIVE",
+  "title": "Every account that trades: can the system itself amend SL, amend TP, close and cancel, with no human? Matrix + gap rows",
+  "state": "done",
+  "owner": "lane CAPABILITY-MATRIX-LIVE",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11; manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24979
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Operator 2026-11-11 ~21:15Z, verbatim: 'These are basic system requirements. I kind of don't understand how we even went live with these things without knowing that we had these capacities, or at what point in decisions it was made that we didn't need them ... the system was trying to be safer and ... now we're missing a very basic capability that we need to have that would have helped us keep the trade safer'. Trigger: velotrade_1 has no supported TP/SL apply path (PROP-BRACKET-APPLY builds it). Done = a committed matrix (docs/reference/account-capability-matrix.md) of every account on any roster x {open, amend SL, amend TP, close, cancel, read position/orders}, each cell MEASURED from code + a proof (test, journal event or system-action run) or marked gap; every gap becomes a row with an owner; and a guard proposal (CI check that a rostered account has all basic capabilities) for the operator, because a guard is a gate and needs the operator's OK. [2026-11-11 lane] Matrix PR #24979 (Tier 1, landing self, not yet merged at report time). Gap rows filed: CAP-PROP-LIVE-DRILL, CAP-PROP-VM-CLOSE, CAP-TRADEIFY-TP-AMEND, CAP-OPTIONS-ORDER-MGMT. Guard proposal is matrix \u00a7 6, awaiting operator OK (not built). PROP-BRACKET-APPLY and PHONE-SELF-DIAGNOSE were not on origin/main at f0b9698bbf, so not cross-linked. Close this row when #24979 is merged.",
+  "phase": "now",
+  "terminal_reason": "matrix merged in #24979; 4 gap rows filed (CAP-PROP-LIVE-DRILL, CAP-PROP-VM-CLOSE, CAP-TRADEIFY-TP-AMEND, CAP-OPTIONS-ORDER-MGMT); guard proposal is matrix \u00a7 6, operator question open with the manager",
+  "updated_at": "2026-11-11T21:55:19Z",
+  "updated_by": "Lane CAPABILITY-MATRIX-LIVE"
+}

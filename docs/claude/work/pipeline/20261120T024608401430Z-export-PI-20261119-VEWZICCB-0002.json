@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "PR #27201 merged: event_flatten_s0.py on main and RQ-20261118-a5b3-01 in research/queue/ with status queued",
+    "conditions": [
+      "pr_merged:27201"
+    ],
+    "kind": "observation"
+  },
+  "id": "PI-20261119-VEWZICCB-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), EVENT-SPAN-HISTORY build PR",
+    "rerun": "python3 scripts/research/event_flatten_s0.py --self-test"
+  },
+  "state": "done",
+  "terminal_reason": "PR #27201 merged on main (b68a0e0dce): scripts/research/event_flatten_s0.py is on main and research/queue/RQ-20261118-a5b3-01.yaml has status queued (no longer in blocked/). Verified with git cat-file / git show on origin/main 2026-11-19.",
+  "what": "BUILD (lever EVENT-FLATTEN-ARM, Tier-1 research tooling): an event arm in scripts/research/ltr_action_trigger_s0.py that (a) tags each ltr_corpus trade as spanning a graded US release (comms/research/event_span_history/us_releases.jsonl: fomc_decision, cpi, nfp; minutes reported) and (b) builds the majority-open-risk-side FLATTEN book at T-60 min vs HOLD vs 200 matched random-time flattens (outside +-6 h of any release), graded by RULE-AM-RISK-ADJUSTED-V1. Unblocks research/queue/blocked/RQ-20261118-a5b3-01 (rule already registered). The release history it needs landed with the EVENT-SPAN-HISTORY build. UPDATE 2026-11-19: built as scripts/research/event_flatten_s0.py (a new script reusing ltr_action_trigger_s0's primitives, that file unchanged; self-test PASS) in PR #27201 (HELD), which also moves RQ-20261118-a5b3-01 to research/queue/ (manager-approved before-run amendment)."
+}

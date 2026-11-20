@@ -1,0 +1,23 @@
+{
+  "id": "SEC-API-OPEN-READS",
+  "title": "Security: the API read surface is open to the internet (site gate built, not armed)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 19,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "MEASURED 2026-11-11 22:35Z: GET /api/auth/config returns site_auth_enforced=false. CODE READ (src/web/api, 141 GET routes): 91 take no credential, including /api/bot/accounts/balances, /api/bot/positions, /api/bot/order-packages, /api/bot/trades/closed, the pnl routes, /api/bot/logs and /ws/market. UNVERIFIED: an unauthenticated request from outside (the audit session's proxy injects a credential; trainer probe issue #24990 was still queued). Fix is arming SITE_AUTH_ENFORCE, which is row UI-UPGRADE-1-AUTH (landed_unproven); this row exists so the exposure has a severity and a close test. Known blocker found in the code: with the gate on, POST /api/bot/alerts, /wake-toggles and /work/decision need one Authorization header to carry both a ws_ session and DASHBOARD_API_TOKEN, which is impossible (auth.py:282-288 vs prop.py:73-77). Close when: an outside request with no credential gets 401 on /api/bot/accounts/balances.",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "surge"
+}

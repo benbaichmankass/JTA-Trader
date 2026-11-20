@@ -1,0 +1,23 @@
+{
+  "id": "SEC-SSH-SINGLE-KEY",
+  "title": "Security: one shared SSH key is the live VM's whole perimeter (trainer + 62 workflows), no host-key pinning",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 119,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "MEASURED 2026-11-11 (live ssh.service journal via diag, ~23h retained): 10,222 accepted logins, all user ubuntu, all ONE key fingerprint; of the newest 2,000, 1,935 came from the trainer VM and 65 from 31 other public sources (Actions runners). 1,976 failed attempts from 31 sources in 23h (per hour: median 50, max 588, n=25). The ssh journal starts 2026-11-10 22:50Z, so under 24h of login history is kept. REPO READ: VM_SSH_KEY is referenced by 62 of 166 workflows; 0 of 60 SSH workflows pin a known_hosts entry (53 use accept-new). INFERRED: ubuntu has passwordless sudo (the deploy script uses sudo -n cp/chmod/systemctl). UNVERIFIED: sshd_config, fail2ban, OCI security list. Proposed: separate keys for the trainer and for Actions; from= on the trainer key; a pinned host key as a secret; longer journal retention for ssh. Until the keys are split a new-source login alert cannot work. Tier 2, key origination is the operator's.",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "throttle"
+}

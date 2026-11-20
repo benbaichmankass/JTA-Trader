@@ -1,0 +1,24 @@
+{
+  "id": "RESEARCH-COLLECT-DOUBLE-LAND",
+  "title": "collect_runner_results landed the same run's result row twice (RQ-20261113-d18c-01 run 43580685219), inflating the dispatcher's non-verdict retry count",
+  "state": "queued",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-17",
+  "clears_when": "a test lands the same run twice and the results file holds one row; no duplicate (unit, run_id) rows across research/results/ on main",
+  "note": "MEASURED 2026-11-14 17:45Z: research/results/RQ-20261113-d18c-01/43580685219.jsonl holds 2 identical rows, appended by two batch-land commits: 622dec364d (#26021, dispatcher run 43595379572, 12:48Z, which also landed the run artifacts) and a828086658 (#26024, dispatcher run 43596604761, 13:02Z, appended only the jsonl line). collect_runner_results.already_landed (scripts/research/collect_runner_results.py:234) did not stop the second landing. Consequence: dispatch_queue.nonverdict_attempts counted 3 rows for 2 runs, so the retry cap (max 2) fired early and re-stamped the unit ('needs a human', run 43602339850). Next: find why already_landed said no on the second cycle (it may check the artifact dir rather than the results jsonl, or a stale checkout), make landing idempotent per (unit, run_id) row, and add a test that runs the collector twice over the same run. Not a skip. FINDING 2026-11-15 (AM-OPS, while fixing 8d20-02's lost record in PR #26171): recollect_orphans re-tries 3 older orphan runs on every dispatcher cycle and research_result refuses them every time: comms/research/RQ-20260929-019/38747768830 (record 4: population.n absent, read_state measured with n None), RQ-20261031-f18f-01/41567569662 (measured with n None), RQ-20261103-a7c8-01/42134900236 (population.n absent + measured with n None). Same class as 8d20-02: a producer wrote measured without an integer n. These units read as dispatched with no record forever. Fix per run: relabel read_state to not_attempted / no_data where the cells were not read (as #26171 did), or re-run if a measurement exists but n was dropped; and log the producer bug per tool. CORRECTION to the note above: the unit ids there were WRONG (typed before the lookup). The 3 refused orphan runs are comms/research/RQ-20261007-080/38747768830, comms/research/RQ-20261101-b623-01/41567569662 and comms/research/RQ-20261105-d256-03/42134900236 (verified with ls on main 2026-11-15 ~01:25Z). The reasons as stated above stand. GAP 2026-11-15 02:25Z (verified by AM-OPS): nothing in CI runs collect_runner_results.py --recollect-orphans (grep of .github/workflows and scripts finds no caller), so the orphan-recollect path the docstring describes (RESEARCH-PIPE-UNSTICK) never fires. Orphans land only by hand. 8d20-02 landed by hand in PR #26183. FIX (Tier 1, small): call --recollect-orphans from research-queue-dispatch after the normal collect pass (same batch PR), and keep refusing inadmissible records as now. The 3 stuck orphans (RQ-20261007-080, RQ-20261101-b623-01, RQ-20261105-d256-03) still need their producer relabel.",
+  "updated_at": "2026-11-15T02:21:16Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

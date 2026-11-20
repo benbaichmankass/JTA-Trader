@@ -1,0 +1,24 @@
+{
+  "id": "PHONE-EXECUTOR-ANOMALY",
+  "title": "breakout_2: submit succeeded but confirm read 'not found after 3 reads' (venue-ack fix)",
+  "state": "landed_unproven",
+  "owner": "lane PHONE-EXECUTOR-ANOMALY",
+  "lane": "session_01AFoLuK4QkQBLzCSoiyyoMo",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operational anomaly fix on an existing path",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24333
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-10",
+  "note": "[2026-11-08 lane PHONE-EXECUTOR-ANOMALY] DIAGNOSIS (causes tested vs the app's own captures entry-prop-manual-c1391d5720b1-20261108T215237Z / -ed6dc04db93b-20261108T215352Z): tickets = trader strategies trend_donchian_eth_4h SHORT + trend_donchian_sol_4h SHORT, $10 risk each, limit sells. SUBMIT SUCCEEDED: role=alertdialog toast 'Order submitted / Short SOL @ Limit' on both; Open orders chip gained a count badge (width 98 -> 116) after the first submit; Positions reads 'No positions' at 21:54:21Z. RULED OUT: order form (all 4 fields read back, form accepted); login/session (last logged_in); popup/maintenance; overlay/bg mode (the same read fails in fg run -ed6dc, page fg); network; crash (restarts_24h 2, unrelated). SUPPORTED: our own read gap, not a layout change: MainActivity.executeEntry step 7 confirms only via exec.js rows() = tr/[role=row] and the page has none (all div grids; Positions got a grid reader in BREAKOUT-UNTRACKED-1014, Open orders never did), and the venue toast was only used to decide whether to click. FIX exec.js 2026-11-08.1 (remote): rows() adds the Order-submitted toast as one row; MainActivity.kt: venue ack => placed, plus an open_orders capture step (APK needed for those two). NOT ESTABLISHED: Open orders panel DOM never captured (next ticket on the new APK captures it); badge digit masked so 1 vs 2 resting orders unproven. SEPARATE, FILED not fixed: positionsRead returns no_table on the empty 'No positions. Start trading with leverage' panel (no role=tabpanel, tab chip has no count): 47 positions_miss since 11-07; fixing flips flat detection and journal reconciliation, so it needs its own change. [2026-11-08 lane end] PR #24333 DRAFT, Tier-2 HOLD for the manager (landing hold + merge-slot claim committed; Kotlin not compiled here). Next: manager merges -> phone-exec-js-sign; observe: GET /api/bot/prop/status?account_id=breakout_2 phone_heartbeat.state.exec_js == 2026-11-08.1 with exec_src remote; the next live ticket on the new exec.js should end 'placed' not 'mismatch' (the APK build + operator install adds the venue-ack fallback and the open_orders capture). Operator one glance (optional): Open orders tab, expect ETH sell limit 0.39@2193.86 + SOL sell limit 6.83@87.64; cancel nothing. Positions empty-state is row PHONE-POSITIONS-EMPTY-STATE. [2026-11-09 00:15Z lane] (3) STILL OPEN, handed to the manager's daily brief. New app 1b.356 confirmed (logged_in, exec_js 2026-11-08.1, exec_src bundled; remote refresh not yet seen). The 00:00Z 4h bar produced two tickets, BOTH suppressed by the server (prop-manual-0d81a64ed252 ETH blocked_by c1391d5720b1; prop-manual-71f45d1c9e61 SOL), so the phone made NO entry attempt and the venue-ack fallback + open_orders capture are still unexercised. OBSERVE: first breakout_2 ticket that is NOT suppressed -> entry-<ticket> capture run on app 1b.356 must end 'placed' (event text may cite the venue toast) not 'mismatch', and contain an open_orders step (count the resting rows from its .jpg/.dom.json). SIDE OBSERVATION, cause not established: ticket prop-manual-ed6dc04db93b (SOL short limit 87.64) now reads status 'filled' (was 'placed' at 22:09Z) while account_status positions_state is still no_table (PHONE-POSITIONS-EMPTY-STATE), equity 4861.94 -> 4867.98 between 22:45Z and 00:03Z. c1391d5720b1 still 'placed'. A position may now exist; the Positions/Open orders tab is the one glance.",
+  "phase": "build",
+  "updated_at": "2026-11-09T00:15:05Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

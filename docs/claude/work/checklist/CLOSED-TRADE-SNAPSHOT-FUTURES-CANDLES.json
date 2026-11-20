@@ -1,0 +1,33 @@
+{
+  "id": "CLOSED-TRADE-SNAPSHOT-FUTURES-CANDLES",
+  "title": "Snapshot builder: candle source for futures symbols (candles_unavailable:MGC seen live)",
+  "state": "done",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "child of UI-REDESIGN-2026-11, which is unmapped",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25565
+  ],
+  "blocked_on": [
+    {
+      "clears_when": [
+        "pr_merged:25565"
+      ],
+      "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+      "reason": "Alpaca half on PR #25565 (Tier 2 held, AM-UI Q10 (b)); the futures half stays queued: needs IB pacing headroom measured, then an IB since read"
+    }
+  ],
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-19",
+  "note": "2026-11-13 00:25Z UI lane, VERIFIED IN CODE: the historical since-read does NOT work for IB (MGC/MES) and also not for Alpaca. IBConnector.get_ohlcv (src/exchange/ib_connector.py:300) and AlpacaConnector.get_ohlcv (alpaca_connector.py:206) take no since; fetch_candles returns None for a since-read against them by design (market_data.py ~925). candles_for then falls back to the most recent <=MAX_LIMIT(1000) bars, which reach an old window only for a fresh close. So it is not futures-only: /trades/snapshots/status 00:24Z shows last_error candles_unavailable:SPY (trade:3077), failing 33, pending 665, built 1996 of which built_partial 1974 (the partial reasons are not broken out by the route; UNVERIFIED how many are candles). FIX = an optional since on both connectors (IB: endDateTime=since+duration; Alpaca: REST start=), default unchanged. This is src/exchange (the live data path) so Tier 2, with live risk: IB historical reads share the trader's pinned IB thread and IB pacing; an Alpaca 429 puts the live bars reads into cooldown. Options: (a) build both, with the builder throttled (1 req per N s) and Alpaca first; (b) Alpaca only, futures stay a dash; (c) accept the dash for v1. Sent to AM-UI 2026-11-13. 2026-11-13 00:5xZ AM-UI chose Q10 (b). Alpaca half on branch claude/snapshot-alpaca-since (head 0d61912e8, Tier 2 held; PR follows once guards pass). FUTURES HALF STAYS OPEN on this row: it needs an optional since on IBConnector.get_ohlcv (reqHistoricalData endDateTime=since+duration), and FIRST a measurement of IB pacing headroom on the shared pinned IB thread (historical requests per 10 min vs IB's limit, while the trader's own MES/MGC reads run), so a builder backfill can't starve the trader's candles. Until then futures snapshots render the dash. GAP: partial reasons are not countable by cause cheaply (they live only inside each encoded payload). Fix = store snapshot_read_state's reasons in a column at build time.",
+  "updated_at": "2026-11-14T10:21:05Z",
+  "updated_by": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)"
+}

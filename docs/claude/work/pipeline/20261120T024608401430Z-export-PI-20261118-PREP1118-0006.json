@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "hold_vs_close mean dR and every by_skill_sha hold mean are plausible R (|mean| < 5) with the bad rows named, plus a test",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --since 2026-11-11T20:00:00Z --json"
+  },
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[performance][tooling] live_review_grade.py hold_vs_close prints non-R magnitudes: --since 2026-11-11T20Z hold vs close-at-review n=109 mean dR 91.47; by skill_sha abe00c33 hold mean 92.71 and fcbbce42 hold mean 452.14, while every other figure is within +-1.1 R. A $-denominated (or wrong-denominator) row is entering an R mean. Find the rows and fix the denominator; the hold CALIBRATED/NO_SKILL verdicts may rest on the same rows."
+}

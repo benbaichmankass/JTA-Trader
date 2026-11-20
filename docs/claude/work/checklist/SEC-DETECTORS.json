@@ -1,0 +1,25 @@
+{
+  "id": "SEC-DETECTORS",
+  "title": "Security detectors: one red-flag alert per suspicious event (SSH, token probing, file changes, GitHub, foreign orders, transfers)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 118,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25000
+  ],
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-18",
+  "note": "Operator ask 2026-11-11 ~21:55Z: 'are we adding any guards/alerts for when we see suspicious activity on the system'. Alerts only, through telegram_channels.send('alert') and the alert ledger, deduped with src/runtime/alert_cooldown. No gate, no halt. One PR per detector. D1 SSH: BUILT, scripts/ops/security_watch.py + ict-security-watch.timer (branch claude/sec-watch-ssh). Baseline MEASURED live VM 2026-11-11 (~23h): 10,222 logins, 1 identity; failures per hour median 50, max 588, n=25; threshold 2000/h. Replay over the real lines: 0 alerts after baseline. Re-measure the failure baseline after 7 days of state. D3 FILE CHANGES (next): add a 'files' detector to the same script. Hash authorized_keys (all users), /etc/sudoers and sudoers.d, /etc/systemd/system units and drop-ins, crontabs, /etc/cron.d. A unit whose bytes equal deploy/<name> in the checkout is expected and silent; everything else that changes alerts once with the path, never the content. Needs sudo -n for root-owned paths: check what ubuntu may read first. Baseline to measure before shipping: how many unit files change per deploy (18 deploys in 23h on 2026-11-11). D4 GITHUB: a workflow on push to main touching .github/workflows/** that checks the commit has a merged PR (GET commits/{sha}/pulls, GITHUB_TOKEN is enough) and posts to POST /api/bot/alerts. New collaborator, deploy key, secret change and branch-protection change need the admin PAT on a schedule: collaborators baseline is 1 (MEASURED 2026-11-11, the owner). Note 433 Actions runs were queued at 22:06Z, so this detector can be late. D2 TOKEN PROBING: blocked on SEC-AUTH-FAIL-VISIBILITY (no 401/403 is logged today). Interim option: count uvicorn access-log lines with status 401/403 on /api/diag and /api/bot in the ict-web-api journal; baseline not measured. D5 FOREIGN ORDERS: partly exists. src/runtime/order_monitor.py adopts a venue position with no journal row as adopted_orphan and pings (enqueue_exchange_orphan_adoption). Gaps: resting ORDERS that are not ours, and no count of adoptions per week to tell normal from new. Measure adopted_orphan rows per account per week from trade_journal.db first. D6 TRANSFERS: Bybit rows are already stored by pull-bybit-transaction-log with type TRANSFER_IN / TRANSFER_OUT (src/runtime/bybit_wallet_truth.py NON_PNL_TYPES). Detector = any new TRANSFER_OUT row alerts once. Alpaca account activities and IB are not mapped. Baseline: count of TRANSFER_* rows to date, not measured.",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "throttle"
+}

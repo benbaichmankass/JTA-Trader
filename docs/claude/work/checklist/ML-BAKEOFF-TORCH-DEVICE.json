@@ -1,0 +1,27 @@
+{
+  "id": "ML-BAKEOFF-TORCH-DEVICE",
+  "title": "ml_bakeoff torch_gru: select cuda when available so GPU-shaped ML units (D2 GRU challenger RQ-20261117-c21d-05 and successors) can route to Kaggle GPU instead of CPU",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26634
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed 2026-11-17 by lane ML-ITERATION-REFILL-20261117. MEASURED: scripts/research/ml_bakeoff.py::_fit_torch_gru has no device selection (torch.set_num_threads only), so a torch learner cannot use the Kaggle GPU weekly quota; the GPU backend had no diagnosed ML work on 2026-11-17. Done when: device=cuda if torch.cuda.is_available() with a CPU self-test parity check, and one GPU-routed unit lands. Gates this adds: none. [2026-11-17 11:51Z ML-PRIMARY-5] OBSERVED: research/results/RQ-20261117-c21d-05/44067674666.jsonl measurement torch_devices == [\"cuda\"] (workflow research-script-run-kaggle, run 44067674666). The observe condition holds; closing done.",
+  "observe": {
+    "how": "research/results/RQ-20261117-c21d-05/*.jsonl measurement.torch_devices == [\"cuda\"] (a [\"cpu\"] read means the kernel had no GPU: reopen)",
+    "when": "RQ-20261117-c21d-05 lands a result on Kaggle GPU"
+  },
+  "phase": "build",
+  "updated_at": "2026-11-17T11:51:28Z",
+  "updated_by": "session_01AFoLuL9Wd1b7YqZfrRevn5"
+}

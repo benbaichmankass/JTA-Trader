@@ -1,0 +1,28 @@
+{
+  "id": "AUD-20261111-SIZE-UP-AT-CALLERS",
+  "title": "venue-minimum size-up policy (operator Tier 3, 2026-11-09) lives in a default-off size_up flag that each caller must pass: 4 size_up=True sites; pairs_executor.py:1462 and coordinator.py:3025 call legalize_qty without it",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-18T18:19:33Z",
+      "lane": "session_01AFoLuMroLtrU2biw4ZDoBk"
+    }
+  ],
+  "note": "WEEKLY-AUDIT-20261111 deep pass 2 MODULARITY (last >=4-file runtime change #24596 touched coordinator, execute, risk, qty_legalize for one policy). Question, not an asserted bug: are the 2 non-opting callers deliberate (pairs hedge balance; delta resize) or misses? Investigate (Tier 1); any behaviour change is Tier 3 -> ask_operator. DETECTOR: a test enumerating legalize_qty callers with their declared size_up intent. CHECK: {command: grep -rn 'legalize_qty(' src scripts, rule: every entry-order caller passes size_up explicitly, resolves_when: true}.",
+  "phase": "ops",
+  "updated_at": "2026-11-18T18:19:36Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "week_lane": "throttle"
+}

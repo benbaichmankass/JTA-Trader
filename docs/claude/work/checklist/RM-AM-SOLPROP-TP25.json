@@ -1,22 +1,22 @@
 {
   "id": "RM-AM-SOLPROP-TP25",
   "title": "trend_donchian_sol_prop: predictive entry TP 2.5R (replaces unreachable 6R) - harness confirmation RQ-20261028-a7c3-03, then prop EV re-run, then Tier-3",
-  "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "dropped",
+  "owner": "FRONTIER-RESEARCH (session_01AFoLuMfGoUaVmVtfzXaKEK)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Screen RQ-20261016-004 PASS_NONINFERIOR (OOS +0.041 R/trade, CI95 [-0.025,+0.111], n_oos 126, reach 0.23) MEASURED. 3R+measured-move FAILED (RQ-20261022-bea9-03). Order: (1) a7c3-03; (2) prop_ev_grid at tp 2.5 per firm ruleset for breakout_2/tradeify_1/velotrade_1 (prop superset rule); (3) Tier-3: tp_r 6.0 -> 2.5 on the leg (bybit_2 + bybit_portfolio + the 3 prop books share the leg key); operator approval. TP revision on prop is BUILD-gated (prop path_state absent: prop_trail passes take_profit=None) - row TP-DOCTRINE B2. Basis of the screen numbers: RQ-20261016-004 per_leg trend_donchian_sol_prop, n=314 uncapped harness trades (188 IS / 126 OOS out-of-sample trades), K* selected on the first 60%, graded on the last 40%. [2026-11-04 lane TP-REALMONEY-UNITS] HELD-OUT FAIL: RQ-20261104-c6f1-05. 2.5/3/4R with measured-move 0.5 won discovery (58.41 vs 45.86 R) and lost the held-out span (0.51 vs 3.83 R, n 100), the same shape as bea9-03 (PR #22999).",
-  "updated_at": "2026-11-04T22:48:12Z",
-  "updated_by": "session_01AFoLuMRyM6AERSLy3HFeHR",
   "roadmap": [
     "L-ATM"
   ],
-  "due_by": "2026-11-11",
-  "_seq": 770
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "_seq": 770,
+  "note": "Screen RQ-20261016-004 PASS_NONINFERIOR (OOS +0.041 R/trade, CI95 [-0.025,+0.111], n_oos 126, reach 0.23) MEASURED. 3R+measured-move FAILED (RQ-20261022-bea9-03). Order: (1) a7c3-03; (2) prop_ev_grid at tp 2.5 per firm ruleset for breakout_2/tradeify_1/velotrade_1 (prop superset rule); (3) Tier-3: tp_r 6.0 -> 2.5 on the leg (bybit_2 + bybit_portfolio + the 3 prop books share the leg key); operator approval. TP revision on prop is BUILD-gated (prop path_state absent: prop_trail passes take_profit=None) - row TP-DOCTRINE B2. Basis of the screen numbers: RQ-20261016-004 per_leg trend_donchian_sol_prop, n=314 uncapped harness trades (188 IS / 126 OOS out-of-sample trades), K* selected on the first 60%, graded on the last 40%. [2026-11-04 lane TP-REALMONEY-UNITS] HELD-OUT FAIL: RQ-20261104-c6f1-05. 2.5/3/4R with measured-move 0.5 won discovery (58.41 vs 45.86 R) and lost the held-out span (0.51 vs 3.83 R, n 100), the same shape as bea9-03 (PR #22999). 2026-11-14 FRONTIER-RESEARCH (reassigned, manager 14:05Z): confirmed dropped. The held-out RQ-20261104-c6f1-05 also FAILED (E25 held-out +0.51R vs B +3.83R), so the drop stands on both a7c3-03 and c6f1-05. The doctrine gap remains: check_tp_doctrine reads FAIL:entry_tp+tp_revision (tp_r 6 unreachable, reach 0.019) on bybit_2 + bybit_portfolio.",
+  "phase": null,
+  "updated_at": "2026-11-14T14:09:06Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK"
 }

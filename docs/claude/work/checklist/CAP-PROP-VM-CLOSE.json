@@ -1,0 +1,29 @@
+{
+  "id": "CAP-PROP-VM-CLOSE",
+  "title": "tradeify_1 and velotrade_1: no automatic close path (strategy exit, live-review close); flatten is reachable only by containment or an operator-dispatched action",
+  "state": "landed_unproven",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuLZif73NzCZEY27pKE",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11 (CAPABILITY-MATRIX-LIVE); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25230
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "MEASURED: ACTION_PATHS['prop_vm'] is empty; live_review_apply close refuses no_action_path:close (tests/test_live_review_trade_actions.py::test_close_on_every_account_class). Overlaps LTR-ACTION-EXECUTOR-GAPS item (2), which has no owner or due date; this row owns CLOSE only. First establish whether a strategy exit on a prop VM account closes or only pings (UNVERIFIED here). Also correct the stale header in scripts/ops/live_review_apply.py ('widen_sl no executor' is false for the phone since 2026-11-09). velotrade TP/SL amend stays with PROP-BRACKET-APPLY. Lane CAPABILITY-MATRIX-LIVE 2026-11-11; matrix docs/reference/account-capability-matrix.md (cell refs in \u00a7 2). Filed from the matrix; roadmap mapped by the manager at the weekly pass. [2026-11-12 ~09:20Z OPERATOR via Manager 2026-11-11a] SURGE, verbatim: \"The system needs to be able to do that on its own. I'm not doing it manually anymore. Enough is enough.\" Goal: the system carries out a decided close / partial close / tighten on every prop account (breakout_2 via the phone executor; tradeify_1, velotrade_1 via their adapters) with no operator at a terminal. Mandate proposal MD-LTR-PROP-AUTO: PR #25214 (proposed only). Spawn requested by AM-TRADING. [2026-11-12 lane CAP-PROP-VM-CLOSE session_01AFoLuLZif73NzCZEY27pKE] Q1 MEASURED (code, 1acc75e24): a strategy exit on a prop VM account does NOT close (trail steps the stop; close levers alert; closed package undetected) -> PROP-VM-STRATEGY-EXIT-CLOSE. BUILT PR #25230 (Tier 2, hold): ACTION_PATHS prop_vm += close, reduce; vm_close.request_close -> executor tick run_close_step (full close: watched _close_and_confirm, retried, red flag at 3; partial velotrade_1 only: REST CLOSE order vs positionCode, read back size + both brackets). tradeify_1 partial refused -> TRADEIFY-PARTIAL-CLOSE-PROBE. Journal qty after partial -> PROP-VM-PARTIAL-JOURNAL-QTY. Header fixed. Tighten unchanged (sl_floor). Not merged, not deployed, not observed; closes after merge + deploy + one drill per cell (CAP-PROP-LIVE-DRILL). [2026-11-12 13:41Z] PR #25230 MERGED (squash 70116dab09). Deployed: not yet observed. Observed: no. Closes on one drill per cell (CAP-PROP-LIVE-DRILL, tradeify_1/velotrade_1 only; breakout_2 on ice). Strategy-exit close follows in #25295 (rebased on it, head b32e56cdd4). [2026-11-12 13:52Z] DEPLOYED (MEASURED): /api/diag/version 13:50:20Z trader_git_sha=70116dab0, git_sha_on_disk=70116dab0, restart_pending false (the prop executor timers run the on-disk code each tick). ict-web-api deployed_sha reads 0fc8e5b5 (pre-#25230), yet GET /api/bot/prop/tickets already returns the close_request key (read 13:52Z). Observed: no close yet. landed_unproven until the first live close/partial_close receipt + venue re-read. [2026-11-12 23:04Z lane CAP-PROP-VM-CLOSE close-out] Operator throttled to 3 lanes (~22:48Z): the live observation watch moves to AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx). Deploy of #25295 (2cbfa5f609) UNVERIFIED at close-out: /api/diag/version answered 502 at 23:04Z; at 20:26Z it was not yet on disk.",
+  "observation": {
+    "due_by": "2026-11-19T00:00Z",
+    "what": "first live-review close or partial_close on tradeify_1 or velotrade_1: the vm_close receipt line in ict-prop-executor@<acct> plus a venue re-read showing flat (or reduced with both brackets resting); PR #25230 merged 70116dab0"
+  },
+  "phase": "now",
+  "updated_at": "2026-11-12T23:04:34Z",
+  "updated_by": "session_01AFoLuLZif73NzCZEY27pKE",
+  "week_lane": "surge"
+}

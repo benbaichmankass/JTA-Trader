@@ -1,24 +1,25 @@
 {
   "id": "CF-D3-BOOKSIM",
   "title": "Book-level USD simulation importing RiskManager.position_size, per-account books from arms (folds in BOOK-SIM-REAL-SIZER)",
-  "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": "opus",
-  "ceiling_usd": 15,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "CF-B1-BULK-BACKTEST"
-  ],
-  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
-  "priority_rank": 2,
-  "updated_at": "2026-11-02T07:33:59Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "_seq": 833
+  "priority_rank": 139,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "_seq": 833,
+  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added. [2026-11-12 11:35Z AM-TRADING, UNBLOCK-WATCH triage] Its blocker CF-B1-BULK-BACKTEST is landed_unproven (built); treat as runnable now with CF-B2/CF-D2 in one counterfactual lane (requested via the manager). AM-REGRADE-BOOKSIM waits on this row.",
+  "phase": null,
+  "summary": "2026-11-12: scripts/research/cf_booksim.py imports RiskManager.position_size, per-account USD books (bybit_2, bybit_portfolio, bybit_1) graded in account-R under RULE-AM-RISK-ADJUSTED-V1 basis=book_usd_sim with 60 causal matched-random controls per class. Population 841 gradable packages. Records comms/research/cf_booksim/2026-11-12/.",
+  "updated_at": "2026-11-12T12:10:34Z",
+  "updated_by": "session_01AFoLuLfq1jtUhiQzLRWTje",
+  "week_lane": "throttle"
 }

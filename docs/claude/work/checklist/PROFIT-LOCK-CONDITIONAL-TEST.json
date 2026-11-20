@@ -1,0 +1,27 @@
+{
+  "id": "PROFIT-LOCK-CONDITIONAL-TEST",
+  "title": "Test a CONDITIONAL profit lock (open >= 2R, near TP) harness-native, per leg; the 10-28 advice-only verdict pooled every tighten",
+  "state": "done",
+  "owner": "FRONTIER-RESEARCH",
+  "lane": "ML",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "exit-refinement lever test triggered by operator directive; maps to the exit pipeline once graded",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25986
+  ],
+  "blocked_on": [],
+  "next_action": null,
+  "due_by": "2026-11-16",
+  "note": "Operator 2026-11-14 ~08:53Z: ADA short (ada_pullback_2h, bybit_2 real money) sat at +2.63R open / +2.86R peak with the stop at 0.18123 (entry 0.1784, only +0.47R past entry, so ~3R of giveback exposed); operator: 'there's no way that we can leave this much R on the table'. Manager applied a directed tighten to 0.1664 (+2R locked) on bybit_2 and bybit_portfolio, venue read-back 0.1664 on both (directed_action 08:56Z). WHY the system held: (1) tightens are ADVICE ONLY since 2026-10-28 (live-trade-review SKILL 0.0) on evidence that 981 Claude tightens averaged -0.097R; that population is UNCONDITIONAL (every tighten, every state) and never tested a lock conditional on open >= 2R with TP within ~0.5R. (2) The review picks max mean R; hold beat r:2 by 0.14R, inside one SE (~0.26), while r:2's worst case was +1.29R vs hold's -0.52R: the rule ignores the tail when the means tie. (3) The leg's own trail had moved the stop only to +0.47R past entry at a +2.86R peak. Unit to register (pre-run rule, full cost stack, two-window guard): per leg, arm A config-exact vs arm L 'once open >= kR, stop to lock (k-1)R' for k in {2,2.5}, plus a variant gated on dist-to-TP <= 0.5R; PASS iff L beats A pooled on both windows; a per-leg pass is a Tier-3 exit-param proposal (exit-refinement skill). Also grade this ADA trade's outcome vs hold when it closes. 2026-11-14 FRONTIER-RESEARCH: unit RQ-20261114-db1a-05 graded FAIL (run 43589684532; PRs #25986 levers+unit, claude/profit-lock-writeback lever maps). Pooled over 18 crypto legs, L2 (lock 1R once MFE >= 2R) minus A: -30.25R record, -18.93R year before; L25 -37.54R / -22.87R; L2T (TP within 0.5R) -9.18R / +1.59R. No per-leg pass on any arm, so no Tier-3 exit-param proposal. ada_pullback_2h: A +23.96R n68, L2 -12.37R vs A. STILL OWED: grade the 08:56Z directed-lock ADA trade against hold once it closes. 2026-11-14 13:45Z FRONTIER-RESEARCH: the directed-lock ADA trade is graded. Order package pkg-3de13868d406447a, ada_pullback_2h short, entry 0.1784, closed 13:04:48Z at its take-profit (0.1607 bybit_portfolio, 0.1608 bybit_2; TP 0.1607384, exit_reason tp; diag journal trades rows 7002/7003). The locked stop 0.1664 (+2R, R = 0.0060) was never touched. LOCK vs HOLD: identical outcome, about +2.94R. Hold, with the stop at 0.18123, would also have filled at the TP, because price reached the TP before either stop. The lock cost nothing on this trade and removed about 3R of giveback exposure while it was open. One trade grades nothing statistically; the population test RQ-20261114-db1a-05 (FAIL, L2 -30.25R / -18.93R pooled) is the evidence on the policy.",
+  "phase": "build",
+  "terminal_reason": "db1a-05 graded FAIL (no lock arm passes; no Tier-3 proposal; lever maps written via #26013) and the directed-lock ADA trade graded: TP fill, identical to hold (+2.94R).",
+  "updated_at": "2026-11-14T13:45:22Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK"
+}

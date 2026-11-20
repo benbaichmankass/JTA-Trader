@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "clears_when": "KS <= 0.20, or KS > 0.20 with RG4 live AUC >= 0.55 and every required capability gate (non_degenerate, sample_sufficiency, cross_run_stability) passing: keep advisory, close done. Escalate to drift-remediation (a NEW model version; the live artifact untouched) ONLY if KS stays > 0.20 AND (RG4 AUC < 0.55 OR another required gate fails).",
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261112-GERETIRE-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "trainer-vm-diag #25444 (run 43290560050); ML-STAGE-RETIRE drift triage",
+    "rerun": "trainer-vm-diag issue (label trainer-vm-diag-request), cmd: cd /home/ubuntu/ict-trading-bot && .venv/bin/python -m ml shadow-drift --model-id btc-regime-15m-lgbm-fc-pcv-v2 && .venv/bin/python -m ml gate-check btc-regime-15m-lgbm-fc-pcv-v2 --registry-root ml/registry-store --db /data/bot-data/trade_journal.db"
+  },
+  "owner": "manager",
+  "redate": {
+    "evidence": "GET https://ict-bot.duckdns.org/api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2",
+    "observation": "2026-11-18 re-read (>48h after the 11-12 artifact): drift persists -- /shadow/drift btc-regime-15m-lgbm-fc-pcv-v2 verdict significant, KS 0.552, PSI 0.871, mean p 0.966 -> 0.853 (ref 2026-10-12..11-11 n 3322; cur 11-11..11-18 n 741). Escalated to row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2 (persistent: 2 consecutive weekly reads).",
+    "observed_at": "2026-11-18"
+  },
+  "routed_to": "MLP-D2-COLLIE-5A",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Re-check drift on advisory btc-regime-15m-lgbm-fc-pcv-v2 after its 2026-11-12T15:22Z artifact has served 48h (manager 2026-11-12 20:28Z: keep advisory, no demotion, no remediation version)\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: 48h drift re-check on btc-regime-15m-lgbm-fc-pcv-v2 is that model's dev-plan row EVIDENCE: row MLP-D2-COLLIE-5A (in_flight) names btc-regime-15m-lgbm-fc-pcv-v2"
+}

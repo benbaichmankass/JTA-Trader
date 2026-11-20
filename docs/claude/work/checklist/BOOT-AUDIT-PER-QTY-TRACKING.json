@@ -1,0 +1,20 @@
+{
+  "id": "BOOT-AUDIT-PER-QTY-TRACKING",
+  "title": "Boot audit (src/runtime/boot_audit.py) counts a broker position as 'tracked' per SYMBOL, not per QUANTITY: a false-clean read. EVIDENCE: the 2026-11-18 23:28:59Z restart report read alpaca_portfolio '1 broker positions / 1 tracked / SL+TP at broker 1/1' for SLV, while the venue held 877 short and the journal had one open row of 6 sh, itself a phantom with no venue order (PI-20261118-JFWRQYOV-0004; the reconciler logs the 871 surplus as ERROR every pass). FIX (Tier 1, read path): compare journal-open qty with venue qty per (account, symbol, side). A mismatch is a problem line ('journal X / venue Y'), and 'tracked' only when they match (within the venue's qty step); bracket coverage is likewise per quantity (sum of resting stop qty vs position). TEST: the SLV case as a fixture (venue 877, journal 6) must read as a problem. Gates this adds: none (a report line, not a refusal).",
+  "state": "queued",
+  "owner": "AM-OPS-4 (session_01AFoLuMqma5FZ2WpXNqAxxz)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-24"
+}

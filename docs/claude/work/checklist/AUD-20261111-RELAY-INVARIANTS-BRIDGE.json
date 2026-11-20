@@ -1,0 +1,28 @@
+{
+  "id": "AUD-20261111-RELAY-INVARIANTS-BRIDGE",
+  "title": "C1 instrument cannot run on relay output: system_invariants.py --payloads needs files, the vm-diag relay returns one truncated comment; with DIAG_READ_TOKEN 401 since ~18:16Z 11-11, 11 of 12 invariants are NOT-MEASURED and C1 was recomputed by hand",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-18T18:19:24Z",
+      "lane": "session_01AFoLuJUGfpon2bNgwFbFmx"
+    }
+  ],
+  "note": "WEEKLY-AUDIT-20261111. MEASURED: system_invariants.py over positions.json + prop_status.json = 0 FAIL, 11 NOT-MEASURED, 1 pass; relay issues #24898/#24899 (bybit_open_orders truncated to 1 of 14 accounts in the batched read; journal truncated 89040/100040 B). Fix (Tier 1): a relay-to-payload-dir extractor (parse '## <path>' blocks, refuse truncated ones by name) so the invariants run on relay output. DETECTOR: extractor self-test with a truncated block. CHECK: {command: system_invariants.py --payloads <extracted dir>, rule: NOT-MEASURED <= 3, resolves_when: next audit C1 runs it}. Operator-side: the DIAG_READ_TOKEN environment secret update (manager already holds this). WEEKLY-AUDIT-2026-11-18: diag DIRECT works again (diag_fetch served by ict-bot.duckdns.org), so system_invariants ran on 9 payload files: 6 pass / 2 FAIL / 4 NOT-MEASURED (was 0/0/11). Residual NM: prop (breakout_2 snapshot stale, no open prop fill), INV-PACKAGE-LEG-REACHABLE (no order_packages payload stem), INV-FLATTEN (no closed intent rows). Re-scoped: the bridge is now only the relay fallback; the open value is a SCHEDULED run of the invariants (they caught 2 real FAILs today that nothing else alerted on). Lane released (owner AM-OPS archived).",
+  "phase": "ops",
+  "updated_at": "2026-11-18T18:23:03Z",
+  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "week_lane": "throttle"
+}

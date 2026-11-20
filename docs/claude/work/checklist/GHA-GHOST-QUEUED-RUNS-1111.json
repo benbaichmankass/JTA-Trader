@@ -1,0 +1,22 @@
+{
+  "id": "GHA-GHOST-QUEUED-RUNS-1111",
+  "title": "411 GitHub Actions runs stuck 'queued' since <=2026-11-11 20:53Z (0 created since 11-14): cancel or confirm they hold no concurrency slot",
+  "state": "queued",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "CI hygiene",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "MEASURED 2026-11-15 13:1xZ via GET actions/runs?status=queued: total 411. All have created_at <= 2026-11-11T20:53:30Z (37 before 11-01). Examples: system-actions send-ping 43096787421 (created 11-11 20:33Z, never updated), Guards/pytest-* pull_request runs. Population by created>=2026-11-14: 0, so new runs schedule normally; the system-actions host-security runs today ran at once. Likely GitHub ghost runs from an incident. Risk: they may hold or skew concurrency groups and inflate capacity telemetry (compute-util, actions_capacity_inventory). Next: cancel them via POST actions/runs/{id}/cancel (force-cancel if needed) and re-read the count; done when status=queued count older than 24 h = 0. Checked: the research dispatcher ignores queued runs older than 24 h (STALE_PRESSURE_HOURS), so these do NOT defer research. Remaining impact is telemetry and the system-actions overlap report only. Low priority.",
+  "phase": null,
+  "updated_at": "2026-11-15T13:12:59Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

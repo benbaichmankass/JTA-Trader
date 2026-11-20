@@ -1,0 +1,21 @@
+{
+  "id": "HEALTH-20261118-OOH-FALSE-FLAT",
+  "title": "Out-of-hours Alpaca market brackets are false-closed exchange_flat_reconciled and re-entered every ~7 min (SLV 877 / QQQ 1981 stacked on paper; journal tracks 6 / 2)",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "Root cause and arithmetic on PI-20261118-JFWRQYOV-0004 (HEALTH-REVIEW-20261118). Change: in order_monitor._reconcile_orphan_exchange_positions, a row whose own entry order is still OPEN at the broker is not flat (read alpaca open orders by broker_order_id before arming), and/or stop 1h equity legs from sending market brackets outside RTH. Premortem: a not-flat rule keyed on open orders could strand a row whose entry was cancelled at the venue; resolve on order status filled/cancelled, never on age. Closes when: the next pre-market 1h equity signal yields ONE package and ONE open row that survives the open, INV-JOURNAL-EXCHANGE passes on alpaca_paper/alpaca_portfolio, and the 871 SLV / 1979 QQQ untracked shares are adopted or flattened by record. Gates this adds: none.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:19:34Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

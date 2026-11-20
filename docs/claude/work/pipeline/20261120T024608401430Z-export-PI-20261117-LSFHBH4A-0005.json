@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "comms/strategy_evidence/fvg_range_15m.json is rebuilt with the exit-style-far builder (config_fingerprint and generated date after #26678) and carries a note naming d5a7-11 and d5a7-12 as superseded; or the item is killed with a stated reason (for example the leg is retired by record first).",
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LSFHBH4A-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS-2 session_01AFoLuKdqv7sRrnLSFhbH4a, filed on the manager's order 2026-11-17 13:24Z (finding by REFILL-2, fix #26678)",
+    "rerun": "git show origin/main:scripts/research/regime_debt_matrix.py | grep -n 'exit-style'  # the fvg_range branch must pin --exit-style far; then python3 scripts/research/regime_debt_matrix.py --help to rebuild the fvg_range_15m record and diff comms/strategy_evidence/fvg_range_15m.json against the old one (expectancy_r_oos, n_trades_oos, fidelity)"
+  },
+  "state": "queued",
+  "what": "FVG-RANGE Stage-0 evidence is midline-based: rebuild with the fixed builder. Manager 2026-11-17 13:24Z (found by REFILL-2): #26678 fixed regime_debt_matrix so it pins --exit-style far; before that fix every fvg_range_15m Stage-0 evidence record or replay used backtest_fvg_range's midline target, which the live leg does not trade (the live leg targets the far range boundary), while still reporting faithful=True. TO DO (after the usage reset, not before): rebuild comms/strategy_evidence/trend... i.e. comms/strategy_evidence/fvg_range_15m.json with the fixed builder, and note in the record which earlier grades it supersedes: RQ-20261116-d5a7-11 (run 44066996242) and RQ-20261116-d5a7-12 (run 44067201528), whose FAILs graded a strategy the leg does not trade (first faithful read: RQ-dc44-05). LINKS: checklist row FVG-RANGE-ABLATION-DRIVER (its note already records the supersession). Any decision that cited the old fvg_range_15m control (net -13.84 R, n=45, 1830 d) must be re-read against the rebuilt record. CORRECTION: the record to rebuild is comms/strategy_evidence/fvg_range_15m.json (the 'trend... i.e.' in the TO DO sentence above is a typo). The rebuild command is not verified: the rerun field's first half (grep for exit-style in regime_debt_matrix.py) is the check that regenerates the finding; the rebuild step itself is for the lane to work out."
+}

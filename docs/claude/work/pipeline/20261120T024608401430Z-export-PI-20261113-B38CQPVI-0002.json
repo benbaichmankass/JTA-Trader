@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research/queue unit testing a real take-profit for spy_pullback_1h exists (any status), or the leg is retired by record",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-B38CQPVI-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS B38CQPVI-0001 / PR #25826 tp-doctrine-guard",
+    "rerun": "python3 scripts/ci/check_tp_doctrine.py | grep spy_pullback_1h"
+  },
+  "owner": "research-ops (next pass)",
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "RESEARCH-ITERATE",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "SPY-1H-REAL-TP: spy_pullback_1h has no real take-profit (tp_r 50 sentinel, tp_intent none) and no registered real-TP test. It goes back on the alpaca_paper demo floor under PR #25826 with its debt as a visible check_tp_doctrine.py baseline line (alpaca_paper/spy_pullback_1h: ER). Register a real-TP unit like RQ-20261104-7fdb-01 (qqq: tp_r 2/3/4/6, trail kept, held-back 25%) or a predictive-TP unit like RQ-20261112-5ab1-01 (tlt). A PASS sets a real tp_r (Tier 3) and replaces the baseline line."
+}

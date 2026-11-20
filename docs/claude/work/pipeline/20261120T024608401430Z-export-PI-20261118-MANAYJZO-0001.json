@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the fix is merged AND aadc-11, aadc-12, 78fc-03 and RQ-20260927-002 have re-run on the fixed harness and been graded; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-MANAYJZO-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-6, 2026-11-18 exit-head pin work",
+    "rerun": "python3 -c \"import lightgbm as l,numpy as n;X=n.random.rand(200,2);c=l.LGBMClassifier(verbose=-1).fit(X,(X[:,0]>.5).astype(int));print(c.predict(X[:3]))\" (labels, not probabilities); grep -n \"predict(vec)\" scripts/research/exit_head_*.py"
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "high",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml/D8] EXIT-HEAD REPLAY DEFECT: 4 research harnesses scored train_exit_head.train_model()'s LGBMClassifier with .predict(vec)[0] (the 0/1 class label) into would_exit_for(score < tau 0.10), so every replay fired whenever P < 0.5, not the served P < 0.10 (MEASURED: aadc-12 fired 16,739/18,649). Invalidated: RQ-20260927-002 (BTC 10-29 annotate de-risk), RQ-20261101-78fc-03 (ETH 11-12 annotate de-risk), 0bc8-02, d5a7-06, d5a7-07, aadc-04, aadc-11, aadc-12 (v2-neg25 evidence), aadc-13 (in flight). Fix: branch claude/ml6-exithead-proba-fix (predict_proba, regression test). Next: re-arm aadc-11/12, 78fc-03, RQ-20260927-002 with an amendment; mark the rest invalidated; no annotate->close flip until a fixed per-leg OOS control passes."
+}

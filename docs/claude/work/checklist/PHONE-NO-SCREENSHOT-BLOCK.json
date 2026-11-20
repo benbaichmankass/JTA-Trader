@@ -1,0 +1,21 @@
+{
+  "id": "PHONE-NO-SCREENSHOT-BLOCK",
+  "title": "Phone app: remove the screenshot block (operator decision); PARKED after screenshots observed working on app 1b.380",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuLy6LFEvP8DEySbKZR",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "[2026-11-12 AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk] Row was missing; added. Lane session_01AFoLuLy6LFEvP8DEySbKZR prepared the removal PR. [2026-11-12 ~09:17Z OPERATOR via Manager 2026-11-11a] The operator sent a screenshot from the new app 1b.380 at 11:16 local: screenshots WORK (fix observed working). Decision: keep the removal PR OPEN and PARKED, do not merge. Blocked on: a reason to merge (screenshots failing again). [2026-11-12T09:22Z lane session_01AFoLuLy6LFEvP8DEySbKZR] PARKED, not merged: draft PR #25210 (branch phone-no-flag-secure, landing hold tier 2) removes every FLAG_SECURE use from tools/phone-executor plus the heartbeat secure/secure_why/secure_min fields. Merge it only if screenshots fail again on 1b.380+ (it needs one APK). Capture.credentialScreen is kept for the app's own uploaded captures. Leftover: phone-probe FLAG_SECURE is filed as PI-20261112-DEYSBKZR-0001. [2026-11-12 09:22Z AM-TRADING] Lane report: draft PR #25210 (branch phone-no-flag-secure), HELD Tier 2, removes every FLAG_SECURE use in tools/phone-executor + heartbeat secure fields; needs one APK install after merge; CI queued 09:19Z. PARKED per operator (screenshots work on 1b.380); do not merge. tools/phone-probe still sets FLAG_SECURE (out of scope). [2026-11-12T21:04Z lane session_01AFoLuLy6LFEvP8DEySbKZR] PR #25210 was CLOSED without merging at 21:03Z (not by this lane). Its CI was green on 8be529b1b (check/guards/pytest-run/pytest-collect all passed). The branch phone-no-flag-secure still holds the change; if screenshots fail again, reopen #25210 or cherry-pick 8be529b1b. The manager decides whether this row stays blocked or is killed. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> queued, owner manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session). It was marked blocked with an empty blocked_on, so nothing blocks it.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:31:58Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

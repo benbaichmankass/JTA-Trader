@@ -1,0 +1,27 @@
+{
+  "id": "ML-ENTRY-EQ-REPRO-DRIFT",
+  "title": "ml_entry_eq_struct's graded model no longer reproduces from a fresh Alpaca fetch, so every unit gated on its booster sha cannot read its cells. Graded RQ-20261107-98e3-06 (run 42432561069, 11-08): train_rows 368,757, booster 0afc49948a41671a. Refits on 11-14 (RQ-20261112-d9c0-01, run 43529495956: FAIL) and 11-15 (RQ-20261112-8d20-02, run 43646720569: INDETERMINATE, 'refit sha 483d86b3bde12e36 != 0afc49948a41671a; cells NOT read') both give train_rows 368,758 and booster 483d86b3. One more training row (window ends 2025-06-30) now comes back from Alpaca.",
+  "state": "done",
+  "owner": "ML-PRIMARY",
+  "lane": "ML-PRIMARY",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Filed by AM-OPS 2026-11-15 ~01:10Z while grading 8d20-02 (operator's trend-alignment question for the equity ML leg). MEASURED from the run artifacts: same pool (172 ETFs; table 490,105 rows / 170 symbols in 8d20-02), libs lightgbm 4.6.0 / numpy 2.4.6 / pandas 3.1.1, python 3.11.18. The 1-row drift in the training window (368,757 -> 368,758) is the observed difference; the exact bar is not yet named. CONSEQUENCE: the sha gate (correctly) refuses, so the daily-trend split question (8d20-02) and any future unit gated on 0afc49948a41671a stay INDETERMINATE, while the live leg's evidence record can no longer be re-derived from source. FIX OPTIONS (not chosen; ML-PRIMARY decides): (a) pin the graded training table / bar snapshot as a committed or artifact-stored input keyed by pool sha, so refits read frozen bars; (b) find and drop/repair the drifted bar, and record a data-revision policy for Alpaca history; (c) re-grade on the current data with a newly registered rule, and re-key the gated units to the new sha. CLEARS WHEN a gated unit (e.g. 8d20-02 re-armed) reproduces its expected sha and reads its cells. Manager priority rule (operator ~22:20Z): ML-supporting work ranks second. 2026-11-15 ~01:20Z: the 8d20-02 run's E5 record was LOST at landing (producer wrote read_state measured with n null on the sha-gate path; research_result refused it). Fixed in PR #26171 (producer -> not_attempted; this run's record relabelled so recollect_orphans emits it). The verdict is unchanged: INDETERMINATE, sha mismatch. [2026-11-15 11:21Z ML-PRIMARY-2] OBSERVED FIXED: RQ-20261112-8d20-02 run 43692034676 (re-armed by #26225, on the #26184 producer) scored the committed graded ensemble: booster_sha256 0afc49948a41671add88..., sha_match true (comms/research/RQ-20261112-8d20-02/43692034676/verdict.json). Unit graded INDETERMINATE (CT40 n 16 < 40, expected). Closing done.",
+  "phase": null,
+  "terminal_reason": "observed: 8d20-02 run 43692034676 reproduced the graded ensemble (sha_match true, 0afc4994) via the #26184 pinned-artifact producer.",
+  "updated_at": "2026-11-15T11:20:51Z",
+  "updated_by": "session_01AFoLuHnp85DHQ4PWMQy8LM",
+  "writeback": {
+    "arch": "none: research tooling only",
+    "roadmap": "none: research reproducibility fix, no milestone change"
+  }
+}

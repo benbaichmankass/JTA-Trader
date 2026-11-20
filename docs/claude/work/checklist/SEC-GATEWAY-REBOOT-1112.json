@@ -1,0 +1,22 @@
+{
+  "id": "SEC-GATEWAY-REBOOT-1112",
+  "title": "IB Gateway VM reboot (kernel/libc, 16 reboot-required entries, up 22 wk), split from SEC-HOST-CHANGES-1112",
+  "state": "done",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "host security maintenance",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "decision: 2026-11-12 operator decisions page m4 'Do all four now'. Runs as system-action host-security-change target: gateway-reboot apply: true, LAST, after ssh-harden + fail2ban. Not revertible (recovery is an OCI instance reset). Open IB trades keep their brackets at IBKR. Split 2026-11-15 by AM-OPS (manager option B). 15:18Z decision: 2026-11-15 operator-chat \"You can do the reboot whenever there's a good opportunity to do that.\" Window chosen: Sunday now..22:30Z (CME/US equities closed until 23:00Z). Dispatched to AM-OPS after the tradeify close: dry run then apply, verify the gateway + trader IB reconnect and IBKR brackets. decision: 2026-11-15 operator-chat \"You can do the reboot whenever there's a good opportunity to do that.\" (relayed by Manager 15a at 15:18Z; window now through Sunday 22:30Z, CME and US equities closed until 23:00Z). Pre-read 15:18Z: ib_paper holds 3 shorts (GLD 382, MGC 11, MHG 22), each with a GTC STP+LMT OCA pair resting at IBKR (7 orders; one duplicate MHG LMT PendingCancel). ib_live reads could_not_look and has no gateway client. AM-OPS running the dry run, then apply.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:29:45Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

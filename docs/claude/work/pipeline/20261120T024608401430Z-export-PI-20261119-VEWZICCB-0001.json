@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "desk_trigger_replay.py accepts --decluster-bars and the node P1-RP1119-desk-levelbreak-fade-decluster carries a unit: body; or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-VEWZICCB-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), comms/research/programme_review/20261119-replan.json",
+    "rerun": "python3 scripts/research/desk_trigger_replay.py --help | grep -c decluster-bars"
+  },
+  "state": "queued",
+  "what": "BUILD desk_trigger_replay.py --decluster-bars N (keep the first firing per symbol per N bars, report the dropped count; self-test on a planted cluster). Why: the desk trigger replays RQ-20261119-d7c3-01..04 are NOT_CLEARED vs the +0.15 R bar, but both level-break FADE cells have a cluster lower bound > 0 (level_break_break +0.088 R lb +0.051, sweep +0.057 R lb +0.026, p 1e-4) and ~half the firings fall within 12 bars of the previous same-symbol firing. The declustered re-read is the pre-registered next question, node P1-RP1119-desk-levelbreak-fade-decluster (authoring_blocked on this flag). Owner: the desk entry-review redesign lane (week plan 2026-11-19 item 14)."
+}

@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the fetch_failed count per bar over the last 20 bars of ml_decision_shadow is read, with the failing symbols and the cause named, and either fixed (retry/backoff) or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-SHADOWFETCH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "ML-V1-PARITY lane 2026-11-03",
+    "rerun": "log_file?name=ml_decision_shadow&grep=<bar_close prefix>, count read_state != ok among strategy=ml_entry tf_offset=0m rows"
+  },
+  "routed_to": "VENUE-KLINE-RATE-LIMIT",
+  "state": "done",
+  "terminal_reason": "Fixed by #25256 (d1d964b39, deployed 2026-11-12T18:40Z): shadow timer moved +50s -> +3m20s (off the trader burst) + one retry per fetch_failed symbol. MEASURED log_file?name=ml_decision_shadow grep=fetch_failed (complete, 117,130 rows scanned): 0 fetch_failed rows logged since 2026-11-12T18:40:04Z (~24.5 h, ~8,000 rows logged on 11-13 alone) vs 60 on 11-12 00:00-18:40Z and 430 over 11-02..12. Timer verified on new schedule (runs 18:48:20Z, 19:03:20Z).",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ml_decision_shadow (src/runtime/ml_decision_shadow.py::refresh_cache, public Bybit 15m klines) wrote read_state=fetch_failed for ENJUSDT and ZRXUSDT on the 2026-11-03T16:00Z bar (2 of 52 symbols, tf_offset 0m rows for ml_entry; n_reference 50 instead of 52), against 0 of 52 on the 12:00Z bar. Population: 2 bars read through log_file?name=ml_decision_shadow. Effect: the shadow score for every symbol is computed on a smaller reference set than live had (live n_ref 51), which broke the strict live-vs-shadow n_ref equality test for PI-20261103-MLV2-0001. Find why the fetch failed (rate limit, symbol error, timeout; the failure detail is not stored in read_state beyond the exception name) and whether it recurs; consider retrying a failed symbol once before logging fetch_failed. || UPDATE 2026-11-04 (lane ML-V1-PARITY): ml_decision_shadow fetch_failed count among the 52 listed symbols by decision bar: 0 (11-03 12:00Z), 2 (16:00Z: ENJ, ZRX), 2 (20:00Z: DOT, RUNE), 5 (11-04 00:00Z: EGLD, FIL, LRC, NEO, STORJ); n_reference 52, 50, 50, 47. Population: 4 bars, tf_offset 0m ml_entry rows. Effect on scores: at 00:00Z the shadow v1 still agreed with live within 0.0007 on 10 values, while the shadow v2 p_long differed from live (which equals the n-52 replay exactly) by 0.0102 to 0.0319; v2 may be more sensitive to the reference-set size (UNVERIFIED, v2 was not replayed at n 47). The count is rising across the 4 bars. The failure cause is still not read.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: ml_decision_shadow fetch_failed on public Bybit klines rose across bars with the cause unread; it is the same bar-close fetch burst as the 10006 items, and no open row owns that burst. EVIDENCE: Item measured fetch_failed 0/2/2/5 of 52 symbols over 4 bars (11-03 12:00Z to 11-04 00:00Z). Searched open_rows.json titles for 10006|rate.limit and found no owner. TICK-DURATION-115S covers tick length, not the fetch burst. | owner row opened by this drain"
+}

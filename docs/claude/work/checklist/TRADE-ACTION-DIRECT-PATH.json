@@ -1,0 +1,25 @@
+{
+  "id": "TRADE-ACTION-DIRECT-PATH",
+  "title": "Direct trade-action path: review trigger -> review lane -> mandate-approved action executes on the account immediately (no repo/PR/Actions hop); operator-needed actions get a one-tap Approve button that executes directly",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-12",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25187
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Operator 2026-11-12 ~00:00Z, verbatim: 'those decisions shouldn't, preferably not even going through the repo, like there might be logged there, but the action needs to be, it doesn't need a PR, that can't be the flow here. We need something that's much more direct so that actions can be taken while they're relevant, otherwise the whole, this whole thing is completely pointless, right? We need to have like the alerts, when the system recognizes that a review is needed, the review needs to start immediately, it needs to get pushed to the review lane, and when the review makes a decision that is approved by a mandate, then that decision needs to be implemented on the account immediately, not through the repo. And if it needs me, then it needs to ping me so that I can immediately do that, right? But also through the system, not like going into the broker account. So there needs to be a button that I press to accept a recommendation, and that directly executes that action.' Trigger: 2026-11-11 the ETH and SOL ml_entry close recommendations (+0.36R / +0.35R measured) sat in the GitHub-issue / Actions-queue path until the stops hit (ETH lost ~0.37R more). Related: MANAGER-VM-DIRECT-OPS (blocked), PI-20260927-W6OPSR-0004 (fan-out), LTR-ACTION-EXECUTOR-GAPS, PROP-BRACKET-APPLY. [2026-11-12] m5 defaults accepted verbatim: \"Accept the defaults (15 min; all classes; advice rows get a button; yes to Tier-1 on the credential); I'll create the routine and token\". Button TTL 15 min; all executor classes; advice-only rows get a button; the one environment credential may run Tier-1 VM actions directly (Tier 2 still needs a quote or an Approve tap). Record: docs/plans/thursday-planning-2026-11-12-answers.md. [2026-11-12 AM-TRADING] Lane session_01AFoLuLp28byLnMmk2UZuLf (phase 3, PR #25187: the VM fires the review routine) now reports to the TRADING assistant manager; the manager merges #25187 and tells the lane to run set-env. [2026-11-12 09:12Z AM-TRADING, from lane session_01AFoLuLp28byLnMmk2UZuLf] Phase 3 #25187: closure fix 128e7e30a pushed, CI queued. After merge: manager deploys (restart ict-trader-live); then, on the manager's word, set-env LIVE_REVIEW_ROUTINE_TOKEN (from the saved secret) and LIVE_REVIEW_ROUTINE_ID, both ict-trader-live; get-env reads both set (fingerprint only). CLOSES phase 3 on ONE real due event: (a) live_review_fires line state=fired http 200 with session_id + due_to_fire_s; (b) ltr-wake comment says reviewer started by routine and no manager lane started; (c) GET /api/bot/live-review/rows/<review_id> state handled, rows_watch source direct; (d) latency due->fired->reviewed->seen vs ~7 min measured 11-11. 2026-11-12T13:38Z lane session_01AFoLuLp28byLnMmk2UZuLf: phase 3 PR #25187 CI green on 1c72126ad (guards, pytest-collect, pytest-run, watch), mergeable clean; two CI fixes en route (trader import closure; red_flag via telegram_channels SENDERS). Awaiting manager merge+deploy, then set-env x2 (token from secret, ID=trig_01L9YVZ4WzCiV4Ca6Js55S12) and the 4-part end-to-end observation. 2026-11-12T16:35Z lane session_01AFoLuLp28byLnMmk2UZuLf: phase 3 OBSERVED on one real-money/prop event. set-env #25364 (token, from secret) + #25367 (ID trig_01L9YVZ4WzCiV4Ca6Js55S12); get-env #25373 both set in the running process (fingerprints only). fires.jsonl 16:24:34Z: state fired, http 200, session cse_01AFoLuNKZfmuYauh84h3Ez4, keys pkg-3de13868d406447a giveback 1.5 + judgement_cadence 16:00, pkg-50f5eed272f64197 judgement_cadence 16:00, due_to_fire_s 648.7, fire call 0.495 s. Wake receipt: state posted, routine_fire fired (comment 6829338391 on #17895; body text not read). Rows LR-20261112T1617Z-pkg-3de13868d406447a + LR-20261112T1618Z-pkg-50f5eed272f64197: source direct, seen 16:29:14Z, GET /api/bot/live-review/rows state handled (verdict not_dispatchable). Chain due ~16:13:46Z -> fired 16:24:34Z -> seen 16:29:14Z = ~15.5 min vs ~7 min on 11-11: WORSE end to end; fire->seen 4m40s, the ~10.7 min is the wake pass building packets (incl. suppressed paper) before the fire. Filed PI-20261112-MK2UZULF-0001. Open: manager to confirm no lane was also dispatched for these two packages.",
+  "phase": "now",
+  "updated_at": "2026-11-19T06:07:05Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL",
+  "week_lane": "surge"
+}

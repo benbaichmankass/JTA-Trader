@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "manager request 2026-11-20 00:26Z (00:20Z review rows 216fb7b5) / comms/live_review/packets on origin/live-review/rows",
+    "rerun": "git show origin/live-review/rows:comms/live_review/packets/LR-20261120T0022Z-pkg-8958fc7d4ee74c60.json | python3 -c \"import json,sys;print(json.load(sys.stdin)['packet_health'])\""
+  },
+  "state": "queued",
+  "what": "LOW PRIORITY (manager 2026-11-20 00:26Z): ib_paper live-review packets come back without priced option tables, so IB legs never get a priced hold/tighten/close comparison. MEASURED on origin/live-review/rows, package pkg-8958fc7d4ee74c60 (mgc_trend_1h, MGC short, trade 7737, paper): LR-20261120T0022Z packet_health degraded, priced_options.candles candles_missing 2/2 and priced_options.options all_options_unpriced:no_candles 2/2 (2 more options inapplicable: stop_level_not_below_price). LR-20261120T0004Z on the same package, 18 min earlier: all_options_unpriced:insufficient_n 4/4, with no candles_missing. So the cause is not constant: the candle read for an IB futures symbol fails intermittently (the 00:00:17Z IB gateway socket drop and the 'IBMarketData.get_ohlcv failed ... Socket disconnect' lines are candidates, INFERRED). Separately, the leg's corpus is under the pricing floor. GLD (gld_pullback_1d) packets were NOT checked by this filer. Diagnose: which candle source live_review_packet.py uses for IB symbols, and whether it falls back to the trainer/Dukascopy store when the gateway read fails; whether insufficient_n reflects the leg's real trade count."
+}

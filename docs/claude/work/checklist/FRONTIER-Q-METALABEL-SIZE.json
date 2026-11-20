@@ -1,0 +1,36 @@
+{
+  "id": "FRONTIER-Q-METALABEL-SIZE",
+  "title": "Meta-label sizing for ENTRY: scale size by a second model's confidence instead of a fixed tau cut",
+  "state": "dropped",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "frontier": {
+    "baseline": "flat-size tau=0.1 policy on the same decisions, net of the full cost stack",
+    "consumer": "ml_entry sizing on bybit_2 (Tier-3 change if it passes; the unit changes nothing)",
+    "est_cost": "$0 runner",
+    "family": "conformal_calibration / meta-labelling",
+    "next_step": "dropped (power + already covered): per-trade sd 1.09 R (audit); concentrating Foxhound-1's 907 held-out decisions into a top half (n~450) gives se ~0.051 R, so the 80%-power MDE is ~0.14 R above the pooled +0.037 R (top half would need ~+0.18 R). The tau sweep in ml_decision_entry (TAU_GRID 0..0.30, chosen on dev folds) already tests 'trade only the high-confidence decisions'. Re-open only if RESID-ENTRY passes or on a pooled population >= ~3,000 decisions.",
+    "p_pass": 0.1,
+    "source": "Lopez de Prado, Advances in Financial Machine Learning ch.3 meta-labelling (PRIMARY, book); conformal history in ml-plan-items (INDETERMINATE, PASS, FAIL)",
+    "state": "dropped",
+    "unit": null,
+    "why": "Foxhound-1's edge is +0.037R/decision; per the audit it cannot be verified live at that size. Concentrating size on the top-confidence decisions raises per-trade edge, which is the only route to a verifiable edge on the small real-money book"
+  },
+  "note": "[2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D4-METALABEL-SIZE (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "updated_at": "2026-11-12T14:49:30Z",
+  "updated_by": "session_01AFoLuKCLkLbWaDfBPBBWPy",
+  "week_lane": "surge"
+}

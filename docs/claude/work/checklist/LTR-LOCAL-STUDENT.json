@@ -1,0 +1,22 @@
+{
+  "id": "LTR-LOCAL-STUDENT",
+  "title": "Local students for the live trade review and desk in-trade role: S0 rule student every 5m bar + grader + S1 learned student, shadow vs the LTR as baseline (spec docs/plans/ltr-desk-local-student-SPEC-2026-11-15.md)",
+  "state": "queued",
+  "owner": "manager (build after the 2026-11-18 18:00Z weekly reset)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Operator 2026-11-15 ~14:35Z (chat): copy the LTR and desk-trade flows into our own models so a basic version runs locally on VM capacity, LTR as baseline, run active management as often as possible. Spec committed with MEASURED inventory: 781 packets, 776 LTR rows, 666 graded outcomes; rule-vs-LTR agreement 138/183 (75%); LTR close n=27 +0.570R and tighten n=10 +0.611R vs hold (counterfactual, estimated, no CI); claude_judgments family built (CJ-2) but no student trained (CJ-5 never filed); desk = 213 entry_generation rows only. Build order: LTR-STUDENT-S0 (Tier 2 for the VM timer) -> LTR-STUDENT-GRADER -> LTR-STUDENT-S1 -> LTR-STUDENT-S2-MEASURE. After S1 has a grade: put S3 (student screens every bar, Claude woken only on non-hold / low confidence / mechanics; changes the LTR trigger) to the operator as a decision. Done for the request = S1 graded vs the teacher and the S3 decision put to the operator. 15:09Z spec merged (#26339). Manager measurement for the operator's 'can the system act on the rule now' question: over 167 graded LTR reviews with a priceable rule action, the S0 rule's value vs hold = +0.004 R/decision, 95% CI [-0.002, +0.009] (counterfactual; delta_r from outcomes.jsonl; rule=hold scored 0). Its 37 tighten-where-LTR-held calls are UNPRICED: cf_r_shadow_0_5 == net_r on all 37 (the 0.5R shadow never moved the path). So acting on S0 now has no evidence of gain; recommendation: shadow S0 at 15-min cadence (live VM CPU, LIVE-VM-CPU-SATURATION-1112) + add a real tighten counterfactual at the options-table level to the grader. Awaiting operator OK for the Tier-2 VM timer. 15:16Z OPERATOR DECISION (chat): (1) shadow S0 ON HOLD - build after the 2026-11-18 reset, since it adds no value before then and backtests can teach what it would. (2) BAR for the first live local LTR: it does NOT need to beat Claude; it runs at higher cadence as an urgent check / fallback, so it must PROVE IT WILL NOT LOSE MONEY (pre-registered no-loss test vs hold, out of sample, net of the full cost stack), then serves as the live baseline. Beating Claude remains the bar only for S3 (replacing Claude's wakes). Spec amended in the PR from claude/ltr-student-bar. After the reset: aim S1 at that no-loss test and take it live.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:12:58Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}
