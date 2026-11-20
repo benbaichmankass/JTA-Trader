@@ -35,6 +35,14 @@ Invariants
 - **INV-3**  ``status IN ('open','closed')`` (non-backtest) with NO resolvable
   order-package link by EITHER direction — ``order_package_id IS NULL`` AND
   the row is not referenced by any ``order_packages.linked_trade_id``.
+  EXCEPT a RESOLVED adopted orphan (``setup_type='adopted_orphan'``): the
+  orphan adopter writes a row for a venue position no journal row owns, so it
+  has no package BY CONSTRUCTION. Exempt only when it is closed with an
+  ``exit_reason``, or open for less than ``ADOPTED_ORPHAN_OPEN_GRACE_HOURS``
+  (the exit-coverage resolver closes an unattributable one within minutes). An
+  adopted orphan with no exit_reason, or still open past the grace, still
+  flags. Every exempted row is counted by **INV-3b** (report-only), so the
+  exemption narrows the check and never hides a population.
 - **INV-4**  ``account_class IS NULL`` (non-backtest). Recent ⇒ an insert
   didn't stamp it (regression — WC-2 should prevent). Legacy ⇒ pre-backfill.
 - **INV-5**  an ``order_packages`` row in a terminal state whose
@@ -101,6 +109,9 @@ if str(_REPO_ROOT) not in sys.path:
 
 DEFAULT_WINDOW_HOURS = 48.0
 DEFAULT_PNL_GRACE_HOURS = 6.0
+# INV-3: an adopted orphan still open after this long has outlived the exit-coverage
+# resolver (which closes an unattributable one within minutes) and flags again.
+ADOPTED_ORPHAN_OPEN_GRACE_HOURS = 1.0
 
 # How many offending ids to carry in each check's `sample_ids` — enough for
 # the operator to spot-check via the Data Explorer, small enough to keep the
@@ -388,22 +399,51 @@ def run_checks(
         # EITHER direction. order_package_id NULL (forward link absent) AND
         # not referenced by any order_packages.linked_trade_id (reverse link
         # absent). A row linked by either direction is fine.
+        #
+        # Resolved adopted orphans (2026-11-20, trade 7735, ib_paper MGC) have
+        # no package BY CONSTRUCTION and are exempt; INV-3b counts them. The
+        # exemption needs the setup_type, exit_reason and created_at columns; on a journal without it the
+        # check is exactly the original one.
+        inv3_unlinked = (
+            f"{_NON_BACKTEST} AND t.status IN ('open', 'closed') "
+            "AND t.order_package_id IS NULL "
+            "AND NOT EXISTS ("
+            "  SELECT 1 FROM order_packages op "
+            "  WHERE op.linked_trade_id = t.id"
+            ")"
+        )
+        trade_cols = {r[1] for r in conn.execute("PRAGMA table_info(trades)")}
+        has_setup_type = {"setup_type", "exit_reason", "created_at"} <= trade_cols
+        if has_setup_type:
+            orphan_grace_iso = _iso(now - timedelta(hours=ADOPTED_ORPHAN_OPEN_GRACE_HOURS))
+            resolved_orphan = (
+                "(t.setup_type = 'adopted_orphan' AND ("
+                "  (t.status = 'closed' AND COALESCE(t.exit_reason, '') != '')"
+                f"  OR (t.status = 'open' AND COALESCE(t.created_at, '') >= '{orphan_grace_iso}')"
+                "))"
+            )
+        else:
+            resolved_orphan = "0"
         checks.append(
             _check(
                 conn,
                 check_id="INV-3",
                 title="open/closed trade with no order-package link (either direction)",
-                base_where=(
-                    f"{_NON_BACKTEST} AND t.status IN ('open', 'closed') "
-                    "AND t.order_package_id IS NULL "
-                    "AND NOT EXISTS ("
-                    "  SELECT 1 FROM order_packages op "
-                    "  WHERE op.linked_trade_id = t.id"
-                    ")"
-                ),
+                base_where=f"{inv3_unlinked} AND NOT {resolved_orphan}",
                 since_iso=since_iso,
             )
         )
+        # INV-3b — the exempted resolved adopted orphans. Reported, never
+        # alerting: the exemption must not become a mute button.
+        inv3b = _check(
+            conn,
+            check_id="INV-3b",
+            title="resolved adopted orphan with no package link (by design; reported, not alerting)",
+            base_where=f"{inv3_unlinked} AND {resolved_orphan}",
+            since_iso=since_iso,
+        )
+        inv3b["alert"] = False
+        checks.append(inv3b)
 
         # INV-4 — row missing account_class (the funding-category axis).
         checks.append(

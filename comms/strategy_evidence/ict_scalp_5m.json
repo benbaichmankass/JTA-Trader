@@ -3,47 +3,47 @@
   "strategy": "ict_scalp_5m",
   "symbol": "BTCUSDT",
   "timeframe": "5m",
-  "config_fingerprint": "sha256:5a810b6b0ee0265a22d51970e8d79fb9",
+  "config_fingerprint": "sha256:e3d41415592709621a0d53d5bf80fa3e",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": -42.456,
-  "expectancy_r_oos": -0.2908,
-  "n_trades_oos": 146,
+  "net_r_oos": -28.9104,
+  "expectancy_r_oos": -0.3212,
+  "n_trades_oos": 90,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 36,
-      "net_r": -15.6518,
-      "expectancy_r": -0.4348,
-      "start": "2025-10-31 03:15:00+00:00",
-      "end": "2026-01-30 14:55:00+00:00"
+      "trades": 22,
+      "net_r": -6.3015,
+      "expectancy_r": -0.2864,
+      "start": "2025-11-19 15:25:00+00:00",
+      "end": "2026-02-26 08:15:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 36,
-      "net_r": -3.6201,
-      "expectancy_r": -0.1006,
-      "start": "2026-01-31 16:50:00+00:00",
-      "end": "2026-04-08 12:25:00+00:00"
+      "trades": 22,
+      "net_r": -6.5846,
+      "expectancy_r": -0.2993,
+      "start": "2026-02-26 14:45:00+00:00",
+      "end": "2026-04-29 18:15:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 36,
-      "net_r": -7.1271,
-      "expectancy_r": -0.198,
-      "start": "2026-04-14 22:20:00+00:00",
-      "end": "2026-07-09 12:05:00+00:00"
+      "trades": 22,
+      "net_r": -5.1523,
+      "expectancy_r": -0.2342,
+      "start": "2026-05-04 10:45:00+00:00",
+      "end": "2026-07-20 08:40:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 38,
-      "net_r": -16.057,
-      "expectancy_r": -0.4226,
-      "start": "2026-07-09 13:40:00+00:00",
-      "end": "2026-10-27 23:45:00+00:00"
+      "trades": 24,
+      "net_r": -10.872,
+      "expectancy_r": -0.453,
+      "start": "2026-07-23 19:40:00+00:00",
+      "end": "2026-11-10 08:30:00+00:00"
     }
   ],
   "folds_positive": 0,
@@ -51,15 +51,15 @@
   "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 146,
-    "max_drawdown_r": 44.4282,
-    "max_drawdown_at_trade": 143,
-    "final_equity_r": -42.456,
-    "max_equity_r": 1.2446,
-    "worst_trade_r": -2.5309,
+    "n": 90,
+    "max_drawdown_r": 30.6094,
+    "max_drawdown_at_trade": 89,
+    "final_equity_r": -28.9104,
+    "max_equity_r": 1.3895,
+    "worst_trade_r": -2.2048,
     "best_trade_r": 1.4496,
-    "worst_day_r": -2.8015,
-    "worst_day_date": "2026-03-29",
+    "worst_day_r": -2.2048,
+    "worst_day_date": "2025-11-20",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-28/ict_scalp_5m__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-11-20/ict_scalp_5m__bt.json"
   },
-  "net_r_oos_fee_only": -32.318,
+  "net_r_oos_fee_only": -22.7424,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,29 +79,32 @@
     "verdict": "fail"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-28T18:22:57.729168+00:00",
+  "generated_at": "2026-11-20T03:58:06.706942+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-28/ict_scalp_5m__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-11-20/ict_scalp_5m__trades.jsonl",
   "error": null,
   "harness": "ict_scalp",
-  "venue_bracket_arm": null,
-  "rebaseline_history": [
-    {
-      "superseded_at": "2026-10-28",
-      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
-      "net_r_oos": -29.7133,
-      "expectancy_r_oos": -0.2049,
-      "n_trades_oos": 145,
-      "fee_bps_roundtrip": 7.5,
-      "window_days": 365,
-      "window": [
-        "2025-10-02 15:10:00+00:00",
-        "2026-09-29 06:05:00+00:00"
-      ],
-      "generated_at": "2026-10-02T17:10:43.549134+00:00",
-      "source_run": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_5m__trades.jsonl",
-      "decision_rule_verdict": "fail",
-      "folds_positive": 0
-    }
-  ]
+  "reproduce": {
+    "window_days": 365,
+    "window_days_source": "--days",
+    "folds": 4,
+    "data_start": "2025-11-19 00:00:00+00:00",
+    "data_end": "2026-11-18 23:55:00+00:00",
+    "git_sha": "4e359f959899a52e97a9cccf1520055c08797383",
+    "argv": [
+      "python3",
+      "scripts/ops/build_strategy_evidence.py",
+      "--strategy",
+      "ict_scalp_5m",
+      "--days",
+      "365",
+      "--folds",
+      "4",
+      "--window-start",
+      "2025-11-19 00:00:00+00:00",
+      "--window-end",
+      "2026-11-18 23:55:00+00:00"
+    ]
+  },
+  "venue_bracket_arm": null
 }

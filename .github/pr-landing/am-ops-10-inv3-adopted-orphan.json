@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Mostly Tier-1 (the INV-3 reporter + tests), but src/utils/json_notes.py is in the trader's import closure (trader_import_closure decide: RESTART), so the manager merges it and pairs it with a trader-restart window for the protected-key change to take effect.",
+  "why": "WHY: db-integrity INV-3 flagged ib_paper MGC trade 7735 (paper), an orphan-adopter row (setup_type=adopted_orphan) that has no order package by construction and was closed by the exit-coverage resolver 3 minutes after adoption: a by-design row, not a write-path bug (manager decision 2026-11-20). WHAT: INV-3 exempts a RESOLVED adopted orphan only (closed with an exit_reason, or open under ADOPTED_ORPHAN_OPEN_GRACE_HOURS=1h); one with no exit_reason or open past the grace still flags; the exempted rows are counted by a new report-only INV-3b so the exemption cannot mute a population; a journal without setup_type runs the original check. Also adds adopted_at/adopted_by (short stamps) to json_notes._DEFAULT_PROTECTED: 7735's close write had trimmed both to empty strings, losing orphan-adoption provenance a leak investigation needs. Gates this adds or changes: none (INV-3 is a reporter, not a gate)."
+}
