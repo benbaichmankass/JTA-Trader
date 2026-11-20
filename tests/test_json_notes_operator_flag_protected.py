@@ -65,15 +65,18 @@ def test_the_long_free_text_reason_is_still_shed_first():
 
 
 @pytest.mark.parametrize("budget", [240, 300, 320])
-def test_below_the_protected_sets_own_size_NOTHING_survives(budget):
-    """The known limit, asserted rather than left to be discovered.
+def test_below_the_protected_sets_own_size_the_close_stamps_survive(budget):
+    """The limit this used to assert is gone (DUMP-CAPPED-DROPS-PROTECTED, 2026-11-20).
 
-    Once even the protected set overflows, `dump_capped` emits the barest valid
-    marker and the flag is gone too. Measured: that boundary sits near 320 chars
-    for this blob. A caller that needs the flag under a budget this tight cannot
-    get it from notes at all — which is precisely why `exit_reason` (a real
-    COLUMN) is the load-bearing signal and the notes keys are corroboration.
+    It read "NOTHING_survives": once the protected set overflowed, `dump_capped`
+    emitted the bare `{"_truncated": true}` marker (live trade 7131 is stored that
+    way). Now protected prose is shortened and protected keys are shed one at a
+    time, the close stamps last, so under these budgets closed_at and the
+    operator flag still survive, whole and unaltered.
     """
-    out = json.loads(dump_capped(_blob(), budget))
+    raw = dump_capped(_blob(), budget)
+    out = json.loads(raw)
+    assert len(raw) <= budget
     assert out.get("_truncated") is True
-    assert out.get("closed_by_operator") is None
+    assert out.get("closed_at") == "2026-08-30T09:33:25.721080+00:00"
+    assert out.get("closed_by_operator") is True
