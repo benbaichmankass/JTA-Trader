@@ -4,7 +4,7 @@
 # Gates this adds or changes: none.
 id: RQ-20261120-e9b5-03
 title: 'RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261015-1631-02: Same-symbol allocation input, XRPUSDT: per-leg OOS net R per capital-day (solo vs shared slot) for trend_donchian_xrp_4h, xrp_pullback_2h'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -114,3 +114,14 @@ iteration:
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, run 2026-10-30, OOS from 2025-01-01): solo trend_donchian_xrp_4h -2.96 R n74 (-0.1561 R/capital-day); solo xrp_pullback_2h +4.51 R n115 (+0.0116). FLAGGED: trend_donchian_xrp_4h reads skip_hours on 4h bars, the case the old grid mis-stamped by about one bar, so it is the arm expected to move most. Reported at grading: per-arm before/after, sign changes, and config drift since 2026-10-30 separately.'
 last_dispatched_at: '2026-11-20T15:26:04+00:00'
+grading:
+  attested: RULE-RQ-20261015-1631-02-SAME-SYMBOL-REPORT-RERUN-27655
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-1631-02-SAME-SYMBOL-REPORT-RERUN-27655
+  evidence:
+  - research/results/RQ-20261120-e9b5-03/44756285851.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

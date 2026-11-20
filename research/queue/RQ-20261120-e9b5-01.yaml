@@ -5,7 +5,7 @@
 id: RQ-20261120-e9b5-01
 title: 'RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261119-029: turtle_soup single-vs-combo: the confirmed stop atr_stop_mult 0.5 (b3aa-01) and the extended sweep
   lookback 180 (b3aa-02). Do they add, and does the combination bring the leg to net >= 0?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -154,3 +154,13 @@ iteration:
   due_by: '2026-11-27'
   search: 'the turtle_soup atr_stop_mult 0.5 and extended sweep, re-run on the fixed backtest_system engine; only the engine changed, the lever family and grid are those of the original unit'
 last_dispatched_at: '2026-11-20T15:33:12+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-RP1119-turtle-soup-atr05-lb180-combo-RERUN-27655
+  evidence:
+  - research/results/RQ-20261120-e9b5-01/44756268909.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

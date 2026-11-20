@@ -2,7 +2,7 @@
 # Rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261120-ca49-01
 title: 'ITERATION 1 of spy_pullback_1h (fail): one-factor atr_stop_mult sweep (2.0, 2.5, 3.0 vs configured) net of cost - does the exit-stop family move the leg fold-stably?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -116,3 +116,16 @@ iteration:
     correction: Holm
     note: every variant fixed before the run; a best-of-k pass is a LEAD that needs a holdout read
 last_dispatched_at: '2026-11-20T17:12:19+00:00'
+grading:
+  attested: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  auto: true
+  decision_rule_id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  evidence:
+  - research/results/RQ-20261120-ca49-01/44780148991.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

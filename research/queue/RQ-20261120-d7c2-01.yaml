@@ -4,7 +4,7 @@
 id: RQ-20261120-d7c2-01
 title: 'RE-RUN on the fixed regime tooling (#27654) of RQ-20261113-b819-01: ITERATION 2 of ml-btc-router-cells (fail): by MONEY, not macro-F1: do the 8 authored BTC trend_vol OFF-cells drop trades that lose more
   net R than the same number dropped at random, on the 3 bybit_1 legs they veto?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -175,3 +175,16 @@ iteration:
   due_by: '2026-11-27'
   search: 'the regime trend_vol OFF-cell family: re-run, on the fixed regime tooling, the money test (net R of trades the 8 authored BTC OFF-cells drop) that replaces the failed macro-F1 read; only the instrument changed, not the lever'
 last_dispatched_at: '2026-11-20T15:26:00+00:00'
+grading:
+  attested: RULE-RQ-20261113-b819-01-BTC-CELLS-KEEP-RERUN-27654
+  auto: true
+  decision_rule_id: RULE-RQ-20261113-b819-01-BTC-CELLS-KEEP-RERUN-27654
+  evidence:
+  - research/results/RQ-20261120-d7c2-01/44756273079.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

@@ -5,7 +5,7 @@
 id: RQ-20261120-c3a7-01
 title: 'CONFIRMATION (disjoint span): does the trailing-median vol-target overlay that passed on trend_donchian_sol_prop 2023-02..2026-10 (RQ-20261120-7d49-04)
   also raise its net Sharpe by >= +0.10 without a worse drawdown, in >= 3 of 4 calendar blocks, on 2021-11-15 .. 2023-01-31?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -140,3 +140,16 @@ iteration:
   diagnosis: 'RQ-20261120-7d49-04 PASSED on 2023-02..2026-10 (dSharpe +0.2249, 4/4 blocks, multiplier 0.87..1.21, 0 periods at cap). Its rule requires
     a confirmation on a disjoint span before a sizing proposal. The overlay, costs and thresholds are unchanged; only the window and the trade floor change.'
 last_dispatched_at: '2026-11-20T14:43:37+00:00'
+grading:
+  attested: RULE-RQ20261120c3a701-VOLTARGET-CONFIRM-DISJOINT
+  auto: true
+  decision_rule_id: RULE-RQ20261120c3a701-VOLTARGET-CONFIRM-DISJOINT
+  evidence:
+  - research/results/RQ-20261120-c3a7-01/44753795199.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
