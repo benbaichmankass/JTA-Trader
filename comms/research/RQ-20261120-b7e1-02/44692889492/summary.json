@@ -1,0 +1,270 @@
+{
+  "leg": "avax_pullback_2h",
+  "grade": {
+    "verdict": "fail",
+    "label": "incumbent_stands",
+    "baseline": "A",
+    "candidates": {
+      "OFF": {
+        "net_r": 15.6343,
+        "delta_net_r": 4.7921,
+        "max_drawdown_r": 17.2462,
+        "max_drawdown_cap": 25.0416,
+        "folds_ge_incumbent": 2,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 50.0,
+          "reach_ge_6r": 0.004,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 3,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 5.62,
+    "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0036,
+      "n": 281,
+      "net_r": 10.8422,
+      "net_r_fee_only": 16.6495,
+      "max_drawdown_r": 18.5493,
+      "by_outcome": {
+        "trail_stop": 139,
+        "stop": 90,
+        "take_profit": 51,
+        "timeout": 1
+      },
+      "mean_bars_held": 19.744,
+      "net_r_per_capital_day": 0.0235,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2023-02-01 00:00:00+00:00",
+      "data_end": "2026-10-15 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2023-02-01 00:00:00+00:00",
+          "end": "2024-01-05 05:59:45+00:00",
+          "trades": 71,
+          "net_r": 21.063
+        },
+        {
+          "fold": 2,
+          "start": "2024-01-05 05:59:45+00:00",
+          "end": "2024-12-08 11:59:30+00:00",
+          "trades": 80,
+          "net_r": 4.9324
+        },
+        {
+          "fold": 3,
+          "start": "2024-12-08 11:59:30+00:00",
+          "end": "2025-11-11 17:59:15+00:00",
+          "trades": 68,
+          "net_r": -0.7757
+        },
+        {
+          "fold": 4,
+          "start": "2025-11-11 17:59:15+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 62,
+          "net_r": -14.377
+        }
+      ],
+      "argv": [
+        "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+        "/home/ubuntu/ict-trading-bot/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261120-b7e1-02/44692889492/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261120-b7e1-02/44692889492/arms/A__bt.json",
+        "--adx-min",
+        "25",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--trail-decay-arm-r",
+        "4.86",
+        "--trail-decay-stall-bars",
+        "6",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2023-02-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    },
+    "OFF": {
+      "reach_ge_6r": 0.004,
+      "n": 249,
+      "net_r": 15.6343,
+      "net_r_fee_only": 22.1909,
+      "max_drawdown_r": 17.2462,
+      "by_outcome": {
+        "stop": 144,
+        "take_profit": 76,
+        "timeout": 3,
+        "trail_stop": 26
+      },
+      "mean_bars_held": 29.422,
+      "net_r_per_capital_day": 0.0256,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2023-02-01 00:00:00+00:00",
+      "data_end": "2026-10-15 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2023-02-01 00:00:00+00:00",
+          "end": "2024-01-05 05:59:45+00:00",
+          "trades": 59,
+          "net_r": 23.2694
+        },
+        {
+          "fold": 2,
+          "start": "2024-01-05 05:59:45+00:00",
+          "end": "2024-12-08 11:59:30+00:00",
+          "trades": 74,
+          "net_r": 3.681
+        },
+        {
+          "fold": 3,
+          "start": "2024-12-08 11:59:30+00:00",
+          "end": "2025-11-11 17:59:15+00:00",
+          "trades": 64,
+          "net_r": -1.0552
+        },
+        {
+          "fold": 4,
+          "start": "2025-11-11 17:59:15+00:00",
+          "end": "2026-10-15 23:59:00+00:00",
+          "trades": 52,
+          "net_r": -10.2607
+        }
+      ],
+      "argv": [
+        "/home/ubuntu/ict-trading-bot/.venv/bin/python3",
+        "/home/ubuntu/ict-trading-bot/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261120-b7e1-02/44692889492/arms/OFF__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261120-b7e1-02/44692889492/arms/OFF__bt.json",
+        "--adx-min",
+        "25",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2023-02-01",
+        "--end",
+        "2026-10-15 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2023-02-01",
+    "end": "2026-10-15 23:59",
+    "fetch_days": 740,
+    "feed": {
+      "resample": "2h",
+      "source": "explicit --data-csv"
+    },
+    "fold_edges": [
+      "2023-02-01 00:00:00+00:00",
+      "2024-01-05 05:59:45+00:00",
+      "2024-12-08 11:59:30+00:00",
+      "2025-11-11 17:59:15+00:00",
+      "2026-10-15 23:59:00+00:00"
+    ]
+  }
+}

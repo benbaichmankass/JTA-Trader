@@ -117,7 +117,10 @@ def plan_items(db: _DB, fconn, plan: Dict[str, Any]) -> List[Dict[str, Any]]:
             elif not _agrees(store, float(row["position_size"]), v["to_exit_price"]):
                 v.update(verdict="store_disagrees", store=store)
             else:
-                from src.runtime.local_pnl import compute_realized_pnl, contract_value_usd_for
+                from src.runtime.local_pnl import (
+                    compute_realized_pnl,
+                    contract_value_usd_for,
+                )
                 gross = compute_realized_pnl(
                     entry_price=float(row["entry_price"]), exit_price=store["vwap"],
                     qty=float(row["position_size"]), direction=row["direction"],
@@ -174,19 +177,11 @@ def apply_items(db: _DB, items: List[Dict[str, Any]]) -> int:
 
 
 def _backup(db_path: str) -> str:
-    """Online SQLite backup (consistent under WAL, unlike a file copy) beside the DB."""
-    from datetime import datetime, timezone
-    dest = f"{db_path}.bak-partial-close-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}"
-    src = sqlite3.connect(db_path)
-    try:
-        out = sqlite3.connect(dest)
-        try:
-            src.backup(out)
-        finally:
-            out.close()
-    finally:
-        src.close()
-    return dest
+    """Online SQLite backup beside the DB through the shared helper (PI-20261120-CGNCTD2Z-0005):
+    <db>.bak-partial-close-<YYYYMMDDTHHMMSSZ>, then the per-tag (1) and total (2) retention, so this
+    writer no longer adds an unpruned full copy to the live trader's disk."""
+    from scripts.ops.journal_backup import take_backup  # ROOT is on sys.path above
+    return take_backup(db_path, "partial-close", method="online", stamp_style="iso")
 
 
 def main(argv: Optional[List[str]] = None) -> int:
