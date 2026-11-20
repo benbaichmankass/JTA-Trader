@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only — a session-local two-arm (HTF filter ON vs forced OFF) re-run of one ict_scalp leg; origin.rerun of PI-20261025-1CZRLDTS-0001-A/-B and RQ-20260928-001; no scheduled consumer.
+# wiring: scripts/research/htf_filter_confirm.py imports run_arm (P3-M27 disjoint-window confirmation units); also run by hand for RQ-20260928-001 / PI-20261025-1CZRLDTS-0001-A/-B.
 """RQ-20260928-001 driver: ict_scalp HTF trend filter OFF vs ON on the 7 variant legs.
 
 Invokes ``scripts/backtest_ict_scalp.py`` in-process exactly as
@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-def run_arm(leg: str, csv: str, out: Path, arm: str) -> dict:
+def run_arm(leg: str, csv: str, out: Path, arm: str, extra_argv=None) -> dict:
     # Imported here: the sys.path inserts above must run first, and a function-level
     # import keeps the module clean under ruff E402 without a noqa that ruff versions disagree on.
     import backtest_ict_scalp as bt
@@ -40,6 +40,7 @@ def run_arm(leg: str, csv: str, out: Path, arm: str) -> dict:
         str(out / f"{leg}_{arm}_trades.csv"), str(out / f"{leg}_{arm}.json"))
     argv = argv[1:]  # drop interpreter; keep script path as argv[0]
     argv += ["--slippage-bps-roundtrip", str(slip), "--funding-bps-per-window", str(fund)]
+    argv += list(extra_argv or [])  # e.g. ["--start", d0, "--end", d1] (htf_filter_confirm.py); argparse keeps the last value
     orig = bt._load_yaml_params
     want = arm == "on"
 
