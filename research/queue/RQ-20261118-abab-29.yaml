@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-29
 title: 'SESSION lever family on ict_scalp_mgc_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of S_LATE/S_ASIA (SESSION skip-hours) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -125,18 +125,22 @@ roadmap:
 related:
 - RQ-20261117-9e1c-12
 - research/levers/ict_scalp_mgc_15m.yaml
-last_dispatched_at: '2026-11-20T07:01:47+00:00'
+last_dispatched_at: '2026-11-20T07:19:00+00:00'
 rearmed_at: '2026-11-20T05:40:00+00:00'
 grading:
   attested: RULERQ20261118abab29
-  auto: true
+  auto: false
   decision_rule_id: RULERQ20261118abab29
   evidence:
-  - research/results/RQ-20261118-abab-29/44593876463.jsonl
-  - research/results/RQ-20261118-abab-29/44598159719.jsonl
+  - research/results/RQ-20261118-abab-29/44686489029.jsonl
   graded_at: '2026-11-20'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'ict_scalp_mgc_15m, SESSION lever family, Dukascopy 15m feed, window 2019-01-01..2026-10-30, 6 folds,
+    re-graded from raw trades under the unit''s rule: n(A) 526, net R -176.10, maxDD 176.73. S_LATE: n 509, net
+    -160.61 (delta +15.49 vs bar 10.52), >= A in 5 of 6 folds, maxDD 160.61 -> PASS. S_ASIA: n 375, net -145.13
+    (delta +30.97) but >= A in only 3 of 6 folds -> no. Best passing arm S_LATE, denominator 2. Read before use:
+    S_LATE is still net-negative and removes only 17 trades of 526, so its gain is small; the leg''s own A net R
+    of -176.10 is the finding. No window disjoint from 2019-2026 exists on this feed.'
+  rows: 1
+  verdict: pass

@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -336,9 +335,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("DRY RUN: nothing written (pass --apply to write)")
         return 0
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    backup = f"{a.db}.bak-reopen-{now.replace(':', '')}"
     conn.close()
-    shutil.copy2(a.db, backup)
+    # Through the shared helper (PI-20261120-CGNCTD2Z-0005): an online, WAL-consistent copy named
+    # <db>.bak-reopen-<YYYYMMDDTHHMMSSZ>, then the per-tag (1) and total (2) retention. The old name
+    # (isoformat minus ':') did not match journal_backup's stamp pattern, so no prune ever saw it:
+    # three full copies survived on 2026-11-19.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from scripts.ops.journal_backup import take_backup
+    backup = take_backup(a.db, "reopen", method="online", stamp_style="iso")
     # The live trader writes this journal continuously. sqlite3's default 5 s wait lost the race on 2026-11-19
     # (run 44513698892: 'database is locked' on the first UPDATE; the `with conn:` transaction rolled back, nothing
     # written). Wait up to WRITE_LOCK_TIMEOUT_S for the trader's write lock instead.

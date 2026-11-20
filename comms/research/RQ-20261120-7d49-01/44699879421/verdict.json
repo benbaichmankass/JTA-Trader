@@ -1,0 +1,98 @@
+{
+  "unit": "RQ-20261120-7d49-01",
+  "started_at": "2026-11-20T08:07:54.141057+00:00",
+  "legs": "trend_donchian,trend_donchian_eth,trend_donchian_sol",
+  "tf": "1h",
+  "family": "donchian",
+  "required_symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "after": "2026-11-01",
+  "build_out": "datasets-out/exit_head/1h/donchian_aligned_fresh_build",
+  "publish": "datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl",
+  "published": true,
+  "round_returncode": 0,
+  "per_symbol": {
+    "BTCUSDT": {
+      "rows": 12680,
+      "trades": 392,
+      "last_bar_t": "2026-11-05T14:00:00+00:00",
+      "sources": {
+        "harness": 11578,
+        "live": 1102
+      }
+    },
+    "ETHUSDT": {
+      "rows": 23375,
+      "trades": 690,
+      "last_bar_t": "2026-11-19T04:00:00+00:00",
+      "sources": {
+        "harness": 22651,
+        "live": 724
+      }
+    },
+    "SOLUSDT": {
+      "rows": 9571,
+      "trades": 307,
+      "last_bar_t": "2026-11-05T14:00:00+00:00",
+      "sources": {
+        "harness": 9443,
+        "live": 128
+      }
+    }
+  },
+  "reasons": [],
+  "build_report_generated_at": "2026-11-20T08:32:58.103712+00:00",
+  "build_report": {
+    "generated_at": "2026-11-20T08:32:58.103712+00:00",
+    "tf": "1h",
+    "trades_in": 1451,
+    "skipped": {
+      "no_candles": 0,
+      "unresolvable": 62
+    },
+    "entry_alignment": "live_fill_bar_v2",
+    "skipped_at_load": {},
+    "rows_seen_at_load": 1364,
+    "rows_loaded_at_load": 1364,
+    "per_family_load": {
+      "donchian": {
+        "seen": 1364,
+        "loaded": 1364
+      }
+    },
+    "families_starved": [],
+    "holding_pays_threshold_r": 0.25,
+    "families": {
+      "donchian": {
+        "rows": 45626,
+        "trades": {
+          "harness": 1305,
+          "live": 84
+        },
+        "holding_pays_pos": 13720,
+        "holding_pays_rate": 0.3007,
+        "rows_by_source": {
+          "harness": 43672,
+          "live": 1954
+        },
+        "rows_by_year": {
+          "2021": 5051,
+          "2022": 7069,
+          "2023": 8138,
+          "2024": 8109,
+          "2025": 8031,
+          "2026": 9228
+        }
+      }
+    }
+  },
+  "n_rows": 45626,
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "donchian 1h exit-head rows rebuilt from legs trend_donchian,trend_donchian_eth,trend_donchian_sol on the trainer's candles; required fresh symbols BTCUSDT,ETHUSDT,SOLUSDT (last bar_t after 2026-11-01)",
+  "n": 45626,
+  "note": "PASS (measured): published datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl"
+}

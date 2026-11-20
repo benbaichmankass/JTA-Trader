@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Two Tier-2 journal writeback helpers now take their pre-apply backup through journal_backup.take_backup (retention 1 per tag / 2 total); the manager merges",
+  "why": "PI-20261120-CGNCTD2Z-0005: root fs hit 94% on 2026-11-20 with 5 full ~3 GB journal backups. reopen_filled_closed_rows.py named its copy <db>.bak-reopen-<isoformat minus ':'>, which journal_backup's stamp pattern never matches, so no prune saw it (3 survived 11-19); backfill_partial_close_children.py made its own online copy and pruned nothing. Gates this adds or changes: none."
+}
