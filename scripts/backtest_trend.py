@@ -2088,6 +2088,9 @@ def main(argv: List[str]) -> int:
             legacy_default=LEGACY_DATA_DEFAULT), file=sys.stderr)
         return 2
     args.data = _src.path
+    # the resolver picked a FINER file than --timeframe: aggregate to the leg's bar unless --resample was given
+    # (PI-20261119-RIMARY13-0002; before this a --timeframe 1h run replayed on 5m/15m bars)
+    args.resample = _backtest_data_source.effective_resample(_src, args.resample)
     # The label follows the data, never the other way round. An unset --symbol
     # keeps the historical label so existing output is byte-comparable.
     args.symbol = args.symbol or LEGACY_SYMBOL_LABEL

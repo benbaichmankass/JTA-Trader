@@ -254,6 +254,44 @@ def load_resolved_frame(harness, path: str, resample: str | None):
     return df
 
 
+def effective_resample(res: "Resolution", explicit: Optional[str] = None) -> Optional[str]:
+    """The resample rule a harness CLI must apply: the caller's explicit ``--resample`` wins, else the resolver's
+    instruction (``Resolution.resample``, set only when a FINER file than the leg's timeframe was picked).
+
+    PI-20261119-RIMARY13-0002 (ML-PRIMARY-14, 2026-11-20): every harness CLI resolved ``--symbol/--timeframe`` and
+    then dropped ``Resolution.resample`` -- only an explicit ``--resample`` aggregated -- so a ``--timeframe 1h``
+    call on the trainer (ETH/SOL/XRP/... have only 5m files, BTC only 15m) replayed the 1h config on sub-hourly
+    bars while the provenance line printed "(resampled to 1h)". An EXPLICIT ``--data`` file carries no resample,
+    so explicit runs are unchanged."""
+    if explicit:
+        return explicit
+    return getattr(res, "resample", None) or None
+
+
+def resample_open_stamped(df, rule: Optional[str], ts_col: str = "timestamp"):
+    """Aggregate an OPEN-stamped OHLC(V) frame to ``rule`` keeping the OPEN-stamp convention of the native files
+    (``label='left', closed='left'``): a resampled 15m frame is the same series a native ``<SYM>_15m.csv`` would be.
+    For harnesses with no ``_resample`` of their own (ict_scalp, orb, system and the drivers that load raw).
+    ``rule`` None/empty returns ``df`` unchanged. Pandas minute alias ``m`` is normalised to ``min``."""
+    if not rule:
+        return df
+    import pandas as pd  # local: this module is imported by tooling that has no pandas need otherwise
+
+    r = str(rule).strip().lower()
+    if r.endswith("m") and not r.endswith("min"):
+        r = r[:-1] + "min"
+    out = df.copy()
+    if not pd.api.types.is_datetime64_any_dtype(out[ts_col]):
+        # parse only when not already datetimes: a harness loader's own tz choice (naive or UTC) is kept
+        out[ts_col] = pd.to_datetime(out[ts_col], utc=True, errors="coerce")
+    out = out.dropna(subset=[ts_col]).set_index(ts_col).sort_index()
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
+    if "volume" in out.columns:
+        agg["volume"] = "sum"
+    res = out.resample(r, label="left", closed="left").agg(agg).dropna(subset=["close"])
+    return res.reset_index()
+
+
 def refusal_message(res: Resolution, *, harness: str,
                     legacy_default: Optional[str] = None,
                     env_var: str = DEFAULT_ENV_VAR) -> str:

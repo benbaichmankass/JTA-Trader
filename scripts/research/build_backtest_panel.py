@@ -147,6 +147,7 @@ def _adapter_ict_scalp(
     htf_ema_period: int = 20,
     vol_spec: Optional[Dict[str, Any]] = None,
     sim_breakeven: bool = False,
+    resample: Optional[str] = None,
     **_ignored: Any,
 ) -> Tuple[Any, List[SimTrade], Dict[str, Any]]:
     """Run scripts/backtest_ict_scalp.py in-process and normalize its trades.
@@ -159,6 +160,7 @@ def _adapter_ict_scalp(
     import scripts.backtest_ict_scalp as H  # noqa: PLC0415 — local import by design
 
     df = H._load_candles(data_path)
+    df = _backtest_data_source.resample_open_stamped(df, resample)  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
     cfg_overrides: Dict[str, Any] = {}
     if not ignore_yaml:
         try:
@@ -596,6 +598,7 @@ def _build_adapter_opts(args: argparse.Namespace) -> Dict[str, Any]:
             vol_spec = None
     return {
         "data_path": args.data,
+        "resample": getattr(args, "data_resample", None),
         "symbol": args.symbol,
         "timeframe": args.timeframe,
         "stamp_regime": bool(args.stamp_regime),
@@ -715,6 +718,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             file=sys.stderr)
         return 2
     args.data = _src.path
+    args.data_resample = _src.resample  # PI-20261119-RIMARY13-0002: resolver picked a finer file than the leg timeframe
     args.symbol = args.symbol or "BTCUSDT"
     print(_src.provenance_line(), file=sys.stderr)
 
