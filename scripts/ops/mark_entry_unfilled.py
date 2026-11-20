@@ -15,7 +15,7 @@ fail-closed read #27537 uses). Only ``True`` passes: terminal (canceled / expire
 ``filled_qty`` exactly 0. Any fill, an unreadable or unknown order, an unsupported venue, or an ambiguous
 status REFUSES that id, and if ANY id is refused nothing is written at all.
 
-What it writes, per row (one transaction, after an online SQLite backup beside the DB):
+What it writes, per row (one transaction, after a JSON backup of the named rows beside the DB (no full-DB copy: the journal shares the trader root filesystem)):
   * ``trades.exit_reason = 'entry_unfilled'``;
   * notes: ``pnl_source = 'unmeasured'`` (src/runtime/provenance.UNMEASURED_MARKER, the ONE marker INV-2
     accepts) and ``unmeasured_reason = 'entry_unfilled'``; the prior label under
@@ -235,18 +235,32 @@ def apply_restore(conn: sqlite3.Connection, updates: list[dict[str, Any]]) -> in
     return len(updates)
 
 
-def backup(db_path: str) -> str:
-    """Online SQLite backup beside the DB (consistent under WAL, unlike a file copy)."""
-    dest = f"{db_path}.bak-mark-entry-unfilled-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}"
-    src = sqlite3.connect(db_path)
-    try:
-        out = sqlite3.connect(dest)
-        try:
-            src.backup(out)
-        finally:
-            out.close()
-    finally:
-        src.close()
+def row_backup(db_path: str, conn: sqlite3.Connection, trade_ids: list[int]) -> str:
+    """Back up ONLY the named rows' fields this script can change, to a small JSON file beside the DB.
+
+    A full online backup is ~3 GB and the journal shares the trader's root filesystem: measured
+    2026-11-20 at 3.3 GB free (94% used) with 5 such backups on disk, so a full copy here could
+    starve the live trader's own writes. The fields below are everything this script writes, so
+    the file is enough to reverse it row by row.
+    """
+    conn.row_factory = sqlite3.Row
+    has_pkg = "order_package_id" in {c[1] for c in conn.execute("PRAGMA table_info(trades)")}
+    sel = "id, exit_reason, notes, " + ("order_package_id" if has_pkg else "NULL AS order_package_id")
+    rows = []
+    for tid in trade_ids:
+        r = conn.execute(f"SELECT {sel} FROM trades WHERE id = ?", (tid,)).fetchone()
+        if r is None:
+            continue
+        pkg = None
+        if r["order_package_id"]:
+            p = conn.execute("SELECT close_reason FROM order_packages WHERE order_package_id = ?",
+                             (r["order_package_id"],)).fetchone()
+            pkg = p[0] if p else None
+        rows.append({"id": r["id"], "exit_reason": r["exit_reason"], "notes": r["notes"],
+                     "order_package_id": r["order_package_id"], "package_close_reason": pkg})
+    dest = f"{db_path}.rows-mark-entry-unfilled-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
+    with open(dest, "w") as fh:
+        json.dump({"written_at": datetime.now(timezone.utc).isoformat(), "rows": rows}, fh, indent=1)
     return dest
 
 
@@ -330,10 +344,12 @@ def _self_test() -> int:
         ck("an unrelated package is untouched",
            c.execute("SELECT close_reason FROM order_packages WHERE order_package_id='pkg-2'").fetchone()[0]
            == "exchange_flat_reconciled")
+        b = row_backup(db, c, [1])
         c.close()
-        b = backup(db)
-        ck("backup writes a readable copy", sqlite3.connect(b).execute(
-            "SELECT exit_reason FROM trades WHERE id=1").fetchone()[0] == EXIT_REASON)
+        rb = json.loads(Path(b).read_text())["rows"]
+        ck("the row backup holds the named row's writable fields, and is small",
+           rb and rb[0]["id"] == 1 and rb[0]["package_close_reason"] == EXIT_REASON
+           and Path(b).stat().st_size < 10_000)
     print("mark-entry-unfilled self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -387,7 +403,7 @@ def main(argv: list[str] | None = None) -> int:
         if not updates:
             print("nothing to do.")
             return 0
-        print(f"backup: {backup(db)}")
+        print(f"row backup: {row_backup(db, conn, [u['id'] for u in updates])}")
         print(f"applied: {apply(conn, updates)} row(s).")
         return 0
     finally:
@@ -421,7 +437,7 @@ def _run_restore(conn: sqlite3.Connection, db: str, bak_path: str, ids: list[int
     if not updates:
         print("nothing to do.")
         return 0
-    print(f"backup: {backup(db)}")
+    print(f"row backup: {row_backup(db, conn, [u['id'] for u in updates])}")
     print(f"restored: {apply_restore(conn, updates)} row(s).")
     return 0
 

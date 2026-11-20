@@ -100,6 +100,9 @@ def test_restore_rebuilds_8034_from_the_backup(tmp_path):
     n = json.loads(notes)
     assert er == "entry_unfilled" and n["pnl_source"] == "unmeasured"
     assert n["pre_mark_exit_reason"] == "exchange_flat_reconciled" and n["broker_leg_read"] == "no_filled_leg"
+    # disk: only a small row backup, never a full-journal copy (3.3 GB free on the trader fs, 2026-11-20)
+    assert list(tmp_path.glob("j.db.rows-mark-entry-unfilled-*.json"))
+    assert not list(tmp_path.glob("j.db.bak-*"))
     # idempotent: a second run skips
     assert meu.main(["--db", str(live), "--trade-ids", "8034", "--reason", "x",
                      "--restore-notes-from", str(bak), "--apply"]) == 0
