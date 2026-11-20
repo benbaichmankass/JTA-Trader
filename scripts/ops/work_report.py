@@ -92,7 +92,27 @@ def _short(s: Any, n: int = 200) -> str:
 QUEUE_DIR = REPO_ROOT / "research" / "queue"
 
 
-def session_debt(queue_dir: Path | None = None) -> dict:
+def _future_not_before(u: dict, now: datetime) -> bool:
+    """True when the unit declares a ``not_before`` that is still in the future.
+
+    A unit that cannot be dispatched yet BY ITS OWN DECLARATION (a fresh window still accruing) is scheduled, not forgotten.
+    An unparseable value is NOT treated as future: a malformed ``not_before`` must not hide a unit from the debt count."""
+    nb = u.get("not_before")
+    if nb is None or nb == "":
+        return False
+    if isinstance(nb, datetime):
+        when = nb
+    else:
+        try:
+            when = datetime.fromisoformat(str(nb).strip().replace("Z", "+00:00"))
+        except ValueError:
+            return False
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return when > now
+
+
+def session_debt(queue_dir: Path | None = None, now: datetime | None = None) -> dict:
     """How many QUEUED research units can only move if a session acts (PI-20261006-LCEVL8D5-0002).
 
     Operator principle (research/queue/README.md, 2026-10-06): a step that waits on a session is
@@ -105,6 +125,11 @@ def session_debt(queue_dir: Path | None = None) -> dict:
       * ``session_graded``: hand-written (no ``generated``) and no ``grading.auto``, so
         ``queue_grade.py`` can never close it.
 
+    SCHEDULED (manager decision 2026-11-20, Tier 1): a queued unit whose own ``not_before`` is still in the
+    future cannot be moved by anyone yet, so it is counted in ``scheduled`` and NOT in ``session_debt``. It stays
+    visible as its own list and count (``scheduled_count``) so nothing hides, and it becomes debt the moment its
+    ``not_before`` passes. A deferred-n read with no ``not_before`` is still debt: only a declared date schedules.
+
     Raises on an unreadable unit rather than returning a shorter list: a debt count that silently
     skipped a corrupt file would read as less debt.
     """
@@ -112,8 +137,10 @@ def session_debt(queue_dir: Path | None = None) -> dict:
     from scripts.research import compute_router as cr  # noqa: PLC0415
     cfg = cr.load_config()
     d = queue_dir or QUEUE_DIR
+    now = now or datetime.now(timezone.utc)
     bound: list[str] = []
     graded: list[str] = []
+    scheduled: list[str] = []
     queued = 0
     files = sorted(d.glob("*.yaml"))
     for f in files:
@@ -125,12 +152,15 @@ def session_debt(queue_dir: Path | None = None) -> dict:
         queued += 1
         uid = str(u.get("id") or f.stem)
         wf = str((u.get("run") or {}).get("workflow") or "")
-        if not wf.endswith((".yml", ".yaml")) and not (not wf.strip() and cr.plan(u, cfg).ok):
+        if _future_not_before(u, now):
+            scheduled.append(uid)
+        elif not wf.endswith((".yml", ".yaml")) and not (not wf.strip() and cr.plan(u, cfg).ok):
             bound.append(uid)
         elif not u.get("generated") and not (u.get("grading") or {}).get("auto"):
             graded.append(uid)
     return {"population": f"{len(files)} unit files in research/queue/, {queued} with status queued",
             "session_bound": bound, "session_graded": graded,
+            "scheduled": scheduled, "scheduled_count": len(scheduled),
             "session_debt": len(bound) + len(graded)}
 
 
@@ -258,6 +288,8 @@ def render(now: datetime, sections: dict) -> str:
                  f"never fire), {len(dd['session_graded'])} session-graded (grader can never close) "
                  f"· population: {dd['population']}")
         L += [f"- bound `{u}`" for u in dd["session_bound"]] + [f"- graded `{u}`" for u in dd["session_graded"]]
+        L.append(f"scheduled (not_before in the future, NOT counted above): **{dd.get('scheduled_count', 0)}**")
+        L += [f"- scheduled `{u}`" for u in dd.get("scheduled", [])]
     else:
         L.append(f"- ⛔ not measured: {sd.get('error', 'section missing')}")
     d = sections.get("due", {})
@@ -396,6 +428,22 @@ def _self_test() -> int:
         check("session debt: bound, graded and the clean/closed units are told apart",
               sdb["session_bound"] == ["RQ-1"] and sdb["session_graded"] == ["RQ-2"]
               and sdb["session_debt"] == 2, sdb)
+        # SCHEDULED: a declared future not_before moves a unit out of the debt count and into its own visible one
+        fixed = datetime(2026, 11, 20, 6, 0, tzinfo=timezone.utc)
+        (q / "RQ-8.yaml").write_text("id: RQ-8\nstatus: queued\nnot_before: '2026-12-01T00:00:00Z'\nrun:\n  workflow: none — session-local\n")
+        (q / "RQ-9.yaml").write_text("id: RQ-9\nstatus: queued\nnot_before: '2026-12-01T00:00:00Z'\nrun:\n  workflow: x.yml\n")
+        (q / "RQ-10.yaml").write_text("id: RQ-10\nstatus: queued\nnot_before: '2026-11-01T00:00:00Z'\nrun:\n  workflow: x.yml\n")
+        (q / "RQ-11.yaml").write_text("id: RQ-11\nstatus: queued\nnot_before: not-a-date\nrun:\n  workflow: x.yml\n")
+        sdb = session_debt(q, now=fixed)
+        check("a future not_before is SCHEDULED, bound or graded alike, and visible as its own list and count",
+              sdb["scheduled"] == ["RQ-8", "RQ-9"] and sdb["scheduled_count"] == 2, sdb)
+        check("a not_before that has passed, or cannot be parsed, stays DEBT (nothing hides in 'scheduled')",
+              "RQ-10" in sdb["session_graded"] and "RQ-11" in sdb["session_graded"]
+              and sdb["session_debt"] == len(sdb["session_bound"]) + len(sdb["session_graded"]), sdb)
+        check("the scheduled unit becomes debt once its not_before passes",
+              session_debt(q, now=datetime(2026, 12, 2, tzinfo=timezone.utc))["scheduled_count"] == 0)
+        for _n in ("RQ-8", "RQ-9", "RQ-10", "RQ-11"):
+            (q / f"{_n}.yaml").unlink()
         (q / "RQ-6.yaml").write_text("id: [unclosed\n")
         try:
             session_debt(q)

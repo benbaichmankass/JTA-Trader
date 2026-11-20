@@ -6,7 +6,7 @@
 id: RQ-20261119-c8e2-03
 title: 'LEVER-OFF ARM on current data: does the SHIPPED trail_decay on REAL-MONEY leg tlt_pullback_1h still earn
   its place (base with trail_decay removed vs the shipped_* cell restoring it at live values)?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -69,3 +69,29 @@ follows_from:
   run: '44582576728'
   reason: its sweep emitted no lever-off arm (all 25 rows kind=cell vs the live-lever base)
 last_dispatched_at: '2026-11-19T20:07:22+00:00'
+grading:
+  attested: RULE-EXIT-REFINEMENT-P2-GATE
+  auto: false
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261119-c8e2-03/44599554210.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'tlt_pullback_1h (REAL-MONEY leg), m20 sweep with trail_decay REMOVED from the base book vs the shipped_*
+    cell restoring it at live values (stall 6 / tight 1.5), OOS-trades split, tp_cap_pct 0.099. Registered rule
+    applied: base book 49 OOS trades (floor 25 met); cells swept 1, cells passed 0 (gate reason net_r_worse), so
+    the unit reads FAIL. CORRECTED 2026-11-20 after reconciliation with RQ-20261119-c8e2-04: this FAIL is window-specific
+    and underpowered and is NOT an argument to retire the lever. Cell-level numbers from the m20 corpus row (branch
+    claude/m20-sweep-corpus, sweep 2026-11-19T19:49Z): split 2022-04-04, the default holdout reserved the latest
+    span (from 2024-05-24, 56 trades), OOS n 49 (about 2022-04..2024-05) d_net_r_OOS -1.24 R, IS n 127 d +3.66 R;
+    base maxDD OOS 7.25 R, decay-on delta -1.96 (lower). The powered re-test c8e2-04 (holdout_frac 0, split 2021-09-17,
+    OOS n 117 to 2026-11) reads d_net_r_OOS +7.11 R (+0.061 R/trade), IS +1.44 R, base maxDD OOS 10.80 R with decay-on
+    delta -3.63 (about 7.17 R), IS maxDD delta -1.22 (11.67 R to about 10.45 R). d_max_dd is cell minus base (m20_fleet_exit_sweep.py),
+    so decay-on has the lower drawdown in every window. Per-year d_net_r in the c8e2-04 row: 2021 +0.26, 2022 +2.40,
+    2023 -4.90, 2024 +2.87, 2025 +4.80, 2026 -0.06; this unit''s OOS window contains 2023, the one clearly negative
+    year, at n 49, below the 87-trade power floor c8e2-04 registered. An Aug-13 row (split 2025-07-01, OOS n 50)
+    read +3.21 R. Caveats: c8e2-04''s own walk-forward gate reads wf_fail (3 of 6 folds), and its KEEP rests on
+    its registered statistic only. This grade proposes no config change.'
+  rows: 1
+  verdict: fail

@@ -1,0 +1,7 @@
+[A] /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 6.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261120-b7e1-01/44692002863/arms/A__trades.jsonl --json comms/research/RQ-20261120-b7e1-01/44692002863/arms/A__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 4.0 --tp-revision donchian_measured_move --tp-revision-width-mult 0.5 --start 2023-02-01 --end 2026-10-15 23:59
+[OFF] /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 6.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261120-b7e1-01/44692002863/arms/OFF__trades.jsonl --json comms/research/RQ-20261120-b7e1-01/44692002863/arms/OFF__bt.json --tp-cap-pct 0.099 --tp-r 4.0 --tp-revision donchian_measured_move --tp-revision-width-mult 0.5 --start 2023-02-01 --end 2026-10-15 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "OFF beats the incumbent A (net R 59.5199 vs 42.8678) in >= 3/4 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

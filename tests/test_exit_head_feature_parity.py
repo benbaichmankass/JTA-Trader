@@ -122,3 +122,54 @@ def test_peak_is_in_label_present_and_consistent():
     # read peak-is-in, the first rows must not
     assert rows[-1]["peak_is_in"] == 1
     assert rows[0]["peak_is_in"] == 0
+
+
+@pytest.mark.parametrize("direction", ["long", "short"])
+def test_live_fill_anchors_like_harness_decision_bar(direction):
+    """PI-20261120-7ITMUEB1-0004: a LIVE t_open is a fill time inside the first
+    in-trade bar; it must yield the same rows as the harness trade whose t_open is
+    the decision bar's open stamp (no first-bar drop, same entry reference)."""
+    candles, _ = _synthetic()
+    cand_ts = [c["t"] for c in candles]
+    atrs = builder.atr_series(candles)
+    decision_bar = 30
+    entry = candles[decision_bar]["close"]
+    sl = entry - 5.0 if direction == "long" else entry + 5.0
+    base = {"strategy": "trend_donchian", "symbol": "SYN", "direction": direction,
+            "t_close": candles[-1]["t"], "entry": entry, "sl": sl, "final_r": 1.0,
+            "final_r_source": "harness_net_r", "exit_reason": "trail_stop"}
+    harness = builder.rows_for_trade(
+        {**base, "source": "harness", "t_open": candles[decision_bar]["t"]},
+        candles, cand_ts, atrs)
+    live = builder.rows_for_trade(
+        {**base, "source": "live", "trade_id": 1,
+         "t_open": candles[decision_bar + 1]["t"] + 5.0},
+        candles, cand_ts, atrs)
+    assert harness and live
+    assert live[0]["bar_t"] == int(candles[decision_bar + 1]["t"])
+    # The shape the pre-fix anchor broke: row 0 IS the first in-trade bar (age 0), its excursion is in MFE/MAE,
+    # and the entry reference is the decision bar's ATR (not the first in-trade bar's).
+    first = candles[decision_bar + 1]
+    risk = abs(entry - sl)
+    hi_r = ((first["high"] - entry) if direction == "long" else (entry - first["low"])) / risk
+    lo_r = ((first["low"] - entry) if direction == "long" else (entry - first["high"])) / risk
+    assert live[0]["age_bars"] == 0
+    assert live[0]["mfe_r"] == round(max(0.0, hi_r), 4)
+    assert live[0]["mae_r"] == round(min(0.0, lo_r), 4)
+    assert live[0]["atr_ratio_vs_entry"] == round(atrs[decision_bar + 1] / atrs[decision_bar], 4)
+    assert len(live) == len(harness)
+    skip = {"source", "trade_key"}
+    for h, lv in zip(harness, live):
+        assert {k: v for k, v in h.items() if k not in skip} == \
+            {k: v for k, v in lv.items() if k not in skip}
+
+
+def test_live_fill_before_first_candle_yields_no_rows():
+    candles, _ = _synthetic()
+    cand_ts = [c["t"] for c in candles]
+    tr = {"source": "live", "trade_id": 2, "strategy": "trend_donchian",
+          "symbol": "SYN", "direction": "long", "t_open": candles[0]["t"] - 60.0,
+          "t_close": candles[-1]["t"], "entry": 100.0, "sl": 95.0,
+          "final_r": None, "final_r_source": "last_mark", "exit_reason": None}
+    assert builder.rows_for_trade(tr, candles, cand_ts,
+                                  builder.atr_series(candles)) == []

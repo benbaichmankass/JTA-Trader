@@ -363,6 +363,8 @@ scheduler weather (`scripts/research/queue_throughput.py`).
 
 ### Session debt — steps that still wait on a session (2026-10-06)
 
+> **Scheduled is not debt (manager decision 2026-11-20).** A queued unit whose own `not_before` is still in the future cannot be moved by anyone yet, so `work_report.session_debt()` lists it under `scheduled` / `scheduled_count`, shown beside the debt count in the work report, and not in `session_debt`. It becomes debt the day its `not_before` passes. Only a declared date schedules a unit: an unparseable `not_before` and a forward read with no `not_before` stay debt.
+
 Filed in the pipeline (`docs/claude/work/pipeline/`), each with a `rerun` that re-measures
 it; re-run those rather than quoting these counts.
 

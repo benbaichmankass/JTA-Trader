@@ -15,7 +15,7 @@ fail-closed read #27537 uses). Only ``True`` passes: terminal (canceled / expire
 ``filled_qty`` exactly 0. Any fill, an unreadable or unknown order, an unsupported venue, or an ambiguous
 status REFUSES that id, and if ANY id is refused nothing is written at all.
 
-What it writes, per row (one transaction, after an online SQLite backup beside the DB):
+What it writes, per row (one transaction, after a JSON backup of the named rows beside the DB (no full-DB copy: the journal shares the trader root filesystem)):
   * ``trades.exit_reason = 'entry_unfilled'``;
   * notes: ``pnl_source = 'unmeasured'`` (src/runtime/provenance.UNMEASURED_MARKER, the ONE marker INV-2
     accepts) and ``unmeasured_reason = 'entry_unfilled'``; the prior label under
@@ -53,8 +53,12 @@ EXIT_REASON = "entry_unfilled"
 RELABELABLE = ("exchange_flat_reconciled", "stuck_strategy_watchdog")
 UNMEASURED = "unmeasured"  # src.runtime.provenance.UNMEASURED_MARKER (pinned by the self-test)
 #: Kept through the 500-char notes cap so the record stays reversible and the INV-2 marker survives.
-PROTECTED = ("pnl_source", "unmeasured_reason", "pre_mark_exit_reason", "entry_unfilled_marked_at",
-             "entry_unfilled_venue", "closed_at", "closed_by")
+#: SHORT values only. Measured on trade 8034 (2026-11-20, issue #27646): protecting two ~64+ char prose
+#: keys on top of the reconciler's ~330-char closed_reason pushed the protected set past 500, and
+#: dump_capped fell to the bare {"_truncated": true}, dropping the marker itself. Prose stays trimmable.
+PROTECTED = ("pnl_source", "unmeasured_reason", "pre_mark_exit_reason", "closed_at", "closed_by")
+#: Default-protected keys that are long PROSE: trimmed here rather than allowed to sink the marker.
+UNPROTECT = ("closed_reason",)
 
 VenueRead = Callable[[dict[str, Any], str], bool | None]
 
@@ -64,12 +68,44 @@ def _db_path() -> str:
     return str(trade_journal_db_path())
 
 
+def _protected() -> set[str]:
+    try:
+        from src.utils.json_notes import _DEFAULT_PROTECTED
+        base = set(_DEFAULT_PROTECTED)
+    except Exception:  # noqa: BLE001 -- outside the repo only
+        base = set()
+    return (base - set(UNPROTECT)) | set(PROTECTED)
+
+
 def _dump_notes(notes: dict[str, Any]) -> str:
     try:
-        from src.utils.json_notes import _DEFAULT_PROTECTED, dump_capped
-        return dump_capped(notes, 500, protected=set(_DEFAULT_PROTECTED) | set(PROTECTED))
-    except Exception:  # noqa: BLE001 -- outside the repo only; named, not implicit
+        from src.utils.json_notes import dump_capped
+        return dump_capped(notes, 500, protected=_protected())
+    except ImportError:  # outside the repo only; named, not implicit
         return json.dumps(notes)
+
+
+def _marker_survives(blob: str, prior: str) -> bool:
+    """The written notes must carry the INV-2 marker AND the reversal key, or nothing is written."""
+    try:
+        n = json.loads(blob)
+    except (TypeError, ValueError):
+        return False
+    return (isinstance(n, dict) and n.get("pnl_source") == UNMEASURED
+            and n.get("unmeasured_reason") == EXIT_REASON and n.get("pre_mark_exit_reason") == prior)
+
+
+def _build_notes(raw: Any, prior: str, oid: str, reason: str) -> str:
+    notes = _load_notes(raw)
+    notes.update({
+        "pnl_source": UNMEASURED,
+        "unmeasured_reason": EXIT_REASON,
+        "pre_mark_exit_reason": prior,
+        "entry_unfilled_marked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "entry_unfilled_venue": f"order {oid[:12]}: terminal, filled_qty 0",
+        "entry_unfilled_reason": reason[:120],
+    })
+    return _dump_notes(notes)
 
 
 def _load_notes(raw: Any) -> dict[str, Any]:
@@ -98,7 +134,6 @@ def plan(conn: sqlite3.Connection, trade_ids: list[int], reason: str, *,
     updates: list[dict[str, Any]] = []
     refusals: list[str] = []
     skipped: list[int] = []
-    now = datetime.now(timezone.utc).isoformat()
     for tid in trade_ids:
         r = conn.execute(
             "SELECT id, account_id, symbol, status, exit_reason, pnl, notes, broker_order_id, "
@@ -139,32 +174,93 @@ def plan(conn: sqlite3.Connection, trade_ids: list[int], reason: str, *,
             refusals.append(f"{tid}: venue does not confirm an unfilled terminal entry order {oid} "
                             f"(read {verdict!r}: False = it filled, None = could not tell)")
             continue
-        notes = _load_notes(r["notes"])
-        notes.update({
-            "pnl_source": UNMEASURED,
-            "unmeasured_reason": EXIT_REASON,
-            "pre_mark_exit_reason": r["exit_reason"],
-            "entry_unfilled_marked_at": now,
-            "entry_unfilled_venue": f"order {oid}: terminal, filled_qty 0",
-            "entry_unfilled_reason": reason,
-        })
+        blob = _build_notes(r["notes"], r["exit_reason"], oid, reason)
+        if not _marker_survives(blob, r["exit_reason"]):
+            refusals.append(f"{tid}: the notes cap would drop the INV-2 marker or the reversal key")
+            continue
         updates.append({"id": tid, "prior": r["exit_reason"], "package": r["order_package_id"],
-                        "notes": _dump_notes(notes)})
+                        "notes": blob})
     return updates, refusals, skipped
 
 
-def backup(db_path: str) -> str:
-    """Online SQLite backup beside the DB (consistent under WAL, unlike a file copy)."""
-    dest = f"{db_path}.bak-mark-entry-unfilled-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}"
-    src = sqlite3.connect(db_path)
-    try:
-        out = sqlite3.connect(dest)
-        try:
-            src.backup(out)
-        finally:
-            out.close()
-    finally:
-        src.close()
+def plan_restore(conn: sqlite3.Connection, bak: sqlite3.Connection, trade_ids: list[int], reason: str
+                 ) -> tuple[list[dict[str, Any]], list[str], list[int]]:
+    """Repair rows ALREADY relabelled entry_unfilled whose notes lost the marker (trade 8034,
+    issue #27646): rebuild the notes from the pre-write backup's original blob. Writes notes only.
+
+    Refuses unless the live row is closed, entry_unfilled, pnl NULL, and missing the marker, and
+    the backup row is the same trade (same account, broker order id) still carrying a
+    flat-detector label with pnl NULL. A row already carrying the marker is skipped.
+    """
+    conn.row_factory = sqlite3.Row
+    bak.row_factory = sqlite3.Row
+    updates: list[dict[str, Any]] = []
+    refusals: list[str] = []
+    skipped: list[int] = []
+    q = ("SELECT id, account_id, status, exit_reason, pnl, notes, broker_order_id "
+         "FROM trades WHERE id = ?")
+    for tid in trade_ids:
+        r = conn.execute(q, (tid,)).fetchone()
+        b = bak.execute(q, (tid,)).fetchone()
+        if r is None or b is None:
+            refusals.append(f"{tid}: missing from the {'journal' if r is None else 'backup'}")
+            continue
+        if r["exit_reason"] != EXIT_REASON or r["status"] != "closed" or r["pnl"] is not None:
+            refusals.append(f"{tid}: live row is not a closed, NULL-pnl {EXIT_REASON} row")
+            continue
+        if _load_notes(r["notes"]).get("pnl_source") == UNMEASURED:
+            skipped.append(tid)
+            continue
+        if (b["account_id"], b["broker_order_id"]) != (r["account_id"], r["broker_order_id"]):
+            refusals.append(f"{tid}: backup row is a different trade (account/order id differ)")
+            continue
+        if b["exit_reason"] not in RELABELABLE or b["pnl"] is not None:
+            refusals.append(f"{tid}: backup row carries {b['exit_reason']!r}/pnl {b['pnl']!r}, "
+                            "not the pre-write flat-detector state")
+            continue
+        oid = str(r["broker_order_id"] or "")
+        blob = _build_notes(b["notes"], b["exit_reason"], oid, reason)
+        if not _marker_survives(blob, b["exit_reason"]):
+            refusals.append(f"{tid}: the notes cap would drop the INV-2 marker or the reversal key")
+            continue
+        updates.append({"id": tid, "notes": blob})
+    return updates, refusals, skipped
+
+
+def apply_restore(conn: sqlite3.Connection, updates: list[dict[str, Any]]) -> int:
+    with conn:
+        for u in updates:
+            conn.execute("UPDATE trades SET notes = ? WHERE id = ? AND exit_reason = ?",
+                         (u["notes"], u["id"], EXIT_REASON))
+    return len(updates)
+
+
+def row_backup(db_path: str, conn: sqlite3.Connection, trade_ids: list[int]) -> str:
+    """Back up ONLY the named rows' fields this script can change, to a small JSON file beside the DB.
+
+    A full online backup is ~3 GB and the journal shares the trader's root filesystem: measured
+    2026-11-20 at 3.3 GB free (94% used) with 5 such backups on disk, so a full copy here could
+    starve the live trader's own writes. The fields below are everything this script writes, so
+    the file is enough to reverse it row by row.
+    """
+    conn.row_factory = sqlite3.Row
+    has_pkg = "order_package_id" in {c[1] for c in conn.execute("PRAGMA table_info(trades)")}
+    sel = "id, exit_reason, notes, " + ("order_package_id" if has_pkg else "NULL AS order_package_id")
+    rows = []
+    for tid in trade_ids:
+        r = conn.execute(f"SELECT {sel} FROM trades WHERE id = ?", (tid,)).fetchone()
+        if r is None:
+            continue
+        pkg = None
+        if r["order_package_id"]:
+            p = conn.execute("SELECT close_reason FROM order_packages WHERE order_package_id = ?",
+                             (r["order_package_id"],)).fetchone()
+            pkg = p[0] if p else None
+        rows.append({"id": r["id"], "exit_reason": r["exit_reason"], "notes": r["notes"],
+                     "order_package_id": r["order_package_id"], "package_close_reason": pkg})
+    dest = f"{db_path}.rows-mark-entry-unfilled-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
+    with open(dest, "w") as fh:
+        json.dump({"written_at": datetime.now(timezone.utc).isoformat(), "rows": rows}, fh, indent=1)
     return dest
 
 
@@ -248,10 +344,12 @@ def _self_test() -> int:
         ck("an unrelated package is untouched",
            c.execute("SELECT close_reason FROM order_packages WHERE order_package_id='pkg-2'").fetchone()[0]
            == "exchange_flat_reconciled")
+        b = row_backup(db, c, [1])
         c.close()
-        b = backup(db)
-        ck("backup writes a readable copy", sqlite3.connect(b).execute(
-            "SELECT exit_reason FROM trades WHERE id=1").fetchone()[0] == EXIT_REASON)
+        rb = json.loads(Path(b).read_text())["rows"]
+        ck("the row backup holds the named row's writable fields, and is small",
+           rb and rb[0]["id"] == 1 and rb[0]["package_close_reason"] == EXIT_REASON
+           and Path(b).stat().st_size < 10_000)
     print("mark-entry-unfilled self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -261,6 +359,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--trade-ids", default="")
     ap.add_argument("--reason", default="")
     ap.add_argument("--db", default="", help="journal path (default: the canonical resolver)")
+    ap.add_argument("--restore-notes-from", default="",
+                    help="repair mode: rebuild the named rows' notes from this pre-write backup")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -283,6 +383,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"REFUSE: {db} is not a readable trade journal ({exc}); nothing written.", file=sys.stderr)
         return 1
     try:
+        if a.restore_notes_from.strip():
+            return _run_restore(conn, db, a.restore_notes_from.strip(), ids, a.reason.strip(), a.apply)
         updates, refusals, skipped = plan(conn, ids, a.reason.strip(), accounts=_accounts_default(),
                                           venue_read=_venue_read_default)
         for t in skipped:
@@ -301,11 +403,43 @@ def main(argv: list[str] | None = None) -> int:
         if not updates:
             print("nothing to do.")
             return 0
-        print(f"backup: {backup(db)}")
+        print(f"row backup: {row_backup(db, conn, [u['id'] for u in updates])}")
         print(f"applied: {apply(conn, updates)} row(s).")
         return 0
     finally:
         conn.close()
+
+
+def _run_restore(conn: sqlite3.Connection, db: str, bak_path: str, ids: list[int], reason: str,
+                 do_apply: bool) -> int:
+    try:
+        bak = sqlite3.connect(f"file:{bak_path}?mode=ro", uri=True, timeout=30)
+        bak.execute("SELECT 1 FROM trades LIMIT 1")
+    except sqlite3.Error as exc:
+        print(f"REFUSE: backup {bak_path} is not a readable trade journal ({exc}); nothing written.")
+        return 1
+    try:
+        updates, refusals, skipped = plan_restore(conn, bak, ids, reason)
+    finally:
+        bak.close()
+    for t in skipped:
+        print(f"skip {t}: notes already carry pnl_source={UNMEASURED}")
+    for r in refusals:
+        print(f"REFUSE {r}")
+    for u in updates:
+        print(f"restore {u['id']}: notes rebuilt from backup; pnl_source={UNMEASURED}; {len(u['notes'])} chars")
+    if refusals:
+        print(f"{len(refusals)} refusal(s): NOTHING written.")
+        return 1
+    if not do_apply:
+        print(f"dry-run: {len(updates)} row(s) would change. Re-run with --apply.")
+        return 0
+    if not updates:
+        print("nothing to do.")
+        return 0
+    print(f"row backup: {row_backup(db, conn, [u['id'] for u in updates])}")
+    print(f"restored: {apply_restore(conn, updates)} row(s).")
+    return 0
 
 
 if __name__ == "__main__":

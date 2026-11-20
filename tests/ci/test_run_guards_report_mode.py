@@ -24,10 +24,12 @@ REPORT_ONLY = {
     "risk-basis-agreement", "roster-promotion-evidence-guard", "roster-symbol-reachability",
     "strategy-coverage-guard", "strategy-decision-record", "strategy-risk-guard",
     "tp-venue-cap-single-owner",
+    # not an operator gate decision: report-only by design, manager direction 2026-11-19 (PROGRAMME-REVIEW), "No new gates"
+    "queue-harness-flags-guard",
 }
 
 
-def test_exactly_the_operator_named_guards_are_report_only():
+def test_exactly_the_named_guards_are_report_only():
     got = {g["name"] for g in rg.GUARDS if rg.is_report_only(g)}
     assert got == REPORT_ONLY
     # report-only, not deleted: every one is still in the registry

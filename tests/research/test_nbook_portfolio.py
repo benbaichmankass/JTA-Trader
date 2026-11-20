@@ -54,6 +54,37 @@ FIXTURE = dict(roster=["ict_scalp_5m", "hf_vwap_revert"], clock_tf="5m",
                signal_ttl_bars=8)
 
 
+def _fixed_stream(base5m, offset: int):
+    """A deterministic signal stream on the strategy's OPEN-stamped 5m grid.
+
+    The real streams are too sparse on this 3.5-day file to anchor a parity test: 5 ict_scalp setups on main's
+    right/right grid became 0 on the native grid (PI-20261120-7ITMUEB1-0006; the session-window rejections were
+    identical, 288 vs 288), and nothing else on the roster signals at all. What this test compares is the ENGINE (tick
+    loop, election, monitors, PnL), so both engines are handed ONE fixed stream; the real monitors still manage exits.
+    """
+    import pandas as pd
+    df = bs._resample(base5m, "5min")
+    rows = []
+    for k, i in enumerate(range(300 + offset, len(df) - 20, 37)):
+        win = df.iloc[i - 12:i + 1]
+        entry = float(df["close"].iloc[i])
+        dist = max(float(win["high"].max() - win["low"].min()) / 2.0, entry * 1e-4)
+        side = "long" if k % 2 == 0 else "short"
+        sgn = 1.0 if side == "long" else -1.0
+        rows.append({"ts": df["timestamp"].iloc[i], "side": side, "entry": entry,
+                     "sl": entry - sgn * dist, "tp": entry + sgn * 2.0 * dist,
+                     "confidence": 0.5, "meta_json": "{}"})
+    return pd.DataFrame(rows, columns=["ts", "side", "entry", "sl", "tp", "confidence", "meta_json"])
+
+
+@pytest.fixture
+def fixed_streams(monkeypatch):
+    """Both engines read bs.generate_signal_stream; give every roster member the same bars so they CONTEST."""
+    def _gen(name, base5m, **_k):
+        return _fixed_stream(base5m, 0)
+    monkeypatch.setattr(bs, "generate_signal_stream", _gen)
+
+
 class _NeutralTrackRecord(rk.ReplayTrackRecord):
     """Tier-3 term made inert for BOTH engines.
 
@@ -69,7 +100,7 @@ class _NeutralTrackRecord(rk.ReplayTrackRecord):
 
 
 @pytest.mark.skipif(not DATA.is_file(), reason="committed candle fixture absent")
-def test_nbook_at_n1_reproduces_the_one_book_harness_trade_for_trade():
+def test_nbook_at_n1_reproduces_the_one_book_harness_trade_for_trade(fixed_streams):
     base5m = bs._load_candles(str(DATA))
 
     # Capture the one-book harness's closed trades. `run_system_backtest`
@@ -131,7 +162,7 @@ def test_nbook_at_n1_reproduces_the_one_book_harness_trade_for_trade():
 
 
 @pytest.mark.skipif(not DATA.is_file(), reason="committed candle fixture absent")
-def test_a_book_that_does_not_carry_the_global_winner_stands_aside_and_it_is_COUNTED():
+def test_a_book_that_does_not_carry_the_global_winner_stands_aside_and_it_is_COUNTED(fixed_streams):
     """The starvation shape, made visible rather than rendering as 'no signal'.
 
     `BL-20260827-PROP-ONLY-TWIN-WINS-THE-GLOBAL-SYMBOL-SLOT-AND-STARVES-ITS-PAPER-SIBLING`
