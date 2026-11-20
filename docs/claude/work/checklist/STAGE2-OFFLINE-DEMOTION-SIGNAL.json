@@ -1,22 +1,24 @@
 {
   "id": "STAGE2-OFFLINE-DEMOTION-SIGNAL",
   "title": "A demotion signal for Stage-2 legs that does not need 40 live closed trades: scheduled per-leg rolling Stage-0 re-measure at the full cost stack plus a risk-aware early-warning (cumulative net $ and R vs the leg's Stage-0 band, derisk-only), feeding MD-DEMOTE-S2-S1; registered before its first run",
-  "phase": null,
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": "claude-opus-5-5",
-  "ceiling_usd": 15,
-  "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.1 / top-10 #2. MEASURED: MD-DEMOTE-S2-S1 reads the last 40 closed trades (config/mandates.yaml ~566-576); at Stage-0 OOS trade rates 40 trades = ~13 weeks (eth_prop) to ~261 weeks (iaum); r4-demotion-gate 2026-10-28: demote 0, abstain_thin 6 of 6; measured USD on those rows negative on 5 of 6 legs, net ~-$62; comms/mandate_firings absent (no firing ever). Done when: the signal runs on cron, writes a dated comms record per Stage-2 leg, its rule (with a risk term per the objective in ARCH \u00a7 Active management) is registered and operator-approved, and a dry run on the 6 production legs is committed. Relates DEMOTE-T3 (done), AM-RISK-ADJUSTED-RULE, RISK-OBJECTIVE-AUDIT.",
-  "priority_rank": 2,
   "roadmap": [
     "L-LADDER"
   ],
-  "updated_at": "2026-10-29T07:33:15Z",
-  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
-  "_seq": 783
+  "priority_rank": 56,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "_seq": 783,
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.1 / top-10 #2. MEASURED: MD-DEMOTE-S2-S1 reads the last 40 closed trades (config/mandates.yaml ~566-576); at Stage-0 OOS trade rates 40 trades = ~13 weeks (eth_prop) to ~261 weeks (iaum); r4-demotion-gate 2026-10-28: demote 0, abstain_thin 6 of 6; measured USD on those rows negative on 5 of 6 legs, net ~-$62; comms/mandate_firings absent (no firing ever). Done when: the signal runs on cron, writes a dated comms record per Stage-2 leg, its rule (with a risk term per the objective in ARCH \u00a7 Active management) is registered and operator-approved, and a dry run on the 6 production legs is committed. Relates DEMOTE-T3 (done), AM-RISK-ADJUSTED-RULE, RISK-OBJECTIVE-AUDIT. [2026-11-12] p2 \"Both in parallel (needs capacity)\" + note \"And don't let anything get demoted without me looking at it first \": F1 work is PERF-F1-DEMOTION-SIGNAL; the operator-looks rule is DEMOTE-OPERATOR-LOOKS. Record: docs/plans/thursday-planning-2026-11-12-answers.md. [2026-11-12 08:20Z correction] p2 is ONE-OFF for this week's batch (operator, relayed ~08:05Z): the demotion candidates from F1/P1 incl. the ml_entry Stage-2 read go to the operator before any automatic demotion; the existing demotion ladder is unchanged; DEMOTE-OPERATOR-LOOKS dropped. Record \u00a7 p2.",
+  "phase": null,
+  "updated_at": "2026-11-12T08:16:37Z",
+  "updated_by": "session_01AFoLuMpRDMZ3GfqaMUnCk5",
+  "week_lane": "surge"
 }

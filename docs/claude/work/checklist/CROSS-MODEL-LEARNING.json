@@ -1,0 +1,28 @@
+{
+  "id": "CROSS-MODEL-LEARNING",
+  "title": "Cross-model learning loops: map which model learns from which; test LTR outcomes as entry-model training/eval signal (operator 2026-11-16)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-16T10:55:54Z",
+      "lane": "session_01AFoLuKd6mLTjJbQDVd44Cm"
+    }
+  ],
+  "note": "Operator 2026-11-16 (verbatim): \"how models are learning from each other's performance when it's relevant. Like ... the ML entry model learning from the LTR decision desk, and ... is it using that information to understand ... which trades were better, which ones ... weren't as good, or how to better structure them from the beginning ... not spamming models with data that doesn't help them make better decisions\". Manager read 2026-11-16 (verified in code): ml_entry retrain (scripts/research/ml_entry_retrain.py) trains only on kline-derived 2/3-ATR 24h bracket labels over the 60-perp universe; it reads no live trade, LTR review or LTR outcome. Entry->LTR exists (TP revision re-scores the entry model in-trade). LTR->student distillation is built (ml/datasets/families/claude_judgments.py) but the chain CJ-3 (landed_unproven) -> CJ-4-LABEL-VALIDATION (queued, blocked on CJ-3; runs at n>=150; blind_grades has 707 lines) -> CJ-5 / DESK-19 is stalled. 2026-11-16 lane session_01AFoLuKd6mLTjJbQDVd44Cm: PR #26486 (draft, HELD for manager merge). MAP comms/research/cross_model_learning/2026-11-16/MAP.md: no model trains on another layer's outcomes or LTR output; only entry->TP-revision re-score and conviction-meta on realised P&L cross layers. CJ chain: CJ-2 and CJ-3 both landed_unproven on ONE unread trainer observation (claude_judgments population line, blind_grade emitted>0, journal present); CJ-4 is data-runnable now (707 distinct blind trades >= 150) but has no instrument. Defects: 14 prompt_sha (max 128 rows) so the literal 3.3 source key cannot reach n150; pre_cutoff null on 707. Units (blocked/, none run): RQ-20261116-089f-01 CJ-4, -02 managed-target, -03 state-conditional bracket; instruments on row CML-HARNESS. Not worth feeding: see MAP section 3. 2026-11-16 10:57Z: #26486 merged 305a5141 (MAP + CJ chain diagnosis + units RQ-20261116-089f-01/-02/-03 in research/queue/blocked/). Question answered and reported to the operator; follow-through is row CML-HARNESS (instruments) then the units via research-ops. Lane archived.",
+  "phase": null,
+  "updated_at": "2026-11-16T10:55:55Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

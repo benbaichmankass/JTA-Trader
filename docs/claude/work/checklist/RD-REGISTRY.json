@@ -1,0 +1,23 @@
+{
+  "id": "RD-REGISTRY",
+  "title": "Idea-level ML and strategy testing registry: what has been tested, what failed, what is in iteration, what is on (scripts/research/rd_registry.py -> comms/research/rd_registry.json + GET /api/bot/research/registry; rendered on the decisions page R&D tab)",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuLjX1TGekdb38cqpvi",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25313
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "[2026-11-12 23:23Z lane RD-REGISTRY] MERGED #25313 at 22db4df7 (manager). DEPLOYED and OBSERVED: GET https://ict-bot.duckdns.org/api/bot/research/registry returned 200, present true, readState read, servedFrom built. 359 ideas (STRATEGY 219, ML 140) over 2,251 units; read_state ml_registry ok (live, 106 rows), research_catalog ok (0 read errors). Per-stage counts equal the committed comms/research/rd_registry.json exactly. Filter ?track=ML&stage=production returned the 5 real-money model rows (Foxhound-1 x2, Foxhound-4, Labrador-1b, Beagle-1) in 0.26 s from cache; ?track=NOPE returned 422. Cold build took 14.2 s. The FIRST request at ~23:21:30Z returned 502 'upstream request failed', most likely the git-sync web-api restart window. Not reproduced since; if a 502 recurs on a cold cache after a 30-min idle, that is the build time and needs a warm-up or a committed-file-first read. Open follow-ups: PI-20261112-B38CQPVI-0001 (rosterless legs); RD-REGISTRY-UI / UI-WQ-RD (AM-UI); survivor by_class lands with PR #25307; a unit subject/slot field would cut the 829 unattributed units and the per-slot gap.",
+  "phase": null,
+  "updated_at": "2026-11-12T23:23:00Z",
+  "updated_by": "session_01AFoLuLjX1TGekdb38cqpvi"
+}

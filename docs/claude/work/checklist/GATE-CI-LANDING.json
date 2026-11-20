@@ -1,0 +1,28 @@
+{
+  "id": "GATE-CI-LANDING",
+  "title": "Implement operator gate decisions 2026-11-12 (CI + landing): required checks -> [guards]; 16 run_guards guards report-only; PRL R7/R8/R9/R14 removed, R6 report-only; system-actions concurrency report-only",
+  "state": "landed_unproven",
+  "owner": "AM-DEVOPS",
+  "lane": "session_01AFoLuKAz918WCb8tGr6tuh",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator gate decisions 2026-11-12, CI/landing hygiene",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25318,
+    25326,
+    25325
+  ],
+  "blocked_on": [
+    "AM-DEVOPS merge of #25318 #25326 #25325"
+  ],
+  "due_by": "2026-11-13",
+  "note": "PRs open (drafts, held for AM-DEVOPS merge). Before-state of main protection NOT read (bp-report #25317 queued, no runner). Observe after merge: (1) branch-protection-sync run on the #25318 merge commit shows contexts=[\"guards\"] enforce_admins=true and 'Post-state verified'; (2) a new [bp-report] issue returns required_status_checks=[\"guards\"]; (3) first system-action after #25325 gets group system-actions-<run_id> (route job log). CI-TEST-SHADOW-NEVER-ORDERS structural fix handed to AM-ML (trig_01WQR4Ertcy3m4Eg8hBJXq2D). [2026-11-15 07:44Z AM-OPS] #25325 (system-actions per-action concurrency lanes) merged by manager 15a after the refresh (main merged in, claim committed, CI green). SKIP for the trader. Observed when two different system-actions run concurrently without one cancelling the other. [2026-11-15 07:45Z AM-OPS, manager 15a] #25325 merged 14eb17a4. landed_unproven; observed at the next system-action run whose outcome comment carries the overlap line or 'no other run'.",
+  "phase": "ci",
+  "updated_at": "2026-11-15T07:44:51Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

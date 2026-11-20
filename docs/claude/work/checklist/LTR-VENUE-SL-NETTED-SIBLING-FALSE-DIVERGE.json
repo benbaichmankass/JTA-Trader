@@ -1,0 +1,22 @@
+{
+  "id": "LTR-VENUE-SL-NETTED-SIBLING-FALSE-DIVERGE",
+  "title": "live_review_due venue_sl_diverges false positive on a netted position: the venue snapshot keeps ONE stop leg per book (the sibling's), not this package's own stop matched by order_id",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Filed 2026-11-15 (manager ask 03:09Z; measured by AM-OPS). FALSE POSITIVE: at 03:01Z mechanics venue_sl_diverges fired for pkg-a7b186d4ab9440e7 (trend_donchian_xrp_4h short; trades 7245 bybit_2, 7246 bybit_portfolio), comparing package SL 0.95642857 against venue stop 0.9707, which is the SIBLING's stop (pkg-ea232fa1 xrp_adx25 short, SL 0.97067143; trades 7247/7248) on the same netted short book. Both per-leg stop orders were live: the 4h leg's OWN stop (order 64a01696 on bybit_2, 99745333 on bybit_portfolio) filled at 0.9565 at 03:01:10Z, exactly -1.0R on the plan (closed_by netting_own_leg_fill). EVIDENCE (/api/diag/venue_protection_snapshot?order_package_id=pkg-a7b186d4ab9440e7): both rows read_state measured, venue_sl 0.9707, n_stop_legs 1, ref_sl 0.95642857, reads 174 since 00:08:45Z. So the snapshot recorded ONE stop leg for the book, the sibling's, while the package's own stop rested at the venue. COST: it woke a paid review on a false signal and nearly drove a wrong tighten that would have stopped the sibling out early. FIX DIRECTION: on a netted venue, the snapshot/due check grades the package's OWN stop order matched by the journal row's sl_order_id (trades.sl_order_id) among the book's stop legs. If its own leg is not found, report could_not_look/own_leg_absent, never compare against another leg's price. Related but distinct: LTR-MECHANICS-SIBLING-SLICE-FALSE-MISMATCH (packet side, same failure class); SHARED-BRACKET-FIX 2026-11-04 fixed the opposite-BOOK case (_bybit_snapshot_cov), not same-book siblings. Code: src/runtime/order_monitor.py _bybit_snapshot_cov / the snapshot writer, and src/runtime/live_review_due.py venue_events (~l.840-897). Tier 2 (observe-only path; no order). No new gate.",
+  "phase": "build",
+  "updated_at": "2026-11-15T03:13:01Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

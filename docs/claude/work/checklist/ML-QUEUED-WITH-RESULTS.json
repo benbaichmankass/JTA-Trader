@@ -1,0 +1,21 @@
+{
+  "id": "ML-QUEUED-WITH-RESULTS",
+  "title": "8 ML units status=queued with landed results never graded (re-dispatched); per-unit cause + disposition; mapper fix for the arms shape",
+  "state": "queued",
+  "owner": "research-ops",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "[2026-11-15 ML-PRIMARY-3, item 2 of the post-throttle plan] 8 ML units sit status=queued with landed results that no grader closed; un-graded units get re-dispatched (b604 3 runs, b607 4, b620 6), which wastes runner minutes. Cause and disposition per unit (MEASURED from the committed outputs on main):\n(1) b604-01 and b607-01: the harness wrote per-ARM verdicts that ml_entry_v2_run.write_verdict could not read (it read only `cells`), so they landed producer_failed. FIXED going forward on branch claude/v2run-arms-verdict (arms read like cells, +5 tests). Mechanical verdicts from the latest run's own words: b604 INDETERMINATE (R1_isotonic indeterminate, R2_binned no_win; 41376491565); b607 PASS on dev folds (R1/R2 single + E2/E3 ens3 win; 41379084221). Those candidates were consumed by the v2 stack b608, whose held-out reads later failed (Foxhound-2), so no live decision rides on them.\n(2) b608-01 and a508-01: descriptive result shapes, no verdict word. b608 winning_stack S3_R2_gate_24 (consumed by b609/b610, v2 FAIL); a508 flags BTC/ETH HARM, XRP/ADA/SOL UNDETERMINED. Hand-grade each against its own rule.\n(3) b620-01 and b626-01: the measured runs DISAGREE (b620 fail, fail, pass; b626 no_action_warranted x2, fail). The grader rightly refuses a unit with conflicting rows. Likely code changed between runs (e.g. ML-ENTRY-HOLE-SAFE-ADOPT 11-12); grade on the run at the registered code, or record INDETERMINATE with a reproducibility note.\n(4) e9a1-01: descriptive by its own rule; the harness writes verdict 'descriptive' (not an E5 word), so every record is malformed. Its confirming unit e9a1-02 already ran (holdout ledger). Disposition: done (consumed); a separate defect is that ml_entry_equity's dev mode should write a valid E5 word.\n(5) 98e3-15: NOT a grading case. Both runs exited 1 on 'alpaca GET /v2/stocks/bars: still throttled/unavailable after 8 attempts' (43504856587). A re-run at a quieter time is the fix.\nOwner for the grades: research-ops' pass (manager 15a). This lane ships only the mapper fix. [2026-11-15 15:34Z ML-PRIMARY-3] Mapper fix #26354 MERGED: ml_entry_v2_run.write_verdict reads per-arm verdicts. Arm-shaped runs from now on write verdict.json and grade mechanically. Merged, not observed: the observation is the next arm-shaped run landing measured, not producer_failed. The 8 existing units still need research-ops' grading per the dispositions above (no unit was edited).",
+  "phase": null,
+  "updated_at": "2026-11-15T15:34:52Z",
+  "updated_by": "session_01AFoLuMkZYvbttnmb2gtVcA"
+}

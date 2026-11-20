@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "GET /api/bot/gates shows >=1 row with hits_read_state=measured, or a record that no registered gate writes a distinguishable signals reason",
+    "kind": "event"
+  },
+  "id": "PI-20261112-G6AU3FAC-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "GATE-REGISTRY (session_01AFoLuMuyahDZgPg6aU3fac)",
+    "rerun": "python3 scripts/ops/gates.py list --json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(sum(1 for g in d['gates'] if g['hits_read_state']=='measured'))\""
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "GATE-REGISTRY hits: every gate_registry row has hits_14d=null (hits_read_state=not_measurable) because gate refusals are logged on the VM, not in a queryable table. Mechanism shipped in #25322: comms/gates/hit_probes.json {gate_id: {table: signals, column: reason|status, equals: <value>}} turns a row measured. Next: read DISTINCT signals.status/reason on the live journal (diag relay), map values that correspond to registered gates (e.g. GATE-BAR-DEBOUNCE, GATE-MARKET-HOURS, open-package gate), commit only probes whose value is SEEN live. Population: 298 registry rows (2026-11-12 seed)."
+}

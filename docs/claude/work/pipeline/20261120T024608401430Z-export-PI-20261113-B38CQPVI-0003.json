@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the leaking test file is named and fixed (or the fixture made self-isolating), or 10 consecutive full-suite pytest-runs pass the file",
+    "kind": "observation"
+  },
+  "id": "PI-20261113-B38CQPVI-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS, PR #25820 CI attempt 1 vs 2",
+    "rerun": "python3 -m pytest -q -n logical --dist loadfile tests/  # look for test_live_replay_parity_ml failures on one worker"
+  },
+  "owner": "FRONTIER",
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "ML-LIVE-PARITY-ML-LEGS",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "PARITY-ML-ORDER-DEPENDENT: tests/test_live_replay_parity_ml.py fails order-dependently under xdist --dist loadfile. Evidence: PR #25820 pytest-run 43485229948 attempt 1 (head 9d360b13) had 5 failures, all on worker gw1 and all on the module fixture 'entry' (ml_entry crypto, BTCUSDT 1h). The fixture's eval rows carried no 'feat=' refusal, so analyse_ml_entry returned could_not_check and four more failures cascaded (None comparisons). Attempt 2 on the SAME sha passed. Not reproducible locally: the file alone, after test_alpaca_partial_tp_replace, on latest main, in a depth-1 clone, and after 27 ml_entry/parity files in one process (463 passed). The served pointer did not move. Suspects: a test that leaves ml_entry / ml_entry_profile / feature-module state behind on the worker (ME.load_model _CACHE is mtime-keyed). A flaky gate on every order_path PR (full suite)."
+}

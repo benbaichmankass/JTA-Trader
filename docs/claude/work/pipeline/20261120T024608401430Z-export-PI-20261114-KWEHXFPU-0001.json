@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v10",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "curl https://ict-bot.duckdns.org/api/bot/work/pipeline-map returns read_state 'read' with last_commit.sha on main, AND a human (the operator) confirms Work -> Pipeline map renders the tables and the mermaid flow on the deployed SPA (headless checks against Pages do not work from the sandbox, per the dashboard CLAUDE.md).",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-KWEHXFPU-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PIPELINE-MAP session_01AFoLuJEArj5fnhkwehXFPU, 2026-11-14, building docs/reference/trading-pipeline-map.md",
+    "rerun": "curl -sS https://ict-bot.duckdns.org/api/bot/work/pipeline-map | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d[\"read_state\"],d[\"last_commit\"])'; then fetch the live SPA index.html, read the hashed bundle, grep it for 'Trading pipeline map' (positive) and a string absent from the change (negative control)."
+  },
+  "routed_to": "PIPELINE-MAP",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "PIPELINE-MAP landed in pieces and is not yet observed: the doc and weekly check (JTA-Trader #26142, Tier 1, auto-merge armed), the read route GET /api/bot/work/pipeline-map (#26143, HOLD for the manager), and the Work-tab 'Pipeline map' view (ict-trader-dashboard #270, HOLD). Merged != deployed != observed.\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: observation of that row's own landing EVIDENCE: row PIPELINE-MAP landed_unproven; item names #26142/#26143",
+  "why_it_matters": "The operator asked to review the pipeline on the Work tab; until the route is deployed and the view renders in a real browser, the request is not delivered."
+}

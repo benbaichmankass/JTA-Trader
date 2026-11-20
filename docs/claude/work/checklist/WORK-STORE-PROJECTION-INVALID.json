@@ -1,0 +1,21 @@
+{
+  "id": "WORK-STORE-PROJECTION-INVALID",
+  "title": "19 live work-store observation items project to pipeline records that pipeline.validate refuses (15 done/killed with no terminal_reason, 4 routed with no routed_to; none from BACKLOG-DRAIN-20261112): the store accepts writes the pipeline schema refuses, so any export (work.py export --to-files) would fail pipeline-guard",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "MEASURED 2026-11-12 ~10:00Z: work.py export --to-files then pipeline.py --check -> 19 refusals. Ids include PI-20260927-W6OPSR-0004, PI-20261017-VMDGITZI-0002, PI-20261022-J9X7ACR3-0001, PI-20261028-PVRNY2JI-0001/0004/0005, PI-20261104-PREP1104-0002, PI-SOAK-20261101-bybit_1-trend_donchian_xrp_adx25, PRB-20260720-OPTIONS-PORTFOLIO-GRADUATION (terminal_reason missing); PI-20261106-WSDS4-0001, PI-20261111-TX7TX2ZN-0001/0002/0004 (routed_to missing). Rerun: python3 scripts/ops/work.py export --to-files --root <tmp> && python3 scripts/ops/pipeline.py --check --store <tmp>/docs/claude/work/pipeline. Fix: give each a terminal_reason/routed_to, and decide whether the store's write validation should match pipeline.validate.",
+  "phase": null,
+  "updated_at": "2026-11-12T09:56:37Z",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev"
+}

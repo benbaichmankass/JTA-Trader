@@ -1,0 +1,27 @@
+{
+  "id": "PROP-FORMING-BAR-REEMIT",
+  "title": "trend_donchian_eth_4h + sol_4h decide on the FORMING 4h bar and re-emit an order package every ~60 s; on the prop path a re-emit supersedes the resting prop ticket (entry chasing). No duplicate exposure measured.",
+  "state": "blocked",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": [
+    {
+      "clears_when": "that re-measure verdict lands. If CLOSED wins: decision_bar: closed (Tier 3 via the manager). If FORMING wins: AM-OPS builds the Tier-2 entry-chasing fix (hold a resting prop entry instead of cancel-and-re-ticket within one bar)",
+      "kind": "research_unit",
+      "ref": "AM-ML pre-registered forming vs closed re-measure for trend_donchian_eth_4h + sol_4h (merged with PI-20261113-AMML-0002, due 2026-11-17)",
+      "what": "the verdict on whether these legs should decide on the forming or the closed 4h bar"
+    }
+  ],
+  "next_action": null,
+  "due_by": "2026-11-17"
+}

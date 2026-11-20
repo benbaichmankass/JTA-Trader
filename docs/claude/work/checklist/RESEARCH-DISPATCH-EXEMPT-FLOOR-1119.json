@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-DISPATCH-EXEMPT-FLOOR-1119",
+  "title": "Research dispatcher: starvation-floor one-fire cap and infra yield defer the exempt trainer/kaggle_cpu backends (trainer idle since 03:25Z 2026-11-19)",
+  "state": "done",
+  "owner": "lane ML-PRIMARY-10",
+  "lane": "ML-PRIMARY-10",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-21",
+  "note": "MEASURED dispatcher run 44492257802 (09:19Z): backpressure repo queued 68 fresh (cap 10), 121 stale >24h ignored (gh list truncated at 200; repo-wide queued ~456), infra queued 2 (yield at 2). The infra block was lifted by the starvation floor, which caps the cycle at inflight+1 = 4: one runner unit fired, and every other unit incl. trainer a10d-03 was deferred on 'research compute cap 4 reached' while trainer showed 0/1 busy. Trainer and kaggle_cpu are already in limits.repo_queued_exempt_backends, but the floor clears the block, so soft_block goes False and the inflight+1 cap binds them. Infra yield never honoured the exemption. Fix: exempt backends are bounded by their own max_concurrent and max_total_inflight, never by the floor's one-fire cap or the infra yield. Manager-proposed (excluding runs >6h) does not address this: the block that cycle was infra-kind.",
+  "phase": "research-ops",
+  "updated_at": "2026-11-19T14:20:32Z",
+  "updated_by": "session_01AFoLuKrgqS76QYDyWBAEMQ"
+}

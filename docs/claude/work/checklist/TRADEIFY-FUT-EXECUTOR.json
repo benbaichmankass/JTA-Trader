@@ -1,0 +1,24 @@
+{
+  "id": "TRADEIFY-FUT-EXECUTOR",
+  "title": "Build (when unblocked): Tradeify FUTURES executor -- Tradovate ticket/bracket automation on the operator's own device (breakout_2 phone/PC executor pattern), session-flat close before 16:45 ET, dry-run first",
+  "state": "dropped",
+  "owner": "unassigned",
+  "lane": "TRADEIFY-FUT-EXECUTOR",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    "FUT-INTRADAY-DUKA-LANE",
+    "FUT-CME-INTRADAY-HIST"
+  ],
+  "due_by": "2026-11-19",
+  "note": "Filed 2026-11-12 for TRADEIFY-FUTURES-EVAL Q3 (what builds are needed). Facts from docs/research/tradeify-futures-frontier-2026-11-12.md section 4. TRADEIFY-WIRE (DXtrade REST on the VM) does NOT carry over. Tradeify futures uses Tradovate, Rithmic or WealthCharts. Tradovate API: 'only available for LIVE funded accounts' (help-centre article 10468222). Logging in through a VPS/VPN is banned (12268494). The bot clause needs 'a live video of you enabling the code on your own PC'. So the path is src/prop/phone_executor.py's claim/ticket/kill-switch plumbing, plus new Tradovate UI scripts on the operator's device. Estimate 2-4 weeks. Blocked until BOTH hold: (a) an edge -- one session-flat leg passes Stage 0 on the real CME contract (RQ-20261112-09d2-04 / -05) and the EOD-trailing survival rule (RQ-20261112-09d2-02); (b) a written Tradeify answer that our setup is allowed (server-side decisions, our own data feed vs FTA 6.3, device execution). (b) is an operator email. Tier 2 because it adds an order path.",
+  "phase": null,
+  "updated_at": "2026-11-12T09:06:41Z",
+  "updated_by": "session_01AFoLuLwRU7eg9KzpMcxWu"
+}

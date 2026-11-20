@@ -1,0 +1,24 @@
+{
+  "id": "RENAME-SLUG-FUNCTIONAL-AUDIT",
+  "title": "Repo rename left functional references to the old slug Metis-Insights (permission rules, string-compare defaults): audit and fix every one that a GitHub redirect does not cover",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops correctness, rename follow-through",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24942
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-11",
+  "note": "Operator 2026-11-08, verbatim: 'that's the kind of thing that we should catch and change when we're doing something. When we're doing something like changing the name of the repo. So that is like a faulty task.' FOUND: the 10-27 manager merge allow rules in .claude/settings.json pinned repos/benbaichmankass/Metis-Insights; after the 10-28 rename they matched nothing, so every held PR needed an operator auto-off window for ~11 days (fix: #24221). CLAUDE.md 'do not chase a rename sweep' is right for prose and labels (redirects cover URLs and API calls), but WRONG for anything matched as a STRING: permission patterns, equality compares, prefixes. Remaining live hits on main (git grep, code/config only): scripts/ops/manager_view.py DEFAULT_REPO, scripts/ops/session_reaper.py REPO_PREFIX 'Metis-Insights:', scripts/ops/lane_reconcile.py default repo, scripts/ops/session_registry.py prompt text and slug compare (~L681), scripts/ops/pr_action_gate.py examples. DO: classify each hit as string-matched (fix to read GITHUB_REPOSITORY / git remote, per CLAUDE.md 'Tooling reads the repo slug from GITHUB_REPOSITORY / git remote, never a literal') vs label/fixture (leave); amend docs/runbooks/jta-trader-rename.md and the CLAUDE.md 'Repo identity' line so a future rename greps string-matched slugs first. Paused under the usage cut until the Wed 11-11 reset unless the operator pulls it forward.",
+  "phase": null,
+  "updated_at": "2026-11-08T08:52:52Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

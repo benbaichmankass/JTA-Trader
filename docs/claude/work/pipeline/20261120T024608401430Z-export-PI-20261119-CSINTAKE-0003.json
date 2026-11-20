@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 7780's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-CSINTAKE-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:7780 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 7780"
+  },
+  "state": "done",
+  "terminal_reason": "Resolved by PI-20261118-JFWRQYOV-0004 (manager OK 11:38Z): this exchange_flat_reconciled close was the reconciler closing the row before its bracket entry filled. The reopen repair (system-actions run 44514714053, 2026-11-19T11:32:40Z) reopened it with the venue fill price; fresh reads at ~11:36-11:39Z show journal 1981 = venue 1981 QQQ short, and every package's SL+TP legs sum to 1981.",
+  "what": "mechanics fault on trade 7780 (alpaca_paper/qqq_pullback_1h QQQ, exit_reason='exchange_flat_reconciled'): exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded"
+}

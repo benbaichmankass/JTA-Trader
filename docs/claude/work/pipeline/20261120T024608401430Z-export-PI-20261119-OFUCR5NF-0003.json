@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "scripts/backtest_ict_scalp.py accepts --side-filter long|short|both (default both, byte-identical when absent) with a parity test against the live ict_scalp side filter, merged on main; then git-mv the 7 blocked units RQ-20261118-abab-24/26/28/30/32/34/36 back to research/queue/ with status queued, rule unchanged",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-OFUCR5NF-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20261118-abab-26 run 44443932727 (comms/research/RQ-20261118-abab-26/44443932727/logs/cmd-0.log), lane QUEUE-FILL-STANDING-W47b 2026-11-19",
+    "rerun": "grep -c -e '--side-filter' scripts/backtest_ict_scalp.py   # 0 = still unsupported; and: grep -l 'ict_scalp' research/queue/blocked/RQ-20261118-abab-*.yaml"
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "M40"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "ADD --side-filter TO scripts/backtest_ict_scalp.py (parity-tested against the live side filter), THEN UNBLOCK 7 DIRECTION UNITS (2026-11-19, QUEUE-FILL-STANDING-W47b). RQ-20261118-abab-26 (ict_scalp_avax_5m, run 44443932727, Kaggle overflow) failed deterministically: exit_lever_ablation passes --side-filter long to scripts/backtest_ict_scalp.py, which rejects it (backtest_ict_scalp.py: error: unrecognized arguments: --side-filter long); the candle feed itself was served. The same defect sits in every queued DIRECTION unit on an ict_scalp leg: abab-24 (ict_scalp_5m), abab-26 (avax_5m), abab-28 (mgc_15m), abab-30 (sol_15m), abab-32 (sol_5m), abab-34 (xrp_15m), abab-36 (xrp_5m); each carries 4 side-filter lines and none had a landed result except abab-26's failures. All 7 are BLOCKED on this item (manager: block, do not retire). BUILD: a --side-filter {long,short,both} flag in backtest_ict_scalp.py (default both, byte-identical when absent), parity-tested against the live ict_scalp side filter (name the live filter in the PR), with a self-test and a test that the unfiltered output is unchanged. NOTE: scripts/backtest_ict_scalp.py is an evidence-harness file; the manager schedules the merge and decides whether it is a restart-path file. Gates this adds: none."
+}

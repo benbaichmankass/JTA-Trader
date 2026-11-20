@@ -1,0 +1,22 @@
+{
+  "id": "HOURLY-CRON-SCHEDULE-DROP",
+  "title": "GitHub fires this repo's hourly crons ~3 times a day: 3/24 scheduled slots for every hourly workflow measured; counterfactual-grade-closed (the mechanics-fault intake) has no keeper fallback",
+  "state": "done",
+  "owner": "AM-OPS-7",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 ~10:40Z by AM-OPS-7 (manager: file one row with run counts, do not fix). MEASURED (Actions API, event=schedule, created >= 24 h before 10:38Z): counterfactual-grade-closed 3, dashboard-edge-watch 3, desk-decisions-mirror 3, desk-scan-packet 3, forecast-grade 3, live-review-rows-mirror 3, main-tree-watch 3, research-queue-dispatch 3, research-watchdog (*/15) 3, live-review-wake (*/5) 4, work-store-outbox 4, schedule-keeper 5 (2 cancelled), work-digest 0 -- against 24 expected for hourly (96 for */15, 288 for */5). The slots arrive in repo-wide BURSTS, not late singles: counterfactual 14:12Z/22:05Z/03:38Z, research-queue-dispatch 14:07Z/22:01Z/03:34Z, desk-scan-packet 13:48Z/21:49Z/03:12Z. So GitHub is DROPPING the schedule (it creates a few slots every ~6-8 h); it is not a backlog of created-but-queued runs (live-review-wake has 1 queued). Separately, the repo had 463 queued + 21 in-progress runs at 10:38Z. Already known as a class: schedule-keeper.yml header (MEASURED 09-20..27, dashboard-edge-watch 15/168) and KEEPER-VM-FLOOR (done: the trainer VM dispatches schedule-keeper hourly). Covered by the keeper's dispatch (workflow_dispatch runs in the same 24 h): research-queue-dispatch 52, desk-scan-packet 22. NOT in scripts/ops/schedule_keeper.py's targets: counterfactual-grade-closed, dashboard-edge-watch, desk-decisions-mirror, live-review-rows-mirror, main-tree-watch, work-digest, work-store-outbox (and live-review-wake: LTR-GH-WAKE-CRON-THROTTLED). Consequence today: #27170's intake fix (merged 10:31Z) will not run until the next burst. work-digest shows 0 scheduled runs in 24 h; check whether it is disabled or moved. Decision for the manager: add the uncovered hourly workflows to the keeper's targets, or accept ~3 runs/day for them. 2026-11-19 #27259 merged (48891c2; full-file-list decide SKIP, also confirmed by the manager). LANDED_UNPROVEN. Observation that closes it: in a schedule-keeper run after 48891c2, the keeper's decision lines show counterfactual-grade-closed, desk-decisions-mirror, live-review-rows-mirror and work-store-outbox DISPATCHED when their hourly slot is starved (no run since slot + 30 min), and research-watchdog dispatched at its starved_min 30 floor; then each target shows a workflow_dispatch run (actor = the keeper) in the Actions API. dashboard-edge-watch / main-tree-watch: dispatched, and their late cron run skipped by the dedupe job.",
+  "phase": null,
+  "updated_at": "2026-11-19T12:16:56Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

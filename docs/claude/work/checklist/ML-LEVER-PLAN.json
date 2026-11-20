@@ -1,37 +1,37 @@
 {
   "id": "ML-LEVER-PLAN",
   "title": "ENTRY lever plan: ranked levers, one pre-registered dev-only unit per lever test, one combined held-out read (record: research/levers/ml-entry.yaml declared)",
-  "phase": "research",
   "state": "queued",
-  "owner": "manager",
+  "owner": "FRONTIER",
   "lane": null,
   "model": null,
-  "ceiling_usd": 10,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Operator 2026-11-01 ~17:55Z via manager: a specific plan for improving ml_entry (selectivity, active management, levers, testing plan). Record = research/levers/ml-entry.yaml declared.ranked_levers + ml-brackets.yaml declared + units b601-01..b605-01 (blocked; shared harness ML-LEVER-HARNESS) + a508-01 + d507-01. Held-out year already spent on two bracket geometries (c692-02), so the combined v2 candidate read uses W1 (2026-10-01..31, unspent) or live forward data, ONE read, rule written first. Gates this adds: none.  [2026-11-01 18:30Z] ROUND 1 DONE (dev, 3 seeds): b606 cost gate 0.06 WIN (+0.0205 vs +0.0089), b602 low-vol abstention WIN (same cost-share mechanism), b601 2/4 +0.0126 below power, b604 score is a ranking not an expectation (slope 0.17), a508 BTC/ETH HARM and coin-driven. Records: comms/research/RQ-20261101-{b601,b602,b604,b606,a508}-01/local-20261101T1830Z/. Units b601/b602/b604/a508/b606 queued as P2 priority 1 (plan picks 2-6). Still open: d507-01, b603-01, b605-01, active management; combined held-out read on W1 or live forward, rule first.  [2026-11-01 19:10Z] d507-01 INDETERMINATE (LOFO quantile threshold is a noise source). b607-01 (recipe at a matched decision share, registered first): R2 single +0.0293 vs base +0.0089 WIN (also R1, E2, E3; R0 ensemble no win) - regularisation is the lever. Combined-read candidates: recipe R2, cost gate 0.06, bracket 2/4. Interaction untested (next: stack test on dev, then the combined read on W1 or live forward).  [2026-11-01 20:20Z] OPERATOR 'swap to v2 fast': b608-01 dev stack S3 (R2 + cost gate 0.06 + 2/4) +0.0478 vs +0.0089 (8/8 folds, 4/4 years, super-additive). b609-01 ONE W1 read (rule first, lock claimed): FAIL, v2 -0.1161 (n=320) vs frozen v1 -0.0405 (n=894), shorts worse than random on a short-favouring month. NO SWAP PR built; v1 stays. W1 spent for the stack; re-test needs a fresh window.  [2026-11-01 21:05Z] OPERATOR 'Live at 1.5% as approved + v2 on bybit_1': b610-01 registered (rule + label-free close first): ONE read of the FROZEN v2 artifact on a fresh window from 2026-11-01, closed when the label-free candidate count reaches 1,100 (about 600 decisions; MEASURED W1 ratio 0.539) or 2026-12-31. Accrual MEASURED: W1 594 candidates = 19.2/day -> D=2026-12-28; dev ~27 decisions/day (~50 candidates/day) -> D=2026-11-23. fwd-read harness reproduces the W1 count (594). bybit_1 leg = mechanics soak only; Tier-3 PR stacked on #22079 held. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: no live lane; lever-map PR #22279 MERGED 2026-11-02. Per the row: resume after 2026-11-04T18:00Z; b610-01 decides v2 (read ~2026-11-23..12-28).",
-  "updated_at": "2026-11-05T09:20:53Z",
-  "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
   "roadmap": [
     "L-ML-LIVE"
   ],
-  "observation": {
-    "what": "each lever unit (b601-01 brackets, b602-01 selectivity, b603-01 horizon/cadence, b604-01 calibration, b605-01 target, a508-01 symbol set, d507-01 recipe) has a result record, and the dev winners are collected into ONE combined held-out read unit with its rule written first",
-    "how_to_check": "ls comms/research/RQ-20261101-b6*-01 comms/research/RQ-20261101-a508-01 comms/research/RQ-20261101-d507-01",
-    "due_by": "2026-11-03"
-  },
-  "writeback": {
-    "roadmap": "L-ML-LIVE: ENTRY lever outcomes written back when each unit closes (levers map reading)",
-    "arch": "none: research plan, no contract change"
-  },
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-23",
+  "_seq": 886,
   "lane_history": [
     {
-      "lane": "ML-RECIPE",
-      "archived_at": "2026-11-05T09:20:53Z"
+      "archived_at": "2026-11-05T09:20:53Z",
+      "lane": "ML-RECIPE"
     }
   ],
-  "due_by": "2026-11-07",
-  "_seq": 886
+  "note": "Operator 2026-11-01 ~17:55Z via manager: a specific plan for improving ml_entry (selectivity, active management, levers, testing plan). Record = research/levers/ml-entry.yaml declared.ranked_levers + ml-brackets.yaml declared + units b601-01..b605-01 (blocked; shared harness ML-LEVER-HARNESS) + a508-01 + d507-01. Held-out year already spent on two bracket geometries (c692-02), so the combined v2 candidate read uses W1 (2026-10-01..31, unspent) or live forward data, ONE read, rule written first. Gates this adds: none.  [2026-11-01 18:30Z] ROUND 1 DONE (dev, 3 seeds): b606 cost gate 0.06 WIN (+0.0205 vs +0.0089), b602 low-vol abstention WIN (same cost-share mechanism), b601 2/4 +0.0126 below power, b604 score is a ranking not an expectation (slope 0.17), a508 BTC/ETH HARM and coin-driven. Records: comms/research/RQ-20261101-{b601,b602,b604,b606,a508}-01/local-20261101T1830Z/. Units b601/b602/b604/a508/b606 queued as P2 priority 1 (plan picks 2-6). Still open: d507-01, b603-01, b605-01, active management; combined held-out read on W1 or live forward, rule first.  [2026-11-01 19:10Z] d507-01 INDETERMINATE (LOFO quantile threshold is a noise source). b607-01 (recipe at a matched decision share, registered first): R2 single +0.0293 vs base +0.0089 WIN (also R1, E2, E3; R0 ensemble no win) - regularisation is the lever. Combined-read candidates: recipe R2, cost gate 0.06, bracket 2/4. Interaction untested (next: stack test on dev, then the combined read on W1 or live forward).  [2026-11-01 20:20Z] OPERATOR 'swap to v2 fast': b608-01 dev stack S3 (R2 + cost gate 0.06 + 2/4) +0.0478 vs +0.0089 (8/8 folds, 4/4 years, super-additive). b609-01 ONE W1 read (rule first, lock claimed): FAIL, v2 -0.1161 (n=320) vs frozen v1 -0.0405 (n=894), shorts worse than random on a short-favouring month. NO SWAP PR built; v1 stays. W1 spent for the stack; re-test needs a fresh window.  [2026-11-01 21:05Z] OPERATOR 'Live at 1.5% as approved + v2 on bybit_1': b610-01 registered (rule + label-free close first): ONE read of the FROZEN v2 artifact on a fresh window from 2026-11-01, closed when the label-free candidate count reaches 1,100 (about 600 decisions; MEASURED W1 ratio 0.539) or 2026-12-31. Accrual MEASURED: W1 594 candidates = 19.2/day -> D=2026-12-28; dev ~27 decisions/day (~50 candidates/day) -> D=2026-11-23. fwd-read harness reproduces the W1 count (594). bybit_1 leg = mechanics soak only; Tier-3 PR stacked on #22079 held. 2026-11-05 CHECKLIST-STATE-TRUTH sweep: no live lane; lever-map PR #22279 MERGED 2026-11-02. Per the row: resume after 2026-11-04T18:00Z; b610-01 decides v2 (read ~2026-11-23..12-28). [2026-11-12 10:50Z AM-ML] decision: 2026-11-12 operator decisions page w14 \"Take the assistant managers' defaults on all three\". AM-ML DEFAULT for b610-01 (\"re-point at W1 2026-10 now, or wait for forward data?\"): DO NOT WAIT and DO NOT re-read W1. Reasons: W1 was already read for this exact frozen v2 artifact (b609-01 FAIL -0.1161 n=320), so a W1 re-read is the same data at a stricter deflated bar; and the unit already carries a registered pre-run WINDOW CHANGE to an in-hand symbol holdout S (20 non-manifest perps, 2022-01..2026-10, disjoint symbol claim via holdout_lock). So: run the registered symbol-holdout read now, ledger claim before any outcome. The remaining blocker is the driver option (blocked_on); routed to lane ML-DECISION-MODELS (session_01AFoLuHrh2txGoKFBMCuhC9). Operator note on w14: \"No fable reset this week, just the general one\". [2026-11-12 ~11:10Z lane ML-DECISION-MODELS session_01AFoLuHrh2txGoKFBMCuhC9] RQ-20261101-b610-01 READ (operator decision relayed by AM-ML: decision: 2026-11-12 operator decisions page w14 \"Take the assistant managers' defaults on all three\"): FAIL under RULE-20261101-b610-01 (thresholds unchanged). Population: frozen ENTRY v2 artifact (no refit) on the first 100 lexicographic USDT-M perps outside bp2-f4271084b120 with >= 3y of 1h bars (75 had rows in the window, 73 traded), decisions 2026-09-24..2026-10-31. WINDOW NOTE: the registered 2022-01..2026-10 window S overlaps the artifact's training dates and holdout_lock rule 4 (GEXSLEAK) refuses it, so the amendment pushed before the run (c757d428c) reads the time-disjoint slice and widens to 100 symbols (the registered 20 alone would have been ~130 decisions, under the 300 floor). RESULT: v2 mean net R -0.0443 per decision (n=948, 73 symbols, SE 0.038; gross -0.0005, cost 0.044); longs +0.479 (n=114), shorts -0.116 (n=834) while always-short made +0.050: the short picks are worse than random; random matched -0.0042 (p95 +0.028). (a) met, (b) FAIL (point bar t>=1.62 x SE at ENTRY read 11 on the window, and the point is negative anyway), (c) FAIL: frozen v1 reference on the same rows +0.0245 (n=1,857, SE 0.026; longs +0.120, shorts +0.0005). Registered 20, reported: v2 -0.166 (n=194) vs v1 +0.026 (n=425). Second independent read against v2 (after b609 W1 -0.116): v2 does not generalise; no Tier-3 packet. MONITORING (not a gate, not a promotion input): frozen v1 is +0.025 on a population disjoint from it in both symbols and time (13 months past its training end). Records: research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl, comms/research/RQ-20261101-b610-01/local-20261112T1107Z/; 2 ledger claims appended. PR #25278. v2 leg on bybit_1 stays as is (testing floor; never demoted by a lane). [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D3-FOXHOUND-1, MLP-D3-RANKING-TARGETS (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
+  "observation": {
+    "due_by": "2026-11-03",
+    "how_to_check": "ls comms/research/RQ-20261101-b6*-01 comms/research/RQ-20261101-a508-01 comms/research/RQ-20261101-d507-01",
+    "what": "each lever unit (b601-01 brackets, b602-01 selectivity, b603-01 horizon/cadence, b604-01 calibration, b605-01 target, a508-01 symbol set, d507-01 recipe) has a result record, and the dev winners are collected into ONE combined held-out read unit with its rule written first"
+  },
+  "phase": "research",
+  "updated_at": "2026-11-13T22:19:14Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "writeback": {
+    "arch": "none: research plan, no contract change",
+    "roadmap": "L-ML-LIVE: ENTRY lever outcomes written back when each unit closes (levers map reading)"
+  }
 }

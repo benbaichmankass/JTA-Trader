@@ -1,0 +1,22 @@
+{
+  "id": "TRADER-DEPLOY-DOUBLE-RESTART",
+  "title": "Two deploy paths (system-action pull-and-deploy, ict-git-sync) both restart ict-trader-live: 2 of 36 restarts 11-11..11-12 were the race; at 03:43Z one boot was killed 24 s in and never ticked. Fix = one restarter (or git-sync skips when a deploy is in flight); also read whether the boot catches up a bar boundary missed in the ~75 s blind window (06:30:00Z restart spanned a 15m boundary). Tier 2. Evidence: docs/reviews/2026-11-12-trader-restart-accounting.md",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25310
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-16"
+}

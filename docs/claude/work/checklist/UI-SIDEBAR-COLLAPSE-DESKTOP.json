@@ -1,0 +1,22 @@
+{
+  "id": "UI-SIDEBAR-COLLAPSE-DESKTOP",
+  "title": "UI push (post-reset): make the dashboard sidebar collapsible on desktop, as it already is on mobile",
+  "state": "landed_unproven",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": "session_01AFoLuMr5RixbuwJtqED344",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator UI ask 2026-11-10; small SPA change in the post-reset UI push",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Operator 2026-11-10 ~12:45Z, verbatim: 'Also another item for the ui push after the reset - I want the sidebar on the UI to be collapsable on the desktop version like it is in the mobile version'. Scope: benbaichmankass/ict-trader-dashboard (Svelte SPA). Reuse the existing mobile collapse behaviour on desktop breakpoints: a toggle button, a collapsed rail or hidden state, the main content widening to fill the space, and the choice remembered per browser (localStorage, wrapped in try/catch). Done = on desktop the sidebar collapses and expands from a visible control, and the state persists across reloads. Batch with the other post-reset UI items (PROP-UI-BRACKETS-CLOSED, PHONE-SCREENSHOTS is the app, not the SPA). Throttle: waits for the reset. Design: docs/design/ui-workplan-2026-11.md (PR #24818) 2026-11-11 ~13:30Z: dashboard PR #237 merged (87fbd60), 9/9 checks green, svelte-check 0 errors; auto-deploys to GitHub Pages via pages.yml. Desktop: \u00ab toggle hides the sidebar, \u2630 reopens, content reflows, state in localStorage. Merged, deploy pending; NOT yet observed in a browser \u2014 operator to confirm.",
+  "phase": null,
+  "updated_at": "2026-11-11T13:35:25Z",
+  "updated_by": "Manager Session 2026-11-09a"
+}

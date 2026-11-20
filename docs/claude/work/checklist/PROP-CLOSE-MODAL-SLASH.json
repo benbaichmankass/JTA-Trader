@@ -1,0 +1,24 @@
+{
+  "id": "PROP-CLOSE-MODAL-SLASH",
+  "title": "DXtrade close modal refuses 'SOL/USD' heading; tradeify_1 SOLUSD close retried and refused every tick from 11:44Z 11-15",
+  "state": "done",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "prop execution defect fix",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26302
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Root cause: _close_modal_mismatch wants bare SOLUSD; the terminal heading is 'Close SOL/USD Buy Position'. vm_close vmc-a2ad1dce4531 retrying. Fix #26302 (Tier 2 hold, RESTART). Closing observation: after deploy, the vm_close result=closed and SOLUSD is gone from tradeify_1 venue_terminal positions.",
+  "phase": null,
+  "updated_at": "2026-11-15T15:19:34Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "MAIN-RED-OPS-ACTIONS-PARITY",
+  "title": "main is red: tests/ops/test_ops_actions_parity.py (registry vs docs/claude/system-actions.md table name+tier; wave-one design list) fails on clean origin/main",
+  "state": "done",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "CI hygiene: a red test on main, no milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "MEASURED 2026-11-12 ~18:55Z by lane ML-DEV-PLAN: on a clean checkout of origin/main, pytest tests/ops/test_ops_actions_parity.py -> test_registry_equals_the_doc_table_name_and_tier FAILED; in CI on PR #25404 (run 43265720828) both test_registry_equals_the_doc_table_name_and_tier and test_wave_one_is_exactly_the_design_list FAIL. Likely cause (UNVERIFIED): a system-action added without the doc table/design list in step, candidate #25333 (vm-cpu-sample). Rerun: python3 -m pytest -q tests/ops/test_ops_actions_parity.py. Done when it passes on main. Also seen: MAIN-RED-DECISION-BAR-FINGERPRINT and MAIN-RED-DECISION-BAR-INERT-1112 look like duplicate rows for one failure (manager to merge). Gates: none.",
+  "phase": null,
+  "terminal_reason": "MEASURED 2026-11-12 19:58Z: python3 -m pytest -q tests/ops/test_ops_actions_parity.py -> 7 passed on origin/main bd565fbee (fixed by #25402 send-ping direct + set-env row). Verified by AM-ML.",
+  "updated_at": "2026-11-12T19:51:36Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

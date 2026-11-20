@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "CLAUDE.md and .claude/skills/doc-freshness/SKILL.md name docs/claude/work/pipeline/ (via scripts/ops/pipeline.py) as the intake.",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-KWEHXFPU-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PIPELINE-MAP session_01AFoLuJEArj5fnhkwehXFPU, 2026-11-14, building docs/reference/trading-pipeline-map.md",
+    "rerun": "git cat-file -e origin/main:docs/claude/work/PIPELINE.jsonl; echo $?; grep -n 'PIPELINE.jsonl' CLAUDE.md .claude/skills/doc-freshness/SKILL.md"
+  },
+  "routed_to": "AUD-20261104-PIPELINE-DOC-PATH",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "CLAUDE.md § 'The follow-through pipeline' (and the doc-freshness skill's description/step 6) name 'docs/claude/work/PIPELINE.jsonl' as the append-only intake, but that file is absent on main; the store is docs/claude/work/pipeline/ (one immutable JSON per record, scripts/ops/pipeline.py STORE).\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: exactly that row's finding EVIDENCE: row AUD-20261104-PIPELINE-DOC-PATH: 'CLAUDE.md and canonical name docs/claude/work/PIPELINE.jsonl as the intake; the store is docs/claude/work/pipeline'",
+  "why_it_matters": "Every session reads CLAUDE.md first; a path that does not exist sends sessions to the wrong intake or makes them conclude the pipeline is missing."
+}

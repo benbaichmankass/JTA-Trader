@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the manager records whether the watchdog queue-depth escalation should name authoring as the heal or stay as is, and any chosen wording change is merged; the floor and the STOP-GENERATED-AUTHORING flag are not changed",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0011",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19, manager instruction 23:56Z, replenish run 44640567224",
+    "rerun": "python3 scripts/research/queue_replenish.py --json | head -3   # prints the floor-generation-OFF line, target 0, runnable_before"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "The research watchdog's self-heal for a short queue is the replenish workflow, but queue_replenish has floor-driven generation OFF (STOP-GENERATED-AUTHORING), so the heal can never close a gap and the watchdog escalates on every cycle where runnable < 25. MEASURED 2026-11-19 23:45-23:55Z: watchdog escalated queue@20261119T2345Z (runnable 20, floor 25); the replenish run it triggered (44640567224) succeeded but its 'Land the new units on main' step was SKIPPED (zero units generated); python3 scripts/research/queue_replenish.py --json prints 'floor-driven generation is OFF (STOP-GENERATED-AUTHORING); computed floor 137 is reported, not filled', target 0, runnable_before 20. So the escalation names a remedy that is switched off. Manager decision 2026-11-19 23:56Z: do NOT change the floor or the STOP flag (both deliberate); this item only makes the mismatch visible. Open question for the manager, not a proposal to flip anything: should the watchdog's queue-depth message name authoring from the programme nodes (23 ready, 18 non-ML) as the heal instead of replenish, or should the escalation stay as is."
+}

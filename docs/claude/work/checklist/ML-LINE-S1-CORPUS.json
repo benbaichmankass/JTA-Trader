@@ -1,34 +1,35 @@
 {
   "id": "ML-LINE-S1-CORPUS",
   "title": "[MODEL] ML line S1: standing per-leg Stage-0 corpus producer for every money leg then the demo floor (config-exact harness trades + paths, cost-net labels from the exit actually traded), pooled by family into an ml/datasets family",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
   "lane": "ML-LINE-S1-CORPUS",
   "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 2,
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     21960,
     21966
   ],
   "blocked_on": [],
-  "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units). [2026-10-31 manager decision] leg-corpus-s1 template weight is 1 (a standing refresh must not skew the research allocator). Coverage station metric (money legs with a corpus <= 7d / money legs) stays on the row: if coverage is below 7/7 one week after landing, raise the weight. Re-cut PR: #21966 (supersedes #21960).",
-  "priority_rank": 2,
-  "updated_at": "2026-10-31T21:06:52Z",
-  "updated_by": "session_01AFoLuJV2KtzyNPoYFQ56pS",
-  "roadmap": [
-    "L-ML-LIVE"
-  ],
-  "writeback": {
-    "roadmap": "none: L-ML-LIVE where/next are owned by the manager's roadmap pass; this row only adds the standing S1 producer and dataset family, the closing observation below is what moves it",
-    "arch": "none: Tier-1 research tooling, a read-only ml/datasets family and generated queue units; no runtime component, path or contract changed"
-  },
+  "due_by": "2026-11-15",
+  "_seq": 782,
+  "note": "[2026-10-31 lane session_01AFoLuJwBvR58WBtD4qc5Gp] Timeframe defect VERIFIED FIXED AT SOURCE: backtest_trend/pullback write timeframe=args.resample or args.timeframe (FP-TF-LABEL); a --resample 4h run reads 4h in bt.json; the '1h' labels are in the old run artifact only. BUILT: scripts/research/leg_corpus_s1.py (per-family producer, money legs re-parsed from config, station metrics), research/templates/leg-corpus-s1.yaml + units RQ-20261031-020..023 (one per family incl. pullback_1d/iaum, which ran locally: n=41, tf equal, params hash equal), ml/datasets/families/leg_corpus.py (+tests). OBSERVATION THAT CLOSES: first producer run of each unit lands a <=7d corpus for every money leg (verdict.json coverage 7/7 across the 4 units). [2026-10-31 manager decision] leg-corpus-s1 template weight is 1 (a standing refresh must not skew the research allocator). Coverage station metric (money legs with a corpus <= 7d / money legs) stays on the row: if coverage is below 7/7 one week after landing, raise the weight. Re-cut PR: #21966 (supersedes #21960). [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-D4-METALABEL-TEST-RESULTS in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none.",
   "observation": {
-    "what": "the four leg-corpus-s1 units (RQ-20261031-020..023) each land read_state measured; the union of their verdict.json coverage lists is every money leg with a corpus <= 7 days old and bt.json timeframe equal to config",
+    "due_by": "2026-11-07",
     "how_to_check": "ls research/results/RQ-20261031-02*/; python3 scripts/research/leg_corpus_s1.py --list-families; read verdict.json measurement.coverage in comms/research/RQ-20261031-02*/<run_id>/",
-    "due_by": "2026-11-07"
+    "what": "the four leg-corpus-s1 units (RQ-20261031-020..023) each land read_state measured; the union of their verdict.json coverage lists is every money leg with a corpus <= 7 days old and bt.json timeframe equal to config"
   },
-  "_seq": 782
+  "phase": null,
+  "updated_at": "2026-11-12T14:49:49Z",
+  "updated_by": "session_01AFoLuKCLkLbWaDfBPBBWPy",
+  "writeback": {
+    "arch": "none: Tier-1 research tooling, a read-only ml/datasets family and generated queue units; no runtime component, path or contract changed",
+    "roadmap": "none: L-ML-LIVE where/next are owned by the manager's roadmap pass; this row only adds the standing S1 producer and dataset family, the closing observation below is what moves it"
+  }
 }

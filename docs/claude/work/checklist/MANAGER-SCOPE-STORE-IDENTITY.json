@@ -1,0 +1,21 @@
+{
+  "id": "MANAGER-SCOPE-STORE-IDENTITY",
+  "title": "manager-scope-guard R2 cannot see any manager who started after the WSD-S4 freeze (2026-11-07): lanes are written to work_store.db and the checklist files are an export, so git carries no new dispatch act; restore a LIVE identity source from the store's hash-chained events log (who set lane, when)",
+  "state": "queued",
+  "owner": "AM-OPS-8",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Found 2026-11-19 by AM-OPS-8 while fixing the R2 false positive on #27299/#27308/#27313 (the fix: export commits are not dispatch evidence; dispatch source now reports export_only). MEASURED over all 2,285 remote branches: the only post-freeze lane-adding commit with a foreign lane was AM-OPS-7's export dry run 496dfe54de; no real dispatch has appeared in git since 2026-11-07, so the roster is the pre-freeze one (41 sessions) and the current manager is not on it. Fix: the export (or the daily export workflow, AUD-20261118-STORE-WRITES-UNGUARDED) commits a derived dispatch ledger from events (op set whose patch sets lane to a session != by: item_id, lane, by, at), and the guard reads it as a live source. Done when: a store dispatch by a test manager appears in the ledger and admits that session; --self-test plants it. Until then every guard run prints the limit. Population note: --verify-dispatch's exact reader reads only the retired monolith (pre-10-08), a second staleness found in passing; fold it in here.",
+  "phase": "ops",
+  "updated_at": "2026-11-19T13:13:53Z",
+  "updated_by": "session_01AFoLuHwqqyiix4qDoybTSN"
+}

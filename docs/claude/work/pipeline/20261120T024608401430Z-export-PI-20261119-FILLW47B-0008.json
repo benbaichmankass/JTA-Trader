@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the manager picks (a) or (b) (or records why neither), and any chosen mechanism is merged or a unit/row owns it; the git-sync pull time for the 2026-11-19 deploy is read from the VM to confirm the inference",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19, live read after the ea98b14 restart; manager asked for this row 19:50Z",
+    "rerun": "scripts/ops/diag_fetch.sh \"audit?limit=600\" | jq -r \".[] | select(.strategy==\\\"ict_scalp_sol_5m\\\") | [.logged_at_utc, .bar_open_ts, .reason] | @tsv\"   # audit rows rotate off the tail; the 19:46-19:49Z timeline in the title is the record"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "Config read live each tick can land before the code that needs it. PRIORITY HIGH for real-money legs. MEASURED 2026-11-19 on ict_scalp_sol_5m (demo floor, bybit_1): #27415 changed config/strategies.yaml (session_filter_enabled true, start 8, end 24) and the code that makes that flag work (ict_scalp.py reads the timestamp column; the old code read df.index[-1], epoch hour 0 on the live RangeIndex frame, and blocked EVERY signal). The live signal audit shows: 19:46:06Z bar 19:45 'no liquidity sweep' (filter off); 19:47:06Z bar 19:45 'last bar outside the configured session window' (BLOCK at UTC hour 19: new config + OLD code); restart 19:48:13Z (ea98b14); 19:49:01Z and 19:49:48Z bar 19:45 'no liquidity sweep' (passes the fixed code). So for about a minute the live builder (which re-reads strategies.yaml every tick via load_strategy_config) applied the new flag through the old filter. My inference, not a read of the sync log: the VM's git-sync pulled main between 19:46 and 19:47 and the restart came later; the git-sync pull time was NOT read. Cost here: one blocked demo-floor eval. On a real-money leg a flag/param whose enabling code ships in the same deploy would run old code with new config until the restart: wrong sizing, a blocked or mis-gated entry, or an exit lever the old code reads differently. FIX OPTIONS (manager's): (a) the deploy restarts the trader BEFORE the YAML takes effect for legs whose params change (e.g. git-sync stages the config change until after the restart, or the restart is part of the sync step); (b) a convention that code ships one deploy BEFORE the config that uses it (a two-step land: code PR that is a no-op with the old config, then the config PR), enforced by a CI check that a PR touching a leg's strategy params in config/strategies.yaml and the module that reads them is refused unless the module change is already on main. Owner: manager. Evidence record: PR #27415 body and the audit tail rows above (comms audit endpoint, strategy=ict_scalp_sol_5m). Gates this adds: none proposed here; option (b)'s CI check WOULD be a gate and needs the operator's recorded permission."
+}

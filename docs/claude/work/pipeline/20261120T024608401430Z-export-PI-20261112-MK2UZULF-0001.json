@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a real-money/prop routine fire's fires.jsonl due_to_fire_s is under 120 s on a pass that also carried paper entries (or the wake pass no longer builds paper packets before firing real-money/prop entries)",
+    "kind": "event"
+  },
+  "id": "PI-20261112-MK2UZULF-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "TRADE-ACTION-DIRECT-PATH phase 3 lane (session_01AFoLuLp28byLnMmk2UZuLf)",
+    "rerun": "scripts/ops/diag_fetch.sh 'log_file?name=live_review_fires&lines=50'  # due_to_fire_s per fire; compare with ltr_wake_post_receipt computed_at -> posted_at"
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "LIVE-REVIEW WAKE LATENCY is now the wake pass, not the fire (MEASURED 2026-11-12, n=1 real-money/prop fire): the first routine fire (pkg-3de13868d406447a, pkg-50f5eed272f64197) logged due_to_fire_s 648.7 with the fire HTTP call itself 0.495 s; the wake pass computed due at 16:13:53Z and fired at 16:24:34Z, i.e. ~641 s inside live_review_wake_post.run_once building and landing packets (attach_packets + land_evidence) for EVERY newly due entry, including paper-only entries that apply_toggles then suppresses (ltr_paper is OFF). Full chain on that event: due ~16:13:46Z -> fired 16:24:34Z -> rows seen 16:29:14Z (source direct, handled) = ~15.5 min, vs ~7 min measured on 11-11. Also: suppressed markers are in-process only, so after every trader restart the first pass rebuilds packets for all suppressed paper entries (~10 min measured after the 15:21Z restart) before any real-money wake. Candidate fixes (each keeps the paper data path, canonical 'off the trade path is not off the data path'): (a) order the pass so real-money/prop entries are built, landed and FIRED first, paper packets after; (b) build packets in parallel; (c) persist suppressed markers across restarts. Tier 2 (src/runtime/live_review_wake_post.py)."
+}

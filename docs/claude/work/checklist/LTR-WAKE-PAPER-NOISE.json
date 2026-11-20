@@ -1,22 +1,24 @@
 {
   "id": "LTR-WAKE-PAPER-NOISE",
   "title": "ltr-wake labels paper packages 'real-money/prop' and fires repeatedly on ib_paper packages that have no apply path",
-  "phase": "build",
   "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "FOUND 2026-11-02 00:20-02:15Z (manager): ltr-wake comments on #17895 headline 'newly due on real-money/prop packages' for bybit_1 / ib_paper (paper) packages. ib_paper MGC pkg-d76f1b15 woke 3x in 2h (giveback, momentum_flip) with account_bounds 'no apply path for this exchange yet (LTR-9)', so every review there is no_action. Fix: label the account class correctly in the wake headline, and coalesce wakes for a package reviewed inside its cooldown when its apply path is none. No new gate: wakes still fire, the headline and cooldown change. Pick up after the 2026-11-04 reset. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. Not built; build lane.",
-  "updated_at": "2026-11-06T06:00:03Z",
-  "updated_by": "lane-BACKLOG-DRAIN-20261106",
-  "due_by": "2026-11-09",
   "roadmap": [
     "L-OPS"
   ],
-  "_seq": 891
+  "priority_rank": 9,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "_seq": 891,
+  "note": "FOUND 2026-11-02 00:20-02:15Z (manager): ltr-wake comments on #17895 headline 'newly due on real-money/prop packages' for bybit_1 / ib_paper (paper) packages. ib_paper MGC pkg-d76f1b15 woke 3x in 2h (giveback, momentum_flip) with account_bounds 'no apply path for this exchange yet (LTR-9)', so every review there is no_action. Fix: label the account class correctly in the wake headline, and coalesce wakes for a package reviewed inside its cooldown when its apply path is none. No new gate: wakes still fire, the headline and cooldown change. Pick up after the 2026-11-04 reset. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. Not built; build lane. DAILY REVIEW 2026-11-15 (manager), second symptom of the same class, filed here; owner moved to AM-OPS because the AM-TRADING lane is archived. attention_watch 'live_review_due_stale' is BREACHED by 6 due events unreviewed for more than 120 min, the oldest mhg_pullback_1d on ib_paper (demo). Paper and demo events are NEVER dispatched: src/runtime/wake_toggles.py 'ltr_paper' default False, so wakes go only to real-money/prop. The alarm counts them anyway (scripts/ops/attention_watch.py _lr_due_clause counts every due event in live_review_due()), so it breaches as noise and would hide a real stale real-money/prop review. FIX (Tier 1, no new gate): _lr_due_clause counts only events whose wake class toggle is on (wake_toggles classify by account_class; the same classes live_review_wake_post fires), and states the excluded count in the detail ('N paper/demo due excluded: wake toggle off'). If the toggle is turned on, they count again automatically. Test: one paper and one real-money stale event; only the real-money one breaches.",
+  "phase": "build",
+  "updated_at": "2026-11-15T05:57:28Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "throttle"
 }

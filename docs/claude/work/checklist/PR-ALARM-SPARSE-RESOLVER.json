@@ -1,0 +1,56 @@
+{
+  "id": "PR-ALARM-SPARSE-RESOLVER",
+  "title": "pr-landing-hold-merge-alarm cannot resolve citations outside its sparse checkout, so recorded approvals still page the operator (#25799)",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-20",
+  "decision_requests": [
+    {
+      "allowsFreeText": true,
+      "answer": {
+        "acted": "Read back 2026-11-13 21:17Z. AM-ML/FRONTIER lands option A (make_resolver falls back to git ls-tree for an exact-path blob in the merged commit; strict; self-test with the #25799 ref), citing this answer; the manager reviews and merges.",
+        "chosen": "fix_a",
+        "committed_by": "Manager Session 2026-11-13a",
+        "submission_id": "cac476bc404e4621886f8ca673c8a615",
+        "submitted_at": "2026-11-13T21:16:21.501853Z",
+        "submitted_by": "telegram"
+      },
+      "askedOn": "2026-11-13T18:30:00Z",
+      "evidence": "MEASURED 2026-11-13: the alarm workflow checks out only 4 paths, so a citation pointing at research/ or comms/ is always 'not found' (alarm run 43476136968, #25799, whose cited file does exist on main). Option A (recommended): the checker also asks git whether the exact cited file exists in the commit (reads git's tree only, no download, false on any error), with a self-test showing a fake path and a directory still fail. Option B: widen the workflow's checkout to comms/, research/, docs/, runtime_logs/ (simpler, slower, downloads large folders). Either way a citation must still name a real file; nothing gets looser than 'the file exists'. The lanes' own safety check refused to edit the detector without you, which is correct. Until you answer, lanes cite pipeline items so the alarm stays quiet.",
+      "id": "PR-ALARM-RESOLVER-FIX",
+      "options": [
+        {
+          "key": "fix_a",
+          "label": "Yes, fix it with option A (recommended)"
+        },
+        {
+          "key": "fix_b",
+          "label": "Yes, fix it with option B"
+        },
+        {
+          "key": "leave",
+          "label": "Leave the alarm as it is; keep the workaround"
+        }
+      ],
+      "question": "The alarm that pages you when a Tier-2/3 PR merges without a recorded approval cannot see most of the repo, so it pages even when the approval IS recorded (it did on #25799 today). May a lane fix it so a cited file that exists in the merged commit counts?",
+      "recommended": "fix_a",
+      "urgency": "routine"
+    }
+  ],
+  "note": "FOUND 2026-11-13 by AM-ML (run 43476136968). .github/workflows/pr-landing-hold-merge-alarm.yml checks out sparse (only the alarm script, .github/pr-landing/, docs/claude/work/checklist/, docs/claude/work/pipeline/). make_resolver() tests repo paths with os.path.isfile on the working tree, so any recorded_decision path under research/ or comms/ can never resolve in CI, and every true standing-authorization citation pages the operator (#25780 had none; #25799 had one and still paged). Both fixes were refused by lane sessions' safety classifier as editing an oversight detector, so this goes to the operator. Interim: refs cite a pipeline id or checklist row, and evidence lives under docs/claude/work/{checklist,pipeline}/. 2026-11-19 07:04Z: #27185 MERGED (manager). It adds resolver tests for both cases on top of fix_a (_in_head_tree, already on main): a cited file outside the sparse checkout resolves, and an uncited or fake path still fails. CI was green on head 405be6d9. Merged != observed: it is closed when the next hold-merge alarm run on a PR citing a research/ or comms/ file reads 'found' and does not page.",
+  "updated_at": "2026-11-19T07:04:46Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

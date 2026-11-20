@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # mgc_trend_1h must read covered; and python3 scripts/ops/mandate_resolver.py --leg mgc_trend_1h --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "killed",
+  "terminal_reason": "Its own close condition is met: iteration_orphans now reads mgc_trend_1h covered by a queued iteration unit. The separate ib_paper soak-contract gap it mentions is owned by PI-20261103-6GNSZYUN-0011 (routed SOAK-VOCAB-RETIRE in this slice). | evidence: python3 scripts/research/iteration_orphans.py --json run 2026-11-12 on checkout 3 commits behind origin/main 30b5cd919 (population: 59 strategy_leg / 10 ml_model / 7 ltr_class subjects; strategy_leg orphan 7, covered 50): mgc_trend_1h state=covered, iterations=[RQ-20261106-004 queued].",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ITERATION ORPHAN mgc_trend_1h (Stage-0 verdict pass_unconfirmed): no queued research unit carries an iteration: block for it (programme-review rule). n=118, net +25.61R, faithful, RULE-D1 pass, positive in 2 of 4 folds (R-FOLDS REFUSE); no IB soak contract (SOAK-stage1-ib_paper-mgc_trend_1h absent) and shadow soak REFUSE. Diagnose fold dispersion; separately the ib_paper soak contract is missing (run soak_state.py --backfill). Close when a unit with iteration.subject=mgc_trend_1h is queued (iteration_orphans reads covered).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Its own close condition is met: iteration_orphans now reads mgc_trend_1h covered by a queued iteration unit. The separate ib_paper soak-contract gap it mentions is owned by PI-20261103-6GNSZYUN-0011 (routed SOAK-VOCAB-RETIRE in this slice). EVIDENCE: python3 scripts/research/iteration_orphans.py --json run 2026-11-12 on checkout 3 commits behind origin/main 30b5cd919 (population: 59 strategy_leg / 10 ml_model / 7 ltr_class subjects; strategy_leg orphan 7, covered 50): mgc_trend_1h state=covered, iterations=[RQ-20261106-004 queued]."
+}

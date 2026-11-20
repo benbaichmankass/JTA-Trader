@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "(1) the cause of the TD trade-parity drop is named (strategy code change since 2026-10-24 vs data/fetch change) and either the reference corpus is re-pinned with a disclosed record or the harness is fixed so TD parity >= 0.98; AND (2) cpcv_challengers records carry the family INDETERMINATE, shown by a self-test; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZZUFKM1F-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), grading RQ-20261117-aadc-03, PR #26694",
+    "rerun": "git show origin/main:comms/research/RQ-20261117-aadc-03/44070620023/verdict.json (families.TD); grep -n 'def cpcv_challengers' scripts/research/ml_overlay_noninferior.py"
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "routed_to": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "state": "routed",
+  "what": "[ml/D4] Two defects block every TD overlay read on the 09a6-01 reference corpus. (1) TRADE PARITY: the TD Stage-0 corpus rebuilt over 2020-07-01..2026-10-15 no longer matches the committed reference corpus comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b (MEASURED in RQ-20261117-aadc-03 run 44070620023 and RQ-20261116-cc86-01 run 43849787455, identical: eth_4h 0.8473, xrp_4h 0.0882, eth_prop 0.5779, sol_prop 0.4194, all < 0.98), so the V1 harness returns INDETERMINATE for the TD family and no D4 challenger can be graded on it. (2) HARNESS: scripts/research/ml_overlay_noninferior.py cpcv_challengers writes per-arm records with verdict fail/pass without inheriting the family INDETERMINATE, so the results rows (and the mechanical grader) read fail when the registered rule says indeterminate (aadc-03 hand-graded INDETERMINATE in PR #26694)."
+}

@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261111-LRP-A038E248",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ml_entry_eq_struct:could_not_check",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "ML-LIVE-PARITY-ML-LEGS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `ml_entry_eq_struct` — could_not_check (REAL-MONEY roster) in window 2026-11-04T07:00:00+00:00..2026-11-11T07:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-11.json. Examples: unit 'ml_entry_eq' not supported by the replay\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: real-money ML leg the parity replay cannot check; ML-LIVE-PARITY-ML-LEGS is the open row building replay coverage for ml_entry / ml_entry_eq_struct EVIDENCE: comms/live_parity/2026-11-12.json totals.real_money_legs_could_not_check=[ml_entry, ml_entry_eq_struct]; legs[ml_entry].reason='unit None not supported by the replay', legs[ml_entry_eq_struct].reason=\"unit 'ml_entry_eq' not supported by the replay\""
+}

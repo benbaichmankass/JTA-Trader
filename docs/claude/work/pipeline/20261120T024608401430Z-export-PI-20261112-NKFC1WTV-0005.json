@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "both tests pass on origin/main, each fixed in code/config or its expectation changed by a recorded decision",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-NKFC1WTV-0005",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "run the rerun command on a clean origin/main checkout",
+    "what": "the two tests still fail on origin/main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane UI-SPA-BACKEND-ROUTES, PR #25231 pytest-run on bab6f89d4 (session_01AFoLuHn6DPjiMUNkfC1wTV)",
+    "rerun": "python3 -m pytest tests/test_pytest_run_filter.py::test_every_committed_tree_the_suite_reads_is_covered tests/test_sync_vm_secrets_restart_scope.py::test_web_api_only_keys_are_not_read_outside_the_web_api -q   # on a clean origin/main checkout"
+  },
+  "state": "done",
+  "terminal_reason": "Both tests pass on PR #25231 head a2b4054ad (local 2 passed; CI pytest-run success). Fixed on main after #25500; fixing commit not identified.",
+  "what": "MAIN IS RED (2 tests), most likely from #25500 'VM change ledger on the ops jobs store + fold-back + write ping + token dual-accept (VM-CHANGE-LEDGER, Tier 2)': (1) tests/test_pytest_run_filter.py::test_every_committed_tree_the_suite_reads_is_covered fails because docs/reference/env-vars.md is read by tests/ops/test_ops_ledger.py but would SHORT-CIRCUIT pytest-run (a PR touching only that doc would merge having executed no tests): the pytest-run path filter needs to cover it; (2) tests/test_sync_vm_secrets_restart_scope.py::test_web_api_only_keys_are_not_read_outside_the_web_api fails because WORK_STORE_TOKEN is read outside src/web/ (src/runtime/ops_actions.py): the key's web-api-only classification or its new reader needs a recorded decision. MEASURED 2026-11-12: both fail on a clean worktree of origin/main 3392ae015; found while driving PR #25231 (whose diff touches neither file). Not tests to skip: (2) is a secrets-scope check, so read it before assuming a stale expectation. Every open PR's pytest-run goes red on these until fixed. || RESOLVED 2026-11-15: both tests pass on PR #25231's head a2b4054ad (a clean merge of main): `pytest tests/test_pytest_run_filter.py::test_every_committed_tree_the_suite_reads_is_covered tests/test_sync_vm_secrets_restart_scope.py::test_web_api_only_keys_are_not_read_outside_the_web_api` -> 2 passed locally, and CI pytest-run is success on that head (checked per check run). The #25500 follow-up fix landed on main between 2026-11-12 and 2026-11-15; I did not identify which commit."
+}

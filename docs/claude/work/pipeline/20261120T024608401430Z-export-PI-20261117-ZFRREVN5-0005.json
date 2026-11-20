@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "both regime packets are delivered to the manager (or the c03/c04 nodes are killed with a walk-forward reason), and the eth4h-stop and slv1d declare nodes each carry an applied / superseded / packet-ready disposition",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZFRREVN5-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ITERATION-REFILL-20261117 (session_01AFoLuL9Wd1b7YqZfrRevn5), 2026-11-17; held PR #26637 annotates these nodes authoring_route",
+    "rerun": "grep -n 'trail_adx_\\|momentum_stale\\|tp_revision' config/strategies.yaml; python3 scripts/research/regime_cell_walkforward.py --help"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "[ml][tier3] HANDOVER from ML-ITERATION-REFILL-20261117 (manager order 3, 2026-11-17): (a) the two regime-selectivity Tier-3 packets P2-R3.c03-pass (eth_pullback_2h, RQ-20261016-65ff-03 disjoint-window PASS) and P2-R3.c04-pass (trend_donchian_sol, RQ-20261016-65ff-04 PASS) are NOT assembled: each needs walk-forward first, evidence paths, the exact config/regime_policy.yaml diff, net of cost, per .claude/skills/regime-selectivity/SKILL.md; no config change, decision is the manager's. (b) Declare-node check READ on config/strategies.yaml (origin/main 2026-11-17): eth4h measured-move w05 APPLIED (tp_revision donchian_measured_move width_mult 0.5); eth4h stop M1 (trail_adx_below 20 / trail_adx_tight_mult 2.5, RQ-20261016-005) NOT APPLIED (trend_donchian_eth_4h runs trail_decay_stall_bars 10 / trail_decay_tight_mult 1.8; trail_adx_* exists only on trend_donchian_xrp_adx25); slv1d momentum_stale_bars 8 / adx 20 (RQ-20261016-016) NOT APPLIED (slv_pullback_1d runs trail_decay_stall_bars 6 / tight 2.0). Whether the later trail_decay rules superseded those Oct-18 confirmations was not checked: that read decides packet-vs-kill for both."
+}

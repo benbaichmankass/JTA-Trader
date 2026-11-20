@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "python3 -m pytest -q tests/test_research_queue.py passes on origin/main.",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-KWEHXFPU-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PIPELINE-MAP session_01AFoLuJEArj5fnhkwehXFPU, 2026-11-15 ~00:05Z, triaging #26143 pytest-run",
+    "rerun": "git worktree add --detach /tmp/m origin/main && cd /tmp/m && python3 -m pytest -q tests/test_research_queue.py -k 'real_queue_parses or powered_and_routable or live_queue_is_readable'"
+  },
+  "state": "killed",
+  "terminal_reason": "fixed: tests/test_research_queue.py passes on main now | evidence: origin/main 9aaf26a617: pytest tests/test_research_queue.py passes (part of 94 passed, 2026-11-15 ~10:25Z); the item measured 3 failures on cb4132923",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "main is red: tests/test_research_queue.py fails on origin/main cb4132923 (3 tests: test_the_real_queue_parses_and_every_job_is_structurally_valid, test_every_committed_job_is_both_powered_and_routable, test_the_live_queue_is_readable_and_every_job_is_valid). Two queue jobs, research/queue/RQ-20261114-1ae8-01.yaml and RQ-20261114-82fd-01.yaml, have no lands.store and no routing: block. Every PR's pytest-run inherits the failure (seen on JTA-Trader #26143).\n\n[2026-11-15 BACKLOG-DRAIN-20261112] KILL: fixed: tests/test_research_queue.py passes on main now EVIDENCE: origin/main 9aaf26a617: pytest tests/test_research_queue.py passes (part of 94 passed, 2026-11-15 ~10:25Z); the item measured 3 failures on cb4132923",
+  "why_it_matters": "A red main hides real regressions in every PR's CI and blocks auto-merge on green; the dispatcher will not route an unroutable job."
+}

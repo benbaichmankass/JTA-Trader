@@ -1,0 +1,27 @@
+{
+  "id": "UI-DECISION-DOCS",
+  "title": "UI: list open decision docs (artifact links) in the console 'waiting on you' view",
+  "state": "landed_unproven",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": "session_01AFoLuMr5RixbuwJtqED344",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator workflow instruction 2026-11-11, not a roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Operator 2026-11-11 ~21:10Z: decision docs (private artifact pages with explanations + questions/options; precedent https://claude.ai/artifact/3YvSRcb5eMSbTL8zmD9Bwt) should be visible on the UI so the operator sees what is waiting on them. Build: the console shows each open decision doc (title, link, n questions / n answered, created, status) in the inbox / waiting-on-you view; the manager registers each doc when it is sent (send-ping + register). Skill section: PR #24970. Done = an open decision doc appears on the console with a working link, and disappears or flips to answered when closed. [2026-11-12 10:05Z UI lane p2] BUILT. Console v27 (version 1794477672-b5af) shows 'Decision docs waiting on you' from db collection decisions/<id> {title,url,questions,answered,counted_at,created_at,status open|answered|closed,row}: title links to the doc (claude.ai artifact URLs only), 'n of N answered', created date and a status chip; closed docs fold into 'Closed (n)'. Access rule: decisions read view, write admin (verified: view-level read OK, interact-level write refused). SEEDED with the real doc: thursday-planning-20261111 -> https://claude.ai/artifact/3YvSRcb5eMSbTL8zmD9Bwt, 68 questions, 54 answered (open: w1-w14), counted 10:05Z from its answers collection. The manager skill Delivery step now says to register + recount + close (PR, Tier 1). Observation to close: the operator opens the console and sees the doc with a working link; then a manager sets status closed and it folds away.",
+  "observe": {
+    "how": "read console page db decisions/* via ArtifactData list on the console artifact (YU4ZwddDFB1AD2xWV2oE3g): >=1 doc registered by a manager session other than the UI lane, with counted_at within that manager check-in; and git grep \"decisions/<id>\" .claude/skills/manager/SKILL.md on main",
+    "when": "after #25246 merges"
+  },
+  "phase": "now",
+  "updated_at": "2026-11-12T15:06:32Z",
+  "updated_by": "session_01AFoLuMw1bWyUmi4HkqYBX8",
+  "week_lane": "surge"
+}

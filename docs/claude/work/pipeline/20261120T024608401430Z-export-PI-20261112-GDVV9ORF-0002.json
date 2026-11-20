@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "a trades row with strategy_name slv_trend_1h and account_id alpaca_live (long, whole shares) shows a broker fill with SL and TP legs attached at the venue, AND one on alpaca_portfolio does the same; the closing observation is reported to AM-TRADING; AND the realized entry slippage (bps, vs the intended price) is recorded for each book and reported with the observation",
+    "conditions": [
+      "deployed:c776ac277",
+      "manual:first slv_trend_1h order filled on alpaca_live (long, whole shares) and on alpaca_portfolio, with broker-side SL+TP, read from /api/diag/journal?table=trades"
+    ],
+    "kind": "event",
+    "owner": "AM-OPS"
+  },
+  "id": "PI-20261112-GDVV9ORF-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SLV-ITERATION (session_01AFoLuKQhQJibSRgDVv9oRf); Manager 2026-11-11a 21:23Z ask",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/diag/journal?table=trades&limit=200' | python3 -c \"import json,sys;[print(r['id'],r['account_id'],r['direction'],r['position_size'],r['status'],r['created_at']) for r in json.load(sys.stdin) if r.get('strategy_name')=='slv_trend_1h' and r.get('account_id') in ('alpaca_live','alpaca_portfolio')]\""
+  },
+  "routed_to": "Manager Session 2026-11-13a",
+  "state": "routed",
+  "what": "slv_trend_1h FIRST LIVE FILL (the one-trade mechanics check; mechanics already proven, so this is the closing observation of the 2026-11-12 promotion). #25267 merged at c776ac27, deployed 21:21Z. OBSERVED 21:24Z: /api/diag/version trader sha c776ac277, restart_pending false; /api/bot/config shows slv on alpaca_live (real_money, live) + alpaca_portfolio (live) + alpaca_options_paper, tp_r 6.0, atr_stop_mult 1.5. Not yet observed: an order or fill on either book. The next US cash session opens 2026-11-13 14:30Z. Check: the order was placed and filled, whole shares on alpaca_live, long-only (a short must be refused on alpaca_live and taken on alpaca_portfolio), broker-side SL+TP at about 6R, and the same order package on both books (Alpaca superset rule). ADDED 2026-11-12 21:58Z (AM-TRADING): MEASURE THE REALIZED SLIPPAGE on each first live fill. For alpaca_live and alpaca_portfolio, record the signal/intended entry price vs the broker fill price (and the exit fill vs the stop or TP level when it closes), in bps round trip. Compare it with the 5 bps placeholder and the ~30 bps break-even from RQ-20261112-cdb2-05. The edge holds in 4 of 4 folds only up to about 5 bps, so a measured RT slippage above ~10 bps is a Gate-2 input to AM-TRADING. HANDED OFF 2026-11-12 23:00Z to AM-OPS (general lane, session_01AFoLuJUGfpon2bNgwFbFmx) on AM-TRADING's 22:58Z instruction: the operator throttled to three lanes and SLV-ITERATION closes. The check (US close 2026-11-13 21:00Z onward) now runs inside the general lane."
+}

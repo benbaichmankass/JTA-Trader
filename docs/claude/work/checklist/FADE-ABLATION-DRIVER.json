@@ -1,0 +1,22 @@
+{
+  "id": "FADE-ABLATION-DRIVER",
+  "title": "exit_lever_ablation.py driver for the fade harness (scripts/backtest_fade.py; unblocks RQ-20261116-d5a7-13/-14, fade_breakout_4h adx_max + donchian sweeps)",
+  "state": "done",
+  "owner": "unowned",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed by RESEARCH-OPS-20261117-1006. d5a7-13 (run 43895125533) and d5a7-14 (run 43912586581) landed producer_failed exit=1: build_arm_argv raises ValueError 'fade_breakout_4h: harness fade -- this ablation covers the trend, pullback, ict_scalp and turtle_soup harnesses'. Data fetch succeeded (10980 Binance 4h rows), so this is NOT the Alpaca bars throttle (RUNNER-ALPACA-BARS-THROTTLE). Same build class as FVG-RANGE-ABLATION-DRIVER; one PR may clear both. clears_when: build_arm_argv gains a fade branch with --self-test passing; then git mv the two units back to research/queue/.",
+  "phase": "research",
+  "terminal_reason": "Delivered by #26638 (f83079c414, exit_lever_ablation covers fade + fvg_range) while this row was being filed; RQ-20261116-d5a7-13/-14 re-queued on PR branch claude/research-ops-20261117-1006.",
+  "updated_at": "2026-11-17T10:44:10Z",
+  "updated_by": "session_01AFoLuMNJLaELyLniVCjP7T"
+}

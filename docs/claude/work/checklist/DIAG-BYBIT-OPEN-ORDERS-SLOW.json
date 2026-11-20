@@ -1,0 +1,25 @@
+{
+  "id": "DIAG-BYBIT-OPEN-ORDERS-SLOW",
+  "title": "diag bybit_open_orders (all accounts) times out / 502s: reads Bybit accounts serially through the single-worker account executor; the live-review packet's venue-order read fails",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26202
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "MEASURED 2026-11-15: the all-accounts call took 30.7 s -> 502 at Caddy, then 21.2 s; a single account takes ~6 s. The live-review packets at ~04:05Z and 04:10Z reported bybit_orders timed_out_after_connect (manager: 2/2 tonight), so mechanics could not read venue SL/TP for real-money ADA. Same root cause as DIAG-EXCHANGE-POSITIONS-SLOW (#26163): serial run_account_read. Fix: run_account_read_parallel + per-account deadline + read_state/elapsed_s, as #26163 did. CORRECTION: I said #26202 was web-api only with no trader restart. That was wrong. 'echo src/web/api/routers/diag.py | python3 scripts/ops/trader_import_closure.py decide' returns RESTART (in_closure), the same as #26163. #26202 is approved at head 2014d1a8; the manager is batching it with #26203 (or merging it alone at 05:30Z). Lesson: run the decide tool before claiming restart impact. MERGED 05:02Z as one restart batch with #26203 (squash f0a088a0). landed_unproven. CLOSING OBSERVATION: an all-accounts bybit_open_orders read answers in under ~15 s with orders_read on every Bybit account (deadline_s + elapsed_s present), and the next live-review packet carries no bybit_orders read error. Check scheduled 05:15Z.",
+  "phase": "build",
+  "terminal_reason": "OBSERVED 2026-11-15 05:16Z after deploy 7d865bc (restart batch #26202+#26203): all-accounts bybit_open_orders answered in 6.8 s wall (was 21-31 s / 502), deadline_s 15.0, bybit_1 orders_read 3.11 s, bybit_2 6.52 s, bybit_portfolio 3.81 s. Merged f0a088a0, deployed, observed.",
+  "updated_at": "2026-11-15T05:17:45Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

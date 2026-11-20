@@ -1,0 +1,23 @@
+{
+  "id": "ML-D2-YZ-HEADS-ETH-SOL",
+  "title": "D2: train and register ETH 1h + SOL 1h yz regime heads (the c21d-03 PASS learner), so the yz-labelled money consumer test can run on the SOL/ETH TD legs",
+  "state": "landed_unproven",
+  "owner": "ML-ITERATION-REFILL-2-20261117 (session_01AFoLuJTQqWT5KwZQksKUgh)",
+  "lane": "session_01AFoLuJTQqWT5KwZQksKUgh",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26680
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed 2026-11-17 by ML-PRIMARY-5. RQ-20261117-c21d-03 PASSED (ml_bakeoff in-run learners: lgbm_yz beats lgbm v2 by +0.0097 nats ETH 1h and +0.0129 SOL 1h, 5 folds). No ETH/SOL yz head exists in the registry (ml/configs has btc-regime-15m/1h-lgbm-yz-v1 only), so ml_vol_label_replay cannot replay yz labels for ETH/SOL and the money consumer test (RQ-20261112-bcd2-01 pattern on the SOL/ETH TD legs) cannot run. Build: manifests ml/configs/{eth,sol}-regime-1h-lgbm-yz-v1.yaml (copy of btc-regime-1h-lgbm-yz-v1 with symbol scope; dataset market_features v002), train on the trainer (python -m ml train, research_only/shadow; no advisory promotion), then author the consumer unit. The BTC analogue is RQ-20261117-aadc-08 (BTC cells with the yz head). Gates this adds: none. [2026-11-17 12:23Z ML-PRIMARY-5] Handed to ML-ITERATION-REFILL-2-20261117 (session_01AFoLuJTQqWT5KwZQksKUgh) on its request; owner set.",
+  "phase": null,
+  "updated_at": "2026-11-17T13:23:27Z",
+  "updated_by": "ML-ITERATION-REFILL-2-20261117 session_01AFoLuJTQqWT5KwZQksKUgh"
+}

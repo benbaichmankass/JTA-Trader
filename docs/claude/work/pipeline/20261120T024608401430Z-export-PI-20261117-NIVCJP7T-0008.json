@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "after #26637 merges, each of the four has a written disposition in research/programmes/*.yaml or the unit file",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-NIVCJP7T-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261117-1006 (session_01AFoLuMNJLaELyLniVCjP7T), authoring-queue triage (fork C) and orphan pass (fork A)",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -E 'P3-Q1-live-bt-stage-b|P4-Q2-ppi-rty-econ|P3-RG1025-lever-pooled'; grep -n not_before research/queue/RQ-20261112-c1a5-01.yaml"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "Authoring-queue node dispositions research-ops could not write (programme edits collide with held PR #26637): (1) P3-Q1-live-bt-stage-b -> kill, answered by PR #18870's live join + 2a10-01 NO_LEG_CLEARS_CLOSED_WINS; (2) P4-Q2-ppi-rty-econ -> its driver lever MACRO-EVENT-RANKTILT-ARM was dropped in the 2026-10-29 reset and units 7769-20/-22 no longer exist: reopen the lever or kill the node; (3) #26637 marks P3-RG1025-lever-pooled blocked on a missing harness, but pool_arm_diff.py exists and the DI emits are committed: unblock and author (a ready body is described in RESEARCH-OPS-20261117-1006's record handoff); (4) RQ-20261112-c1a5-01 waits on not_before 2026-12-01 with no iteration block: classify A/B/C under RESEARCH-NO-WAIT."
+}

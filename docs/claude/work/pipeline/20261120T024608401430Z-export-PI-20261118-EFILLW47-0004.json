@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a pooled 1d-ETF pullback DIRECTION unit is authored and queued (research/queue, naming ief_pullback_1d among its cells) or the DIRECTION question for ief_pullback_1d is retired by record; abab-38 then re-armed or closed. A dated re-check on 2026-11-22 re-dates this if neither has happened.",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EFILLW47-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-11-18, RQ-20261118-abab-38 run 44387493913 INDETERMINATE underpowered n=33<39; manager accepted the no-unit diagnosis 23:35Z",
+    "rerun": "python3 - <<PY\nimport json\nr=json.loads(open(sorted(__import__(\"glob\").glob(\"research/results/RQ-20261118-abab-38/*.jsonl\"))[-1]).read().strip().splitlines()[-1])\nprint(r[\"verdict\"], r[\"population\"][\"n\"])\nPY\n# re-arm RQ-20261118-abab-38 (last_dispatched_at: null) and read n once the leg has >=39 trades"
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "M40"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "abab-38 (ief_pullback_1d DIRECTION lever) INDETERMINATE: incumbent n=33 < n_floor 39 on the corpus window 2021-07-01..2026-10-15 (run 44387493913). No single-leg follow-up (window shared by the sibling 1d legs; the full 2330 d adds ~+6-7 trades, borderline). The standing doctrine on the older STRUCTURE-EXITS-DEFAULT gap item is a POOLED 1d-ETF population, never a wait for accrual: author one pooled 1d-ETF pullback DIRECTION unit (harness_stage0.py --family pullback --non-crypto-source dukascopy over the 1d ETF legs, bar registered before the run, measured sd), then re-arm or retire abab-38."
+}

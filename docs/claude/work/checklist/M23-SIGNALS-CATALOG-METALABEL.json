@@ -1,0 +1,28 @@
+{
+  "id": "M23-SIGNALS-CATALOG-METALABEL",
+  "title": "M23: signals catalog plus meta-labeling, high on the ML surge list",
+  "state": "landed_unproven",
+  "owner": "ML standing lane (session_01AFoLuJzKhDBzvqyKJM6emw)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M23"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24894
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Operator 2026-11-11 12:48Z (plan-page comment): 'This is important and should be high up on the ML surge list.' Scope: deliver the signals catalog (ties to FEATURES-CATALOG-UI-VERIFY + FEATURE-IMPACT-MAP and the ideas-inbox catalog item) and the meta-labeling layer per milestone M23 'next' (land the 02 AI-trader programme plan with the signals catalog first). ML lane, surge, near the top. [2026-11-11 ML lane session_01AFoLuJzKhDBzvqyKJM6emw] LANDING (branch ml-lane-2026-11-11): (1) signal-catalog.yaml: ml_models entries for the 7 ml/served + ml/candidates model.json artifacts + 28 ml_feature inputs (definitions and file:line from the serving modules). PR #24854's coverage function re-run on this tree: models missing 7->0, features missing 28->0; 27 catalog inputs still unused. (2) Fresh 1,825 d --research-emits ledgers for the 19 crypto trend/pullback legs: 6,214 trades, every f_* column non-null >= 99.28% (comms/strategy_evidence/research_emits/2026-11-11/); equity legs failed to fetch in the sandbox. (3) ledger_metalabel.py --group-by family / --control-features / --features wide. (4) RQ-20261111-3a23-01 (re-authored 9d20-04) registered and pushed (a84e6ed1e) BEFORE its run. SANDBOX READ, NOT the graded runner row: INDETERMINATE. trend_donchian n=4,047: wide AUC gain +0.048 (CI +0.007..+0.089), lift +0.001 R vs control lift +0.039 R; control AUC gain +0.054 >= wide, so the catalog features add nothing over confidence. pullback n=2,167: null. Caution: family-level control AUC may be leg base rate via the one-hots (M23 P1 trap). OPEN: signal-catalog-review.md's 20 questions still untriaged (SIGNAL-CATALOG row); the 02 AI-trader plan update. CLOSES WHEN the runner lands and grades research/results/RQ-20261111-3a23-01/. [2026-11-11 ML lane] PR #24894 opened HELD (unvouchable_paths: hand-authored queue unit); manager merges. After merge the dispatcher runs RQ-20261111-3a23-01 on the runner. [2026-11-11 19:13Z ML lane] #24894 MERGED (manager). landed_unproven until the runner grades RQ-20261111-3a23-01. Still open on the row: triage the 20 signal-catalog-review.md questions. [2026-11-11 23:25Z ML lane] RQ-20261111-3a23-01 NOT YET DISPATCHED. Dry run: would_dispatch (github_runner, cpu_light). Dispatcher runs since the merge: 43093224542 (20:05Z) conclusion failure; 43099655841 (21:05Z) and 43108391534 (22:18Z) fired 0, log 'deferred=17' with 4 free github_runner slots and 16 due (backpressure deferral; the starvation floor did not lift it although the newest stamp was 18:59Z, 3.3 h old); 43116747477 (23:03Z) still queued for a runner at 23:25Z. This is a pipeline-wide stall, not this unit. Rechecking at about 02:30Z. [2026-11-12 02:31Z ML lane] Still not dispatched. comms/research/utilization/: no dispatch since 2026-11-11 18:59Z; runs at 21:05Z, 22:18Z and 23:58Z dispatched nothing (github_runner due 4 -> 16 -> 18); no record after 23:58Z. Pipeline-wide research dispatcher stall, reported to Manager 2026-11-11a for the research-watchdog owner. Final recheck 08:30Z. [2026-11-12 08:35Z ML lane] DISPATCHED: last_dispatched_at 2026-11-12T08:05:19Z (utilization record 08:05Z). The result has not landed on main yet. The dispatcher stall cleared to one fire per cycle from 04:29Z (31-33 still due). Still landed_unproven; closes when research/results/RQ-20261111-3a23-01/ lands and queue_grade grades it. This session is closing out; the next ML-lane session takes the grade and the milestones.yaml M23 writeback.",
+  "observation": {
+    "due_by": "2026-11-14",
+    "how_to_check": "ls research/results/RQ-20261111-3a23-01/; grep -A4 ^grading research/queue/RQ-20261111-3a23-01.yaml",
+    "what": "the dispatcher runs RQ-20261111-3a23-01 on the runner and queue_grade grades it"
+  },
+  "phase": null,
+  "updated_at": "2026-11-12T08:32:19Z",
+  "updated_by": "session_01AFoLuJzKhDBzvqyKJM6emw"
+}

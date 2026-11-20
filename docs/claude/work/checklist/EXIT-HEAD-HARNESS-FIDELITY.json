@@ -1,0 +1,22 @@
+{
+  "id": "EXIT-HEAD-HARNESS-FIDELITY",
+  "title": "Backtest harness omits exit_head_action / exit_head_model / exit_head_threshold, so 3 x 1h trend_donchian legs cannot regenerate a FAITHFUL record",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up filed from CRYPTO-FORMING-RDM-FORWARD (f251-01)",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "2026-11-13 16:05Z AM-ML. f251-01 (run 43447401545) regenerated trend_donchian, trend_donchian_sol and trend_donchian_eth (all 1h) APPROXIMATE: the harness has no lever for their configured exit_head_action / exit_head_model / exit_head_threshold, so the replay cannot reproduce the live exit. Exit-head fidelity gap, independent of the forming bar; records NOT landed. Build: add the exit-head levers to the trend harness (serve the same exit-head model the live leg loads, point-in-time), then regenerate the 3 records faithful. Done = 3 faithful records committed (C5 clean) or a stated reason per leg. Check first whether any of the 3 is on a real-money or prop roster (re-parse config/accounts.yaml): if so, raise priority to the manager.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:18:00Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "QUEUE-FILL-STANDING-W47-HANDOVER",
+  "title": "QUEUE-FILL-STANDING-W47 HANDOVER (2026-11-19 01:05Z, rotating on the manager's instruction). Lane job: keep the research queue full from existing plans only (diagnosis + declared baseline + decision rule registered before the run; no floor-filler), land HELD PRs with a per-branch merge-slot claim, wake the manager on green, report batches in UNITS and fires/day. OPEN ITEMS FOR THE SUCCESSOR (verify each; nothing below is verified by you): (1) PR #27027 stamp-PR triage (head e111f2f09c, held draft; manager merges on green; then run the research-watchdog workflow ONCE as a dry run (default) and send the manager the log + merge sha; flip STAMP_TRIAGE_LIVE to true in research-watchdog.yml only after the manager has read it; the --land path is unwired by design). (2) PI-20261118-EFILLW47-0003 (Kaggle candle path): root cause was the Kaggle workflows' sparse checkout dropping comms/research/candle_dataset/coverage.json (fixed, #27043 a1935d9b merged); STILL OPEN until a kaggle_cpu unit shows 'candle dataset: served' in logs/cmd-0.log plus a measured result: download the run artifact (gh run download <id>) and read it; send the manager the served line. (3) GPU overflow (#27033 ceeee71d merged, kaggle_overflow keep_gpu_hours 12): send the manager the FIRST CPU unit that overflows to the GPU kernel (research-script-run-kaggle.yml run for a non-gpu unit): exit and runtime; if it fails for kernel-image reasons set kaggle_overflow off in scripts/research/research_compute.yaml and tell the manager. (4) PI-20261118-EFILLW47-0004 (build the pooled 1d-ETF pullback DIRECTION unit for ief/slv; abab-38 n=33<39) and -0005 (stamp triage; follows #27027) and -0001/-0002 (ltr-close trigger defect; est calibration). (5) BUILD WITH THE MANAGER'S GO (00:59Z): scripts/research/desk_trigger_replay.py + 5 per-family units, exactly per the REGISTERED-RULE NOTE on row DESK-ENTRY-REVIEW-REDESIGN (01:00Z); needs a research-capability-index row and a self-test; land HELD. (6) IB-GROSS-NO-CAP-FIX unit: BLOCKED on AM-OPS-4/AM-OPS-3 registering k, corpus, metric, bar on that row; do not invent them. (7) D9 specs A/B: authored by ML-PRIMARY-8, not this lane. (8) ABAB RESULTS so far (2026-11-18): abab-48 PASS (trend_donchian_1h LONG-only), its holdouts abab-69..72 dispatched, Tier-3 decision waits on >=3/4; abab-56 FAIL (ict_scalp fidelity: forming-bar entries vs closed-bar replay; revert PR #26987 opened by the manager); abab-01/02/03/20/22/47/49/50 FAIL; abab-38 INDETERMINATE; abab-04/26/27 producer_failed (stay unstamped so they re-run). abab-64..68 (ltr sl_to_structure / partial_close) are queued/dispatched: read them and apply their registered rules verbatim. (9) Standing: re-measure runway in UNITS and fires/day each ~3 h; the dispatcher defers every fire when >10 fresh runs are queued repo-wide (exempt backends kaggle_cpu/trainer since #26998); read dispatcher logs not guesses; the PR landing checklist: pr-landing json + claim_merge_slot --branch-claim, index row for any new scripts/research script, no inert params, run tests/test_research_queue_timeouts_in_preflight_range.py; GitHub MCP drops intermittently, gh api works. Scheduled check-ins stored: trig_01757y8qTRNCgFtVsMfyr6Px (01:31Z).",
+  "state": "queued",
+  "owner": "QUEUE-FILL-STANDING-W47 successor",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M40"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-19"
+}

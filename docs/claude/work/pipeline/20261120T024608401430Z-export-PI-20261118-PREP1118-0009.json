@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research/queue unit for the ict_scalp_eth_15m per-trade live-bar check + backtest fidelity re-test exists with a rule registered before the run",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0009",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg ict_scalp_eth_15m; grep -rl ict_scalp_eth_15m research/queue docs/claude/work/checklist"
+  },
+  "owner": "manager (author the owed unit)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "owed re-test ran (RQ-20261118-abab-56 FAIL, run 44385139200); consequences filed: RQ-20261119-e11f-01, checklist ICT-SCALP-FORMING-BAR-ARM, PI-20261119-Q8HCWKL1-0001 (PR #27202 HELD)",
+  "tier": 1,
+  "updated_by": "session_01AFoLuJQHZnwtERq8HCwKL1",
+  "what": "[performance][real-money] ict_scalp_eth_15m went to bybit_2 + bybit_portfolio on 2026-11-17 (fe4673b58, operator popup '2, but then 1 also after the reset') on the LIVE-PERFORMANCE path with a FAILED Stage-0 record (comms/strategy_evidence/ict_scalp_eth_15m.json: net_r_oos -2.93 over n=76, verdict fail; DSR 0.026). The promotion comment owes 'exact per-trade live-bar check + backtest fidelity re-test after the 11-18 reset'. I found no queue unit or checklist row for that owed work (grep of research/queue and checklist for the leg after 11-17 returns only RQ-20261117-9e1c-11, an exit-lever ablation, which is not it). File the owed fidelity re-test as a unit. 0 real-money closes so far.\n\n[2026-11-19 PERF-FOLLOWUP-2026W47] The owed re-test exists and ran: RQ-20261118-abab-56, graded FAIL 2026-11-19 (match rate 0.065 = forming-bar entries; cost arm expectancy ~0, CIs span 0). Consequence filed: RQ-20261119-e11f-01 (blocked) + ICT-SCALP-FORMING-BAR-ARM + Tier-3 PI-20261119-Q8HCWKL1-0001. PR #27202 (HELD)."
+}

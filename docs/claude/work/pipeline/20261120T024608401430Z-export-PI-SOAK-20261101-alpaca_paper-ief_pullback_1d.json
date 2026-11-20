@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-06-20",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "alpaca_paper/ief_pullback_1d"
+    }
+  },
+  "id": "PI-SOAK-20261101-alpaca_paper-ief_pullback_1d",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "state": "killed",
+  "terminal_reason": "Its mechanical exit is met: alpaca_paper/ief_pullback_1d reads verdict ready, \"mechanical soak passed\". Any promotion is a separate MD-PROMOTE-S1-S2 / PROMO-EVIDENCE-REFRESH decision. | evidence: docs/claude/work/soak-state.json on origin/main 30b5cd919 (generated 2026-11-08T03:49Z, grade comms/research/soak_book_grade/2026-11-08.json, grade_usable true; population 48 stage1 subjects: 6 ready, 40 accruing, 1 could-not-look): alpaca_paper/ief_pullback_1d verdict ready, why \"mechanical soak passed - the leg is a promotion candidate (MD-PROMOTE-S1-S2)\".",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "SOAK (stage1): alpaca_paper/ief_pullback_1d — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Its mechanical exit is met: alpaca_paper/ief_pullback_1d reads verdict ready, \"mechanical soak passed\". Any promotion is a separate MD-PROMOTE-S1-S2 / PROMO-EVIDENCE-REFRESH decision. EVIDENCE: docs/claude/work/soak-state.json on origin/main 30b5cd919 (generated 2026-11-08T03:49Z, grade comms/research/soak_book_grade/2026-11-08.json, grade_usable true; population 48 stage1 subjects: 6 ready, 40 accruing, 1 could-not-look): alpaca_paper/ief_pullback_1d verdict ready, why \"mechanical soak passed - the leg is a promotion candidate (MD-PROMOTE-S1-S2)\"."
+}

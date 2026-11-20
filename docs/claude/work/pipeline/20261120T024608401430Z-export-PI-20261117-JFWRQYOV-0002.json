@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "mirror-orphan-watch exits 0 on a night when alpaca_portfolio carries ml_entry_eq_struct longs that alpaca_live refused for affordability, with those rows classified (e.g. verdict affordability_superset) rather than ORPHAN, and a genuine orphan still FAILS (planted control)",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-JFWRQYOV-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-17 23:40Z: mirror-orphan-watch run 44196544512 FAILED with ORPHAN alpaca_live->alpaca_portfolio IVW/IWF/TZA long (the 16:00Z ml_entry_eq_struct packages, which the live account refused for affordability)",
+    "rerun": "gh run view of the latest mirror-orphan-watch; or: scripts/ops/diag_fetch.sh exchange_positions?account_id=alpaca_live and ...=alpaca_portfolio > pos.json; python3 scripts/ops/check_mirror_orphans.py pos.json"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "MIRROR-ORPHAN CHECK LAGS THE 2026-11-01 ALPACA SUPERSET RULE: scripts/ops/check_mirror_orphans.py only classifies a mirror-without-live-twin position as benign when the LIVE side_filter suppresses that side (side_filter_superset, 2026-11-13). The operator's 2026-11-01 rule makes alpaca_portfolio a SUPERSET of alpaca_live (affordability proxies at full size, shorting, symbols live cannot trade), so a live affordability REFUSAL leaves a legitimate mirror-only position that the checker reports as ORPHAN and the watch fails nightly with a high-priority alert. Fix: classify a mirror position as superset when the live twin's package was refused/dry for affordability (read the package's per-account refusal reason, the same resolver the coordinator uses), keep ORPHAN for anything else, and keep a planted-orphan control. Paper only; no real-money exposure. Gates this adds: none (narrows a false finding)."
+}

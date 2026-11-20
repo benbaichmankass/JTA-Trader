@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-12",
+    "kind": "date"
+  },
+  "id": "PI-20261109-MLLANE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "dispatcher run 42559741478 log (cycle 969), PR #24382, PR #24289; unit RQ-20261108-98e3-29",
+    "rerun": "gh api repos/{owner}/{repo}/actions/jobs/128973322645/logs | grep 'RQ-20261108-98e3-29 not_due'; gh pr view 24382 --json state,closedAt,statusCheckRollup; python3 -c \"import sys;sys.path.insert(0,'.');from scripts.research import dispatch_queue as d;print(d.stranded_stamp_adoptions.__doc__)\""
+  },
+  "routed_to": "WSD-S6D-RESEARCH-RESULTS",
+  "severity": "medium",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 2,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Stranded research-queue stamp PRs silently freeze every unit they name for up to 6 h. MEASURED 2026-11-09: #24289 stranded on a merge conflict (manager closed it 22:51Z) and #24382 stranded with ZERO check runs (open 02:37Z-04:21Z; its stamps named 98e3-24 and 98e3-29). Dispatcher cycle 969 (04:04Z, only=RQ-20261108-98e3-29) logged 'not_due already dispatched: PR #24382 ... its stamp has not merged / its result has not landed yet' for a unit that was otherwise due (re-armed, retry 1/2). The watchdog self-heal dispatch cleared neither. PROPOSED FIX (manager 2026-11-09 04:21Z): the dispatcher treats a stamp PR with no check runs after 15 min, or mergeable_state dirty, as dead: it closes it and re-stamps on the next cycle. Tier-2 (dispatcher/workflow change). Cost of the bug today: 98e3-29 (lake-presence, the first real test of the manifest-only fetch) was delayed ~2 h.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Stranded stamp PRs exist because stamps land as PRs on main. WSD-S6D moves stamps off main (0 stamp commits). EVIDENCE: Row WSD-S6D-RESEARCH-RESULTS note: \"stamps 107 ... go to 0 commits on main\"."
+}

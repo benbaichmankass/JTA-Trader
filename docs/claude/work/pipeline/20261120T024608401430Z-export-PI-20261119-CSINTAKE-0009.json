@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 6673's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-CSINTAKE-0009",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:6673 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 6673"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 6673 (ib_paper/mgc_pullback_1d MGC, exit_reason='tp'): bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm"
+}

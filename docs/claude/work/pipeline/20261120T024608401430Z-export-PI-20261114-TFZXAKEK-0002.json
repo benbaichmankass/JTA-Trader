@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "The live journal is read for turtle_soup trades sharing one setup (same sl / risk_per_unit within 4 bars): either none (live is protected by something not found in coordinator.py / pipeline.py, and the harness is mis-modelling, so it gets a one-fill-per-setup fix and f251-12 is re-graded), or some (a live strategy defect, routed to the manager as a Tier-3 setup_lookback_bars / re-entry proposal).",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-TFZXAKEK-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK, 2026-11-14, turtle_soup TP read for the manager (option a)",
+    "rerun": "git show origin/main:comms/research/RQ-20261113-f251-12/43510468202/arm_BTC/arms/A__trades.jsonl, grouped by (direction, sl, risk_per_unit); sed -n '230,260p' src/units/strategies/turtle_soup.py (setup_window loop); DIAG_FETCH_MAX_TIME=300 bash scripts/ops/diag_fetch.sh '/api/diag/audit_query?since=2026-10-01T00:00:00Z&strategy=turtle_soup&limit=500'."
+  },
+  "routed_to": "DEMO-FLOOR-ITER-20261113",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "turtle_soup re-enters the SAME setup after a stop-out. order_package() scans the last setup_lookback_bars (live: 4) bars for a setup bar and builds the package from it, so for 4 bars after a setup every bar re-emits the identical package (same sl and risk_per_unit). The backtest harness (signal_ttl_bars 1, next-open fill) re-fills it after each stop-out: in RQ-20261113-f251-12 arm_BTC (2024-10..2026-10, 15m) 55 of 88 setups filled more than once (182 of 215 positions), and those rows carry -79.2R of the leg's -81.8R; the worst setup filled 4 times on consecutive bars, each stopped out at about -2R (the fill drifts from the setup bar's price while R stays on the setup's risk). The live path has no per-signal re-entry refusal: the position-netting guard only suppresses a re-entry while a trade is open, and the signal_key empty-sizing brake is report-only (pipeline.py, GATE-EMPTY-SIZING-BRAKE 2026-11-12). So live very likely re-enters too. NOT VERIFIED against the live journal: the audit_query read timed out (120 s) at 01:20Z.\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: turtle_soup re-entry behaviour belongs with its iteration/lever-census row EVIDENCE: row DEMO-FLOOR-ITER-20261113 (in_flight) covers turtle_soup (78fc-12 -81.81R n215) and its lever census",
+  "why_it_matters": "If live behaves like the harness, turtle_soup takes up to 4 losing entries per setup on its book, and every Stage-0 read of the leg is dominated by that behaviour. Even one entry per setup is estimated at -29.3R over n 88 (0/6 folds) on the record window and -26.9R over n 112 on the year before, so removing the repeat does not create an edge; it stops a multiplier on the loss."
+}

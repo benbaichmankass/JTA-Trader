@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "date:2026-11-19 (after the Wednesday 2026-11-18 reset); closes when a design for holding both packages' protection on a netted Alpaca symbol is chosen and filed as a Tier-3 row, or the manager kills it with a stated reason",
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LSFHBH4A-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane session_01AFoLuKdqv7sRrnLSFhbH4a (AM-OPS-2), PI-20261027-KYYBSZXS-0001 follow-up, manager 2026-11-17 06:02Z",
+    "rerun": "grep -n 'releasing %s and retrying once' src/units/accounts/alpaca_client.py; journal ict-trader-live grep 'releasing' for an alpaca place_protective(<sym>) line, each one is a sibling TP released"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "Netted Alpaca symbol: second package's TP released to arm the first; needs a merged-OCO design. Alpaca nets per symbol, so when a re-arm OCO for one journal row is refused while a SIBLING row's standalone take-profit rests on the same reducing side (the shares are shared, 'insufficient qty available'), AlpacaClient.place_protective RELEASES (DELETEs) that sibling target and retries the OCO once (kept as documented, manager 2026-11-17 06:02Z). If the retry succeeds the sibling row is left with no take-profit: a TP-doctrine gap (the sibling's TP is lost to arm the first package's stop). #26611 restores the released target only when the retry is also refused. Needs a design that holds both packages' protection on one netted position (one merged OCO sized to the netted qty with per-package accounting), then a Tier-3 order-path change."
+}

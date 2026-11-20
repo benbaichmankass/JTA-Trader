@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261104-COSTINFRA-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-INFRA-REVIEW lane 2026-11-04 see docs/reviews/2026-11-04-cost-infra-review.md",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/live-review-wake.yml/runs?created=2026-10-05..2026-11-04&per_page=1' --jq .total_count"
+  },
+  "state": "killed",
+  "terminal_reason": "The decision it asks for is already made in code: the live-review wake has a VM-side low-latency poster, and the */5 Actions cron is only the fallback channel. | evidence: src/runtime/live_review_wake_post.py origin/main 30b5cd919 lines 1-18: \"The Actions poller ... is the token-free channel. This module is the low-latency one: the live trader itself posts the SAME ltr-wake comment\", kicked on every record_position_telemetry. PI-20261106-QSEQAVLT-0002 records a 2026-11-06 wake with \"poster vm\". Measured: the Actions cron still under-delivers (29 runs 2026-11-05..11-12 vs ~2016 nominal).",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[F2] Scheduled cron cadence is not delivered: live-review-wake (*/5) ran 41 times in 30d vs ~8640 nominal. Decide: move live-review wake to a VM timer/other trigger, or stop treating */5 as a guarantee.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: The decision it asks for is already made in code: the live-review wake has a VM-side low-latency poster, and the */5 Actions cron is only the fallback channel. EVIDENCE: src/runtime/live_review_wake_post.py origin/main 30b5cd919 lines 1-18: \"The Actions poller ... is the token-free channel. This module is the low-latency one: the live trader itself posts the SAME ltr-wake comment\", kicked on every record_position_telemetry. PI-20261106-QSEQAVLT-0002 records a 2026-11-06 wake with \"poster vm\". Measured: the Actions cron still under-delivers (29 runs 2026-11-05..11-12 vs ~2016 nominal)."
+}

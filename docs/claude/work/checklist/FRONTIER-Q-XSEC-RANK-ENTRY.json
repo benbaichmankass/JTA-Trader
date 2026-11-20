@@ -1,0 +1,35 @@
+{
+  "id": "FRONTIER-Q-XSEC-RANK-ENTRY",
+  "title": "Cross-sectional ranking objective for the crypto ENTRY model: rank the perps against each other at each decision time instead of predicting each one's R alone",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25559
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-13",
+  "frontier": {
+    "baseline": "the same recipe on the raw per-asset net-R regression target, same 13 monthly origins, graded on actual net R of outright trades at the canonical cost stack",
+    "consumer": "src/units/strategies/ml_entry.py (D3) on bybit_2 real money + mirror + prop",
+    "est_cost": "$0 runner (~2 h); needs a lambdarank arm in the ml_entry_residual harness",
+    "family": "gbdt (objective lever: LightGBM lambdarank / rank-IC)",
+    "next_step": "unit RQ-20261112-4654-06 (RULE-RQ20261112-4654-06-XSDEMEAN-TARGET, decide_vs_raw: paired >= +0.06, CI low > 0, n >= 300 over 13 windows; baseline RAW net of full cost stack) rides PR #25559 with the harness arm; grade when it lands. Top-k-per-timestamp policy arm is the PASS follow-up.",
+    "p_pass": 0.12,
+    "source": "arXiv 2512.08124 (long-only crypto portfolio by ranking assets, NN; title+summary, PRIMARY abstract) and 2606.27670 CryptoGAT (cross-asset graph beats per-asset temporal models; summary only); same mechanism as RESID-ENTRY (98e3-23 SIDE-DRIVER: the model prices the common factor)",
+    "state": "unit_authored",
+    "unit": "RQ-20261112-4654-06",
+    "why": "a ranking objective is market-neutral by construction (only relative order at a timestamp matters), so it is the strong form of the residual-target idea; it also uses the whole 48-60 perp cross-section, which is the breadth lever the 2026-11-12 audit names for making Foxhound-1's edge verifiable"
+  },
+  "week_lane": "surge"
+}

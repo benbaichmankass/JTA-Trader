@@ -1,0 +1,30 @@
+{
+  "id": "SEC-8001-LOCKDOWN",
+  "title": "Web API :8001 reachable from the internet over plain HTTP: move the 3 remaining clients (shelved Android app, one diag fallback, one network-check workflow) to HTTPS, bind 8001 to localhost, drop its firewall rule; one web-API restart",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25182,
+    25185,
+    25190,
+    25193,
+    25196,
+    25219,
+    25329
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "decision: 2026-11-12 operator decisions page m3 \"Lock it down: move those three clients to HTTPS, then bind 8001 to localhost and drop its firewall rule (one Tier-2 change, one web-API restart, live-money path unaffected)\". Tier 2, approved by that answer. Measured open by issue #25118 probe 04:21Z. Open edge: IPv6 accept-all, unchecked public IPv6. Record: docs/plans/thursday-planning-2026-11-12-answers.md. [2026-11-12 08:13Z OPDEC-20261112] NOT DISPATCHED: create_session for this lane was refused by the Claude Code auto-mode classifier (reason: [Production Deploy]), even though m3 is the operator's Tier-2 OK. No workaround attempted; escalated to the manager. UI-SPA was told the Android-app part waits on this.",
+  "phase": "build",
+  "updated_at": "2026-11-12T08:14:22Z",
+  "updated_by": "session_01AFoLuMpRDMZ3GfqaMUnCk5",
+  "week_lane": "surge"
+}

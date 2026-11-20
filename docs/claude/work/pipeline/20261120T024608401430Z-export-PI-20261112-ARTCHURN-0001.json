@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "(1) and (2) observed after PR #25457 is deployed, or the PR is closed unmerged (then kill with that reason)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-ARTCHURN-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&since=<day>%2000:00:00&grep=Started%20ICT%7Cboot_audit:%20restart&lines=2000' ; scripts/ops/diag_fetch.sh 'journalctl?unit=ict-git-sync&since=<day>%2000:00:00&grep=Trader%20restart%20gate%7Crestarted%20ict-trader-live&lines=2000'",
+    "what": "gate skip observed for an unloaded-non-py-only merge; set-env trader restart carries intent=manual"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane TRADER-RESTART-CHURN (AM-ML / Manager Session 2026-11-11a), PR #25457",
+    "rerun": "scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&since=<day>%2000:00:00&grep=Started%20ICT%7Cboot_audit:%20restart&lines=2000' ; scripts/ops/diag_fetch.sh 'journalctl?unit=ict-git-sync&since=<day>%2000:00:00&grep=Trader%20restart%20gate%7Crestarted%20ict-trader-live&lines=2000'"
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "VERIFICATION WATCH (landed_unproven) for PR #25457 once merged and deployed. (1) The ict-git-sync journal shows 'Trader restart gate: skip' for a merge that touches only *.sh, another unit's deploy/ file or config/trader_import_closure.txt. (2) The next set-env aimed at ict-trader-live boots with intent=manual in boot_audit. (3) Daily trader starts with each one attributed (baseline 2026-11-12: 47 starts, 42 git-sync, 2 pull-and-deploy, 2 set-env, 1 unattributed). #25310 should remove the pull-and-deploy double restart."
+}

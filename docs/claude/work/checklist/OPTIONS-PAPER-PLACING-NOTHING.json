@@ -1,0 +1,23 @@
+{
+  "id": "OPTIONS-PAPER-PLACING-NOTHING",
+  "title": "alpaca_options_paper placing NOTHING (alert 2026-11-16 14:24Z): find why its rostered testing legs (slv_trend_1h, slv_pullback_1d, gdx_pullback_1d) place no orders; the demo floor requires every testing leg to trade",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Alert 14:24Z: '[ALERT] Account placing NOTHING: alpaca_options_paper' (Telegram delivery suppressed_by_policy). Paper testing account, no money at risk. Under pacing (until the Wed 11-18 reset) this is queued rather than worked; AM-OPS-2 or the next GENERAL lane diagnoses: roster vs signals vs refusals (RiskManager, options repricing, OPTIONS-VERTICAL-REPRICE / AMEND-PARITY-ALPACA-OPTIONS rows are related). Doctrine: OPERATING-PLAN \u00a7 2 'Stage 1 is the DEMO FLOOR'. 2026-11-18 18:40Z AM-OPS-2: CAUSE (journal read, 500-row window): all 37 alpaca_options_paper rows are slv_trend_1h, all rejected 'options_expression:no_selection:fewer_than_two_quotable_strikes'; the daily legs slv_pullback_1d and gdx_pullback_1d gave no signal in the window. In place_options_expression the contract discovery is filtered (type, 0-60d expiry, strike band) but data_client.snapshots(underlying, limit=200) was not, so it returned the first 200 contracts of the whole chain and the two sets barely overlapped. FIX: PR #26868 (Tier 2, HOLD): the snapshot request carries the same filters, limit 1000. NOT VERIFIED LIVE: no Alpaca credentials in this session; diagnosis fits all 37 rows but was not replayed. CLOSES ON: the first slv_trend_1h signal after merge + trader restart either places a spread or is refused for a DIFFERENT reason (then the diagnosis was partial). [2026-11-19 15:45Z AM-OPS-8, inherited wake] NOT YET OBSERVABLE. #26868 merged 2026-11-18 19:04Z. The journal (trades read of 600 rows, min id 7432) holds 0 alpaca_options_paper rows created since then, vs 37 rejected slv_trend_1h rows on 11-16/11-18. No slv_trend_1h signal has reached the options account since the fix, so the closing condition (first post-merge signal places a spread or is refused for a DIFFERENT reason) has not occurred. Re-check on the next slv_trend_1h signal.",
+  "phase": null,
+  "updated_at": "2026-11-19T15:43:43Z",
+  "updated_by": "session_01AFoLuHwqqyiix4qDoybTSN"
+}

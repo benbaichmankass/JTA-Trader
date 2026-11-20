@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "seen in connector work_items recent",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-4HKQYBX8-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "UI lane p2 session_01AFoLuMw1bWyUmi4HkqYBX8, C3 probe after #25164 install run 43254983022",
+    "rerun": "call the JTA Trader connector work_items (view recent) and look for this id"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "killed",
+  "terminal_reason": "Probe served its purpose: written 16:28:44Z, first item in connector work_items (recent) at as_of 16:28:49Z = 5 s <= 45 s. C3 observed. Killed so it does not sit in the due set.",
+  "what": "C3 PROBE (UI-CONSOLE-ARTIFACT closing check): a session-written store item must appear on the console Work tab (connector work_items recent) within 45 s. Closed as killed right after the read."
+}
