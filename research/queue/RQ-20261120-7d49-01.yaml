@@ -3,7 +3,7 @@
 id: RQ-20261120-7d49-01
 title: 'BUILD: rebuild the donchian 1h exit-head training rows on the ALIGNED grid (post-#27566 harness emit + PR #27676 live-fill anchor) into
   datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -39,12 +39,7 @@ decision_rule:
   fail_action: 'Fix the named reason on PI-20261120-7ITMUEB1-0004 and re-run this unit (same rule).'
   what_it_does_not_do: 'Trains, registers and serves nothing (--build-only); overwrites no existing corpus; edits no config; publishes nothing off
     the trainer (journal-derived rows stay there); places no order; adds no gate.'
-blocked_on:
-- kind: build
-  ref: PR #27676 (build_exit_head_dataset live-fill anchor)
-  what: the builder fix and entry_alignment stamp on main
-  owner: ML-PRIMARY lane
-  clears_when: 'pr_merged:27676; then git mv this file to research/queue/, set status queued (rule unchanged)'
+unblocked: 'pr_merged:27676 held (merged 2026-11-20 as ad4cbd98, manager 07:09Z); moved from research/queue/blocked/, rule unchanged'
 practice_precedent: 'Train on features computed exactly as serving computes them: a one-bar anchor skew between the training rows and the live
   scorer is train/serve skew (docs/reference/trading-and-model-practice-principles.md).'
 value:
