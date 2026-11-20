@@ -4255,6 +4255,16 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
+def _row_field(row: Any, key: str) -> Any:
+    """``row[key]`` for a sqlite3.Row or dict, ``None`` when the column is absent."""
+    try:
+        if hasattr(row, "keys") and key not in row.keys():
+            return None
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
 
@@ -11222,7 +11232,8 @@ def _alpaca_replace_partial_target(db, client, account_id: str, symbol: str, row
 
 
 def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
-                            sym_rows: List[Any], sl: float) -> Tuple[str, Dict[str, Any]]:
+                            sym_rows: List[Any], sl: float,
+                            cfg: Any = None) -> Tuple[str, Dict[str, Any]]:
     """Decide what the naked sweep may do for *row*: ``(verdict, info)``.
 
     PI-20260929-PR6YRTQY-0005 (+ REVIEW-14241). Measured 2026-09-24,
@@ -11237,6 +11248,11 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
     * ``ok`` — re-arm the row's own OCO.
     * ``could_not_look`` — position or price unreadable; counted, streaked on
       the ``preflight`` channel and paged when it persists.
+    * ``entry_pending`` — the fresh read is flat because the row's ENTRY
+      ORDER is still working at the venue (needs *cfg*; same
+      :func:`_entry_order_hold` check as the flat-close paths). Nothing to
+      protect yet: refused, logged, never paged
+      (VENUE-FLAT-PENDING-ENTRY-LABELS).
     * ``flat`` / ``side_mismatch`` / ``row_shares_gone`` — this row's shares
       are not at the venue (gone, or the book is on the other side). Refused
       and paged: a re-arm would open exposure or sell a sibling's shares.
@@ -11272,6 +11288,13 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
         pass
     if q.get("state") == "flat":
         _clear_protection_unreadable(account_id, symbol, "preflight")
+        if cfg is not None and _entry_order_hold(
+                cfg, _row_field(row, "broker_order_id")) == "pending":
+            logger.info(
+                "_alpaca_rearm_preflight: %s/%s trade_id=%s flat because its "
+                "entry order %s is still working — entry_pending, not refused-flat",
+                account_id, symbol, row["id"], _row_field(row, "broker_order_id"))
+            return "entry_pending", {}
         _in_confirm = _row_in_flat_confirm(row["id"])
         _page_rearm_refusal("flat", account_id, symbol, row["id"],
                             "no venue position — the row's shares are gone; a "
@@ -11627,6 +11650,11 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # its flat-detector close (ML-ENTRY-WATCHDOG-EXIT, 2026-11-05). Logged,
         # not paged.
         "target_flat": 0,
+        # The symbol reads FLAT because this row's ENTRY ORDER has not filled
+        # yet (VENUE-FLAT-PENDING-ENTRY-LABELS, 2026-11-19): not a filled stop,
+        # not naked, nothing to re-arm. Logged, never paged. Same
+        # _entry_order_hold check the flat-close paths use.
+        "entry_pending": 0,
         # ── QUANTITY coverage (BL-20260908-ALPACA-COVERAGE-IS-SIDES-NOT-QUANTITY).
         # Declared here, not created on first use: a sweep that found no
         # partial coverage must report 0 rather than omit the key, or "we
@@ -11651,6 +11679,7 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         # item 6): declared at 0 so "none happened" reads as 0, not absent.
         "rearm_refused_could_not_look": 0,
         "rearm_refused_flat": 0,
+        "rearm_refused_entry_pending": 0,
         "rearm_refused_side_mismatch": 0,
         "rearm_refused_row_shares_gone": 0,
         "rearm_refused_all_stops_breached": 0,
@@ -11720,11 +11749,16 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
-            rows = conn.execute(
-                "SELECT id, account_id, symbol, direction, position_size, "
-                "stop_loss, take_profit_1, created_at, notes "
-                "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
-            ).fetchall()
+            _cols = ("id, account_id, symbol, direction, position_size, "
+                     "stop_loss, take_profit_1, created_at, notes")
+            _where = " FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
+            try:
+                rows = conn.execute(
+                    "SELECT " + _cols + ", broker_order_id" + _where).fetchall()
+            except __import__("sqlite3").OperationalError:
+                # A journal without broker_order_id: no entry-order state to read
+                # (_row_field -> None -> the existing flat grading).
+                rows = conn.execute("SELECT " + _cols + _where).fetchall()
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001
@@ -11938,6 +11972,25 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                     elif _size > 0:
                         summary["covered"] += 1
 
+            if isinstance(_cov, dict) and _cov.get("source") == "flat":
+                # VENUE-FLAT-PENDING-ENTRY-LABELS: a flat symbol says nothing about
+                # an entry order that has not filled yet (alpaca_options_paper SLV
+                # trade 8034, 2026-11-19: DAY mleg limit still `new`, graded
+                # target_flat "stop already filled" and refused-flat CRITICAL).
+                # Only a POSITIVE "still working" changes the label; an
+                # unreadable order read keeps the existing grading.
+                if _entry_order_hold(acc_by_id.get(account_id),
+                                     _row_field(row, "broker_order_id")) == "pending":
+                    summary["entry_pending"] += 1
+                    logger.info(
+                        "_check_broker_naked_equity_positions: %s/%s trade_id=%s "
+                        "venue holds no position because the row's entry order "
+                        "%s is still working (not yet filled) — graded "
+                        "entry_pending, nothing to re-arm",
+                        account_id, symbol, row["id"],
+                        _row_field(row, "broker_order_id"),
+                    )
+                    continue
             _released_age = _iso_age_seconds(state.get("stop_released_at"), now)
             if (state.get("target") is False
                     and row["take_profit_1"] not in (None, 0)
@@ -12069,6 +12122,7 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                  if str(r["account_id"] or "") == account_id
                  and str(r["symbol"] or "").upper() == symbol.upper()],
                 a_sl,
+                cfg=acc_by_id.get(account_id),
             )
             _pf, _pf_info = _pf
             if _pf in ("exit_breached", "cap"):
