@@ -1,0 +1,66 @@
+Fetching SOLUSDT 15 candles 2024-10-11 -> 2026-11-20 (source=binance_vision) …
+  vision monthly 2024-10: 2976 bars (2016 kept)
+  vision monthly 2024-11: 2880 bars (4896 kept)
+  vision monthly 2024-12: 2976 bars (7872 kept)
+  vision monthly 2025-01: 2976 bars (10848 kept)
+  vision monthly 2025-02: 2688 bars (13536 kept)
+  vision monthly 2025-03: 2976 bars (16512 kept)
+  vision monthly 2025-04: 2880 bars (19392 kept)
+  vision monthly 2025-05: 2976 bars (22368 kept)
+  vision monthly 2025-06: 2880 bars (25248 kept)
+  vision monthly 2025-07: 2976 bars (28224 kept)
+  vision monthly 2025-08: 2976 bars (31200 kept)
+  vision monthly 2025-09: 2880 bars (34080 kept)
+  vision monthly 2025-10: 2976 bars (37056 kept)
+  vision monthly 2025-11: 2880 bars (39936 kept)
+  vision monthly 2025-12: 2976 bars (42912 kept)
+  vision monthly 2026-01: 2976 bars (45888 kept)
+  vision monthly 2026-02: 2688 bars (48576 kept)
+  vision monthly 2026-03: 2976 bars (51552 kept)
+  vision monthly 2026-04: 2880 bars (54432 kept)
+  vision monthly 2026-05: 2976 bars (57408 kept)
+  vision monthly 2026-06: 2880 bars (60288 kept)
+  vision monthly 2026-07: 2976 bars (63264 kept)
+  vision monthly 2026-08: 2976 bars (66240 kept)
+  vision monthly 2026-09: 2880 bars (69120 kept)
+  vision monthly 2026-10: 2976 bars (72096 kept)
+  vision daily 2026-11: 73824 bars kept so far
+Wrote 73824 rows (2024-10-11 -> 2026-11-18) to comms/research/RQ-20261120-3b7c-06/44657681334/ict_scalp_sol_15m__candles.csv
+  data source [explicit] comms/research/RQ-20261120-3b7c-06/44657681334/ict_scalp_sol_15m__candles.csv for symbol=SOLUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-06/44657681334/ict_scalp_sol_15m_off.json
+  data source [explicit] comms/research/RQ-20261120-3b7c-06/44657681334/ict_scalp_sol_15m__candles.csv for symbol=SOLUSDT timeframe=15m
+
+JSON written to comms/research/RQ-20261120-3b7c-06/44657681334/ict_scalp_sol_15m_on.json
+ict_scalp_5m backtest — SOLUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 177
+  win_rate_pct   : 50.28%
+  expectancy_r   : -0.0913
+  total_r (gross): -16.1672
+  net_total_r    : -31.607 (exp -0.1786) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : -27.9116 (exp -0.1577) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.06635, 'slippage_r': 0.0181, 'funding_r': 0.00278, 'total_cost_r': 0.08723, 'funding_windows': 0.58757}
+  max_drawdown_r : 35.0232 [on net curve]
+  sharpe_r       : -0.107
+  avg_win_r      : 0.641
+  avg_loss_r     : -0.832
+  by_outcome     : {'timeout': 89, 'sl_hit': 65, 'tp_hit': 18, 'be_stop': 5}
+ict_scalp_5m backtest — SOLUSDT 15m
+  data: 2024-10-25 00:00:00+00:00 → 2025-10-24 00:00:00+00:00 (34945 bars)
+  total_trades   : 73
+  win_rate_pct   : 53.42%
+  expectancy_r   : 0.0707
+  total_r (gross): 5.1601
+  net_total_r    : -0.0665 (exp -0.0009) [net-of-full-cost: fee+slippage+funding]
+  net_r_fee_only : 1.219 (exp 0.0167) [fee-only comparison arm]
+  cost           : fee=11.0bps slip=3.0bps fund=1.0bps/8h mean_cost_r={'fee_r': 0.05399, 'slippage_r': 0.01472, 'funding_r': 0.00289, 'total_cost_r': 0.0716, 'funding_windows': 0.63014}
+  max_drawdown_r : 7.2195 [on net curve]
+  sharpe_r       : 0.0874
+  avg_win_r      : 0.6689
+  avg_loss_r     : -0.6155
+  by_outcome     : {'timeout': 44, 'sl_hit': 15, 'tp_hit': 11, 'be_stop': 3}
+{
+ "verdict": "pass",
+ "note": "PASS: ON -0.07 R vs OFF -31.61 R (delta +31.54); mean -0.0009 vs -0.1786; ex-worst-trade ON 1.25 vs OFF -29.92; folds ON>=OFF 6/6"
+}
