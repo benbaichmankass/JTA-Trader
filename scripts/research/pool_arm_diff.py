@@ -56,21 +56,21 @@ def _ts(s: str) -> datetime:
     return datetime.fromisoformat(str(s).replace("Z", "+00:00"))
 
 
-def find_arm_file(unit: str, arm: str, root: Path) -> Optional[Path]:
-    """The newest kept emit of ``arm`` for ``unit`` (comms/research/<unit>/<run>/arms/<arm>__trades.jsonl)."""
-    hits = sorted(
-        glob.glob(
-            str(
-                root
-                / "comms"
-                / "research"
-                / unit
-                / "*"
-                / "arms"
-                / f"{arm}__trades.jsonl"
-            )
-        )
-    )
+def find_arm_file(
+    unit: str, arm: str, root: Path, leg: Optional[str] = None
+) -> Optional[Path]:
+    """The newest kept emit of ``arm`` for ``unit`` (comms/research/<unit>/<run>/arms/<arm>__trades.jsonl).
+
+    A harness_stage0 unit keeps its trades per CELL, not per arm: comms/research/<unit>/<run>/cells/<family>_<SYMBOL>_<tf>_<ARM>__trades.jsonl.
+    When no arms/ file exists and ``leg`` is given (the cell label ``<SYMBOL>_<tf>``, e.g. ``AAVEUSDT_4h``), that cell file is read
+    instead, so a pooled paired read can span the cells of several timeframes (PI-20261119-FILLW47B-0012). The suffix match is exact
+    on ``_<leg>_<arm>__trades.jsonl``, so arm D40 never matches D40A."""
+    base = root / "comms" / "research" / unit / "*"
+    hits = sorted(glob.glob(str(base / "arms" / f"{arm}__trades.jsonl")))
+    if not hits and leg:
+        hits = sorted(glob.glob(str(base / "cells" / f"*_{leg}_{arm}__trades.jsonl")))
+    if len(hits) > 1:   # several runs kept an emit: say which one is read (the newest), never pick silently
+        print(f"pool_arm_diff: {unit} {leg or '-'} {arm}: {len(hits)} kept emits, reading the newest {hits[-1]}", file=sys.stderr)
     return Path(hits[-1]) if hits else None
 
 
@@ -264,7 +264,7 @@ def run(a: argparse.Namespace) -> int:
     for leg, unit in units.items():
         per_leg[leg] = {}
         for arm in arms:
-            p = find_arm_file(unit, arm, root)
+            p = find_arm_file(unit, arm, root, leg)
             if p is None:
                 missing.append(f"{unit}:{arm}")
             else:
