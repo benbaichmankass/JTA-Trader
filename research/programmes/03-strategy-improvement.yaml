@@ -1502,7 +1502,8 @@ nodes:
     verdict: pass
   authoring_route: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): Tier-3 action -- HTF filter ON beats OFF, but stays net-negative on 5/6 legs: a roster decision'
   not_authored: '2026-11-19 lane QUEUE-FILL-STANDING-W47b (manager instruction): not authored -- no decision follows; legs net-negative under both arms. The disjoint-window confirmation would only re-measure a filter that still loses money ON and OFF, so neither outcome changes the roster decision.'
-  needs_authoring: 'RESULT 2026-10-25 (lane RQ-20260928-001-RUN, docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json): 6 of 7 legs PASS
+  authoring_closed: '2026-11-20 lane QUEUE-FILL-STANDING-W47b (manager 2026-11-20 00:05Z, Tier-1): authored as RQ-20261120-3b7c-01..06 (sol_5m, xrp_5m, avax_5m, xrp_15m, eth_15m, sol_15m), the disjoint-window confirmation of RQ-20260928-001 on 2024-10-25..2025-10-24 with the original rule''s thresholds verbatim plus the worst-trade-removed clause, via scripts/research/htf_filter_confirm.py (arm config keys do not reach the backtest in exit_lever_ablation, PI-20261119-FILLW47B-0013). mgc_15m is out (no 15m feed in the original). Do not re-author; the units own the question.'
+  authoring_closed_ask: 'RESULT 2026-10-25 (lane RQ-20260928-001-RUN, docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json): 6 of 7 legs PASS
     (mgc_15m no_data); ON beats OFF by +91 R (sol_5m) .. +4 R, pooled -318.3 R OFF vs -97.9 R ON, but ON is still net-negative on 5 of 6 legs
     and the outlier clause is already discharged (ON > OFF with each arm''s worst trade removed, all 6). The remaining step is the disjoint-window confirmation.
     The HTF trend-bias filter ADDS net-of-cost edge on the ict_scalp variants (RQ-20260928-001 PASS,

@@ -1,0 +1,109 @@
+# Authored 2026-11-20 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, from programme node P3-M27-htf-pass (manager 2026-11-20 00:05Z). Called by the node's remaining step: the disjoint-window confirmation of RQ-20260928-001. Gates this adds or changes: none.
+id: RQ-20261120-3b7c-06
+title: 'CONFIRMATION of RQ-20260928-001 on a DISJOINT window: does the HTF trend filter (ON vs forced OFF) on ict_scalp_sol_15m still raise net R, net of the full cost stack, on 2024-10-25..2025-10-24?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On ict_scalp_sol_15m over 2024-10-25 .. 2025-10-24 (disjoint from the 2025-10-25 .. 2026-10-24 window of RQ-20260928-001, which starts the day after this one ends), does forcing the HTF trend-bias filter ON (completed HTF bars, causal) raise total net R over forcing it OFF, with the mean R per trade not worse than OFF by more than 0.3 and ON still higher with each arm''s single worst trade removed, net of the harness cost stack? The first window graded PASS on this leg (OFF 196 trades -14.27 R, ON 87 trades -10.22 R, run recorded in docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json); this unit asks whether that survives out of window.'
+why_this_matters: 'Programme node P3-M27-htf-pass: 6 of 7 legs PASSED RQ-20260928-001 but ON is still net-negative on 5 of 6 legs (PASS is loss-cutting, not edge) and the node requires one disjoint-window confirmation, with the outlier clause, before any Tier-3 note. Decision changed: PASS -> the filter''s loss-cutting effect is confirmed on this leg (a Tier-3 keep note at most, never a config edit; still not an edge claim); FAIL -> the first-window PASS is NOT confirmed on this leg and no claim is made; a Tier-3 review of leaving the filter ON is the manager''s, not an edit here. Window check, stated: the original rows all carry window [2025-10-25, 2026-10-24]; this unit ends 2025-10-24, one day earlier, so the windows do not overlap.'
+power:
+  expected_n: 283
+  min_detectable_effect: 0.3
+  effect_units: R per trade
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n = n(OFF) + n(ON) of the original window (196 + 87 = 283), an ESTIMATE for the prior year, not a measurement. min_detectable_effect 0.3 R per trade is the original unit''s own reading of its effect threshold (the mean-tolerance clause). sd 1.0 R is an ESTIMATE (R-multiples of a fixed stop; the original rows do not record a per-trade sd). Below n 175 the unit grades INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on a pinned in-hand window of public candles; nothing accrues.
+evidence_class:
+  holdout: disjoint_window
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261120-3B7C-06-HTF-CONFIRM-SOL_15M
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'scripts/research/htf_filter_confirm.py --leg ict_scalp_sol_15m on the pinned window 2024-10-25 .. 2025-10-24: scripts/backtest_ict_scalp.py run twice in-process through rq_20260928_001_htf_wire.run_arm (the leg''s own argv from regime_debt_matrix.build_harness_cmd, venue fee, slippage and funding passed explicitly from execution_costs.resolve_cost_policy), htf_trend_filter_enabled forced False (OFF) then True (ON). Per arm: n, total net R, mean R per trade, net R with the single worst trade removed, net R per calendar fold (6 folds by entry time, reported not gating). Disclosure: the driver was smoke-tested on 2026-11-20 on a 400-day sol_5m candle file (2025-10-16..2026-11-18), a different window that overlaps this unit''s window only on 2025-10-16..2025-10-24; the OFF arm''s trade count (376) and net R (-114.6) over that file were seen, the ON arm was not read, and nothing was run on this leg''s confirmation window.'
+  rule: 'INDETERMINATE IF n(OFF) + n(ON) < 175. PASS IF n(OFF) + n(ON) >= 175 AND net R(ON) > net R(OFF) AND mean R(ON) >= mean R(OFF) - 0.3 AND net R(ON) > net R(OFF) with each arm''s single worst trade removed. FAIL otherwise. The first three clauses are RULE-RQ0928-001-ICTSCALP-HTF-FILTER-WIRE unchanged; the fourth is the programme node''s outlier clause. Thresholds are not changed after any result.'
+  pass_action: 'record the HTF filter as confirmed (loss-cutting, not edge) on ict_scalp_sol_15m in research/levers/ict_scalp_sol_15m.yaml; at most a Tier-3 keep note through the manager; never a config edit.'
+  fail_action: 'record the first-window PASS as NOT confirmed on ict_scalp_sol_15m; no claim; the lever family is not retired (scripts/research/family_retirement_policy.yaml); any change to the live filter state is a separate Tier-3 act.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. Stated deviations from RQ-20260928-001: candles are Binance USD-M futures (the harness fetch, binance_vision um monthly klines), the original used Binance spot; ON uses completed HTF bars (causal), one bar staler than live''s forming bar, as in the original; OFF is forced False (the leg''s YAML block no longer carries the flag). mgc_15m is not part of this set (no 15m feed in the original).'
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): confirmation on a disjoint window named by the node; thresholds copied unchanged from the registered rule'
+intervention_controls:
+  not_applicable: an entry-filter ablation run through the backtest on closed historical bars, not an in-trade action or active-management intervention
+iteration:
+  subject: ict_scalp_sol_15m
+  subject_kind: strategy_leg
+  from_result: RQ-20260928-001
+  verdict_read: pass
+  diagnosis: 'RQ-20260928-001 graded the HTF trend filter PASS on ict_scalp_sol_15m (6 of 7 legs): loss-cutting (ON removes ~61-67% of trades and is still net-negative on 5 of 6 legs). The node asks for one disjoint-window confirmation with the outlier clause before any Tier-3 note.'
+  search: 'htf filter family, ON vs forced OFF on the disjoint window 2024-10-25..2025-10-24, same rule as the first window plus the worst-trade-removed clause.'
+  levers:
+  - htf
+  map_entries:
+  - research/levers/ict_scalp_sol_15m.yaml
+  attempt: 1
+  due_by: '2026-11-27'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: structural
+  basis: planning weight for a confirmation of a lever cell on a rostered/prop-sized leg; an estimate, not a measurement
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  basis: 'MEASURED 2026-11-20: one 400-day sol_5m OFF arm of this driver took about 3 minutes in a container; two arms plus a ~770-day fetch is est 25 min, an over-estimate for the 15m legs. The first run replaces it.'
+  why_runner: 'fetches keyless public candles (Binance Vision) for a window older than the Kaggle candle dataset holds for this feed; the Kaggle kernel has no internet, so the unit stays on the GitHub runner.'
+run:
+  command:
+  - python3
+  - scripts/research/htf_filter_confirm.py
+  - --leg
+  - ict_scalp_sol_15m
+  - --days
+  - '770'
+  - --start
+  - '2024-10-25'
+  - --end
+  - '2025-10-24'
+  - --min-n
+  - '175'
+  - --mean-tol
+  - '0.3'
+  - --folds
+  - '6'
+  - --rule-id
+  - RULE-RQ20261120-3B7C-06-HTF-CONFIRM-SOL_15M
+  - --research-unit
+  - RQ-20261120-3b7c-06
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-3b7c-06
+  timeout_minutes: 90
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+programme_node:
+  programme: P3
+  node: P3-M27-htf-pass
+  goal: G1
+  after: []
+related:
+- RQ-20260928-001
+- docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json
+- research/levers/ict_scalp_sol_15m.yaml
+- scripts/research/htf_filter_confirm.py
+- scripts/research/rq_20260928_001_htf_wire.py
+last_dispatched_at: null
