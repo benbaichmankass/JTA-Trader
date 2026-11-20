@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "research tooling fix: harness CLIs and raw-loading drivers apply the resolver's resample; m20 resolver never returns a coarser file; manager merges after the FULL pytest-run is green",
+  "why": "Audit of the resolve_or_refuse/resolve_data callers PR #27491 left (PI-20261119-RIMARY13-0002). The 7 --resample harness CLIs aggregated only on an explicit --resample, so --symbol/--timeframe 1h on a 5m-only trainer symbol replayed on 5m bars; ict_scalp/orb and three drivers loaded the resolved file raw; m20 _resolve_one treated 1m/3m/30m as 60 min (BTCUSDT 1m -> BTCUSDT_15m.csv resample=1m). Research tooling only; no config, model or order path. Gates this adds or changes: none."
+}
