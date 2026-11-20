@@ -326,12 +326,15 @@ def _header_meta(db: str | None) -> dict:
 
 # ── export pre-check (AM-OPS-9): the guards' own row checks, run BEFORE a file is written ──
 #
-# Gates this adds or changes: none added; narrows roadmap-map, soak-contract and claim-basis to skip
-# rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
+# Gates this adds or changes: none added; narrows roadmap-map, soak-contract, claim-basis and (since
+# EXPORT-VALIDATION-GAP, 2026-11-20) redate to skip rows whose store updated_at <= export_base_at
+# (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
 #
 # A changed row/record that fails roadmap-map (roadmap_map.row_problems), soak-contract
-# (check_soak_contracts.row_findings / pipeline_item_findings) or claim-basis
-# (check_claim_basis.new_row_failure) stays in the store, is LEFT OUT of this export, and is filed ONCE
+# (check_soak_contracts.row_findings / pipeline_item_findings), claim-basis
+# (check_claim_basis.new_row_failure) or redate (pipeline.redate_problems: a record that moves an open
+# item's next-due later without a new observation; first export run 44648031388 landed 13 such records
+# the redate-guard then refused) stays in the store, is LEFT OUT of this export, and is filed ONCE
 # as an observation titled ``EXPORT HELD BACK [<id>] ...`` (no second filing while one is open). The next
 # export re-checks it. A row/record whose store updated_at <= export_base_at (_header.json) lands anyway.
 
@@ -372,6 +375,9 @@ def export_precheck(kind: str, item_id: str, new: dict, old: dict | None, name: 
     else:
         msgs = list(sc.pipeline_item_findings(new, name, ctx["ids"],
                                               lambda: old.get("next_action") if old is not None else None))
+        if old is not None:  # the redate-guard's own predicate (scripts/ci/check_redate.py)
+            from scripts.ops import pipeline as _pl
+            msgs += _pl.redate_problems(old, new)
         path = cb.PIPELINE_DIR
     if old is None:  # claim-basis grades NEW ids only
         f = cb.new_row_failure(item_id, new, path)
