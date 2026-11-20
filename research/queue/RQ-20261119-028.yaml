@@ -4,7 +4,7 @@
 id: RQ-20261119-028
 title: 'ITERATION of uso_trend_1h after the vol-skip cells failed on both tails (9e1a, 9e1b): does an
   ADX ceiling AX40 / AX50 beat the declared leg, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -158,3 +158,15 @@ generated:
   params:
     node: P3-RP1119-uso-trend-1h-adx-ceiling
 last_dispatched_at: '2026-11-20T01:04:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RP1119-uso-trend-1h-adx-ceiling
+  evidence:
+  - research/results/RQ-20261119-028/44648956455.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
