@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "Adds .github/workflows/work-store-export.yml, a daily workflow that opens self-landing Tier-1 data PRs through .github/actions/commit-to-main, and narrows three CI guards (roadmap-map, soak-contract, claim-basis) for pre-cutover export rows. The manager reads it once and merges; no runtime, order path, config or src/ file is touched.",
+  "why": "AM-OPS-9 (manager decision): the work-store export (scripts/ops/work.py export --to-files) pre-checks each changed row/record with the guards' own per-row predicates (refactored out of roadmap_map.diff_problems, check_soak_contracts.diff_findings, check_claim_basis.check_new_rows/check_new_pipeline_rows; guard behaviour otherwise unchanged), holds a failing one back and files it once as an EXPORT HELD BACK observation; rows with store updated_at <= _header.json export_base_at (2026-11-19T22:30:00Z) land and the guards skip them via docs/claude/work/EXPORT-STAMPS.json. Plus the daily work-store-export workflow. Gates this adds or changes: none added; narrows roadmap-map, soak-contract and claim-basis to skip rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258). Revert: git revert."
+}

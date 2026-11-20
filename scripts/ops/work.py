@@ -14,7 +14,8 @@ A thin HTTPS client over ``/api/bot/work/items`` on the live VM. Stdlib only.
     work.py reopen <id> [--state queued]            # set state, clear terminal_reason
     work.py observe <id> "what was seen"            # observation: due_rule.last_checked = today, then a note
     work.py drain --issue N                         # (runner) apply the outbox issue's pending ops
-    work.py export --to-files [--root DIR] [--db PATH] [--unfreeze]   # the ROLLBACK path (WSD-S4)
+    work.py export --to-files [--root DIR] [--db PATH] [--unfreeze] [--no-precheck] [--no-file] [--run-ref R]
+                                                    # the export / ROLLBACK path (WSD-S4); pre-check: AM-OPS-9
 
 Every write carries an ``op_id`` (``--op-id`` or a fresh uuid) -- a retried write is a no-op on the
 server -- and, after create, ``If-Match: <version>`` read from the item; a 409 (someone wrote in
@@ -323,38 +324,136 @@ def _header_meta(db: str | None) -> dict:
     return out
 
 
-def export_to_files(root, items: list[dict], *, unfreeze: bool = False, header_meta: dict | None = None) -> dict:
-    """Write the store's items into the file layout under ``root``; only what differs is written."""
+# ── export pre-check (AM-OPS-9): the guards' own row checks, run BEFORE a file is written ──
+#
+# Gates this adds or changes: none added; narrows roadmap-map, soak-contract and claim-basis to skip
+# rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
+#
+# A changed row/record that fails roadmap-map (roadmap_map.row_problems), soak-contract
+# (check_soak_contracts.row_findings / pipeline_item_findings) or claim-basis
+# (check_claim_basis.new_row_failure) stays in the store, is LEFT OUT of this export, and is filed ONCE
+# as an observation titled ``EXPORT HELD BACK [<id>] ...`` (no second filing while one is open). The next
+# export re-checks it. A row/record whose store updated_at <= export_base_at (_header.json) lands anyway.
+
+HOLD_PREFIX = "EXPORT HELD BACK "
+HOLD_BY = "work-export"
+
+
+def hold_title(item_id: str) -> str:
+    """The stable title prefix that keys the one open filing per held-back row/record."""
+    return f"{HOLD_PREFIX}[{item_id}]"
+
+
+def precheck_context(root) -> dict:
+    """What the three guards read, from ``root`` (falling back to this repo's copy when ``root``
+    lacks a file): the milestones spec, the soak contract ids, and ``export_base_at``."""
+    from pathlib import Path
+    from scripts import check_claim_basis as cb
+    from scripts.ci import check_soak_contracts as sc
+    from scripts.ops import roadmap_map as rm
+    from scripts.ops import work_export_cutover as cut
+    ss = sc.ss  # the soak guard's own soak_state module (its contract loader)
+    root = Path(root)
+    ms = root / rm.MILESTONES.relative_to(rm.REPO)
+    soaks = root / ss.CONTRACTS.relative_to(ss.REPO)
+    return {"spec": rm.load_spec(ms if ms.is_file() else rm.MILESTONES),
+            "ids": {c.get("id") for c in ss.load_contracts(soaks if soaks.is_file() else ss.CONTRACTS)},
+            "base_at": cut.base_at(root), "rm": rm, "sc": sc, "cb": cb}
+
+
+def export_precheck(kind: str, item_id: str, new: dict, old: dict | None, name: str, ctx: dict) -> list[str]:
+    """The guard messages for ONE changed row (``kind`` build) or ONE new pipeline record, through the
+    guards' own predicates. ``old`` is the file's current content (None = not in the files yet)."""
+    rm, sc, cb = ctx["rm"], ctx["sc"], ctx["cb"]
+    if kind == "build":
+        msgs = rm.row_problems(ctx["spec"], item_id, new, old, new.get("_seq", 0))
+        msgs += sc.row_findings(new, old.get("state") if old is not None else None, ctx["ids"])
+        path = cb.BACKLOGS[0]
+    else:
+        msgs = list(sc.pipeline_item_findings(new, name, ctx["ids"],
+                                              lambda: old.get("next_action") if old is not None else None))
+        path = cb.PIPELINE_DIR
+    if old is None:  # claim-basis grades NEW ids only
+        f = cb.new_row_failure(item_id, new, path)
+        if f:
+            msgs.append(f)
+    return msgs
+
+
+def export_to_files(root, items: list[dict], *, unfreeze: bool = False, header_meta: dict | None = None,
+                    precheck: bool = True) -> dict:
+    """Write the store's items into the file layout under ``root``; only what differs is written.
+    With ``precheck`` (the default) a changed row/record failing a guard's row check is held back
+    (``held``), unless its store updated_at <= export_base_at. ``precheck=False`` (``--no-precheck``)
+    is the byte-exact rollback: every differing item is written."""
     from pathlib import Path
     from scripts.ops import pipeline as pl
+    from scripts.ops import work_export_cutover as cut
     from src.runtime import checklist_store as cs
     from src.runtime import work_read
     from src.runtime import work_store_import as wi
     root = Path(root)
     cdir, pdir = root / cs.STORE, root / pl.STORE
     cdir.mkdir(parents=True, exist_ok=True)
-    out = {"rows_written": 0, "rows_unchanged": 0, "records_written": 0, "records_unchanged": 0}
+    out = {"rows_written": 0, "rows_unchanged": 0, "rows_held": 0,
+           "records_written": 0, "records_unchanged": 0, "records_held": 0,
+           "exempt_failing_landed": 0, "held": []}
     have = pl.read_files(pdir).items if pdir.exists() else {}
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+    ctx = precheck_context(root) if precheck else None
+    stamps: dict = {}
+
+    def admit(kind: str, it: dict, new: dict, old: dict | None, name: str) -> bool:
+        if ctx is None:
+            return True
+        msgs = export_precheck(kind, it["id"], new, old, name, ctx)
+        if not msgs:
+            return True
+        if cut.is_pre_cutover(it.get("updated_at"), ctx["base_at"]):
+            out["exempt_failing_landed"] += 1
+            return True
+        out["rows_held" if kind == "build" else "records_held"] += 1
+        out["held"].append({"id": it["id"], "kind": it["kind"], "updated_at": it.get("updated_at"),
+                            "messages": msgs})
+        return False
+
+    def write(path: Path, text: str, it: dict) -> None:
+        data = text.encode("utf-8")
+        path.write_bytes(data)
+        stamps[path.relative_to(root).as_posix()] = {"updated_at": it.get("updated_at"), "sha256": cut.sha(data)}
+
     for it in sorted(items, key=lambda i: i["id"]):
         if it["kind"] == "build":
             row = wi.to_row(it)
             path = cdir / f"{row['id']}.json"
-            if path.is_file() and json.loads(path.read_text(encoding="utf-8")) == row:
+            old = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+            if old == row:
                 out["rows_unchanged"] += 1
                 continue
-            path.write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
+            if not admit("build", it, row, old, path.name):
+                continue
+            write(path, json.dumps(row, indent=2) + "\n", it)
             out["rows_written"] += 1
         else:
             rec = wi.to_pipeline_item(it)
             if have.get(rec["id"]) == rec:
                 out["records_unchanged"] += 1
                 continue
-            pdir.mkdir(parents=True, exist_ok=True)
             name = f"{stamp}Z-export-{rec['id']}{pl.RECORD_SUFFIX}"
-            (pdir / name).write_text(json.dumps(rec, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-                                     encoding="utf-8")
+            if not admit("observation", it, rec, have.get(rec["id"]), (pl.STORE / name).as_posix()):
+                continue
+            pdir.mkdir(parents=True, exist_ok=True)
+            write(pdir / name, json.dumps(rec, ensure_ascii=False, sort_keys=True, indent=2) + "\n", it)
             out["records_written"] += 1
+    if stamps:  # the cutover's side file: store updated_at + sha of every file THIS export wrote
+        sp = root / cut.STAMPS_REL
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        sp.write_text(json.dumps({
+            "_comment": "Written by scripts/ops/work.py export --to-files (AM-OPS-9). For each file the "
+                        "last export wrote: the work store's updated_at and the sha256 of the bytes written. "
+                        "The guards skip a file whose updated_at <= _header.json export_base_at and whose "
+                        "bytes still match (scripts/ops/work_export_cutover.py). Never edit by hand.",
+            "files": dict(sorted(stamps.items()))}, indent=2) + "\n", encoding="utf-8")
     hp = cdir / cs.HEADER
     if header_meta:  # store-backed header keys go back into _header.json (rollback fidelity)
         head = json.loads(hp.read_text(encoding="utf-8"))
@@ -369,6 +468,104 @@ def export_to_files(root, items: list[dict], *, unfreeze: bool = False, header_m
         out["unfrozen"] = head.pop(work_read.FROZEN_KEY, None) is not None
         hp.write_text(json.dumps(head, indent=2) + "\n", encoding="utf-8")
     return out
+
+
+def file_holds(held: list[dict], items: list[dict], *, run_ref: str = "", today=None) -> dict:
+    """File ONE observation per held-back row/record through the store API (the ``add`` op), unless
+    an open observation titled ``hold_title(id)...`` already exists. Best-effort: a failed filing is
+    printed and counted, never raised -- the export already happened."""
+    from datetime import timedelta
+    today = today or datetime.now(timezone.utc).date()
+    due = (today + timedelta(days=2)).isoformat()
+    open_titles = [str(i.get("title") or "") for i in items
+                   if i.get("kind") == "observation" and i.get("state") not in ("done", "dropped")]
+    out = {"filed": [], "skipped_open": [], "errors": []}
+    for h in held:
+        rid, prefix = h["id"], hold_title(h["id"])
+        if any(t.startswith(prefix) for t in open_titles):
+            out["skipped_open"].append(rid)
+            continue
+        what = (f"{prefix} held back from the work-store export of {today.isoformat()}: the store "
+                f"{'row' if h.get('kind') == 'build' else 'pipeline record'} fails the guard row check -- "
+                + " | ".join(h.get("messages") or []))
+        oid = f"EXPORT-HOLD-{today.strftime('%Y%m%d')}-{rid}"
+        body = {
+            "id": oid, "kind": "observation", "title": what, "owner": "manager",
+            "roadmap": ["unmapped"],
+            "roadmap_unmapped_reason": "export hygiene: a store row the work-store export held back; the "
+                                       "fix is on that row (pre-cutover debt is STORE-EXPORT-BACKFILL-258)",
+            "due_rule": {"kind": "date", "due_date": due}, "next_action": "check_observation",
+            "origin": {"kind": "audit", "by": HOLD_BY,
+                       "ref": f"scripts/ops/work.py export --to-files {run_ref}".strip() + f"; held item {rid}",
+                       "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held "
+                                "row; it lands once the guard row check passes"},
+            # a one-shot definition of done, so this filing itself passes soak-contract on export
+            "extra": {"observation": {"what": f"{rid} lands in the work-store export",
+                                      "how_to_check": f"the next export's summary no longer lists {rid} as held",
+                                      "due_by": due}},
+        }
+        try:
+            res = apply_direct(make_op("create", oid, body, HOLD_BY, f"work-export:hold:{oid}"))
+            out["filed"].append({"id": oid, "for": rid, "replayed": res.get("replayed", False)})
+            open_titles.append(what)
+        except Exception as exc:  # noqa: BLE001 -- best-effort: nothing here may abort the export
+            print(f"work-export: filing for held {rid} FAILED (export not affected): {exc}", file=sys.stderr)
+            out["errors"].append({"for": rid, "error": str(exc)})
+    return out
+
+
+VALIDATION_PREFIX = "EXPORT VALIDATION FAILED ["
+
+
+def file_validation_failure(checks: list[str], log_tail: str, items: list[dict], *, run_ref: str = "",
+                            today=None) -> dict:
+    """The workflow's post-export validation (guards + tests on the exported tree) failed, so that run
+    committed NOTHING. File ONE observation titled ``EXPORT VALIDATION FAILED [<date>] ...`` naming the
+    failing checks and a log tail -- unless an open one with that prefix already exists (whatever its
+    date). Best-effort like ``file_holds``: never raises."""
+    from datetime import timedelta
+    today = today or datetime.now(timezone.utc).date()
+    if any(i.get("kind") == "observation" and i.get("state") not in ("done", "dropped")
+           and str(i.get("title") or "").startswith(VALIDATION_PREFIX) for i in items):
+        return {"filed": None, "skipped_open": True, "error": None}
+    due = (today + timedelta(days=2)).isoformat()
+    oid = f"EXPORT-VALIDATION-{today.strftime('%Y%m%d')}"
+    tail = (log_tail or "").strip()[-2000:]
+    what = (f"{VALIDATION_PREFIX}{today.isoformat()}] the work-store export was NOT landed: validation of "
+            f"the exported tree failed from the work-store export of {today.isoformat()} -- failing: "
+            f"{', '.join(checks) or 'unknown'}. Log tail: {tail}")
+    body = {
+        "id": oid, "kind": "observation", "title": what, "owner": "manager", "roadmap": ["unmapped"],
+        "roadmap_unmapped_reason": "export hygiene: the daily work-store export failed its own validation "
+                                   "and landed nothing; the fix is in the failing check or the store data",
+        "due_rule": {"kind": "date", "due_date": due}, "next_action": "check_observation",
+        "origin": {"kind": "audit", "by": HOLD_BY,
+                   "ref": f".github/workflows/work-store-export.yml {run_ref}".strip(),
+                   "rerun": "dispatch .github/workflows/work-store-export.yml (or run scripts/ops/work.py "
+                            "export --to-files then the guards/tests it lists); it lands once validation passes"},
+        "extra": {"observation": {"what": "a work-store-export run validates clean and lands its PR",
+                                  "how_to_check": "the latest work-store-export run summary shows validation passed",
+                                  "due_by": due}},
+    }
+    try:
+        res = apply_direct(make_op("create", oid, body, HOLD_BY, f"work-export:validation:{oid}"))
+        return {"filed": oid, "skipped_open": False, "error": None, "replayed": res.get("replayed", False)}
+    except Exception as exc:  # noqa: BLE001 -- best-effort: a failed filing is printed, never raised
+        print(f"work-export: filing the validation failure FAILED: {exc}", file=sys.stderr)
+        return {"filed": None, "skipped_open": False, "error": str(exc)}
+
+
+def export_summary(out: dict) -> str:
+    """One human line per count, for the workflow log / step summary."""
+    f = out.get("filing") or {}
+    lines = [f"rows: {out['rows_written']} written, {out['rows_unchanged']} unchanged, {out['rows_held']} held back",
+             f"records: {out['records_written']} written, {out['records_unchanged']} unchanged, "
+             f"{out['records_held']} held back",
+             f"pre-cutover failing items landed (exempt): {out['exempt_failing_landed']}",
+             f"items filed: {len(f.get('filed', []))} (already open: {len(f.get('skipped_open', []))}, "
+             f"filing errors: {len(f.get('errors', []))})"]
+    lines += [f"held: {h['id']}: {' | '.join(h['messages'])}" for h in out.get("held", [])]
+    return "\n".join(lines)
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────────────────
@@ -479,6 +676,15 @@ def main(argv: list[str] | None = None) -> int:
     pe.add_argument("--root", default=None, help="repo root to write into (default: this repo)")
     pe.add_argument("--db", default=None, help="a local work_store.db (the VM); default: page the API")
     pe.add_argument("--unfreeze", action="store_true", help="also remove the freeze key (rollback)")
+    pe.add_argument("--no-precheck", action="store_true",
+                    help="write every differing item, skipping the guards' row checks (the byte-exact rollback)")
+    pe.add_argument("--no-file", action="store_true", help="do not file observations for held-back items")
+    pe.add_argument("--run-ref", default=None, help="who ran the export (e.g. a workflow run url), for filings")
+    pv = sub.add_parser("export-validation-failed",
+                        help="(workflow) file ONE 'EXPORT VALIDATION FAILED' observation, deduplicated")
+    pv.add_argument("--check", action="append", default=[], help="a failing check name, repeatable")
+    pv.add_argument("--log", default=None, help="a log file; its tail goes into the filing")
+    pv.add_argument("--run-ref", default=None)
     for sp in (pa, ps, pn, pc, pr, po):
         sp.add_argument("--by")
         sp.add_argument("--op-id")
@@ -511,7 +717,27 @@ def main(argv: list[str] | None = None) -> int:
                 out = send(make_op("meta", a.key, {"value": val}, _by(a), a.op_id), a.via, a.issue)
         elif a.cmd == "export":
             root = a.root or str(_REPO)
-            out = export_to_files(root, _all_items(a.db), unfreeze=a.unfreeze, header_meta=_header_meta(a.db))
+            items = _all_items(a.db)
+            out = export_to_files(root, items, unfreeze=a.unfreeze, header_meta=_header_meta(a.db),
+                                  precheck=not a.no_precheck)
+            if out["held"] and not a.no_file:
+                out["filing"] = file_holds(out["held"], items, run_ref=a.run_ref or "")
+            print(export_summary(out), file=sys.stderr)
+        elif a.cmd == "export-validation-failed":
+            tail = ""
+            if a.log:
+                try:
+                    with open(a.log, encoding="utf-8", errors="replace") as fh:
+                        tail = fh.read()[-4000:]
+                except OSError as exc:
+                    tail = f"(log unreadable: {exc})"
+            try:
+                items = _all_items(None)
+            except WorkError as exc:  # cannot dedup without the listing: say so, do not file blind
+                print(f"work-export: cannot list the store to dedup, NOT filing: {exc}", file=sys.stderr)
+                items = None
+            out = (file_validation_failure(a.check, tail, items, run_ref=a.run_ref or "")
+                   if items is not None else {"filed": None, "error": "store listing failed"})
         elif a.cmd == "drain":
             if not a.issue:
                 raise WorkError("drain needs --issue (or WORK_STORE_OUTBOX_ISSUE)")

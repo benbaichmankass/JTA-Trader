@@ -43,7 +43,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import yaml
 
@@ -142,7 +142,45 @@ def _prior_next_action(base: str, item_id: str) -> Optional[str]:
     return None
 
 
-def diff_findings(base: str, contracts: List[dict]) -> List[str]:
+def row_findings(r: dict, old_state: Optional[str], ids: set) -> List[str]:
+    """The per-row predicate of ``diff_findings``: ``r`` is the row now, ``old_state`` its state at
+    base (None = new). Also imported by the work-store export's pre-check (scripts/ops/work.py)."""
+    if r.get("state") == "landed_unproven" and old_state != "landed_unproven" and r.get("id") not in ids:
+        if "observation" in r:
+            return [f"checklist row {r.get('id')}: {p}" for p in observation_problems(r["observation"])]
+        return [f"checklist row {r.get('id')} enters landed_unproven with no soak contract "
+                f"(add a contract with id {r.get('id')!r} to docs/claude/work/SOAKS.json: the "
+                f"mechanical checklist and n_needed <= 2) — or, for a one-shot "
+                f"check, an `observation: {{what, how_to_check, due_by}}` on the row."]
+    return []
+
+
+def pipeline_item_findings(item: dict, name: str, ids: set,
+                           prior_next_action: Callable[[], Optional[str]]) -> List[str]:
+    """The per-record predicate of ``diff_findings`` for one ADDED pipeline record file ``name``.
+    ``prior_next_action()`` returns the id's ``next_action`` at base (None = new id); it is only
+    called once the cheap checks pass. Also imported by the work-store export's pre-check."""
+    if item.get("next_action") != "check_observation" or item.get("state") in ("done", "killed"):
+        return []
+    if (item.get("due_when") or {}).get("soak") or item.get("id") in ids:
+        return []
+    # An UPDATE record is a new FILE but not a new definition-of-done
+    # question: the item was already a check_observation at base, so its
+    # filing was graded (or grandfathered) then. Only an item that BECOMES a
+    # check_observation here, or a brand-new id, is checked.
+    # (PI-20261005-WFBREDQP-0001: a plain re-date of 249 items failed CI.)
+    if prior_next_action() == "check_observation":
+        return []
+    if "observation" in item:
+        return [f"new pipeline item {item.get('id')}: {p}" for p in observation_problems(item["observation"])]
+    return [f"new pipeline item {item.get('id')} ({name}) is a check_observation with no "
+            f"definition of done: add due_when.soak or a SOAKS.json contract (something "
+            f"that ACCRUES), or `observation: {{what, how_to_check, due_by}}` (a one-shot check)."]
+
+
+def diff_findings(base: str, contracts: List[dict], exempt: frozenset = frozenset()) -> List[str]:
+    """``exempt``: exported files the work-store export cutover exempts (store updated_at <=
+    export_base_at; scripts/ops/work_export_cutover.py). Empty = every touched row/record is checked."""
     ids = {c.get("id") for c in contracts}
     out = []
     from src.runtime import checklist_store  # noqa: PLC0415
@@ -155,38 +193,19 @@ def diff_findings(base: str, contracts: List[dict]) -> List[str]:
     if old_doc is not None:
         old_state = {r.get("id"): r.get("state") for r in old_doc.get("items") or []}
     for r in new_rows:
-        if r.get("state") == "landed_unproven" and old_state.get(r.get("id")) != "landed_unproven" \
-                and r.get("id") not in ids:
-            if "observation" in r:
-                out += [f"checklist row {r.get('id')}: {p}" for p in observation_problems(r["observation"])]
-                continue
-            out.append(f"checklist row {r.get('id')} enters landed_unproven with no soak contract "
-                       f"(add a contract with id {r.get('id')!r} to docs/claude/work/SOAKS.json: the "
-                       f"mechanical checklist and n_needed <= 2) — or, for a one-shot "
-                       f"check, an `observation: {{what, how_to_check, due_by}}` on the row.")
+        if f"{CHECKLIST}/{r.get('id')}.json" in exempt:
+            continue
+        out += row_findings(r, old_state.get(r.get("id")), ids)
     added = _git("diff", "--name-only", "--diff-filter=A", f"{base}...HEAD", "--", PIPE_DIR)
     for name in added.stdout.split():
+        if name in exempt:
+            continue
         try:
             item = json.loads((REPO / name).read_text())
         except (OSError, ValueError):
             continue
-        if item.get("next_action") != "check_observation" or item.get("state") in ("done", "killed"):
-            continue
-        if (item.get("due_when") or {}).get("soak") or item.get("id") in ids:
-            continue
-        # An UPDATE record is a new FILE but not a new definition-of-done
-        # question: the item was already a check_observation at base, so its
-        # filing was graded (or grandfathered) then. Only an item that BECOMES a
-        # check_observation here, or a brand-new id, is checked.
-        # (PI-20261005-WFBREDQP-0001: a plain re-date of 249 items failed CI.)
-        if _prior_next_action(base, item.get("id", "")) == "check_observation":
-            continue
-        if "observation" in item:
-            out += [f"new pipeline item {item.get('id')}: {p}" for p in observation_problems(item["observation"])]
-            continue
-        out.append(f"new pipeline item {item.get('id')} ({name}) is a check_observation with no "
-                   f"definition of done: add due_when.soak or a SOAKS.json contract (something "
-                   f"that ACCRUES), or `observation: {{what, how_to_check, due_by}}` (a one-shot check).")
+        out += pipeline_item_findings(item, name, ids,
+                                      lambda: _prior_next_action(base, item.get("id", "")))
     return out
 
 
@@ -316,7 +335,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
     findings = tree_findings(acc, strat, contracts)
     if _git("rev-parse", "--verify", a.base).returncode == 0:
-        findings += diff_findings(a.base, contracts)
+        from scripts.ops import work_export_cutover as _cut  # noqa: PLC0415 — REPO is on sys.path
+        findings += diff_findings(a.base, contracts, exempt=frozenset(_cut.exempt_paths(REPO)))
     else:
         print(f"soak-contract-guard: base {a.base} not found — diff-scoped checks NOT run")
     designs: dict = {}

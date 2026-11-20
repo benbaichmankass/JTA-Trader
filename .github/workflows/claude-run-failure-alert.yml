@@ -73,6 +73,9 @@ on:
       # which looks exactly like "nothing needed demoting".
       - r4-demotion-gate
       - exit-cell-mandate
+      # AM-OPS-9 (2026-11-19): the daily work-store export. A dead run leaves the
+      # checklist/pipeline files (what the CI guards read) silently stale.
+      - work-store-export
       # W6-OPS-R (2026-09-27): the keeper that dispatches r4-demotion-gate and
       # the other critical validators near their slot, and pages on silence.
       - schedule-keeper
