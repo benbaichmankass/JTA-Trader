@@ -19278,7 +19278,11 @@ def run_reconciliation_tick(
     try:
         # The sweep's venue READS run first WITHOUT journal_sync; the locked body uses them only while the
         # venue generation is unchanged (src/runtime/venue_read_cache.py, LIVE-TICK-NEAR-BUDGET).
-        _eq_cache = _prefetch_equity_sweep_reads(db)
+        # Its own tick-cost phase, timed but NOT under journal_sync (`_phase`, not `_recon_phase`), so the AFTER
+        # read shows what the prefetch costs off the lock (tests/test_order_monitor_phase_split.py).
+        _eq_cache = None
+        with _phase("prefetch_equity_sweep_reads"):
+            _eq_cache = _prefetch_equity_sweep_reads(db)
         try:
             from src.runtime.venue_read_cache import active as _vrc_active
         except Exception:  # noqa: BLE001
