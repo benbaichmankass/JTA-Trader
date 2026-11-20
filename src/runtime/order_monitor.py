@@ -12260,9 +12260,7 @@ def _reassert_soak_path():
     return os.path.join(runtime_logs_dir(), "protection_reassert_soak.jsonl")
 
 
-def _reassert_row_changed_mid_sweep(
-    db, row, sweep_started_at: Optional[datetime],
-) -> Optional[str]:
+def _reassert_row_changed_mid_sweep(db, row) -> Optional[str]:
     """Why a re-assert must NOT act on this sweep's snapshot of *row*, or ``None``.
 
     IB-TRAIL-AMEND-MISSED (2026-11-20, ib_paper MGC trade 7737, paper): the IB
@@ -12270,16 +12268,24 @@ def _reassert_row_changed_mid_sweep(
     monitor thread at 00:00:23.47Z (stop 3683.4 -> 3654.1, IB ack OK); this sweep
     graded the venue's NEW stop against its OLD snapshot (3683.39), called that a
     divergence, and re-placed 3683.4 at 00:00:24.68Z. The 1 h cooldown then
-    locked the reverted level in. So, immediately before deciding, the row is
-    re-read fresh, and the re-assert stands down when:
+    locked the reverted level in. So, immediately before deciding, the row and
+    its package are re-read fresh, and the re-assert stands down when:
 
       * the fresh read fails (fail closed: never act on what could not be read);
       * the trade is no longer open;
       * its stop_loss / take_profit_1 / position_size differ from the snapshot;
-      * its linked order package was updated at or after the snapshot was taken.
+      * its linked package's sl / tp differ from the snapshot (``pkg_sl`` /
+        ``pkg_tp``, read with the row): the trail writes the package first, so
+        this catches a trade-row write that has not landed yet.
 
-    A genuinely diverged row passes all four and re-asserts exactly as before.
-    Never raises.
+    Keyed on LEVEL COLUMNS ONLY, never on ``updated_at`` (manager review of
+    #27545): ``update_order_package`` bumps ``updated_at`` on every write, so a
+    future metadata-only write would otherwise make a genuinely diverged row
+    stand down on every sweep and the re-assert would silently stop working. A
+    package touched without a level change still re-asserts.
+
+    A genuinely diverged, unchanged row passes all checks and re-asserts exactly
+    as before. Never raises.
     """
     def _same(a: Any, b: Any) -> bool:
         if a is None or b is None:
@@ -12289,30 +12295,31 @@ def _reassert_row_changed_mid_sweep(
         except (TypeError, ValueError):
             return str(a) == str(b)
 
+    def _has(key: str) -> bool:
+        try:
+            return key in row.keys()
+        except AttributeError:
+            return key in row
+
     try:
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
             try:
                 fresh = conn.execute(
-                    "SELECT status, stop_loss, take_profit_1, position_size, "
-                    "order_package_id FROM trades WHERE id = ?",
+                    "SELECT t.status, t.stop_loss, t.take_profit_1, t.position_size, "
+                    "p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id WHERE t.id = ?",
                     (row["id"],),
                 ).fetchone()
             except __import__("sqlite3").OperationalError:
-                # A journal without order_package_id: the level checks still run.
+                # A journal without the package link: the trade-level checks still run.
                 fresh = conn.execute(
                     "SELECT status, stop_loss, take_profit_1, position_size, "
-                    "NULL AS order_package_id FROM trades WHERE id = ?",
+                    "NULL AS pkg_sl, NULL AS pkg_tp FROM trades WHERE id = ?",
                     (row["id"],),
                 ).fetchone()
-            pkg_updated = None
-            if fresh is not None and fresh["order_package_id"]:
-                p = conn.execute(
-                    "SELECT updated_at FROM order_packages WHERE order_package_id = ?",
-                    (fresh["order_package_id"],),
-                ).fetchone()
-                pkg_updated = p["updated_at"] if p is not None else None
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001 -- fail closed, never raise into the sweep
@@ -12325,23 +12332,16 @@ def _reassert_row_changed_mid_sweep(
         if not _same(fresh[col], row[col]):
             return (f"{col} changed after this sweep read it "
                     f"({row[col]!r} -> {fresh[col]!r})")
-    if sweep_started_at is not None and pkg_updated:
-        try:
-            pu = datetime.fromisoformat(str(pkg_updated).replace("Z", "+00:00"))
-            if pu.tzinfo is None:
-                pu = pu.replace(tzinfo=timezone.utc)
-            if pu >= sweep_started_at:
-                return (f"order package updated at {pkg_updated}, after this "
-                        f"sweep's snapshot ({sweep_started_at.isoformat()})")
-        except (TypeError, ValueError):
-            pass  # an unparseable stamp does not block; the level checks above still ran
+    for col in ("pkg_sl", "pkg_tp"):
+        if _has(col) and not _same(fresh[col], row[col]):
+            return (f"order package {col[4:]} changed after this sweep read it "
+                    f"({row[col]!r} -> {fresh[col]!r})")
     return None
 
 
 def _reassert_from_divergence(
     db, *, client, account_id: str, protect_symbol: str, row,
     price_verdict: Dict[str, Any], summary: Dict[str, int],
-    sweep_started_at: Optional[datetime] = None,
 ) -> None:
     """Decide, record, and (only at ``apply`` on an allowlisted account) act.
 
@@ -12357,7 +12357,7 @@ def _reassert_from_divergence(
     import json as _json
     import time as _time
     try:
-        _changed = _reassert_row_changed_mid_sweep(db, row, sweep_started_at)
+        _changed = _reassert_row_changed_mid_sweep(db, row)
         if _changed is not None:
             summary["stop_price_reassert_skipped_row_changed"] = int(
                 summary.get("stop_price_reassert_skipped_row_changed", 0)) + 1
@@ -12670,18 +12670,28 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             return summary
         acc_by_id = {str(a.get("account_id")): a for a in accounts}
 
-        # IB-TRAIL-AMEND-MISSED: the moment this sweep's row snapshot is taken.
-        # Anything that changes a row after it (a trail amend landing on the
-        # monitor thread) makes the snapshot stale for a re-assert.
-        sweep_started_at = datetime.now(timezone.utc)
         conn = db.connect()
         try:
             conn.row_factory = __import__("sqlite3").Row
-            rows = conn.execute(
-                "SELECT id, account_id, symbol, direction, position_size, "
-                "stop_loss, take_profit_1, created_at, notes "
-                "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
-            ).fetchall()
+            try:
+                # IB-TRAIL-AMEND-MISSED: snapshot the linked package's LEVELS with
+                # the row, so a re-assert can tell a level move that landed after
+                # this read (the trail amend) from a mere touch of the package.
+                rows = conn.execute(
+                    "SELECT t.id, t.account_id, t.symbol, t.direction, "
+                    "t.position_size, t.stop_loss, t.take_profit_1, t.created_at, "
+                    "t.notes, p.sl AS pkg_sl, p.tp AS pkg_tp "
+                    "FROM trades t LEFT JOIN order_packages p "
+                    "ON p.order_package_id = t.order_package_id "
+                    "WHERE t.status='open' AND COALESCE(t.is_backtest,0)=0"
+                ).fetchall()
+            except __import__("sqlite3").OperationalError:
+                # A journal without the package link: the trade-level checks still run.
+                rows = conn.execute(
+                    "SELECT id, account_id, symbol, direction, position_size, "
+                    "stop_loss, take_profit_1, created_at, notes "
+                    "FROM trades WHERE status='open' AND COALESCE(is_backtest,0)=0"
+                ).fetchall()
         finally:
             conn.close()
     except Exception as exc:  # noqa: BLE001
@@ -12861,7 +12871,6 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                         db, client=client, account_id=account_id,
                         protect_symbol=protect_symbol, row=row,
                         price_verdict=_pv, summary=summary,
-                        sweep_started_at=sweep_started_at,
                     )
                     _gap = abs(_pv["diff"]) * contract_value_usd_for(
                         protect_symbol) * size
