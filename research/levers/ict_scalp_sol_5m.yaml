@@ -7,66 +7,66 @@ books:
 - bybit_1
 baseline:
   record: comms/strategy_evidence/ict_scalp_sol_5m.json
-  net_r: -31.4854
-  n: 181
+  net_r: -16.6392
+  n: 116
   fidelity: faithful
   rule_verdict: fail
 attribution:
   read_state: measured
-  n: 181
-  net_r: -31.485
-  gross_r: 4.58
-  cost_r: 36.066
-  cost_share_of_gross: 7.875
+  n: 116
+  net_r: -16.639
+  gross_r: 5.497
+  cost_r: 22.136
+  cost_share_of_gross: 4.027
   verdict_hint: cost erases a gross edge
   entry_quality:
-    mean_mfe_r: 0.782
-    share_mfe_ge_1r: 0.359
-    n_with_mfe: 181
+    mean_mfe_r: 0.762
+    share_mfe_ge_1r: 0.328
+    n_with_mfe: 116
   exit_capture:
-    median_net_over_mfe_winners: 0.537
-    n_winners: 86
-    losers_that_reached_1r_mfe: 3
+    median_net_over_mfe_winners: 0.6
+    n_winners: 53
+    losers_that_reached_1r_mfe: 1
   by_year:
     '2025':
-      n: 46
-      net_r: -10.435
-      gross_r: -2.357
+      n: 21
+      net_r: -4.151
+      gross_r: -0.622
     '2026':
-      n: 135
-      net_r: -21.051
-      gross_r: 6.937
+      n: 95
+      net_r: -12.488
+      gross_r: 6.119
   by_direction:
     long:
-      n: 89
-      net_r: -27.881
-      gross_r: -10.798
+      n: 55
+      net_r: -19.992
+      gross_r: -9.649
     short:
-      n: 92
-      net_r: -3.605
-      gross_r: 15.378
+      n: 61
+      net_r: 3.353
+      gross_r: 15.146
   by_exit_reason:
     be_stop:
-      n: 12
-      net_r: 0.277
-      gross_r: 4.134
+      n: 6
+      net_r: 0.169
+      gross_r: 2.512
     sl_hit:
-      n: 59
-      net_r: -72.638
-      gross_r: -59.0
+      n: 38
+      net_r: -46.303
+      gross_r: -38.0
     timeout:
-      n: 81
-      net_r: 3.564
-      gross_r: 15.947
+      n: 51
+      net_r: 1.77
+      gross_r: 9.484
     tp_hit:
-      n: 29
-      net_r: 37.312
-      gross_r: 43.5
+      n: 21
+      net_r: 27.724
+      gross_r: 31.5
   by_adx_at_entry:
     unknown:
-      n: 181
-      net_r: -31.485
-      gross_r: 4.58
+      n: 116
+      net_r: -16.639
+      gross_r: 5.497
 manifest:
   entry: untested
   exit: tested
@@ -203,6 +203,20 @@ levers:
         max_drawdown_r: 49.3903
         verdict: pass
         joint_change: false
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261118-abab-33
+        window: 2024-10-05..2026-10-04
+        n: 250
+        net_r: -44.6936
+        baseline_n: 384
+        baseline_net_r: -56.3847
+        delta_net_r: 11.6911
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 49.3903
+        verdict: pass
+        joint_change: false
       - value: 20,21,22,23
         baseline_value: 'off'
         arm: S_LATE
@@ -217,10 +231,52 @@ levers:
         max_drawdown_r: 61.5767
         verdict: pass
         joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261118-abab-33
+        window: 2024-10-05..2026-10-04
+        n: 316
+        net_r: -47.6547
+        baseline_n: 384
+        baseline_net_r: -56.3847
+        delta_net_r: 8.73
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 61.5767
+        verdict: pass
+        joint_change: false
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261119-8260-01
+        window: 2022-10-05..2024-10-04
+        n: 220
+        net_r: -24.6381
+        baseline_n: 337
+        baseline_net_r: -51.5278
+        delta_net_r: 26.8897
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 34.2381
+        verdict: pass
+        joint_change: false
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261119-8260-01
+        window: 2022-10-05..2024-10-04
+        n: 220
+        net_r: -24.6381
+        baseline_n: 337
+        baseline_net_r: -51.5278
+        delta_net_r: 26.8897
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 34.2381
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.0304
-      fold_stability: 0.667
+      points: 6
+      best_delta_r_per_trade: 0.0798
+      fold_stability: 0.778
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   sizing_vs_cost:
     entry_mode:

@@ -186,6 +186,104 @@ levers:
       fold_stability: 0.333
       reading: no response at the tested values
   exit:
+    trail_adx_below:
+      tests:
+      - value: '20'
+        baseline_value: 'off'
+        arm: TA20
+        unit: RQ-20261117-b2f2-20
+        window: 2020-07-01..2026-10-15
+        n: 641
+        net_r: 21.5427
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 11.4275
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 18.8081
+        verdict: pass
+        joint_change: true
+      - value: '25'
+        baseline_value: 'off'
+        arm: TA25
+        unit: RQ-20261117-b2f2-20
+        window: 2020-07-01..2026-10-15
+        n: 704
+        net_r: 15.8836
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 5.7684
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 25.932
+        verdict: pass
+        joint_change: true
+      - value: '20'
+        baseline_value: 'off'
+        arm: TA20
+        unit: RQ-20261119-015
+        window: 2020-07-01..2026-10-15
+        n: 717
+        net_r: -33.5994
+        baseline_n: 527
+        baseline_net_r: -31.8984
+        delta_net_r: -1.701
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 58.0916
+        verdict: fail
+        joint_change: true
+      shape: peaked
+      points: 3
+      best_delta_r_per_trade: 0.0247
+      fold_stability: 0.611
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    trail_adx_tight_mult:
+      tests:
+      - value: '2.5'
+        baseline_value: 'off'
+        arm: TA20
+        unit: RQ-20261117-b2f2-20
+        window: 2020-07-01..2026-10-15
+        n: 641
+        net_r: 21.5427
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 11.4275
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 18.8081
+        verdict: pass
+        joint_change: true
+      - value: '2.5'
+        baseline_value: 'off'
+        arm: TA25
+        unit: RQ-20261117-b2f2-20
+        window: 2020-07-01..2026-10-15
+        n: 704
+        net_r: 15.8836
+        baseline_n: 463
+        baseline_net_r: 10.1152
+        delta_net_r: 5.7684
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 25.932
+        verdict: pass
+        joint_change: true
+      - value: '2.5'
+        baseline_value: 'off'
+        arm: TA20
+        unit: RQ-20261119-015
+        window: 2020-07-01..2026-10-15
+        n: 717
+        net_r: -33.5994
+        baseline_n: 527
+        baseline_net_r: -31.8984
+        delta_net_r: -1.701
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 58.0916
+        verdict: fail
+        joint_change: true
+      shape: monotone
+      points: 3
+      best_delta_r_per_trade: 0.0247
+      fold_stability: 0.611
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     atr_stop_mult:
       tests:
       - value: '4'
@@ -312,76 +410,6 @@ levers:
       best_delta_r_per_trade: 0.0
       fold_stability: 1.0
       reading: no response at the tested values
-    trail_adx_below:
-      tests:
-      - value: '20'
-        baseline_value: 'off'
-        arm: TA20
-        unit: RQ-20261117-b2f2-20
-        window: 2020-07-01..2026-10-15
-        n: 641
-        net_r: 21.5427
-        baseline_n: 463
-        baseline_net_r: 10.1152
-        delta_net_r: 11.4275
-        folds_ge_baseline: 4/6
-        max_drawdown_r: 18.8081
-        verdict: pass
-        joint_change: true
-      - value: '25'
-        baseline_value: 'off'
-        arm: TA25
-        unit: RQ-20261117-b2f2-20
-        window: 2020-07-01..2026-10-15
-        n: 704
-        net_r: 15.8836
-        baseline_n: 463
-        baseline_net_r: 10.1152
-        delta_net_r: 5.7684
-        folds_ge_baseline: 4/6
-        max_drawdown_r: 25.932
-        verdict: pass
-        joint_change: true
-      shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.0247
-      fold_stability: 0.667
-      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
-    trail_adx_tight_mult:
-      tests:
-      - value: '2.5'
-        baseline_value: 'off'
-        arm: TA20
-        unit: RQ-20261117-b2f2-20
-        window: 2020-07-01..2026-10-15
-        n: 641
-        net_r: 21.5427
-        baseline_n: 463
-        baseline_net_r: 10.1152
-        delta_net_r: 11.4275
-        folds_ge_baseline: 4/6
-        max_drawdown_r: 18.8081
-        verdict: pass
-        joint_change: true
-      - value: '2.5'
-        baseline_value: 'off'
-        arm: TA25
-        unit: RQ-20261117-b2f2-20
-        window: 2020-07-01..2026-10-15
-        n: 704
-        net_r: 15.8836
-        baseline_n: 463
-        baseline_net_r: 10.1152
-        delta_net_r: 5.7684
-        folds_ge_baseline: 4/6
-        max_drawdown_r: 25.932
-        verdict: pass
-        joint_change: true
-      shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.0247
-      fold_stability: 0.667
-      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     stale_exit_bars:
       tests:
       - value: '12'
