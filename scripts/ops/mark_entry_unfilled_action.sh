@@ -21,8 +21,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/ops/_lib.sh
 source "${SCRIPT_DIR}/_lib.sh"
 
-cd "${REPO_DIR}"
+# Secrets FIRST, then the DB path: the same order as every working DB wrapper
+# (grade_closed_trades, backfill_closed_null_pnl, ...). The first live run
+# (issue #27636) resolved the path the other way round, behind an early cd,
+# and both reads then opened a file that is not the journal.
+load_runtime_secrets
 DB_PATH="$(runtime_db_path)"
+cd "${REPO_DIR}"
 PY_SCRIPT="${REPO_DIR}/scripts/ops/mark_entry_unfilled.py"
 PY="${REPO_DIR}/.venv/bin/python3"
 [ -x "${PY}" ] || PY="python3"
@@ -44,8 +49,7 @@ printf '%s' "${TRADE_IDS}" | grep -Eq '^[0-9]+(,[0-9]+)*$' \
 
 # The venue check reads the entry order from Alpaca, so authenticate exactly like
 # the live services (same pattern as rearm_alpaca_protective_action.sh). Presence
-# diagnostics only; never echoes a value.
-load_runtime_secrets
+# diagnostics only; never echoes a value. (load_runtime_secrets ran above.)
 WEBAPI_ENV="/etc/ict-trader/web-api.env"
 if sudo test -r "${WEBAPI_ENV}" 2>/dev/null; then
   for _v in ALPACA_API_KEY_ID_LIVE ALPACA_API_SECRET_KEY_LIVE \
@@ -67,6 +71,14 @@ else
 fi
 
 echo
+echo "===== DB: ${DB_PATH} ====="
+ls -la "${DB_PATH}" || true
+# Fail fast, before anything else reads it: the resolved file must be the journal.
+if ! python3 "${_DBR}" "${DB_PATH}" "SELECT COUNT(*) FROM trades;" >/dev/null 2>&1; then
+    fail "${DB_PATH} has no readable trades table; refusing (not the trade journal)." "db not the journal"
+fi
+
+echo
 echo "===== PRECONDITION: mark_entry_unfilled.py --self-test ====="
 "${PY}" "${PY_SCRIPT}" --self-test
 
@@ -81,7 +93,7 @@ python3 "${_DBR}" --table "${DB_PATH}" "${SHOW}" || true
 echo
 echo "===== DRY-RUN plan ====="
 set +e
-TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}"
+TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}"
 dry_code=$?
 set -e
 if [ "${dry_code}" -ne 0 ]; then
@@ -94,7 +106,7 @@ fi
 echo
 echo "===== APPLY ====="
 set +e
-TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --apply
+TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" --apply
 exit_code=$?
 set -e
 
