@@ -1,7 +1,7 @@
 # Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1. Re-test on the NATIVE evidence feed of a shipped exit lever chosen on trainer bars (PI-20261120-7ITMUEB1-0001 step 3b); rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261120-75e6-07
 title: 'NATIVE-FEED re-test of the shipped trail decay on trend_donchian_eth_prop (ETHUSDT 1h): does removing it beat the leg as declared? (trainer-bar evidence, PI-20261120-7ITMUEB1-0001)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -106,3 +106,17 @@ related:
 - PI-20261120-7ITMUEB1-0005
 - 'PR #27566'
 last_dispatched_at: '2026-11-20T03:22:07+00:00'
+grading:
+  attested: RULE-RQ2026112075e607-NATIVE-TRAILDECAY-RETEST
+  auto: false
+  decision_rule_id: RULE-RQ2026112075e607-NATIVE-TRAILDECAY-RETEST
+  evidence:
+  - research/results/RQ-20261120-75e6-07/44664829240.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'trend_donchian_eth_prop ETHUSDT 1h, trail decay OFF vs A, window 2020-07-04..2026-10-15, 4 folds. n(A)
+    863; net R OFF 77.01 vs A 76.84 (delta +0.17; bar +17.26); OFF >= A in 1 of 4 folds. Delta and fold clauses
+    fail, so FAIL: the shipped lever stands.'
+  rows: 1
+  verdict: fail

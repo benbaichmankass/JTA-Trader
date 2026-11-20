@@ -1,7 +1,7 @@
 # Authored 2026-11-20 by lane QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf), Tier 1 research, from programme node P3-M27-htf-pass (manager 2026-11-20 00:05Z). Called by the node's remaining step: the disjoint-window confirmation of RQ-20260928-001. Gates this adds or changes: none.
 id: RQ-20261120-3b7c-02
 title: 'CONFIRMATION of RQ-20260928-001 on a DISJOINT window: does the HTF trend filter (ON vs forced OFF) on ict_scalp_xrp_5m still raise net R, net of the full cost stack, on 2024-10-25..2025-10-24?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -107,3 +107,18 @@ related:
 - scripts/research/htf_filter_confirm.py
 - scripts/research/rq_20260928_001_htf_wire.py
 last_dispatched_at: '2026-11-20T01:13:48+00:00'
+grading:
+  attested: RULE-RQ20261120-3B7C-02-HTF-CONFIRM-XRP_5M
+  auto: false
+  decision_rule_id: RULE-RQ20261120-3B7C-02-HTF-CONFIRM-XRP_5M
+  evidence:
+  - research/results/RQ-20261120-3b7c-02/44652086741.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'ict_scalp_xrp_5m, window 2024-10-25..2025-10-24, re-graded from arms/OFF__ and arms/ON__ trades.jsonl:
+    n OFF 500 + ON 190 (floor 175); net R ON -83.68 vs OFF -108.86; ex-worst-trade ON -32.14 vs OFF -98.94; mean
+    clause within 0.3. All four registered clauses hold, so PASS. PASS is loss-cutting: ON is still net-negative or about flat on every leg, it does not make the leg profitable. The outlier clause was added by the programme node; the
+    first three are RULE-RQ0928-001 unchanged.  This grade alone proposes no config change.'
+  rows: 1
+  verdict: pass

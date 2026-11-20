@@ -1,0 +1,104 @@
+# Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1, on the manager's 03:52Z decision (VENUE-GAP-20261120, re-test (b)). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-4f03-02
+title: 'ml_entry''s own VENUE PENALTY: its Stage-0 held-out population re-scored on Bybit bars, net of the full cost stack. Does the live exit stay > 0? (VENUE-GAP-20261120)'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+practice_precedent: 'none: the record''s own scoring command re-run with the held-out window''s candles swapped to the traded venue; a measurement-basis check, not a new method.'
+question: With the served ENTRY model, the record's TP model fold and dev margin unchanged, and the held-out window's 1h bars (2025-10-01 onward) taken from the trainer's Bybit
+  linear files instead of Binance-vision USD-M, is ml_entry arm F (the live exit) mean net R per decision on the record's population (served held-out trades on the traded symbols,
+  ~907) > 0, net of the full cost stack the harness applies (fee 11 + slippage 3 bps round trip + funding 1 bp per 8 h)? And how far does it move from the same command on Binance
+  bars?
+why_this_matters: 'ml_entry is on a real-money roster. Its Stage-0 evidence (comms/strategy_evidence/ml_entry.json) is scored on Binance bars: 907 held-out decisions, expectancy
+  0.0371 R. The fleet venue-gap measurement (comms/research/VENUE-GAP-20261120/record.json) found harness legs earn a trade-weighted 0.0185 R/trade less on Bybit (95% CI 0.010..0.028,
+  21 legs). ml_entry has no harness argv, so its own penalty was never measured, and its margin is only 2.0x the pooled figure: the second-thinnest real-money margin. Manager 2026-11-20
+  03:52Z: measure it, bar pre-registered. No demotion, config or live change rides on this unit; a FAIL is reported to the manager as evidence for the operator.'
+power:
+  alpha: 0.05
+  basis: 'expected_n = the record''s 907 held-out decisions (the population is fixed by the served model; Bybit bars can move a few decisions near the holdout start through rolling
+    features). At n 907 a one-sample test detects d = (1.96 + 0.8416) / sqrt(907) = 0.093 sd. With a per-decision sd near 0.9 R (an estimate from the record''s fixed-TP bootstrap
+    CI half-width ~0.06 at n 907), that is ~0.08 R/decision, larger than the 0.0371 margin: the sign rule is graded at the declared n, exactly as the record''s own rule is (point
+    estimate >= 0), and the penalty is reported with that resolution stated, never as a significance claim.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 907
+  min_detectable_effect: 0.093
+  power: 0.8
+  feasibility:
+    accrual_basis: Re-scores a fixed historical population on resident and keyless candles; nothing accrues.
+    source: none
+decision_rule:
+  id: RULE-RQ202611204f0302-MLENTRY-BYBIT-PENALTY
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF the CONTROL run (the record''s command on Binance bars) does not reproduce the record''s expectancy_r_oos (0.0371) within 0.005 R/decision, IF any traded
+    symbol has no trainer Bybit file (the penalty would be partly unmeasured), or IF the BYBIT run holds < 100 decisions (the record''s floor). PASS iff BYBIT arm F mean net R per
+    decision > 0 (manager 03:52Z: "does Bybit-native expectancy stay > 0"; strict, one notch above the record''s >= 0). FAIL otherwise. penalty = BYBIT mean - CONTROL mean, reported
+    with its per-symbol split; never graded. PASS: the leg''s evidence holds on its venue; the measured penalty replaces the pooled stand-in on VENUE-GAP-20261120. FAIL: reported to
+    the manager as evidence for the operator''s doctrine decision; the leg is NOT demoted on it (live net of cost governs demotion; manager 03:52Z). Thresholds are not changed after
+    any result.'
+  statistic: 'scripts/research/ml_entry_bybit_rescore.py: fills the Binance kline cache with ml_decision_entry.fetch (keyless, as the record run does); builds a BYBIT cache in which
+    every universe symbol with a trainer Bybit linear file has its 1h bars from ml_decision_entry.HOLDOUT_START (2025-10-01) onward replaced by the Bybit bars (finest trainer file
+    <= 1h, open-stamped), bars before that untouched, so the TP model''s training rows and the dev margin are identical in both runs; runs the record''s own command
+    (ml_entry_tp_revision.py evidence-extend-only --structure-sl pivot=5) once per cache; reads arm F (SL-only structure stop pivot 5 + extend-only ml_first_passage TP + 24 h) from
+    each evidence_extend_only.json. Stated limits: rolling features in the first days of the holdout read a mixed Binance/Bybit lookback; universe symbols without a Bybit file stay
+    Binance and are listed in measurement.coverage.'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: a real-money ML leg whose margin is 2.0x an unmeasured venue penalty; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.2
+  usd_at_stake_per_month: 300
+routing:
+  basis: 'MEASURED: the record command took 334 s and 337 s excluding the fetch (comms/research/RQ-20261103-5e04-01/41783308121 and /41823438321 evidence_extend_only.json
+    elapsed_s); two runs plus a cold keyless fetch (ESTIMATE <= 30 min) and the splice.'
+  est_minutes: 45
+  needs_gpu: false
+  needs_trainer_resident_data: true
+  peak_memory_gb: 4.0
+  why_runner: The Bybit linear candle files are trainer-resident (data/, refreshed by deploy/trainer/ict-candle-refresh); LightGBM for the TP model is in the trainer venv.
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_bybit_rescore.py
+  - --cache
+  - /tmp/ml_decision_klines
+  - --work
+  - /tmp/{unit}-{run_id}
+  - --data-dir
+  - data
+  - --structure-sl
+  - pivot=5
+  - --bar
+  - '0'
+  - --n-floor
+  - '100'
+  - --repro-tol
+  - '0.005'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-4f03-02
+  timeout_minutes: 120
+  workflow: research-script-run-trainer.yml
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: 'evidence for the operator on keeping ml_entry on the real-money roster: its Stage-0 margin net of its own measured Bybit venue penalty (no change rides on this unit)'
+  legs:
+  - ml_entry
+  book: money
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- comms/research/VENUE-GAP-20261120/record.json
+- comms/strategy_evidence/ml_entry.json
+- research/queue/RQ-20261103-5e04-01.yaml
+- scripts/research/ml_entry_bybit_rescore.py
+- PI-20261120-7ITMUEB1-0005
+- PI-20261120-7ITMUEB1-0007

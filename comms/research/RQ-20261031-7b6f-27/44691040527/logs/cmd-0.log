@@ -1,0 +1,9 @@
+candle dataset: served binance__ADAUSDT__120 (27961 rows, last 2026-11-17 22:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261031-7b6f-27/44691040527/arms/A__trades.jsonl --json comms/research/RQ-20261031-7b6f-27/44691040527/arms/A__bt.json --adx-min 28 --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 4 --start 2020-07-01 --end 2026-10-15 23:59
+[VL20] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261031-7b6f-27/44691040527/arms/VL20__trades.jsonl --json comms/research/RQ-20261031-7b6f-27/44691040527/arms/VL20__bt.json --adx-min 28 --vol-skip-below-pctl 0.2 --tp-cap-pct 0.099 --tp-r 4 --start 2020-07-01 --end 2026-10-15 23:59
+[VL30] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261031-7b6f-27/44691040527/arms/VL30__trades.jsonl --json comms/research/RQ-20261031-7b6f-27/44691040527/arms/VL30__bt.json --adx-min 28 --vol-skip-below-pctl 0.3 --tp-cap-pct 0.099 --tp-r 4 --start 2020-07-01 --end 2026-10-15 23:59
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}

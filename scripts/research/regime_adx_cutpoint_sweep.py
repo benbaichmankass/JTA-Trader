@@ -57,6 +57,7 @@ import regime_debt_matrix as rdm  # type: ignore  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from candle_io import load_candles as _load  # type: ignore  # noqa: E402
 from candle_io import resample_ohlcv as _resample  # type: ignore  # noqa: E402
+from candle_io import entry_bar_locator as _entry_bar_locator  # type: ignore  # noqa: E402
 from regime_matrix import _adx  # type: ignore  # noqa: E402
 
 import pandas as pd  # noqa: E402
@@ -90,12 +91,13 @@ def _entry_adx(trades: List[dict], adx: pd.Series, df: pd.DataFrame) -> List[dic
     the ADX lookup is computed ONCE and reused across every cut-point pair.
     """
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    locate, _bar_mode = _entry_bar_locator(ts, [pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce") for t in trades])
     out: List[dict] = []
     for t in trades:
         et = pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce")
         if et is pd.NaT:
             continue
-        idx = ts.searchsorted(et, side="right") - 1
+        idx = locate(et)  # causal bar for this entry (candle_io.entry_bar_locator)
         a = float(adx.iloc[idx]) if 0 <= idx < len(adx) else float("nan")
         row = dict(t)
         row["_adx"] = a

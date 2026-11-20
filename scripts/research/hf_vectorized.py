@@ -44,7 +44,18 @@ def _resample(df, rule):
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
         agg["volume"] = "sum"
-    return (df.set_index("timestamp").resample(rule, label="right", closed="right")
+    # Native OPEN-stamped grid (PI-20261120-7ITMUEB1-0006). Used for the 5m clock frame from 5m data (identity).
+    # The HTF frame joined by backward merge_asof uses _resample_close_stamped instead (open stamps would leak).
+    return (df.set_index("timestamp").resample(rule, label="left", closed="left")
+            .agg(agg).dropna().reset_index())
+
+
+def _resample_close_stamped(df, rule):
+    """Native grouping [T, T+rule) labelled at the CLOSE T+rule: the backward-as-of-join form."""
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
+    if "volume" in df.columns:
+        agg["volume"] = "sum"
+    return (df.set_index("timestamp").resample(rule, label="right", closed="left")
             .agg(agg).dropna().reset_index())
 
 
@@ -314,10 +325,11 @@ def signals_displacement(df5: pd.DataFrame, p: Dict[str, Any], htf_close, htf_em
 
 def build_htf(df5: pd.DataFrame, base5m: pd.DataFrame, ema_period: int, htf_tf="1h"):
     rule = {"1h": "1h", "4h": "4h"}.get(htf_tf, "1h")
-    htf = _resample(base5m, rule)
+    htf = _resample_close_stamped(base5m, rule)   # close-stamped: the merge_asof below sees only closed HTF bars
     htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
     htf = htf.dropna(subset=["ema"])
-    merged = pd.merge_asof(df5[["timestamp"]].sort_values("timestamp"),
+    bar_close = (df5["timestamp"] + pd.Timedelta("5min")).rename("timestamp").to_frame()   # the 5m bar's decision time
+    merged = pd.merge_asof(bar_close.sort_values("timestamp"),
                            htf[["timestamp", "close", "ema"]].rename(columns={"close": "_hc", "ema": "_he"}).sort_values("timestamp"),
                            on="timestamp", direction="backward")
     return merged["_hc"].to_numpy(), merged["_he"].to_numpy()

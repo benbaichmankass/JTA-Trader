@@ -1,0 +1,123 @@
+# Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1, on the manager's 03:52Z decision (VENUE-GAP-20261120, re-test (a)). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-4f03-01
+title: 'BYBIT-NATIVE re-run of trend_donchian_sol_prop''s Stage-0 evidence argv, original holdout boundary kept: does the leg stay net-positive on the bars it trades? (VENUE-GAP-20261120)'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'none: the leg''s own Stage-0 argv and grade re-run on a second candle source; a measurement-basis check, not a new method.'
+question: On the trainer's Bybit linear SOLUSDT bars (5m aggregated open-stamped to 1h), with trend_donchian_sol_prop as declared in config/strategies.yaml and the full cost
+  stack the harness resolves for Bybit perps, is (1) discovery net R > 0 over 2023-02-01 .. 2025-04-15 23:59:15 (trades whose entry AND exit precede the boundary) and (2) holdout
+  net R > 0 over trades entered 2025-04-15 23:59:15 .. 2026-10-15 23:59 (the span RQ-20261016-077e-05 held back, read here a second time on a different venue), with >= 25 trades
+  in each? R is on the full initial position's risk.
+why_this_matters: 'trend_donchian_sol_prop is on a real-money roster. Its Stage-0 evidence (comms/strategy_evidence/trend_donchian_sol_prop.json) is built on Binance-vision USD-M
+  candles: OOS expectancy 0.0926 R/trade (n 538) and holdout 0.0392 R/trade (n 96). The fleet venue-gap measurement (comms/research/VENUE-GAP-20261120/record.json) ran the leg''s
+  exact argv on both venues over 2023-02-01 .. 2026-11-15: Bybit earned 0.0364 R/trade less (n 236, sum 19.555 R on Binance vs 10.970 R on Bybit). That is 1.08x the holdout margin,
+  the thinnest of the real-money legs. Manager 2026-11-20 03:52Z: re-run on the Bybit bars, graded on the rule its evidence registered. No demotion, config or live change rides on
+  this unit; a FAIL is reported to the manager as evidence for the operator, never acted on here.'
+power:
+  alpha: 0.05
+  basis: 'expected_n is the HOLDOUT trade count, an estimate: the Binance holdout held 96 trades over the same span (holdout_confirmation.n_holdout) and the venue-gap run matched
+    227 of 236 trades by entry time (0.962), so ~92-96 Bybit holdout trades. At the 25-trade floor a one-sample test detects d = (1.96 + 0.8416) / sqrt(25) = 0.56 -> 0.57 sd; at
+    n 92, 0.29 sd. A per-trade edge of 0.0392 R against a per-trade sd near 1.5 R is ~0.03 sd, far below either: this unit tests the registered sign rule (net R > 0), not a
+    significance bar, exactly as the original holdout did.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 92
+  min_detectable_effect: 0.57
+  power: 0.8
+  feasibility:
+    accrual_basis: Replays history on the trainer's resident Bybit files for a pinned window; nothing accrues.
+    source: none
+decision_rule:
+  id: RULE-RQ202611204f0301-BYBIT-NATIVE-SOLPROP
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'The leg''s two registered rules on Bybit bars, nothing added: RULE-D1-STAGE0-NET-OF-FULL-COST (net R > 0 net of fee + slippage + funding) on the discovery span, and
+    RULE-RQ-20261016-077e-05''s holdout clause (held-back net R > 0) on the same boundary. INDETERMINATE IF discovery n < 25 (underpowered) or IF discovery passes and holdout n <
+    25 (holdout_underpowered). FAIL IF discovery net R <= 0 (stage0_no_edge) or holdout net R <= 0. PASS iff both hold. Fold counts are reported, never graded: --fold-majority 1
+    is the harness minimum and adds no condition (discovery net R > 0 implies at least one of 4 folds net-positive), matching RULE-D1, which has no fold clause. PASS: the leg''s evidence holds on its own venue; recorded on VENUE-GAP-20261120 and PI-20261120-7ITMUEB1-0005. FAIL: reported to
+    the manager as evidence for the operator''s doctrine decision; the leg is NOT demoted on it (live net of cost governs demotion; manager 03:52Z: no demotion on this evidence).
+    Thresholds are not changed after any result.'
+  statistic: 'Command 1: scripts/research/bybit_native_csv.py writes the trainer''s SOLUSDT Bybit linear file (data/, the finest file <= 1h) aggregated open-stamped to 1h. Command
+    2: scripts/research/exit_lever_ablation.py --grade stage0 --stage0-holdout-start 2025-04-15T23:59:15 on that CSV (--data-csv), one arm A = the leg as declared, window
+    2023-02-01 .. 2026-10-15 23:59 (the Bybit file starts 2022-12-03: 60 days of indicator warm-up before the first counted entry), 4 equal calendar folds of the discovery span,
+    net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Discovery = trades whose entry AND exit precede
+    the boundary; holdout = trades entered in [boundary, end].'
+compute: needs_vm_data
+value:
+  basis: 'stand-in: a real-money leg whose holdout margin is 1.08x its measured venue penalty; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.2
+  usd_at_stake_per_month: 300
+routing:
+  basis: 'ESTIMATE: one 5m->1h aggregation of ~400k rows plus one trend-harness pass over ~32k 1h bars; the venue-gap relay #27588 ran 14 such passes (7 legs x 2 venues) inside
+    one 60-minute relay.'
+  est_minutes: 15
+  needs_gpu: false
+  needs_trainer_resident_data: true
+  peak_memory_gb: 2.0
+  why_runner: The Bybit linear candle files are trainer-resident (data/, refreshed by deploy/trainer/ict-candle-refresh); no keyless public source serves them for this window.
+run:
+  commands:
+  - - python3
+    - scripts/research/bybit_native_csv.py
+    - --symbol
+    - SOLUSDT
+    - --timeframe
+    - 1h
+    - --data-dir
+    - data
+    - --out-csv
+    - /tmp/{unit}-{run_id}/bybit_SOLUSDT_1h.csv
+    - --provenance
+    - '{out_dir}/bybit_csv_provenance.json'
+  - - python3
+    - scripts/research/exit_lever_ablation.py
+    - --leg
+    - trend_donchian_sol_prop
+    - --arm
+    - A=
+    - --data-csv
+    - /tmp/{unit}-{run_id}/bybit_SOLUSDT_1h.csv
+    - --start
+    - '2023-02-01'
+    - --end
+    - 2026-10-15 23:59
+    - --grade
+    - stage0
+    - --stage0-holdout-start
+    - '2025-04-15T23:59:15'
+    - --baseline
+    - A
+    - --delta-r
+    - '0'
+    - --folds
+    - '4'
+    - --fold-majority
+    - '1'
+    - --n-floor
+    - '25'
+    - --holdout-min-trades
+    - '25'
+    - --research-unit
+    - RQ-20261120-4f03-01
+    - --out
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-4f03-01
+  timeout_minutes: 60
+  workflow: research-script-run-trainer.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- comms/research/VENUE-GAP-20261120/record.json
+- comms/strategy_evidence/trend_donchian_sol_prop.json
+- research/queue/RQ-20261016-077e-05.yaml
+- scripts/research/bybit_native_csv.py
+- PI-20261120-7ITMUEB1-0005

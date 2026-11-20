@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "test-only fix for main's red pytest-run; manager merges FIRST",
+  "why": "Main's pytest-run is red after #27654: test_entry_adx_labels_nearest_prior_bar asserted the pre-#27654 'nearest bar at/before entry' ADX (30.0), which reads the bar a 02:30 entry sits inside (it closes at 03:00), i.e. one bar of lookahead. The causal locator correctly returns the last bar closed by the entry (20.0). The test expectation is updated and an on-grid case added. Test-only; no code change. Gates this adds or changes: none."
+}

@@ -11,7 +11,7 @@
   "MAKE REPORT-ONLY"
  ],
  "sort": "real_money desc, no_operator_authorization desc, category",
- "count": 297,
+ "count": 298,
  "gates": [
   {
    "id": "GATE-BAR-DEBOUNCE",
@@ -8598,6 +8598,32 @@
    "authorization": "PLATFORM",
    "no_operator_authorization": false,
    "question": "Keep this gate? A recurring scheduled task cannot fire more often than hourly, so a wake/poll loop (e.g.",
+   "options": [
+    "KEEP",
+    "REMOVE",
+    "MAKE REPORT-ONLY"
+   ]
+  },
+  {
+   "id": "CI-queue-harness-flags-guard",
+   "category": "ci-guard",
+   "where": "scripts/ci/run_guards.py (GUARDS name=queue-harness-flags-guard)",
+   "where_more": [
+    "scripts/ci/check_queue_harness_flags.py"
+   ],
+   "blocks": "Nothing: report-only (mode: report). A NEW queued unit that passes a flag its harness parser does not declare prints a ::warning:: and the job exits 0; the --self-test step is also report-only.",
+   "scope": "only PRs touching: research/queue/**, scripts/backtest_*.py, src/backtest/run_backtest_vwap.py, scripts/research/regime_debt_matrix.py, scripts/research/exit_lever_ablation.py, scripts/ci/check_queue_harness_flags.py, config/strategies.yaml",
+   "added": "2026-11-19 (#27200) CI: queue units may only pass harness flags the parser declares (PROGRAMME-REVIEW-20261119)",
+   "auth": "Manager direction 2026-11-19 (PROGRAMME-REVIEW): report-only by design (canonical 'No new gates'); registered 2026-11-20 on manager direction, not an operator decision.",
+   "real_money": false,
+   "rec": "KEEP",
+   "rec_why": "Report-only by design; it catches a unit that would die at argparse (producer_failed) without blocking any merge.",
+   "effect": "NEITHER",
+   "effect_why": "Prints a warning; blocks no merge and no trade.",
+   "trigger_case": false,
+   "authorization": "NONE",
+   "no_operator_authorization": true,
+   "question": "Keep this gate? It is report-only by design.",
    "options": [
     "KEEP",
     "REMOVE",

@@ -44,6 +44,8 @@ CHOP_BAND_R = 0.25
 # M21 E-3c: trailing window (bars) for the decision-bar ATR-percentile
 # feature — matches the shipped vol-at-entry gate's default (#6434).
 ENTRY_ATR_PCTL_WINDOW = 200
+# Stamped into build_report.json: live fills anchor to the bar that contains them.
+ENTRY_ALIGNMENT = "live_fill_bar_v2"
 
 
 _HEAVY_REPO = Path(__file__).resolve().parents[2]
@@ -396,7 +398,18 @@ def rows_for_trade(tr: dict, candles: List[dict], cand_ts: List[float],
     if risk <= 0:
         return []
     is_long = tr["direction"] in ("long", "buy")
+    # i0 = the FIRST IN-TRADE bar; i0 - 1 = the DECISION bar (entry-time refs).
+    # Harness t_open is the decision bar's OPEN stamp (entry at its close, on the
+    # open-stamped grid since PI-20261120-7ITMUEB1-0001), so bisect_right lands on
+    # the bar after it. A LIVE t_open is a wall-clock fill time, which falls INSIDE
+    # the first in-trade bar, so bisect_right lands one bar late: step back one, or
+    # the first in-trade bar becomes the entry reference and drops out of the rows
+    # (PI-20261120-7ITMUEB1-0004). Serving (exit_head_shadow) anchors the same way.
     i0 = bisect_right(cand_ts, tr["t_open"])
+    if tr.get("source") == "live":
+        if i0 < 1:
+            return []   # no bar covers the fill
+        i0 -= 1
     j_end = bisect_right(cand_ts, tr["t_close"])
     n = j_end - i0
     if n < 2 or i0 >= len(candles):
@@ -726,6 +739,10 @@ def main(argv: List[str]) -> int:
     report: Dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "tf": a.tf, "trades_in": len(trades), "skipped": skipped,
+        # Which entry anchoring built these rows (PI-20261120-7ITMUEB1-0004): absent
+        # = a pre-fix corpus whose LIVE rows start one bar late. Harness rows are
+        # aligned only if the harness emitted on the open-stamped grid (#27566).
+        "entry_alignment": ENTRY_ALIGNMENT,
         "skipped_at_load": dict(harness_report.get("skipped") or {}),
         "rows_seen_at_load": harness_report.get("rows_seen"),
         "rows_loaded_at_load": harness_report.get("rows_loaded"),

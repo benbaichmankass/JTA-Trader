@@ -117,6 +117,35 @@ def _journal_basis_counts(journal: Path, symbols: list[str], *, paper: bool = Fa
     return out
 
 
+def _after(rows: list[dict], after: str | None) -> tuple[list[dict], dict | None]:
+    """Keep eval rows whose ``ts`` is strictly AFTER ``after`` (ISO; an OUT-OF-TIME read of rows an earlier read never
+    saw, e.g. the RQ-20261119-2780-04 confirmation). A row with an unparseable or missing ``ts`` is excluded and
+    counted, never kept. ``after`` None returns the rows unchanged (every existing call is byte-identical)."""
+    if not after:
+        return rows, None
+    from datetime import datetime, timezone
+
+    def _p(v):
+        try:
+            t = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+        return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+    cut = _p(after)
+    if cut is None:
+        raise SystemExit(f"--eval-after {after!r} is not an ISO timestamp")
+    kept, unparsed = [], 0
+    for r in rows:
+        t = _p(r.get("ts"))
+        if t is None:
+            unparsed += 1
+        elif t > cut:
+            kept.append(r)
+    return kept, {"after": cut.isoformat(), "before": len(rows), "after_n": len(kept),
+                  "excluded_not_after": len(rows) - len(kept) - unparsed, "excluded_unparsed_ts": unparsed}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
@@ -134,6 +163,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="keep only eval rows whose pnl_provenance is 'measured' (provenance.py), the strict read")
     ap.add_argument("--lb-pct", type=float, default=2.5,
                     help="lower percentile of the (b) bootstrap (2.5 = the registered 95%%; deflate for re-reads)")
+    ap.add_argument("--eval-after", default=None,
+                    help="keep only eval rows with ts strictly after this ISO time (an out-of-time read); off = unchanged")
     a = ap.parse_args(argv)
 
     import yaml
@@ -160,6 +191,7 @@ def main(argv: list[str] | None = None) -> int:
         ev = [r for r in rows if r.get("is_live_trade")]
     else:
         ev = [r for r in rows if r.get("event_source") == "live_paper"]
+    ev, window = _after(ev, a.eval_after)
     strategies = _load_strategies(a.strategies_file)
     filt = None
     if strategies is not None:
@@ -237,8 +269,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{n} real closed trades (is_live_trade) in the live_holdout book of the dataset; symbols {sorted(per_sym)}"
             if a.eval_source == "live" else
             f"{n} PAPER-book closed trades (event_source live_paper) of the dataset; symbols {sorted(per_sym)}"
-        ) + (f"; strategy filter {a.strategies_file} ({len(strategies)} names)" if strategies is not None else ""),
-        "eval_source": a.eval_source, "strategy_filter": filt,
+        ) + (f"; strategy filter {a.strategies_file} ({len(strategies)} names)" if strategies is not None else "") + (f"; entered after {window['after']}" if window else ""),
+        "eval_source": a.eval_source, "strategy_filter": filt, "eval_window": window,
         "pnl_provenance_counts": prov_counts, "measured_only": bool(a.measured_only),
         "n_eval": n, "take_rate": take_rate, "threshold": thr,
         "a_cost_gate": {"passed": a_ok, "reason": gate.get("reason"), "value_r": gate.get("candidate_value_r"),

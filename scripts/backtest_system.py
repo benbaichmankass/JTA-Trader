@@ -228,12 +228,51 @@ def _load_candles(path: str) -> pd.DataFrame:
     return df.dropna(subset=["timestamp"]).reset_index(drop=True)
 
 
+#: Bar-stamp convention of every resampled frame below. Part of the signal-cache key, so a stream cached under the old
+#: right/right grid is never reused (PI-20261120-7ITMUEB1-0006).
+GRID = "open-stamped-v2"
+
+
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """OPEN-stamped native grid [T, T+rule) labelled T (PI-20261120-7ITMUEB1-0006): the convention of live bars and of
+    the harnesses that fitted the units' hour parameters (skip_hours, session/killzone filters). right/right grouped the
+    sub-bars opened in (T-rule, T]. Strategy frame and clock share this convention; a signal on the strategy bar
+    [T, T+tf) is mapped to the first clock bar opening at/after its close T+tf, and the HTF is joined at the close."""
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
         agg["volume"] = "sum"
-    return (df.set_index("timestamp").resample(rule, label="right", closed="right")
+    return (df.set_index("timestamp").resample(rule, label="left", closed="left")
             .agg(agg).dropna().reset_index())
+
+
+def _resample_close_stamped(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """Native grouping [T, T+rule) labelled at the CLOSE T+rule: the backward-as-of-join form for HTF context."""
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
+    if "volume" in df.columns:
+        agg["volume"] = "sum"
+    return (df.set_index("timestamp").resample(rule, label="right", closed="left")
+            .agg(agg).dropna().reset_index())
+
+
+def _signal_clock_index(clock_ts, sig_ts, strategy_tf: str) -> int:
+    """Clock index at which a signal on the OPEN-stamped strategy bar [sig_ts, sig_ts+tf) becomes actionable: the first
+    clock bar opening at/after the strategy bar's close. Causal by construction (that clock bar starts after the close)."""
+    return int(np.searchsorted(clock_ts, np.datetime64(pd.Timestamp(sig_ts) + pd.Timedelta(strategy_tf)), side="left"))
+
+
+def _htf_asof(df: pd.DataFrame, base5m: pd.DataFrame, strategy_tf: str, htf_tf: str, ema_period: int):
+    """Per strategy bar: the latest HTF close + EMA whose HTF bar CLOSED at/before the strategy bar's close (its
+    decision time). HTF stamped at its close; the left key is the strategy bar's close."""
+    htf = _resample_close_stamped(base5m, htf_tf)
+    htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
+    htf = htf.dropna(subset=["ema"])
+    bar_close = (df["timestamp"] + pd.Timedelta(strategy_tf)).rename("timestamp").to_frame()
+    merged = pd.merge_asof(
+        bar_close.sort_values("timestamp"),
+        htf[["timestamp", "close", "ema"]].rename(columns={"close": "_htf_close", "ema": "_htf_ema"}).sort_values("timestamp"),
+        on="timestamp", direction="backward",
+    )
+    return merged["_htf_close"].to_numpy(), merged["_htf_ema"].to_numpy()
 
 
 def _date_filter(df, start, end):
@@ -298,7 +337,7 @@ def _import_callable(module: str, attr: str) -> Optional[Callable]:
 
 def _cache_key(name: str, base_path: str, start, end, overrides: dict) -> Path:
     h = hashlib.sha1(
-        json.dumps([name, base_path, str(start), str(end), overrides],
+        json.dumps([name, base_path, str(start), str(end), overrides, GRID],
                    sort_keys=True, default=str).encode()
     ).hexdigest()[:12]
     return _SIG_CACHE / f"{name}_{h}.parquet"
@@ -356,21 +395,8 @@ def generate_signal_stream(name: str, base5m: pd.DataFrame, *, start, end,
     if name in ("ict_scalp_5m", "hf_displacement_cont") and bool(cfg.get("htf_trend_filter_enabled", True)):
         htf_tf = _PANDAS_TF.get(str(cfg.get("htf_filter_timeframe") or "1h"), "1h")
         ema_period = int(cfg.get("htf_filter_ema_period") or 20)
-        htf = _resample(base5m, htf_tf)
-        htf["ema"] = htf["close"].ewm(span=ema_period, adjust=False).mean()
-        htf = htf.dropna(subset=["ema"])
-        # Vectorized as-of join: for each df bar, the latest 1h close/ema at or
-        # before it. merge_asof is O(n) — the prior per-bar .loc filter was
-        # O(n²) and stalled the 5m/6y stream (~600k bars).
-        merged = pd.merge_asof(
-            df[["timestamp"]].sort_values("timestamp"),
-            htf[["timestamp", "close", "ema"]].rename(
-                columns={"close": "_htf_close", "ema": "_htf_ema"}
-            ).sort_values("timestamp"),
-            on="timestamp", direction="backward",
-        )
-        htf_close_arr = merged["_htf_close"].to_numpy()
-        htf_ema_arr = merged["_htf_ema"].to_numpy()
+        # Vectorized as-of join at the strategy bar's CLOSE against close-stamped HTF bars (O(n), causal).
+        htf_close_arr, htf_ema_arr = _htf_asof(df, base5m, _PANDAS_TF[spec["tf"]], htf_tf, ema_period)
 
     rows = []
     warm = 260
@@ -1172,13 +1198,14 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
     lo = clock["low"].to_numpy(float)
     c = clock["close"].to_numpy(float)
 
-    # map each strategy's signal rows onto clock indices (signal becomes
-    # actionable on the NEXT clock bar after its bar close — no lookahead)
+    # map each strategy's signal rows onto clock indices: a signal on the OPEN-stamped strategy bar [T, T+tf) is
+    # actionable on the first clock bar opening at/after its close T+tf -- no lookahead
     clock_ts = ts.values
     sig_at: Dict[int, Dict[str, dict]] = {}
     for name, s in streams.items():
+        _tf = _PANDAS_TF[ROSTER[name]["tf"]]
         for _, r in s.iterrows():
-            idx = int(np.searchsorted(clock_ts, np.datetime64(pd.Timestamp(r["ts"])), side="right"))
+            idx = _signal_clock_index(clock_ts, r["ts"], _tf)
             if idx >= n:
                 continue
             sig_at.setdefault(idx, {})[name] = r.to_dict()

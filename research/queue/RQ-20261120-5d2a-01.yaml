@@ -3,7 +3,7 @@
 # Gates this adds or changes: none.
 id: RQ-20261120-5d2a-01
 title: 'POOLED paired read, Donchian-55 / trail 6.0 (D55) vs Donchian-20 (B) on SOL/BNB/ETH/XRP/LINK/AAVE across the 1h, 2h and 4h bars as ONE test: does D55 beat B by >= 0.05 R per baseline trade?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -130,3 +130,20 @@ programme_node:
   goal: G2
   after: []
 last_dispatched_at: '2026-11-20T02:07:02+00:00'
+grading:
+  attested: RULE-RQ20261120-5D2A-01-POOLED-D55-VS-B
+  auto: false
+  decision_rule_id: RULE-RQ20261120-5D2A-01-POOLED-D55-VS-B
+  evidence:
+  - research/results/RQ-20261120-5d2a-01/44653488789.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'Pooled D55 vs B over 18 cells (6 symbols x 1h/2h/4h): n(B) 15828 (floor 15000), MDE 0.0308 R/trade (below
+    the 0.05 bar), so not INDETERMINATE. D55 - B = +0.01515 R per baseline trade (net R 549.75 vs 309.89), bootstrap
+    95% CI [-0.0143, +0.0455]. The CI upper bound 0.0455 is below the bar 0.05, so FAIL under the registered rule.
+    Arithmetic check: 239.86 R / 15828 = 0.01515; naive SE 1.5594/sqrt(15828) = 0.0124 gives an upper bound of about
+    0.039, also below 0.05 (the block bootstrap is wider). D55 is higher in net R but the gain does not reach the
+    bar. Family not retired; the node is closed.'
+  rows: 1
+  verdict: fail
