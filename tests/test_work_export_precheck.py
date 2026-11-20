@@ -334,3 +334,64 @@ def test_validation_failure_never_raises(monkeypatch):
         raise work_cli.Unreachable("store not reached: test")
     monkeypatch.setattr(work_cli, "http", down)
     assert work_cli.file_validation_failure(["x"], "", [])["error"]
+
+
+# ── (e) EXPORT-VALIDATION-GAP (2026-11-20): redate-guard joins the pre-check and the cutover ──
+# The first export run (44648031388) landed 13 records that pushed an open item's next-due later
+# without a new observation. redate-guard then refused its bot PR #27549 in full CI.
+
+
+def _obs_due(oid: str, due: str, updated_at: str = NOW) -> dict:
+    return dict(_obs(oid, updated_at=updated_at,
+                     observation={"what": "w", "how_to_check": "h", "due_by": due}),
+                due_rule={"kind": "date", "due_date": due})
+
+
+def test_a_bare_redate_is_held_back_post_cutover(tmp_path):
+    root = _root(tmp_path, PAST)
+    work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-01")])
+    out = work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-15")])    # later, no redate
+    assert out["records_held"] == 1 and out["records_written"] == 0
+    msgs = out["held"][0]["messages"]
+    assert any("redate" in m for m in msgs), msgs                               # the guard's own words
+
+
+def test_a_bare_redate_from_before_the_cutover_lands(tmp_path):
+    root = _root(tmp_path, FUTURE)                                             # every store write is "old"
+    work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-01")])
+    out = work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-15")])
+    assert out["records_written"] == 1 and out["records_held"] == 0
+    assert out["exempt_failing_landed"] == 1
+
+
+def test_an_earlier_due_date_is_not_a_redate(tmp_path):
+    root = _root(tmp_path, PAST)
+    work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-15")])
+    out = work_cli.export_to_files(root, [_obs_due("PI-RD", "2026-12-01")])    # pulled IN: fine
+    assert out["records_written"] == 1 and out["records_held"] == 0
+
+
+def test_redate_guard_skips_pre_cutover_record_and_fails_post_cutover_one(gitrepo):
+    from scripts.ci import check_redate as cr
+    root = gitrepo
+    (root / PIPE).mkdir(parents=True)
+
+    def rec(iid, due):
+        return {"id": iid, "what": "w", "state": "queued", "next_action": "check_observation",
+                "origin": {"kind": "audit", "ref": "r", "rerun": "x"},
+                "due_when": {"kind": "date", "due_date": due}}
+    for iid in ("PI-OLD", "PI-NEW"):                                            # the base records
+        (root / PIPE / f"2026a-{iid}.json").write_text(json.dumps(rec(iid, "2026-12-01")))
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "base records")
+    for iid, ts in (("PI-OLD", "2026-11-19T00:00:00Z"), ("PI-NEW", "2026-11-20T00:00:00Z")):
+        rel = f"{PIPE}/2026b-{iid}.json"
+        (root / rel).write_text(json.dumps(rec(iid, "2026-12-15")))            # bare re-date
+        _stamp(root, rel, ts)
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "export")
+    plain = cr.findings(root, "HEAD~1")
+    assert any("PI-OLD" in f for f in plain) and any("PI-NEW" in f for f in plain)
+    got = cr.findings(root, "HEAD~1", exempt=frozenset(cut.exempt_paths(root)))
+    assert not any("PI-OLD" in f for f in got)
+    assert any("PI-NEW" in f for f in got)

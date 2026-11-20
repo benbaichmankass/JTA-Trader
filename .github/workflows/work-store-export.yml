@@ -1,7 +1,7 @@
 # work-store-export -- the daily EXPORT of the work store into the checklist / pipeline files (AM-OPS-9).
 #
-# Gates this adds or changes: none added; narrows roadmap-map, soak-contract and claim-basis to skip
-# rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
+# Gates this adds or changes: none added; narrows roadmap-map, soak-contract, claim-basis and redate to
+# skip rows whose store updated_at <= export_base_at (pre-cutover debt, tracked on STORE-EXPORT-BACKFILL-258).
 #
 # Since the WSD-S4 freeze (2026-11-12) checklist rows and pipeline items live in work_store.db on the
 # live VM; docs/claude/work/checklist/ and docs/claude/work/pipeline/ are an EXPORT that CI guards read.
@@ -13,7 +13,8 @@
 #
 # THE PRE-CHECK (scripts/ops/work.py export_precheck): before writing, each CHANGED row / record goes
 # through the same per-row predicates the guards use -- roadmap_map.row_problems,
-# check_soak_contracts.row_findings / pipeline_item_findings, check_claim_basis.new_row_failure. A
+# check_soak_contracts.row_findings / pipeline_item_findings, check_claim_basis.new_row_failure,
+# pipeline.redate_problems (the redate-guard's predicate; EXPORT-VALIDATION-GAP 2026-11-20). A
 # failing one stays in the store, is LEFT OUT of this export, and is filed ONCE as an observation
 # titled "EXPORT HELD BACK [<id>] ..." (WORK_STORE_TOKEN; no second filing while one is open; a failed
 # filing is printed, never aborts). The next run re-checks it. Every other row lands, so one bad row
@@ -26,9 +27,12 @@
 #
 # VALIDATE BEFORE LANDING -- IT MUST NEVER PUSH RED TO MAIN. After the export writes files and BEFORE
 # anything is committed or pushed, the exported tree is committed LOCALLY (never pushed), and these run
-# against it exactly as CI runs them (scripts/ci/run_guards.py, WORK_READ_SOURCE=export, origin/main as
-# the base): roadmap-map-guard, soak-contract-guard, claim-basis-guard, checklist-readers-guard,
-# pipeline-guard; plus `pytest -q tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py`.
+# against it exactly as CI's PR guards job runs them: scripts/ci/run_guards.py in RELEVANCE mode on the
+# export's own diff (WORK_READ_SOURCE=export, origin/main as the base), so the guard set is the one CI
+# will select for the bot PR, never a hand list; plus pytest over EVERY test file that reads the
+# register, derived by scripts/ci/register_reader_tests.py. EXPORT-VALIDATION-GAP (2026-11-20): the
+# first run (44648031388) validated with 5 named guards and test_checklist*/test_pipeline*/test_work*,
+# passed, and its bot PR #27549 went red in full CI on redate-guard and tests/console_connector.
 # If ANY fails: NOTHING is committed or pushed that run, ONE observation "EXPORT VALIDATION FAILED
 # [<date>] ..." is filed (failing checks + log tail; not again while an open one exists), and the run
 # exits 0 -- no red run, no halt; the next scheduled run retries. This enforces the existing
@@ -55,11 +59,16 @@ jobs:
     runs-on: ubuntu-latest
     # >= the commit-to-main merge wait (80m, .github/actions/commit-to-main) + 5m slack:
     # tests/test_commit_to_main_callers.py enforces it.
-    timeout-minutes: 100
+    # EXPORT-VALIDATION-GAP (2026-11-20): raised from 100 because validation now runs CI's full
+    # relevance guard set (~17 min in CI) and every register-reading test (1,890 tests, ~15 min
+    # measured locally) on top of the export and the 80 min merge wait.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          # Full history, as guards.yml checks out: the diff-scoped guards read history (redate-guard
+          # finds an item's previous record with `git grep` over the base). EXPORT-VALIDATION-GAP.
+          fetch-depth: 0
           # The PAT: a GITHUB_TOKEN PR gets no required checks (PI-20260928-TURC5MJC-0004).
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
 
@@ -103,25 +112,36 @@ jobs:
             echo "land=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           # origin/main = the commit this run exported onto, so the diff-scoped guards see exactly the export.
-          git fetch -q --no-tags --depth=1 origin "+${GITHUB_SHA}:refs/remotes/origin/main"
+          git fetch -q --no-tags origin "+${GITHUB_SHA}:refs/remotes/origin/main"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- $PATHS
           git commit -qm "work-store export (LOCAL validation commit, never pushed)"
           LOG="${RUNNER_TEMP:-/tmp}/validate.log"; DIFF="${RUNNER_TEMP:-/tmp}/export.diff"
           git diff origin/main...HEAD > "$DIFF"
-          GUARDS="roadmap-map-guard soak-contract-guard claim-basis-guard checklist-readers-guard pipeline-guard"
           checks=()
-          only=(); for g in $GUARDS; do only+=(--only "$g"); done
-          # --all: run the named guards whatever relevance says (--only alone exits 1 on a skipped guard).
-          if ! python3 scripts/ci/run_guards.py --all --base-ref main --event-name pull_request --pr-diff "$DIFF" "${only[@]}" \
+          # The guards CI's PR job will run on the bot PR: relevance mode on this diff, no --only list.
+          if ! python3 scripts/ci/run_guards.py --base-ref main --event-name pull_request --pr-diff "$DIFF" \
               > "$LOG" 2>&1; then
-            for g in $GUARDS; do grep -q -- "--- $g: PASS" "$LOG" || checks+=(--check "$g"); done
-            [ ${#checks[@]} -gt 0 ] || checks+=(--check run_guards)
+            # Only run_guards' own closing "FAILING GUARDS" block names guards; a guard's output can
+            # carry its own ::error:: lines, which are not guard names.
+            mapfile -t failed < <(awk '/^FAILING GUARDS/{f=1; next} f && /::error::/{sub(/.*::error::/, ""); sub(/:.*/, ""); print}' "$LOG" | sort -u)
+            # EXCLUDED, and why: pr-landing-guard checks the PR's .github/pr-landing/<slug>.json, which
+            # .github/actions/commit-to-main WRITES after this step; here it can only report R11
+            # "undeclared" (dry run on #27549's tree, 2026-11-20: PASS 58, FAIL 1 = exactly this). The
+            # bot PR's own CI runs it on the real declaration.
+            EXCLUDED="pr-landing-guard"
+            for g in "${failed[@]}"; do
+              case " $EXCLUDED " in *" $g "*) echo "validation: $g excluded (see the comment above)";; *) checks+=(--check "$g");; esac
+            done
+            # Exit 1 with NO "FAILING GUARDS" block = a guard COULD NOT RUN; CI would be red too.
+            grep -q '^FAILING GUARDS' "$LOG" || checks+=(--check "run_guards (a guard could not run)")
           fi
-          if ! python3 -m pytest -q tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py \
-              >> "$LOG" 2>&1; then
-            checks+=(--check "pytest tests/test_checklist*.py tests/test_pipeline*.py tests/test_work*.py")
+          # Every test file that reads the register (derived, so a new reader is covered automatically).
+          if ! mapfile -t TESTS < <(python3 scripts/ci/register_reader_tests.py) || [ ${#TESTS[@]} -eq 0 ]; then
+            checks+=(--check "register_reader_tests selected nothing")
+          elif ! python3 -m pytest -q "${TESTS[@]}" >> "$LOG" 2>&1; then
+            checks+=(--check "pytest (${#TESTS[@]} register-reading test files)")
           fi
           # Back to uncommitted: commit-to-main stages and commits the same paths itself.
           git reset -q --soft HEAD~1

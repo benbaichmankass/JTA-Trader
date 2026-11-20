@@ -294,11 +294,67 @@ def test_options_helper():
     assert data._options({}) is None and data._options({"options": []}) is None and data._options(None) is None
 
 
-def test_inbox_items_carry_options_key():
+def _fixture_register(monkeypatch):
+    """A register with KNOWN decision edges, independent of the live one.
+
+    EXPORT-VALIDATION-GAP (2026-11-20): this test read the LIVE register and asserted it held at
+    least one open operator_decision edge. When the last one closed in the store (DESK-18D-JUDGE-2,
+    11-17), the first faithful work-store export turned the test red, a property of the data and
+    not of the code. The register is now a fixture: one edge with options, one without.
+    """
+    from types import SimpleNamespace
+    rows = [
+        {"id": "ROW-WITH-OPTIONS", "title": "t1", "state": "blocked", "updated_at": "2026-11-19T00:00:00Z",
+         "blocked_on": [{"kind": "operator_decision", "ref": "r", "what": "pick one",
+                         "options": ["A", {"label": "B"}]}]},
+        {"id": "ROW-NO-OPTIONS", "title": "t2", "state": "queued",
+         "blocked_on": [{"kind": "operator_decision", "ref": "r", "what": "yes or no"}]},
+        {"id": "ROW-CLOSED", "title": "t3", "state": "done",
+         "blocked_on": [{"kind": "operator_decision", "ref": "r", "what": "ignored"}]},
+        {"id": "ROW-OTHER-EDGE", "title": "t4", "state": "blocked",
+         "blocked_on": [{"kind": "row", "ref": "X"}, "a bare string edge"]},
+    ]
+    items = {
+        "PI-ASK-1": {"id": "PI-ASK-1", "what": "w", "state": "queued", "next_action": "ask_operator",
+                     "due_when": {"kind": "date", "due_date": "2026-11-01"},
+                     "options": [{"label": "Yes"}, {"label": "No"}]},
+        "PI-ASK-2": {"id": "PI-ASK-2", "what": "w2", "state": "due", "next_action": "ask_operator",
+                     "due_when": {"kind": "date", "due_date": "2026-11-01"}},
+        "PI-NOT-ASK": {"id": "PI-NOT-ASK", "what": "w3", "state": "queued", "next_action": "dispatch_lane",
+                       "due_when": {"kind": "date", "due_date": "2026-11-01"}},
+        "PI-DONE-ASK": {"id": "PI-DONE-ASK", "what": "w4", "state": "done", "next_action": "ask_operator",
+                        "terminal_reason": "x", "due_when": {"kind": "date", "due_date": "2026-11-01"}},
+    }
+    monkeypatch.setattr(data, "_load_checklist", lambda repo: {"items": rows})
+    monkeypatch.setattr(data, "load_pipeline",
+                        lambda repo: SimpleNamespace(items=items, healthy=True, unreadable=[]))
+
+
+def test_inbox_items_carry_options_key(monkeypatch):
+    _fixture_register(monkeypatch)
+    out = data.inbox(REPO, limit=200)
+    dec = out["sections"]["decisions_checklist"]
+    asks = out["sections"]["asks_pipeline"]
+    assert [i["id"] for i in dec["items"]] == ["ROW-WITH-OPTIONS", "ROW-NO-OPTIONS"]
+    assert sorted(i["id"] for i in asks["items"]) == ["PI-ASK-1", "PI-ASK-2"]
+    for i in dec["items"] + asks["items"]:
+        assert "options" in i
+    by = {i["id"]: i for i in dec["items"] + asks["items"]}
+    assert by["ROW-WITH-OPTIONS"]["options"] == ["A", "B"]
+    assert by["ROW-NO-OPTIONS"]["options"] is None
+    assert by["PI-ASK-1"]["options"] == ["Yes", "No"]
+    assert by["PI-ASK-2"]["options"] is None
+
+
+def test_inbox_on_the_live_register_is_well_formed_even_when_empty():
+    """The real register may legitimately hold zero decisions; the shape must still hold."""
     out = data.inbox(REPO, limit=200)
     for sec in ("decisions_checklist", "asks_pipeline"):
-        items = out["sections"][sec]["items"]
-        assert items and all("options" in i for i in items)
+        s = out["sections"][sec]
+        assert s["read_state"] in ("read", "stale", "could_not_look")
+        assert all("options" in i for i in s["items"])
+        if s["read_state"] != "could_not_look":
+            assert s["count"] == len(s["items"]) or s["count"] > len(s["items"])
 
 
 # ── system_catalog (public: committed config only) ─────────────────────

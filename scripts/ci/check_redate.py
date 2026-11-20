@@ -28,6 +28,8 @@ from typing import List, Optional
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
+if str(REPO) not in sys.path:  # for scripts.ops.work_export_cutover (the export's cutover exemption)
+    sys.path.insert(1, str(REPO))
 import pipeline as pl  # noqa: E402
 
 PIPE_DIR = "docs/claude/work/pipeline/"
@@ -50,12 +52,16 @@ def _latest_at_base(repo: Path, base: str, item_id: str) -> Optional[dict]:
     return None
 
 
-def findings(repo: Path, base: str) -> List[str]:
+def findings(repo: Path, base: str, exempt: frozenset = frozenset()) -> List[str]:
+    """``exempt``: repo-relative record paths the work-store export wrote for pre-cutover store debt
+    (scripts/ops/work_export_cutover.exempt_paths), skipped like the other register guards do."""
     added = sorted(_git(repo, "diff", "--name-only", "--diff-filter=A",
                         f"{base}...HEAD", "--", PIPE_DIR).stdout.split())
     out: List[str] = []
     latest: dict = {}
     for name in added:
+        if name in exempt:
+            continue
         try:
             rec = json.loads((repo / name).read_text())
         except (OSError, ValueError):
@@ -146,7 +152,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if _git(REPO, "rev-parse", "--verify", a.base).returncode != 0:
         print(f"redate-guard: base {a.base} not found -- COULD NOT CHECK (not 'clean')")
         return 2
-    f = findings(REPO, a.base)
+    from scripts.ops import work_export_cutover as _cut  # noqa: PLC0415
+    f = findings(REPO, a.base, exempt=frozenset(_cut.exempt_paths(REPO)))
     if f:
         print("::error::a pipeline item re-dated without a new observation:")
         for x in f:
