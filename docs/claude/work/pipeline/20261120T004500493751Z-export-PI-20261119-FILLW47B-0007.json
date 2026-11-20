@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "after the restart that deploys #27415: ict_scalp_sol_5m evals show session-window blocks only at UTC 0-7, at least one signal or trade at UTC 8-23 within 7 days of the restart (not 48 h if the first 48 h are empty), and zero entries in UTC 0-7",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19, #27415 merged",
+    "rerun": "scripts/ops/diag_fetch.sh the journal/signal endpoints for ict_scalp_sol_5m (skill diag-data); and: git log origin/main -1 --format=%cI -- src/units/strategies/ict_scalp.py for the deploy time; ssh-free reads only"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "OBSERVE ict_scalp_sol_5m session filter live after the RESTART that deploys #27415 (merged 2026-11-19 19:42Z; manager batches it with #27430 and #27434): session_filter_enabled true, start 8, end 24 on bybit_1 (demo floor). WHY: the filter had a defect (read df.index[-1], epoch hour 0 on the live RangeIndex frame, so it would have blocked EVERY signal); fixed to read the timestamp column and epoch ms/s, but only offline tests and a harness run prove it; the live path is unobserved. WHAT WOULD CLOSE IT (all three): (1) the trader journal/signal log shows ict_scalp_sol_5m evals blocked with reason containing 'session window' only at UTC hours 0-7 and NOT at hours 8-23; (2) over the first 48 h after the restart at least one ict_scalp_sol_5m signal or trade is emitted at a UTC hour 8-23 (the leg took 116 trades in 365 d under the filter, about 0.32 per day, so 48 h can legitimately show 0: if none, widen to 7 d before calling it dead); (3) zero entries stamped in hours 0-7. A silent zero is the failure mode this guards: do not read 'no trades' as 'filter works'. REVERT: session_filter_enabled false in config/strategies.yaml for ict_scalp_sol_5m, then re-run build_strategy_evidence.py --strategy ict_scalp_sol_5m (fingerprint moves with the params). Evidence: PR #27415 body (filter-off -27.08 R n 178 vs filter-on -16.64 R n 116, same window; both fail Stage 0; the leg still loses net)."
+}

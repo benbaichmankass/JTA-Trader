@@ -1,0 +1,23 @@
+{
+  "id": "IB-GROSS-NO-CAP-FIX",
+  "title": "D4 (operator 2026-11-18): remove the NEED for a gross-exposure cap on IB. MEASURED 2026-11-18 22:35Z ib_paper venue = journal: MGC short 27 (~1.02M notional at ~3770 x 10), TLT long 5536 (~0.44M), GLD short 382 (~0.14M) => ~1.6M gross, ~1.5x the ~1.03M equity on file (PI-20261104-KKPOFDJQ-0004), MGC alone ~1x. ROOT CAUSE (replayed 2026-10-24, docs/research/mgc-sizing-oversize-2026-10-24.md; re-confirmed on trade 7737: stop 12.6 pt = 0.33% of price): the sizer is arithmetically right; flat 1.5% risk over a 0.26-0.40% stop gives 3.7-5.8x notional per futures trade. The 1.5x cap then BRICKS the account (headroom <= 0 refuses every new trade: 6892-6895 'sized_qty=0'), and exposure is read from the JOURNAL, so a stale open row bricks it further. Stacking/over-cover paths (#26862; PI-20261117-LSFHBH4A-0006) multiply it. PROPOSED FIX (Tier 3, Stage-0 test first): size on max(declared stop distance, k x ATR(14)) so a tight stop cannot buy leverage (stop unchanged); then measure whether 1.5x ever binds on the ib_paper corpus and, if not, propose retiring both IB caps. Also read exposure from the VENUE, not the journal. Next: author the Stage-0 unit. Gates this adds: none.",
+  "state": "queued",
+  "owner": "AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-22",
+  "note": "[2026-11-19 04:25Z QUEUE-FILL-STANDING-W47b] RQ-20261119-b9a4-01 (run 44450610030) label FAIL by rule, mechanism not exercised (floor never binds, 0% reweighted at k 0.5 and 1.0); 'caps stay' NOT supported; the live problem leg (ict_scalp_mgc_15m, no committed per-trade rows) was excluded. M1 3.534 identical in all arms = concurrency across the 4 legs at 1.5% risk each. Median stop/ATR14: mgc_trend_1h 2.52 (118 of 141 trades), mhg_pullback 5.7, mgc_pullback 4.9, mes_trend 15.2; ATR matches the backtest (stop/(atr_stop_mult x ATR) median 1.009). Follow-ups (manager GO 04:17Z): (a) ict_scalp_mgc_15m per-trade corpus + re-registered ATR-floor test; (b) concurrency/gross-cap test on the 141-trade corpus.",
+  "updated_at": "2026-11-19T14:27:53Z",
+  "updated_by": "QUEUE-FILL-STANDING-W47b"
+}

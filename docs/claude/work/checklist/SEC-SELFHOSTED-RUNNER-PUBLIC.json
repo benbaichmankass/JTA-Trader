@@ -1,0 +1,23 @@
+{
+  "id": "SEC-SELFHOSTED-RUNNER-PUBLIC",
+  "title": "Security: non-ephemeral self-hosted runner (jta-infra, trainer VM) on a public repo; fork-PR approval setting unread",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 16,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "REPO READ 2026-11-11: infra-runner-smoke.yml:32 runs on [self-hosted, jta-infra]; system-actions, trainer-vm-diag, vm-diag-snapshot and diag-relay-sweep switch to it when vars.INFRA_RUNS_ON is set. The runner is installed on the trainer VM, which holds the SSH key into the live VM. No --ephemeral flag. infra-runner-install.yml:92-95 only READS the fork-PR approval policy. Risk: on a public repo a fork PR that edits a pull_request workflow can target the runner label. UNVERIFIED: the repo's fork-PR approval setting, the runner group's public-repo setting, whether INFRA_RUNS_ON is armed now. First step is reading those three settings (needs the admin token).",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "surge"
+}

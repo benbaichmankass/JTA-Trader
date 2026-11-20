@@ -1,0 +1,53 @@
+{
+  "id": "RETIRE-AVAX-PULLBACK-2H",
+  "title": "Retire avax_pullback_2h (lever-exhausted; operator decides; PR #25944 held)",
+  "state": "dropped",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-21",
+  "decision_requests": [
+    {
+      "allowsFreeText": true,
+      "answer": {
+        "acted": "Read back in chat 2026-11-14 ~09:19Z. avax_pullback_2h stays a TESTING leg on the bybit_1 demo floor for data, with no further research. PR #25944 (retirement) closed unmerged; FRONTIER told to drop it from the iteration queue. db1a-04 had failed it (H record -1.41R n65 1/4; year before +2.20R).",
+        "chosen": "keep_demo",
+        "committed_by": "Manager Session 2026-11-13a",
+        "free_text": "Yeah, we can keep it so that we're getting and generating that Dina so that even if we're not going to put effort into specifically trying to find a strategy that works very bad we can still",
+        "submitted_at": "2026-11-14T09:16:00Z",
+        "submitted_by": "manager_chat_popup"
+      },
+      "askedOn": "2026-11-14T06:05:00Z",
+      "evidence": "MEASURED, net of the full cost stack, rules registered before each run. Forming record -15.74R (year before -3.22R); closed record -14.69R. Every lever family tested: short-only (f251-08/-09, db1a-01 C_S) fails 3/4 folds on both bars; trend filter (f251-22) and others fail the two-window guard; the regime unit RQ-20261114-db1a-02 (run 43562273934) found no ADX cell that rescues it (no chop/long trades, ex-cell unchanged). The power arithmetic shows the observed short edge (~+0.05R/trade) is untestable at ~55 trades/yr. The lever-exhaustion note and gate read are on the #25944 branch (research/levers/avax_pullback_2h.yaml). UPDATE 2026-11-14 07:13Z: RQ-20261114-db1a-03 (run 43567392380) PASSED post-hoc: skipping longs when the prior daily close < 200-day SMA moves the 15-leg pool from -142.34R to -54.28R on the record year (year before +106.09R -> +111.43R), and avax_pullback_2h to -0.44R record / +2.20R year before (about breakeven). It is post-hoc, so a harness-native unit with the filter built in is queued; a per-leg pass there would be a Tier-3 proposal instead of a retirement.",
+      "id": "RETIRE-AVAX-PB-2H",
+      "options": [
+        {
+          "key": "retire",
+          "label": "Retire it: merge #25944 (disable + remove from the bybit_1 roster; rollback recorded)"
+        },
+        {
+          "key": "keep_demo",
+          "label": "Keep it on the demo floor for data, no more research"
+        },
+        {
+          "key": "hold",
+          "label": "Hold - I want to read it first"
+        }
+      ],
+      "question": "Retire avax_pullback_2h (demo floor, bybit_1 only; no real money or prop)? UPDATED 07:13Z: a new pooled result may rescue it, so the manager now recommends HOLD until the confirming backtest grades.",
+      "recommended": "hold",
+      "urgency": "routine"
+    }
+  ]
+}

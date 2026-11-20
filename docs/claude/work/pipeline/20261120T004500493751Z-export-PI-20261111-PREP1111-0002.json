@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "realized_slippage.py (and any other scripts/ caller found by grep for an argv Authorization header) sends the bearer via a 0600 config or stdin, and a test asserts a failed call message does not contain the header value",
+    "kind": "event",
+    "last_checked": "2026-11-11"
+  },
+  "id": "PI-20261111-PREP1111-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-11 (lane PERF-REVIEW-PREP-20261111); docs/reviews/2026-11-11-weekly-walkthrough.md PERFORMANCE section 4",
+    "rerun": "grep -n Authorization scripts/research/realized_slippage.py"
+  },
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent - state no parent: OPS backlog drain (BACKLOG-DRAIN-20261112, after HEALTH-20261111-EXPORT-READS-STALE per operator p4) [weekly planning 2026-11-12]",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "perf-review 2026-11-18 re-check: Fixed by 89cf721ff (#24965, 2026-11-11): curl config file, token never in argv; tests/test_diag_token_not_printed.py passes.",
+  "tier": 1,
+  "what": "[health][security] scripts/research/realized_slippage.py passes the diag bearer as a curl argv element (-H Authorization: Bearer ...). When curl fails, subprocess.CalledProcessError prints the full argv, token included: observed 2026-11-11 in a session traceback (the printed token was the pre-rotation one, so it is dead). The same path run on a GitHub runner would print a live token into a public Actions log. scripts/ops/diag_fetch.sh already avoids this with a 0600 curl config. Not a runtime path; Tier 1."
+}

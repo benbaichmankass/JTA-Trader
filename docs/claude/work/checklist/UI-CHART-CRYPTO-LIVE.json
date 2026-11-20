@@ -1,23 +1,25 @@
 {
   "id": "UI-CHART-CRYPTO-LIVE",
   "title": "Chart phase 1 (crypto, first): Lightweight Charts on the Bybit public v5 WebSocket in the browser, with signal/order/fill/bracket markers; /ws/market stops fetching *USDT candles",
-  "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuLzLVokt9d5VS4yCA2",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Step T3a of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 4.3/\u00a7 5.1 (operator U3, 2026-11-05 ~00:36Z: \"Full library, but in phases so that we get crypto live fast\"). Lightweight Charts beats the widget for phase 1: it is already the SPA's dependency (components/LiveChart.svelte), and the Bybit public stream needs no key or relay. Cost $0. Live markers depend on UI-TRADING-PUSH T1; until then markers come from a REST snapshot. Tier 1 SPA plus a Tier 2 candle-loop change in market_ws.py. Closing: the crypto chart ticks with zero API candle fetches for *USDT; a fill marker appears within 2 s of its journal row once T1 is live. [2026-11-06 ~00:20Z manager, OPERATOR DECISION popup verbatim: \"Wait for throttle\"] UI redesign build phases (crypto chart T3a, push T1-T2, console tabs + catalogs) are dispatched in the throttle period after the surge, or next week after the 11-11 reset; not during the surge.",
-  "due_by": "2026-11-12",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-06T00:16:46Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
-  "week_lane": "throttle",
-  "_seq": 933
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25200
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "_seq": 933,
+  "note": "Step T3a of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 4.3/\u00a7 5.1 (operator U3, 2026-11-05 ~00:36Z: \"Full library, but in phases so that we get crypto live fast\"). Lightweight Charts beats the widget for phase 1: it is already the SPA's dependency (components/LiveChart.svelte), and the Bybit public stream needs no key or relay. Cost $0. Live markers depend on UI-TRADING-PUSH T1; until then markers come from a REST snapshot. Tier 1 SPA plus a Tier 2 candle-loop change in market_ws.py. Closing: the crypto chart ticks with zero API candle fetches for *USDT; a fill marker appears within 2 s of its journal row once T1 is live. [2026-11-06 ~00:20Z manager, OPERATOR DECISION popup verbatim: \"Wait for throttle\"] UI redesign build phases (crypto chart T3a, push T1-T2, console tabs + catalogs) are dispatched in the throttle period after the surge, or next week after the 11-11 reset; not during the surge. [2026-11-12 UI lane p2] NOT BUILT; SPA-only, blocked on dashboard repo access (m2). No API change needed: drop *USDT from /ws/market symbols= and the VM fetches nothing for them. File-by-file plan: docs/plans/UI-SPA-HANDOFF-2026-11-12.md (PR #25167) section 1 (Bybit public WS kline/tickers, history via Bybit REST or one /candles read; CORS of the Bybit REST is UNVERIFIED). [2026-11-12 ~09:05Z UI lane p2] Bot side BUILT, HELD: PR #25200 (/ws/market fetches no *USDT candles; one candles_source frame per symbol, feed bybit_public_ws; positions unchanged; a test shows zero fetches). SPA side is in ict-trader-dashboard#238 (dashboard lane). Deploy #25200 only once #238's bundle is live (the manager's call). CLOSES WHEN the SPA crypto chart ticks from Bybit and the ict-web-api journal shows 0 *USDT candle fetches from /ws/market. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner AM-UI is ARCHIVED. Bot side #25200 merged 11-12 16:00Z. Observation that closes it: the SPA crypto chart ticks from Bybit (ict-trader-dashboard #238) and the ict-web-api journal shows 0 *USDT candle fetches from /ws/market.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:35:06Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
 }

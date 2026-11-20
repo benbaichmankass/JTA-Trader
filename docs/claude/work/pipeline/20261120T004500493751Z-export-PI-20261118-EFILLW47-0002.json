@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "research/queue/PLANNING.md section 1b states how est_minutes is calibrated from measured wall time AND scripts/research/research_compute.yaml kaggle_first no longer keys on routing.est_minutes alone, AND the runway line of check_research_queue_health / research_utilization reports supply in units and fires per day beside est hours",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EFILLW47-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-11-18, runs 44382443666 / 44382447562 / 44387488936 / 44387493913; manager instruction to file it",
+    "rerun": "python3 scripts/ci/check_research_queue_throughput.py --json  # runnable, fired_24h, results_landed_24h; then per run: mcp actions get_workflow_run <id> and subtract run_started_at from updated_at, compared with the unit's routing.est_minutes (abab-01 70, abab-02 90, abab-20 30, abab-38 30)"
+  },
+  "owner": "research-ops",
+  "state": "queued",
+  "what": "EST_MINUTES OVERSTATES MEASURED RUNTIME ~8x, AND THE ROUTER AND RUNWAY METRICS USE IT (2026-11-18). MEASURED on the four QUEUE-FILL-W47 units that ran (workflow wall time on the GitHub runner, including ~1 min setup; run ids 44382443666, 44382447562, 44387488936, 44387493913): abab-01 harness_stage0 est 70 min, actual 9.1; abab-02 harness_stage0 est 90, actual 9.6; abab-20 exit_lever_ablation est 30, actual 1.5; abab-38 exit_lever_ablation est 30, actual 7.5. Actual/est = 0.13, 0.11, 0.05, 0.25, median ~0.12 (n = 4, runner only, no Kaggle-kernel timing yet). Separately, ltr_action_trigger_s0.py took 11.2 s against the est of 60 min carried by the ed2b/43b6 units. TWO CONSEQUENCES. (1) Runway quoted in est-hours overstates real supply; the binding constraint is the dispatcher fire rate (check_research_queue_throughput 2026-11-18: fired_24h 100, runnable 81, results_landed_24h 115, i.e. ~4 fires/h, 81 runnable ~ 19 h), so supply must be quoted in UNITS and fires/day, with est hours only as a diagnostic. (2) compute_router.class_backends promotes a cpu_light unit to kaggle_cpu when routing.est_minutes > research_compute.yaml kaggle_first.min_est_minutes (30), and cost-weights the value score by est hours; both inherit the inflated est, so which units go to Kaggle is decided by an authoring-time guess, not by measured cost. FIX: calibrate est from measured wall time per harness (a measured-runtime table keyed by run.command script + cells x arms, fed by the landed run manifests / workflow run durations), have the authoring contract (research/queue/PLANNING.md section 1b) read it, and give kaggle_first a threshold that is not est-based (for example a per-harness measured median, or an explicit routing.kaggle_preferred), so that correcting est does not silently move every unit back onto the runner. Manager decision 2026-11-18: est is KEPT on the units for now so the Kaggle routing stands; a measured-runtime note is added to routing.basis instead."
+}

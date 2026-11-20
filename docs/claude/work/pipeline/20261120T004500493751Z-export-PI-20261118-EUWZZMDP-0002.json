@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "by_slot.D2 live heads list the strategies/accounts their trend_vol cells gate, and ml_order_changers.py prints a D2 line per live head",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EUWZZMDP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-18 (ML-REVIEW-20261118, lane ML-FRONTIER-PREP-20261118, session_01AFoLuMhxGuKUegEUWZzMdp)",
+    "rerun": "GET https://ict-bot.duckdns.org/api/bot/ml/registry by_slot.D2 consuming_strategies; python3 scripts/ops/ml_order_changers.py"
+  },
+  "routed_to": "ML lanes (manager to dispatch)",
+  "state": "routed",
+  "what": "[ml] Consumer feed misses the D2 router consumers: GET /api/bot/ml/registry by_slot lists consuming_strategies=[] and consuming_accounts=[] for all three LIVE D2 heads (mes-regime-5m-lgbm-v2, btc/sol-regime-15m-lgbm-fc-pcv-v2), while config/regime_policy.yaml trend_vol cells gate trend_donchian / ict_scalp_5m / squeeze_breakout_4h on the ML vol label. ml_order_changers.py therefore omits D2 (8 models listed, none D2), so C3 under-counts the legs ML changes. Build: derive D2 consumers from regime_policy.yaml cells x rostered legs in the consumer inventory."
+}

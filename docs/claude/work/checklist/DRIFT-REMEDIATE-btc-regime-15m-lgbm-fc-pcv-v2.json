@@ -1,0 +1,21 @@
+{
+  "id": "DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2",
+  "title": "Persistent score drift on live D2 head Collie-5a (BTC 15m fc-pcv-v2): diagnose before any demotion",
+  "state": "queued",
+  "owner": "ML lanes (manager to dispatch)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "Drifted in 2 consecutive weekly reads: 2026-11-11 (ml-review-20261111) and 2026-11-18 (/api/bot/shadow/drift KS 0.552, PSI 0.871, ref n 3322 vs cur n 741; mean p 0.966 -> 0.853). Stage-guard proposes demote both weeks (BTC + SOL fc-pcv-v2). Labelled macro-F1 0.585 (registry latest run) holds above 0.57. Competing hypotheses: (a) regime-mix (calmer market lowers p) -- refuted if labelled decay appears; (b) serve-path defect -- aadc-01 FAIL shows live vs replay labels disagree (BTC kappa 0.24), PI-20261118-ZZUFKM1F-0001. Rule (drift-remediation skill): a live model is the baseline; drift is an iteration input, not a demotion. Closes when the serve-path diff (PI-...-0001) names the cause and a re-read classifies the drift as regime-mix or a fixed defect. Also: trainer plan-only drift scan (19 rows) listed 0 dispatch/skip_no_manifest while the API drift reads 'significant' -- instrument disagreement filed separately.",
+  "phase": null,
+  "updated_at": "2026-11-18T18:25:03Z",
+  "updated_by": "ML-FRONTIER-PREP-20261118"
+}

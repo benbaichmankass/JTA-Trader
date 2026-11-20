@@ -1,0 +1,22 @@
+{
+  "id": "MANAGER-SCOPE-GUARD-RETIRED-LEASE",
+  "title": "manager-scope-guard cannot identify its subject locally: it still reads the retired MANAGER-LEASE.json",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[2026-11-15 08:29Z Manager 15a] Reported by lane PIPELINE-MAP-V2 (prepush): manager-scope-guard (scripts/ci/check_manager_scope.py) cannot identify the subject session because it looks for docs/claude/work/MANAGER-LEASE.json, which was retired 2026-09-21 (CLAUDE.md 'do not resurrect'). It should read the session identity some other way (e.g. the session tag/title or an env var) and never ask for the lease to come back. Done when prepush runs the guard cleanly for a lane and for the manager.",
+  "phase": null,
+  "updated_at": "2026-11-15T08:28:51Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

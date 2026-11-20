@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the held PR merges (git grep above returns nothing) or the operator closes it with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0009",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "git grep -n 'continue-work.yml' -- scripts/session_handoff/close_session.py  # a hit = still open"
+  },
+  "state": "killed",
+  "terminal_reason": "Fixed: _dispatch now prints a retirement notice and returns instead of running continue-work.yml. | evidence: scripts/session_handoff/close_session.py origin/main 30b5cd919 lines 221-228: _dispatch prints \"`continue-work` was deleted 2026-11-06 ... nothing was dispatched\". The only remaining continue-work.yml hit (line 224) is in the docstring, so the item's naive git-grep rerun would still match.",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "close_session.py --dispatch still runs `gh workflow run continue-work.yml` (scripts/session_handoff/close_session.py), a workflow deleted 2026-11-06 (WORKFLOW-PRUNE P1, 0 runs in 90 d): the flag now fails with HTTP 404. Found by the post-merge reference probe. The fix (make _dispatch print a retirement notice and return, drop the unused shutil import and WORKFLOW_FILE_NAME, one test) is outside the Tier-1 self-land surface (check_pr_landing R5), so it needs a human-merged PR: opened as a held PR by lane WORKFLOW-PRUNE.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Fixed: _dispatch now prints a retirement notice and returns instead of running continue-work.yml. EVIDENCE: scripts/session_handoff/close_session.py origin/main 30b5cd919 lines 221-228: _dispatch prints \"`continue-work` was deleted 2026-11-06 ... nothing was dispatched\". The only remaining continue-work.yml hit (line 224) is in the docstring, so the item's naive git-grep rerun would still match."
+}

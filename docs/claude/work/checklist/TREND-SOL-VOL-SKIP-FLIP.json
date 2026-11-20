@@ -1,0 +1,21 @@
+{
+  "id": "TREND-SOL-VOL-SKIP-FLIP",
+  "title": "trend_donchian_sol: add vol_skip_above_pctl 0.9 (bybit_1 demo floor; data-backed Tier 3, manager decision 2026-11-17)",
+  "state": "queued",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "Manager order 2026-11-17 10:46Z, after the d5a7 checks. Change: vol_skip_above_pctl: 0.9 on trend_donchian_sol after min_confidence: 0.80 in config/strategies.yaml. Packet docs/research/regime-tier3-packets-2026-11-17.md (on HELD PR #26646, lands when the manager merges it). Evidence per manager: 407c-21 PASS, 65ff-04 PASS, 7b6f-22 PASS (5/6 folds), 47b6-02 PASS, 47b6-01 FAIL (flat). Scope bybit_1 only; rollback = delete the line. Steps: (1) diag read SOL 1h live candle frame >= 200 bars, else report and do NOT flip; (2) exact diff from the packet; (3) restamp the leg's evidence fingerprint if test_fingerprint_agrees_with_every_committed_record needs it (numbers NOT re-run, say so); (4) parseable Tier-3 decision line copied from a recent data-backed Tier-3 PR, no invented operator quote; (5) trader_import_closure decide, batch into a restart window, tell the manager when green. Done when the first logged vol_skip_above_pctl non-actionable rejection appears on bybit_1 (landed_unproven until then). eth_pullback_2h skip_hours is NOT part of this (waits on RQ-20261117-f5b3-01). 2026-11-17 12:40Z NOT STARTED, so DEFERRED to after the usage reset (2026-11-18 18:00Z) on the manager's order (usage 92%, operator: 'try not starting any new items if we don't really need them'). The 5 steps above are unchanged; nothing built, no PR open.",
+  "phase": null,
+  "updated_at": "2026-11-17T12:37:49Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

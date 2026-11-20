@@ -1,0 +1,22 @@
+{
+  "id": "RESEARCH-TEMPLATE-LEG-GAPS",
+  "title": "Research tooling: roster-walkforward template emits unrunnable legs weekly; two drivers write non-schema verdict words",
+  "state": "queued",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[2026-11-07 RESEARCH-OPS-AUTHOR-20261107] Found dispositioning RESULTS-UNDISPOSITIONED (17 units). (1) The roster-walkforward template emits WEEKLY units for legs exit_lever_ablation.py cannot run: RQ-20261105-021 (fade_breakout_4h) and RQ-20261106-014 (squeeze_breakout_4h) raise 'this ablation covers the trend, pullback and ict_scalp harnesses' (build_arm_argv, exit_lever_ablation.py line 240); RQ-20261105-031 (ict_scalp_mgc_15m, GC=F 15m) fails because Yahoo serves 15m only over 5 days (use --non-crypto-source dukascopy); RQ-20261105-022 (fvg_range_15m) is the same class. Fix: research/templates/roster-walkforward.yaml / queue_replenish.py skip legs whose harness is not trend|pullback|ict_scalp and pass dukascopy for sub-daily non-crypto legs. (2) Drivers write verdict.json outside the script_run schema: prop_ml_leg.py read_state n_below_floor (RQ-20261105-fd68-03; the result is INDETERMINATE, n=35 < 150) and the ml_entry equity DEV driver verdict descriptive with no population (RQ-20261105-e9a1-01; measured, OOF mean net R 0.1067 at n=3896); the collector turns both into producer_failed. Fix: emit read_state measured + verdict indeterminate/not_applicable with a population. (3) RQ-20261031-7b6f-27 hit a transient runner DNS error on data.binance.vision; re-queued, no fix needed. Rerun: python3 scripts/research/result_disposition_check.py --list. The grading.owner of 021/022/031/014/fd68-03/e9a1-01/7b6f-27 points here.",
+  "phase": "research",
+  "updated_at": "2026-11-07T06:48:20Z",
+  "updated_by": "lane RESEARCH-OPS-AUTHOR-20261107",
+  "week_lane": "throttle"
+}

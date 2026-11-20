@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-06-21",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "alpaca_paper/slv_trend_1h"
+    }
+  },
+  "id": "PI-SOAK-20261101-alpaca_paper-slv_trend_1h",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "state": "killed",
+  "terminal_reason": "moot: slv_trend_1h left alpaca_paper when it was promoted to real money on 2026-11-12, so there is no paper soak to grade | evidence: config/accounts.yaml on origin/main 9aaf26a617: slv_trend_1h on alpaca_live roster, absent from alpaca_paper; config/strategies.yaml:2594 '(off alpaca_paper) on comms/strategy_evidence/slv_trend_1h.json (rebuilt 2026-11-12 ...)'; row SLV-ITERATION 'real money since 2026-11-12'",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "SOAK (stage1): alpaca_paper/slv_trend_1h — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing.\n\n[2026-11-15 BACKLOG-DRAIN-20261112] KILL: moot: slv_trend_1h left alpaca_paper when it was promoted to real money on 2026-11-12, so there is no paper soak to grade EVIDENCE: config/accounts.yaml on origin/main 9aaf26a617: slv_trend_1h on alpaca_live roster, absent from alpaca_paper; config/strategies.yaml:2594 '(off alpaca_paper) on comms/strategy_evidence/slv_trend_1h.json (rebuilt 2026-11-12 ...)'; row SLV-ITERATION 'real money since 2026-11-12'"
+}

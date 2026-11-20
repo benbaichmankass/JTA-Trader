@@ -1,0 +1,21 @@
+{
+  "id": "SLICE-SAME-SIGNAL-VISIBILITY",
+  "title": "Nothing detects two legs taking the same signal on a slice account (real money): report-only same-signal check",
+  "state": "queued",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "Filed 2026-11-17 on the manager's order (11:06Z), low priority after the current queue. GAP: scripts/ci/check_same_symbol_allocation.py skips every account with position_model: slices (bybit_1, bybit_2, bybit_portfolio), which includes the real-money book, so two legs taking one signal are invisible. Found via trend_donchian_xrp_4h + trend_donchian_xrp_adx25 (row XRP-DOUBLE-EXPOSURE): 2026-11-15 00:03:20 / 00:03:29 on bybit_2, 40.4 XRP on one signal. PROPOSED FIX: a REPORT-ONLY check (NO CI block, because a block would be a new gate and needs the operator's permission): list every (account, symbol) where >= 2 rostered legs share an identical entry rule, or entered within N seconds on the same signal in the journal; surface it in the weekly health review. ALSO: read how slice sizing treats two legs on one signal and put the answer on this row (see the follow-up note). 2026-11-17 SLICE SIZING (read from src/runtime/positions.py admit_slice + slice_qty and config/slice_allocation.yaml; code read, not run): two legs on one signal on a slice account do NOT each get a full slice. Both are POOLED contenders on bybit_2 (declared_slices exists only for bybit_1 desk/E4 legs, so neither XRP leg has its own budget). Each leg's qty = min(sized_qty, weight * remaining / |entry-stop|) with symbol_budget_trades = 1.0 (one trade's risk) per (account, symbol) shared by the contenders' allocation weights, so the pair is DESIGNED to carry about ONE trade of stop-risk in total, bounded by the budget, not two. A leg that already holds a slice is not re-admitted (own_slice_open). CAVEAT: this holds when both legs are contenders in the same tick; I did not read the stored slice_allocation meta (the journal notes of trades 7245/7247 carry no slice fields), so I did not confirm the weights used on 2026-11-15. OBSERVED 2026-11-15 on bybit_2: trade 7245 xrp_4h short 15.4 @0.9137 stop 0.95643 = stop-risk 0.658 USD; trade 7247 adx25 short 25.0 @0.9152 stop 0.97067 = 1.387 USD; total 2.045 USD (32%/68% by risk, 38%/62% by qty): consistent with a weight split of one budget. So the exposure is a shared-signal / shared-budget question, not a doubled-risk one, unless the contention step did not see both legs. 2026-11-17 12:40Z DEFERRED to after the usage reset (2026-11-18 18:00Z) on the manager's order (operator: 'try not starting any new items if we don't really need them', usage 92%). Not started beyond the filing and the slice-sizing read already on this row.",
+  "phase": null,
+  "updated_at": "2026-11-17T12:37:48Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

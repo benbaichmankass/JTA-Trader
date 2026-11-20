@@ -1,24 +1,25 @@
 {
   "id": "CF-B2-BULK-LIVE",
   "title": "Counterfactual backfill over every closed live+paper order package (paged packages, historical bars); CF-BULK-LIVE fidelity; report closed-package n",
-  "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": "sonnet",
-  "ceiling_usd": 6,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "CF-B0-ENGINE-LIFT"
-  ],
-  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
-  "priority_rank": 2,
-  "updated_at": "2026-11-02T07:33:59Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "_seq": 828
+  "priority_rank": 135,
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "_seq": 828,
+  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added. UNBLOCK-WATCH 2026-11-12: cleared stale blocked_on [CF-B0-ENGINE-LIFT]: CF-B0-ENGINE-LIFT state=done (measured on the live work store). decision: 2026-11-12 operator chat \"when something is blocked or waiting, there needs to be clear reasoning for what is blocking it and what conditions will change that\".",
+  "phase": null,
+  "summary": "2026-11-12: closed-package n 2517 (paged read, 0 failed pages); 841 graded, 1676 not graded each with one reason (pairs_two_leg 716, no_filled_leg 646, no_bars_non_crypto 152, legs_not_closed 115, horizon_not_passed 47). CF-BULK-LIVE fidelity rule FAIL: 28.7% of 836 within 0.10R (mechanical exits 44%, managed exits 0-11%); arms ESTIMATED_LOW_FIDELITY. Records comms/research/cf_bulk_live/2026-11-12/, memo docs/research/cf-counterfactual-d-phase-2026-11-12.md",
+  "updated_at": "2026-11-12T12:10:29Z",
+  "updated_by": "session_01AFoLuLfq1jtUhiQzLRWTje",
+  "week_lane": "throttle"
 }

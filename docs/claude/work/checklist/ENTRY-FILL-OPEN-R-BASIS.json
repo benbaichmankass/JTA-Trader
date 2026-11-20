@@ -1,0 +1,25 @@
+{
+  "id": "ENTRY-FILL-OPEN-R-BASIS",
+  "title": "After ENTRY-FILL-WRITEBACK rewrites trades.entry_price to the fill, the r-block (position_telemetry entry) still measures open_r from the PLAN entry",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26203
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-15 04:16Z, trade 7260 (bybit_2 ADAUSDT long, pkg-eb9ee0d2). trades.entry_price 0.1501 (fill) and /api/bot/positions entryPrice 0.1501 with broker uPnL +0.07, but r.openR -0.0631 = (mark 0.1501 - plan 0.1506)/0.007929. On the fill: (0.1503 - 0.1501)/0.007429 = about +0.03R. The live reviewer saw journal open_r -0.0505 vs venue uPnL +0.068. Cause: position_telemetry keeps the entry from open time; the writeback updates trades only (by design, condition 2). Fix options: the telemetry entry follows the writeback (with the 1R basis declared), or the r-block reads trades.entry_price. Basis decision (fill vs plan) asked of the manager 04:18Z; recommended fill (consistent with decision (a)). Tier 2 (runtime telemetry). MANAGER DECISION 04:18Z: open R on a written-back row measures from the FILL (option (a): one meaning of entry). The R denominator is the risk from the fill (|fill - SL|), not the plan risk. Only the telemetry/r-block entry changes, never SL/TP or a bracket (pin with tests). Rows already open keep plan R until re-read; no backfill. Build as a Tier-2 hold. MERGED 05:02Z as one restart batch with #26202 (squash 7d865bcb). landed_unproven. CLOSING OBSERVATION: trade 7260 (ADA bybit_2, fill 0.1501) shows r.openR re-based on the fill: sign agrees with broker uPnL, entry = 0.1501, risk = 0.1501 - 0.142671. No exit-lever or bracket event. Check scheduled 05:15Z. OBSERVED 05:15-05:16Z after deploy 7d865bc (boot_audit 25/25 tracked, SL+TP 25/25). Trade 7260 (ADA bybit_2, fill 0.1501, plan 0.1506): telemetry open_r 0.0 at mark 0.1501 (05:15:36) and +0.0404 at mark 0.1504 (05:16:37) = (mark - 0.1501)/(0.1501 - 0.142671); plan basis would read -0.063 / -0.025. Broker uPnL +0.10, so the sign agrees. BTC 7250: +0.0367 = (64918.3 - 64833.5)/2309.5 on the fill (plan would be +0.057). DEFECT (cosmetic, follow-up): the telemetry upsert's DO UPDATE does not set entry/risk_per_unit (insert-only), so rows opened BEFORE the deploy keep the PLAN entry/risk in those columns (7260 entry 0.1506, risk 0.00792857) while open_r / r_to_stop are fill-based. Readers that recompute from entry+risk would disagree. Fix: add entry=excluded.entry, risk_per_unit=excluded.risk_per_unit to _UPSERT (Tier 2, trader closure).",
+  "phase": "build",
+  "terminal_reason": "OBSERVED 05:15-05:16Z after deploy 7d865bc: open_r on written-back rows is fill-based (7260: 0.0 then +0.0404 = (mark-0.1501)/(0.1501-0.142671), plan would be -0.063/-0.025; broker uPnL +0.10, sign agrees); no exit-lever or bracket change (boot_audit SL+TP 25/25). Follow-up for the stale entry/risk columns on pre-deploy rows: TELEMETRY-UPSERT-ENTRY-RISK-COLUMNS.",
+  "updated_at": "2026-11-15T05:17:47Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

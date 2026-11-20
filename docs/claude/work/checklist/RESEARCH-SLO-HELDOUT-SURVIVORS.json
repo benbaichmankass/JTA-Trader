@@ -1,0 +1,28 @@
+{
+  "id": "RESEARCH-SLO-HELDOUT-SURVIVORS",
+  "title": "research_slo.py: count survivors as the operator defined them (registered-rule PASS on held-out data), split edge vs model-quality, beside the DSR/BHY proxy",
+  "state": "done",
+  "owner": "ML standing lane",
+  "lane": "session_01AFoLuJzKhDBzvqyKJM6emw",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24983
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[2026-11-11 ML lane session_01AFoLuJzKhDBzvqyKJM6emw; manager 2026-11-11a OK'd authoring it] WHY: survivors_per_month reads 0 by construction. research_slo.yaml labels the proxy (trial ledger stage0_pass_surviving_dsr_and_bhy_haircut) a stand-in for the operator's 2026-11-04 definition. In the newest ledger (comms/research/RQ-20261016-6013-01/42276444552) the best DSR is 0.54, the BHY haircut is 0.0 on every leg with a series, and ml_entry has dsr=null. MEASURED 2026-11-11: 381 graded registered-rule PASSes with graded_at >= 2026-10-12 (live_strategy 164, new_strategy_prop 71, ml_health 58, regime 49, macro 14, infra 14, timeframes 10) vs 965 fail / 225 indeterminate. SCOPE: (1) add a DIAGNOSTIC fact heldout_registered_passes_30d to research_slo.py, read from research/queue grading (verdict pass, decision_rule.registered_before_run true, graded in the window). (2) Classify each pass held-out yes/no from a STRUCTURED unit field, not free text. If no such field exists, add one (e.g. design.holdout: walk_forward|final_fold|none) to the unit schema with a guard default of unknown, and count unknown separately. (3) Split edge (statistic is net-of-cost P&L/R) vs model_quality (logloss/AUC/accuracy), also from a structured field. (4) Report beside the proxy. GATES THIS ADDS OR CHANGES: none; whether this fact replaces the proxy as the alerting SLO is the operator's call (thresholds are operator placeholders). DONE WHEN research_slo.py emits the fact with a stated population and read_state, a test pins it, and comms/research/health/ shows it on the next SLO run. [2026-11-11 ~21:45Z ML lane] PR #24983 (Tier-1 self-land): diagnostic heldout_registered_passes_30d in research_slo.py; optional evidence_class field documented in research/queue/PLANNING.md section 1e; test added. First read (local): 382 registered-rule passes in 30 d; held-out 34 (all model_quality, inferred from ml_bakeoff); held-out edge 0; unknown 314, because the schema does not record held-out-ness. CLOSES WHEN it is merged and the next research-slo run's status file under comms/research/health/ shows the fact with read_state measured. FOLLOW-UP (not filed as its own row yet): backfilling evidence_class on the 314 unknown passes is a research/queue edit (stamp-only surface, so held PRs) and needs per-unit judgement; the programme review is the natural owner. [2026-11-11 22:26Z ML lane] #24983 MERGED 22:26Z (CI green). landed_unproven until the next research-slo run shows the fact on main. [2026-11-12 08:35Z ML lane] OBSERVED on main: comms/research/health/2026-11-12.json (research-slo run 43174015636, landed #25156 07:29Z) carries heldout_registered_passes_30d = 83, state ok, read_state measured: held_out_edge 49, held_out_model_quality 34, registered_passes 382, unknown 55, in_sample 205, by_source explicit 259 / inferred 68 / unknown 55. The unknown share fell from 314 to 55 after EVIDENCE-CLASS-BACKFILL (#24998). DONE.",
+  "observation": {
+    "due_by": "2026-11-13",
+    "how_to_check": "git log -1 -- comms/research/health/; grep -l heldout_registered_passes_30d comms/research/health/*",
+    "what": "the next research-slo run writes a status file under comms/research/health/ whose latest table carries heldout_registered_passes_30d with read_state measured"
+  },
+  "phase": "W46",
+  "updated_at": "2026-11-12T08:32:10Z",
+  "updated_by": "session_01AFoLuJzKhDBzvqyKJM6emw"
+}

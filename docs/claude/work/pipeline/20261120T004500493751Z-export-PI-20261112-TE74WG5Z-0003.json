@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "after #25186 merges: RQ-20261108-98e3-17 grading carries a verdict (or a retirement record) written by RESEARCH-OPS, needs_review false",
+    "kind": "event"
+  },
+  "id": "PI-20261112-TE74WG5Z-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AUD-20261019-RESEARCH-SLO-RED lane (session_01AFoLuKDJYVZsxPtE74wG5z)",
+    "rerun": "python3 -c \"import yaml; g=yaml.safe_load(open('research/queue/RQ-20261108-98e3-17.yaml')).get('grading') or {}; print(g.get('needs_review'), g.get('owner'), g.get('verdict'))\""
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "RESEARCH-OPS hand-off: RQ-20261108-98e3-17 is needs_review (set by #25186). Its only measured row (42492596157, indeterminate) was graded under RULE-RQ20261108-98e3-17-EXPORT (registered 2026-11-07); the unit's rule is RULE-RQ2026110898e317-REG (registered 2026-11-08); two -REG runs were producer_failed (42483498896) or -EXPORT (42468362616). Decide: was the -REG rule ever run? If not, re-run under -REG; if -EXPORT is the intended rule, record that and grade."
+}

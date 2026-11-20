@@ -1,0 +1,23 @@
+{
+  "id": "GLD-WEDGE-RETRO",
+  "title": "Retrospective: alpaca_paper GLD 39 wedge (08-27 to 11-09) cost a paper account; close the 3 open prevention gaps",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "post-incident prevention; feeds Alpaca order-path rows",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Operator 2026-11-09 ~18:30Z: 'check that we know what went wrong with the gld trade so we can make sure we don't make the same mistake again - i had to delete that paper account and create a new one'. CHAIN (from rows GLD-ORPHAN-5209, PAPER-RESET, ALPACA-CLOSE-WEDGE, ALPACA-LIVE-MECHANICS, ALPACA-CLOSE-REPRICE-NO-RESET; measured unless marked): (1) 2026-08-27 trade 5126 bought GLD 39 on alpaca_paper (pkg-8106d5eef6fc425c) with a GTC OCO, SL 416.09 / TP 461.27. (2) 08-28 07:34Z the position_snapshot_reconciler FALSELY closed 5126 as exchange_flat_reconciled while the shares were still held (cause INFERRED, not re-measured: two absent snapshots + an Alpaca 404). (3) 08-29 the reverse reconciler re-adopted the 39 sh as trade 5209 onto the WRONG package (pkg-6a8e, a different gld_pullback_1h package where this account's row was REJECTED) because orphan attribution ignored which account filled. (4) by 2026-09-30 the OCO was a broker-side zombie: Alpaca accepted cancels but did not act, including the operator's own cancel in the Alpaca UI (09-30); no reset feature was found then, the account was kept. (5) 10-25 operator: leave it; 10-28 gld_pullback_1h retired, so nothing managed or measured the position (telemetry_absent, unreviewable). (6) 11-06 a directed close's cancel pass CANCELLED THE STOP (c928eda6) while the take-profit (2e843e04) kept holding every share: position left with NO STOP. (7) 11-09: #23946 / #24547 escalation ran rung 2 (reprice) then rung 3 (close-all); Alpaca ignored all of it for GLD (TLT closed fine); the operator deleted the paper account and created a new one (~18:20Z). ALREADY FIXED: orphan attribution needs the account's own fill + bracket match (#22215, deployed 11-01, not yet exercised); 5209 relinked (#22213); close ladder escalates to paper reset (#23946, #24547, deployed 16:43Z). OPEN GAPS (this row): (A) the 08-28 FALSE CLOSE: find what made the reconciler close an open position (404/absent snapshot treated as flat?) and confirm a guard exists now (a read failure must never read as flat); if not, file the Tier-2 fix. (B) STOPLESS CANCEL ORDER: the close path cancels the stop before it knows the take-profit will release the shares; change the order (TP first, or re-arm the stop if the flatten does not land) so a failed close never leaves a position without a stop; Tier 2. (C) PROCESS: a broker order that ignores cancels is a wedge; it went 6 weeks with a standing 'do not raise' decision. Proposal (operator's call, no new gate): any position on an account with an unclearable order gets a time-boxed escalation (support ticket / reset decision) within 48 h, and a retired leg with an open position keeps telemetry (row RETIRED-LEG-OPEN-TELEMETRY, overdue since 11-05). (D) also on ALPACA-CLOSE-REPRICE-NO-RESET: when close-all clears other symbols but not the target, still run journal_account_reset for them. UNKNOWN: why Alpaca's paper venue wedged that OCO (broker side; not observable from here).",
+  "phase": null,
+  "updated_at": "2026-11-09T18:25:04Z",
+  "updated_by": "session_01AFoLuKgeM4bM8AQqUfQZjE",
+  "week_lane": "throttle"
+}

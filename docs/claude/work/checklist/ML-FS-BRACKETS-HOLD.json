@@ -1,28 +1,29 @@
 {
-  "phase": "research",
-  "state": "queued",
+  "id": "ML-FS-BRACKETS-HOLD",
+  "title": "BRACKETS and HOLD/ADJUST/CLOSE read the same feature store: BRACKETS re-scored on v2 features 2026-11-02T12:00Z; in-trade path features from the store 2026-11-03T12:00Z",
+  "state": "blocked",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "ML-FS-ENTRY-V2"
-  ],
   "roadmap": [
     "L-ML-LIVE"
   ],
   "priority_rank": 2,
-  "id": "ML-FS-BRACKETS-HOLD",
-  "title": "BRACKETS and HOLD/ADJUST/CLOSE read the same feature store: BRACKETS re-scored on v2 features 2026-11-02T12:00Z; in-trade path features from the store 2026-11-03T12:00Z",
   "ceiling_usd": 8,
-  "note": "Operator scope: one pooled model per question, all symbols, no sizing/risk features. BRACKETS: unit RQ-20261101-c692-02 harness exists; re-point at the v2 feature set once fs02-01 has a verdict (its own pre-registered rule, forward window, variants stated). HOLD/ADJUST/CLOSE: the 31 catalogued in-trade path features (docs/reference/signal-catalog.yaml, ml_feature in_trade_path group) via src/research/intrabar_features.py joined to the store at the position bar; depends on DATA-INTRADE-LABEL-STORE and PATH-FLOW-JOIN. Moving TP stays with ML-ENTRY-TP-REVISION. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none.",
+  "prs": [],
+  "blocked_on": [
+    "DATA-INTRADE-LABEL-STORE"
+  ],
+  "due_by": "2026-11-13",
+  "_seq": 879,
+  "note": "Operator scope: one pooled model per question, all symbols, no sizing/risk features. BRACKETS: unit RQ-20261101-c692-02 harness exists; re-point at the v2 feature set once fs02-01 has a verdict (its own pre-registered rule, forward window, variants stated). HOLD/ADJUST/CLOSE: the 31 catalogued in-trade path features (docs/reference/signal-catalog.yaml, ml_feature in_trade_path group) via src/research/intrabar_features.py joined to the store at the position bar; depends on DATA-INTRADE-LABEL-STORE and PATH-FLOW-JOIN. Moving TP stays with ML-ENTRY-TP-REVISION. Plan: docs/research/ml-feature-inventory-2026-11-01.md section 1b (dated, UTC). Gates: none. UNBLOCK-WATCH 2026-11-12: cleared stale blocked_on [ML-FS-ENTRY-V2]: ML-FS-ENTRY-V2 state=done (measured on the live work store). decision: 2026-11-12 operator chat \"when something is blocked or waiting, there needs to be clear reasoning for what is blocking it and what conditions will change that\". [2026-11-12 11:35Z AM-ML] UNBLOCK-WATCH cleared the stale block, so the row is runnable. Ranked per the 2026-11-12 WORKPLAN: LATER @2026-11-30 (not this week's surge). Its BRACKETS half depends on fs02-01's verdict and its HOLD/ADJUST/CLOSE half on DATA-INTRADE-LABEL-STORE + PATH-FLOW-JOIN; I dispatch it when those land or on 11-30. owner: AM-ML. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'FRONTIER', no live session); state stays blocked. still blocked on DATA-INTRADE-LABEL-STORE.",
   "observation": {
-    "what": "BRACKETS record on the v2 feature set and a HOLD state-feature coverage table exist",
+    "due_by": "2026-11-03",
     "how_to_check": "ls research/results/ | grep -i c692-02",
-    "due_by": "2026-11-03"
+    "what": "BRACKETS record on the v2 feature set and a HOLD state-feature coverage table exist"
   },
-  "updated_at": "2026-11-02T07:33:59Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
-  "_seq": 879
+  "phase": "research",
+  "updated_at": "2026-11-15T11:31:34Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
 }

@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a velotrade-api-probe run log shows symbols_present for at least XAGUSD-or-equivalent, XAUUSD-or-equivalent and a WTI symbol on velotrade_1 (true or false each)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-D6UC5YT4-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROP-FRONTIER-RESEARCH (Manager Session 2026-11-11a), docs/research/prop-frontier-2026-11-12.md",
+    "rerun": "grep -n SYMBOLS scripts/prop/velotrade_api_probe.py"
+  },
+  "owner": "manager (Tier-2 build lane; operator OK in chat for the action change)",
+  "state": "killed",
+  "terminal_reason": "Its only purpose was buy-point condition 2 for a Velotrade CFD account; VELO-CFD-STAGE0 (PI-...-0001) failed 0/4, so that buy is closed and an operator OK would be spent on nothing. Draft diff kept in docs/research/prop-frontier-2026-11-12.md Appendix A.",
+  "what": "VELO-INSTR-READ: extend the read-only velotrade-api-probe symbol list (scripts/prop/velotrade_api_probe.py SYMBOLS) with the CFD names Velotrade lists 1P (gold, silver, WTI, SPY, QQQ, IWM; exact DXtrade spellings unknown, try XAUUSD/XAU/USD/GOLD, XAGUSD, USOIL/WTI, SPY/QQQ/IWM) and dispatch it once on velotrade_1 while flat. Confirms the instruments exist on our account, lotSize/multiplier and session hours. Tier 2 action change (system-actions allowlisted script); buy-point condition 2."
+}

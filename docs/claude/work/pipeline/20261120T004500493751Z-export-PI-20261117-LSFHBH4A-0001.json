@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "date:2026-11-19 (after the Wednesday 2026-11-18 reset); closes when load_calendar re-reads on mtime change and a yaml-only data commit no longer needs a trader restart, or the manager kills it with a stated reason",
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261117-LSFHBH4A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane session_01AFoLuKdqv7sRrnLSFhbH4a (AM-OPS-2), manager question 2026-11-17 05:55Z about #26605 restarting the trader",
+    "rerun": "grep -n 'lru_cache' src/news/news_events.py; git log --format=%h -n5 -- config/economic_calendar.yaml; git diff --name-only <sha>^ <sha> | python3 scripts/ops/trader_import_closure.py decide"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "economic_calendar.yaml PIT refresh restarts the trader daily; make load_calendar mtime-aware so a refresh needs no restart. src/news/news_events.py load_calendar() is lru_cache(maxsize=1), so a running trader keeps the old event list until restarted; trader_import_closure decide on any commit that rewrites config/economic_calendar.yaml says RESTART (non_py_runtime). MEASURED 2026-11-17: #26605 (bcbee07dee, econ-calendar PIT snapshots) rewrote the yaml and restarted the trader at ~05:02Z. Fix shape: re-read the file when its mtime changes (cache key = mtime); only then can the closure treat a yaml-only data commit as no-restart. Both are Tier-2 edits to the trader's news layer."
+}

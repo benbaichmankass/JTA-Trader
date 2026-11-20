@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 21,
+    "clears_when": "a run of it executes its job, or a record says why skipping is intended",
+    "kind": "event",
+    "last_checked": "2026-11-12"
+  },
+  "id": "PI-20261106-01AFOLUJ-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "gh api 'repos/benbaichmankass/JTA-Trader/actions/workflows/sp500-membership-refresh.yml/runs?per_page=5&status=success' --jq '.total_count'"
+  },
+  "redate": {
+    "evidence": ".github/workflows/sp500-membership-refresh.yml origin/main: cron \"41 3 2 * *\", jobs gated to schedule/dispatch/labelled issue. gh api: 0 successful runs ever, latest runs are issue-event skips.",
+    "observation": "[2026-11-12 BACKLOG-DRAIN-20261112] DATE: The workflow is now monthly (operator 2026-11-06 \"Make it monthly\"). Its first scheduled run is 2026-12-02 03:41Z, which is the observation. EVIDENCE: .github/workflows/sp500-membership-refresh.yml origin/main: cron \"41 3 2 * *\", jobs gated to schedule/dispatch/labelled issue. gh api: 0 successful runs ever, latest runs are issue-event skips.",
+    "observed_at": "2026-11-12"
+  },
+  "state": "queued",
+  "what": "sp500-membership-refresh (scheduled data pull) had 183 runs in 7 d and 0 executed (all skipped) in 90 d: the pull may never run. Data pull, so untouched by the prune."
+}

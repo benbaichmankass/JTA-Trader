@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "manager request 2026-11-20 00:23Z (two review lanes' reports) / comms/live_review/reviews.jsonl on origin/live-review/rows",
+    "rerun": "git show origin/live-review/rows:comms/live_review/reviews.jsonl | python3 -c \"import sys,json,collections;print(collections.Counter((json.loads(l).get('handoff') or {}).get('verdict') for l in sys.stdin if l.strip()))\""
+  },
+  "state": "queued",
+  "what": "LIVE-REVIEW handoff.verdict out of enum on the live-review/rows branch: decide WIDEN the schema enum vs MIGRATE the rows. MEASURED 2026-11-20 00:40Z by AM-OPS-10. The live-review/rows branch's comms/live_review/reviews.jsonl (tip a1dbf5f294, 236 rows) has 15 rows whose handoff.verdict is outside comms/schema/live_review.schema.json's enum [confirm, revise, exit]: 11 'keep', 1 'carry', 3 'none'. They sit on lines 184-202, all reviewed 2026-11-11 04:10Z-20:12Z (first LR-20261111T0404Z-pkg-8c89e54e01764207, last LR-20261111T2008Z-pkg-9c60d10d49be487c). No row after 11-11 20:12Z uses them, and the same branch has 55 confirm, 5 revise, 1 exit. main's copy (811 rows) contains none of them, and check_live_review_records.py passes on main. So the errors two review lanes saw on 11-19 (reported as 32, around lines 193-202) come from running the guard on a rows-branch checkout; this item did not reproduce the 32 count. Reading: 'keep'/'carry' look like confirm-synonyms from one day's reviewers, and 'none' likely means no handoff applied, which the schema expresses as handoff null rather than a verdict. Leaning MIGRATE (keep/carry -> confirm, none -> handoff null) with an append-only correction record rather than widening the enum, but that is the decision to make."
+}

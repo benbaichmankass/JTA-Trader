@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "config/accounts.yaml adds a strategy to a real-money (account, symbol) pair that already rosters >= 1 leg (the 82fd-02 census pairs), and the D5 census is re-run on it",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZFRREVN5-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ITERATION-REFILL-20261117 (session_01AFoLuL9Wd1b7YqZfrRevn5), 2026-11-17; slot table docs/research/ml-slot-iteration-2026-11-17.md",
+    "rerun": "compare the multi-leg (account, symbol) pairs in config/accounts.yaml against comms/research/RQ-20261114-82fd-02/*/ census cells; python3 scripts/research/d5_aggregator_arms.py --self-test"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "[ml] D5 Mastiff re-entry trigger: RQ-20261115-a474-02 FAILED (no allocation rule arm beats today's slices/election rule A0 in both windows on the 5 census pairs) and its REGISTERED fail mapping says MLP-D5-MASTIFF stays the slices rule, rule-exhausted until a roster change adds a leg on a census pair. No unit is authored until then (an aggregator unit now would be floor-filler). This item makes the block visible: when the trigger fires, re-run the D5 census (RQ-20261114-82fd-02 harness) on the new roster and author the rule-arm unit again."
+}

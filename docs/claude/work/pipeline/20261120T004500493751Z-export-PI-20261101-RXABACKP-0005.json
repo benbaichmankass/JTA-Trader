@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261101-RXABACKP-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-LIVE-ACTIVITY-ML / research/queue/RQ-20261101-bdc2-01.yaml",
+    "rerun": "git cat-file -e origin/main:scripts/research/holdout_lock.py && python3 scripts/research/holdout_lock.py --help"
+  },
+  "routed_to": "ALPACA-LIVE-ACTIVITY-ML",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[HOLDOUT-LOCK back-fill] RQ-20261101-bdc2-01 (frozen ENTRY v1 on the 11 alpaca_live ETFs, 2025-10-01..2026-09-30) was read once on 2026-11-01 ~12:05Z, before scripts/research/holdout_lock.py existed on main. ML-FEATURE-INFRA (relayed 12:03Z) asks that it be back-filled once PR #22097 lands: python3 scripts/research/holdout_lock.py claim --model-id ENTRY-v1-frozen --start 2025-10-01 --end 2026-09-30 --unit RQ-20261101-bdc2-01 --reader session_01AFoLuMP2ywy8v4RXABackp --symbols SPY,QQQ,GLD,IWM,TLT,IEF,SLV,USO,GDX,SPYM,IAUM. The lock stamps read_at as now: record the true read time beside it (unit field holdout_lock_note).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The holdout-lock claim was never back-filled into the ledger (only a note on the unit); the unit's ml_consumer is this row. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): comms/research/holdout_reads.jsonl (24 lines, contains backfilled c692-01 so the probe finds positives) has no bdc2-01 line; research/queue/RQ-20261101-bdc2-01.yaml:98 holdout_lock_note says \"back-filled once PR #22097 lands\"; ml_consumer ALPACA-LIVE-ACTIVITY-ML."
+}

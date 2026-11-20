@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the slug fix is merged on main before 2026-11-22T04:00Z and the next ml-entry-retrain PASS opens a promotion PR whose pr-landing guard is green (or a FAIL run, with the fix verified by reading the workflow on main)",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-MANAYJZO-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-6, #26288 CI diagnosis",
+    "rerun": "git show origin/main:.github/workflows/ml-entry-retrain.yml | grep -n pr-landing/"
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "high",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[ml/D3][real-money path] ml-entry-retrain.yml wrote its HELD promotion PR's landing file as .github/pr-landing/ml-entry-promote-<tag>-<run>.json while the branch is bot/ml-entry-promote-..., so pr-landing-guard R11 failed and #26288 (PASSing ENTRY refit ml_decision_entry_v1r20261115) sat red 11-15..11-18; its pointer note also named ml_decision_entry_v1 as revert target (real target = the previously served artifact). Fix on branch claude/ml6-entry-retrain-landing-slug (self-land): landing file = full branch slug; note reads the prior artifact_dir. Record note: the promotion grade's cost stack is the label stack (fee 11 + slip 3 + funding 1/8h), the stack RULE-ENTRY-PROMOTE-20261106 registered; not the per-symbol spread+impact stack. Must land before Sunday 11-22 04:00Z run."
+}

@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research/queue unit testing a per-bar same-direction cap on the ml_entry Stage-0 rows is graded, or killed with a reason",
+    "conditions": [
+      "date:2026-12-17",
+      "manual:f7c1-08 re-run grades at >= 30 binding bars"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "journal bybit_2 ml_entry closes grouped by entry hour; python3 scripts/research/live_vs_backtest.py --leg ml_entry"
+  },
+  "owner": "perf-followup (PERF-FOLLOWUP lane after the 2026-11-18 review lands)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 3,
+  "updated_by": "session_01AFoLuJQHZnwtERq8HCwKL1",
+  "what": "[performance][portfolio][real-money] ml_entry fires as same-bar baskets: its 25 real-money closes 2026-11-11T20Z..11-18 came from 9 entry bars. Three same-direction LONG baskets (11-11T20 XRP/ETH/SOL, 11-12T08 SOL/XRP/ETH, 11-14T16+20 BTC/ETH/ADA/XRP/SOL) closed 13 of 13 at SL for -$34.98, against a leg 7d total of -$19.74 / -6.63R (perf 7d). Effective independent n is ~9, not 25, and one bar risks 3-5R. Test on the committed 907-trade Stage-0 record: per-bar grouping, effective n, max drawdown, and a cap of k same-direction entries per bar, net of full cost; rule registered before the run.\n\n[2026-11-19 PERF-FOLLOWUP-2026W47] f7c1-01 PASS k=2 on the 907 record, gain inside noise (CI [-21.3,+61.2] R); f7c1-08 forward INDETERMINATE (binds 18 bars < 30), point estimates against the cap; cap stays OFF. Re-run f7c1-08 when the forward window binds >= 30 bars (estimate 2026-12-17). PR #27202."
+}

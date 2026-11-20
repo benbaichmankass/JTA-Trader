@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "filed_by": "lane RESEARCH-OPS-AUTHOR-20261107",
+  "id": "PI-20261107-20261107-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "python3 scripts/research/result_disposition_check.py --list (2026-11-07: 17 units, 11 unowned + 6 ungraded); logs comms/research/RQ-20261105-021/42077942176/logs/cmd-0.log, RQ-20261106-014/42276448072, RQ-20261105-031/42229600869",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list ; grep -L 'ValueError' comms/research/RQ-20261106-014/*/logs/cmd-0.log"
+  },
+  "routed_to": "RESEARCH-TEMPLATE-LEG-GAPS",
+  "state": "routed",
+  "summary": "Template emits unrunnable legs weekly; two drivers emit non-schema verdict words; one transient re-queue. Owner of 021/022/031/014/fd68-03/e9a1-01 grading rows.",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "RESEARCH TOOLING (Tier 1), found while dispositioning RESULTS-UNDISPOSITIONED 2026-11-07, three defects that turn into producer_failed rows: (1) the roster-walkforward template emits weekly units for legs exit_lever_ablation.py cannot run: RQ-20261105-021 (fade_breakout_4h) and RQ-20261106-014 (squeeze_breakout_4h) raise 'this ablation covers the trend, pullback and ict_scalp harnesses' (build_arm_argv line 240); RQ-20261105-031 (ict_scalp_mgc_15m, GC=F 15m) fails because Yahoo serves 15m only over 5 days (use the dukascopy lane); RQ-20261105-022 (fvg_range_15m) fails the same way. They are weekly, so they re-fire and fail every week. Fix: have research/templates/roster-walkforward.yaml / queue_replenish skip legs whose harness is not trend|pullback|ict_scalp, and pass --non-crypto-source dukascopy for sub-daily non-crypto legs. (2) drivers write verdict.json outside the script_run schema: prop_ml_leg.py read_state 'n_below_floor' (RQ-20261105-fd68-03; the same result is INDETERMINATE n=35 < 150) and the ml_entry equity DEV driver verdict 'descriptive' without a population (RQ-20261105-e9a1-01; measured, OOF mean net R 0.1067 at n=3896 selected B|0.2). The collector turns both into producer_failed. Fix: map to read_state measured + verdict indeterminate / not_applicable with population. (3) RQ-20261031-7b6f-27 (ada_pullback_2h) failed on a transient runner DNS error fetching data.binance.vision; re-queued (last_dispatched_at cleared) by this lane, no tooling fix needed.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The row text is the same finding. EVIDENCE: Row RESEARCH-TEMPLATE-LEG-GAPS note quotes the same three defects (RQ-20261105-021, RQ-20261106-014, RQ-20261105-031, prop_ml_leg n_below_floor)."
+}

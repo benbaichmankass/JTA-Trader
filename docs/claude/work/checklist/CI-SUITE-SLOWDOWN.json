@@ -1,0 +1,23 @@
+{
+  "id": "CI-SUITE-SLOWDOWN",
+  "title": "CI: pytest-run full suite 14.4 -> 40-53 min; mirrors held runner slots ~90 min in verify-merged",
+  "state": "landed_unproven",
+  "owner": "lane",
+  "lane": "lane/ci-suite-slowdown",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25262
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "[2026-11-12 15:30Z lane] MERGED #25262 = e8206d47c5 (thread cap + -n logical + mirror deferred verify + api-tier 192). With #25285 (beb8ed76d0) and #25296 (17fe66957c) all three lane PRs are on main. Main's test_check_api_tier_policy passes at e8206d47 (29/29 locally). Merged, not deployed-relevant (CI only), NOT yet observed on main. OBSERVE by 2026-11-15: median full-suite pytest-run duration over the next ~10 full runs (expect ~30 min or less vs 40-53 min; same-day A/B 1836 s fix vs 2442/2963 s old), 'cpus: ... logical=4' in each log, and mirror runs (live-review-rows-mirror, desk-decisions-mirror) finishing in <10 min with no verify-merged wait. Remaining gap to 14.4 min = suite growth + unprofiled slow files: next lever is a CI --durations read on main.",
+  "phase": "ci",
+  "updated_at": "2026-11-12T15:28:39Z",
+  "updated_by": "session_01AFoLuHgb4azeFBsuXnJwWP"
+}

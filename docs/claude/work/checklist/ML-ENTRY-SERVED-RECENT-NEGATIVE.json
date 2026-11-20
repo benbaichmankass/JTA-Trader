@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-SERVED-RECENT-NEGATIVE",
+  "title": "Served ml_entry (real money on bybit_2) reads -0.13 R/decision on the last 14 days in the retrain grade replay; run drift-remediation at the Wed ml-review",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-11",
+  "note": "Source: ml-entry-retrain scheduled run 42473814600 (2026-11-08 11:00Z), evidence comms/research/ml_entry_grade/42473814600/grade_evidence.json (#24229). Rule RULE-ENTRY-PROMOTE-20261106 verdict FAIL as designed: the candidate (-0.2205 R mean, n=311) is worse than the served model (-0.1316 R, n=317) over window 2026-10-25..2026-11-07 (14 days), so the served artifact is KEPT. The red run is the guard working, not a broken job. CONCERN: the served model itself reads NEGATIVE on recent data (offline replay, 14-day window, n=317). Per the drift-remediation skill this is not a reflexive demote: distinguish transient drift (self-corrects on retrain) from persistent capability failure, and read the bybit_2 mirror net-of-cost window (the actual demotion signal per OPERATING-PLAN). Also: refit_reproduces_retrain_candidate=false. Take to the Wed 11-11 /ml-review (usage cut until then) unless the mirror window says act sooner.",
+  "phase": null,
+  "updated_at": "2026-11-08T11:22:22Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

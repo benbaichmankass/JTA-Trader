@@ -1,0 +1,21 @@
+{
+  "id": "ALPACA-PAPER-1M-SIZING-BASIS",
+  "title": "alpaca_paper sizes off a ~$1.0M paper balance (10x alpaca_options_paper), so its dollar P&L and position sizes are not comparable across Alpaca books",
+  "state": "queued",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Found 2026-11-12 (lane OPDEC-SURVIVORS, step 0 of the slv_trend_1h promotion). MEASURED: paper trade #7005 (pkg-ad753824acbc43b8, slv_trend_1h long SLV 2026-11-09) sized 26,615 sh = 1.5% (alpaca_paper risk_pct 0.015) x ~$1,000,000 basis / risk_per_unit 0.5636 ($15.0k at the stop, notional $1.28M); the same package on alpaca_options_paper sized 2,661 = 1.5% x $100,000 / 0.5636 exactly. broker_account_status 2026-11-12: alpaca_paper equity $971,866, cash $93,386, buying_power $1.45M (multiplier 4), regt_buying_power $11,763. VERDICT: RiskManager.position_size applied policy exactly; the input (paper equity ~$1M) is the anomaly, so it is paper-only and does not touch alpaca_live (cash, multiplier 1, $194.52 -> <= 3 SLV shares under the 0.9 cash wall). Earlier SLV paper fills (#6778 1,683 sh, #6908 823 sh) were far smaller, most likely clamped by the margin pre-flight on regt_buying_power at the time (NOT verified: journalctl for 2026-11-09 19:41-19:44 scanned 1 line, retention does not reach it). TODO: (1) establish why alpaca_paper equity is ~$1M (reset/funding vs positions), (2) decide whether paper books should share a basis so paper $-P&L is comparable (operator), (3) any review that sums paper $ across Alpaca books must normalize by basis or use R. Gates this adds or changes: none.",
+  "phase": null,
+  "updated_at": "2026-11-12T10:44:05Z",
+  "updated_by": "session_01AFoLuLWn3eMSsJGMn4UYXX"
+}

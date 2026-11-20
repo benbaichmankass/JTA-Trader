@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "trade-series answers 200 and a verdict.json reads resolution block=1 for a Stage-2 leg",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-LDM-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": "curl -s 'https://ict-bot.duckdns.org/api/bot/performance/trade-series?n=400' | head -c 600 ; python3 scripts/research/live_decay_cusum.py --leg ada_pullback_2h --out /tmp/ld",
+    "what": "after the web-api deploy of the PR carrying trade-series, run live_decay_cusum.py for ada_pullback_2h and trend_donchian_xrp_4h: verdict.json shows resolution block=1 and n_trades equal to the leg's rTradeCount on /performance/recent; a live-decay unit has been minted by queue_replenish and graded once"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane LIVE-DECAY-MONITOR (AM-TRADING, 2026-11-12)",
+    "rerun": "python3 scripts/research/live_decay_cusum.py --coverage"
+  },
+  "routed_to": "Manager Session 2026-11-13a",
+  "state": "routed",
+  "what": "LIVE-DECAY-MONITOR first-run verification (landed_unproven): the read-only GET /api/bot/performance/trade-series is deployed and live_decay_cusum.py reads per-trade R from it (resolution block=1, not the 20-trade fallback)."
+}

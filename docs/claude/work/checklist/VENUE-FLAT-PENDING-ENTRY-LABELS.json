@@ -1,0 +1,21 @@
+{
+  "id": "VENUE-FLAT-PENDING-ENTRY-LABELS",
+  "title": "Three venue-flat readers mislabel a row whose ENTRY ORDER is still working. They must use the same _entry_order_hold() pending-entry check the close paths (_watchdog_stuck_strategies, _reconcile_orphan_exchange_positions; PI-20261118-JFWRQYOV-0004) already use: (1) src/runtime/boot_audit.py 'ghost: \u2026 (journal open, broker flat)'; (2) order_monitor._alpaca_rearm_preflight 'REFUSED (flat): the row's shares are gone' plus the CRITICAL alpaca_rearm_refused alert; (3) order_monitor._check_broker_naked_equity_positions 'graded target_flat (stop already filled)'. A pending entry should read as its own state ('entry pending'), with no CRITICAL alert and no ghost line.",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 16:35Z by AM-OPS-8 at the manager's request. Case: alpaca_options_paper SLV trade 8034. Entry mleg LIMIT 0.39 DAY order 10fd4469\u2026 was status 'new' and unfilled (diag alpaca_order_history 16:26Z); the 16:14Z restart boot audit reported it as a ghost; CRITICAL alpaca_rearm_refused fired at 15:58Z; journalctl 16:25-16:27Z shows the rearm preflight and naked-check lines while the close paths correctly held. Paper only, no money at risk; a queued fix, not urgent. Related: PI-20261119-QDOYBTSN-0004 (expiry-close check), ALPACA-CLOSE-BROKER-TRUTH. [2026-11-19 21:55Z AM-OPS-9] Same class, another reader: scripts/ops/mechanics_fault_intake.py grades trade 8034 (entry mleg order expired unfilled) as a mechanics fault 'exit_journaled: exchange_flat_reconciled, no exit price; fill_and_fees: pnl or fee not recorded' (MEASURED, --live --since-hours 72 dry run 21:50Z). The null P&L is correct; the label is wrong. The fix here should make the intake's grader see the same pending/expired-entry state (or give the row an exit_reason naming the unfilled entry), so it is not filed as a close fault once PR #27497 starts reading it. [2026-11-20 00:2xZ AM-OPS-10] PR #27535 (draft, Tier 2 HOLD, branch am-ops-10/venue-flat-pending-entry, head a4e8d33b5e6f6aedc84acea05dbf31ba903f8518): the three readers (boot_audit ghost, _alpaca_rearm_preflight flat page, naked-sweep target_flat) now use _entry_order_hold(); a POSITIVE pending read becomes entry_pending (no ghost, no CRITICAL page); unreadable/terminal keep the old labels. 9 new tests fail on main and pass on the branch. Deploy = RESTART (trader_import_closure). NOT in scope, proposed to the manager: the close label for an entry that expired unfilled (8034 closed exchange_flat_reconciled 21:02Z), which needs a venue filled-qty read at close plus a neutral exit_reason entry_unfilled.",
+  "phase": null,
+  "updated_at": "2026-11-19T23:51:33Z",
+  "updated_by": "session_01AFoLuJvENzG66GcgnCTd2z"
+}

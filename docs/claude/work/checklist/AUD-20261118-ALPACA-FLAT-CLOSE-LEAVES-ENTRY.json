@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261118-ALPACA-FLAT-CLOSE-LEAVES-ENTRY",
+  "title": "Alpaca: the snapshot reconciler closes a row 'exchange_flat_reconciled' while its pre-market bracket ENTRY is still working at the venue; the strategy re-enters, and at 14:30Z every orphaned entry fills at once (QQQ alpaca_paper 1981 at the venue vs 2 in the journal; SLV alpaca_portfolio 877 vs 6)",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "EVIDENCE (WEEKLY-AUDIT-2026-11-18, 18:12Z): system_invariants INV-JOURNAL-EXCHANGE FAIL alpaca_paper/QQQ 2 vs 1981, alpaca_portfolio/SLV 6 vs 877. The venue qty equals the sum of the falsely-closed rows exactly: QQQ 7712(1182)+7780(735)+7781(55)+7782(7)+open 7783(2)=1981; SLV 7750(794)+7754(53)+7758(2)+7762(19)+7766(2)+7770(2)+7774(5)=877. Each row was entered every ~7-8 min pre-market (13:03Z-14:17Z), closed ~6.5 min later as exchange_flat_reconciled with pnl NULL, and fills were 14:31-14:34Z (alpaca_open_orders). Same pattern for SPY on 11-16 (7583/7584/7585). Population: 14 alpaca exchange_flat_reconciled closes in the trades journal 11-07..11-18 (1000 rows), 14 of 14 in this pattern. Venue protection exists per fill (bracket stops sum to the position), so this is not naked. The harm: oversized positions (QQQ +68% vs the first package), open risk in the journal understated by ~99.9%, the closed rows' PnL unmeasured, and the eventual close of 1979 shares unjournaled. Real money exposure: alpaca_live trades the same class (today its SLV entries were refused side_filter:long, so no stack). MECHANISM: src/runtime/order_monitor.py snapshot-flat close path (~L4940) gates on _snapshot_min_fill_age_seconds (300 s) and position absence only; it never asks whether the row's entry order is still working, and _cancel_resting_protection_after_flat does not cancel the parent entry. PROPOSED (Tier 2, ask_operator for the deploy OK): before an exchange_flat_reconciled close on a venue without a per-order status reader, read the row's broker_order_id; if the entry is new/accepted/held (not filled, not cancelled), keep the row open as pending-entry and skip it; if the row is closed for any reason, cancel its working entry first. DETECTOR: an invariant INV-FLAT-CLOSE-WITH-WORKING-ENTRY in system_invariants.py (closed row whose broker_order_id is still working in alpaca_open_orders), plus a test on the reconciler. CHECK {command: 'diag alpaca_open_orders + positions?include_paper=true -> system_invariants.py --payloads', rule: 'INV-JOURNAL-EXCHANGE has 0 alpaca pairs with ratio < 0.9 AND no exchange_flat_reconciled alpaca row whose entry later filled', resolves_when: 'two consecutive US sessions with pre-market entries pass'}. PREMORTEM: if keeping a pending-entry row open blocks the strategy's next entry (open-package gate) on an entry that never fills, it starves the leg; so the row also needs a cancel-on-expiry (DAY order or a TTL).",
+  "phase": null,
+  "updated_at": "2026-11-19T06:20:09Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

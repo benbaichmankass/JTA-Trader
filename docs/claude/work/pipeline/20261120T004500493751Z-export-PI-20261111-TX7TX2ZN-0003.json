@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "GET /api/bot/performance?since=<7 days ago> returns totalTrades below the lifetime count and echoes since, or the route documents that it does not take since= and every caller is moved to the windowed route",
+    "kind": "observation"
+  },
+  "id": "PI-20261111-TX7TX2ZN-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-11 (lane ML-FRONTIER-PREP-20261111)",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/performance?since=2026-11-04T00:00:00 | jq .since,.totalTrades ; compare with no since"
+  },
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344): routed to its owning row PERF-API-SINCE-IGNORED (surge), owner AM-UI [weekly planning 2026-11-12]",
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "PERF-API-SINCE-IGNORED",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "GET /api/bot/performance ignores its since= query parameter. MEASURED 2026-11-11 ~19:10Z: since=2026-11-04T00:00:00 and since=2026-10-12T00:00:00 both returned the lifetime figures (live 487 trades / -152.12 R; demo 1,786; mirror 168) and the payload's own 'since' key read None. Any consumer that asks for a 7 d / 30 d window silently gets lifetime numbers, a collapsed-state hazard; the ml-review scoreboard marked 90d/30d/7d could_not_look because of it.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Still reproduces now. No open row owns the route parameter. EVIDENCE: curl https://ict-bot.duckdns.org/api/bot/performance?since=2026-11-04T00:00:00 at 2026-11-12 ~08:45Z: since None, totalTrades 490, identical to the no-since call (490). | owner row opened by this drain"
+}

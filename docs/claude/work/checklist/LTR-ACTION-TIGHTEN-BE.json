@@ -1,0 +1,21 @@
+{
+  "id": "LTR-ACTION-TIGHTEN-BE",
+  "title": "ltr_action_trigger_s0.py: add a tighten_be action (stop to BE + x R at a trigger, >= 1 ATR room) \u2014 unblocks RQ-20261117-43b6-05 (ltr-tighten-sl late cell); cheaper route than LTR-TIGHTEN-WRAPPER for the same late-cell question",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed once by RESEARCH-OPS-20261117-1006 (fork A). Spec in research/queue/blocked/RQ-20261117-43b6-05.yaml blocked_on: price_tighten_be via lro.replay_tighten + lro.tightened_net_r (as price_sl_to_structure), flags --be-plus-r 0.25 / --min-room-atr 1.0, a self-test case. clears_when: action on main + self-test passes, then git mv the unit to research/queue/.",
+  "phase": "research",
+  "updated_at": "2026-11-17T10:27:16Z",
+  "updated_by": "session_01AFoLuMNJLaELyLniVCjP7T"
+}

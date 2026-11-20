@@ -1,0 +1,34 @@
+{
+  "id": "FRONTIER-Q-TSFM-CITRAS-VOL",
+  "title": "CITRAS-FM (7M-param, CPU) zero-shot vol/regime forecast as a feature vs the LightGBM vol head (ts_foundation_model family)",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 6,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-20",
+  "frontier": {
+    "baseline": "the existing LightGBM vol/regime head (or realized-vol persistence) on identical rows, net-of-cost consumer read as the decision",
+    "blocking": "a loader + package for CITRAS-FM weights (licence to read first; HF hitachi-* repo per metadata) and a zero-shot vol-forecast feature block in ml_bakeoff",
+    "consumer": "the 15m/1h vol-regime heads that feed trend_vol OFF-cells (config/regime_policy.yaml) or the ml_entry vol features",
+    "est_cost": "lever ~half a day; unit cpu",
+    "family": "ts_foundation_model",
+    "next_step": "read the model card + licence; if usable, build the loader as an opt-in ml_bakeoff feature block and author a unit vs the LightGBM vol head",
+    "p_pass": 0.05,
+    "source": "CITRAS-FM arXiv 2606.10798 (PRIMARY abstract: 7M params, covariate-informed zero-shot, sub-0.1 s CPU inference); negative prior for returns from 2606.27100 (TSFM gains over random walk small/sparse, DM rejects 2/10)",
+    "state": "idea",
+    "unit": null,
+    "why": "ts_foundation_model has 0 open plan items; this is the first TSFM that is CPU-feasible on our runners/trainer; aim it at vol/regime (where persistence is real), not returns"
+  },
+  "week_lane": "surge"
+}

@@ -1,0 +1,30 @@
+{
+  "id": "HF-LAKE-FROZEN-DELETE",
+  "title": "Delete the frozen crypto copy from HF (jta-market-lake) now that the Kaggle mirror loader is proven; dry-run tool first, irreversible, operator-gated",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "M14"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    {
+      "clears_when": [
+        "pr_merged:25341",
+        "manual:manager go to build the dry-run HF frozen-delete tool"
+      ],
+      "owner": "AM-ML",
+      "reason": "the loader PR must land first, then the manager gives the go (operator 2026-11-06: Delete after loader works) to build the dry-run delete tool"
+    }
+  ],
+  "due_by": "2026-11-16",
+  "note": "Filed by lane HF-LAKE-KAGGLE-LOADER 2026-11-12. OPERATOR 2026-11-06: 'Delete after loader works (Recommended)'. Loader proof PASSED (PR #25341, run 43302530493: kernel on 11 mounts + runner single-file download); see row HF-LAKE-KAGGLE-LOADER. NOT DONE: no HF frozen-delete tool exists (hf_storage.py only squashes history). PROPOSED: build scripts/data_lake/hf_delete_frozen.py, DRY-RUN BY DEFAULT, driven by the mirror INDEX (33,058 frozen paths, plan 251a870815140f1f): one HfApi.create_commit of CommitOperationDelete for exactly those paths (never derived timeframes, never the hot tail), then hf-lake-storage squash to free the LFS objects (history keeps them until squashed; irreversible). Nothing is deleted before the operator approves the dry-run output via the manager. CHECK BEFORE ANY DELETE: (a) the daily market-data-lake refresh does not rebuild and re-upload frozen months that are absent on HF (reads MANIFEST.json; NOT verified); (b) other HF readers of these paths (scripts/research/lake_presence.py, published_data.py, nonprice_inventory.py) still resolve; (c) months closing after the 2026-11-05 copy (2026-10 on Dec 1) are read from HF by design. NOT EXERCISED by the proof: metrics, premium and funding labels and spot (only um_perp 1m -> 1h). Kaggle ToS and third-party data rights stay operator-level exposure. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'FRONTIER', no live session); state stays blocked. #25341 merged 2026-11-15 07:33Z; still blocked on the manual edge (manager go to build the dry-run frozen-delete tool).",
+  "phase": null,
+  "updated_at": "2026-11-15T11:31:10Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "every families.<f>.history entry carries unit + target + decision_slot, and --diversity prints no UNMAPPED-TRAINER line; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EUWZZMDP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-18 (ML-REVIEW-20261118, lane ML-FRONTIER-PREP-20261118, session_01AFoLuMhxGuKUegEUWZzMdp)",
+    "rerun": "python3 scripts/ops/ml_plan_status.py --diversity (UNMAPPED line); families history shape in docs/plans/ml-plan-items.yaml"
+  },
+  "routed_to": "ML lanes (manager to dispatch)",
+  "state": "routed",
+  "what": "[ml] Family-diversity ledger cannot apply its own rule: docs/plans/ml-plan-items.yaml families.<f>.history entries are bare verdicts (e.g. linear_logit FAIL,FAIL,PASS,...) with no configuration (checkpoint/input/target/horizon), so 'a FAIL closes only the exact configuration tested' (frontier-research Step 0) is unenforceable; and ml_plan_status.py --diversity prints UNMAPPED:None for all 8 served order-changing models. MEASURED 2026-11-18: 27 units with a tabicl/tabpfn/torch_gru/sklearn_mlp arm all targeted regime_label/direction_label. Build: history entries as {verdict, unit, target, decision_slot, n, config}; backfill from research/results; map served artifacts to a family."
+}

@@ -1,23 +1,26 @@
 {
   "id": "AUD-20261019-RESEARCH-SLO-RED",
   "title": "Research SLOs red every run for 6/6 days (grade latency, theme share, research-ops not run); blocked_over_age and runnable_floor red since 10-18/19; 3 days with monitor gaps > 4h",
-  "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuKDJYVZsxPtE74wG5z",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the research pipeline SLO monitor has alerted for a week without a same-day disposition. EVIDENCE: comms/research/health/2026-10-16..21.json: not_ok in every run of every day for grade_latency_p90_d, theme_share_min_ratio, research_ops_not_run (n=72 runs); blocked_over_age every run 10-19..21; runnable_floor 6/15 runs 10-18, 4/12 10-20, 10/10 10-21; max inter-run gap 4.3h (10-16), 4.6h (10-19), 4.1h (10-20) > the 4h liveness bound. Context: usage wind-down until weekly reset 2026-10-21 18:00Z explains research_ops_not_run, not grade latency or theme share. POSITIVE CONTROL: research_slo.py --self-test OK (planted starved queue alerts once). NEXT: manager dispatches research-ops after the reset and records per-SLO disposition (fix, threshold PR, or row). DETECTOR: research-slo.yml itself; this row closes when one full day of runs has no grade_latency/research_ops_not_run breach. [WEEKLY-AUDIT-2026-10-28 L0] call HIT, action moving: breaches 7 of 7 days 10-22..10-28 (research_ops_not_run 6/7, theme_share 6/7, runnable_floor 5/7); grade latency cleared. Root cause + fix on hold PR #20970 (RESEARCH-SLO-ROOTCAUSE, needs a human merge). [DEEP-AUDIT-20261104 L0] STALLED across 2 audits and WORSE (follow-through finding): breaches per run 1-3 (10-28..10-31) -> 7-8 (11-02..11-04): survivors_per_month, trials_per_survivor, producer_failed_rate_24h, grade_latency_p90_d, undispositioned_24h, blocked_over_age, runnable_floor, research_ops_age_h. Why it stalls: owner manager, never laned. Decision: put to Thursday planning as a dispatched lane, not re-filed.",
-  "updated_at": "2026-11-04T18:47:04Z",
-  "updated_by": "session_01AFoLuJHHNrJpWUPrhHXtjo",
   "roadmap": [
     "L-OPS"
   ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25184,
+    25186
+  ],
+  "blocked_on": [],
   "next_action": "dispatch_lane",
-  "due_by": "2026-11-07",
-  "_seq": 582
+  "due_by": "2026-11-12",
+  "_seq": 582,
+  "note": "WEEKLY-AUDIT-20261111 L0: HIT, STALLED 3 audits: breaches 7/7 days (6,6,7,7,8,9,8 per day 11-05..11-11); survivors_per_month 0, trials_per_survivor 3457. Research-ops staleness split out to AUD-20261111-RESEARCH-OPS-NO-RECORD. Put to Thursday 11-12 planning as one lane or killed with a reason; not re-filed again. [2026-11-12] p7: \"one research-SLO lane\" this week; dispatched lane OPDEC-P7-LEVERS (RESEARCH-SLO part). Record: docs/plans/thursday-planning-2026-11-12-answers.md. [2026-11-12 10:35Z AM-ML] MERGED by AM-ML: #25186 (26b5ecb6, 14 98e3 dispositions) at ~09:55Z and #25184 (c369eb54, grader no-restamp + recurring attestation + survivors by the operator's 2026-11-04 definition) at 10:34Z. Merged, not yet observed: the next research_slo run should read survivors_per_month ~40 and trials_per_survivor ~70; grade_latency_p90_d self-heals by 2026-11-19. [2026-11-12 12:34Z AM-ML] CORRECTION to the #25184 merged reading: the ML deep audit (section 2.2) finds the 40/month survivor census still miscounts. Of the 49 held-out edge passes, 14 carry grading.confirmation not_replicated/underpowered and 14 re-validate legs already trading, so 13-18 are confirmed lever results and 0 are new legs or models. Follow-up row RESEARCH-SLO-SURVIVOR-CONVERSION is routed to this row's lane (session_01AFoLuKDJYVZsxPtE74wG5z). Until it lands, do not quote 40/month as survivors.",
+  "phase": null,
+  "updated_at": "2026-11-13T04:14:19Z",
+  "updated_by": "session_01AFoLuKDJYVZsxPtE74wG5z"
 }

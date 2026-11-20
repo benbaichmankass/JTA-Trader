@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "PI-20261112-5ESTHDYL-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DEMOTION-NOT-BAN (Manager Session 2026-11-12a dispatch for AM-TRADING), operator 2026-11-12 'a demotion based on evidence was interpreted as a ban'",
+    "rerun": "python3 scripts/research/iteration_orphans.py --legacy --json"
+  },
+  "state": "queued",
+  "what": "[programme-review iteration loop] ITERATION ORPHANS + OVERDUE, measured 2026-11-12 by iteration_orphans.py --legacy (population: testing legs from strategy_status.py + scripts/research/iteration_subjects.yaml; 59 strategy_leg / 10 ml_model / 7 ltr_class subjects). ORPHANS (no live iteration unit): strategy_leg 7 = qqq_pullback_1h (testing, alpaca_paper, pass_unconfirmed; its unit RQ-20261104-7fdb-01 is done), tlt_pullback_1h (testing, NO book; see AM-TRADING proposal), tsmom-crypto, xsec-crypto, tsmom-etf, movement-capture, vol-premium-proxy; ml_model 2 = ml-exit-head-donchian-1h, ml-eth-vol-head; ltr_class 5 = ltr-partial-close, ltr-widen-sl, ltr-sl-to-structure, ltr-tp-extend, ltr-tp-pull-in. OVERDUE (unit past due_by): claude_desk (RQ-20261026-e535-03), e4_oi_shock_1h (RQ-20261101-78fc-11 blocked), ml-brackets, ml-setup-metalabel-p2pool, ml-tm-action-value, ml-holdbias-exit, ml-conviction-meta, ml-btc-router-cells, ltr-tighten-sl, ltr-close (all 78fc-* blocked). COVERED BUT STALLED: slv_trend_1h's return-to-real-money unit RQ-20261104-7fdb-02 has not_before 2027-03-16 (a session's clean-holdout design, not a registered rule; sent to AM-TRADING/manager). Programme review authors the orphan units (not this lane). Clears when iteration_orphans.py reports 0 strategy_leg orphans or each is named with a reason in the review's handoff."
+}

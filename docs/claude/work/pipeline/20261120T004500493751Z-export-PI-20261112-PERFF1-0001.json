@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a /performance/recent?since= response echoes since, and live_vs_backtest prints config_cut=applied for the three legs (verdicts recorded on PERF-F1-DEMOTION-SIGNAL)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-PERFF1-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": "curl -s 'https://ict-bot.duckdns.org/api/bot/performance/recent?n=200&since=2026-11-06T21:52:07Z' then python3 scripts/research/live_vs_backtest.py",
+    "what": "config_cut=applied rows for the three 11-06 legs"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PERF-F1-DEMOTION-SIGNAL (session_01AFoLuKGivxba8N7Mss11en), PRs #25232 #25198",
+    "rerun": "python3 scripts/research/live_vs_backtest.py"
+  },
+  "routed_to": "Manager Session 2026-11-13a",
+  "state": "routed",
+  "what": "F1 config-date cut, first CUT read: after #25198 (read-only since= on /api/bot/performance/recent, Tier 2, HELD) merges AND ict-web-api restarts, run live_vs_backtest with the default cut and record per-leg verdicts for ada_pullback_2h, trend_donchian_xrp_4h, trend_donchian_sol_prop (cut 2026-11-06T21:52:07Z). Any BELOW_BACKTEST is a demotion CANDIDATE reported to the manager/AM-TRADING for the operator (p2), never shipped."
+}

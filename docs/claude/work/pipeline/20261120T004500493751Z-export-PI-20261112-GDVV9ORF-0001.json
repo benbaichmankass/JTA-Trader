@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "PR #25267 (lane/slv1h-promote) is merged AND comms/strategy_evidence/slv_trend_1h.json on main carries param_selection_provenance != not_established, citing docs/research/slv-trend-1h-param-provenance-2026-11-12.md",
+    "kind": "event"
+  },
+  "id": "PI-20261112-GDVV9ORF-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SLV-ITERATION (session_01AFoLuKQhQJibSRgDVv9oRf)",
+    "rerun": "python3 -c \"import json;print(json.load(open('comms/strategy_evidence/slv_trend_1h.json')).get('param_selection_provenance'))\""
+  },
+  "routed_to": "Manager Session 2026-11-13a",
+  "state": "routed",
+  "what": "slv_trend_1h evidence record: fill param_selection_provenance from docs/research/slv-trend-1h-param-provenance-2026-11-12.md once PR #25267 (held Tier-3, rewrites the record) merges. SLV-ITERATION did not edit the record because that PR is open. Content: donchian 24 + trail 4.0 chosen in the 2026-06-20 SLV-CFD 1h RTH sweep (~2017..2026-06-18, best of 5, undeflated); atr_stop_mult 1.5 from the E35 run 32975514836 (2026-08-26, ~1830d, path B, leverage-contingent); min_confidence 0.3 from paper-book grading (2026-08-01); tp_r 6.0 from RQ-20261112-5ab1-03 (best of 4). Verdict: in-sample for every full-history test; the out-of-sample reads are RQ-20261104-7fdb-02 and the mirror window."
+}

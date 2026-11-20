@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "over a 6 h window the github_runner backend runs research units with <30 min idle per hour while would_dispatch>0 (measured from research-script-run run timestamps), and est_minutes for exit_lever_ablation units reflects measured run time",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-JFWRQYOV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-18 03:25Z check-in: queue barely drained (39.7 -> 39.2 runner-h over 3 h) with 60 runner units would_dispatch",
+    "rerun": "list research-script-run.yml runs (created_at/updated_at) and research-queue-dispatch.yml runs for the last 12 h; compare with python3 scripts/research/dispatch_queue.py --json would_dispatch"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "RESEARCH RUNNER THROUGHPUT ~5% UTILISED. MEASURED 2026-11-17 20:30Z-2026-11-18 01:10Z: research-queue-dispatch fires about hourly (cron '20 * * * *' with GitHub lag; gaps up to 2h15m, e.g. none 01:03Z-03:18Z), each cycle fires ~4 research-script-run units (runner max_concurrent in scripts/research/research_compute.yaml), and each exit_lever_ablation unit finishes in ~2 min (e.g. runs 44213159939, 44203968200: ~2 min) while its routing.est_minutes says 40-60. So ~4 units/hour run in ~8 runner-minutes and the runners idle ~55 min/hour; the queue's 'hours' figure overstates work ~20x and 60 due runner units take ~15 h to clear for ~2 h of compute. Fixes to weigh (Thursday planning, operator's 'queue always full / capacity used' directive): (1) re-fire as runs complete (top-up within a cycle or a 10-15 min cadence) instead of one batch per hour; (2) correct est_minutes from measured durations so supply planning is honest; (3) consider raising runner max_concurrent within the hosted-runner pool rules. No gate added; config/tooling only."
+}

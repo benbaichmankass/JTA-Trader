@@ -1,0 +1,35 @@
+{
+  "id": "FRONTIER-Q-LINEAR-ENTRY",
+  "title": "Ridge vs LightGBM for the crypto ENTRY model net of cost (linear_logit family)",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25571
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-15",
+  "frontier": {
+    "baseline": "LightGBM on the raw net-R target, same 13 monthly origins, graded on actual net R at the canonical cost stack",
+    "consumer": "src/units/strategies/ml_entry.py (D3) on bybit_2 real money + mirror + prop",
+    "est_cost": "$0 runner (~50 min)",
+    "family": "linear_logit",
+    "next_step": "unit RQ-20261112-4654-09 (RULE-RQ20261112-4654-09-RIDGE) in PR #25571; grade when it lands",
+    "p_pass": 0.06,
+    "source": "Gu, Kelly and Xiu 2020 RFS (SECONDARY); ml_plan_status --diversity after 2026-11-13 hygiene: linear_logit 0 open items",
+    "state": "unit_authored",
+    "unit": "RQ-20261112-4654-09",
+    "why": "cheapest test of the linear family on the real-money ENTRY recipe; the ridge arm already exists (#25559)"
+  },
+  "week_lane": "surge"
+}

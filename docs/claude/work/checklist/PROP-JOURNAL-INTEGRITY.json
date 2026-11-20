@@ -1,0 +1,53 @@
+{
+  "id": "PROP-JOURNAL-INTEGRITY",
+  "title": "Prop journal/report integrity: ticket upsert order_package_id backfill, explicit pnl basis (gross/net/unknown), sl/tp populated on prop_fills, emitted-ticket valid_until latch, stale-balance refusal ping, screenshot reader round-trip",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "decision_requests": [
+    {
+      "answer": {
+        "chosen": null,
+        "committed_at": "2026-11-13T07:00Z",
+        "committed_by": "Manager Session 2026-11-11a",
+        "free_text": "I misspoke - I don't remember what I meant to say but it wasnt prop integrity. Drop this for now",
+        "submission_id": "26eac930326d4492925113d5b3294464",
+        "submitted_at": "2026-11-13T06:53:14.166419Z",
+        "submitted_by": "operator-spa"
+      },
+      "evidence": "Five rows touch live prop money: partial-fill order path + journal qty, journal backfill, explicit pnl basis, trail bad-candle guard, unrealized day-P&L in the gate. The general lane rated the partial-fill work multi-hour, so under tonight's 3-lane throttle it sits behind other general items.",
+      "id": "PROP-INTEGRITY-LANE",
+      "options": [
+        {
+          "key": "fourth_lane",
+          "label": "Yes - add a 4th dedicated lane for prop integrity"
+        },
+        {
+          "key": "ui_slot",
+          "label": "Use the UI slot for it once UI work is done"
+        },
+        {
+          "key": "general",
+          "label": "Keep it in the general lane's queue"
+        }
+      ],
+      "recommended": "ui_slot",
+      "title": "Give prop integrity its own dedicated lane?"
+    }
+  ],
+  "note": "Opened by BACKLOG-DRAIN-20261112 (one decision per unowned item; operator 2026-11-12 p4) to own 6 pipeline item(s) that had no owning row: BL-20260628-PROP-TICKET-UPSERT-NO-OPID-BACKFILL, BL-20260823-PROP-JOURNAL-PNL-DISAGREES-WITH-VENUE-ON-RECENT-ROWS, BL-20260823-SCREENSHOT-FALLBACK-REPORTS-ONLY-THE-SECOND-FAILURE, BL-20260830-PROP-FILL-BRACKETS-LIVE-IN-PROSE-SO-THE-SLTP-CROSSING-ALERT-CANNOT-FIRE, BL-20260909-PROP-SIZING-REFUSAL-ON-A-STALE-BALANCE-IS-JOURNALED-BUT-NEVER-PINGED, BL-20260912-AN-EMITTED-PROP-TICKET-WITH-NO-VALID-UNTIL-LATCHES-THE-BOOK-FOREVER. Each item's record carries the evidence.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:26:19Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL",
+  "week_lane": "surge"
+}

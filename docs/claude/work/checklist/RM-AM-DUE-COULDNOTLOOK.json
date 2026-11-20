@@ -1,23 +1,30 @@
 {
   "id": "RM-AM-DUE-COULDNOTLOOK",
   "title": "Live-review due route reads 'could not look' on the event triggers of 7 of 8 open packages and has 3 due packages with the oldest due bar ~21h old - root-cause",
-  "phase": null,
-  "state": "queued",
-  "owner": "lane (Sonnet)",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "MEASURED 2026-10-28 21:04Z diag live_review_due: read_state looked, open_count 8, due_count 3, packages_with_events_could_not_look 7, events_not_evaluated 2, telemetry_less 1, suppressed_by_cooldown 4, oldest_due_bar_start 2026-10-28T00:00Z. reviews.jsonl on main: 124 rows, newest 2026-10-28T17:15Z; applied=False on 124 of 124 (0 applies ever). Not a duplicate of LTR-PACKET-READ-REACH (packet builder order reads) unless the root cause is shared - check first and merge into it if so. Tier 1 read; fix tier per path. [Manager 2026-11-05a] RE-MEASURED 2026-11-05 ~09:40Z by BACKLOG-DRAIN-20261105 (session_01AFoLuLoMgjGPiy3UA2Ua8P): live-review events could_not_look on 12 of 13 open packages. Still open; ranked 2 (live-money review coverage). First step: check whether the root cause is shared with LTR-6R-COULDNOTLOOK-FIX (IB clientId 498 collision) before a separate fix.",
-  "updated_at": "2026-11-05T09:44:28Z",
-  "updated_by": "session_01AFoLuJnejB97CXXc8yn9oA",
   "roadmap": [
     "L-ATM"
   ],
-  "due_by": "2026-11-12",
-  "priority_rank": 2,
-  "_seq": 774
+  "priority_rank": 43,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25234,
+    25302,
+    25334,
+    25339,
+    25501
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "_seq": 774,
+  "note": "MEASURED 2026-10-28 21:04Z diag live_review_due: read_state looked, open_count 8, due_count 3, packages_with_events_could_not_look 7, events_not_evaluated 2, telemetry_less 1, suppressed_by_cooldown 4, oldest_due_bar_start 2026-10-28T00:00Z. reviews.jsonl on main: 124 rows, newest 2026-10-28T17:15Z; applied=False on 124 of 124 (0 applies ever). Not a duplicate of LTR-PACKET-READ-REACH (packet builder order reads) unless the root cause is shared - check first and merge into it if so. Tier 1 read; fix tier per path. [Manager 2026-11-05a] RE-MEASURED 2026-11-05 ~09:40Z by BACKLOG-DRAIN-20261105 (session_01AFoLuLoMgjGPiy3UA2Ua8P): live-review events could_not_look on 12 of 13 open packages. Still open; ranked 2 (live-money review coverage). First step: check whether the root cause is shared with LTR-6R-COULDNOTLOOK-FIX (IB clientId 498 collision) before a separate fix. [2026-11-12 09:30Z AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk] SURGE (manager). RE-MEASURED: GET /api/diag/live_review_due via scripts/ops/diag_fetch.sh: 1st try timed out at 10 s (connect OK); 2nd try with DIAG_FETCH_MAX_TIME=150 -> HTTP 502 from the HTTPS host after ~31 s. Other routes answer (/api/bot/config 200, /api/bot/prop/status 200), so web-api is UP and this route fails. Spawn requested from the manager. [2026-11-12 09:35Z AM-TRADING] The lane also owns DIAG-LIVE-REVIEW-DUE-SLOW (route under 5 s, same output; stopgap #25064 DIAG_FETCH_MAX_TIME=45 in live-review-wake.yml).",
+  "phase": null,
+  "updated_at": "2026-11-12T09:56:29Z",
+  "updated_by": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "week_lane": "surge"
 }

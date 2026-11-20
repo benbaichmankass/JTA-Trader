@@ -1,0 +1,26 @@
+{
+  "id": "SMALL-ACCOUNT-RISK",
+  "title": "Small real-money account risk: alpaca_live notional/exposure cap, reachable-set derived on demand (not a constant), per-account losing-streak floor",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuMFGRG8sT3VRva2mo3",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25248,
+    25314,
+    25330
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "Opened by BACKLOG-DRAIN-20261112 (one decision per unowned item; operator 2026-11-12 p4) to own 3 pipeline item(s) that had no owning row: BL-20260823-ALPACA-RISK-SIZING-EXCEEDS-ACCOUNT-NOTIONAL-AT-EVERY-FUNDING-LEVEL, BL-20260910-THE-ALPACA-LIVE-REACHABLE-SYMBOL-SET-IS-RECORDED-AS-A-CONSTANT-AND-GDX-HAS-SINCE-FALLEN-OUT-OF-IT, BL-20260911-LOSING-STREAK-SIZE-GATE-IS-A-FLEET-WIDE-ABSOLUTE-SO-IT-UNDER-SERVES-A-SMALL-REAL-MONEY-ACCOUNT. Each item's record carries the evidence. [2026-11-12 lane session_01AFoLuMFGRG8sT3VRva2mo3] TIER-1 BUILT: scripts/ops/account_reachable_set.py (PR #25248, auto-merge armed) derives the reachable set through RiskManager.position_size at live balance + live candles; output is not committed (carries a balance). MEASURED 2026-11-12 ~09:40Z, population 172 (leg,symbol) pairs on the 2-leg roster: 139 size >0, 26 cash-refused, 3 stop-refused, 4 no_data. Sized notional is a median of 73% of equity (max 90% = the 0.9x buying-power cap, which binds on 118/139). Worst risk 1.46x the per-trade budget, via round-up. FINDING: tqqq_trend_long_1d:TQQQ is UNREACHABLE right now: one share's 2.5xATR14(1d) stop is about 2.8x the per-trade budget (above the 1.5x round-up limit), so the sizer refuses every signal until TQQQ ATR falls. WHAT-IF per-position cap: 50% of equity loses 38/139 pairs and trims 79; 75% loses 11; 90% loses 0. TIER-3 PROPOSAL (awaiting AM/operator): add alpaca_live.risk.max_gross_exposure_pct: 1.0. It uses the existing exposure.py mechanism, is a no-op on today's 1x cash book, and bounds the book if the venue later grants margin; it clears BL-20260823. No per-position cap below the cash cap at this size (it would filter the pooled population by price, a filter not fixed before the run). In the same PR, replace the accounts.yaml 'reachable : TLT IEF SLV USO IAUM GDX' prose with a pointer to the script (clears BL-20260910). Losing-streak: propose floor = min(500, 5% of account equity) for real_money accounts; it can only ADD alerts (option a). Needs the operator's pick (Tier 3). [2026-11-12 10:15-10:22Z OPERATOR decisions page, relayed by Manager 2026-11-11a] w10: \"Wait for the lane's evidence-based proposal\"; note \"No cap, any position that can be held within the funding should be\". => no per-position cap; sizer allows any position the cash can hold. [2026-11-15 08:26Z Manager 15a] DECISION. Operator 2026-11-15 ~08:24Z, verbatim: \"2. Merge the PRs\" (the four Tier-3 PRs held for the operator: #25314 losing-streak per-account floor, #25330 alpaca_live reachable-set comment, #25272 tradeify_1 TP amend, #25389 balance prescrub). AM-OPS refreshes each onto main; the manager merges on green, citing this decision in the PR body. 2026-11-15 11:20Z AM-OPS: both blockers merged by manager 15a under the operator's 08:24Z 'Merge the PRs': #25330 (953dd258, 11:10:55Z) and #25314 (5fa17fa2, 11:11:08Z); #25248 merged earlier. Owner AM-TRADING is completed, so the row moves to the manager. Merged, not yet deployed: the trader restarted at 11:11:52 on 80271750, which predates both; the next git-sync restart loads them. Observation that closes it: once the trader sha includes 5fa17fa2, the losing-streak grading records min_loss_usd_applied / floor_basis per account, and a small real-money account's floor reads min(500, 5% of equity). 2026-11-15 11:25Z AM-OPS: DEPLOYED. The trader runs 5db059c70d (read 11:24:35Z); git merge-base --is-ancestor 5fa17fa2 5db059c7 is true, so #25314 and #25330 are loaded. Still to observe: losing-streak grading showing min_loss_usd_applied / floor_basis per account.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:24:55Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

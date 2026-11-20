@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "maker_entry.leg_entry_order reads the leg's whole strategies.yaml block (python3 -c \"from src.units.accounts import maker_entry as me; print(me.leg_entry_order('claude_desk'))\" prints post_only_touch while claude_desk declares it), or the entry_order line is removed / killed with a stated reason by the manager",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-4NJQPY25-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane D9-MAKER-EXIT-BUILD 2026-11-19 (session_01AFoLuHgLS5eDS94nJqpy25), found while building the maker-exit counterpart",
+    "rerun": "python3 -c \"from src.units.accounts import maker_entry as me; from src.strategy_registry import _strategy_cfg; print(me.leg_entry_order('claude_desk'), sorted(_strategy_cfg('claude_desk')))\""
+  },
+  "state": "queued",
+  "what": "DESK-MAKER-FILLS probe (b) is a silent no-op in production. maker_entry.leg_entry_order reads the leg via src.strategy_registry._strategy_cfg, which returns ONLY name/service/model/signal_prefixes/execution (load_strategies builds that 5-key dict). MEASURED 2026-11-19 on main f76e9a341: config/strategies.yaml claude_desk declares entry_order: post_only_touch, yet leg_entry_order('claude_desk') returns 'market', so resolve_entry_order can never return post_only_touch and every desk entry is a taker Market order. tests/test_maker_entry_probe.py monkeypatches _strategy_cfg with a full dict, so the suite is green over a path that never runs. The YAML comment on that line still says 'PENDING OPERATOR YES (PR held)', so whether to activate it is the manager's/operator's decision, not a lane's; NOT fixed in D9-MAKER-EXIT-BUILD. Fix (Tier 3, live order path): read the whole leg block (as src/units/accounts/maker_exit.full_leg_cfg does) and add a test that reads the real YAML. Same class: any other caller reading a non-core leg field through _strategy_cfg."
+}

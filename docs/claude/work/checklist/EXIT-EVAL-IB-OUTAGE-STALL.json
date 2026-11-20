@@ -1,0 +1,23 @@
+{
+  "id": "EXIT-EVAL-IB-OUTAGE-STALL",
+  "title": "Exit-eval interval breach during an IB gateway outage: the exit loop's first IB OHLCV call waits 29 s on the pinned IB thread before the breaker trips, so one pass ran 69.4 s (> 60 s requirement)",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-20",
+  "note": "Observation read 2026-11-15 04:30-06:00Z (journalctl complete, 20,728 lines). A REAL IBKR reset happened: 12 x 'Error 1100' at 05:16:10-05:16:33Z, each restored by 'Error 1102 ... restored - data maintained' within ~6 s (05:16:16, 05:16:23, 05:16:33). Exit evaluation did NOT stall: exit passes at 05:15:40, 05:16:20, 05:16:41, 05:17:10 (max gap 40.5 s, under the 60 s requirement); /api/bot/exit-interval/soak last_breach_utc is still 2026-11-13T05:18:25Z, so no new breach. BUT PRE-TRIPPED was NOT logged: each outage was shorter than the gap between exit passes, so no IB-routed fetch ran while the link was down and the pre-trip path was never exercised. Closing condition not met (PRE-TRIPPED present + no breach); stays landed_unproven. Outcome is still favourable: a reset happened and nothing stalled. Re-armed for the next 06:00Z read; the next outage long enough to span a pass (the 11-13 one lasted ~2 min) exercises the pre-trip.",
+  "updated_at": "2026-11-15T06:03:02Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

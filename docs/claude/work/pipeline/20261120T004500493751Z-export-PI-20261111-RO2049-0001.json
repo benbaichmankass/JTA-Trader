@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a unit with routing.why_runner whose crypto feed candle_dataset.covers() is routed to kaggle_cpu and its landed result reads read_state measured, not producer_failed with a data.binance.vision resolution error",
+    "kind": "observation"
+  },
+  "id": "PI-20261111-RO2049-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-16",
+    "how_to_check": "ls comms/research/RQ-20261110-73de-08/*/logs/cmd-0.log; grep -c 'candle dataset: served' comms/research/RQ-*/*/logs/cmd-0.log | grep -v ':0' | head",
+    "what": "the 5 re-queued units (runner_only) land measured; and a Kaggle-routed covered-feed unit lands measured with a 'candle dataset: served' log line"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-OPS-20261111-2049",
+    "rerun": "python3 -c \"import yaml;from scripts.research import candle_dataset as cd;print(cd.covers(yaml.safe_load(open('research/queue/RQ-20261110-73de-08.yaml'))))\"; grep -l 'NameResolutionError' comms/research/RQ-*/*/logs/cmd-0.log | wc -l"
+  },
+  "routed_to": "COMPUTE-PREFER-KAGGLE",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Kaggle CPU route fails for exit_lever_ablation units whose crypto candle feed the candle dataset 'covers': RQ-20261110-73de-08/09/10/14/15 all producer_failed 5/5 with data.binance.vision NameResolutionError (cmd-0.log) -- the kernel had no CANDLE_DATA_ROOT served (no 'candle dataset: served/not served' line printed), so the run fell through to the network, which the kernel does not have. The 5 units are pinned runner_only and re-queued. Fix the mount/serve path (kernel_main.py CANDLES_MANIFEST glob, candle_dataset.serve days_built vs --days 2330, coverage.json vs the mounted dataset version), then drop runner_only from them.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The Kaggle CPU candle-dataset mount failure blocks the Kaggle-first routing that row owns. EVIDENCE: research/queue/RQ-20261110-73de-08/09/10/14/15.yaml origin/main: all still runner_only: true \"until PI-20261111-RO2049-0001 is fixed\"; each has 1 result row, producer_failed."
+}

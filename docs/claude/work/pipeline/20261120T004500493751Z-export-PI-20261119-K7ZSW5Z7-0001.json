@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the cause of the second b9d0-01 dispatch is named from the dispatcher run logs and fixed (or shown benign with evidence), or killed with a reason",
+    "due_date": "2026-11-22",
+    "kind": "date"
+  },
+  "id": "PI-20261119-K7ZSW5Z7-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-PRIMARY-9 grading RQ-20261119-b9d0-01, 2026-11-19 04:05Z",
+    "rerun": "git ls-tree --name-only origin/main comms/research/RQ-20261119-b9d0-01/"
+  },
+  "owner": "ML-PRIMARY-10 (session_01AFoLuMq6PeudHur3tmBVgF)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[research-queue] DUPLICATE DISPATCH: trainer unit RQ-20261119-b9d0-01 (cadence once) ran TWICE, runs 44449459292 and 44450607058 (research-script-run-trainer), both landed on main with byte-identical results (n 675; cusum excess 0.1405/0.206, learned -0.0107/-0.2512), so one trainer slot in the 03:00-05:00Z idle window was spent twice. Unit stamped last_dispatched_at 2026-11-19T03:19:00Z. Find which dispatcher runs fired each and why the dedupe (open-stamp-PR + recent-run, dispatch_queue.fired_run_units) did not block the second; fix so a cadence-once unit cannot fire twice. Found by ML-PRIMARY-9 while grading b9d0-01."
+}

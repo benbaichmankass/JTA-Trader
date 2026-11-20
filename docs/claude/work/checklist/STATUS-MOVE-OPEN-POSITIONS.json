@@ -1,22 +1,28 @@
 {
   "id": "STATUS-MOVE-OPEN-POSITIONS",
   "title": "A status change (promotion/demotion) moves the roster but leaves positions already open on the old book: ADA 6734 on bybit_1 (opened 2026-10-24, #21038 merged 2026-10-29 04:42Z). Define and build what happens to open positions on a book move (operator 2026-10-29: 'There shouldn't be three versions of this trade. There should be at most two'), and give strategy-status-guard/a runtime check a positions read, not only the roster",
-  "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMm8mdmV1JgmwFHKEU",
   "model": "sonnet",
-  "ceiling_usd": 6,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "6734 FLATTENED: #21201 apply ok (Bybit retCode 0, order 9ae8e5e5-3dcb-4b7c-8c5a-0f692b7f1c35, broker reads flat; queued 07:57Z -> ran ~08:2xZ behind the Actions backlog); journal row closed by reconciler at 08:26:32Z (MEASURED /api/bot/positions?include_paper=true). Exit relabel to operator_flatten_reconciled filed #21209. Remaining ADA legs: 6735 bybit_2 + 6736 bybit_portfolio, SL 0.2015.",
-  "priority_rank": 5,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
   "roadmap": [
     "L-LADDER"
   ],
-  "_seq": 795
+  "priority_rank": 20,
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "prs": [
+    25249,
+    25251
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "_seq": 795,
+  "note": "2026-11-12 lane session_01AFoLuMm8mdmV1JgmwFHKEU: DEFINED in OPERATING-PLAN \u00a7 2 'Open positions on a book move' (promotion: the paper copy with a money/mirror sibling is closed on the paper book, per row if netted; sole copy runs out; demotion: money+mirror run out, keep open block new; retirement: runs out; at most 2 copies). BUILT the positions read: scripts/ops/status_move_positions.py (src/runtime/status_move.py, tests/test_status_move.py, 9 pass). Live read 2026-11-12 ~09:40Z, /api/bot/positions?include_paper=true: population 24 open, on_book 24, close_* 0, breaches 0 (positive controls on the same data: a simulated ada demotion -> 2x run_out; a simulated eth_pullback_2h promotion with planted siblings -> close_netted, neighbour 7000 eth_pullback_prop_2h on bybit_1 ETHUSDT, plus a version breach). LANDED_UNPROVEN: closes when a roster PR that moves a leg with an open copy merges, the read classifies it, and the paper close lands (or the read shows 0 off-book rows after #25192 merges). Not built: an automatic close inside the trader (an order-path change, Tier 2); the procedure is the merger runs the read after a roster PR merges. positions API lacks order_package_id, so sibling match is ESTIMATED. PR #25249 (Tier 1, auto-merge armed). OPEN GAPS owned here until AM decides rows: (1) bybit_1 nets symbols across legs (e.g. #7004 eth_pullback_2h + #7000 eth_pullback_prop_2h both ETHUSDT short), and flatten-bybit-position closes the whole symbol, so a close_netted row has no per-row close action yet; (2) automatic paper-copy close in the promotion path (Tier 2) not built; (3) /api/bot/positions lacks orderPackageId (sibling match ESTIMATED). Decision line sent to AM 2026-11-12 ~10:08Z. 2026-11-12 13:25Z: #25249 MERGED (0fc8e5b51; read-only scripts, no deploy needed: ops tool run from the repo). Observed from main 13:26Z: population 21 open positions (/api/bot/positions?include_paper=true), on_book 21, close_* 0, breaches 0. Remaining: #25251 (rule text, Tier 2 HELD, CI green, draft) for operator confirmation of the demotion half; follow-on rows STATUS-MOVE-AUTO-PAPER-CLOSE + POSITIONS-API-ORDER-PACKAGE-ID (queued). Row stays in_flight until #25251 lands. 2026-11-12 13:45Z: operator APPROVED the demotion half (decisions page x3, 'Let them run to their own exits; block new real-money entries'). #25251 updated (head 8a919251b: x3 quote in the doc row and the landing hold_text; decision line in the body); waiting on CI, then AM-DEVOPS merges. Behaviour check: matches already (coordinator.py:1362-1373 roster dispatch; order_monitor.exit_population E21), nothing to build. Closes 'done' when #25251 merges.",
+  "phase": null,
+  "summary": "Rule merged in OPERATING-PLAN \u00a7 2 \"Open positions on a book move\" (#25251, 9410034039; operator x3 2026-11-12) + read-only positions read scripts/ops/status_move_positions.py (#25249, 0fc8e5b51). Promotion closes the paper third copy; demotion/retirement run to own exits, new entries blocked via roster. Follow-ons: STATUS-MOVE-AUTO-PAPER-CLOSE, POSITIONS-API-ORDER-PACKAGE-ID.",
+  "updated_at": "2026-11-14T09:54:47Z",
+  "updated_by": "session_01AFoLuMm8mdmV1JgmwFHKEU",
+  "week_lane": "surge"
 }

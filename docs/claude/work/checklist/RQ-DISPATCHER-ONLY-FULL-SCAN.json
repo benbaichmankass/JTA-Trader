@@ -1,0 +1,28 @@
+{
+  "id": "RQ-DISPATCHER-ONLY-FULL-SCAN",
+  "title": "dispatch_queue.py --only <id> still loads, validates and plans all ~2,109 queue units, filtering only at the decision loop (scripts/research/dispatch_queue.py:1707). A single-unit dry run takes 71 s locally (MEASURED 2026-11-12 17:55Z, origin/main bc48d181), so tests/test_research_queue.py::test_w4_dispatcher_dry_run_selects_the_unit (subprocess timeout=120 at line 356) times out on slow runners: 6 pytest-run failures on #25312 (run 43263773705), 892 s run. It worsens as the queue grows. Fix: apply --only before the per-job planning, without changing --fire semantics, so a single-unit dry run is sub-second. Done when that test runs under 10 s locally and pytest-run on main has no TimeoutExpired from it. Gates: none.",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research tooling / CI health",
+  "ceiling_usd": null,
+  "spend_usd": 1.46,
+  "prs": [
+    25414
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "PR #25414 MERGED 2026-11-12T19:11Z (squash, automerge). landed_unproven: close on pytest-run on main showing no TimeoutExpired from the w4 test. Open item for another lane: RQ-20261112-d2ct-01 has non-hex id 'd2ct' (invalid per validator); needs re-id by lane-ml-d2-consumer-test. Manager was not paged via trigger (lineage depth 8 refusal); reported by PR comment. [2026-11-12 19:55Z AM-ML] #25414 merged: single-unit dry run 71 s -> 2.0 s (MEASURED locally by the lane). Lane session_01AFoLuJBmF6m55kMaps4dYG archived; spend $1.46. The d2ct invalid id it found was fixed by #25437 (1a897217). Closes on the first main pytest-run with no TimeoutExpired from test_w4_dispatcher_dry_run_*. Owner: AM-ML.",
+  "observe": {
+    "how": "pytest-run on main: tests/test_research_queue.py::test_w4_dispatcher_dry_run_selects_the_unit has no TimeoutExpired and runs in under 10 s (locally ~2 s); the d2ct-01 invalid id (RQ-20261112-d2ct-01, from #25312) may keep other tests red until re-id",
+    "when": "next pytest-run on main after 2026-11-12T19:11Z"
+  },
+  "phase": "build",
+  "updated_at": "2026-11-13T22:19:37Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "ZERO-QTY-EXPOSURE-EXPLAIN",
+  "title": "Name the gross-exposure ceiling in the sized_qty=0 refusal (exposure_ceiling token) + Tier-3 proposal: netted-venue de-risking entries should not count as additive gross",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuJoJfAsbJkD7sXrTaW",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25233,
+    25269
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "Opened by BACKLOG-DRAIN-20261112 (one decision per unowned item; operator 2026-11-12 p4) to own 1 pipeline item(s) that had no owning row: PI-20261104-KKPOFDJQ-0004. Each item's record carries the evidence. [2026-11-12 lane session_01AFoLuJoJfAsbJkD7sXrTaW] exposure_ceiling token built in PR #25233 (held Tier-2, NOT merged; explanation only, sizing unchanged). Tier-3 netted-venue de-risking exemption: proposal sent to AM-TRADING, not built. Done when #25233 is deployed and one clamp-caused refusal reads exposure_ceiling: in entry_reason. [2026-11-12 10:15-10:22Z OPERATOR decisions page, relayed by Manager 2026-11-11a] w15: \"Yes: exempt net-reducing orders on netted venues\". Build: clamp only the change in absolute net exposure (|net_after|-|net_before|) on netted exchanges. [2026-11-12 10:52Z lane] w15 netted-venue exemption built in PR #25269 (IB only; held Tier-2, NOT merged). Done when #25233 and #25269 are deployed and observed: one exposure_ceiling: refusal, and one ib_paper entry against a held opposite position sized >0 while at the ceiling. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. owner AM-TRADING is completed. #25269 is green on today's main (head 4276ead7, operator w15) and waiting on the manager's merge; #25233 (Tier 2 draft, CI cancelled) is in batch 3. [2026-11-15 ~11:15Z lane] #25269 MERGED as c67eed55b (11:10Z). On the VM checkout (git_sha_on_disk 8027175072 contains it) but NOT deployed to the running trader: ict-trader-live runs 46b0364f4e (10:04Z, before the merge), read from diag version. #25233 green on 6772b8fbe, waiting on AM-DEVOPS. Remaining: trader restart onto a sha containing c67eed55b, then observe one ib_paper entry vs a held opposite position sized >0 at the ceiling.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:11:35Z",
+  "updated_by": "session_01AFoLuJoJfAsbJkD7sXrTaW",
+  "week_lane": "surge"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "CJ-LABEL-ALTERNATIVE",
+  "title": "Alternative teacher label for the claude_judgments student chain (the blind grade failed CJ-4: rho -0.183, n 707): iterate the grading design (rubric/prompt, risk_atr<1 exclusion, expected_r vs grade_score) or an outcome-based alternative, validated by the CJ-4 rule; the weekly blind-grade backfill retires only when this is in place (operator 2026-11-16)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Operator 2026-11-16 (verbatim): \"We can retire when an alternative is in place\". Inputs: 089f-01 result (comms/research, research/results/RQ-20261116-089f-01*), the 10-26 tier-A diagnostic (expected_r +0.117 [+0.026,+0.205] on the 469 clean packages; the risk_atr<1 artifact), design docs/plans/ml-claude-distillation-DESIGN.md \u00a7 3.3. First step: the risk_atr<1-excluded sensitivity read of 089f-01. Starts after the Wed 11-18 reset (pacing). Operator 2026-11-16 clarification (verbatim): \"Paused nit retired, until there's a replacement\" \u2014 the blind-grade backfill stays paused (not retired) until this row's replacement is in place. [2026-11-17 10:54Z ML-PRIMARY-5, input from D10] Two reads bear on this row. (1) Orientation audit of 089f-01 (row ML-D10-BASSET-BASELINE): the negative sign is NOT an R-denominator artifact. On the same 707 trades, an outcome with no risk basis (net USD / entry notional, journal pulled via diag 2026-11-17) gives rho(grade) -0.150, rho(grade, win) -0.161, and it is negative for longs (-0.111, n 374) and shorts (-0.191, n 333) and within ICT-scalp legs (-0.13..-0.36). So the risk_atr<1 exclusion is unlikely to flip the sign on its own; the first-step sensitivity read should still be run, but expect the anti-signal to survive it. Shape: grade F (0) n 46 won 69.6%; grade C (2) n 246 won 30.9%. (2) RQ-20261117-aadc-05 (PR #26649, held): as a leg-decay signal the rolling blind grade scores AUC 0.314, CI95 [0.152, 0.505] (n 494, 17 legs), while a plain CUSUM on net R vs Stage-0 scores 0.658 [0.522, 0.766]. Any alternative teacher label should be checked against that CUSUM bar, not only against 0. [2026-11-17 11:01Z ML-PRIMARY-5] CORRECTION to my earlier note on this row: the comparator figure 'AUC 0.314 [0.152, 0.505]' came from read1 of RQ-20261117-aadc-05, which had a units defect in the net-R basis (futures/options without contract multiplier; order_packages.sl sometimes the amended ~breakeven stop; PI-20261117-ZZUFKM1F-0001). Read2 (fixed, disclosed): the blind grade as a leg-decay signal is AUC 0.458 [0.327, 0.630], n 460: uninformative at this n, not anti-informative. The CUSUM bar is AUC 0.654 [0.550, 0.750]. The 089f-01 orientation audit (net USD / notional, rho -0.150) is unaffected. NOTE for this row: 089f-01's own net-R label uses the package sl basis, so it carries the same defect on degenerate rows; re-check it on a corrected basis.",
+  "phase": null,
+  "updated_at": "2026-11-17T11:01:46Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

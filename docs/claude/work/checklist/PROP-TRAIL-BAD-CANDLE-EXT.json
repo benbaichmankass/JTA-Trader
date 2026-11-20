@@ -1,0 +1,22 @@
+{
+  "id": "PROP-TRAIL-BAD-CANDLE-EXT",
+  "title": "Prop trail structure replay reads a corrupt SOL low (ext 22.93, mfe_r 44.18) on tradeify_1/velotrade_1",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-11 18:03Z journalctl ict-prop-executor@tradeify_1/@velotrade_1: trail_plan SOLUSD source structure_exit ext 22.93, mfe_r 44.1814 for a SOL short entered 87.64 (price ~84). A candle low ~22.93 is in the 4h feed prop_trail.default_candles_fn serves the replay. Harm: mfe-based levers (giveback_min_mfe_r, decay arm 5.57R) read a fake 44R peak; trail decay may arm on a phantom. Next: dump the 4h SOL candles since signal_time from the same fn, find the bad bar, fix at source + add a sanity clamp (bar low < 0.5x prior close = could-not-look). Re-run: the same journalctl query shows a sane ext.",
+  "phase": null,
+  "updated_at": "2026-11-11T18:14:31Z",
+  "updated_by": "session_01AFoLuKoQkQBLzCSoiyyoMo",
+  "week_lane": "surge"
+}

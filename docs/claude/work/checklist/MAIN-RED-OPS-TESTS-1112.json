@@ -1,0 +1,21 @@
+{
+  "id": "MAIN-RED-OPS-TESTS-1112",
+  "title": "Two tests are red on origin/main (3392ae015): test_pytest_run_filter env-vars.md coverage and WORK_STORE_TOKEN read outside src/web in ops_actions.py",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "Filed by lane HF-LAKE-KAGGLE-LOADER 2026-11-13 (found on PR #25341; NOT that PR's). MEASURED on a clean origin/main worktree at 3392ae015: (1) tests/test_pytest_run_filter.py::test_every_committed_tree_the_suite_reads_is_covered FAILS: docs/reference/env-vars.md is read by tests/ops/test_ops_ledger.py but would short-circuit pytest-run; (2) tests/test_sync_vm_secrets_restart_scope.py::test_web_api_only_keys_are_not_read_outside_the_web_api FAILS: WORK_STORE_TOKEN is read outside src/web/ in src/runtime/ops_actions.py. Both look like they came with the OPS-EXEC / ops_actions work (#25397) but I did not trace the introducing commit. A third test seen red on PR branches (test_check_api_tier_policy doc coverage 201 vs 202) already passes on main. WHY IT MATTERS: every PR currently gets a red pytest-run it did not cause. WHAT: trace the introducing commit, fix in the owning change (add the env-vars.md path to the pytest-run filter; move or allowlist the WORK_STORE_TOKEN read), confirm both pass on main. CLOSES WHEN: both tests pass on origin/main. Re-run: python3 -m pytest -q -n0 tests/test_pytest_run_filter.py::test_every_committed_tree_the_suite_reads_is_covered tests/test_sync_vm_secrets_restart_scope.py::test_web_api_only_keys_are_not_read_outside_the_web_api",
+  "phase": null,
+  "updated_at": "2026-11-13T22:18:02Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

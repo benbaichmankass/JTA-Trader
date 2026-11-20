@@ -1,0 +1,21 @@
+{
+  "id": "IB-TRAIL-AMEND-MISSED",
+  "title": "IB protective re-assert reverts a just-applied trail amend from a stale row read: _check_broker_naked_ib_positions (reconciliation-loop thread) grades and re-asserts against row['stop_loss'] from the row set it read at sweep start, so a trail amend that lands mid-sweep is cancelled and the PREVIOUS stop re-placed. Measured on ib_paper MGC trade 7737 (pkg-8958fc7d4ee74c60), paper. Fix: re-read trades.stop_loss/take_profit_1 fresh immediately before _reassert_from_divergence decides (and re-grade against that), or skip the re-assert when the trade/package was updated within the last sweep interval; then the 1 h cooldown cannot lock the wrong level in.",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "[2026-11-20 00:45Z AM-OPS-10] Diagnosis (read-only, journalctl ict-trader-live 23:59:30-00:35Z via diag, plus ib_open_orders). MEASURED timeline (UTC, 11-20): 00:00:17.778 IB gateway peer closed the socket (reconnected by 00:00:22.588). 00:00:21.950 order_monitor verdict sl=3654.0857 (prior 3683.3857). 00:00:22.694 cancel 1461 STP 3683.4 + 1462 LMT; 00:00:23.463 place 1468 STP 3654.1 + 1469 LMT 3398.7; 00:00:23.467 'modify_open_order ... IB re-arm OK' (retCode 0, legs_placed 2); pkg updated_at 00:00:23.493 (sl 3654.0857). 00:00:24.079 cancel 1468/1469; 00:00:24.682 place 1470 STP 3683.4 + 1471 LMT 3398.7; 00:00:25.107 'RE-ASSERT both_legs_resting ib_paper/MGC trade=7737 -> sl=3683.38571429 ... (was resting 3654.1, 292.9 ticks exits_earlier)'; 00:00:25.121 'STOP PRICE DIVERGES ... journal declares 3683.38571429 but the nearest resting stop is 3654.1'. So the AMEND WAS SENT AND ACKNOWLEDGED; the sweep then reverted it from a stale journal read. Since then the sweep logs every ~6 min (00:05:19, 00:11:20, 00:17:18, 00:23:17) 'journal declares 3654.08571429 but the nearest resting stop is 3683.4 (293.1 ticks above; more_exposed) ~$7914.86', and does not act: _REASSERT_STATE cooldown 3600 s from 00:00:25 (PROTECTION_REASSERT_COOLDOWN_S default). decide_reassert has no direction asymmetry, so the first sweep after ~01:00:25Z should re-assert 3654.0857 (expected ~01:05Z; attempt 2 of max 3). Venue re-read 00:27:30Z: 1470 STP BUY 27 @3683.4 PreSubmitted GTC + 1471 LMT 3398.7, oca-protect-t7737, so not yet fixed. Nothing hand-placed. Small separate defect noted by the 00:20Z reviewer: the logs diag route returned no JSON (journalctl route works). Related: BL-20260823-MODIFY-IDEMPOTENCE-COMPARES-INTENT-TO-JOURNAL-NEVER-TO-VENUE. [2026-11-20 01:00Z AM-OPS-10] (a) FIX PR #27545 (draft, Tier 2 HOLD, head 069fee7fa1bef8643f9ffd5f1943ad8855ec3bef): the IB re-assert re-reads the row fresh and stands down on a mid-sweep change. RESTART. Merges cleanly with #27535 and #27537 (186 tests pass on the combined tree). (b) REAL-MONEY CHECK: no exposure. The price re-assert's only caller is the IB sweep; the Bybit and Alpaca sweeps re-protect only naked positions and amend in place; ib_live runs mode dry_run. The durable protection_reassert_soak.jsonl (35 rows, 2026-08-23 to 11-20) holds only ib_paper rows. (c) PROBABLE EARLIER CASE: MES trade 4350, 2026-09-16 19:16Z, acted re-assert 'exits_earlier' (declared 7602.45, resting 7647.25). Same shape as 7737; its journal has rotated away, so this is INFERRED. (d) SEPARATE PATTERN, not this race: MGC 6740 (4 acted re-asserts on 10-26, declared 4040.81, resting 4270.0 every time) and MGC 7569 (4 on 11-16 to 11-18, declared 3891.71, resting 4116-4137) each reported both_legs_resting while the resting level did not move. Candidate causes in code: _reassert_applied_state verifies that legs rest, not their PRICE; and the stray-group sweep cancels only NON-keyed groups, so a group keyed to another trade survives. Likely related to the 4-group over-cover on AUD-20261118-MGC-OVERCOVER. Filed separately.",
+  "phase": null,
+  "updated_at": "2026-11-20T00:41:01Z",
+  "updated_by": "session_01AFoLuJvENzG66GcgnCTd2z"
+}

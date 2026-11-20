@@ -1,0 +1,21 @@
+{
+  "id": "ICT-SCALP-FORMING-BAR-ARM",
+  "title": "scripts/backtest_ict_scalp.py: add a --decision-bar closed|forming arm so the ict_scalp legs can be scored on the bar they trade (as-traded Stage 0)",
+  "state": "done",
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "lane": "",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "[2026-11-19 PERF-FOLLOWUP-2026W47] WHY: RQ-20261118-abab-56 (graded FAIL 2026-11-19, run 44385139200) matched 3 of 46 live ict_scalp_eth_15m trades to the closed-bar harness (match rate 0.0652; 43 live-only, median entry 4.8 min into the 15m bar = forming-bar entries; 14 harness-only): ict_scalp declares no decision_bar, so live decides on the forming bar while scripts/backtest_ict_scalp.py scores closed bars, so no ict_scalp Stage-0 record scores the trade set the leg trades (the 2026-10-21 perf-followup L3 cause, there on pullback_2h; as_traded_stage0.py covers pullback/trend only). BUILD: scripts/backtest_ict_scalp.py accepts --decision-bar closed|forming (default closed, byte-identical when absent; forming reads a --minutes-1m-csv the way exit_lever_ablation.py --forming-1m-fetch already provides for the other harnesses) with a parity test against the live ict_scalp decision bar. DONE WHEN: the flag is merged on main with the parity test green AND exit_lever_ablation.py --leg ict_scalp_eth_15m --arm FORMING=--decision-bar=forming produces a non-empty arm whose CLOSED control reproduces comms/strategy_evidence/ict_scalp_eth_15m.json (n 76, net_r -2.93, within 2 trades / 0.5 R). Then git-mv research/queue/blocked/RQ-20261119-e11f-01.yaml to research/queue/ with status queued (rule unchanged). Siblings on the same harness: ict_scalp_avax_5m / sol_5m / sol_15m / mgc_15m, queued behind it. Sibling harness edits already queued: PI-20261119-OFUCR5NF-0003 (--side-filter) and PI-20261119-FILLW47B-0002 (--skip-hours): land the three flags in one PR if the same lane takes them. Tier 1 (research harness, no config).",
+  "phase": "build",
+  "updated_at": "2026-11-19T15:59:47Z",
+  "updated_by": "QUEUE-FILL-STANDING-W47b"
+}

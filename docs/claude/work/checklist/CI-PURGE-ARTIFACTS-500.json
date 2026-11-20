@@ -1,0 +1,22 @@
+{
+  "id": "CI-PURGE-ARTIFACTS-500",
+  "title": "purge-artifacts schedule fails on GitHub API 500 listing artifacts (3 of last 4 scheduled runs)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Seen 2026-11-09 by manager 2026-11-07a. Scheduled runs: 11-06 10:28Z FAIL, 11-07 09:41Z FAIL, 11-08 09:55Z ok, 11-09 11:00Z FAIL (run 42605406980). Cause in the log: GET /repos/.../actions/artifacts?per_page=100 returned HTTP 500 'Unexpected end of JSON input' after ~8 s; github-script runs with retries: 0. Likely the artifact list is large and the API times out. Fix (Tier 1, small): set retries: 3 on the github-script step and page with a smaller per_page (e.g. 30), so an intermittent 500 is retried instead of failing the purge; then confirm the next scheduled run is green. Impact: artifacts are not reclaimed on failing days (storage creep), no trading impact. After the 11-11 reset.",
+  "phase": null,
+  "updated_at": "2026-11-09T11:06:10Z",
+  "week_lane": "throttle"
+}
