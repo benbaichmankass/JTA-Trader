@@ -108,9 +108,14 @@ def exclude_reset_flat_predicate(prefix: str = "") -> str:
     decisions — the account was reset externally — so counting them would
     contaminate per-strategy win-rate / PnL. They stay in the journal (audit)
     but are excluded from KPI aggregates. NULL-safe; the literal is hard-coded
-    (no injection surface). Operator-requested 2026-07-08."""
+    (no injection surface). Operator-requested 2026-07-08.
+
+    Also drops ``exit_reason='entry_unfilled'`` (ENTRY-UNFILLED-LABEL,
+    2026-11-19): a row whose entry order ended at the venue without filling never
+    held a position, so it is not a trade at all and must not sit in a
+    per-strategy denominator."""
     er = _col(prefix, "exit_reason")
-    return f" AND COALESCE({er},'') != 'exchange_reset_flat'"
+    return f" AND COALESCE({er},'') NOT IN ('exchange_reset_flat', 'entry_unfilled')"
 
 
 def exclude_reduce_leg_predicate(prefix: str = "") -> str:

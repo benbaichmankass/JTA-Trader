@@ -94,6 +94,7 @@ NOT_STRATEGY_EXIT: dict[str, tuple[str, str]] = {
     "exit_coverage_no_strategy": ("infrastructure", "exit-coverage close with no owning strategy"),
     "pairs_half_open_cleanup": ("infrastructure", "pairs sleeve half-open cleanup"),
     "exchange_reset_flat": ("infrastructure", "wholesale account reset"),
+    "entry_unfilled": ("infrastructure", "entry order ended unfilled — no position was ever held"),
 }
 
 
