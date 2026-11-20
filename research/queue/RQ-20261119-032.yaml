@@ -5,7 +5,7 @@ id: RQ-20261119-032
 title: 'P4-Q2 SYMBOL HOLDOUT for the PPI rank-tilt: 7769-22 PASSED on NQ=F (t 2.009, at the bar) and 7769-20
   FAILED on ES=F (t 1.886). Does the same exposure-matched tilt beat the all-long floor on YM=F, a US
   index no PPI tilt has been read on, net of the MYM cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -135,3 +135,15 @@ generated:
   params:
     node: P4-Q2-ppi-ym-tilt-holdout
 last_dispatched_at: '2026-11-20T01:13:43+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P4-Q2-ppi-ym-tilt-holdout
+  evidence:
+  - research/results/RQ-20261119-032/44649909484.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
