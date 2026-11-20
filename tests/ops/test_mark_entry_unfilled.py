@@ -41,5 +41,5 @@ def test_a_wrong_db_path_refuses_and_never_creates_a_file(tmp_path):
 def test_wrapper_resolves_the_db_after_loading_secrets_and_checks_it():
     text = (REPO / "scripts" / "ops" / "mark_entry_unfilled_action.sh").read_text()
     assert text.index("load_runtime_secrets\nDB_PATH=") >= 0
-    assert "SELECT COUNT(*) FROM trades" in text
+    assert "SELECT COUNT(*) FROM trades" in text and "mode=rw" in text
     assert text.count('--db "${DB_PATH}"') == 2

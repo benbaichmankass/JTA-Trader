@@ -79,11 +79,18 @@ ls -la "${DB_PATH}" || true
 OLD_ORDER_PATH="$(env -i HOME="${HOME}" PATH="${PATH}" bash -c \
     "source '${SCRIPT_DIR}/_lib.sh' >/dev/null 2>&1; cd '${REPO_DIR}'; runtime_db_path" 2>/dev/null || true)"
 echo ">>> old-order path (issue #27636 ordering, clean shell): ${OLD_ORDER_PATH:-<unresolved>}"
+# WAL hypothesis (manager, 04:47Z): a mode=ro open of a WAL journal needs write access to the
+# -wal/-shm sidecars or the directory. Show who we are and the modes involved.
+echo ">>> id: $(id)"
+ls -ld "$(dirname "${DB_PATH}")" 2>/dev/null || true
+ls -l "${DB_PATH}" "${DB_PATH}-wal" "${DB_PATH}-shm" 2>&1 || true
 for _p in "${OLD_ORDER_PATH}" "${REPO_DIR}/trade_journal.db" "${REPO_DIR}/src/bot/trade_journal.db"; do
     [ -n "${_p}" ] && { ls -la "${_p}" 2>/dev/null || echo ">>> absent: ${_p}"; }
 done
 # Fail fast, before anything else reads it: the resolved file must be the journal.
-if ! python3 "${_DBR}" "${DB_PATH}" "SELECT COUNT(*) FROM trades;" >/dev/null 2>&1; then
+# A read-write open (never creating), the way grade_closed_trades' python opens it; NOT db_read's
+# mode=ro, which on a WAL journal also needs the sidecars and may be the #27636 failure itself.
+if ! python3 -c 'import sqlite3,sys; sqlite3.connect("file:"+sys.argv[1]+"?mode=rw", uri=True, timeout=30).execute("SELECT COUNT(*) FROM trades").fetchone()' "${DB_PATH}"; then
     fail "${DB_PATH} has no readable trades table; refusing (not the trade journal)." "db not the journal"
 fi
 
