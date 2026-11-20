@@ -126,6 +126,46 @@ TRADE_JOURNAL_DB="${DB_PATH}" "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-i
 exit_code=$?
 set -e
 
+# REPAIR PASS (trade 8034, issue #27646): a row relabelled by an earlier run whose notes lost the INV-2
+# marker to the 500-char cap gets its notes rebuilt from that run's pre-write backup. The helper
+# skips rows that already carry the marker and refuses any backup whose row is not the pre-write
+# flat-detector state, so the newest backup that passes a dry-run is the one used.
+if [ "${exit_code}" -eq 0 ]; then
+    echo
+    echo "===== REPAIR PASS (notes missing the marker) ====="
+    restored="none"
+    _cands=0
+    while IFS= read -r _bak; do
+        [ -n "${_bak}" ] || continue
+        _cands=$((_cands + 1))
+        set +e
+        _out="$("${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" \
+                --restore-notes-from "${_bak}" 2>&1)"
+        _rc=$?
+        set -e
+        echo ">>> candidate ${_bak}: exit ${_rc}"
+        echo "${_out}"
+        if [ "${_rc}" -eq 0 ]; then
+            if printf '%s' "${_out}" | grep -q '^restore '; then
+                set +e
+                "${PY}" "${PY_SCRIPT}" --db "${DB_PATH}" --trade-ids "${TRADE_IDS}" --reason "${REASON_TEXT}" \
+                    --restore-notes-from "${_bak}" --apply
+                exit_code=$?
+                set -e
+                restored="${_bak}"
+            else
+                restored="not needed"
+            fi
+            break
+        fi
+    done < <(ls -1t "${DB_PATH}".bak-mark-entry-unfilled-* 2>/dev/null || true)
+    echo ">>> repair pass: ${restored} (${_cands} candidate backup(s))"
+    if [ "${restored}" = "none" ] && [ "${_cands}" -gt 0 ]; then
+        log "ERROR: every candidate backup refused the repair; see the REFUSE lines above."
+        exit_code=3
+    fi
+fi
+
 echo
 echo "===== AFTER ====="
 python3 "${_DBR}" --table "${DB_PATH}" "${SHOW}" || true
