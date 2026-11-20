@@ -1,0 +1,133 @@
+# Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1. The registered confirmation of RQ-20261119-2780-04 (PI-20261120-7ITMUEB1-0003). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-2cb9-01
+title: 'OUT-OF-TIME confirmation of RQ-20261119-2780-04 PASS: the setup meta-label head (3e98-01 model, threshold 0.48 fixed) on measured rostered-paper rows entered AFTER the v024 read,
+  P1 unchanged'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: Does the setup meta-label head setup-candidates-metalabel-rostered-paper-v1 (the RQ-20261119-3e98-01 model state, unchanged) at decision threshold 0.48 (selected by RQ-20261119-2780-04
+  STEP 1 on training-side OOF scores; NOT re-selected) pass P1 clauses (a)-(e) on the MEASURED rostered-paper rows (event_source live_paper AND strategy in research/manifests/roster59-20261119.txt
+  AND pnl_provenance measured) whose ts is after 2026-11-20T00:00:00Z, i.e. rows the 2780-04 read (all 698 measured rows of v024) never saw?
+why_this_matters: 'RQ-20261119-2780-04 PASSED P1 on 698 measured rostered-paper rows (value +0.0362 R/opp vs matched random -0.0018; bootstrap lower bound +0.0012 at the 0.625 percentile,
+  the fourth read of that population; take rate 41 of 698). Its registered pass action is ONE confirmation before any Tier-3 proposal. A time split of the same 698 rows (the first draft,
+  PI-20261120-7ITMUEB1-0003) is not independent: every row was already read at 0.48. Only rows entered after the v024 build are. Two caveats stated at authoring: (1) the model''s TRAINING
+  side is 92.2% backtest rows (5,164 of 5,598 in v024), which code-read says are built on Binance-vision candles (PI-20261120-7ITMUEB1-0007), while the eval rows are Bybit paper trades;
+  the venue-gap record (comms/research/VENUE-GAP-20261120/record.json) measured a 0.0185 R/trade harness-level gap between the venues; (2) the 2780-04 point estimate was selected after
+  three earlier reads of the family, so it is likely inflated (winner''s curse) and this unit''s power below is an upper bound.'
+iteration:
+  subject: ml-setup-metalabel-p2pool
+  subject_kind: ml_model
+  from_result: RQ-20261119-2780-04
+  verdict_read: pass
+  diagnosis: P1 passes on the measured rostered paper book at threshold 0.48 (n 698, take 41); the pass action requires ONE confirmation before any Tier-3 proposal, and every v024 eval
+    row was already read.
+  search: 'none: confirmation of the selected configuration on rows entered after the read; model, threshold, features, filter and rule unchanged'
+  levers:
+  - threshold
+  map_entries:
+  - research/levers/ml-setup-metalabel-p2pool.yaml
+  attempt: 4
+  due_by: '2027-01-31'
+power:
+  alpha: 0.05
+  power: 0.8
+  design: one_sample
+  effect_units: r_multiple
+  expected_n: 600
+  min_detectable_effect: 0.033
+  sd: 1.0
+  basis: 'Floor 600 new measured rows (the accrual gate below). 2780-04''s bootstrap half-width at n 698 was (0.0789 - 0.0012) / 2 = 0.0389 at the 0.625 percentile (z ~2.50) -> SE ~0.0156;
+    at n 600 SE ~0.0168, so the 95% lower bound clears 0 when the point is > 1.96 x 0.0168 = 0.033 R/opp. If the true effect equals 2780-04''s point (+0.0380), the chance the lower bound
+    is > 0 is ~62% (z = 0.038 / 0.0168 - 1.96 = 0.30); at n 700, ~69%. The true effect is likely smaller (caveat 2), so ~60% is an upper bound: an INDETERMINATE-or-FAIL here does not
+    by itself refute the head, and the unit says so in its result.'
+  feasibility:
+    source: journal (paper book, measured pnl, roster59, crypto)
+    accrual_basis: 'MEASURED 2026-11-20 from GET /api/bot/trades/closed (include_paper, paginated): 183 measured roster59 crypto paper closes over 2026-11-03..2026-11-20 (10.8/day; 58
+      over 2026-10-20..11-03, 4.1/day). At 10.8/day, 600 rows accrue in ~56 days (around 2027-01-15). The dataset''s own live_paper count (setup_candidates build) is the authority at
+      unblock; the API rate is the planning estimate.'
+baseline: RQ-20261119-2780-04 measured read (value +0.0362 R/opp, n 698, take rate 0.0587).
+decision_rule:
+  id: RULE-RQ202611202cb901-P1-OOT-CONFIRM
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  min_n: 600 measured, filtered paper eval rows entered after 2026-11-20T00:00:00Z
+  population_filter: 'FIXED BEFORE THE RUN: event_source == live_paper AND strategy in research/manifests/roster59-20261119.txt AND pnl_provenance == measured AND ts > 2026-11-20T00:00:00Z
+    (p1_costnet_grade.py --eval-source live_paper --strategies-file ... --measured-only --eval-after 2026-11-20T00:00:00Z).'
+  statistic: 'scripts/ml/p1_costnet_grade.py on the 3e98-01 model state (ml/experiments-runs/setup-candidates-metalabel-rostered-paper-v1/20261119T202129Z) with the manifest copy whose
+    evaluator_config.decision_threshold = 0.48 (2780-04''s), on the first setup_candidates build (v025 or later, same build params as v024) that holds >= 600 eval rows after the filter,
+    --lb-pct 2.5 (the registered 95%: a DISJOINT population read once at a fixed threshold, so no multiplicity deflation). P1 clauses (a)-(e) exactly as RULE-RQ20261119-2780-04-P1-MEASURED-PAPER-THR.'
+  rule: 'INDETERMINATE (no grade step) IF the build holds < 600 filtered eval rows after the cut, or the model state / threshold differs from the above. Otherwise PASS iff (a) AND (b)
+    AND (c) AND (d) AND (e); FAIL iff (a) fails OR (b) fails; INDETERMINATE otherwise ((c)/(d)/(e) not met or unit_fallback share > 10%). PASS: the confirmation the 2780-04 pass action
+    requires; evidence for ONE Tier-3 proposal to act on the head on the demo floor, never a change from this unit. FAIL: the 2780-04 pass does not replicate out of time; recorded on
+    the family; the head is not acted on. Reported, never graded: the measured+estimated read at the same cut, the per-symbol table, and the venue-restricted companion below. Thresholds,
+    filter, cut and model are not changed after any result.'
+  companion_reported_ungraded: 'VENUE-RESTRICTED COMPANION (manager 2026-11-20 02:47Z): the same recipe retrained with its TRAINING rows restricted to outcomes from the live venue (the
+    real live trades: 434 of 5,598 training rows in v024; the candle venue of the cusum/signal_log rows is established by the companion build, PI-20261120-7ITMUEB1-0007), scored on the
+    SAME eval rows, threshold re-selected by the same OOF procedure on its own training rows. Reported next to the graded read, never graded. Power stated: ~434 training rows for 10
+    features with min_data_in_leaf 50 supports at most ~8 leaves per tree; a near-prior model is the expected outcome and is not evidence against the head.'
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (out-of-time confirmation of a selected configuration before acting on it) and research/queue/RQ-20261119-2780-04.yaml
+  (its pass action: one confirmation before any Tier-3 proposal; P1 per docs/plans/ml-live-promotion-plan-2026-10-29.md section 3).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: an entry filter; a skipped trade contributes 0 R, a taken one its realized R
+  matched_random:
+    draws: 10000
+    note: the matched random take is the take rate times the take-all mean, as in cost_gate.py; the bootstrap resamples trades
+  best_static:
+    grid:
+    - take_all
+    - take_none
+    - matched_random
+    excludes_test_folds: true
+    note: the eval rows are held out of training by the live_holdout split (live_flag_column event_source, live_flag_true_value live_paper)
+  bootstrap_group: trade
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 30
+  why_runner: The setup_candidates build, the 3e98-01 model state and the journal are trainer-resident.
+  basis: 'ESTIMATE from relay #27546 (2780-04 STEP 2 on v024 ran inside one trainer relay).'
+value:
+  basis: 'stand-in: the confirmation gate in front of the only P1 pass on the demo floor; an estimate.'
+  bucket: ai_trader
+  confidence: 0.2
+  usd_at_stake_per_month: 150
+blocked_on:
+- kind: accrual
+  ref: setup_candidates live_paper measured roster59 rows after 2026-11-20T00:00:00Z
+  what: '>= 600 eval rows after the population filter above in a setup_candidates build (v025 or later, v024 build params)'
+  clears_when: 'a trainer build''s p1_costnet_grade.py --eval-after 2026-11-20T00:00:00Z dry count (or a relay counting the filtered rows) reads >= 600; then git mv this file to research/queue/,
+    set status queued and add run: (STEP 2 above), rule unchanged. ~2027-01-15 at the measured 10.8/day.'
+- kind: build
+  ref: PI-20261120-7ITMUEB1-0007 (venue-restricted companion)
+  what: a script that writes the v0NN data.jsonl copy with training rows restricted to live-venue outcomes and trains the 3e98-01 recipe on it (companion arm only)
+  clears_when: the companion script lands with a self-test; if it has not landed when the accrual clears, the graded read runs without it and the companion is reported as not_attempted
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: src/runtime/advisory_sizing.py
+  decision: skip or downsize an entry on the 5 bybit_1 1h/2h/4h BTC/ETH/SOL legs
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+  - squeeze_breakout_4h
+  - htf_pullback_trend_2h
+  book: demo_floor
+related:
+- research/queue/RQ-20261119-2780-04.yaml
+- research/queue/RQ-20261119-3e98-01.yaml
+- PI-20261120-7ITMUEB1-0003
+- PI-20261120-7ITMUEB1-0007
+- comms/research/VENUE-GAP-20261120/record.json
+- scripts/ml/p1_costnet_grade.py
+what_it_does_not_do: Serves, promotes or applies nothing; changes no config; places no order; never re-selects the threshold.
