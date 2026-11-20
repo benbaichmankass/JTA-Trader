@@ -1,0 +1,97 @@
+{
+  "unit": "RQ-20261119-a10d-08",
+  "run_id": "44705280956",
+  "commit_sha": null,
+  "run_url": null,
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": null,
+    "cpu_simd": [
+      "asimd"
+    ],
+    "cores_logical": 1,
+    "cores_usable": 1,
+    "machine": "aarch64",
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-1060-oracle",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.11.0rc1",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.4",
+      "pandas": "3.0.3",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [
+      "cpu_model"
+    ],
+    "class_id": "8b8eea7d004b",
+    "read_state": "partial"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_head_label_bakeoff.py",
+        "--rows",
+        "datasets-out/exit_head/1h/donchian_fresh/rows.jsonl",
+        "--legs",
+        "trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT,trend_donchian:DOGEUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:LTCUSDT,trend_donchian:DOTUSDT,trend_donchian:TRXUSDT,trend_donchian:NEARUSDT",
+        "--num-folds",
+        "5",
+        "--embargo-days",
+        "7",
+        "--lookback",
+        "500",
+        "--arms",
+        "holding_pays_neg25",
+        "--z",
+        "1.96",
+        "--pass-dr",
+        "0.01",
+        "--exclude-train-symbol",
+        "XRPUSDT",
+        "--exclude-train-symbol",
+        "ADAUSDT",
+        "--exclude-train-symbol",
+        "AVAXUSDT",
+        "--exclude-train-symbol",
+        "DOGEUSDT",
+        "--exclude-train-symbol",
+        "LINKUSDT",
+        "--exclude-train-symbol",
+        "BNBUSDT",
+        "--exclude-train-symbol",
+        "LTCUSDT",
+        "--exclude-train-symbol",
+        "DOTUSDT",
+        "--exclude-train-symbol",
+        "TRXUSDT",
+        "--exclude-train-symbol",
+        "NEARUSDT",
+        "--unit",
+        "RQ-20261119-a10d-08",
+        "--rule-id",
+        "RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM",
+        "--registered-at",
+        "2026-11-17",
+        "--json",
+        "comms/research/RQ-20261119-a10d-08/44705280956/verdict.json"
+      ],
+      "log": "comms/research/RQ-20261119-a10d-08/44705280956/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 93.9
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
