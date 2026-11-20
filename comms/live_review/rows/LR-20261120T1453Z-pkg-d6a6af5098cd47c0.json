@@ -1,0 +1,289 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261120T1453Z-pkg-d6a6af5098cd47c0",
+ "reviewed_at": "2026-11-20T14:58:00Z",
+ "order_package_id": "pkg-d6a6af5098cd47c0",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "new_peak",
+  "level": 0.5,
+  "l0_snapshot_at": "2026-11-20T14:52:10Z"
+ },
+ "info_cutoff_at": "2026-11-20T14:53:19Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 4,
+  "giveback_r": 0.1595,
+  "open_r": 0.4206,
+  "peak_provenance": "estimated",
+  "peak_r": 0.5801,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1775.4225,
+  "tp": 1687.06
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.1595,
+  "open_r": 0.4206,
+  "peak_r": 0.5801,
+  "r_to_stop": 1.0915,
+  "r_to_target": 1.0337
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 1775.4225 / tp 1687.06 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "tradeify_1": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "velotrade_1": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "mean_r": 0.0619,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -1.1347,
+   "p_giveback_gt_half": 0.6146,
+   "sd_r": 1.1499,
+   "state": "measured",
+   "worst_r": -1.2043,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.0865,
+   "ev_cost_se_r": 0.0643,
+   "mean_r": 0.1484,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -0.2942,
+   "p_giveback_gt_half": 0.8333,
+   "sd_r": 0.3577,
+   "spec": "atr:1.0",
+   "state": "measured",
+   "stop_at_r_now": 0.0801,
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": -0.2433,
+   "worst_r": -1.4476,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.1077,
+   "ev_cost_se_r": 0.0617,
+   "mean_r": 0.1696,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -0.2942,
+   "p_giveback_gt_half": 0.7882,
+   "sd_r": 0.6103,
+   "spec": "atr:1.5",
+   "state": "measured",
+   "stop_at_r_now": -0.1699,
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": -0.2433,
+   "worst_r": -1.4476,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.0313,
+   "ev_cost_se_r": 0.0573,
+   "mean_r": 0.0932,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -0.4726,
+   "p_giveback_gt_half": 0.7743,
+   "sd_r": 0.5933,
+   "spec": "atr:2.0",
+   "state": "measured",
+   "stop_at_r_now": -0.4199,
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": -0.2433,
+   "worst_r": -1.4476,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.0562,
+   "ev_cost_se_r": 0.0561,
+   "mean_r": 0.1181,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -0.2942,
+   "p_giveback_gt_half": 0.8264,
+   "sd_r": 0.6313,
+   "spec": "r:0",
+   "state": "measured",
+   "stop_at_r_now": 0.0,
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": -0.2433,
+   "worst_r": -1.4476,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "ev_cost_r": -0.0739,
+   "ev_cost_se_r": 0.0631,
+   "mean_r": 0.1359,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": -0.2942,
+   "p_giveback_gt_half": 0.9236,
+   "sd_r": 0.4051,
+   "spec": "r:0.21",
+   "state": "measured",
+   "stop_at_r_now": 0.21,
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": -0.2433,
+   "worst_r": -1.4476,
+   "level": null,
+   "net": true
+  },
+  {
+   "action": "close",
+   "ev_cost_r": -0.2765,
+   "ev_cost_se_r": 0.0677,
+   "mean_r": 0.3384,
+   "n": 288,
+   "n_floor": 20,
+   "p05_r": 0.2782,
+   "p_giveback_gt_half": 0.0764,
+   "sd_r": 0.032,
+   "spec": "close",
+   "state": "measured",
+   "within_auto_bound": true,
+   "within_shadow_bound": true,
+   "worst_case_gain_r": 1.4004,
+   "worst_r": 0.1961,
+   "level": null,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261120T1453Z-pkg-d6a6af5098cd47c0.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.2765,
+  "worst_case_delta_r": 1.4004,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": null,
+  "reason": "Previous forecast (12:09Z hold, target 1687.06, invalidation 1770.32, 12 bars) has not resolved: neither level touched, price made a new low 1727 and peak +0.58R (from +0.004R), so the short is working but 4 bars in, bars_since_peak 0. Measured cell n=288 (floor 20, leg pool 907): HOLD mean +0.062R sd 1.15 worst -1.20, p(giveback>half) 0.61; CLOSE now +0.338R net, i.e. +0.277R over hold, SE 0.068 (>4 SE), worst +0.196 vs -1.204 (tail gain 1.40R >= 1R). Every tighten (atr:1.0 +0.148, r:0 +0.118, atr:1.5 +0.170) also beats hold but by only 0.06-0.11R (<2 SE) with worse worst-case, so they are dominated by locking the gain. Exit_plan (SL 1775.42 = 1.09R away, single TP 1687.06 at 1.5R, no trail) leaves +0.42R exposed to a 1.5R round trip; price sits on the 1716/1722 lows 1h swing support where this leg historically gives back. Close, with a 1h retest of ~1757 the expected path."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=288 mean +0.062R measured; close +0.338R; close is trivially the current R net of cost, so the 4 SE edge is hold's giveback drag on this leg, not a forecast",
+  "book: 4 other short ETHUSDT packages open (e4_oi_shock_1h -0.05R, eth_pullback_2h +0.79R, eth_pullback_prop_2h +0.78R) plus 3 short BTC, correlated crypto-beta short exposure",
+  "missing_input: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding not available",
+  "htf: 4h trending ADX 43.4, lower highs 1843>1835>1817: thesis intact, the close is a judgement that the leg's peak-then-pullback pool beats holding, not a thesis failure",
+  "live_vs_backtest: CONSISTENT (36 closed, live -1.63R real / -0.95R mirror vs backtest +0.037R, n=907)",
+  "prop accounts tradeify_1 / velotrade_1: positions read 0 open, read unknown; the VM skips where no position"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1775.42 / TP 1687.06, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 0 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1775.42 / TP 1687.06, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuMavMzRsiKqAjjKUCA",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "bff85e99f8efabab6929903f020c85da2af6814289500397531da96d2d4f0914",
+ "forecast": {
+  "thesis": "Short stays with the 4h downtrend, but price sits at 1731 on the 1716/1722 1h swing lows after a 1727 low this bar, and this leg gives back more than half of its peaks 61% of the time; I expect a retest of the 1757 1h high before any run to 1687, so locking +0.42R beats holding",
+  "direction": "against_trade",
+  "target_px": 1757.19,
+  "p_target": 0.5,
+  "invalidation_px": 1716.17,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "features_at_review: open_r +0.42, peak_r +0.58, bars_since_peak 0",
+   "context_v3.chart.swings: 1h lows 1722.0 / 1716.17, highs 1762.62 / 1770.32",
+   "context_v3.exit_plan: sl_now 1775.42, tp_now 1687.06, no trail",
+   "priced_options: hold +0.062R vs close +0.338R, n=288"
+  ]
+ }
+}
