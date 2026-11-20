@@ -1,0 +1,492 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261119-a10d-08",
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "note": "an arm is below n_oos or between the pass bar and the fail floor",
+ "n": 665,
+ "population": "OOS harness trades of ['trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian'] (1h), 5-fold sequential walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n 45372) bar_t <= fold start - 7.0 d; paired per-trade replayed R vs the holding_pays champion",
+ "decision_rule": {
+  "id": "RULE-RQ20261117-aadc-12-EXITHEAD-NEG25-CONFIRM",
+  "registered_at": "2026-11-17",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "indeterminate",
+   "chosen": null,
+   "why": "an arm is below n_oos or between the pass bar and the fail floor",
+   "arms": {
+    "holding_pays_neg25": {
+     "n": 665,
+     "mean": -0.00707,
+     "se": 0.0278,
+     "ci": [
+      -0.06156,
+      0.04742
+     ],
+     "z": 1.96
+    }
+   }
+  },
+  "arm_dr_vs_hold_context": {
+   "holding_pays": {
+    "n": 665,
+    "mean": 0.05866,
+    "se": 0.04642,
+    "ci": [
+     -0.03233,
+     0.14965
+    ],
+    "z": 1.96
+   },
+   "holding_pays_neg25": {
+    "n": 665,
+    "mean": 0.05159,
+    "se": 0.03703,
+    "ci": [
+     -0.02098,
+     0.12416
+    ],
+    "z": 1.96
+   }
+  },
+  "fired": {
+   "holding_pays": 482,
+   "holding_pays_neg25": 267
+  },
+  "target_coverage": {
+   "holding_pays_neg25": 1.0
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+   "XRPUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ADAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "AVAXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DOGEUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LINKUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BNBUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DOTUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "TRXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "NEARUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+   "BTCUSDT": 12217,
+   "ETHUSDT": 23605,
+   "SOLUSDT": 9550
+  },
+  "excluded_train_symbols": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "BNBUSDT",
+   "DOGEUSDT",
+   "DOTUSDT",
+   "LINKUSDT",
+   "LTCUSDT",
+   "NEARUSDT",
+   "TRXUSDT",
+   "XRPUSDT"
+  ],
+  "train_rows_after_exclusion": 45372,
+  "z": 1.96,
+  "pass_dr": 0.01,
+  "legs": [
+   {
+    "leg": "trend_donchian",
+    "symbol": "XRPUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/XRPUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 48403
+    },
+    "read_state": "unestablishable",
+    "n_total_trades": 367,
+    "block_n": 61,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 61,
+      "train_rows_n": 7163,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 7163 under floor"
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 61,
+      "train_rows_n": 13894,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 13894 under floor"
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 61,
+      "train_rows_n": 21319,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 21319 under floor"
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 61,
+      "train_rows_n": 29296,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 29296 under floor"
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 61,
+      "train_rows_n": 36274,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 36274 under floor"
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "ADAUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/ADAUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 49749
+    },
+    "read_state": "unestablishable",
+    "n_total_trades": 368,
+    "block_n": 61,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 61,
+      "train_rows_n": 5503,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 5503 under floor"
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 61,
+      "train_rows_n": 12990,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 12990 under floor"
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 61,
+      "train_rows_n": 19538,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 19538 under floor"
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 61,
+      "train_rows_n": 26934,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 26934 under floor"
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 61,
+      "train_rows_n": 35898,
+      "read_state": "unestablishable",
+      "reason": "test n 61 / train rows 35898 under floor"
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "AVAXUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/AVAXUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 45404
+    },
+    "read_state": "unestablishable",
+    "n_total_trades": 352,
+    "block_n": 58,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 58,
+      "train_rows_n": 8652,
+      "read_state": "unestablishable",
+      "reason": "test n 58 / train rows 8652 under floor"
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 58,
+      "train_rows_n": 15407,
+      "read_state": "unestablishable",
+      "reason": "test n 58 / train rows 15407 under floor"
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 58,
+      "train_rows_n": 23091,
+      "read_state": "unestablishable",
+      "reason": "test n 58 / train rows 23091 under floor"
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 58,
+      "train_rows_n": 30359,
+      "read_state": "unestablishable",
+      "reason": "test n 58 / train rows 30359 under floor"
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 58,
+      "train_rows_n": 37225,
+      "read_state": "unestablishable",
+      "reason": "test n 58 / train rows 37225 under floor"
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "producer_failed",
+    "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'DOGEUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "LINKUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/LINKUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 53299
+    },
+    "read_state": "measured",
+    "n_total_trades": 402,
+    "block_n": 67,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 67,
+      "train_rows_n": 1974,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 54,
+       "holding_pays_neg25": 41
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 67,
+      "train_rows_n": 10923,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 55,
+       "holding_pays_neg25": 28
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 67,
+      "train_rows_n": 18555,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 44,
+       "holding_pays_neg25": 29
+      }
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 67,
+      "train_rows_n": 27363,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 48,
+       "holding_pays_neg25": 26
+      }
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 67,
+      "train_rows_n": 35459,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 43,
+       "holding_pays_neg25": 19
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "BNBUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/BNBUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 47277
+    },
+    "read_state": "measured",
+    "n_total_trades": 399,
+    "block_n": 66,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 66,
+      "train_rows_n": 7702,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 49,
+       "holding_pays_neg25": 35
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 66,
+      "train_rows_n": 14559,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 49,
+       "holding_pays_neg25": 21
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 66,
+      "train_rows_n": 21472,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 47,
+       "holding_pays_neg25": 22
+      }
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 66,
+      "train_rows_n": 29272,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 45,
+       "holding_pays_neg25": 18
+      }
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 66,
+      "train_rows_n": 36292,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 48,
+       "holding_pays_neg25": 28
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "producer_failed",
+    "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'LTCUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "producer_failed",
+    "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'DOTUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "producer_failed",
+    "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'TRXUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "producer_failed",
+    "why": "exit_head_label_bakeoff.py: REFUSING to run - you asked for symbol 'NEARUSDT' (timeframe '1h') and gave no --data, and no candle file for that symbol was found.\n  searched: /home/ubuntu/ict-trading-bot/data via the canonical resolver (scripts/research/m20_fleet_exit_sweep.py::resolve_data, convention data/<SYMBOL>_<grain>.csv)\n  or point BACKTEST_DATA_PATH at the file you want."
+   }
+  ]
+ },
+ "generated_at": "2026-11-20T08:50:04Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/exit_head_label_bakeoff.py"
+ }
+}
