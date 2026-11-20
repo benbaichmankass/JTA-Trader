@@ -125,6 +125,15 @@ def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
     return out
 
 
+def _resample_close_stamped(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """Native-grid buckets [T, T+rule) labelled by their CLOSE time T+rule: the as-of-join form (an LTF bar may read
+    an HTF bar only after it closed). Same grouping as _resample; only the label differs."""
+    return (df.set_index("timestamp")
+            .resample(_norm_rule(rule), label="right", closed="left")
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
+            .dropna().reset_index())
+
+
 def _date_filter(df: pd.DataFrame, start: Optional[str], end: Optional[str]) -> pd.DataFrame:
     if start:
         df = df[df["timestamp"] >= pd.Timestamp(start, tz="UTC")]
@@ -201,7 +210,11 @@ def _build_htf_features(base: pd.DataFrame, *, htf_rule: str, range_lookback: in
     HTF bar; the backward merge_asof in run_backtest guarantees an LTF entry
     only ever reads an HTF bar that closed at/before it, so there is no
     lookahead despite the inclusive window."""
-    htf = _resample(base, htf_rule)
+    # Pattern (B), NOT _resample: buckets [T, T+htf) labelled at their CLOSE T+htf, so the backward merge_asof
+    # below attaches an HTF bar to an LTF bar only once it has closed. _resample is open-stamped (pattern A, the
+    # native grid); feeding it to a backward as-of join leaked up to one HTF bar of future (#27566 regression, fixed
+    # 2026-11-20 by ML-PRIMARY-14, PI-20261120-7ITMUEB1-0006). The old right/right was causal but mis-grouped.
+    htf = _resample_close_stamped(base, htf_rule)
     htf["htf_hi"] = htf["high"].rolling(range_lookback).max()
     htf["htf_lo"] = htf["low"].rolling(range_lookback).min()
     htf["htf_adx"] = _adx(htf, adx_period)
@@ -235,7 +248,7 @@ def run_backtest(df: pd.DataFrame, *, htf_rule: str, timeframe: str, symbol: str
     df["atr"] = _atr(df, atr_period)
 
     # HTF boundaries/regime, attached to each LTF bar via a BACKWARD merge_asof
-    # on the right-labelled HTF close time — the lookahead-safety property.
+    # on the CLOSE-stamped HTF bars (_resample_close_stamped) — the lookahead-safety property.
     htf_feat = _build_htf_features(
         df, htf_rule=htf_rule, range_lookback=range_lookback,
         adx_period=adx_period, touch_tol_pct=touch_tol_pct)
