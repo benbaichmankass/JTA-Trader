@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 order-path change (journal_sync, the Alpaca clients' _request, the equity naked sweep); trader_import_closure decide: RESTART. The manager reads the diff and pairs it with a restart window.",
+  "why": "WHY: row LIVE-TICK-NEAR-BUDGET. Final tick_cost read 2026-11-20 06:18:50Z (98 ticks after the 04:41:12Z restart): tick mean 45.0 s (rule < 30 s), main journal_sync.wait mean 6.89 s (rule < 2 s). _recon_phase holds journal_sync across each phase's broker I/O; the off-loop hold max 15.9 s equals the equity naked sweep's max (mean 9.83 s). WHAT (manager-approved design with the hardening that EVERY venue-mutating call moves the generation): journal_sync gains a process-local venue generation, bumped inside both Alpaca clients' _request for any non-GET (before and after the call) and on entry_dispatch / pairs_tick release. The equity naked sweep's per-row venue reads (positions, protection_state, protection_coverage) are prefetched WITHOUT the lock; the locked body is served from them only while the generation is unchanged, otherwise it reads live under the lock exactly as today. Writes are never cached. Scope: the equity sweep only. Gates this adds or changes: none."
+}

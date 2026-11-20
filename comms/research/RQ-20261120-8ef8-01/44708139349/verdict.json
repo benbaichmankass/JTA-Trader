@@ -1,0 +1,134 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_eth_4h: 169 Stage-0 trades on bybit_linear (trainer data/), 2023-02-12..2026-10-31 (169 book days)",
+  "n": 169,
+  "measurement": {
+    "label": "vol_target_does_not_clear",
+    "n_trades": 169,
+    "dsharpe": 0.0914,
+    "maxdd_baseline_r": 21.9752,
+    "maxdd_targeted_r": 10.9876,
+    "blocks_dsharpe_positive": 1,
+    "blocks": 4,
+    "clause_a_dsharpe": false,
+    "clause_b_maxdd": true,
+    "clause_c_blocks": false,
+    "overlay": {
+      "params": {
+        "target_vol_annualized": 0.1,
+        "short_lookback": 20,
+        "long_lookback": 60,
+        "blend": 0.5,
+        "cap_lo": 0.5,
+        "cap_hi": 1.5,
+        "retarget": "monthly",
+        "turnover_bps": 14.0,
+        "cost_policy": {
+          "cost_symbol": "ETHUSDT",
+          "is_perp": true,
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0,
+          "funding_windows_per_day": 3.0,
+          "held_exposure": 1.0,
+          "turnover_bps_charged": 14.0,
+          "turnover_bps_override": null,
+          "source": "execution_costs.resolve_cost_policy"
+        }
+      },
+      "data_start": "2023-02-12",
+      "data_end": "2026-10-31",
+      "baseline": {
+        "n_days": 169,
+        "total_return_r": 40.5969,
+        "sharpe_annualized": 1.8872,
+        "annualized_vol": 32.077119,
+        "max_drawdown_r": 21.9752
+      },
+      "vol_targeted": {
+        "n_days": 169,
+        "total_return_r": 21.38235,
+        "sharpe_annualized": 1.9786,
+        "annualized_vol": 16.114174,
+        "max_drawdown_r": 10.9876
+      },
+      "sharpe_delta": 0.0914,
+      "multiplier": {
+        "mean": 0.5059,
+        "min": 0.5,
+        "max": 1.0,
+        "n_periods": 45,
+        "n_periods_at_cap": 44,
+        "pct_periods_at_cap": 97.78
+      },
+      "total_turnover_cost_r": 0.0007,
+      "total_funding_cost_r": {
+        "baseline": 0.0507,
+        "vol_targeted": 0.02565
+      },
+      "run_date": "2026-11-20"
+    },
+    "block_detail": [
+      {
+        "block": 0,
+        "start": "2023-02-12",
+        "end": "2024-01-17",
+        "n_days": 39,
+        "sharpe_baseline": 1.6518,
+        "sharpe_targeted": 2.0858,
+        "dsharpe": 0.434
+      },
+      {
+        "block": 1,
+        "start": "2024-01-17",
+        "end": "2024-12-21",
+        "n_days": 36,
+        "sharpe_baseline": 4.3753,
+        "sharpe_targeted": 4.3753,
+        "dsharpe": 0.0
+      },
+      {
+        "block": 2,
+        "start": "2024-12-21",
+        "end": "2025-11-25",
+        "n_days": 42,
+        "sharpe_baseline": 4.1203,
+        "sharpe_targeted": 4.1203,
+        "dsharpe": 0.0
+      },
+      {
+        "block": 3,
+        "start": "2025-11-25",
+        "end": "2026-10-31",
+        "n_days": 52,
+        "sharpe_baseline": -2.8944,
+        "sharpe_targeted": -2.8944,
+        "dsharpe": 0.0
+      }
+    ],
+    "source": {
+      "trades": "/tmp/RQ-20261120-8ef8-01-44708139349/trend_donchian_eth_4h__trades.jsonl",
+      "symbol": "ETHUSDT",
+      "timeframe": "4h",
+      "harness": "trend",
+      "faithful": true,
+      "omitted_levers": [],
+      "candle_source": {
+        "path": "data/ETHUSDT_5m.csv",
+        "venue": "bybit_linear (trainer data/)",
+        "proxy": false,
+        "resampled_to": "4h",
+        "bars": 12457,
+        "first": "2021-03-15 00:00:00+00:00",
+        "last": "2026-11-20 00:00:00+00:00"
+      }
+    },
+    "rule_thresholds": {
+      "dsharpe_bar": 0.1,
+      "n_floor": 100,
+      "blocks": 4,
+      "block_majority": 3
+    }
+  }
+}
