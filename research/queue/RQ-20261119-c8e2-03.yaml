@@ -6,7 +6,7 @@
 id: RQ-20261119-c8e2-03
 title: 'LEVER-OFF ARM on current data: does the SHIPPED trail_decay on REAL-MONEY leg tlt_pullback_1h still earn
   its place (base with trail_decay removed vs the shipped_* cell restoring it at live values)?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -69,3 +69,24 @@ follows_from:
   run: '44582576728'
   reason: its sweep emitted no lever-off arm (all 25 rows kind=cell vs the live-lever base)
 last_dispatched_at: '2026-11-19T20:07:22+00:00'
+grading:
+  attested: RULE-EXIT-REFINEMENT-P2-GATE
+  auto: false
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261119-c8e2-03/44599554210.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'tlt_pullback_1h (REAL-MONEY leg), m20 sweep with trail_decay REMOVED from the base book vs the shipped_*
+    cell restoring it at live values (stall 6 / tight 1.5), OOS-trades split, tp_cap_pct 0.099. From the committed
+    run row (comms/research/RQ-20261119-c8e2-03/44599554210, measurement block; the cell-level IS/OOS numbers sit
+    in the m20 corpus row on branch claude/m20-sweep-corpus and were NOT re-derived here): base book 49 OOS trades
+    (floor 25 met), base net R OOS +14.86; cells swept 1, cells passed 0. A cell passes only if it clears Path A
+    or Path B in both IS and OOS; the single shipped cell did not, so under the registered rule the unit reads FAIL.
+    The unit''s own question text says a FAIL is a data-backed argument to retire the live lever, a Tier-3 decision
+    for the manager; this grade proposes no config change. Holdout from 2024-05-24 (56 base trades): no_discovery,
+    which only says no other cell was found there. Caveat: one cell swept, so the read is about this one shipped
+    geometry only.'
+  rows: 1
+  verdict: fail

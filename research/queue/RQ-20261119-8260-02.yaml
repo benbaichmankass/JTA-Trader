@@ -2,7 +2,7 @@
 id: RQ-20261119-8260-02
 title: 'CONFIRMATION of RQ-20261118-abab-25 on a DISJOINT window: does S_ASIA (--skip-hours=0..7) on ict_scalp_5m (BTCUSDT) beat the declared leg A again, on 2019-10-01..2021-11-13, net of the
   harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -121,3 +121,20 @@ related:
 - RQ-20261118-abab-25
 - research/levers/ict_scalp_5m.yaml
 last_dispatched_at: '2026-11-20T01:13:40+00:00'
+grading:
+  attested: RULERQ20261119826002
+  auto: false
+  decision_rule_id: RULERQ20261119826002
+  evidence:
+  - research/results/RQ-20261119-8260-02/44648962837.jsonl
+  graded_at: '2026-11-20'
+  graded_by: 'QUEUE-FILL-STANDING-W47b (session_01AFoLuM2HorU8WJofUCr5Nf): hand re-grade from the raw emits under
+    the unit''s registered rule'
+  reason: 'ict_scalp_5m, S_ASIA vs A, window 2019-12-31..2021-11-13 (the registered 2019-10-01 start precedes the
+    data), re-graded from arms/A__ and arms/S_ASIA__trades.jsonl: n(A) 265, n(S_ASIA) 189; net R -23.28 vs -42.46
+    (delta +19.18 against the 0.02 R x n(A) bar of 5.30); S_ASIA >= A in 6 of 6 folds; maxDD 27.80 vs 43.84 (cap
+    1.35x = 59.18). All registered clauses hold, so PASS: the abab-25 PASS is confirmed on a disjoint window. S_ASIA
+    is net-negative on both windows, so this is loss-cutting, not profit. The follow-up the rule names (live-producer
+    check plus a Tier-3 declare proposal) was done: PR #27624 is merged, with the live check tracked as PI-20261119-FILLW47B-0007.'
+  rows: 1
+  verdict: pass
