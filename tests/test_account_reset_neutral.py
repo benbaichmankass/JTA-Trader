@@ -6,8 +6,10 @@ exit_reason='account_reset' after the close ladder's rung-3 paper close-all
 USO close liquidated QQQ/SLV/GDX/IAUM/SPY/USO (alpaca_order_history). Those rows
 are collateral, so the readers must treat the label as neutral, like
 `exchange_reset_flat` and `entry_unfilled`:
-the mechanics grader (no clean, no fault), close attribution (not a strategy
-exit) and the KPI predicate (outside per-strategy denominators).
+the mechanics grader (no clean, no fault) and the KPI predicate (outside per-strategy
+denominators). Close attribution's NOT_STRATEGY_EXIT must equal the trader's
+ml_entry_live_monitor.OPERATIONAL_EXIT_REASONS (tests/runtime/test_ml_entry_live_monitor.py),
+so both gain account_reset together in the Tier-2 trader PR (PI-20261120-XGESYDCD-0001).
 """
 from __future__ import annotations
 
@@ -47,11 +49,6 @@ def test_neutral_row_does_not_reset_a_soak():
     reset = dict(soak_state.grade_trade(_row("account_reset")), id=2)
     assert clean["clean"] is True
     assert soak_state.evaluate([clean, reset], 1)["state"] == "passed"
-
-
-def test_close_attribution_calls_it_not_a_strategy_exit():
-    import real_money_close_attribution as rmca
-    assert rmca.bucket_for("account_reset")[0] == "b_not_strategy_exit"
 
 
 def test_kpi_predicate_drops_account_reset_and_keeps_strategy_exits():
