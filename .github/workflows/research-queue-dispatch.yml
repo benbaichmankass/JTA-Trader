@@ -674,7 +674,9 @@ jobs:
     # with the collector innocent. 255 = 3 x 80 + 15.
     # B6: 255 -> 25. No landing in this job waits for a merge any more (all three are deferred to the next cycle), so the
     # budget covers checkout + three PR openings only. Pinned by test_budget_covers_every_wait_in_the_job (0 waits).
-    timeout-minutes: 25
+    # AM-OPS-9 25 -> 40: plus two producer-side validations (results, stamps; scripts/ci/validate_before_land.py),
+    # each a few minutes of pytest, re-run once on the base when it fails (--baseline-ref).
+    timeout-minutes: 40
     env:
       # Read from the dispatch job, which owns THE ONE FIRE DECISION (see its env).
       # `inputs` is deliberately not consulted here: on a schedule event it is empty.
@@ -734,9 +736,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/research/collect_runner_results.py --prune-pending
 
+      # VALIDATE BEFORE LANDING (AM-OPS-9, manager 2026-11-19). Producer-side validation; enforces the existing
+      # never-land-red rule; respects the operator's 2026-11-12 PYTEST-RUN-REQUIRED: REPORT-ONLY decision; adds no
+      # merge-side gate. The readers of research/results + comms/research (scripts/ci/validate_before_land.py::
+      # PROFILES["research-results"]) run on the restored tree before the batch is committed. On a FAIL the batch is
+      # not landed this run (the next collect re-collects its runs, exactly as for a batch PR that did not merge),
+      # ONE pipeline item "PRODUCER VALIDATION FAILED [research-queue-dispatch/results]" is filed (deduplicated),
+      # and the step exits 0: no red run, no halt. --baseline-ref: a failure that ALSO fails on the checked-out base
+      # is main's own red, not this batch's, and does not hold the batch back.
+      - name: Install the validation test runner
+        run: pip install --quiet "pytest>=8.0"
+
+      - name: Validate the results batch before landing (producer-side, no merge-side gate)
+        id: validate_results
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != '' && steps.prune.outputs.count != '0'
+        env:
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
+        run: >-
+          python3 scripts/ci/validate_before_land.py --producer research-queue-dispatch/results
+          --profile research-results --baseline-ref "${BASE_SHA}"
+
       - name: Land the batch of runner results on main
         id: batch
-        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != '' && steps.prune.outputs.count != '0'
+        if: needs.dispatch.outputs.collect_count != '0' && needs.dispatch.outputs.collect_count != '' && steps.prune.outputs.count != '0' && steps.validate_results.outputs.ok == 'true'
         uses: ./.github/actions/commit-to-main
         with:
           # "false" (B6 / GH-CAPACITY-LAND-VERIFY-OFF-RUNNER, COMPUTE-ALLOCATION-2026-11-03 section 3.3): the in-run wait held a
@@ -881,10 +903,29 @@ jobs:
         if: env.FIRE == 'true'
         run: git checkout -q --detach "${BASE_SHA}"
 
+      # VALIDATE BEFORE LANDING (AM-OPS-9, manager 2026-11-19). Producer-side validation; enforces the existing
+      # never-land-red rule; respects the operator's 2026-11-12 PYTEST-RUN-REQUIRED: REPORT-ONLY decision; adds no
+      # merge-side gate. The readers of the stamped `last_dispatched_at` over research/queue (scripts/ci/
+      # validate_before_land.py::PROFILES["research-queue-stamps"]) run on the stamped tree before it is committed.
+      # On a FAIL the stamps are not landed this run, ONE pipeline item "PRODUCER VALIDATION FAILED
+      # [research-queue-dispatch/stamps]" is filed (deduplicated), and the step exits 0: no red run, no halt.
+      # ⚠️ An unlanded stamp lets its unit re-fire next cycle, so --baseline-ref is load-bearing here: a failure that
+      # ALSO fails on the checked-out base (main already red, e.g. tonight's RQ-20261119-031) does not hold the
+      # stamps back; only a failure THESE stamps introduce does.
+      - name: Validate the dispatch stamps before landing (producer-side, no merge-side gate)
+        id: validate_stamps
+        if: env.FIRE == 'true'
+        env:
+          WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
+        run: >-
+          python3 scripts/ci/validate_before_land.py --producer research-queue-dispatch/stamps
+          --profile research-queue-stamps --baseline-ref "${BASE_SHA}"
+
       - name: Land the dispatch stamps on main
         # Reads the SAME `FIRE` as the flag above. If these two can disagree, a
         # fired job goes unstamped and re-fires forever.
-        if: env.FIRE == 'true'
+        # AM-OPS-9: and only when the producer-side validation above passed (same FIRE condition, plus ok).
+        if: env.FIRE == 'true' && steps.validate_stamps.outputs.ok == 'true'
         uses: ./.github/actions/commit-to-main
         with:
           # "false" (B6): arrival is verified NEXT cycle. dispatch_queue.py treats a unit in a fresh open stamp PR as already
