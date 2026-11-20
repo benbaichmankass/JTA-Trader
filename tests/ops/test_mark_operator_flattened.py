@@ -203,3 +203,106 @@ def test_a_first_time_mark_records_where_its_prior_came_from(tmp_path):
     ups, _ = m.plan(conn, [4934], "x")
     assert json.loads(ups[0]["notes"])["pre_mark_exit_reason_source"] \
         == "trades.exit_reason"
+
+
+# ── --exit-reason account_reset (PI-20261120-XGESYDCD-0002) ─────────────────────────────────
+# The 2026-11-16 14:32:33Z paper close-all shape (alpaca_order_history): rows opened days before,
+# all closed by detectors within ~1 minute of each other.
+_RESET_ROWS = [
+    (7029, "IAUM", "stuck_strategy_watchdog", "2026-11-10T14:32:52+00:00", "2026-11-16T14:35:52+00:00"),
+    (7031, "GDX", "stuck_strategy_watchdog", "2026-11-10T14:43:32+00:00", "2026-11-16T14:35:52+00:00"),
+    (7131, "USO", "sl", "2026-11-12T19:04:00+00:00", "2026-11-16T14:35:52+00:00"),
+]
+
+
+def _reset_db(tmp_path, rows=_RESET_ROWS, account_class="paper", is_demo=1, account="alpaca_paper"):
+    c = _db(tmp_path)          # canonical schema (+ the unrelated fixture row 4934)
+    for tid, sym, er, opened, closed in rows:
+        c.execute("INSERT INTO trades (id, timestamp, symbol, direction, entry_price, position_size, status, "
+                  "exit_reason, notes, is_backtest, is_demo, account_class, account_id, created_at, closed_at, "
+                  "pnl, exit_price) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                  (tid, opened, sym, "short", 87.0, 10.0, "closed", er,
+                   json.dumps({"closed_by": "stuck_strategy_watchdog"}), 0, is_demo,
+                   account_class, account, opened, closed, 12.5, 80.26))
+    c.commit()
+    c.close()
+    return tmp_path / "j.db"
+
+
+def test_account_reset_plans_the_episode_and_writes_reversibly(tmp_path):
+    m = _mod()
+    p = _reset_db(tmp_path)
+    c = sqlite3.connect(p)
+    ups, refs = m.plan_account_reset(c, [7029, 7031, 7131], "11-16 paper close-all collateral")
+    assert refs == [] and [u["id"] for u in ups] == [7029, 7031, 7131]
+    n = m.apply(c, ups, m.ACCOUNT_RESET)
+    assert n == 3
+    for tid, _s, er, *_ in _RESET_ROWS:
+        reason, notes, pnl, px = c.execute(
+            "SELECT exit_reason, notes, pnl, exit_price FROM trades WHERE id=?", (tid,)).fetchone()
+        d = json.loads(notes)
+        assert reason == "account_reset" and d["closed_by_account_reset"] is True
+        assert d["pre_mark_exit_reason"] == er          # reversible
+        assert (pnl, px) == (12.5, 80.26)               # no monetary field touched
+    assert m.plan_account_reset(c, [7029, 7031, 7131], "again") == ([], [])   # idempotent
+
+
+def test_account_reset_refuses_real_money(tmp_path):
+    m = _mod()
+    p = _reset_db(tmp_path, account_class="real_money", is_demo=0, account="alpaca_live")
+    ups, refs = m.plan_account_reset(sqlite3.connect(p), [7029], "x")
+    assert ups == [] and any("not a paper row" in r for r in refs)
+
+
+def test_account_reset_refuses_rows_that_are_not_one_episode(tmp_path):
+    m = _mod()
+    rows = _RESET_ROWS[:2] + [(7202, "QQQ", "stuck_strategy_watchdog",
+                               "2026-11-13T16:30:00+00:00", "2026-11-16T16:00:00+00:00")]
+    p = _reset_db(tmp_path, rows=rows)
+    ups, refs = m.plan_account_reset(sqlite3.connect(p), [7029, 7031, 7202], "x")
+    assert ups == [] and any("not one close-all episode" in r for r in refs)
+
+
+def test_account_reset_refuses_a_row_opened_after_the_close(tmp_path):
+    m = _mod()
+    rows = _RESET_ROWS[:2] + [(7617, "GDX", "max_hold", "2026-11-16T20:04:00+00:00", "2026-11-16T14:36:00+00:00")]
+    p = _reset_db(tmp_path, rows=rows)
+    ups, refs = m.plan_account_reset(sqlite3.connect(p), [7029, 7031, 7617], "x")
+    assert ups == []
+    assert any("decision" in r for r in refs)          # max_hold is never overwritten
+
+
+def test_account_reset_refuses_a_decision_label(tmp_path):
+    m = _mod()
+    rows = [(7814, "GDX", "live_review_close", "2026-11-10T16:01:00+00:00", "2026-11-16T14:35:52+00:00")]
+    p = _reset_db(tmp_path, rows=rows)
+    ups, refs = m.plan_account_reset(sqlite3.connect(p), [7814], "x")
+    assert ups == [] and any("decision" in r for r in refs)
+
+
+def test_account_reset_cli_is_dry_run_without_apply_and_writes_a_row_backup_with_it(tmp_path):
+    p = _reset_db(tmp_path)
+    base = [sys.executable, str(SCRIPT), "--db", str(p), "--trade-ids", "7029,7031,7131",
+            "--reason", "collateral", "--exit-reason", "account_reset"]
+    out = subprocess.run(base, capture_output=True, text=True, cwd=REPO, check=False)
+    assert out.returncode == 0 and "DRY-RUN" in out.stdout, out.stdout + out.stderr
+    assert sqlite3.connect(p).execute("SELECT exit_reason FROM trades WHERE id=7029").fetchone()[0] \
+        == "stuck_strategy_watchdog"
+    out = subprocess.run(base + ["--apply"], capture_output=True, text=True, cwd=REPO, check=False)
+    assert out.returncode == 0 and "APPLIED: 3" in out.stdout, out.stdout + out.stderr
+    baks = list(tmp_path.glob("j.db.rows-mark-account-reset-*.json"))
+    assert len(baks) == 1 and len(json.loads(baks[0].read_text())["rows"]) == 3
+
+
+def test_wrapper_account_reset_mode_is_dry_run_unless_apply_true():
+    src = WRAPPER.read_text()
+    assert 'account_reset) ;;' in src and '"${ACTION_APPLY:-}" != "true"' in src
+
+
+def test_account_reset_refuses_a_detector_row_opened_after_the_earliest_close(tmp_path):
+    m = _mod()
+    rows = _RESET_ROWS[:2] + [(7700, "GDX", "stuck_strategy_watchdog",
+                               "2026-11-16T14:36:10+00:00", "2026-11-16T14:40:00+00:00")]
+    p = _reset_db(tmp_path, rows=rows)
+    ups, refs = m.plan_account_reset(sqlite3.connect(p), [7029, 7031, 7700], "x")
+    assert ups == [] and any("cannot be collateral" in r for r in refs)

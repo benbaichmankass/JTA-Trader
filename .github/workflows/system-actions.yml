@@ -2258,6 +2258,10 @@ jobs:
               exit 1
             fi
             REMOTE_CMD="ACTION_TRADE_ID=$(printf '%q' "${TRADE_ID}") ACTION_REASON=$(printf '%q' "${REASON}") ${REMOTE_CMD}"
+            if [ "${ACTION}" = "mark-operator-flattened" ]; then
+              # `target: account_reset` + `apply: true` (PI-20261120-XGESYDCD-0002); the wrapper validates both.
+              REMOTE_CMD="ACTION_TARGET=$(printf '%q' "${ACTION_TARGET:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+            fi
           fi
           if [ "${ACTION}" = "set-journal-trade-qty" ]; then
             # Shape-check only; set_journal_trade_qty.py owns every guard (open row, account/symbol match,

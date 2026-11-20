@@ -30,8 +30,12 @@ population (a ``std_dev`` / z-score with a zero denominator).
 from __future__ import annotations
 
 import json
+import logging
 import math
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Keys whose value we never trim or drop — consumers read these verbatim
 # (e.g. closed_flat_invariant + trades_closed extract `closed_at`). Trimming
@@ -116,6 +120,16 @@ _MAX_TRIM_ITERS = 200
 # protected set alone overflows. Timestamps, source stamps and flags are well
 # under it.
 _PROTECTED_PROSE_MIN_LEN = 64
+# Second pass (DUMP-CAPPED-DROPS-PROTECTED, 2026-11-20): when prose trimming is
+# not enough, protected PROSE (a value containing whitespace) is shortened down to
+# this many characters (plus the ellipsis) before any protected key is given up.
+_PROTECTED_STAMP_MIN_LEN = 16
+# When protected keys must be shed, these go LAST: the close's own timestamp and
+# provenance (closed_flat_invariant reads closed_at via json_extract; the cost and
+# exit sweeps branch on the *_source stamps).
+_PROTECTED_KEEP_LAST: frozenset[str] = frozenset({
+    "closed_at", "closed_by", "exit_price_source", "pnl_source", "exit_reason_source",
+})
 
 
 def sanitize_nonfinite(obj: Any) -> Any:
@@ -287,7 +301,52 @@ def _shrink_dict(
         s = _dumps(minimal, ensure_ascii)
         if len(s) <= max_len:
             return s
-    # Even the protected set overflows — emit the barest valid marker.
+    # DUMP-CAPPED-DROPS-PROTECTED (2026-11-20). This used to fall straight to the
+    # bare marker, deleting EVERY protected key at once. Measured on live trade
+    # 7131 (alpaca_paper USO, closed 2026-11-16, the paper close-all episode):
+    # its notes are exactly {"_truncated": true}, so the close's own provenance
+    # (closed_by, exit_price_source, pnl_source) is gone. Degrade gradually:
+    # (1) shorten protected PROSE, longest first, down to
+    # _PROTECTED_STAMP_MIN_LEN; (2) shed protected keys ONE at a time, the
+    # largest serialized value first, _PROTECTED_KEEP_LAST last; (3) only then the bare marker. Any
+    # protected loss is logged at WARNING with the key names, never silent.
+    for _ in range(_MAX_TRIM_ITERS):
+        key = None
+        longest = _PROTECTED_STAMP_MIN_LEN + len(_ELLIPSIS)
+        for k, v in minimal.items():
+            # PROSE only (it contains whitespace). An id, a timestamp or a source
+            # stamp is never cut: "2026-08-30T09:33…" breaks every reader that
+            # parses closed_at, so such a value is kept whole or dropped whole.
+            if isinstance(v, str) and len(v) > longest and any(c.isspace() for c in v):
+                key, longest = k, len(v)
+        if key is None:
+            break
+        cur = minimal[key]
+        new_len = max(_PROTECTED_STAMP_MIN_LEN, min(len(cur) - 8, len(cur) // 2))
+        minimal[key] = cur[:new_len] + _ELLIPSIS
+        s = _dumps(minimal, ensure_ascii)
+        if len(s) <= max_len:
+            return s
+    dropped: list[str] = []
+    while True:
+        cands = [k for k in minimal if k != "_truncated"]
+        if not cands:
+            break
+        drop = max(cands, key=lambda k: (k not in _PROTECTED_KEEP_LAST,
+                                         len(_dumps({k: minimal[k]}, ensure_ascii)), k))
+        minimal.pop(drop)
+        dropped.append(drop)
+        s = _dumps(minimal, ensure_ascii)
+        if len(s) <= max_len and len(minimal) > 1:
+            logger.warning(
+                "dump_capped: protected key(s) %s dropped to fit max_len=%d "
+                "(kept %s); raise the cap at this call site", dropped, max_len,
+                sorted(k for k in minimal if k != "_truncated"))
+            return s
+    # Even the protected set overflows — emit the barest valid marker, loudly.
+    logger.warning(
+        "dump_capped: EVERY protected key lost (%s) — max_len=%d cannot hold "
+        "even the smallest; raise the cap at this call site", dropped, max_len)
     return _dumps({"_truncated": True}, ensure_ascii)
 
 

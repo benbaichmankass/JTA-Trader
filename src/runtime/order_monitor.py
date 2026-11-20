@@ -11658,6 +11658,85 @@ def _note_protection_unreadable(account_id: str, symbol: str, trade_id: Any,
                          account_id, symbol)
 
 
+def _venue_read_cache_wrap(account_id: str, client):
+    """The client the equity sweep uses: serves the unlocked prefetch's reads while the venue generation
+    is unchanged (src/runtime/venue_read_cache.py), else the client itself. Never raises."""
+    try:
+        from src.runtime import venue_read_cache
+        return venue_read_cache.wrap(account_id, client)
+    except Exception:  # noqa: BLE001
+        return client
+
+
+def _prefetch_equity_sweep_reads(db):
+    """The equity naked sweep's per-row venue READS, made WITHOUT journal_sync (LIVE-TICK-NEAR-BUDGET).
+
+    Mirrors the reads `_check_broker_naked_equity_positions` makes first for each row it grades:
+    `protection_state(symbol, since=...)`, the account's `positions()`, and `protection_coverage(...)` for a
+    held symbol, with the same arguments, so the locked body can be served from them while no venue write
+    or dispatch has happened since. It skips what the body skips (non-Alpaca, in grace, no symbol, an
+    active close). Returns the cache, or None on any failure (the body then reads live, as before).
+    Places, amends and cancels nothing.
+    """
+    try:
+        from src.bot import data_loaders
+        from src.runtime import venue_read_cache
+        from src.units.accounts.clients import alpaca_client_for
+
+        accounts = data_loaders.list_accounts() or []
+        acc_by_id = {str(a.get("account_id")): a for a in accounts
+                     if str(a.get("exchange", "")).lower() == "alpaca"}
+        if not acc_by_id:
+            return None
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = conn.execute(
+                "SELECT id, account_id, symbol, created_at FROM trades "
+                "WHERE status='open' AND COALESCE(is_backtest,0)=0").fetchall()
+        finally:
+            conn.close()
+        cache = venue_read_cache.Cache()
+        now = datetime.now(timezone.utc)
+        recs: Dict[str, Any] = {}
+        positions: Dict[str, Any] = {}
+        done: set = set()
+        for row in rows:
+            account_id = str(row["account_id"] or "")
+            symbol = str(row["symbol"] or "")
+            if account_id not in acc_by_id or not symbol or (account_id, symbol) in done:
+                continue
+            created = _parse_created_at(row["created_at"])
+            if created is not None and (now - created).total_seconds() < _NAKED_POSITION_GRACE_SECONDS:
+                continue
+            if is_active_close(account_id, symbol):
+                continue
+            done.add((account_id, symbol))
+            if account_id not in recs:
+                client = alpaca_client_for(acc_by_id[account_id])
+                recs[account_id] = cache.recorder(account_id, client) if client is not None else None
+            rec = recs[account_id]
+            if rec is None:
+                continue
+            since = _oldest_open_created_at(rows, account_id, symbol)
+            try:
+                if rec.protection_state(symbol, since=since) is None:
+                    continue
+                if account_id not in positions:
+                    snap = rec.positions()
+                    positions[account_id] = (None if snap is None
+                                             else {str(p.get("symbol") or "").upper(): p for p in snap})
+                by_sym = positions[account_id]
+                if by_sym and by_sym.get(symbol.upper()) is not None:
+                    rec.protection_coverage(symbol, position=by_sym[symbol.upper()], since=since)
+            except Exception:  # noqa: BLE001 - a failed prefetch read is simply not cached
+                continue
+        return cache
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("equity sweep prefetch skipped: %s", exc)
+        return None
+
+
 def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
     """Re-arm GTC protection on Alpaca positions that are NAKED at the broker.
 
@@ -11871,7 +11950,8 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
             continue
         try:
             if account_id not in clients:
-                clients[account_id] = alpaca_client_for(acc_by_id[account_id])
+                clients[account_id] = _venue_read_cache_wrap(
+                    account_id, alpaca_client_for(acc_by_id[account_id]))
             client = clients[account_id]
             if client is None:
                 summary["no_client"] += 1
@@ -18848,6 +18928,20 @@ def _recon_phase(name: str):
             yield
 
 
+@contextlib.contextmanager
+def _unlocked_read_phase(name: str):
+    """A reconciliation phase timed into the tick-cost split but deliberately NOT under ``journal_sync``.
+
+    For READ-ONLY venue prefetches only (LIVE-TICK-NEAR-BUDGET, #27669): the equity sweep's reads are made
+    off the lock, and the locked body uses them only while the venue generation is unchanged
+    (src/runtime/venue_read_cache.py), so a write or dispatch in between forces live reads under the lock.
+    Nothing that places, amends, cancels or writes the journal may run here.
+    tests/test_reconcile_offtick.py allow-lists the names that may use it, so a new unlocked phase fails CI.
+    """
+    with _phase(name):
+        yield
+
+
 def run_reconciliation_tick(
     *,
     db_path: Optional[str] = None,
@@ -19196,8 +19290,22 @@ def run_reconciliation_tick(
     # cancelled at the RTH close, so it is broker-naked yet invisible to the
     # DB-driven check above. This re-arms a GTC OCO for any such position.
     try:
-        with _recon_phase("check_broker_naked_equity_positions"), _venue_snapshot_batch():
+        # The sweep's venue READS run first WITHOUT journal_sync; the locked body uses them only while the
+        # venue generation is unchanged (src/runtime/venue_read_cache.py, LIVE-TICK-NEAR-BUDGET).
+        # Its own tick-cost phase, timed but NOT under journal_sync (`_phase`, not `_recon_phase`), so the AFTER
+        # read shows what the prefetch costs off the lock (tests/test_order_monitor_phase_split.py).
+        _eq_cache = None
+        with _unlocked_read_phase("prefetch_equity_sweep_reads"):
+            _eq_cache = _prefetch_equity_sweep_reads(db)
+        try:
+            from src.runtime.venue_read_cache import active as _vrc_active
+        except Exception:  # noqa: BLE001
+            _vrc_active = None
+        _eq_ctx = _vrc_active(_eq_cache) if _vrc_active is not None else contextlib.nullcontext()
+        with _recon_phase("check_broker_naked_equity_positions"), _venue_snapshot_batch(), _eq_ctx:
             broker_naked_summary = _check_broker_naked_equity_positions(db)
+        if _eq_cache is not None:
+            logger.info("equity sweep venue prefetch: %s", _eq_cache.stats())
         # ONE line per sweep with EVERY outcome counter, zeros included — the
         # only place these are observable. The `summaries` dict below is
         # returned to src/main.py's exit loop, which discards it (measured
