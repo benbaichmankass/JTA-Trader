@@ -4255,32 +4255,6 @@ def _reset_suspect_note_read_failure(aid: str) -> None:
         _reset_suspect_maybe_flag(aid)
 
 
-#: Close label for a row whose ENTRY ORDER ended at the venue without ever filling
-#: (ENTRY-UNFILLED-LABEL, 2026-11-19; alpaca_options_paper SLV trade 8034: a DAY mleg
-#: limit that expired unfilled, closed as exchange_flat_reconciled and then graded a
-#: close fault). Not a trade decision of the leg: neutral in soak_state, a
-#: not-strategy-exit in close attribution, never priced by the local-PnL sweep.
-ENTRY_UNFILLED_EXIT_REASON = "entry_unfilled"
-
-
-def _entry_never_filled(cfg: Any, entry_order_id: Any) -> bool:
-    """True only on a POSITIVE venue read: terminal entry order, ``filled_qty`` exactly 0.
-
-    Fails closed: no real order id, an integration that cannot answer, a read failure,
-    an unknown (404) order, an ambiguous status, or any fill at all -> ``False`` (the
-    caller keeps its existing label). Never raises.
-    """
-    oid = str(entry_order_id or "").strip()
-    if not oid or not _is_real_order_id(oid):
-        return False
-    try:
-        from src.units.accounts.clients import account_entry_order_unfilled
-        return account_entry_order_unfilled(cfg, oid) is True
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("_entry_never_filled: order %s read raised: %s", oid, exc)
-        return False
-
-
 def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     """Why a row whose symbol reads FLAT must stay OPEN because of its entry order.
 
@@ -4329,6 +4303,32 @@ def _entry_order_hold(cfg: Any, entry_order_id: Any) -> Optional[str]:
     if state is None:
         return "unreadable"
     return None
+
+
+#: Close label for a row whose ENTRY ORDER ended at the venue without ever filling
+#: (ENTRY-UNFILLED-LABEL, 2026-11-19; alpaca_options_paper SLV trade 8034: a DAY mleg
+#: limit that expired unfilled, closed as exchange_flat_reconciled and then graded a
+#: close fault). Not a trade decision of the leg: neutral in soak_state, a
+#: not-strategy-exit in close attribution, never priced by the local-PnL sweep.
+ENTRY_UNFILLED_EXIT_REASON = "entry_unfilled"
+
+
+def _entry_never_filled(cfg: Any, entry_order_id: Any) -> bool:
+    """True only on a POSITIVE venue read: terminal entry order, ``filled_qty`` exactly 0.
+
+    Fails closed: no real order id, an integration that cannot answer, a read failure,
+    an unknown (404) order, an ambiguous status, or any fill at all -> ``False`` (the
+    caller keeps its existing label). Never raises.
+    """
+    oid = str(entry_order_id or "").strip()
+    if not oid or not _is_real_order_id(oid):
+        return False
+    try:
+        from src.units.accounts.clients import account_entry_order_unfilled
+        return account_entry_order_unfilled(cfg, oid) is True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_entry_never_filled: order %s read raised: %s", oid, exc)
+        return False
 
 
 def _reverify_reset_suspect_row(
