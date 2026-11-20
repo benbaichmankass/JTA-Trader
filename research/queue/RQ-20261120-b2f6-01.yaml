@@ -1,6 +1,6 @@
 id: RQ-20261120-b2f6-01
 title: 'IB-vs-DUKASCOPY FEED ADEQUACY for ict_scalp_mgc_15m: is the XAU_USD spot proxy adequate, measured on the leg''s own IB bars? (PI-20261120-FILLW47B-0014)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -98,3 +98,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-11-20T10:42:59+00:00'
+grading:
+  attested: RULE-RQ20261120B2F601-MGC-IB-PROXY-ADEQUACY
+  auto: true
+  decision_rule_id: RULE-RQ20261120B2F601-MGC-IB-PROXY-ADEQUACY
+  evidence:
+  - research/results/RQ-20261120-b2f6-01/44720631311.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

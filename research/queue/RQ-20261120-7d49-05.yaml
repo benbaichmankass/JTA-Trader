@@ -4,7 +4,7 @@
 id: RQ-20261120-7d49-05
 title: 'VARIANT (unit-free target): does vol-target SIZING with a trailing-median target improve trend_donchian_eth_prop''s net Sharpe by >= +0.10 without
   a worse drawdown, in >= 3 of 4 calendar blocks?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -140,3 +140,16 @@ iteration:
     changed: --target-mode trailing_median (target = the book''s own expanding median vol estimate at period starts, past returns only), so the multiplier
     moves around 1. Leg, window, overlay lookbacks, caps, retarget, costs and all thresholds are unchanged (PI-20261120-H58PIBEE-0003).'
 last_dispatched_at: '2026-11-20T12:23:01+00:00'
+grading:
+  attested: RULE-RQ202611208ef803-VOLTARGET-SIZING-TRAILMED
+  auto: true
+  decision_rule_id: RULE-RQ202611208ef803-VOLTARGET-SIZING-TRAILMED
+  evidence:
+  - research/results/RQ-20261120-7d49-05/44734615499.jsonl
+  graded_at: '2026-11-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
