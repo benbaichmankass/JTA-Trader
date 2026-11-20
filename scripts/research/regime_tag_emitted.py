@@ -65,6 +65,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from candle_io import load_candles as _load  # type: ignore  # noqa: E402
 from candle_io import resample_ohlcv as _resample  # type: ignore  # noqa: E402
+from candle_io import entry_bar_locator as _entry_bar_locator  # type: ignore  # noqa: E402
 from regime_matrix import (  # type: ignore  # noqa: E402
     _CHOP_MAX,
     _TREND_MIN,
@@ -154,12 +155,13 @@ def annotate_trades_with_regime(trades: List[Dict[str, Any]], adx: pd.Series,
     label against) — the count is reported by the caller via the difference.
     """
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    locate, _bar_mode = _entry_bar_locator(ts, [pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce") for t in trades])
     out: List[Dict[str, Any]] = []
     for t in trades:
         et = pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce")
         if et is pd.NaT:
             continue
-        idx = ts.searchsorted(et, side="right") - 1  # nearest bar at/just-before entry
+        idx = locate(et)  # causal bar for this entry (candle_io.entry_bar_locator)
         a = float(adx.iloc[idx]) if 0 <= idx < len(adx) else float("nan")
         tagged = dict(t)
         tagged["regime"] = _regime(a)
@@ -262,12 +264,13 @@ def boundary_exposure(trades: List[Dict[str, Any]], adx: pd.Series, df: pd.DataF
     quote it. It is deliberately NOT used to suppress or alter any number.
     """
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    locate, _bar_mode = _entry_bar_locator(ts, [pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce") for t in trades])
     rows: List[Dict[str, Any]] = []
     for t in trades:
         et = pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce")
         if et is pd.NaT:
             continue
-        idx = ts.searchsorted(et, side="right") - 1
+        idx = locate(et)  # causal bar for this entry (candle_io.entry_bar_locator)
         a = float(adx.iloc[idx]) if 0 <= idx < len(adx) else float("nan")
         if a != a:  # NaN — no bar to judge, counted but never called "safe"
             rows.append({"adx": None, "dist": None, "near": False, "unknown": True,
@@ -398,6 +401,7 @@ def tag_emitted_by_regime(trades: List[Dict[str, Any]], adx: pd.Series,
     harness's JSONL.
     """
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    locate, _bar_mode = _entry_bar_locator(ts, [pd.to_datetime(t.get("entry_time"), utc=True, errors="coerce") for t in trades])
     by: Dict[str, Dict[str, Any]] = {}
     skipped = 0
     for t in trades:
@@ -405,7 +409,7 @@ def tag_emitted_by_regime(trades: List[Dict[str, Any]], adx: pd.Series,
         if et is pd.NaT:
             skipped += 1
             continue
-        idx = ts.searchsorted(et, side="right") - 1  # nearest bar at/just-before entry
+        idx = locate(et)  # causal bar for this entry (candle_io.entry_bar_locator)
         a = float(adx.iloc[idx]) if 0 <= idx < len(adx) else float("nan")
         reg = _regime(a)
         direction = str(t.get("direction", "?")).lower()
