@@ -182,4 +182,11 @@ amendments:
       row predates the fix and measured a different bar size). Rule, arms, folds, thresholds, cost stack and rows unchanged; the fixed driver records candle_source {path, resampled_to,
       bars} per leg, which the grader reads (resampled_to 1h for 5m/15m files) before any clause. Prior grade, kept for the record: verdict fail graded 2026-11-19 by lane ML-PRIMARY-12
       (session_01AFoLuHgkz5UrjVmZX2nyZC), HELD for the manager; scripts/research/queue_grade.py auto-grade on main concurs (verdict fail, all rows measured).'
-rearmed_at: '2026-11-19T21:45:00+00:00'
+- at: '2026-11-20T01:19:00+00:00'
+  before_any_run: true
+  by: lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1)
+  text: 'RE-ARM (rule, arms, thresholds unchanged): rearmed_at moved from 2026-11-19T21:45Z to this PR''s time because the harness _resample built the 5m/15m->1h
+    frame on a grid shifted by one sub-bar (label/closed right; PI-20261120-7ITMUEB1-0001), and load_resolved_frame (#27491) uses it. Measured on the trainer (relay
+    #27551): trend_donchian_eth on the shifted grid n 465, -35.73 R vs native 1h n 451, +4.26 R. Any row landed before this rearmed_at ran on that grid and is not
+    evidence for this unit.'
+rearmed_at: '2026-11-20T01:19:00+00:00'

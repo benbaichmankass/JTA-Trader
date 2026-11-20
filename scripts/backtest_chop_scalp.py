@@ -115,8 +115,11 @@ def _norm_rule(rule: str) -> str:
 
 
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    # OPEN-stamped buckets [T, T+rule) labelled T, the grid of the native exchange files (PI-20261120-7ITMUEB1-0001,
+    # 2026-11-20). label/closed='right' put the sub-bars opened T-55m..T in the 1h bar labelled T (true close T+5m):
+    # left/left reproduced 199,185 of 199,259 native ETHUSDT 15m bars from 5m, right/right 4 (trainer relay #27551).
     out = (df.set_index("timestamp")
-           .resample(_norm_rule(rule), label="right", closed="right")
+           .resample(_norm_rule(rule), label="left", closed="left")
            .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
            .dropna().reset_index())
     return out
