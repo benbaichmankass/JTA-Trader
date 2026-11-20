@@ -1,22 +1,24 @@
 {
   "id": "RM-AM-ADA-TPX",
   "title": "ada_pullback_2h: TP-revision mechanic (tp_extend X6 anchored at 4R) - unit RQ-20261028-a7c3-01, then Tier-3 declare on bybit_2 + bybit_portfolio + bybit_1 if it passes",
-  "phase": null,
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "dropped",
+  "owner": "FRONTIER-RESEARCH (session_01AFoLuMfGoUaVmVtfzXaKEK)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Evidence state: trail 5x ATR (stop 1.5x) is the only in-trade mechanic; TP 4R reachable (guard reach 0.241, n 253) but tp_revision fails (rule_undeclared). Unit RQ-20261028-a7c3-01 (pre-registered 2026-10-28, cpu_light ~25 min) settles it. On PASS + doctrine read: exact diff = add under ada_pullback_2h in config/strategies.yaml 'tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}'; one revertible PR; operator approval needed (real money; not a data-backed promotion, a doctrine-compliance change that the unit shows P&L-neutral). Revert = delete the block. Also open, not proposed: vol_trail vt_hot90_t2.5 passed_unshipped (fresh-holdout unit RQ-20260930-901 queued) and the loss-cut unit P1-Q4-desk-losscut-ada-pb (#20994). [2026-11-04 lane TP-REALMONEY-UNITS] HELD-OUT FAIL: RQ-20261104-c6f1-01. X41 (= the a7c3-01 cell) won discovery but lost the held-out span, 32.73 vs 36.29 R (n 85/87). The a7c3-01 pass is not confirmed out of sample, so the declare loses its basis (PR #22999).",
-  "updated_at": "2026-11-04T22:48:12Z",
-  "updated_by": "session_01AFoLuMRyM6AERSLy3HFeHR",
   "roadmap": [
     "L-ATM"
   ],
-  "due_by": "2026-11-11",
-  "_seq": 768
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "_seq": 768,
+  "note": "Evidence state: trail 5x ATR (stop 1.5x) is the only in-trade mechanic; TP 4R reachable (guard reach 0.241, n 253) but tp_revision fails (rule_undeclared). Unit RQ-20261028-a7c3-01 (pre-registered 2026-10-28, cpu_light ~25 min) settles it. On PASS + doctrine read: exact diff = add under ada_pullback_2h in config/strategies.yaml 'tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}'; one revertible PR; operator approval needed (real money; not a data-backed promotion, a doctrine-compliance change that the unit shows P&L-neutral). Revert = delete the block. Also open, not proposed: vol_trail vt_hot90_t2.5 passed_unshipped (fresh-holdout unit RQ-20260930-901 queued) and the loss-cut unit P1-Q4-desk-losscut-ada-pb (#20994). [2026-11-04 lane TP-REALMONEY-UNITS] HELD-OUT FAIL: RQ-20261104-c6f1-01. X41 (= the a7c3-01 cell) won discovery but lost the held-out span, 32.73 vs 36.29 R (n 85/87). The a7c3-01 pass is not confirmed out of sample, so the declare loses its basis (PR #22999). 2026-11-14 FRONTIER-RESEARCH (row reassigned from archived AM-TRADING, manager 14:05Z): DROPPED. Known doctrine gap kept on record: check_tp_doctrine reads FAIL:tp_revision for ada_pullback_2h on bybit_2 + bybit_portfolio. No unit for now (real money; the held-out evidence leans against tp_extend).",
+  "phase": null,
+  "terminal_reason": "held-out RQ-20261104-c6f1-01 FAIL (X41 32.73R vs B 36.29R): the a7c3-01 tp_extend pass did not confirm out of sample, so the declare has no basis. The entry TP 4R stays declared and reachable, and the 2026-11-14 ADA trade closed at it. tp_revision guard FAIL left as a known doctrine gap.",
+  "updated_at": "2026-11-14T14:08:49Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK",
+  "week_lane": "surge"
 }

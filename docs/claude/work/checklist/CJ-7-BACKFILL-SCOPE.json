@@ -1,33 +1,34 @@
 {
   "id": "CJ-7-BACKFILL-SCOPE",
   "title": "Claude->ML: SCOPE backfilling Claude analyses for ALL past trades (1,823 historical closed trades first; optional backtest-ledger sample): blind-grade + reconstructed real-time-style analysis at decision points, point-in-time inputs, cost from the CJ-3 pilot, ordering by value, total pp and weeks at the agreed cap, what to backfill first",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": null,
   "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "priority_rank": 6,
   "ceiling_usd": 4,
   "spend_usd": 12.37,
-  "tier": 1,
   "prs": [],
   "blocked_on": [
     "CJ-3-BLIND-GRADE-PILOT"
   ],
-  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Operator, verbatim: \"plus scoping on backfilling Claude analyses for all past trades\". Scope doc + numbers only; the backfill itself is a follow-up row sized by this scope and the operator's cap. [2026-10-26 07:08Z manager] Operator restated the backfill ask and widened it to a standing offline training-session flow (verbatim on DESK-15-ENTRY-GENERATION); DESK-15 design v1 reconciles this row with that flow. [2026-10-26 manager] Per design v1 \u00a7 4C.2: scope covers in-trade, exit and post-trade on the 1,823 historical trades, not post-trade grades alone. Caveat: most predate the judge model's knowledge cutoff (pre_cutoff: true) -> may TRAIN a student, never VALIDATE one; gates run on post-cutoff history and forward shadow rows. [2026-10-26 lane CJ-7-BACKFILL session_01NH39kinEyygRPN4ALst35n] TIER A BACKFILL RUN under the operator cap ('$15 once + $3/week'): 567 new packages (decided >= 2026-07-01; the pilot's 695 counted any date, 78 older NOT graded) blind-graded, 496 revealed; stores now 617 blind / 546 revealed, validate 0 problems. spend_usd 12.37 = grader sessions only (MEASURED usage.cost_usd: blind 6.43, reveal kept 4.68, 8 reveal sessions stopped by an API safeguard 1.25); 0 passes rejected. 71 packets lack reveal (safeguard error on b07 and b06a) -> pipeline row. Report + run records: comms/claude_judgments/backfill/tier-a/. Weekly $3 routine text PROPOSED in REPORT.md \u00a7 5, NOT created. n>=150 diagnostic: all-617 Spearman of blind p_win vs net R = -0.39 [-0.46,-0.32] is an ARTIFACT of 148 packages with risk_atr<1 whose net R is on a tiny basis (pipeline row filed); on the 469 clean packages expected_r +0.117 [+0.026,+0.205], p_win -0.028, strategy confidence +0.025 (exploratory threshold, NOT CJ-4). Closes when the weekly routine has run once under the $3 cap and CJ-4 label rule is registered. Landing PR self-land Tier 1. CJ7 weekly 2026-10-28: +12 blind, +48 reveals (recovered from the 71); 35 reveals still missing (23 old r07 + 12 new) - first job of next weekly run, 17-18 packets/session, inputs on orphan branches cj7-weekly-20261028/{rv-r07-2,rv-r07-3,new-reveal}. Grader 1.77 USD measured; per-session overhead dominates, use 24-48 packets/session. See comms/claude_judgments/backfill/weekly-20261028/run.json.",
-  "priority_rank": 6,
-  "updated_at": "2026-10-28T20:34:45Z",
-  "updated_by": "session_01AFoLuKHJQ8u6wJTV9ddbJS",
-  "roadmap": [
-    "M25"
-  ],
+  "due_by": "2026-11-19",
+  "_seq": 669,
+  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Operator, verbatim: \"plus scoping on backfilling Claude analyses for all past trades\". Scope doc + numbers only; the backfill itself is a follow-up row sized by this scope and the operator's cap. [2026-10-26 07:08Z manager] Operator restated the backfill ask and widened it to a standing offline training-session flow (verbatim on DESK-15-ENTRY-GENERATION); DESK-15 design v1 reconciles this row with that flow. [2026-10-26 manager] Per design v1 \u00a7 4C.2: scope covers in-trade, exit and post-trade on the 1,823 historical trades, not post-trade grades alone. Caveat: most predate the judge model's knowledge cutoff (pre_cutoff: true) -> may TRAIN a student, never VALIDATE one; gates run on post-cutoff history and forward shadow rows. [2026-10-26 lane CJ-7-BACKFILL session_01NH39kinEyygRPN4ALst35n] TIER A BACKFILL RUN under the operator cap ('$15 once + $3/week'): 567 new packages (decided >= 2026-07-01; the pilot's 695 counted any date, 78 older NOT graded) blind-graded, 496 revealed; stores now 617 blind / 546 revealed, validate 0 problems. spend_usd 12.37 = grader sessions only (MEASURED usage.cost_usd: blind 6.43, reveal kept 4.68, 8 reveal sessions stopped by an API safeguard 1.25); 0 passes rejected. 71 packets lack reveal (safeguard error on b07 and b06a) -> pipeline row. Report + run records: comms/claude_judgments/backfill/tier-a/. Weekly $3 routine text PROPOSED in REPORT.md \u00a7 5, NOT created. n>=150 diagnostic: all-617 Spearman of blind p_win vs net R = -0.39 [-0.46,-0.32] is an ARTIFACT of 148 packages with risk_atr<1 whose net R is on a tiny basis (pipeline row filed); on the 469 clean packages expected_r +0.117 [+0.026,+0.205], p_win -0.028, strategy confidence +0.025 (exploratory threshold, NOT CJ-4). Closes when the weekly routine has run once under the $3 cap and CJ-4 label rule is registered. Landing PR self-land Tier 1. CJ7 weekly 2026-10-28: +12 blind, +48 reveals (recovered from the 71); 35 reveals still missing (23 old r07 + 12 new) - first job of next weekly run, 17-18 packets/session, inputs on orphan branches cj7-weekly-20261028/{rv-r07-2,rv-r07-3,new-reveal}. Grader 1.77 USD measured; per-session overhead dominates, use 24-48 packets/session. See comms/claude_judgments/backfill/weekly-20261028/run.json. 2026-11-16 15:15Z OPERATOR DECISION (popup, verbatim answer): \"Pause it\" \u2014 the weekly blind-grade backfill (reset_protocol job cj7-weekly) is PAUSED: the Wed 11-18 reset must NOT dispatch cj7-weekly; the operator decides keep/stop after the reset. Context: CJ-4 unit RQ-20261116-089f-01 FAILED (blind grade_score vs net R rho -0.183, CI [-0.258,-0.101], n 707). Manager caveat for that decision: the 10-26 tier-A diagnostic found the all-617 negative correlation was an ARTIFACT of 148 packages with risk_atr<1 (tiny R basis); whether the 089f-01 harness excluded them is unverified \u2014 a sensitivity read excluding risk_atr<1 is requested before the post-reset decision (it does not change the registered verdict). 2026-11-16 ~15:20Z OPERATOR (verbatim): \"We can retire when an alternative is in place\". Manager reading: the weekly blind-grade backfill is NOT retired on the 089f-01 FAIL; it stays paused through the Wed 11-18 reset (operator's 'Pause it'), then RESUMES at its weekly cadence (cj7-weekly) and is retired only once an alternative label source is in place and validated. Follow-through: row CJ-LABEL-ALTERNATIVE (iterate the grading design / an alternative teacher label, validated by the same CJ-4 rule). 2026-11-16 ~15:25Z OPERATOR CLARIFICATION (verbatim): \"Paused nit retired, until there's a replacement\" (read: 'Paused, not retired, until there's a replacement'). SUPERSEDES the manager's earlier reading. The weekly blind-grade backfill (reset job cj7-weekly) stays PAUSED \u2014 NOT dispatched at any reset \u2014 and is NOT retired, until a replacement label source (row CJ-LABEL-ALTERNATIVE) is in place. No resume after the 11-18 reset. 2026-11-18 AM-OPS-2: CJ-7 weekly (cj7-weekly in config/reset_protocol.yaml) is PAUSED UNTIL A REPLACEMENT EXISTS: operator 2026-11-16, as relayed by the manager: 'Paused nit retired, until there's a replacement'. The reset protocol now honours paused: true + paused_reason (PR am-ops-2/reset-protocol-paused): reset_protocol.py --plan lists it '(not dispatched) cj7-weekly: PAUSED: ...' and a paused job supersedes nothing. Resume = set paused: false (or delete the two keys).",
   "observation": {
-    "what": "the weekly CJ-7 forward-grade routine has run once under the $3 cap and the CJ-4 net-R label rule is registered",
+    "due_by": "2026-11-09",
     "how_to_check": "ls comms/claude_judgments/backfill/ and python3 scripts/ops/blind_grade.py validate; pipeline row on the CJ-4 label hazard closed",
-    "due_by": "2026-11-09"
+    "what": "the weekly CJ-7 forward-grade routine has run once under the $3 cap and the CJ-4 net-R label rule is registered"
   },
+  "phase": null,
+  "updated_at": "2026-11-18T19:06:47Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a",
   "writeback": {
-    "roadmap": "docs/roadmap/milestones.yaml M25 where: CJ-7 tier A line (2026-10-26)",
-    "arch": "ARCHITECTURE-CANONICAL.md \u00a7 AI-traders training workflow step 1: backfill rows and the net-R label caveat"
-  },
-  "_seq": 669
+    "arch": "ARCHITECTURE-CANONICAL.md \u00a7 AI-traders training workflow step 1: backfill rows and the net-R label caveat",
+    "roadmap": "docs/roadmap/milestones.yaml M25 where: CJ-7 tier A line (2026-10-26)"
+  }
 }

@@ -1,0 +1,21 @@
+{
+  "id": "MGR-HANDOFF-2026-11-11",
+  "title": "Manager handoff 2026-11-09a -> successor at the 2026-11-11 reset",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "HANDOFF from Manager Session 2026-11-09a (session_01AFoLuKgeM4bM8AQqUfQZjE, ~710k tokens) at 2026-11-11 ~18:12Z.\nRESET 2026-11-11 status: throttle lifted. Done by 09a: research-ops trig_01UnRpzN513KbMjvJWFAf911 back to '47 2,8,14,20 * * *'; assistant check-in trig_01HxRVXSy6GGqWaWQXmGdJ97 RE-ENABLED (18:02Z); 3h check-in trig_012jBkNF9ihZ8S1mF46PAa83 rewritten (throttle dropped, 3 standing lanes); daily review trig_01EQ6ttLabP7KvosLJnyEZVg rewritten (cut dropped, 4b = general lane drains backlog); 18:10Z one-shot deleted after its steps were done by hand. NOT DONE: (0) reset receipt 'started' was written locally but direct push to main is refused (protected branch) - land it via PR, then (2) sweep (reset_protocol.py --sweep), (3) dispatch the 7 due jobs from reset_protocol.py --plan 2026-11-11T18:00Z at their offsets (weekly-audit 18:31Z; perf-review-prep, ml-frontier-prep, practice-refresh 18:53Z; health-review 19:11Z; programme-review 19:29Z; cj7-weekly 20:13Z), (5) complete receipt + one send-ping line.\nREBIND to the successor: trig_012jBkNF9ihZ8S1mF46PAa83 (3h check-in), trig_01EQ6ttLabP7KvosLJnyEZVg (daily review), and the report triggers lanes fire (they target the manager seat): trig_012iEP8gw2semYs8ABdS4QkD (LTR reports), trig_01Fy9mgQD58638DyHz4JDRbg (standing lanes), trig_01RDPpkrHzP7rnuaCk79rKNd (FULL-POOL build), trig_01Hkdom616uL1ucegsieMkRP (security), trig_011K1L9cixuWMAgrr6iawJM4 (wave-2), trig_01FobNUxhf5oUZYAmuRFsJXV, trig_01LzoRGNYrXFA8QguD9PjHPC (old; may delete). Subscribe PR #17895 (ops flags).\nRUNNING LANES: ML-ENTRY-EQ-STRUCT-FULL-POOL (session_01AFoLuMysyimFV51Wt3f3zW, Opus; operator-approved universe widening to 173 ETFs, report trig_01RDPpkrHzP7rnuaCk79rKNd); GENERAL standing (session_01AFoLuK4QkQBLzCSoiyyoMo, Opus; PHONE-LIVE-ACCOUNT-FEED first = see+move prop stops, operator 'fix ASAP'); UI standing (session_01AFoLuLJapgsBXDy8iHTrHC, Sonnet; docs/design/ui-workplan-2026-11.md); ML standing (session_01AFoLuJzKhDBzvqyKJM6emw, Opus; M23 first); LIVE-REVIEW (session_01AFoLuJGGMavuR55cHSW9G7; XRP stall-24); DIAG-TOKEN-LOG-REDACT (session_01AFoLuLEWFUHorSL9cNtix1; PR #24864 merged 8a76e1343, now deploying vm-caddy-deploy then rotating DIAG_READ_TOKEN - may need the operator to update the Claude environment network secret for ict-bot.duckdns.org); FEATURES-CATALOG-UI-VERIFY (session_01AFoLuKHDCbWgA5bL93GAaH; PR #24854 green, HELD Tier 2, waiting on operator OK).\nOPEN OPERATOR QUESTIONS: (1) OK to merge PR #24854 (read-only catalog route); (2) run ML-DEEP-AUDIT-FABLE now (toggle surge) given FABLE-RESETS-PLAN is throttle/'not now'; (3) the 8 UI design questions (docs/design/ui-workplan-2026-11.md \u00a713/\u00a716) - UI lane uses defaults unless told; (4) promotion of trend_donchian_xrp_adx25 (soak passed clean 16:00Z) to real money; (5) DIAG token rotation follow-ups.\nLIVE: SOL short prop tradeify_1 + velotrade_1 (entry 87.64, stop still 89.105 at venue, operator has not moved it); latest review 15:58Z recommends hand-set stop 86.20 (locks ~+1R); operator told. bybit_2 open: XRP ml_entry long (stop 1.0423), ADA short (~-0.1R, gave back +1.37R peak). ETH ml_entry closed 15:00Z max_hold -$1.29 (-0.56R).\nPLAN PAGE with operator surge/throttle toggles: https://claude.ai/artifact/3FiwRndAB38ZwzWUhh65Hh (ArtifactData collection 'modes'). Console: https://claude.ai/artifact/YU4ZwddDFB1AD2xWV2oE3g. Wed/Thu planning agenda on row WEEKLY-PLANNING. Reset receipt 'started' commit 2eb292c0e is pushed to branch claude/reset-receipt-2026-11-11 (main refuses direct pushes). Successor: open/land a PR from that branch (or redo the receipt in your own PR) instead of rewriting it.",
+  "phase": null,
+  "updated_at": "2026-11-11T18:11:44Z",
+  "updated_by": "Manager Session 2026-11-09a"
+}

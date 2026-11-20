@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "phone_events for breakout_2 show no positions_miss closed_no_tab for 24 h and a closed read returns state read",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-QBUCEZZU-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-15",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/status (phone_events kind positions_miss)",
+    "what": "closedRead returns read on breakout_2"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PHONE-POSITIONS-CARDS (Manager Session 2026-11-11a), PR #25197",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/prop/status | python3 -c \"import json,sys;d=json.load(sys.stdin);print([e for e in d['phone_events'] if e['kind']=='positions_miss'])\""
+  },
+  "routed_to": "ROUTE-PROP-TRACKING",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "breakout_2 phone: the new Breakout Trade view has NO Closed orders / Trades tab (chips are only Order form, Positions, Open orders; captures closed-no_tab-20261112T063454Z .. 074345Z, app 1b.373), so every closedRead posts closed_no_tab and venue closes cannot be journaled with an exit. Find where closed history now lives (likely the bottom nav 'Activity'), capture it, teach exec.js/MainActivity to read it, with a fixture. Also: the closed miss takes the shared POS_MISS_MS throttle slot in MainActivity.readAccount, which hid Positions misses.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: breakout_2 phone closed-history read (exit journaling) is prop-executor exit-read work EVIDENCE: Row ROUTE-PROP-TRACKING (queued) title 'Prop executors: exit reads, idle anchor, feed-trip classification, phone service loop'; item captures closed-no_tab-20261112T063454Z..074345Z"
+}

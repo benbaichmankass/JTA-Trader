@@ -1,0 +1,25 @@
+{
+  "id": "UI-RESEARCH-CATALOG-502",
+  "title": "GET /api/bot/research/catalog times out (502 after ~30 s); Data Explorer Research tab blank",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "UI backend defect found by the 2026-11-12 spec gap audit; manager maps at the weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25557
+  ],
+  "blocked_on": [],
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "2026-11-13 UI lane: fix on #25558 (held by R5, Tier-1 read). Catalog: CSafeLoader (identical parse, 2,257 files) + per-file mtime memo, build 11.3 s -> 1.9 s cold / 0.6 s warm locally (live 502 at 30.08 s, measured 00:05Z). Registry: body memo while registry.jsonl is unchanged (<=60 s) + opt-in ?runs_tail=N (runs+history = 99% of 8.9 MB). Single uvicorn worker = the shared stall; worker count unchanged (Tier 2). Closes on: catalog 200 < 30 s after deploy, plus no 502 in an SPA burst. Correction: the PR is #25557 (the previous note said #25558). 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'AM-UI (session_01AFoLuMr5RixbuwJtqED344)', no live session). blocker #25557 merged 2026-11-13 02:17Z. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation.",
+  "updated_at": "2026-11-15T11:30:39Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

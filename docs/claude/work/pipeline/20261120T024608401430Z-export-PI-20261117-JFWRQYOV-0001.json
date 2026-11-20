@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a fresh live-review packet for an open ml_entry_eq / ml_entry_eq_struct package carries a non-null state.open_r and a priced priced_options (or a named insufficient_n reason instead of could_not_price)",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261117-JFWRQYOV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-17 14:34Z: LTR reviewer session_01AFoLuNLTjg6jsBwmMCTszf on LR-20261117T1430Z-pkg-0a89fcdbe96b4169 (USO) reported PACKET DEFECTS priced_options could_not_price 1/1 and context_null:state.open_r 1/1",
+    "rerun": "read the ltr-packet marker for any open ml_entry_eq* package on the ops-flags PR, or run scripts/ops/live_review_packet.py for it, and check state.open_r and priced_options; context_v3.book also shows null open_r for USO and TQQQ ml_entry_eq rows"
+  },
+  "owner": "manager",
+  "redate": {
+    "evidence": "scripts/ops/diag_fetch.sh '/api/diag/position_telemetry?limit=300' ; scripts/ops/diag_fetch.sh '/api/diag/exchange_positions?account_id=alpaca_live'",
+    "observation": "2026-11-18 18:25Z AM-OPS-2 read: NOT reproducible now. alpaca_live holds no positions (exchange_positions read_state ok) and the journal has no open ml_entry_eq / ml_entry_eq_struct trade in the latest 500 rows, so there is no package to inspect. position_telemetry (limit 300) DOES populate risk_per_unit and open_r for equity 'ml_entry' rows on alpaca_paper (GDX open_r -0.22, risk_per_unit 2.80), so the equity read path itself works; the gap is specific to the ml_entry_eq / _struct packages. NEXT: on the first open ml_entry_eq_struct package after the 18:00Z reset, read its position_telemetry row (risk_per_unit, entry) and the packet's state.open_r, and compare with the journal package meta; if telemetry has no row for it, the writer skips these strategy names",
+    "observed_at": "2026-11-18"
+  },
+  "state": "queued",
+  "what": "LTR PACKET BLIND ON EQUITY ML ENTRIES: packets for ml_entry_eq / ml_entry_eq_struct packages (real-money alpaca_live + alpaca_portfolio) carry state.open_r = null and priced_options = could_not_price, so the reviewer computes open R by hand and decides on judgement only. The producer src/units/strategies/ml_entry_eq.py:110 DOES write risk_per_unit and entry_time (ML-ENTRY-RISK-META, done, fixed the crypto ml_entry producer), so the gap is downstream: the packet generator or position telemetry does not resolve risk for these packages (packages placed before the fix, a meta key lookup mismatch, or an equity price read). Diagnose on one package, fix the read path, verify on the next packet."
+}

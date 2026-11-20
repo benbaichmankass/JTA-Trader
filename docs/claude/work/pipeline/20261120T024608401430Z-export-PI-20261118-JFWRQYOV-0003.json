@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "every alpaca_live non-placement on a mirrored package carries a recorded refusal reason in refusal_causes_by_account, and the SLV-short drop cause is named from the trader log / alpaca order history",
+    "kind": "observation",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-JFWRQYOV-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, 2026-11-18 15:05Z, operator question",
+    "rerun": "scripts/ops/diag_fetch.sh journal?table=order_packages&limit=150 then read meta.sized_qty_by_account / placed_qty_by_account / refusal_causes_by_account for pkg-2616d7fbc5134e2e, pkg-1368d83133574082, pkg-592c81538faa44ee, pkg-aca05cbdb1c04052"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "killed",
+  "terminal_reason": "OPERATOR 2026-11-18 ~15:12Z (chat, verbatim): \"We don't need to changes anything, I just wanted to make sure there wasn't a bug\". Both causes are by design: the ETF longs did not fit alpaca_live's free cash (affordability, under the superset rule), and alpaca_live does not short (SLV). No change wanted.",
+  "tier": null,
+  "what": "ALPACA_LIVE PLACES NOTHING ON MIRROR TRADES, two causes (operator asked 2026-11-18 ~15:05Z, 'it looks off'). Measured from order_packages meta. (1) ETF longs IWF/TZA/IVW (ml_entry_eq_struct, 2026-11-17 16:08Z): alpaca_live sized_qty 0, refusal 'risk_refused: available_usd=54.45', because buying power was mostly tied up (likely the then-open USO position), and one whole share of IWF/IVW costs more than the free cash. Ideas: fractional-share sizing for small live accounts, or a recorded affordability reason; this is the superset case. (2) SLV SHORT (slv_trend_1h, pkg-2616d7fbc5134e2e, 2026-11-18 13:47Z): alpaca_live sized_qty 4 but placed NOTHING and NO refusal_causes_by_account entry. A silent drop on a real-money account. Likely the venue refused a short on a small cash/non-margin account, but the refusal is not recorded. Also alpaca_options_paper sized 2447 and placed 0 (same as OPTIONS-PAPER-PLACING-NOTHING). FIX: record every per-account non-placement with its venue reason (no silent drops); decide whether alpaca_live should be side-filtered off shorts, so it is excluded up front rather than failing at the venue; then re-check the superset classification. Gates this adds: none."
+}

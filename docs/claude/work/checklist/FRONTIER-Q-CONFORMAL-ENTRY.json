@@ -1,0 +1,36 @@
+{
+  "id": "FRONTIER-Q-CONFORMAL-ENTRY",
+  "title": "Uncertainty-normalised (conformal-style) selection for the crypto ENTRY model at matched coverage vs plain predicted-R threshold (conformal_calibration family)",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25571
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-15",
+  "frontier": {
+    "baseline": "RAW LightGBM at the served tau, same 13 monthly origins, same rows, graded on actual net R at the canonical cost stack",
+    "consumer": "src/units/strategies/ml_entry.py (D3) on bybit_2 real money + mirror + prop",
+    "design_sketch": "arm in ml_entry_residual.py: per refit split train by time into proper (first 80%) and calibration (last 20%); mu = LightGBM on proper; sigma = LightGBM on |y - mu| over calibration (or normalised split-conformal); score = mu / sigma; threshold s* chosen ON THE CALIBRATION SLICE so E.policy(score, s*) takes as many decisions there as E.policy(mu, tau) does (matched coverage, point-in-time, never on the test window); graded paired vs RAW by decide_vs_raw. Open design question before authoring: matched count on calibration vs matched count per test window (the latter peeks).",
+    "est_cost": "$0 runner (~2 h)",
+    "family": "conformal_calibration",
+    "next_step": "unit RQ-20261112-4654-08 (RULE-RQ20261112-4654-08-CONF-MATCHED) + conf arm in PR #25571 (stacked on #25559); design question resolved: coverage matched on CAL-B inside the training rows (point-in-time), never per test window. Grade when it lands.",
+    "p_pass": 0.08,
+    "source": "ML-F3 design (RQ-20261011-9da8-03, retired 2026-11-06 with no verdict; scorer scripts/research/conformal_abstain_eval.py on main) and RQ-20261016-65ff-25 (conformal vs plain threshold at matched coverage on published regime shards: FAIL, a science result)",
+    "state": "unit_authored",
+    "unit": "RQ-20261112-4654-08",
+    "why": "conformal_calibration has 0 open plan items after the 2026-11-13 hygiene pass; the real-money ENTRY recipe has never been tested with uncertainty-normalised selection"
+  },
+  "week_lane": "surge"
+}

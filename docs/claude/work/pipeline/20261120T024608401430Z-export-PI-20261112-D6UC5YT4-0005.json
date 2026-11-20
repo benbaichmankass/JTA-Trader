@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "comms/strategy_evidence/mes_trend_long_1d.json generated_at is later than 2026-11-01, or its decision_rule/notes name RQ-20261101-78fc-57",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-D6UC5YT4-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROP-FRONTIER-RESEARCH, docs/research/prop-frontier-2026-11-12.md section 4",
+    "rerun": "python3 -c \"import json;print(json.load(open('comms/strategy_evidence/mes_trend_long_1d.json'))['decision_rule'])\" ; ls research/results/RQ-20261101-78fc-57*"
+  },
+  "owner": "FRONTIER",
+  "routed_to": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "state": "routed",
+  "what": "EVIDENCE-RECORD-STALE-MES: comms/strategy_evidence/mes_trend_long_1d.json reads decision_rule verdict 'fail' (n=5, 365d window, run 2026-09-24-e55), while docs/research/tradeify-futures-frontier-2026-11-12.md cites graded unit RQ-20261101-78fc-57 as a Stage-0 PASS (n=31, ES=F 1d). The record readers (prop fit screens, promotion guards) therefore see the older verdict. Refresh the record from the newer graded unit (scripts/ops/build_strategy_evidence.py, or record the unit as the evidence basis), or state why the 365d record stays authoritative. Found by lane PROP-FRONTIER-RESEARCH while building the Velotrade book (mes_trend_long_1d was excluded on the record's verdict)."
+}

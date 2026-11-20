@@ -1,20 +1,20 @@
 {
   "id": "HEALTH-20261028-PIPELINE-ROUTING-OWNER",
   "title": "No lane routes due pipeline items: unrouted 0 -> 59 in 4 days (oldest 94 d), due 369 -> 510; give routing one owner",
-  "phase": "floor",
-  "state": "queued",
+  "state": "dropped",
   "owner": "manager",
   "lane": null,
   "model": null,
+  "tier": 1,
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[HEALTH-REVIEW-20261028] MEASURED: python3 scripts/ops/pipeline.py --stats 2026-10-28 ~19:20Z: items 2361, open 1028, due 510, unrouted 59, unrouted_alarm BREACHED oldest 94 d (BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS); --gate: gate 87 (high_severity 4, owner_closed 14, unrouted 69). Series over reviews: due 110 (10-17) -> 256 (10-21) -> 369 (10-24) -> 510 (10-28); unrouted 25 -> 0 (10-24) -> 59. review_followthrough.py: health-review backlog 337 open, 275 with no owner, median age 65 d. The newest research-ops record (20261028T1530Z) lists 'routing of due pipeline items: ... not routed by this pass' under not_run, and the health review's gate walk is bounded; so nothing whose job it is routes them. Proposed: make routing an explicit step of ONE recurring lane (research-ops 4x/day or a daily ROUTE lane) with a count it must drain, and a kill pass on the 275 ownerless health items older than 30 d. Closes when pipeline.py --stats shows unrouted_alarm not breached on two consecutive weekly reviews. [HEALTH-REVIEW-20261104] STALLED 7 d (state queued, no lane). pipeline.py --stats 19:3xZ: due 577 (510), unrouted 166 (59), oldest 156 d BL-20260601-003; --gate 274 (87). Lane BACKLOG-DRAIN-20261104 is working the register today; this row's done-condition is that lane naming a standing routing owner, otherwise the manager kills or re-scopes it at Thursday planning.",
-  "updated_at": "2026-11-04T19:32:33Z",
-  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ",
-  "roadmap": "L-OPS",
   "due_by": "2026-11-11",
-  "_seq": 756
+  "_seq": 756,
+  "note": "[HEALTH-REVIEW-20261028] MEASURED: python3 scripts/ops/pipeline.py --stats 2026-10-28 ~19:20Z: items 2361, open 1028, due 510, unrouted 59, unrouted_alarm BREACHED oldest 94 d (BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS); --gate: gate 87 (high_severity 4, owner_closed 14, unrouted 69). Series over reviews: due 110 (10-17) -> 256 (10-21) -> 369 (10-24) -> 510 (10-28); unrouted 25 -> 0 (10-24) -> 59. review_followthrough.py: health-review backlog 337 open, 275 with no owner, median age 65 d. The newest research-ops record (20261028T1530Z) lists 'routing of due pipeline items: ... not routed by this pass' under not_run, and the health review's gate walk is bounded; so nothing whose job it is routes them. Proposed: make routing an explicit step of ONE recurring lane (research-ops 4x/day or a daily ROUTE lane) with a count it must drain, and a kill pass on the 275 ownerless health items older than 30 d. Closes when pipeline.py --stats shows unrouted_alarm not breached on two consecutive weekly reviews. [HEALTH-REVIEW-20261104] STALLED 7 d (state queued, no lane). pipeline.py --stats 19:3xZ: due 577 (510), unrouted 166 (59), oldest 156 d BL-20260601-003; --gate 274 (87). Lane BACKLOG-DRAIN-20261104 is working the register today; this row's done-condition is that lane naming a standing routing owner, otherwise the manager kills or re-scopes it at Thursday planning.",
+  "phase": "floor",
+  "roadmap": "L-OPS",
+  "updated_at": "2026-11-04T19:32:33Z",
+  "updated_by": "session_01AFoLuJuS137LaGTV3KwRtZ"
 }

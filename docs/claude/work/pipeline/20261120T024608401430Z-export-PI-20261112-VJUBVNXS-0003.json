@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "a change to deploy/<non-trader unit>.service no longer makes trader_import_closure.py decide return RESTART, or this item is killed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-12"
+  },
+  "id": "PI-20261112-VJUBVNXS-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SEC-8001-LOCKDOWN (session_01AFoLuMBna38VjYvJUbVnXS)",
+    "rerun": "printf 'deploy/ict-web-api.service\\n' | python3 scripts/ops/trader_import_closure.py decide --root ."
+  },
+  "redate": {
+    "evidence": "item text 'LOW PRIORITY (manager 2026-11-12 08:38Z, filed rather than built)', due_when.check_every_days=14",
+    "observation": "[2026-11-12 BACKLOG-DRAIN-20261112] DATE: manager filed this low-priority restart-policy proposal rather than build it (2026-11-12 08:38Z); re-check on its own 14-day cadence EVIDENCE: item text 'LOW PRIORITY (manager 2026-11-12 08:38Z, filed rather than built)', due_when.check_every_days=14",
+    "observed_at": "2026-11-12"
+  },
+  "state": "queued",
+  "what": "LOW PRIORITY (manager 2026-11-12 08:38Z, filed rather than built). MEASURED: the trader restart gate (scripts/ops/trader_import_closure.py NON_RUNTIME_PATHS_RE, copied in scripts/deploy_pull_restart.sh and in diag's _NON_RUNTIME_PATHS_RE) classifies every deploy/*.service as non_py_runtime and restarts ict-trader-live, including units the trader never reads such as deploy/ict-web-api.service (seen on #25185). Proposal: carve out deploy/<unit>.service for units other than ict-trader-live, in all three copies, with a test. Tier 2 (deploy restart policy)."
+}

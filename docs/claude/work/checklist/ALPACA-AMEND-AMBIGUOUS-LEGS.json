@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-AMEND-AMBIGUOUS-LEGS",
+  "title": "alpaca_amend read_trade_legs matches legs by qty only: identical same-size brackets refuse every trail as ambiguous_legs (SLV alpaca_portfolio 7758/7766/7770)",
+  "state": "dropped",
+  "owner": "AM-OPS-9",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "order-path correctness defect (paper mirror), not a roadmap milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed 2026-11-19 21:30Z by AM-OPS-8 (session_01AFoLuHwqqyiix4qDoybTSN) on manager request 21:11Z. Prior evidence is in AMEND-PARITY-ALPACA-TRAIL-READBACK notes 16:40Z and 17:40Z. SYMPTOM (manager, 21:09Z): the monitor trail was refused 3 times on alpaca_portfolio (PAPER mirror) SLV short, trades 7758/7766/7770, qty 2 each, wanted stop 41.229: 'refused (ambiguous_legs: 3 stop / 3 target leg(s) of qty=2.0)' from src/units/accounts/alpaca_amend.py. Same at 16:00Z/16:14Z. The old stops stay at the venue (41.93/41.85/41.90) while the 19sh/5sh siblings trailed. The monitor retries every tick, so it keeps refusing and alerting. No money (paper). CAUSE: read_trade_legs() scopes a trade's legs by share count only (abs(lq-qty) <= _QTY_EPS). FIX SHAPE: pass the row's broker_order_id (entry) into read_trade_legs. Match STOP legs by parent_id == broker_order_id: diag alpaca_open_orders 16:31Z shows stop 6d3cbb68 parent 51f4045b = 7770; d5e0e002/aa1dff1a = 7766; f6b0077f/c64f9ccc = 7758. sl_order_id/tp_order_id are NULL on all 7 rows. TP legs carry NO parent_id in the flat read (re-armed 11-18 14:31-14:34Z), so match them by the nested /v2/orders?nested=true parent->legs read, or by the row's journal take_profit_1 to the cent. Keep qty as a fallback only when the parent is unknown. Optionally persist sl_order_id/tp_order_id on entry so later reads key on ids. Related: the live-review packet's mechanics verdict reads 'match' while it found no TP for these legs; an unattributable leg should read could_not_attribute. TIER 2 (order path): build as a HELD PR with tests (3 identical-qty brackets -> each trail reaches its own stop; unknown parent -> qty fallback; TP by price), run trader_import_closure decide over the full file list, and tell the manager before anything ships (needs a restart window). DONE WHEN: merged + deployed + an alpaca_portfolio trail modify on a same-size sibling logs readback=applied (or a named non-ambiguous refusal). [2026-11-19 21:35Z AM-OPS-9] DUPLICATE of ALPACA-AMEND-LEG-IDS (same defect, filed in parallel); the fix is PR #27494 (head 937d379e590a5ad59a646ad3f2c3ed27b93fd0c4), manager-approved, merges on green. Dropped on manager instruction 21:30Z; all tracking continues on ALPACA-AMEND-LEG-IDS.",
+  "phase": null,
+  "updated_at": "2026-11-19T21:31:45Z",
+  "updated_by": "session_01AFoLuMdfKSRmey33cVTNak"
+}

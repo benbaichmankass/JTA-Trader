@@ -1,0 +1,22 @@
+{
+  "id": "WIRE-ACCOUNTCLASS-NO-TRADE-FALLBACK",
+  "title": "order_packages accountClass reads real_money for a package with no linked trade: account_class_wire falls back to real_money when account_class and is_demo are both null",
+  "state": "queued",
+  "owner": "AM-OPS",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "read-path provenance defect",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "MEASURED 2026-11-15: pkg-3d3925fdd57c4bfb (sol_pullback_2h, a TESTING leg on bybit_1 paper only per scripts/ops/strategy_status.py and config/accounts.yaml) shows accountClass=real_money. Cause: src/web/api/_clean_trades.py:194 account_class_wire() returns 'paper' if is_demo else 'real_money' and is documented 'never returns null'. A package with no joined trade row passes None/None and is therefore labelled real_money: an invented funding class (CLAUDE.md: render missing as '-', never fabricate). Fix (Tier 1, read path): for packages with no linked trade, return null, or derive the class from the strategy's roster books; keep the SPA contract by documenting a null case. Check the SPA renders null as '-'. Re-entry test: an unlinked package serialises accountClass null (or paper for a paper-only leg), never real_money.",
+  "phase": null,
+  "updated_at": "2026-11-15T16:07:04Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

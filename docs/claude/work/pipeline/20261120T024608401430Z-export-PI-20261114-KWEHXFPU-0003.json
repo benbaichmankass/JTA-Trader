@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "ARCHITECTURE-CANONICAL points at the pipeline map instead of TRADE-PIPELINE.md, and TRADE-PIPELINE.md is marked superseded (superseded_by the map) in docs/DOCUMENT-INDEX.md or archived.",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-KWEHXFPU-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PIPELINE-MAP session_01AFoLuJEArj5fnhkwehXFPU, 2026-11-14, building docs/reference/trading-pipeline-map.md",
+    "rerun": "grep -n 'TRADE-PIPELINE' docs/ARCHITECTURE-CANONICAL.md docs/DOCUMENT-INDEX.md"
+  },
+  "routed_to": "PIPELINE-MAP",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "docs/TRADE-PIPELINE.md (doc status 'unknown', last verified 'never') is a stale stage map; ARCHITECTURE-CANONICAL § 'End-to-End Trade Pipeline' still calls it 'the canonical step-by-step map' that the dashboard's Trade Process tab fetches (that tab is not on the SPA). docs/reference/trading-pipeline-map.md now covers the same ground with verified paths.\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: the stale TRADE-PIPELINE.md stage map is replaced by the generated pipeline map EVIDENCE: item: docs/TRADE-PIPELINE.md doc status unknown, last verified never; row PIPELINE-MAP",
+  "why_it_matters": "Two pipeline maps, one unverified and named canonical by a higher-precedence doc, is the doc-vs-doc drift doc-freshness exists to remove."
+}

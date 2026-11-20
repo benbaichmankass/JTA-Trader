@@ -1,0 +1,24 @@
+{
+  "id": "RESEARCH-SLO-SURVIVOR-CONVERSION",
+  "title": "Research SLO: count survivors as CONFIRMED held-out results and show which reached a book: census reads grading.confirmation, splits new leg or model / lever on an existing leg / re-validation, stamps evidence_class on the money ML units, adds a pass-to-roster conversion column (report-only)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuKDJYVZsxPtE74wG5z",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research-pipeline measurement, parent AUD-20261019-RESEARCH-SLO-RED",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25307,
+    25309
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-19",
+  "note": "Filed 2026-11-12 by lane ML-DEEP-AUDIT-FABLE (docs/research/ml-deep-audit-2026-11-12.md section 2.2, rank 3). Parent: AUD-20261019-RESEARCH-SLO-RED / PR #25184 (open at 09:30Z). Gates: none (report-only). MEASURED on main 2026-11-12, population = units graded since 2026-10-13 (1,725), research_slo.heldout_pass_census edge passes = 49: grading.confirmation not_replicated 11, underpowered 3, confirmed 13, none 22; 14 of the 49 are re-validations of legs already trading; 0 are ML units. queue_grade.py writes verdict pass when the run rows pass and puts the held-out outcome in grading.confirmation (example RQ-20261016-d37f-03: verdict pass, confirmation not_replicated); the census reads only verdict. The 3 ML results that put a model on real money (RQ-20261101-c692-01, RQ-20261101-383f-01, RQ-20261029-5785-02) have an empty evidence_class and land in unknown_holdout (55). PR #25184 reports 40 per month and 70.6 trials per survivor without reading confirmation; this audit reads 13 to 18 confirmed lever results and 0 new legs or models. NOT DONE by the audit: the pass-to-roster join (shallow checkout). DONE WHEN: research_slo evidence shows the three classes, excludes confirmation != confirmed where the field exists, and prints converted / survivors. Rerun: python3 scripts/research/research_slo.py (census) on a full checkout. Sonnet, about $6."
+}

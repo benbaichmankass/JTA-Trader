@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the Checkout step on a jta-infra job is under 30 s, or the hosted-vs-self-hosted total job time shows the clone does not matter (then kill)",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-RAM7EH86-0003",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-10",
+    "how_to_check": "list_workflow_jobs on the newest vm-diag-snapshot run; started_at/completed_at of the 'Checkout repo' step",
+    "what": "Checkout step duration on a jta-infra runner job"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "PR #22652 / vm-diag-snapshot run 41636162263",
+    "rerun": "actions list_workflow_jobs on the newest vm-diag-snapshot run on a trainer-jta-infra-* runner; read the 'Checkout repo' step duration"
+  },
+  "routed_to": "GH-CAPACITY-INFRA-RUNNER",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "jta-infra runner jobs re-clone the full repo every job (checkout step 2:49 on vm-diag-snapshot run 41636162263; one workspace measured 6.6 GB vs 17 GB free on the trainer), because the job hook deletes the workspace to protect the trainer disk. Cut it: sparse/filtered checkout (filter: blob:none or sparse-checkout of the paths each moved workflow reads) in the moved workflows, or a shared read-only reference clone the runners use via --reference.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: That row owns the jta-infra self-hosted runner; per-job full re-clone is listed there as open item (b). EVIDENCE: Row GH-CAPACITY-INFRA-RUNNER note (2026-11-03 14:45Z incident + OPEN list a-d). Rescue still absent: grep -n -i rescue scripts/ops/infra_runner_health.py origin/main = 0 hits. Schedule still \"4,19,34,49 * * * *\" (.github/workflows/infra-runner-health.yml:13)."
+}

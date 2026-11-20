@@ -1,0 +1,23 @@
+{
+  "id": "DESK-ENTRY-REVIEW-REDESIGN",
+  "title": "Planning (post-reset): restructure the desk v1 into an LTR-style ENTRY review: the system detects setup patterns and triggers a desk call, instead of periodic desk scans of everything",
+  "state": "queued",
+  "owner": "AM-OPS-4 (session_01AFoLuMqma5FZ2WpXNqAxxz); units to QUEUE-FILL-STANDING-W47",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator design ask 2026-11-10 for planning discussion; maps to the desk milestone once scoped at planning",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "[2026-11-19 02:55Z QUEUE-FILL-STANDING-W47b] BUILD ITEM (b) OUTCOME, trigger replay (rule: work-store event 16945; harness scripts/research/desk_trigger_replay.py, PR #27061 e90c1254): 4 of 4 per-family units landed and ALL FAIL the registered bar (S3 >= +0.15 R net, Holm 97.5% lb > 0, n >= 100). Runs: atr_burst RQ-20261119-d7c3-01 run 44442050816; momentum_burst d7c3-02 run 44442054288; level_break_break d7c3-03 run 44442962409; level_break_sweep d7c3-04 run 44445105111. DEV 2025-11-01..2026-09-15, six USDT perps, closed 5m bars, 22,356-30,175 firings per family (51-60% within 12 bars of the previous same-symbol firing). HOLM TABLE over 8 family x rule cells (S3 mean R, one-sided p vs Holm threshold): level_break_break fade +0.088 (p 0.0001 vs 0.00714, reject); level_break_break continuation +0.067 (0.0001 vs 0.00625, reject); level_break_sweep fade +0.057 (0.0001 vs 0.00833, reject); atr_burst continuation +0.044 (0.027 vs 0.01, no); momentum_burst continuation +0.056 (0.045 vs 0.0167, no); level_break_sweep continuation +0.024 (0.043 vs 0.0125, no); atr_burst fade +0.029 (0.071 vs 0.025, no); momentum_burst fade +0.017 (0.264 vs 0.05, no). No cell clears the +0.15 R bar (best +0.088). EVERY ARM IS NEGATIVE IN ABSOLUTE NET R, best -0.45 R/trade (level_break_break fade -0.446 vs its random baseline B3 -0.533; worst atr_burst fade/momentum_burst fade about -0.56): S3 is less-negative-than-random, not profit. Instrument controls held in all 4 (no-lookahead identical, oracle +0.83..+0.87, anti-oracle -0.72..-0.76, random-side not clearing: +0.018 / +0.034 / +0.078 / +0.026). Random-side tracks the effect (timing/geometry, direction adds ~+0.01 R): filed as PI-20261119-OFUCR5NF-0002 (net timing edge or bracket/cost-in-R geometry? falsifier: finer ATR% bins + gross S3). Pass/fail action per the rule: all four families stay label-only in desk_triggers.yaml, data collection kept; none goes forward. near_signal and calendar recorded UNSCORED (not reconstructable point-in-time). Nothing graded or landed by this lane.",
+  "phase": null,
+  "updated_at": "2026-11-19T02:49:16Z",
+  "updated_by": "QUEUE-FILL-STANDING-W47b",
+  "week_lane": "surge"
+}

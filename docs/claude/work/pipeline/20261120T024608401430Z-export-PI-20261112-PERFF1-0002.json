@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "research/results/RQ-20261112-d9c0-01/*.jsonl exists and its verdict is acted on as above",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-PERFF1-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-16",
+    "how_to_check": "ls research/results/RQ-20261112-d9c0-01/ ; mandate_resolver.stage0_block_p10('ml_entry_eq_struct')",
+    "what": "the d9c0-01 result record and, on PASS, an r4 gate p10 for ml_entry_eq_struct"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PERF-F1-DEMOTION-SIGNAL (session_01AFoLuKGivxba8N7Mss11en), PRs #25232 #25198",
+    "rerun": "python3 scripts/research/research_queue.py"
+  },
+  "routed_to": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "state": "routed",
+  "what": "ml_entry_eq_struct per-trade Stage-0 rows: when RQ-20261112-d9c0-01 lands, read its verdict. PASS (sha+n+mean reproduce, 207 rows) -> PR repointing comms/strategy_evidence/ml_entry_eq_struct.json source_run to comms/research/RQ-20261112-d9c0-01/<run>/ml_entry_eq_struct__trades.jsonl, then confirm r4_demotion_gate prints a p10 for it. FAIL -> diagnose which of sha/n/mean mismatched (n/mean mismatch expected if run after 2026-11-30)."
+}

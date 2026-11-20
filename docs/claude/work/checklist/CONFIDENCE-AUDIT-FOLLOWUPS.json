@@ -1,0 +1,23 @@
+{
+  "id": "CONFIDENCE-AUDIT-FOLLOWUPS",
+  "title": "Confidence audit follow-ups: path-history per-package coverage read; vwap closed trades have no order_package_id; closed_at epoch-ms (trade 6131); pnl null on 161 closed",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "confidence-score design item 1 follow-up",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "From docs/research/CONFIDENCE-SCORE-DATA-AUDIT-2026-11-09.md (merged f653972). (1) Add a read-only count of distinct order_package_id and min/max written_at in position_path_history (no diag route today; allowlist or system-actions read) so path coverage of the 2567 closed trades is measured, not could-not-look. (2) 0 of 362 closed vwap trades has order_package_id while vwap has 2081 packages: find out why (writer, reconcile path) before any per-strategy model uses vwap. (3) trade id 6131 (alpaca_paper) closed_at='1790835474843' epoch-ms string. (4) pnl null on 161 of 2567 closed rows (bybit_1 105, bybit_2 18, alpaca_paper 15, alpaca_portfolio 12, ib_paper 8, bybit_portfolio 3). Items 2-4 may be writer/reconciler defects (Tier 2 to fix); this row only measures and files.",
+  "phase": null,
+  "updated_at": "2026-11-09T15:01:22Z",
+  "updated_by": "session_01AFoLuJdZnAnUxd2xzc6tPA",
+  "week_lane": "throttle"
+}

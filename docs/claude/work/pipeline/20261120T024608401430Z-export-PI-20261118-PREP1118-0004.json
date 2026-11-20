@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_vs_backtest.py prints n_entry_bars and n_touched per leg and bootstraps by entry bar, with a test",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg ml_entry --json"
+  },
+  "owner": "PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[performance][tooling] live_vs_backtest.py bootstraps i.i.d. trades, but ml_entry enters 3-5 correlated coins on the same bar (9 entry bars for 25 real-money closes this week), so its band is too narrow and the verdict over-flags. Also: all 4 post-cut ml_entry real-money closes (7549/7551/7563/7565, 11-16) were live_review_close, i.e. TOUCHED, so the cut read (INSUFFICIENT_N n=4 +1.69R) is not the exit Stage 0 validated. Fix: block-bootstrap by entry bar, and print n_touched beside n."
+}

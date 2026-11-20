@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a named owner authors from graded ML results on a standing cadence, and check_research_queue_health.py H1 shows runnable units >= 25 for 3 consecutive days without a one-off refill lane",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZFRREVN5-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ITERATION-REFILL-20261117 (session_01AFoLuL9Wd1b7YqZfrRevn5), 2026-11-17; slot table docs/research/ml-slot-iteration-2026-11-17.md",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py; python3 scripts/research/dispatch_queue.py --json"
+  },
+  "owner": "ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), taken 2026-11-17 ~10:00Z per Manager 15a dispatch",
+  "state": "queued",
+  "what": "[ml] ROOT CAUSE of the 2026-11-17 research starvation (dispatcher fired nothing 00:24Z-09:00Z; 0 of 2262 unit files due): floor-driven generation was stopped (STOP-GENERATED-AUTHORING, 2026-11-01) and nothing owns DIAGNOSIS-driven ML iteration authoring between weekly programme reviews. Under usage pacing the ML lane was told 'grading only', so graded results produced no follow-up unit (e.g. RQ-20261112-4654-02's dev WIN at tau 0.30 had no held-out read for 4 days). This lane refilled 4 units (c21d-01..04). The standing fix is the manager's: name an owner (research-ops step 3 each pass, or the ML lane) that authors the next unit from every graded ML result within 24 h, and add a supply line to the brief (runnable ML units per slot and per backend)."
+}

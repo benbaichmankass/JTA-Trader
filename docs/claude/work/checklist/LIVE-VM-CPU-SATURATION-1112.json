@@ -1,0 +1,24 @@
+{
+  "id": "LIVE-VM-CPU-SATURATION-1112",
+  "title": "Live trader VM (ict-bot-arm, 2 OCPU) runs CPU p95 99.7-99.9% every day (MEASURED comms/cloud/compute_util_ledger.jsonl, 2026-11-04..11-11, 8 days, host=live; cpu_max 100). Name what holds the CPU (trader loop, web-api, git-sync/installer, timers, journal backups, ML shadow) via a process-level read at a few points incl. bar closes; say whether saturation delays bar-close work (ties to VENUE-KLINE-RATE-LIMIT, the 75 s restart blind window in TRADER-RESTART-ACCOUNTING-1112, and the desk scan packet SIGTERM in DESK-WAKE-SILENT-1112). Diagnosis is Tier 1; any resize/offload is Tier 2.",
+  "state": "in_flight",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuN8W9UCAhWmW48kGkM",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25333
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14",
+  "note": "Filed by AM-OPS 11:40Z while checking FREE-CAPACITY-PLAN. Check: a per-process CPU table with population, and a yes/no plus evidence on bar-close delay.",
+  "week_lane": "surge"
+}

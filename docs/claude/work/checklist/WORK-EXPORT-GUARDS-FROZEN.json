@@ -1,0 +1,24 @@
+{
+  "id": "WORK-EXPORT-GUARDS-FROZEN",
+  "title": "File guards that grade register AGE over the frozen WSD-S4 export (operator-owed-guard first) can never see a store-side resolution: the export's newest record is 2026-11-06T22:02Z, so every owed/aging item trips and stays red on every pipeline-touching PR and on the scheduled backstop until 'work.py export --to-files' is run and committed. Decide: a scheduled export commit, or these guards read the live store where reachable and say could_not_look otherwise",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25238
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Found 2026-11-12 by HEALTH-20261111-EXPORT-READS-STALE (PR #25177): operator-owed-guard exits 1 on base and on the PR over PI-20261106-01AFOLUJ-0009 (owed, due, unchanged 6.2 d in the export). That item was killed in the store by BACKLOG-DRAIN-20261112 with evidence (close_session.py _dispatch fixed, origin/main L221-228), yet the guard keeps reading the export. Population: guards selected by run_guards with WORK_READ_SOURCE=export; at least check_operator_owed.py (record_ages over file commit times). No new gate: this removes a false red.",
+  "phase": null,
+  "updated_at": "2026-11-15T10:11:19Z",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "week_lane": "throttle"
+}

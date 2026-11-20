@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "one sync-vm-secrets run observed after #23241 merged (2026-11-05T10:58Z), with restart scope matching the changed keys and a named cause/ping",
+    "kind": "event"
+  },
+  "id": "PI-20261105-1ZKXX7N1-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-12",
+    "how_to_check": "open the run's log for '>>> Changed keys: ... -> restart scope: ...'; read journalctl -u ict-trader-live around it via the diag relay; read the Telegram/ops ping lines",
+    "what": "one sync-vm-secrets run after #23241: restart scope matches the changed keys (no trader restart for WORK_STORE_TOKEN-only), a trader restart's boot ping names 'sync-vm-secrets (changed: ...)', and the ops ping reads '[ops] sync-vm-secrets: ok' at normal priority"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "PR #23241 (lane WSD-S1-STORE-API, session_01AFoLuJFu3NEJt21ZKxx7N1)",
+    "rerun": "read the sync-vm-secrets run log ('>>> Changed keys: ... -> restart scope: ...') and journalctl -u ict-trader-live around it via the diag relay; read the restart ping's cause line"
+  },
+  "routed_to": "SYNC-SECRETS-RESTART-OBS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Observe #23241 live: the next sync-vm-secrets run must restart ict-trader-live ONLY when a key the trader reads changed. A WORK_STORE_TOKEN-only change must leave the trader up. When the trader does restart, its boot ping must read 'manual restart (sync-vm-secrets (changed: ...))', not 'cause: unknown'. The ops ping must be '[ops] sync-vm-secrets: ok' at normal priority, not URGENT UNKNOWN ACTION. Origin: the 2026-11-05T09:30:46Z cause-unknown trader restart and the 62.2 s exit-eval gap breach (ops-flags #17895).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Half observed: the scope line works on a trader-key change. The boot-ping cause and the non-trader-key case are unread, and no open row owns them. EVIDENCE: sync-vm-secrets run 42674757569 (2026-11-09T18:32Z, success) log: \"Changed keys: ALPACA_API_KEY_ID ALPACA_API_SECRET_KEY -> restart scope: trader+web-api\". No non-skipped run since then except cancelled/queued 11-11 runs (gh api runs created >= 2026-11-05). | owner row opened by this drain"
+}

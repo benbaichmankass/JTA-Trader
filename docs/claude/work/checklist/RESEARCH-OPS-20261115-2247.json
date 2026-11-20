@@ -1,0 +1,27 @@
+{
+  "id": "RESEARCH-OPS-20261115-2247",
+  "title": "research-ops pass 2026-11-15 22:47Z",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-OPS-20261115-2247",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Dispatched by manager session_01AFoLuHbhd9wFuGJfWRqyoV, ceiling $5. Items: research-store-bundle run 43689172680 expiring (disposition), runnable floor restore with decision-led iteration units.  PR #26412 (hold, claim committed). 5 units 2411-01..05; bundle of 43689172680 dispositioned safe to lose; grade run 43689172680 commit-to-main step hung 82 min (manager). Record comms/research/ops/20261115T2320Z.json. 2026-11-15 23:45Z manager: #26412 pytest-run failed because the 5 new units had no status field (the W4 dispatcher dry-run also exited 1). Manager pushed 990975f8 adding status: queued; tests/test_research_queue.py passes 92/92 locally. Root cause: pytest is not installed in the research-ops lane container, so the queue validator was never run before the PR. Follow-up for the research-ops skill/routine: install pytest, or run python3 -m pytest tests/test_research_queue.py, before landing new units.",
+  "observation": {
+    "due": "2026-11-18",
+    "due_by": "2026-11-18",
+    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; git log origin/main -- research/queue/RQ-20261115-2411-0*",
+    "what": "PR #26412 merged and units RQ-20261115-2411-01..05 dispatched with results"
+  },
+  "phase": null,
+  "updated_at": "2026-11-15T23:43:24Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

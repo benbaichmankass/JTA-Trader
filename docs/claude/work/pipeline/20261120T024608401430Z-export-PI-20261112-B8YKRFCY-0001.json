@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "check_every_days": 90,
+    "clears_when": "recurring: each completed rotation (GET /api/bot/ops/ledger answers 200 on the new credential and a sync-vm-secrets-using workflow gets 2xx) re-dates last_checked; killed only if the operator retires the token or the cadence",
+    "kind": "observation",
+    "last_checked": "2026-11-12"
+  },
+  "id": "PI-20261112-B8YKRFCY-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "VM-CHANGE-LEDGER 4b; operator popup ~21:44Z 2026-11-12 \"Every 90 days\"; PR #25500",
+    "rerun": "python3 scripts/ops/pipeline.py --due --all | grep PI-20261112-B8YKRFCY-0001"
+  },
+  "routed_to": "VM-CHANGE-LEDGER",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 2,
+  "what": "Ops token (WORK_STORE_TOKEN) rotation, every 90 days (operator popup ~21:44Z 2026-11-12, verbatim: \"Every 90 days\", relayed by Manager Session 2026-11-11a). When due, the manager dispatches ONE lane that runs docs/runbooks/ops-token-rotation.md: stage-token-rotation ops job (VM side, dual-accept 72 h), then the ONE operator prompt (request_credential for ict-bot.duckdns.org header X-Work-Store-Token + paste the same value into the GitHub secret WORK_STORE_TOKEN), then sync-vm-secrets, verify, ledger-backfill. After a successful rotation the lane re-dates last_checked (pipeline.py --redate). Recurring: never closed by a rotation. No cron by design."
+}

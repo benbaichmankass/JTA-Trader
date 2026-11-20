@@ -1,0 +1,27 @@
+{
+  "id": "XRP-DOUBLE-EXPOSURE",
+  "title": "trend_donchian_xrp_4h + trend_donchian_xrp_adx25 take the same XRP short on bybit_2 (+ mirror): paired exit re-test, keep the winner",
+  "state": "landed_unproven",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "OPERATOR popup 2026-11-17 ~11:00Z (relayed by the manager 11:00Z), verbatim answer: \"Paired re-test, then keep winner (Recommended)\". Both legs STAY as they are on bybit_2/bybit_portfolio until the re-test. EVIDENCE (journal, last 1000 trade rows 2026-10-20..11-17): bybit_2 2026-11-15 00:03:20 trend_donchian_xrp_4h short 0.9137 size 15.4 and 00:03:29 trend_donchian_xrp_adx25 short 0.9152 size 25.0, nine seconds apart = 40.4 XRP short on ONE signal, two different stop/trail sets; adx25 joined bybit_2 2026-11-11 and that is its only bybit_2 entry so far; same on bybit_portfolio. Entry rules identical (donchian 20, short, min_conf 0.80, skip_hours 0, vol_skip 0.9); exits differ: atr_stop_mult 1.5 vs 2.0, trail_mult 4.0 vs 5.0, adx25 adds trail_adx_below 25 -> tight 2.5. Records distinct (OOS net R +3.48 vs +9.72, both n=46, 3/4 folds, measured+faithful). PLAN: (1) one paired research unit (runner, self-landed, rule registered before the run, TIE keeps xrp_4h and demotes adx25 to the demo floor); (2) on the verdict draft the Tier-3 packet with the exact roster diff, NOT applied: the demotion goes to the operator first via the manager; (3) Tier-1 fix of the stale exact-copy comment in check_same_symbol_allocation.py. 2026-11-17 13:25Z VERDICT (unit RQ-20261117-ea57-01, run 44089514640 on 7211933ef7, measured; result read from the batch-land branch automation/research-results-batch-44089841049-1, not yet on main): TIE / tie_keep_incumbent under the registered rule. Both arms took the SAME 61 trades (match_share 1.0). Paired dR (adx25 exits minus xrp_4h exits, net of the full cost stack): mean +0.0536 R/trade, sd 0.648, t=0.646, sum +3.27 R; fold wins 2 vs 2 of 4. Window net R: A (xrp_4h) +11.09, maxDD 6.59, folds +8.60/+0.91/-2.90/+4.48; B (adx25) +14.36, maxDD 4.20, folds +5.61/-0.02/+0.42/+8.35. Observed sd 0.648 vs the 0.6 I inferred; minimum detectable mean at n=61 is about 0.23 R/trade, so the 0.054 gap is far inside the noise: a TIE, not proof the exits are equal. B has the lower drawdown and higher window total but the rule does not weigh either. Registered consequence: keep xrp_4h on bybit_2 + bybit_portfolio and demote adx25 to bybit_1. Tier-3 packet DRAFTED in the message to the manager (not applied); the demotion goes to the operator first. 2026-11-17 13:40Z OPERATOR popup ~13:24Z (via the manager), verbatim: \"Follow the rule: demote adx25 (Recommended)\". HELD Tier-3 PR #26692 opened (config/accounts.yaml: adx25 out of bybit_2 + bybit_portfolio, into bybit_1; decision line parseable on body line 1; RESTART; rollback in body). Local guards clean (see the PR). No open adx25 position anywhere; roster removal never orphans an open package (order_monitor.exit_population). landed_unproven (the PR is not merged, let alone deployed): closes on the first post-restart tick showing adx25 only on bybit_1 (accounts roster read via /api/bot/config) and no new adx25 entry on bybit_2 or bybit_portfolio.",
+  "observation": {
+    "due": "2026-11-20",
+    "due_by": "2026-11-20",
+    "how_to_check": "bash scripts/ops/diag_fetch.sh \"journal?table=trades&limit=400\" filtered to symbol XRPUSDT, opened after 2026-11-17T14:26Z: expect a trend_donchian_xrp_4h row on bybit_2 and bybit_portfolio and zero trend_donchian_xrp_adx25 rows there (the 11-15 pair was 2 rows nine seconds apart); also audit_query?strategy=trend_donchian_xrp_4h for the eval line that fired",
+    "what": "the first XRPUSDT entry after e6510a21 shows trend_donchian_xrp_4h on bybit_2/bybit_portfolio with NO trend_donchian_xrp_adx25 twin on real money"
+  },
+  "phase": null,
+  "updated_at": "2026-11-17T16:14:58Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

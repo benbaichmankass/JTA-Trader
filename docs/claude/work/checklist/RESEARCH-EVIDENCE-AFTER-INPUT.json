@@ -1,0 +1,22 @@
+{
+  "id": "RESEARCH-EVIDENCE-AFTER-INPUT",
+  "title": "research-script-run.yml: evidence_after input so the 14 fresh-window units can dispatch from 2027-01-04",
+  "state": "queued",
+  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
+  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research pipeline prerequisite",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-21",
+  "note": "Verified 2026-11-09 on origin/main: 14 units status=blocked, blocked_reason 'research-script-run.yml has no input that confines the evidence to data after <PASS run end>': RQ-20261105-0579-01, -2117-01, -2823-01, -8821-01, -a8b3-01, -f844-01 (not_before 2027-01-04); RQ-20261106-8c9a-01 (2027-01-05); RQ-20261107-053f-01 (2027-01-06), -0c19-01, -40a6-01, -6a89-01, -b7c1-01, -d89a-01 (2027-01-05), -fe4a-01 (2027-01-06). queue_grade._FRESH_WINDOW_INPUTS is {} (scripts/research/queue_grade.py:361). Harnesses exit_lever_ablation.py and leg_corpus_s1.py already accept --start/--end. Plan: optional evidence_after workflow input passed to --start, wired via _FRESH_WINDOW_INPUTS, then unblock exactly these units (YAML only, rules unchanged, not_before unchanged). NOT runway before 2026-11-11: dispatch_queue.py:456-461 refuses until not_before; they run on GitHub runners, not the trainer.",
+  "phase": null,
+  "updated_at": "2026-11-09T14:31:25Z",
+  "updated_by": "session_01AFoLuJdZnAnUxd2xzc6tPA"
+}

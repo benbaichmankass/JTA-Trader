@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-22",
+    "kind": "date"
+  },
+  "id": "PI-20261119-QDOYBTSN-0002",
+  "next_action": "check_observation",
+  "origin": {
+    "by": "session_01AFoLuHwqqyiix4qDoybTSN",
+    "kind": "audit",
+    "ref": "grading a7f1-07 (manager-accepted 2026-11-19 15:03Z); matrix PR #27350; unit PR #27353",
+    "rerun": "git fetch origin main && ls research/results/RQ-20261119-c8e2-01/   # the lever-off result; grade its shipped_* cell vs the lever-removed base from the corpus rows on claude/m20-sweep-corpus"
+  },
+  "owner": "AM-OPS-8",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "ANSWERED 2026-11-19: RQ-20261119-c8e2-01 (run 44561874575) lever-off arm for trend_donchian_eth_4h shipped trail_decay = FAIL on IS maxDD only (+0.073) with net R better in both windows (IS +4.775 / OOS +0.767). Manager decision 20:30Z: RETAIN the lever, no revert (revert path: set trail_decay off in the leg YAML, Tier 3). Matrix note in the AM-OPS-8 trail-decay decisions PR; gate-materiality proposal filed as PI-20261119-QDOYBTSN-0005.",
+  "tier": null,
+  "what": "Real-money question left unasked by a7f1-07: is the SHIPPED trail_decay (stall 10 / tight 1.8) on trend_donchian_eth_4h (bybit_2 real money + bybit_portfolio + bybit_1) still worth having ON vs OFF on fresh data? m20 run 44517900736 emitted no lever-off arm (25 kind=cell rows vs the live-lever base), so only 'no alternative beats it' was shown. Harness unit RQ-20261119-c8e2-01 (PR #27353) runs the lever-off arm (without_declared_levers: trail_decay); grade it by RULE-EXIT-REFINEMENT-P2-GATE. A FAIL goes to the manager as a Tier-3 retirement argument (no revert before then)."
+}

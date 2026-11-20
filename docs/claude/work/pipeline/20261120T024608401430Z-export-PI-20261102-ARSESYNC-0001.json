@@ -1,0 +1,27 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "trainer_git_sync.sh applies the sparse patterns + blob filter and a trainer-vm-diag read shows no comms/research/**/streams/ on the trainer's disk",
+    "event": "the VM-SPARSE-SYNC PR (deploy_pull_restart.sh sparse checkout) is merged and observed on ict-bot-arm (deploy log shows 'Sparse checkout patterns applied')",
+    "kind": "event"
+  },
+  "id": "PI-20261102-ARSESYNC-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "trainer-vm-diag relay: df -h /, git -C <repo> config core.sparseCheckout, du -sh comms/research",
+    "what": "trainer sync is sparse + filtered; trainer disk free of research caches"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane VM-SPARSE-SYNC (manager session_01AFoLuJ1apgy8sfngu4WyNH dispatch, 2026-11-02; incident #22365 filled ict-bot-arm's 45G disk)",
+    "rerun": "grep -nE 'git (fetch|reset|checkout)|sparse' scripts/ops/trainer_git_sync.sh ; trainer-vm-diag: df -h / and du -sh <trainer repo>/comms/research"
+  },
+  "routed_to": "TRAINER-SPARSE-SYNC",
+  "severity": "high",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 2,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ict-trainer-git-sync (scripts/ops/trainer_git_sync.sh on ict-trainer-vm) does a full `git fetch origin main` + checkout like the live VM's sync did before VM-SPARSE-SYNC, so any research batch that puts bulk caches on main (#22365: 21.6 GB of comms/research/**/streams/*.pkl) also lands on the trainer's disk. Give it the same treatment: fetch with --filter=blob:limit=5m and apply deploy/vm-sparse-checkout (or a trainer variant if the trainer READS some comms/research caches — grep scripts/training + scripts/ml first) before the reset, idempotent every run, with a simulated-repo test like tests/test_vm_sparse_checkout.py.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The trainer sync still does a full fetch and checkout, so any bulk cache on main lands on the trainer disk, which is already short of space. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/ops/trainer_git_sync.sh:35-36 plain `git fetch --quiet origin main` + `git checkout --force -B main origin/main`, no --filter or sparse (grep filter=blob|sparse: 0 hits); row ETF-HISTORY-REFRESH-RED: trainer 12 GB free. | owner row opened by this drain"
+}

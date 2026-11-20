@@ -1,0 +1,24 @@
+{
+  "clears_when": "a committed measurement record per account with population, n and the R-bias distribution",
+  "due_when": {
+    "due_date": "2026-11-18",
+    "kind": "date"
+  },
+  "id": "ENTRY-FILL-BIAS-30D",
+  "next_action": "dispatch_lane",
+  "note": "Per account, closed live rows of the last 30d: journal entry_price (the plan) vs the venue entry fill (Bybit closed-pnl avg_entry, Alpaca filled_avg_price, IB execution). Report median and p90 |fill-plan|/plan and the signed mean bias in R (over the row's initial risk), split netting-account rows (position-average entry) from the rest. Bybit closed-pnl filters on created_time = entry: read from the row's entry. Feeds ENTRY-FILL-WRITEBACK.",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS session_01AFoLuJUGfpon2bNgwFbFmx, manager GO 2026-11-14 17:59Z, row ENTRY-FILL-WRITEBACK",
+    "rerun": "scripts/ops/diag_fetch.sh '/api/diag/journal?table=trades&limit=1000' plus '/api/diag/bybit_raw_closed_pnl?account_id=<acct>&symbol=<sym>&start_ms=<entry-1h>&end_ms=<close+3h>' per row; compare entry_price with avg_entry_price"
+  },
+  "owner": "AM-OPS",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "measured: comms/research/entry_fill_bias/2026-11-15.json on main via #26166 (298 live closes since 10-16, per-account n + bps + R-bias split clean/overlap); feeds ENTRY-FILL-WRITEBACK (#26167)",
+  "tier": 1,
+  "what": "Measure the planned-vs-fill entry bias over the last 30d of closes, per account, so we know which R figures are distorted (feeds ENTRY-FILL-WRITEBACK)"
+}

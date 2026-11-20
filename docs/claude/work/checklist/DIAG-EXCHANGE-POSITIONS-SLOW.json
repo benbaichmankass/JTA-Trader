@@ -1,0 +1,23 @@
+{
+  "id": "DIAG-EXCHANGE-POSITIONS-SLOW",
+  "title": "/api/diag/exchange_positions (all accounts) 502s past the proxy's 30 s limit: read accounts in parallel with a per-account deadline and a per-account read_state",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26163
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "MEASURED 2026-11-14 20:05-20:09Z. The route with no account_id reads every account in sequence on the single-worker account-read executor (src/web/api/routers/diag.py get_exchange_positions -> run_account_read). Per-account reads: bybit_portfolio 5.2 s, alpaca_portfolio 7.4 s, bybit_2 5.7 s, alpaca_live 4.3 s. All accounts: a 10 s client times out (timed_out_after_connect); a 90 s client gets HTTP 502 at ~30 s (the proxy's upstream limit). So every caller of the all-accounts form now reads 'could not look'. mirror-orphan-watch failed this way on runs 38 (11-13 21:35Z) and 39 (11-14 20:03Z); worked around in #26119 (per-account reads). CALLERS of the all-accounts form (grep of .github/workflows, scripts, src at 20:15Z): (1) .github/workflows/mirror-orphan-watch.yml, fixed by #26119; (2) scripts/ops/journal_venue_audit.py (_diag('exchange_positions'), no account filter); (3) scripts/ops/system_invariants.py reads a captured exchange_positions.json; the weekly audit and health review capture it, so INV-JOURNAL-EXCHANGE and friends would grade not_measured, or fail to capture; (4) scripts/ops/venue_snapshot_dry_read.py (all accounts); (5) scripts/ops/reattach_stranded_package_legs_action.sh calls http://127.0.0.1:8001 on the VM, which bypasses the proxy, so there is no 502 but it is slow. Per-account callers are unaffected (mi171_alpaca_overclose_population.py, any ?account_id= read). UNVERIFIED: whether the dashboard SPA (separate repo) calls the all-accounts form; not checked. FIX: read accounts in parallel with a per-account deadline (e.g. 8 s), and return a partial result with read_state per account (ok / timed_out / error), never failing the whole call. NOTE: the IB branch must stay on its dedicated executor thread (BL-20260706-IBCONCURRENCY), so parallelise the non-IB accounts or give IB its own lane. Clears when the all-accounts read answers under 30 s with every account's read_state, and callers (2)-(4) run green. 2026-11-15 ~00:50Z: built, PR #26163 (draft, Tier-2 hold with decision line; both files are in the trader import closure, so it needs a restart batch). Non-IB accounts read in parallel on a new 8-worker lane; IB stays on the single-worker lane. Per-account deadline_s (default 8) with read_state ok/timed_out/error and elapsed_s. 4 new tests fail on the old code. Clears after deploy: the all-accounts read answers under 30 s with every read_state, and journal_venue_audit.py / venue_snapshot_dry_read.py / the system_invariants capture run green. 2026-11-15 02:32Z: #26163 merged (with #26167). landed_unproven. Clears on: GET /api/diag/exchange_positions (all accounts) answering under 30 s with a read_state per account, after the deploy. OBSERVED 2026-11-15 02:51Z after deploy b28cda10 (#26163; restart 02:38Z). Ran diag_fetch /api/diag/exchange_positions, all accounts, DIAG_FETCH_MAX_TIME=60. It answered in about 3 s wall, no 502, deadline_s 8.0. All 14 accounts read_state ok. Per-account elapsed_s: bybit_1 0.91, bybit_2 2.68, bybit_portfolio 1.53, alpaca_paper 0.61, alpaca_portfolio 0.61, alpaca_live 1.01, alpaca_options_paper 0.73; IB, oanda and prop all 0.05 s. Done: merged, deployed, observed.",
+  "phase": null,
+  "updated_at": "2026-11-15T02:52:38Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

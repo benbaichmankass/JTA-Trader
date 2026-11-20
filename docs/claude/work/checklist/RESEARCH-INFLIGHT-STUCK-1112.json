@@ -1,0 +1,23 @@
+{
+  "id": "RESEARCH-INFLIGHT-STUCK-1112",
+  "title": "Research inflight cap counts research runs frozen in the Actions backlog: throughput ~1 unit per 45 min while they sit queued",
+  "state": "done",
+  "owner": "lane RESEARCH-DISPATCH-STALL-1112",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25106
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "OBSERVED 2026-11-12 04:52Z, run 43156812754 (workflow_dispatch fire=true after #25106 merged 04:44Z). Backpressure line: 'research compute in flight 0 (cap 8; 8 research run(s) queued > 1 h not counted) ... repo runs queued 199 (cap 10) ... infra queued 0 fresh (36 stuck > 1 h not yielded to)'. Result: deferred=36 \u00b7 dispatched=1 (RQ-20261111-203c-02 to research-script-run). The inflight cap no longer binds. Throughput is still 1 per cycle because the repo_queued cap (199 > 10, frozen runs < 24 h) is lifted only by the starvation floor, for ONE fire. That is the next lever and a policy call for the manager, not done here. The same run's dispatch job ended red on an unrelated collector 'lost=1' (row RQ-470A-11-EMIT-REFUSED).",
+  "phase": "research-ops",
+  "updated_at": "2026-11-12T04:55:40Z",
+  "updated_by": "Lane RESEARCH-DISPATCH-STALL-1112"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "UI-LIVE-CHART-FRAMING",
+  "title": "Open-trade card chart: frame x = trade open .. current bar (+5% each side), y = SL (initial if moved) .. TP (farthest if moved) (+5% each side); load history back to the open",
+  "state": "landed_unproven",
+  "owner": "PIPELINE-MAP-V2-UI lane (session_01AFoLuNKrmqHXsTtppiyi3f)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "child of UI-REDESIGN-2026-11",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "OPERATOR 2026-11-15 ~10:30Z (chat, screenshot of BTCUSDT ml_entry bybit_2 card, opened 6h ago): live chart opens on 2 huge 15m bars (10:00, 10:15); 'we need to enforce the requested format of open until current bar +5% on each side, as well as top-to-bottom from SL (first one if it's been moved) to TP (farthest if it has been moved), + 5% on each side'. Two defects visible: (1) no history back to the trade open (only bars since the stream subscribed); (2) no visible-range / price-scale framing. Closed-trade SnapshotChart already frames (15% time / 10% price, addendum 2). Bracket history source: /api/bot/trades/{id}/markers. Done when: a live open-trade card on the deployed page opens framed per the rule, screenshot on desktop + phone. 10:45Z: dashboard #273 merged as 86b9c0c and deployed (the bundle carries the change, observed 10:43:21Z). LiveChart had called fitContent() once on the first candles. It now frames from the trade open to the current bar and from the first SL to the farthest TP, +5% each side, and loads history back to the open. A trade under 20 bars shows 20 bars, with the extra room on the left. Deployed screenshots are in docs PR #274. Closing observation: the operator sees a framed open-trade card. Deferred until after the 11-18 reset (throttle): on the 220px phone card chart the LTR/open marker labels crowd each other now that the whole trade is in view. Shorten or drop the labels at narrow width.",
+  "phase": null,
+  "updated_at": "2026-11-15T13:22:29Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

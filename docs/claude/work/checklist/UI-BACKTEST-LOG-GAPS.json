@@ -1,0 +1,33 @@
+{
+  "id": "UI-BACKTEST-LOG-GAPS",
+  "title": "Backtesting page: trainer backtest mirror 156 days stale; no per-run 'what we did' field",
+  "state": "done",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "UI spec gap (S&M Backtesting log) found by the 2026-11-12 gap audit; manager maps at the weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25562
+  ],
+  "blocked_on": [
+    {
+      "clears_when": [
+        "pr_merged:25562"
+      ],
+      "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+      "reason": "PR #25562 (read, held by R5); manager merges"
+    }
+  ],
+  "next_action": null,
+  "due_by": "2026-11-19",
+  "note": "2026-11-13 UI lane: #25562 (held by R5, Tier-1 read) adds GET /api/bot/research/runs, the run log with a computed what_we_did (links: iteration.from_result, requires_result.unit, grading.confirm_unit/confirms, disposition, retired_reason). Gap 1 is NOT a broken sync: run_backtest_sweep.sh is an on-demand manual sweep (2026-05-17), never scheduled; its age is now published as trainer_sweeps. FINDING (local, current tree): 1,959 runs with a verdict; what_we_did acted 91 / recorded 61 / none_recorded 1,807 (92%) = follow-through is rarely linked on the record.",
+  "updated_at": "2026-11-13T04:42:22Z",
+  "updated_by": "AM-UI session_01AFoLuMr5RixbuwJtqED344"
+}

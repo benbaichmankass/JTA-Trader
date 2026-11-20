@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261119-QDOYBTSN-0004",
+  "next_action": "check_observation",
+  "origin": {
+    "by": "session_01AFoLuHwqqyiix4qDoybTSN",
+    "kind": "audit",
+    "ref": "manager 2026-11-19 16:27Z; boot audit 16:14Z ghost line; diag alpaca_order_history 16:26Z; journalctl 16:26-16:27Z entry order pending holds",
+    "rerun": "scripts/ops/diag_fetch.sh \"/api/diag/journal?table=trades&limit=200\" | python3 -c \"import json,sys;[print({k:r.get(k) for k in (\\\"id\\\",\\\"status\\\",\\\"exit_reason\\\",\\\"exit_price\\\",\\\"pnl\\\",\\\"closed_at\\\",\\\"pnl_basis\\\")}) for r in json.load(sys.stdin) if r.get(\\\"id\\\")==8034]\"; scripts/ops/diag_fetch.sh \"/api/diag/alpaca_order_history?account_id=alpaca_options_paper&order_ids=10fd4469-aa72-4c9a-a893-ff5cafcc491d\""
+  },
+  "owner": "AM-OPS-8",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "OBSERVED 21:11Z (diag journal trades limit 200 + alpaca_order_history by_id). Trade 8034: status closed, closed_at 21:02:11Z, pnl NULL, exit_price NULL, pnl_basis NULL; no exit price fabricated from entry 40.22. Entry mleg order 10fd4469 terminal status expired at 21:00:06Z, filled_qty null, both legs expired. The flat-close path behaved correctly on money fields; no correction or code fix needed. One gap vs the stated condition: exit_reason is the generic exchange_flat_reconciled, not a reason naming an unfilled/expired entry. Not filed: that reason is in ml_entry_live_monitor.OPERATIONAL_EXIT_REASONS (== real_money_close_attribution.NOT_STRATEGY_EXIT), so the row is already excluded from strategy-exit attribution, and with null pnl it enters no P&L measure.",
+  "tier": null,
+  "what": "NOT BEFORE 2026-11-19 21:05Z: alpaca_options_paper SLV trade 8034 (pkg-145e79054b884464). Its entry is an mleg debit-vertical LIMIT 0.39 DAY order (10fd4469…), status 'new', never filled. At the 21:00Z bell the order expires, _entry_order_hold returns None, and the flat-close path runs. Correct: status closed, pnl NULL, no exit_price fabricated from entry 40.22, exit_reason naming an unfilled/expired entry. If a P&L or exit price was written: bring the manager a dry-run correction plus a HELD code fix (the flat close must refuse to price a row whose entry order is terminal with filled_qty 0). Also read the order's terminal status from alpaca_order_history."
+}

@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "Either the record's strategy field names the rostered leg (after checking its config_fingerprint matches the leg's current config), or the record is marked research-only and the leg gets its own Stage-0 record.",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-KWEHXFPU-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PIPELINE-MAP session_01AFoLuJEArj5fnhkwehXFPU, 2026-11-14, building docs/reference/trading-pipeline-map.md",
+    "rerun": "python3 scripts/ops/pipeline_map_numbers.py --offline && grep -A2 'naming no leg' docs/reference/trading-pipeline-map.md"
+  },
+  "routed_to": "STAGE0-ROUTE-E4-DESK",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "comms/strategy_evidence/e4_oi_shock.json carries strategy 'e4_oi_shock' but the rostered leg in config/strategies.yaml is 'e4_oi_shock_1h' (testing, bybit_1). Matched on the record's own strategy field, the leg reads 'no evidence record' on the pipeline map, and any reader keyed on the leg name misses it.\n\n[2026-11-15 BACKLOG-DRAIN-20261112] ROUTE: the e4 evidence record's strategy-name mismatch is part of giving e4 a Stage-0 evidence route EVIDENCE: comms/strategy_evidence/e4_oi_shock.json strategy 'e4_oi_shock' vs rostered leg 'e4_oi_shock_1h'",
+  "why_it_matters": "A leg on the demo floor with its Stage-0 record unreachable by name looks evidence-less; either the field is stale or the record measured a different config."
+}

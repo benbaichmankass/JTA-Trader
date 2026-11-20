@@ -1,0 +1,25 @@
+{
+  "id": "LTR-DIRECT-EVIDENCE-SOURCE",
+  "title": "Direct-POST live-review rows can't find an outcome table that exists only on live-review/rows (could_not_look, exit 3) - reviewer-rebuilt evidence never applies via the direct route",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review plumbing incident follow-up",
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26287
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-15 11:31-11:39Z (reviewer 0920, session_01AFoLuK2c7KYMJSeSwt2RN6): after #26258 deployed (trader 5db059c7), two CLOSE rows were POSTed directly (LR-20261115T1129Z-pkg-858c60dc674d418f ETH, ...-pkg-ec406687dc6d449f SOL). Both returned HTTP 201. Ten receipt reads over 8 min all showed: state pending, verdict could_not_look, exit 3, detail evidence_not_yet_at_ref:comms/live_review/tables/<id>.json, ref \"direct\", retrying. Cause (reviewer's read of live_review_dispatch.py:541-551 and live_review_rows_watch.py:401-407): a direct row has no pinned ref, so the dispatcher looks for the outcome table at HEAD plus --local-root (the direct tree and the wake poster's local evidence root). A table the reviewer committed only to the live-review/rows branch is never found. #26258 fixed materialization once the table is found, not finding it. The direct route works only when the table is in a local root, i.e. a table the VM poster built; a reviewer-rebuilt table never qualifies. Mitigation used: ETH/SOL were re-submitted by the branch route with fresh review_ids. Fix wanted (Tier 2): the direct POST carries the table (or its bytes are fetched from live-review/rows by packet_sha), or the dispatcher also reads the rows branch for a direct row. The REVIEWER-BRIEF 4a text must say which. Done when a direct-POSTed row whose table exists only on the branch applies with exit 0. 2026-11-15 11:55Z AM-OPS: PR #26287 (Tier 2 hold, head f9c712f0). Fix: for a direct row, when the named table is in neither local root nor HEAD, the dispatcher fetches live-review/rows and reads it at the tip (evidence_source live-review/rows@<sha>); the existing materialize step copies it into the checkout. No new trust: the pinned-ref route already reads that branch. REVIEWER-BRIEF section 4a: table on the branch, row direct; the interim note stays, reworded to wait on this being observed. 4 new tests fail before / pass after; 66 dispatch-area tests pass. No trader restart (per-row subprocess). Closes on: the next direct trade row with a branch-only table reaches the apply with exit 0. 12:03Z manager 15a: #26287 merged (squash 6c97275a) after a diff read. A direct row whose table is only on live-review/rows is now read at the fetched rows-branch tip and recorded as evidence_source. The REVIEWER-BRIEF 4a interim note stays. No trader restart. Closing observation: the next direct-POSTed trade row with a branch-only table reaches the apply with exit 0, and its receipt shows evidence_source live-review/rows@<sha>. 2026-11-15 12:02Z AM-OPS: #26287 merged by manager 15a as 6c97275aa6. The dispatcher is a per-row subprocess run from the VM checkout, so it takes effect at the next ict-git-sync pull, with no restart. Merged; not yet observed. Observation that closes it: the next direct-POSTed trade row whose table exists only on live-review/rows reaches the apply with exit 0, and its receipt shows evidence_source live-review/rows@<sha>. Then the REVIEWER-BRIEF section 4a interim note comes out (AM-OPS Tier-1 follow-up). 12:20Z manager 15a, PARTIAL OBSERVATION: after #26287 deployed, the two stuck direct rows LR-20261115T1129Z-pkg-858c60dc674d418f and -pkg-ec406687dc6d449f stopped reading could_not_look/exit 3. Both reached the apply, at 12:04:57Z and 12:05:03Z, which refused correctly with exit 2 'package ... not open' (both were already closed at 11:43Z via the branch route), and sent the #26258 refusal ping. So the branch-only evidence lookup works. The full closing observation, an exit 0 on an open package, is still pending. Note: the ping text labels the mandate MD-LIVE-TIGHTEN-SL (the superseded alias) rather than MD-TRADE-DESK; cosmetic.",
+  "phase": null,
+  "updated_at": "2026-11-15T12:22:03Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

@@ -1,0 +1,81 @@
+{
+  "id": "TQQQ-D20-PROMOTE",
+  "title": "tqqq_trend_long_1d: Donchian 30 -> 20 on the production leg (alpaca_live + alpaca_portfolio), PR #25671",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": "ML",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "check_observation",
+  "due_by": "2026-11-20",
+  "decision_requests": [
+    {
+      "answer": {
+        "chosen": "merge",
+        "committed_by": "Manager Session 2026-11-11a",
+        "duplicate_submission": "ace8c73666c1482aad62afa03995a606",
+        "submission_id": "b999c77b66fd4c968ac4761a0094ee6a",
+        "submitted_at": "2026-11-13T07:06:06.780086Z",
+        "submitted_by": "telegram"
+      },
+      "evidence": "Test on the SPY twin (proxy for TQQQ), daily bars 2010-06..2026-10, 4 folds, stops and TP unchanged, cost 5 bps slippage. Current 30: 95 trades, +9.37R net, max drawdown 5.10R. Proposed 20: 96 trades, +15.10R net, max drawdown 4.27R. Better in 3 of 4 folds (fold 3: -2.37R vs +0.18R). Passed all three pre-registered conditions. Caveats: one proxy symbol, not TQQQ itself; in-sample evidence; statistical power not yet established ('accruing'). Revert is one line.",
+      "id": "TQQQ-D20",
+      "options": [
+        {
+          "key": "merge",
+          "label": "Merge it now (real money), observe the next signals"
+        },
+        {
+          "key": "wait_power",
+          "label": "Wait until the test's power is established / a TQQQ-own walk-forward confirms"
+        },
+        {
+          "key": "decline",
+          "label": "Decline; keep 30"
+        }
+      ],
+      "recommended": "wait_power",
+      "title": "Merge #25671: TQQQ trend leg Donchian 30 -> 20 (real money)?"
+    },
+    {
+      "answer": {
+        "acted": "#25691 (decision_bar: closed) is NOT merged; live keeps deciding on the forming bar. AM-ML is asked to build an equity forming-bar replay for tqqq_trend_long_1d and re-measure; the main-red fingerprint test is handed to AM-ML/the new manager to resolve without a waiver.",
+        "chosen": "build_replay",
+        "committed_by": "Manager Session 2026-11-11a",
+        "submission_id": "d8dec02ebe14457c9293b92e727d5ff1",
+        "submitted_at": "2026-11-13T08:02:34.773806Z",
+        "submitted_by": "telegram"
+      },
+      "evidence": "Every backtest for tqqq_trend_long_1d (incl. today's 30->20 PASS) measures decisions on CLOSED daily bars, but live currently decides on the FORMING bar (no decision_bar set), which has no evidence behind it. Since #25228 the evidence record correctly flags this as 'approximate', which keeps a test red on main. Precedent: DECISION-BAR-MATCH (your 2026-10-22 call) moved legs to closed bars for the same reason. Change: add decision_bar: closed (entries move from an intraday breakout to the daily close). Revert: delete the line. Regenerated record at closed bars: +24.96R over 136 trades, 6/8 folds positive.",
+      "id": "TQQQ-DECISION-BAR",
+      "options": [
+        {
+          "key": "closed",
+          "label": "Switch to closed bars (match the evidence)"
+        },
+        {
+          "key": "waiver",
+          "label": "Keep forming bars; I waive the fidelity check for this leg"
+        },
+        {
+          "key": "build_replay",
+          "label": "Keep forming; build an equity forming-bar replay first (days)"
+        }
+      ],
+      "recommended": "closed",
+      "title": "TQQQ trend leg: decide on the daily CLOSE (match its evidence), or keep deciding on the forming intraday bar?"
+    }
+  ],
+  "note": "AM-ML owns the observation (manager 07:18Z). (1) DEPLOYED, OBSERVED 07:21:46Z via /api/diag/version: ict-trader-live deployed sha dd2d934d9, restart_pending false; git merge-base confirms it contains 7f6fedac5 (#25671). /api/bot/config 07:2xZ shows tqqq_trend_long_1d donchian 20, tp_r 1.5, execution live. (2) OPEN: the first tqqq_trend_long_1d signal/entry on alpaca_live + alpaca_portfolio on the 20-bar channel, with bracket placed. Checks after each US session close; a Donchian-20 breakout can take days. Rollback: donchian: 30. 12:46Z FORMING-BAR VERDICT: PASS on RULE-EQ-FORMING-TQQQ-20261113. Run 43421052545 (research-script-run), unit RQ-20261113-1449-01. Population: TQQQ forming daily bar from Alpaca iex 1m, 2020-07-27..2026-11-12; net of 0 fee + 5 bps slippage. (a) D20 forming net_r_oos +12.77 R. (b) D20 - D30 = +3.16 R, maxDD 3.65 vs 4.66, 3/4 folds, n 54 vs 43. (c) The record is faithful. Manager 12:45Z: no Tier-3 action, so tqqq stays on donchian 20 and the forming bar. #25691 (closed-bar fallback) closes once the result dir and the faithful record land on main (the PR that deletes FIDELITY_PENDING_REMEASURE). First live D20 signal: still watched (check 21:40Z). 13:55Z: #25740 MERGED (42b2dcc4b). It landed the 1449-01 results and the faithful tqqq record (net_r_oos 12.7698, n 54) and emptied FIDELITY_PENDING_REMEASURE. Closed #25691 (the closed-bar fallback) per the manager's 12:45Z instruction. Remaining open item: the first live D20 signal (check 21:40Z). 2026-11-13 21:45Z AM-ML first-signal check (2), after the US close: NO breakout. journalctl ict-trader-live since 19:00Z grep tqqq_trend_long_1d: 198 lines (complete), 0 buy signals, 0 orders; last eval 21:41:04Z 'no breakout ... close=57.635 within channel [50.25, 73.42]' -> needs +27.4% to the channel high. No bracket to verify. Next check after Monday 2026-11-16 US close. Related: TQQQ-LIVE-FRAME-STALE (89% stale frames, 0 decision divergence) could delay the first entry -- diagnose before a breakout is near.",
+  "updated_at": "2026-11-13T22:19:34Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

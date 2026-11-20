@@ -1,0 +1,23 @@
+{
+  "id": "ALPACA-CLOSE-REPRICE-NO-RESET",
+  "title": "alpaca close: rung 2 'repriced' but not flat skips rung 3 (paper reset) - GLD 39 stuck, no stop",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "bug follow-up of ALPACA-LIVE-MECHANICS",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Evidence: row ALPACA-LIVE-MECHANICS note 2026-11-09 15:08Z; issue #24542 run 42641090513. Defect: AlpacaClient.close flat-confirm gate (alpaca_client.py ~L2129) skips _escalate_not_flat when result.scope == oco_target_reprice, so an accepted-but-ineffective replace (TP stays 461.27) never reaches rung 3a (paper close-all + journal_account_reset). Fix: when confirm gate sees not-flat after scope oco_target_reprice, run rung 3 (paper only; live = one red flag). Also decide: order_monitor wedge suppression vs directed close. Test: unit with fake client whose replace is accepted but position stays open. Operator already chose paper reset for GLD 5209 (popup 'Paper account reset'). 2026-11-09 16:48Z lane: #24547 merged (b401164ff) and deployed (trader sha b401164ff, restart_pending false, 16:43Z). Re-ran flatten-alpaca-position alpaca_paper GLD apply=true (issue #24559, run 42657734779, 16:45Z RTH). NEW PATH RAN: rung 2 repriced TP (976ab9e1), position still open, then rung 3 close-all DELETE /v2/positions?cancel_orders=true was ACCEPTED (state reset). Post-state 16:48Z (diag): alpaca_paper TLT 632 is GONE (closed by the reset; its bracket orders gone) but GLD long 39 is STILL OPEN, TP 2e843e04 still limit 461.27 status new, stop c928eda6 canceled, so GLD still has NO STOP. So the broker ignores cancel, replace AND close-all for GLD: a broker-side wedge no API call clears. Because the close returned not-flat, journal_account_reset did NOT run: TLT journal row is still to be closed (reconciler close-on-disappear expected; NOT verified), trade 5209 still open. Remaining path is operator/Alpaca-only: reset the alpaca_paper account in the Alpaca paper dashboard (Account > Reset), or Alpaca support. Code follow-up (small): in _escalate_after_ineffective_reprice, when close-all accepted and a DIFFERENT symbol left but sym did not, still run journal_account_reset for the closed others (needs close result to carry closed_symbols on retCode 1); wording nit: marker reads 'account reset reset: not flat'. 2026-11-09 18:3xZ lane (Tier-2, key propagation): operator reset alpaca paper + rotated keys (ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY; alpaca_live uses *_LIVE, portfolio *_PAPER_PORTFOLIO, options *_OPTIONS - none touched). Dispatched sync-vm-secrets via issue #24576 (label sync-vm-secrets-request) -> run 42673862390 CONCLUSION=failure at ~50s, issue got no comment, no artifact, session cannot read job logs (jobs API returns 0). Post-state read 18:28:42Z: /api/diag/exchange_positions?account_id=alpaca_paper still shows GLD long 39 (-1693 uPnL), error null, so the VM env/restart is NOT shown to have taken effect. Journal reconcile (trade 5209 etc.) NOT done: close-stranded-journal-row refuses while the broker still reads open. Needs: someone who can read run 42673862390 logs (likely a REQUIRED secret unset/ssh step), then re-dispatch; DO NOT assume keys propagated. 2026-11-09 18:43Z lane (alpaca_paper key propagation, Tier 2): operator reset the alpaca paper account + rotated ALPACA_API_KEY_ID/ALPACA_API_SECRET_KEY. Run 42673862390 failed at GitHub start (0 jobs); manager re-dispatched sync-vm-secrets run 42674757569, success 18:32:50Z, trader restarted ~18:32:49Z. OBSERVED 18:32:49Z-18:42:49Z (10 min), journalctl ict-trader-live grep alpaca, 53 lines: 0 auth/401/403/forbidden errors; only WARNING = boot_reconcile GHOST TRADE 5209 GLD at 18:32:49 (expected). alpaca_paper balance()=1000000.00, exchange_positions=[] error null (13 balance reads, last 18:42). Journal: trade 5209 (gld_pullback_1h, pkg-8106d5eef6fc425c) status closed, exit_reason sl_cross, pnl None (broker-reset closure, no fill price: pnl unverified); alpaca_paper open journal rows = 0 across newest 1000 trades (ids 6004-7003) plus offsets to id 3004, so close-stranded-journal-row NOT needed and not run. ib_paper packages tlt/gld/mgc/mhg_pullback_1d untouched. alpaca_live/alpaca_portfolio/options untouched. No orders, no secret values handled.",
+  "phase": "fix",
+  "updated_at": "2026-11-09T18:42:59Z",
+  "updated_by": "session_01AFoLuKgeM4bM8AQqUfQZjE",
+  "week_lane": "throttle"
+}

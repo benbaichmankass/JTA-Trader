@@ -1,0 +1,27 @@
+{
+  "id": "TMBENCH-V2-TRAIN-INPUT",
+  "title": "Corpus v2 (bp2-f4271084b120) as a tm_bench TRAIN input on the runner: materialise it in research-script-run (artifact of run 40999208713 expires ~2026-01-27, or regenerate from hash_inputs + git_sha), manifest hash checked; tm_bench --train-sample-mult K (seeded, trade-grouped, purged, de-duplicated vs v1) with a selfcheck row. Unblocks RQ-20261112-3144-02 (ml-tm-action-value iteration 3).",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": 4.89,
+  "prs": [
+    25250
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Filed 2026-11-12 by lane ML-AM-NEXT-LIVE (session_01AFoLuKUkUmhzEzkiXTb9tG) after RQ-20261112-3144-01 FAIL. Not built in-lane: lane ceiling. Done when RQ-20261112-3144-02 is git-mv'd to research/queue/ with run.command, rule unchanged. Gates: none. 2026-11-12 lane start: artifact of run 40999208713 is GONE (artifact list for the run and by name both total_count 0; probe verified positive on other runs). Plan: fetch-latest-by-name else regenerate in-runner, manifest trade_key_sha256 checked; tm_bench --train-sample-mult. Finding: v1/v2 trade_key strings differ (strategy vs leg stamp) so key-string de-dup never matched; de-dup on (leg,symbol,entry,direction) identity. 2026-11-12 PR #25407 (draft, hold, Tier 1) ready for AM-ML merge: corpus_v2_materialise.py (fetch else regenerate at manifest git_sha, trade_key hash -> materialise.json), research-script-run step, tm_bench --train-sample-mult + 5 selfcheck rows, unit 3144-02 git-mv'd with run.command (rule untouched). Verified: selfcheck PASS, tests 12+91, ADA regen counts == manifest, real-data smoke. NOT verified: full 360-cell regen + unit run on the runner (landed_unproven; closes on the first 3144-02 run with materialise.state in artifact|regenerated and match true). Spend: no Anthropic API credits. 2026-11-12 PR #25407 MERGED (039b09a96; unit 3144-02 in research/queue on main). MERGED, not deployed-by-run, not observed: landed_unproven; observe field names the verdict.json fields that close it. Open items: pytest-run red on main (research_queue d2ct-01/78fc-13, ops parity) not mine; 3 tests red on my head only (wake_toggles, console_reads, vm_sparse_bootstrap) unchecked vs main. First thing next session: confirm the first 3144-02 dispatch ran materialise (full 360-cell regen is untested on a runner; one symbol reproduced exactly). create_trigger refused (lineage depth 8); reported by PR comment. No API credits spent.",
+  "observe": {
+    "how": "read comms/research/RQ-20261112-3144-02/<run_id>/verdict.json: measurement.train_corpus.materialise.state in [artifact, regenerated] and trade_key_sha256_match true, n_trades_observed 146158; measurement.train_sample.per_fold sizes = min(pool, 4 x n_v1_train_with_states); verdict not indeterminate for corpus reasons",
+    "when": "after the first research-script-run of RQ-20261112-3144-02 (queued on main, merge 039b09a96)"
+  },
+  "phase": null,
+  "updated_at": "2026-11-13T22:19:37Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F"
+}

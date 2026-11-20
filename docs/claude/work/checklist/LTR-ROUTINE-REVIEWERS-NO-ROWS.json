@@ -1,0 +1,56 @@
+{
+  "id": "LTR-ROUTINE-REVIEWERS-NO-ROWS",
+  "title": "Live review: routine-fired reviewer sessions land NO rows. 10 fired since 2026-11-12 16:24Z (http 200), 0 rows; the last row anywhere is LR-20261112T1419Z (reviewed 14:27Z, a manager-dispatched lane)",
+  "state": "dropped",
+  "owner": "manager (routine config)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": [],
+  "next_action": "ask_operator",
+  "due_by": "2026-11-14",
+  "decision_requests": [
+    {
+      "allowsFreeText": true,
+      "answer": {
+        "acted": "Read back to the operator 2026-11-13 15:47Z (late: the 15:17Z check-in fired at 15:44Z). The operator attaches the repo to the routine; the next NEW due key's routine reviewer is the trial (row LTR-ROUTINE-REVIEWERS-NO-ROWS). Catch-up lanes keep covering until a routine reviewer lands a row.",
+        "chosen": "attach",
+        "committed_by": "Manager Session 2026-11-13a",
+        "submission_id": "10027af4a55e4df986b91e857d94b223",
+        "submitted_at": "2026-11-13T13:19:33.982309Z",
+        "submitted_by": "telegram"
+      },
+      "askedOn": "2026-11-13T12:50:00Z",
+      "evidence": "MEASURED 2026-11-13: the 12:02Z routine reviewer ran 6 min ($1.71) with no repo and wrote no review. Its instructions already told it to attach the repo (#25687, deployed) and the tool was available, but the attach did not happen in the unattended session. The last review written by any routine reviewer was 2026-11-12 14:27Z; every review since came from a manager-started catch-up lane. The fix is a routine setting only you can change: in claude.ai, open that routine's settings and add benbaichmankass/JTA-Trader under repositories. Nothing else changes. Until then, catch-up lanes keep covering prop and real-money reviews (one is running now).",
+      "id": "LTR-ROUTINE-REPO-SOURCE",
+      "options": [
+        {
+          "key": "attach",
+          "label": "I'll attach the repo to the routine (recommended)"
+        },
+        {
+          "key": "not_now",
+          "label": "Not now; keep using catch-up lanes"
+        },
+        {
+          "key": "retire_routine",
+          "label": "Retire the routine; catch-up lanes only"
+        }
+      ],
+      "question": "The automatic live-review routine (\"\u26a1 JTA live review (real money + prop)\") starts without the repo, so it never records a review. Will you attach the JTA-Trader repo to that routine as a source?",
+      "recommended": "attach",
+      "urgency": "routine"
+    }
+  ],
+  "note": "[2026-11-17T15:4xZ manager] KILLED: operator popup 2026-11-17 'Retire the routine (Recommended)'. Already paused on the VM: LIVE_REVIEW_ROUTINE_ID unset after the 11-13 popup; diag live_review_fires last fire 2026-11-14T00:02Z. Reviews come from the ltr-wake comment -> manager-dispatched reviewer path (rows land). Optional operator tidy-up: delete the 'JTA live review' routine in claude.ai. Do not re-set the id.",
+  "updated_at": "2026-11-17T15:40:05Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

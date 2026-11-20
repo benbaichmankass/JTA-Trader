@@ -1,0 +1,23 @@
+{
+  "id": "EQ-FORMING-BAR-REPLAY",
+  "title": "Equity forming-bar replay for the trend harness, then re-measure tqqq_trend_long_1d d20 and d30 on the FORMING daily bar (operator 2026-11-13 08:02Z build_replay: 'Keep forming; build an equity forming-bar replay first (days)')",
+  "state": "done",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML) session_01AFoLuMfGoUaVmVtfzXaKEK",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25691
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "WHY: live tqqq_trend_long_1d decides on the FORMING daily bar (no decision_bar; runtime default, intent_multiplexer:524). Every Stage-0 number for it (the committed evidence record, RQ-20261113-4654-01) measures CLOSED-bar decisions. scripts/backtest_trend.py --decision-bar forming reads Binance 1m archives only, so equities cannot be replayed today; since #25228 the leg's record grades 'approximate' (C5). BUILD: (1) an equity 1m source for TQQQ with a declared history window: Alpaca market-data bars via a runner or the VM (keys live there; never in the repo), else Yahoo, which gives ~30 d of 1m and so cannot cover a backtest; (2) feed scripts/research/forming_bar_entries.py, the one forming-decision implementation, from it, honouring the leg's US-session gate; (3) regime_debt_matrix forwards --decision-bar forming for equity legs when 1m is available, so the record grades faithful. SIZE: 3-5 lane-days (data source + adapter + tests + the run), honest, as the operator was told. Lane: FRONTIER (2-lane throttle). PRE-REGISTERED RULE (written 2026-11-13 ~09:35Z, before any forming run), RULE-EQ-FORMING-TQQQ-20261113: arms D30 and D20 on TQQQ 1m-derived forming decisions over the full available 1m history (window declared at run time from the source and fixed before scoring), 4 folds, the full cost stack (fee + 5 bps slippage, no funding). (a) STAGE 0: net_r_oos(D20, forming) > 0, net of the full cost stack. FAIL -> the closed-bar fallback #25691 goes to the operator. (b) D20 vs D30 on forming: PASS iff net_r(D20) - net_r(D30) >= 0 AND maxDD(D20) <= maxDD(D30) AND D20 wins >= 3 of 4 folds. FAIL -> revert-to-30 proposal to the operator. Never automatic. (c) The regenerated record is faithful and closes the main-red exception. INDETERMINATE if n(D30) < 25. Fixed now; not changed after any result. 12:38Z VERDICT PASS on RULE-EQ-FORMING-TQQQ-20261113 (run 43421052545, unit RQ-20261113-1449-01). Population: TQQQ forming daily bar from Alpaca iex 1m; daily 2020-07-27..2026-11-12; RTH alignment 1582/1583 days; net of fee 0 + 5 bps slippage. (a) D20 forming net_r_oos +12.77 R. (b) D20 - D30 = +3.16 R; maxDD 3.65 vs 4.66; D20 wins 3/4 folds; n D30 43, D20 54. (c) The record regenerates faithful, omitted_levers []. NO Tier-3 consequence: tqqq stays on donchian 20 and the forming bar; #25691 (closed-bar fallback) can close. OPEN: FRONTIER lands the faithful record and deletes FIDELITY_PENDING_REMEASURE plus its README note in one PR. Caveat: the window is limited by the Alpaca 1m history (6.3 y, smaller n than the closed-bar record).",
+  "phase": null,
+  "updated_at": "2026-11-13T13:40:50Z",
+  "updated_by": "session_01AFoLuMfGoUaVmVtfzXaKEK"
+}

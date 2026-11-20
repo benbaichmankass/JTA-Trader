@@ -1,0 +1,23 @@
+{
+  "id": "ML-EQ-ENTRY-TIMING",
+  "title": "Equity ML entries land ~15.6 min after bar close: batched multi-symbol candle fetch + close-aligned poll for ml_entry_eq / ml_entry_eq_struct (Tier 2, changes no decision)",
+  "state": "landed_unproven",
+  "owner": "FRONTIER",
+  "lane": "session_01AFoLuHbxGELH3mydcLCU6t",
+  "model": "claude-opus-5-5",
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Thursday-planning 2026-11-11 decision; weekly pass maps it",
+  "ceiling_usd": 14,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "[operator decision 2026-11-11, Thursday-planning doc] c1 Equity ML entry timing, 15.6 min late -> verbatim choice \"Approve the fix\": batched multi-symbol fetch plus close-aligned poll, Tier 2. APPROVED (Tier 2) by this answer: build, validate, ship, verify the post-state (paper packages measured ~15.6 min late after the bar close). DONE WHEN the next 10 equity ML packages after deploy land within a stated bound (e.g. < 2 min) of the bar close, MEASURED from package timestamps. [2026-11-12 16:09Z AM-ML] Dispatched lane session_01AFoLuHbxGELH3mydcLCU6t (claude-opus-5-5, fresh, $14). The manager said breadth over waiting (16:02Z). The brief carries the row text, the operator decision and the 11:45Z no-new-gates line verbatim. 13:11Z: #25512 MERGED by the manager (e2d4a0964). It makes the eq refresher seed per symbol and confines the idle re-seed to more than 30 min from a decision close. OPEN OBSERVATION (AM-ML owns it): (a) the trader's deployed sha (/api/diag/version) contains e2d4a0964; (b) the refresher log (journalctl ict-trader-live) shows a clean seed or incremental cycle, with no 200-page cap hit on the multi-symbol endpoint, and no re-seed within 30 min of a 4h decision close. 14:28Z: DEPLOYED (trader 04fe0cfa2 contains e2d4a0964). NOT YET OBSERVED: the journal tail (14:19-14:27Z, 2000 lines) has no ml_entry_eq_refresher line. Its next activity is at a 4h decision close, the next being 16:00Z. Re-read the refresher log after 16:00Z for a clean seed or incremental cycle and no re-seed within 30 min of the close. 2026-11-13 19:50Z AM-ML: AM-OPS-routed Alpaca 429 finding PI-20261113-BMHG94FT-0001 closed (refuted as steady state; one-off at #25512's first run + 3 restarts in 23 min). The refresher's full 173-call re-seed (17:57:15Z) and the 14:49Z/18:05Z restarts produced zero HTTP 429. Refresher observed healthy: 16:05:10Z bar_close 16:00Z covered=167/173 took_s=156.8 lag_s=310.3 incremental 155/seeded 18 calls 48.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:19:35Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "week_lane": "surge"
+}

@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "ml_entry_eq_struct on alpaca_live executes >=50% of its packages over 7d, or a recorded decision accepts the refusal rate",
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "diag journal?table=trades alpaca_live rows since 2026-11-16, entry_reason"
+  },
+  "owner": "health-review",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 2,
+  "what": "[health][real-money] ml_entry_eq_struct on alpaca_live emitted 21 packages 2026-11-16..17 and executed 1 (7615 USO): the other 20 are risk_refused sized_qty=0 with balance ~$194.6 but available_usd $54.45. The leg cannot size on the real-money account, so its live record will not accrue. Same class as BL-20260908 (alpaca_live cannot buy one share). Read what holds the other ~$140 and decide."
+}

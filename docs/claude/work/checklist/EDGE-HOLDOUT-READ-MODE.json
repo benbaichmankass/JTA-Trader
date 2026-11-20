@@ -1,0 +1,21 @@
+{
+  "id": "EDGE-HOLDOUT-READ-MODE",
+  "title": "Holdout-read mode for the edge portfolio harnesses (edge_portfolio_discovery.py carry/tsmom + edge_etf_tsmom.py): fixed registered config evaluated on 2024-07-01..last complete month via edge_data allow_holdout=True, read claimed through holdout_lock.claim_read (deflated bar), self-test",
+  "state": "queued",
+  "owner": "unowned",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed once by RESEARCH-OPS-20261117-1006 (fork B). Unblocks RQ-20261101-d1f3-07 (funding-carry C1 holdout read, the only discovery PASS of the 58e4 set, overdue since 2026-11-15), RQ-20261117-617c-02 (tsmom-crypto FS2) and RQ-20261117-617c-03 (tsmom-etf TR1). Diagnosis: both tsmom arms clear Sharpe/stress/halves but fail ONLY on DSR at the cumulative in-sample trial count (FS2 0.553 at N=20; TR1 0.624 at N=16), so another in-sample arm cannot pass by construction; an untouched in-hand window is the only informative next read. HOLDOUT-LOCK (the old blocker) is done; edge_data.MAX_MONTH=2024-06 still makes the window unloadable without this mode. Tier 1 research tooling, no order path.",
+  "phase": "research",
+  "updated_at": "2026-11-17T10:19:43Z",
+  "updated_by": "session_01AFoLuMNJLaELyLniVCjP7T"
+}

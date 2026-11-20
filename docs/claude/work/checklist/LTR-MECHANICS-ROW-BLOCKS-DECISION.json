@@ -1,0 +1,29 @@
+{
+  "id": "LTR-MECHANICS-ROW-BLOCKS-DECISION",
+  "title": "Live reviews emit flag_mechanics with no exit decision on known or by-design venue differences, stalling the decision",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-18T22:20:22Z",
+      "lane": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+    }
+  ],
+  "note": "2026-11-16 08:25Z manager, MEASURED over the overnight real-money reviews: at least 4 rows came back as flag_mechanics with no hold/tighten/close decision (pkg-fe0c 00:13Z + 04:12Z on velotrade_1's by-design sl_only TP; pkg-0da0 04:11Z on the paper mirror's stop lag; pkg-09c9 also needed a manager override). Each forced a re-dispatch with manager context. Fix candidates in the REVIEWER-BRIEF and packet: (a) a mechanics difference on a PAPER mirror, or one known and by design (sl_only prop TP), is recorded as a flag beside the exit decision and does not replace it; (b) the packet carries a 'known_mechanics_dispositions' list (row id plus reason) so reviewers don't re-flag. Closing observation: a review with a known mismatch still produces an exit decision. 2026-11-16 ~08:55Z OPERATOR DIRECTIVE (binding, verbatim): \"Regarding the execution - even there is a legitimate reason to not apply on one account, it shouldn't prevent the decision from being applied on other accounts holding the same trade\". MEASURED case: pkg-fe0c ETH short. velotrade_1's by-design sl_only TP difference made the 00:13Z and 04:12Z rows flag_mechanics (no decision), and the 08:32Z close (ev +0.298R, n=256) route operator_ask, so nothing auto-applied on bybit_2/bybit_portfolio (mechanics match there) for ~8.5 h. Operator approved the close at ~08:48Z (directed-action OPS-20261116T084821Z). BUILD: mechanics verdict per ACCOUNT, not per package; a recommended action applies on every account whose mechanics match, and only the mismatched account is skipped (flagged, with the reason); by-design differences (sl_only prop TP) are not mismatches. Touches the REVIEWER-BRIEF, the row schema (per-account mechanics), live_review_dispatch.py (route check per account) and live_review_rows_watch.py. Tier 2 HOLD PR. 2026-11-16 09:00Z AM-OPS-2: BUILT as HOLD PR #26481 (Tier 2, RESTART; landing file + branch merge-slot claim committed). (a) packet mechanics.per_account; (b) dispatch applies on the match accounts (--accounts) and skips+flags the mismatched with its reason; apply honours intent.account_scope and never moves the shared stop; (c) sl_only prop TP at the ticket's entry TP is by design; (d) REVIEWER-BRIEF + skill + schema updated (embedded schema identical); (e) tests/test_live_review_mechanics_scope.py 13 tests incl. a mixed package; 774 live-review tests pass. Rows watcher unchanged (routes by action+route). Closing observation (after merge+deploy): the next real-money review on a package with a mismatched account still applies its decision on the matching accounts, receipt shows mechanics_skipped for the rest. Known limit: the reviewer must copy packet per_account into the row; rows written by an older brief fall back to the package verdict. 2026-11-16 ~09:10Z OPERATOR CLARIFICATION (verbatim; read with the obvious typo fixes 'should [not] prevent' / 'does[n't] hold'): \"Ok, we can have one review per trade package instead of account if it's leaner, but one accounts mismatch should prevent the ltr (at all, it can help us see and fix that), and the implementation should be per account do one accounts blocker does hold the decision from all accounts holding that trade\". Design confirmed: ONE review per package (lean); the reviewer always makes the decision; an account mismatch is FLAGGED for fixing, never a reason to skip the review; apply is per account, so one account's blocker never holds the decision on the others. #26481 implements exactly this. 2026-11-16 09:47Z DEPLOYED (#26481 squash ae5f4342), NOT YET OBSERVED. diag version: git_sha_on_disk = trader_git_sha = ai ae5f434278cb, restart_pending false for ict-trader-live and ict-web-api, deployed_sha_by_unit both ae5f4342. ict-trader-live active; journal window 09:45:52-09:46:38Z: 0 error/traceback lines, tick loop running (60 s interval). CLOSING OBSERVATION (still open): the next real-money review row whose mechanics.per_account differs across accounts (e.g. a velotrade_1 prop mismatch beside matching bybit accounts) is dispatched with --accounts <matching>, applies on those, and the dispatch receipt / dispatch_state records mechanics_skipped for the rest. Watch: dispatch_state.json 'mechanics_skipped' and the dispatch line '>>> ... SKIPPED <acct>'. Caveat: the reviewer must copy packet per_account into the row (new brief); rows from reviewers on the old brief fall back to the package verdict.",
+  "phase": null,
+  "rank": 1,
+  "updated_at": "2026-11-18T22:20:23Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

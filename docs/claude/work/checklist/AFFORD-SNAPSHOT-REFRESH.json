@@ -1,0 +1,20 @@
+{
+  "id": "AFFORD-SNAPSHOT-REFRESH",
+  "title": "R-AFFORD account snapshots go stale with no scheduled refresh: every real-money promotion (Stage-0 OR live-bar path) is NEEDS_DATA on affordability. MEASURED 2026-11-19 ~02:10Z (committed files on main): comms/mandate_evidence/account_snapshot/bybit_2.json captured_at 2026-11-06T19:59Z (12.2 d) and alpaca_live.json 2026-11-01T11:53Z (17.6 d), against ACCOUNT_SNAPSHOT_MAX_AGE_DAYS=7 in scripts/ops/mandate_resolver.py. Resolver run on trend_donchian_sol_4h S1->S2 bybit_2: NEEDS-DATA R-AFFORD '...is 12.2 days old'. scripts/ops/snapshot_account_for_mandate.py (the v2 writer: per-leg answers, never a balance) has NO caller in .github/workflows, deploy/ or a timer (grep 2026-11-19), so it refreshes only when a session runs it by hand. Fix (Tier 1, tooling): run the writer on a daily schedule (a workflow reading the diag account endpoint, as the writer already does) and commit the per-leg answers; or run it inside the live-bar daily feed job. No new gate (it supplies a measurement the existing clause already reads). Done when both snapshots are < 7 d old on main by a scheduled run, observed twice.",
+  "state": "queued",
+  "owner": "AM-OPS-5 (session_01AFoLuJoiTZn52nfU7Q2ynt)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-21"
+}

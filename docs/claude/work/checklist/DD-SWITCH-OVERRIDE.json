@@ -1,0 +1,56 @@
+{
+  "id": "DD-SWITCH-OVERRIDE",
+  "title": "Daily DD switch: a one-time operator override (button) that clears today's trip for one account, journaled and alerted",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuJD1uLtmKbpHNi6gX5",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator request 2026-11-12",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25181
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "decision_requests": [
+    {
+      "answer": {
+        "chosen": "merge",
+        "committed_at": "2026-11-13T07:00Z",
+        "committed_by": "Manager Session 2026-11-11a",
+        "submission_id": "eacec75dc3ed4cdb817ce135f8e532eb",
+        "submitted_at": "2026-11-13T06:51:34.551144Z",
+        "submitted_by": "operator-spa"
+      },
+      "evidence": "Tier 3, risk path. Fixes which balance the daily DD switch measures 'today' from, and adds a one-time operator override that clears today's trip for one account. Rebased on main by AM-OPS; summary + revert on this row. Related: #25531 (live Alpaca equity for the switch) is already merged and deployed.",
+      "id": "DDSW-25181-MERGE",
+      "options": [
+        {
+          "key": "merge",
+          "label": "Merge it (AM-OPS deploys, then dashboard #244 adds the button)"
+        },
+        {
+          "key": "hold",
+          "label": "Hold - I want to read it first"
+        },
+        {
+          "key": "no_override",
+          "label": "Merge the day-start fix only, drop the override"
+        }
+      ],
+      "recommended": "merge",
+      "title": "Merge #25181: daily drawdown switch day-start fix + a one-time override button?"
+    }
+  ],
+  "next_action": "manager: merge PR #25181 (Tier 3 HOLD, decision m7), deploy, verify on VM; forward route contract to UI-SPA",
+  "note": "Operator 2026-11-12 ~00:07Z: wanted a one-time override after bybit_2 + bybit_portfolio tripped late on 11-11 ('I want to override that one time ... turn it back on'). Today the trip latches to the UTC day boundary with no manual clear (src/units/accounts/daily_dd_switch.py). Operator: 'add the override button to the morning list'. Design question for the morning: an operator-only button (Telegram/console via TRADE-ACTION-DIRECT-PATH) that clears today's trip for one account once, logged with reason. Same day bug to check: on 11-12 at 00:05Z both accounts were flat but already showed ~45% of the day's limit used (bybit_2 2.73/5.91, portfolio 790/1779), suggesting the day-start equity is read before the boundary while losing positions were still open. decision: 2026-11-12 operator decisions page m7 \"Build the one-time override button and fix the day-start reading first\". The switch stays a per-trade RiskManager refusal (no new gate). Parent DAILY-DD-SWITCH. Record: docs/plans/thursday-planning-2026-11-12-answers.md. [2026-11-12 lane session_01AFoLuJD1uLtmKbpHNi6gX5] PR #25181 (HOLD, Tier 3, operator decision m7) - NOT merged, NOT deployed. ROOT CAUSE (MEASURED from balance_snapshots plus the live state file): at rollover the switch carried the last reading taken within 2h BEFORE the reset as day-start equity. bybit_2 anchored on 197.157 (the 23:00Z snapshot) against 194.428 at 00:01Z, so 2.73 of 11-11's loss was charged to 11-12 (2.73/5.91 = 46%). bybit_portfolio: 790.21/1779.42 = 44%. FIX: day-start = first reading at/after the reset; read_state awaiting_day_start until it arrives. OVERRIDE: once per account per day; journal runtime_logs/daily_dd_switch_overrides.jsonl; alerted. ROUTES: GET /api/bot/accounts/{a}/daily-dd-switch (open read) and POST .../daily-dd-switch/override (operator session; body {reason}; 200 overridden, 409 not_tripped/already_overridden, 400 not_armed, 404, 503). status() adds trip_latched, override, override_available. UI-SPA HANDOFF NOT DELIVERED: create_trigger refused (lineage depth 8), no reachable peers. Manager: forward the route contract in the PR #25181 body to UI-SPA (session_01AFoLuK7JPLuVHFGNKbcoqt). OPEN after merge: deploy, then GET 200 and POST 401 with no session on the VM; next 00:05Z day_start_equity equals the first post-reset reading. REVERT: revert PR #25181. [2026-11-12 09:46Z AM-TRADING] UI handoff OPEN: UI-SPA session_01AFoLuK7JPLuVHFGNKbcoqt is ARCHIVED (trigger refused), so the override-button UI has no owner. Route contract is in the PR #25181 body; needs the UI assistant manager / a dashboard lane (repo ict-trader-dashboard). Flagged to the manager. [2026-11-12 09:56Z AM-TRADING] UI handoff re-routed (manager): route contract sent to the UI assistant manager session_01AFoLuMr5RixbuwJtqED344 (owns SPA lane session_01AFoLuLzLVokt9d5VS4yCA2). [2026-11-12 10:10Z AM-TRADING] UI half: ict-trader-dashboard #244 (draft, head 74d6196, stacked on #238) by AM-UI's SPA lane; builds on the #25181 contract; lands after #25181. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner AM-TRADING is completed. Backend #25181 merged 11-13 08:05Z. The UI half (ict-trader-dashboard #244, by AM-UI's SPA lane) is unowned now that AM-UI is archived. Observation that closes it: the override button clears a trip on one account in the live SPA.",
+  "phase": "now",
+  "updated_at": "2026-11-15T10:37:00Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

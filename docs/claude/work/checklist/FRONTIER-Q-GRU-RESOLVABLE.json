@@ -1,0 +1,37 @@
+{
+  "id": "FRONTIER-Q-GRU-RESOLVABLE",
+  "title": "Resolvable GRU test (ML-F29): add a paired block-bootstrap statistic to ml_bakeoff so a +0.010 macro_f1 delta is decidable, then author the unit (deep_sequence family)",
+  "state": "queued",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25573,
+    25633
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-16",
+  "frontier": {
+    "baseline": "LightGBM on identical purged folds and rows (ff8f-04 design)",
+    "blocking_lever": "scripts/research/ml_bakeoff.py has no bootstrap or multi-seed support (grep 2026-11-13: none). Needed: a paired moving-block bootstrap of the row-level macro_f1 delta (block = label horizon) within each test fold, pooled across folds, giving a CI on delta; OR an n_seeds paired design. Then author the unit with power from the measured row-level sd.",
+    "consumer": "the 15m regime heads still registered (btc/sol-regime-15m-lgbm-fc-pcv-v2); their v1 siblings were demoted 2026-11-11",
+    "est_cost": "lever ~half a day; unit runs on the trainer route",
+    "family": "deep_sequence",
+    "next_step": "lever #25573 merged; unit RQ-20261113-4654-02 in PR #25633 (trainer route); grade when it lands",
+    "p_pass": 0.05,
+    "source": "ML-F29 (needs_authoring, ML-READ-1025): ff8f-04 GRU INDETERMINATE (n 72,000); fold-level macro_f1 delta sd ~0.03 so +0.010 needs ~70 folds",
+    "state": "unit_authored",
+    "unit": "RQ-20261113-4654-02",
+    "why": "deep_sequence's only open plan item; a resolvable design needs a row-level statistic, not fold-level"
+  },
+  "week_lane": "surge"
+}

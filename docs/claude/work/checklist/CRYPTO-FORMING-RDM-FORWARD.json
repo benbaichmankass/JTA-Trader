@@ -1,0 +1,21 @@
+{
+  "id": "CRYPTO-FORMING-RDM-FORWARD",
+  "title": "Forward the Binance 1m forming-bar replay through regime_debt_matrix / build_strategy_evidence for CRYPTO forming-decision trend legs, so their evidence records model decision_bar (faithful) instead of omitting it",
+  "state": "landed_unproven",
+  "owner": "lane FRONTIER-RESEARCH (AM-ML)",
+  "lane": "FRONTIER-RESEARCH",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-27",
+  "note": "FOUND 2026-11-13 closing RESEARCH-PRODUCER-ROW-DEFECTS: research/results/RQ-20261105-d256-03/43381829839.jsonl (trend_donchian_sol_4h, n 116) reads indeterminate because the faithful arm still omits decision_bar. Every crypto trend leg without decision_bar: closed decides live on the forming bar, and regime_debt_matrix.build_harness_cmd adds decision_bar to omitted_levers unless a 1m source is forwarded. PR #25710 (EQ-FORMING-BAR-REPLAY) added forming_1m forwarding but only for a 1m CSV (--minutes-1m-csv). BUILD: let rdm.run_one / build_strategy_evidence / exit_lever_ablation accept a Binance 1m archive dir (backtest_trend already reads --klines-1m-dir) or fetch it via scripts/ops/fetch_backtest_candles.py --source binance_vision --interval 1m, forward --decision-bar forming, and re-measure the crypto forming legs records (re-parse config for the count). Then re-run d256-03. Depends on #25710 landing."
+}

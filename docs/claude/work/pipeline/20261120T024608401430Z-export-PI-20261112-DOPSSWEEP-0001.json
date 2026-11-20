@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-13",
+    "kind": "date"
+  },
+  "id": "PI-20261112-DOPSSWEEP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AFoLuLMkKMmnAGCzjeVBTZ (lane DIRECT-OPS-SWEEP); issue #25351",
+    "rerun": "GET /api/bot/ops/jobs/<set-env job id>; issue #25351 comments"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "APPLIED, verified by Manager Session 2026-11-11a 18:38Z via ops exec OPS-20261112T183345Z-exec-7bf161: PROP_PHONE_MODE_BREAKOUT_2=off is in the shared .env (written 16:30Z by the #25350 system-action rerun, not #25351), and the live environment of both ict-trader-live and ict-web-api carries it (trader restarted since). This lane's 17:10-17:35Z reading 'not applied' was wrong: it rested on #25351's cancel comment and the ops-runner journal and never checked #25350 or the process env.",
+  "tier": 2,
+  "what": "KILL SWITCH NOT APPLIED: system-action #25351 set-env PROP_PHONE_MODE_BREAKOUT_2=off was CANCELLED while pending (displaced in the system-actions concurrency group, cancel-guard comment 2026-11-12 15:11Z): nothing ran on the VM. Direct path is set-env in PR #25390, which as of 17:10Z fails tests/ops/test_ops_actions_parity.py 2/7 (no § 2.3 row, wave set unchanged). Close when a set-env job (or equivalent) reads done and the trader env is observed off."
+}

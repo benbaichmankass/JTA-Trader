@@ -1,0 +1,22 @@
+{
+  "id": "PROP-LIMIT-ENTRY-MISSED-FILL",
+  "title": "tradeify_1 rejects a sell limit at/through market, so the executor's retry places it only after price has moved away and the entry is missed",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "2026-11-16 08:55Z manager, from AM-OPS-2's executor-journal read (venue bars not verified). pkg-fe0c ETH short. 00:04:11Z tradeify_1 terminal rejected the Sell LIMIT 1834.35 ('Entry Price you set must be higher than \u2026': limit at/through market, bid 1833.7). The executor retried each tick. velotrade_1 (REST, same limit placed 00:03:25Z) filled at 1834.38 at ~00:08:07Z. tradeify_1 placed the order at 00:08:59Z with bid 1830.915, so it rested 3.4 above the market. ETH fell to ~1805, it never filled, and the executor cancelled it at 01:04:28Z (valid_until 01:03Z). Effect: a correct signal missed on one prop account, with a different entry later (pkg-f24f). Fix options: when the terminal refuses a limit as marketable, send a marketable or market entry within a declared slippage bound (net-of-cost and prop rules permitting); or reprice to the current best price on the retry; or cap the retry window. Entry behaviour on prop, so Tier 2/3; needs a cost/slippage check. After the reset unless it recurs.",
+  "phase": null,
+  "updated_at": "2026-11-16T08:54:58Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

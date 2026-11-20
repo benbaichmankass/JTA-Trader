@@ -1,0 +1,21 @@
+{
+  "id": "ML-D9-MAKER-EXIT-HARNESS",
+  "title": "D9 Whippet next lever: maker (post-only) EXIT replay for ml_entry's 24h time-stop exits (non-directional, so no run-away selection), extending scripts/research/ml_entry_maker_replay.py",
+  "state": "queued",
+  "owner": "ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F)",
+  "lane": "session_01AFoLuMFLP9yi6gZzUfKM1F",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-24",
+  "note": "Filed 2026-11-17 by lane ML-ITERATION-REFILL-20261117 (slot table docs/research/ml-slot-iteration-2026-11-17.md). Diagnosis: RQ-20261112-1c4e-01 maker ENTRY FAIL, delta -0.0041 R/decision, day-block CI95 [-0.0087,+0.0002], n=9210: a directional model's picks run away from a resting limit (adverse selection). The time-stop exit at T+24h is not a directional pick, so the same 1m-kline approximation (calibrated in 1c4e-01 against a3f1-01's +2.03 bps) can price a maker exit without that bias. Build: an 'exit' subcommand reusing decision_rows at the exit timestamp with direction reversed, plus a self-test; then author the unit (rule: delta R/decision > 0 with day-block CI lower > 0, n >= 3000). Gates this adds: none. [2026-11-17 10:40Z ML-PRIMARY-5] Built: ml_entry_maker_replay.py 'exit' subcommand (policy F on the CLOSING order of v1 held-out time-stop exits; direction reversed; 00:00Z prior-day stitch; EXEC-family holdout claim before any post-exit bar; deflated CI from the claim; matched-random side control reported). Unit RQ-20261117-aadc-02 (github runner, public klines): PASS iff mean dR>0 AND deflated LB>0 at >=1000 exits/>=10 symbols; calibration gate as 1c4e-01. Power stated: ~2,000 measured exits, MDE ~0.009 R vs prior ~+0.010 R (near-miss FAIL is underpowered). PR #26642 (self-land). landed_unproven until aadc-02 runs and is graded. [2026-11-17 10:54Z ML-PRIMARY-5, CLOCK CORRECTION] The HH:MMZ stamps on my earlier notes today (10:30, 10:40, 11:00, 11:05, 11:20, 11:55, 12:25Z) were hand-typed estimates and ran AHEAD of the clock; date -u read 10:53:30Z at the time of this note. The content is unchanged; read those notes as written between ~10:00Z and 10:53Z. The D10 evidence dir was renamed to comms/research/RQ-20261117-aadc-05/local-20261117T1045Z. 2026-11-17T15:54Z ML-PRIMARY-5: aadc-02 (W 5) FAIL +0.0019 R/exit LB -0.0026; aadc-10 (W 1) FAIL +0.0018 LB -0.0013 (unfilled -18.2 -> -6.9 bps, fill 0.72 -> 0.54, net flat). The window lever is flat at net. Next lever (both fail_actions): the closing order PRICE, a mid-price peg. The 1m approximation models a one-tick spread, so k-inside-spread cannot be expressed; a mid-peg arm needs a harness change in scripts/research/ml_entry_maker_replay.py (a build), deferred past the 2026-11-18 18:00Z usage reset by the manager's minimum-pace rule. This is a PI-20261117-ZFRREVN5-0004 24 h follow-up SLIP for D9 (graded 15:50Z; the follow-up will be authored after the reset).",
+  "phase": "build",
+  "updated_at": "2026-11-17T15:54:33Z",
+  "updated_by": "session_01AFoLuMFLP9yi6gZzUfKM1F"
+}

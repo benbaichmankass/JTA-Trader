@@ -1,0 +1,24 @@
+{
+  "id": "PROP-TICKET-TRUTH",
+  "title": "Prop ticket truth: header names the account's own venue; tradeify_1 fills established; executor mode read",
+  "state": "landed_unproven",
+  "owner": "lane PROP-TICKET-TRUTH",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "none: prop ticket text correctness; no milestone changed",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25355
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "2026-11-12 lane PROP-TICKET-TRUTH. (1) Template fix = draft PR #25328, Tier 2 HELD for AM-DEVOPS (header names own venue; test added). (2) Fill truth: both tradeify_1 ETHUSDT sl tickets (11-11 20:03Z, 11-12 08:02Z) FILLED and stopped out, see ML-ENTRY-PROP-BASELINE; velotrade_1 skipped both = risk gate cushion_unknown + open risk unrealized_unreported (account-status snapshot unreadable at the time; fresh now). (3) Executor mode: vm-diag relay issue #25327 queued behind runner backlog at close; fills prove prop_executor placed tradeify_1 orders 11-11 and 11-12 so it was not read_only then; velotrade_1 has placed/open/closed fills through 11-08. OPEN: read the #25327 comment for the literal mode. [2026-11-15 07:34Z AM-OPS] #25355 merged (manager). landed_unproven; observed when the tickets view for a velotrade ticket shows the venue open-risk read and the emitted stop after the deploy restart. [2026-11-15 07:35Z AM-OPS, manager 15a] #25355 merged eb8dec6d. Observed when the next velotrade ticket with an open position grades open risk from the Current Price (loss-to-stop = units*cv*(mark-stop)) instead of unrealized_unreported. Caveat stays open: velotrade's Current Price column is unverified.",
+  "phase": null,
+  "updated_at": "2026-11-15T07:34:20Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

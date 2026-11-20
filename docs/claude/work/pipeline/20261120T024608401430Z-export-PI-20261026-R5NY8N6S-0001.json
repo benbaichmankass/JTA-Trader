@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-R5NY8N6S-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), PR #20347",
+    "rerun": "create_session with no source_url and a prompt to create_or_update_file one line on live-review/rows; read get_session().post_turn_summary for 403 / landed"
+  },
+  "state": "killed",
+  "terminal_reason": "Fixed in the procedure: reviewers are now started on a checkout of live-review/rows precisely because repo-less sessions get 403. | evidence: origin/main 30b5cd919 (2026-11-12): .claude/skills/live-trade-review/REVIEWER-BRIEF.md:7 \"on a shallow, sparse checkout of live-review/rows ... exists only so your GitHub writes are authorized (a session with no repo gets 403 on every write)\".",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Repo-less Claude sessions cannot write to a repo branch: MEASURED 2026-10-26 (lane DESK-6, 4 wakes): a session created with no source got 403 on create_or_update_file even after add_repo(access: push); one started on lane/desk-5-6 did not land a write to desk/decisions; one started with source_revision + outcome_branch = desk/decisions wrote (655a9c6). PR #20319's repo-less live-review REVIEWER-BRIEF assumes a no-source session can CAS-write live-review/rows, so it likely cannot land rows as designed: start the reviewer ON live-review/rows (spawner pattern, .claude/skills/trading-desk/SKILL.md 6b) and re-test before relying on it.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Fixed in the procedure: reviewers are now started on a checkout of live-review/rows precisely because repo-less sessions get 403. EVIDENCE: origin/main 30b5cd919 (2026-11-12): .claude/skills/live-trade-review/REVIEWER-BRIEF.md:7 \"on a shallow, sparse checkout of live-review/rows ... exists only so your GitHub writes are authorized (a session with no repo gets 403 on every write)\"."
+}

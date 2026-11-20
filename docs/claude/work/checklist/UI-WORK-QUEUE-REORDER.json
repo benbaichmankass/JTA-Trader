@@ -1,0 +1,23 @@
+{
+  "id": "UI-WORK-QUEUE-REORDER",
+  "title": "Overview work queue: operator moves items up/down (writes priority_rank to the work store)",
+  "state": "done",
+  "owner": "UI-WORK-QUEUE-DND lane (session_01AFoLuK5HqcdRq2GuFJyPvM)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "child of UI-REDESIGN-2026-11",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "OPERATOR 2026-11-15 ~10:30Z: 'When will I able to move items there up and down the work que?' Not built and not filed before today (searched the live store: no reorder/drag row). Scope: up/down controls on the Overview work-queue cards that write priority_rank through the existing authenticated work-store write path (POST/PATCH used by scripts/ops/work.py), with the operator recorded as updated_by. Tier 2 because it is a new SPA write path; adds no gate. Done when: the operator moves a row on the deployed page and GET /api/bot/work/items shows the new rank. 10:45Z UI lane scoping, measured: the existing POST /api/bot/work/items/{id}/set needs If-Match. The bot's CORS allow-list refuses if-match (400 'Disallowed CORS headers'), so the SPA cannot call it. Snapshot rows carry no version, many ranks are null, and the lists are unsorted. MANAGER DECISION 15a: build a new session-gated route, POST /api/bot/work/reorder {id, direction up|down}, that swaps atomically server-side, assigns ranks to null-ranked neighbours, and stamps updated_by with the session's operator. No CORS widening. Lower priority_rank = higher in the list (the register's existing meaning). Backend: lane WORK-REORDER-ROUTE. UI: PIPELINE-MAP-V2-UI, as a held PR once the contract is merged. 13:15:50Z dashboard #275 deployed (bundle index-Cnsdila2.js); backend #26277 live 13:09:53Z; #26282 (dispatch honours queue_pos) merged 13:23Z. Not yet observed: the operator's first signed-in press. 13:55Z operator scope change (chat): replace the up/down buttons with DRAG-AND-DROP ordering; rows expand into detail CARDS (what exactly the task is); the QUEUED (not in flight) list becomes its own collapsible list under in-flight, and its items can be dragged to the top. Frontend-only: POST /api/bot/work/reorder already takes over=<any open row> (drop X above Y = id X, direction up, over Y; cross-list moves adopt Y's rank). Dispatched to lane UI-WORK-QUEUE-DND. 14:13Z LANDED (landed_unproven): dashboard #277 (38723ef6) merged, CI 11/11 green; lane observed the live bundle carrying 'Drag to reorder' at 14:11:48Z (manager could not re-check: dashboard repo outside manager scope). Screenshots in dashboard #278 docs/DEPLOYED-work-queue-dnd-*.png. Drag handle via pointer events (mouse+touch one path), drop X above/below Y -> POST reorder {id,direction,over}; arrow keys on the handle = keyboard path; no optimistic order (re-reads snapshot); cards fetch GET /api/bot/work/items/{id}; Queued list collapsible under In flight. CLOSES ON: the operator's first real drag (phone ideally) seen in the work store as a moved row. Backend gaps (go to the UI-TESTING-QUEUE backend lane): (a) Queued list loads 200 of 416 queued rows, no server-ordered queued route -> rows 201-416 not draggable; (b) store keeps one extra.note, no notes history for the card; (c) blocked_on renders as raw JSON (frontend polish). 14:22Z OBSERVED: operator's first real drag on a phone worked (operator chat 16:20 local). Defect: on phone width many Waiting/In-flight rows render only '\u283f \u2026' (rows with long id+owner); live snapshot/items routes return all 29 in-flight rows with id+title, so frontend layout (whole-label ellipsis). Fix lane UI-WORK-QUEUE-ROW-ELLIPSIS (session_01AFoLuMaL8y2xQJcHr82wJg). 14:5xZ DONE. Row-ellipsis fix merged in dashboard #279/#280/#281 (lane UI-WORK-QUEUE-ROW-ELLIPSIS, archived). OBSERVED by the operator on the deployed Overview (chat: 'the UI fixes took'), on top of the operator's first real phone drag at ~14:20Z. Remaining backend gaps (200-of-416 queued cap, notes history, blocked_on rendering) live on UI-TESTING-QUEUE. Operator 2026-11-15: UI work paused until after the 2026-11-18 18:00Z reset unless something urgent.",
+  "phase": null,
+  "updated_at": "2026-11-15T14:43:48Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

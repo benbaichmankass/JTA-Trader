@@ -1,0 +1,23 @@
+{
+  "id": "BALANCE-TIP-PRESCRUB",
+  "title": "Scrub the ~99 tip files that still carry an account balance (report generator, prose, code, queue files) so the history purge leaves the tip tree identical",
+  "state": "queued",
+  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "lane": "session_01AFoLuMrErnygNnpSdqrqSj",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "priority_rank": 30,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "Filed 2026-11-12 from the full-scope dry run in docs/runbooks/account-balance-history-purge.md (PR #25283). PR #25305 covers the grader, the RQ runner and the diag redactor. Not covered: the comms/reports generator (real+paper+prop balances in report.json/.md/.html), a config/accounts.yaml comment, and ~48 prose/code/test/queue sites. Paths only (no values): scripts/ops/history_purge/tip-prescrub-paths.txt. Code and tests need a synthetic fixture, not a purge token. Done when the dry-run tip tree old==new (plan section 7 check 4) and a reports no-balance test is in CI. Gates the purge. [2026-11-15 08:26Z Manager 15a] DECISION. Operator 2026-11-15 ~08:24Z, verbatim: \"2. Merge the PRs\" (the four Tier-3 PRs held for the operator: #25314 losing-streak per-account floor, #25330 alpaca_live reachable-set comment, #25272 tradeify_1 TP amend, #25389 balance prescrub). AM-OPS refreshes each onto main; the manager merges on green, citing this decision in the PR body. [2026-11-15 09:25Z AM-OPS, manager 15a] #25389 (operator 2026-11-15 'Merge the PRs') is accepted as PARTIAL. MEASURED: it removes the 4 runtime figures it targets (accounts.yaml x2, prop_reconcile.py, screenshot_parse.py: 5 hits on main -> 0 on the branch), but it touches only 4 of the 99 paths in scripts/ops/history_purge/tip-prescrub-paths.txt (#25283). Still OPEN on this row after it merges: the comms/reports generator (real+paper+prop balances in report.json/.md/.html) and the ~48 prose/code/test/queue sites; done only when the dry-run tip tree old==new (plan section 7 check 4) and a reports no-balance test is in CI. 2026-11-15 AM-OPS: #25389 (head 5ce76b45, Tier 3, operator 'Merge the PRs') is accepted by manager 15a as PARTIAL. Verified: it removes all 5 hits of its 4 target figures on main, but covers only 4 of the 99 prescrub paths. The other 95 paths stay open on this row; the row is not done when #25389 lands. 2026-11-15 11:20Z AM-OPS: #25389 merged by manager 15a 11:10:59Z (339095f4); it removes the 5 hits of its 4 target figures. Partial: the other ~95 prescrub paths stay open on this row.",
+  "phase": null,
+  "queue_pos": 875.0,
+  "updated_at": "2026-11-19T06:07:15Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+}

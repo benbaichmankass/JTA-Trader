@@ -1,0 +1,16 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261112-GDVV9ORF-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SLV-ITERATION (session_01AFoLuKQhQJibSRgDVv9oRf); AM-TRADING 21:55Z ask",
+    "rerun": "git show origin/main:comms/research/RQ-20261112-cdb2-06/43299111558/arms/C1__trades.jsonl | python3 -c \"import json,sys;t=[json.loads(l) for l in sys.stdin if l.strip()];tp=[r for r in t if r['exit_reason']=='take_profit'];print(len(tp),max(r['mfe_r'] for r in tp),min(r['gross_r'] for r in tp))\""
+  },
+  "state": "queued",
+  "what": "HARNESS MFE UNDERSTATES TP EXITS (scripts/backtest_trend.py), which zeroes the TP-reach readings. MEASURED on RQ-20261112-cdb2-06 arm trades (origin/main comms/research/RQ-20261112-cdb2-06/43299111558/arms/): C1 at tp_r 6.0 has 263 trades, all carrying mfe_r, and 42 take_profit exits, but max mfe_r is 5.986. On those TP exits mfe_r ranges 0.628..5.986 while gross_r ranges 6.0..10.539. Arm A: 27 TP exits, mfe_r 0.075..5.941, gross_r 3.705..8.214. So mfe_r < realized R on the exit bar. exit_lever_ablation.summarize_arm (reach_ge_6r = share of mfe_r >= 6.0) therefore reports 0.0, and the replace grade's tp_doctrine says satisfies_reach_floor false for an arm that hit its TP 42 times. LIKELY CAUSE (to verify): mfe is updated by the end-of-bar ratchet (backtest_trend.py ~L944 long / ~L976 short), which runs after the bar's stop/TP test, so the bar that fills the TP never enters mfe. The AM-TRADING hypothesis 'mfe not populated on replace arms' is refuted: it is populated, but short of the exit-bar extreme. IMPACT: every consumer of mfe_r from this harness (TP reach / tp_doctrine readings, exit capture, mfe-based attribution in the lever maps such as 'losers_that_reached_1r_mfe') is biased low on trades that exit at a target. Verdicts graded on net R are unaffected. FIX: fold the exit bar's extreme (capped at the exit price for TP fills) into mfe before recording; add a test that a take_profit exit has mfe_r >= tp_r. Not a blocker for anything live. Owner from 2026-11-12 23:00Z: AM-OPS (general lane); SLV-ITERATION has closed."
+}

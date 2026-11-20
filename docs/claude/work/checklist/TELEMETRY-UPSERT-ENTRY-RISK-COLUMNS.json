@@ -1,0 +1,25 @@
+{
+  "id": "TELEMETRY-UPSERT-ENTRY-RISK-COLUMNS",
+  "title": "position_telemetry upsert never updates entry/risk_per_unit, so pre-#26203 rows keep the plan basis in those columns while open_r is fill-based",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26209
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "MEASURED 05:16Z: position_telemetry for trade 7260 has entry 0.1506 / risk 0.00792857 (plan) but open_r 0.0404 = fill-based. _UPSERT's ON CONFLICT DO UPDATE sets trade_id/last_price/account_id/open_r/peak_r/... but not entry or risk_per_unit (insert-only). Fix: add entry=excluded.entry, risk_per_unit=excluded.risk_per_unit (both stable on the plan basis, so a no-op for unaffected rows) + a test. Trader closure (position_telemetry): restart batch.",
+  "phase": "build",
+  "terminal_reason": "OBSERVED 06:11Z after the auto restart onto 22f365d at 06:09:27Z (#26209; boot_audit 25/25 tracked, SL+TP 25/25): position_telemetry 7260 entry 0.1501 / risk_per_unit 0.00742857 (was 0.1506 / 0.00792857), open_r -0.175 = (0.1488-0.1501)/0.00742857; 7250 BTC entry 64833.5 / risk 2309.54 and 7254 ETH 1814.59 / 82.07 also on the fill. Merged 22f365dd, deployed, observed.",
+  "updated_at": "2026-11-15T06:11:35Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

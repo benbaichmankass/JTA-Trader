@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261111-AUDIT-ROWS-NOT-LANED",
+  "title": "15 of 17 open weekly-audit rows have had 0 state changes since filing; 13 are past due_by although every one was dated on 11-04, and DETECTOR-IS-A-GATE kept 'queued' 5 days after the operator answered it",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "WEEKLY-AUDIT-20261111 Layer 0. MEASURED via work.py get on all 17 ids (updated_at <= 2026-11-06, state unchanged). Last week's fix (date every row) was necessary, not sufficient. H0 (expected variation): the operator's 11-07 usage cut paused backlog-drain 4b until the 11-11 18:00Z reset (verbatim in trig_017fr7tUPqpmmkN4BDsPKMV8). H1: nobody owns AUD rows between audits. Test: 11-04..11-07 (before the cut) BACKLOG-DRAIN-20261106 closed 2 AUD rows and recorded 3 operator answers, then nothing. Survivor H0 for the 4 cut days, p0.7 INFERRED; H1 for the answered-but-open row. Action here: DETECTOR-IS-A-GATE closed with the operator's recorded answer; unblocked detector rows re-dated with notes; ranked list handed to the general/backlog lane in the manager report. DETECTOR: review_followthrough due% (fixed this PR). CHECK: {command: review_followthrough.py --source weekly-audit, rule: due% < 50, resolves_when: next audit}.",
+  "phase": "ops",
+  "updated_at": "2026-11-11T18:52:51Z",
+  "updated_by": "session_01AFoLuLZUWddKKncPqapt9k"
+}

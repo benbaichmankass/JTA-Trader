@@ -1,0 +1,20 @@
+{
+  "id": "PI-20261120-7ITMUEB1-0002",
+  "title": "[tests] ORDER-DEPENDENT FAILURE in tests/test_fut_intraday_session_flat.py::TestStage0Split (3 tests: pass_needs_discovery_and_holdout, holdout_negative_is_not_replicated, short_holdout_after_discovery_pass_is_indeterminate). Measured 2026-11-20: the file passes alone (29 of 29) but fails 3 when run after the other 130 test files that reference backtest_*/m20/resolve_data harnesses -- identical on main@bba20d675 (3 failed, 1819 passed) and on the PI-0002 branch, so pre-existing and not caused by either. exit_lever_ablation.grade_stage0_split returns stage0_no_edge instead of pass/holdout labels -> some earlier test mutates module state (likely a monkeypatched constant or sys.modules entry for exit_lever_ablation). Bisect the polluter and make it restore state.",
+  "state": "queued",
+  "owner": "ML-PRIMARY lane (successor inherits)",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "test hygiene, no roadmap milestone",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-30"
+}

@@ -1,23 +1,23 @@
 {
   "id": "ML-REGISTRY-LADDER-GAPS",
   "title": "[MODEL] I4: registry status field reads 'candidate' on all 97 rows while deployment_bucket is LIVE3/SHADOW20/OFFLINE74 -> move readers to canonical stage; exit head acting outside the registry; BTC 15m variant cap",
-  "phase": "W44",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": "sonnet",
-  "ceiling_usd": 6,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 6 I4. MEASURED GET /api/bot/ml/registry 2026-10-28 20:56Z (97 rows).  [21:25Z] Folds review proposal R-P6 (PI-20261028-GNVUF1ES-0003): pause regime/direction learner variants; re-register or retire the 4 queued units. 2026-11-05 lane ML-WEEK-1105: SCOPE EXTENDED per docs/plans/ML-ROADMAP-MECE-2026-11.md section 8 P1 / section 10 (milestone L-ML-MECE done-condition (a)): the SERVING INVENTORY lives on this row, not a new row. One table over BOTH serving paths: registry + ml/served/* + ml/overlay/* + their consumers in config/strategies.yaml / config/overlay_policy.yaml / config/regime_policy.yaml -> model, display name, slot (D1-D10), registered population, books it changes, demotion signal, last scored; printed on /ml-review step 1. Reason: the 3 artifacts that change real-money orders (Foxhound-1, Labrador-1b, the TD overlay) are not in the registry (trainer-vm-diag #22883, 2026-11-04). Report-only, gates none. due 2026-11-11, Sonnet build lane $6.",
-  "updated_at": "2026-11-05T09:27:40Z",
-  "updated_by": "session_01AFoLuMQQLPmdu6fdmexxA9",
   "roadmap": [
     "M25",
     "L-ML-MECE"
   ],
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
   "due_by": "2026-11-11",
-  "_seq": 764
+  "_seq": 764,
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 6 I4. MEASURED GET /api/bot/ml/registry 2026-10-28 20:56Z (97 rows).  [21:25Z] Folds review proposal R-P6 (PI-20261028-GNVUF1ES-0003): pause regime/direction learner variants; re-register or retire the 4 queued units. 2026-11-05 lane ML-WEEK-1105: SCOPE EXTENDED per docs/plans/ML-ROADMAP-MECE-2026-11.md section 8 P1 / section 10 (milestone L-ML-MECE done-condition (a)): the SERVING INVENTORY lives on this row, not a new row. One table over BOTH serving paths: registry + ml/served/* + ml/overlay/* + their consumers in config/strategies.yaml / config/overlay_policy.yaml / config/regime_policy.yaml -> model, display name, slot (D1-D10), registered population, books it changes, demotion signal, last scored; printed on /ml-review step 1. Reason: the 3 artifacts that change real-money orders (Foxhound-1, Labrador-1b, the TD overlay) are not in the registry (trainer-vm-diag #22883, 2026-11-04). Report-only, gates none. due 2026-11-11, Sonnet build lane $6. 2026-11-09 18:38Z Manager 2026-11-09a: operator asked for the registry to be consolidated and the ML page organised by MECE slot -> breed -> cards with variants. MEASURED: /api/bot/ml/registry 98 rows, 0 of the 4 trading models (ml-decision-entry-v1/v2, ml-entry-eq-v1, ml-entry-eq-struct-ens5-v1). Dispatched lane ML-REGISTRY-CONSOLIDATE session_01AFoLuJ62D1abPR3jobxkyc (Sonnet, ~$8): slot in model_names.yaml, served/candidate/overlay rows + by_slot in the feed, consistency guard, SPA ML page grouped by slot (minimal slice of UI-CATALOG-STRATEGIES-ML). 2026-11-09 ML-REGISTRY-CONSOLIDATE: serving inventory built. PR #24582 (registry: served/candidate/overlay rows + display_name/slot on every row + by_slot; model_names.yaml slot: per breed; ml-registry-consistency-guard). Proposed names (operator may change): ml-entry-eq-struct-ens5-v1=Foxhound-4, exit-head-donchian-1h-v1=Labrador-2 (D8), overlay-td-v1=Beagle-1 (D4). Extras filed: ml-decision-entry-v1r20261106 (the ENTRY_SERVED pointer target) is shown as a pointer-sibling variant; m27 vol_spec heads and mirror rows with no name are slot unassigned unless the id says -regime-. 2026-11-09 20:19Z OBSERVED LIVE: #24582 merged; ict-web-api served it within ~4 min of merge with no manual restart (git-sync path). GET /api/bot/ml/registry: count 98 (mirror), total_count 106, inventory_read_state ok, by_slot present; the 4 trading models + TD overlay + exit head + tp-revision present, 0 rows without slot/display_name. Rows by slot: D2 63, D3 5, D4 1, D7 1, D8 1, D9 1, unassigned 34 (unnamed mirror rows, no -regime-/exit-head/execution-quality token); D1/D5/D6/D10 empty. OPEN: the 34 unassigned mirror rows need names/slots if the operator wants them in a slot.",
+  "phase": "W44",
+  "updated_at": "2026-11-09T20:19:54Z",
+  "updated_by": "ML-REGISTRY-CONSOLIDATE"
 }

@@ -1,0 +1,23 @@
+{
+  "id": "CAP-OPTIONS-ORDER-MGMT",
+  "title": "alpaca_options_paper: no open-orders read and no cancel for an unfilled day-limit entry (AlpacaOptionsExec)",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11 (CAPABILITY-MATRIX-LIVE); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "MEASURED by reading alpaca_options_exec.py + options_lifecycle.py: place_spread/place_single_option are day LIMIT orders; there is no cancel method and no orders accessor (account_alpaca_open_orders is the equity client's). No deferral recorded anywhere (never built). Paper, so low money; matters before any real-money options leg. Done = accessor + cancel + tests, or an n/a record. Lane CAPABILITY-MATRIX-LIVE 2026-11-11; matrix docs/reference/account-capability-matrix.md (cell refs in \u00a7 2). Filed from the matrix; roadmap mapped by the manager at the weekly pass.",
+  "phase": "now",
+  "updated_at": "2026-11-11T22:09:24Z",
+  "updated_by": "session_01AFoLuKfMTNHddXSQPZkuGh",
+  "week_lane": "throttle"
+}

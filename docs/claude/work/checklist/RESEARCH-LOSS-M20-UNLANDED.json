@@ -1,0 +1,22 @@
+{
+  "id": "RESEARCH-LOSS-M20-UNLANDED",
+  "title": "Research loss detector run 43297292915 (2026-11-12 20:23Z, docs/claude/work/RESEARCH-LOSS-RECEIPT.json) found 10 unlanded result runs, all m20-exit-lever-sweep.yml with result_job=failure: 42256673587, 41983651204, 41978235919, 41970551893, 41763381661, 41195608647, 41187215930, 41068790597, 40994427469, 40978648245 (10-30..11-06). Population: 108 completed runs of 7 research-result workflows since 10-29. Diagnose each failure. Then re-run its unit (clear the stamp), land what exists, or retire it with a reason. Related: PI-20261112-TE74WG5Z-0005 (a failed m20 run writes no producer_failed row) and #25293 (re-armed 2 lost m20 units). Done when the next detector run shows B_unlanded_result_runs clean, or each remaining run carries a recorded disposition. Gates: none.",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "research pipeline health",
+  "ceiling_usd": null,
+  "spend_usd": 3.45,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "2026-11-12 PR #25487 (draft, hold; AM-ML merges). MEASURED over the 10 runs: none produced a result (no verdicts.json, no artifact), so nothing to re-land. 7 died in plan on unroutable legs (classify None; template minted units for every roster leg) -> template now live_roster_legs_m20_sweepable, 7 units retired. 3 crashed HoldoutLeak (fixed on main, untested until now) -> test added, 3 units re-armed; a re-fire lands indeterminate/measured, not a sweep (thin legs). PI-0005 covered: research_result falls back to input/sentinel legs and writes producer_failed rows. Detector: RESEARCH-LOSS-DISPOSITIONS.json closes all 10; without it B stays red until 11-13..11-20 age-out. NOT verified live: workflow change and the 3 re-fires. Row stays in_flight until merge + next detector run shows B clean (landed_unproven). 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> queued, owner manager. The owner was the label 'FRONTIER', which has no session behind it; ML-PRIMARY-2 confirmed none of the FRONTIER rows (10:38Z).",
+  "phase": "build",
+  "updated_at": "2026-11-15T10:54:18Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

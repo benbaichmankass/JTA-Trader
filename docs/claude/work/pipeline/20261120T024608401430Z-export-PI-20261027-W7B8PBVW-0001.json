@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-W7B8PBVW-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-8-SHORT-HOLD-S0 (session_01AFoLuHs2cWVPBBW7B8PbvW), PR #20561 demo-floor rule",
+    "rerun": "python3 -m pytest tests/test_desk_near_signals.py -k resolves_to_a_unit"
+  },
+  "routed_to": "DESK-FOLLOWUPS-1027",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Add name-family rules to scripts/ops/desk_near_signals.py UNIT_ORDER for fade_breakout_4h, fvg_range_15m, squeeze_breakout_4h and turtle_soup so the desk's near-signal probe can look at them instead of reading `unlooked`. They were put on the bybit_1 demo floor by the demo-floor rule (PR #20561); tests/test_desk_near_signals.py pins the four as the known gap.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: UNIT_ORDER still lacks the four families. EVIDENCE: origin/main 30b5cd919 (2026-11-12): scripts/ops/desk_near_signals.py:56 UNIT_ORDER = ict_scalp, pullback, trend only. | owner row opened by this drain"
+}

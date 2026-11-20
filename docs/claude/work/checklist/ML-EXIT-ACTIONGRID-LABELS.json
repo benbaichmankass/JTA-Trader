@@ -1,21 +1,29 @@
 {
   "id": "ML-EXIT-ACTIONGRID-LABELS",
   "title": "[MODEL] P6 labels: --action-grid mode in desk_lifecycle_driver.py pricing the full bracket-action enum (close, partial, tighten/widen k, SL/TP to structure, TP pull-in/extend k) vs hold at every check-in; corpus A (507 desk trades) + corpus B (7 real-money legs' Stage-0 paths)",
-  "phase": "W44",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "state": "done",
+  "owner": "session_01AFoLuLWp2gWxxBuEKpvVAR",
+  "lane": "session_01AFoLuLWp2gWxxBuEKpvVAR",
   "model": "sonnet",
-  "ceiling_usd": 8,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a. MEASURED gap: labels.jsonl prices move_tp in 45 rows, widen_sl/structure in 0 rows. $0 model usage (deterministic replay). Dispatch Thu 10-29. Coordinated with ACTIVE-MGMT-REAL-MONEY-PLAN (owns wiring).  Offered as the shared Stage-A label source for DESK-V1 section 5b unpriced classes (widen, TP extend/pull-in, to-structure); coordinate with DESK-V1 rows before building twice.",
-  "updated_at": "2026-10-28T21:17:52Z",
-  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
   "roadmap": [
     "M25"
   ],
-  "_seq": 769
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "prs": [
+    27377
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "_seq": 769,
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 2a. MEASURED gap: labels.jsonl prices move_tp in 45 rows, widen_sl/structure in 0 rows. $0 model usage (deterministic replay). Dispatch Thu 10-29. Coordinated with ACTIVE-MGMT-REAL-MONEY-PLAN (owns wiring).  Offered as the shared Stage-A label source for DESK-V1 section 5b unpriced classes (widen, TP extend/pull-in, to-structure); coordinate with DESK-V1 rows before building twice. [2026-11-15 ML-PRIMARY-3] PI-20261029-IHFQDB3W-0004 (desk lifecycle label join for a D8 exit head) KILLED with a stated reason: parked on power. full-c4e gives at most 720 OOS trades; MDE ~0.08 R vs exit-head effects within +/-0.06 R. Re-entry test on plan line MLP-D8-LABRADOR-2 (PR #26320): >= ~5,000 OOS trades of desk labels, or a mechanical label source that size. This row's own action-grid label work is unaffected. [2026-11-19 ML-BUILD-1119 session_01AFoLuLWp2gWxxBuEKpvVAR] Built: desk_lifecycle_driver.py --action-grid (13-action enum vs hold, one-step counterfactuals on run()). Labels MEASURED and committed in draft PR #27377 (hold): corpus A 1,040 desk trades / 6,289 check-ins / 76,427 feasible (hold reproduces full-c4e C_h/R_h exactly, 0.21375 R/trade); corpus B 2,627 Stage-0 trades of the 6 crypto money legs (tmb-8b924106949b) / 117,732 check-ins / 1,455,635 feasible (fidelity: 950 static-bracket trades median gap 0.0 R, 89% within 0.05 R). IAUM out of scope. trader_import_closure: SKIP. Closes when #27377 merges (manager) and RQ-20261101-78fc-05 leaves blocked/ (ML-PRIMARY-11 told). [2026-11-19 18:10Z] DONE: observation met -- corpus-B labels on origin/main (#27377) and RQ-20261101-78fc-05 in research/queue/ status queued (moved by #27404, merged 18:09Z).",
+  "observe": {
+    "how": "git cat-file -e origin/main:comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz && test -f research/queue/RQ-20261101-78fc-05.yaml (moved out of blocked/ by ML-PRIMARY-11)",
+    "when": "pr_merged:27377"
+  },
+  "phase": "W44",
+  "updated_at": "2026-11-19T18:10:42Z",
+  "updated_by": "session_01AFoLuLWp2gWxxBuEKpvVAR",
+  "week_lane": "throttle"
 }

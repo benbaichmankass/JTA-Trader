@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "iteration_orphans.py reads strategy_leg ORPHAN 0 and ltr_class ORPHAN 0 (author units from a diagnosis, programme-review)",
+    "kind": "observation",
+    "observation": "orphans 0"
+  },
+  "id": "PI-20261103-3ORPHANS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "python3 scripts/research/iteration_orphans.py 2026-11-03",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep -i orphan"
+  },
+  "routed_to": "AUD-20261104-ITERATION-ORPHANS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Iteration orphans (iteration_orphans.py 2026-11-03): strategy_leg ml_entry_v2 (verdict pass_unconfirmed) and 5 ltr_class (partial-close, widen-sl, sl-to-structure, tp-extend, tp-pull-in; verdict pending) have no live iteration unit. Blocks RESEARCH-ITERATE.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: ml_entry_v2 is now covered but all 5 ltr_class subjects are still orphans; the iteration-loop audit row owns it. EVIDENCE: iteration_orphans.py --json on origin/main@30b5cd919 (2026-11-12 08:22Z) (as_of 2026-11-12): ml_entry_v2 covered (RQ-20261105-002); ltr-partial-close, ltr-widen-sl, ltr-sl-to-structure, ltr-tp-extend, ltr-tp-pull-in state orphan (population ltr_class 7: covered 0, overdue 2, orphan 5)."
+}

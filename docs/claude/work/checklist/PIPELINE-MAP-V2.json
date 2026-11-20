@@ -1,0 +1,22 @@
+{
+  "id": "PIPELINE-MAP-V2",
+  "title": "Pipeline map v2: top of page, interactive (zoom + open), straight vertical spine, iteration loops on the side, step demarcation, trading flow on the right, technical flow on the left",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "PIPELINE-MAP-V2",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Operator 2026-11-15 ~08:15Z, verbatim: \"the trading map is looking good, but I do want us to make a few changes: The Map itself should: 1. Be at the top of that page 2. It should be interactive so that I can zoom in and open things on it 3. The map should be a straight line from top to bottom - the itterative lines should be on the side of the main pipeline 4. The map should also have more demarcation for each step in teh proceces 5. To the right of each step of the pipeline, I want to see the corresponding elements of the trading flow 6. To the left, I want to see the elements of the technical flow\". Follows PIPELINE-MAP (#26143 + dashboard #270, landed_unproven). Source of truth stays the generated map (docs/reference/trading-pipeline-map.skeleton.md + GET /api/bot/work/pipeline-map); the SPA renders it. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner lane session_01AFoLuLReiVZLECG897qNkm was ARCHIVED today. Its PR #26250 (v2 structured payload) merged 10:19Z. Observation that closes it: the SPA Work tab renders the v2 vertical spine from GET /api/bot/work/pipeline-map. 2026-11-15T10:45Z, manager 15a, filing for the PIPELINE-MAP-V2-UI lane (which has no JTA-Trader access). Live-payload findings from #26250 as rendered by dashboard #271/#272. (1) Element ids repeat within a payload (r:note many times), so the UI keys by index. (2) About 189 of ~250 elements have state null. (3) Element kinds beyond the documented set: config, route, store. (4) Each step carries read_state, which the UI does not use. (5) Step 3 has 27 technical + 75 trading elements (step 1: 15 technical; step 9: 20 + 27; step 5: 16 trading), 287 chips in total. The UI caps each side at 8 with an expander (map 4,501px, was 8,210px); grouping in the backend would read better. (6) Of the 3 loops, two both run step 11 to step 3. UI deployed: dashboard #272 (d583a52, observed 10:39:00Z) and #273 (live chart framing, 86b9c0c, observed 10:43:21Z). Deployed screenshots are in dashboard docs/pipeline-map-v2/DEPLOYED-live-*.png. Remaining backend work: unique ids, fill element states, and group the large steps. It goes to the WORK-REORDER-ROUTE lane. Deferred until after the 11-18 reset (throttle): the UI does not yet adopt ?grouped=true or the technical_groups/trading_groups arrays from #26277 (live since 13:09Z); it still caps each step side at 8 with an expander. UI lane archived 13:23Z; dashboard #271-#276 merged.",
+  "phase": null,
+  "updated_at": "2026-11-15T13:22:30Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

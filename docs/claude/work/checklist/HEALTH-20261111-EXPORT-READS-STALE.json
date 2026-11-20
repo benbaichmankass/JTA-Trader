@@ -1,0 +1,24 @@
+{
+  "id": "HEALTH-20261111-EXPORT-READS-STALE",
+  "title": "Off-VM reads of the register silently use the frozen export: pipeline.py --gate/--stats and review_followthrough.py read docs/claude/work/pipeline/ + checklist/*.json (newest pipeline record 20261106T220235Z) when work_store.db is absent; store 4211 items vs export 4098 (MEASURED 2026-11-11 /api/bot/work/items); no read-state says 'export, 5 d stale'. Fix: off-VM, read GET /api/bot/work/items (or print export age + item-count delta as read_state). Do not archive the files (WSD-S7) before this lands.",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25177
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "note": "decision: 2026-11-12 operator decisions page p4 \"Accept: start after the export fix\". Named by the 11-11 health review and the 11-12 walkthrough but not filed until now. BACKLOG-DRAIN-20261112 waits on this. Record: docs/plans/thursday-planning-2026-11-12-answers.md.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:14:16Z",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "week_lane": "surge"
+}

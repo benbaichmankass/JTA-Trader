@@ -1,0 +1,32 @@
+{
+  "id": "FVG-RANGE-ABLATION-DRIVER",
+  "title": "exit_lever_ablation.py driver for the fvg_range harness (unblocks RQ-20261116-d5a7-11/-12)",
+  "state": "done",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-23",
+  "note": "build_arm_argv raises ValueError for harness fvg_range (d5a7-12 producer_failed, run 43859133629). Add an fvg_range branch or re-point the two blocked units at a driver that covers fvg_range (scripts/research/mi319_fvg_parity.py). Filed by RESEARCH-OPS-20261116-1448. 2026-11-17 12:44Z CORRECTION (manager relay, found by REFILL-2): the fvg_range_15m research replays were UNFAITHFUL. The live leg targets the far range boundary, but regime_debt_matrix's argv builder only forwarded exit_style when the config declared it, so backtest_fvg_range ran its midline default while still reporting faithful=True. RQ-20261116-d5a7-11 (run 44066996242) and RQ-20261116-d5a7-12 (run 44067201528) FAILs therefore graded a strategy the leg does not trade and are SUPERSEDED by RQ-dc44-05 (the first faithful read, after #26678 pins --exit-style far with a regression test). Do not read the fvg_range control A of -13.84 R in those two rows as the live leg's Stage-0 result. d5a7-13/-14 are fade_breakout_4h (a different harness) and are not affected by this finding. The driver change itself (#26638, fvg_range accepted by exit_lever_ablation.py) stands; it was the argv builder underneath it that was unfaithful.",
+  "observation": {
+    "due": "2026-11-23",
+    "due_by": "2026-11-23",
+    "how_to_check": "git grep -n fvg_range scripts/research/exit_lever_ablation.py",
+    "what": "exit_lever_ablation.py handles fvg_range; RQ-20261116-d5a7-11 back in research/queue and lands a verdict"
+  },
+  "phase": null,
+  "terminal_reason": "exit_lever_ablation.py covers fade and fvg_range (#26638, #26643); d5a7-11/-12/-13/-14 re-ran and landed measured verdicts (runs 44066996242, 44067201528, 44067001648, 44067006339), all FAIL/no_reachable_lever_beats_removed",
+  "updated_at": "2026-11-17T12:44:06Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a",
+  "writeback": {
+    "arch": "none",
+    "roadmap": "none: tooling gap"
+  }
+}

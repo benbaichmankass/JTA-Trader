@@ -1,0 +1,27 @@
+{
+  "id": "CLOSED-TRADE-SNAPSHOT-WRITER",
+  "title": "Close-time chart snapshot writer + backfill (web-api background builder, table trade_chart_snapshots; off the order path, best-effort, retried)",
+  "state": "done",
+  "owner": "AM-UI (session_01AFoLuMr5RixbuwJtqED344)",
+  "lane": "session_01AFoLuLDXyD8UHUCqA3e7DU",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "child of UI-REDESIGN-2026-11, which is unmapped",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25221,
+    25413
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "Parent UI-REDESIGN-2026-11 (addendum 3). Tier 2: held PR, manager decides. One poller builds every closed trade whose framed window has ended and that has no snapshot (covers new closes and the backfill), newest first, batched, idempotent per trade_id. 2026-11-12 20:42Z OBSERVED: the status route GET /api/bot/trades/snapshots/status (#25449, merged 20:28Z) is live, returns HTTP 200 read_state=measured, and CORS is OK for the SPA origin. Population: closed live trades plus closed prop fills from the journal: total_closed=2694 (2619 trades + 75 prop). built=536 (480 trade + 56 prop; 515 partial); failing=7 (max attempts 2, none flagged; last error candles_unavailable:MGC on trade:6345); pending=2151 (2694-536-7). Writer running since 20:35:30Z (restarted by the deploy), loop_errors=0, last batch 16 partial + 4 retrying. At about 16-20 per 2-minute batch, the backfill should finish in roughly 4-5 h (estimate).",
+  "parent_id": "UI-REDESIGN-2026-11",
+  "phase": null,
+  "updated_at": "2026-11-12T20:43:08Z",
+  "updated_by": "session_01AFoLuLDXyD8UHUCqA3e7DU",
+  "week_lane": "surge"
+}

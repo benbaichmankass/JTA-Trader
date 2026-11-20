@@ -1,30 +1,31 @@
 {
   "id": "ML-DRIFT-SPLIT-INSTRUMENT",
   "title": "ML: scripts/research/drift_regime_mix.py -- split advisory-head score drift into regime-mix vs capability loss (unblocks RQ-20261011-6e85-01)",
-  "phase": "ml",
   "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": null,
+  "tier": 1,
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     20037
   ],
   "blocked_on": [],
-  "note": "[2026-10-11 ml-review] Instrument for blocked unit RQ-20261011-6e85-01 (hold PR). Build: join shadow log (active+gz) to realised labels per window; per head volatile_label_share and AUC; write verdict.json {read_state,...}. Sonnet lane, ceiling $3. GO test: reproduces KS 0.230 for sol-regime-15m-lgbm-fc-pcv-v2 from shadow/drift. Closes when the script is merged AND one run's verdict is read for sol+btc advisory heads (record the run id here). [2026-10-16 lane P2-AI-REGIME-BACKLOG-1016, PR pending] Scope widened by a consumer: blocked/RQ-20261016-65ff-27 asks, for the 9 heads PI-20261016-P3PFA1GK-0001 flags on every scan, whether the flag survives version-pure scoring (ARTIFACT / MIX / DECAY per head). Needs a --by-version mode in this row's script. The runnable 1h twin RQ-20261016-65ff-24 (published data, kaggle_cpu) answers transient-vs-persistent for the 1h heads in the meantime. [2026-10-25 ML-HEALTH-BUILDS-1027] Script built (scripts/research/drift_regime_mix.py, split + by-version); 6e85-01 and 65ff-27 moved to queued. Closes when the first trainer run's verdict is read and SOL KS reproduces ~0.230 (pinned --as-of 2026-10-11T09:45Z).",
-  "updated_at": "2026-10-25T07:43:14Z",
-  "updated_by": "session_01WHECg9ey5pPngrEhWED1EM",
-  "roadmap": "M25",
+  "due_by": "2026-11-15",
+  "_seq": 407,
+  "note": "[2026-10-11 ml-review] Instrument for blocked unit RQ-20261011-6e85-01 (hold PR). Build: join shadow log (active+gz) to realised labels per window; per head volatile_label_share and AUC; write verdict.json {read_state,...}. Sonnet lane, ceiling $3. GO test: reproduces KS 0.230 for sol-regime-15m-lgbm-fc-pcv-v2 from shadow/drift. Closes when the script is merged AND one run's verdict is read for sol+btc advisory heads (record the run id here). [2026-10-16 lane P2-AI-REGIME-BACKLOG-1016, PR pending] Scope widened by a consumer: blocked/RQ-20261016-65ff-27 asks, for the 9 heads PI-20261016-P3PFA1GK-0001 flags on every scan, whether the flag survives version-pure scoring (ARTIFACT / MIX / DECAY per head). Needs a --by-version mode in this row's script. The runnable 1h twin RQ-20261016-65ff-24 (published data, kaggle_cpu) answers transient-vs-persistent for the 1h heads in the meantime. [2026-10-25 ML-HEALTH-BUILDS-1027] Script built (scripts/research/drift_regime_mix.py, split + by-version); 6e85-01 and 65ff-27 moved to queued. Closes when the first trainer run's verdict is read and SOL KS reproduces ~0.230 (pinned --as-of 2026-10-11T09:45Z). [2026-11-12 lane ML-DEV-PLAN session_01AFoLuKCLkLbWaDfBPBBWPy] This row carries ML dev plan line(s) MLP-N-DRIFT-SPLIT (mirror) in docs/plans/ml-dev-plan.yaml (state + evidence, levers ahead with baseline / PASS -> / FAIL ->, next 3-4 weeks, exhaustion). When this row moves, the line's levers/next_weeks are updated in that file; read with python3 scripts/ops/ml_dev_plan.py. Gates: none. [2026-11-15 ML-PRIMARY-3] Plan line MLP-N-DRIFT-SPLIT lever 'run on Foxhound-1's forward series' is SUPERSEDED by RQ-20261112-cd01-01 (manager 15a accepted, 2026-11-15). Result file: research/results/RQ-20261112-cd01-01/local-20261112T1500Z.jsonl (rule RULE-RQ20261112-cd01-01-REGIME-SELECT-COST, registered before the run; population n 375 served S decisions tau 0.1, 60-perp universe, window B 2026-10-25..11-07). R1: served-window gap -0.2113 R = regime -0.2002 (se 0.177, t -1.13) + selection -0.0112 (se 0.031); cost +0.0033 -> COST-NOT-DRIVER, REGIME-UNRESOLVED by rule. R2: frozen v1 on the same 14 days -0.324 R (n_V 430), S-V +0.120 CI [-0.087,0.441] -> REGIME-SHARED. Overall unit verdict INDETERMINATE by rule. Reading: the gap is a shared regime drawdown that frozen v1 also took, not served-model decay; it gives no demotion case. The demotion read for Foxhound-1 is the population test plus the weekly forward grade (ML-PRIMARY-3, next). This instrument row still closes on its own condition (drift_regime_mix.py run with SOL KS ~0.230 reproduced); the plan line's lever edit follows once #26293 merges.",
   "observation": {
-    "what": "first trainer runs of RQ-20261011-6e85-01 (split, pinned as-of reproduces SOL KS ~0.230), RQ-20261016-65ff-27 (9-head by-version verdict) and RQ-20261011-17f4-02 (label census) land under research/results/ with read_state measured",
+    "due_by": "2026-11-01",
     "how_to_check": "ls research/results/RQ-20261011-6e85-01 research/results/RQ-20261016-65ff-27 research/results/RQ-20261011-17f4-02; read each verdict.json measurement against its pre-registered rule (6e85-01: measurement.per_head.*.score_drift.ks vs 0.230; 65ff-27: measurement.tally)",
-    "due_by": "2026-11-01"
+    "what": "first trainer runs of RQ-20261011-6e85-01 (split, pinned as-of reproduces SOL KS ~0.230), RQ-20261016-65ff-27 (9-head by-version verdict) and RQ-20261011-17f4-02 (label census) land under research/results/ with read_state measured"
   },
+  "phase": "ml",
+  "roadmap": "M25",
+  "updated_at": "2026-11-15T12:22:11Z",
+  "updated_by": "session_01AFoLuMkZYvbttnmb2gtVcA",
   "writeback": {
-    "roadmap": "M25: script drift_regime_mix.py merged; 6e85-01 and 65ff-27 leave blocked/ (milestone updates when their verdicts land)",
-    "arch": "none: offline research tooling, no component or contract changed"
-  },
-  "_seq": 407
+    "arch": "none: offline research tooling, no component or contract changed",
+    "roadmap": "M25: script drift_regime_mix.py merged; 6e85-01 and 65ff-27 leave blocked/ (milestone updates when their verdicts land)"
+  }
 }

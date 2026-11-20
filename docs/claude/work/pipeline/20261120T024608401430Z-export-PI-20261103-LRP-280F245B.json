@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261103-LRP-280F245B",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_sol:lost_bar",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "not reproduced: trend_donchian_sol lost_bar was 1 at filing, 0 in the latest live-vs-replay window | evidence: comms/live_parity/2026-11-12.json legs[trend_donchian_sol].by_class.lost_bar=0, state=checked, bars_checked=168, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `trend_donchian_sol` — lost_bar ×1 (paper roster) in window 2026-10-27T07:45:00+00:00..2026-11-03T07:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-03.json. Examples: [{\"class\": \"lost_bar\", \"bar\": \"2026-11-02T13:00:00+00:00\", \"detail\": \"4 traded 15m candles, 0 live evals\"}]\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: not reproduced: trend_donchian_sol lost_bar was 1 at filing, 0 in the latest live-vs-replay window EVIDENCE: comms/live_parity/2026-11-12.json legs[trend_donchian_sol].by_class.lost_bar=0, state=checked, bars_checked=168, window 2026-11-05T07:00Z..2026-11-12T07:00Z; controls.planted_defect=pass (3/3 plants flagged incl. lost_bar), so a zero is a real read; a recurrence is re-filed by the daily parity run"
+}

@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the audit names the cause of the below-chance AUC (with a planted-leak self-test in d10_basset_baseline.py) and either fixes it or records that the inversion is real; or killed with a reason",
+    "due_date": "2026-11-21",
+    "kind": "date"
+  },
+  "id": "PI-20261119-JX6BUNMV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RQ-20261118-f7c1-07 fail_action, graded by lane ML-PRIMARY-8 2026-11-19",
+    "rerun": "python3 -c \"import json;print(json.load(open(\\\"comms/research/RQ-20261118-f7c1-07/44417165432/verdict.json\\\"))[\\\"note\\\"])\""
+  },
+  "owner": "ML-PRIMARY-9 (session_01AFoLuKRfgo8TULK7ZsW5Z7)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "Cleared by its own condition. CAUSE NAMED + planted-leak self-test: #27060 (merged f96cfd4e) — no leak in learned_points/learned_oof (features 0..i vs label i+1..i+20; folds by leg group; a planted label-reading feature drives OOF AUC > 0.9). The POOLED below-chance AUC is the design's null (iid synthetic legs: learned pooled 0.46-0.48, within-leg 0.36-0.37 for past-mean scores), now graded via --null-calibrate. RECORDED REAL on the live points by RQ-20261119-b9d0-01 (runs 44449459292/44450607058, FAIL by rule): learned pooled excess over the order null -0.0107 (p 0.51) = empty, not inverted, pooled; but WITHIN-LEG the learned score is 0.25 below its shuffled null (observed 0.318 vs null 0.569, all 40 draws above) = a REAL within-leg inversion for this feature set. CUSUM beats the null: +0.14 pooled / +0.21 within-leg (p 0.005). D10 reference stays the CUSUM; the next D10 learned lever must be graded by order-null excess on a fresh window.",
+  "tier": null,
+  "what": "[ml/D10] HARNESS AUDIT before any further D10 learned unit (RQ-20261118-f7c1-07 registered fail_action). f7c1-07 (run 44417165432) FAILED its falsifier: dropping the leg-level inputs mu and n_seen did NOT restore aadc-14's below-chance learned AUC; pooled AUC 0.4188 CI95 [0.3327, 0.4902] stayed below 0.5, n 670 (leg, trade) points on 49 legs, out of fold by 5 leg groups. A learned score reliably WORSE than chance means a sign-consistent leak or inversion, not mere noise. Audit learned_points / learned_oof in scripts/research/d10_basset_baseline.py: (a) label horizon (next-20 trades) overlapping the rolling-stat feature window, (b) fold leakage across leg groups, (c) the within-leg ordering of points vs the label. Until it closes, no D10 learned unit is authored; the CUSUM baseline (aadc-05 PASS, AUC 0.654) stays the D10 reference."
+}
