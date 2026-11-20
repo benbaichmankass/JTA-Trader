@@ -41,15 +41,14 @@ evidence_class:
   claim: model_quality
 power:
   expected_n: 2400
-  min_detectable_effect: 0.04
+  min_detectable_effect: 0.041
   effect_units: r_multiple
   sd: 0.7
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: 'sd 0.70 R carried from the measured neg25 paired sd (a10d-07 0.597, a10d-08 0.717); a feature arm differs from the champion on the same
-    trades, so the same order is assumed (ESTIMATE). n MEASURED on 7d49-02: pooled n_oos 2,403. At n 2,400, sd 0.70: SE 0.0143; 95% half-width
-    0.028, MDE at 80% ~0.040 R. Stated before the run.'
+    trades, so the same order is assumed (ESTIMATE). n MEASURED on 7d49-02: pooled n_oos 2,403. At n 2,400, sd 0.70: SE 0.0143. At n 2,400, sd 0.70, alpha 0.05 two-sided, power 0.80: MDE = (1.960 + 0.842) x 0.70 / sqrt(2400) = 0.0400 R, declared as 0.041 (rounded up; grader floor 2,288 <= 2,400). Corrected 2026-11-20 ~23:35Z (manager): the first draft declared 0.04, whose floor 2,403.7 exceeded expected_n by 3.7; the decision rule and thresholds are unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays the aligned trainer corpus and trainer-resolved 1h candles; nothing accrues.
