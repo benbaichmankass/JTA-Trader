@@ -1,0 +1,106 @@
+# Authored 2026-11-20 by lane ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1), Tier 1. Re-test on the NATIVE evidence feed of a shipped exit lever chosen on trainer bars (PI-20261120-7ITMUEB1-0001 step 3b); rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-75e6-01
+title: 'NATIVE-FEED re-test of the shipped trail decay on trend_donchian (BTCUSDT 1h): does removing it beat the leg as declared? (trainer-bar evidence, PI-20261120-7ITMUEB1-0001)'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'none: an unchanged-lever re-read on the evidence feed of a lever already shipped; a measurement-basis correction, not a new method.'
+question: Over 2020-07-01 .. 2026-10-15 23:59 on trend_donchian (BTCUSDT 1h, live), on the NATIVE 1h candles of the Stage-0 evidence feed (keyless Binance Vision, the grid
+  the leg trades), does removing the shipped trail decay (trail_decay_tight_mult 2.5, trail_decay_arm_r 6.49) beat the leg as declared (A) by >= 0.02 R/trade on net R in >=
+  3 of 4 calendar folds within the drawdown bar (maxDD(OFF) <= maxDD(A) x 1.35)? R is on the full initial position's risk.
+why_this_matters: 'The trail decay on trend_donchian was chosen by M20 trainer sweeps, which replay the trainer''s BTCUSDT 5m/15m files resampled to 1h. Two defects make those
+  sweeps a different measurement from the leg we trade: (1) the harness _resample used label/closed right, a one-sub-bar phase shift of every resampled bar (left/left reproduces
+  199,185 of 199,259 native ETHUSDT 15m bars, right/right 4; relay #27551; fixed in PR #27566), and (2) the trainer crypto files are a different venue''s series (trainer files
+  = Bybit linear perp, the live venue; evidence feed = Binance USD-M perp: close diff median 0.88 bps, p99 6.1, max 76.5 bps over 34,032 ETH 1h bars, no time offset; on trend_donchian_eth
+  the venue alone moves the book from +4.26 R to -2.61 R, 422 of 451 trades matched by entry time; relay #27576) (PI-20261120-7ITMUEB1-0005). On trend_donchian_eth the shifted
+  trainer grid read n 465 -35.73 R vs n 451 +4.26 R on native 1h. This unit re-reads the lever on the series the evidence and the live leg use; it changes nothing by itself.'
+power:
+  alpha: 0.05
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades, as in RQ-20261023-a1f3-06; below it the unit grades indeterminate, never FAIL. Trade sequences autocorrelate:
+    the fold majority carries the rest.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 100
+  min_detectable_effect: 0.45
+  power: 0.8
+  feasibility:
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    source: none
+decision_rule:
+  id: RULE-RQ2026112075e601-NATIVE-TRAILDECAY-RETEST
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39, or IF OFF is byte-identical to A (the lever never fired). OFF PASSES iff net_r(OFF) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge
+    >= 3 of 4 AND maxDD(OFF) <= maxDD(A) x 1.35. PASS (removal beats keeping): a discovery on one window; the follow-up is ONE confirmation unit on a disjoint partition before
+    any Tier-3 proposal to remove the lever, never a config edit from this unit. FAIL: the shipped lever stands on the native feed for this window. Thresholds are not changed
+    after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on trend_donchian, window 2020-07-01 .. 2026-10-15 23:59 (4 equal calendar folds, a trade binned by entry
+    time), net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared
+    in config/strategies.yaml; OFF = A with trail_decay_tight_mult, trail_decay_arm_r unset. Per arm: n, net_total_r, max_drawdown_r, net R per fold. delta = net_r(OFF) - net_r(A);
+    folds_ge = folds with net_r(OFF) >= net_r(A).'
+compute: cpu_light
+value:
+  basis: 'stand-in: exit lever on a live leg; an estimate, not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.15
+  usd_at_stake_per_month: 250
+routing:
+  basis: 'One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm (2 arms on xrp_pullback_2h over 2020-07..2026-10 took 74 s wall MEASURED
+    2026-10-16).'
+  est_minutes: 30
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data (the point of the unit).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian
+  - --arm
+  - A=
+  - --arm
+  - OFF=-trail_decay_tight_mult;-trail_decay_arm_r
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261120-75e6-01
+  timeout_minutes: 120
+  workflow: research-script-run.yml
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+related:
+- scripts/research/exit_lever_ablation.py
+- PI-20261120-7ITMUEB1-0001
+- PI-20261120-7ITMUEB1-0005
+- 'PR #27566'
