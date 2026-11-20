@@ -1,0 +1,31 @@
+{
+  "id": "PHONE-CLOSED-ORDERS-NEW-LAYOUT",
+  "title": "Phone executor: read Closed orders on the new broker layout (likely under the bottom Activity button)",
+  "state": "blocked",
+  "owner": "manager",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 31,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": [
+    {
+      "clears_when": "manual",
+      "kind": "manual",
+      "owner": "AM-TRADING",
+      "ref": "operator reactivates breakout_2"
+    }
+  ],
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-16",
+  "note": "[2026-11-12 09:35Z AM-TRADING] Assigned to the phone lane session_01AFoLuMmYph1armQBUCeZzU, queued behind #25197 and PHONE-LIVE-ACCOUNT-FEED (the closed-orders read is the same work: the new Trade view has no Closed tab, PI-20261112-QBUCEZZU-0001). [2026-11-12 09:43Z lane session_01AFoLuMmYph1armQBUCeZzU] DESIGN CALL (AM-TRADING 09:41Z, under the operator no-reinstall rule): stay APK-free. The app's only closed step (readAccount: clickTab(closed) then __ex.closedRead()) is now borrowed by #25217 for Open orders brackets. Plan: exec.js picks the view per pass: Open orders on most passes, Activity/closed history every Nth pass (N from the measured background pass interval, e.g. 1 in 3), plus on demand when a ticket is placed/filled with no venue position (BREAKOUT-UNRECORDED's case). Each read carries as_of + read_state so a stale closed read shows as stale. An APK is last resort: name it to AM-TRADING with the reason before building. Order: after #25197/#25212/#25217 land, first confirm the trail amend applies + the real SL/TP of both breakout_2 legs, then BREAKOUT-UNRECORDED + this row. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): owner -> manager (was 'AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)', no live session); state stays blocked. still blocked: operator reactivates breakout_2.",
+  "updated_at": "2026-11-15T11:31:14Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

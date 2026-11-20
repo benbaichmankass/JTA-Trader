@@ -1,0 +1,22 @@
+{
+  "id": "LTR-FAST-MOVE-WAKE",
+  "title": "Live-review fast-move wake: an 'impulse' telemetry event (+X R within N minutes / a bar range > k x ATR) wakes the live review at once instead of the 4h cadence or the 0.5R new_peak step",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "From LTR-FAST-MOVE-LOCKIN Q1 (operator 2026-11-10 ~15:25Z: 'quicker and more aggressive action on an SL moving'). MEASURED 2026-11-11 by reading src/runtime/live_review_due.py: TELEMETRY_EVENTS = (r_milestone, new_peak, giveback, near_target); no velocity/impulse event, so ADA's +0.8R in ~17 min (2026-11-10 15:04->15:21Z) and its +1.37R -> giveback 0.52R (16:11Z) woke reviews only through new_peak / giveback steps. Build: add 'impulse' (open_r gained >= X R within N min of the position path history, or a forming-bar range >= k x ATR) to TELEMETRY_EVENTS with a dedup bucket; thresholds declared in config/live_trade_review.yaml (advice-only wake, no apply). Done = a replay of the 2026-11-10 ADA path fires 'impulse' at ~15:21Z in a test, and the live due list shows it on the next real impulse. Companion exit-rule evidence: research/queue/RQ-20261111-9b09-01 (bar-scale; intrabar is this row's job).",
+  "phase": null,
+  "updated_at": "2026-11-11T18:43:14Z",
+  "updated_by": "session_01AFoLuKoQkQBLzCSoiyyoMo",
+  "week_lane": "surge"
+}

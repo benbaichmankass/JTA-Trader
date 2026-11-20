@@ -1,33 +1,33 @@
 {
   "id": "LTR-1-DUE-WATCH",
   "title": "Live trade review: GET /api/diag/live_review_due (pure read) + scripts/ops/live_review_due.py + attention_watch backstop probe; thresholds in config/live_trade_review.yaml",
-  "phase": null,
   "state": "done",
   "owner": "build lane (manager dispatch)",
   "lane": "session_0189hvc7Y8WficPsWafqNRmP",
   "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 4,
   "ceiling_usd": 8,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     20115
   ],
   "blocked_on": [],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7\u00a7 1-2. BUILT on branch lane/ltr-1-due-watch (landing: hold, manager merges). GET /api/diag/live_review_due (src/runtime/live_review_due.py, thresholds config/live_trade_review.yaml), scripts/ops/live_review_due.py (exit 0 due / 10 nothing due / 11 could not look), tests/test_live_review_due.py. Events evaluated: r_milestone, new_peak, giveback, near_target, daily_floor; NOT yet evaluated (reported in events_not_evaluated): swing, vol_regime, funding, calendar, mechanics. NOT built here: the attention_watch backstop probe (title lists it, task scope did not) -> follow-up. CLOSING OBSERVATION (not yet made): after merge+deploy, GET /api/diag/live_review_due on the live VM returns read_state=looked with a real open package listed. OBSERVED 2026-10-25 20:15:36Z by the manager (01MdQiC8). After pull-and-deploy #20158 (VM at 1e44c171, wrapper exit 0), scripts/ops/diag_fetch.sh live_review_due returned read_state=looked, open_count=7, due_count=0, reviews_state=read, suppressed_by_cooldown=5, review_bad_lines=0. This meets the observation (looked, open_count>=1). Merged d1ee259, deployed 20:12Z, observed 20:15Z.",
-  "priority_rank": 4,
-  "updated_at": "2026-10-25T20:16:27Z",
-  "updated_by": "session_01MdQiC8UqKBLj287KWFWN71",
-  "roadmap": [
-    "L-ATM"
-  ],
-  "writeback": {
-    "roadmap": "L-ATM: live trade review L0 (due computation) built; the milestone updates when the first live review runs",
-    "arch": "none: a read-only diag route (api-tier-policy row added) and a declared-thresholds YAML; no pipeline component changed"
-  },
+  "_seq": 657,
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7\u00a7 1-2. BUILT on branch lane/ltr-1-due-watch (landing: hold, manager merges). GET /api/diag/live_review_due (src/runtime/live_review_due.py, thresholds config/live_trade_review.yaml), scripts/ops/live_review_due.py (exit 0 due / 10 nothing due / 11 could not look), tests/test_live_review_due.py. Events evaluated: r_milestone, new_peak, giveback, near_target, daily_floor; NOT yet evaluated (reported in events_not_evaluated): swing, vol_regime, funding, calendar, mechanics. NOT built here: the attention_watch backstop probe (title lists it, task scope did not) -> follow-up. CLOSING OBSERVATION (not yet made): after merge+deploy, GET /api/diag/live_review_due on the live VM returns read_state=looked with a real open package listed. OBSERVED 2026-10-25 20:15:36Z by the manager (01MdQiC8). After pull-and-deploy #20158 (VM at 1e44c171, wrapper exit 0), scripts/ops/diag_fetch.sh live_review_due returned read_state=looked, open_count=7, due_count=0, reviews_state=read, suppressed_by_cooldown=5, review_bad_lines=0. This meets the observation (looked, open_count>=1). Merged d1ee259, deployed 20:12Z, observed 20:15Z. 2026-11-16 21:25Z (AM-OPS-2, manager 21:20Z) /api/diag/live_review_due is intermittently SLOW on a cold read, not broken. Two back-to-back reads at 21:2xZ (my diag_fetch, 100 s cap): read 1 returned a full valid doc (13 due, read_state looked, 47 KB) after 92 s wall; its own timings_ms: reviews 82460, market_context 4866, conflicting_exposure 1782, compute_due 214, telemetry 646, total 91081. Read 2, seconds later: total 632 ms (reviews 197). At 18:21Z the same route totalled 5537 ms (reviews 1827). So the cost is the 'reviews' stage on a cold path: read_reviews_merged = the 2.9 MB reviews.jsonl parse + read_branch_rows (git rev-parse + rows_lib.read_at(tip) shelling out to git on the rows branch) + direct rows; warm it is sub-second. The manager's two could_not_look reads fit this (10 s cap: accepted, no answer; 90 s cap: empty body: a read landing at ~90 s). Likely cause, UNPROVEN: cold page cache / IO contention on the saturated VM, the git calls competing with the git-sync run's sparse read-tree (2 min 9 s of heavy IO every ~5 min, GIT-SYNC-PRUNE-STUCK; PR #26573 removes it on no-change runs) and the 4755-pack repo. Not a defect in the route's logic; nothing built. Closing observation: after #26573 deploys the cold 'reviews' stage stays under ~5 s. The wake poster is unaffected (it computes in-process and posted 19:37Z and 20:22Z).",
   "observation": {
-    "what": "GET /api/diag/live_review_due answers on the live VM with read_state=looked and lists/counts a real open order package",
+    "due_by": "2026-10-27T00:00Z",
     "how_to_check": "scripts/ops/diag_fetch.sh live_review_due -> read_state looked, open_count >= 1",
-    "due_by": "2026-10-27T00:00Z"
+    "what": "GET /api/diag/live_review_due answers on the live VM with read_state=looked and lists/counts a real open order package"
   },
-  "_seq": 657
+  "phase": null,
+  "updated_at": "2026-11-16T21:23:38Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a",
+  "writeback": {
+    "arch": "none: a read-only diag route (api-tier-policy row added) and a declared-thresholds YAML; no pipeline component changed",
+    "roadmap": "L-ATM: live trade review L0 (due computation) built; the milestone updates when the first live review runs"
+  }
 }

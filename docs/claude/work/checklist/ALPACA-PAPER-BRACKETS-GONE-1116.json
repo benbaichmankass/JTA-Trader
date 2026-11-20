@@ -1,0 +1,23 @@
+{
+  "id": "ALPACA-PAPER-BRACKETS-GONE-1116",
+  "title": "alpaca_paper positions found at the broker with no resting stop/target at the 14:32Z restart (paper book self-flattened by the watchdog); cause unestablished",
+  "state": "landed_unproven",
+  "owner": "AM-OPS-2 (session_01AFoLuKdqv7sRrnLSFhbH4a)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "paper-book bracket integrity",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "2026-11-16 14:40Z MEASURED (alerts + venue reads): the 14:32:21Z restart ping (deploy 9bc27a9, #26513) read '1 problem(s)'; the '3 prop account(s) not broker-readable' tail is normal (identical on the clean 09:44Z and 13:40Z pings). The problem: CRITICAL alpaca_partial_stop_coverage + alpaca_target_naked at 14:32:52-14:33:09Z on alpaca_paper IAUM 9375, GDX 1869, SLV 383, QQQ 1093 (resting stop for only 0.0 / target 0.0). 14:35:52-14:36:45Z: stuck_strategy_watchdog closed QQQ/GDX/USO, exchange_flat_reconciled closed SPY; journal rows closed closeReason other, exitPrice null. Broker alpaca_paper now holds only TLT long 864. The 13:40Z restart ping had said SL+TP at broker 18/18 for the same book. UNEXPLAINED: what removed the bracket legs between 13:40Z and 14:32Z (hypothesis, unmeasured: Alpaca DAY/OCO legs expiring at the 14:30Z open). Also spy_pullback_1h opened+closed a paper trade every ~9 min from 14:07Z (journal 7583/7584/7585) without a fill. Paper money: no real-money or prop exposure. NEXT: read the alpaca order history for the lost legs (time in force, status, cancel reason) and the watchdog/reconciler journal for the closes; propose a fix or file why it is by design. Closing observation: the next restart ping shows alpaca_paper brackets 100% and no stuck_strategy_watchdog close of a paper position with no resting legs. 2026-11-16 15:05Z ROOT CAUSE ESTABLISHED (MEASURED: /api/diag/alpaca_order_history for alpaca_paper, trader journal 14:32, src/units/accounts/alpaca_client.py _escalate_not_flat). NOT leg expiry (all bracket legs gtc) and NOT the open. 14:32:21Z uso_trend_1h verdict close/sl_cross -> DAY market sell 4249 at 14:32:24Z; paper fills were slow (QQQ 1 min, USO 1.5 min) so the 6 s flat-confirm timed out; _escalate_not_flat classified the close order WE had just placed as an 'accepted-not-flat wedge' holder (log: 'accepted-not-flat wedge, orders [<id>] hold the shares; oco target exit no_candidate; account reset reset: not flat; POSITION HAS NO STOP'); rung 3 on PAPER = documented close-all: at 14:32:33Z every open order was cancelled (all bracket legs) and 6 DAY market closes sent (QQQ 1093, SLV 383, GDX 1869, IAUM 9375, SPY 26, USO 4249), filled 14:33:36-14:35:28Z. The 14:32:52Z 'no resting stop' CRITICAL alerts saw legs we had cancelled with the closes in flight. LIVE: close-all is never automated (one red flag) but the same false wedge detection applies (rung 2 reprice + live-ladder-exhausted flag). Real-money alpaca_portfolio SLV short legs (TP 41.44 + SL 44.14, gtc) were present and untouched; alpaca_live flat. SEPARATE defect: spy_pullback_1h pre-open re-entry loop (3 entry brackets 101/12/2 placed 14:07/14:16/14:25Z, journal rows closed 'flat' by the reconciler ~7 min after open with no fill, all three filled at/after the open 14:30-14:32Z: venue SURPLUS 26 vs journal 2). FIX PLAN (Tier 2 HOLD PR, RESTART): wedge ladder ignores an order created by THIS close attempt / within a grace window; PAPER close-all only when the wedge persists on a later tick; tests. SPY pre-open re-entry = its own row. Fix PR #26522 (HOLD, Tier 2): own flatten order excluded from wedge holders. SPY loop filed as SPY-PULLBACK-1H-PREOPEN-LOOP-1116. Closing obs: next slow paper close does not trigger account_reset; alpaca_portfolio SLV short legs gtc check still to report. 15:16Z #26522 merged (4b7e9ed0), landed_unproven. Closing observation: the next slow Alpaca flatten confirms with no wedge escalation and no account_reset close-all fires. Post-deploy check (version >= 4b7e9ed0, clean restart, SL/TP at broker) pending git-sync.",
+  "phase": null,
+  "updated_at": "2026-11-16T15:15:42Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

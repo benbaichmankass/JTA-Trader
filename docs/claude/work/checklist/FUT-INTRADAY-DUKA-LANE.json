@@ -1,0 +1,27 @@
+{
+  "id": "FUT-INTRADAY-DUKA-LANE",
+  "title": "Wire Dukascopy 5m/15m into exit_lever_ablation (_DUKA_INTERVAL has 1h/2h/4h/1d only) + a session-flat overlay flag + a per-contract cost arm",
+  "state": "done",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuM4o8Pd4R6xczg9eWA",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25303,
+    25425
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "next_action": "",
+  "note": "Filed 2026-11-12 by TRADEIFY-FUTURES-FRONTIER. Unblocks RQ-20261101-78fc-13 (ict_scalp_mgc_15m Stage 0) and RQ-20261112-09d2-04 (ict_scalp transfer to Tradeify futures). Both pointed at ICT-SCALP-EVIDENCE, which is DROPPED, so they could never clear. Re-pointed here. Evidence the feed works: scripts/ops/fetch_dukascopy_ohlcv.py with dukascopy-python==4.0.1 fetched 2019-2026 5m for E_SANDP_500 / E_NQ_100 / XAU_USD in seconds per year (2026-11-12). Done when: 78fc-13 and 09d2-04 are git-mv'd to research/queue/ with a run.command, rules unchanged. 2026-11-12 lane session_01AFoLuM4o8Pd4R6xczg9eWA: harness PR #25303 (Tier 1 self-land, auto-merge armed). 78fc-13 moved to queue with run.command. 09d2-04 move waits on #25203 landing (manager). 09d2-04 local run: MGC fail, MES fail, MNQ running. 2026-11-12 ~17:50Z: #25203 merged, so 09d2-04 is git-mv'd into research/queue with status done, run.command and grading FAIL (0/3), folded into #25303 with its result. 78fc-13 is queued with a run.command. Done-condition met on the branch; landed when #25303 merges. Earlier CI runs on #25303 were cancelled by something outside the PR at 14:54-15:00Z; I merged main (which also resolved a 78fc-13 conflict with #25203) and re-pushed.",
+  "phase": null,
+  "terminal_reason": "Done-condition met on main (b3ec3e5ea, #25303 merged 2026-11-12 18:37Z): RQ-20261101-78fc-13 queued with run.command, RQ-20261112-09d2-04 in research/queue with run.command + grading FAIL 0/3, rules unchanged; harness = dukascopy 5m/15m, session-flat, per-contract cost, opt-in extended stage0. Merged, not deployed/observed (research tooling, no runtime surface). Follow-up #25425 (78fc-13 power.design paired->one_sample, lost from #25303) is held for the manager's merge.",
+  "updated_at": "2026-11-12T18:42:04Z",
+  "updated_by": "session_01AFoLuM4o8Pd4R6xczg9eWA",
+  "week_lane": "surge"
+}

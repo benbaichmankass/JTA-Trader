@@ -1,29 +1,34 @@
 {
   "id": "DASH-PROP-OVERVIEW",
   "title": "Overview Prop book shows live prop equity, open trades and realized P&L",
-  "phase": "A",
   "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01Usus8BBv8MN6cd17xH6SaQ",
   "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-10: Overview Prop view showed all dashes and 'No open prop trades' while velotrade_1 had an OPEN fill (id 96) and fresh equity on two accounts. ROOT CAUSE (SPA, not API): ExecSummary.svelte hard-coded the prop branch to equity=null, open=[] and segPerf=null ('lives on the Prop tab'); Overview never fetched any prop endpoint. FIX: API GET /api/bot/prop/overview (equity over fresh snapshots only, stale listed+excluded; open = open/filled with no closing row; realized over closed fills in window, population stated) + SPA wiring in ict-trader-dashboard. OBSERVATION THAT CLOSES: after the API deploys AND the SPA Pages build publishes, Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity = sum of fresh accounts. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. API half observed: /api/bot/prop/overview?window=7d returns open tradeify_1 ETHUSDT long and equity.total_usd 19891.41 = 9935.43+4955.98+5000.00 (3 of 3 counted). SPA render (ict-trader-dashboard #221) not loaded by this sweep. Next: operator eyes or a browser pass. | [BACKLOG-DRAIN 2026-11-01] PENDING: PARTIAL. GET /api/bot/prop/overview?window=7d: accounts_counted 3 of 3 and equity.total_usd equals the sum of the counted accounts (checked). open_trades is empty now, so the open velotrade_1 ETHUSDT long cannot be shown; the SPA render needs an operator view.",
-  "updated_at": "2026-11-01T11:43:33Z",
-  "updated_by": "BACKLOG-DRAIN-20261101",
+  "due_by": "2026-11-13",
+  "_seq": 375,
+  "note": "Operator 2026-10-10: Overview Prop view showed all dashes and 'No open prop trades' while velotrade_1 had an OPEN fill (id 96) and fresh equity on two accounts. ROOT CAUSE (SPA, not API): ExecSummary.svelte hard-coded the prop branch to equity=null, open=[] and segPerf=null ('lives on the Prop tab'); Overview never fetched any prop endpoint. FIX: API GET /api/bot/prop/overview (equity over fresh snapshots only, stale listed+excluded; open = open/filled with no closing row; realized over closed fills in window, population stated) + SPA wiring in ict-trader-dashboard. OBSERVATION THAT CLOSES: after the API deploys AND the SPA Pages build publishes, Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity = sum of fresh accounts. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. API half observed: /api/bot/prop/overview?window=7d returns open tradeify_1 ETHUSDT long and equity.total_usd 19891.41 = 9935.43+4955.98+5000.00 (3 of 3 counted). SPA render (ict-trader-dashboard #221) not loaded by this sweep. Next: operator eyes or a browser pass. | [BACKLOG-DRAIN 2026-11-01] PENDING: PARTIAL. GET /api/bot/prop/overview?window=7d: accounts_counted 3 of 3 and equity.total_usd equals the sum of the counted accounts (checked). open_trades is empty now, so the open velotrade_1 ETHUSDT long cannot be shown; the SPA render needs an operator view. 2026-11-10 manager: the operator's dashboard screenshots partly DISPROVE this row: the open prop trade shows no SL/TP, and closed prop trades are excluded from the closed log ('not included here yet'). Follow-up row: PROP-UI-BRACKETS-CLOSED (post-reset).",
   "observation": {
-    "what": "Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity equal to the sum of fresh prop accounts",
-    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/overview?window=7d (open_trades non-empty, equity.total_usd = sum of counted accounts) then load the SPA Overview with Prop selected after both PRs (metis-insights #17421, ict-trader-dashboard #221) are deployed",
     "due_by": "2026-11-08",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/overview?window=7d (open_trades non-empty, equity.total_usd = sum of counted accounts) then load the SPA Overview with Prop selected after both PRs (metis-insights #17421, ict-trader-dashboard #221) are deployed",
     "redated": {
-      "on": "2026-11-01",
-      "from": "2026-10-31",
       "by": "BACKLOG-DRAIN-20261101",
+      "from": "2026-10-31",
+      "on": "2026-11-01",
       "reason": "PARTIAL. GET /api/bot/prop/overview?window=7d: accounts_counted 3 of 3 and equity.total_usd equals the sum of the counted accounts (checked). open_trades is empty now, so the open velotrade_1 ETHUSDT long cannot be shown; the SPA render needs an operator view."
-    }
+    },
+    "what": "Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity equal to the sum of fresh prop accounts"
   },
-  "_seq": 375
+  "phase": "A",
+  "updated_at": "2026-11-10T11:11:35Z",
+  "updated_by": "Manager Session 2026-11-09a"
 }

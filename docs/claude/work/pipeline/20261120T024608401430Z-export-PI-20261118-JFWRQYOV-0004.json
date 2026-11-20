@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the cause of the repeated same-signal entries is named from the trader log and order_packages, fixed (one package per signal per bar), and observed on the next 1h equity entry; plus a check that no alpaca_live long stacked the same way",
+    "kind": "observation",
+    "last_checked": "2026-11-19"
+  },
+  "id": "PI-20261118-JFWRQYOV-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-18 15:20Z check-in",
+    "rerun": "curl https://ict-bot.duckdns.org/api/bot/alerts?since=2026-11-18T12:17:00Z and filter trade-open for slv_trend_1h / qqq_pullback_1h; scripts/ops/diag_fetch.sh journal?table=order_packages&limit=150 for the SLV/QQQ packages"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "2026-11-18 21:40Z: no after-close Alpaca entry occurred. Journal trades newest row (any account) is 20:04:36Z in the latest 80 rows, so nothing was created after the 16:00 ET close. 'is still pending' not seen in the ict-trader-live journal 21:04-21:12Z and 21:28-21:36Z (nothing to defer). equity_first_full_hour_wait also not seen in those windows; the 21:00-21:04Z window was not captured (journalctl cap 2000 lines), so the D9 gate firing is NOT established. Re-arm 2026-11-19 13:10Z.",
+    "observed_at": "2026-11-18"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "APPLIED 2026-11-19T11:32:40Z (system-actions run 44514714053, issue #27273; manager OK 11:18Z; backup /data/bot-data/trade_journal.db.bak-reopen-2026-11-19T113240+0000). The first apply (run 44513698892) hit 'database is locked' and rolled back (verified unchanged); fix in #27274 (60 s lock wait). POST-STATE from FRESH reads at ~11:36Z, not the action's output: (1) diag journal: alpaca_paper open QQQ shorts = 7712 (1182 @ 661.978206), 7780 (735 @ 661.584735), 7781 (55 @ 661.831455), 7782 (7 @ 661.97), 7783 (2 @ 660.3); sum 1981, long 0; the four reopened rows carry notes.reopen_repair. (2) diag exchange_positions alpaca_paper: QQQ short 1981 (venue avg 661.82787, read_state ok), so journal 1981 = venue 1981. That is the exact comparison boot_audit.qty_mismatch makes; it runs only at a trader restart, so the next restart report is the live confirmation, and the 11:26 report (2 vs 1981) predates the apply. (3) diag venue_protection_snapshot: all five open packages (pkg-bcc6fb66, -c0871a50, -0defd7ed, -cb5d8c89, -6dacfc6b) read_state measured at 11:36:42-11:36:49Z with venue_sl and venue_tp set (5 stop legs, 5 target legs). Leg QUANTITIES summing to 1981 were not separately read.",
+  "tier": null,
+  "what": "REPEATED RE-ENTRY ON 1H EQUITY LEGS (order path; paper today, real-money path shared). MEASURED 2026-11-18 from /api/bot/alerts trade-open rows. slv_trend_1h SHORT opened SEVEN times on alpaca_portfolio, about every 7 min, 13:03-13:47Z: qty 794, 53, 2, 19, 2, 2, 5; SL 41.57 / 41.63 / 41.93 / 41.93 / 41.85 / 41.90 / 41.90. qqq_pullback_1h SHORT opened FOUR times on alpaca_paper, 14:01-14:26Z: qty 735, 55, 7, 2. Shrinking quantities suggest each repeat is sized against the remaining risk budget (bounded, not runaway), but one 1h signal should give ONE package. This also explains the 'unexplained' SLV venue SL 41.57 (PI-20261118-JFWRQYOV-0002): it is the FIRST entry's stop, and the live-review packet tracked only the last package (pkg-2616d7fbc5134e2e, SL 41.90). Hypotheses: an intra-bar re-fire with no per-bar dedupe on 1h equity legs; a partial-fill or qty-coverage top-up re-arm; or restore-on-refusal (#26611) re-sending. Check whether alpaca_live (real money, longs) has done the same on any long. PRIORITY: first general-lane item after the reset (order path). Related: SLICE-SAME-SIGNAL-VISIBILITY. Gates this adds: none."
+}

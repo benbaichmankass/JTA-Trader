@@ -1,0 +1,24 @@
+{
+  "id": "SIGNALS-CATALOG-ROUTE",
+  "title": "GET /api/bot/signals/catalog for the SPA Signals Catalog tab (dashboard #238 gets 404)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuMw1bWyUmi4HkqYBX8",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25199
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "Manager request 2026-11-12 08:51Z (operator p5: 'I don't see the signals catalog and features heat map here'). Built by UI lane p2: PR #25199 (HELD: access tier 1, deploy tier 2). Serves signal-catalog.yaml inputs joined with consuming strategies and models (build_features_view), groups, coverage, filters, paging, read_state, provenance; CORS via the app middleware (checked). The heat map stays at /api/bot/feature-impact/heatmap. CLOSES WHEN: after the ict-web-api deploy, GET https://ict-bot.duckdns.org/api/bot/signals/catalog?limit=3 returns 200, read_state read, population.inputs 363, and the SPA tab renders it. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner AM-UI is ARCHIVED. #25199 merged. OBSERVED 10:40Z today: GET /api/bot/signals/catalog?limit=3 returns 200, read_state read, population.inputs 363 (with_consumer 336). Still open: the SPA tab rendering it (not checked).",
+  "phase": null,
+  "updated_at": "2026-11-15T10:35:03Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

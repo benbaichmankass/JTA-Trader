@@ -1,0 +1,25 @@
+{
+  "id": "PROPOSAL-ALERT-ROUTING",
+  "title": "Every ready promotion/decision proposal reaches the operator decision queue automatically (no new gate): shared awaits_operator() predicate used by brief section 2, brief section 0 (overdue builds named), and attention_watch push",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJY7cUhczBrRc7GwLc",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Thursday-planning 2026-11-11 decision; weekly pass maps it",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25237
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-13",
+  "note": "[operator decision 2026-11-11, Thursday-planning doc] b1 1h promotions tlt/qqq/slv/uso -> verbatim choice \"Put qqq and tlt on the paper floor now; promote tlt to real money\". Operator note, verbatim: \"We need to make sure these proposals don't stay una Ted on, why aren't you getting an alert when the proposal is ready to send me the decision?\" ROOT CAUSE (2026-11-11 read, lane thursday-planning; file:line from the read, not re-run): PROMOTE-1H-SURVIVORS-20261104 was a checklist BUILD row (owner manager, tier 3), not a pipeline ask_operator item. Every surfacing path missed it: scripts/ops/attention_watch.py (~l.192, ~l.965) pushes only on pipeline next_action == ask_operator; scripts/ops/render_daily_brief.py:376-388 (section 2, decisions for you) lists only rows whose OWNER contains \"operator\"; :245-250 (section 0) prints overdue build rows as a bare COUNT, never by id. Nothing converts \"lane finished, operator must decide\" into a record those readers see; the hand-back lived as prose in the row note. (The 11-04 lane also found no leg cleared every check, and nothing surfaced that either.) FIX (routes and alerts only, refuses nothing): one awaits_operator(row) predicate in src/runtime/checklist_store.py on structured fields only (ask_operator; owner operator; blocked_on kind operator; tier>=3 and past due_by; a lane hand-back field when set) used by render_daily_brief decisions_for_you, section 0 (list overdue ids), and attention_watch (read the work store, file fallback; edge-triggered ping, re-alert after 48h). Tests: tests/test_render_daily_brief.py + attention_watch --self-test, positive control = the real PROMOTE-1H row JSON. CHECK FIRST: attention_watch reads the pipeline file export, which HEALTH-20261111-EXPORT-READS-STALE says is frozen since 11-06; if the VM copy is equally stale even a correct ask_operator item would not alert. Gates this adds: none. DAILY REVIEW 2026-11-15 (inflight breach, untouched since 11-12): #25237 is MERGED on main (ca16a2781b), so in_flight -> landed_unproven. CLOSING OBSERVATION: the next row that is awaits_operator (ask_operator, or tier >= 3 past due_by) appears in /api/bot/work/brief decisions_for_you / section 0, and attention_watch pings once (edge-triggered). Not yet observed.",
+  "phase": null,
+  "updated_at": "2026-11-15T05:55:33Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

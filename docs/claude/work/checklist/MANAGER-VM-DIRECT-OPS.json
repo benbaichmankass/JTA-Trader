@@ -1,23 +1,35 @@
 {
   "id": "MANAGER-VM-DIRECT-OPS",
   "title": "Direct manager<->VM ops channel: system-actions allowlist as authenticated HTTPS calls on the WSD token path (no labelled issues); deliberate push->pull->restart->observe deploy; manager reads /api/bot/alerts directly on every wake; GitHub kept only as a content-free doorbell",
-  "phase": null,
-  "state": "blocked",
+  "state": "queued",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "BLOCKED ON: operator OK of the exact change (Tier 2, live-VM mutation surface), plus WSD-S1 (token path) and ALERT-LEDGER-TO-MANAGER (#23033). Operator comment on System Map v2 artifact, 2026-11-05T00:36Z, verbatim: \"I think we maybe need more direct two way comms between the manager and vm - I yiu should get alerts directly, not through the repo, and you should also be able to take direct actions on the live vms, including their configuration, no?\" Manager reply (same thread): config changes stay in git (reviewed + tested; git is the change record); deploy becomes direct; actions keep the same tiers and approval rules, only the pipe changes. OPEN (UNVERIFIED): whether any supported channel lets an external host wake a cloud session other than GitHub events / scheduled tasks; verify before design. OPERATOR DECIDED 2026-11-05 ~00:47Z (popup, verbatim answers): Direct ops = \"Approve (Recommended)\" (file as build rows after WSD-S1; Tier 2 ships under this OK + post-deploy observe); Config path = \"Keep via git (Recommended)\" (the direct channel carries actions, not config edits); Deploy = \"Keep git-sync (Recommended)\" (no change; add a direct 'sync now' action for urgent fixes); Alert wake = \"Tiny GitHub doorbell (Recommended)\" (content-free 'check alerts' ping on the ops PR, system/high priority only; content read from /api/bot/alerts). Remaining block: WSD-S1 + ALERT-LEDGER-TO-MANAGER (#23033).",
-  "due_by": "2026-11-12",
   "roadmap": [
     "unmapped"
   ],
   "roadmap_unmapped_reason": "redesign extension; maps with WSD rows once the operator OKs it",
-  "updated_at": "2026-11-05T00:46:28Z",
-  "updated_by": "session_01AFoLuN7HERxg65eHjtmMYE",
-  "_seq": 933
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [
+    {
+      "clears_when": [
+        "pr_merged:25052",
+        "manual:the operator has created the claude.ai scheduled task and its API token for the instant review wake (m5: I will create the routine and token)",
+        "manual:one direct manager->VM action over HTTPS observed end to end after deploy (request, VM receipt, result read back)"
+      ],
+      "owner": "operator (routine+token), then AM-OPS (observe)",
+      "reason": "#25052 merged 2026-11-12T11:09:18Z (m5). Remaining: the operator step (routine + token), then deploy and observe one direct action.",
+      "since": "2026-11-12"
+    }
+  ],
+  "due_by": "2026-11-12",
+  "_seq": 933,
+  "note": "BLOCKED ON: operator OK of the exact change (Tier 2, live-VM mutation surface), plus WSD-S1 (token path) and ALERT-LEDGER-TO-MANAGER (#23033). Operator comment on System Map v2 artifact, 2026-11-05T00:36Z, verbatim: \"I think we maybe need more direct two way comms between the manager and vm - I yiu should get alerts directly, not through the repo, and you should also be able to take direct actions on the live vms, including their configuration, no?\" Manager reply (same thread): config changes stay in git (reviewed + tested; git is the change record); deploy becomes direct; actions keep the same tiers and approval rules, only the pipe changes. OPEN (UNVERIFIED): whether any supported channel lets an external host wake a cloud session other than GitHub events / scheduled tasks; verify before design. OPERATOR DECIDED 2026-11-05 ~00:47Z (popup, verbatim answers): Direct ops = \"Approve (Recommended)\" (file as build rows after WSD-S1; Tier 2 ships under this OK + post-deploy observe); Config path = \"Keep via git (Recommended)\" (the direct channel carries actions, not config edits); Deploy = \"Keep git-sync (Recommended)\" (no change; add a direct 'sync now' action for urgent fixes); Alert wake = \"Tiny GitHub doorbell (Recommended)\" (content-free 'check alerts' ping on the ops PR, system/high priority only; content read from /api/bot/alerts). Remaining block: WSD-S1 + ALERT-LEDGER-TO-MANAGER (#23033). [2026-11-12] decision: 2026-11-12 operator decisions page m5 \"Accept the defaults (15 min; all classes; advice rows get a button; yes to Tier-1 on the credential); I'll create the routine and token\". #25052 may merge once green (Tier 2 approved by that answer). Operator creates the claude.ai scheduled task + its API token for the instant review wake. Record: docs/plans/thursday-planning-2026-11-12-answers.md.",
+  "phase": null,
+  "updated_at": "2026-11-19T06:07:04Z",
+  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL",
+  "week_lane": "surge"
 }

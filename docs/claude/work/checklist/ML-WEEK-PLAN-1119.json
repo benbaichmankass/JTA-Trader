@@ -1,0 +1,27 @@
+{
+  "id": "ML-WEEK-PLAN-1119",
+  "title": "ML week plan Thu-Sun 2026-11-19..22 (unattended): execute docs/plans/ml-week-plan-2026-11-19.md section 4 units and slot tasks",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY-14 (session_01AFoLuLuhC7149E7iTmueB1)",
+  "lane": "ML-PRIMARY-14",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26906,
+    27491,
+    27508,
+    27511,
+    27516
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "2026-11-18T18:41Z audit item (manager #26864) 'retired manifests may still train every cycle' MEASURED on main: run_training_cycle.sh trains every yaml under ml/configs/ (27 manifests); 0 of the 27 model_ids is a RETIRE row in docs/plans/ML-CONSOLIDATION-2026-11-11.md (the only string hit, btc-regime-5m-lgbm-v2, is the comparator inside the yz-v1 RETIRE line). No retired model spends trainer cycles; the 72 RETIRE rows are registry-label debt. Not checked: a TRAINING_MANIFESTS env override on the trainer. No ML-CONSOLIDATION checklist row exists (only the plan doc). 2026-11-18T18:45Z D5 Donchian min_confidence re-test (operator decision 2026-11-18, manager: register vs CURRENT config). SOURCE FOUND: PR #6322 (merged 9155f87, 2026-07-13, M21 E-2 batch 1) moved trend_donchian (BTC 1h) min_confidence 0.6->0.7 on m21_entry_sweep depth_0.7 PASS wf 5/6, and trend_donchian_sol 0.6->0.8 (docs/research/entry-refinement-coverage.json depth_threshold). Current 0.70 legs: trend_donchian (strategies.yaml:205; its comment still argues 0.60 = STALE comment, a finding) and trend_donchian_avax_4h (:1891; origin not yet traced). No strategy_changelog entry for either (finding). Audit Q3's 'failed fresh-window confirmation 2026-10-16' cites single-window PASSes not confirmed (e.g. 470a-09 vs RQ-20261015-4941-02). SPEC TO WRITE: scripts/research/m21_entry_sweep.py --split 2026-07-14 (fresh window = after the 07-13 decision), 0.70 vs 0.60 per leg, rule stated before the run; power is thin (~4 months, BTC 1h ~30-40 trades) -> state INDETERMINATE floor. A FAIL = data-backed revert to 0.60 under the standing rule, reported in the email. 2026-11-18T18:57Z ML-PRIMARY-5 FINAL: handed to ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo). Exit-head neg25 export NOT run (gated on #26861 merging; #26861 auto-merge disabled 18:48Z with a 2nd commit, head ffcb0712) -> owned by ML-6 with the full procedure. #26866 aadc-13 MERGED. #26878 aadc-15 CLOSED (dup of dbf8-01). #26870 aadc-14: guards fix 283d563c (heavy-queue lock), CI re-running; ML-5 pings the manager when green. All ML-5 one-shot wakes deleted. 2026-11-18T19:16Z CORRECTION to docs/plans/ml-week-plan-2026-11-19.md s0: 'one L2 logistic regression; everything else is LightGBM' holds for DEPLOYED models only. In research, ridge (4654-09 FAIL) and an LGBM+ridge blend (4654-07 INDET) were tested on the D3 money label, and CatBoost passed on D2 (de02-01, dc44-02); no deep / foundation-model / CatBoost learner has been tested on a money label (ML-FRONTIER-PREP #26877). Also s4 is superseded: #5 = aadc-13 (merged), #6 = aadc-14 (#26870), the D3 learner arm is dbf8-01 (frontier lane), not aadc-15 (withdrawn). Next first for ML-6: the exit-head v2-neg25 export once #26861 merges, because it is the only approved data-backed change waiting and the D8 slot goes live on it.",
+  "phase": null,
+  "updated_at": "2026-11-20T00:22:15Z",
+  "updated_by": "session_01AFoLuLuhC7149E7iTmueB1"
+}

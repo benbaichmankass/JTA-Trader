@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "grep -n 'research_unit' .github/workflows/macro-valuation-backfill.yml; grep -n 'attributable' research/templates/macro-valuation.yaml"
+  },
+  "routed_to": "MACRO-BACKFILL-E5",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[research templates] macro-valuation cadence arms (7 control / 30 / 91) are sibling units whose snapshots land UNATTRIBUTED: .github/workflows/macro-valuation-backfill.yml has no research_unit input, so the lever map cannot separate the arms (design_arms.attributable=false in each unit). Fix: add research_unit input + a result record naming cadence_days, then set structured.attributable: true in research/templates/macro-valuation.yaml.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Exact scope: macro-valuation-backfill.yml research_unit input and E5 record. EVIDENCE: Row MACRO-BACKFILL-E5 (queued) title: \"macro-valuation-backfill.yml declares a research_unit input and lands an E5...\"."
+}

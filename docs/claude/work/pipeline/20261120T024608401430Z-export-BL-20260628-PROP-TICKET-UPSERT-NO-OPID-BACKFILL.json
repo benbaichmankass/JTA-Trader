@@ -1,0 +1,27 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 30,
+    "clears_when": "Either confirmed non-issue (ticket ids are always fresh, no same-id re-emit path exists) and recorded as such, or the upsert COALESCEs order_package_id and a regression test covers re-emit backfill.",
+    "kind": "observation",
+    "last_checked": "2026-10-05"
+  },
+  "id": "BL-20260628-PROP-TICKET-UPSERT-NO-OPID-BACKFILL",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": " Confirmation that ticket ids are always fresh (recorded) or upsert COALESCE with a re-emit backfill regression test. | evidence: src/prop/prop_journal.py:201-216,236-241 record_ticket ON CONFLICT does not update order_package_id (documented 'first write authoritative'), no COALESCE and no regression test found; whether a same-id re-emit path exists is not established (ticket_i",
+    "what": "Either confirmed non-issue (ticket ids are always fresh, no same-id re-emit path exists) and recorded as such, or the upsert COALESCEs order_package_id and a regression test covers re-emit backfill."
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json#BL-20260628-PROP-TICKET-UPSERT-NO-OPID-BACKFILL",
+    "rerun": "python3 -c \"import json; d=json.load(open('docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json')); items=d['items'] if isinstance(d, dict) else d; print(json.dumps(next(i for i in items if i.get('id')=='BL-20260628-PROP-TICKET-UPSERT-NO-OPID-BACKFILL'), indent=2))\""
+  },
+  "routed_to": "PROP-JOURNAL-INTEGRITY",
+  "state": "routed",
+  "terminal_reason": null,
+  "triage_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] still applies at HEAD (no live owner / owner does not cover it). NEXT OBSERVATION: Confirmation that ticket ids are always fresh (recorded) or upsert COALESCE with a re-emit backfill regression test. | evidence: src/prop/prop_journal.py:201-216,236-241 record_ticket ON CONFLICT does not update order_package_id (documented 'first write authoritative'), no COALESCE and no regression test found; whether a same-id re-emit path exists is not established (ticket_i",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[health] record_ticket upsert can't backfill a NULL order_package_id on re-emit\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Upsert still does not COALESCE order_package_id on conflict. EVIDENCE: origin/main 30b5cd919 (2026-11-12): src/prop/prop_journal.py record_ticket (L201+) docstring: order_package_id NOT updated on conflict; ON CONFLICT SET COALESCEs only status/qty/valid_until/message. | owner row opened by this drain"
+}

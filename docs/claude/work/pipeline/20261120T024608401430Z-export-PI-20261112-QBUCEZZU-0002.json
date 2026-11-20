@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "a breakout_2 periodic capture with a position open shows positions read state=read, layout=cards",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-QBUCEZZU-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-16",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'phone_captures?account_id=breakout_2' (latest periodic step note) and curl -s https://ict-bot.duckdns.org/api/bot/prop/status (.phone_positions_diag)",
+    "what": "phone_positions_diag / periodic capture note on breakout_2 after merge+deploy"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PHONE-POSITIONS-CARDS watch (Manager Session 2026-11-11a), PR #25197",
+    "rerun": "scripts/ops/diag_fetch.sh 'phone_captures?account_id=breakout_2'"
+  },
+  "routed_to": "ROUTE-PROP-TRACKING",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "VERIFICATION WATCH (landed_unproven once PR #25197 merges): exec.js readCards reads the Breakout Positions cards. Observe on breakout_2 with a position open: phone_positions_diag no longer no_table, the periodic view posts 'posted' (not posted_pos_no_table), and the reconcile marks the open tickets as seen. Also a decision for the manager/operator (gate change, not built): when the journal holds placed tickets and the last phone positions read was not clean, should compute_open_risk report unreadable instead of no_open_positions (collapsed-states rule)?\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: verification watch for the breakout_2 phone positions read (PR #25197) belongs with the prop exit/position read row EVIDENCE: Row ROUTE-PROP-TRACKING (queued); item names PR #25197 and phone_positions_diag no_table as the observation"
+}

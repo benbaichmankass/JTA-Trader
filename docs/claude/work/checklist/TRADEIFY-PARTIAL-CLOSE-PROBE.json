@@ -1,0 +1,22 @@
+{
+  "id": "TRADEIFY-PARTIAL-CLOSE-PROBE",
+  "title": "tradeify_1 partial close: measure the Close Position modal's lots-to-close field (dry), then add reduce_position to the browser adapter",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-12 (CAP-PROP-VM-CLOSE surge); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "PR #25230 refuses a tradeify_1 partial at request time: DXtradeAdapter.flatten closes FULL size only and never edits lots-to-close (unmeasured DOM). Step 1: a dry probe (breakout-login-check, a new edit-close-modal-dry mode) reads the field + types a value + reads it back + presses Discard, no submit. Step 2: reduce_position on the browser adapter, PARTIAL_CLOSE_SUPPORTED=True, read-back via vm_close.confirm_partial. Re-entry: the dry probe's run id. [2026-11-12 14:42Z handoff] Not started. clears_when: a dry breakout-login-check mode reads the Close Position modal's lots-to-close field, types a value, reads it back and presses Discard (run id recorded), THEN reduce_position + PARTIAL_CLOSE_SUPPORTED on the browser adapter merged. Until then tradeify_1 partial refuses at request time (gate-audit item 1) and a shared tradeify position alerts instead of reducing.",
+  "phase": null,
+  "updated_at": "2026-11-12T14:41:04Z",
+  "updated_by": "session_01AFoLuLZif73NzCZEY27pKE"
+}

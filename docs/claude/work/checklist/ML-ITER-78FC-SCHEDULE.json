@@ -1,0 +1,23 @@
+{
+  "id": "ML-ITER-78FC-SCHEDULE",
+  "title": "Schedule the blocked ML iteration units 78fc-01..06 + 08 (models survive retirement); 78fc-07 killed",
+  "state": "queued",
+  "owner": "FRONTIER",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Thursday-planning 2026-11-11 decision; weekly pass maps it",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[operator decision 2026-11-11, Thursday-planning doc] a4 8 blocked ML iteration units 78fc-01..08 -> verbatim choice \"Schedule the ones whose models survive retirement; kill the rest\". Mapping against docs/plans/ML-CONSOLIDATION-2026-11-11.md: SCHEDULE 02 (setup-candidates-metalabel-p2pool-v2, KEEP), 03 (exit-head-donchian-1h-v1, KEEP), 06 (conviction-meta-v1, KEEP), 08 (btc fc-pcv-v2, KEEP/LIVE), and 01 (ml-brackets), 04 (ml-tm-action-value, after TMBENCH-QTM1B per a6), 05 (exit-holdbias-v1): these three subjects are not on the retire list, so they survive. KILL 07 (ml-eth-vol-head): every ETH 15m regime head is RETIRE or HELD for the D2 bake-off, none survives yet; re-author if the bake-off keeps one. 78fc-07 status set to retired in the thursday-planning Tier-1 PR. Job: clear each scheduled unit's blocked_on work_item or re-point it, and move it out of research/queue/blocked/ with a not_before inside this week.",
+  "phase": null,
+  "updated_at": "2026-11-13T22:18:28Z",
+  "updated_by": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "week_lane": "throttle"
+}

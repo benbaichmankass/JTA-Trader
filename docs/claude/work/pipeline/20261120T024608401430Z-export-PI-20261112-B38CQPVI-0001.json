@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "spy_pullback_1h and tlt_pullback_1h are each on a general-paper roster (bybit_1/alpaca_paper/ib_paper), or enabled: false with a retirement record",
+    "kind": "event"
+  },
+  "id": "PI-20261112-B38CQPVI-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RD-REGISTRY (session_01AFoLuLjX1TGekdb38cqpvi), PR #25313",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.ops import strategy_status as s;t=s.table();print({l:t[l] for l in ('spy_pullback_1h','tlt_pullback_1h')})\""
+  },
+  "routed_to": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "state": "routed",
+  "what": "ROSTERLESS TESTING LEGS (MEASURED 2026-11-12 on main 73c867982, population = 62 legs in config/strategies.yaml): spy_pullback_1h and tlt_pullback_1h are enabled, on NO account roster, yet strategy_status.py reads them 'testing'. OPERATING-PLAN s2 'Stage 1 is the DEMO FLOOR' says every testing leg trades on the floor and only a retirement record removes a leg. Latest units: spy_pullback_1h RQ-20261111-203c-01 fail (open RQ-20261112-003); tlt_pullback_1h RQ-20261111-203c-02 pass. Decide: put each on alpaca_paper, or retire by record. strategy_status.py could also derive a distinct state for 'enabled, on no roster' (report-only, adds no gate)."
+}

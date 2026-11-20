@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "no committed or collected comms/research/*/*/work file exceeds 50 MB and the collector logs no 'pruned oversize' line for a full dispatcher day, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-UUBTKHN7-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "COLLECTOR-STUCK 2026-11-02 / PR #22356",
+    "rerun": "gh run view 41409245551 --log | grep -E 'exceeds GitHub|pruned oversize'  (and: find the uploaded artifact of a new run of RQ-20261101-a508-01 for work/table.pkl size)"
+  },
+  "routed_to": "RESEARCH-LOSS-DETECTOR-RED",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Producers of RQ-20261101-a508-01 (run 41357669686) and RQ-20261101-b601-01 (run 41397568396) write a 164.84 MB work/table.pkl into the uploaded run artifact; it exceeded GitHub's 100 MB push limit and rejected every results batch since 2026-11-01 evening (COLLECTOR-STUCK). #22356 prunes >50 MB files at collection; the producers should stop uploading the table (write it outside the artifact dir, or downsample).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Collector-side pruning exists, but the producers still pickle large tables into the artifact; results-landing hygiene is the loss-detector row's scope. EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): scripts/research/collect_runner_results.py:126 prune_oversize (COLLECTOR-STUCK); find comms/research -path \"*/work/*\" -size +50M = 0 files; producers unchanged (e.g. scripts/research/ml_decision_entry.py:136 df.to_pickle)."
+}

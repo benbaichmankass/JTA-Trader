@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "coverage_gaps lists only releases verified as delayed/cancelled at the source, or killed with a stated reason",
+    "conditions": [
+      "pr_merged:27201"
+    ],
+    "kind": "observation",
+    "owner": "research-ops (macro-research skill)"
+  },
+  "id": "PI-20261119-VEWZICCB-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), EVENT-FLATTEN-ARM build (PR #27201)",
+    "rerun": "python3 -c \"import sys;sys.path[:0]=['scripts/research'];import event_flatten_s0 as e;from pathlib import Path;print(e.coverage_gaps(e.load_releases(e.RELEASES)))\""
+  },
+  "state": "queued",
+  "what": "FINDING (EVENT-SPAN-HISTORY data gaps): comms/research/event_span_history/us_releases.jsonl (built from the committed calendar snapshots) lacks releases inside 2021-01..2026-11 that the class cadence implies: fomc_decision between 2021-07-28 and 2021-11-03 (one decision missing) and between 2025-03-19 and 2025-06-18 (one missing); cpi between 2023-10-12 and 2023-12-12 (one missing); cpi/nfp late-2025 gaps (2025-09..12) may be real delays/cancellations, unverified. Effect: event_flatten_s0 / event_vol_study count trades spanning a missing release as non-spanning (stated bias, listed in coverage_gaps). Fix: source the missing release timestamps (a primary schedule, not a hand guess), add them to the snapshot backfill, rebuild, and confirm event_span_history.py --check-gaps (or coverage_gaps) reads empty for the gaps that are not real cancellations. CORRECTION: event_span_history.py has no --check-gaps flag; the check is event_flatten_s0.coverage_gaps() (origin.rerun), which should list only gaps verified as real delays/cancellations."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "AUTOMERGE-SILENT-DISARM",
+  "title": "Auto-merge disarmed on green Tier-1 PRs without merging (github-actions[bot])",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "2026-11-12, SECURITY-HARDENING-AUDIT lane 2. Seen twice in one night: #25013 (auto-merge disabled 00:55Z, 6 min after green; the manager merged by hand at 00:57Z) and #25098 (all 5 checks green at 04:14:42Z, auto-merge disabled 04:15:00Z by github-actions[bot], mergeable_state clean, still open). Counter-example: #25084, the same kind of Tier-1 self-landing PR also touching system-actions.yml, auto-merged fine at 03:14Z. Ruled out: pr-automerge-disable.yml (no request file on main for either PR; it triggers only on automation/pr-automerge-disable/*.json). Not yet checked: which workflow run calls disablePullRequestAutoMerge or why GitHub disarms (repo-wide Actions runs at the disarm minute; a merge-slot or R13 claim check; GitHub's own disarm on a failed merge attempt). Close test: name the disarming run and its reason, then either fix it or document it as intended.",
+  "phase": null,
+  "updated_at": "2026-11-12T04:16:00Z",
+  "updated_by": "SECURITY-HARDENING-AUDIT lane 2 session_01AFoLuJr75uZpqoU94Ptw7g",
+  "week_lane": "throttle"
+}

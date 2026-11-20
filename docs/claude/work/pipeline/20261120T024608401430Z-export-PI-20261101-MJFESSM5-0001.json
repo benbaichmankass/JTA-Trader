@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261101-MJFESSM5-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist RESEARCH-TEMPLATES-STRUCTURED",
+    "rerun": "grep -n 'rotate' research/templates/roster-walkforward.yaml research/templates/leg-corpus-s1.yaml; ls research/queue | grep -c .; python3 scripts/research/queue_replenish.py --json | head -c 600"
+  },
+  "routed_to": "RESEARCH-TEMPLATE-LEG-GAPS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "[research templates] roster-walkforward / leg-corpus-s1 units freeze their lever at generation. roster-walkforward rotates (lever_key joins the identity, so a new lever after the map moves is a NEW weekly unit, old weekly units keep re-running -> unbounded growth of weekly units per leg); leg-corpus-s1 does NOT rotate (arms frozen at mint). Decide: retire a roster-walkforward unit once its lever has a map entry, and let leg-corpus-s1 rotate its lever on a cadence. Not a gate.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: Template lever rotation/retirement for roster-walkforward and leg-corpus-s1 is template tooling this row owns. EVIDENCE: Row RESEARCH-TEMPLATE-LEG-GAPS (queued) note covers research/templates/roster-walkforward.yaml and queue_replenish.py."
+}

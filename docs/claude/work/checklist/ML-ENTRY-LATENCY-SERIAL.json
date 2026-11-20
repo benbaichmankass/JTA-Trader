@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-LATENCY-SERIAL",
+  "title": "ml_entry package latency still +58 s over baseline after D1 removal (serial per-symbol build order suspected)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 6,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "2026-11-16 04:30Z manager, from AM-OPS-2's closing read on TREND-ALIGN-D1-LATENCY-TEST (MEASURED). Post-#26367 ml_entry n=7 over the 00Z+04Z closes: median 217.1 s vs the 158.8 s prior-7d baseline (+58.3 s), max 237 s, none >300 s. D1 is confirmed off the path (104/104 packages d1_off_path), so this residual is NOT D1. Suspected cause: packages are built serially per symbol within a close (ETH first at 161-174 s; SOL/XRP/ADA later at 169-237 s), so latency grows with the number of symbols firing. Next: measure per-symbol build time and parallelise or reorder; pre-register the bar (median within 30 s of baseline over 3 closes) before any change. After the reset unless latency crosses 300 s.",
+  "phase": null,
+  "updated_at": "2026-11-16T04:28:14Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

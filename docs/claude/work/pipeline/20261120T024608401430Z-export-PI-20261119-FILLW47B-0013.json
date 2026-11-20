@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "exit_lever_ablation forwards arm config keys into the backtest config or refuses an unforwardable key, with a positive control test, or the manager records why not",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0013",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-20, manager instruction 00:05Z",
+    "rerun": "grep -n \"def build_harness_cmd\" scripts/research/regime_debt_matrix.py   # arm keys not mapped there never reach backtest_ict_scalp"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "exit_lever_ablation arm config keys do not reach the backtest, so every entry-filter lever needs a one-off driver. HIT TWICE 2026-11-19/20: (1) ict_scalp_sol_5m session filter (session_filter_enabled / session_start_hour / session_end_hour set via --cfg-set produced a record byte-identical to filter ON, with zero entries in UTC 0-7; the working route was --skip-hours, a raw backtest flag); (2) the ict_scalp HTF trend filter (htf_trend_filter_enabled): the harness can only reach it through scripts/research/rq_20260928_001_htf_wire.py, a manual-only driver that patches backtest_ict_scalp._load_yaml_params. Cause: regime_debt_matrix.build_harness_cmd forwards only the keys it maps to backtest flags; any other strategies.yaml key an arm sets is silently dropped. Proposed fix (manager decision 2026-11-20 00:05Z: file only, do not build tonight): a real pass-through in the harness so an arm's config key reaches the strategy's config inside the backtest (or the harness REFUSES an arm key it cannot forward, never drops it silently), with a positive control that an arm key changes the trade set. Not a gate: it removes a silent no-op. Until then each such lever needs a driver like htf_filter_confirm.py."
+}

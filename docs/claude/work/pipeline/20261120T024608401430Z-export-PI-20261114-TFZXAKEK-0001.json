@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "backtest_pullback.py either applies the be-floor under --structure-exit or refuses the pair, with a test; and every research/levers/*.yaml be_floor_r test whose arm also carried --structure-exit is re-marked inert.",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-TFZXAKEK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane FRONTIER-RESEARCH session_01AFoLuMfGoUaVmVtfzXaKEK, 2026-11-14, authoring RQ-20261113-f251-18",
+    "rerun": "sed -n '/def _ratchet/,/def _levers/p' scripts/backtest_pullback.py | grep -n '_sx is not None'; git show origin/main:comms/research/RQ-20261110-73de-04/42754921474/logs/cmd-0.log | grep -- '--be-floor-r'. Holds while the override line still follows the be-floor block."
+  },
+  "state": "done",
+  "terminal_reason": "Fixed: backtest_pullback.py re-applies the MI-165 break-even floor after the --structure-exit override (#25887, merged 99015d8d91), with a composition test that fails on the old harness and passes on the fix. The three inert readings (RQ-20261110-73de-01/-02/-04 arm C1, SLV/IEF/TLT) are marked INERT in each lever map's manifest_notes (#25883, merged 266f3606). Scan population: 40 committed comms/research logs carrying --be-floor-r, 3 matched.",
+  "what": "Harness lever interaction defect in scripts/backtest_pullback.py: with --structure-exit set, _ratchet() ends with `if _sx is not None: trail = _trail_prev`, which discards everything the ratchet computed that bar, including the MI-165 break-even floor (--be-floor-r / --be-floor-lock-r) and the level-trail tighten. A be_floor_r arm composed with a structure-exit leg is therefore silently inert. Measured: RQ-20261110-73de-04 arm C1 (tlt_pullback_1d, --structure-exit pivot=5 --be-floor-r 1.0) returned delta 0.0R over n 68 and sits on research/levers/tlt_pullback_1d.yaml as 'no response at the tested values'. That reads as a lever result, but it is an inert arm. Fix shape (Tier 1, research harness, off the trade path): either apply the be-floor after the structure override (the floor only tightens, so it composes), or refuse the combination with a named error; then re-read every lever-map be_floor_r entry whose arm also carried --structure-exit and mark it inert.",
+  "why_it_matters": "An inert arm recorded as 'no response' closes a lever that was never tested, which steers the lever-map search away from it (it nearly stopped the tlt exit lever, f251-18). The be-floor is also a live-capable exit, so a wrong 'flat' reading can keep a real improvement off the books."
+}

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261120-CGNCTD2Z-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "PR #27537 (entry_unfilled on the snapshot close) / row VENUE-FLAT-PENDING-ENTRY-LABELS",
+    "rerun": "grep -n 'stuck_strategy_watchdog' src/runtime/order_monitor.py  # the watchdog flat close still writes this label; _entry_never_filled is not called there"
+  },
+  "state": "queued",
+  "what": "ENTRY-UNFILLED-LABEL follow-up: the stuck-strategy watchdog flat close (order_monitor._watchdog_stuck_strategies, the fallback after the snapshot reconciler) still closes a row whose entry order ended unfilled as stuck_strategy_watchdog (package close_reason too). Apply the same fail-closed _entry_never_filled() read there, only after _entry_order_hold returned None, and close as entry_unfilled for the trade AND the package close_reason; never relabel a filled-then-flat row. Manager decision 2026-11-20 ~00:02Z: file it, do not build tonight. Depends on PR #27537 (adds ENTRY_UNFILLED_EXIT_REASON, _entry_never_filled, the neutral-set memberships)."
+}

@@ -1,0 +1,56 @@
+{
+  "based_on": "work_store:v7",
+  "decision_requests": [
+    {
+      "answer": {
+        "chosen": "defer",
+        "committed_at": "2026-11-13T07:00Z",
+        "committed_by": "Manager Session 2026-11-11a",
+        "duplicate_submission": "41eb003822494f5791d95b49603ec487",
+        "submission_id": "443c986b6d7f4e5dbc290d276705cd18",
+        "submitted_at": "2026-11-13T06:53:28.367270Z",
+        "submitted_by": "operator-spa"
+      },
+      "evidence": "Where: Alpaca dashboard https://app.alpaca.markets/ -> your account -> Market Data / subscriptions (the OPRA agreement + plan). Alpaca support said the 403 'agreement not signed' is really a missing Algo Trader Plus subscription (paid), so signing alone may not unlock it. Today options capture runs on the free 'indicative' feed (your 11-05 choice). Full OPRA unlocks real option bars + history for the options/IV research that is currently blocked (OPTIONS-IV-HISTORY-GAP).",
+      "id": "OPRA-SIGN",
+      "options": [
+        {
+          "key": "sign_now",
+          "label": "I'll sign/subscribe now (link above)"
+        },
+        {
+          "key": "defer",
+          "label": "Keep deferring; indicative feed is enough for now"
+        },
+        {
+          "key": "price_it",
+          "label": "Tell me the monthly cost and what it unlocks first"
+        }
+      ],
+      "recommended": "price_it",
+      "title": "Alpaca options data (OPRA): sign/subscribe now, or keep deferring?"
+    }
+  ],
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "operator decides on signing the OPRA agreement and past capture runs are checked",
+    "kind": "event",
+    "last_checked": "2026-11-05"
+  },
+  "id": "PI-20261102-PTDVAI3R-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "issue #22458 / PR #22449",
+    "rerun": "file an options-snapshot-request issue with 'mode: probe'; list options-snapshot-capture.yml schedule runs before 2026-11-02 and read their Install deps / capture logs"
+  },
+  "redate": {
+    "observation": "Operator popup 2026-11-05 ~18:17Z, verbatim: 'Later (Rec.)' -- OPRA signing deferred until options work resumes (options are backseat this week per ML-LIVE-FIRST). Re-ask at the 11-12 weekly planning; the past-capture pyyaml check still owed.",
+    "observed_at": "2026-11-05"
+  },
+  "routed_to": "OPRA-INDICATIVE-FEED",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Options: Alpaca OPRA agreement not signed (opra feed + all historical option bars 403); and not checked whether past nightly options captures failed for the same missing pyyaml fixed in #22449 (#22348 empty probe assumed same cause).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The OPRA feed decision is this row's scope. EVIDENCE: Row OPRA-INDICATIVE-FEED (queued): \"switch Alpaca options data to the free feed=indicative; defer...\".\n\n[2026-11-17 manager] OPERATOR DECISION popup 2026-11-17: 'Use indicative feed (Recommended)' -- do not sign OPRA now. Next (post-reset, row OPRA-INDICATIVE-FEED): switch Alpaca options data to feed=indicative, observe one nightly capture landing rows, and check past nightly captures for the missing-pyyaml failure."
+}

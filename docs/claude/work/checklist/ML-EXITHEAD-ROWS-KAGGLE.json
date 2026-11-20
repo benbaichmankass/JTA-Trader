@@ -1,0 +1,21 @@
+{
+  "id": "ML-EXITHEAD-ROWS-KAGGLE",
+  "title": "Publish the trainer-resident exit-head corpora (datasets-out/exit_head/**/rows.jsonl + their 1h candles) to the private Kaggle dataset so D8 exit-head bake-offs route to kaggle_cpu / Kaggle GPU instead of the one-slot trainer",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY-8 (session_01AFoLuJX6bUNMVUBC5BtCxj)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "[2026-11-18 PROGRAMME-REVIEW-20261118] Runway audit (per backend, queued units due now, compute_router.plan + dispatch_queue.due_within): github_runner 25 units / 17.2 h, kaggle_cpu 0, Kaggle GPU 0, trainer 0, against ~102 wall hours to Sun 24:00Z. Every exit-head unit this week (aadc-04/-11/-12, d5a7-06/-07) needed needs_vm_data because rows.jsonl lives only on the trainer (market_data_export.py / ml-data-export-kaggle.yml carry no exit_head path: grep count 0). Kaggle CPU (1 slot, ~100 h/week, internet off) and Kaggle GPU (~27 usable h/week) sat idle while the trainer queue is 1 slot shared with the daily cycle. Done when: one exit_head_label_bakeoff unit with routing.published_data runs on kaggle_cpu and lands a measured row. Twin search: ML-DATA-OFF-TRAINER (market-only shards, landed_unproven), ML-DATA-XASSET-1H (bars) - neither carries exit-head rows. No new gate.",
+  "phase": "W47",
+  "updated_at": "2026-11-18T22:19:18Z",
+  "updated_by": "session_01AFoLuMjpeknPJNAUAQoFMN"
+}

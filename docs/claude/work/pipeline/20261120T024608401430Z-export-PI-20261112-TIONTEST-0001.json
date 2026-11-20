@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "research/results/RQ-20261105-e9a1-01/42166322024.jsonl and research/results/RQ-20261106-e9a1-03/42172553293.jsonl exist on main (emitted by the collector, not by hand)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-TIONTEST-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-19",
+    "how_to_check": "git cat-file -e origin/main:research/results/RQ-20261105-e9a1-01/42166322024.jsonl && git cat-file -e origin/main:research/results/RQ-20261106-e9a1-03/42172553293.jsonl",
+    "what": "both E5 records present on main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-ENTRY-POPULATION-TEST (session_01AFoLuHcFNPFRmS3ovR5CKV), PR #25462",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'scripts/research');import collect_runner_results as c;from pathlib import Path;print(c.recollect_orphans(Path('.'),repo_slug='benbaichmankass/JTA-Trader'))\""
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "Two committed research-script-run artifacts carry record-inputs.json but no E5 record in research/results: RQ-20261105-e9a1-01 (run 42166322024) and RQ-20261106-e9a1-03 (run 42172553293). collect_runner_results.recollect_orphans emits both (seen 2026-11-12 by lane ML-ENTRY-POPULATION-TEST, left out of PR #25462 as out of scope). Until emitted, the queue grader cannot read those units' results."
+}

@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each of (a)-(e) is done or closed with a reason",
+    "kind": "event",
+    "last_checked": "2026-11-06"
+  },
+  "id": "PI-20261106-01AFOLUJ-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WORKFLOW-PRUNE (Manager Session 2026-11-05b), session_01AFoLuJ6sZjv24MuhwLtDtDwuuz",
+    "rerun": "python3 scripts/ops/workflow_prune_inventory.py --out /tmp/wp.json"
+  },
+  "routed_to": "WORKFLOW-PRUNE-FOLLOWUPS",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "WORKFLOW-PRUNE follow-ups not done: (a) board-post.yml deletion needs its own human-merged PR (LANDING_MACHINERY, R12); (b) scripts only the 48 deleted workflows called are orphaned (session_reaper.py, render_due_list.py, constraint_readout.py, ...); (c) research-queue-chain redesign (8 min slot-holding sleep); (d) repo-inventory ~2,450 runs/wk with a cron-only YAML, trigger unfound; (e) re-measure job-h/wk 7 days after PRs #23594 and #23600 merge. [UPDATE 2026-11-06: item (d) is RESOLVED: repo-inventory's PR/push triggers were removed ~2026-11-03 (API: 0 PR/push runs since 11-04, 2 schedule runs); the 2,450 runs/wk were the pre-change days in the 7-day window. Lesson kept open under (e): every 7-day figure in the audit is overstated for workflows whose trigger changed in-window.]\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: board-post.yml is done. The orphan scripts and the research-queue-chain sleep are still on main, and the WORKFLOW-PRUNE lane has no open row. EVIDENCE: origin/main 30b5cd919: .github/workflows/board-post.yml absent (a) done. scripts/ops/session_reaper.py, render_due_list.py, constraint_readout.py present (b). research-queue-chain.yml:70 still has sleep \"$wait\" (c). | owner row opened by this drain"
+}

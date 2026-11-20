@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "BybitConnector.place_market_order and main.BybitExchangeAdapter are deleted (no caller) or resolve the symbol through bybit_connector.market_symbol / an explicit category; or killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261104-TCANDLES-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "SPOTCANDLES-AUDIT lane 2026-11-04",
+    "rerun": "grep -rn 'safe_place_order(\\|BybitExchangeAdapter\\|place_market_order\\|get_balance()' src/ --include=*.py"
+  },
+  "routed_to": "BYBIT-SPOT-ADAPTER-DEAD",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Dead order path on a spot-default client. src/main.py builds BybitExchangeAdapter(BybitConnector) and passes it into run_one_tick/run_pipeline; its only consumer is src/runtime/orders.py::safe_place_order, which has NO caller in src/ (grep 2026-11-04). BybitConnector.place_market_order sends create_market_order(bare symbol) on a ccxt client built defaultType=spot, so if anything revived that path a bare BTCUSDT order would be a SPOT order on a linear-perp account. Live orders go through pybit with explicit category (src/units/accounts/execute.py::_bybit_category) and are unaffected. get_balance (fetch_balance on the spot default) also has no caller. Fix: delete the dead adapter/methods, or resolve the symbol through bybit_connector.market_symbol. Tier 2 (order-path code, even if dead).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The dead spot-default order path is still in src/ and no open row owns it. EVIDENCE: git grep origin/main 30b5cd919: src/main.py:36 class BybitExchangeAdapter (built at :93); src/runtime/orders.py:47 def safe_place_order. The other hits are comments in src/runtime/validation.py:205-206, with no call site in src/. | owner row opened by this drain"
+}

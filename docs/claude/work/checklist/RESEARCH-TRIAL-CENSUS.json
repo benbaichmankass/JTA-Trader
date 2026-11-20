@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-TRIAL-CENSUS",
+  "title": "Research-ops (Tier-1 tooling): census of TRUE trial counts per subject/lever family across research/queue (hand + generated + LLM-authored units, incl. near-duplicates), compared with the n_comparisons each decision rule declares; reported weekly to programme-review",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "Filed 2026-11-18 by PRACTICE-REFRESH-20261118 (docs/research/practice-review-2026-11-18.md \u00a7 R-G1). Principles M4/M5/R5 + R9 (new): practice and the LLM alpha-mining literature both say automated idea generators produce homogeneous, near-duplicate hypotheses (AlphaAgent S84 enforces an originality score against existing factors; Man AlphaGPT S83 forbids flipping a hypothesis after results). MEASURED 2026-11-18: research/queue holds 2,398 RQ units (1,994 done, 318 queued, 71 retired, 15 blocked); queue_replenish.py dedupes only by generated key; hand-authored units carry no overlap check; decision rules declare n_comparisons per unit, and only some disclose prior reads of the same class (e.g. RQ-20261117-43b6-03 'cumulative 7'). Build: group units by (subject, lever, harness, metric, holdout window), report per family the count of reads vs the max declared n, and list families where declared < counted. Feeds the M13 holdout ledger. Re-entry test: the first census record lands and programme-review cites it.",
+  "phase": "build",
+  "updated_at": "2026-11-18T18:20:24Z",
+  "updated_by": "PRACTICE-REFRESH-20261118"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "DEPLOY-WRAPPER-FALSE-SUCCESS",
+  "title": "pull-and-deploy reports success (exit 0) when deploy_pull_restart.sh fails: git index.lock collision left the VM on the old HEAD with no restart",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops defect found 2026-11-11",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "MEASURED 2026-11-11, system-action #24976 (deploy of #24936). The log shows 'fatal: Unable to create /home/ubuntu/ict-trading-bot/.git/index.lock: File exists' during the hard-reset to origin/main, then 'ERROR: deploy_pull_restart.sh exited 0', and the comment says completed with wrapper exit 0. The VM stayed on 0f1fe6d5b and the prop executors were not restarted, so merged != deployed went unseen. Fix: (1) propagate the real exit status, and red-flag when the post-deploy HEAD != origin/main; (2) serialise with ict-git-sync (flock on a shared lock) or retry the git step after a short wait when index.lock exists and no git process holds it. Retry dispatched as #24999 (or the next issue number).",
+  "phase": "now",
+  "updated_at": "2026-11-11T22:17:38Z",
+  "updated_by": "Manager Session 2026-11-11a",
+  "week_lane": "surge"
+}

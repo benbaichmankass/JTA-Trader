@@ -1,0 +1,31 @@
+{
+  "id": "RESEARCH-OPS-20261113-1545",
+  "title": "research-ops pass 2026-11-13 15:45Z",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-OPS-20261113-1545",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "Dispatched by manager session_01AFoLuKXonDBdED7cNK7FhN, ceiling $5. Results attributed: 1751-01 (tlt short-only PASS) and 1751-02 (qqq S1 PASS confirmed); orphans 4->2 strategy_leg (claude_desk, e4_oi_shock_1h) + ltr-close named in handoff; 5 unowned needs_review -> owner PI-20261113-SX5INCOP-0001 (producer contract defects); blocked_over_age 0 of 125 blocked units (no unblock/retire needed). Record comms/research/ops/20261113T1620Z.json.",
+  "observation": {
+    "due": "2026-11-15",
+    "due_by": "2026-11-15",
+    "how_to_check": "python3 scripts/research/iteration_orphans.py | grep -E \"orphan.*(qqq|tlt)_pullback_1h\"; ls research/results/RQ-20261113-f090-01 research/results/RQ-20261113-f090-02",
+    "what": "RQ-20261113-f090-01/-02 land measured rows and orphans for qqq/tlt_pullback_1h stay covered"
+  },
+  "phase": null,
+  "updated_at": "2026-11-13T15:54:57Z",
+  "updated_by": "session_01AFoLuLs9enz3u3SX5incoP",
+  "writeback": {
+    "arch": "none",
+    "roadmap": "none: research-ops pass"
+  }
+}

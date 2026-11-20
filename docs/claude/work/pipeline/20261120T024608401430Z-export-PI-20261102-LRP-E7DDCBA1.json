@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261102-LRP-E7DDCBA1",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:control:planted_defect",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "the planted-defect control that failed on 11-02 now passes | evidence: comms/live_parity/2026-11-12.json controls.planted_defect.state=pass, 3 of 3 plants flagged (replay_signal_live_none avax_pullback_2h, lost_bar tqqq_trend_long_1d, live_signal_replay_none tqqq_trend_long_1d)",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: the parity run — control_planted_defect_failed (REAL-MONEY roster) in window 2026-10-26T07:00:00+00:00..2026-11-02T07:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-02.json. Examples: {\"state\": \"fail\", \"plants\": [{\"plant\": \"replay_signal_live_none\", \"leg\": \"trend_donchian_eth_4h\", \"window\": \"2026-10-29T23:45:00+00:00\", \"flagged\": true}, {\"plant\": \"lost_bar\", \"leg\": \"gld_pullback_1d\", \"bar\": \"2026-10-27T04:00:00+00:00\", \"flagged\": false}, {\"plant\": \"live_signal_replay_none\", \"leg\": \"gld_pullback_1d\", \"flagged\": true, \"window\": \"2026-10-27T13:30:00+00:00\"}]}\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: the planted-defect control that failed on 11-02 now passes EVIDENCE: comms/live_parity/2026-11-12.json controls.planted_defect.state=pass, 3 of 3 plants flagged (replay_signal_live_none avax_pullback_2h, lost_bar tqqq_trend_long_1d, live_signal_replay_none tqqq_trend_long_1d)"
+}

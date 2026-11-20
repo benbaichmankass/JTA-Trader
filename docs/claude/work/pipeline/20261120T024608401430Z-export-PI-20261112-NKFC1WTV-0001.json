@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "/api/bot/health/infra reports kaggle and hugging_face from a probe or mirror taken within the last hour (detail no longer says 'not a live probe'), and testing-queue hf_jobs.read_state is `read`; or a decision is recorded that the record-derived reading is enough",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-NKFC1WTV-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-11-26",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/health/infra ; curl -s https://ict-bot.duckdns.org/api/bot/work/testing-queue",
+    "what": "hugging_face/kaggle detail still says 'not a live probe' and hf_jobs is still could_not_look"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane UI-SPA-BACKEND-ROUTES, PR #25231 (session_01AFoLuHn6DPjiMUNkfC1wTV)",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/health/infra | python3 -m json.tool ; curl -s https://ict-bot.duckdns.org/api/bot/work/testing-queue | python3 -m json.tool  # look for hugging_face/kaggle detail text and hf_jobs.read_state"
+  },
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "Make Kaggle and Hugging Face observable for the SPA health bar and testing-queue card. /api/bot/health/infra currently derives `kaggle` from comms/backups/kaggle_latest.json and `hugging_face` from comms/data_lake/health_latest.json (workflow records, not live probes; the HF record was 10 days old on 2026-11-12), and /api/bot/work/testing-queue reports hf_jobs as could_not_look because no HF job state is mirrored to the live VM. Build either a live reachability probe (Kaggle API / HF Hub, off the request path, result written to a runtime_logs state file) or a job-state mirror, then read it in routers/infra_status.py. Landed with PR #25231 (UI-SPA-BACKEND-ROUTES)."
+}

@@ -1,0 +1,20 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "every scripts/research/*.py that calls holdout_lock.claim_read on a research-script-run runner either claims against an out-dir copy of the ledger (the ml_decision_manage.claim_read pattern) or is shown to run only locally; and no landed runner read since 2026-11-15 is missing from comms/research/holdout_reads.jsonl",
+    "kind": "observation"
+  },
+  "id": "PI-20261115-PWMQY8LM-0001",
+  "next_action": "check_observation",
+  "note": "2026-11-15 ML-PRIMARY-3 (session_01AFoLuMkZYvbttnmb2gtVcA): routed to checklist row HOLDOUT-LEDGER-RUNNER-CLAIMS. The generic fix merged as #26301: script_run.execute captures any line a runner appends to its checkout ledger into <out_dir>/holdout_claims.jsonl, and collect_runner_results merges that file plus any out-dir holdout_reads.jsonl copy into comms/research/holdout_reads.jsonl in the results batch. No per-script conversion is needed any more. 5 lost claims backfilled; a474-04's was carried by #26298. The row closes on observing a runner claim land with no hand append.",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-2 (session_01AFoLuHnp85DHQ4PWMQy8LM), 2026-11-15: RQ-20261115-a474-04 run 43703425338 claimed read 12 into the runner's repo ledger and the line never landed (fixed by hand in PR #26298)",
+    "rerun": "grep -ln 'claim_read(' scripts/research/*.py  # then, per script, check whether the ledger argument defaults to holdout_lock.LEDGER on the runner; and compare comms/research/*/<run>/holdout_claim.json against comms/research/holdout_reads.jsonl"
+  },
+  "owner": "manager",
+  "routed_to": "checklist row HOLDOUT-LEDGER-RUNNER-CLAIMS",
+  "state": "routed",
+  "what": "HOLDOUT LEDGER UNDERCOUNT RISK: a runner job that calls holdout_lock.claim_read with the default ledger writes the claim to its own checkout of comms/research/holdout_reads.jsonl, and the dispatcher's landing payload does not carry that file back, so the read is never counted and the NEXT read of the family is graded on a too-lenient bar (HOLDOUT-DEFLATED-REUSE). Seen on a474-04 (ENTRY read 12; hand-carried in #26298). A crude grep (2026-11-15) lists ~14 claim_read callers not obviously using the out-dir copy pattern (ml_decision_entry, ml_entry_levers, ml_entry_population_test, ml_entry_regime_split, ml_entry_v2, ml_variant_prop_gate, ...); some may be local-only. Audit each; convert runner-run ones to the copy pattern and back-fill any lost claim lines from their holdout_claim.json / verdict."
+}

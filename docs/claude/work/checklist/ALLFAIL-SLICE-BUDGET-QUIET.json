@@ -1,0 +1,23 @@
+{
+  "id": "ALLFAIL-SLICE-BUDGET-QUIET",
+  "title": "Stop the 'ALL accounts failed to dispatch' ping when every result is slice_budget_exhausted; keep the refusal logged for reviews and training",
+  "state": "done",
+  "owner": "manager (session_01AFoLuHbhd9wFuGJfWRqyoV)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "alert hygiene, operator request",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Operator 2026-11-15 ~15:50Z (chat): 'I don't need to keep getting these alerts for this reason' + ~16:00Z: 'we should be logging the rejections so that we can learn from them... use it for reviews and live training and learning, but if it's expected system behavior, then I don't need to be getting constant updates'. PR #26363 (held, Tier 2, RESTART; batch with the eth_4h TP change). Logging VERIFIED in code: Coordinator.multi_account_execute calls log_rejection_to_journal(reason=slice_budget_exhausted, status=rejected) and writes pkg.meta.slice_admission BEFORE the alert step; #26363 changes only the alert guard. Package record seen live: pkg-3d3925fdd57c4bfb status orphaned. Done when deployed and the next slice_budget_exhausted round journals a rejection row with no ping. Side question to AM-OPS: that package reads accountClass real_money but only bybit_1 was attempted. 16:08Z AM-OPS findings on pkg-3d3925fdd57c4bfb: (a) sol_pullback_2h is TESTING (bybit_1 only); 'real_money' is a wire read-path defect: unlinked packages fall back to real_money in account_class_wire (src/web/api/_clean_trades.py:194) -> row WIRE-ACCOUNTCLASS-NO-TRADE-FALLBACK (Tier 1, after reset: SPA contract). (b) THIS dispatch journaled NO rejection row: trace dcb61d0a went silent after the bybit_1 balance read at 15:41:11.757Z; the package blocked re-dispatch 5.5 min and was orphaned at 15:46:44Z; the 29 neighbouring sol_pullback_2h dispatches 15:30-16:05Z all journaled 'rejected / slice_budget_exhausted'. So logging works in general (29/30 here) but one path loses the result -> row DISPATCH-RESULT-LOST-NO-REJECTION-ROW (Tier 2, coordinator). (c) Volume: post-11-12 the leg re-dispatches ~every minute while its slice budget is exhausted, ~60 journaled refusals/hour for one leg; logged as the operator wants, but each is a separate package+row. Consider a refusal-dedupe/backoff that keeps one row with a count (a data-volume question, not a gate) - after the reset. 16:52Z MERGED #26363 (bd4a39f2) in one batch with #26353 (a6b1ce0e, eth_4h tp_r 4) and #26367 (45d38872, D1 off the order path): one trader restart expected. Closes when the next all-slice_budget_exhausted round journals rejection rows and fires no ping. 18:20Z OBSERVED + DONE: after the 16:55:36Z deploy (#26363 in batch), sol_pullback_2h journaled 26 order packages 16:56:21-18:18:42Z, all status=rejected with meta.slice_admission.reason=slice_budget_exhausted, and /api/bot/alerts since 17:00Z holds 0 all_accounts_failed rows (23 alerts total: trade-update 11, pr_merged 6, trades_snapshot 2, manager_update 2, work_digest_receipt 1, unclassified 1). Logged, not pinged, as the operator asked. Remaining follow-ups live on their own rows: DISPATCH-RESULT-LOST-NO-REJECTION-ROW, WIRE-ACCOUNTCLASS-NO-TRADE-FALLBACK.",
+  "phase": null,
+  "updated_at": "2026-11-15T18:19:48Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "PROP-VELO-SOL-TP-DIVERGE",
+  "title": "velotrade_1 SOL terminal TP 76.16 vs ticket/package TP 76.6257 (prop bridge TP divergence)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    26220
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "[2026-11-15 06:32Z Manager 15a, from LIVE-REVIEW-20261115-0625 flag_mechanics on pkg-ec406687dc6d449f] MEASURED: the velotrade_1 terminal TP is 76.16, against the ticket/package TP of 76.6257, 0.47 px (0.29 ATR) closer than intended. The SL agrees, and bybit_2 plus its mirror match the package. Direction of harm: the TP is nearer, so it takes profit early and adds no extra risk. Next: find whether the prop bridge rounds, re-bases or mis-reads the TP (one-off vs systematic, by checking other velotrade tickets), fix at source, and correct this TP at the venue if the bridge allows. Owner AM-OPS (TRADING class). [2026-11-15 06:53Z Manager 15a, from AM-OPS] CAUSE (measured, velotrade_1 executor journal): not the bridge. prop_trail._tp_step amended the TP 76.626\u219276.16 at 04:08:26Z on 'structure_exit: level 76.16 (+1.37R)'. It ignored ml_entry's structure_exit 'pivot=5;sl_only' flag, which the exchange path honours, and it broke extend_only. In practice it happened once (1 structure TP amend on velotrade_1 since 11-08, 0 on tradeify_1). In the code it is systematic for sl_only legs on TP-capable prop adapters. VENUE restored: amend-prop-bracket system action (#26221 dry-run, #26222 apply); executor confirmed 76.16\u219276.626 at 06:44:08Z, SL unchanged; 06:48Z trail_tp_hold 76.626. FIX: PR #26220 (Tier 2 hold, RESTART). CLOSES WHEN #26220 is merged and deployed AND the next sl_only prop ticket shows no trail_tp_amend with reason structure_exit. [2026-11-15 07:15Z AM-OPS] #26220 merged dc289776 (manager). landed_unproven; closes when deployed (prop executor tick on >= dc289776) and the next sl_only prop ticket shows no trail_tp_amend with reason structure_exit. 2026-11-16 04:35Z AM-OPS-2 MEASURED: velotrade_1 ETH pkg-fe0c0d8875b142f6: venue TP 1777.97 (the entry TP) while the package TP reads 1740.38 (ml_first_passage tp_revision, extend_only). By design on an sl_only leg (#26220): the structure verdict moves only the stop; the prop TP is the ticket's entry TP and sits CLOSER than the package TP, so the exposure is lower, not higher. Open question for after the 2026-11-18 reset (TP doctrine, manager): whether the prop TP should follow the package's TP revision. No change made.",
+  "phase": null,
+  "updated_at": "2026-11-16T04:31:56Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

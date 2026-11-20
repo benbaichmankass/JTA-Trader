@@ -1,0 +1,31 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a perf-followup Track-4 unit reports co-direction concentration vs book drawdown over >=90d of journal, or is killed with a reason",
+    "conditions": [
+      "date:2026-11-26",
+      "manual:journal pull of >=90d closed trades run through codirection_drawdown.py --journal"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-18"
+  },
+  "id": "PI-20261118-PREP1118-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-11-18 (lane PERF-REVIEW-PREP-20261118, manager session_01AFoLuHbhd9wFuGJfWRqyoV); docs/reviews/2026-11-18-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "GET /api/bot/positions?include_paper=true; side x asset_class count and |entry-SL|*qty"
+  },
+  "owner": "PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "routed_to": "PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "updated_by": "session_01AFoLuJQHZnwtERq8HCwKL1",
+  "what": "[performance][portfolio] Cross-book same-direction exposure into a scheduled macro event: at 2026-11-18T18:15Z (GET /api/bot/positions, 22 open) 15 positions were SHORT (crypto 9, metals SLV/MGC/GLD 3, equity SPY/QQQ/GDX 3) and 3 were bond LONGS (TLT x2, IEF) into FOMC; open stop-risk $9.4k short vs $20.1k long (bond longs $18.0k), paper books; real money had 1 open (bybit_2 ADA short, $3 risk). No measure exists of how often >=N legs share one macro direction or what it does to drawdown clustering. perf-followup Track 4: measure it over the journal (co-direction count per hour vs next-24h book R) and propose a portfolio readout; no new gate.\n\n[2026-11-19 PERF-FOLLOWUP-2026W47] MEASURED on the BACKTEST population only (8 legs, 4076 trades, 1090 snapshots; comms/perf_followup/evidence/20261119-codirection): concentration goes with BETTER next-24h R (rho(sum_r) +0.118 [0.048,0.185]); within families inconclusive. Descriptive, not pre-registered. Journal read still owed: pull >=90d closed trades (leg, entry_time, exit_time, direction, net_r) to a jsonl and run scripts/research/codirection_drawdown.py --journal <file>; rule = its grade(). PR #27202."
+}

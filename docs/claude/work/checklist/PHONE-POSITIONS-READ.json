@@ -1,0 +1,24 @@
+{
+  "id": "PHONE-POSITIONS-READ",
+  "title": "breakout_2 Positions tab unreadable since >=01:25Z 2026-11-12: SOL long + ETH long (filled 08:21Z) invisible; rule_distance reads no_open_positions",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuMmYph1armQBUCeZzU",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "incident fix on the prop phone read path; cross-link PHONE-LIVE-ACCOUNT-FEED",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25197
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-14",
+  "note": "[2026-11-12 AM-TRADING session_01AFoLuMroLtrU2biw4ZDoBk] Lane dispatched by Manager Session 2026-11-11a (row was missing; added by the TRADING assistant manager). PR #25197 (branch claude/phone-positions-cards). Real money (prop). Done = both positions visible on the Positions read and rule_distance.open_risk on the live VM, observed. Successor scope PHONE-LIVE-ACCOUNT-FEED. [2026-11-12 09:25Z lane] Cause: Breakout draws open positions as CARDS (dl Open quantity/Notional/Opening/Current price), no table -> no_table (capture positions-no_table-20261112T082111Z). PR #25197: readCards() + real-capture fixture (before no_table, after read 2 rows) + landing decl Tier-2 hold + EXEC_VERSION 2026-11-12.1 (phone only swaps a strictly newer signed version; heartbeat exec_js 2026-11-11.1 bundled). Server already sees both positions via journal fills (rule_distance measured). Observe after merge+deploy: heartbeat exec_js 2026-11-12.1 and /api/bot/prop/status phone_positions_diag/positions_state read with 2 rows. Watch PI-20261112-QBUCEZZU-0002; Closed tab gone PI-20261112-QBUCEZZU-0001. [2026-11-12 12:40Z lane session_01AFoLuMmYph1armQBUCeZzU] PARKED under PHONE-EXECUTOR-ICE (operator: breakout_2 breached, on ice; no more phone builds). State at stop: #25197 merged, NOT served (signature 2026-11-11.1; my phone-exec-js-sign dispatch run 43209770689 queued since 11:31Z, run 43203008869 attempt 2 pending). #25212 (head 50821a9) and #25217 (head 88468be, APK-free brackets channel + amendments test) parked as draft, both merged with main and green locally. Live at 12:22-12:33Z: rule_distance no_open_positions (0), phone bg_last 'posted' (clean Positions read), 12:07:56Z phone heartbeat shows a LIVE SOL SL amend from 81.48 attempted. Reactivation first step: confirm the signing landed (diag phone_exec_js served true), then resume the merge order #25212 -> #25217. 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS blocked-row sweep (manager 15a, 11:28Z: 'same rules'): blocked -> landed_unproven, owner manager (was 'lane', no live session). its PR #25197 merged 2026-11-12; the remaining manual edge (operator reactivates breakout_2) is kept in the note, because the phone executor is on ice. Merged, not verified by AM-OPS; the row's own clears_when/note names the closing observation.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:30:55Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}

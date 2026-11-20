@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "scripts/research/prop_ev_sim.py accepts drawdown_type eod_trailing or intraday_trailing without raising (grep the guard at the ruleset loader)",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-D6UC5YT4-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROP-FRONTIER-RESEARCH (Manager Session 2026-11-11a), docs/research/prop-frontier-2026-11-12.md",
+    "rerun": "grep -n 'drawdown_type' scripts/research/prop_ev_sim.py"
+  },
+  "owner": "manager (research-tooling lane)",
+  "state": "done",
+  "terminal_reason": "PROP-TRAILING-DD-SIM landed: #26228 merged e6b905fc (prop_ev_sim trailing drawdown with lock, self-test PASS, CI green); CFD half already on main via #25304.",
+  "what": "PROP-TRAILING-DD-SIM: scripts/research/prop_ev_sim.py raises on any non-static drawdown, so no EV screen could be run for Blue Guardian 1-Step (6% trailing on highest closed-trade watermark, 1P help.blueguardian.com 14062186) or FTMO 1-Step (EOD trailing 10%). Generalise the EOD-trailing simulator written for RQ-20261112-09d2-02 (scripts/research/tradeify_futures_fit.py, PR #25203) into prop_ev_sim.py's drawdown_type, then re-run RULE-PROP-FRONTIER-EV6M on those plans. Low priority: neither firm has an API route we drive (MT5 EA on a VPS/Wine)."
+}

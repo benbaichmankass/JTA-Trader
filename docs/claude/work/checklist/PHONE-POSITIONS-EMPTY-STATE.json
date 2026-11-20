@@ -1,0 +1,22 @@
+{
+  "id": "PHONE-POSITIONS-EMPTY-STATE",
+  "title": "phone positionsRead answers no_table on the empty 'No positions' panel (47 positions_miss since 2026-11-07)",
+  "state": "done",
+  "owner": "unowned (manager dispatches)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operational read fix on an existing path",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "note": "[2026-11-08 lane PHONE-EXECUTOR-ANOMALY] Evidence: signature 321dd507 (count 47, last 21:35Z) and the 21:54:21Z capture show the Positions panel reading 'No positions. Start trading with leverage' while positionsRead() (exec.js readTable) returns no_table: the page has no role=tabpanel (panelEmpty needs exactly one) and the Positions chip has no count badge when flat (tabCount null). Effect: account_status positions_state stays no_table, so the server never gets a positive 'flat'. NOT shipped with the venue-ack fix because a recognised-empty read turns on flat detection and journal reconciliation (open journal rows are closed on a flat read). Needs: panel-scoped empty evidence (the empty text below the chip strip, same container as the chips, no grid present), a test from capture shape 321dd507, then Tier-2 review. Re-run: GET /api/bot/prop/status?account_id=breakout_2 -> phone_anomalies 321dd507.count rising.",
+  "phase": "build",
+  "updated_at": "2026-11-08T22:08:29Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

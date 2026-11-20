@@ -1,0 +1,28 @@
+{
+  "id": "PROP-VM-STRATEGY-EXIT-CLOSE",
+  "title": "tradeify_1/velotrade_1: a strategy exit (closed package, close lever) never closes the prop position \u2014 wire it to vm_close",
+  "state": "landed_unproven",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": "session_01AFoLuLZif73NzCZEY27pKE",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-12 (CAP-PROP-VM-CLOSE surge); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25295
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-19",
+  "note": "MEASURED by code at origin/main 1acc75e24 (lane CAP-PROP-VM-CLOSE, PR #25230): prop_trail on a crossed trail only steps the stop (bounded tighten-only ModifyRollout); close levers (stale_exit_bars, giveback_*) alert once 'operator decides'; a CLOSED order package is never read on the VM path (only phone_trail._note_divergence alerts, breakout_2 only). The close executor now exists (vm_close.request_close -> run_close_step). Build: when the ticket's package closes with a strategy reason (or a close lever fires), write meta.close_request. Tier 3 (changes the prop legs' exit behaviour) unless the Stage-0 harness evidence (it exits at bar close) settles it. Re-entry test: a test that a closed package / fired close lever produces exactly one close_request. [2026-11-12 ~11:40Z OPERATOR chat, relayed by Manager 2026-11-11a, verbatim] \"both trades are still open on Breakout 2, and the fact that this is the situation where we're at is just unacceptable. I don't care about if we breach the accounts. We'll get new ones. That's not the issue. ... Worry about getting the system to do what it's fucking supposed to do. ... Whatever we break whatever gate is there and throw it in the trash.\" ANSWERS decisions page x1 = YES: a strategy's own exit closes the prop position (Tier 3 approved). Scope widened to ALL prop accounts incl. breakout_2 (phone close ticket). URGENT; assigned to lane session_01AFoLuLZif73NzCZEY27pKE. State 11:32:17Z: breakout_2 ETH pkg-a20ebe8b65ce4c44 closed (sl) while the venue position is OPEN; SOL also open. [2026-11-12 11:53Z lane CAP-PROP-VM-CLOSE] Operator chat ~11:40Z approved (decisions page x1 YES), scope ALL prop accounts. BUILT PR #25295 (Tier 3 hold; contains #25230): strategy_exit_close.is_strategy_exit (non-bookkeeping close_reason); VM via vm_close pkgexit-<ticket>; phone via one phone_cancel.request_close per filled ticket from the claim/pending poll. Live target breakout_2 pkg-a20ebe8b65ce4c44 (closed sl 11:32:17Z, venue open). Not merged/deployed/observed. [2026-11-12 12:55Z] CONFIRMED by operator decisions page x1: \"Yes: a strategy exit closes the prop position, as in the backtest\". Scope (AM-TRADING 12:38Z): tradeify_1 + velotrade_1 VM closes only; phone path inert (breakout_2 on ice). PR #25295 head df7c4e5908, attribution rule in (shared position: velotrade reduce own qty / tradeify alert, no close). [2026-11-12 14:42Z handoff] PR #25295 head b32e56cdd4 (tradeify_1 + velotrade_1 only; phone inert). clears_when: #25295 merged + deployed AND the first tradeify_1/velotrade_1 package-exit close observed (vm_close line with close_id pkgexit-<ticket> + reconcile closed_on_terminal with a measured exit). Owner after this lane: AM-TRADING. [2026-11-12 20:27Z] PR #25295 MERGED as 2cbfa5f609 (head fc7c8cf811, CI green). Deployed: NOT YET at 20:26:26Z (/api/diag/version git_sha_on_disk 04a8fcd93, trader 376705e7a, neither contains it; git-sync ~5 min). Observed: no. Watch owner AM-TRADING. [2026-11-12 23:04Z lane CAP-PROP-VM-CLOSE close-out] Operator throttled to 3 lanes (~22:48Z): the live observation watch moves to AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx). Deploy of #25295 (2cbfa5f609) UNVERIFIED at close-out: /api/diag/version answered 502 at 23:04Z; at 20:26Z it was not yet on disk.",
+  "observation": {
+    "due_by": "2026-11-19T00:00Z",
+    "what": "after deploy (git_sha_on_disk contains 2cbfa5f609), the first tradeify_1/velotrade_1 package close with the venue still open produces a vm_close line with close_id pkgexit-<ticket> in ict-prop-executor@<acct> and a reconcile closed_on_terminal with a measured exit (or, shared position: velotrade reduce / tradeify one needs_call alert)"
+  },
+  "phase": null,
+  "updated_at": "2026-11-12T23:04:31Z",
+  "updated_by": "session_01AFoLuLZif73NzCZEY27pKE"
+}

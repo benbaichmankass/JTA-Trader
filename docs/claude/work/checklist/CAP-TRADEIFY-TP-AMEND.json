@@ -1,0 +1,25 @@
+{
+  "id": "CAP-TRADEIFY-TP-AMEND",
+  "title": "tradeify_1 cannot move a take-profit: TP_AMEND_SUPPORTED=False on the browser adapter, so the TP doctrine's moving prediction is not applied there",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01AFoLuLZif73NzCZEY27pKE",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator instruction 2026-11-11 (CAPABILITY-MATRIX-LIVE); manager maps at the weekly pass",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25272
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "MEASURED: dxtrade.py:8533 'flip only together with a measured TP-amend rollout step'; prop_trail.py:31 skips the TP step for the browser adapter. No row owned the flip. Done = a measured TP-amend rollout step on the browser adapter then the flag flipped, or a recorded decision that tradeify_1 keeps a static TP with its TP-doctrine status stated. Tier 3 flip needs operator approval. Lane CAPABILITY-MATRIX-LIVE 2026-11-11; matrix docs/reference/account-capability-matrix.md (cell refs in \u00a7 2). Filed from the matrix; roadmap mapped by the manager at the weekly pass. [2026-11-12 10:15-10:22Z OPERATOR decisions page, relayed by Manager 2026-11-11a] w12 tradeify_1 take-profit moves: \"Build it\". [2026-11-12 lane CAP-PROP-VM-CLOSE] BUILT PR #25272 (Tier 3, hold, stacked on #25230): TP-only rollout step on the browser DXtrade adapter (rollout_tp_mismatch + rollout_verify_tp_mismatch, same measured Position Details TP field), TP_AMEND_SUPPORTED=True; tp-doctrine baseline shrank (tradeify_1/ml_entry removed, trend_donchian_eth_4h ER->E). Not merged/deployed/observed; closes on one live TP move on the next filled tradeify_1 ticket recorded in matrix \u00a7 2. [2026-11-12 14:42Z lane CAP-PROP-VM-CLOSE handoff] PR #25272 head 4698d0f67f (main merged in after #25230; landing file renamed tradeify-tp-amend.json; guards were red only on the landing filename, fixed). Tier 3, operator w12 'Build it'. clears_when: #25272 merged + deployed AND one live tradeify_1 TP move observed (trail_tp_amend line with rollout verified in ict-prop-executor@tradeify_1) recorded in matrix \u00a7 2. Owner after this lane: AM-TRADING. [2026-11-15 08:26Z Manager 15a] DECISION. Operator 2026-11-15 ~08:24Z, verbatim: \"2. Merge the PRs\" (the four Tier-3 PRs held for the operator: #25314 losing-streak per-account floor, #25330 alpaca_live reachable-set comment, #25272 tradeify_1 TP amend, #25389 balance prescrub). AM-OPS refreshes each onto main; the manager merges on green, citing this decision in the PR body. 2026-11-15 11:20Z AM-OPS: #25272 merged by manager 15a 11:10:39Z (8027175072) under the operator's 'Merge the PRs'. DEPLOYED: the trader restarted 11:11:52 at trader_git_sha 8027175072, which is that merge. Owner AM-TRADING is completed, so the row moves to the manager. Observation that closes it: one live TP move on the next naturally filled tradeify_1 ticket (rollout TP step verified, SL and size unchanged), recorded in account-capability-matrix section 2.",
+  "phase": "now",
+  "updated_at": "2026-11-15T11:15:55Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

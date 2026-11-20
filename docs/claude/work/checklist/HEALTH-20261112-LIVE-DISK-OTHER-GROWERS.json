@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261112-LIVE-DISK-OTHER-GROWERS",
+  "title": "Live VM disk: growers other than journal .bak copies (MEASURED disk-usage-report #25142 06:41Z vs #25411 18:34Z, root / 52G). syslog 820->921 MB in 11.9 h (~200 MB/day; syslog.1 953 MB uncompressed, weekly rotation); ibkr_datasets 48->181 MB; trade_journal.db +21 MB (~43 MB/day); signal_audit.jsonl +14 MB (~28 MB/day); /tmp +35 MB. vmHealth.disk 72.3% (11:05Z) -> 72.9% (18:34Z) = ~0.3 GB in 7.5 h. Unexplained: ict-trading-bot tree 12G of which .git pack 1.35G. At ~0.6-1 GB/day, 14G free reaches the 20% line (10.4 GB) ~11-16..11-18, so HEALTH-20261111-LIVE-DISK-REGROWTH's 11-18 check is at risk even with the .bak cap. Next: read-only exec (du of the repo tree depth 2; syslog top talkers) via AM-OPS, then cap the writer (Tier 2).",
+  "state": "done",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuL258tHykcEaADf8rE",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25434
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-14"
+}

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each of the 14 units is either unblocked (its harness accepts every flag it passes, and abab-12/18/19 baseline is corrected) or retired with a stated reason; python3 scripts/ci/check_queue_harness_flags.py --audit lists none of them",
+    "kind": "observation"
+  },
+  "id": "PI-20261119-FILLW47B-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19; manager asked which other harnesses/units the guard gap affects",
+    "rerun": "python3 scripts/ci/check_queue_harness_flags.py --audit   # on a checkout that has PR #27200"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "state": "queued",
+  "what": "LEVER-FLAG PARITY: 14 queued ablation units (RQ-20261118-abab-05/06/07/10/11/12/14/15/16/17/18/19/45/46) pass lever flags their harness does not declare, so each would die at argparse (producer_failed); abab-18 and abab-19 already did. Found by scripts/ci/check_queue_harness_flags.py --audit (PR #27200, population: 384 queued units on origin/main). Missing flags by harness: backtest_fade.py: --be-floor-r, --side-filter, --skip-hours, --stale-exit-bars, --trail-adx-below, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_fvg_range.py: --side-filter, --skip-hours, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_ict_scalp.py: --be-floor-r, --trail-adx-below, --skip-hours (PI-20261119-FILLW47B-0002); backtest_squeeze.py: --adx-max, --side-filter, --skip-hours, --trail-adx-below, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_turtle_soup.py: --adx-max, --vol-skip-above-pctl, --vol-skip-below-pctl. abab-12, 18 and 19 ALSO pass --baseline mid while declaring arms that do not include it (exit_lever_ablation: \"arm 'mid' is not declared\"): correct to the declared baseline A, which the unit question names, when unblocking. Each flag is a harness BUILD (default byte-identical, golden test, parity with the live gate where one exists, like --side-filter in #27149), so decide per flag whether it is worth building before building all; a lever the live strategy cannot express has no live producer for a PASS."
+}

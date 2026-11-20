@@ -1,0 +1,25 @@
+{
+  "id": "SEC-API-DEVICE-REGISTER-OPEN",
+  "title": "Security: POST /api/bot/devices/register takes no credential; devices DELETE/PATCH open when the token is unset",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25007,
+    25006
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "CODE READ 2026-11-11: src/web/api/routers/devices.py:200 has no auth check and writes device_tokens, so an outsider may be able to register a device and receive pushes. devices.py:75-76 returns open when DASHBOARD_API_TOKEN is unset (DELETE :333, PATCH :375, GET list :292). UNVERIFIED: whether the token is set on the VM and whether a registered stranger device actually receives FCM pushes. Also: prop.py:77 and devices.py:82 compare tokens with != (not constant-time). Fix: require a device session or the write token; fail closed when unset. Tier 2.",
+  "parent": "SECURITY-HARDENING-AUDIT"
+}

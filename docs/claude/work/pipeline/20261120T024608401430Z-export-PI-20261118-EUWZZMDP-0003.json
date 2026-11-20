@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the drift scan and /shadow/drift agree on the drifted set for the live D2 heads on the same day, or the difference is documented as intended in the ml-review skill C7 detail",
+    "kind": "observation"
+  },
+  "id": "PI-20261118-EUWZZMDP-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-11-18 (ML-REVIEW-20261118, lane ML-FRONTIER-PREP-20261118, session_01AFoLuMhxGuKUegEUWZzMdp)",
+    "rerun": "trainer: sudo systemctl start ict-drift-retrain.service; tail runtime_logs/drift_retrain.jsonl; GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2"
+  },
+  "routed_to": "ML lanes (manager to dispatch)",
+  "state": "routed",
+  "what": "[ml] Drift instruments disagree: the trainer plan-only drift scan (ict-drift-retrain.service, 2026-11-18 ~18:15Z, 19 rows in the last hour) listed 0 dispatch/skip_no_manifest models, while GET /api/bot/shadow/drift reads 'significant' for btc-regime-15m-lgbm-fc-pcv-v2 (KS 0.552, PSI 0.871) and sol-regime-15m-lgbm-fc-pcv-v2 (KS 0.246, PSI 0.310), gate-check drift_clean FAILs both, and stage-guard proposes demoting both. One of the three reads a different window/threshold/model set. Diagnose which, and make the review's C7(a) read one instrument."
+}

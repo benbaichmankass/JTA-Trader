@@ -1,0 +1,27 @@
+{
+  "id": "FUT-CME-INTRADAY-HIST",
+  "title": "CME micro intraday history (real contract) for MES/MNQ/MGC 1m-5m, point-in-time with rolls, 2019+: IB historical via ict-ib-gateway or Databento GLBX.MDP3 (spend decision)",
+  "state": "landed_unproven",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuKmnezCYQeAttGhgZb",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25298,
+    25299,
+    25492,
+    25576
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-17",
+  "note": "Filed 2026-11-12 by TRADEIFY-FUTURES-FRONTIER. RQ-20261112-09d2-01 tested a session-flat Tradeify leg on Dukascopy CFD/spot PROXIES only. Confirming any proxy result on the real futures contract (RQ-20261112-09d2-05) needs real CME bars. Options: (a) IB reqHistoricalData through ict-ib-gateway (ib_paper already trades MES/MGC; whether its data entitlements cover intraday history for expired contracts is UNVERIFIED); (b) Databento historical, usage-priced (UNVERIFIED quote; the spend goes to the operator with a fresh quote); (c) yfinance NQ=F/ES=F/GC=F, 60 days at 5m and 720 days at 1h (too short for 5m). Done when: a committed fetch path produces MNQ 5m 2019+ and 09d2-05 is unblocked. [2026-11-12 ~09:17Z OPERATOR, relayed by Manager 2026-11-11a via AM-TRADING] Verbatim: \"the futures intraday history, yeah, use IB's free history. Let's use that, always free, if there's an option for free.\" Decision: CME intraday history comes from IB free history; free sources preferred whenever an option exists.",
+  "phase": null,
+  "updated_at": "2026-11-13T12:56:38Z",
+  "updated_by": "AM-OPS",
+  "week_lane": "surge"
+}

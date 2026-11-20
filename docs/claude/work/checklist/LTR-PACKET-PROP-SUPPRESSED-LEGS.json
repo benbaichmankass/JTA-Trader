@@ -1,0 +1,23 @@
+{
+  "id": "LTR-PACKET-PROP-SUPPRESSED-LEGS",
+  "title": "Live-review packet lists prop accounts (account_bounds/accounts) for a package whose prop tickets were SUPPRESSED at entry - implies prop exposure that does not exist",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review packet fidelity",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-16",
+  "note": "MEASURED 2026-11-15 11:43Z (reviewer 0920): ETH pkg-858c60dc674d418f (ml_entry long) listed tradeify_1 and velotrade_1 in its accounts and account_bounds. Both prop tickets were status suppressed (opposite_direction_blocked, opposite_open_position short 0.12 on leg trend_donchian_eth_4h) and never opened. Consequence: the manager held a real-money close for ~2h on a prop-leg risk (LTR-APPLY-EXIT2) that did not apply to this package. Fix: the packet's account list excludes suppressed/never-opened tickets, or flags them as suppressed. Done when a package with suppressed prop tickets shows only its live accounts.",
+  "phase": null,
+  "updated_at": "2026-11-15T11:44:59Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV"
+}

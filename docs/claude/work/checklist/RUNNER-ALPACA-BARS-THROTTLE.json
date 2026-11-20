@@ -1,0 +1,22 @@
+{
+  "id": "RUNNER-ALPACA-BARS-THROTTLE",
+  "title": "Runner research jobs fail on Alpaca /v2/stocks/bars throttling (blocks RQ-20261108-98e3-15, ENTRY-EQ pivot=3)",
+  "state": "done",
+  "owner": "AM-OPS-2",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-20",
+  "note": "[2026-11-17 ML-PRIMARY-4] RQ-20261108-98e3-15 (D3 equity entry, ENTRY-EQ structure exit pivot=3) failed TWICE as producer_failed on the runner. Runs 42483502138 and 43504856587: scripts/research/alpaca_readonly.py raised 'alpaca GET /v2/stocks/bars: still throttled/unavailable after 8 attempts'. The unit's own owner_reason says a second producer_failed becomes an infra row, not a re-queue. FIX OPTIONS (not decided): serve the bars from a committed or cached candle dataset (the unit already passes --cache), stagger runner jobs that hit Alpaca, or add longer backoff and resume. DONE WHEN a re-run of 98e3-15 lands read_state=measured. Graded INDETERMINATE (infra) until then. 2026-11-17 10:10Z AM-OPS-2: #26636 merged (8ffc47dc3b): alpaca_readonly max_retries 8->20 + adaptive pacing. Cause measured: runs 42483502138/43504856587 died at symbol 22/25 of 173 with ~30% of calls 429 at ~150/min pacing (shared key bucket; the other consumer is not identified). Re-dispatched RQ-20261108-98e3-15 as run 44062359903 on that head (research-script-run, est ~100 min). Row closes when that run lands measured. d5a7-12/-13/-14 fail for a different cause (exit_lever_ablation.py ValueError: harness fvg_range/fade not covered), not throttling. [2026-11-17 RESEARCH-OPS-20261117-1006] Checked d5a7-12/-13/-14 for this throttle: NOT it. All three logs (comms/research/RQ-20261116-d5a7-1{2,3,4}/*/logs/cmd-0.log) show a successful Binance-vision fetch then ValueError from exit_lever_ablation.build_arm_argv: harness fvg_range / fade not covered. Routed to FVG-RANGE-ABLATION-DRIVER and FADE-ABLATION-DRIVER; units moved to research/queue/blocked/.",
+  "phase": null,
+  "terminal_reason": "#26636 merged (alpaca_readonly 20 retries + adaptive pacing); re-run of RQ-20261108-98e3-15 (run 44062359903) landed MEASURED: 172 symbols fetched, 8547 calls, 429s=118 (1.4%, vs about 30% in the two failed runs); pivot=3 result B_ens tau 0.25 OOF mean net R +0.0766 at n=1490, producer verdict indeterminate (descriptive dev stage)",
+  "updated_at": "2026-11-17T12:43:45Z",
+  "updated_by": "session_01AFoLuKdqv7sRrnLSFhbH4a"
+}

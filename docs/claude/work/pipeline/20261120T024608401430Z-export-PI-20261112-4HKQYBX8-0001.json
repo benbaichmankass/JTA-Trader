@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a cold /api/bot/positions?include_paper=true build completes in <= 5 s and X-Snapshot-Age-S never exceeds ~16 s across 2 min of 5 s reads with the stream keep-warm on",
+    "kind": "observation"
+  },
+  "id": "PI-20261112-4HKQYBX8-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "UI standing lane part 2 (session_01AFoLuMw1bWyUmi4HkqYBX8), #25271 follow-up / #25357; AM-UI 15:00Z",
+    "rerun": "for i in 1 2 3 4 5 6; do curl -s -o /dev/null -D - 'https://ict-bot.duckdns.org/api/bot/positions?include_paper=true' | grep -i x-snapshot; sleep 5; done"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "BACKLOG-DRAIN-20261112",
+  "state": "routed",
+  "what": "POSITIONS-BUILD-SPEED: the /api/bot/positions?include_paper=true snapshot rebuild takes 8.7 s in the foreground and ~15-20 s as a background SWR refresh under load. Measured 2026-11-12 ~14:40Z: X-Snapshot-Age-S on /positions climbed 0.9 -> 6.2 -> 10.8 -> 16.1 -> 21.3 s across stale reads 5 s apart before a refresh landed, and the journal had 0 'swr[positions' failures in 84,584 lines. This build time is the floor on the stream's pnl snapshot age after #25357 (age <= max(15 s, build)). Likely cause, not yet verified: _build_positions does one serial broker read per open row (21 open) on the single-worker account-read executor (src/web/api/_account_read_executor.py). Measure each per-row read, then parallelise or batch per venue. Separate from #25357 by AM-UI's instruction."
+}

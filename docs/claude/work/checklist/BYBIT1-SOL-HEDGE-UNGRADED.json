@@ -1,0 +1,20 @@
+{
+  "id": "BYBIT1-SOL-HEDGE-UNGRADED",
+  "title": "bybit_1 (PAPER) SOLUSDT holds BOTH hedge books, so the Bybit naked sweep refuses the symbol every pass and its protection is never graded. MEASURED 2026-11-19 ~03:42Z: /api/diag/bybit_raw_positions?account_id=bybit_1 shows SOLUSDT Buy 12.2 and Sell 210.1, position-level stopLoss/takeProfit null (Partial-mode legs, if any, not read). Trader journal: '_bybit_position_protection: SOLUSDT REFUSED (ambiguous_multi_book) -- 2 books carry size ... no protective re-arm for this symbol this pass': 289 lines 01:00-03:26Z of 36,758 scanned (complete), and still firing at 03:41Z. Open SOL packages in the monitor: ict_scalp_sol_15m (pkg-4072f8c1) and sol_pullback_2h (pkg-091933af). NOT CHECKED: bybit_2 / bybit_portfolio (the raw-positions read timed out at 10 s); whether either book has resting Partial SL/TP legs (bybit_open_orders). TASK: (1) read bybit_open_orders for bybit_1 SOLUSDT and grade each book's stop/target qty vs its size; (2) the sweep should grade per positionIdx when the account is in hedge mode, using the journal rows' direction, instead of refusing the whole symbol (Tier 2, order path), or at least alert once per refusal streak; (3) confirm bybit_2 / bybit_portfolio are not in the same state. Paper only so far; no money at risk on bybit_1.",
+  "state": "queued",
+  "owner": "AM-OPS-5 (session_01AFoLuJoiTZn52nfU7Q2ynt)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": "dispatch_lane",
+  "due_by": "2026-11-20"
+}

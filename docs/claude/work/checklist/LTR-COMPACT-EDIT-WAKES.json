@@ -1,0 +1,24 @@
+{
+  "id": "LTR-COMPACT-EDIT-WAKES",
+  "title": "ltr-compact edits of old wake comments on ops-flags #17895 wake the manager once per comment (paper, days old)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops noise fix, no milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    24204
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-08",
+  "note": "Observed 2026-11-07 23:20Z to 2026-11-08 01:15Z: at least 8 issue_comment.edited events on #17895, each an ltr-compact rewrite of an ltr-wake comment posted 2026-11-05, all paper accounts (bybit_1, ib_paper), each delivered to the subscribed manager as a wake (usage cost overnight). The wake_toggles switches gate NEW posts, not compaction edits. Fix options: (a) the compactor skips or batches wake comments older than N hours / for toggled-off classes; (b) compaction rewrites into one summary comment instead of editing each. Tier 1 if the compactor is in scripts/; verify by no edit-wakes across one compaction pass. [2026-11-08 06:35Z Manager 2026-11-07a] Operator popup 2026-11-08, verbatim choice: 'Stop compaction wakes (Recommended)' (usage 79%, projected to run out Mon). Fix: PR #24204 stops the alert-watch pass calling compact_ltr_comments(). Observe: no issue_comment.edited ltr-compact wakes on #17895 after it deploys (attention_watch runs on the VM or in Actions; confirm which picks it up). [2026-11-08 07:03Z] #24204 MERGED. Observe: alert_watch_receipt.json shows ltr_compact.state=disabled_wakes_manager and no ltr-compact issue_comment.edited wakes on #17895 over the next 6h. 2026-11-08 13:05Z manager: observed. Since #24204 deployed, no stale-comment-edit wake reached this manager session from 07:02Z to 13:05Z (6h; population: every ops-flags/PR notification delivered here, which were only new comments, CI and lane triggers). The fix holds; closing.",
+  "phase": null,
+  "updated_at": "2026-11-08T13:03:36Z",
+  "updated_by": "session_01AFoLuJ3yguifJsDomuAzGx"
+}

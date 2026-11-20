@@ -1,0 +1,23 @@
+{
+  "id": "IB-GATEWAY-WATCHDOG-TIMER-INACTIVE",
+  "title": "ict-ib-gateway-watchdog.timer reads inactive on the live VM; confirm whether it should be armed",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "ops health finding",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "Manager check-in 2026-11-12 03:18Z, /api/diag/services (67 units): ict-ib-gateway-watchdog.timer and .service both 'inactive'. docs/reference/vm-topology.md says this ~5-min reactive watchdog was re-armed 2026-06-22 (BL-20260622-GATEWAY-MIDDAY-WEDGE) to catch mid-day gateway wedges. Either it was deliberately retired (then fix the doc) or it is disarmed (then re-enable it via the existing system-action path, Tier 2). Also relevant: the gateway VM needs a kernel/libc reboot (SEC posture #25070). Other inactive timers seen are expected: per-account ict-prop-executor@/ict-prop-feed@ timers are active, and the bare templates are inactive.",
+  "phase": null,
+  "updated_at": "2026-11-12T03:20:03Z",
+  "updated_by": "Manager Session 2026-11-11a",
+  "week_lane": "throttle"
+}

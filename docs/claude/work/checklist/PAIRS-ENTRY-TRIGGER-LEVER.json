@@ -1,0 +1,21 @@
+{
+  "id": "PAIRS-ENTRY-TRIGGER-LEVER",
+  "title": "backtest_pairs.py --entry-trigger {rolling,fixed_beta} (lever for blocked RQ-20261017-9582-01)",
+  "state": "dropped",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "Filed once by RESEARCH-OPS-20261112-2050. #18648 (fixed-beta R scale) is merged (PAIRS-R-SCALE done); the remaining blocker on RQ-20261017-9582-01 (26 d old) is that scripts/backtest_pairs.py has no fixed-beta ENTRY-trigger arm (grep 'entry-trigger|entry_trigger' = 0 hits 2026-11-12). Build: --entry-trigger {rolling,fixed_beta} default rolling (current behaviour), a self-test planting a case where the two disagree, pairs_configured_stage0.py passes it through. Then git mv the unit out of blocked/, set run + lands. Question stays live: PAIRS-R-SCALE measured 45-54% of entries on the wrong side of the fixed-beta spread.  | [RESEARCH-OPS-20261113-0250] verified open; blocked units RQ-20261017-9582-01 and RQ-20261014-470a-12 wait on it; unowned, build lane needed (manager).",
+  "phase": null,
+  "updated_at": "2026-11-13T04:01:10Z",
+  "updated_by": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)"
+}

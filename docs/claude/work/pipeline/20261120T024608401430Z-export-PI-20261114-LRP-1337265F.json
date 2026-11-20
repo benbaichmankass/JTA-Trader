@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261114-LRP-1337265F",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ml_entry:lost_bar",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "killed",
+  "terminal_reason": "not reproduced: ml_entry lost_bar x1 (11-07..11-14 window) is 0 in the next run, and the lost_bar planted control was flagged | evidence: comms/live_parity/2026-11-15.json (window 2026-11-08T07:00Z..11-15T07:00Z) legs[ml_entry].state=checked, by_class all 0; controls.planted_defect.plants lost_bar (slv_trend_1h bar 2026-11-13T14:00Z) flagged=true; a recurrence is re-filed by the daily run",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Live-vs-replay parity: leg `ml_entry` — lost_bar ×1 (REAL-MONEY roster) in window 2026-11-07T06:45:00+00:00..2026-11-14T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-14.json. Examples: [{\"class\": \"lost_bar\", \"bar\": \"2026-11-07T07:00:00+00:00\", \"t\": \"2026-11-07T08:00:00+00:00\", \"symbol\": \"BTCUSDT\", \"detail\": {\"replay_side\": \"none\"}}]\n\n[2026-11-15 BACKLOG-DRAIN-20261112] KILL: not reproduced: ml_entry lost_bar x1 (11-07..11-14 window) is 0 in the next run, and the lost_bar planted control was flagged EVIDENCE: comms/live_parity/2026-11-15.json (window 2026-11-08T07:00Z..11-15T07:00Z) legs[ml_entry].state=checked, by_class all 0; controls.planted_defect.plants lost_bar (slv_trend_1h bar 2026-11-13T14:00Z) flagged=true; a recurrence is re-filed by the daily run"
+}

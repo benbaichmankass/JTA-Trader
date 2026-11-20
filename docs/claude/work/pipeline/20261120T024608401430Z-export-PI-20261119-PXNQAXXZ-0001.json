@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-21",
+    "kind": "date"
+  },
+  "id": "PI-20261119-PXNQAXXZ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "AM-OPS-4 session_01AFoLuMqma5FZ2WpXNqAxxz, PERF-F1-DEMOTION-SIGNAL drain",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg ml_entry_eq_struct --json; read research/queue/RQ-20261112-d9c0-01.yaml grading"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "#27171 merged 06:38Z: comms/strategy_evidence/ml_entry_eq_struct.json source_run cites the committed e8a1-04 per-trade JSONL (207 rows); OBSERVED on main: mandate_resolver.stage0_block_p10('ml_entry_eq_struct') returns p10 3.536 R, source_n 207 (was None).",
+  "tier": null,
+  "what": "ml_entry_eq_struct (REAL MONEY, alpaca_live roster) has no demotion signal, and its Stage-0 read does not reproduce. MEASURED: live_vs_backtest.py (2026-11-19) reads NO_BACKTEST on both books, because comms/strategy_evidence/ml_entry_eq_struct.json cites an Actions run URL (42432561069, no artifacts, no committed per-trade rows) as source_run. The reproduction unit RQ-20261112-d9c0-01 (graded FAIL 2026-11-14, run 43529495956) refit booster 483d86b3... vs the graded 0afc49948a41671a and produced n=224, mean +0.300 R against the graded n=207, mean +0.492 R; its rows are committed but may NOT be cited (rule). Nothing followed the FAIL. Consequences: (1) the r4 gate and live_vs_backtest are blind on this leg; (2) the graded Stage-0 population cannot be re-derived. Possible causes, to discriminate: training non-determinism despite pinned seeds, or input drift (Alpaca bar revisions or cache contents between 11-08 and 11-13). NEXT: a unit that re-runs the reproduction twice back to back on one cache (determinism test) and diffs the input-table hash against 42432561069's record-inputs.json; then either fix determinism and reproduce, or register a fresh Stage-0 confirm on today's data and re-cite. Live so far: 1 real-money close -0.11 R, 4 mirror closes +0.07 R (n too small)."
+}

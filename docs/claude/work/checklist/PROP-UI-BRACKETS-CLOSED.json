@@ -1,0 +1,23 @@
+{
+  "id": "PROP-UI-BRACKETS-CLOSED",
+  "title": "After reset: prop trades in the dashboard: (1) open prop trades show no SL/TP on the chart or in the trade data; (2) closed prop trades are missing from the 'Last closed trades' log",
+  "state": "queued",
+  "owner": "unassigned (AM-UI lane archived)",
+  "lane": "",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "operator ask 2026-11-10 (dashboard screenshots); prop read-path/UI fix, milestone assigned at planning",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-12",
+  "note": "Operator 2026-11-10 ~11:05Z, two screenshots plus verbatim: 'the prop trades don't have the brackets on the chart (or in the data - we need to fix this)' and 'closed prop trades aren't showing up in the log'. EVIDENCE: (1) Open trades \u00b7 prop, SOLUSDT SELL 6.82 @87.64, breakout_2, ticket prop-manual-ed6dc04db93b: Stop loss '\u2014', Take profit '\u2014', R '\u2014', chart has an entry line and no SL/TP lines, uPnL source 'estimate'. Yet GET /api/bot/prop/status (10:36Z) rule_distance.open_risk carries sl 89.1 / ticket_sl 89.10464, so the API has a (stale) SL that never reaches the open-trades payload. The stored SL is also wrong: the operator hand-moved it to 85.5 (see LTR-ACCOUNT-SCOPED-ACTIONS: the app does not record a hand-moved stop). TP is absent from the stored record too, which is a TP-doctrine question for prop tickets. (2) The 'Last closed trades \u00b7 last 30d' panel with Live+Prop ticked prints 'Prop closed trades come from the prop journal (Prop tab) \u2014 not included here yet.' and lists only bybit_2 rows. SCOPE: backend (src/prop journal -> the open-trades and closed-trades read paths, with sl/tp/R carried and provenance marked) plus the dashboard repo benbaichmankass/ict-trader-dashboard (draw bracket lines; merge prop-journal closes into the closed log; render null as '\u2014'). Fold in or cross-link the landed_unproven DASH-PROP-OVERVIEW, which this disproves in part, and BREAKOUT-UNRECORDED. Done = the next prop open trade shows SL/TP lines and values matching the venue, and the next prop close appears in the closed log with P&L. Design: docs/design/ui-workplan-2026-11.md (PR #24818) DAILY REVIEW 2026-11-15 (inflight breach: untouched since 2026-11-12, no PR; the AM-UI lane is gone): in_flight -> queued, unassigned. CLEARS_WHEN: a UI lane (SPA, ict-trader-dashboard) is dispatched and picks it up. Rank: the rest (UI, no money path). Design spec unchanged: docs/design/ui-workplan-2026-11.md.",
+  "phase": null,
+  "updated_at": "2026-11-15T05:55:41Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
+}

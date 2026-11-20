@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-10",
+    "kind": "date"
+  },
+  "id": "PI-20261103-6GNSZYUN-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "SOAK-REGRADE 2026-11-03, docs/claude/work/findings/soak-regrade-20261103.md (ITERATE orphan)",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # uso_trend_1h must read covered; and python3 scripts/ops/mandate_resolver.py --leg uso_trend_1h --from S1 --to S2 --account <real-money acct> --json"
+  },
+  "state": "killed",
+  "terminal_reason": "Clearing condition met: uso_trend_1h now has an iteration unit. | evidence: iteration_orphans.py --json on origin/main@30b5cd919 (2026-11-12 08:22Z) (as_of 2026-11-12, population 59 strategy legs): uso_trend_1h covered by RQ-20261106-035.",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "ITERATION ORPHAN uso_trend_1h (Stage-0 verdict pass_unconfirmed): no queued research unit carries an iteration: block for it (programme-review rule). n=56, net +25.89R, faithful, RULE-D1 pass, but positive in only 2 of 4 folds (resolver R-FOLDS REFUSE). Diagnose the two losing folds from the source_run rows (regime? contango roll?), form a hypothesis, register the next variant with its rule pre-registered. Close when a unit with iteration.subject=uso_trend_1h is queued (iteration_orphans reads covered).\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Clearing condition met: uso_trend_1h now has an iteration unit. EVIDENCE: iteration_orphans.py --json on origin/main@30b5cd919 (2026-11-12 08:22Z) (as_of 2026-11-12, population 59 strategy legs): uso_trend_1h covered by RQ-20261106-035."
+}

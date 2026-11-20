@@ -1,0 +1,18 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-06",
+    "kind": "date"
+  },
+  "id": "PI-20261103-01AFOLUJ-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuJCo138TgfjBcbwcLh 2026-11-03 09:35Z, from the LTR reviewer report on pkg-b8aef658ed1b4032",
+    "rerun": "python3 scripts/ops/check_live_review_records.py on main (and on branch live-review/rows); read the failing line numbers"
+  },
+  "state": "killed",
+  "terminal_reason": "Fixed: the live-review record validator is green on all of reviews.jsonl (the script moved to scripts/ci/). | evidence: origin/main@30b5cd919 (2026-11-12 08:22Z): python3 scripts/ci/check_live_review_records.py exit 0, \"reviews.jsonl and outcomes.jsonl are schema-valid\" (population: 648 lines of comms/live_review/reviews.jsonl).",
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "scripts/ops/check_live_review_records.py FAILS on older lines of comms/live_review/reviews.jsonl (reported by LTR reviewer session_01AFoLuJ6DckkMow3MC9Vvb8 at 09:34Z: a trigger.level stored as a string, and a 'handoff' field the schema does not know). So the live-review record validator is red on history, which hides any NEW malformed row behind an already-failing check. Fix: either migrate or grandfather the legacy lines (named by line/ts) so the check is green, then keep it strict for new rows.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] KILL: Fixed: the live-review record validator is green on all of reviews.jsonl (the script moved to scripts/ci/). EVIDENCE: origin/main@30b5cd919 (2026-11-12 08:22Z): python3 scripts/ci/check_live_review_records.py exit 0, \"reviews.jsonl and outcomes.jsonl are schema-valid\" (population: 648 lines of comms/live_review/reviews.jsonl)."
+}

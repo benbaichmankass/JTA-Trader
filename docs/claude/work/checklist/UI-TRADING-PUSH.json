@@ -1,23 +1,25 @@
 {
   "id": "UI-TRADING-PUSH",
   "title": "Trading dashboard push: one SSE broadcaster (/api/bot/stream) from the alert ledger + journal cursors; SPA 15 s/30 s polls deleted (steps T1-T2; the chart phases are UI-CHART-*)",
-  "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuMw1bWyUmi4HkqYBX8",
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Steps T1-T3 of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 5. Depends: ALERT-LEDGER-TO-MANAGER steps 1-2 for alert frames; operator decision U3 for the non-crypto chart. Gates: none. Closing: DB reads/s identical with 1 and 2 clients; 0 SPA /positions polls over 1 h; /ws/market connections 0 for a day. Waits on operator approval of the design (U1-U6). [2026-11-05] Re-scoped after operator U3 (\"Full library, but in phases so that we get crypto live fast\"): this row is T1+T2 only. The chart phases moved to UI-CHART-CRYPTO-LIVE (T3a, 11-12), UI-CHART-EQUITIES-FEED (T3b, 11-25) and UI-CHART-FUTURES-FEED (T3c, 12-09). Design approved 2026-11-05 ~00:36Z. [2026-11-06 ~00:20Z manager, OPERATOR DECISION popup verbatim: \"Wait for throttle\"] UI redesign build phases (crypto chart T3a, push T1-T2, console tabs + catalogs) are dispatched in the throttle period after the surge, or next week after the 11-11 reset; not during the surge.",
-  "due_by": "2026-11-18",
   "roadmap": [
     "L-OPS"
   ],
-  "updated_at": "2026-11-06T00:16:46Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
-  "week_lane": "throttle",
-  "_seq": 919
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    25173
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-15",
+  "_seq": 919,
+  "note": "Steps T1-T3 of docs/plans/UI-TWO-SURFACE-DESIGN-2026-11.md \u00a7 5. Depends: ALERT-LEDGER-TO-MANAGER steps 1-2 for alert frames; operator decision U3 for the non-crypto chart. Gates: none. Closing: DB reads/s identical with 1 and 2 clients; 0 SPA /positions polls over 1 h; /ws/market connections 0 for a day. Waits on operator approval of the design (U1-U6). [2026-11-05] Re-scoped after operator U3 (\"Full library, but in phases so that we get crypto live fast\"): this row is T1+T2 only. The chart phases moved to UI-CHART-CRYPTO-LIVE (T3a, 11-12), UI-CHART-EQUITIES-FEED (T3b, 11-25) and UI-CHART-FUTURES-FEED (T3c, 12-09). Design approved 2026-11-05 ~00:36Z. [2026-11-06 ~00:20Z manager, OPERATOR DECISION popup verbatim: \"Wait for throttle\"] UI redesign build phases (crypto chart T3a, push T1-T2, console tabs + catalogs) are dispatched in the throttle period after the surge, or next week after the 11-11 reset; not during the surge. [2026-11-12 UI lane p2] T1 BUILT, HELD: PR #25173 (GET /api/bot/stream SSE + /stream/status; one broadcaster, 1 s, O(1) in viewers; ws-ticket auth on this path only). 115 tests pass; real-uvicorn smoke test: 2 clients got the same package frame within 1 tick. Needs: manager merge + ict-web-api deploy + the closing check in the PR body. T2 (SPA) diff plan: docs/plans/UI-SPA-HANDOFF-2026-11-12.md (PR #25167) section 2. Baseline for T2's check: operator browser 184 GETs over 10 routes 07:00-08:00Z (diag journalctl). [2026-11-12 10:12Z UI lane p2] T1 MERGED: #25173 -> 46431a8d4 (10:04:40Z). NOT DEPLOYED as of 10:06:39Z: /api/diag/version shows ict-web-api deployed 6d320f42 (before the merge) and /api/bot/stream/status returns 404. Watching for the deploy; on 200 I run the closing check (two clients on /api/bot/stream, /stream/status clients=2, send_route_test_ping reaches both within 2 s). T2 (SPA) is in the dashboard lane (#238); plan in docs/plans/UI-SPA-HANDOFF-2026-11-12.md section 2. [2026-11-12 10:21Z UI lane p2] T1 MERGED + DEPLOYED + OBSERVED. /api/bot/stream/status 200 since 10:09:04Z. Closing check met: with two clients connected /stream/status showed clients=2 and one reader per tick (alerts/journal/health read_state read, open_trades 24, open_packages 20). A REAL ledger row (kind restart, ts 10:19:43.685Z) reached BOTH clients as the same frame (seq 4, frame ts 10:19:44.477Z): 0.79 s, within the 2 s target. Earlier 7-min window 10:09:30-10:16 was a true negative (0 ledger rows, journal unchanged). Not used: send_route_test_ping (it sends the operator a real Telegram message); a synthetic POST /api/bot/alerts needs the dashboard token, which the proxy does not inject. T1 is DONE; this row stays open for T2 (SPA subscribes, polls deleted: dashboard lane #238, plan in docs/plans/UI-SPA-HANDOFF-2026-11-12.md section 2). [2026-11-12 10:58Z UI lane p2] Follow-up from dashboard T2 (#246): position frames fire only on open-set changes. PR #25271 (HELD, Tier 2) adds 'pnl' frames: every 5 s the broadcaster peeks the snapshot /api/bot/positions already holds (new SWRCache.peek, no build, no venue call) and pushes a frame when a position's uPnL moves >= 0.5 or its provenance changes, with unrealizedPnlProvenance, openR, as_of and snapshot_age_s; no snapshot means sources.pnl could_not_look, never zeros. Tests 10/10 stream + swr/positions suites green locally. Caveat: after T2 deletes its /positions polls, the snapshot is kept warm only by /ws/market and REST reads; snapshot_age_s shows that. 2026-11-12 15:10Z UI lane p2: API side MERGED+DEPLOYED+OBSERVED: #25173 /api/bot/stream (T1) and #25271 pnl frames + 15 s keep-warm (pnl_refresh every 15.0 s; 29 pnl frames in 75 s over 21 positions, 13:47Z). Correction: #25271's '<= ~16 s' snapshot age did not hold live (36.9/10.4/25.8/2.7 s). #25357 (held T2, CI queued) bounds it at max(15 s, build). Build-speed work is PI-20261112-4HKQYBX8-0001. SPA side (T2 polls deleted) is in the dashboard repo (#246). 2026-11-12 18:43Z UI lane p2: #25357 MERGED (38f3cf5a6, 18:33Z) and DEPLOYED (web-api b3ec3e5ea, ~18:40Z). OBSERVED with one client, 18:41-18:43Z: pnl_refresh read; refreshes landed at 18:41:11, :31, :50, 42:03, 42:31 (gaps 12.7-28.1 s); steady-state snapshot_age_s samples 9.1/4.9/1.5/4.1/19.4/7.0/23.2 s (n=7, after one 36.5 s warm-up sample before the first refresh); 56 pnl frames over 20 positions in ~140 s. Versus #25271's live samples (36.9/10.4/25.8/2.7) the worst case improved from ~37 s to ~28 s. CORRECTION to #25357's stated bound 'max(15 s, build) + ~1 s': NOT met in 2 of 7 samples. The cadence is measured from the previous refresh START, so with VARIABLE build times the gap is 15 s + build_n - build_(n-1); the true worst case is ~15 s + max build. The remainder belongs to PI-20261112-4HKQYBX8-0001 (positions build speed). 2026-11-15 AM-OPS WORK-INFLIGHT-STALE-OWNERS sweep (manager 15a): in_flight -> landed_unproven, owner manager. owner AM-UI is ARCHIVED. #25173 merged and was measured live 11-12. The remainder belongs to PI-20261112-4HKQYBX8-0001 (positions build speed).",
+  "phase": null,
+  "updated_at": "2026-11-15T10:35:01Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "week_lane": "surge"
 }

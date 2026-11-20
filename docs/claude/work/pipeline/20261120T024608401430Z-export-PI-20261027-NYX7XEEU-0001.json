@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-NYX7XEEU-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "DESK-SHORT-HOLD-LANE PRs #20559/#20560 architecture-impact box",
+    "rerun": "grep -n 'desk_packet_wake\\|short_hold_wake' docs/ARCHITECTURE-CANONICAL.md  # empty = still open"
+  },
+  "routed_to": "DESK-FOLLOWUPS-1027",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "docs/ARCHITECTURE-CANONICAL.md has no entry for the VM desk producers: desk_packet_wake (desk-wake marker + scan packet on desk/decisions) and short_hold_wake (short-hold-wake/closed markers + 5-min envelopes on live-review/rows, PR #20560). Add one section: producers, branches, marker contract, receipts.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The ARCHITECTURE doc still has no entry for the desk VM producers. EVIDENCE: origin/main 30b5cd919 (2026-11-12): docs/ARCHITECTURE-CANONICAL.md has 0 hits for desk_packet_wake|short_hold_wake (11 hits for \"desk\", so the probe works); src/runtime/desk_packet_wake.py exists. | owner row opened by this drain"
+}

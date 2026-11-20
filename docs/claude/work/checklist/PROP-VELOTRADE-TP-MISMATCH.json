@@ -1,0 +1,21 @@
+{
+  "id": "PROP-VELOTRADE-TP-MISMATCH",
+  "title": "velotrade_1 SOL short TP drifts from ticket TP (prop_trail structure TP clamped to price*0.901)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-18",
+  "note": "[PROP-VELOTRADE-TP-MISMATCH 2026-11-11, Tier-1 diagnose, read-only] CAUSE ESTABLISHED: not rounding, not a per-firm rule, not the bad candle. velotrade_1 is the only VM-executed dxtrade_api account (TP_AMEND_SUPPORTED); src/prop/prop_trail.py::_tp_step (TP doctrine B1) re-amends the resting TP every ~5 min to _structure_tp_revision(): trend_donchian_sol_4h declares structure_exit pivot=5 (strategies.yaml:1630); its structure TP level is a constant 74.19 (+5.6..+9R) in all 612 amendments (fills id 232 amendments journal, 2026-11-08T23:18Z..11-11T20:18Z; 609 source prop_trail_tp, 3 prop_executor reconcile), but 74.19 is further than TP_VENUE_CAP_PCT 9.9% from the live quote, so clamp_to_venue_cap pins TP = ref*0.901 (76.508 = 84.92*0.901) and the TP chases price both directions (min 74.19 max 79.595). tradeify_1 is browser dxtrade (TP_AMEND_SUPPORTED false -> trail_tp_skip) so it keeps the placement TP 78.964 = entry*0.901 (itself the rest-at-venue-cap, tp_r 50 default). Both placed 78.964 at 11-08T21:53Z (fills 227/228). Bad candle (PR 24936) RULED OUT for TP: level constant 74.19, SL never moved (89.105). POPULATION: last 30 ticket-fills per account (fills endpoint, 246 rows): 1 divergent (this one); the only other open ticket with a venue TP (tradeify ETH ml_entry) matches; closed rows carry fill tp=None so divergence there is UNMEASURABLE. OPEN (candidate, Tier-3): the 4 sibling legs dropped structure_exit 11-05 (RULE-STRUCTURE-EXITS-REVERSE-V1) but trend_donchian_sol_4h still has it; and a clamped target is a moving rest-at-cap, not a prediction (TP doctrine). A hand reset to 78.964 would be overwritten by the next trail step (<=5 min) unless the TP step is stopped. No fix PR opened: remedy is a Tier-3 strategy decision.",
+  "phase": "build",
+  "updated_at": "2026-11-11T20:35:23Z",
+  "updated_by": "session_01AFoLuMUh4kAHdRpdtz8qPL"
+}

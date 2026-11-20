@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the initial stop is persisted at entry and read by the net-R consumers, or every consumer of package sl excludes/flags degenerate bases; then 089f-01's label is re-checked on the corrected basis",
+    "kind": "observation"
+  },
+  "id": "PI-20261117-ZZUFKM1F-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-5 (session_01AFoLuMFLP9yi6gZzUfKM1F), RQ-20261117-aadc-06 read1 defect; PR #26649",
+    "rerun": "python3 - <<< pull journal?table=trades + journal?table=order_packages via scripts/ops/diag_fetch.sh; count closed rows with abs(entry_price - op.sl)/entry_price < 0.001 (scripts/research/d10_basset_baseline.py degenerate_basis)"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "[ml/data] order_packages.sl is NOT always the initial stop: on some closed rows it equals the amended (~breakeven) stop (MEASURED 2026-11-17 via /api/diag/journal: trade 6168 AVAXUSDT entry 10.541, trades.stop_loss 10.542163, order_packages.sl 10.542163; 47 of the closed rows on legs with a Stage-0 record have |entry - package sl| / entry < 0.1%, giving |net R| up to 3,587). Every consumer that treats package sl as the initial-risk basis inherits it: ml.datasets.families.claude_judgments._journal_outcomes (docstring: 'the PACKAGE sl (the initial stop)'), so RQ-20261116-089f-01's net R label, and any net-R label built the same way. Fix options: persist the initial stop at entry (order_packages column or trades.initial_stop_loss written once), or exclude/flag degenerate bases at read. Also: journal rows for futures (ib_paper) and options carry no contract multiplier, so R from entry x qty is inflated (d10_basset_baseline now excludes them)."
+}

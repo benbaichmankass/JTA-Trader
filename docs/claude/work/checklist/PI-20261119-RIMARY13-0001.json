@@ -1,0 +1,20 @@
+{
+  "id": "PI-20261119-RIMARY13-0001",
+  "title": "[research/D8] RE-READ every exit-head unit run on the sub-hourly-replay defect (fixed by PR #27491). The four drivers (exit_head_label_bakeoff, volcomp_exit_head_bakeoff, exit_head_walkforward_multifold, exit_head_eth_oos_control) dropped Resolution.resample, so on the trainer (ETH/SOL 5m, BTC 15m files) '1h' replays ran the 1h config on sub-hourly bars (a10d-07 n_total_trades ETH 9,418 vs ~118/yr on the 1h harness). Affected graded units: a10d-07 PASS (evidence for #26906), a10d-06 FAIL, 04a5-04 FAIL (the 4-7x random-truncation control), aadc-11 PASS, aadc-12 PASS, aadc-04 INDET, ef40-04 INDET, aadc-13 ungraded, 0bc8-02/d5a7-06/d5a7-07 FAIL (volcomp). Per unit: read its run's leg n_total_trades vs the 1h harness rate to classify affected/unaffected (data files changed over time; #25113 at 605 ETH OOS trades was 1h), then re-arm each affected unit on the fixed harness under its UNCHANGED rule (amendment recording the defect), and unblock a10d-08 on the fix. #26906's data-backed basis is void until a10d-07's re-run grades.",
+  "state": "queued",
+  "owner": "ML-PRIMARY lane (successor inherits)",
+  "lane": null,
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-23"
+}

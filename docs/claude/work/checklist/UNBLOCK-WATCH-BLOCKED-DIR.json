@@ -1,0 +1,21 @@
+{
+  "id": "UNBLOCK-WATCH-BLOCKED-DIR",
+  "title": "unblock_watch.py never reads research/queue/blocked/: load_waiting_units globs research/queue/RQ-*.yaml only, so every unit parked in blocked/ (incl. structured clears_when blocks) is invisible to the BLOCKED brief section",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-25",
+  "note": "Found 2026-11-18 by PRACTICE-REFRESH-20261118 at close-out. MEASURED on main e66d3b333: scripts/ops/unblock_watch.py:342 'for f in sorted(queue_dir.glob(\"RQ-*.yaml\"))' with queue_dir=research/queue; load_waiting_units returned 22 waiting units and none of the three new blocked units RQ-20261118-a5b3-01/-02/-03 (each carries blocked.clears_when row_state:<ROW>=done). Population: 133 unit files in research/queue/blocked/, 3 with a top-level blocked: block. Fix (Tier 1): also glob queue_dir/'blocked'/'RQ-*.yaml' and set path accordingly; extend --self-test with a planted blocked/ unit. Re-entry test: unblock_watch.py lists RQ-20261118-a5b3-01 with its row_state condition.",
+  "phase": "build",
+  "updated_at": "2026-11-18T18:28:28Z",
+  "updated_by": "PRACTICE-REFRESH-20261118"
+}

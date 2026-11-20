@@ -1,0 +1,22 @@
+{
+  "id": "VENUE-PNL-GAPS-BYBIT-1-UNMATCHED",
+  "title": "Standing diagnosis: bybit_1 venue-vs-computed P&L unmatched items (operator w11: if we have a gap we need to understand why)",
+  "state": "queued",
+  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "clears_when": "scripts/ops/venue_pnl_gaps.py --mode demo --account bybit_1 --kind unmatched --max-age-days 7 --check exits 0 (no unmatched items closed in the last 7 days)",
+  "note": "Standing diagnosis row for the DEMO book bybit_1, kind=unmatched, created 2026-11-12 by lane JOURNAL-TRUTH on manager decision (#25270: standing rows per (account, gap class) for demo books). Fed by: scripts/ops/venue_pnl_gaps.py --mode demo --account bybit_1 --kind unmatched (lists every trade in the group). Known prior class (MEASURED 2026-11-12, docs/research/pnl-gross-vs-venue-6817-2026-11-12.md): demo netting makes the venue closed_pnl a position average, so gaps on netted symbols are expected until diagnosed per symbol. Nothing is populated until #25270 is merged and deployed (pnl_basis is written only by its sweep).",
+  "phase": null,
+  "updated_at": "2026-11-12T11:01:45Z",
+  "updated_by": "session_01AFoLuLaFeiQpKFjyffLkxw"
+}

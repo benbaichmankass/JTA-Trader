@@ -1,0 +1,23 @@
+{
+  "id": "SEC-AUTH-FAIL-VISIBILITY",
+  "title": "Security: failed auth is invisible (no 401/403 log, no Caddy access log, no rate limit on login or tokens)",
+  "state": "queued",
+  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "model": null,
+  "tier": null,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": 120,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-18",
+  "note": "CODE READ 2026-11-11: none of the auth checks log a failure (require_session, require_site_session, _require_diag_token, _require_write_token, the login route); the only middleware is CORS; deploy/caddy/Caddyfile has no log directive in the site block. Rate limiting exists only on the Google/passkey routes (10 per 300s per IP, in memory). /api/auth/login answers 403 for a wrong email and 401 for a wrong password. uvicorn's default access log does reach the journal (INFERRED from the unit file; no flag disables it). Fix: one structured log line per 401/403/429 (path, status, hashed client), then the token-probing detector counts it. Detector D2 on SEC-DETECTORS is blocked on this. Tier 2 (web-api).",
+  "parent": "SECURITY-HARDENING-AUDIT",
+  "week_lane": "throttle"
+}

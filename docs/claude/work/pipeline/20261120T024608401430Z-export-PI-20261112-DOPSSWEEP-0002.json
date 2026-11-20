@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-11-19",
+    "kind": "date"
+  },
+  "id": "PI-20261112-DOPSSWEEP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AFoLuLMkKMmnAGCzjeVBTZ (lane DIRECT-OPS-SWEEP); diag journalctl unit=ict-git-sync.service + unit=ict-ops-runner.service 2026-11-12 17:02-17:17Z",
+    "rerun": "GET /api/diag/journalctl?unit=ict-ops-runner.service&grep=job_id ; GET /api/diag/journalctl?unit=ict-git-sync.service&lines=200"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "MANAGER-VM-DIRECT-OPS",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 2,
+  "what": "SYNC-NOW TIMEOUT < DEPLOY TIME: ops job OPS-20261112T170201Z-sync-now-d5151b read failed exit 124 after 900.7 s while ict-git-sync kept deploying (MEASURED ict-git-sync journal: 'systemctl restart ict-work-digest.service' 17:05:28 -> 17:12:06 = 6.6 min, then ict-work-report next). Restarting a oneshot unit runs its whole job synchronously inside the deploy. Prior sync-now runs today: 541, 603, 676 s. So the job's 'failed' is a timeout artefact, not a failed deploy, and deploys are slowed by oneshot report units. Fix options: deploy uses 'systemctl restart --no-block' (or skips) for Type=oneshot units; sync-now waits on the unit's own result rather than a fixed 900 s."
+}

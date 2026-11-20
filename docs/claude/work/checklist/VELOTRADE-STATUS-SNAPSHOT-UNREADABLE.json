@@ -1,0 +1,23 @@
+{
+  "id": "VELOTRADE-STATUS-SNAPSHOT-UNREADABLE",
+  "title": "velotrade_1 account-status snapshot was unreadable at the 11-11 20:03Z and 11-12 08:02Z ml_entry ticket times, so the prop risk gate graded cushion_unknown / unrealized_unreported and the ticket was SKIPPED while the same signal filled on tradeify_1 (PROP-TICKET-TRUTH, evidence on ML-ENTRY-PROP-BASELINE). Snapshot was fresh (0.04h) at 13:51Z. Find why the snapshot goes unreadable (staleness window vs the DXtrade REST status pull cadence). #25345 makes the gate report-only so it stops skipping, but the read gap itself needs fixing. Check: over the next 5 velotrade_1 tickets the snapshot is readable at ticket time.",
+  "state": "landed_unproven",
+  "owner": "AM-TRADING",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": null,
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-16",
+  "note": "[2026-11-15 07:35Z AM-OPS, manager 15a] #25355 merged eb8dec6d. Observed when the next velotrade ticket with an open position grades open risk from the Current Price (loss-to-stop = units*cv*(mark-stop)) instead of unrealized_unreported. Caveat stays open: velotrade's Current Price column is unverified.",
+  "updated_at": "2026-11-15T07:34:18Z",
+  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+}
