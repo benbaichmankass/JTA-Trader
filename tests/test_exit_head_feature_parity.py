@@ -147,6 +147,16 @@ def test_live_fill_anchors_like_harness_decision_bar(direction):
         candles, cand_ts, atrs)
     assert harness and live
     assert live[0]["bar_t"] == int(candles[decision_bar + 1]["t"])
+    # The shape the pre-fix anchor broke: row 0 IS the first in-trade bar (age 0), its excursion is in MFE/MAE,
+    # and the entry reference is the decision bar's ATR (not the first in-trade bar's).
+    first = candles[decision_bar + 1]
+    risk = abs(entry - sl)
+    hi_r = ((first["high"] - entry) if direction == "long" else (entry - first["low"])) / risk
+    lo_r = ((first["low"] - entry) if direction == "long" else (entry - first["high"])) / risk
+    assert live[0]["age_bars"] == 0
+    assert live[0]["mfe_r"] == round(max(0.0, hi_r), 4)
+    assert live[0]["mae_r"] == round(min(0.0, lo_r), 4)
+    assert live[0]["atr_ratio_vs_entry"] == round(atrs[decision_bar + 1] / atrs[decision_bar], 4)
     assert len(live) == len(harness)
     skip = {"source", "trade_key"}
     for h, lv in zip(harness, live):
