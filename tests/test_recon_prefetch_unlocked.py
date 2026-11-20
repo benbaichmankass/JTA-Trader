@@ -15,13 +15,11 @@ from __future__ import annotations
 
 import sqlite3
 
-import pytest
-
 import tests.test_alpaca_rearm_preflight as _pf
 from src.runtime import journal_sync as js
 from src.runtime import order_monitor as om
 from src.runtime import venue_read_cache as vrc
-from tests.test_alpaca_rearm_preflight import _Venue, _use
+from tests.test_alpaca_rearm_preflight import _use, _Venue
 
 world = _pf.world  # the re-arm preflight suite's journal + venue fixture, reused as-is
 

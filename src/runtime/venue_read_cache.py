@@ -29,7 +29,8 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
-from typing import Any, Dict, Iterator, Optional, Tuple
+from collections.abc import Iterator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ CACHED_READS = ("positions", "protection_state", "protection_coverage")
 _state = threading.local()
 
 
-def _generation() -> Optional[int]:
+def _generation() -> int | None:
     try:
         from src.runtime.journal_sync import venue_generation
         return venue_generation()
@@ -47,7 +48,7 @@ def _generation() -> Optional[int]:
         return None
 
 
-def _key(account_id: str, method: str, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Tuple:
+def _key(account_id: str, method: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> tuple:
     def norm(v: Any) -> Any:
         if isinstance(v, dict):  # a position dict: key on what the read depends on
             return ("pos", str(v.get("symbol") or "").upper(), str(v.get("qty") or v.get("size") or ""),
@@ -62,7 +63,7 @@ class Cache:
 
     def __init__(self) -> None:
         self.gen0 = _generation()
-        self.data: Dict[Tuple, Any] = {}
+        self.data: dict[tuple, Any] = {}
         self.hits = 0
         self.misses = 0
         self.invalidated = 0
@@ -70,10 +71,10 @@ class Cache:
     def valid(self) -> bool:
         return self.gen0 is not None and _generation() == self.gen0
 
-    def recorder(self, account_id: str, client: Any) -> "Recorder":
+    def recorder(self, account_id: str, client: Any) -> Recorder:
         return Recorder(self, account_id, client)
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         return {"prefetched": len(self.data), "hits": self.hits, "misses": self.misses,
                 "invalidated": self.invalidated}
 
@@ -122,7 +123,7 @@ class CachedClient:
 
 
 @contextlib.contextmanager
-def active(cache: Optional[Cache]) -> Iterator[None]:
+def active(cache: Cache | None) -> Iterator[None]:
     """Make *cache* the one :func:`wrap` serves from, for this thread, inside the block."""
     prev = getattr(_state, "cache", None)
     _state.cache = cache
