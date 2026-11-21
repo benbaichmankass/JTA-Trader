@@ -1,0 +1,150 @@
+{
+ "run": "RESEARCH-OPS-2026-11-21-1448",
+ "finished_at": "2026-11-21T15:25:00Z",
+ "by": "session_01AFoLuLsMJoKxpwvyDRSbNp (research-ops lane, throttled; one active lane until the 11-25 reset)",
+ "floor": 33,
+ "floor_basis": "computed_floor(fired_24h 41), diagnostic only",
+ "authoring_queue_depth": null,
+ "idle_backends": [],
+ "needs_review_triaged": 8,
+ "needs_review_left": 126,
+ "throughput": {
+  "runnable_before": 19,
+  "runnable_after": null,
+  "queued": 282,
+  "fired_24h": 41,
+  "results_landed_24h": 49,
+  "hours_since_last_dispatch": 0.5,
+  "idle_alarm": false,
+  "runnable_after_note": "not re-measured after authoring; ad6a-01/02 add 2 queued units"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (receipt commit #27979 on main, last dispatch 0.5 h ago)",
+  "collector": "ok (49 results landed 24h, 0 unreadable)",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "read_state": "tree_only for workflow-run lists (github-actions MCP down; github MCP not called this pass)"
+ },
+ "results_read": {
+  "pass": 1,
+  "fail": 1,
+  "indeterminate": 2,
+  "units": [
+   "RQ-20261120-f1a9-04 indeterminate (hand read)",
+   "RQ-20261120-f1a9-05 indeterminate (hand read)",
+   "RQ-20261120-ca49-01 fail (spy_pullback_1h stop sweep)",
+   "RQ-20261120-ca49-02 pass_unconfirmed (qqq_pullback_1h stop30)"
+  ],
+  "dispositions": [
+   "f1a9-04: configuration INDETERMINATE (feat_exh +0.0227, CI [-0.0163,+0.0616], n 2403, coverage 0.9097); power lesson: measured paired sd 0.97 R (SE 0.01987*sqrt 2403), so true MDE ~0.055 R, the +0.03 bar was unreachable; family open; next = ad6a-03 (blocked on ML-EXITHEAD-CORPUS-WIDEN)",
+   "f1a9-05: INDETERMINATE (no_calendar +0.0062 upper 0.0326; no_volume +0.0048 upper 0.0278; path_only +0.0147 upper 0.0515; n 2403 each, Bonferroni z 2.394); not FAIL because two arms' upper bounds exceed +0.03; next = ad6a-03",
+   "ca49-01: configuration closed (atr_stop_mult 2.0/2.5/3.0 vs 1.5 on SPY 1h, fold wins 2 of 4); family stays open; response monotone and un-bracketed at the grid edge; next = ad6a-02 (3.5/4.0/5.0)",
+   "ca49-02: PASS is a discovery (best-of-2, control net -2.62 R, lead rests on fold 3); next = ad6a-01 pre-dev confirmation, then a Tier-3 stop-width proposal to the manager only if it replicates"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "widened donchian exit-head rows corpus",
+   "ref": "ML-EXITHEAD-CORPUS-WIDEN (existing row, owner ML-PRIMARY, post-reset)"
+  },
+  {
+   "lever": "producer_failed cluster (8 units)",
+   "ref": "PI-20261121-UGKSAUWU-0001"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261121-ad6a-01",
+  "RQ-20261121-ad6a-02",
+  "blocked/RQ-20261121-ad6a-03"
+ ],
+ "followups_filed": [
+  "PI-20261121-UGKSAUWU-0001"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "throttle until 11-25 reset; the authoring queue was not read, only the iteration loop ran"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 4,
+   "of": 4,
+   "note": "f1a9-04/05 and ca49-01/02 opened row-level; other results landed since the last record were NOT attributed (throttle)"
+  },
+  "map_entries_added": "lever_map.py --backfill rewrote qqq/spy/ml-exit-head/ada_pullback_2h maps (4 files, 160+/34-); no hand-written entries",
+  "next_tests_from_map": 3,
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 4,
+   "total": 13
+  },
+  "orphans_after": {
+   "strategy_leg": 4,
+   "ml_model": 2,
+   "ltr_class": 4,
+   "total": 10
+  },
+  "results_iterated": [
+   {
+    "result": "RQ-20261120-ca49-02",
+    "verdict": "pass_unconfirmed",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261121-ad6a-01",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261120-ca49-01",
+    "verdict": "fail",
+    "subject": "spy_pullback_1h",
+    "next": "RQ-20261121-ad6a-02",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261120-f1a9-04/05",
+    "verdict": "indeterminate",
+    "subject": "ml-exit-head-donchian-1h",
+    "next": "RQ-20261121-ad6a-03 (blocked)",
+    "attempt": 3
+   }
+  ],
+  "advanced": 3,
+  "survivors": [],
+  "overdue": [
+   "34 strategy legs' older iteration units are past due_by (iteration_orphans.py): not re-dated this pass"
+  ]
+ },
+ "ml_slots": {
+  "D1": "named block: none on purpose; re-entry test >= 30 legs with Stage-0 records on one cost basis (MECE s3)",
+  "D2": "RQ-20261120-d7c2-01 queued (fails_without_next lists it: its iteration block exists, no verdict yet)",
+  "D3": "RQ-20261119-b9d0-02 / RQ-20261118-f7c1-04 (f7c1-04 is producer_failed, now owned by PI-20261121-UGKSAUWU-0001)",
+  "D4": "RQ-20261120-2cb9-01 (ml-setup-metalabel-p2pool covered)",
+  "D5": "named block ONLY: row MLP-D5-MASTIFF queued, owner ML-PRIMARY; no unit exists (done units 82fd-02, a474-02 only) - WAKE MANAGER",
+  "D6": "named block: RQ-20261105-af07-01 blocked on a pointer-v0 subcommand; ef40-05/06 blocked on a D3 positive-net entry model",
+  "D7": "RQ-20261118-04a5-07 FAIL, tm line CLOSED per manager (f1a9-01/02/03/06); family review PI-20261121-RIMARY17-0001 due 11-27; no TM re-run authored",
+  "D8": "RQ-20261121-ad6a-03 blocked on ML-EXITHEAD-CORPUS-WIDEN (named, post-reset); RQ-20261105-17bf-01 blocked on EXIT-VOLTRAIL-TRAINSET-DRIVER",
+  "D9": "RQ-20261030-f18f-01 queued",
+  "D10": "named block: MLP-D10-BASSET join harness, post-reset (manager); no unit exists - WAKE MANAGER"
+ },
+ "slots_with_next_unit": "8 of 10 have a unit or named block with an owner; D5 and D10 have a row only",
+ "runnable_hours_per_backend": "not computed: research_utilization.py was not run this pass (throttle); fired_24h 41, runnable 19 (TRADING 8, MODEL 4, INFRA 7), floor 33 diagnostic",
+ "not_run": [
+  "E authoring from the programme authoring queue and ideas pool (throttle)",
+  "C blocked/ audit of the 77 status:blocked queue units (blocker_watch showed 14 STALE_BLOCK checklist rows, 3 NOT_RUNNING; none unblocked or retired)"
+ ],
+ "limits": [
+  "next_rq_id --fetch hung; ids minted locally (RQ-20261121-ad6a-01/02), collision risk unverified against origin",
+  "github-actions MCP down; workflow runs not listed",
+  "Remaining orphans (claude_desk, xsec-crypto, cost-levers-live-legs, movement-capture), ml-holdbias-exit, ml-btc-router-cells and the 4 ltr classes were not re-diagnosed; reasons carry over from the 11-20 record"
+ ],
+ "handoff": [
+  "ORPHANS STILL WITHOUT A NEXT TEST (10): claude_desk, xsec-crypto, cost-levers-live-legs, movement-capture (strategy_leg); ml-holdbias-exit, ml-btc-router-cells (ml_model; d7c2-01 queued for the latter, malformed-repaired 11-20, check iteration_orphans); ltr-close, ltr-partial-close, ltr-sl-to-structure, ltr-tp-pull-in (lane LTR-CLASS-GRADE)",
+  "D5 and D10 have no unit (row-only)",
+  "8 UNGRADED units remain on result_disposition_check; 34 overdue iteration units are past due_by",
+  "blocker_watch STALE_BLOCK 14 checklist rows with unresolvable edges (e.g. 'operator reactivates breakout_2' x4, WEPE-BUILDOUT, TPX-XRP-DECLARE): checklist-row fixes, not queue units",
+  "post-reset: D10 BASSET harness, tick-time levers, queue contention, ML-EXITHEAD-CORPUS-WIDEN then unblock ad6a-03"
+ ]
+}
