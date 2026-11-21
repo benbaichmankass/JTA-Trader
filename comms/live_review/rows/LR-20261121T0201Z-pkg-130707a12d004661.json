@@ -1,0 +1,140 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261121T0201Z-pkg-130707a12d004661",
+ "reviewed_at": "2026-11-21T02:10:00Z",
+ "order_package_id": "pkg-130707a12d004661",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "stall",
+  "level": 8,
+  "l0_snapshot_at": "2026-11-21T02:00:00Z"
+ },
+ "info_cutoff_at": "2026-11-21T02:01:23Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 8,
+  "giveback_r": 0.2208,
+  "open_r": 0.273,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4938,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 57508.58928571,
+  "tp": 61060.62857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 5,
+  "giveback_r": 0.2208,
+  "open_r": 0.273,
+  "peak_r": 0.4938,
+  "r_to_stop": 0.8777,
+  "r_to_target": 1.2051
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 57508.58928571 / tp 61060.62857142857 agree with every readable account"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "spec": null,
+   "n": 98,
+   "mean_r": 0.2026,
+   "sd_r": 1.0348,
+   "worst_r": -1.1065,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "spec": "close",
+   "n": 98,
+   "mean_r": 0.2146,
+   "sd_r": 0.0239,
+   "worst_r": 0.131,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261121T0201Z-pkg-130707a12d004661.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.012,
+  "worst_case_delta_r": 1.2375,
+  "basis": "table",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.55,
+  "reason": "Table (n=98 comparable): close mean +0.2146 sd 0.024 worst +0.131 vs hold mean +0.2026 sd 1.035 worst -1.107; close >= hold on mean (diff +0.012, SE 0.105) and worst case +1.24R better (tail tie-break); trade stalled (8 bars, peak 0.49R est.) as a long against a 4h downtrend (lower highs, ADX 52), price pinned ~59.0k below 59.38k swing high with stop 57.5k and TP 61.06k 4+ ATR away; take +0.27R."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=98 mean +0.2026 worst -1.1065; close n=98 mean +0.2146 worst +0.131 (tool numbers, packet table)",
+  "structure: 4h trend down (swing highs 64.07k/65.44k above, last 4h close 58.92k), 1h range 58.8-59.4k since entry; no reclaim of 59.38k",
+  "book: correlated long crypto (BTC, ETH x2, SOL x3, ADA, XRP) is one crypto-beta bet",
+  "live_vs_backtest: realMoney ml_entry live -2.02R over 42 closed, CONSISTENT with backtest band",
+  "missing: regime cells and atr_now_over_entry null in packet (could not look)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "apply paths close, move_tp, reduce, tighten, widen_sl; mechanics match; executor reaches leg, RiskManager approval not pre-read"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "apply paths close, move_tp, reduce, tighten, widen_sl; mechanics match"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuHzCUA7EKY9yM9E5td",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [],
+ "packet_sha": "a48671ede869fa39ce42ae1396135f49464539e44a8fd2d7b7af82ed81deec01",
+ "forecast": {
+  "thesis": "Stalled long inside a 4h downtrend; price pins under the 59.38k swing high, so continuation to the 61.06k TP is lower odds than a fade back toward the 57.5k stop.",
+  "direction": "against_trade",
+  "target_px": 57719.9,
+  "p_target": 0.3,
+  "invalidation_px": 59382.0,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 59382 low 58165.5",
+   "chart.htf: 4h trending, lower swing highs",
+   "exit_plan: sl_now 57508.6 / tp_now 61060.6",
+   "priced_options: close worst +0.131 vs hold -1.1065"
+  ]
+ }
+}
