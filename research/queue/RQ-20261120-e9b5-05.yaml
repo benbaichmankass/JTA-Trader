@@ -7,7 +7,7 @@
 id: RQ-20261120-e9b5-05
 title: 'RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261018-001: Same-symbol overlap read, SOLUSDT (bybit_2 book): per-leg OOS net R per capital-day, solo vs shared
   slot, for trend_donchian_sol_4h and trend_donchian_sol_prop'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M18
@@ -126,3 +126,13 @@ iteration:
   verdict_read: pass
   diagnosis: 'BEFORE (old engine, run 2026-10-30, OOS from 2025-01-01): solo trend_donchian_sol_4h +37.59 R n87 (+0.1811 R/capital-day); solo trend_donchian_sol_prop +22.07 R n124 (+0.1876); together +44.84 R n177 (+0.2018). Reported at grading: per-arm before/after, sign changes, and config drift since 2026-10-30 separately.'
 last_dispatched_at: '2026-11-20T19:04:45+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q8-SOL4H-OVERLAP-REPORT-RERUN-27655-B
+  evidence:
+  - research/results/RQ-20261120-e9b5-05/44798802941.jsonl
+  graded_at: '2026-11-21'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

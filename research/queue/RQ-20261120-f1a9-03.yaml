@@ -5,7 +5,7 @@
 id: RQ-20261120-f1a9-03
 title: 'ml-tm-action-value ITERATION 9c (action-set lever, WIDE): with the incumbent heads, labels and features, does the FULL 7-action set (adds
   the 3 stop tightenings and 2 TP pull-ins) pass S-OFFLINE on the in-trade management bench?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -185,3 +185,16 @@ related:
 - RQ-20261120-f1a9-02
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
 last_dispatched_at: '2026-11-20T21:55:07+00:00'
+grading:
+  attested: RULE-RQ20261120-f1a9-03-TM-ACTIONSET-ALL7_H12
+  auto: true
+  decision_rule_id: RULE-RQ20261120-f1a9-03-TM-ACTIONSET-ALL7_H12
+  evidence:
+  - research/results/RQ-20261120-f1a9-03/44824547697.jsonl
+  graded_at: '2026-11-21'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
