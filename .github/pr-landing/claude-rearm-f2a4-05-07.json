@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "One research/queue unit edit (re-arm), merged by the manager on green.",
+  "why": "RQ-20261119-f2a4-05 was meant to be re-armed in #27989 (--delta-r fix), but it still carried its 11-19 dispatch stamp and hit the retry cap, so the dispatcher never re-ran it. This removes the stale stamp and adds a dated rearmed_at, the dispatcher's own re-arm path. No decision rule changes. Gates this adds or changes: none."
+}
