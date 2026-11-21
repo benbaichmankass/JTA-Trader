@@ -3,7 +3,7 @@
 id: RQ-20261119-f2a4-06
 title: 'COST REPRICE of the real-money slv_trend_1h Stage-0 record at the MEASURED Alpaca cost: does its edge (+0.593 R/trade, n 92,
   at 5 bps round trip) survive 26 bps (paper fills, realized_slippage 2026-11-18) and how does it read at 53 bps?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -126,16 +126,16 @@ related:
 - PROGRAMME-REPLAN-2026-11-19
 last_dispatched_at: '2026-11-21T16:14:53+00:00'
 grading:
-  owner: PI-20261121-UGKSAUWU-0001
-  owner_reason: 'cause READ 2026-11-21: exit_lever_ablation.py exited 2 on the missing required --delta-r; RE-ARMED with --delta-r 0 (the value sibling stage0 units c1b4-01/02 use; not read by the stage0 rule), last_dispatched_at reset, decision rule untouched; owner PI-20261121-UGKSAUWU-0001'
   attested: RULE-RQ20261119f2a406-COST-REPRICE
   auto: true
   decision_rule_id: RULE-RQ20261119f2a406-COST-REPRICE
   evidence:
   - research/results/RQ-20261119-f2a4-06/44544538402.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261119-f2a4-06/44922849676.jsonl
+  graded_at: '2026-11-21'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail
