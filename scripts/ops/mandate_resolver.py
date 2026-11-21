@@ -1032,6 +1032,10 @@ def _decide(leg: str, frm: str, to: str, account: str, root: Path,
         "pr_title": f"{mid}: {leg} {frm} -> {to} ({account})",
         "then": "ping in realtime; show the evidence in §1 of the next daily brief",
     }
+    if ctx["evidence"].get("promotion_path") == "live_bar":
+        ctx["proposal"]["fidelity_unit_required"] = (
+            f"draft a research/queue fidelity-check unit for {leg} (why did the backtest disagree with the live bar?) "
+            "in the SAME PR as the roster edit (OPERATING-PLAN § 2, conflict rule)")
 
 
 def _delta(leg: str, frm: str, to: str, account: str, exchange: str,
@@ -1099,93 +1103,106 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
         if bar.get("soak_passed"):
             _soak_passed(leg, soak, m, root, ctx, account)
 
-    # ── the committed record ────────────────────────────────────────────────
-    rec_rel = f"{EVIDENCE_DIR_REL}/{leg}.json"
-    record = b1.load_record(leg, root / EVIDENCE_DIR_REL)
-    if record is None:
-        raise _NeedsData("R-RECORD-MISSING", f"no readable committed record at {rec_rel}",
-                         _record_missing_data_task(leg, frm, to))
-    ev = ctx["evidence"]
-    ev.update({"record": rec_rel, "harness": record.get("harness"),
-               "n_trades_oos": record.get("n_trades_oos"),
-               "expectancy_r_oos": record.get("expectancy_r_oos"),
-               "net_r_oos": record.get("net_r_oos"), "folds": record.get("folds"),
-               "folds_positive": record.get("folds_positive"),
-               "cost_stack": record.get("cost_stack"),
-               "decision_rule": (record.get("decision_rule") or {}).get("id"),
-               "source_run": record.get("source_run")})
-    if not in_repo(root, record.get("source_run")):
-        raise _Refuse("R-SOURCE-RUN-ABSENT", f"source_run {record.get('source_run')!r} is not a "
-                                             "committed file in the repo")
+    # LIVE-BAR READ (S1 -> S2 only): REPORTED on every result, and decisive only through `bar.live_bar_path` below.
+    live = _live_bar_read(leg, root) if (frm, to) == ("S1", "S2") else None
+    if live is not None:
+        ctx["evidence"]["live_bar"] = live
 
-    # ── B1's clauses + identity, verbatim ───────────────────────────────────
-    # C5 (fidelity, operator 2026-10-11) binds only a NEW RISK-BEARING add: the
-    # operator's rule is "Stage-0 evidence for a real-money roster add", so a
-    # Stage-0 -> Stage-1 move onto a paper soak account is not refused on it.
-    # `account`/`leg` are passed so the guard's FIDELITY_BASELINE applies to the
-    # slot actually being edited. Same risk-bearing predicate the guard uses.
-    c5_binds = b1.is_risk_bearing(rosters[account]["class"])
-    for clause, ok, detail in b1.clause_verdicts(record, account, leg):
-        if clause == "C5" and not c5_binds:
-            continue
+    def _stage0() -> None:
+        # ── the committed record ────────────────────────────────────────────────
+        rec_rel = f"{EVIDENCE_DIR_REL}/{leg}.json"
+        record = b1.load_record(leg, root / EVIDENCE_DIR_REL)
+        if record is None:
+            raise _NeedsData("R-RECORD-MISSING", f"no readable committed record at {rec_rel}",
+                             _record_missing_data_task(leg, frm, to))
+        ev = ctx["evidence"]
+        ev.update({"record": rec_rel, "harness": record.get("harness"),
+                   "n_trades_oos": record.get("n_trades_oos"),
+                   "expectancy_r_oos": record.get("expectancy_r_oos"),
+                   "net_r_oos": record.get("net_r_oos"), "folds": record.get("folds"),
+                   "folds_positive": record.get("folds_positive"),
+                   "cost_stack": record.get("cost_stack"),
+                   "decision_rule": (record.get("decision_rule") or {}).get("id"),
+                   "source_run": record.get("source_run")})
+        if not in_repo(root, record.get("source_run")):
+            raise _Refuse("R-SOURCE-RUN-ABSENT", f"source_run {record.get('source_run')!r} is not a "
+                                                 "committed file in the repo")
+
+        # ── B1's clauses + identity, verbatim ───────────────────────────────────
+        # C5 (fidelity, operator 2026-10-11) binds only a NEW RISK-BEARING add: the
+        # operator's rule is "Stage-0 evidence for a real-money roster add", so a
+        # Stage-0 -> Stage-1 move onto a paper soak account is not refused on it.
+        # `account`/`leg` are passed so the guard's FIDELITY_BASELINE applies to the
+        # slot actually being edited. Same risk-bearing predicate the guard uses.
+        c5_binds = b1.is_risk_bearing(rosters[account]["class"])
+        for clause, ok, detail in b1.clause_verdicts(record, account, leg):
+            if clause == "C5" and not c5_binds:
+                continue
+            if not ok:
+                raise _Refuse(f"R-B1-{clause}", detail)
+        strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}
+        ok, detail = b1.identity_verdict(record, leg, strategies)
         if not ok:
-            raise _Refuse(f"R-B1-{clause}", detail)
-    strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}
-    ok, detail = b1.identity_verdict(record, leg, strategies)
-    if not ok:
-        raise _Refuse("R-B1-IDENTITY", detail)
+            raise _Refuse("R-B1-IDENTITY", detail)
 
-    # ── the mandate's bar ───────────────────────────────────────────────────
-    min_n = bar.get("min_n_closed")
-    n = record.get("n_trades_oos")
-    if not isinstance(min_n, int) or isinstance(min_n, bool):
-        raise _Refuse("R-MANDATE-NOT-GRANTED", f"bar.min_n_closed={min_n!r} is not an integer")
-    if n < min_n:
-        raise _NeedsData("R-N", f"n_trades_oos={n} < {min_n} closed",
-                         _n_floor_data_task(leg, n, min_n))
-    exp = record.get("expectancy_r_oos")
-    net = record.get("net_r_oos")
-    if not isinstance(exp, (int, float)) or isinstance(exp, bool) or exp <= 0 \
-            or not isinstance(net, (int, float)) or net <= 0:
-        raise _Refuse("R-EXPECTANCY", f"expectancy_r_oos={exp!r}, net_r_oos={net!r} -- not > 0 "
-                                      "net of the full cost stack")
-    # Cross-check with arithmetic, not a re-read: expectancy must be net / n.
-    if abs(net / n - exp) > 0.01:
-        raise _Refuse("R-EXPECTANCY", f"expectancy_r_oos={exp} != net_r_oos/n = {net / n:.4f} -- "
-                                      "the record disagrees with itself")
-    folds, pos = record.get("folds"), record.get("folds_positive")
-    detail_rows = record.get("fold_detail")
-    if not isinstance(folds, int) or not isinstance(pos, int) or folds < 1:
-        raise _Refuse("R-FOLDS", f"folds={folds!r}, folds_positive={pos!r} -- not stated")
-    if isinstance(detail_rows, list):
-        counted = sum(1 for f in detail_rows if isinstance(f, dict)
-                      and isinstance(f.get("net_r"), (int, float)) and f["net_r"] > 0)
-        if len(detail_rows) != folds or counted != pos:
-            raise _Refuse("R-FOLDS", f"fold_detail shows {counted}/{len(detail_rows)} positive but "
-                                     f"the record states {pos}/{folds}")
-    if not 2 * pos > folds:
-        raise _Refuse("R-FOLDS", f"positive in {pos} of {folds} folds -- not a majority")
+        # ── the mandate's bar ───────────────────────────────────────────────────
+        min_n = bar.get("min_n_closed")
+        n = record.get("n_trades_oos")
+        if not isinstance(min_n, int) or isinstance(min_n, bool):
+            raise _Refuse("R-MANDATE-NOT-GRANTED", f"bar.min_n_closed={min_n!r} is not an integer")
+        if n < min_n:
+            raise _NeedsData("R-N", f"n_trades_oos={n} < {min_n} closed",
+                             _n_floor_data_task(leg, n, min_n))
+        exp = record.get("expectancy_r_oos")
+        net = record.get("net_r_oos")
+        if not isinstance(exp, (int, float)) or isinstance(exp, bool) or exp <= 0 \
+                or not isinstance(net, (int, float)) or net <= 0:
+            raise _Refuse("R-EXPECTANCY", f"expectancy_r_oos={exp!r}, net_r_oos={net!r} -- not > 0 "
+                                          "net of the full cost stack")
+        # Cross-check with arithmetic, not a re-read: expectancy must be net / n.
+        if abs(net / n - exp) > 0.01:
+            raise _Refuse("R-EXPECTANCY", f"expectancy_r_oos={exp} != net_r_oos/n = {net / n:.4f} -- "
+                                          "the record disagrees with itself")
+        folds, pos = record.get("folds"), record.get("folds_positive")
+        detail_rows = record.get("fold_detail")
+        if not isinstance(folds, int) or not isinstance(pos, int) or folds < 1:
+            raise _Refuse("R-FOLDS", f"folds={folds!r}, folds_positive={pos!r} -- not stated")
+        if isinstance(detail_rows, list):
+            counted = sum(1 for f in detail_rows if isinstance(f, dict)
+                          and isinstance(f.get("net_r"), (int, float)) and f["net_r"] > 0)
+            if len(detail_rows) != folds or counted != pos:
+                raise _Refuse("R-FOLDS", f"fold_detail shows {counted}/{len(detail_rows)} positive but "
+                                         f"the record states {pos}/{folds}")
+        if not 2 * pos > folds:
+            raise _Refuse("R-FOLDS", f"positive in {pos} of {folds} folds -- not a majority")
 
-    # ── affordability (S1 -> S2 only) ───────────────────────────────────────
-    # Before cost fidelity on purpose: a leg the real-money account cannot
-    # size is a DECISIVE refusal, and filing a "collect more fills" data task
-    # for it would be work towards a promotion that can never trade.
-    if (frm, to) == ("S1", "S2"):
-        _affordability(leg, account, exchange, record, acfg, root, ctx)
+        # ── affordability (S1 -> S2 only) ───────────────────────────────────────
+        # Before cost fidelity on purpose: a leg the real-money account cannot
+        # size is a DECISIVE refusal, and filing a "collect more fills" data task
+        # for it would be work towards a promotion that can never trade.
+        if (frm, to) == ("S1", "S2"):
+            _affordability(leg, account, exchange, record, acfg, root, ctx)
 
-    # ── holdout confirmation (both promotions, bar.holdout_required) ────────
-    # After affordability for the same reason cost fidelity is: an unaffordable
-    # leg must never file a data task (here, a holdout re-run) towards a
-    # promotion that can never trade.
-    if bar.get("holdout_required"):
-        _holdout(leg, frm, to, record, bar, m, root, ctx)
+        # ── holdout confirmation (both promotions, bar.holdout_required) ────────
+        # After affordability for the same reason cost fidelity is: an unaffordable
+        # leg must never file a data task (here, a holdout re-run) towards a
+        # promotion that can never trade.
+        if bar.get("holdout_required"):
+            _holdout(leg, frm, to, record, bar, m, root, ctx)
 
-    # ── DSR: REPORTED, NEVER A REFUSAL (operator 2026-11-06 ~19:35Z, option 3 "Holdout governs; promote") ──
-    ctx["evidence"]["dsr_probation"] = dsr_probation(leg, root)
+        # ── DSR: REPORTED, NEVER A REFUSAL (operator 2026-11-06 ~19:35Z, option 3 "Holdout governs; promote") ──
+        ctx["evidence"]["dsr_probation"] = dsr_probation(leg, root)
 
-    # ── Stage-1 cost fidelity (S1 -> S2 only) ───────────────────────────────
-    if (frm, to) == ("S1", "S2"):
-        _cost_fidelity(leg, venue, record, m, root, ctx)
+        # ── Stage-1 cost fidelity (S1 -> S2 only) ───────────────────────────────
+        if (frm, to) == ("S1", "S2"):
+            _cost_fidelity(leg, venue, record, m, root, ctx)
+
+    try:
+        _stage0()
+    except (_Refuse, _NeedsData) as e:
+        if not _live_bar_may_carry(e, bar, live):
+            raise
+        _live_bar_path(leg, account, e, live, root, acfg, ctx)
 
     # ── the cap ─────────────────────────────────────────────────────────────
     if cap.get("basis") != CAP_BASIS:
@@ -1211,6 +1228,119 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if used > share * budget + 1e-12:
         raise _Refuse("R-CAP", f"auto-promoted declared risk {used:.4f} > {share:.0%} of "
                                f"{account}'s budget {budget:.4f} ({auto_after}/{roster_after} legs)")
+
+
+# ── LIVE-BAR PATH: a second way up for S1 -> S2 (OPERATING-PLAN § 2 "Live-performance promotion path") ───
+# Operator, 2026-11-17 (popups, verbatim): live bar "20+ trades, clearly positive (Recommended)"; conflict "Live wins +
+# fix backtest (Recommended)"; scope "Both strategies and MLs (Recommended)". A leg that clears the LIVE BAR promotes even
+# when Stage 0 failed or is missing, and a fidelity-check unit is drafted WITH the promotion.
+#
+# GRANT SCOPE. MD-PROMOTE-S1-S2 grants "add a leg to a REAL-MONEY roster on Stage-0 evidence". Reading live-bar evidence
+# as a FIRE widens that grant, and widening a grant is the operator's act (CLAUDE.md § "The daily sync": a session may
+# PROPOSE, only the operator GRANTS). So the path is decisive ONLY when the granted entry's `bar:` states
+# `live_bar_path: true` (the same keyed-field pattern as `soak_step: retired`). Without it, the live-bar read is still
+# REPORTED as evidence on every S1 -> S2 result, so the manager can act on it under the standing data-backed rule.
+#
+# What the path does and does not replace:
+#   replaces  the Stage-0 record clauses: record present, B1 C1-C5 + identity, the bar's n / expectancy / folds, the
+#             holdout, and Stage-1 cost fidelity (live R is already net of the venue's real costs).
+#   keeps     the soak/mechanics section (it runs first), affordability (a decisive R-AFFORD REFUSE is never carried:
+#             a leg the account cannot size cannot trade, whatever its live record), and the cap.
+#   needs     a FRESH feed (comms/live_bar/latest.json, <= LIVE_BAR_MAX_AGE_H old) whose leg row passes, re-checked
+#             from its own n / sum_r / lcb80, AND whose venue-MEASURED-pnl subset also passes at n >= 20.
+# The swap rule (a demo-floor variant takes a real-money variant's slot) is a demotion of the incumbent and stays a
+# separate MD-DEMOTE-S2-S1 decision; same-symbol-allocation-guard still checks the roster PR.
+LIVE_BAR_REL = "comms/live_bar/latest.json"
+LIVE_BAR_MAX_AGE_H = 26.0  # the feed runs daily (05:47Z); one late run plus slack, beyond that it reads as stale
+LIVE_BAR_SCHEMA = 1
+LIVE_BAR_PASS = "pass"
+LIVE_BAR_MIN_N = 20  # OPERATING-PLAN § 2: ">= 20 closed live trades"
+
+
+def _live_bar_read(leg: str, root: Path) -> Dict[str, Any]:
+    """The leg's live-bar row from the committed daily feed, with an explicit read_state (never a collapsed 0/None)."""
+    from datetime import datetime, timezone
+    out: Dict[str, Any] = {"feed": LIVE_BAR_REL, "read_state": "could_not_look", "verdict": None, "n": None,
+                           "sum_r": None, "mean_r": None, "lcb80": None, "measured_subset_verdict": None,
+                           "measured_subset_n": None, "pooled": None, "generated_at": None, "age_h": None,
+                           "rule": None}
+    doc = _json(root / LIVE_BAR_REL)
+    if doc is None:
+        out["why"] = f"{LIVE_BAR_REL} is absent or unreadable"
+        return out
+    if doc.get("schema") != LIVE_BAR_SCHEMA:
+        out["why"] = f"{LIVE_BAR_REL} schema={doc.get('schema')!r}, this resolver reads {LIVE_BAR_SCHEMA}"
+        return out
+    ts = _parse_ts(doc.get("generated_at"))
+    if ts is None:
+        out["why"] = f"{LIVE_BAR_REL} carries no parseable generated_at"
+        return out
+    age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600.0
+    out.update({"generated_at": doc.get("generated_at"), "age_h": round(age_h, 2), "rule": doc.get("rule")})
+    if age_h > LIVE_BAR_MAX_AGE_H or age_h < -1.0:
+        out["read_state"] = "stale"
+        out["why"] = f"{LIVE_BAR_REL} is {age_h:.1f} h old (allowed 0..{LIVE_BAR_MAX_AGE_H:g} h)"
+        return out
+    row = (doc.get("legs") or {}).get(leg)
+    if not isinstance(row, dict):
+        out["read_state"] = "leg_absent"
+        out["why"] = f"{leg} is not in {LIVE_BAR_REL}"
+        return out
+    sub = row.get("pnl_measured_subset")
+    out.update({"read_state": "read", "verdict": row.get("verdict"), "n": row.get("n"), "sum_r": row.get("sum_r"),
+                "mean_r": row.get("mean_r"), "lcb80": row.get("lcb80"), "pooled": row.get("pooled"),
+                "measured_subset_verdict": sub.get("verdict") if isinstance(sub, dict) else None,
+                "measured_subset_n": sub.get("n") if isinstance(sub, dict) else None})
+    return out
+
+
+def _live_bar_passes(live: Optional[Dict[str, Any]]) -> bool:
+    """The row's label AND its own numbers (cross-check, RULE ONE 4): n >= 20, sum R > 0, lcb80 > 0; AND the
+    venue-MEASURED-pnl subset passes the same bar on its own n (manager design requirement 2026-11-19, relayed by
+    AM-OPS-4: "net of real costs" must rest on measured pnl, not only on declared R over estimated pnl)."""
+    if not live or live.get("read_state") != "read" or live.get("verdict") != LIVE_BAR_PASS:
+        return False
+    sub_n = live.get("measured_subset_n")
+    if live.get("measured_subset_verdict") != LIVE_BAR_PASS or not isinstance(sub_n, int) or isinstance(sub_n, bool) \
+            or sub_n < LIVE_BAR_MIN_N:
+        return False
+    n, s, lb = live.get("n"), live.get("sum_r"), live.get("lcb80")
+    return (isinstance(n, int) and not isinstance(n, bool) and n >= LIVE_BAR_MIN_N
+            and _num(s) and _finite(s) and s > 0 and _num(lb) and _finite(lb) and lb > 0)
+
+
+def _live_bar_may_carry(e: Exception, bar: Dict[str, Any], live: Optional[Dict[str, Any]]) -> bool:
+    if bar.get("live_bar_path") is not True:
+        return False
+    if isinstance(e, _Refuse) and getattr(e, "clause", None) == "R-AFFORD":
+        return False  # decisive: the account cannot size the leg
+    return _live_bar_passes(live)
+
+
+def _live_bar_path(leg: str, account: str, stage0: Exception, live: Dict[str, Any], root: Path,
+                   acfg: Dict[str, Any], ctx: Dict[str, Any]) -> None:
+    verdict = REFUSE if isinstance(stage0, _Refuse) else NEEDS_DATA
+    clause = getattr(stage0, "clause", None)
+    ctx["evidence"]["promotion_path"] = "live_bar"
+    ctx["evidence"]["stage0_path"] = {"verdict": verdict, "clause": clause,
+                                      "detail": getattr(stage0, "detail", str(stage0))}
+    if clause == "R-AFFORD":
+        raise stage0  # an affordability NEEDS_DATA stays NEEDS_DATA: the live bar measures edge, not sizing
+    # Affordability still binds. With a committed record, the sizer runs against its setups, as on the Stage-0 path;
+    # without one there is nothing to size, so it is NEEDS_DATA (never a pass by default).
+    record = b1.load_record(leg, root / EVIDENCE_DIR_REL)
+    if record is None or not in_repo(root, record.get("source_run")):
+        why = (f"{leg} clears the live bar, but no committed record with a source_run gives the sizer setups to "
+               f"size on {account}")
+        raise _NeedsData("R-AFFORD", why, _afford_data_task(account, why))
+    exchange = str((acfg.get(account) or {}).get("exchange") or "")
+    _affordability(leg, account, exchange, record, acfg, root, ctx)
+    ctx["caveats"] = list(dict.fromkeys(ctx["caveats"]))  # the Stage-0 attempt may already have run it
+    ctx["caveats"].append(
+        f"LIVE-BAR PATH: promoted on the live bar (n={live.get('n')}, sum R {live.get('sum_r')}, lcb80 "
+        f"{live.get('lcb80')}; venue-measured subset pass at n={live.get('measured_subset_n')}; pooled "
+        f"{live.get('pooled')}); Stage 0 read {verdict} at {clause}. The conflict rule "
+        "(live wins) requires a fidelity-check unit drafted WITH this promotion, never after it.")
 
 
 # ── R-HOLDOUT: a pass on a pre-registered, never-seen latest span ────────────
