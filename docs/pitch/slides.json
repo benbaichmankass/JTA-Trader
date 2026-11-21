@@ -1,0 +1,1183 @@
+{
+ "schema": "jta-pitch-slides/v1",
+ "built_from_commit": "38cf4a56e",
+ "built_on": "2026-11-17",
+ "slide_count": 16,
+ "spec": {
+  "audience": "smart non-expert",
+  "numbers": "ratios only, no $, each tagged MEASURED or ESTIMATED",
+  "length": "deep dive, 20+ slides",
+  "close": "roadmap, no ask"
+ },
+ "refresh": "python3 docs/pitch/build_deck.py (recomputes every number from the files named in `source`)",
+ "note": "live_endpoint_candidate names a read-only API route that serves the same underlying data; a UI that wires it must verify the field it reads matches `source` before showing the number.",
+ "slides": [
+  {
+   "number": 1,
+   "section": "Opening",
+   "title": "JTA Trader — the edge comes from the research loop, not the plumbing",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [
+    "The edge comes from the research loop, not the plumbing",
+    "How a trade flows · how the models keep getting better · what the research has produced",
+    "Project walkthrough · 2026-11-17"
+   ],
+   "notes": "Automated trading infrastructure is common; what is hard is finding an edge that survives costs and keeps surviving. This deck is about the research and development loop that produces that edge, especially on the machine-learning side, and about what it has produced so far. One slide covers how the system runs. Every number is either MEASURED, read straight from a committed file or result, or ESTIMATED, resting on an assumption, and the tag says which. R means one unit of risk: what a trade loses if its stop is hit.",
+   "numbers": [
+    {
+     "label": "build date",
+     "value": "2026-11-17",
+     "provenance": "MEASURED",
+     "source": "docs/pitch/build_deck.py (build time, UTC)",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "live_refreshable": false
+  },
+  {
+   "number": 2,
+   "section": "The trade pipeline",
+   "title": "The trading pipeline",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [
+    "Step 3 runs two kinds of decision-makers — Rule strategies: trend breakouts, pullbacks, scalps and others, each with its own backtest evidence. ML models: learned entry models that propose trades too.",
+    "Same path for both — Steps 4–10 treat them alike: intent layer, risk manager, stop and target, execution, live management, reconciliation.",
+    "The loop — Step 11 grades everything. New evidence changes rosters and settings; retrained models re-enter at step 3."
+   ],
+   "notes": "This is the trading pipeline map we built and use on the Work tab, drawn from the same source. Every trade passes through these eleven steps. At step 3, two kinds of decision-makers run side by side: hand-designed rule strategies, such as trend breakouts, pullbacks in a trend and short-term scalps, each with its own backtest evidence; and machine-learning models that propose trades of their own. Both feed the same intent layer, risk manager, bracket and execution steps, so a model gets no shortcut around the risk controls. Step 11 grades every trade and test, and its two dashed arrows are the loop: new evidence changes which strategies run and with what settings, and retrained, promoted models go back in at step 3.",
+   "numbers": [],
+   "sources": [],
+   "visual": "pipeline_image",
+   "image": "docs/pitch/pipeline_map.png",
+   "mermaid_source": "docs/reference/trading-pipeline-map.md § The flow",
+   "footnote": "The map: docs/reference/trading-pipeline-map.md § The flow (mermaid source rendered verbatim; live at /api/bot/work/pipeline-map).",
+   "live_refreshable": false
+  },
+  {
+   "number": 3,
+   "section": "The trade pipeline",
+   "title": "From data to a sized order: steps 1–6",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "1. Data in — Candles, feeds and ML features from every venue.",
+    "2. Signal builders — Each strategy computes its own inputs.",
+    "3. Strategies + ML — Rule strategies and ML models propose trades.",
+    "4. Intent layer — Combine; step aside in losing regimes; elect one.",
+    "5. Routing — Which accounts; two on/off switches.",
+    "6. Risk + sizing — Size in R; daily drawdown brake; exposure."
+   ],
+   "notes": "The first half of the map, from market data to an order that is ready to send. Data arrives from every venue. Each strategy computes its own inputs. At step 3, rule strategies and ML models propose trades side by side. The intent layer combines the proposals, steps aside where a strategy loses in the current market regime, and elects one trade per market. Routing decides which accounts carry the strategy, behind exactly two switches: account live or dry run, strategy live or shadow. The risk manager then sizes the trade in R and applies the daily drawdown brake. Today 8 strategies trade real money and 51 trade on the demo floor; 11 of 14 accounts send orders.",
+   "numbers": [
+    {
+     "label": "production legs",
+     "value": 8,
+     "provenance": "MEASURED",
+     "source": "scripts/ops/strategy_status.py",
+     "live_endpoint_candidate": "/api/bot/strategies"
+    },
+    {
+     "label": "testing legs",
+     "value": 51,
+     "provenance": "MEASURED",
+     "source": "scripts/ops/strategy_status.py",
+     "live_endpoint_candidate": "/api/bot/strategies"
+    },
+    {
+     "label": "accounts sending orders",
+     "value": 11,
+     "provenance": "MEASURED",
+     "source": "config/accounts.yaml (mode: live)",
+     "live_endpoint_candidate": "/api/bot/config"
+    }
+   ],
+   "sources": [],
+   "stages": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "footnote": "MEASURED: 8 production and 51 testing legs (scripts/ops/strategy_status.py); 11 of 14 accounts live (config/accounts.yaml). Steps from docs/reference/trading-pipeline-map.md.",
+   "live_refreshable": true
+  },
+  {
+   "number": 4,
+   "section": "The trade pipeline",
+   "title": "Trade management: entry, in-trade, exit",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "1. Entry — Stop-loss defines 1R; profit target is a real prediction (the TP doctrine).",
+    "2. In-trade — Either bracket moves, part-close or close, triggered by live market evidence.",
+    "3. Review desk — Every open trade reviewed; options priced from the strategy's own history. 789 reviews on record.",
+    "4. Exit + grade — Close reason recorded, trade graded, grade becomes a training label."
+   ],
+   "notes": "The second half of the map, steps 7 to 10, where the trade is actually managed. At entry every order carries a protective stop, which defines 1R, and a profit target that must be a real prediction, not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the position can be part-closed or closed, but only when something in the live market triggers it: structure, volatility, momentum, regime or a scheduled event. Never the profit alone, never the clock alone. A review function looks at every open trade, prices each option from that strategy's own backtest history, and since 14 November its recommended actions are applied automatically through each account's own risk checks, with a ping to the operator. At the exit the close reason is recorded and graded, and the grade feeds research. Honest status on targets: on real money 7 of 8 routings set a real target at entry, but only 1 of 8 revise it during the trade.",
+   "numbers": [
+    {
+     "label": "real-money routings with an entry target",
+     "value": "7 of 8",
+     "provenance": "MEASURED",
+     "source": "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "real-money routings revising the target in-trade",
+     "value": "1 of 8",
+     "provenance": "MEASURED",
+     "source": "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "live-trade reviews on record",
+     "value": 789,
+     "provenance": "MEASURED",
+     "source": "comms/live_review/reviews.jsonl (line count)",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    7,
+    8,
+    9,
+    10
+   ],
+   "footnote": "MEASURED: real-money target at entry 7 of 8 routings, revised in-trade 1 of 8 (scripts/ci/check_tp_doctrine.py); reviews: comms/live_review/reviews.jsonl. Rules: docs/ARCHITECTURE-CANONICAL.md § TP doctrine, § Active management.",
+   "live_refreshable": false
+  },
+  {
+   "number": 5,
+   "section": "How we find edge",
+   "title": "The R&D loop: how a model earns, and keeps, its place",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [
+    "1. Diagnose — Why is the champion not better? Name the lever: label, features, threshold, exit.",
+    "2. Pre-register — Test, statistic and pass mark written down before the run.",
+    "3. Test — Held-out data, full cost stack, challenger vs champion on the same trades.",
+    "4. Decide — Pass → real money + mirror. Fail → back to Diagnose.",
+    "5. Monitor — Mirror net-negative after costs → demo floor, keep iterating."
+   ],
+   "notes": "This is the core of the project. Every strategy and every model sits in the same loop. Start from a diagnosis of why the current version is not better. Write down the test and its pass mark before running it. Run it on data held out from tuning, charged with the full cost of trading. Compare the challenger with the champion, the version in use, on the same trades and the same costs. Pass, and it goes straight to real money with a paper mirror. Fail, and the result is not thrown away: it becomes the next diagnosis. A live model whose mirror goes net-negative after costs drops back to the demo floor and keeps generating data while it is improved. Retirement needs evidence that no lever helps, never a fixed number of attempts.",
+   "numbers": [],
+   "sources": [
+    "docs/plans/ml-pipeline-design-2026-10-29.md (champion/challenger)"
+   ],
+   "stages": [
+    11
+   ],
+   "footnote": "Rules: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 (no step between a backtest pass and real money, 2026-11-12; the held-out pass governs real money) and § “What does not pass goes back into research”.",
+   "live_refreshable": false
+  },
+  {
+   "number": 6,
+   "section": "How we find edge",
+   "title": "Two real cycles: one ML model, one rule strategy",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "Equity ML model (Foxhound-4) — 1 · Promoted: held-out +0.49R per trade, n 207. 2 · Diagnosis: trades cluster in volatile months. 3 · Test: does the score predict direction or cost? → cost (IC −0.53). FAIL. 4 · Next: a cost-neutral training target, registered 17 Nov.",
+    "Long-bond pullback (rule strategy) — 1 · One-year record: −6.7R, n 94. FAIL: costs were 3.5× the gross edge. 2 · Fix: fewer trades, chosen on early data; held-back read +4.5R, n 111. PASS. 3 · Confirmed on unseen 2018–2020 history. PASS. 4 · Long only, 3.5R target → real money 14 Nov; record +8.2R, n 75, 3/4 folds +."
+   ],
+   "notes": "Two worked examples of the loop from the last three weeks. On the left, the equity entry model: promoted on a strong held-out result, then a pre-registered test found its score mostly tracks how cheap a trade is relative to its risk, not direction, so the next challenger targets that. On the right, a rule strategy, the long-bond fund pullback: its one-year record failed because it traded too often for its small edge and costs ate it. Filters that cut trade frequency, chosen on early data and judged on held-back data, turned it positive; it was confirmed on older history it had never seen; the operator approved a long-only version with a real 3.5R target, and it went to real money on 14 November.",
+   "numbers": [
+    {
+     "label": "Foxhound-4 held-out expectancy at promotion",
+     "value": 0.492,
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Foxhound-4 score IC vs cost per R",
+     "value": -0.527,
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261111-207f-03.yaml grading.reason",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "TLT pullback one-year record (before)",
+     "value": -6.73,
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261101-78fc-56.yaml iteration.diagnosis",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "TLT pullback held-back read after the fix",
+     "value": 4.48,
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261112-c1b4-02.yaml iteration.diagnosis (from RQ-20261111-203c-02)",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "TLT pullback promoted record net R",
+     "value": 8.17,
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/tlt_pullback_1h.json",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [
+    "research/queue/RQ-20261111-207f-03.yaml",
+    "research/queue/RQ-20261117-c21d-06.yaml",
+    "research/queue/RQ-20261101-78fc-56.yaml",
+    "research/queue/RQ-20261111-203c-02.yaml",
+    "research/queue/RQ-20261112-c1b4-02.yaml",
+    "research/queue/RQ-20261114-db1a-14.yaml"
+   ],
+   "stages": [
+    3,
+    11
+   ],
+   "footnote": "MEASURED: graded units 207f-03, c21d-06 (Foxhound-4); 78fc-56, 203c-02, c1b4-02, db1a-14 and comms/strategy_evidence/tlt_pullback_1h.json (long-bond pullback). Every test was registered before it ran, net of the full cost stack.",
+   "live_refreshable": false
+  },
+  {
+   "number": 7,
+   "section": "How we find edge",
+   "title": "What our strategies have delivered",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [],
+   "notes": "The track record of the rule-based strategies, the part of the system that has run long enough to have one; the ML models are too new and are judged on their offline evidence. The table shows only strategies with a positive live record, on any book. For context, if asked: across all 57 rule strategies, all-time realized results are negative, -156.2R over 478 real-money trades and -106.3R over 1111 demo trades. That total includes strategies that have since failed their backtests and been taken off real money, which is the ladder working. The table shows the production strategies with a positive actual record, and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result confirmed against the venue, shown as a small tag.",
+   "numbers": [
+    {
+     "label": "live real money ΣR: trend_donchian",
+     "value": 7.64,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: ict_scalp_5m",
+     "value": 4.94,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: trend_donchian_eth_4h",
+     "value": 4.66,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live real money ΣR: tlt_pullback_1h",
+     "value": 1.29,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian",
+     "value": 23.71,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: uso_trend_1h",
+     "value": 11.77,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian_ada_4h",
+     "value": 10.74,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ada_pullback_2h",
+     "value": 10.35,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ict_scalp_sol_15m",
+     "value": 9.32,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ict_scalp_sol_5m",
+     "value": 9.29,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian_sol_4h",
+     "value": 8.91,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ict_scalp_mgc_15m",
+     "value": 8.24,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ict_scalp_eth_15m",
+     "value": 8.11,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: e4_oi_shock_1h",
+     "value": 7.84,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian_eth_prop",
+     "value": 6.4,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian_avax_4h",
+     "value": 6.38,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: ief_pullback_1d",
+     "value": 5.9,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: trend_donchian_1h",
+     "value": 2.36,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: eth_pullback_prop_2h",
+     "value": 1.85,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: iaum_pullback_1d",
+     "value": 1.34,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "live demo ΣR: mgc_trend_1h",
+     "value": 1.07,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "rule strategies net positive live (any book)",
+     "value": 20,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "rule strategies, real money all-time ΣR",
+     "value": -156.2,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    },
+    {
+     "label": "rule strategies, demo all-time ΣR",
+     "value": -106.3,
+     "provenance": "MEASURED",
+     "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)",
+     "live_endpoint_candidate": "/api/bot/performance?window=all"
+    }
+   ],
+   "sources": [],
+   "stages": [
+    3
+   ],
+   "headline": "20 rule strategies are net positive live",
+   "table": {
+    "header": [
+     "Strategy",
+     "Book",
+     "Live result (actual)",
+     "Backtest (net R, out of sample)"
+    ],
+    "rows": [
+     [
+      "Trend breakout · BTC 1h [trend_donchian] · testing",
+      "real money",
+      "+7.64R · n 15 · E[R] +0.51 · 5 of 15 confirmed",
+      "-16.2R · n 71 · 1/4 folds +"
+     ],
+     [
+      "ICT scalp · BTC 5m · testing",
+      "real money",
+      "+4.94R · n 35 · E[R] +0.14 · 6 of 35 confirmed",
+      "-42.5R · n 146 · 0/4 folds +"
+     ],
+     [
+      "Ether trend breakout (4-hour bars) · testing",
+      "real money",
+      "+4.66R · n 19 · E[R] +0.24 · 6 of 19 confirmed",
+      "+30.9R · n 135 · 3/4 folds +"
+     ],
+     [
+      "Long-bond-ETF pullback (hourly bars) · production",
+      "real money",
+      "+1.29R · n 1 · E[R] +1.29 · 0 of 1 confirmed",
+      "+8.2R · n 75 · 3/4 folds +"
+     ],
+     [
+      "Trend breakout · BTC 1h [trend_donchian] · testing",
+      "demo",
+      "+23.71R · n 29 · E[R] +0.82 · 4 of 29 confirmed",
+      "-16.2R · n 71 · 1/4 folds +"
+     ],
+     [
+      "Trend · USO 1h · testing",
+      "demo",
+      "+11.77R · n 24 · E[R] +0.49 · 12 of 24 confirmed",
+      "+18.9R · n 58 · 4/4 folds +"
+     ],
+     [
+      "Trend breakout · ADA 4h · testing",
+      "demo",
+      "+10.74R · n 25 · E[R] +0.43 · 5 of 25 confirmed",
+      "-3.4R · n 55 · 2/4 folds +"
+     ],
+     [
+      "Cardano pullback (2-hour bars) · production",
+      "demo",
+      "+10.35R · n 52 · E[R] +0.20 · 13 of 52 confirmed",
+      "+27.1R · n 67 · 4/4 folds +"
+     ]
+    ]
+   },
+   "rest_line": "Also net positive: ICT scalp · SOL 15m (demo) +9.3R · ICT scalp · SOL 5m (demo) +9.3R · Trend breakout · SOL 4h (demo) +8.9R · ICT scalp · MGC 15m (demo) +8.2R · ICT scalp · ETH 15m (demo) +8.1R · Event: open-interest shock (1h) (demo) +7.8R · Trend breakout · ETH 1h (prop variant) (demo) +6.4R · Trend breakout · AVAX 4h (demo) +6.4R · Pullback · IEF 1d (demo) +5.9R · Trend breakout · BTC 1h [trend_donchian_1h] (demo) +2.4R · Pullback · ETH 2h (demo) +1.9R · Gold-ETF pullback (daily bars) (demo) +1.3R · Trend · MGC 1h (demo) +1.1R",
+   "track_record": {
+    "aggregate": {
+     "rm": {
+      "n": 478,
+      "sr": -156.2,
+      "er": -0.32677824267782424,
+      "conf": 47,
+      "legs": 17,
+      "pos": 4
+     },
+     "paper": {
+      "n": 1111,
+      "sr": -106.33,
+      "er": -0.0957065706570657,
+      "conf": 310,
+      "legs": 54,
+      "pos": 17
+     }
+    },
+    "as_of": "2026-11-17",
+    "source": "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)"
+   },
+   "footnote": "Live results are real but small samples; edge is established offline, live checks it holds. MEASURED, journal all-time to 2026-11-17 (pipeline-map per-leg table); backtests comms/strategy_evidence/. ML legs and the AI desk excluded.",
+   "live_refreshable": true
+  },
+  {
+   "number": 8,
+   "section": "The ML families",
+   "title": "The model families, placed on the map",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [],
+   "notes": "Each family sits on the step where it decides. Most are gradient-boosted decision trees: many small trees added together, each correcting the last; they suit tabular market data and retrain fast. The filter is a deliberately simple logistic regression. Three decisions have no model yet and run on rules, which we state rather than hide. The ML models have only been live a short time, so their story is the R&D process and the offline evidence; the rule strategies carry the live track record.",
+   "numbers": [],
+   "sources": [
+    "docs/reference/model_names.yaml",
+    "ml/served/SERVED_MODELS.yaml",
+    "ml/served/*/model.json",
+    "ml/overlay/overlay_td.json",
+    "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml",
+    "research/queue/RQ-20261117-aadc-05.yaml"
+   ],
+   "stages": [
+    3,
+    4,
+    6,
+    7,
+    9
+   ],
+   "table": {
+    "header": [
+     "Step",
+     "Family · slot",
+     "Model type",
+     "Decides",
+     "Where it stands"
+    ],
+    "rows": [
+     [
+      "3 Strategies",
+      "Foxhound · D3",
+      "Gradient-boosted trees",
+      "Open long, short or nothing",
+      "Real money"
+     ],
+     [
+      "4 Intent layer",
+      "Collie · D2",
+      "Gradient-boosted classifier",
+      "Which market regime",
+      "Advisory on paper"
+     ],
+     [
+      "4 Intent layer",
+      "Beagle · D4",
+      "Logistic regression",
+      "Take or halve a signal",
+      "Live on 2 legs"
+     ],
+     [
+      "6 Risk",
+      "Mastiff · D5",
+      "None yet",
+      "Combine signals on one market",
+      "Research only"
+     ],
+     [
+      "7 Order",
+      "Pointer · D6",
+      "None yet",
+      "Stop and target at entry",
+      "Rule today"
+     ],
+     [
+      "9 Live mgmt",
+      "Labrador · D7",
+      "Gradient-boosted classifier",
+      "Extend the target",
+      "Live on ML trades"
+     ],
+     [
+      "9 Live mgmt",
+      "Labrador · D8",
+      "Close/hold head",
+      "Close now?",
+      "Demo floor"
+     ],
+     [
+      "11 Grade",
+      "Basset · D10",
+      "CUSUM baseline",
+      "Is a strategy fading?",
+      "Baseline tested"
+     ]
+    ]
+   },
+   "footnote": "The ML models have only been live a short time: judge them on the R&D process and offline evidence. MEASURED from model artifacts (ml/served, ml/candidates, ml/overlay, ml/configs) and ml/served/SERVED_MODELS.yaml. The D8 exit head's artifact lives on the trainer; its type is not verified here.",
+   "live_refreshable": false
+  },
+  {
+   "number": 9,
+   "section": "The ML families",
+   "title": "Model card · Foxhound, the entry model (step 3)",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "It scans every market every four hours and asks one question: after costs, would a standard trade here pay? If not, it stays out.",
+    "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules someone wrote down.",
+    "It is judged only on data it never saw while learning.",
+    "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+    "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+    "Widen to new coins only where each coin's own costs still leave a profit."
+   ],
+   "notes": "Foxhound answers the first question of every trade: is there one worth taking right now? Think of a scout that has studied hundreds of thousands of past situations and only signals when the odds after costs look good; most of the time it says nothing. The crypto version trades real money on its held-out result. The equity version showed a much larger held-out result, but our own follow-up found it mostly picks trades that are cheap to make relative to their risk, so the next challenger targets that. A broader test on 51 coins at each coin's own costs failed, which is why it trades only the five it passed on.",
+   "numbers": [
+    {
+     "label": "Crypto model, average result per trade",
+     "value": "+0.037R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Equity model, per trade (mostly a cost effect)",
+     "value": "+0.49R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Refit vs old model (−0.092R) on recent weeks",
+     "value": "+0.0018R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Wider test, 51 coins at own costs: FAIL",
+     "value": "−0.068R",
+     "provenance": "MEASURED",
+     "source": "research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    3
+   ],
+   "card": {
+    "good": [
+     "It scans every market every four hours and asks one question: after costs, would a standard trade here pay? If not, it stays out.",
+     "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules someone wrote down.",
+     "It is judged only on data it never saw while learning."
+    ],
+    "stats": [
+     {
+      "big": "+0.037R",
+      "r": 0.0371,
+      "label": "Crypto model, average result per trade",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 907 · 2025-10 → 2026-09",
+      "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1"
+     },
+     {
+      "big": "+0.49R",
+      "r": 0.4922,
+      "label": "Equity model, per trade (mostly a cost effect)",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 207 · 2025-07 → 2026-10",
+      "source": "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1"
+     },
+     {
+      "big": "+0.0018R",
+      "r": 0.0018,
+      "label": "Refit vs old model (−0.092R) on recent weeks",
+      "prov": "MEASURED",
+      "kind": "offline, 14-day grade",
+      "meta": "n 281 · 2026-10-23 → 11-05",
+      "source": "ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106"
+     },
+     {
+      "big": "−0.068R",
+      "r": -0.068,
+      "bad": true,
+      "label": "Wider test, 51 coins at own costs: FAIL",
+      "prov": "MEASURED",
+      "kind": "offline, held-out",
+      "meta": "n 12,746 decisions · year to 2026-10",
+      "source": "research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)"
+     }
+    ],
+    "next": [
+     "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+     "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+     "Widen to new coins only where each coin's own costs still leave a profit."
+    ]
+   },
+   "live_refreshable": false
+  },
+  {
+   "number": 10,
+   "section": "The ML families",
+   "title": "Model card · Beagle, the signal filter (step 4)",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+    "Like a volume knob, not an off switch, so a wrong call costs little.",
+    "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose.",
+    "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+    "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+    "Regime models: keep only those that beat a simple baseline (72 of 106 proposed for retirement)."
+   ],
+   "notes": "Beagle sits between a strategy's signal and the order. It does not veto; it turns the volume down on signals that look weak, halving their size, on two trend strategies. It is deliberately simple, a logistic regression on nine inputs, because simple models are harder to fool themselves with. It passed a test that it does no harm across 1,830 historical trades. Its first challenger did not beat it, so the next one has to disagree with it more often to be worth testing. The regime family, Collie, also sits at this step; an inventory on 11 November proposed retiring most of its unused models.",
+   "numbers": [
+    {
+     "label": "No-harm test vs taking every signal",
+     "value": "PASS",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Live: halves size on weak signals",
+     "value": "2 legs",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "First challenger vs Beagle",
+     "value": "NOT A WIN",
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261116-cc86-01.yaml grading",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    4
+   ],
+   "card": {
+    "good": [
+     "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+     "Like a volume knob, not an off switch, so a wrong call costs little.",
+     "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose."
+    ],
+    "stats": [
+     {
+      "big": "PASS",
+      "r": null,
+      "label": "No-harm test vs taking every signal",
+      "prov": "MEASURED",
+      "kind": "offline, out-of-sample",
+      "meta": "n 1830 trades · 2020-07 → 2026-10",
+      "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1"
+     },
+     {
+      "big": "2 legs",
+      "r": null,
+      "label": "Live: halves size on weak signals",
+      "prov": "MEASURED",
+      "kind": "live, mechanics only",
+      "meta": "config/overlay_policy.yaml",
+      "source": "ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis"
+     },
+     {
+      "big": "NOT A WIN",
+      "r": null,
+      "bad": true,
+      "label": "First challenger vs Beagle",
+      "prov": "MEASURED",
+      "kind": "offline",
+      "meta": "graded indeterminate · 2026-11-16",
+      "source": "research/queue/RQ-20261116-cc86-01.yaml grading"
+     }
+    ],
+    "next": [
+     "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+     "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+     "Regime models: keep only those that beat a simple baseline (72 of 106 proposed for retirement)."
+    ]
+   },
+   "live_refreshable": false
+  },
+  {
+   "number": 11,
+   "section": "The ML families",
+   "title": "Model card · Labrador, the in-trade manager (steps 7 and 9)",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "Once a trade is open, it re-checks five times where the price is likely to get to.",
+    "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+    "So it can add profit on strong trades without ever cutting a winner short.",
+    "Re-check it once 300 live trades have closed since 12 November.",
+    "Test checking in on market events, not only on a timer.",
+    "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin."
+   ],
+   "notes": "Labrador manages a trade that is already open. At five check-ins it re-estimates how far the trade is likely to run and can only move the target further out, never closer, so it cannot cut a winner short. Its registered forward test passed and its live gain is small but positive. Its sibling, the exit head, decides whether to close now; it failed out of sample on two of three markets and only acts on the demo floor. A new training label for it showed a small gain that missed the pass bar, and the next version is queued.",
+   "numbers": [
+    {
+     "label": "Registered forward test, per trade: PASS",
+     "value": "+0.0081R",
+     "provenance": "MEASURED",
+     "source": "research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Live policy (extend only), per trade",
+     "value": "+0.0008R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Exit head (close now?): FAIL",
+     "value": "-0.0141R",
+     "provenance": "MEASURED",
+     "source": "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    7,
+    9
+   ],
+   "card": {
+    "good": [
+     "Once a trade is open, it re-checks five times where the price is likely to get to.",
+     "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+     "So it can add profit on strong trades without ever cutting a winner short."
+    ],
+    "stats": [
+     {
+      "big": "+0.0081R",
+      "r": 0.0081,
+      "label": "Registered forward test, per trade: PASS",
+      "prov": "MEASURED",
+      "kind": "offline, forward",
+      "meta": "n 868 · Oct 2026",
+      "source": "research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)"
+     },
+     {
+      "big": "+0.0008R",
+      "r": 0.0008,
+      "label": "Live policy (extend only), per trade",
+      "prov": "MEASURED",
+      "kind": "offline replay",
+      "meta": "n 907 · 2025-10 → 2026-09",
+      "source": "ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1"
+     },
+     {
+      "big": "-0.0141R",
+      "r": -0.0141,
+      "bad": true,
+      "label": "Exit head (close now?): FAIL",
+      "prov": "MEASURED",
+      "kind": "offline, out-of-sample",
+      "meta": "n 1041 · 3 folds 2022–2026",
+      "source": "ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1"
+     }
+    ],
+    "next": [
+     "Re-check it once 300 live trades have closed since 12 November.",
+     "Test checking in on market events, not only on a timer.",
+     "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin."
+    ]
+   },
+   "live_refreshable": false
+  },
+  {
+   "number": 12,
+   "section": "What the R&D has produced",
+   "title": "Model card · Basset, the early-warning light (step 11)",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "It watches every strategy's results against what its backtest promised, trade by trade.",
+    "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+    "Today it is a warning light, not an automatic switch, because the switch failed a fresh test.",
+    "Keep the alarm as a warning in reviews; it does not switch anything off.",
+    "Redesign the action before retesting, on data it has never seen.",
+    "Find out why AI grades of past trades ran opposite to their results before using them as a signal."
+   ],
+   "notes": "The newest family, and an honest one to show. Basset's job is to spot a strategy that is starting to fade before the losses pile up. The first baseline is a classic statistical alarm, a CUSUM: it adds up how far each strategy's live results fall short of its backtest and rings when the shortfall builds up. It works as a warning, better than chance in its test window. But stopping strategies when it rang did not hold up on a fresh window of data, so it stays a warning light and does not act. Both results are recorded, which is exactly how the loop is meant to work.",
+   "numbers": [
+    {
+     "label": "Spots a fading strategy (0.5 = coin flip): PASS",
+     "value": "0.654",
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261117-aadc-05.yaml grading.reason",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Stopping on the alarm beat random stops, in-window",
+     "value": "PASS",
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261117-aadc-07.yaml grading.reason",
+     "live_endpoint_candidate": null
+    },
+    {
+     "label": "Same rule on a fresh window: did not replicate",
+     "value": "FAIL",
+     "provenance": "MEASURED",
+     "source": "research/queue/RQ-20261117-aadc-09.yaml grading.reason",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    11
+   ],
+   "card": {
+    "good": [
+     "It watches every strategy's results against what its backtest promised, trade by trade.",
+     "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+     "Today it is a warning light, not an automatic switch, because the switch failed a fresh test."
+    ],
+    "stats": [
+     {
+      "big": "0.654",
+      "r": null,
+      "label": "Spots a fading strategy (0.5 = coin flip): PASS",
+      "prov": "MEASURED",
+      "kind": "offline, in-window",
+      "meta": "AUC · n 664 points · 24 strategies",
+      "source": "research/queue/RQ-20261117-aadc-05.yaml grading.reason"
+     },
+     {
+      "big": "PASS",
+      "r": null,
+      "label": "Stopping on the alarm beat random stops, in-window",
+      "prov": "MEASURED",
+      "kind": "offline, in-window",
+      "meta": "p 0.0115 · 654 skipped trades",
+      "source": "research/queue/RQ-20261117-aadc-07.yaml grading.reason"
+     },
+     {
+      "big": "FAIL",
+      "r": null,
+      "bad": true,
+      "label": "Same rule on a fresh window: did not replicate",
+      "prov": "MEASURED",
+      "kind": "offline, fresh window",
+      "meta": "p 0.994 · 620 skipped · before 2026-05",
+      "source": "research/queue/RQ-20261117-aadc-09.yaml grading.reason"
+     }
+    ],
+    "next": [
+     "Keep the alarm as a warning in reviews; it does not switch anything off.",
+     "Redesign the action before retesting, on data it has never seen.",
+     "Find out why AI grades of past trades ran opposite to their results before using them as a signal."
+    ]
+   },
+   "live_refreshable": false
+  },
+  {
+   "number": 13,
+   "section": "What the R&D has produced",
+   "title": "Produced so far 2 — research throughput, and how much fails",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "1930 questions done — 412 passed · 1088 failed · 267 indeterminate. 27% pass rate on decisive results.",
+    "54 strategy backtests — 32 passed, 22 failed, after the full cost stack. Scalps: 0 of 7 passed.",
+    "316 questions queued — Each written down with its data, test and pass mark before it runs. A dispatcher runs them on cloud runners."
+   ],
+   "notes": "The volume behind the results. The research queue has 1930 completed questions. Of the graded ones, 412 passed their pre-registered rule and 1088 failed, with 267 indeterminate because the sample was too small to call. That is a pass rate of 27% on decisive results. Strategy evidence tells the same story: of 54 measured backtests, 32 passed. The short-term scalp family passed 0 of its 7 tests and is not on real money. Most ideas fail, and the system is built so that they fail cheaply, offline, before any money is at risk.",
+   "numbers": [
+    {
+     "label": "research questions done",
+     "value": 1930,
+     "provenance": "MEASURED",
+     "source": "research/queue/*.yaml (status: done)",
+     "live_endpoint_candidate": "/api/bot/research/catalog"
+    },
+    {
+     "label": "graded pass / fail / indeterminate",
+     "value": "412 / 1088 / 267",
+     "provenance": "MEASURED",
+     "source": "research/queue/*.yaml (grading.verdict, status done)",
+     "live_endpoint_candidate": "/api/bot/research/catalog"
+    },
+    {
+     "label": "pass rate on decisive results",
+     "value": "27%",
+     "provenance": "MEASURED",
+     "source": "research/queue/*.yaml (grading.verdict)",
+     "live_endpoint_candidate": "/api/bot/research/catalog"
+    },
+    {
+     "label": "questions queued",
+     "value": 316,
+     "provenance": "MEASURED",
+     "source": "research/queue/*.yaml (status: queued)",
+     "live_endpoint_candidate": "/api/bot/research/catalog"
+    },
+    {
+     "label": "measured strategy backtests passed",
+     "value": "32 of 54",
+     "provenance": "MEASURED",
+     "source": "comms/strategy_evidence/*.json (decision_rule.verdict)",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    11
+   ],
+   "footnote": "MEASURED: research/queue/*.yaml (status + grading.verdict; 153 done units carry no verdict); comms/strategy_evidence/*.json. Commit 38cf4a56e.",
+   "live_refreshable": true
+  },
+  {
+   "number": 14,
+   "section": "How it runs",
+   "title": "How it runs automatically, in one slide",
+   "kicker": null,
+   "provenance": [
+    "MEASURED"
+   ],
+   "bullets": [
+    "Venues — Crypto perpetual futures, US funds and futures, and prop-firm accounts. 11 of 14 accounts sending orders.",
+    "Two switches — Account: live or dry run. Strategy: live or shadow. No hidden third switch; never self-halts.",
+    "Run by agents — AI agent sessions do the research and reviews; 23 operator-granted mandates let evidence-backed decisions proceed."
+   ],
+   "notes": "The infrastructure, briefly. The trader runs around the clock on cloud servers, on crypto, US funds and futures venues, plus prop-firm accounts. 11 of 14 accounts are switched on to send orders. Exactly two switches decide whether something trades: one per account, one per strategy. It never switches itself off: failures are contained to one trade or job and retried. Day to day, AI agent sessions run the research, reviews and bookkeeping under 23 standing mandates the operator has granted; agents may propose a mandate, only the operator grants one. Real money excludes fossil-fuel funds by the operator's policy.",
+   "numbers": [
+    {
+     "label": "accounts sending orders",
+     "value": 11,
+     "provenance": "MEASURED",
+     "source": "config/accounts.yaml (mode: live)",
+     "live_endpoint_candidate": "/api/bot/config"
+    },
+    {
+     "label": "accounts configured",
+     "value": 14,
+     "provenance": "MEASURED",
+     "source": "config/accounts.yaml",
+     "live_endpoint_candidate": "/api/bot/config"
+    },
+    {
+     "label": "mandates granted",
+     "value": 23,
+     "provenance": "MEASURED",
+     "source": "config/mandates.yaml (mandates)",
+     "live_endpoint_candidate": null
+    }
+   ],
+   "sources": [],
+   "stages": [
+    1,
+    2,
+    5,
+    8,
+    10
+   ],
+   "footnote": "MEASURED: config/accounts.yaml, config/mandates.yaml; rules docs/CLAUDE-RULES-CANONICAL.md § Prime Directive, CLAUDE.md § The two execution gates; config/values_exclusions.yaml.",
+   "live_refreshable": true
+  },
+  {
+   "number": 15,
+   "section": "Where it goes next",
+   "title": "Roadmap: the next ML milestone at each decision",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [],
+   "notes": "Where the loop goes next, decision by decision. The entry model's next challenger tests a cost-neutral target. The regime family is being pruned to the heads that beat their baseline. The empty slots each have a first question: predicted brackets at entry, combining several signals on one market, cheaper order placement, and whether a learned review of closed trades detects a fading strategy earlier than a simple statistical alarm. Alongside: more ML in the live loops, the trading desk made production-ready, and more labelled outcomes, which are the binding constraint. The deck ends here: no request, just the plan.",
+   "numbers": [],
+   "sources": [
+    "docs/roadmap/milestones.yaml (G4: L-ML-LIVE, L-ML-MECE, L-REGIME, L-DESK-V1, L-DATA, L-ML-AGGREGATOR)",
+    "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2–3",
+    "docs/plans/ML-CONSOLIDATION-2026-11-11.md"
+   ],
+   "stages": [
+    3,
+    4,
+    6,
+    7,
+    8,
+    9,
+    11
+   ],
+   "table": {
+    "header": [
+     "Slot",
+     "Next milestone"
+    ],
+    "rows": [
+     [
+      "D3 Entry",
+      "Cost-neutral training target vs the live recipe (registered 2026-11-17)"
+     ],
+     [
+      "D2 Regime",
+      "Keep only heads that beat their baseline; retire the rest"
+     ],
+     [
+      "D4 Filter / D7–D8",
+      "Extend proven in-trade actions; retest the exit head per market"
+     ],
+     [
+      "D6 Bracket",
+      "Does a predicted stop and target beat each strategy's fixed bracket?"
+     ],
+     [
+      "D5 Aggregate",
+      "Offline research: combine several signals on one market"
+     ],
+     [
+      "D9 Execution",
+      "Cut realised trading cost against today's order types"
+     ],
+     [
+      "D10 Review",
+      "Does a learned grade spot a fading strategy earlier than a CUSUM alarm on R?"
+     ],
+     [
+      "Across slots",
+      "ML in the live loops · trading desk V1 · more labelled outcomes"
+     ]
+    ]
+   },
+   "footnote": "Source: ROADMAP.md live block (docs/roadmap/milestones.yaml, goal G4) and the ML plan's slot questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).",
+   "live_refreshable": false
+  },
+  {
+   "number": 16,
+   "section": "Where it goes next",
+   "title": "ML infrastructure roadmap",
+   "kicker": null,
+   "provenance": [],
+   "bullets": [
+    "Infrastructure we're building — 1 · Entry and exit data published as GPU datasets → the diagnosed entry and exit questions can run on GPU. 2 · Pooled reads across a strategy family → bigger samples in every test. 3 · Live results as a column in the promotion packet → live evidence feeds the ladder (after the 18 Nov reset). 4 · A benchmark for in-trade check-ins → test acting on market events, not only a timer. 5 · A new teacher label for the review student model → the first AI grade ran opposite to results.",
+    "How we'll get more powerful models — 1 · More and better labels: the binding constraint on every model. 2 · New information, not more price data: a news-layer veto and prediction-market surprises. 3 · New model families, tested fairly: a sequence model lost and a tabular foundation model tied; next tries run on GPU. 4 · Regime-transition research: spotting when markets change state. 5 · Faster iteration: every ML test runs the same registered-rule pipeline as strategy tests."
+   ],
+   "notes": "The operator asked what comes next for the ML infrastructure and for building more powerful models. Left, the infrastructure being built and what each piece unlocks; every item is a filed build or a queued research unit. Right, how the models get more powerful. The lesson so far is that labels and new information, not computing power, are the binding constraint: a sequence model lost to gradient-boosted trees on regime, and a tabular foundation model only tied. So GPU time is pointed at the questions with a diagnosis behind them, once their data is published where the GPU can read it.",
+   "numbers": [],
+   "sources": [
+    "PI-20261117-ZQKSKUGH-0001 (Kaggle GPU datasets)",
+    "PI-20261117-NIVCJP7T-0007 (pooled cells)",
+    "PI-20261117-LSFHBH4A-0007 (live-performance promotion path, post-reset)",
+    "research/queue/RQ-20261117-c21d-04.yaml (check-in cadence)",
+    "CJ-LABEL-ALTERNATIVE (student teacher label)",
+    "PI-20261117-LSFHBH4A-0004 (regime-transition research)",
+    "ROADMAP.md § AI trader (ML) — build plan (tracks D, N, F)"
+   ],
+   "stages": [
+    1,
+    11
+   ],
+   "footnote": "Sources: work-store items PI-20261117-ZQKSKUGH-0001, -NIVCJP7T-0007, -LSFHBH4A-0007, -LSFHBH4A-0004, CJ-LABEL-ALTERNATIVE; unit RQ-20261117-c21d-04; ROADMAP.md § AI trader (ML) build plan. Dates only where a plan states one.",
+   "live_refreshable": false
+  }
+ ]
+}
