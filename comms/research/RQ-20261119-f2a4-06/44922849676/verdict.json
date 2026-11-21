@@ -1,0 +1,460 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "slv_trend_1h: 74 trades in the baseline arm 'S26' on SLV 1h candles 2025-06-02 .. 2026-11-11 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'S26', 'S53']",
+  "n": 74,
+  "measurement": {
+    "leg": "slv_trend_1h",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "S26",
+      "net_r": 25.5456,
+      "n": 74,
+      "max_drawdown_r": 11.9065,
+      "folds_positive": 2,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=25.5456 with 2/4 positive folds (needs > 0 and >= 3)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 74,
+        "net_r": 38.024,
+        "net_r_fee_only": 40.995,
+        "max_drawdown_r": 10.0811,
+        "by_outcome": {
+          "stop": 42,
+          "take_profit": 16,
+          "trail_stop": 16
+        },
+        "mean_bars_held": 15.959,
+        "net_r_per_capital_day": 0.7727,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 24,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.3
+        },
+        "data_start": "2025-06-02 13:00:00+00:00",
+        "data_end": "2026-11-11 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2025-06-02 00:00:00+00:00",
+            "end": "2025-10-11 23:59:45+00:00",
+            "trades": 21,
+            "net_r": 1.9357
+          },
+          {
+            "fold": 2,
+            "start": "2025-10-11 23:59:45+00:00",
+            "end": "2026-02-20 23:59:30+00:00",
+            "trades": 18,
+            "net_r": 23.13
+          },
+          {
+            "fold": 3,
+            "start": "2026-02-20 23:59:30+00:00",
+            "end": "2026-07-02 23:59:15+00:00",
+            "trades": 17,
+            "net_r": 11.488
+          },
+          {
+            "fold": 4,
+            "start": "2026-07-02 23:59:15+00:00",
+            "end": "2026-11-11 23:59:00+00:00",
+            "trades": 18,
+            "net_r": 1.4703
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ]
+      },
+      "S26": {
+        "reach_ge_6r": 0.0,
+        "n": 74,
+        "net_r": 25.5456,
+        "net_r_fee_only": 40.995,
+        "max_drawdown_r": 11.9065,
+        "by_outcome": {
+          "stop": 42,
+          "take_profit": 16,
+          "trail_stop": 16
+        },
+        "mean_bars_held": 15.959,
+        "net_r_per_capital_day": 0.5191,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 26.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 24,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.3
+        },
+        "data_start": "2025-06-02 13:00:00+00:00",
+        "data_end": "2026-11-11 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2025-06-02 00:00:00+00:00",
+            "end": "2025-10-11 23:59:45+00:00",
+            "trades": 21,
+            "net_r": -4.0704
+          },
+          {
+            "fold": 2,
+            "start": "2025-10-11 23:59:45+00:00",
+            "end": "2026-02-20 23:59:30+00:00",
+            "trades": 18,
+            "net_r": 21.2213
+          },
+          {
+            "fold": 3,
+            "start": "2026-02-20 23:59:30+00:00",
+            "end": "2026-07-02 23:59:15+00:00",
+            "trades": 17,
+            "net_r": 9.6845
+          },
+          {
+            "fold": 4,
+            "start": "2026-07-02 23:59:15+00:00",
+            "end": "2026-11-11 23:59:00+00:00",
+            "trades": 18,
+            "net_r": -1.2895
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S26__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S26__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--slippage-bps-roundtrip",
+          "26",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ]
+      },
+      "S53": {
+        "reach_ge_6r": 0.0,
+        "n": 74,
+        "net_r": 9.502,
+        "net_r_fee_only": 40.995,
+        "max_drawdown_r": 15.6819,
+        "by_outcome": {
+          "stop": 42,
+          "take_profit": 16,
+          "trail_stop": 16
+        },
+        "mean_bars_held": 15.959,
+        "net_r_per_capital_day": 0.1931,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 53.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 24,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.3
+        },
+        "data_start": "2025-06-02 13:00:00+00:00",
+        "data_end": "2026-11-11 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2025-06-02 00:00:00+00:00",
+            "end": "2025-10-11 23:59:45+00:00",
+            "trades": 21,
+            "net_r": -11.7923
+          },
+          {
+            "fold": 2,
+            "start": "2025-10-11 23:59:45+00:00",
+            "end": "2026-02-20 23:59:30+00:00",
+            "trades": 18,
+            "net_r": 18.767
+          },
+          {
+            "fold": 3,
+            "start": "2026-02-20 23:59:30+00:00",
+            "end": "2026-07-02 23:59:15+00:00",
+            "trades": 17,
+            "net_r": 7.3653
+          },
+          {
+            "fold": 4,
+            "start": "2026-07-02 23:59:15+00:00",
+            "end": "2026-11-11 23:59:00+00:00",
+            "trades": 18,
+            "net_r": -4.8383
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S53__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S53__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--slippage-bps-roundtrip",
+          "53",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2025-06-02",
+      "end": "2026-11-11 23:59",
+      "fetch_days": 540,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "SLV",
+        "interval": "60m",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2025-06-02 00:00:00+00:00",
+        "2025-10-11 23:59:45+00:00",
+        "2026-02-20 23:59:30+00:00",
+        "2026-07-02 23:59:15+00:00",
+        "2026-11-11 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/A__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "S26": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S26__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S26__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--slippage-bps-roundtrip",
+          "26",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--slippage-bps-roundtrip",
+          "26"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "S53": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "24",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SLV",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.3",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S53__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261119-f2a4-06/44922849676/arms/S53__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--slippage-bps-roundtrip",
+          "53",
+          "--start",
+          "2025-06-02",
+          "--end",
+          "2026-11-11 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--slippage-bps-roundtrip",
+          "53"
+        ],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=25.5456 with 2/4 positive folds (needs > 0 and >= 3)"
+}
