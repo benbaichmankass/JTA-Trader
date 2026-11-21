@@ -1,0 +1,618 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261120-f1a9-04",
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "note": "an arm is below n_oos or between the pass bar and the fail floor",
+ "n": 2403,
+ "population": "OOS harness trades of ['trend_donchian', 'trend_donchian_eth', 'trend_donchian_sol', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian', 'trend_donchian'] (1h), 3-fold sequential walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n 45626) bar_t <= fold start - 7.0 d; paired per-trade replayed R vs the holding_pays champion",
+ "decision_rule": {
+  "id": "RULE-RQ20261120-f1a9-04-EXITHEAD-FEATURES",
+  "registered_at": "2026-11-20",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "indeterminate",
+   "chosen": null,
+   "why": "an arm is below n_oos or between the pass bar and the fail floor",
+   "arms": {
+    "feat_exh": {
+     "n": 2403,
+     "mean": 0.02268,
+     "se": 0.01987,
+     "ci": [
+      -0.01626,
+      0.06163
+     ],
+     "z": 1.96
+    }
+   }
+  },
+  "arm_dr_vs_hold_context": {
+   "holding_pays": {
+    "n": 2403,
+    "mean": 0.02261,
+    "se": 0.02451,
+    "ci": [
+     -0.02542,
+     0.07065
+    ],
+    "z": 1.96
+   },
+   "feat_exh": {
+    "n": 2403,
+    "mean": 0.0453,
+    "se": 0.01594,
+    "ci": [
+     0.01406,
+     0.07654
+    ],
+    "z": 1.96
+   }
+  },
+  "fired": {
+   "holding_pays": 1632,
+   "feat_exh": 1210
+  },
+  "target_coverage": {
+   "feat_exh": 0.9097
+  },
+  "arm_features": {
+   "holding_pays": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long"
+   ],
+   "feat_exh": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long",
+    "bars_since_peak",
+    "mom_8",
+    "mom_decay",
+    "atr_impulse_phase",
+    "vol_at_peak_ratio",
+    "band_ext_pctile",
+    "failure_swing"
+   ]
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+   "BTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ETHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SOLUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LINKUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BNBUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "XRPUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ADAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "AVAXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+   "BTCUSDT": 12680,
+   "ETHUSDT": 23375,
+   "SOLUSDT": 9571
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 45626,
+  "z": 1.96,
+  "pass_dr": 0.03,
+  "legs": [
+   {
+    "leg": "trend_donchian",
+    "symbol": "BTCUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/BTCUSDT_15m.csv",
+     "resampled_to": "1h",
+     "bars": 47020
+    },
+    "read_state": "measured",
+    "n_total_trades": 377,
+    "block_n": 94,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 94,
+      "train_rows_n": 12605,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 49,
+       "feat_exh": 38
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 94,
+      "train_rows_n": 21875,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 58,
+       "feat_exh": 42
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 94,
+      "train_rows_n": 32216,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 60,
+       "feat_exh": 53
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_eth",
+    "symbol": "ETHUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/ETHUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 49852
+    },
+    "read_state": "measured",
+    "n_total_trades": 661,
+    "block_n": 165,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 165,
+      "train_rows_n": 10088,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 132,
+       "feat_exh": 103
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 165,
+      "train_rows_n": 20450,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 120,
+       "feat_exh": 86
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 165,
+      "train_rows_n": 31131,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 110,
+       "feat_exh": 68
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_sol",
+    "symbol": "SOLUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 44716
+    },
+    "read_state": "measured",
+    "n_total_trades": 288,
+    "block_n": 72,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 72,
+      "train_rows_n": 13056,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 56,
+       "feat_exh": 39
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 72,
+      "train_rows_n": 22462,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 53,
+       "feat_exh": 37
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 72,
+      "train_rows_n": 32527,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 47,
+       "feat_exh": 35
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "LINKUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/LINKUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 53323
+    },
+    "read_state": "measured",
+    "n_total_trades": 402,
+    "block_n": 100,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 100,
+      "train_rows_n": 6554,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 76,
+       "feat_exh": 45
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 100,
+      "train_rows_n": 18102,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 66,
+       "feat_exh": 33
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 100,
+      "train_rows_n": 31043,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 63,
+       "feat_exh": 42
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "BNBUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/BNBUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 47301
+    },
+    "read_state": "measured",
+    "n_total_trades": 399,
+    "block_n": 99,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 99,
+      "train_rows_n": 10834,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 67,
+       "feat_exh": 65
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 99,
+      "train_rows_n": 21570,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 70,
+       "feat_exh": 56
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 99,
+      "train_rows_n": 32870,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 59,
+       "feat_exh": 48
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "XRPUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/XRPUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 48427
+    },
+    "read_state": "measured",
+    "n_total_trades": 367,
+    "block_n": 91,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 91,
+      "train_rows_n": 10141,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 62,
+       "feat_exh": 48
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 91,
+      "train_rows_n": 21404,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 61,
+       "feat_exh": 42
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 91,
+      "train_rows_n": 32660,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 60,
+       "feat_exh": 51
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "ADAUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/ADAUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 49773
+    },
+    "read_state": "measured",
+    "n_total_trades": 368,
+    "block_n": 92,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 92,
+      "train_rows_n": 9625,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 65,
+       "feat_exh": 47
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 92,
+      "train_rows_n": 19715,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 64,
+       "feat_exh": 48
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 92,
+      "train_rows_n": 31827,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 56,
+       "feat_exh": 49
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian",
+    "symbol": "AVAXUSDT",
+    "candle_source": {
+     "path": "/home/ubuntu/ict-trading-bot/data/AVAXUSDT_5m.csv",
+     "resampled_to": "1h",
+     "bars": 45428
+    },
+    "read_state": "measured",
+    "n_total_trades": 352,
+    "block_n": 88,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 88,
+      "train_rows_n": 12120,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 62,
+       "feat_exh": 42
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 88,
+      "train_rows_n": 23441,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 59,
+       "feat_exh": 41
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 88,
+      "train_rows_n": 33628,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 57,
+       "feat_exh": 52
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "generated_at": "2026-11-21T07:09:19Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/exit_head_label_bakeoff.py"
+ }
+}
