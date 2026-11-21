@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "no could_not_commit/403 wake from the runner poster for 3 days, or the runner path is removed or deduped against VM-committed events",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-MGR15A-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, ltr-wake comments on PR #17895 (runs 44754456840, 44812226372)",
+    "rerun": "grep the ltr-wake comment markers on PR #17895 for packet_state could_not_commit and evidence_http_code 403"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "The live-review wake poster's GitHub-runner path fails to commit packets with HTTP 403. MEASURED 2026-11-20, twice: run 44754456840 (14:33Z, 7 SLV paper packages) and run 44812226372 (20:33Z, XRP real-money package): packet_state could_not_commit, packet_reason 'git data API commit failed', evidence_http_code 403. In both cases the VM poster (poster 'vm') posted the same events minutes earlier with packets committed fine, so no review was lost. But the runner path re-posts duplicate wakes that cannot be reviewed (runbook: could_not_commit means no reviewer), which adds noise and could hide a real gap if the VM poster ever stops. TO CHECK: the token/permission the runner path uses for the git data API on live-review/rows (contents:write?), whether a secondary rate limit is hit, and whether the runner poster should skip events the VM already committed. It must add no new gate."
+}

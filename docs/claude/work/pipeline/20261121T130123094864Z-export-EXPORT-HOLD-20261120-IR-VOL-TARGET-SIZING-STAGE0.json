@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-22",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261120-IR-VOL-TARGET-SIZING-STAGE0",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-22",
+    "how_to_check": "the next export's summary no longer lists IR-VOL-TARGET-SIZING-STAGE0 as held",
+    "what": "IR-VOL-TARGET-SIZING-STAGE0 lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/44745421745; held item IR-VOL-TARGET-SIZING-STAGE0",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [IR-VOL-TARGET-SIZING-STAGE0] held back from the work-store export of 2026-11-20: the store row fails the guard row check -- row IR-VOL-TARGET-SIZING-STAGE0: closing to landed_unproven needs `writeback` = {\"roadmap\": \"<milestone line you updated | none: reason>\", \"arch\": \"<ARCHITECTURE section you updated | none: reason>\"} | checklist row IR-VOL-TARGET-SIZING-STAGE0: `observation.how_to_check` missing or empty"
+}

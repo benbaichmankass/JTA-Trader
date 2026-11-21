@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the research watchdog's dispatch-stall alarm keys on DUE units (dispatch_queue.py decision != not_due) rather than runnable (queued, not done), or a committed note records why runnable is the right denominator; and the next 'N runnable, none dispatched' page is checked against dispatch_queue.py's dry run",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-D3GR4UKX-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-16 (session_01AFoLuMyxTNgKYBD3gR4UkX), 2026-11-20 ~14:20Z, manager item 0 on watchdog run 44747375530 (13:49Z)",
+    "rerun": "python3 scripts/research/dispatch_queue.py | grep -v ' not_due ' ; python3 scripts/ci/check_research_queue_health.py | grep runnable"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "RESEARCH WATCHDOG FALSE ALARM (second today): watchdog 13:49Z paged '13 runnable, no research run for 97 min'. Measured 14:20Z on main: dispatch_queue.py dry run -> not_due=2613 of 2613 job files (every once unit has run; the queued ones are weekly/monthly recurrences whose cadence has not elapsed). Dispatcher run 44744928904 (13:30Z) succeeded, FIRE true, research-queue-health printed 'backend(s) idle with nothing due ... runnable=13'. So the health/watchdog 'runnable' count includes not-yet-due recurring units, and the dispatcher correctly fires nothing; the self-heal dispatch 'didn't take' because there was nothing to take. Fix: the stall condition should count due units (or say 'nothing due' instead of paging). Also seen: two research-queue-dispatch runs in progress at once (44748097501 13:52Z, 44750172332 14:05Z) -- check the concurrency group is intended."
+}

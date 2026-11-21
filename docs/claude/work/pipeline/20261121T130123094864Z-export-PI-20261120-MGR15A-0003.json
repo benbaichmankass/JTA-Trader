@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a giveback event fires only on peak_r measured from the package fill time (a test pins a pre-entry bar high not counting), and since_entry is populated",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-MGR15A-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, LTR lane 20261120-1618Z report (wake comment 7044816630 on PR #17895)",
+    "rerun": "compare packet state.peak_r against the max favourable price since the package's fill time for pkg-2e68b21321cb4fad (evidence commit fdaa59db6b31 on live-review/rows)"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "Live-review packet defect, phantom giveback triggers. On 2026-11-20 16:18Z, 4 ml_entry packages on bybit_2 (real money; pkg-21be03c746ba4ba2 ADA, pkg-2e68b21321cb4fad ETH, pkg-6b71a09f77c64620 SOL, pkg-79fbf1e7eceb4cfb BTC) raised 'giveback' events of 1.1-2.9R (e.g. ETH 'gave back 2.91R of 3.69R peak'). The 16:29Z reviewer (lane LIVE-REVIEW-20261120-1618Z) reconstructed from each packet's SL/TP/r_to_* fields: the implied peak equals the HIGH of the last closed 1h bar BEFORE entry, and the implied entry sits at or below that bar's low, so the giveback predates the position (real open_r +0.37..+0.48R). state.peak_r/giveback_r appear to include pre-entry bars; context_v3.chart.since_entry was null on 5/5 packets (package open time not in the journal reads). Effect: false giveback wakes, which cost a reviewer lane and could mislead a close decision. TO FIX: the peak/giveback computation in the live-review packet/wake generator (scripts/ops/live_review_packet.py and its event detector) must start at the package's fill time; also fix the missing since_entry. Owner row candidates: LTR-PACKET-READ-REACH. Reviewer reconstruction NOT independently verified: verify first on one package."
+}

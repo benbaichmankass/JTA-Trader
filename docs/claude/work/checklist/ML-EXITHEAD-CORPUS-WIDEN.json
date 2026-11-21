@@ -1,0 +1,21 @@
+{
+  "id": "ML-EXITHEAD-CORPUS-WIDEN",
+  "title": "Widen the exit-head donchian-1h rows corpus so the feat_exh lead (+0.023 R/trade) can be read at power",
+  "state": "queued",
+  "owner": "ML-PRIMARY (post-reset, after Wed 11-25)",
+  "lane": "ML-PRIMARY",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "WHY: RQ-20261120-f1a9-04 (feat_exh = shipped FEATURES + M20 P4.3 exhaustion block) read +0.0227 R/trade, CI95 [-0.0163, +0.0616], pooled n_oos 2,403 over 8 donchian 1h legs x 3 folds, INDETERMINATE (below the +0.03 pass bar, upper above it); f1a9-05 ablations INDETERMINATE (no_calendar +0.0062, no_volume +0.0048, path_only +0.0147). MEASURED paired sd for feat_exh is 0.97 R (not the 0.70 declared): 80%-power MDE at n 2,403 is ~0.056 R, so no re-read on the current corpus can settle +0.03. n is capped: datasets-out/exit_head/1h/donchian_aligned_fresh/rows.jsonl (7d49-01) has training rows for BTC/ETH/SOL only and the 8 legs are every donchian 1h symbol with trainer candles. SCOPE: (a) extend scripts/research/exit_head_fresh_rows.py / build_exit_head_dataset.py rows to more donchian 1h symbols (LINK/BNB/XRP/ADA/AVAX first, then any perp with trainer 1h candles) on the aligned live_fill_bar_v2 entry alignment; (b) add trainer 1h candles for further symbols if needed (data dependency: trainer candle resolver / market_raw coverage). RE-ENTRY TEST: one pre-registered exit_head_label_bakeoff.py --arms none --feature-arms feat_exh unit on the widened corpus with power from sd 0.97 (n for MDE 0.03 at 80%, z 1.96: ~8,200 OOS trades), rule as f1a9-04, power grounded by feasibility.source replay on the f1a9-04 verdict. Not a re-run of f1a9-04/05 on the same rows.",
+  "phase": null,
+  "updated_at": "2026-11-21T11:32:40Z",
+  "updated_by": "session_01AFoLuMcZaf14qcYTYfX5kF"
+}

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 6951's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-CSINTAKE-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:6951 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 6951"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 6951 (ib_paper/gld_pullback_1d GLD, exit_reason='tp_cross'): bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm; fill_and_fees: pnl or fee not recorded"
+}

@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-22",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261120-PI-20261118-MANAYJZO-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-22",
+    "how_to_check": "the next export's summary no longer lists PI-20261118-MANAYJZO-0003 as held",
+    "what": "PI-20261118-MANAYJZO-0003 lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/44745421745; held item PI-20261118-MANAYJZO-0003",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [PI-20261118-MANAYJZO-0003] held back from the work-store export of 2026-11-20: the store pipeline record fails the guard row check -- next-due moved 0001-01-01 -> 2026-11-22 with no `redate` block: a new date is not an observation. Re-run origin.rerun, then record what it showed (`pipeline.py --redate ID --observation TEXT --next-due DATE`), or close/kill the item with a terminal_reason."
+}

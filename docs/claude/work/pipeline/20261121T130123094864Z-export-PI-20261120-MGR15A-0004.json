@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a day with no high-severity 'RUN cancelled live-review-wake' alerts while wakes still post, or a decision recorded that the noise is acceptable",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-MGR15A-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a, alert-watch comments on PR #17895, 2026-11-20",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/alerts?since=<day>' | grep -c 'RUN cancelled\\] live-review-wake'"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "live-review-wake '[RUN cancelled]' alert noise. MEASURED 2026-11-20: 5 'RUN cancelled live-review-wake' high-severity alerts (16:12Z to 17:13Z). The workflow runs on cron */5 with concurrency group live-review-wake and cancel-in-progress: false (live-review-wake.yml:24,37-39). GitHub keeps at most ONE pending run per group, so when a run takes more than 5 min, the next pending run is superseded and reported as 'cancelled'. That is expected behaviour, not a missed wake: wakes posted normally at 16:07Z and 16:29Z. Cost: it teaches readers to ignore red run-failure alerts. TO DECIDE: treat 'cancelled' on this workflow (concurrency supersession) as info rather than a high run-failure alert, or shorten runs below the cron period. It must add no gate and must not hide a real failure."
+}
