@@ -93,6 +93,8 @@ run:
   - stage0
   - --baseline
   - S26
+  - --delta-r
+  - '0'
   - --folds
   - '4'
   - --fold-majority
@@ -122,10 +124,10 @@ related:
 - comms/reviews/performance-review-20261118-190000.json
 - comms/strategy_evidence/tlt_pullback_1h.json
 - PROGRAMME-REPLAN-2026-11-19
-last_dispatched_at: '2026-11-19T14:30:24+00:00'
+last_dispatched_at: null
 grading:
   owner: PI-20261121-UGKSAUWU-0001
-  owner_reason: 'producer_failed with an empty measurement; the cause is not yet read (logs under comms/research/<unit>/<run>/logs); filed as PI-20261121-UGKSAUWU-0001, due 2026-11-27'
+  owner_reason: 'cause READ 2026-11-21: exit_lever_ablation.py exited 2 on the missing required --delta-r; RE-ARMED with --delta-r 0 (the value sibling stage0 units c1b4-01/02 use; not read by the stage0 rule), last_dispatched_at reset, decision rule untouched; owner PI-20261121-UGKSAUWU-0001'
   attested: RULE-RQ20261119f2a407-COST-REPRICE
   auto: true
   decision_rule_id: RULE-RQ20261119f2a407-COST-REPRICE
