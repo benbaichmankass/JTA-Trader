@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-11-21T07:28:43Z",
+  "generated_at": "2026-11-21T19:33:02Z",
   "overall": "findings",
   "produced_by": {
-    "run_id": "44880213816",
+    "run_id": "44941272144",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [
         {
-          "age_hours": 23.8,
+          "age_hours": 35.9,
           "branch": "automation/research-queue-grade-44694465506-1",
           "pr": 27708,
           "title": "research-queue: mechanical grading (auto)"
         }
       ],
-      "population": "28 open PRs; 16 automation/*; 4 carry research; 12 automation/* carry none (not graded here)",
+      "population": "23 open PRs; 11 automation/*; 1 carry research; 10 automation/* carry none (not graded here)",
       "state": "findings",
       "threshold_hours": 6.0
     },
@@ -23,25 +23,11 @@
       "findings": [],
       "lost": [],
       "pending_merge": [],
-      "population": "91 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-11-07 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 212 produced no result by design (skipped); 0 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3528 result file(s) on origin/main",
+      "population": "91 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-11-07 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 212 produced no result by design (skipped); 0 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3553 result file(s) on origin/main",
       "state": "clean"
     },
     "C_expiring_unlanded_artifacts": {
       "findings": [
-        {
-          "artifact": "research-store-bundle",
-          "artifact_id": 14697816187,
-          "expires_at": "2026-11-24T07:25:51Z",
-          "run_id": "44880004255",
-          "workflow": "research-queue-grade.yml"
-        },
-        {
-          "artifact": "watchdog-rows",
-          "artifact_id": 14697363350,
-          "expires_at": "2026-11-24T07:27:39Z",
-          "run_id": "44880035636",
-          "workflow": "research-watchdog.yml"
-        },
         {
           "artifact": "research-store-bundle",
           "artifact_id": 14611450673,
@@ -64,7 +50,7 @@
           "workflow": "research-queue-grade.yml"
         }
       ],
-      "population": "[bulk] 1911 artifact(s) listed, 1911 unexpired, 673 expire within 72.0h across 375 run(s); 52 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "population": "[bulk] 1896 artifact(s) listed, 1896 unexpired, 747 expire within 72.0h across 411 run(s); 51 of those from research workflows (research-queue-grade.yml, research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "read_via": "bulk",
       "state": "findings"
     }
