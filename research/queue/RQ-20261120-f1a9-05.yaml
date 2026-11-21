@@ -5,7 +5,7 @@
 id: RQ-20261120-f1a9-05
 title: 'ml-exit-head-donchian-1h FEATURE lever (ablations): on the powered 8-leg aligned design, does REMOVING the calendar columns, the volume
   ratio, or everything but the trade-path columns beat the champion by +0.03 R per OOS trade, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -179,3 +179,17 @@ levers:
   hypothesised_effect: the calendar / volume columns are noise that overfits across symbols; a leaner head generalises better to the 5 unseen-symbol
     legs
 last_dispatched_at: '2026-11-21T07:16:11+00:00'
+grading:
+  attested: RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
+  evidence:
+  - research/results/RQ-20261120-f1a9-05/44879475731.jsonl
+  graded_at: '2026-11-21'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
