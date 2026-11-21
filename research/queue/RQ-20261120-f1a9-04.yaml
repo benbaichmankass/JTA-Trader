@@ -6,7 +6,7 @@ id: RQ-20261120-f1a9-04
 title: 'ml-exit-head-donchian-1h FEATURE lever (additive): on the powered 8-leg aligned design, does adding the M20 P4.3 exhaustion block (bars_since_peak,
   mom_8, mom_decay, atr_impulse_phase, vol_at_peak_ratio, band_ext_pctile, failure_swing) to the champion''s features beat the champion by +0.03
   R per OOS trade, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -172,3 +172,17 @@ levers:
   - feat_exh
   hypothesised_effect: the exhaustion block carries the truncation information the 14 shipped path/vol features lack
 last_dispatched_at: '2026-11-21T07:16:04+00:00'
+grading:
+  attested: RULE-RQ20261120-f1a9-04-EXITHEAD-FEATURES
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261120-f1a9-04-EXITHEAD-FEATURES
+  evidence:
+  - research/results/RQ-20261120-f1a9-04/44878345292.jsonl
+  graded_at: '2026-11-21'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
