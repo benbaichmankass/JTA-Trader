@@ -1,0 +1,185 @@
+# Hand-authored 2026-11-21 by lane ML-PRIMARY-17 (Tier 1 research), dispatched by Manager Session 2026-11-20a
+# (session_01AFoLuHkCcFAd2Nbdp56peq; 01:25Z "build the Fitted-Q harness now ... ONE pre-registered unit vs the TM champion, bar unchanged").
+# Uses tm_bench learner fqi_stop_value added in the same PR. Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261120-f1a9-06
+title: 'ml-tm-action-value ITERATION 10 (learner FAMILY: fitted-Q iteration): on the incumbent bench, does an optimal-STOPPING fitted-Q policy
+  (close-vs-hold, Q_hold backed up from the next state''s max(Q_close, Q_hold)) pass S-OFFLINE where every Monte-Carlo action-value head failed?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): change one factor against the
+  incumbent on the incumbent''s harness, folds and cost stack; a learner-class step is tried only after the label and feature levers it competes
+  with were tested.'
+question: 'Same bench as RQ-20261120-f1a9-02 (test corpus tmb-73f5c3660014, train corpus v2 bp2-f4271084b120 x4 sample, seed 11, path_state block,
+  every-bar check-ins, actions {close}, --label full, act margin chosen on 3 inner folds from the registered grid, 6 folds, 2000 bootstrap, 200
+  random draws). ONE FACTOR CHANGED vs f1a9-02: the learner is fqi_stop_value: Q_close = LightGBM regression of the realised close advantage;
+  Q_hold re-fitted FQI_ITERS = 5 times to max(Q_close(s+1), Q_hold(s+1)) (0 at the last state = B0); the policy closes at the first check-in where
+  Q_close - Q_hold beats the act margin. Does the fqi arm pass S-OFFLINE?'
+why_this_matters: 'Every learned management arm on this bench is a Monte-Carlo per-state action-value head, and all failed S-OFFLINE (iterations
+  1-9: horizon, feature block, quantile target, CatBoost learner, and the f1a9-01/02/03 action-set and label levers). Those heads value HOLD as
+  ''follow B0 to the end''; a stopping policy that can close later is never credited, which biases the close/hold comparison toward the wrong
+  question. Fitted-Q is the D7 family the b9d0-04 fail_action names next and the last untested family on this bench. PASS is pending a fresh window;
+  FAIL closes the D7 line on in-hand data (family review).'
+iteration:
+  subject: ml-tm-action-value
+  subject_kind: ml_model
+  from_result: RQ-20261120-f1a9-02
+  verdict_read: fail
+  diagnosis: 'f1a9-01/02/03 FAIL (n 2,627): close-only h12 +0.0033 [-0.0070, +0.0131]; close-only full -0.0152 [-0.0331, +0.0006]; 7 actions -0.0089
+    [-0.0240, +0.0047]. With b9d0-04 (CatBoost) and 04a5-07 (quantile), every lever of the Monte-Carlo action-value family is now tested on this
+    bench and the oracle close saving (0.78 R/trade) stays unreached. The untested axis is the VALUE DEFINITION: a hold value that includes the
+    option to stop later (Bellman backup).'
+  search: 'none: one learner (fqi_stop_value, FQI_ITERS 5, the incumbent LGBM_PARAMS per head) on the f1a9-02 configuration; nothing tuned on
+    a test fold'
+  attempt: 10
+  due_by: '2026-11-28'
+  map_entries:
+  - research/levers/ml-tm-action-value.yaml
+levers:
+- name: tm_action_value_learner_family
+  values:
+  - monte_carlo_action_value (lgbm)
+  - fitted_q_stopping (fqi_stop_value)
+  hypothesised_effect: a Bellman-backed-up hold value removes the follow-B0 bias of the MC heads and clears S-OFFLINE
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: test n MEASURED (v1, 2,627 trades, b9d0-04 verdict n); per-trade delta sd 0.45 carried from RQ-20261030-c7a1-01 (ESTIMATE). SE ~0.0088
+    R, MDE ~0.022 R one-sided at 80%, inside the 0.03 R gain bar. One arm.
+  feasibility:
+    source: replay
+    verdict: comms/research/RQ-20261119-b9d0-04/44515648087/verdict.json
+    basis: Same harness, same fixed test corpus as the pointed run (its measured n); a re-read of an in-hand corpus, nothing accrues.
+baseline:
+  definition: B0 hold (the trade's own exit) and B1 the best static management rule chosen on train folds, on identical folds; the incumbent 2-action
+    lgbm arm (7e18-01, +0.0033 R/trade) is reported as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261120-f1a9-06-TM-FITTED-Q
+  registered_at: '2026-11-20'
+  registered_before_run: true
+  statistic: 'tm_bench score --rule s_offline on the one fqi_stop_value arm with --actions close --label full: delta vs B0 per trade, trade-clustered
+    bootstrap CI95, folds positive of 6, per-leg max drawdown vs B0, net R per capital-day vs B0, delta vs B2, B4 matched-random margin CI, Holm-adjusted
+    p (tm_bench.s_offline, which grades fqi_* arms exactly as lgbm_* arms).'
+  rule: 'PASS (pass_pending_fresh_window) iff tm_bench.s_offline returns pass_pending_fresh_window for the fqi_stop_value arm: gain >= 0.03 R/trade
+    over max(B0, B1), CI95 lower > 0, >= 5 of 6 folds positive, max drawdown and capital-day checks pass, beats B2, beats its own matched random
+    B4 (margin CI lower > 0), Holm p < 0.05. FAIL iff its CI95 upper < max(B0, B1) + 0.03. INDETERMINATE otherwise, or if the fqi arm is not measured
+    or unavailable, actions_allowed in verdict.json differs from [close], the label kind is not full, the test corpus is not tmb-73f5c3660014,
+    the train corpus is not bp2-f4271084b120 with >= 10,000 de-duplicated trades after purge, or the selfcheck fails (including its fitted-Q planted
+    / null controls). Thresholds, actions, label and grid are fixed now and not changed after any result.'
+  pass_action: 'pass_pending_fresh_window: author the fresh-window confirmation on a corpus disjoint from tmb-73f5c3660014 before any live proposal;
+    record the learner-family response on research/levers/ml-tm-action-value.yaml.'
+  fail_action: 'Record fitted-Q as tested; with every Monte-Carlo lever also failed, the D7 line has no untested family on this bench: a family-review
+    record, never a re-run of these configurations.'
+  what_it_does_not_do: Trains nothing persistent, registers, serves or promotes nothing; changes no config; places no order.
+  min_n: 2000 test trades
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    how: 'tm_bench B4: the same per-check-in action rate and mix as the catboost policy on each test fold, random eligible check-ins, sequential'
+  best_static:
+    grid:
+    - be_at_1r
+    - lock1_at_2r
+    - be_lock_ladder
+    - chandelier_2atr
+    - chandelier_3atr
+    - channel_10
+    - channel_20
+    excludes_test_folds: true
+    how: 'tm_bench B1: the static rule with the best TRAIN-fold value, scored once on the test fold'
+  bootstrap_group: trade
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.12
+  bucket: ai_trader
+  basis: planning weight carried from 7e18-01 / c21d-04 / 04a5-07; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 12.0
+  est_minutes: 180
+  why_runner: corpus v2 is an Actions artifact / regenerable on a runner (the workflow's corpus_v2 step); CPU only; lightgbm only.
+  basis: 'ESTIMATE: f1a9-02 (one lgbm head, same data) est 90; fitted-Q fits 1 + FQI_ITERS = 6 LightGBM heads per fit and the inner 3-fold margin
+    selection refits them, so ~2x the wall time (training is a minority of the run; corpus build and replay dominate). Timeout 330.'
+run:
+  command:
+  - python3
+  - scripts/research/tm_bench.py
+  - score
+  - --test-corpus
+  - comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl
+  - --train-corpus
+  - corpus_v2
+  - --train-sample-mult
+  - '4'
+  - --seed
+  - '11'
+  - --rule
+  - s_offline
+  - --feature-block
+  - path_state
+  - --label
+  - full
+  - --learners
+  - fqi_stop_value
+  - --checkins
+  - every_bar
+  - --actions
+  - close
+  - --inner-folds
+  - '3'
+  - --act-margin-grid
+  - 0,0.02,0.05,0.1,0.2,0.3
+  - --folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --random-draws
+  - '200'
+  - --expect-test-corpus
+  - tmb-73f5c3660014
+  - --expect-train-corpus
+  - bp2-f4271084b120
+  - --min-train-trades
+  - '10000'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run.yml
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261120-f1a9-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: ML-AM-NEXT-LIVE
+  decision: whether a fitted-Q stopping policy for close-vs-hold proceeds to a fresh-window confirmation on the money legs
+  legs:
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+related:
+- RQ-20261120-f1a9-01
+- RQ-20261120-f1a9-02
+- RQ-20261120-f1a9-03
+- RQ-20261119-b9d0-04
+- scripts/research/tm_bench.py
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.

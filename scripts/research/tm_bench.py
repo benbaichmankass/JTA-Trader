@@ -149,7 +149,11 @@ CB_PARAMS = {"loss_function": "RMSE", "learning_rate": 0.05, "depth": 6, "l2_lea
              "bootstrap_type": "Bernoulli", "subsample": 0.8, "verbose": False, "allow_writing_files": False,
              "thread_count": int(os.environ.get("OMP_NUM_THREADS") or 4)}
 #: learners whose heads predict an action VALUE in R (act on argmax > the act margin); logit heads predict a probability
-VALUE_LEARNERS = ("lgbm_action_value", "catboost_action_value")
+VALUE_LEARNERS = ("lgbm_action_value", "catboost_action_value", "fqi_stop_value")
+#: fitted-Q iteration (lane ML-PRIMARY-17, 2026-11-20; the D7 family named by RQ-20261119-b9d0-04's fail_action): an
+#: optimal-STOPPING value learner for the close-vs-hold action set only. FQI_ITERS sweeps of the hold-value backup; fixed
+#: before any run, never tuned on a test fold.
+FQI_ITERS = 5
 INNER_MARGIN_GRID = (0.0, 0.02, 0.05, 0.1, 0.2, 0.3)   # RQ-20261030-c7a1-01 (Q-TM1b) registered grid
 SYNTH_SUBSTEPS = 100
 
@@ -631,6 +635,35 @@ def _fit_catboost(X: np.ndarray, y: np.ndarray, seed: int):
     return CatBoostRegressor(iterations=CB_ROUNDS, random_seed=seed, **CB_PARAMS).fit(X, y)
 
 
+def fqi_stop(X_by_trade: Sequence[np.ndarray], c_by_trade: Sequence[np.ndarray], fit: Callable[[np.ndarray, np.ndarray], Any],
+             iters: int = FQI_ITERS) -> Tuple[Any, Any]:
+    """Fitted-Q iteration for optimal stopping on one trade's ordered check-in states (gamma 1, values relative to B0).
+
+    c(s) = label["close"][s] = net R(B0 + close at s) - net R(B0): the realised value of stopping at s. Holding from s and
+    following the policy afterwards is worth Q_hold(s) = max(Q_close(s+1), Q_hold(s+1)); holding from the LAST state is B0
+    itself, worth 0. Q_close is a regression of c on the state; Q_hold is re-fitted `iters` times to the backed-up targets
+    from the previous fit (Q_hold starts at 0). The policy closes at the first check-in where Q_close - Q_hold beats the
+    act margin. `fit(X, y)` returns an object with `.predict(X)`. Returns (q_close, q_hold); q_hold is None when iters == 0."""
+    X = np.vstack([x for x in X_by_trade if len(x)])
+    c = np.concatenate([np.nan_to_num(np.asarray(v, dtype=float), nan=0.0) for v, x in zip(c_by_trade, X_by_trade) if len(x)])
+    q_close = fit(X, c)
+    qc_all = np.asarray(q_close.predict(X), dtype=float)
+    q_hold, qh_all = None, np.zeros(len(X))
+    for _ in range(int(iters)):
+        y, off = np.zeros(len(X)), 0
+        for x in X_by_trade:
+            n = len(x)
+            if not n:
+                continue
+            nxt = np.maximum(qc_all[off + 1:off + n], qh_all[off + 1:off + n])
+            y[off:off + n - 1] = nxt
+            y[off + n - 1] = 0.0                      # holding from the last state = B0
+            off += n
+        q_hold = fit(X, y)
+        qh_all = np.asarray(q_hold.predict(X), dtype=float)
+    return q_close, q_hold
+
+
 def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -> Dict[str, Any]:
     rows = [i for i in tr_idx if ev[i]["n"]]
     if not rows:
@@ -652,6 +685,13 @@ def fit_learners(ev, labs, tr_idx: List[int], kinds: Sequence[str], seed: int) -
             out["catboost_action_value"] = {a: _fit_catboost(Xf, Y[a], seed) for a in ACTIONS}
         except ImportError as exc:  # allow-silent: an unavailable learner is a recorded fact in the arm, never a pooled zero
             out["catboost_action_value"] = {"unavailable": repr(exc)}
+    if "fqi_stop_value" in kinds:
+        try:
+            Xs = [np.where(np.isfinite(ev[i]["X1"]), ev[i]["X1"], med) for i in rows]
+            qc, qh = fqi_stop(Xs, [labs[i]["labels"]["close"] for i in rows], lambda X_, y_: _fit_lgbm(X_, y_, seed))
+            out["fqi_stop_value"] = {"q_close": qc, "q_hold": qh}
+        except ImportError as exc:  # allow-silent: an unavailable learner is a recorded fact in the arm, never a pooled zero
+            out["fqi_stop_value"] = {"unavailable": repr(exc)}
     if "logit_action_value" in kinds:
         out["logit_action_value"] = {a: Logit().fit(Xf, (Y[a] > 0).astype(float), w) for a in ACTIONS}
     if "b2" in kinds:   # distance-only reference: stop_atr, target_atr, no_target (R1 columns 4, 5, 6)
@@ -665,6 +705,11 @@ def learner_scores(kind: str, model, X: np.ndarray, med: np.ndarray) -> Optional
     if isinstance(model, dict) and "unavailable" in model:
         return None
     Xf = np.where(np.isfinite(X), X, med)
+    if kind == "fqi_stop_value":   # close column = Q_close - Q_hold; every other action is not offered (-inf)
+        sc = np.full((len(Xf), len(ACTIONS)), -np.inf)
+        qh = model["q_hold"].predict(Xf) if model.get("q_hold") is not None else 0.0
+        sc[:, ACTIONS.index("close")] = model["q_close"].predict(Xf) - qh
+        return sc
     if kind in VALUE_LEARNERS:
         return np.column_stack([model[a].predict(Xf) for a in ACTIONS])
     return np.column_stack([model[a].predict_proba_sl(Xf) for a in ACTIONS])
@@ -843,6 +888,8 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
     the training set (the transfer / s_offline construction). `feature_block` "path_state": append path_state_features to X1 (RQ-20261101-78fc-04). `calibration`: Stage-A per-action OOS rank calibration of the lgbm arm. `inner_folds` N > 0: the lgbm act margin is chosen per
     outer fold on N-fold out-of-fold predictions of the OUTER TRAIN set (no outer test row is touched; grid = `act_margin_grid` or
     INNER_MARGIN_GRID). `actions`: restrict the lgbm arm to these classes, or ["stage_a"] = the classes passing Stage A."""
+    if "fqi_stop_value" in kinds and list(actions or []) != ["close"]:
+        raise ValueError("fqi_stop_value is an optimal-STOPPING learner: it needs --actions close (close-vs-hold only)")
     T = test["trades"]
     same = train is None
     combo = (not same) and train_sample_mult is not None
@@ -1350,6 +1397,23 @@ def selfcheck(verbose: bool = True) -> Dict[str, Any]:
                            str(cp.get("act_margin_selection"))))
         else:
             checks.append(("catboost action-value controls (skipped: catboost not installed)", True, "skipped"))
+        # 2a'. fitted-Q iteration (ML-PRIMARY-17): the optimal-stopping learner on close-vs-hold passes the same planted / null
+        # controls, its margin chosen from its OWN inner OOF scores
+        fq = {}
+        for spec in ("synthetic", "synthetic-planted"):
+            corp, meta = resolve_corpus(spec, work=Path(td))
+            bc = build_corpus(corp, meta, cost_fn=cx)
+            bc["trades"] = bc["trades"][:300]
+            rr = score(bc, None, k=6, n_boot=200, draws=50, seed=7, cost=cost, kinds=("fqi_stop_value",),
+                       checkins=("every_bar",), inner_folds=2, actions=["close"])
+            fq[spec] = next((a for a in rr["arms"] if a.get("arm_id") == "fqi_stop_value@every_bar"), {})
+        fp, fn_ = fq["synthetic-planted"], fq["synthetic"]
+        checks.append(("planted: fitted-Q stop value beats B0 (CI lower > 0)",
+                       fp.get("read_state") == "measured" and fp["ci95"][0] > 0, f"{fp.get('delta_vs_b0_r')} {fp.get('ci95')}"))
+        checks.append(("null: fitted-Q stop value does not pass on a driftless walk (CI lower <= 0)",
+                       fn_.get("read_state") == "measured" and fn_["ci95"][0] <= 0, f"null {fn_.get('delta_vs_b0_r')} {fn_.get('ci95')}"))
+        checks.append(("fitted-Q margin chosen from its own inner OOF", fp.get("act_margin_selection") == "inner_oof",
+                       str(fp.get("act_margin_selection"))))
         # 2b. path-state block: causal (truncation-invariant) and the per-fold Stage-A rule separates planted from null
         corp, meta = resolve_corpus("synthetic-planted", work=Path(td))
         TT = build_corpus(corp, meta, cost_fn=cx)["trades"][:200]
@@ -1664,7 +1728,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         b0 = next(x for x in r["arms"] if x["arm_id"] == "B0_hold")
         orc = r["oracle"]["census_best_close_saving_r_per_trade"]
         for arm in r["arms"]:
-            if arm.get("arm_id", "").startswith(("lgbm_", "logit_", "catboost_")) and arm.get("read_state") == "measured":
+            if arm.get("arm_id", "").startswith(("lgbm_", "logit_", "catboost_", "fqi_")) and arm.get("read_state") == "measured":
                 arm["s_offline"] = dict(zip(("verdict", "why"), s_offline(arm, r["arms"])))
         if a.rule == "reproduce":
             parts = [f"selfcheck {'pass' if sc['pass'] else 'FAIL'}", f"B0-B0 {b0['b0_minus_b0_r']}",
