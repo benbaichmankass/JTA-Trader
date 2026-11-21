@@ -161,6 +161,11 @@ def _log_path() -> pathlib.Path:
 #: planner only lists accounts that hold a candidate).
 _GRADE = {
     "elected": "routed",
+    # NETTED-SLICES: a slice account's row is `allocated` (arbitration_fanout._plan_slice_account: every
+    # strategy in its `allocation` gets a round). Until M18-ALLOCATOR-REEVALUATE (2026-11-11) it fell to
+    # `unknown`, so the starved tripwire was blind on slice accounts: 2026-11-11 had 44 of 48 gradings
+    # `unknown`. It grades `routed`, and the round-membership check below still catches a starved one.
+    "allocated": "routed",
     "elected_flat": "no_winner",
     "elected_undispatchable": "starved",
     "unknown": "unknown",
