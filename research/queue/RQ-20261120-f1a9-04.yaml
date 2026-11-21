@@ -173,16 +173,12 @@ levers:
   hypothesised_effect: the exhaustion block carries the truncation information the 14 shipped path/vol features lack
 last_dispatched_at: '2026-11-21T07:16:04+00:00'
 grading:
+  auto: false
   attested: RULE-RQ20261120-f1a9-04-EXITHEAD-FEATURES
-  auto: true
-  awaiting: more_data
   decision_rule_id: RULE-RQ20261120-f1a9-04-EXITHEAD-FEATURES
+  graded_at: '2026-11-21'
+  grader: session RESEARCH-OPS-20261121-1448 (hand, per the rule's own text)
   evidence:
   - research/results/RQ-20261120-f1a9-04/44878345292.jsonl
-  graded_at: '2026-11-21'
-  grader: scripts/research/queue_grade.py
-  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
-    NOT a kill'
-  reason: 1 row(s), all measured, all indeterminate
-  rows: 1
   verdict: indeterminate
+  note: "Hand read from verdict.json per the registered rule. feat_exh: pooled n_oos 2,403 (>=1500), target_coverage 0.9097 (>=0.90, so graded), mean d +0.0227, CI [-0.0163, +0.0616]. Not PASS: mean < +0.03 and CI lower < 0. Not FAIL: CI upper +0.0616 >= +0.03. INDETERMINATE. Measured paired sd = SE*sqrt(n) = 0.0199*49.0 = 0.97 R, not the 0.70 R declared, so the design's true MDE is ~0.055 R and the +0.03 bar was unreachable at n 2,403; the null is not a kill and not a lead (a single arm, denominator 1). Next: ML-EXITHEAD-CORPUS-WIDEN (post-reset), unit RQ-20261121-ad6a-03 (blocked)."

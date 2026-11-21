@@ -1,0 +1,116 @@
+# Hand-authored 2026-11-21 by RESEARCH-OPS-20261121-1448 (Tier 1 research): iteration from a diagnosed result (the CORE MANDATE).
+# Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261121-ad6a-02
+title: 'ITERATION 2 of spy_pullback_1h: extend the atr_stop_mult sweep past the grid edge (3.5, 4.0, 5.0 vs configured 1.5) - ca49-01''s monotone response was never
+  bracketed'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations. Template: RQ-20261106-011.'
+question: On SPY 1h (Dukascopy, ~540 days) does any atr_stop_mult in {3.5, 4.0, 5.0} beat the configured 1.5 by >= 4.0 R net of cost, with maxDD no worse and >= 3
+  of 4 calendar folds, at control n >= 39? Three arms vs control, Holm.
+why_this_matters: 'spy_pullback_1h trades on alpaca_paper (testing, Stage 1) with a net-negative committed record and no iteration unit. This is its first diagnosis-driven
+  test; a fold-stable stop width is the cheapest lead (ceiling: Tier-3 proposal after a holdout read).'
+power:
+  expected_n: 75
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: ca49-01 control n 71 on the same 540-day window; floor 39 (E35); each variant graded against the control on the same entries. Replays history;
+    nothing accrues.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-21'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the
+    full cost stack; the control n, net R and fold signs are reported.'
+  rule: PASS (a LEAD for a Tier-3 setting proposal after a holdout read, never applied here) IF some variant beats A by >= 4.0 R, with maxDD no worse and >= 3 of
+    4 folds, at A's n >= 39. FAIL IF none does at n >= 39 (these settings are not better than the configured ones; the lever FAMILY stays open until its map is flat/noisy
+    at adequate power). INDETERMINATE IF A's n < 39 or the producer failed. Thresholds are not changed after any result. Regime-robustness reporting (per-year table,
+    long/short split) is attached to the result, not a graded clause.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, 1+3 arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261106-011).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a small real-money ETF leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - spy_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - stop35=atr_stop_mult=3.5
+  - --arm
+  - stop40=atr_stop_mult=4.0
+  - --arm
+  - stop50=atr_stop_mult=5.0
+  - --days
+  - '540'
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261121-ad6a-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared:
+- exit
+iteration:
+  subject: spy_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261120-ca49-01
+  verdict_read: fail
+  diagnosis: 'ca49-01 FAIL (control A n 71, net -17.2 R, folds -0.07/-15.04/+18.99/-21.07, maxDD 27.0 R): delta net R vs A was stop20 -4.66, stop25 +1.36, stop30
+    +8.97 (maxDD -12.7 R, fold wins 2 of 4 < the 3 required) -- monotone in stop width and still rising at the grid''s wide edge (3.0), so the response was not bracketed;
+    the FAIL says the tested settings missed the fold bar, not that the lever is flat. Control loses on both stop (52 of 71 exits) and a thin tail, i.e. entry quality
+    at a 1.5 ATR stop is stopped out before the pullback resolves. Wider stops change the R unit, so each arm is read in its own R.'
+  search: 'exit family, atr_stop_mult 3.5/4.0/5.0 beyond the 3.0 edge: finds the peak or shows the response saturates'
+  levers:
+  - exit
+  map_entries:
+  - research/levers/spy_pullback_1h.yaml#levers.exit.atr_stop_mult
+  attempt: 2
+  due_by: '2026-11-30'
+  multiple_testing:
+    arms_counted: 4
+    variants_vs_control: 3
+    correction: Holm
+    note: every variant fixed before the run; a best-of-k pass is a LEAD that needs a disjoint-window confirmation

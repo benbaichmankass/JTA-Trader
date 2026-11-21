@@ -569,11 +569,39 @@ levers:
         max_drawdown_r: 13.7038
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 2
-      best_delta_r_per_trade: -0.0055
+      - value: '2.0'
+        baseline_value: '2.5'
+        arm: stop20
+        unit: RQ-20261120-ca49-02
+        window: 2025-05-29..2026-11-20
+        n: 64
+        net_r: -4.8112
+        baseline_n: 57
+        baseline_net_r: -2.6234
+        delta_net_r: -2.1878
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 17.8914
+        verdict: pass
+        joint_change: false
+      - value: '3.0'
+        baseline_value: '2.5'
+        arm: stop30
+        unit: RQ-20261120-ca49-02
+        window: 2025-05-29..2026-11-20
+        n: 45
+        net_r: 7.8302
+        baseline_n: 57
+        baseline_net_r: -2.6234
+        delta_net_r: 10.4536
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 8.5952
+        verdict: pass
+        joint_change: false
+      shape: peaked
+      points: 4
+      best_delta_r_per_trade: 0.1834
       fold_stability: 0.5
-      reading: every tested value is worse than the baseline
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   filter:
     adx_min:
       tests:

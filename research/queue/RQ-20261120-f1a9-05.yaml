@@ -180,16 +180,12 @@ levers:
     legs
 last_dispatched_at: '2026-11-21T07:16:11+00:00'
 grading:
+  auto: false
   attested: RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
-  auto: true
-  awaiting: more_data
   decision_rule_id: RULE-RQ20261120-f1a9-05-EXITHEAD-FEATURES
+  graded_at: '2026-11-21'
+  grader: session RESEARCH-OPS-20261121-1448 (hand, per the rule's own text)
   evidence:
   - research/results/RQ-20261120-f1a9-05/44879475731.jsonl
-  graded_at: '2026-11-21'
-  grader: scripts/research/queue_grade.py
-  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
-    NOT a kill'
-  reason: 1 row(s), all measured, all indeterminate
-  rows: 1
   verdict: indeterminate
+  note: 'Hand read from verdict.json per the registered rule (Bonferroni z 2.394, 3 arms, each pooled n_oos 2,403, coverage 1.0). no_calendar mean +0.0062 CI [-0.0202, +0.0326]; no_volume +0.0048 CI [-0.0182, +0.0278]; path_only +0.0147 CI [-0.0221, +0.0515]. No arm has mean d >= +0.03, so no PASS. FAIL needs every upper bound < +0.03: no_calendar +0.0326 and path_only +0.0515 are above it, so no FAIL. INDETERMINATE. Same sd lesson as f1a9-04 (paired sd ~0.97 R; MDE ~0.055 R at n 2,403): the arms are unresolved, not ruled out; point estimates are all positive and under the bar. Next: ML-EXITHEAD-CORPUS-WIDEN, unit RQ-20261121-ad6a-03 (blocked).'

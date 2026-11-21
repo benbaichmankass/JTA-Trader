@@ -3046,6 +3046,20 @@ levers:
         baseline_value: '1.5'
         arm: atr_stop_mult_hi
         unit: RQ-20261105-007
+        window: 2021-11-17..2026-11-20
+        n: 305
+        net_r: 82.8664
+        baseline_n: 333
+        baseline_net_r: 95.3421
+        delta_net_r: -12.4757
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 12.0842
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-007
         window: 2021-11-01..2026-11-03
         n: 285
         net_r: 83.2738
@@ -3074,6 +3088,20 @@ levers:
         baseline_value: '1.5'
         arm: atr_stop_mult_lo
         unit: RQ-20261105-007
+        window: 2021-11-17..2026-11-20
+        n: 379
+        net_r: 117.216
+        baseline_n: 333
+        baseline_net_r: 95.3421
+        delta_net_r: 21.8739
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 15.3477
+        verdict: fail
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-007
         window: 2021-11-01..2026-11-03
         n: 345
         net_r: 137.1096
@@ -3085,9 +3113,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 10
+      points: 12
       best_delta_r_per_trade: 0.1126
-      fold_stability: 0.375
+      fold_stability: 0.396
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     trail_adx_below:
       tests:
@@ -5167,6 +5195,20 @@ levers:
         baseline_value: '4'
         arm: tp_r_hi
         unit: RQ-20261105-007
+        window: 2021-11-17..2026-11-20
+        n: 331
+        net_r: 91.2163
+        baseline_n: 333
+        baseline_net_r: 95.3421
+        delta_net_r: -4.1258
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.8958
+        verdict: fail
+        joint_change: false
+      - value: '5'
+        baseline_value: '4'
+        arm: tp_r_hi
+        unit: RQ-20261105-007
         window: 2021-11-01..2026-11-03
         n: 299
         net_r: 98.1104
@@ -5195,6 +5237,20 @@ levers:
         baseline_value: '4'
         arm: tp_r_lo
         unit: RQ-20261105-007
+        window: 2021-11-17..2026-11-20
+        n: 346
+        net_r: 85.0979
+        baseline_n: 333
+        baseline_net_r: 95.3421
+        delta_net_r: -10.2442
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 13.8958
+        verdict: fail
+        joint_change: false
+      - value: '3'
+        baseline_value: '4'
+        arm: tp_r_lo
+        unit: RQ-20261105-007
         window: 2021-11-01..2026-11-03
         n: 316
         net_r: 94.3936
@@ -5206,9 +5262,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 7
+      points: 9
       best_delta_r_per_trade: -0.0124
-      fold_stability: 0.333
+      fold_stability: 0.343
       reading: every tested value is worse than the baseline
     be_floor_lock_r:
       tests:

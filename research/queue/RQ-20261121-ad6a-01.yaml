@@ -1,0 +1,114 @@
+# Hand-authored 2026-11-21 by RESEARCH-OPS-20261121-1448 (Tier 1 research): iteration from a diagnosed result (the CORE MANDATE).
+# Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261121-ad6a-01
+title: 'CONFIRMATION of RQ-20261120-ca49-02 PASS: qqq_pullback_1h atr_stop_mult 3.0 vs configured 2.5 on a DISJOINT pre-development window (2022-12..2025-05), net
+  of cost'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations. Template: RQ-20261106-011.'
+question: On QQQ 1h Dukascopy closed bars from 2022-12-01 to 2025-05-28 (disjoint from the ca49-02 discovery window that began 2025-05-29), does atr_stop_mult 3.0
+  beat the configured 2.5 by >= 4.0 R net of cost, with maxDD no worse and >= 3 of 4 calendar folds, at control n >= 39? One arm vs control (denominator 1 of the
+  2 variants ca49-02 chose from).
+why_this_matters: ca49-02 PASSED on one window (stop30 +10.45 R, 3/4 folds) but the control itself was net -2.62 R there and the leg's per-trade expectancy is thin;
+  a PASS read on one window is a discovery. This is the one confirmation before any Tier-3 stop-width proposal to the manager.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: ca49-02 control n 57 over ~540 days (cadence ~0.105/day); a ~30-month pre-dev window projects n ~95 for the control (ESTIMATE); floor 39 per the
+    E35 rule. If the Dukascopy feed does not reach 2022-12 the producer reports a short window and the unit is INDETERMINATE (not a verdict). Replays history; nothing
+    accrues.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-21'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the
+    full cost stack; the control n, net R and fold signs are reported.'
+  rule: PASS iff stop30 beats A by >= 4.0 R net of the full cost stack on the pre-dev window with maxDD no worse and >= 3 of 4 calendar folds at A's n >= 39 (thresholds
+    identical to ca49-02, unchanged). FAIL iff A's n >= 39 and stop30 does not clear them (the discovery did not replicate; the stop-width lever stays open on other
+    legs/windows, this configuration is closed). INDETERMINATE if A's n < 39 or the window is not covered by the feed. Per-year table and long/short split attached,
+    not graded. A PASS goes to the manager as a Tier-3 stop-width proposal citing denominator 2 (ca49-02) and this confirmation; never applied here.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, 1+2 arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261106-011).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a small real-money ETF leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - stop30=atr_stop_mult=3.0
+  - --days
+  - '1450'
+  - --start
+  - '2022-12-01'
+  - --end
+  - '2025-05-28'
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261121-ad6a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared:
+- exit
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261120-ca49-02
+  verdict_read: pass_unconfirmed
+  diagnosis: 'ca49-02 PASS: stop30 beat control A by +10.45 R (maxDD -5.6 R, 3 of 4 folds) and stop20 lost 2.19 R, so the response is monotone toward wider stops
+    on the only two points; A itself was -2.62 R net on n 57 (folds -2.95/-4.65/+12.99/-8.02), so the lead rests on one fold (fold 3) and 2 variants were tried (best-of-2).
+    Changing atr_stop_mult also changes the R unit, so a wider stop trades fewer R per dollar; the delta is read in each arm''s own R. A discovery on one window needs
+    one disjoint in-hand window before any proposal.'
+  search: one arm (stop30) vs the configured control on pre-dev history 2022-12-01..2025-05-28; nothing tuned
+  levers:
+  - exit
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.exit.atr_stop_mult
+  attempt: 2
+  due_by: '2026-11-30'
+  multiple_testing: null
