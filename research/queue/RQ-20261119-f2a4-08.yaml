@@ -4,7 +4,7 @@ id: RQ-20261119-f2a4-08
 title: 'Cross-book SAME-DIRECTION concentration on the LIVE journal (perf review 2026-11-18 call G4): does the number of open positions sharing
   one direction at 00:00 UTC predict a worse next-24 h book return, over every closed trade since 2026-09-01 (the population the backtest read
   in #27202 did not touch)?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -109,16 +109,13 @@ amendments:
     by its timestamp/net_r NaN filter); its --self-test passes on main.'
 last_dispatched_at: '2026-11-19T16:23:29+00:00'
 grading:
+  auto: false
   owner: PI-20261121-UGKSAUWU-0001
-  owner_reason: 'producer_failed with an empty measurement; the cause is not yet read (logs under comms/research/<unit>/<run>/logs); filed as PI-20261121-UGKSAUWU-0001, due 2026-11-27'
   attested: RULE-RQ20261119f2a408-CODIRECTION
-  auto: true
   decision_rule_id: RULE-RQ20261119f2a408-CODIRECTION
+  graded_at: '2026-11-21'
+  grader: session RESEARCH-OPS-20261121-1448b (hand, per the rule's own text)
   evidence:
-  - research/results/RQ-20261119-f2a4-08/44565614234.jsonl
-  graded_at: '2026-11-19'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 2
-  verdict: null
+  - comms/research/RQ-20261119-f2a4-08/44565614234/verdict.json
+  verdict: indeterminate
+  note: "Hand read from comms/research/RQ-20261119-f2a4-08/44565614234/verdict.json (read_state measured, harness verdict 'miss', n_trades 1230): rho(sum) +0.167 CI [-0.164,+0.431]; rho(mean) +0.136 CI [-0.185,+0.392]; placebo p05 -0.080. Rule RULE-RQ20261119f2a408-CODIRECTION: not PASS (CI uppers > 0); not FAIL (rho(sum) CI lower -0.164 is not > -0.10); INDETERMINATE. DEFECT: the landed research/results rows for this unit read producer_failed with an empty measurement while the run's own verdict.json is measured: a collector/landing mismatch, not read further."

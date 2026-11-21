@@ -149,7 +149,7 @@ unblocked:
   why: 'Both blocked_on clauses cleared: RQ-20261111-207f-01 has a measured, graded row (FAIL, run 44387485084); RQ-20261117-c21d-06 has a measured result graded FAIL (label stays net R), so per its clears_when this file moves to research/queue/ as queued with the rule unchanged.'
 grading:
   owner: PI-20261121-UGKSAUWU-0001
-  owner_reason: 'producer_failed with an empty measurement; the cause is not yet read (logs under comms/research/<unit>/<run>/logs); filed as PI-20261121-UGKSAUWU-0001, due 2026-11-27'
+  owner_reason: "cause READ 2026-11-21: the run's log stops mid-fetch at Alpaca 1h bar 136 of 173 after 7,007 calls and 254 HTTP 429s (rate limit), no verdict; NOT re-armed: a re-run hits the same 429 wall; the fix needs a cached bar store or a throttled fetcher (code); owner PI-20261121-UGKSAUWU-0001"
   attested: RULE-RQ20261118-f7c1-04-HORIZON
   auto: true
   decision_rule_id: RULE-RQ20261118-f7c1-04-HORIZON
