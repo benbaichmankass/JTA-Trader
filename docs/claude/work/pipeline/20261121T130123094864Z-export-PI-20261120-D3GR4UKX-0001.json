@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261120-D3GR4UKX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-16 (session_01AFoLuMyxTNgKYBD3gR4UkX), 2026-11-20, PI-20261120-7ITMUEB1-0008 re-read (PR #27802); manager 14:04Z: DEFERRED under the usage throttle, not rejected",
+    "rerun": "python3 scripts/research/regime_cell_walkforward.py --strategy <s> --regime <r> --start <a> --end <b> --days <n> --folds 4 --json   # per row of comms/research/REGIME-REREAD-20261120/README.md"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "TIER-3 REGIME-CELL CANDIDATES (bybit_1 demo floor only; no real money gated) from comms/research/REGIME-REREAD-20261120 (fixed regime tooling #27654/#27566, BTCUSDT Binance-vision, FOLD_PANEL 3/4/5). (1) ADD transitional.trend_donchian.long: off -- long n41 pooled -15.07R, majority-negative 3/3, 4/4, 4/5 (stable_drag TRUE; affirmative, restrictive). (2) REMOVE unjustified OFF cells (permissive; stable_drag FALSE): trending htf_pullback_trend_2h short (n58 +8.75R, 90% from one fold: weak), transitional htf_pullback_trend_2h short (n12 -2.17R fold_sensitive), chop htf_pullback_trend_2h long (n11 +3.40R), chop fvg_range_15m short (n14 +4.78R). (3) NO-OP cells, cleanup only: trend_donchian short in trending/transitional (leg long_only), trending fvg_range_15m and fade_breakout_4h (adx_max 20, never fire). KEEP trending htf_pullback_trend_2h long OFF (n44 -12.39R stable_drag); chop htf short n6 = no finding. regime-selectivity checks per candidate: Rule 2 walk-forward = the README table (1-D cells); Rule 1 no-cosmetic-cell = only (1) adds a cell and it is stable_drag on its own population; the removals undo cells that fail Rule 2; Rule 3 axis-fidelity = the 1-D trend axis (ADX) is ML-independent, the same axis the router enforces (no vol label involved). Open before a packet: fidelity is approximate (decision_bar omitted) on htf_pullback and trend_donchian; a Bybit-native confirmation is robustness only. Next step after 2026-11-25: one Tier-3 config PR + packet for the manager, with account_compat_matrix."
+}

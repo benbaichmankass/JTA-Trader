@@ -1,0 +1,31 @@
+{
+  "id": "RESEARCH-OPS-20261120-1448",
+  "title": "research-ops pass 2026-11-20 14:48Z",
+  "state": "landed_unproven",
+  "owner": "research-ops",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-22",
+  "note": "NOT YET MERGED: hold PR #27817 (head fc8fb03, CI green) awaits the manager's merge. Content: RQ-20261120-ca49-01/02 (spy/qqq_pullback_1h atr_stop_mult sweeps), repaired iteration blocks d7c2-01/e9b5-01, lever maps, run record comms/research/ops/20261120T1500Z.json. Orphans 14->10; the remaining 10 and D10 (named block: MLP-D10-BASSET join harness, waits until after the 11-25 reset) are in the record handoff / PR body. Open orphan list: PI-20261119-20261119-0001.",
+  "observation": {
+    "due": "2026-11-23",
+    "due_by": "2026-11-23",
+    "how_to_check": "git log origin/main --oneline -- research/queue/RQ-20261120-ca49-01.yaml; ls research/results/RQ-20261120-ca49-*; python3 scripts/research/iteration_orphans.py",
+    "what": "PR 27817 merged, then ca49-01/02 fire and land; orphan count falls to <=10"
+  },
+  "phase": null,
+  "updated_at": "2026-11-20T15:31:34Z",
+  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV",
+  "writeback": {
+    "arch": "none",
+    "roadmap": "none: research-ops pass"
+  }
+}

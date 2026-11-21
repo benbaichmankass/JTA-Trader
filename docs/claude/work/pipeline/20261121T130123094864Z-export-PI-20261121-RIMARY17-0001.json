@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "research/family_reviews/ml-tm-action-value.yaml lands meeting scripts/research/family_retirement_policy.yaml (lever_map over the ml_model families, outside sources or searches, test-design checks) with a verdict A/B/C, or the manager kills it with a reason",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261121-RIMARY17-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-17 2026-11-21, fail_action of RQ-20261120-f1a9-01/02/03/06 (manager 01:25Z: record the family review)",
+    "rerun": "for u in 01 02 03 06; do python3 -c \"import json,glob;d=json.load(open(glob.glob('comms/research/RQ-20261120-f1a9-'+'$u'+'/*/verdict.json')[0]));print('$u',d['verdict'],d['n'])\"; done"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "FAMILY REVIEW due for ml-tm-action-value (D7 in-trade management, the tm_bench S-OFFLINE line). On ONE bench (test corpus tmb-73f5c3660014, 2,627 trades on 6 money legs; train v2 tmb-d6c7005cf876; full cost stack) every tested family has FAILED S-OFFLINE: horizon/feature block (d5a7, 13 of 14 rows), quantile target (04a5-07 IND), CatBoost learner (b9d0-04), action set close-only / full label / 7 actions (f1a9-01 +0.0033 [-0.0070,+0.0131]; -02 -0.0152 [-0.0331,+0.0006]; -03 -0.0089 [-0.0240,+0.0047]) and fitted-Q stopping (f1a9-06 -0.0055 [-0.0167,+0.0036], action rate 2.4%), while the oracle close saving is 0.78 R/trade. All on one corpus and one window, so this is NOT a retirement: the review must decide A (tested wrong: e.g. the bench's every-bar check-in or 6-leg universe), B (needs a disjoint corpus / new information class) or C (retire, with outside sources). Untested ml_model lever families to cover or justify: universe (6 legs only), calibration. Do not re-run any of these configurations."
+}

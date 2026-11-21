@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261120-D3GR4UKX-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-16 (session_01AFoLuMyxTNgKYBD3gR4UkX), 2026-11-20, grading RQ-20261120-e9b5-03 for PI-20261120-7ITMUEB1-0009",
+    "rerun": "python3 -c \"import json;r=[json.loads(l) for l in open('research/results/RQ-20261120-e9b5-03/44756285851.jsonl') if l.strip()][-1];print(r['measurement']['arms'])\"  # solo:trend_donchian_xrp_4h capital_days 3.3958 over n_oos 65"
+  },
+  "owner": "manager",
+  "state": "queued",
+  "what": "BACKTEST_SYSTEM MIS-SIMULATES trend_donchian_xrp_4h (REAL-MONEY leg, bybit_2 + bybit_portfolio)? In the same-symbol head-to-head on the fixed engine (RQ-20261120-e9b5-03, run 44756285851, OOS 2025-01-01..2026-10-30) solo:trend_donchian_xrp_4h has n_oos 65 over capital_days 3.40, i.e. ~1.25 h average hold on a 4h Donchian trend leg, net -9.17 R (-2.70 R/capital-day). On the old engine (RQ-20261015-1631-02, 2026-10-30) it was n74 over 18.95 capital-days (~6 h), -2.96 R. Its Stage-0 record on backtest_trend (comms/strategy_evidence/trend_donchian_xrp_4h.json, 2026-11-06, faithful) is +3.48 R over 46 OOS trades. A sub-bar average hold says backtest_system closes this leg inside (or at) its entry bar: suspect skip_hours '0' handling, the close-mapped clock/HTF after #27655, or the tightened stop (atr_stop_mult 2 -> 1.5, trail 5 -> 4 since 10-29) on 5m intrabar resolution. Until explained, backtest_system / same-symbol h2h numbers for xrp_4h must not feed the allocator. Next step: dump the e9b5-03 solo xrp_4h trades (comms/research/RQ-20261120-e9b5-03/44756285851/) and compare entry/exit stamps and exit reasons against backtest_trend's ledger on the same window; one fidelity unit if the cause is the engine. Not a Stage-0 or promotion question by itself (Stage-0 is backtest_trend)."
+}

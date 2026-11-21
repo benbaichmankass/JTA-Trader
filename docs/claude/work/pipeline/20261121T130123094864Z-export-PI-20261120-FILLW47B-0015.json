@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "each of the four artifacts is either landed on main before its expiry (earliest 2026-11-22 07:33Z) or the detector is fixed to skip that artifact class with a stated reason; the manager's report is due 2026-11-21",
+    "kind": "observation"
+  },
+  "id": "PI-20261120-FILLW47B-0015",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-20, manager instruction 07:46Z (parked 07:48Z, operator one-lane throttle)",
+    "rerun": "python3 scripts/ops/research_loss_detector.py --ref origin/main   # question C_expiring_unlanded_artifacts lists the expiring runs"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "done",
+  "terminal_reason": "[2026-11-20 14:35Z AM-OPS-11] All 4 are false findings; NOTHING lost, nothing needs landing before expiry. (1) watchdog-rows run 44692559562: LANDED as #27701 'incident ledger rows (run 44692559562)'; the detector read at 07:42Z during that run's merge wait (timing). Left in scope. (2-4) research-store-bundle runs 44694465506 / 44533148252 / 44480035240: all research-queue-grade runs. Each run's research-store job shipped the bundle to the trainer (success); its own landing timed out or was cancelled. The bundle is the WSD-S6D shadow dual-write, built from files the same run commits to git (research_store.py make_bundle), so its run id never lands on main by design. queue_grade.py on main 2026-11-20 reports 0 changed / 0 spawned: every disposition is already landed (#27735, #27795). Detector fix: PR #27809 (TRANSPORT_ARTIFACTS skip for research-store-bundle, with the reason, a population line and a test with a negative control).",
+  "tier": null,
+  "what": "Research loss detector (run 44695531477, 2026-11-20 07:42Z) flags C_expiring_unlanded_artifacts = 4: research-store-bundle runs 44694465506 (expires 2026-11-23 07:40Z), 44533148252 (2026-11-22 13:32Z) and 44480035240 (2026-11-22 07:33Z), plus watchdog-rows run 44692559562 (2026-11-23 07:13Z). EARLIEST DEADLINE 2026-11-22 07:33Z; the manager asked for a report by 2026-11-21. WHAT TO DECIDE for each: should it have landed (then find why it did not and land it before expiry) or is it by design never landed (then the detector gives a false finding: file a tooling fix so it skips that artifact class, with a reason). The research-store bundles are the important ones: if a bundle is the research store's only copy, losing it loses results. NOTHING has been investigated: this item was handed to lane QUEUE-FILL-STANDING-W47b at 07:46Z and parked at 07:48Z by the operator's one-lane throttle (ML first). A first step that costs little: list the artifacts of those four runs, see which workflow produced them and whether a landing job exists for that class (scripts/ops/research_loss_detector.py q_expiring shows how the detector decides 'unlanded'), and check whether the same results already sit on main."
+}
