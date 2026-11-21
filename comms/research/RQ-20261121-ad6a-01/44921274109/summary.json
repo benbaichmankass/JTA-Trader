@@ -1,0 +1,235 @@
+{
+  "leg": "qqq_pullback_1h",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "stop30": {
+        "delta_net_r": -5.8367,
+        "delta_max_drawdown_r": -1.8766,
+        "fold_wins": 2,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0238,
+      "n": 84,
+      "net_r": 15.9569,
+      "net_r_fee_only": 19.061,
+      "max_drawdown_r": 11.1425,
+      "by_outcome": {
+        "stop": 41,
+        "trail_stop": 39,
+        "take_profit": 4
+      },
+      "mean_bars_held": 38.262,
+      "net_r_per_capital_day": 0.1192,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2022-12-02 14:00:00+00:00",
+      "data_end": "2025-05-27 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-12-02 14:00:00+00:00",
+          "end": "2023-07-17 10:30:00+00:00",
+          "trades": 20,
+          "net_r": 10.7908
+        },
+        {
+          "fold": 2,
+          "start": "2023-07-17 10:30:00+00:00",
+          "end": "2024-02-29 07:00:00+00:00",
+          "trades": 20,
+          "net_r": -2.7112
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-29 07:00:00+00:00",
+          "end": "2024-10-13 03:30:00+00:00",
+          "trades": 22,
+          "net_r": 3.016
+        },
+        {
+          "fold": 4,
+          "start": "2024-10-13 03:30:00+00:00",
+          "end": "2025-05-28 00:00:00+00:00",
+          "trades": 22,
+          "net_r": 4.8615
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261121-ad6a-01/44921274109/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261121-ad6a-01/44921274109/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2022-12-01",
+        "--end",
+        "2025-05-28"
+      ]
+    },
+    "stop30": {
+      "reach_ge_6r": 0.0,
+      "n": 79,
+      "net_r": 10.1202,
+      "net_r_fee_only": 12.5699,
+      "max_drawdown_r": 9.2659,
+      "by_outcome": {
+        "trail_stop": 45,
+        "take_profit": 3,
+        "stop": 31
+      },
+      "mean_bars_held": 41.544,
+      "net_r_per_capital_day": 0.074,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2022-12-02 14:00:00+00:00",
+      "data_end": "2025-05-27 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2022-12-02 14:00:00+00:00",
+          "end": "2023-07-17 10:30:00+00:00",
+          "trades": 16,
+          "net_r": 11.0247
+        },
+        {
+          "fold": 2,
+          "start": "2023-07-17 10:30:00+00:00",
+          "end": "2024-02-29 07:00:00+00:00",
+          "trades": 20,
+          "net_r": 0.4605
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-29 07:00:00+00:00",
+          "end": "2024-10-13 03:30:00+00:00",
+          "trades": 22,
+          "net_r": 0.7608
+        },
+        {
+          "fold": 4,
+          "start": "2024-10-13 03:30:00+00:00",
+          "end": "2025-05-28 00:00:00+00:00",
+          "trades": 21,
+          "net_r": -2.1259
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3.0",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261121-ad6a-01/44921274109/arms/stop30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261121-ad6a-01/44921274109/arms/stop30__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2022-12-01",
+        "--end",
+        "2025-05-28"
+      ]
+    }
+  },
+  "window": {
+    "start": "2022-12-01",
+    "end": "2025-05-28",
+    "fetch_days": 1450,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "QQQ",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2022-12-02 14:00:00+00:00",
+      "2023-07-17 10:30:00+00:00",
+      "2024-02-29 07:00:00+00:00",
+      "2024-10-13 03:30:00+00:00",
+      "2025-05-28 00:00:00+00:00"
+    ]
+  }
+}
