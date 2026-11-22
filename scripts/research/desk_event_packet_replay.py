@@ -436,12 +436,29 @@ def cmd_score(a) -> int:
     }
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "verdict.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    (out / "verdict.json").write_text(json.dumps(contract_verdict(res), indent=1, default=str) + "\n")
     (out / "records.jsonl").write_text("".join(json.dumps(r, default=str) + "\n" for r in desk))
     print(json.dumps({k: res[k] for k in ("verdict", "population", "take_rate")}, default=str))
     print(json.dumps({"S3": st, "rule_same_events_S3": res["rule_same_events"]["S3"], "jvr": res["judge_minus_rule_per_event"],
                       "controls_ok": ctl_ok}, default=str))
     return 0
+
+
+#: The rule's own words -> the research-result contract's verdicts (scripts/research/script_run.py VERDICTS). The registered word is kept
+#: beside the mapped one (`verdict_word`); it is never discarded. An unknown word maps to `indeterminate`, never to pass/fail.
+_CONTRACT_VERDICT = {"S3_CLEARED": "pass", "S3_NOT_CLEARED": "fail", "INDETERMINATE": "indeterminate",
+                     "INDETERMINATE_INSTRUMENT": "indeterminate"}
+
+
+def contract_verdict(res: dict) -> dict:
+    """verdict.json for the contract: res with `verdict` mapped to a contract word, the registered word in `verdict_word`, and `n` present.
+
+    RQ-20261112-e4a7-01 landed `producer_failed: verdict.json malformed: verdict 'S3_NOT_CLEARED' not in (pass, fail, ...)` because this
+    script wrote the rule's own vocabulary into the contract's field and no `n` (PI-20261122-SME5WDGR-0004, group D)."""
+    word = str(res.get("verdict"))
+    n = (res.get("S3") or {}).get("n")
+    out = dict(res, verdict=_CONTRACT_VERDICT.get(word, "indeterminate"), verdict_word=word, n=n)
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
