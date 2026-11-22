@@ -1,0 +1,144 @@
+{
+  "unit": "RQ-20261122-fa22-03",
+  "started_at": "2026-11-22T11:06:26.515396+00:00",
+  "legs": "trend_donchian,trend_donchian_eth,trend_donchian_sol,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT",
+  "tf": "1h",
+  "family": "donchian",
+  "required_symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "LINKUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "AVAXUSDT"
+  ],
+  "after": "2026-10-15",
+  "build_out": "datasets-out/exit_head/1h/donchian_widened_fresh_build",
+  "publish": "datasets-out/exit_head/1h/donchian_widened_fresh/rows.jsonl",
+  "published": true,
+  "round_returncode": 0,
+  "per_symbol": {
+    "BTCUSDT": {
+      "rows": 12694,
+      "trades": 393,
+      "last_bar_t": "2026-11-22T03:00:00+00:00",
+      "sources": {
+        "harness": 11592,
+        "live": 1102
+      }
+    },
+    "ETHUSDT": {
+      "rows": 23430,
+      "trades": 693,
+      "last_bar_t": "2026-11-22T03:00:00+00:00",
+      "sources": {
+        "harness": 22685,
+        "live": 745
+      }
+    },
+    "SOLUSDT": {
+      "rows": 9571,
+      "trades": 307,
+      "last_bar_t": "2026-11-05T14:00:00+00:00",
+      "sources": {
+        "harness": 9443,
+        "live": 128
+      }
+    },
+    "LINKUSDT": {
+      "rows": 11258,
+      "trades": 418,
+      "last_bar_t": "2026-11-05T14:00:00+00:00",
+      "sources": {
+        "harness": 11258
+      }
+    },
+    "BNBUSDT": {
+      "rows": 9128,
+      "trades": 392,
+      "last_bar_t": "2026-11-08T10:00:00+00:00",
+      "sources": {
+        "harness": 9128
+      }
+    },
+    "XRPUSDT": {
+      "rows": 7800,
+      "trades": 364,
+      "last_bar_t": "2026-11-22T03:00:00+00:00",
+      "sources": {
+        "harness": 7800
+      }
+    },
+    "ADAUSDT": {
+      "rows": 8844,
+      "trades": 382,
+      "last_bar_t": "2026-11-05T14:00:00+00:00",
+      "sources": {
+        "harness": 8844
+      }
+    },
+    "AVAXUSDT": {
+      "rows": 8226,
+      "trades": 365,
+      "last_bar_t": "2026-11-13T15:00:00+00:00",
+      "sources": {
+        "harness": 8226
+      }
+    }
+  },
+  "reasons": [],
+  "build_report_generated_at": "2026-11-22T11:07:48.561074+00:00",
+  "build_report": {
+    "generated_at": "2026-11-22T11:07:48.561074+00:00",
+    "tf": "1h",
+    "trades_in": 3442,
+    "skipped": {
+      "no_candles": 0,
+      "unresolvable": 128
+    },
+    "entry_alignment": "live_fill_bar_v2",
+    "skipped_at_load": {},
+    "rows_seen_at_load": 3354,
+    "rows_loaded_at_load": 3354,
+    "per_family_load": {
+      "donchian": {
+        "seen": 3354,
+        "loaded": 3354
+      }
+    },
+    "families_starved": [],
+    "holding_pays_threshold_r": 0.25,
+    "families": {
+      "donchian": {
+        "rows": 90951,
+        "trades": {
+          "harness": 3229,
+          "live": 85
+        },
+        "holding_pays_pos": 25953,
+        "holding_pays_rate": 0.2854,
+        "rows_by_source": {
+          "harness": 88976,
+          "live": 1975
+        },
+        "rows_by_year": {
+          "2021": 10281,
+          "2022": 14665,
+          "2023": 15661,
+          "2024": 17643,
+          "2025": 16327,
+          "2026": 16022,
+          "2020": 352
+        }
+      }
+    }
+  },
+  "n_rows": 90951,
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "donchian 1h exit-head rows rebuilt from legs trend_donchian,trend_donchian_eth,trend_donchian_sol,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT on the trainer's candles; required fresh symbols BTCUSDT,ETHUSDT,SOLUSDT,LINKUSDT,BNBUSDT,XRPUSDT,ADAUSDT,AVAXUSDT (last bar_t after 2026-10-15)",
+  "n": 90951,
+  "note": "PASS (measured): published datasets-out/exit_head/1h/donchian_widened_fresh/rows.jsonl"
+}
