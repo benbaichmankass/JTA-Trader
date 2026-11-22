@@ -1,0 +1,118 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 684,
+ "population": "harness trades of squeeze_breakout_4h (BTCUSDT 4h, faithful), ict_scalp_5m (BTCUSDT 5m, faithful), 2190d Binance-vision candles, full cost stack, tagged by replayed vol labels",
+ "measurement": {
+  "primary": {
+   "cells": {
+    "ict_scalp_5m": [
+     "chop/volatile/long",
+     "chop/volatile/short",
+     "trending/volatile/long",
+     "trending/volatile/short"
+    ],
+    "squeeze_breakout_4h": [
+     "trending/calm/short"
+    ]
+   },
+   "legs": {
+    "squeeze_breakout_4h": {
+     "trades": 119,
+     "dropped": 18,
+     "added_r": 3.2236
+    },
+    "ict_scalp_5m": {
+     "trades": 565,
+     "dropped": 63,
+     "added_r": 9.5603
+    }
+   },
+   "trades_total": 684,
+   "dropped_n": 81,
+   "added_r": 12.7839,
+   "min_dropped": 25,
+   "folds": 6,
+   "draws": 5000,
+   "seed": 20261112,
+   "fold_added_r": [
+    0.0,
+    4.6808,
+    3.6382,
+    5.3061,
+    2.7965,
+    -3.6377
+   ],
+   "fold_wins": 4,
+   "control_p": 0.6449,
+   "verdict": "fail"
+  },
+  "since": {
+   "cells": {
+    "ict_scalp_5m": [
+     "chop/volatile/long",
+     "chop/volatile/short",
+     "trending/volatile/long",
+     "trending/volatile/short"
+    ],
+    "squeeze_breakout_4h": [
+     "trending/calm/short"
+    ]
+   },
+   "legs": {
+    "squeeze_breakout_4h": {
+     "trades": 9,
+     "dropped": 0,
+     "added_r": 0
+    },
+    "ict_scalp_5m": {
+     "trades": 32,
+     "dropped": 2,
+     "added_r": -0.3546
+    }
+   },
+   "trades_total": 41,
+   "dropped_n": 2,
+   "added_r": -0.3546,
+   "min_dropped": 25,
+   "folds": 6,
+   "draws": 5000,
+   "seed": 20261112,
+   "fold_added_r": [
+    0.0602,
+    0.0,
+    0.0,
+    -0.4148,
+    0.0,
+    0.0
+   ],
+   "fold_wins": 1,
+   "control_p": 0.8164,
+   "verdict": "indeterminate_underpowered"
+  },
+  "since_date": "2026-07-01",
+  "legs": [
+   {
+    "strategy": "squeeze_breakout_4h",
+    "symbol": "BTCUSDT",
+    "timeframe": "4h",
+    "harness": "squeeze",
+    "fidelity": "faithful",
+    "omitted_levers": [],
+    "tagged": "comms/research/RQ-20261122-0104-07/45041681114/legs/squeeze_breakout_4h__tagged.jsonl"
+   },
+   {
+    "strategy": "ict_scalp_5m",
+    "symbol": "BTCUSDT",
+    "timeframe": "5m",
+    "harness": "ict_scalp",
+    "fidelity": "faithful",
+    "omitted_levers": [],
+    "tagged": "comms/research/RQ-20261122-0104-07/45041681114/legs/ict_scalp_5m__tagged.jsonl"
+   }
+  ],
+  "rule_reason": "primary fail (added_r <= 0, fold_wins < 4 or control_p > 0.05) on a window biased toward the cells",
+  "min_since_dropped": 25
+ },
+ "note": "primary fail (added_r <= 0, fold_wins < 4 or control_p > 0.05) on a window biased toward the cells"
+}
