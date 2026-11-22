@@ -1,0 +1,160 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261122T0823Z-pkg-cb689c1abaf44154",
+ "reviewed_at": "2026-11-22T08:40:00Z",
+ "order_package_id": "pkg-cb689c1abaf44154",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-22T08:22:00Z"
+ },
+ "info_cutoff_at": "2026-11-22T08:23:12Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 0.7691,
+  "open_r": -0.6215,
+  "peak_provenance": "estimated",
+  "peak_r": 0.1476,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.9279714285714286,
+  "tp": 0.8955428571428572
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 0.7691,
+  "open_r": -0.6215,
+  "peak_r": 0.1476,
+  "r_to_stop": 0.3785,
+  "r_to_target": 2.141
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.9279714285714286 / tp 0.8955428571428572 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 199,
+   "mean_r": -0.935,
+   "sd_r": 0.5506,
+   "worst_r": -1.2032,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 199,
+   "mean_r": -0.9889,
+   "sd_r": 0.3594,
+   "worst_r": -2.8107,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 199,
+   "mean_r": -0.7074,
+   "sd_r": 0.0317,
+   "worst_r": -0.8224,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261122T0823Z-pkg-cb689c1abaf44154.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.2276,
+  "worst_case_delta_r": 0.3808,
+  "basis": "ev_positive",
+  "confidence": "measured",
+  "evidence_source": "table",
+  "judgement_confidence": 0.6,
+  "reason": "Table (n=199, floor 20, ml_entry short corpus, 5 symbols): hold mean -0.935 sd 0.551 worst -1.203 vs close mean -0.707 sd 0.032 worst -0.822, so closing now is +0.228 R better on the mean (SE of difference 0.039) and +0.381 R on the worst case; atr:2.0 tighten (-0.989, worst -2.811) is worse than hold and atr:1.0/1.5 are invalid (stop not below price). Trade is -0.62 R after a +0.15 R peak, 2 bars held, price pushed back to the stop side inside a 4h ADX 28 trend; with ~6 other crypto shorts open this is one beta bet, so I take the measured exit."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=199 measured mean -0.935 (sd 0.551, worst -1.203); close -0.707 (sd 0.032, worst -0.822); atr:2.0 -0.989 (worst -2.811); atr:1.0 and atr:1.5 invalid_level",
+  "regime: 1h chop ADX 17.7, 4h trending ADX 28.1; atr_now_over_entry null (not read)",
+  "book: crypto shorts ADA x2, ETH, BTC, SOL, AVAX, XRP are one correlated beta bet; BTC and ETH longs open too",
+  "live_vs_backtest: realMoney CONSISTENT live_r -2.96 n=47; mirror CONSISTENT live_r -2.10 n=47",
+  "caveat: hold cell is the leg's peak-then-pullback population, not this exact trade; chart last_close 0.915 equals entry while open_r -0.62 implies the live mark is near 0.923, so the adverse move is inside the current bar",
+  "missing_inputs: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding, context_v3.chart.since_entry"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.928 / TP 0.8955, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.928 / TP 0.8955, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier",
+ "session": "session_01AFoLuJ2JEPDwp2ccCwXNXR",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [],
+ "packet_sha": "792e4d05958e9ce7a47c3ffcb0f0f408f1bd0e883b7eebb81b5ea73414e469ea",
+ "forecast": {
+  "thesis": "Short stalls and the bar that pushed price to the stop side keeps pressing toward the 0.928 stop while the 4h trend stays up; the leg's own history prices holding at -0.94 R against -0.71 R closing.",
+  "direction": "against_trade",
+  "target_px": 0.926,
+  "p_target": 0.45,
+  "invalidation_px": 0.915,
+  "horizon_bars": 4,
+  "timeframe": "1h",
+  "evidence": [
+   "table hold n=199 mean -0.935 vs close -0.707",
+   "regime.trend_now chop, htf trending ADX 28",
+   "exit_plan sl 0.928 tp 0.8955 entry 0.915",
+   "book: 6 correlated crypto shorts"
+  ]
+ }
+}
