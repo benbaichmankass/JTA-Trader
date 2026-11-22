@@ -2,7 +2,7 @@
 cadence: once
 compute: cpu_light
 decision_rule:
-  id: RULERQ20261117b2f114
+  id: RULERQ20261117b2f103
   registered_at: '2026-11-17'
   registered_before_run: true
   rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02
@@ -12,10 +12,10 @@ decision_rule:
     the record names the arm that moved closest. Thresholds and the arm grid are not changed after any result.'
   statistic: 'scripts/research/exit_lever_ablation.py --leg mes_trend_long_1d --grade replace, the sibling window and folds of RQ-20261117-9e1c-01 (same leg, same flags) by
     entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg
-    as declared in config/strategies.yaml; candidates MS8/MS12. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+    as declared in config/strategies.yaml; candidates DI/DS. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
   what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3 declare. The arm
     grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
-id: RQ-20261117-b2f1-14
+id: RQ-20261117-b2f1-03
 intervention_controls:
   not_applicable: a parameter-width ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
 kind: experiment
@@ -39,14 +39,15 @@ power:
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
 priority: 2
 programme: P3
-question: 'On mes_trend_long_1d, over the same window, folds and bar as the leg''s sibling unit RQ-20261117-9e1c-01, does any of the arms MS8/MS12 (MOMENTUM-STALE exit (--momentum-stale-bars
-  8/12 with --momentum-stale-adx-below 20)) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/mes_trend_long_1d.yaml
+question: 'On mes_trend_long_1d, over the same window, folds and bar as the leg''s sibling unit RQ-20261117-9e1c-01, does any of the arms DI/DS (DIRECTION gate (+DI/-DI sign
+  DI, Donchian-midline slope DS: --direction-filter di/slope)) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/mes_trend_long_1d.yaml
   (no such family tested on this leg).'
 related:
 - RQ-20261117-9e1c-01
 - research/levers/mes_trend_long_1d.yaml
 roadmap:
-- L-LADDER
+- L-REGIME
+- L-PROP
 routing:
   basis: Estimate from comparable exit_lever_ablation runs of 2026-10-26..29 (a538-*); the first run replaces it.
   est_minutes: 40
@@ -63,9 +64,9 @@ run:
   - --arm
   - A=
   - --arm
-  - MS8=--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - DI=--direction-filter=di
   - --arm
-  - MS12=--momentum-stale-bars=12;--momentum-stale-adx-below=20
+  - DS=--direction-filter=slope
   - --days
   - '3060'
   - --start
@@ -91,26 +92,27 @@ run:
   - --out
   - '{out_dir}'
   inputs:
-    research_unit: RQ-20261117-b2f1-14
+    research_unit: RQ-20261117-b2f1-03
   timeout_minutes: 150
-status: queued
-theme: live_strategy
-title: 'MS lever family never tested on mes_trend_long_1d: MOMENTUM-STALE exit (--momentum-stale-bars 8/12 with --momentum-stale-adx-below 20) vs the declared leg, net of cost?'
+status: blocked
+theme: regime
+title: 'DIR lever family never tested on mes_trend_long_1d: DIRECTION gate (+DI/-DI sign DI, Donchian-midline slope DS: --direction-filter di/slope) vs the declared leg, net
+  of cost?'
 value:
   basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
   bucket: structural
   confidence: 0.1
   usd_at_stake_per_month: 150
-why_this_matters: 'Plan node: research/levers/mes_trend_long_1d.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016 CONFIRMED momentum_stale_bars
-  8 / adx_below 20 on slv_pullback_1d (20.73 vs 12.82 R, 3 of 4 folds, 2018-03..2026-10) and the leg-by-leg lever maps carry no momentum_stale family for this leg. One factor,
-  2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
-last_dispatched_at: '2026-11-18T06:47:22+00:00'
+why_this_matters: 'Plan node: research/levers/mes_trend_long_1d.yaml (testing leg; lever map shows this family untested). Source: the direction family is `untested` in the
+  lever map manifest; the one positive read is a LEAD on a sibling leg (3a84-01, DI on xrp_pullback_2h, +5.56 R, a disjoint-window confirmation still owed, row RESULTS-GRADE-1025),
+  and the harness flag --direction-filter exists (scripts/backtest_pullback.py, scripts/backtest_trend.py). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint
+  window, never a config edit; a FAIL closes this leg x arm-grid only.'
 grading:
-  attested: RULERQ20261117b2f114
+  attested: RULERQ20261117b2f103
   auto: true
-  decision_rule_id: RULERQ20261117b2f114
+  decision_rule_id: RULERQ20261117b2f103
   evidence:
-  - research/results/RQ-20261117-b2f1-14/44253972169.jsonl
+  - research/results/RQ-20261117-b2f1-03/44236947199.jsonl
   graded_at: '2026-11-19'
   grader: scripts/research/queue_grade.py
   needs_review: true
@@ -122,3 +124,8 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+blocked_on:
+- kind: data
+  ref: yfinance ES=F (mes_trend_long_1d feed) via regime_debt_matrix._fetch_csv
+  what: 'Yahoo returns no rows for ES=F AND the SPY control (venue_state=refusing_us; yfinance 0.2.66 plain-requests UA gets HTTP 429), so exit_lever_ablation dies in fetch_candles before any arm runs. Same failure on all 7 sibling units, one run each (no result, nothing graded). A re-run on the same host repeats it. The alternative lane (--non-crypto-source dukascopy) serves MES only as an S&P index CFD PROXY (dukascopy_instruments REL_PROXY), a different instrument and cost basis than the registered feed, so switching is a population change that needs its own decision, not a silent edit.'
+  clears_when: 'a non-refusing yfinance lane is verified on the runner (a SPY and ES=F probe returns rows), OR the operator/manager approves the Dukascopy MES proxy as the registered population for this leg family (then re-register the unit population text); then git mv this file back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged'
