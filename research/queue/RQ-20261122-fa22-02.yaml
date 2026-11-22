@@ -2,7 +2,7 @@
 id: RQ-20261122-fa22-02
 title: 'ml-exit-head-donchian-1h FEATURE lever on the 8-symbol BACKTEST-SOURCE corpus (public Bybit 1h klines): does feat_exh beat the champion by +0.03 R per OOS
   trade, and what n does the widened corpus reach?'
-status: queued
+status: retired
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -168,3 +168,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 4
   verdict: null
+retired_reason: 'Superseded by RQ-20261122-0104-01 (research-ops 2026-11-22 14:47Z): three producer_failed runs (45015557842, 45016054128, 45016558630), cmd-0.log HTTP 403 from api.bybit.com on every kline request (Bybit REST is country-blocked from GitHub runners; known since #7771). The dispatcher retry cap (max 2 retries on non-verdict outcomes) stops an in-place re-arm, so the same question re-registers on the Binance-vision candle source. Harness defect, not a verdict; rule and thresholds unchanged.'

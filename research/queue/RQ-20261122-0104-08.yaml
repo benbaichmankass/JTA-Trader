@@ -1,0 +1,157 @@
+id: RQ-20261122-0104-08
+title: 'D5 position aggregation PRE-DEV read: do rule arms A1-A3 beat today''s rule A0 on 2023-04..2024-10 (history no earlier D5 read used)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+why_not_inferential: 'A fixed replay, not a sample: every arm re-weights the SAME fully replayed solo streams over two fixed windows, so a re-run returns the same numbers.
+  The chance element is handled inside the rule by A4 (matched random exposure, 1000 seeded draws, the arm must beat its 95th percentile) and by requiring the SAME arm to clear
+  the bar in both windows.'
+question: On two disjoint windows before 2024-10 (p1 2023-04..2024-01, p2 2024-01..2024-10) using the same five pair streams, does any of A1-A3 clear the unchanged a474-02
+  bar over A0 in both windows?
+why_this_matters: 'fa22-06 (split 2025-07-01) was INDETERMINATE, not FAIL: A3 beat A0 in both windows but missed the materiality (>= 5 R), random-null and drawdown bars; a474-02
+  FAILED on a different split. Both read 2024-10..2026-10. Same-data re-cuts are robustness reads, not new evidence; pre-dev history is the in-hand window neither used. A3
+  clearing the bar on earlier data is the first independent evidence for a learned/rule aggregator (MLP-D5-MASTIFF); A3 failing there closes the split-sensitivity story.'
+power:
+  expected_n: 2900
+  min_detectable_effect: 5.0
+  effect_units: R_summed_over_pairs_per_window
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: a deterministic replay; n = trades across 5 pairs x 2 windows from the census record (~2,900). The materiality bar (>= 5 R over A0 summed over the 5 pairs,
+    per window) is the declared resolution.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision 5m / 1h history through 2026-09-30; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: stage0_allocation_rule_arms
+ml_consumer:
+  consumer: config/slice_allocation.yaml
+  decision: whether the per-(account, symbol) budget split gets a learned aggregator (and which rule arm is its baseline), or stays the slices / election rule
+  legs:
+  - ml_entry
+  - trend_donchian_xrp_4h
+  - trend_donchian_xrp_adx25
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  book: money
+arms_on:
+  pairs:
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: XRPUSDT
+    legs:
+    - trend_donchian_xrp_4h
+    - trend_donchian_xrp_adx25
+    - ml_entry
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: ADAUSDT
+    legs:
+    - ada_pullback_2h
+    - ml_entry
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: SOLUSDT
+    legs:
+    - trend_donchian_sol_prop
+    - ml_entry
+  - accounts:
+    - tradeify_1
+    - velotrade_1
+    symbol: ETHUSDT
+    legs:
+    - trend_donchian_eth_4h
+    - ml_entry
+  - accounts:
+    - tradeify_1
+    - velotrade_1
+    symbol: SOLUSDT
+    legs:
+    - trend_donchian_sol_4h
+    - ml_entry
+  source: the five pairs of RQ-20261114-82fd-02, unchanged; windows are PRE-DEV history (2023-04..2024-10) that neither a474-02 nor fa22-06 used (they used 2024-10..2026-10)
+  windows:
+    p1:
+    - '2023-04-01'
+    - '2024-01-01'
+    p2:
+    - '2024-01-01'
+    - '2024-10-01'
+  fetch_start: '2022-12-01'
+run:
+  command:
+  - python3
+  - scripts/research/d5_aggregator_arms.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261122-0104-08
+decision_rule:
+  id: RULE-RQ20261122-fa22-06-D5-ARMS-SPLIT
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'Per arm and window (EARLY 2024-10-01..2025-06-30, LATE 2025-07-01..2026-09-30, by entry time): net R = sum over the 5 pairs of w x net_r (w fixed at entry, budget
+    1.0 per pair, so R per capital-day = net R / (5 x days)); max_dd = max drawdown of the combined equity (pairs summed, ordered by exit). A0 slices: same-side w = 1 - open
+    weights, opposite open slice refuses, w < 0.05 not opened, stops not trailed; A0 election: one open package per pair. A1 w = 1/N, opposite allowed, no netting fee credit.
+    A2 w = 1 for the leg with the highest net R on the OTHER window. A3 w_leg = positive part of the leg''s mean net R on the OTHER window, normalised (equal when none positive).
+    A4: each trade kept with p = A0 exposure / n trades, w = 1, 1000 seeded draws -> p95. Rule legs at the full cost stack (resolve_run_costs, require_full_costs); ml_entry
+    net R from its own cost stack (BTCUSDT slippage/funding for every symbol: levels overstated for alts, the same for every arm).'
+  rule: 'PASS iff ONE arm X in {A1, A2, A3} meets ALL of, in BOTH windows: net R(X) - net R(A0) >= 5.0; net R(X) > A4 p95; max_dd(X) <= 1.25 x max(1, max_dd(A0)). FAIL iff
+    no X has net R(X) > net R(A0) in both windows. INDETERMINATE otherwise (including a pair stream the archive does not cover in these windows: coverage attached). Thresholds
+    are those of a474-02/fa22-06, unchanged; only the windows moved to untouched pre-dev history. A PASS is a Tier-3 proposal; never applied here.'
+  what_it_does_not_do: Changes no slice weight or position_model, places no order, trains nothing. Solo streams with untrailed stops are a ceiling read for A0's refusals; the
+    conviction score live slices split by is not replayed (first-come at full weight stands in for it).
+  min_n: 20 trades per pair-window
+  pass_action: 'A PASS on the re-cut split while a474-02 FAILED means the verdict is split-dependent: file it, do not build; a re-read on an untouched window is the next step.'
+  fail_action: A second FAIL on a different split makes "rule-exhausted" robust to the cross-fit design; MLP-D5-MASTIFF stays the slices/election rule until a roster change
+    adds a leg on a pair.
+compute: cpu_long
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (baseline before a learned model) + docs/plans/ML-ROADMAP-MECE-2026-11.md § 4.7 (rule arms before
+  a learned arm); the census RQ-20261114-82fd-02 (same streams, same harness calls); forecast combination: equal / performance weights as the standard combination baselines.'
+follow_up: ML-PRIMARY-2 grades on landing, updates MLP-D5-MASTIFF, reports to the manager.
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: INFERRED from the census run (same stream replays; the arms add seconds).
+  needs_internet: true
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-position-aggregator-d5
+  subject_kind: ml_model
+  from_result: RQ-20261122-fa22-06
+  verdict_read: indeterminate
+  diagnosis: 'fa22-06 INDETERMINATE: A3 beat A0 in both windows but missed materiality (delta >= 5 R), the A4 random-null p95 and the DD tolerance; a474-02 FAILED on the other
+    split. Both reads share 2024-10..2026-10 data, so neither separates a real A3 effect from window noise.'
+  search: two earlier windows (2023-04..2024-10) of the same five streams; arms A0..A4 and thresholds unchanged; denominator 3 learned arms
+  attempt: 3
+  due_by: '2026-12-01'
+  map_entries:
+  - research/levers/ml-position-aggregator-d5.yaml

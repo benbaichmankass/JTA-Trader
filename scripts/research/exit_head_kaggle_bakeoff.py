@@ -77,6 +77,23 @@ def fetch_bybit_candles(sym: str, dst: Path, start: str, end: str | None = None)
     return _csv_from_df(df, dst)
 
 
+def fetch_binance_vision_candles(sym: str, dst: Path, start: str, end: str | None = None) -> dict[str, Any]:
+    """RUNNER ROUTE, geoblock-safe (RQ-20261122-fa22-02 failed 3x on 403s: Bybit REST is country-blocked from GitHub runners).
+    Binance USD-M perp 1h klines from the public data.binance.vision archive (globally reachable; the same fallback
+    fetch_backtest_candles uses). Market data only. A perp-vs-Bybit basis exists and is stated in every result."""
+    from datetime import datetime, timezone
+    sys.path.insert(0, str(_REPO / "scripts" / "ops"))
+    import fetch_backtest_candles as fbc
+    t0 = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+    t1 = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else datetime.now(timezone.utc)
+    rows = fbc.fetch_klines_binance_vision(sym, "60", int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
+    if not rows:
+        return {"read_state": "could_not_look", "why": "binance_vision returned no klines"}
+    import pandas as pd
+    df = pd.DataFrame(rows).drop_duplicates("timestamp").sort_values("timestamp")
+    return _csv_from_df(df, dst)
+
+
 def _csv_from_df(df, dst: Path) -> dict[str, Any]:
     cols = ["timestamp", "open", "high", "low", "close"] + (["volume"] if "volume" in df.columns else [])
     out = df[cols].copy()
@@ -165,13 +182,14 @@ def run(a) -> int:
     for _, sym in legs:
         if sym in csvs or sym in spans:
             continue
-        if a.candle_source == "bybit":
+        if a.candle_source in ("bybit", "binance_vision"):
             csvs[sym] = work / "candles" / f"{sym}_{TF}.csv"
+            fetcher = fetch_bybit_candles if a.candle_source == "bybit" else fetch_binance_vision_candles
             try:
-                info = fetch_bybit_candles(sym, csvs[sym], a.start, a.end)
+                info = fetcher(sym, csvs[sym], a.start, a.end)
             except Exception as exc:  # noqa: BLE001  # allow-silent: network/pager failure lands as could_not_look in verdict.json, never a silent empty
                 info = {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
-            spans[sym] = {"source": "bybit_public_klines", **info}
+            spans[sym] = {"source": "bybit_public_klines" if a.candle_source == "bybit" else "binance_vision_um_perp_klines", **info}
             if info.get("read_state") != "measured":
                 csvs.pop(sym)
             continue
@@ -218,7 +236,7 @@ def run(a) -> int:
                 + (["--feature-arms", a.feature_arms] if a.feature_arms else []))
     row = json.loads(bj.read_text())
     row["decision_rule"] = {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}
-    row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from {'public Bybit 1h klines' if a.candle_source == 'bybit' else 'published market_raw 1h v002'}; no journal trades) -- "
+    row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from { {'bybit': 'public Bybit 1h klines', 'binance_vision': 'public Binance-vision USD-M perp 1h klines (basis vs Bybit not measured)'}.get(a.candle_source, 'published market_raw 1h v002') }; no journal trades) -- "
                          + str(row.get("population", "")))
     row.setdefault("measurement", {}).update(extra)
     row["produced_by"] = {"tool": "python3 scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py)"}
@@ -289,8 +307,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--registered-at", default=REGISTERED_AT, help="the unit's decision_rule.registered_at")
-    ap.add_argument("--candle-source", choices=("published", "bybit"), default="published",
-                    help="published = metis-market-data market_raw (kaggle_cpu, internet off); bybit = public klines (runner)")
+    ap.add_argument("--candle-source", choices=("published", "bybit", "binance_vision"), default="published",
+                    help="published = metis-market-data market_raw (kaggle_cpu, internet off); bybit = public klines (runner; "
+                         "403 from GitHub runners); binance_vision = data.binance.vision archive (runner, geoblock-safe)")
     ap.add_argument("--start", default="2020-06-01", help="bybit source: first bar date")
     ap.add_argument("--end", default=None, help="bybit source: last bar date (default now)")
     ap.add_argument("--self-test", action="store_true")

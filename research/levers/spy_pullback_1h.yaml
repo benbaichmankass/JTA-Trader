@@ -222,11 +222,74 @@ levers:
         max_drawdown_r: 12.776
         verdict: pass
         joint_change: false
+      - value: '40'
+        baseline_value: '60'
+        arm: tl40
+        unit: RQ-20261122-5722-02
+        window: 2022-12-01..2026-11-20
+        n: 162
+        net_r: 16.1405
+        baseline_n: 162
+        baseline_net_r: 34.5273
+        delta_net_r: -18.3868
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 21.6926
+        verdict: fail
+        joint_change: false
+      - value: '90'
+        baseline_value: '60'
+        arm: tl90
+        unit: RQ-20261122-5722-02
+        window: 2022-12-01..2026-11-20
+        n: 169
+        net_r: 30.8562
+        baseline_n: 162
+        baseline_net_r: 34.5273
+        delta_net_r: -3.6711
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.8736
+        verdict: fail
+        joint_change: false
       shape: peaked
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.083
-      fold_stability: 0.75
+      fold_stability: 0.625
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    pullback_frac:
+      tests:
+      - value: '0.5'
+        baseline_value: '0.618'
+        arm: pf50
+        unit: RQ-20261122-5722-02
+        window: 2022-12-01..2026-11-20
+        n: 160
+        net_r: 22.7328
+        baseline_n: 162
+        baseline_net_r: 34.5273
+        delta_net_r: -11.7945
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 28.131
+        verdict: fail
+        joint_change: false
+      - value: '0.786'
+        baseline_value: '0.618'
+        arm: pf786
+        unit: RQ-20261122-5722-02
+        window: 2022-12-01..2026-11-20
+        n: 179
+        net_r: 17.0492
+        baseline_n: 162
+        baseline_net_r: 34.5273
+        delta_net_r: -17.4781
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 31.4405
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0728
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
   exit:
     trail_adx_below:
       tests:
@@ -651,10 +714,24 @@ levers:
         max_drawdown_r: 17.45
         verdict: pass
         joint_change: false
-      shape: monotone
-      points: 5
+      - value: '25'
+        baseline_value: 'off'
+        arm: adx25
+        unit: RQ-20261122-5722-02
+        window: 2022-12-01..2026-11-20
+        n: 106
+        net_r: 11.7098
+        baseline_n: 162
+        baseline_net_r: 34.5273
+        delta_net_r: -22.8175
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 19.6921
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 6
       best_delta_r_per_trade: -0.1158
-      fold_stability: 0.233
+      fold_stability: 0.236
       reading: every tested value is worse than the baseline
     vol_skip_above_pctl:
       tests:

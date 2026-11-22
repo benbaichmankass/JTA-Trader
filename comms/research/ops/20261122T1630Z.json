@@ -1,0 +1,363 @@
+{
+ "run": "RESEARCH-OPS-20261122-1447",
+ "finished_at": "2026-11-22T16:30:00Z",
+ "by": "session_01AFoLuHt8M6mKprAQhd6uk8",
+ "floor": 53,
+ "floor_basis": "computed_floor(fired_24h 66)",
+ "authoring_queue_depth": 17,
+ "idle_backends": [
+  "github_runner",
+  "github_runner_data",
+  "kaggle",
+  "kaggle_cpu",
+  "trainer"
+ ],
+ "needs_review_triaged": 8,
+ "needs_review_left": null,
+ "throughput": {
+  "runnable_before": 14,
+  "runnable_after": null,
+  "queued": 277,
+  "fired_24h": 66,
+  "results_landed_24h": 72,
+  "hours_since_last_dispatch": 3.4,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "tree_only",
+  "collector": "tree_only",
+  "stranded_stamp_prs": [],
+  "incident": "fa22-02 producer_failed x3 (Bybit REST 403 from runners) + dispatcher retry cap; fixed by supersede 0104-01"
+ },
+ "results_read": {
+  "pass": 6,
+  "fail": 5,
+  "indeterminate": 3,
+  "units": {
+   "RQ-20261122-5722-01": "pass: qqq tl90 +16.03 R vs A, 4/4 folds, DD -3.57 (1 of 5 arms; discovery). configuration open; next = 0104-02 (pre-dev confirm) + 0104-03 (curve)",
+   "RQ-20261122-5722-02": "fail: spy entry/filter 5 arms none clears; configuration closed; family stays open; next = 0104-04 (exit/session)",
+   "RQ-20261122-5722-03": "pass (replace) but both arms net-negative (A -92.9 R, VL60 -52.5 R over 8y); next = 0104-05 (VL70/80)",
+   "RQ-20261122-5722-04/05/06": "fail x3: pullback_frac 0.375 on eth/xrp/avax 2h; configuration closed; family stays open; sol discovery does not transfer; next = other sol families (handoff)",
+   "RQ-20261122-fa22-01": "indeterminate (kaggle_cpu ran): feat_exh d +0.009 CI [-0.033,+0.051] n 909; FAIL bar n 8200 unreachable on 3 symbols",
+   "RQ-20261121-ad6a-03": "indeterminate (trainer ran): feat_exh target_coverage 0.8926 < 0.90 -> could_not_look; feat_path_only d -0.044 CI [-0.079,-0.009] n 2406 (worse than champion)",
+   "RQ-20261122-fa22-02": "producer_failed x3 (HTTP 403 api.bybit.com from runners): harness defect, not a verdict; superseded by 0104-01",
+   "RQ-20261122-fa22-03": "pass: D8 corpus donchian_widened_fresh built (unblocked ad6a-03, which ran)",
+   "RQ-20261122-fa22-04": "fail: trend_donchian chop/calm/long -1.72 R n 101 p 0.41; 5 of 8 cells n 7-13 underpowered all added_r>0; next = 0104-07",
+   "RQ-20261122-fa22-05": "pass: xsec SMA100 delta +0.858 p 0.0133 net +0.61, 1 of 5 arms (Bonferroni p 0.067), gain mostly 2023; next = 0104-06 pre-dev confirm",
+   "RQ-20261122-fa22-06": "indeterminate: D5 A3 beat A0 in both windows, missed materiality/null/DD; next = 0104-08 pre-dev windows"
+  }
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20261122-fa22-02",
+   "reason": "superseded by 0104-01 (producer_failed x3, dispatcher retry cap)"
+  },
+  {
+   "unit": "RQ-20261028-d1f5-03",
+   "reason": "blocked_over_age: blocker DESK-LIFECYCLE-S0 done; -02 pilot graded fail; no run command"
+  },
+  {
+   "unit": "RQ-20261030-e18g-01/02/03",
+   "reason": "blocked_over_age: id-band blocker moot, results already committed under comms/research/RQ-20261030-e18g-01 and -03 (a first unblock attempt was reverted after finding them)"
+  }
+ ],
+ "levers_filed": [
+  {
+   "lever": "desk_edge_1m.py single run mode (fe57-02 wrapper); D3/D4/D6/D7/D9 next units; kaggle_cpu has no diagnosed fit",
+   "ref": "PI-20261122-HOPS1447-0001"
+  },
+  {
+   "lever": "aadc-13 n-count audit (same n_test_trades in all 5 folds, probable rows-not-trades)",
+   "ref": "PI-20261122-HOPS1447-0002"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261122-0104-01",
+  "RQ-20261122-0104-02",
+  "RQ-20261122-0104-03",
+  "RQ-20261122-0104-04",
+  "RQ-20261122-0104-05",
+  "RQ-20261122-0104-06",
+  "RQ-20261122-0104-07",
+  "RQ-20261122-0104-08"
+ ],
+ "followups_filed": [
+  "PI-20261122-HOPS1447-0001",
+  "PI-20261122-HOPS1447-0002"
+ ],
+ "authoring": {
+  "queue_depth": 17,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "nodes": [],
+  "why": "17 nodes are Tier-3 declares / no driver (same as 0847); the iteration loop took the budget"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 13,
+   "of": 13
+  },
+  "map_entries_added": null,
+  "next_tests_from_map": 8,
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 2,
+   "ltr_class": 4
+  },
+  "orphans_after": {
+   "strategy_leg": 3,
+   "ml_model": 1,
+   "ltr_class": 4
+  },
+  "results_iterated": [
+   {
+    "result": "RQ-20261122-5722-01",
+    "verdict": "pass",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261122-0104-02/03",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261122-5722-02",
+    "verdict": "fail",
+    "subject": "spy_pullback_1h",
+    "next": "RQ-20261122-0104-04",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261122-5722-03",
+    "verdict": "pass",
+    "subject": "mgc_trend_1h",
+    "next": "RQ-20261122-0104-05",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261122-fa22-04",
+    "verdict": "fail",
+    "subject": "ml-btc-router-cells",
+    "next": "RQ-20261122-0104-07",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261122-fa22-05",
+    "verdict": "pass",
+    "subject": "xsec-crypto",
+    "next": "RQ-20261122-0104-06",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261122-fa22-06",
+    "verdict": "indeterminate",
+    "subject": "ml-position-aggregator-d5",
+    "next": "RQ-20261122-0104-08",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261122-fa22-02",
+    "verdict": "producer_failed",
+    "subject": "ml-exit-head-donchian-1h",
+    "next": "RQ-20261122-0104-01",
+    "attempt": 6
+   }
+  ],
+  "advanced": 7,
+  "survivors": [],
+  "overdue": "see iteration_orphans.py (many 11-05/11-06 units overdue)",
+  "retired_by_review": [],
+  "orphans_remaining_named": [
+   "claude_desk",
+   "ml-holdbias-exit",
+   "ltr-close",
+   "ltr-partial-close",
+   "ltr-sl-to-structure",
+   "ltr-tp-pull-in",
+   "cost-levers-live-legs",
+   "movement-capture (all in PI-20261122-C8ZPUM9L-0001)"
+  ]
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "5722-01 graded fail",
+   "p": 0.7,
+   "outcome": "miss",
+   "action_happened": true,
+   "learned": "it PASSED (tl90 +16 R): an assumed fail after ad6a-01 was priced from the stop lever, but entry lever was untested; do not price a fail from a sibling lever's flip"
+  },
+  {
+   "call": ">=1 of 5722-04/05/06 passes",
+   "p": 0.2,
+   "outcome": "miss",
+   "action_happened": true,
+   "learned": "0 of 3: sol pullback_frac 0.375 does not transfer to ETH/XRP/AVAX"
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-22T14:52Z",
+  "since": "previous record",
+  "runnable_by_track": {
+   "TRADING": 4,
+   "MODEL": 4,
+   "INFRA": 6
+  },
+  "fails_without_next": 4,
+  "needs_review": 123,
+  "result_disposition": {
+   "ungraded_before": 8,
+   "ungraded_after": 0,
+   "unowned_before": 1
+  },
+  "could_not_look": [
+   "github-actions MCP down: workflow runs not listed, tree read only",
+   "next_rq_id --fetch hung: ids minted offline (batch 0104), collision on origin unchecked"
+  ]
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261122-5722-01",
+   "RQ-20261122-5722-03",
+   "RQ-20261122-fa22-01",
+   "RQ-20261121-ad6a-03",
+   "RQ-20261122-fa22-04",
+   "RQ-20261122-fa22-05",
+   "RQ-20261118-aadc-13"
+  ],
+  "trading": {
+   "meaning": [
+    "qqq tl90 +16 R is monotone in trend_lookback (40:-5.5, 60:0, 90:+16) which is what a real lever looks like, but the same arm on SPY failed, so QQQ-only or noise until the pre-dev confirm (0104-02) reads.",
+    "mgc VL60 passes its replace rule while both arms lose (-92.9 vs -52.5 R, 8y, after 7.5 bp fee + 5 bp slip): the filter is less bad, the leg has no net edge; that is a roster question for the manager, not a lever result.",
+    "sol pullback_frac 0.375 failed 0 of 3 symbol holdouts (eth/xrp/avax), so the +15 R is sol-specific or in-sample; the sol leg moves to families not yet read.",
+    "xsec SMA100 gate converts a -0.25 book to +0.61 but is 1 of 5 arms at uncorrected p 0.0133 (0.067 Bonferroni) with 2023 carrying the gain: a discovery until the pre-dev window reads."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "spy entry/filter",
+     "hypotheses": [
+      "noise",
+      "idea wrong",
+      "design"
+     ],
+     "test": "0104-04 exit/session",
+     "survivor": "idea",
+     "next": "RQ-20261122-0104-04"
+    },
+    {
+     "cluster": "pullback_frac 0.375 symbol holdouts",
+     "hypotheses": [
+      "noise",
+      "sol-specific",
+      "regime"
+     ],
+     "test": "none authored: sol next family in handoff",
+     "survivor": "idea",
+     "next": "handoff"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261122-0104-02",
+     "decision_changed": "whether QQQ tl90 goes to a Tier-3 proposal",
+     "on_pass": "proposal citing denominator 5 + pre-dev window",
+     "on_fail": "tl90 closed as in-sample",
+     "premortem": "Dukascopy QQQ 1h may not reach 2018 -> INDETERMINATE"
+    },
+    {
+     "id_or_node": "RQ-20261122-0104-06",
+     "decision_changed": "whether the xsec book carries a BTC SMA100 gate",
+     "on_pass": "Tier-3 proposal",
+     "on_fail": "gate closed as 2023-only",
+     "premortem": "funding/close coverage before 2020-09 for SOL/AVAX thins the panel"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "aadc-13 PASS (+0.0203, CI LB +0.012) rests on n 37,295 where every fold tests the same 7,459-row block: the CI is too narrow and the unit of n is probably rows, so the D8 4h head has no confirmed pass (PI-20261122-HOPS1447-0002).",
+    "ad6a-03: path-only features are significantly WORSE than the champion (d -0.044, CI [-0.079,-0.009], n 2406) and feat_exh sits at coverage 0.8926 just under the 0.90 gate; fa22-01 gives d +0.009 [-0.033,+0.051]: the exit-head FEATURE family shows no resolvable lift anywhere."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "exit-head features (D8)",
+     "hypotheses": [
+      "noise",
+      "power",
+      "coverage hole",
+      "idea wrong"
+     ],
+     "test": "0104-01 (8 symbols, Binance-vision)",
+     "survivor": "power",
+     "next": "RQ-20261122-0104-01"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261122-0104-07",
+     "decision_changed": "keep/remove the 5 underpowered BTC OFF-cells (config/regime_policy.yaml)",
+     "on_pass": "cells earn their keep",
+     "on_fail": "Tier-3 removal proposal",
+     "premortem": "BTC 15m label dataset may not span 6y"
+    }
+   ]
+  },
+  "cross_track": [
+   {
+    "from": "MODEL",
+    "finding": "D8 4h pass has a count defect",
+    "feeds": "PI-20261122-HOPS1447-0002"
+   },
+   {
+    "from": "TRADING",
+    "finding": "trend_donchian chop/calm/long cell vetoes cost R (no-cosmetic-cell)",
+    "feeds": "manager Tier-3 regime-policy note"
+   }
+  ],
+  "surprises": [
+   "fa22-02 ran 3x before anyone read cmd-0.log: all 403s",
+   "an e18g unblock looked mechanical until the result dirs under comms/research were found"
+  ]
+ },
+ "calls": [
+  {
+   "call": "0104-02 (qqq tl90 pre-dev) grades pass",
+   "p": 0.25,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "0104-02 graded pass",
+    "resolves_when": "2026-11-27"
+   }
+  },
+  {
+   "call": "0104-01 (D8 8-symbol) ends INDETERMINATE (FAIL bar 8200 unreachable) with CI upper < +0.03",
+   "p": 0.55,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "0104-01 verdict + CI upper bound",
+    "resolves_when": "2026-11-25"
+   }
+  },
+  {
+   "call": "0104-06 (xsec SMA100 pre-dev) grades pass",
+   "p": 0.3,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "0104-06 graded pass",
+    "resolves_when": "2026-11-27"
+   }
+  }
+ ],
+ "not_run": [
+  "E authoring from the programme authoring queue (17 nodes: Tier-3 declares / no driver; skipped on purpose)"
+ ],
+ "limits": [
+  "github-actions MCP down; tree read only",
+  "next_rq_id --fetch hung; ids minted offline",
+  "blocked/ audit covered the 12 blocked_over_age units only"
+ ],
+ "handoff": [
+  "PI-20261122-HOPS1447-0001: D3/D4/D6/D7/D9 next units, kaggle_cpu fit, fe57-02 wrapper",
+  "PI-20261122-HOPS1447-0002: aadc-13 n-count audit",
+  "8 orphans remain named (PI-20261122-C8ZPUM9L-0001)",
+  "sol_pullback_2h next lever family after the pullback_frac holdouts failed",
+  "units 0104-* and the PI are a HELD PR (hand-authored queue units)"
+ ]
+}
