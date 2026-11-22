@@ -1,4 +1,4 @@
-# UNBLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48: the harness now declares --side-filter / --skip-hours (default byte-identical, tests/test_backtest_squeeze_fvg_side_skip.py), rule unchanged. `--baseline mid` (an undeclared arm) corrected to `A`, the baseline arm the rule names.
+# UNBLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48: the harness now declares --side-filter / --skip-hours (default byte-identical, tests/test_backtest_squeeze_fvg_side_skip.py), rule unchanged. The stale `last_dispatched_at` (2026-11-19T03:19Z, from the argparse-failed dispatch) was removed: it has never produced a result and, with cadence once, the stamp would read as already dispatched. `--baseline mid` (an undeclared arm) corrected to `A`, the baseline arm the rule names.
 id: RQ-20261118-abab-18
 title: 'DIRECTION lever family on fvg_range_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost stack?'
 status: queued
@@ -115,4 +115,3 @@ roadmap:
 related:
 - RQ-20261117-dc44-05
 - research/levers/fvg_range_15m.yaml
-last_dispatched_at: '2026-11-19T03:19:00+00:00'
