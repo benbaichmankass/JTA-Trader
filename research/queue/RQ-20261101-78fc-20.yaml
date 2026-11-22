@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group A: network). The landed row was producer_failed: the Kaggle kernel tried to fetch candles from data.binance.vision (no internet) before the published candle dataset covered this unit's feed (already diagnosed 2026-11-19 and owned by PI-20261118-EFILLW47-0003, which closes when the unit re-lands measured on a backend with the feed). The dataset now serves this feed (candle_dataset.covers True; a Kaggle run of the same harness on 2026-11-22, RQ-20261118-abab-16, logged 'candle dataset: served binance__BTCUSDT__240 ... from metis-research-candles'). last_dispatched_at cleared so the unit can re-run; rule and grading block unchanged (a measured re-run re-grades it). See PI-20261122-SME5WDGR-0003.
 # Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-78fc-20
 title: 'ITERATION 1 of eth_pullback_prop_2h (fail): On eth_pullback_prop_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30),
@@ -122,7 +123,6 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/eth_pullback_prop_2h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
-last_dispatched_at: '2026-11-03T04:15:50+00:00'
 grading:
   attested: RULE-RQ-20261101-78fc-20
   auto: true
