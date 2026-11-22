@@ -1,0 +1,34 @@
+RUN /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/research/m20_exit_head_round.py --legs trend_donchian,trend_donchian_eth,trend_donchian_sol,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT --tf 1h --out datasets-out/exit_head/1h/donchian_widened_fresh_build --build-only --db data/trade_journal.db
+th: 679 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv --symbol SOLUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.8 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian_sol --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_sol.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian_sol: 302 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/LINKUSDT_5m.csv --symbol LINKUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_LINKUSDT.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 428 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/BNBUSDT_5m.csv --symbol BNBUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_BNBUSDT.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 408 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/XRPUSDT_5m.csv --symbol XRPUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_XRPUSDT.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 384 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/ADAUSDT_5m.csv --symbol ADAUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_ADAUSDT.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 395 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/backtest_trend.py --data /home/ubuntu/ict-trading-bot/data/AVAXUSDT_5m.csv --symbol AVAXUSDT --timeframe 1h --resample 1h --donchian 20 --atr-period 14 --atr-stop-mult 2 --trail-mult 5.0 --min-confidence 0.7 --trail-decay-arm-r 6.49 --trail-decay-tight-mult 2.5 --long-only --tp-cap-pct 0.099 --tp-r 50.0 --strategy-name trend_donchian --emit-trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_AVAXUSDT.jsonl --json /tmp/eh_round_cell.json
+emitted trend_donchian: 372 trades
++ /home/ubuntu/ict-trading-bot/.venv/bin/python3 /home/ubuntu/ict-trading-bot/scripts/ml/build_exit_head_dataset.py --tf 1h --out datasets-out/exit_head/1h/donchian_widened_fresh_build --instruments /home/ubuntu/ict-trading-bot/config/instruments.yaml --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_eth.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_sol.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_LINKUSDT.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_BNBUSDT.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_XRPUSDT.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_ADAUSDT.jsonl --trades datasets-out/exit_head/1h/donchian_widened_fresh_build/emit/trend_donchian_AVAXUSDT.jsonl --candles BTCUSDT=/home/ubuntu/ict-trading-bot/data/BTCUSDT_15m.csv --candles ETHUSDT=/home/ubuntu/ict-trading-bot/data/ETHUSDT_5m.csv --candles SOLUSDT=/home/ubuntu/ict-trading-bot/data/SOLUSDT_5m.csv --candles LINKUSDT=/home/ubuntu/ict-trading-bot/data/LINKUSDT_5m.csv --candles BNBUSDT=/home/ubuntu/ict-trading-bot/data/BNBUSDT_5m.csv --candles XRPUSDT=/home/ubuntu/ict-trading-bot/data/XRPUSDT_5m.csv --candles ADAUSDT=/home/ubuntu/ict-trading-bot/data/ADAUSDT_5m.csv --candles AVAXUSDT=/home/ubuntu/ict-trading-bot/data/AVAXUSDT_5m.csv --db data/trade_journal.db --legs trend_donchian,trend_donchian_eth,trend_donchian_sol
+candles BTCUSDT: 47044 1h bars
+candles ETHUSDT: 49876 1h bars
+candles SOLUSDT: 44740 1h bars
+candles LINKUSDT: 53347 1h bars
+candles BNBUSDT: 47325 1h bars
+candles XRPUSDT: 48451 1h bars
+candles ADAUSDT: 49797 1h bars
+candles AVAXUSDT: 45452 1h bars
+donchian: 90951 rows, holding_pays 28.5%, trades {'harness': 3229, 'live': 85}
+report -> datasets-out/exit_head/1h/donchian_widened_fresh_build/build_report.json
+ live source data/trade_journal.db: 8350 rows in `trades`, 2462 matched filters, 88 usable
+LOAD BY FAMILY:
+    donchian: loaded 3354 of 3354
+
+build-only: rows under datasets-out/exit_head/1h/donchian_widened_fresh_build (emitted legs: ['trend_donchian', 'trend_donchian:ADAUSDT', 'trend_donchian:AVAXUSDT', 'trend_donchian:BNBUSDT', 'trend_donchian:LINKUSDT', 'trend_donchian:XRPUSDT', 'trend_donchian_eth', 'trend_donchian_sol'])
+ {"status": "heavy_lock_acquired", "label": "m20_exit_head_round"}
+
+published datasets-out/exit_head/1h/donchian_widened_fresh_build/donchian/rows.jsonl -> datasets-out/exit_head/1h/donchian_widened_fresh/rows.jsonl
+{"verdict": "pass", "read_state": "measured"}
