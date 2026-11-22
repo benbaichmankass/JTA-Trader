@@ -95,7 +95,7 @@ run:
   inputs:
     research_unit: RQ-20261117-9e1a-01
   timeout_minutes: 150
-status: queued
+status: blocked
 theme: regime
 title: 'REGIME lever family never tested on mes_trend_long_1d: top-vol entry skip VH80/VH90 vs the declared leg, net of cost?'
 value:
@@ -105,7 +105,6 @@ value:
   usd_at_stake_per_month: 150
 why_this_matters: research/levers/mes_trend_long_1d.yaml lists no vol-skip-above (regime) family for this TESTING leg; the lever passed on 2 of 3 daily legs (RQ-20261017-ae17-17
   family). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
-last_dispatched_at: '2026-11-17T14:33:55+00:00'
 grading:
   attested: RULERQ202611179e1a01
   auto: true
@@ -123,3 +122,8 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+blocked_on:
+- kind: data
+  ref: yfinance ES=F (mes_trend_long_1d feed) via regime_debt_matrix._fetch_csv
+  what: 'Yahoo returns no rows for ES=F AND the SPY control (venue_state=refusing_us; yfinance 0.2.66 plain-requests UA gets HTTP 429), so exit_lever_ablation dies in fetch_candles before any arm runs. Same failure on all 7 sibling units, one run each (no result, nothing graded). A re-run on the same host repeats it. The alternative lane (--non-crypto-source dukascopy) serves MES only as an S&P index CFD PROXY (dukascopy_instruments REL_PROXY), a different instrument and cost basis than the registered feed, so switching is a population change that needs its own decision, not a silent edit.'
+  clears_when: 'a non-refusing yfinance lane is verified on the runner (a SPY and ES=F probe returns rows), OR the operator/manager approves the Dukascopy MES proxy as the registered population for this leg family (then re-register the unit population text); then git mv this file back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged'
