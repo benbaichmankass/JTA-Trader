@@ -119,12 +119,30 @@ def _atr(df: pd.DataFrame, period: int) -> pd.Series:
     return tr.rolling(period, min_periods=1).mean()
 
 
+def _parse_skip_hours(raw: str) -> set:
+    """CSV of UTC hours (0-23) -> set. Empty = off. Anything else is refused: a typo must not silently mean 'no gate'."""
+    out = set()
+    for tok in str(raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            h = int(tok)
+        except ValueError:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}") from None
+        if not 0 <= h <= 23:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}")
+        out.add(h)
+    return out
+
+
 def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                  kc_mult: float, atr_period: int, atr_stop_mult: float,
                  trail_mult: float, timeout_bars: int, cooldown_bars: int,
                  timeframe: str, symbol: str,
                  emit_path: Optional[str] = None,
                  min_confidence: float = 0.0,
+                 side_filter: str = "both", skip_hours: str = "",
                  stale_exit_bars: int = 0, stale_exit_below_r: float = 0.0,
                  tp_cap_pct: float = 0.0,
                  tp_r: float = 50.0,
@@ -135,6 +153,9 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                  trail_vol_below_pctl: float = 0.0,
                  trail_vol_tight_mult: float = 0.0,
                  be_floor_r: float = 0.0) -> Dict[str, Any]:
+    if side_filter not in ("long", "short", "both"):
+        raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
+    skip_hour_set = _parse_skip_hours(skip_hours)
     df = df.reset_index(drop=True)
     df["atr"] = _atr(df, atr_period)
     basis = df["close"].rolling(bb_period).mean()
@@ -178,12 +199,27 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
         if atr <= 0 or pd.isna(prev) or pd.isna(basis_i):
             i += 1
             continue
+        # TIME-OF-DAY GATE (PI-20261119-FILLW47B-0003): skip a signal whose SIGNAL bar's UTC hour is in --skip-hours. Same semantics as
+        # backtest_trend.py / backtest_ict_scalp.py / backtest_fade.py (an unparseable timestamp never skips). A skipped bar mutates no
+        # state, so the next qualifying bar fires. Default "" = no gate = byte-identical.
+        if skip_hour_set:
+            try:
+                if pd.Timestamp(df["timestamp"].iloc[i]).hour in skip_hour_set:
+                    i += 1
+                    continue
+            except (TypeError, ValueError):
+                pass
         # squeeze fires: was ON last bar, OFF now (expansion)
         if not (bool(prev) and not bool(now)):
             i += 1
             continue
         c = float(df["close"].iloc[i])
         direction = "long" if c > float(basis_i) else "short"
+        # SIDE GATE (PI-20261119-FILLW47B-0003): long suppresses shorts, short suppresses longs (the live _side_filter_suppresses
+        # semantics). A suppressed signal does not fire and starts no cooldown. Default "both" = byte-identical.
+        if (side_filter == "long" and direction != "long") or (side_filter == "short" and direction != "short"):
+            i += 1
+            continue
         # Live-parity confidence: distance of price from the BB basis / ATR,
         # clamped [0,1]. Gate entry on it so the sweep mirrors a live floor.
         confidence = round(min(max(abs(c - float(basis_i)) / atr, 0.0), 1.0), 4)
@@ -589,6 +625,10 @@ def main(argv):
                         "futures/equity/fx). Pass 0 for the fee-only arm.")
     p.add_argument("--funding-window-hours", type=float,
                    default=execution_costs.FUNDING_WINDOW_HOURS or 8.0)
+    p.add_argument("--side-filter", choices=("long", "short", "both"), default="both",
+                   help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
+    p.add_argument("--skip-hours", default="",
+                   help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live-parity confidence (|close-basis|/ATR) is below this.")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
@@ -678,7 +718,8 @@ def main(argv):
                      trail_vol_above_pctl=a.trail_vol_above_pctl,
                      trail_vol_below_pctl=a.trail_vol_below_pctl,
                      trail_vol_tight_mult=a.trail_vol_tight_mult,
-                     be_floor_r=a.be_floor_r)
+                     be_floor_r=a.be_floor_r,
+                     side_filter=a.side_filter, skip_hours=a.skip_hours)
     if a.confidence_sweep:
         out = _confidence_sweep(df, _parse_grid(a.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(out))
