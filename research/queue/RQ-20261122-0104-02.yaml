@@ -1,0 +1,109 @@
+id: RQ-20261122-0104-02
+title: qqq_pullback_1h trend_lookback 90 PRE-DEV CONFIRMATION (the 5722-01 discovery, read on the history BEFORE the discovery window), net of cost
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity before
+  combinations; every arm counted.'
+question: On QQQ 1h history BEFORE 2022-12 (the discovery window of RQ-20261122-5722-01), does trend_lookback 90 beat the configured 60 by >= 4.0 R net of cost with maxDD no
+  worse and >= 3 of 4 calendar folds? One arm vs control (denominator 1 of the 5 the discovery chose from).
+why_this_matters: '5722-01 (best of 5 one-factor arms, 2022-12..2026-11) found tl90 +16.03 R over A with 4 of 4 folds and DD -3.57 R; tl40 was -5.49 R and A is the control,
+  so the response in trend_lookback is monotone (40: -5.5, 60: 0, 90: +16.0), the shape a real lever has. But the same lever on SPY (5722-02, tl90 in its 5 arms) did not clear,
+  and a best-of-5 discovery on one window is not a confirmation. Operator rule (2026-11-05): confirm on untouched IN-HAND data - here pre-dev history, registered before the
+  run.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED control n comes from the discovery/diagnosis result named in iteration.from_result; the control n >= 39 floor (E35) applies to arm A; 1 variant arm(s) are
+    counted as the multiple-testing denominator. Replays history on public candles; nothing accrues. A control n < 39 is INDETERMINATE, not a verdict.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the full cost
+    stack; the control n, net R and fold signs are reported.'
+  rule: PASS iff at least one of the 1 variant arm(s) beats control A by >= 4.0 R net of the full cost stack with maxDD no worse than A and >= 3 of 4 calendar folds, at A n
+    >= 39 (thresholds unchanged from the discovery unit; the denominator is 1). FAIL iff A n >= 39 and no arm clears them (the configurations tested are closed; the lever family
+    stays open on other values and legs). INDETERMINATE if A n < 39 or the feed does not cover the window. Per-year table and long/short split attached, not graded. One arm
+    confirms the one discovery; the sibling units are not read together. A PASS goes to the manager as a Tier-3 proposal citing the arm denominator; never applied here.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, control plus variant arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261122-5722-01, which ran in minutes).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a live leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - tl90=trend_lookback=90
+  - --days
+  - '3300'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2022-11-30 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-0104-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared: &id001
+- entry
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261122-5722-01
+  verdict_read: pass_unconfirmed
+  diagnosis: '5722-01 PASS (discovery, denominator 5): tl90 +16.03 R vs A (A net positive, folds 7.2/0.2/10.0/..., fee 0, slippage 5 bps round trip), 4/4 folds, DD -3.57. Sibling
+    SPY (5722-02) with the same tl90 arm failed, so QQQ-only or noise are live hypotheses; ad6a-01 earlier showed the stop lever flipping sign across windows on this leg.'
+  search: one arm (trend_lookback 90) vs the configured control on QQQ 2018-06..2022-11 (4 calendar folds), a window the discovery never saw; a PASS goes to the lever curve
+    (U03) and a Tier-3 proposal; a FAIL closes tl90 as in-sample for this leg. The feed may not reach 2018 (INDETERMINATE then, and the unit names the first covered bar).
+  levers: *id001
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.entry.trend_lookback
+  attempt: 2
+  due_by: '2026-12-01'
+  multiple_testing: null
+status: queued

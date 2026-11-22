@@ -335,10 +335,24 @@ levers:
         max_drawdown_r: 13.8886
         verdict: pass
         joint_change: true
+      - value: '0.375'
+        baseline_value: '0.5'
+        arm: pf375
+        unit: RQ-20261122-5722-05
+        window: 2021-11-18..2026-11-21
+        n: 247
+        net_r: 23.7529
+        baseline_n: 289
+        baseline_net_r: 30.365
+        delta_net_r: -6.6121
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 16.7083
+        verdict: fail
+        joint_change: false
       shape: peaked
-      points: 15
+      points: 16
       best_delta_r_per_trade: 0.061
-      fold_stability: 0.333
+      fold_stability: 0.328
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     min_confidence:
       tests:

@@ -1,5 +1,3 @@
-# AUTHORED by AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL), manager decision 2026-11-19 08:21Z (c): re-run on CURRENT
-# data of an m20 exit-lever result whose trainer input file was FROZEN (real-money leg; TRAINER-1D-STALE-ROSTERED).
 id: RQ-20261119-a7f1-09
 title: 'RE-RUN on current data: M20 exit-lever sweep for REAL-MONEY leg tlt_pullback_1h (inputs were frozen at ~2026-06-18)'
 status: queued
@@ -9,17 +7,14 @@ theme: live_strategy
 priority: 1
 roadmap:
 - M20
-practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg
-  and net of the full cost stack [S4, S5, S6]'
-question: 'On CURRENT data (trainer data/TLT_1h.csv refreshed past the ~2026-06-18 freeze), does each lever cell
-  for tlt_pullback_1h keep the verdict the matrix carries, in particular SHIPPED (live, alpaca_live) trail_decay
-  + passed_unshipped trail_geometry? A shipped lever is graded by the sweep''s lever-off arm (base with the lever
-  removed vs the cell restoring it at live values). Basis: Which hard exit levers (stale_stop, giveback_stop, trail_geometry,
-  trail_decay, vol_trail, momentum_trail, momentum_stale) clear the exit-refinement P2 gate on tlt_pullback_1h (TLT 1h) on the data available now -- and does last month''s answer still hold?'
-why_this_matters: SHIPPED (live, alpaca_live) trail_decay + passed_unshipped trail_geometry. Every committed m20
-  result for tlt_pullback_1h ends at the freeze although run Aug-Nov, so the setting has not been re-checked on
-  post-June data. Failing on current data = a data-backed demotion of the setting, brought to the manager (no revert
-  before then).
+practice_precedent: 'T2, T3, T4 (docs/reference/trading-and-model-practice-principles.md): stop/trail value is per-leg and net of the full cost stack [S4, S5, S6]'
+question: 'On CURRENT data (trainer data/TLT_1h.csv refreshed past the ~2026-06-18 freeze), does each lever cell for tlt_pullback_1h keep the verdict the matrix carries, in
+  particular SHIPPED (live, alpaca_live) trail_decay + passed_unshipped trail_geometry? A shipped lever is graded by the sweep''s lever-off arm (base with the lever removed
+  vs the cell restoring it at live values). Basis: Which hard exit levers (stale_stop, giveback_stop, trail_geometry, trail_decay, vol_trail, momentum_trail, momentum_stale)
+  clear the exit-refinement P2 gate on tlt_pullback_1h (TLT 1h) on the data available now -- and does last month''s answer still hold?'
+why_this_matters: SHIPPED (live, alpaca_live) trail_decay + passed_unshipped trail_geometry. Every committed m20 result for tlt_pullback_1h ends at the freeze although run
+  Aug-Nov, so the setting has not been re-checked on post-June data. Failing on current data = a data-backed demotion of the setting, brought to the manager (no revert before
+  then).
 power:
   expected_n: 25
   min_detectable_effect: 0.45
@@ -27,8 +22,8 @@ power:
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades insufficient_base,
-    not fail. The sweep derives the IS/OOS boundary to target that OOS count (split_mode oos-trades).
+  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades insufficient_base, not fail. The sweep derives the IS/OOS boundary
+    to target that OOS count (split_mode oos-trades).
   feasibility:
     source: none
     accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
@@ -38,10 +33,9 @@ evidence_class:
 decision_rule:
   id: RULE-EXIT-REFINEMENT-P2-GATE
   statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
-  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path B (improves
-    net_r_per_capital_day in BOTH IS and OOS with maxDD not worsening and net_R not falling more than the declared
-    floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is capped at the base book's own D_b.
-    Below the floor grades insufficient_base. No cell is shipped by this unit.
+  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path B (improves net_r_per_capital_day in BOTH IS and OOS with maxDD not
+    worsening and net_R not falling more than the declared floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is capped at the base book's own D_b. Below
+    the floor grades insufficient_base. No cell is shipped by this unit.
   registered_at: '2026-10-31'
   registered_before_run: true
 routing:
@@ -65,5 +59,19 @@ rerun_of:
   unit: RQ-20260928-007
   reason: trainer data/TLT_1h.csv frozen ~2026-06-18
   blast_radius: TRAINER-1D-STALE-ROSTERED real-money extension (2026-11-19)
-unblocked: 'AM-OPS-8 2026-11-19: the blocked_reason''s condition is MET. trainer data/TLT_1h.csv last bar 2026-11-18T20:00:00Z = the previous trading day (fresh read via trainer-vm-diag #27354 at ~15:15Z after #27299 installed and ran ict-candle-refresh; report_data_freshness stale=false). Was: BLOCKED on data freshness (TRAINER-INTRADAY-EQUITY-REFRESH, now done). Question, rule and run are unchanged.'
+unblocked: 'AM-OPS-8 2026-11-19: the blocked_reason''s condition is MET. trainer data/TLT_1h.csv last bar 2026-11-18T20:00:00Z = the previous trading day (fresh read via trainer-vm-diag
+  #27354 at ~15:15Z after #27299 installed and ran ict-candle-refresh; report_data_freshness stale=false). Was: BLOCKED on data freshness (TRAINER-INTRADAY-EQUITY-REFRESH,
+  now done). Question, rule and run are unchanged.'
 last_dispatched_at: '2026-11-19T18:10:09+00:00'
+grading:
+  attested: RULE-EXIT-REFINEMENT-P2-GATE
+  auto: false
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261119-a7f1-09/44582576728.jsonl
+  graded_at: '2026-11-22'
+  grader: research-ops 2026-11-22 14:47Z (session_01AFoLuHt8M6mKprAQhd6uk8)
+  reason: 25 cells on tlt_pullback_1h, 5 cleared IS/OOS, HOLDOUT from 2024-05-08 confirmed. A candidate geometry beats the shipped one; the flip is a Tier-3 proposal for the
+    manager citing 25 cells swept / 5 cleared.
+  rows: 1
+  verdict: pass

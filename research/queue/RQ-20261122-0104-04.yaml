@@ -1,0 +1,114 @@
+id: RQ-20261122-0104-04
+title: spy_pullback_1h EXIT / SESSION lever sweep after entry+filter read flat (5722-02), net of cost
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity before
+  combinations; every arm counted.'
+question: On SPY 1h 2022-12..2026-11, does trail_mult 3.5 or 7.0, a real take-profit (tp_r 3.0), or removing skip_hours (19,20) beat the configured control by >= 4.0 R net
+  of cost, maxDD no worse, >= 3 of 4 folds? Four arms, denominator 4.
+why_this_matters: '5722-02 (entry/filter, 5 arms incl. tl90 and adx25) found no arm that clears the bar on SPY: entry and filter are flat or negative on this leg, and ad6a-02
+  closed stop width. The unmeasured levers are the profit exit (trail_mult, the TP doctrine''s fictional tp_r 50) and the session cut. tp_r 3.0 is also the TP-doctrine compliance
+  probe for this leg (reach and net).'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED control n comes from the discovery/diagnosis result named in iteration.from_result; the control n >= 39 floor (E35) applies to arm A; 4 variant arm(s) are
+    counted as the multiple-testing denominator. Replays history on public candles; nothing accrues. A control n < 39 is INDETERMINATE, not a verdict.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the full cost
+    stack; the control n, net R and fold signs are reported.'
+  rule: PASS iff at least one of the 4 variant arm(s) beats control A by >= 4.0 R net of the full cost stack with maxDD no worse than A and >= 3 of 4 calendar folds, at A n
+    >= 39 (thresholds unchanged from the discovery unit; the denominator is 4). FAIL iff A n >= 39 and no arm clears them (the configurations tested are closed; the lever family
+    stays open on other values and legs). INDETERMINATE if A n < 39 or the feed does not cover the window. Per-year table and long/short split attached, not graded. The TP-doctrine
+    tp_r arm is graded like the others (the doctrine itself is not changed here). A PASS goes to the manager as a Tier-3 proposal citing the arm denominator; never applied
+    here.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg, control plus variant arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261122-5722-01, which ran in minutes).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a live leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - spy_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - tr35=trail_mult=3.5
+  - --arm
+  - tr70=trail_mult=7.0
+  - --arm
+  - tp3=tp_r=3.0
+  - --arm
+  - nosess=-skip_hours
+  - --days
+  - '1450'
+  - --start
+  - '2022-12-01'
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-0104-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared: &id001
+- exit
+- session
+iteration:
+  subject: spy_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261122-5722-02
+  verdict_read: fail
+  diagnosis: '5722-02 FAIL: no_reachable_lever_beats_removed over 5 arms; ad6a-02 FAIL: wider stops cut the loss but none turn positive; QQQ''s tl90 (+16 R) does not transfer
+    to SPY. Entry/filter closed in these configurations; exit and session are the families the diagnosis leaves.'
+  search: one-factor exit/session arms vs the configured control; denominator 4; tp_r 3.0 doubles as the TP-doctrine measure; a survivor goes to a pre-dev read
+  levers: *id001
+  map_entries:
+  - research/levers/spy_pullback_1h.yaml#levers.exit.trail_mult
+  - research/levers/spy_pullback_1h.yaml#levers.session.skip_hours
+  attempt: 2
+  due_by: '2026-12-01'
+  multiple_testing: null
+status: queued
