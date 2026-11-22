@@ -169,8 +169,34 @@ def decide(res: dict[str, Any]) -> dict[str, Any]:
             f"materiality / random-null / drawdown bar"}
 
 
+# ── windows (RESEARCH-FILL-20261122: the census windows were hard-coded; now a unit may register its own) ─────────
+def resolve_windows(unit: dict[str, Any], cli: str | None = None, default: dict | None = None) -> dict[str, tuple[str, str]]:
+    """Precedence: --windows 'a=2022-10-01:2023-10-01,b=2023-10-01:2024-10-01' > unit arms_on.windows {name: [lo, hi]}
+    > the census default. Exactly TWO ordered, non-overlapping windows are required: A2/A3 are cross-fit (each window
+    is scored on weights fitted on the OTHER), and decide() requires the rule to win in every window."""
+    raw: dict[str, tuple[str, str]]
+    if cli:
+        raw = {}
+        for part in cli.split(","):
+            name, _, rng = part.partition("=")
+            lo, _, hi = rng.partition(":")
+            if not (name and lo and hi):
+                raise ValueError(f"bad --windows entry {part!r}: want name=YYYY-MM-DD:YYYY-MM-DD")
+            raw[name.strip()] = (lo.strip(), hi.strip())
+    elif (unit.get("arms_on") or {}).get("windows"):
+        raw = {str(k): (str(v[0]), str(v[1])) for k, v in unit["arms_on"]["windows"].items()}
+    else:
+        raw = dict(default or {})
+    if len(raw) != 2:
+        raise ValueError(f"exactly 2 windows required (cross-fit), got {len(raw)}: {sorted(raw)}")
+    (n1, (a1, b1)), (n2, (a2, b2)) = sorted(raw.items(), key=lambda kv: kv[1][0])
+    if not (a1 < b1 <= a2 < b2):
+        raise ValueError(f"windows must be ordered and non-overlapping: {raw}")
+    return dict(sorted(raw.items(), key=lambda kv: kv[1][0]))
+
+
 # ── streams (re-uses the census replays) ───────────────────────────────────────────────────────────────────────
-def build_pairs(unit: dict[str, Any], out: Path, cache: Path) -> dict[str, dict[str, Any]]:
+def build_pairs(unit: dict[str, Any], out: Path, cache: Path, windows: dict | None = None, fetch_start: str | None = None) -> dict[str, dict[str, Any]]:
     import d5_concurrency_census as C
     import pandas as pd
     from same_symbol_head_to_head import _load_bs, fetch_5m
@@ -199,28 +225,31 @@ def build_pairs(unit: dict[str, Any], out: Path, cache: Path) -> dict[str, dict[
             if leg not in bs.ROSTER:
                 raise ValueError(f"{leg} not in backtest_system ROSTER")
             if sym not in candles:
-                path = fetch_5m(sym, out / "candles", C.FETCH_START)
+                path = fetch_5m(sym, out / "candles", fetch_start or C.FETCH_START)
                 if not path:
                     raise ValueError(f"no 5m candles for {sym}")
                 candles[sym] = bs._load_candles(str(path))
             streams[leg] = C._rule_leg_trades(bs, leg, sym, candles[sym], resolve_run_costs(sym), risk_pct)
         wins = {}
-        for wn, (lo, hi) in C.WINDOWS.items():
+        for wn, (lo, hi) in (windows or C.WINDOWS).items():
             a, b = pd.Timestamp(lo, tz="UTC"), pd.Timestamp(hi, tz="UTC")
             wins[wn] = [{**t, "leg": lg} for lg, ts in streams.items() for t in ts if a <= t["entry_ts"] < b]
         pairs[f"{'+'.join(p['accounts'])}:{sym}"] = {"model": models.pop(), "legs": legs, "windows": wins}
     return pairs
 
 
-def run(unit_path: Path, out: Path, cache: Path) -> int:
+def run(unit_path: Path, out: Path, cache: Path, windows_cli: str | None = None, fetch_start: str | None = None) -> int:
     import yaml
     out.mkdir(parents=True, exist_ok=True)
     unit = yaml.safe_load(unit_path.read_text())
     try:
-        pairs = build_pairs(unit, out, cache)
+        import d5_concurrency_census as C
+        windows = resolve_windows(unit, windows_cli, C.WINDOWS)
+        fetch_start = fetch_start or (unit.get("arms_on") or {}).get("fetch_start")
+        pairs = build_pairs(unit, out, cache, windows, fetch_start)
         res = run_arms(pairs)
         v = decide(res)
-        rec = {"unit": unit["id"], **res, "delta_min_r": DELTA_MIN_R, "dd_tol": DD_TOL, "min_w": MIN_W, **v}
+        rec = {"unit": unit["id"], "window_ranges": windows, "fetch_start": fetch_start or C.FETCH_START, **res, "delta_min_r": DELTA_MIN_R, "dd_tol": DD_TOL, "min_w": MIN_W, **v}
         (out / "arms.json").write_text(json.dumps(rec, indent=1, default=str))
         n = sum(len(w) for p in pairs.values() for w in p["windows"].values())
         (out / "verdict.json").write_text(json.dumps({
@@ -273,20 +302,39 @@ def _self_test() -> None:
     print("self-test ok")
 
 
+def _self_test_windows() -> None:
+    dflt = {"w1": ("2024-10-01", "2025-10-01"), "w2": ("2025-10-01", "2026-10-01")}
+    assert resolve_windows({}, None, dflt) == dflt
+    u = {"arms_on": {"windows": {"late": ["2023-10-01", "2024-10-01"], "early": ["2022-10-01", "2023-10-01"]}}}
+    r = resolve_windows(u, None, dflt)
+    assert list(r) == ["early", "late"] and r["early"] == ("2022-10-01", "2023-10-01"), r
+    assert resolve_windows(u, "a=2021-01-01:2022-01-01,b=2022-01-01:2023-01-01", dflt)["a"][0] == "2021-01-01"
+    for bad in ("a=2021-01-01:2022-01-01", "a=2021-01-01:2022-06-01,b=2022-01-01:2023-01-01", "a=2021:", "x"):
+        try:
+            resolve_windows({}, bad, dflt)
+            raise AssertionError(f"accepted {bad!r}")
+        except ValueError:
+            pass
+    print("windows self-test OK")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--unit", default="RQ-20261115-a474-02")
     ap.add_argument("--out", default="/tmp/d5_arms_out")
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
+    ap.add_argument("--windows", default=None, help="name=lo:hi,name=lo:hi (exactly two); default unit arms_on.windows, else census")
+    ap.add_argument("--fetch-start", default=None, help="5m candle warm-up start; default unit arms_on.fetch_start, else census")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
         _self_test()
+        _self_test_windows()
         return 0
     p = Path(a.unit)
     if not p.exists():
         p = REPO / "research" / "queue" / f"{a.unit}.yaml"
-    return run(p, Path(a.out), Path(a.cache))
+    return run(p, Path(a.out), Path(a.cache), a.windows, a.fetch_start)
 
 
 if __name__ == "__main__":
