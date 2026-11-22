@@ -1,0 +1,13 @@
+pinned input: comms/research/RQ-20261120-d7c2-01/44756273079/legs/squeeze_breakout_4h__tagged.jsonl
+pinned input: comms/research/RQ-20261120-d7c2-01/44756273079/legs/ict_scalp_5m__tagged.jsonl
+pinned input: comms/research/RQ-20261120-d7c2-01/44756273079/legs/trend_donchian__tagged.jsonl
+input legs: {"ict_scalp_5m": "comms/research/RQ-20261120-d7c2-01/44756273079/legs/ict_scalp_5m__tagged.jsonl", "squeeze_breakout_4h": "comms/research/RQ-20261120-d7c2-01/44756273079/legs/squeeze_breakout_4h__tagged.jsonl", "trend_donchian": "comms/research/RQ-20261120-d7c2-01/44756273079/legs/trend_donchian__tagged.jsonl"}
+ict_scalp_5m           chop/volatile/long         n=   9 added_r=   0.170 p=0.7854 folds 2/4 -> indeterminate_underpowered
+ict_scalp_5m           chop/volatile/short        n=   7 added_r=   0.772 p=0.7894 folds 2/3 -> indeterminate_underpowered
+ict_scalp_5m           trending/volatile/long     n=  12 added_r=   1.213 p=0.7253 folds 2/6 -> indeterminate_underpowered
+ict_scalp_5m           trending/volatile/short    n=  12 added_r=   1.564 p=0.8426 folds 3/5 -> indeterminate_underpowered
+squeeze_breakout_4h    trending/calm/short        n=  13 added_r=   2.448 p=0.3635 folds 4/6 -> indeterminate_underpowered
+trend_donchian         chop/calm/long             n= 101 added_r=  -1.718 p=0.4085 folds 3/6 -> fail
+trend_donchian         transitional/calm/long     n=  60 added_r=   8.564 p=0.2094 folds 4/6 -> indeterminate
+trend_donchian         trending/volatile/long     n=  14 added_r=  -1.440 p=0.5521 folds 4/6 -> indeterminate_underpowered
+VERDICT fail - at least one authored cell lost R when vetoed: trend_donchian:chop/calm/long
