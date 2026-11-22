@@ -1,0 +1,100 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261122-fa22-02",
+ "read_state": "producer_failed",
+ "verdict": "not_applicable",
+ "n": 0,
+ "note": "no harness trades emitted (see published_shard_spans / harness_legs)",
+ "decision_rule": {
+  "id": "RULE-RQ20261122-fa22-02-EXITHEAD-FEATURES-WIDE",
+  "registered_at": "2026-11-22",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "rows_source": "harness_only (backtest-source rows; NO journal trades: nothing OURS is read or published)",
+  "published_shard_spans": {
+   "BTCUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "ETHUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=ETHUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "SOLUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=SOLUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "LINKUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=LINKUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "BNBUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=BNBUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "XRPUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=XRPUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "ADAUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=ADAUSDT&interval=60&start=1590969600000&limit=1000"
+   },
+   "AVAXUSDT": {
+    "source": "bybit_public_klines",
+    "read_state": "could_not_look",
+    "why": "HTTPError: 403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/kline?category=linear&symbol=AVAXUSDT&interval=60&start=1590969600000&limit=1000"
+   }
+  },
+  "harness_legs": [
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian_eth",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian_sol",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   },
+   {
+    "leg": "trend_donchian",
+    "read_state": "could_not_look",
+    "why": "no published candles"
+   }
+  ]
+ }
+}
