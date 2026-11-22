@@ -59,6 +59,37 @@ def shard_path(root: Path, sym: str) -> Tuple[str, Path]:
     return rel, root / rel
 
 
+def fetch_bybit_candles(sym: str, dst: Path, start: str, end: Optional[str] = None) -> Dict[str, Any]:
+    """RUNNER ROUTE (RESEARCH-FILL-20261122): public Bybit linear-perp 1h klines for a symbol that is NOT in the published
+    market_raw allowlist (LINK/BNB/XRP/ADA/AVAX). Same venue and same pager the trainer's candle history uses
+    (scripts/ops/fetch_backtest_candles.fetch_klines). Needs the internet, so the unit declares why_runner. Market data only."""
+    from datetime import datetime, timezone
+    sys.path.insert(0, str(_REPO / "scripts" / "ops"))
+    import fetch_backtest_candles as fbc
+    t0 = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+    t1 = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else datetime.now(timezone.utc)
+    rows = fbc.fetch_klines(sym, "60", int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
+    if not rows:
+        return {"read_state": "could_not_look", "why": "bybit returned no klines"}
+    import pandas as pd
+    df = pd.DataFrame(rows)
+    df = df.drop_duplicates("timestamp").sort_values("timestamp")
+    return _csv_from_df(df, dst)
+
+
+def _csv_from_df(df, dst: Path) -> Dict[str, Any]:
+    cols = ["timestamp", "open", "high", "low", "close"] + (["volume"] if "volume" in df.columns else [])
+    out = df[cols].copy()
+    import pandas as pd
+    ts = pd.to_datetime(out["timestamp"], utc=True, unit="ms" if str(out["timestamp"].dtype).startswith(("int", "float")) else None)
+    out["timestamp"] = ts.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(dst, index=False)
+    return {"read_state": "measured", "bars": int(len(out)),
+            "first_ts": str(out["timestamp"].iloc[0]) if len(out) else None,
+            "last_ts": str(out["timestamp"].iloc[-1]) if len(out) else None, "has_volume": "volume" in cols}
+
+
 def write_candles(src: Path, dst: Path) -> Dict[str, Any]:
     """Published market_raw JSONL -> the harness / builder CSV shape (timestamp ISO, open, high, low, close, volume)."""
     import candle_io
@@ -132,6 +163,18 @@ def run(a) -> int:
     spans: Dict[str, Any] = {}
     csvs: Dict[str, Path] = {}
     for _, sym in legs:
+        if sym in csvs or sym in spans:
+            continue
+        if a.candle_source == "bybit":
+            csvs[sym] = work / "candles" / f"{sym}_{TF}.csv"
+            try:
+                info = fetch_bybit_candles(sym, csvs[sym], a.start, a.end)
+            except Exception as exc:  # network/pager failure: a could_not_look, never a silent empty
+                info = {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+            spans[sym] = {"source": "bybit_public_klines", **info}
+            if info.get("read_state") != "measured":
+                csvs.pop(sym)
+            continue
         rel, src = shard_path(root, sym)
         if not src.is_file():
             spans[sym] = {"shard": rel, "read_state": "could_not_look", "why": f"not found under ML_DATA_ROOT={root!s}"}
@@ -143,7 +186,7 @@ def run(a) -> int:
         if sym not in csvs:
             harness_legs.append({"leg": strategy, "read_state": "could_not_look", "why": "no published candles"})
             continue
-        e = work / "emit" / f"{strategy}.jsonl"
+        e = work / "emit" / f"{strategy}_{sym}.jsonl"
         harness_legs.append(emit_trades(strategy, sym, csvs[sym], e, conf))
         if e.exists():
             emits.append(e)
@@ -152,7 +195,7 @@ def run(a) -> int:
     if not emits:
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "producer_failed", "verdict": "not_applicable",
                "n": 0, "note": "no harness trades emitted (see published_shard_spans / harness_legs)",
-               "decision_rule": {"id": a.rule_id, "registered_at": REGISTERED_AT, "registered_before_run": True},
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
                "measurement": extra}
         (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
         print(json.dumps({k: row[k] for k in ("read_state", "verdict", "note")}))
@@ -162,7 +205,7 @@ def run(a) -> int:
     if not built["rows_exist"]:
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "producer_failed", "verdict": "not_applicable",
                "n": 0, "note": "row build produced no donchian rows.jsonl", "measurement": extra,
-               "decision_rule": {"id": a.rule_id, "registered_at": REGISTERED_AT, "registered_before_run": True}}
+               "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}}
         (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
         print(json.dumps({k: row[k] for k in ("read_state", "verdict", "note")}))
         return 2
@@ -170,10 +213,12 @@ def run(a) -> int:
     bj = work / "bakeoff.json"
     rc = L.main(["--rows", built["rows_path"], "--candles-dir", str(work / "candles"), "--timeframe", TF,
                  "--legs", a.legs, "--arms", a.arms, "--unit", a.unit, "--rule-id", a.rule_id, "--z", str(a.z),
-                 "--pass-dr", str(a.pass_dr), "--num-folds", str(a.num_folds), "--json", str(bj)])
+                 "--pass-dr", str(a.pass_dr), "--num-folds", str(a.num_folds), "--embargo-days", str(a.embargo_days),
+                 "--lookback", str(a.lookback), "--registered-at", a.registered_at, "--json", str(bj)]
+                + (["--feature-arms", a.feature_arms] if a.feature_arms else []))
     row = json.loads(bj.read_text())
-    row["decision_rule"] = {"id": a.rule_id, "registered_at": REGISTERED_AT, "registered_before_run": True}
-    row["population"] = ("BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from published market_raw 1h v002; no journal trades) -- "
+    row["decision_rule"] = {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}
+    row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from {'public Bybit 1h klines' if a.candle_source == 'bybit' else 'published market_raw 1h v002'}; no journal trades) -- "
                          + str(row.get("population", "")))
     row.setdefault("measurement", {}).update(extra)
     row["produced_by"] = {"tool": "python3 scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py)"}
@@ -240,6 +285,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--z", type=float, default=1.96)
     ap.add_argument("--pass-dr", type=float, default=0.01)
     ap.add_argument("--num-folds", type=int, default=5)
+    ap.add_argument("--feature-arms", default="", help="feature arms vs the champion (exit_head_label_bakeoff.FEATURE_ARMS)")
+    ap.add_argument("--embargo-days", type=float, default=7.0)
+    ap.add_argument("--lookback", type=int, default=500)
+    ap.add_argument("--registered-at", default=REGISTERED_AT, help="the unit's decision_rule.registered_at")
+    ap.add_argument("--candle-source", choices=("published", "bybit"), default="published",
+                    help="published = metis-market-data market_raw (kaggle_cpu, internet off); bybit = public klines (runner)")
+    ap.add_argument("--start", default="2020-06-01", help="bybit source: first bar date")
+    ap.add_argument("--end", default=None, help="bybit source: last bar date (default now)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
