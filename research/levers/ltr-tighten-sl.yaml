@@ -10,10 +10,31 @@ baseline:
 attribution:
   read_state: no_arm_records_yet
 manifest:
-  trigger: untested
+  trigger: tested
   timing: tested
   action_bounds: untested
 levers:
+  trigger:
+    tighten_be_trigger:
+      tests:
+      - unit: RQ-20261122-c8e1-01
+        value: giveback
+        response: -0.1027 R/trade vs hold (CI -0.1765..-0.0316), n_fired 380; 0/6 folds, 0/200 controls
+        shape: single_point
+      - unit: RQ-20261122-c8e1-01
+        value: momentum_flip
+        response: -0.075 R/trade (CI -0.1805..+0.0113), n_fired 169; 0/6 folds, 0/200 controls
+        shape: single_point
+      - unit: RQ-20261122-c8e1-01
+        value: near_target
+        response: -0.0011 R/trade (CI -0.0485..+0.0485), n_fired 388; CVaR5 cut 3.4% (bar 15%); 0/6 folds, 0/200 controls
+        shape: single_point
+      - unit: RQ-20261122-c8e1-01
+        value: structure_break
+        response: -0.3129 R/trade (CI -0.6867..-0.0652), n_fired 20; 0/6 folds, 0/200 controls
+        shape: single_point
+      note: action fixed at BE+0.25R, >= 1 ATR room; trigger `stall` never fired on this corpus (0 of 3,921) so it is not a test; all four arms fail R2/R3, none beats its random control. The action level (action_bounds) is the family still untested (RQ-20261122-d4a9-01/02/03 queued).
+      shape: four_points_none_clear
   timing:
     open_r_at_tighten:
       tests:
