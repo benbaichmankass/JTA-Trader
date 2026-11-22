@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group C part 2; PI-20261122-SME5WDGR-0004): prop_ml_leg.py now writes read_state measured + verdict INDETERMINATE for an n-below-floor held-out (was the invalid read_state 'n_below_floor'); script changed since the failing runs, so the dispatcher's guard allows the retry. last_dispatched_at cleared; rule unchanged (expect INDETERMINATE: held-out n was 35 vs the 150 floor).
 # Hand-authored 2026-11-05 by lane TRADEIFY-OWN-LEG (Tier 1), iteration of RQ-20261105-fd68-01. Gates this adds or changes: NONE. Registered BEFORE any run.
 id: RQ-20261105-fd68-03
 title: '4h-bar iteration of RQ-20261105-fd68-01: Tradeify-only ML leg: can a pooled ETH/SOL/XRP ML entry model, trained on its own declared feature families, beat the declared baselines NET OF Tradeify''s
@@ -184,7 +185,6 @@ iteration:
   - bar_length
   - selectivity
   map_entries: []
-last_dispatched_at: '2026-11-05T13:58:01+00:00'
 grading:
   auto: false
   graded_at: "2026-11-07"

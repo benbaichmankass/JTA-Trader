@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group C part 2; PI-20261122-SME5WDGR-0004): the harness (exit_lever_ablation --grade replace) wrote verdict.json under --out, and --out was `{out_dir}/ada_pullback_2h`, so the contract's {out_dir}/verdict.json never existed (the run measured: 'no candidate clears net R / fold / drawdown: the incumbent exit stands'). --out changed to `{out_dir}`; arms, window, rule and grade flags unchanged. last_dispatched_at cleared.
 id: RQ-20261111-9b09-01
 title: 'LTR fast-move lock-in: after an IMPULSE (> 1.0 / 1.5 R in the last 2-3 closes, peak >= 1 R) does tightening the trail to 2.0 ATR beat
   the declared exit AND the same tighten taken on every trade at peak >= 1 R, on ada_pullback_2h / trend_donchian_xrp_4h / trend_donchian_sol_4h,
@@ -115,7 +116,7 @@ run:
   - --n-floor
   - '39'
   - --out
-  - '{out_dir}/ada_pullback_2h'
+  - '{out_dir}'
   timeout_minutes: 180
   inputs:
     research_unit: RQ-20261111-9b09-01
@@ -134,7 +135,6 @@ related:
 - research/queue/RQ-20261022-b7e1-08.yaml
 - scripts/research/live_review_outcomes.py
 - src/research/path_state_gate.py
-last_dispatched_at: '2026-11-13T03:53:49+00:00'
 grading:
   auto: true
   decision_rule_id: RULE-LTR-FAST-MOVE-LOCKIN-VEL-01
