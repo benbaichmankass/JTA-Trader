@@ -4,7 +4,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import regime_cell_marginal_grade as M
+import regime_cell_marginal_grade as M  # noqa: E402
 
 
 def test_self_test_runs():

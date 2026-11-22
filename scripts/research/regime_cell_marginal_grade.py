@@ -37,7 +37,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import regime_gate_family_consumer as G
+import regime_gate_family_consumer as G  # noqa: E402
 
 MIN_N = 25
 FOLDS = 6
@@ -47,11 +47,8 @@ SEED = 20261112
 DEFAULT_RUN = "comms/research/RQ-20261120-d7c2-01"
 
 
-def default_legs() -> dict[str, str]:
-    runs = sorted((REPO / DEFAULT_RUN).glob("*/legs"))
-    if not runs:
-        return {}
-    d = runs[-1]
+def legs_from_dir(d: Path) -> dict[str, str]:
+    """The committed tagged files of ONE named legs dir (printed by main, so the read is never an implicit pick)."""
     return {p.name.split("__")[0]: str(p) for p in sorted(d.glob("*__tagged.jsonl"))}
 
 
@@ -156,6 +153,7 @@ def _selftest() -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--out", default="out/regime_cell_marginal")
+    ap.add_argument("--legs-dir", default=None, help="a committed .../legs dir holding <leg>__tagged.jsonl (the unit pins it)")
     ap.add_argument("--leg", action="append", default=[], help="leg=path to <leg>__tagged.jsonl (default: the committed d7c2-01 legs)")
     ap.add_argument("--policy", default=str(REPO / "config" / "regime_policy.yaml"))
     ap.add_argument("--since", default=None, help="only trades entered on/after this date (e.g. 2026-07-01)")
@@ -168,12 +166,13 @@ def main(argv: list[str] | None = None) -> int:
     if a.self_test:
         _selftest()
         return 0
-    legs = dict(x.split("=", 1) for x in a.leg) if a.leg else default_legs()
+    legs = dict(x.split("=", 1) for x in a.leg) if a.leg else (legs_from_dir(Path(a.legs_dir)) if a.legs_dir else {})
+    print("input legs:", json.dumps(legs, sort_keys=True), flush=True)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if not legs:
         v = {"verdict": "not_applicable", "read_state": "producer_failed", "population": "no tagged legs found", "n": None,
-             "note": f"no {DEFAULT_RUN}/*/legs/*__tagged.jsonl on this checkout and no --leg given"}
+             "note": f"no --legs-dir / --leg given, or the dir holds no *__tagged.jsonl"}
         (out / "verdict.json").write_text(json.dumps(v, indent=1))
         print(json.dumps(v))
         return 2

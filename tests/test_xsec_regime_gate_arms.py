@@ -7,7 +7,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO), str(REPO / "scripts"), str(REPO / "scripts" / "research")]
-import xsec_regime_gate_arms as X
+import xsec_regime_gate_arms as X  # noqa: E402
 
 
 def _inputs(n=1500):
