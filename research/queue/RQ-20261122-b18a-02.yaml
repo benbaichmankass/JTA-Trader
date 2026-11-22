@@ -1,0 +1,160 @@
+id: RQ-20261122-b18a-02
+title: 'D4 Beagle LEARNER challenger, BLIND HOLDOUT: does the monotone LightGBM arm that passed the dev screen (RQ-20261119-e8a1-03, paired +0.0013, disagree 0.23)
+  beat the shipped Beagle-1 on the disjoint earlier perp window 2019-12..2020-06, paired, on the TD family?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: Fit the monotone-constrained LightGBM P(win) model (MLGBM_PARAMS, signs from Beagle-1) on the whole 2020-07..2026-10-15 TD family pool with tau at the PRIMARY
+  training-score quantile, then score the 2019-12-01..2020-06-23 perp trades of the four real-money TD gate legs it never saw, against the shipped Beagle-1 artifact
+  scored byte for byte. Is the paired per-trade overlay-R difference d = (m_mlgbm - m_beagle1) x net R above 0 with the month-block deflated lower bound above 0,
+  at non-worse maxDD and CVaR5?
+why_this_matters: The overlay is live on the TD family on real money; the only challenger tried on blind data (EV-threshold, cc86-01) did not win. A learner that
+  changes the ranking itself (disagreement 0.23 vs 0.087 for a threshold move) is the lever the diagnosis names. A WIN here is the first blind evidence for a Beagle
+  swap proposal; nothing can demote the live baseline.
+power:
+  expected_n: 105
+  min_detectable_effect: 0.12
+  effect_units: r_per_trade
+  sd: 0.29
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n = the perp 2019-12..2020-06 TD gate-leg trade count, 105 MEASURED in RQ-20261029-5785-02 (cc86-01 holdout B). This is BELOW the cc86-01 n >= 300 floor,
+    so the unit is expected INDETERMINATE on the floor and reports the paired block anyway; it is registered as a direction read (the cc86-01 condition 2 form), with
+    the spot window as the n-bearing arm. sd 0.29 ESTIMATED (cc86-01 basis).
+  feasibility:
+    source: replay
+    verdict: comms/research/RQ-20261116-cc86-01/44434324980/verdict.json
+    basis: cc86-01 holdout windows A (perp, n 105) and B (spot proxy, n 424 + 105) measured; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261122-b18a-02-MLGBM-BLIND
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: shipped Beagle-1 (ml/overlay/overlay_td.json, scored byte for byte, sha256 recorded by the harness) on the same holdout trades
+  statistic: 'ml_overlay_noninferior.py V2 holdout, challenger block: paired d = (m_ch - m_base) x net R per trade, month-block one-sided lower bounds at alpha and
+    alpha/3, maxDD and CVaR5 per arm, disagreement rate. Window A = perp 2019-12-01..2020-06-23; window B = Binance SPOT 2017-09..2020-06-23 as a labelled perp proxy
+    (the cc86-01 design).'
+  rule: MLGBM WINS iff (1) on window B (n-bearing), n >= 300 AND delta_ch_vs_base_lb_deflated_r > 0; (2) on window A, delta_ch_vs_base_mean_r >= 0 (direction agrees
+    on the perp the legs trade; n ~105 is too small for its own bound); (3) on B, maxdd_ch_r <= 1.10 x maxdd_base_r AND cvar5_ch_r >= cvar5_base_r - 0.05. NOT A WIN
+    otherwise. INDETERMINATE iff B has n < 300, or the baseline sha256 differs from the one recorded in cc86-01. These are the cc86-01 conditions with B as the n-bearing
+    arm; thresholds are fixed now and not changed after any result.
+  pass_action: A data-backed Tier-3 SWAP proposal to the manager (export the mlgbm artifact as an overlay_td v2 build; a GBM is not a logistic artifact, so the export
+    is its own Tier-1 build and the serving change is Tier-2/3); the operator is asked only about the swap. Beagle-1 keeps trading until then.
+  fail_action: Record the learner lever (monotone GBM at tau q) as tested blind and not a win on research/levers/ml-overlay-td-v1.yaml; the next D4 lever is features
+    or label (target), never this configuration again.
+  what_it_does_not_do: Reads no forward window, edits no config or artifact, exports nothing, places no order; cannot demote or reduce the live baseline.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and the take-all baseline is the hold-equivalent.
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: the size the reduce removes from profitable below-tau entries on the real-money TD legs; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 45
+  basis: INFERRED from cc86-01 (two invocations ~45 min total) and e8a1-03 (main-window corpus ~45 min); one extra 200-tree monotone fit adds seconds.
+  why_runner: 'needs_internet: the holdout windows fetch public Binance candles (perp, and SPOT for window B) that the published candle dataset does not hold; a Kaggle
+    kernel has no internet.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  commands:
+  - - python3
+    - scripts/research/ml_overlay_noninferior.py
+    - --family
+    - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+    - --start
+    - '2020-07-01'
+    - --end
+    - 2026-10-15 23:59
+    - --days
+    - '2330'
+    - --reference-corpus
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
+    - --parity-basis
+    - trade
+    - --holdout-artifact
+    - ml/overlay/overlay_td.json
+    - --holdout-challenger
+    - mlgbm
+    - --holdout-start
+    - '2019-12-01'
+    - --holdout-end
+    - 2020-06-23 23:59
+    - --holdout-days
+    - '3500'
+    - --out
+    - '{out_dir}/perp'
+  - - python3
+    - scripts/research/ml_overlay_noninferior.py
+    - --family
+    - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+    - --start
+    - '2020-07-01'
+    - --end
+    - 2026-10-15 23:59
+    - --days
+    - '2330'
+    - --reference-corpus
+    - comms/research/RQ-20261118-04a5-06/44417153590/corpus
+    - --parity-basis
+    - trade
+    - --holdout-artifact
+    - ml/overlay/overlay_td.json
+    - --holdout-challenger
+    - mlgbm
+    - --holdout-start
+    - '2017-09-01'
+    - --holdout-end
+    - 2020-06-23 23:59
+    - --holdout-days
+    - '3500'
+    - --holdout-market
+    - spot
+    - --out
+    - '{out_dir}/spot'
+  inputs:
+    research_unit: RQ-20261122-b18a-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261116-cc86-01
+- RQ-20261119-e8a1-03
+- RQ-20261118-04a5-06
+practice_precedent: 'M5, M13, M10 (docs/reference/trading-and-model-practice-principles.md): a challenger scored against the live model on a blind holdout, paired,
+  with the re-read bar raised (M13); one challenger, no grid.'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: replace the live Beagle-1 artifact (overlay_td.json) with a challenger only if it beats it; never a demotion
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+programme: P2
+iteration:
+  subject: ml-overlay-td-v1
+  subject_kind: ml_model
+  from_result: RQ-20261119-e8a1-03
+  verdict_read: pass
+  diagnosis: e8a1-03 PASSED its dev screen (mlgbm arm own V1 gate a-e, paired mean +0.0013, disagreement 0.230) on the SAME 2020-07..2026-10 window Beagle-1 was selected
+    on, and its own text says any swap rests on a forward read. cc86-01 already built the blind-holdout harness (V2, window 2019-12..2020-06 perp, baseline sha-pinned
+    artifact ml/overlay/overlay_td.json) but only for the EV-threshold challenger, which FAILED/INDETERMINATE. The learner arm has never been scored on data it did
+    not see. Only the holdout-challenger plumbing for mlgbm is new (ml_overlay_noninferior.py::mlgbm_holdout_scores, self-tested).
+  search: one challenger (mlgbm), the cc86-01 holdout A window and baseline artifact unchanged; hyper-parameters (MLGBM_PARAMS), monotone signs and tau quantile are
+    the e8a1-03 ones, fixed before any run
+  attempt: 2
+  due_by: '2026-12-01'
+  map_entries:
+  - research/levers/ml-overlay-td-v1.yaml
