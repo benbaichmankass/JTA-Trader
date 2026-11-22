@@ -1,0 +1,252 @@
+{
+ "run": "RESEARCH-OPS-20261122-0847",
+ "finished_at": "2026-11-22T10:10:00Z",
+ "by": "session_01AFoLuLwiyMptiSmB33ftUM",
+ "floor": 50,
+ "floor_basis": "computed_floor(fired_24h 62), diagnostic only",
+ "authoring_queue_depth": 17,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle_cpu",
+  "trainer"
+ ],
+ "needs_review_triaged": 0,
+ "needs_review_left": 106,
+ "throughput": {
+  "runnable_before": 0,
+  "runnable_after": 6,
+  "queued": 282,
+  "fired_24h": 62,
+  "results_landed_24h": 62,
+  "hours_since_last_dispatch": 1.7,
+  "idle_alarm": false,
+  "note": "dispatch_queue.py --json: 0 due of 2630 jobs before; throughput script's runnable 4 is the known trainer-deferred false alarm (PI-20261120-RIMARY17-0001); after = 6 would_dispatch in the dry run"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (tree read)",
+  "collector": "ok (results of 11-21 ad6a-01/02 landed and graded)",
+  "stranded_stamp_prs": [],
+  "incident": null
+ },
+ "results_read": {
+  "pass": 0,
+  "fail": 2,
+  "indeterminate": 0,
+  "units": [
+   "RQ-20261121-ad6a-01",
+   "RQ-20261121-ad6a-02"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "per-cell marginal grade (matched-drop control per cell) for the BTC regime router cells",
+   "ref": "PI-20261122-HOPS0847-0001"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261122-5722-01",
+  "RQ-20261122-5722-02",
+  "RQ-20261122-5722-03",
+  "RQ-20261122-5722-04",
+  "RQ-20261122-5722-05",
+  "RQ-20261122-5722-06"
+ ],
+ "followups_filed": [
+  "PI-20261122-HOPS0847-0001"
+ ],
+ "authoring": {
+  "queue_depth": 17,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "every ready node (P1-Q6 declares, P2-R5, P5-*, P8-*) is a Tier-3 declare or needs a driver that does not exist; iteration units took the budget (STOP-GENERATED-AUTHORING)"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 3,
+   "of": 3,
+   "note": "ad6a-01, ad6a-02 opened row-level; RQ-20261106-011 (sol pullback_frac) and RQ-20261117-9e1b-03 (mgc VL30) PASS rows opened; the other results landed since the last record (generated weekly sweeps) were not attributed individually"
+  },
+  "map_entries_added": "lever_map.py --backfill rewrote 29 research/levers/*.yaml (no hand-written entries)",
+  "next_tests_from_map": 6,
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 2,
+   "ltr_class": 4,
+   "total": 12
+  },
+  "orphans_after": {
+   "strategy_leg": 4,
+   "ml_model": 2,
+   "ltr_class": 4,
+   "total": 10
+  },
+  "results_iterated": [
+   {
+    "result": "RQ-20261121-ad6a-01",
+    "verdict": "fail",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261122-5722-01",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261121-ad6a-02",
+    "verdict": "fail",
+    "subject": "spy_pullback_1h",
+    "next": "RQ-20261122-5722-02",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261117-9e1b-03",
+    "verdict": "pass_unconfirmed",
+    "subject": "mgc_trend_1h",
+    "next": "RQ-20261122-5722-03",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261106-011",
+    "verdict": "pass_unconfirmed",
+    "subject": "sol_pullback_2h",
+    "next": "RQ-20261122-5722-04/05/06 (symbol holdout on eth/xrp/avax)",
+    "attempt": 1
+   }
+  ],
+  "advanced": 4,
+  "survivors": [],
+  "overdue": [
+   "34 strategy legs' older generated sweep units are past due_by (weekly cadence, not re-dated)"
+  ],
+  "retired_by_review": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261121-ad6a-01",
+   "RQ-20261121-ad6a-02",
+   "RQ-20261120-d7c2-01",
+   "RQ-20261115-a474-02",
+   "RQ-20261106-011",
+   "RQ-20261117-9e1b-03"
+  ],
+  "trading": {
+   "meaning": [
+    "qqq stop30 discovery FAILED its confirmation (A +15.96 R n 84 vs stop30 -5.84 R on 2022-12..2025-05): the +10.45 R was a best-of-2 single-fold read, so the stop-width lever is closed for qqq and the leg's decay (+16 R then -2.6 R) points at entry/regime.",
+    "spy wider stops cut the loss monotonically (-16.1 -> -2.2 R at 5.0x) but none reaches 3 of 4 folds or net positive: stop width changes the size of the loss, not the sign, so the next lever is entry/filter.",
+    "mgc VL30 +35.9 R (5 of 6 folds) with the leg still -56.7 R over 8 years: a steep step between VL20 and VL30 needs more grid points before it is potential rather than a spike.",
+    "sol pullback_frac 0.375 +15.3 R (4 of 4 folds, best-of-2): confirmation on sol pre-dev history cannot reach n 39, so the symbol holdout on three sibling legs is the in-hand read."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "qqq/spy 1h pullback stop width",
+     "hypotheses": [
+      "noise",
+      "regime",
+      "idea"
+     ],
+     "test": "RQ-20261122-5722-01/02",
+     "survivor": "regime",
+     "next": "RQ-20261122-5722-01/02"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261122-5722-01/02",
+     "decision_changed": "whether the live QQQ/SPY 1h pullback legs get an entry/filter Tier-3 proposal",
+     "on_pass": "holdout then manager proposal",
+     "on_fail": "entry/filter families closed for the leg, next = side/vol filters",
+     "premortem": "4-year window n may be < 39 for spy (n 70 in 18 months so unlikely)"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "D7 f1a9 family review already filed (PI-20261121-RIMARY17-0001); d7c2-01 FAIL: BTC cells added +11.6 R pooled but control_p 0.35, so the cells are not distinguishable from a random drop of the same size (trend_donchian drops 175 of 299 trades)."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "ml-btc-router-cells",
+     "hypotheses": [
+      "noise",
+      "cosmetic cells"
+     ],
+     "test": "per-cell matched-drop grade (no driver)",
+     "survivor": "design",
+     "next": "PI-20261122-HOPS0847-0001"
+    }
+   ],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "sol/eth/xrp/avax pullback_frac read is also a label candidate for the entry model",
+    "feeds": "RQ-20261122-5722-04..06"
+   }
+  ],
+  "surprises": [
+   "the same qqq control swung from +16 R to -2.6 R across adjacent windows"
+  ]
+ },
+ "ml_slots": {
+  "D1": "named block: none on purpose; re-entry test >= 30 legs with Stage-0 records on one cost basis (MECE s3)",
+  "D2": "d7c2-01 FAIL read; next = per-cell grade, blocked on a driver (PI-20261122-HOPS0847-0001)",
+  "D3": "RQ-20261119-b9d0-02 queued/done; f7c1-04 producer_failed owned by PI-20261121-UGKSAUWU-0001",
+  "D4": "RQ-20261120-2cb9-01 covered",
+  "D5": "named block: P2 census PASS, arms FAIL (a474-02, rule-exhausted); next test needs a window-parameterised d5_aggregator_arms.py -- WAKE MANAGER (PI-20261122-HOPS0847-0001)",
+  "D6": "named block: af07-01 blocked on pointer-v0 subcommand; ef40-05/06 on D3",
+  "D7": "closed per manager; family review PI-20261121-RIMARY17-0001 due 11-27",
+  "D8": "ad6a-03 blocked on ML-EXITHEAD-CORPUS-WIDEN (post-reset)",
+  "D9": "RQ-20261030-f18f-01",
+  "D10": "named block: no harness, MECE parked re-entry n>=150 graded closes -- WAKE MANAGER"
+ },
+ "slots_with_next_unit": "8 of 10 with a unit or named block; D5 and D10 named blocks without a runnable unit (escalated)",
+ "runnable_hours_per_backend": {
+  "before": {
+   "github_runner": 0,
+   "kaggle_cpu": 0,
+   "trainer": 0
+  },
+  "after": {
+   "github_runner": 5.7,
+   "kaggle_cpu": 0,
+   "trainer": 0
+  },
+  "basis": "sum of routing.est_minutes of the 6 new units (60x5 + 40) on github_runner; 7d utilisation was github_runner 0.50, kaggle_cpu 0.30, github_runner_data 0.0"
+ },
+ "calls": [
+  {
+   "call": "qqq entry/filter sweep (5722-01) has a FAIL verdict",
+   "p": 0.7,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "5722-01 graded fail",
+    "resolves_when": "2026-11-25"
+   }
+  },
+  {
+   "call": "at least 1 of the 3 sibling pullback_frac 0.375 units (5722-04..06) PASSes",
+   "p": 0.2,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "any of 5722-04/05/06 graded pass",
+    "resolves_when": "2026-11-25"
+   }
+  }
+ ],
+ "prior_calls_scorecard": [],
+ "not_run": [
+  "E authoring from the programme authoring queue (17 nodes: Tier-3 declares / no driver; skipped on purpose)",
+  "C blocked/ audit of the 19 status:blocked units (not re-audited this pass)"
+ ],
+ "limits": [
+  "next_rq_id --fetch hung (90 s timeout); ids minted locally (RQ-20261122-5722-NN), collision with origin unverified",
+  "github-actions MCP down; workflow runs not listed, tree read only",
+  "previous record's calls were null: nothing to grade"
+ ],
+ "handoff": [
+  "PI-20261122-HOPS0847-0001: 10 orphans + D5/D10 need drivers or a topic lane",
+  "34 generated sweep units past due_by",
+  "8 UNGRADED units on result_disposition_check (04a5-01, aadc-13, a7f1-01/02/07/09/10/11)",
+  "20 unread e35 rows"
+ ]
+}
