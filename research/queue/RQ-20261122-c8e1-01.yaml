@@ -1,0 +1,143 @@
+# Hand-authored 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (Tier 1), ITERATION unit authored from the written diagnosis of RQ-20261117-43b6-05's result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
+# PRE-RUN DESIGN CORRECTION 2026-11-22 (same lane): the trigger `stall` was dropped from the family after a 5-draw smoke run read lever_never_fired on it (0 of 3,921 priced trades fire it on this corpus; a firing COUNT, not a performance read). It cannot be tested here, so it is not a candidate. Rule text otherwise unchanged.
+id: RQ-20261122-c8e1-01
+title: 'ITERATION 3 of ltr-tighten-sl (late cell failed): does the SAME breakeven+0.25R tighten, fired only AFTER momentum has already failed (giveback / momentum_flip
+  / structure_break / near_target), clear RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time tighten on the 4,076-trade Stage-0 corpus?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: Over the committed Stage-0 per-trade corpora (8 legs), does moving the stop to breakeven + 0.25 R (>= 1 ATR room) at the first giveback, momentum_flip,
+  structure_break or near_target trigger cut maxDD or weekly CVaR5 by >= 15% at <= 0.05 R/trade net of the full cost stack, hold in >= 4 of 6 folds, and beat the
+  same tighten at a random bar?
+why_this_matters: 'RQ-20261117-43b6-05 graded FAIL: the BE+0.25R tighten at r_milestone (+1R) is HARMFUL (mean dT -0.0777 R/trade, CI -0.1191..-0.0372, 0/200 controls,
+  0/6 folds, all 8 legs negative). Diagnosis: a mechanical BE stop at +1R cuts runners that retrace through BE and then continue, so the trigger (open >= +1R) is
+  the wrong condition. The harness already prices tighten_be at any trigger; the TRIGGER family of ltr-tighten-sl has never been tested. If a BE stop only helps AFTER
+  the trade has shown failing momentum, the loss at r_milestone is a timing artefact and the class is not exhausted; if every momentum-failure trigger also fails,
+  the class has failed on timing early, timing late and trigger and goes to a lever-exhaustion family review. The action level (BE+0.25R, 1 ATR room) is held FIXED
+  so the trigger is the only variable. One-factor test against the hold baseline.'
+iteration:
+  subject: ltr-tighten-sl
+  subject_kind: ltr_class
+  from_result: RQ-20261117-43b6-05
+  verdict_read: fail
+  diagnosis: '43b6-05: tighten_be@r_milestone n_fired 1,403 of 3,921 priced trades; mean dT vs hold -0.0777 R (CI [-0.1191,-0.0372]); vs random -0.0555 R; 0/200 controls
+    beaten; 0/6 folds; maxDD +4.7% worse, CVaR5 cut 5.6% (bar 15%); per-leg sum_dT negative on all 8 (ada_pullback_2h -50.5 on n 160, trend_donchian_eth_prop -20.8,
+    xrp_pullback_2h -12.7). Early cell (-0.041 R) and late cell (this) both fail, so open-R timing is exhausted for BE; the untested family is the TRIGGER (what the
+    trade is doing when the stop moves).'
+  search: trigger family (4 momentum-failure triggers) with the action fixed (BE + 0.25 R, >= 1 ATR room); arm denominator 4 (+ hold); Bonferroni family n_comparisons
+    4
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-tighten-sl.yaml#levers.timing.open_r_at_tighten
+  attempt: 3
+  due_by: '2026-12-01'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window, as recorded
+    per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 4076
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED: same 4,076-trade book as 43b6-05 (3,921 priced, r_milestone fired 1,403); momentum-failure triggers fire on a different, likely smaller subset
+    per trigger. V1''s n_floor 39 governs; a trigger that fires on < 39 trades reads INDETERMINATE for that arm.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261122-c8e1-01
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (8 legs), at EACH trigger in {giveback, momentum_flip, structure_break,
+    near_target} (ltr_trigger_close_s0.TRIGGERS, first firing per trade): the book with the stop moved at bar j0+1 to breakeven + 0.25 R, taken only when that level
+    is >= 1 ATR below the next open (else the trade holds), replayed to the recorded exit with lro.replay_tighten, vs the HOLD book, against 200 matched random-time
+    tightens to the same level rule on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books at min_control_beat_frac 0.9875 (Bonferroni over 4 trigger
+    arms), plus L1: a pass must keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Reported, never graded: the B3 best static
+    rule (hold + the 4 trigger arms, chosen leave-one-fold-out). Four pre-registered candidates (n_comparisons 4). PASS: at least one tighten_be@<trigger> clears
+    R1-R4 and L1 (a discovery; SCREEN pass, graduation_eligible false until BOOK-SIM-REAL-SIZER; a Tier-3 proposal input, never an apply). FAIL: every candidate fails
+    a read necessary clause (R1, R2 or R3) or is beaten by its random control (R4). INDETERMINATE: the best candidate is under the n floor, never fired, carried by
+    one leg (L1 fails), or no trade could be priced. Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the
+  same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261113-ed2b-01/-03/-05.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261113-ed2b-03 (4,076 trades x 3 triggers x 200 random books, ~60 min budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- LTR-TRIGGER-CLOSE-S0
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+- RQ-20261117-43b6-05
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; the tightened stop is replayed on committed candles from the action bar and fills at its level (a gap fills
+  at the open), which flatters stop-based actions
+- triggers are evaluated on bar closes, live on telemetry passes
+- 8 legs; trend_donchian_eth_prop is 1,182 of 4,076 trades, so L1 is a pass condition
+- 'the 981 graded check-ins were Claude-chosen tightens on desk-lifecycle trades; this arm is a mechanical rule on strategy-leg trades: a different population, said
+  so'
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tighten_be@giveback
+    - tighten_be@momentum_flip
+    - tighten_be@structure_break
+    - tighten_be@near_target
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - tighten_be
+  - --triggers
+  - giveback,momentum_flip,structure_break,near_target
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.9875'
+  - --n-comparisons
+  - '4'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-c8e1-01
+  timeout_minutes: 120

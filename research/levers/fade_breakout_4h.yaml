@@ -70,10 +70,46 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-16
+        window: 2021-11-13..2026-11-17
+        n: 86
+        net_r: -7.152
+        baseline_n: 137
+        baseline_net_r: 3.0414
+        delta_net_r: -10.1934
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 17.855
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-16
+        window: 2021-11-13..2026-11-17
+        n: 88
+        net_r: -11.6339
+        baseline_n: 137
+        baseline_net_r: 3.0414
+        delta_net_r: -14.6753
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 14.974
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.0744
+      fold_stability: 0.375
+      reading: every tested value is worse than the baseline
   entry:
     donchian:
       tests:
