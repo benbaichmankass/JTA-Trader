@@ -339,6 +339,20 @@ levers:
         baseline_value: '2.5'
         arm: atr_stop_mult_hi
         unit: RQ-20261105-036
+        window: 2019-08-13..2026-11-20
+        n: 39
+        net_r: 10.5346
+        baseline_n: 42
+        baseline_net_r: 11.7965
+        delta_net_r: -1.2619
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 3.4396
+        verdict: fail
+        joint_change: false
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-036
         window: 2019-07-29..2026-11-05
         n: 46
         net_r: 15.3084
@@ -367,6 +381,20 @@ levers:
         baseline_value: '2.5'
         arm: atr_stop_mult_lo
         unit: RQ-20261105-036
+        window: 2019-08-13..2026-11-20
+        n: 52
+        net_r: 0.0372
+        baseline_n: 42
+        baseline_net_r: 11.7965
+        delta_net_r: -11.7593
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 10.9435
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-036
         window: 2019-07-29..2026-11-05
         n: 47
         net_r: 17.5024
@@ -378,9 +406,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 10
+      points: 12
       best_delta_r_per_trade: 0.5526
-      fold_stability: 0.425
+      fold_stability: 0.417
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_r:
       tests:
@@ -394,6 +422,20 @@ levers:
         baseline_n: 41
         baseline_net_r: 11.0166
         delta_net_r: 0.2456
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 3.7995
+        verdict: fail
+        joint_change: false
+      - value: '4.375'
+        baseline_value: '3.5'
+        arm: tp_r_hi
+        unit: RQ-20261105-036
+        window: 2019-08-13..2026-11-20
+        n: 40
+        net_r: 12.042
+        baseline_n: 42
+        baseline_net_r: 11.7965
+        delta_net_r: 0.2455
         folds_ge_baseline: 3/4
         max_drawdown_r: 3.7995
         verdict: fail
@@ -430,6 +472,20 @@ levers:
         baseline_value: '3.5'
         arm: tp_r_lo
         unit: RQ-20261105-036
+        window: 2019-08-13..2026-11-20
+        n: 43
+        net_r: 11.7032
+        baseline_n: 42
+        baseline_net_r: 11.7965
+        delta_net_r: -0.0933
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 3.7995
+        verdict: fail
+        joint_change: false
+      - value: '2.625'
+        baseline_value: '3.5'
+        arm: tp_r_lo
+        unit: RQ-20261105-036
         window: 2019-07-29..2026-11-05
         n: 47
         net_r: 18.1843
@@ -441,9 +497,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: flat
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.006
-      fold_stability: 0.75
+      fold_stability: 0.667
       reading: no response at the tested values
     giveback_min_mfe_r:
       tests:

@@ -117,6 +117,20 @@ levers:
         baseline_value: '0.5'
         arm: pullback_frac_hi
         unit: RQ-20261106-005
+        window: 2020-11-16..2026-11-20
+        n: 65
+        net_r: 3.8905
+        baseline_n: 47
+        baseline_net_r: 9.5256
+        delta_net_r: -5.6351
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 11.5596
+        verdict: fail
+        joint_change: false
+      - value: '0.625'
+        baseline_value: '0.5'
+        arm: pullback_frac_hi
+        unit: RQ-20261106-005
         window: 2020-11-02..2026-11-06
         n: 65
         net_r: 1.9657
@@ -139,6 +153,20 @@ levers:
         delta_net_r: -5.6351
         folds_ge_baseline: 2/4
         max_drawdown_r: 11.5596
+        verdict: fail
+        joint_change: false
+      - value: '0.375'
+        baseline_value: '0.5'
+        arm: pullback_frac_lo
+        unit: RQ-20261106-005
+        window: 2020-11-16..2026-11-20
+        n: 28
+        net_r: 5.4344
+        baseline_n: 47
+        baseline_net_r: 9.5256
+        delta_net_r: -4.0912
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 4.4316
         verdict: fail
         joint_change: false
       - value: '0.375'
@@ -170,10 +198,10 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.1486
-      fold_stability: 0.5
-      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+      fold_stability: 0.458
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   exit:
     stale_exit_bars:
       tests:

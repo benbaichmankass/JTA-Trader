@@ -1,0 +1,106 @@
+# Hand-authored 2026-11-22 by RESEARCH-OPS-20261122-0847 (Tier 1 research): iteration from a diagnosed result (the CORE MANDATE).
+# Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261122-5722-04
+title: 'SYMBOL HOLDOUT for the sol_pullback_2h pullback_frac 0.375 discovery: same lever on eth_pullback_2h, net of cost'
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations; every arm counted.'
+question: On eth_pullback_2h's own Binance 2h history (1830 d), does pullback_frac 0.375 beat the configured 0.5 by >= 4.0 R net of cost with maxDD no worse and >=
+  3 of 4 folds? One arm vs control (denominator 1 of the 2 arms sol_pullback_2h chose from).
+why_this_matters: 'RQ-20261106-011 (sol_pullback_2h) found pullback_frac_lo 0.375 +15.3 R (4 of 4 folds, n 110 vs 126, maxDD -4.5) while frac_hi was flat: a discovery
+  from a best-of-2 on one symbol and the full window. The operator rule is to confirm on in-hand untouched data: the sol leg has no pre-dev history long enough to
+  reach n 39, so the symbol holdout (correlated evidence, said so) is the next read.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED control n comes from the discovery/diagnosis result named in iteration.from_result; the control n >= 39 floor (E35) applies to arm A; 1 variant
+    arm(s) are counted as the multiple-testing denominator. Replays history on public candles; nothing accrues. A control n < 39 is INDETERMINATE, not a verdict.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the
+    full cost stack; the control n, net R and fold signs are reported.'
+  rule: PASS iff at least one of the 1 variant arm(s) beats control A by >= 4.0 R net of the full cost stack with maxDD no worse than A and >= 3 of 4 calendar folds,
+    at A n >= 39 (thresholds unchanged from the discovery unit; the denominator is 1). FAIL iff A n >= 39 and no arm clears them (the configurations tested are closed;
+    the lever family stays open on other values and legs). INDETERMINATE if A n < 39 or the feed does not cover the window. Per-year table and long/short split attached,
+    not graded. The three sibling units (eth/xrp/avax) are read together as a symbol holdout of sol_pullback_2h; per-leg result is reported, the pooled read is the
+    manager's. A PASS goes to the manager as a Tier-3 proposal citing the arm denominator; never applied here.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, control plus variant arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261121-ad6a-01).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a live leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - pf375=pullback_frac=0.375
+  - --days
+  - '1830'
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-5722-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared: &id001
+- entry
+iteration:
+  subject: eth_pullback_2h
+  subject_kind: strategy_leg
+  from_result: RQ-20261106-011
+  verdict_read: pass_unconfirmed
+  diagnosis: 'The discovery being read is on a DIFFERENT subject (sol_pullback_2h, symbol holdout rule: sibling legs, correlated, said so). The diagnosis that chose
+    this lever for eth_pullback_2h: the sol result moved the pullback_frac family (0.375 +15.3 R, 4/4 folds; 0.625 -0.7 R) and the sibling legs are untested on pullback_frac
+    below 0.5 (lever map). This is the first lever-map read of pullback_frac on eth_pullback_2h and a holdout read of the sol discovery in one unit.'
+  search: one arm (pullback_frac 0.375) vs the configured control on the full 1830-day window; denominator 1; a PASS on >= 2 of the 3 sibling legs plus the sol result
+    is the pooled-population evidence for a Tier-3 proposal
+  levers: *id001
+  map_entries:
+  - research/levers/eth_pullback_2h.yaml#levers.entry.pullback_frac
+  attempt: 1
+  due_by: '2026-12-01'
+  multiple_testing: null
+status: queued
