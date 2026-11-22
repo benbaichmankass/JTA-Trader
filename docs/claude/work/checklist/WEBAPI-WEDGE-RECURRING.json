@@ -1,7 +1,7 @@
 {
   "id": "WEBAPI-WEDGE-RECURRING",
   "title": "ict-web-api WEDGES ~3x/day (the SPA and every diag read depend on it). MEASURED from /api/diag/alerts (1,000 rows, window 2026-11-16 03:02Z..11-18 23:17Z, ~68 h): 9 '[WARN] ict-web-api wedge detected' -> '[OK] recovered' pairs, each ~2 min: 11-16 16:24, 16:36, 21:52, 22:01, 22:05, 23:02; 11-17 11:02, 14:25; 11-18 22:30 (+ ops-flags 'recovered' 22:32:09). Detector: scripts/check_web_api.py every 2 min, probe http://127.0.0.1:8001/api/health; restart only after 2 consecutive fails, so these are single failed probes that recovered by themselves (no restart). The WARN alert never reached Telegram (HTTP 400, html parse) - fixed in PR #27010. ict-web-api runs ONE uvicorn worker (deploy/ict-web-api.service). TRIGGER NOT YET NAMED; ranked hypotheses: (1) host CPU saturation - live VM daily CPU p95 99.8-100% every day 11-09..11-17 (compute_util ledger) and the trader tick runs at ~92% of its 60 s budget (row LIVE-TICK-NEAR-BUDGET), so /api/health can miss the probe timeout; (2) a blocking call inside an async route stalling the single event loop (the 22:30 window shows no web-api error line; /api/diag/timers and /tick_cost were read at 22:30:04 but get_timers is a sync def, i.e. threadpool); (3) the probe timeout itself. NEXT: correlate the 9 timestamps with 1-min CPU (OCI Monitoring) and with web-api request durations; grep src/web/api for async def handlers that call blocking IO. FIX DIRECTION (Tier 2): move blocking handlers off the loop / add a 2nd worker within the free tier's CPU, after the tick fix frees CPU. Gates this adds: none.",
-  "state": "queued",
+  "state": "done",
   "owner": "AM-OPS-3 (session_01AFoLuLkCBdYmFshAEbsWRr)",
   "lane": null,
   "model": null,
@@ -16,5 +16,8 @@
   "prs": null,
   "blocked_on": null,
   "next_action": "dispatch_lane",
-  "due_by": "2026-11-21"
+  "due_by": "2026-11-21",
+  "note": "[2026-11-22 01:40Z AM-OPS-11] DONE (manager 2026-11-22a accepted PASS at 01:22Z). Evidence: my 01:35Z 72h read of /api/diag/alerts (1373 rows, 3 'wedge detected', all Errno 111 Connection refused during restarts; 0 in the last ~51h). Residual filed: PI-20261122-AMOPS11-0001 (watchdog pages 'wedge' on planned deploy restarts), due 11-26.",
+  "updated_at": "2026-11-22T01:23:15Z",
+  "updated_by": "AM-OPS-11"
 }

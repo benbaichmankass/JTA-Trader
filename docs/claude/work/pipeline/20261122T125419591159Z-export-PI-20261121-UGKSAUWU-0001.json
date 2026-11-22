@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "each of the 8 units has a measured result or a retirement with a reason; python3 scripts/research/result_disposition_check.py --list shows none of them as needs_review_unowned",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261121-UGKSAUWU-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261121-1448 needs_review triage",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list | grep -E 'f2a4-0[5-8]|e9b5-04|f7c1-04|abab-0[89]'"
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "PRODUCER_FAILED cluster, 8 needs_review units with verdict null and no owner (result_disposition_check --list): f2a4-05/06/07 (Alpaca-cost reprice of tqqq_trend_long_1d, slv_trend_1h, tlt_pullback_1h), f2a4-08 (live-journal same-direction concentration), e9b5-04 (SOLUSDT same-symbol overlap re-run on the fixed engine), f7c1-04 (Foxhound-4 horizon), abab-08/09 (iwm/qld EXIT lever family). Only e9b5-04's cause was READ this pass: the runner could not resolve data.binance.vision (NameResolutionError fetching SOLUSDT 5m klines), i.e. a runner-routed unit that needs trainer-resident or cached candles -- declare routing.why_runner/needs_trainer_resident_data or a cached source and re-fire. The other 7 rows carry empty measurement, cause NOT read (could_not_look). Next action: open comms/research/<unit>/<run>/logs for each, classify route/data/harness, fix the unit route or file the lever, re-queue with last_dispatched_at null. Each unit's grading now carries owner = this item."
+}

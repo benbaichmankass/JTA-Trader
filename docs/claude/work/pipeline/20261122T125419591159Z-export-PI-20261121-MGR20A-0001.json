@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the result collector lands f2a4-08's measured verdict (or names why it reads producer_failed), and the landed result row matches verdict.json",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261121-MGR20A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-20a, from RESEARCH-OPS-20261121-1448 PR #27989",
+    "rerun": "python3 -c \"import json,glob;print(json.load(open(glob.glob('comms/research/RQ-20261119-f2a4-08/*/verdict.json')[0])).get('read_state'))\"; ls research/results | grep f2a4-08"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "Collector/landing mismatch: RQ-20261119-f2a4-08's own verdict.json is MEASURED (rho(sum) +0.167, CI [-0.164,+0.431], graded INDETERMINATE by hand), but its landed research/results rows read producer_failed with an empty measurement. Find why the collector dropped a measured verdict; check whether other units are affected. Fix after the 11-25 reset."
+}

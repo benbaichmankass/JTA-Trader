@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261122-AMOPS11-0002",
+  "kind": "observation",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "AM-OPS-11 for Manager 2026-11-22a",
+    "kind": "audit",
+    "ref": "manager 2026-11-22a 08:13Z; runs 44983021424 and 45000914840",
+    "rerun": "read the ltr-wake comments by github-actions[bot] on PR #17895 (field evidence_state) and the logs of runs 44983021424 and 45000914840; a runner-posted wake reading evidence_state=committed clears it"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review transport plumbing, no milestone",
+  "state": "queued",
+  "what": "Live-review wakes posted by the GitHub Actions runner (github-actions[bot]) fail to commit their review packet to live-review/rows. They show evidence_state could_not_commit, 'git data API commit failed', HTTP 403, on 2 of 2 runner-posted wakes on 11-22: run 44983021424 (04:04Z, pkg-81f9bcb22635415a, ada_pullback_2h, bybit_2) and run 45000914840 (08:09Z, pkg-cb689c1abaf44154, ml_entry XRPUSDT, bybit_2). The same slots posted from the VM path DID commit (7161ff762afe at 04:01Z, 895d7b3aec4a at 08:01Z). Likely cause: the runner token lacks write on that branch, or a branch rule blocks it. Nothing is lost while the VM path posts, but the runner path is a broken duplicate that wakes the manager twice. Fix options: give the runner write access to live-review/rows, or skip the runner post when the VM already posted that slot. Clears when a runner-posted wake shows evidence_state committed, or when the runner path is retired with a stated reason. Routed to after the 11-25 usage reset; do not fix during the throttle."
+}
