@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261122-C8ZPUM9L-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-FILL-20261122",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # orphans still listed => block still open"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-fill 11-22] Named blocks with no meaningful runnable next test (drivers NOT built this lane): (1) movement-capture (58e4-06): needs a HAR / ML-vol forecaster + maker-fill entry arm in the movement harness (edge_portfolio_discovery family) -- no driver. (2) cost-levers-live-legs (58e4-04): needs signal-level (per-signal strength) rows for xrp/ada pullback; none committed. (3) ml-holdbias-exit: blocked on build row ML-EXIT-ACTIONGRID-LABELS. (4) ltr-close / ltr-partial-close / ltr-sl-to-structure / ltr-tp-pull-in: owned by lane LTR-CLASS-GRADE (needs a disjoint window for ltr-close). (5) claude_desk: LLM desk leg, not harness-backtestable; evidence = graded live desk decisions, no offline test exists. (6) D10 Basset: harness = join of comms/claude_judgments, forecast-grade output and journal outcomes; the journal is VM-resident and the MECE re-entry needs n>=150 graded closes -- not buildable from this sandbox. Each needs an owner lane or an operator call on whether it is worth a harness."
+}

@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261122-AMOPS11-0001",
+  "kind": "observation",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "AM-OPS-11",
+    "kind": "audit",
+    "ref": "AM-OPS-11 72h read of #27020, 11-22 01:35Z; manager 2026-11-22a 01:22Z; row WEBAPI-WEDGE-RECURRING",
+    "rerun": "scripts/ops/diag_fetch.sh '/api/diag/alerts?since=2026-11-18T23:00:00Z&limit=5000' and filter rows whose body contains 'wedge detected'; for each, check the error text (Errno 111 vs timeout) and whether a kind=restart alert lands within 60 s"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "alert-noise in the web-api watchdog, no milestone",
+  "state": "queued",
+  "what": "ict-web-api watchdog (scripts/check_web_api.py) pages '[WARN] ict-web-api wedge detected' on PLANNED deploy restarts: the probe gets Errno 111 Connection refused while the unit restarts. In the 72h after #27020 all 3 'wedge' alerts were this shape; 2 of 3 fell within 30 s of a deploy-restart alert (#27420, #27494). Fix (Tier 1, no gate): label Errno 111 within N s of a recorded deploy/restart as 'restarting', not a wedge, and keep paging a timeout or refusal outside a restart window. Residual of WEBAPI-WEDGE-RECURRING (closed 11-22)."
+}

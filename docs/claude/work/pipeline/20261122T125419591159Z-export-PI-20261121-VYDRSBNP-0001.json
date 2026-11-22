@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the collector cause is identified and fixed, or shown to be limited to this unit and killed with a reason",
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261121-VYDRSBNP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261121-1448b triage of f2a4-08",
+    "rerun": "python3 -c \"import json;print(json.load(open('comms/research/RQ-20261119-f2a4-08/44565614234/verdict.json'))['read_state'], [json.loads(l)['read_state'] for l in open('research/results/RQ-20261119-f2a4-08/44565614234.jsonl')])\""
+  },
+  "owner": "research-ops",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "COLLECTOR/LANDING MISMATCH: research/results/RQ-20261119-f2a4-08/44565614234.jsonl has 2 rows read_state producer_failed with an empty measurement, while the run's own comms/research/RQ-20261119-f2a4-08/44565614234/verdict.json is read_state measured (harness verdict 'miss', n_trades 1230). Found while triaging PI-20261121-UGKSAUWU-0001; cause NOT investigated. The unit was hand-graded INDETERMINATE from verdict.json in PR #27989. Next action: find where the collector builds the result row from verdict.json and why it landed producer_failed (check other units whose comms verdict.json is measured but whose results rows are producer_failed)."
+}
