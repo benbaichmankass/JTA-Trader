@@ -3,7 +3,7 @@
 id: RQ-20261119-f2a4-05
 title: 'COST REPRICE of the real-money tqqq_trend_long_1d Stage-0 record at the MEASURED Alpaca cost: does its edge (+0.236 R/trade,
   n 54, at 5 bps round trip) survive 26 bps (paper fills, realized_slippage 2026-11-18) and how does it read at 53 bps?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -125,21 +125,15 @@ related:
 - comms/strategy_evidence/tqqq_trend_long_1d.json
 - PROGRAMME-REPLAN-2026-11-19
 rearmed_at: '2026-11-21T20:30:00+00:00'
+last_dispatched_at: '2026-11-21T21:01:03+00:00'
 grading:
   attested: RULE-RQ20261119f2a405-COST-REPRICE
   auto: true
   decision_rule_id: RULE-RQ20261119f2a405-COST-REPRICE
   evidence:
-  - research/results/RQ-20261119-f2a4-05/44539872757.jsonl
-  - research/results/RQ-20261119-f2a4-05/44541014124.jsonl
-  graded_at: '2026-11-21'
+  - research/results/RQ-20261119-f2a4-05/44948785866.jsonl
+  graded_at: '2026-11-22'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261121-UGKSAUWU-0001
-  owner_reason: 'cause READ 2026-11-21: exit_lever_ablation.py exited 2 on the missing required --delta-r;
-    RE-ARMED with --delta-r 0 (the value sibling stage0 units c1b4-01/02 use; not read by the stage0 rule),
-    last_dispatched_at reset, decision rule untouched; owner PI-20261121-UGKSAUWU-0001'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
-last_dispatched_at: '2026-11-21T21:01:03+00:00'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
