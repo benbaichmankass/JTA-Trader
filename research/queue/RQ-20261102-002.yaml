@@ -5,7 +5,7 @@ id: RQ-20261102-002
 title: 'ML-PROP-ITERATE diagnostic 3: what would have to be true? The minimum net edge per trade (R) at
   which ml_entry''s ETH+SOL book clears the registered V2 bar on each firm, and the edge needed for the
   CI clause'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -108,18 +108,22 @@ generated:
     node: P5-MLDIAG-MINEDGE
 last_dispatched_at: '2026-11-03T05:11:38+00:00'
 grading:
-  auto: true
   decision_rule_id: RULE-P5-MLDIAG-MINEDGE
   evidence:
+  - comms/research/RQ-20261102-002/41531241898/result.json
+  - comms/research/RQ-20261102-002/41547053345/result.json
+  - comms/research/RQ-20261102-002/41577247878/result.json
   - research/results/RQ-20261102-002/41531241898.jsonl
   - research/results/RQ-20261102-002/41547053345.jsonl
   - research/results/RQ-20261102-002/41577247878.jsonl
-  graded_at: '2026-11-12'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  graded_at: '2026-11-22'
+  grader: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), hand-graded from the committed per-run result.json under the unit's registered descriptive rule
+  needs_review: false
+  reason: 'Every landed row read producer_failed only because ml_ethsol_diagnostics.py wrote result.json and no verdict.json (fixed in the same PR as this grading). MEASURED (descriptive, no pass bar), identical
+    across 3 runs on the ml_entry v1 ETH+SOL held-out ledger (n=381, 2025-10-01..2026-09-30, extend-only TP, seeds 1,2,3): the minimum net edge per trade on the grid at which the book clears the registered
+    V2 bar is 0.06 R on EVERY firm (breakout_2, tradeify_1, velotrade_1), against the measured +0.017 R (95% CI -0.106..+0.140) and the 5-symbol pooled +0.027 R named in the rule: a gap of about 0.043 R to
+    the V2 bar. The CI clause is further: at n=381 (sd 1.2223 R) the true mean net R needed for the 95% lower bound to reach zero is 0.1227 R, and at an edge of 0.05 R it takes n=2,296 trades (0.03 R: 6,378;
+    0.08 R: 897; 0.10 R: 574). So a better model or lever has to add roughly +0.04 R/trade to clear V2 and about +0.11 R/trade to clear the edge-CI clause at this n. The rule is descriptive with no pass bar,
+    so the contract verdict is no_action_warranted (read, nothing applied). Advice-only.'
   rows: 3
-  verdict: null
+  verdict: no_action_warranted
