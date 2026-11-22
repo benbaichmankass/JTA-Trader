@@ -169,6 +169,35 @@ def write_verdict(unit: str, out: Path) -> bool:
                         "no_action_warranted, not_viable/does_not_reproduce->fail, indeterminate/smoke_not_judged->indeterminate",
             }, indent=2) + "\n")
             return True
+        # b608 (the ENTRY v2 stack): {"levels": {"base": {..., "n": [...]}, "S1_..": {..., "accepted": bool}}, "winning_stack": "<level>"|None}.
+        # The registered rule: the WINNING STACK is the highest accepted level (S1, S2, S3 in order, stopping at the first not accepted); if S1 is
+        # not accepted there is no winning stack. A winning stack is the unit's positive answer (a CANDIDATE for the one W1 read), none is a fail.
+        if isinstance(d, dict) and isinstance(d.get("levels"), dict) and "winning_stack" in d:
+            lv = d["levels"]
+            base_n = (lv.get("base") or {}).get("n")
+            win = d.get("winning_stack")
+            (out / "verdict.json").write_text(json.dumps({
+                "verdict": "pass" if win else "fail", "read_state": "measured",
+                "population": f"{unit}: ENTRY v2 stack on the pooled frozen-60 population, DEV FOLDS ONLY; levels {sorted(k for k in lv if k != 'base')}; "
+                              f"winning stack {win!r}",
+                "n": int(base_n[0]) if isinstance(base_n, list) and base_n else None,
+                "note": "mechanical map of the harness's own `winning_stack` (the rule's highest accepted level): present -> pass, none -> fail; "
+                        "levels, interaction and traded-5 means are in the result file",
+            }, indent=2) + "\n")
+            return True
+        # a508 (the ENTRY v1 traded-slice test): {"flags": {"<SYM>": HARM|SUPPORTED|UNDETERMINED}, "causes": {...}, "A0": {"<SYM>": {"n_per_seed": ..}}}.
+        # The registered rule is an attribution with per-symbol flags and a no-go PROPOSAL the lane never applies; it has no pass bar, so the
+        # contract word is no_action_warranted (manager ruling 2026-11-22: that is the word for a descriptive stage; `indeterminate` is for a test
+        # that had a rule and could not decide).
+        if isinstance(d, dict) and isinstance(d.get("flags"), dict) and isinstance(d.get("causes"), dict):
+            n_syms = [v.get("n_per_seed") for v in (d.get("A0") or {}).values() if isinstance(v, dict) and isinstance(v.get("n_per_seed"), (int, float))]
+            (out / "verdict.json").write_text(json.dumps({
+                "verdict": "no_action_warranted", "read_state": "measured",
+                "population": f"{unit}: ENTRY v1 traded slice, DEV FOLDS ONLY; per-symbol flags {d['flags']}; causes {d['causes']}",
+                "n": int(round(sum(n_syms))) if n_syms else None,
+                "note": "descriptive attribution (no pass bar): HARM flags are a no-go proposal to the operator, never applied by the lane; see the result file",
+            }, indent=2) + "\n")
+            return True
         # ``arms`` (b604 calibration, b607 recipe/ensemble: {"<arm>": {"verdict": win|no_win|indeterminate, "n": [...]}}) is the
         # same per-cell shape under another key; without it those runs landed producer_failed and were re-dispatched (ML-PRIMARY-3,
         # 2026-11-15: b604 ran 3x, b607 4x with real results on main).
