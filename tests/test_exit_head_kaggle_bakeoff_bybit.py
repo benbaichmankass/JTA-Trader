@@ -8,7 +8,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import exit_head_kaggle_bakeoff as K
+import exit_head_kaggle_bakeoff as K  # noqa: E402
 
 
 def _synth(sym_seed: int, n=4000):
