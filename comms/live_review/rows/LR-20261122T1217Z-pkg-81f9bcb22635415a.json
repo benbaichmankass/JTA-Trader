@@ -1,0 +1,159 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261122T1217Z-pkg-81f9bcb22635415a",
+ "reviewed_at": "2026-11-22T12:25:00Z",
+ "order_package_id": "pkg-81f9bcb22635415a",
+ "trade_id": null,
+ "leg": "ada_pullback_2h",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-22T12:17:29Z",
+ "state": {
+  "atr_now_over_entry": 0.6795,
+  "bars_held": 7,
+  "giveback_r": 1.1667,
+  "open_r": -0.5269,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6398,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.14941429,
+  "tp": 0.1301044
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.6795,
+  "bars_since_peak": 3,
+  "giveback_r": 1.1667,
+  "open_r": -0.5269,
+  "peak_r": 0.6398,
+  "r_to_stop": 0.4731,
+  "r_to_target": 3.1605
+ },
+ "mechanics": {
+  "evidence": "package sl 0.14941429 / tp 0.1301044 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 36,
+   "mean_r": -0.5237,
+   "sd_r": 1.4229,
+   "worst_r": -1.1267,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 36,
+   "mean_r": -0.7192,
+   "sd_r": 0.1065,
+   "worst_r": -1.0095,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 36,
+   "mean_r": -0.5852,
+   "sd_r": 0.024,
+   "worst_r": -0.652,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261122T1217Z-pkg-81f9bcb22635415a.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.55,
+  "reason": "Prior forecast (hold, target 0.1301, invalid 0.1494): neither level touched, but direction went against the trade (2h to 0.1466 high, last close 0.1457; 0.1459 swing high cleared on one close, 0.1505 high still intact, 1d ADX 48.8 down). Carried forward with lower p_target. Hold -0.52R n=36 is best mean vs close -0.59 and atr2 tighten -0.72; close gap 0.06R < 1 SE (0.237) but worst-case gain 0.47R < 1R so tail tie-break not met. Stop 0.1494 is ~1.6 ATR away and above the 0.1505-side structure, so not a thesis failure yet."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "structure_break: last 2h close 0.1457, since-entry high 0.1466 (0.4 ATR above 0.1459 swing); 0.1505 swing high still above stop",
+  "book: ADA e4_oi_shock_1h -0.27R, XRP -0.14R, SOL -0.12R, AVAX -0.73R shorts are the same crypto-beta bet; BTC/ETH longs positive",
+  "tighten_bias: stop-at-price fills flatter any tighten; atr:1.0 and atr:1.5 invalid (level not below price)",
+  "news: neutral; calendar: none next 24h; funding unread (missing input)",
+  "drawdown switch overridden by operator 10:13Z on bybit_2; blocks new entries only, no effect on amend/close"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; mechanics match (SL 0.1494 / TP 0.1301 on the venue)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: nothing to apply; mechanics match (SL 0.1494 / TP 0.1301 on the venue)"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuKifPRuyeVhkQU1Fsg-ltr",
+ "prompt_sha": null,
+ "skill_sha": "193596e886d800b0d288d35421d2c5c240ffa7c6",
+ "packet_defects": [],
+ "packet_sha": "5ce0eabb7ecc96cfa2a119f33998048e94632dd5f051fbb409adbc6520ad6e1c",
+ "forecast": {
+  "thesis": "Daily downtrend intact (ADX ~49) and the 2h bounce is a retest below the 0.1505 swing high; I expect a roll-over toward target, but the one close above 0.1459 and the BTC/ETH rally lower the odds versus 10:20Z.",
+  "direction": "with_trade",
+  "target_px": 0.1301,
+  "p_target": 0.2,
+  "invalidation_px": 0.1494,
+  "horizon_bars": 10,
+  "timeframe": "2h",
+  "evidence": [
+   "chart.swings: highs 0.1459, 0.1505",
+   "chart.htf: 1d trending ADX 48.8",
+   "exit_plan: SL 0.1494 / TP 0.1301",
+   "priced_options: hold -0.52R n=36"
+  ]
+ }
+}
