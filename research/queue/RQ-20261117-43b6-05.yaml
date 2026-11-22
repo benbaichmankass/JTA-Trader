@@ -143,12 +143,17 @@ run:
   timeout_minutes: 120
 last_dispatched_at: '2026-11-22T18:12:54+00:00'
 grading:
+  attested: RULE-RQ-20261117-43b6-05
+  auto: true
   decision_rule_id: RULE-RQ-20261117-43b6-05
   evidence:
   - research/results/RQ-20261117-43b6-05/45053149254.jsonl
   graded_at: '2026-11-22'
-  grader: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), hand-graded from the committed measurement under the unit's registered rule
-  needs_review: false
-  reason: 'RESULT: tighten_be@r_milestone FAILS RULE-AM-RISK-ADJUSTED-V1 (label fails_R2_R3; R4 also fails). Population: 3,921 of 4,076 committed Stage-0 trades priced across 8 legs, n_fired 1,403, trigger r_milestone, level BE+0.25R with >=1 ATR room. R1 cost passes (0.028 R/trade <= 0.05) but the action is HARMFUL, not merely unhelpful: mean dT vs hold -0.0777 R/trade, CI95 [-0.1191, -0.0372] excludes zero; vs random-time tighten -0.0555 R (CI95 [-0.0892, -0.0237]); beat 0 of 200 random controls; held in 0 of 6 folds; maxDD got WORSE by 4.7% and weekly CVaR5 improved only 5.6% (bar 15%). Every one of the 8 legs lost R (sum_dT: ada_pullback_2h -50.5 on n 160, trend_donchian_eth_prop -20.8, xrp_pullback_2h -12.7, trend_donchian_eth_4h -12.1, iaum_pullback_1d -6.5, trend_donchian_sol_prop -4.8, trend_donchian_xrp_4h -1.7, ml_entry -0.01), so L1 is moot. DIAGNOSIS: a mechanical breakeven stop at +1R cuts runners that retrace through BE before continuing; the stop-based tighten gives up more than it saves at every leg. The late cell joins the early cell (-0.041 R, CI [-0.087,-0.005]) and the sibling sl_to_structure (ed2b-03, 2.3% DD cut at 0.010 R cost): ltr-tighten-sl has now failed on timing early, timing late (this unit) and a structure level. NEXT: the untested lever families on this class are trigger and action_bounds; lever-exhaustion family review (not an attempt count) is the retirement route, and any further iteration must change the ACTION SHAPE (partial close / tp pull-in already graded elsewhere) not the BE level. Advice-only; nothing applied.'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
+  attribution_by: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), read from the committed measurement 2026-11-22
+  attribution: 'RESULT: tighten_be@r_milestone FAILS RULE-AM-RISK-ADJUSTED-V1 (label fails_R2_R3; R4 also fails). Population: 3,921 of 4,076 committed Stage-0 trades priced across 8 legs, n_fired 1,403, trigger r_milestone, level BE+0.25R with >=1 ATR room. R1 cost passes (0.028 R/trade <= 0.05) but the action is HARMFUL, not merely unhelpful: mean dT vs hold -0.0777 R/trade, CI95 [-0.1191, -0.0372] excludes zero; vs random-time tighten -0.0555 R (CI95 [-0.0892, -0.0237]); beat 0 of 200 random controls; held in 0 of 6 folds; maxDD got WORSE by 4.7% and weekly CVaR5 improved only 5.6% (bar 15%). Every one of the 8 legs lost R (sum_dT: ada_pullback_2h -50.5 on n 160, trend_donchian_eth_prop -20.8, xrp_pullback_2h -12.7, trend_donchian_eth_4h -12.1, iaum_pullback_1d -6.5, trend_donchian_sol_prop -4.8, trend_donchian_xrp_4h -1.7, ml_entry -0.01), so L1 is moot. DIAGNOSIS: a mechanical breakeven stop at +1R cuts runners that retrace through BE before continuing; the stop-based tighten gives up more than it saves at every leg. The late cell joins the early cell (-0.041 R, CI [-0.087,-0.005]) and the sibling sl_to_structure (ed2b-03, 2.3% DD cut at 0.010 R cost): ltr-tighten-sl has now failed on timing early, timing late (this unit) and a structure level. NEXT: the untested lever families on this class are trigger and action_bounds; lever-exhaustion family review (not an attempt count) is the retirement route, and any further iteration must change the ACTION SHAPE (partial close / tp pull-in already graded elsewhere) not the BE level. Advice-only; nothing applied.'

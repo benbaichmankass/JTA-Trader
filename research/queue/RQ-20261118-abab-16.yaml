@@ -118,12 +118,17 @@ related:
 - research/levers/fade_breakout_4h.yaml
 last_dispatched_at: '2026-11-22T18:12:59+00:00'
 grading:
-  decision_rule_id: abab-16 registered rule (no_reachable_lever_beats_removed)
+  attested: RULERQ20261118abab16
+  auto: true
+  decision_rule_id: RULERQ20261118abab16
   evidence:
   - research/results/RQ-20261118-abab-16/45053808317.jsonl
   graded_at: '2026-11-22'
-  grader: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), hand-graded from the committed measurement under the unit's registered rule
-  needs_review: false
-  reason: 'RESULT: both direction arms FAIL on fade_breakout_4h (BTCUSDT 4h, 2021-11-13..2026-11-17, venue-aware cost stack, n 137 in baseline A): LONG-only delta net R -10.19 (n 86, 2 of 4 folds >= A), SHORT-only -14.68 (n 88, 1 of 4 folds), bar +4.0 R. lever_fired TRUE (both arms trade; unlike abab-47/-54 on long-only legs). DIAGNOSIS: the baseline arm A nets only +3.04 R over 137 trades (~0.02 R/trade) so there is no side carrying an edge to isolate: each single side is net negative (-7.15 / -11.63 R) and the arms are not subsets of A (86 + 88 > 137: a suppressed signal frees the position lock so a later opposite-side signal fires), so the delta mixes selection with trade-path interaction. Baseline A also runs tp_r 50.0 with --tp-cap-pct 0.099, a fictional take-profit by the TP doctrine (stop 93, target 42, timeout 2). The direction lever family is flat-to-negative for this leg; the next test is the exit family (a real predictive TP, doctrine-compliant) not another filter. Closes these configurations, not the family.'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
+  attribution_by: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), read from the committed measurement 2026-11-22
+  attribution: 'RESULT: both direction arms FAIL on fade_breakout_4h (BTCUSDT 4h, 2021-11-13..2026-11-17, venue-aware cost stack, n 137 in baseline A): LONG-only delta net R -10.19 (n 86, 2 of 4 folds >= A), SHORT-only -14.68 (n 88, 1 of 4 folds), bar +4.0 R. lever_fired TRUE (both arms trade; unlike abab-47/-54 on long-only legs). DIAGNOSIS: the baseline arm A nets only +3.04 R over 137 trades (~0.02 R/trade) so there is no side carrying an edge to isolate: each single side is net negative (-7.15 / -11.63 R) and the arms are not subsets of A (86 + 88 > 137: a suppressed signal frees the position lock so a later opposite-side signal fires), so the delta mixes selection with trade-path interaction. Baseline A also runs tp_r 50.0 with --tp-cap-pct 0.099, a fictional take-profit by the TP doctrine (stop 93, target 42, timeout 2). The direction lever family is flat-to-negative for this leg; the next test is the exit family (a real predictive TP, doctrine-compliant) not another filter. Closes these configurations, not the family.'

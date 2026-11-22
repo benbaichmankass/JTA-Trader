@@ -164,7 +164,7 @@ run:
   - '{out_dir}'
   inputs:
     research_unit: RQ-20261122-b18a-04
-status: queued
+status: done
 theme: live_strategy
 title: 'D6 Pointer CEILING on xrp_pullback_2h: does ANY static entry bracket (atr_stop_mult x tp_r, 19 cells) beat the declared bracket (SL 2.5 ATR / TP 3.0R) net
   of the full cost stack, held to a registered rule? If the surface is flat, a learned bracket has no headroom on this leg'
@@ -183,3 +183,16 @@ levers:
   - tp_r 3..6
   hypothesised_effect: a different static stop/target cell lifts net R per trade by >= 0.03 on this leg; if none does, the surface is flat
 last_dispatched_at: '2026-11-22T16:37:00+00:00'
+grading:
+  attested: RULE-RQ20261122-b18a-04-BRACKET-CEILING
+  auto: true
+  decision_rule_id: RULE-RQ20261122-b18a-04-BRACKET-CEILING
+  evidence:
+  - research/results/RQ-20261122-b18a-04/45043476905.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
