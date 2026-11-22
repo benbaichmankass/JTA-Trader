@@ -2,7 +2,7 @@
 id: RQ-20261121-ad6a-03
 title: 'ml-exit-head-donchian-1h FEATURE lever re-read at power: feat_exh and feat_path_only vs the champion on the WIDENED donchian rows corpus, sized to the measured
   paired sd 0.97 R'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -48,6 +48,7 @@ power:
   feasibility:
     source: none
     basis: blocked until ML-EXITHEAD-CORPUS-WIDEN lands the rows; no accrual waited for
+    accrual_basis: Replays history on a corpus built in-hand by RQ-20261122-fa22-03; nothing accrues. If the built n is below the n floors this grades INDETERMINATE and states the n still needed.
 baseline:
   definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold training rows and replayed
     on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported as context.
@@ -106,7 +107,7 @@ run:
   - python3
   - scripts/research/exit_head_label_bakeoff.py
   - --rows
-  - datasets-out/exit_head/1h/donchian_widened/rows.jsonl
+  - datasets-out/exit_head/1h/donchian_widened_fresh/rows.jsonl
   - --legs
   - trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT
   - --num-folds
@@ -163,8 +164,13 @@ levers:
   hypothesised_effect: the exhaustion block carries the truncation information the 14 shipped path/vol features lack
 levers_declared:
 - features
-blocked_on:
-- what: the widened donchian exit-head rows corpus (build row ML-EXITHEAD-CORPUS-WIDEN, owner ML-PRIMARY, post-reset after Wed 11-25); the rows path in run.command
-    is the row's planned output and is amended before_any_run if the row lands elsewhere
-  ref: ML-EXITHEAD-CORPUS-WIDEN
-  clears_when: datasets-out/exit_head/1h/donchian_widened/rows.jsonl exists on the trainer with >= 8,000 paired OOS trades over the 8 legs and the row is state done
+requires_result:
+  unit: RQ-20261122-fa22-03
+  verdict: pass
+amendments:
+- at: '2026-11-22'
+  before_any_run: true
+  by: lane RESEARCH-FILL-20261122
+  text:
+  - 'The unit has not run. The corpus build it was blocked on is now unit RQ-20261122-fa22-03 (trainer), enabled by leg:SYMBOL support in m20_exit_head_round.py. The rows path changes from donchian_widened to donchian_widened_fresh because exit_head_fresh_rows.py refuses to publish over a non *_fresh path. requires_result replaces blocked_on.'
+  - 'Rule text, thresholds, arms, legs, folds, z and power are NOT edited. The blocked_on clears_when asked for >= 8,000 paired OOS trades: fa22-03 reports per-symbol rows and trades but does not grade n; if the pooled n_oos is below the rule n floors this unit grades INDETERMINATE by its own rule and reports the n still needed.'

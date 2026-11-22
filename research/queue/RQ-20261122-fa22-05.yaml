@@ -1,0 +1,96 @@
+# Hand-authored 2026-11-22 by lane RESEARCH-FILL-20261122 (Tier 1 research), dispatched by the manager (session_01AFoLuKifPRuyeVhkQU1Fsg) under the operator's 11-22 mandate "all the MLs, all the strategies need to have the next test". Driver built in the same lane (PR RESEARCH-FILL drivers). Rule and power registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261122-fa22-05
+title: 'xsec-crypto REGIME-GATE arms: does a BTC SMA / realized-vol risk-off gate beat no gate and a matched-random gate on the 6-perp cross-sectional momentum book,
+  net of fee, slippage and settled funding?'
+cadence: once
+roadmap:
+- L-LADDER
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations; every arm counted.'
+question: On the 1d Binance-vision basket ETH SOL ADA AVAX BNB LINK (last 1460 d) with settled Bybit funding charged on held legs, does any of the 5 gate arms (BTC
+  SMA 20/50/100/200 risk-off; BTC 30d realized vol above its trailing 365d 70th percentile) beat the ungated book by >= +0.25 net (sum of daily fractional returns)
+  with matched-random p <= 0.05, net > 0, >= 3 improved calendar years and no year > 50% of the gain?
+why_this_matters: 'RQ-20261101-58e4-02 read shorts -0.21 vs longs +1.86 with 2021 = 68% of net: the book earns in one regime. The regime gate is the first untested
+  lever family on its lever map; the engine already honours a BTC risk-off mask (btc_risk_off) but no unit ever swept it with funding charged and a matched-random
+  control.'
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Baseline n_trades floor 39 (E35) over the basket; 5 gate arms are the multiple-testing denominator, each with a 300-draw matched-random control. History
+    replay on public data; nothing accrues.
+  feasibility:
+    source: none
+    accrual_basis: Replays 1460 days of public history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261122-fa22-05-XSEC-GATE
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: 'G0: the same engine, panel and funding series with no gate; plus a matched-random gate per arm.'
+  statistic: 'scripts/research/xsec_regime_gate_arms.py: per arm net total R (sum of daily fractional book returns, scripts/backtest_xsec_momentum.run_backtest with
+    settled funding), delta vs G0, per-year net and delta, control_p over 300 matched-random draws.'
+  rule: PASS iff some arm has delta >= +0.25 AND control_p <= 0.05 AND net > 0 AND improves >= 3 calendar years vs G0 AND no year carries > 50% of the gain, at baseline
+    n_trades >= 39. FAIL iff baseline n_trades >= 39 AND no arm has delta >= +0.25. INDETERMINATE otherwise. Per-year table attached for every arm; long/short split
+    is not available from the engine summary and is reported as such. Thresholds fixed now, not changed after any result.
+  pass_action: The passing arm becomes a candidate regime lever for the xsec book on the lever map; a promotion is a separate Stage-0 holdout then a Tier-3 proposal.
+  fail_action: Record the gate family as tested on research/levers/xsec-crypto.yaml; next untested families are universe/liquidity, short-leg treatment and residual
+    momentum.
+  what_it_does_not_do: Edits no config, adds xsec to no roster, places no order. A Stage-0 research read of the book, not a promotion case.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  why_runner: Fetches public Binance-vision daily closes and Bybit settled funding; a Kaggle kernel has no internet.
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: 'ESTIMATE: frontier xsec runner 15 min for one run (9da8-06); here 6 gate arms x 300 matched draws of a weekly book (local synthetic smoke: ~2 s per 15 draws
+    x 3 arms), timeout 90.'
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  basis: 'stand-in: xsec is a testing leg with a regime-concentrated positive side.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/xsec_regime_gate_arms.py
+  - --days
+  - '1460'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-fa22-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared:
+- filter
+iteration:
+  subject: xsec-crypto
+  subject_kind: strategy_leg
+  from_result: RQ-20261101-58e4-02
+  verdict_read: fail
+  diagnosis: '58e4-02 FAIL: the book is long-biased in one regime (2021 68% of net, shorts -0.21 vs longs +1.86). Regime concentration points at a gate; families
+    untested: regime gate, universe/liquidity, short-leg treatment, residual momentum. This unit tests the gate only.'
+  search: 5 gate arms vs the ungated control; denominator 5; each against a 300-draw matched-random gate (same risk-off fraction, 7-day blocks)
+  levers:
+  - filter
+  attempt: 1
+  due_by: '2026-11-27'
+  map_entries:
+  - research/levers/xsec-crypto.yaml
+status: queued
+evidence_class:
+  holdout: none
+  claim: stage0_gate_arms
