@@ -1,0 +1,192 @@
+{
+  "baseline": {
+    "net": -0.24773587,
+    "per_year": {
+      "2022": 0.028912,
+      "2023": 0.670862,
+      "2024": -0.402652,
+      "2025": -0.055235,
+      "2026": -0.489623
+    },
+    "weeks_gated": 0,
+    "weeks_total": 206,
+    "n_trades": 263
+  },
+  "arms": [
+    {
+      "arm": "SMA20",
+      "net": 0.35190864,
+      "per_year": {
+        "2022": 0.0,
+        "2023": 0.672851,
+        "2024": -0.248878,
+        "2025": 0.070394,
+        "2026": -0.142458
+      },
+      "weeks_gated": 91,
+      "weeks_total": 206,
+      "n_trades": 237,
+      "delta": 0.599645,
+      "risk_off_frac": 0.4635,
+      "control_p": 0.0797,
+      "draws": 300,
+      "years_improved": 4,
+      "years_n": 5,
+      "max_year_share": 0.579,
+      "pass": false
+    },
+    {
+      "arm": "SMA50",
+      "net": 0.34399631,
+      "per_year": {
+        "2022": 0.0,
+        "2023": 0.892459,
+        "2024": -0.328432,
+        "2025": 0.109588,
+        "2026": -0.329618
+      },
+      "weeks_gated": 87,
+      "weeks_total": 206,
+      "n_trades": 199,
+      "delta": 0.591732,
+      "risk_off_frac": 0.4197,
+      "control_p": 0.0532,
+      "draws": 300,
+      "years_improved": 4,
+      "years_n": 5,
+      "max_year_share": 0.374,
+      "pass": false
+    },
+    {
+      "arm": "SMA100",
+      "net": 0.61006527,
+      "per_year": {
+        "2022": 0.0,
+        "2023": 0.897931,
+        "2024": -0.15528,
+        "2025": 0.002699,
+        "2026": -0.135284
+      },
+      "weeks_gated": 82,
+      "weeks_total": 206,
+      "n_trades": 190,
+      "delta": 0.857801,
+      "risk_off_frac": 0.3954,
+      "control_p": 0.0133,
+      "draws": 300,
+      "years_improved": 4,
+      "years_n": 5,
+      "max_year_share": 0.413,
+      "pass": true
+    },
+    {
+      "arm": "SMA200",
+      "net": 0.05238971,
+      "per_year": {
+        "2022": 0.0,
+        "2023": 0.850304,
+        "2024": -0.346662,
+        "2025": -0.269823,
+        "2026": -0.181429
+      },
+      "weeks_gated": 72,
+      "weeks_total": 206,
+      "n_trades": 190,
+      "delta": 0.300126,
+      "risk_off_frac": 0.3551,
+      "control_p": 0.2757,
+      "draws": 300,
+      "years_improved": 3,
+      "years_n": 5,
+      "max_year_share": 1.027,
+      "pass": false
+    },
+    {
+      "arm": "VOL30_P70",
+      "net": -0.25692269,
+      "per_year": {
+        "2022": 0.028912,
+        "2023": 0.318554,
+        "2024": -0.354069,
+        "2025": -0.010549,
+        "2026": -0.239771
+      },
+      "weeks_gated": 58,
+      "weeks_total": 206,
+      "n_trades": 228,
+      "delta": -0.009187,
+      "risk_off_frac": 0.2641,
+      "control_p": 0.495,
+      "draws": 300,
+      "years_improved": 3,
+      "years_n": 5,
+      "max_year_share": null,
+      "pass": false
+    }
+  ],
+  "arm_denominator": 5,
+  "grade": {
+    "verdict": "pass",
+    "why": "['SMA100'] beat G0 by >= 0.25 with matched-random p <= 0.05, net > 0, >= 3 improved years and no year > 50% of the gain",
+    "passing": [
+      "SMA100"
+    ]
+  },
+  "rule": {
+    "delta_min": 0.25,
+    "alpha": 0.05,
+    "min_years": 3,
+    "n_floor": 39
+  },
+  "coverage": {
+    "ETHUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4383,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    },
+    "SOLUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4458,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    },
+    "ADAUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4383,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    },
+    "AVAXUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4383,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    },
+    "BNBUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4383,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    },
+    "LINKUSDT": {
+      "close_rows": 1460,
+      "funding_days": 1439,
+      "funding_settlements": 4383,
+      "funding_months_missing": [
+        "2026-11"
+      ]
+    }
+  },
+  "unit_note": "net is the sum of daily FRACTIONAL book returns (no stop distance in this engine)"
+}
