@@ -93,7 +93,7 @@ iteration:
   - research/levers/ml-btc-router-cells.yaml
   levers:
   - filter
-status: queued
+status: done
 programme: P2
 evidence_class:
   holdout: none
@@ -106,3 +106,16 @@ ml_consumer:
   - squeeze_breakout_4h
   - ict_scalp_5m
 last_dispatched_at: '2026-11-22T11:28:47+00:00'
+grading:
+  attested: RULE-RQ20261122-fa22-04-BTC-CELL-MARGINAL
+  auto: true
+  decision_rule_id: RULE-RQ20261122-fa22-04-BTC-CELL-MARGINAL
+  evidence:
+  - research/results/RQ-20261122-fa22-04/45015566879.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
