@@ -22,6 +22,8 @@ close-trigger S0 design generalised to three more actions that the committed rep
                         closed bars, less ``--pivot-buffer-atr`` x ATR; taken only when that level is TIGHTER than
                         the initial stop and below the next open (a structure level behind the stop is a widen, which
                         needs a past-the-recorded-exit replay this tool does not have).
+  * ``tighten_be``      move the stop to breakeven + ``--be-plus-r`` R from the next bar; refused when the level is within
+                        ``--min-room-atr`` x ATR of the next open or is not a tighten (RQ-20261117-43b6-05).
 
   Not expressible here, so not offered: ``widen_sl`` and ``tp_extend``. Both need the path AFTER the recorded exit
   (the widened stop survives the recorded stop-out; the extended TP outlives the recorded TP fill) replayed under the
@@ -75,7 +77,7 @@ import am_risk_adjusted as ra  # noqa: E402
 import live_review_outcomes as lro  # noqa: E402
 import ltr_trigger_close_s0 as s0  # noqa: E402
 
-ACTIONS = ("partial_close", "tp_pull_in", "sl_to_structure")
+ACTIONS = ("partial_close", "tp_pull_in", "sl_to_structure", "tighten_be")
 SEED = 20261113
 BOOT_DRAWS = 2000
 
@@ -134,8 +136,26 @@ def price_sl_to_structure(t: Dict[str, Any], path: Dict[str, Any], j0: int, pivo
     return net, (hit[1] if hit else path["exit_ts"])
 
 
+def price_tighten_be(t: Dict[str, Any], path: Dict[str, Any], j0: int, be_plus_r: float = 0.25,
+                     min_room_atr: float = 1.0, atr_r: Optional[List[Optional[float]]] = None,
+                     **_: Any) -> Optional[Tuple[float, Any]]:
+    """Stop moved to breakeven + ``be_plus_r`` R from bar j0+1 (RQ-20261117-43b6-05, ltr-tighten-sl iteration 2).
+    None when the level leaves no room (level >= next open - ``min_room_atr`` x ATR) or is not a tighten (level <= -1R),
+    or ATR is unread. Same replay and netting as price_sl_to_structure."""
+    a = atr_r[j0] if atr_r is not None else None
+    if a is None:
+        return None
+    level = float(be_plus_r)
+    if level <= -1.0 or level >= path["open"][j0 + 1] - min_room_atr * a:
+        return None
+    hit = lro.replay_tighten(path, j0, "r", level, 0.0)
+    net, _src = lro.tightened_net_r(t, path, hit, 0.0)
+    return net, (hit[1] if hit else path["exit_ts"])
+
+
 PRICERS: Dict[str, Callable[..., Optional[Tuple[float, Any]]]] = {
-    "partial_close": price_partial, "tp_pull_in": price_tp_pull_in, "sl_to_structure": price_sl_to_structure}
+    "partial_close": price_partial, "tp_pull_in": price_tp_pull_in, "sl_to_structure": price_sl_to_structure,
+    "tighten_be": price_tighten_be}
 
 
 # ── corpus + candles ────────────────────────────────────────────────────────────────────────────────────────
@@ -217,7 +237,8 @@ def build_trades(corpora: List[Tuple[str, dict, List[dict]]], *, action: str, tr
             fires = s0.first_fires(bars, atr_r[:last], side=1.0, entry=0.0, r_dist=1.0,
                                    tp=tp_r, tf=tf, cfg=cfg)
             kw = dict(frac=opts["partial_frac"], keep=opts["tp_keep"], tp_r=tp_r, pivot_bars=opts["pivot_bars"],
-                      buffer_atr=opts["pivot_buffer_atr"], atr_r=atr_r)
+                      buffer_atr=opts["pivot_buffer_atr"], atr_r=atr_r,
+                      be_plus_r=opts.get("be_plus_r", 0.25), min_room_atr=opts.get("min_room_atr", 1.0))
             pricer = PRICERS[action]
             memo: Dict[int, Optional[Tuple[float, Any]]] = {}
 
@@ -346,7 +367,8 @@ def run(args: argparse.Namespace, candle_loader: Optional[Callable[..., Any]] = 
         raise SystemExit(f"unknown trigger(s) {bad}; known: {s0.TRIGGERS}")
     corpora = corpora if corpora is not None else load_corpora(Path(args.corpus_dir), args.legs.split(",") if args.legs else None)
     opts = {"partial_frac": args.partial_frac, "tp_keep": args.tp_keep, "pivot_bars": args.pivot_bars,
-            "pivot_buffer_atr": args.pivot_buffer_atr, "max_real_tp_r": args.max_real_tp_r}
+            "pivot_buffer_atr": args.pivot_buffer_atr, "max_real_tp_r": args.max_real_tp_r,
+            "be_plus_r": getattr(args, "be_plus_r", 0.25), "min_room_atr": getattr(args, "min_room_atr", 1.0)}
     recs, excluded = build_trades(corpora, action=args.action, triggers=triggers, cfg=cfg, opts=opts,
                                   candle_loader=candle_loader)
     pop = (f"{len(recs)} trades priced of {sum(len(r) for _, _, r in corpora)} in {len(corpora)} committed "
@@ -429,11 +451,19 @@ def _self_test() -> int:
     check("sl_to_structure on a reverting trade exits above the recorded -1R stop", v3 is not None and v3[0] > rows[0]["net_r"])
     check("sl_to_structure is refused when the buffered level sits below the initial stop (a widen)",
           price_sl_to_structure(rows[0], path, 0, pivot_bars=5, buffer_atr=50.0, atr_r=atr) is None)
+    # tighten_be: breakeven + 0.25 R once there is room (bar 5 is after the peak in the synthetic path)
+    v4 = price_tighten_be(rows[0], path, 5, be_plus_r=0.25, min_room_atr=0.0, atr_r=atr)
+    check("tighten_be on a reverting trade exits above the recorded -1R stop", v4 is not None and v4[0] > rows[0]["net_r"])
+    check("tighten_be is refused with no room (a huge min_room_atr)",
+          price_tighten_be(rows[0], path, 5, be_plus_r=0.25, min_room_atr=1e6, atr_r=atr) is None)
+    check("tighten_be is refused when the level is not a tighten (be_plus_r <= -1R)",
+          price_tighten_be(rows[0], path, 5, be_plus_r=-1.0, min_room_atr=0.0, atr_r=atr) is None)
+    check("tighten_be is refused when ATR is unread", price_tighten_be(rows[0], path, 5, atr_r=[None] * 99) is None)
     # end-to-end planted positive: partial at +1R on trades that all revert to the stop must pass the screen
     man = {"leg": "syn", "params": {"timeframe": "1h", "tp_r": 3.0}}
     loader = lambda m, s, tf, r, c: (df, "synthetic")  # noqa: E731
     ns = argparse.Namespace(action="partial_close", triggers="r_milestone", corpus_dir="", legs="", partial_frac=0.5,
-                            tp_keep=0.5, pivot_bars=5, pivot_buffer_atr=0.1, max_real_tp_r=10.0, draws=40,
+                            tp_keep=0.5, pivot_bars=5, pivot_buffer_atr=0.1, max_real_tp_r=10.0, be_plus_r=0.25, min_room_atr=1.0, draws=40,
                             min_control_beat_frac=0.95, n_comparisons=1)
     out = run(ns, candle_loader=loader, corpora=[("syn", man, rows)])
     check(f"planted positive (partial@+1R on reverting trades) reads pass, got {out['verdict']}", out["verdict"] == "pass")
@@ -468,6 +498,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--partial-frac", type=float, default=0.5)
     ap.add_argument("--tp-keep", type=float, default=0.5, help="tp_pull_in: share of the open->TP distance kept")
     ap.add_argument("--max-real-tp-r", type=float, default=10.0, help="tp_pull_in: tp_r at/above this is fictional")
+    ap.add_argument("--be-plus-r", type=float, default=0.25, help="tighten_be: the stop moves to this many R above entry")
+    ap.add_argument("--min-room-atr", type=float, default=1.0, help="tighten_be: refused when the level is within this many ATR of the next open")
     ap.add_argument("--pivot-bars", type=int, default=5)
     ap.add_argument("--pivot-buffer-atr", type=float, default=0.1)
     ap.add_argument("--draws", type=int, default=200, help="matched random-time control books")
