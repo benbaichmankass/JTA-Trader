@@ -1,0 +1,375 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "avax_pullback_2h: 380 trades in the baseline arm 'A' on AVAXUSDT 2h candles 2021-11-18 00:00:00+00:00 .. 2026-11-21 22:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'pf375']",
+  "n": 380,
+  "measurement": {
+    "leg": "avax_pullback_2h",
+    "label": "no_reachable_lever_beats_removed",
+    "grade": {
+      "verdict": "fail",
+      "label": "no_reachable_lever_beats_removed",
+      "baseline": "A",
+      "candidates": {
+        "pf375": {
+          "delta_net_r": -49.3944,
+          "delta_max_drawdown_r": 20.5576,
+          "fold_wins": 0,
+          "passes": false
+        }
+      },
+      "delta_r_bar": 4.0,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0026,
+        "n": 380,
+        "net_r": 12.0673,
+        "net_r_fee_only": 19.099,
+        "max_drawdown_r": 18.6396,
+        "by_outcome": {
+          "take_profit": 79,
+          "stop": 114,
+          "trail_stop": 186,
+          "timeout": 1
+        },
+        "mean_bars_held": 18.411,
+        "net_r_per_capital_day": 0.0207,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.1,
+          "vol_pctl_window": 200,
+          "adx_min": 25.0,
+          "adx_period": 14
+        },
+        "data_start": "2021-11-18 00:00:00+00:00",
+        "data_end": "2026-11-21 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-18 00:00:00+00:00",
+            "end": "2023-02-18 11:30:00+00:00",
+            "trades": 105,
+            "net_r": 2.4575
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-18 11:30:00+00:00",
+            "end": "2024-05-20 23:00:00+00:00",
+            "trades": 96,
+            "net_r": 20.4739
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-20 23:00:00+00:00",
+            "end": "2025-08-21 10:30:00+00:00",
+            "trades": 96,
+            "net_r": -5.6876
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-21 10:30:00+00:00",
+            "end": "2026-11-21 22:00:00+00:00",
+            "trades": 83,
+            "net_r": -5.1775
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/A__bt.json",
+          "--adx-min",
+          "25",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ]
+      },
+      "pf375": {
+        "reach_ge_6r": 0.0034,
+        "n": 293,
+        "net_r": -37.3271,
+        "net_r_fee_only": -31.9461,
+        "max_drawdown_r": 39.1972,
+        "by_outcome": {
+          "take_profit": 47,
+          "stop": 105,
+          "trail_stop": 140,
+          "timeout": 1
+        },
+        "mean_bars_held": 17.922,
+        "net_r_per_capital_day": -0.0853,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.375,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.1,
+          "vol_pctl_window": 200,
+          "adx_min": 25.0,
+          "adx_period": 14
+        },
+        "data_start": "2021-11-18 00:00:00+00:00",
+        "data_end": "2026-11-21 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-18 00:00:00+00:00",
+            "end": "2023-02-18 11:30:00+00:00",
+            "trades": 77,
+            "net_r": -16.8784
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-18 11:30:00+00:00",
+            "end": "2024-05-20 23:00:00+00:00",
+            "trades": 78,
+            "net_r": 3.9815
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-20 23:00:00+00:00",
+            "end": "2025-08-21 10:30:00+00:00",
+            "trades": 75,
+            "net_r": -15.3768
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-21 10:30:00+00:00",
+            "end": "2026-11-21 22:00:00+00:00",
+            "trades": 63,
+            "net_r": -9.0533
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.375",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/pf375__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/pf375__bt.json",
+          "--adx-min",
+          "25",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "120",
+        "resample": "2h"
+      },
+      "fold_edges": [
+        "2021-11-18 00:00:00+00:00",
+        "2023-02-18 11:30:00+00:00",
+        "2024-05-20 23:00:00+00:00",
+        "2025-08-21 10:30:00+00:00",
+        "2026-11-21 22:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/A__bt.json",
+          "--adx-min",
+          "25",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      },
+      "pf375": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.375",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/pf375__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261122-5722-06/45012160749/arms/pf375__bt.json",
+          "--adx-min",
+          "25",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--trail-decay-arm-r",
+          "4.86",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ],
+        "cfg_set": {
+          "pullback_frac": 0.375
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / no_reachable_lever_beats_removed: no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+}
