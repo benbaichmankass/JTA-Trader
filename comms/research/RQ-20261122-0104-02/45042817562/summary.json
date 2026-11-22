@@ -1,0 +1,238 @@
+{
+  "leg": "qqq_pullback_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "tl90",
+    "baseline": "A",
+    "candidates": {
+      "tl90": {
+        "delta_net_r": 18.787,
+        "delta_max_drawdown_r": -1.4444,
+        "fold_wins": 3,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "tl90 beats the removed-lever baseline by 18.787 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0201,
+      "n": 149,
+      "net_r": 24.4589,
+      "net_r_fee_only": 29.5551,
+      "max_drawdown_r": 11.2051,
+      "by_outcome": {
+        "stop": 71,
+        "trail_stop": 63,
+        "take_profit": 10,
+        "timeout": 5
+      },
+      "mean_bars_held": 37.946,
+      "net_r_per_capital_day": 0.1038,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2018-06-01 13:00:00+00:00",
+      "data_end": "2022-11-30 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2018-06-01 00:00:00+00:00",
+          "end": "2019-07-16 23:59:45+00:00",
+          "trades": 36,
+          "net_r": 1.9018
+        },
+        {
+          "fold": 2,
+          "start": "2019-07-16 23:59:45+00:00",
+          "end": "2020-08-30 23:59:30+00:00",
+          "trades": 35,
+          "net_r": 17.4997
+        },
+        {
+          "fold": 3,
+          "start": "2020-08-30 23:59:30+00:00",
+          "end": "2021-10-15 23:59:15+00:00",
+          "trades": 34,
+          "net_r": 14.0524
+        },
+        {
+          "fold": 4,
+          "start": "2021-10-15 23:59:15+00:00",
+          "end": "2022-11-30 23:59:00+00:00",
+          "trades": 44,
+          "net_r": -8.9954
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261122-0104-02/45042817562/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261122-0104-02/45042817562/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2022-11-30 23:59"
+      ]
+    },
+    "tl90": {
+      "reach_ge_6r": 0.0205,
+      "n": 146,
+      "net_r": 43.2459,
+      "net_r_fee_only": 48.0859,
+      "max_drawdown_r": 9.7607,
+      "by_outcome": {
+        "stop": 68,
+        "trail_stop": 60,
+        "take_profit": 11,
+        "timeout": 7
+      },
+      "mean_bars_held": 41.075,
+      "net_r_per_capital_day": 0.1731,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 90,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2018-06-01 13:00:00+00:00",
+      "data_end": "2022-11-30 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2018-06-01 00:00:00+00:00",
+          "end": "2019-07-16 23:59:45+00:00",
+          "trades": 34,
+          "net_r": 12.2381
+        },
+        {
+          "fold": 2,
+          "start": "2019-07-16 23:59:45+00:00",
+          "end": "2020-08-30 23:59:30+00:00",
+          "trades": 35,
+          "net_r": 22.4214
+        },
+        {
+          "fold": 3,
+          "start": "2020-08-30 23:59:30+00:00",
+          "end": "2021-10-15 23:59:15+00:00",
+          "trades": 33,
+          "net_r": 3.526
+        },
+        {
+          "fold": 4,
+          "start": "2021-10-15 23:59:15+00:00",
+          "end": "2022-11-30 23:59:00+00:00",
+          "trades": 44,
+          "net_r": 5.0606
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "90",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261122-0104-02/45042817562/arms/tl90__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261122-0104-02/45042817562/arms/tl90__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2018-06-01",
+        "--end",
+        "2022-11-30 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2018-06-01",
+    "end": "2022-11-30 23:59",
+    "fetch_days": 3300,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "QQQ",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2018-06-01 00:00:00+00:00",
+      "2019-07-16 23:59:45+00:00",
+      "2020-08-30 23:59:30+00:00",
+      "2021-10-15 23:59:15+00:00",
+      "2022-11-30 23:59:00+00:00"
+    ]
+  }
+}
