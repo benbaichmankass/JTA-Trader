@@ -1,0 +1,82 @@
+{
+  "unit": "RQ-20261122-0104-01",
+  "run_id": "45041679191",
+  "commit_sha": "a34b37f6f40556dee23965003e0254c5d9f34ab6",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45041679191",
+  "timeout_minutes": 240,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_head_kaggle_bakeoff.py",
+        "--unit",
+        "RQ-20261122-0104-01",
+        "--out",
+        "comms/research/RQ-20261122-0104-01/45041679191",
+        "--candle-source",
+        "binance_vision",
+        "--start",
+        "2020-06-01",
+        "--legs",
+        "trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT",
+        "--arms",
+        "none",
+        "--feature-arms",
+        "feat_exh",
+        "--num-folds",
+        "3",
+        "--embargo-days",
+        "7",
+        "--lookback",
+        "500",
+        "--z",
+        "1.96",
+        "--pass-dr",
+        "0.03",
+        "--registered-at",
+        "2026-11-22",
+        "--rule-id",
+        "RULE-RQ20261122-0104-01-EXITHEAD-FEATURES-WIDE"
+      ],
+      "log": "comms/research/RQ-20261122-0104-01/45041679191/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 601.7
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
