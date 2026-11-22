@@ -81,6 +81,20 @@ levers:
         baseline_value: '30'
         arm: donchian_hi
         unit: RQ-20261106-006
+        window: 2019-08-13..2026-11-20
+        n: 40
+        net_r: 18.9813
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: 0.7291
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 2.661
+        verdict: fail
+        joint_change: false
+      - value: '38'
+        baseline_value: '30'
+        arm: donchian_hi
+        unit: RQ-20261106-006
         window: 2019-07-30..2026-11-06
         n: 40
         net_r: 19.1148
@@ -103,6 +117,20 @@ levers:
         delta_net_r: 0.8626
         folds_ge_baseline: 3/4
         max_drawdown_r: 2.661
+        verdict: fail
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: donchian_lo
+        unit: RQ-20261106-006
+        window: 2019-08-13..2026-11-20
+        n: 47
+        net_r: 17.4319
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -0.8203
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 4.1576
         verdict: fail
         joint_change: false
       - value: '22'
@@ -134,9 +162,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: monotone
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.0205
-      fold_stability: 0.562
+      fold_stability: 0.583
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   filter:
     vol_skip_above_pctl:

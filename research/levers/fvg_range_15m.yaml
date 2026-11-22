@@ -60,7 +60,7 @@ attribution:
       net_r: -9.412
       gross_r: -4.958
 manifest:
-  entry: untested
+  entry: tested
   exit: tested
   filter: tested
   regime_gating: untested
@@ -70,6 +70,77 @@ manifest:
   session: untested
   sizing_vs_cost: untested
 levers:
+  entry:
+    fvg_search:
+      tests:
+      - value: '30'
+        baseline_value: '24'
+        arm: fvg_search_hi
+        unit: RQ-20261105-022
+        window: 2021-11-17..2026-11-20
+        n: 46
+        net_r: -11.523
+        baseline_n: 44
+        baseline_net_r: -11.89
+        delta_net_r: 0.367
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 13.0
+        verdict: fail
+        joint_change: false
+      - value: '18'
+        baseline_value: '24'
+        arm: fvg_search_lo
+        unit: RQ-20261105-022
+        window: 2021-11-17..2026-11-20
+        n: 41
+        net_r: -8.0948
+        baseline_n: 44
+        baseline_net_r: -11.89
+        delta_net_r: 3.7952
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.0
+        verdict: fail
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0863
+      fold_stability: 0.875
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    max_width_pct:
+      tests:
+      - value: '0.15'
+        baseline_value: '0.12'
+        arm: max_width_pct_hi
+        unit: RQ-20261105-022
+        window: 2021-11-17..2026-11-20
+        n: 44
+        net_r: -11.89
+        baseline_n: 44
+        baseline_net_r: -11.89
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.0
+        verdict: fail
+        joint_change: false
+      - value: '0.09'
+        baseline_value: '0.12'
+        arm: max_width_pct_lo
+        unit: RQ-20261105-022
+        window: 2021-11-17..2026-11-20
+        n: 44
+        net_r: -11.89
+        baseline_n: 44
+        baseline_net_r: -11.89
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.0
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
   exit:
     exit_style:
       tests:

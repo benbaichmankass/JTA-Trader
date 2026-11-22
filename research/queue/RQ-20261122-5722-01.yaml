@@ -1,0 +1,120 @@
+# Hand-authored 2026-11-22 by RESEARCH-OPS-20261122-0847 (Tier 1 research): iteration from a diagnosed result (the CORE MANDATE).
+# Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261122-5722-01
+title: qqq_pullback_1h ENTRY/FILTER lever sweep after the stop-width discovery failed to replicate (ad6a-01 FAIL), net of cost, 4 calendar folds
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity
+  before combinations; every arm counted.'
+question: On QQQ 1h Dukascopy bars 2022-12..now, does any one of 5 entry/filter arms (trend_lookback 40 / 90, pullback_frac 0.5 / 0.786, adx_min 20) beat the configured
+  control by >= 4.0 R net of cost with maxDD no worse and >= 3 of 4 folds? The stop-width lever is closed by ad6a-01.
+why_this_matters: 'ad6a-01 showed the ca49-02 stop30 +10.5 R did not replicate (pre-dev control A +15.96 R n 84, stop30 -5.84 R, 2/4 folds), and that the SAME configured
+  control is +16.0 R on 2022-12..2025-05 but -2.6 R on 2025-05..2026-11: the leg decays between windows. The lever that can explain a decaying control is entry/regime,
+  not stop width.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED control n comes from the discovery/diagnosis result named in iteration.from_result; the control n >= 39 floor (E35) applies to arm A; 5 variant
+    arm(s) are counted as the multiple-testing denominator. Replays history on public candles; nothing accrues. A control n < 39 is INDETERMINATE, not a verdict.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD and calendar folds (of 4) in which it beats A, net of the
+    full cost stack; the control n, net R and fold signs are reported.'
+  rule: PASS iff at least one of the 5 variant arm(s) beats control A by >= 4.0 R net of the full cost stack with maxDD no worse than A and >= 3 of 4 calendar folds,
+    at A n >= 39 (thresholds unchanged from the discovery unit; the denominator is 5). FAIL iff A n >= 39 and no arm clears them (the configurations tested are closed;
+    the lever family stays open on other values and legs). INDETERMINATE if A n < 39 or the feed does not cover the window. Per-year table and long/short split attached,
+    not graded. Stop width (closed by ad6a-01) is not varied. A PASS goes to the manager as a Tier-3 proposal citing the arm denominator; never applied here.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, control plus variant arms through the committed-record argv builder on a GitHub runner (same shape as RQ-20261121-ad6a-01).
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: the evidence gate for a live leg; not a P&L measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - tl40=trend_lookback=40
+  - --arm
+  - tl90=trend_lookback=90
+  - --arm
+  - pf50=pullback_frac=0.5
+  - --arm
+  - pf786=pullback_frac=0.786
+  - --arm
+  - adx20=adx_min=20
+  - --days
+  - '1450'
+  - --start
+  - '2022-12-01'
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-5722-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared: &id001
+- entry
+- filter
+iteration:
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261121-ad6a-01
+  verdict_read: fail
+  diagnosis: 'ad6a-01 (confirmation of the ca49-02 PASS) FAILED: stop30 -5.84 R vs A on 2022-12..2025-05 (A +15.96 R, n 84, folds +10.8/-2.7/+3.0/+4.9; stop30 folds
+    +11.0/+0.5/+0.8/-2.1), while ca49-02 on 2025-05..2026-11 had A -2.62 R and stop30 +10.45 R. The stop lever sign flipped across windows (single-fold, best-of-2
+    discovery = noise or regime-dependent), and the control itself moved from +16 R to -2.6 R: the entry/trend regime changed, not the stop. Entry and filter families
+    are untested on this leg (lever map).'
+  search: one-factor entry/filter arms (trend_lookback, pullback_frac, adx_min) vs the configured control on the full 4-year window, 4 calendar folds so each fold
+    spans one year; the denominator is 5; a survivor goes to a pre-dev/symbol holdout
+  levers: *id001
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml#levers.entry
+  - research/levers/qqq_pullback_1h.yaml#levers.filter
+  attempt: 3
+  due_by: '2026-12-01'
+  multiple_testing: null
+status: queued

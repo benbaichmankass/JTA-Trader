@@ -314,6 +314,20 @@ levers:
         max_drawdown_r: 18.2915
         verdict: fail
         joint_change: false
+      - value: '4'
+        baseline_value: '3'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261105-026
+        window: 2021-11-17..2026-11-20
+        n: 351
+        net_r: -2.491
+        baseline_n: 368
+        baseline_net_r: -0.3508
+        delta_net_r: -2.1402
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 18.2915
+        verdict: fail
+        joint_change: false
       - value: '2'
         baseline_value: '3'
         arm: atr_stop_mult_lo
@@ -342,10 +356,24 @@ levers:
         max_drawdown_r: 34.5309
         verdict: fail
         joint_change: false
+      - value: '2'
+        baseline_value: '3'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261105-026
+        window: 2021-11-17..2026-11-20
+        n: 453
+        net_r: -13.0635
+        baseline_n: 368
+        baseline_net_r: -0.3508
+        delta_net_r: -12.7127
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 34.5309
+        verdict: fail
+        joint_change: false
       shape: monotone
-      points: 4
+      points: 6
       best_delta_r_per_trade: -0.0028
-      fold_stability: 0.312
+      fold_stability: 0.375
       reading: every tested value is worse than the baseline
     tp_r:
       tests:
@@ -377,6 +405,20 @@ levers:
         max_drawdown_r: 24.4519
         verdict: fail
         joint_change: false
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261105-026
+        window: 2021-11-17..2026-11-20
+        n: 368
+        net_r: -0.3508
+        baseline_n: 368
+        baseline_net_r: -0.3508
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 24.4519
+        verdict: fail
+        joint_change: false
       - value: '37.5'
         baseline_value: '50.0'
         arm: tp_r_lo
@@ -405,8 +447,22 @@ levers:
         max_drawdown_r: 24.4519
         verdict: fail
         joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261105-026
+        window: 2021-11-17..2026-11-20
+        n: 368
+        net_r: -0.3508
+        baseline_n: 368
+        baseline_net_r: -0.3508
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 24.4519
+        verdict: fail
+        joint_change: false
       shape: flat
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.0
       fold_stability: 1.0
       reading: no response at the tested values

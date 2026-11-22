@@ -403,6 +403,20 @@ levers:
         max_drawdown_r: 22.6534
         verdict: fail
         joint_change: false
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-010
+        window: 2024-01-10..2026-11-20
+        n: 130
+        net_r: 32.0876
+        baseline_n: 140
+        baseline_net_r: 45.3103
+        delta_net_r: -13.2227
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 22.6534
+        verdict: fail
+        joint_change: false
       - value: '1.125'
         baseline_value: '1.5'
         arm: atr_stop_mult_lo
@@ -427,6 +441,20 @@ levers:
         baseline_n: 141
         baseline_net_r: 37.5624
         delta_net_r: 9.0069
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 24.7332
+        verdict: fail
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-010
+        window: 2024-01-10..2026-11-20
+        n: 157
+        net_r: 58.9285
+        baseline_n: 140
+        baseline_net_r: 45.3103
+        delta_net_r: 13.6182
         folds_ge_baseline: 2/4
         max_drawdown_r: 24.7332
         verdict: fail
@@ -516,9 +544,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 12
+      points: 14
       best_delta_r_per_trade: 0.36
-      fold_stability: 0.458
+      fold_stability: 0.446
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_r:
       tests:
@@ -550,6 +578,20 @@ levers:
         max_drawdown_r: 23.0622
         verdict: fail
         joint_change: false
+      - value: '62.5'
+        baseline_value: '6.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-010
+        window: 2024-01-10..2026-11-20
+        n: 130
+        net_r: 57.2903
+        baseline_n: 140
+        baseline_net_r: 45.3103
+        delta_net_r: 11.98
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 23.0622
+        verdict: fail
+        joint_change: false
       - value: '37.5'
         baseline_value: '50.0'
         arm: tp_r_lo
@@ -578,10 +620,24 @@ levers:
         max_drawdown_r: 23.0622
         verdict: fail
         joint_change: false
+      - value: '37.5'
+        baseline_value: '6.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-010
+        window: 2024-01-10..2026-11-20
+        n: 130
+        net_r: 57.2903
+        baseline_n: 140
+        baseline_net_r: 45.3103
+        delta_net_r: 11.98
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 23.0622
+        verdict: fail
+        joint_change: false
       shape: peaked
-      points: 4
-      best_delta_r_per_trade: 0.0769
-      fold_stability: 0.875
+      points: 6
+      best_delta_r_per_trade: 0.0856
+      fold_stability: 0.833
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     stale_exit_bars:
       tests:
@@ -1254,8 +1310,36 @@ levers:
         max_drawdown_r: 44.0322
         verdict: fail
         joint_change: false
+      - value: 'off'
+        baseline_value: '26'
+        arm: A
+        unit: RQ-20261119-f2a4-06
+        window: 2025-06-02..2026-11-11
+        n: 74
+        net_r: 38.024
+        baseline_n: 74
+        baseline_net_r: 25.5456
+        delta_net_r: 12.4784
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 10.0811
+        verdict: fail
+        joint_change: false
+      - value: '53'
+        baseline_value: '26'
+        arm: S53
+        unit: RQ-20261119-f2a4-06
+        window: 2025-06-02..2026-11-11
+        n: 74
+        net_r: 9.502
+        baseline_n: 74
+        baseline_net_r: 25.5456
+        delta_net_r: -16.0436
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 15.6819
+        verdict: fail
+        joint_change: false
       shape: noisy
-      points: 12
-      best_delta_r_per_trade: 0.048
-      fold_stability: 0.25
+      points: 14
+      best_delta_r_per_trade: 0.1686
+      fold_stability: 0.286
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
