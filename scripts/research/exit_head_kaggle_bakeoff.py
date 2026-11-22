@@ -36,7 +36,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 _REPO = Path(__file__).resolve().parents[2]
 for _p in (_REPO, _REPO / "scripts", _REPO / "scripts" / "ml", _REPO / "scripts" / "research"):
@@ -46,12 +46,12 @@ for _p in (_REPO, _REPO / "scripts", _REPO / "scripts" / "ml", _REPO / "scripts"
 UNIT = "RQ-20261118-f7c1-02"
 RULE_ID = "RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25"
 REGISTERED_AT = "2026-11-18"
-LEGS: List[Tuple[str, str]] = [("trend_donchian", "BTCUSDT"), ("trend_donchian_eth", "ETHUSDT"), ("trend_donchian_sol", "SOLUSDT")]
+LEGS: list[tuple[str, str]] = [("trend_donchian", "BTCUSDT"), ("trend_donchian_eth", "ETHUSDT"), ("trend_donchian_sol", "SOLUSDT")]
 SHARD = "datasets-out/market_raw/{sym}/1h/v002/data.jsonl"
 TF = "1h"
 
 
-def shard_path(root: Path, sym: str) -> Tuple[str, Path]:
+def shard_path(root: Path, sym: str) -> tuple[str, Path]:
     rel = SHARD.format(sym=sym)
     from scripts.research import market_data_export as mde
     if not mde.covers(rel):
@@ -59,7 +59,7 @@ def shard_path(root: Path, sym: str) -> Tuple[str, Path]:
     return rel, root / rel
 
 
-def fetch_bybit_candles(sym: str, dst: Path, start: str, end: Optional[str] = None) -> Dict[str, Any]:
+def fetch_bybit_candles(sym: str, dst: Path, start: str, end: str | None = None) -> dict[str, Any]:
     """RUNNER ROUTE (RESEARCH-FILL-20261122): public Bybit linear-perp 1h klines for a symbol that is NOT in the published
     market_raw allowlist (LINK/BNB/XRP/ADA/AVAX). Same venue and same pager the trainer's candle history uses
     (scripts/ops/fetch_backtest_candles.fetch_klines). Needs the internet, so the unit declares why_runner. Market data only."""
@@ -77,7 +77,7 @@ def fetch_bybit_candles(sym: str, dst: Path, start: str, end: Optional[str] = No
     return _csv_from_df(df, dst)
 
 
-def _csv_from_df(df, dst: Path) -> Dict[str, Any]:
+def _csv_from_df(df, dst: Path) -> dict[str, Any]:
     cols = ["timestamp", "open", "high", "low", "close"] + (["volume"] if "volume" in df.columns else [])
     out = df[cols].copy()
     import pandas as pd
@@ -85,12 +85,12 @@ def _csv_from_df(df, dst: Path) -> Dict[str, Any]:
     out["timestamp"] = ts.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(dst, index=False)
-    return {"read_state": "measured", "bars": int(len(out)),
+    return {"read_state": "measured", "bars": len(out),
             "first_ts": str(out["timestamp"].iloc[0]) if len(out) else None,
             "last_ts": str(out["timestamp"].iloc[-1]) if len(out) else None, "has_volume": "volume" in cols}
 
 
-def write_candles(src: Path, dst: Path) -> Dict[str, Any]:
+def write_candles(src: Path, dst: Path) -> dict[str, Any]:
     """Published market_raw JSONL -> the harness / builder CSV shape (timestamp ISO, open, high, low, close, volume)."""
     import candle_io
     df = candle_io.load_candles(str(src))
@@ -99,11 +99,11 @@ def write_candles(src: Path, dst: Path) -> Dict[str, Any]:
     out["timestamp"] = out["timestamp"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(dst, index=False)
-    return {"bars": int(len(out)), "first_ts": str(out["timestamp"].iloc[0]) if len(out) else None,
+    return {"bars": len(out), "first_ts": str(out["timestamp"].iloc[0]) if len(out) else None,
             "last_ts": str(out["timestamp"].iloc[-1]) if len(out) else None, "has_volume": "volume" in cols}
 
 
-def emit_trades(strategy: str, symbol: str, candles_csv: Path, emit: Path, conf: Dict[str, Any]) -> Dict[str, Any]:
+def emit_trades(strategy: str, symbol: str, candles_csv: Path, emit: Path, conf: dict[str, Any]) -> dict[str, Any]:
     """The same run_backtest call exit_head_label_bakeoff.run_leg makes, on the venue cost policy, emitting the JSONL."""
     from exit_head_replay import _apply_venue_cost_policy, _load_harness
     cfg = conf.get("strategies", conf).get(strategy)
@@ -113,7 +113,7 @@ def emit_trades(strategy: str, symbol: str, candles_csv: Path, emit: Path, conf:
     cost = _apply_venue_cost_policy(harness, symbol)
     df = harness._load_candles(str(candles_csv))
     emit.parent.mkdir(parents=True, exist_ok=True)
-    trades: List[Any] = []
+    trades: list[Any] = []
     harness.run_backtest(
         df.copy(), donchian=int(cfg.get("donchian", 20)), atr_period=int(cfg.get("atr_period", 14)),
         atr_stop_mult=float(cfg.get("atr_stop_mult", 2.5)), trail_mult=float(cfg.get("trail_mult", 3.0)),
@@ -123,9 +123,9 @@ def emit_trades(strategy: str, symbol: str, candles_csv: Path, emit: Path, conf:
     return {"leg": strategy, "symbol": symbol, "read_state": "measured", "n_trades": len(trades), "cost_basis": cost}
 
 
-def harness_only_sources(rows_p: Path) -> Dict[str, int]:
+def harness_only_sources(rows_p: Path) -> dict[str, int]:
     """Row count by `source`; REFUSES (SystemExit) if any row is not 'harness' -- this route never holds journal rows."""
-    sources: Dict[str, int] = {}
+    sources: dict[str, int] = {}
     if rows_p.exists():
         with rows_p.open() as fh:
             for line in fh:
@@ -138,7 +138,7 @@ def harness_only_sources(rows_p: Path) -> Dict[str, int]:
     return sources
 
 
-def build_rows(emits: List[Path], candles: Dict[str, Path], out: Path) -> Dict[str, Any]:
+def build_rows(emits: list[Path], candles: dict[str, Path], out: Path) -> dict[str, Any]:
     """build_exit_head_dataset.main with NO --db: harness rows only. Refuses any row whose source is not 'harness'."""
     import build_exit_head_dataset as B
     argv = ["build_exit_head_dataset"] + [x for e in emits for x in ("--trades", str(e))] \
@@ -160,8 +160,8 @@ def run(a) -> int:
     import yaml
     conf = yaml.safe_load((_REPO / "config/strategies.yaml").read_text(encoding="utf-8"))
     legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
-    spans: Dict[str, Any] = {}
-    csvs: Dict[str, Path] = {}
+    spans: dict[str, Any] = {}
+    csvs: dict[str, Path] = {}
     for _, sym in legs:
         if sym in csvs or sym in spans:
             continue
@@ -169,7 +169,7 @@ def run(a) -> int:
             csvs[sym] = work / "candles" / f"{sym}_{TF}.csv"
             try:
                 info = fetch_bybit_candles(sym, csvs[sym], a.start, a.end)
-            except Exception as exc:  # network/pager failure: a could_not_look, never a silent empty
+            except Exception as exc:  # noqa: BLE001  # allow-silent: network/pager failure lands as could_not_look in verdict.json, never a silent empty
                 info = {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
             spans[sym] = {"source": "bybit_public_klines", **info}
             if info.get("read_state") != "measured":
@@ -274,7 +274,7 @@ def _self_test() -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--out", default="out/exit_head_kaggle")

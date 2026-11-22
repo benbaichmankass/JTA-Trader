@@ -1,9 +1,10 @@
 import subprocess
 import sys
 from pathlib import Path
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import regime_cell_marginal_grade as M  # noqa: E402
+import regime_cell_marginal_grade as M
 
 
 def test_self_test_runs():
@@ -12,7 +13,7 @@ def test_self_test_runs():
 
 def test_no_legs_is_producer_failed(tmp_path):
     r = subprocess.run([sys.executable, str(REPO / "scripts/research/regime_cell_marginal_grade.py"), "--out", str(tmp_path),
-                        "--leg", "x=/nonexistent"], capture_output=True, text=True)
+                        "--leg", "x=/nonexistent"], capture_output=True, text=True, check=False)
     assert r.returncode != 0  # a missing file is an error, never a verdict
 
 

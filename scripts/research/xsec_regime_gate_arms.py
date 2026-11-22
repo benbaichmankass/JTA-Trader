@@ -28,7 +28,6 @@ import json
 import random
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -51,11 +50,11 @@ def risk_off_vol(btc: pd.Series, window: int, q: float, lookback: int = 365) -> 
     return (vol > thr) & thr.notna()
 
 
-def _book(panel, funds, mask: Optional[pd.Series], fee_mult: float, rebalance: int, formation: int):
+def _book(panel, funds, mask: pd.Series | None, fee_mult: float, rebalance: int, formation: int):
     import backtest_xsec_momentum as xsec
     r = xsec.run_backtest(panel, formation=formation, skip=0, rebalance=rebalance, quantile=0.3333, fee_bps=xsec.FEE_BPS_ROUNDTRIP,
                           fee_mult=fee_mult, venue="perp", funding_series=funds, btc_risk_off=mask)
-    per_year: Dict[str, float] = {}
+    per_year: dict[str, float] = {}
     for day, net, _ in r["daily"]:
         per_year[str(day.year)] = per_year.get(str(day.year), 0.0) + float(net)
     s = r["summary"]
@@ -70,7 +69,7 @@ def random_mask(index: pd.DatetimeIndex, frac: float, rng: random.Random, block:
     return pd.Series([on[i // block] for i in range(len(index))], index=index)
 
 
-def grade(arms: List[dict], base: dict, delta_min: float, alpha: float, min_years: int, n_floor: int) -> dict:
+def grade(arms: list[dict], base: dict, delta_min: float, alpha: float, min_years: int, n_floor: int) -> dict:
     if base["n_trades"] < n_floor:
         return {"verdict": "indeterminate", "why": f"baseline n_trades {base['n_trades']} < floor {n_floor}", "passing": []}
     passing = []
@@ -94,7 +93,7 @@ def grade(arms: List[dict], base: dict, delta_min: float, alpha: float, min_year
     return {"verdict": "indeterminate", "why": "some arm clears the delta but not the control / years / concentration tests", "passing": []}
 
 
-def run(a, inputs: Optional[dict] = None, btc: Optional[pd.Series] = None) -> dict:
+def run(a, inputs: dict | None = None, btc: pd.Series | None = None) -> dict:
     import frontier_momentum_runner as F
     symbols = [s.strip().upper() for s in a.symbols.split(",") if s.strip()]
     inp = inputs or F.build_inputs(symbols, a.days)
@@ -158,7 +157,7 @@ def _selftest() -> None:
     print("self-test OK")
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--symbols", default=DEFAULT_SYMBOLS)
     ap.add_argument("--days", type=int, default=1460)
@@ -183,7 +182,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     try:
         v = run(a)
-    except Exception as exc:  # allow-silent: landed as producer_failed with the reason in verdict.json
+    except Exception as exc:  # noqa: BLE001  # allow-silent: landed as producer_failed with the reason in verdict.json
         v = {"verdict": "not_applicable", "read_state": "producer_failed", "population": "xsec gate arms", "n": None,
              "note": f"{type(exc).__name__}: {exc}"}
     (out / "verdict.json").write_text(json.dumps(v, indent=1, default=str))

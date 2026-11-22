@@ -1,9 +1,11 @@
 import sys
 from pathlib import Path
+
 import pytest
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import d5_aggregator_arms as D  # noqa: E402
+import d5_aggregator_arms as D
 
 DFLT = {"w1": ("2024-10-01", "2025-10-01"), "w2": ("2025-10-01", "2026-10-01")}
 

@@ -189,7 +189,7 @@ def resolve_windows(unit: dict[str, Any], cli: str | None = None, default: dict 
         raw = dict(default or {})
     if len(raw) != 2:
         raise ValueError(f"exactly 2 windows required (cross-fit), got {len(raw)}: {sorted(raw)}")
-    (n1, (a1, b1)), (n2, (a2, b2)) = sorted(raw.items(), key=lambda kv: kv[1][0])
+    (_n1, (a1, b1)), (_n2, (a2, b2)) = sorted(raw.items(), key=lambda kv: kv[1][0])
     if not (a1 < b1 <= a2 < b2):
         raise ValueError(f"windows must be ordered and non-overlapping: {raw}")
     return dict(sorted(raw.items(), key=lambda kv: kv[1][0]))

@@ -7,7 +7,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO), str(REPO / "scripts"), str(REPO / "scripts" / "research")]
-import xsec_regime_gate_arms as X  # noqa: E402
+import xsec_regime_gate_arms as X
 
 
 def _inputs(n=1500):
@@ -23,8 +23,8 @@ def _inputs(n=1500):
 
 
 def _args(**kw):
-    d = dict(symbols="S0", days=1460, sma_days="50,100", vol_windows="30", vol_q=0.7, draws=15, delta_min=0.25, alpha=0.05,
-             min_years=3, n_floor=10, rebalance_days=7, formation_days=28, fee_multiplier=1.0)
+    d = {"symbols": "S0", "days": 1460, "sma_days": "50,100", "vol_windows": "30", "vol_q": 0.7, "draws": 15, "delta_min": 0.25,
+         "alpha": 0.05, "min_years": 3, "n_floor": 10, "rebalance_days": 7, "formation_days": 28, "fee_multiplier": 1.0}
     d.update(kw)
     return argparse.Namespace(**d)
 
