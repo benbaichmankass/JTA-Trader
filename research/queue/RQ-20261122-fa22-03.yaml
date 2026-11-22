@@ -1,0 +1,107 @@
+# Hand-authored 2026-11-22 by lane RESEARCH-FILL-20261122 (Tier 1 research), dispatched by the manager (session_01AFoLuKifPRuyeVhkQU1Fsg) under the operator's 11-22 mandate "all the MLs, all the strategies need to have the next test". Driver built in the same lane (PR RESEARCH-FILL drivers). Rule and power registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261122-fa22-03
+title: 'Build the WIDENED donchian 1h exit-head rows corpus (8 symbols, all trained) on the trainer: the corpus build ad6a-03 is blocked on (row ML-EXITHEAD-CORPUS-WIDEN
+  step a)'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+programme: P2
+kind: deterministic
+why_not_inferential: A corpus BUILD with a mechanical pass criterion (fresh build, every symbol has rows after the cutoff); it grades no effect and draws no inference. The contrast is RQ-20261121-ad6a-03.
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261120-f1a9-04
+  verdict_read: indeterminate
+  diagnosis: 'f1a9-04/-05 INDETERMINATE: paired sd 0.97 R makes +0.03 unresolvable at n 2,403; the corpus has training rows for BTC/ETH/SOL only. The one factor changed
+    is the corpus: 5 more symbols as training rows.'
+  search: 'none: a build; its result is per-symbol n'
+  attempt: 2
+  due_by: '2026-11-27'
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#features
+question: Can the trainer build live-aligned exit-head rows for all 8 donchian 1h symbols (BTC, ETH, SOL, LINK, BNB, XRP, ADA, AVAX), with every symbol fresh (last
+  bar_t after 2026-10-15), and how many rows and distinct trades does each contribute?
+why_this_matters: 'RQ-20261121-ad6a-03 (feat_exh and feat_path_only at power) reads datasets-out/exit_head/1h/donchian_widened/rows.jsonl, which did not exist. m20_exit_head_round.py
+  now accepts leg:SYMBOL (this lane), so the five symbols that were only replayed (LINK/BNB/XRP/ADA/AVAX) become TRAINING rows too. This is a build, not a test: it
+  publishes a *_fresh corpus and states per-symbol n; the contrast is ad6a-03.'
+decision_rule:
+  id: RULE-RQ20261122-fa22-03-WIDE-ROWS-BUILD
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: the existing aligned fresh corpus (BTC/ETH/SOL; 7d49-01) for row counts; no contrast is graded here
+  statistic: 'exit_head_fresh_rows.py verdict: per-symbol rows, distinct trades and last bar_t; pass iff the build is fresh and every required symbol has rows with
+    last bar_t after --after.'
+  rule: PASS iff the build_report is generated after this run started AND every one of the 8 symbols has rows with last bar_t after 2026-10-15 (the driver publishes
+    to the *_fresh path only on pass). FAIL (nothing published) otherwise, with the failing symbols named; a symbol with no trainer candles is a named data block,
+    never a verdict about the head. No contrast and no n bar are graded here; ad6a-03 reads the n.
+  pass_action: ad6a-03 (requires_result on this unit) runs on the published rows.
+  fail_action: ad6a-03 stays queued behind this unit; the failing symbols become a named data dependency (trainer 1h candle resolver / market_raw coverage) on row
+    ML-EXITHEAD-CORPUS-WIDEN.
+  what_it_does_not_do: Trains nothing, registers nothing, edits no config, places no order; never publishes over a frozen corpus path.
+practice_precedent: 'Size the test to the decision: a pre-registered minimum effect with power computed from the measured variance, rather than a bar the data cannot
+  reach (docs/reference/trading-and-model-practice-principles.md).'
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.25
+  basis: 'stand-in inherited from f1a9-04: the keep/retire decision on the exit head feature lever.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: The 1h candles, data/trade_journal.db and the exit-head builder are trainer-resident; the rows are journal-derived and stay there.
+  basis: 'ESTIMATE: 7d49-01 (3 legs) est 90 min, measured in one trainer dispatch; here 8 harness runs plus the build. Timeout 240.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/exit_head_fresh_rows.py
+  - --legs
+  - trend_donchian,trend_donchian_eth,trend_donchian_sol,trend_donchian:LINKUSDT,trend_donchian:BNBUSDT,trend_donchian:XRPUSDT,trend_donchian:ADAUSDT,trend_donchian:AVAXUSDT
+  - --tf
+  - 1h
+  - --family
+  - donchian
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,LINKUSDT,BNBUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --after
+  - '2026-10-15'
+  - --db
+  - data/trade_journal.db
+  - --build-out
+  - datasets-out/exit_head/1h/donchian_widened_fresh_build
+  - --publish
+  - datasets-out/exit_head/1h/donchian_widened_fresh/rows.jsonl
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-fa22-03
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: which exit_head_model feature list (annotate-only) the three donchian 1h legs carry
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: trend_donchian 1h harness trades of BTC, ETH, SOL, LINK, BNB, XRP, ADA and AVAX USDT perps on trainer-resolved 1h candles, plus the live journal arm for
+  the three live legs.
+levers:
+- name: exit_head_training_corpus
+  values:
+  - BTC/ETH/SOL
+  - + LINK/BNB/XRP/ADA/AVAX
+  hypothesised_effect: more paired trades shrink the feat_exh CI enough to resolve +0.03
