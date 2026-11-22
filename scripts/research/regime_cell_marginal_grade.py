@@ -49,7 +49,11 @@ DEFAULT_RUN = "comms/research/RQ-20261120-d7c2-01"
 
 def legs_from_dir(d: Path) -> dict[str, str]:
     """The committed tagged files of ONE named legs dir (printed by main, so the read is never an implicit pick)."""
-    return {p.name.split("__")[0]: str(p) for p in sorted(d.glob("*__tagged.jsonl"))}
+    found = {}
+    for f in d.glob("*__tagged.jsonl"):
+        found[f.name.split("__")[0]] = str(f)
+        print("pinned input:", f, flush=True)
+    return dict(sorted(found.items()))
 
 
 def grade_cell(rows: list[dict], cell: tuple[str, str, str], t0: float, t1: float, folds: int = FOLDS,
