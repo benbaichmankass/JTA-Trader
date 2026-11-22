@@ -1,0 +1,114 @@
+id: RQ-20261122-b18a-01
+title: 'D9 Whippet cost basis, REAL-MONEY slice: on the fresh 2026-11-22 journal export, is the +1 h markout cost of REAL-MONEY fills (bybit_2, bybit_portfolio, alpaca_live)
+  above the cost the journal records, with the CI lower bound above 0 bps?'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 3
+roadmap:
+- L-ATM
+programme: P1
+practice_precedent: 'T3 (strengthened 2026-11-11): practice measures execution cost as a markout, fill vs a later mid net of fees, and counts size vs displayed depth
+  and forced exits as cost channels [S74 Jia, Moallemi, Wang & Zeng, AFT 2026, ACAD].'
+question: 'On comms/research/markout_fills/2026-11-22.jsonl (journal export since 2026-09-01, aggregated ratios only), graded on the account_class=real_money rows
+  only: is the pooled +1 h gap (markout cost minus the journal''s recorded cost) above 0 bps with a fill-grouped 95% bootstrap CI lower bound > 0, and what does the
+  real-money gap split by order type (entry / stop / limit_tp / market_other) look like?'
+why_this_matters: D9 (Whippet) value is bounded by the cost stack. The paper-dominated pooled read cannot say whether real-money cost is understated; the maker-exit
+  lever and any slippage-term change in the harness cost stack need the real-money number. A PASS is a measured cost-stack input for a Tier-1 harness PR, never a
+  config change.
+power:
+  expected_n: 232
+  min_detectable_effect: 13.0
+  effect_units: bps
+  sd: 95.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n MEASURED from the export (232 real-money fills; mids missing for ~4% as in a5b3-03). sd ESTIMATED from the a5b3-03 real-money CI half-width (+-41 bps at
+    n 188, i.e. sd ~ 41 x sqrt(188)/1.96 ~ 285 at fill level, but trade-grouped; 95 used as a conservative trade-grouped value) so the MDE (1.96+0.84) x 95 / sqrt(232)
+    ~ 17 bps; a read below that is INDETERMINATE, not FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads an in-hand export; real-money fills accrue ~25 per week, so a later refresh adds n slowly.
+evidence_class:
+  holdout: none
+  claim: measurement
+decision_rule:
+  id: RULE-RQ20261122-b18a-01-MARKOUT-REALMONEY
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: the journal's recorded per-fill cost (cost_source estimate or broker)
+  statistic: 'markout_fills.py run --slice account_class=real_money: per fill markout_1h = side x (mid(t_fill + 1 h) - fill) / fill x 1e4 minus fee, minus the recorded
+    cost, in bps; mean and trade-grouped bootstrap 95% CI (1000+ draws) on the real-money rows only; split by order_type reported.'
+  rule: UNDERSTATED iff the real-money pooled gap at +1 h has n >= 200 measured fills AND CI lower bound > 0 bps. NOT UNDERSTATED iff n >= 200 AND CI upper bound
+    < 2 bps. INDETERMINATE otherwise, or mids missing for > 10% of the sliced fills (read_state partial). The a5b3-03 thresholds (0 bps, 2 bps, n 200, 10% missing)
+    are unchanged; only the slice is new. Slice, thresholds and fills file are not changed after any result.
+  pass_action: 'UNDERSTATED: file the per-order-type real-money gap as the proposed slippage term in a Tier-1 harness PR (never config), and re-grade the D9 maker-exit
+    delta net of it.'
+  fail_action: 'NOT UNDERSTATED: record the real-money cost basis as adequate on research/levers/ml-entry.yaml (cost lever); D9 value stays bounded by the stack and
+    the maker-exit proposal rests on 04a5-05 / e8a1-01 alone. INDETERMINATE: the next refresh is the due item; no re-run before 40 more real-money fills.'
+  what_it_does_not_do: Measures only; changes no harness, config, roster or order path; adds no gate. Graded on a slice chosen before the run, not after.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: 'MEASURED 2026-11-19 (a5b3-03): the run fetches 1m candles for ~26 symbols; the journal read is the committed export, not run time.'
+  why_runner: 'needs_internet: fetches public candles (binance/bybit 1m for crypto, the dukascopy lane for equities); the Kaggle CPU kernel has no internet and the
+    markout run does not read the published candle dataset.'
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  bucket: own_losses
+  basis: the cost term is in every promotion verdict; an estimate, not a measurement.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261118-a5b3-03
+- RQ-20261118-04a5-05
+- RQ-20261118-e8a1-01
+stated_biases:
+- 1m candle close as the mid (no order-book mid history)
+- paper fills are simulated by the venue; their markout measures the simulator
+what_it_does_not_do: Measures only; adds no gate; changes no config.
+ml_consumer:
+  not_applicable: 'Not an ML unit: an execution-cost measurement.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 180
+  command:
+  - python3
+  - scripts/research/markout_fills.py
+  - run
+  - --fills
+  - comms/research/markout_fills/2026-11-22.jsonl
+  - --slice
+  - account_class=real_money
+  - --unit
+  - RQ-20261122-b18a-01
+  - --rule-id
+  - RULE-RQ20261122-b18a-01-MARKOUT-REALMONEY
+  - --registered-at
+  - '2026-11-22'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-b18a-01
+iteration:
+  subject: whippet-execution-d9
+  subject_kind: ml_model
+  from_result: RQ-20261118-a5b3-03
+  verdict_read: pass
+  attempt: 2
+  due_by: '2026-12-01'
+  diagnosis: 'a5b3-03 graded UNDERSTATED pooled (+3.78 bps, CI [+0.36,+7.34], n 2375) but the pooled number is 92% paper fills; the real-money slice read +13.4 bps
+    with CI [-4.23,+37.27] on n 188 (94 trades): too wide to say whether the cost the D9 maker-exit pass (04a5-05 / e8a1-01, +0.006 R/decision) saves is real money,
+    and the bybit_1 demo book (n 1790) reads only +1.18 bps. The 2026-11-22 export holds 232 real-money fills (116 entry, 73 stop, 33 market_other, 10 limit_tp),
+    so the slice clears the n 200 floor for the first time.'
+  search: one slice (account_class=real_money) of the SAME driver, rule and cost definition as a5b3-03; only the fills file and the slice differ
+  map_entries:
+  - research/levers/ml-entry.yaml

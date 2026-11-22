@@ -1,0 +1,151 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "note": "no gate arm beats G0 by 0.25 (best -0.5228; 2 arms counted)",
+ "n": 160,
+ "population": "xsec long/short, ['ADAUSDT', 'AVAXUSDT', 'BNBUSDT', 'ETHUSDT', 'LINKUSDT', 'SOLUSDT'], daily 2019-12-31..2022-11-19 (1055 days), 2 gate arms vs G0, matched-random 300 draws",
+ "measurement": {
+  "baseline": {
+   "net": 3.55085618,
+   "per_year": {
+    "2019": 0.0,
+    "2020": 1.056811,
+    "2021": 2.245749,
+    "2022": 0.248297
+   },
+   "weeks_gated": 0,
+   "weeks_total": 151,
+   "n_trades": 160
+  },
+  "arms": [
+   {
+    "arm": "SMA100",
+    "net": 3.02801856,
+    "per_year": {
+     "2019": 0.0,
+     "2020": 1.122677,
+     "2021": 2.093866,
+     "2022": -0.188524
+    },
+    "weeks_gated": 65,
+    "weeks_total": 151,
+    "n_trades": 100,
+    "delta": -0.522838,
+    "risk_off_frac": 0.418,
+    "control_p": 0.0631,
+    "draws": 300,
+    "years_improved": 1,
+    "years_n": 4,
+    "max_year_share": null,
+    "pass": false
+   },
+   {
+    "arm": "VOL30_P70",
+    "net": 2.57895985,
+    "per_year": {
+     "2019": 0.0,
+     "2020": 0.918978,
+     "2021": 1.362453,
+     "2022": 0.297529
+    },
+    "weeks_gated": 38,
+    "weeks_total": 151,
+    "n_trades": 135,
+    "delta": -0.971896,
+    "risk_off_frac": 0.2455,
+    "control_p": 0.4784,
+    "draws": 300,
+    "years_improved": 1,
+    "years_n": 4,
+    "max_year_share": null,
+    "pass": false
+   }
+  ],
+  "arm_denominator": 2,
+  "grade": {
+   "verdict": "fail",
+   "why": "no gate arm beats G0 by 0.25 (best -0.5228; 2 arms counted)",
+   "passing": []
+  },
+  "rule": {
+   "delta_min": 0.25,
+   "alpha": 0.05,
+   "min_years": 3,
+   "n_floor": 39
+  },
+  "coverage": {
+   "ETHUSDT": {
+    "close_rows": 1055,
+    "funding_days": 1055,
+    "funding_settlements": 3195,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12"
+    ]
+   },
+   "SOLUSDT": {
+    "close_rows": 792,
+    "funding_days": 799,
+    "funding_settlements": 2500,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12",
+     "2020-01",
+     "2020-02",
+     "2020-03",
+     "2020-04",
+     "2020-05",
+     "2020-06",
+     "2020-07",
+     "2020-08"
+    ]
+   },
+   "ADAUSDT": {
+    "close_rows": 1024,
+    "funding_days": 1037,
+    "funding_settlements": 3139,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12"
+    ]
+   },
+   "AVAXUSDT": {
+    "close_rows": 788,
+    "funding_days": 790,
+    "funding_settlements": 2398,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12",
+     "2020-01",
+     "2020-02",
+     "2020-03",
+     "2020-04",
+     "2020-05",
+     "2020-06",
+     "2020-07",
+     "2020-08"
+    ]
+   },
+   "BNBUSDT": {
+    "close_rows": 1014,
+    "funding_days": 1015,
+    "funding_settlements": 3074,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12",
+     "2020-01"
+    ]
+   },
+   "LINKUSDT": {
+    "close_rows": 1038,
+    "funding_days": 1039,
+    "funding_settlements": 3146,
+    "funding_months_missing": [
+     "2019-11",
+     "2019-12"
+    ]
+   }
+  },
+  "unit_note": "net is the sum of daily FRACTIONAL book returns (no stop distance in this engine)"
+ }
+}
