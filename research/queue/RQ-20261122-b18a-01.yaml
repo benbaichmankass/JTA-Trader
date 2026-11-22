@@ -1,7 +1,7 @@
 id: RQ-20261122-b18a-01
 title: 'D9 Whippet cost basis, REAL-MONEY slice: on the fresh 2026-11-22 journal export, is the +1 h markout cost of REAL-MONEY fills (bybit_2, bybit_portfolio, alpaca_live)
   above the cost the journal records, with the CI lower bound above 0 bps?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -113,3 +113,17 @@ iteration:
   map_entries:
   - research/levers/ml-entry.yaml
 last_dispatched_at: '2026-11-22T16:37:03+00:00'
+grading:
+  attested: RULE-RQ20261122-b18a-01-MARKOUT-REALMONEY
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261122-b18a-01-MARKOUT-REALMONEY
+  evidence:
+  - research/results/RQ-20261122-b18a-01/45044150503.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -163,6 +163,23 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
     return dx.ewm(alpha=alpha, adjust=False).mean()
 
 
+def _parse_skip_hours(raw: str) -> set:
+    """CSV of UTC hours (0-23) -> set. Empty = off. Anything else is refused: a typo must not silently mean 'no gate'."""
+    out = set()
+    for tok in str(raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            h = int(tok)
+        except ValueError:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}") from None
+        if not 0 <= h <= 23:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}")
+        out.add(h)
+    return out
+
+
 def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  atr_stop_buffer: float, pierce_min: float, exit_style: str,
                  tp_cap_pct: float = 0.0,
@@ -170,7 +187,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  cooldown_bars: int, timeframe: str, symbol: str,
                  adx_max: Optional[float] = None, adx_period: int = 14,
                  emit_path: Optional[str] = None,
-                 min_confidence: float = 0.0) -> Dict[str, Any]:
+                 min_confidence: float = 0.0,
+                 side_filter: str = "both",
+                 skip_hours: str = "") -> Dict[str, Any]:
+    if side_filter not in ("long", "short", "both"):
+        raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
+    skip_hour_set = _parse_skip_hours(skip_hours)
     if exit_style not in _EXIT_STYLES:
         raise ValueError(f"exit_style must be one of {_EXIT_STYLES}")
     df = df.reset_index(drop=True)
@@ -196,6 +218,16 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         if atr <= 0 or pd.isna(hi) or pd.isna(lo):
             i += 1
             continue
+        # TIME-OF-DAY GATE (PI-20261119-FILLW47B-0003): skip a signal whose SIGNAL bar's UTC hour is in --skip-hours. Same
+        # semantics as scripts/backtest_trend.py / backtest_ict_scalp.py --skip-hours (an unparseable timestamp never skips).
+        # A skipped bar mutates no state, so the next qualifying bar fires. Default "" = no gate = byte-identical.
+        if skip_hour_set:
+            try:
+                if pd.Timestamp(df["timestamp"].iloc[i]).hour in skip_hour_set:
+                    i += 1
+                    continue
+            except (TypeError, ValueError):
+                pass
         if adx_max is not None:
             adx_i = df["adx"].iloc[i]
             if pd.isna(adx_i) or float(adx_i) >= adx_max:
@@ -217,6 +249,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             direction = "long"
             pierce_depth = (lo - bar_lo) / atr
         if direction is None:
+            i += 1
+            continue
+        # SIDE GATE (PI-20261119-FILLW47B-0003): same semantics as strategy_signal_builders._side_filter_suppresses
+        # (long suppresses shorts, short suppresses longs). A suppressed signal does not fire and starts no cooldown.
+        if (side_filter == "long" and direction != "long") or (side_filter == "short" and direction != "short"):
             i += 1
             continue
         # Live-parity confidence (fade_breakout_4h.order_package): pierce
@@ -620,6 +657,10 @@ def main(argv: List[str]) -> int:
                         "futures/equity/fx). Pass 0 for the fee-only arm.")
     p.add_argument("--funding-window-hours", type=float,
                    default=execution_costs.FUNDING_WINDOW_HOURS or 8.0)
+    p.add_argument("--side-filter", choices=("long", "short", "both"), default="both",
+                   help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
+    p.add_argument("--skip-hours", default="",
+                   help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live-parity confidence (pierce/ATR) is below this.")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
@@ -673,7 +714,8 @@ def main(argv: List[str]) -> int:
                      trail_mult=args.trail_mult, timeout_bars=args.timeout_bars,
                      cooldown_bars=args.cooldown_bars, timeframe=args.timeframe,
                      symbol=args.symbol, adx_max=args.adx_max,
-                     adx_period=args.adx_period)
+                     adx_period=args.adx_period,
+                     side_filter=args.side_filter, skip_hours=args.skip_hours)
     if args.confidence_sweep:
         sw = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(sw))

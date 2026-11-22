@@ -1,7 +1,8 @@
+# UNBLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48: backtest_fade.py now declares --side-filter / --skip-hours (default byte-identical, tests/test_backtest_fade_side_skip.py), rule unchanged.
 id: RQ-20261118-abab-16
 title: 'DIRECTION lever family on fade_breakout_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost
   stack?'
-status: blocked
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -115,10 +116,17 @@ roadmap:
 related:
 - RQ-20261117-dc44-04
 - research/levers/fade_breakout_4h.yaml
-blocked_on:
-- kind: harness
-  ref: scripts/backtest_fade.py
-  owner: PI-20261119-FILLW47B-0003
-  what: 'scripts/backtest_fade.py declares none of --side-filter: the arm dies at argparse (unrecognized arguments). Found by check_queue_harness_flags.py --audit.'
-  clears_when: 'the harness accepts every flag this unit passes (default byte-identical, golden test), merged on main (PI-20261119-FILLW47B-0003); then git-mv this file back to research/queue/ with status queued, rule unchanged'
-  due_by: '2026-11-26'
+last_dispatched_at: '2026-11-22T18:12:59+00:00'
+grading:
+  attested: RULERQ20261118abab16
+  auto: true
+  decision_rule_id: RULERQ20261118abab16
+  evidence:
+  - research/results/RQ-20261118-abab-16/45053808317.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

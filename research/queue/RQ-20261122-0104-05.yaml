@@ -111,7 +111,7 @@ value:
 why_this_matters: '5722-03 PASSED its replace rule (VL60 beats the incumbent in >= 4/6 folds) but BOTH arms lose money (incumbent -92.9 R, VL60 -52.5 R, 8 years, fee 7.5 bps
   + slippage 5 bps): the pass says the filter is less bad, not that the leg has edge. The response is monotone and still rising at its edge (VL40 -64.5, VL50 -62.9, VL60 -52.5),
   so the next test is where it peaks; if no skip level turns the leg positive, the leg itself is the question for the manager (a Tier-3 roster call, not made here).'
-status: queued
+status: done
 iteration:
   subject: mgc_trend_1h
   subject_kind: strategy_leg
@@ -129,4 +129,15 @@ iteration:
   multiple_testing: null
 levers_declared:
 - filter
-last_dispatched_at: '2026-11-22T16:22:07+00:00'
+last_dispatched_at: '2026-11-22T16:29:25+00:00'
+grading:
+  attested: RULERQ202611179e1b03
+  auto: true
+  decision_rule_id: RULERQ202611179e1b03
+  evidence:
+  - research/results/RQ-20261122-0104-05/45042815310.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
