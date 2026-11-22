@@ -1,8 +1,9 @@
+# UNBLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48: tighten_be action landed in ltr_action_trigger_s0.py (self-test passing), rule unchanged.
 # Hand-authored 2026-11-17 by lane RESEARCH-OPS-20261117-1006 (Tier 1, research-ops fork A), dispatched by the manager. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261117-43b6-05
 title: 'ITERATION 2 of ltr-tighten-sl (fail on the early cell): does a LATE-cell tighten (stop to breakeven + 0.25 R once open >= +1 R with >= 1 ATR room)
   clear RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time tighten, on the 4,076-trade Stage-0 corpus?'
-status: blocked
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -120,16 +121,6 @@ intervention_controls:
     excludes_test_folds: true
     how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
   bootstrap_group: trade
-blocked_on:
-- kind: build
-  ref: scripts/research/ltr_action_trigger_s0.py
-  owner: row LTR-ACTION-TIGHTEN-BE (filed by RESEARCH-OPS-20261117-1006)
-  what: 'ltr_action_trigger_s0.py has ACTIONS = (partial_close, tp_pull_in, sl_to_structure); it has no `tighten_be` action. Needed: price_tighten_be(t,
-    path, j0, be_plus_r=0.25, min_room_atr=1.0, atr_r) -> level = be_plus_r R; None when level >= next open - min_room_atr x ATR (no room) or level <= -1
-    R; then lro.replay_tighten(path, j0, ''r'', level, 0.0) + lro.tightened_net_r exactly as price_sl_to_structure does; flags --be-plus-r and --min-room-atr
-    (defaults 0.25 / 1.0); a self-test case.'
-  clears_when: the action lands on main with its self-test passing (python3 scripts/research/ltr_action_trigger_s0.py --self-test); then git mv this file
-    to research/queue/ with status queued, rule unchanged
 run:
   workflow: research-script-run.yml
   command:
@@ -150,3 +141,17 @@ run:
   inputs:
     research_unit: RQ-20261117-43b6-05
   timeout_minutes: 120
+last_dispatched_at: '2026-11-22T18:12:54+00:00'
+grading:
+  attested: RULE-RQ-20261117-43b6-05
+  auto: true
+  decision_rule_id: RULE-RQ-20261117-43b6-05
+  evidence:
+  - research/results/RQ-20261117-43b6-05/45053149254.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
