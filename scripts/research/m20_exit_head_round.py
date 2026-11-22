@@ -173,6 +173,12 @@ def empty_round_reason(n_legs: int, n_invoked: int, n_failed: int) -> str:
             f"trades in this window — a real empty result, nothing to build.")
 
 
+def parse_leg_spec(spec: str) -> tuple[str, str | None]:
+    """``leg`` or ``leg:SYMBOL`` -> (leg, symbol override or None)."""
+    leg, _, sym = spec.strip().partition(":")
+    return leg.strip(), (sym.strip() or None)
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--legs", required=True, help="CSV of strategy leg names")
@@ -385,11 +391,18 @@ def main(argv: list[str]) -> int:
     # reading as a clean answer.
     n_invoked = 0
     n_harness_failed = 0
-    for leg in a.legs.split(","):
+    for leg_spec in a.legs.split(","):
+        # `leg:SYMBOL` re-points a leg's recipe at another symbol (RESEARCH-FILL-20261122,
+        # D8 corpus widening): the harness emits that leg's trades on SYMBOL's own candles,
+        # rows stay stamped with the base leg name and carry `symbol`. A bare `leg` is
+        # unchanged (symbol = the leg's first configured symbol).
+        leg, sym_override = parse_leg_spec(leg_spec)
         cfg = strategies.get(leg)
         if not isinstance(cfg, dict):
-            print(f"SKIP {leg}: not in strategies.yaml", flush=True)
+            print(f"SKIP {leg_spec}: not in strategies.yaml", flush=True)
             continue
+        if sym_override:
+            cfg = {**cfg, "symbols": [sym_override]}
         fam = classify(leg)
         if fam is None or fam not in FAMILY_HARNESS:
             print(f"SKIP {leg}: no harness family", flush=True)
@@ -421,7 +434,7 @@ def main(argv: list[str]) -> int:
             print(f"SKIP {leg}: proxy data ({sym}) — native history required "
                   "for head training", flush=True)
             continue
-        emit = out / "emit" / f"{leg}.jsonl"
+        emit = out / "emit" / f"{leg}{'_' + sym_override if sym_override else ''}.jsonl"
         args = base_args(leg, cfg, fam, data, resample, a.tp_cap_pct)
         # Every harness stamped a HARDCODED family literal on each emitted row
         # -- `ict_scalp_5m`, `trend_donchian`, `htf_pullback_trend_2h` -- so the
@@ -471,7 +484,7 @@ def main(argv: list[str]) -> int:
             # Recorded HERE, after the harness actually produced trades — a leg
             # that skipped or failed must not colour the round's geometry stamp.
             fams_seen.add(fam)
-            emitted_meta[leg] = {"symbol": str(sym), "family": fam}
+            emitted_meta[leg_spec] = {"symbol": str(sym), "family": fam}
 
     if not emits:
         print(empty_round_reason(len(a.legs.split(",")), n_invoked,
@@ -495,7 +508,8 @@ def main(argv: list[str]) -> int:
         # then crashed training. `--legs` is a no-op without `--db`, so this is
         # the only place it needs to be passed
         # (BL-20260813-EXIT-HEAD-LIVE-ARM-DROPPED-ON-NO-CANDLES defect 1).
-        build_cmd += ["--db", a.db, "--legs", a.legs]
+        build_cmd += ["--db", a.db, "--legs",
+                      ",".join(dict.fromkeys(parse_leg_spec(x)[0] for x in a.legs.split(",")))]
     p = sh(build_cmd, timeout=21600)
     print(p.stdout[-2000:], p.stderr[-500:], flush=True)
     if p.returncode != 0:
