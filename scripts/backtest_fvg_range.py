@@ -184,6 +184,23 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
 # --------------------------------------------------------------------------
 
 
+def _parse_skip_hours(raw: str) -> set:
+    """CSV of UTC hours (0-23) -> set. Empty = off. Anything else is refused: a typo must not silently mean 'no gate'."""
+    out = set()
+    for tok in str(raw or "").split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            h = int(tok)
+        except ValueError:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}") from None
+        if not 0 <= h <= 23:
+            raise ValueError(f"skip_hours must be a CSV of UTC hours 0-23, got {raw!r}")
+        out.add(h)
+    return out
+
+
 def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                  adx_period: int, adx_max: float, min_width_pct: float,
                  max_width_pct: float, touch_tol_pct: float, min_touches: int,
@@ -194,7 +211,11 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                  stale_exit_bars: int = 0, stale_exit_below_r: float = 0.0,
                  giveback_min_mfe_r: float = 0.0, giveback_r: float = 1.0,
                  tp_cap_pct: float = 0.0, no_tp: bool = False,
-                 emit_path: Optional[str] = None) -> Dict[str, Any]:
+                 emit_path: Optional[str] = None,
+                 side_filter: str = "both", skip_hours: str = "") -> Dict[str, Any]:
+    if side_filter not in ("long", "short", "both"):
+        raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
+    skip_hour_set = _parse_skip_hours(skip_hours)
     if exit_style not in _EXIT_STYLES:
         raise ValueError(f"exit_style must be one of {_EXIT_STYLES}")
     df = df.reset_index(drop=True)
@@ -231,6 +252,16 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
         if not (atr > 0) or np.isnan(R) or np.isnan(S):
             i += 1
             continue
+        # TIME-OF-DAY GATE (PI-20261119-FILLW47B-0003): skip a signal whose SIGNAL bar's UTC hour is in --skip-hours. Same semantics as
+        # backtest_trend.py / backtest_ict_scalp.py / backtest_fade.py (an unparseable timestamp never skips). A skipped bar mutates no
+        # state, so the next qualifying bar fires. Default "" = no gate = byte-identical.
+        if skip_hour_set:
+            try:
+                if pd.Timestamp(df["timestamp"].iloc[i]).hour in skip_hour_set:
+                    i += 1
+                    continue
+            except (TypeError, ValueError):
+                pass
         width = R - S
         price = c[i]
         # Width bounds (fraction of price) — reject degenerate (too tight to
@@ -257,6 +288,11 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
         elif price >= upper_third:
             direction = "short"
         else:
+            i += 1
+            continue
+        # SIDE GATE (PI-20261119-FILLW47B-0003): long suppresses shorts, short suppresses longs (the live _side_filter_suppresses
+        # semantics). A suppressed signal does not fire and starts no cooldown. Default "both" = byte-identical.
+        if (side_filter == "long" and direction != "long") or (side_filter == "short" and direction != "short"):
             i += 1
             continue
 
@@ -737,6 +773,10 @@ def main(argv: List[str]) -> int:
                    help="Execution-realism: perp funding bps/8h; DEFAULT (unset) = "
                         "VENUE-AWARE (execution_costs.funding_bps_per_window_for): ~1 bps/8h "
                         "for a crypto perp, 0 for futures/equity/fx. Pass 0 for the fee-only arm.")
+    p.add_argument("--side-filter", choices=("long", "short", "both"), default="both",
+                   help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
+    p.add_argument("--skip-hours", default="",
+                   help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
     p.add_argument("--min-confidence", type=float, default=0.0)
     p.add_argument("--stale-exit-bars", type=int, default=0,
                    help="M20 stale-stop: close at bar close after N bars if still below --stale-exit-below-r (0=off).")
@@ -814,6 +854,7 @@ def main(argv: List[str]) -> int:
         giveback_min_mfe_r=args.giveback_min_mfe_r,
         tp_cap_pct=float(args.tp_cap_pct), no_tp=bool(args.no_tp),
         giveback_r=args.giveback_r,
+        side_filter=args.side_filter, skip_hours=args.skip_hours,
         emit_path=args.emit_trades)
     print(_fmt(out))
     if args.json_out:

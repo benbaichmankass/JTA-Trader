@@ -1,6 +1,7 @@
+# UNBLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48: the harness now declares --side-filter / --skip-hours (default byte-identical, tests/test_backtest_squeeze_fvg_side_skip.py), rule unchanged. `--baseline mid` (an undeclared arm) corrected to `A`, the baseline arm the rule names.
 id: RQ-20261118-abab-18
 title: 'DIRECTION lever family on fvg_range_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -90,7 +91,7 @@ run:
   - --grade
   - sweep
   - --baseline
-  - mid
+  - A
   - --delta-r
   - '4.0'
   - --folds
@@ -115,10 +116,3 @@ related:
 - RQ-20261117-dc44-05
 - research/levers/fvg_range_15m.yaml
 last_dispatched_at: '2026-11-19T03:19:00+00:00'
-blocked_on:
-- kind: harness
-  ref: scripts/backtest_fvg_range.py
-  owner: PI-20261119-FILLW47B-0003
-  what: 'scripts/backtest_fvg_range.py declares none of --side-filter: the arm dies at argparse (unrecognized arguments). Found by check_queue_harness_flags.py --audit. This unit also passes --baseline mid (an undeclared arm): correct it to A when unblocking.'
-  clears_when: 'the harness accepts every flag this unit passes (default byte-identical, golden test), merged on main (PI-20261119-FILLW47B-0003); then git-mv this file back to research/queue/ with status queued, rule unchanged'
-  due_by: '2026-11-26'
