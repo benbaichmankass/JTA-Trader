@@ -1,0 +1,152 @@
+# Hand-authored 2026-11-22 by lane RESEARCH-FILL-20261122 (Tier 1 research), dispatched by the manager (session_01AFoLuKifPRuyeVhkQU1Fsg) under the operator's 11-22 mandate "all the MLs, all the strategies need to have the next test". Driver built in the same lane (PR RESEARCH-FILL drivers). Rule and power registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261122-fa22-01
+title: 'ml-exit-head-donchian-1h FEATURE lever on the BACKTEST-SOURCE corpus (published BTC/ETH/SOL 1h history, kaggle_cpu): does feat_exh beat the champion by +0.03
+  R per OOS trade, net of cost?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 2
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261120-f1a9-04
+  verdict_read: indeterminate
+  diagnosis: 'f1a9-04 (feat_exh +0.0227 CI [-0.0163,+0.0616], pooled n_oos 2,403) is INDETERMINATE because the measured paired sd is 0.97 R, not 0.70: MDE at that
+    n is ~0.055 R. Only more paired trades can separate noise from a small exhaustion-block effect. This unit changes ONE factor: the corpus (trades and symbols)
+    on which the unchanged feat_exh vs champion contrast is read.'
+  search: one arm (feat_exh) vs the champion on a wider corpus; nothing tuned
+  attempt: 2
+  due_by: '2026-11-27'
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml#features
+question: 'On rows rebuilt in-run from the published market_raw 1h history of BTC, ETH and SOL (harness trades of the three live trend_donchian legs, full cost stack,
+  no journal rows), 3 sequential folds, 7-day embargo, lookback 500, champion target holding_pays: is the pooled paired per-trade replayed R of feat_exh vs the shipped-feature
+  champion >= +0.03 R with the CI lower bound > 0?'
+why_this_matters: f1a9-04 could not resolve +0.03 at n 2,403 (sd 0.97). The published shards hold years of 1h history, so the backtest-source corpus is a multiple
+  of the 2.4k live-aligned OOS trades, and it runs on kaggle_cpu with no trainer time. A population change (backtest rows) is stated in the result; it does not replace
+  the trainer-corpus unit ad6a-03.
+evidence_class:
+  holdout: walk_forward
+  claim: model_quality
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.05
+  effect_units: r_multiple
+  sd: 0.97
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE of n: unmeasured until the run (published shard length x 3 legs x ~1 trade/3 days); MDE (1.960+0.842) x 0.97 / sqrt(3000) = 0.0496, declared 0.05.
+    The rule names its own n floors, so a smaller n is INDETERMINATE, not a verdict.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history; nothing accrues. n is the corpus size the run measures; a run below the rule's n floor is INDETERMINATE, not a verdict.
+baseline:
+  definition: The holding_pays champion (the shipped recipe, train_exit_head.FEATURES, unchanged hyper-parameters) retrained on the SAME fold training rows and replayed
+    on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported as context.
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261122-fa22-01-EXITHEAD-FEATURES-WIDE
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: the holding_pays champion on identical folds and trades
+  statistic: 'exit_head_label_bakeoff.py (via the driver) --arms none --feature-arms feat_exh --z 1.96 --pass-dr 0.03: pooled over legs and folds, per OOS trade d
+    = replayed_r(arm) - replayed_r(champion) on identical trades, replay and cost; mean, SE (one trade = one cluster), CI at z 1.96. One arm graded (denominator 1).
+    Reported: per-leg n_oos, target_coverage, fired counts, rows_by_source / corpus facts.'
+  rule: An arm is could_not_look if target_coverage < 0.90. PASS iff pooled n_oos >= 1500 AND mean d >= +0.03 R/trade AND CI lower bound > 0. FAIL iff pooled n_oos
+    >= 8200 (the n at which +0.03 is resolvable at sd 0.97, 80% power) AND CI upper bound < +0.03. INDETERMINATE otherwise; the verdict then reports n_oos and the
+    n still needed. Thresholds, legs, arm, folds, embargo, lookback and rows source are not changed after any result.
+  pass_action: ONE confirmation before any proposal (the held-out-symbol design or a disjoint window), then a data-backed Tier-3 proposal (export + annotate-only
+    pin) to the manager.
+  fail_action: Record feat_exh as tested at power on research/levers/ml-exit-head-donchian-1h.yaml (features family); the head has no in-hand feature lever at +0.03
+    R on donchian 1h and the next step is the family review, never a re-run.
+  what_it_does_not_do: Edits no config, exports or serves nothing, places no order, adds no gate. No close authority for any exit model. Backtest-source rows are
+    a different population from the trainer live-aligned corpus (stated in the result).
+practice_precedent: 'Size the test to the decision: a pre-registered minimum effect with power computed from the measured variance, rather than a bar the data cannot
+  reach (docs/reference/trading-and-model-practice-principles.md).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm keeps the leg's own entry, stop and trail; only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 200
+    note: 'not computed by this unit; the champion''s own matched random truncation control is RQ-20260927-002 / 78fc-03. Reported here as context only: hold (no
+      head) per arm.'
+  best_static:
+    grid:
+    - holding_pays (champion, shipped features, fixed)
+    - feat_exh
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.25
+  basis: 'stand-in inherited from 7d49-02: three demo-floor legs annotate on the head; the main value is the keep / retire decision on the exit head''s levers.'
+routing:
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  needs_trainer_resident_data: false
+  published_data: metis-market-data
+  published_paths:
+  - datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/ETHUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/SOLUSDT/1h/v002/data.jsonl
+  basis: 'ESTIMATE: f7c1-02 (same driver, 3 legs, 1 arm, 60 min) plus one feature arm; timeout 180.'
+ml_consumer:
+  book: demo_floor
+  consumer: src/runtime/exit_head_apply.py
+  decision: which exit_head_model feature list (annotate-only) the three donchian 1h legs carry
+  legs:
+  - trend_donchian
+  - trend_donchian_eth
+  - trend_donchian_sol
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: trend_donchian 1h harness trades of BTC, ETH and SOL USDT perps rebuilt in-run from the published market_raw 1h history (backtest-source rows only, no
+  journal rows); heads trained per fold on the same backtest rows.
+levers:
+- name: exit_head_feature_list
+  values:
+  - shipped FEATURES (14)
+  - feat_exh
+  hypothesised_effect: the exhaustion block carries the truncation information the 14 shipped path/vol features lack; a wider corpus resolves it
+run:
+  command:
+  - python3
+  - scripts/research/exit_head_kaggle_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --legs
+  - trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT
+  - --arms
+  - none
+  - --feature-arms
+  - feat_exh
+  - --num-folds
+  - '3'
+  - --embargo-days
+  - '7'
+  - --lookback
+  - '500'
+  - --z
+  - '1.96'
+  - --pass-dr
+  - '0.03'
+  - --registered-at
+  - '2026-11-22'
+  - --rule-id
+  - RULE-RQ20261122-fa22-01-EXITHEAD-FEATURES-WIDE
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261122-fa22-01
