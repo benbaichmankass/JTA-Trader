@@ -96,7 +96,12 @@ def grade(arms: list[dict], base: dict, delta_min: float, alpha: float, min_year
 def run(a, inputs: dict | None = None, btc: pd.Series | None = None) -> dict:
     import frontier_momentum_runner as F
     symbols = [s.strip().upper() for s in a.symbols.split(",") if s.strip()]
-    inp = inputs or F.build_inputs(symbols, a.days)
+    end_date = getattr(a, "end_date", None)
+    if end_date and not inputs:  # pinned window end (pre-dev confirmation, RESEARCH-NO-WAIT): [end_date - days, end_date]
+        from datetime import datetime, timezone
+        inp = F.build_inputs(symbols, a.days, now=datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc))
+    else:
+        inp = inputs or F.build_inputs(symbols, a.days)
     if inp["panel"] is None or inp["panel"].empty:
         return {"verdict": "not_applicable", "read_state": "no_data", "population": "xsec gate arms: no usable panel", "n": None,
                 "note": f"no_data for {inp.get('empty')}: nothing graded", "measurement": {"coverage": inp["coverage"]}}
@@ -161,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--symbols", default=DEFAULT_SYMBOLS)
     ap.add_argument("--days", type=int, default=1460)
+    ap.add_argument("--end-date", default=None, help="pin the window end (YYYY-MM-DD, UTC); default now. Used for a disjoint pre-dev confirmation window")
     ap.add_argument("--sma-days", default="20,50,100,200")
     ap.add_argument("--vol-windows", default="30")
     ap.add_argument("--vol-q", type=float, default=0.7)

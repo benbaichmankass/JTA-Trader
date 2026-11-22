@@ -1,0 +1,98 @@
+id: RQ-20261122-0104-06
+title: xsec-crypto BTC SMA100 risk-off gate PRE-DEV CONFIRMATION (2019-11..2022-11, before the fa22-05 window)
+cadence: once
+roadmap:
+- L-LADDER
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+practice_precedent: 'M2, M4, M13 (docs/reference/trading-and-model-practice-principles.md): walk-forward against a rule registered before the run; one-factor sensitivity before
+  combinations; every arm counted.'
+question: On the 3 years of cross-sectional crypto history BEFORE the fa22-05 window, does the BTC SMA100 risk-off gate beat no gate by >= 0.25 with matched-random p <= 0.05,
+  net > 0, >= 3 improved years and no year > 50% of the gain?
+why_this_matters: 'fa22-05 (5 gate arms vs G0, 2022-11..2026-11) PASSED on SMA100 only: delta +0.858, control_p 0.0133, net +0.61 vs G0 -0.25, 4 of 5 years improved. But it
+  is 1 of 5 arms (Bonferroni p 0.067 > 0.05), most of the gain is 2023, and the neighbours SMA20/50 show similar deltas (+0.60/+0.59) with p 0.08/0.05, so the response may
+  be real and smooth or one regime. A pass on one window is a discovery; this reads it on earlier in-hand history, registered before the run.'
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Baseline n_trades floor 39 (E35) over the basket; 5 gate arms are the multiple-testing denominator, each with a 300-draw matched-random control. History replay on
+    public data; nothing accrues.
+  feasibility:
+    source: none
+    accrual_basis: Replays 1460 days of public history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261122-fa22-05-XSEC-GATE
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  baseline: 'G0: the same engine, panel and funding series with no gate; plus a matched-random gate per arm.'
+  statistic: 'scripts/research/xsec_regime_gate_arms.py: per arm net total R (sum of daily fractional book returns, scripts/backtest_xsec_momentum.run_backtest with settled
+    funding), delta vs G0, per-year net and delta, control_p over 300 matched-random draws.'
+  rule: PASS iff the SMA100 arm has delta >= +0.25 AND control_p <= 0.05 AND net > 0 AND improves >= 3 calendar years vs G0 AND no year carries > 50% of the gain, at baseline
+    n_trades >= 39 (the fa22-05 thresholds, unchanged). The engine also builds the VOL30_P70 arm, so the denominator is 2 (said in the result). FAIL iff baseline n_trades >=
+    39 AND no arm has delta >= +0.25. INDETERMINATE otherwise, including a window the symbols do not cover (coverage attached). A PASS goes to the manager as a Tier-3 proposal
+    citing both windows and the 5-arm discovery denominator; never applied here.
+  pass_action: The passing arm becomes a candidate regime lever for the xsec book on the lever map; a promotion is a separate Stage-0 holdout then a Tier-3 proposal.
+  fail_action: Record the gate family as tested on research/levers/xsec-crypto.yaml; next untested families are universe/liquidity, short-leg treatment and residual momentum.
+  what_it_does_not_do: Edits no config, adds xsec to no roster, places no order. A Stage-0 research read of the book, not a promotion case.
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  why_runner: Fetches public Binance-vision daily closes and Bybit settled funding; a Kaggle kernel has no internet.
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: 'ESTIMATE: frontier xsec runner 15 min for one run (9da8-06); here 6 gate arms x 300 matched draws of a weekly book (local synthetic smoke: ~2 s per 15 draws x 3 arms),
+    timeout 90.'
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  basis: 'stand-in: xsec is a testing leg with a regime-concentrated positive side.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/xsec_regime_gate_arms.py
+  - --days
+  - '1095'
+  - --end-date
+  - '2022-11-20'
+  - --sma-days
+  - '100'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-0104-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared:
+- regime_gating
+iteration:
+  subject: xsec-crypto
+  subject_kind: strategy_leg
+  from_result: RQ-20261122-fa22-05
+  verdict_read: pass_unconfirmed
+  diagnosis: 'fa22-05 PASS is a discovery: SMA100 1 of 5 arms, p 0.0133 (uncorrected), gain concentrated in 2023 (+0.90 of +0.86 total delta), G0 itself net negative (-0.25).
+    SMA20/50/200 deltas +0.60/+0.59/+0.30 say the response is smooth over 20-100 and weaker at 200.'
+  search: one arm (SMA100) on the disjoint pre-dev window 2019-11..2022-11 with the same bar; denominator 2 (the vol arm is built by the engine)
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/xsec-crypto.yaml#levers.regime_gating
+  attempt: 2
+  due_by: '2026-12-01'
+  multiple_testing: null
+status: queued
+evidence_class:
+  holdout: none
+  claim: stage0_gate_arms

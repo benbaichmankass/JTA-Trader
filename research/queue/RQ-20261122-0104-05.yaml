@@ -1,0 +1,131 @@
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ202611179e1b03
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  rule: 'Same rule as RQ-20261122-5722-03 (replace grade: PASS iff a candidate beats the incumbent A by >= 0.02 R/trade in >= 4 of 6 folds within drawdown tolerance 35%, n
+    floor 39, holdout read), run on VL60/VL70/VL80 (denominator 3 incl. the repeat). ADDED, registered before the run and reported not graded: whether any arm net R > 0 over
+    the window. Thresholds unchanged. A PASS is a Tier-3 proposal citing the denominator and the net-R sign; never applied here.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg mgc_trend_1h --grade replace, the sibling window and folds of RQ-20261104-001 (same leg, same flags) by entry time,
+    net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared
+    in config/strategies.yaml; candidates VL20, VL30. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3 declare. The arm
+    grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+id: RQ-20261122-0104-05
+intervention_controls:
+  not_applicable: a parameter-width ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo standing E35 floor). expected_n=80 is an ESTIMATE from the sibling unit
+    RQ-20261104-001 on this leg, NOT a measurement; below 39 the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar is a materiality bar, not a powered effect: a PASS
+    is a discovery lead and a FAIL closes the configuration only.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 80
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
+priority: 2
+programme: P3
+question: Does skipping entries below the 70th or 80th volatility percentile improve mgc_trend_1h further than VL60 (net -52.5 R vs the incumbent -92.9 R in 5722-03), and does
+  any arm turn the leg net positive?
+related:
+- RQ-20261104-001
+- research/levers/mgc_trend_1h.yaml
+- RQ-20261031-7b6f-17
+roadmap:
+- L-REGIME
+- L-PROP
+routing:
+  basis: Estimate from comparable exit_lever_ablation runs of 2026-10-26..29 (a538-*); the first run replaces it.
+  est_minutes: 60
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - mgc_trend_1h
+  - --arm
+  - A=
+  - --arm
+  - VL60=--vol-skip-below-pctl=0.6
+  - --arm
+  - VL70=--vol-skip-below-pctl=0.7
+  - --arm
+  - VL80=--vol-skip-below-pctl=0.8
+  - --days
+  - '3080'
+  - --start
+  - '2018-06-01'
+  - --end
+  - 2026-10-26 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-0104-05
+  timeout_minutes: 150
+theme: regime
+title: mgc_trend_1h vol-skip response above VL60 (VL70 / VL80) plus the VL60 repeat, with the holdout read, net of cost
+value:
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+why_this_matters: '5722-03 PASSED its replace rule (VL60 beats the incumbent in >= 4/6 folds) but BOTH arms lose money (incumbent -92.9 R, VL60 -52.5 R, 8 years, fee 7.5 bps
+  + slippage 5 bps): the pass says the filter is less bad, not that the leg has edge. The response is monotone and still rising at its edge (VL40 -64.5, VL50 -62.9, VL60 -52.5),
+  so the next test is where it peaks; if no skip level turns the leg positive, the leg itself is the question for the manager (a Tier-3 roster call, not made here).'
+status: queued
+iteration:
+  subject: mgc_trend_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261122-5722-03
+  verdict_read: pass_unconfirmed
+  diagnosis: '5722-03 PASS (replace) but net-negative on both sides: A -92.9 R, VL60 -52.5 R, folds A: -46.7, +7.5, -34.6 ...; vol-skip-below is monotone in 40/50/60 and its
+    best is at the grid edge. The pass is relative to a losing incumbent.'
+  search: extend the vol-skip-below grid upward (70/80) with VL60 repeated as the anchor; read whether any level reaches net R > 0; survivor goes to a symbol/other-metal holdout
+  levers:
+  - filter
+  map_entries:
+  - research/levers/mgc_trend_1h.yaml#levers.filter
+  attempt: 2
+  due_by: '2026-12-01'
+  multiple_testing: null
+levers_declared:
+- filter
