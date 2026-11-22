@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group A: network). The landed row was producer_failed: the Kaggle kernel tried to fetch candles from data.binance.vision (no internet) before the published candle dataset covered this unit's feed (already diagnosed 2026-11-19 and owned by PI-20261118-EFILLW47-0003, which closes when the unit re-lands measured on a backend with the feed). The dataset now serves this feed (candle_dataset.covers True; a Kaggle run of the same harness on 2026-11-22, RQ-20261118-abab-16, logged 'candle dataset: served binance__BTCUSDT__240 ... from metis-research-candles'). last_dispatched_at cleared so the unit can re-run; rule and grading block unchanged (a measured re-run re-grades it). See PI-20261122-SME5WDGR-0003.
 # Authored 2026-11-17 by lane QUEUE-FILL-LEAN-20261117 (Tier 1). Lever-map transfer unit cloned from RQ-20261031-7b6f-17; leg flags/window copied from RQ-20261101-78fc-28.yaml; rule registered BEFORE any run.
 cadence: once
 compute: cpu_light
@@ -111,7 +112,6 @@ value:
   usd_at_stake_per_month: 150
 why_this_matters: research/levers/trend_donchian_xrp_adx25.yaml lists no vol-skip-below (regime) family for this TESTING leg; sibling legs carry the same arms (RQ-20261017-ae17
   / RQ-20261031-7b6f families). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
-last_dispatched_at: '2026-11-17T20:34:36+00:00'
 grading:
   attested: RULERQ202611179e1b05
   auto: true

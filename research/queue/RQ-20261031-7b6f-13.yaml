@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group A: network). The landed row was producer_failed: the Kaggle kernel tried to fetch candles from data.binance.vision (no internet) before the published candle dataset covered this unit's feed (already diagnosed 2026-11-19 and owned by PI-20261118-EFILLW47-0003, which closes when the unit re-lands measured on a backend with the feed). The dataset now serves this feed (candle_dataset.covers True; a Kaggle run of the same harness on 2026-11-22, RQ-20261118-abab-16, logged 'candle dataset: served binance__BTCUSDT__240 ... from metis-research-candles'). last_dispatched_at cleared so the unit can re-run; rule and grading block unchanged (a measured re-run re-grades it). See PI-20261122-SME5WDGR-0003.
 # Hand-authored 2026-10-31 by RESEARCH-OPS-20261031-2110 (Tier 1). Lever-transfer unit; same statistic, folds and bar as its template sibling; rule registered BEFORE any run.
 cadence: once
 compute: cpu_light
@@ -103,7 +104,6 @@ why_this_matters: 'Transfer of a lever that PASSED elsewhere (top-vol entry skip
   to a sibling leg separates a leg-specific artifact (FAIL) from a lever that carries across the family (PASS). Decision it changes: whether the lever is queued for
   a Tier-3 note on avax_pullback_2h or stays an observation. PASS = lead for a Tier-3 note, never a config edit; FAIL closes this leg x arm-grid only, lever family
   stays open.'
-last_dispatched_at: '2026-11-03T05:11:49+00:00'
 grading:
   attested: RULERQ202610317B6F13
   auto: true
