@@ -1,0 +1,78 @@
+{
+  "unit": "RQ-20261122-fa22-01",
+  "run_id": "45015560270",
+  "commit_sha": "de054ca44cc7b1274711180b0464687f2ff6de46",
+  "run_url": null,
+  "timeout_minutes": 180,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "db1ff15f88db",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_head_kaggle_bakeoff.py",
+        "--unit",
+        "RQ-20261122-fa22-01",
+        "--out",
+        "comms/research/RQ-20261122-fa22-01/45015560270",
+        "--legs",
+        "trend_donchian:BTCUSDT,trend_donchian_eth:ETHUSDT,trend_donchian_sol:SOLUSDT",
+        "--arms",
+        "none",
+        "--feature-arms",
+        "feat_exh",
+        "--num-folds",
+        "3",
+        "--embargo-days",
+        "7",
+        "--lookback",
+        "500",
+        "--z",
+        "1.96",
+        "--pass-dr",
+        "0.03",
+        "--registered-at",
+        "2026-11-22",
+        "--rule-id",
+        "RULE-RQ20261122-fa22-01-EXITHEAD-FEATURES-WIDE"
+      ],
+      "log": "comms/research/RQ-20261122-fa22-01/45015560270/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 155.1
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

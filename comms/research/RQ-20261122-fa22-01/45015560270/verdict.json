@@ -1,0 +1,423 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261122-fa22-01",
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "note": "an arm is below n_oos or between the pass bar and the fail floor",
+ "n": 909,
+ "population": "BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from published market_raw 1h v002; no journal trades) -- OOS harness trades of ['trend_donchian', 'trend_donchian_eth', 'trend_donchian_sol'] (1h), 3-fold sequential walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n 42761) bar_t <= fold start - 7.0 d; paired per-trade replayed R vs the holding_pays champion",
+ "decision_rule": {
+  "id": "RULE-RQ20261122-fa22-01-EXITHEAD-FEATURES-WIDE",
+  "registered_at": "2026-11-22",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "indeterminate",
+   "chosen": null,
+   "why": "an arm is below n_oos or between the pass bar and the fail floor",
+   "arms": {
+    "feat_exh": {
+     "n": 909,
+     "mean": 0.00905,
+     "se": 0.02133,
+     "ci": [
+      -0.03276,
+      0.05086
+     ],
+     "z": 1.96
+    }
+   }
+  },
+  "arm_dr_vs_hold_context": {
+   "holding_pays": {
+    "n": 909,
+    "mean": -0.02529,
+    "se": 0.04067,
+    "ci": [
+     -0.10501,
+     0.05443
+    ],
+    "z": 1.96
+   },
+   "feat_exh": {
+    "n": 909,
+    "mean": -0.01624,
+    "se": 0.03959,
+    "ci": [
+     -0.09383,
+     0.06135
+    ],
+    "z": 1.96
+   }
+  },
+  "fired": {
+   "holding_pays": 593,
+   "feat_exh": 595
+  },
+  "target_coverage": {
+   "feat_exh": 0.9191
+  },
+  "arm_features": {
+   "holding_pays": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long"
+   ],
+   "feat_exh": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long",
+    "bars_since_peak",
+    "mom_8",
+    "mom_decay",
+    "atr_impulse_phase",
+    "vol_at_peak_ratio",
+    "band_ext_pctile",
+    "failure_swing"
+   ]
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+   "BTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ETHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SOLUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+   "BTCUSDT": 10854,
+   "ETHUSDT": 21826,
+   "SOLUSDT": 10081
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 42761,
+  "z": 1.96,
+  "pass_dr": 0.03,
+  "legs": [
+   {
+    "leg": "trend_donchian",
+    "symbol": "BTCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_o2aju4ns/candles/BTCUSDT_1h.csv",
+     "resampled_to": null,
+     "bars": 43824
+    },
+    "read_state": "measured",
+    "n_total_trades": 352,
+    "block_n": 88,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 88,
+      "train_rows_n": 11311,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 51,
+       "feat_exh": 51
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 88,
+      "train_rows_n": 21450,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 53,
+       "feat_exh": 53
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 88,
+      "train_rows_n": 31711,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 55,
+       "feat_exh": 54
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_eth",
+    "symbol": "ETHUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_o2aju4ns/candles/ETHUSDT_1h.csv",
+     "resampled_to": null,
+     "bars": 43824
+    },
+    "read_state": "measured",
+    "n_total_trades": 583,
+    "block_n": 145,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 145,
+      "train_rows_n": 11236,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 106,
+       "feat_exh": 101
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 145,
+      "train_rows_n": 21013,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 95,
+       "feat_exh": 100
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 145,
+      "train_rows_n": 30900,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 93,
+       "feat_exh": 89
+      }
+     }
+    ]
+   },
+   {
+    "leg": "trend_donchian_sol",
+    "symbol": "SOLUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_o2aju4ns/candles/SOLUSDT_1h.csv",
+     "resampled_to": null,
+     "bars": 43824
+    },
+    "read_state": "measured",
+    "n_total_trades": 283,
+    "block_n": 70,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 70,
+      "train_rows_n": 10844,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 48,
+       "feat_exh": 50
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 70,
+      "train_rows_n": 20195,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 49,
+       "feat_exh": 49
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 70,
+      "train_rows_n": 30930,
+      "read_state": "measured",
+      "arms_trained": [
+       "feat_exh",
+       "holding_pays"
+      ],
+      "n_fired": {
+       "holding_pays": 43,
+       "feat_exh": 48
+      }
+     }
+    ]
+   }
+  ],
+  "rows_source": "harness_only (backtest-source rows; NO journal trades: nothing OURS is read or published)",
+  "published_shard_spans": {
+   "BTCUSDT": {
+    "shard": "datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl",
+    "read_state": "measured",
+    "bars": 43824,
+    "first_ts": "2021-11-21T00:00:00Z",
+    "last_ts": "2026-11-20T23:00:00Z",
+    "has_volume": true
+   },
+   "ETHUSDT": {
+    "shard": "datasets-out/market_raw/ETHUSDT/1h/v002/data.jsonl",
+    "read_state": "measured",
+    "bars": 43824,
+    "first_ts": "2021-11-21T00:00:00Z",
+    "last_ts": "2026-11-20T23:00:00Z",
+    "has_volume": true
+   },
+   "SOLUSDT": {
+    "shard": "datasets-out/market_raw/SOLUSDT/1h/v002/data.jsonl",
+    "read_state": "measured",
+    "bars": 43824,
+    "first_ts": "2021-11-21T00:00:00Z",
+    "last_ts": "2026-11-20T23:00:00Z",
+    "has_volume": true
+   }
+  },
+  "harness_legs": [
+   {
+    "leg": "trend_donchian",
+    "symbol": "BTCUSDT",
+    "read_state": "measured",
+    "n_trades": 352,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth",
+    "symbol": "ETHUSDT",
+    "read_state": "measured",
+    "n_trades": 583,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_sol",
+    "symbol": "SOLUSDT",
+    "read_state": "measured",
+    "n_trades": 283,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   }
+  ],
+  "rows_build": {
+   "rc": 0,
+   "rows_path": "/tmp/exithead_kaggle_o2aju4ns/rows/donchian/rows.jsonl",
+   "rows_exist": true,
+   "rows_by_source": {
+    "harness": 42761
+   },
+   "build_report": {
+    "generated_at": "2026-11-22T11:12:16.698230+00:00",
+    "tf": "1h",
+    "trades_in": 1218,
+    "skipped": {
+     "no_candles": 0,
+     "unresolvable": 51
+    },
+    "entry_alignment": "live_fill_bar_v2",
+    "skipped_at_load": {},
+    "rows_seen_at_load": 1218,
+    "rows_loaded_at_load": 1218,
+    "per_family_load": {
+     "donchian": {
+      "seen": 1218,
+      "loaded": 1218
+     }
+    },
+    "families_starved": [],
+    "holding_pays_threshold_r": 0.25,
+    "families": {
+     "donchian": {
+      "rows": 42761,
+      "trades": {
+       "harness": 1167
+      },
+      "holding_pays_pos": 11581,
+      "holding_pays_rate": 0.2708,
+      "rows_by_source": {
+       "harness": 42761
+      },
+      "rows_by_year": {
+       "2021": 1053,
+       "2022": 8333,
+       "2023": 8251,
+       "2024": 9055,
+       "2025": 8582,
+       "2026": 7487
+      }
+     }
+    }
+   }
+  }
+ },
+ "generated_at": "2026-11-22T11:14:38Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py)"
+ }
+}
