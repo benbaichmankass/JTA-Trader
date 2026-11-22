@@ -4,7 +4,7 @@
 id: RQ-20261103-005
 title: 'PROP STRUCTURE EXITS gate: does trend_donchian_eth_prop arm SW15R1 clear RULE-P5-GATE-BRK-PER-LEG-V3
   on breakout_2 / tradeify_1 / velotrade_1?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -112,18 +112,21 @@ generated:
     node: P5-SX-GATE-ETH-SW15R1
 last_dispatched_at: '2026-11-04T00:05:44+00:00'
 grading:
-  auto: true
   decision_rule_id: RULE-P5-SX-GATE-ETH-SW15R1
   evidence:
+  - comms/research/RQ-20261103-005/41670661722/result.json
+  - comms/research/RQ-20261103-005/41681526787/result.json
+  - comms/research/RQ-20261103-005/41735850223/result.json
   - research/results/RQ-20261103-005/41670661722.jsonl
   - research/results/RQ-20261103-005/41681526787.jsonl
   - research/results/RQ-20261103-005/41735850223.jsonl
-  graded_at: '2026-11-12'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  graded_at: '2026-11-22'
+  grader: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), hand-graded from the committed per-run result.json under the unit's registered rule
+  needs_review: false
+  reason: 'HAND-GRADED from the committed measurement, not re-run: the gate ran 3 times with identical per-firm verdicts (n=520, variant sx-eth-prop-sw15r1, ledger from RQ-20261102-8ef8-01). Every landed
+    row read producer_failed only because ml_variant_prop_gate.py wrote result.json and no verdict.json (fixed in the same PR as this grading; the three runs were never `unmeasured`). RESULT under RULE-P5-GATE-BRK-PER-LEG-V3
+    unchanged: FAIL on every firm: breakout_2: FAIL (EV median $-7.27, worst-seed p_breach 0.689); tradeify_1: FAIL (EV median $-60.65, worst-seed p_breach 0.548); velotrade_1: FAIL (EV median $-7.04, worst-seed
+    p_breach 0.442). Registered rule: PASS needs the V2 survival/EV bar AND a 95% CI lower bound of mean net R > 0 on at least one firm''s venue arm; none clears it. A fourth run would reproduce this (same
+    ledger, same seeds, same cost arm). Advice-only; nothing applied.'
   rows: 3
-  verdict: null
+  verdict: fail
