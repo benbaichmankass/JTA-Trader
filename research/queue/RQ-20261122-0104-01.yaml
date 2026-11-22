@@ -1,7 +1,7 @@
 id: RQ-20261122-0104-01
 title: 'ml-exit-head-donchian-1h FEATURE lever on the 8-symbol BACKTEST-SOURCE corpus (public Binance-vision USD-M 1h klines (Bybit REST is 403 from runners)): does feat_exh
   beat the champion by +0.03 R per OOS trade, and what n does the widened corpus reach?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -156,3 +156,17 @@ levers:
   - feat_exh
   hypothesised_effect: the exhaustion block carries the truncation information the 14 shipped path/vol features lack; a wider corpus resolves it
 last_dispatched_at: '2026-11-22T16:22:05+00:00'
+grading:
+  attested: RULE-RQ20261122-0104-01-EXITHEAD-FEATURES-WIDE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261122-0104-01-EXITHEAD-FEATURES-WIDE
+  evidence:
+  - research/results/RQ-20261122-0104-01/45041679191.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
