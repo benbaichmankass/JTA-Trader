@@ -636,6 +636,15 @@ def inherit_family_state(cc: dict, family_verdict: str) -> dict:
     return out
 
 
+def mlgbm_holdout_scores(train_df: pd.DataFrame, X_hold: np.ndarray, q: float) -> tuple[np.ndarray, float]:
+    """(P(win) on the holdout rows, tau): the monotone GBM fit on ``train_df`` only, train-standardised, tau = train-score quantile q."""
+    Xt = train_df[list(FEATURES)].to_numpy(float)
+    yt, _sw = target_labels(train_df["net_r"].to_numpy(float), "win")
+    mu_t, sd_t, (Xs_t,) = standardise(Xt)
+    ptr, pte = fit_predict_mlgbm(Xs_t, yt, (X_hold - mu_t) / sd_t, monotone_signs())
+    return pte, float(np.quantile(ptr, q))
+
+
 def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
     """Fresh-window confirmation (V2, practice M5): the PRIMARY model is fit on the WHOLE main-window family pool
     (tau from those training scores, exactly the artifact that would ship), then scores every gate-leg trade of a
@@ -666,7 +675,14 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | No
     # The paired challenger block is computed BEFORE the n floor so it always reports (RQ-20261116-cc86-01 holdout B
     # had n 95 and printed nothing); the holdout verdict below the floor stays INDETERMINATE.
     challenger = None
-    if h.get("challenger"):
+    if h.get("challenger") == "mlgbm":
+        # RQ-20261122-b18a-02: the monotone-GBM learner arm (RQ-20261119-e8a1-03 dev PASS) on the disjoint earlier window. Same recipe as
+        # run_cpcv(learner="mlgbm"): fit P(win) on the WHOLE main-window pool, tau = the training-score quantile PRIMARY["q"], standardise
+        # with the train mean/std. Nothing here is fitted on the holdout.
+        pch, tau_ch = mlgbm_holdout_scores(train_df, X, (cfg or PRIMARY)["q"])
+        challenger = challenger_compare(df, m_base, np.where(pch < tau_ch, MULTIPLIER, 1.0), np.random.default_rng(SEED + 2))
+        challenger.update(tau_rule="mlgbm_quantile", tau=round(tau_ch, 4))
+    elif h.get("challenger"):
         ch = export_model(train_df, cfg or PRIMARY, tau_rule=h["challenger"])
         pch = predict((X - np.array(ch["mean"])) / np.array(ch["std"]), np.array(ch["coef"]), ch["intercept"])
         challenger = challenger_compare(df, m_base, np.where(pch < ch["tau"], MULTIPLIER, 1.0),
@@ -949,6 +965,12 @@ def _self_test() -> int:
         rn = run_refine("nested", "SYN", ["syn"], ["syn"], d, None)
     pa, pb = a["primary_eval"], b["primary_eval"]
     # target plumbing: win reproduces the unweighted default; uniform weights are a no-op; tail1r labels >= 1 R
+    # holdout mlgbm challenger (RQ-20261122-b18a-02): scores only the holdout rows, tau from TRAIN scores only, plumbing on a synthetic frame
+    tdf = pd.DataFrame(rng.normal(size=(400, len(FEATURES))), columns=list(FEATURES))
+    tdf["net_r"] = np.where(tdf[FEATURES[0]] + rng.normal(size=400) > 0, 1.5, -1.0)
+    hold_X = rng.normal(size=(120, len(FEATURES)))
+    ph, tau_h = mlgbm_holdout_scores(tdf, hold_X, 0.25)
+    assert ph.shape == (120,) and 0.0 < tau_h < 1.0 and 0.05 <= float(np.mean(ph < tau_h)) <= 0.6, "mlgbm holdout scores"
     r_ = np.array([2.0, -1.0, 0.5, 1.0])
     assert target_labels(r_, "tail1r")[0].tolist() == [1.0, 0.0, 0.0, 1.0]
     assert target_labels(r_, "win")[1] is None and target_labels(r_, "evweight")[1].tolist() == [2.0, 1.0, 0.5, 1.0]
@@ -1014,7 +1036,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="spot = build the holdout from Binance SPOT candles, a labelled perp PROXY (RQ-20261029-5785-05)")
     ap.add_argument("--holdout-artifact", default=None,
                     help="score this committed artifact JSON on the holdout instead of refitting PRIMARY (byte-exact replay)")
-    ap.add_argument("--holdout-challenger", choices=("ev",), default=None,
+    ap.add_argument("--holdout-challenger", choices=("ev", "mlgbm"), default=None,
                     help="also fit a CHALLENGER (tau_rule ev) on the main-window pool and compare it, paired, to the scored "
                          "baseline on the holdout (RQ-20261116-cc86-01)")
     ap.add_argument("--export-challenger", default=None,

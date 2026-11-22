@@ -1,0 +1,184 @@
+cadence: once
+compute: cpu_long
+decision_rule:
+  id: RULE-RQ20261122-b18a-03-BRACKET-CEILING
+  unit_rule_id: RULE-RQ20261122-b18a-03-BRACKET-CEILING
+  registered_at: '2026-11-22'
+  registered_before_run: true
+  min_n: 39
+  statistic: exit_lever_ablation.py --grade replace over 2020-07-01..2026-10-15 (--days 2330), 6 calendar folds by entry time, full cost stack the harness resolves
+    per venue, baseline B = the leg as declared; delta-r 0, delta-r-per-trade 0.03, fold-majority 5 of 6, dd-tol-frac 0.35, n-floor 39 (the 2780 family bars).
+  rule: 'Registered 2026-11-22 BEFORE any run of the grid. A candidate C REPLACES B iff net_r(C) > net_r(B) AND net_r(C) - net_r(B) >= 0.03 R x n(B) AND net_r(C)
+    >= net_r(B) in >= 5 of 6 folds AND maxDD(C) <= 1.35 x maxDD(B). Several pass -> the highest net R is SELECTED. MULTIPLICITY: 19 candidates, so the bars are the
+    stricter 0.03 R/trade and 5 of 6 (not the single-arm 0.02 / 4 of 6). PASS = a SELECTION, unconfirmed: it supports nothing on the order path until the selected
+    cell alone passes a confirmation registered now: exit_lever_ablation --grade paired (selected vs B) on a disjoint window (pre-2020-07 where the feed exists, else
+    a symbol twin), same bars. FAIL = no candidate passes with n(B) >= 39: the bracket surface is flat on this leg and window, so a learned bracket has no measured
+    headroom here. INDETERMINATE if n(B) < 39 or every candidate is byte-identical to B or the producer failed. Thresholds, arms, window are not changed after any
+    result.'
+  what_it_does_not_do: Edits no config, roster or order path; a PASS is not a promotion and a FAIL does not retire the Pointer family (family review needed, scripts/research/family_retirement_policy.yaml).
+    Per-trade R changes with the stop distance (R is stop-denominated), which the replace grade reports beside net R.
+evidence_class:
+  claim: edge
+  holdout: in_sample
+follow_up: PASS -> author the registered paired confirmation for the selected arm (pre-window 2017-09-01..2020-06-30; SOL via the ETH/BTC windows). FAIL -> record
+  the floor on PI-20261119-RIMARY12-0004 and proceed to the D8 head levers.
+id: RQ-20261122-b18a-03
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B. The matched-random control belongs to the learned-head units (04a5-02).
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261118-04a5-02
+  verdict_read: fail
+  attempt: 1
+  due_by: '2026-12-01'
+  diagnosis: 'Both D6 reads so far are flat: the learned cell choice adds ~nothing over the best fixed cell (c692-02, +0.0143 vs static +0.0144 R/decision) and the
+    q0.60 MFE-quantile TP head failed on frozen Foxhound-1 decisions (04a5-02, -0.0052 [-0.0145,+0.0041], bar +0.02). Both used the ML-entry decision stream. Pointer''s
+    registered baseline "a static per-leg best bracket chosen without the test folds" has never been measured on a rostered money leg. If no static (SL x TP) cell
+    beats the declared one on a money leg, there is no bracket headroom for a predictor to capture on that leg; if one does, the headroom size is the bar Pointer
+    must clear.'
+  search: registered static grid, 2 levers (atr_stop_mult 1.0..3.0 x tp_r 3..6), 19 candidates plus the declared cell, one rule
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+ml_consumer:
+  consumer: ML-BRACKETS-D6
+  decision: 'whether a learned entry bracket (Pointer) is worth building on ada_pullback_2h: it must beat the best static cell this unit finds, or the declared cell
+    if none passes'
+  legs:
+  - ada_pullback_2h
+  book: money
+power:
+  expected_n: 700
+  min_detectable_effect: 0.03
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.2
+  basis: n ESTIMATED ~700 trades for arm B over 2020-07..2026-10 (the 2780 / abab sibling legs held 700-750 trades; this leg has not been counted on this window),
+    replaced by the first run. The bar is materiality plus fold stability, not a significance test; n < 39 grades INDETERMINATE. sd 1.2 R ESTIMATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a pinned window; nothing accrues.
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): intervention judged against the declared setting, entries fixed, net of cost;
+  a pre-registered grid with the multiplicity stated and the bar raised for it.'
+priority: 1
+programme: P2
+question: 'On ada_pullback_2h (declared atr_stop_mult 1.5, tp_r 4.0), 2020-07-01..2026-10-15, six equal calendar folds by entry time, net of the full cost stack:
+  does any of the 19 static (atr_stop_mult x tp_r) cells replace the declared bracket under the registered replace rule (>= +0.03 R/trade, >= 5 of 6 folds, maxDD
+  <= 1.35x)?'
+related:
+- RQ-20261118-04a5-02
+- RQ-20261101-c692-02
+- RQ-20261117-c21d-02
+- RQ-20261119-2780-01
+roadmap:
+- L-ML-LIVE
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 75
+  basis: 'ESTIMATE: 20 arms of one 2h leg over 2330 d; a sibling 21-arm 4h unit (2780-01) was estimated 30-60 min; 2h bars are ~2x the rows. The first run replaces
+    it.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - S10T3=atr_stop_mult=1.0;tp_r=3.0
+  - --arm
+  - S10T4=atr_stop_mult=1.0;tp_r=4.0
+  - --arm
+  - S10T5=atr_stop_mult=1.0;tp_r=5.0
+  - --arm
+  - S10T6=atr_stop_mult=1.0;tp_r=6.0
+  - --arm
+  - S15T3=atr_stop_mult=1.5;tp_r=3.0
+  - --arm
+  - S15T5=atr_stop_mult=1.5;tp_r=5.0
+  - --arm
+  - S15T6=atr_stop_mult=1.5;tp_r=6.0
+  - --arm
+  - S20T3=atr_stop_mult=2.0;tp_r=3.0
+  - --arm
+  - S20T4=atr_stop_mult=2.0;tp_r=4.0
+  - --arm
+  - S20T5=atr_stop_mult=2.0;tp_r=5.0
+  - --arm
+  - S20T6=atr_stop_mult=2.0;tp_r=6.0
+  - --arm
+  - S25T3=atr_stop_mult=2.5;tp_r=3.0
+  - --arm
+  - S25T4=atr_stop_mult=2.5;tp_r=4.0
+  - --arm
+  - S25T5=atr_stop_mult=2.5;tp_r=5.0
+  - --arm
+  - S25T6=atr_stop_mult=2.5;tp_r=6.0
+  - --arm
+  - S30T3=atr_stop_mult=3.0;tp_r=3.0
+  - --arm
+  - S30T4=atr_stop_mult=3.0;tp_r=4.0
+  - --arm
+  - S30T5=atr_stop_mult=3.0;tp_r=5.0
+  - --arm
+  - S30T6=atr_stop_mult=3.0;tp_r=6.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.03'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261122-b18a-03
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261122-b18a-03
+status: queued
+theme: live_strategy
+title: 'D6 Pointer CEILING on ada_pullback_2h: does ANY static entry bracket (atr_stop_mult x tp_r, 19 cells) beat the declared bracket (SL 1.5 ATR / TP 4.0R) net
+  of the full cost stack, held to a registered rule? If the surface is flat, a learned bracket has no headroom on this leg'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'ESTIMATE: governs whether the D6 Pointer build proceeds on a money leg; not a measurement.'
+why_this_matters: 'D6 Pointer (predicted SL/TP at entry) has no stage and two flat reads. This is its static-ceiling baseline on a money leg: it prices the largest
+  bracket gain available WITHOUT a model, so a learned Pointer is only worth building where a static cell already shows headroom. A PASS is a SELECTION (unconfirmed)
+  and a Tier-3 candidate only after its own confirmation; a FAIL closes bracket headroom for this leg on this window, not the family.'
+levers:
+- name: entry_bracket
+  values:
+  - atr_stop_mult 1.0..3.0
+  - tp_r 3..6
+  hypothesised_effect: a different static stop/target cell lifts net R per trade by >= 0.03 on this leg; if none does, the surface is flat

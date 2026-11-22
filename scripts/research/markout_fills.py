@@ -228,7 +228,13 @@ def fetch_bars(symbol: str, start: str, end: str, work: Path) -> tuple:
     return None, []
 
 
-def run(fills_path: Path) -> Dict[str, Any]:
+def slice_rows(rows: List[Dict[str, Any]], slices: Optional[Dict[str, str]]) -> List[Dict[str, Any]]:
+    for k, val in (slices or {}).items():
+        rows = [r for r in rows if str(r.get(k)) == val]
+    return rows
+
+
+def run(fills_path: Path, slices: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     from src.runtime.execution_costs import resolve_fee_bps_roundtrip
     fills = [json.loads(x) for x in fills_path.read_text().splitlines() if x.strip()]
     work = Path(tempfile.mkdtemp(prefix="markout_"))
@@ -241,6 +247,10 @@ def run(fills_path: Path) -> Dict[str, Any]:
         except Exception:  # noqa: BLE001  # allow-silent: an unknown symbol's fee falls back to 0 and is reported per symbol
             fee[sym] = 0.0
     rows = markouts(fills, bars, fee)
+    # --slice KEY=VALUE (D9 real-money read, RQ-20261122-ml18-04): the verdict is graded on the matching rows only; the splits below
+    # are cut from the SAME slice, and fills_total_unsliced records what was dropped. No slice = the a5b3-03 pooled grade, byte-identical.
+    n_unsliced = len(rows)
+    rows = slice_rows(rows, slices)
     v, why, ci, missing = grade(rows)
     split = {}
     for k in ("account", "order_type", "account_class"):
@@ -250,7 +260,7 @@ def run(fills_path: Path) -> Dict[str, Any]:
             "pooled_gap_4h": grouped_boot_ci(rows, "gap_4h_bps"), "pooled_markout_1h": grouped_boot_ci(rows, "markout_1h_bps"),
             "missing_fills": missing, "fills_total": len(rows), "split_gap_1h": split,
             "mid_interval_by_symbol": {s: b[0] for s, b in bars.items()}, "fee_bps_roundtrip_by_symbol": fee,
-            "fills_source": str(fills_path)}
+            "fills_source": str(fills_path), "slices": dict(slices or {}), "fills_total_unsliced": n_unsliced}
 
 
 # ------------------------------------------------------------------------------------------------ self-test
@@ -288,6 +298,10 @@ def self_test() -> int:
     check("grade: n < 200 -> indeterminate", grade(mk(10.0, 100))[0] == "indeterminate")
     rows_m = mk(10.0, 400) + [{"trade": f"x{i}", "gap_1h_bps": None} for i in range(60)]
     check("grade: > 10% missing -> indeterminate (partial)", grade(rows_m)[0] == "indeterminate")
+    sl = slice_rows([{"account_class": "real_money", "order_type": "entry"}, {"account_class": "paper", "order_type": "entry"},
+                     {"account_class": "real_money", "order_type": "stop"}], {"account_class": "real_money"})
+    check("slice_rows keeps only the matching rows; no slice keeps all", len(sl) == 2 and len(slice_rows(sl, None)) == 2
+          and len(slice_rows(sl, {"account_class": "real_money", "order_type": "stop"})) == 1)
     print(f"{len(fails)} failure(s)")
     return 1 if fails else 0
 
@@ -303,6 +317,8 @@ def main(argv=None) -> int:
     for k in ("--fills", "--unit", "--rule-id", "--out"):
         r.add_argument(k, required=True)
     r.add_argument("--registered-at", default="2026-11-18")
+    r.add_argument("--slice", action="append", default=[], metavar="KEY=VALUE",
+                   help="grade only rows with row[KEY] == VALUE (account_class / account / order_type); repeatable")
     a = ap.parse_args(argv)
     if a.self_test:
         return self_test()
@@ -311,7 +327,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd != "run":
         ap.error("export | run | --self-test")
-    res = run(Path(a.fills))
+    slices = dict(x.split("=", 1) for x in a.slice)
+    res = run(Path(a.fills), slices)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     row = {"schema_version": 1, "schema": "markout_fills/1", "research_unit": a.unit, "read_state": "measured" if res["verdict"] != "indeterminate" or res["n"] >= N_MIN else "partial",
