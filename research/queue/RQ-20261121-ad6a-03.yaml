@@ -2,7 +2,7 @@
 id: RQ-20261121-ad6a-03
 title: 'ml-exit-head-donchian-1h FEATURE lever re-read at power: feat_exh and feat_path_only vs the champion on the WIDENED donchian rows corpus, sized to the measured
   paired sd 0.97 R'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -175,3 +175,17 @@ amendments:
   - 'The unit has not run. The corpus build it was blocked on is now unit RQ-20261122-fa22-03 (trainer), enabled by leg:SYMBOL support in m20_exit_head_round.py. The rows path changes from donchian_widened to donchian_widened_fresh because exit_head_fresh_rows.py refuses to publish over a non *_fresh path. requires_result replaces blocked_on.'
   - 'Rule text, thresholds, arms, legs, folds, z and power are NOT edited. The blocked_on clears_when asked for >= 8,000 paired OOS trades: fa22-03 reports per-symbol rows and trades but does not grade n; if the pooled n_oos is below the rule n floors this unit grades INDETERMINATE by its own rule and reports the n still needed.'
 last_dispatched_at: '2026-11-22T11:28:49+00:00'
+grading:
+  attested: RULE-RQ20261121-ad6a-03-EXITHEAD-FEATURES-WIDE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261121-ad6a-03-EXITHEAD-FEATURES-WIDE
+  evidence:
+  - research/results/RQ-20261121-ad6a-03/45016056283.jsonl
+  graded_at: '2026-11-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
