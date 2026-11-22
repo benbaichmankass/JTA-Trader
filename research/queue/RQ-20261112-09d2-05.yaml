@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group C part 2; PI-20261122-SME5WDGR-0004): tradeify_futures_fit.py now maps its read_state to measured/no_data and writes n (the failing run wrote read_state 'complete' and no n, run 43361991285; the run printed verdict fail, population {'MNQ_OR15': 231}). last_dispatched_at cleared; rule unchanged.
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1). ITERATION unit, authored from the written diagnosis of RQ-20261112-09d2-01's FAIL. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-05
 title: 'ITERATION 1 of the Tradeify-futures ORB (fail on proxies): on REAL CME MNQ 5m history, does MNQ_OR15 clear the same Stage-0 bar, deflated for having been picked from 6 cells?'
@@ -93,7 +94,6 @@ run:
   timeout_minutes: 30
   inputs:
     research_unit: RQ-20261112-09d2-05
-last_dispatched_at: '2026-11-13T03:53:49+00:00'
 grading:
   attested: RULE-RQ-20261112-09d2-05
   auto: true

@@ -1,3 +1,4 @@
+# RE-ARMED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group D2; PI-20261122-SME5WDGR-0004): every landed row predates the fix and does not count against the retry cap. Cause fixed: the `arms` shape was mapped by ML-PRIMARY-3 on 2026-11-15 (after the 3 failing runs of 2026-11-01..02); tests/test_ml_entry_v2_run_levers_verdict.py runs it against the committed local result (maps to indeterminate: one arm indeterminate, none wins). last_dispatched_at replaced by rearmed_at; rule unchanged.
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b604-01
 title: 'ENTRY lever 6, calibration: does a reliability remap of the score restore a monotone score-to-outcome relation (the precondition for confidence-scaled sizing)?'
@@ -100,7 +101,7 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
-last_dispatched_at: '2026-11-02T10:50:53+00:00'
+rearmed_at: '2026-11-22T23:40:00+00:00'
 grading:
   attested: RULE-20261101-b604-01
   auto: true

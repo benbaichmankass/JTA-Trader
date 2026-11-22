@@ -75,6 +75,8 @@ run:
   - scripts/research/prop_candidate_gate.py
   - --leg
   - ada_pullback_2h
+  - --days
+  - '2400'
   - --start
   - '2020-10-01'
   - --end
@@ -99,7 +101,7 @@ why_this_matters: 'Operator 2026-10-31 (pipeline PI-20261031-TD4QC5GP-0005, verb
   rosters only until a replacement passes. a4e7-03 is one of four pre-registered candidates graded on its own rule with the batch denominator stated; this unit pre-registers
   its disjoint-window twin (as RQ-20261101-01-e5b1-10 does for a4e7-03) so a candidate PASS is never decided on one window. It runs whatever the verdict of a4e7-03
   is; it changes nothing by itself. Prior: docs/research/prop-replacement-2026-10-30/RESULT.md.'
-last_dispatched_at: '2026-11-01T07:40:11+00:00'
+rearmed_at: '2026-11-22T23:35:00+00:00'  # argv fix: no --days so the 1110 d default fetch began 2023-10-18, after --end 2023-10-12 (empty window); --days 2400 verified to build the ledger (n=32 on e5b1-08, below min_n 88 = the registered INDETERMINATE)
 grading:
   attested: RULE-RQ-20261101e5b110-PROP-CONFIRM
   auto: true

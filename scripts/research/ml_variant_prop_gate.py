@@ -67,6 +67,35 @@ def run_cells(leg: str, led: Path, out: Path, jobs: int, leg_key: str = "ml_entr
         list(ex.map(lambda j: cell(*j), [(a, arm, s) for a in G.SIM for arm in ("ven", "cur") for s in range(1, 6)]))
 
 
+def contract_verdict(res: dict) -> dict:
+    """The research-result contract's verdict.json (scripts/research/script_run.py: verdict in VERDICTS, read_state in READ_STATES,
+    a non-empty population, `n` present) for this gate's own result dict.
+
+    Until this existed the gate wrote only result.json, so a gate that ran to completion and graded FAIL landed as
+    `producer_failed: no verdict.json` (PI-20261122-SME5WDGR-0004, group C; RQ-20261103-001..009 each fired 2-3 times with
+    byte-identical outputs). The mapping is lossless for the decision: PASS -> pass, FAIL -> fail, INDETERMINATE -> indeterminate;
+    `graded` -> measured; `no_variant_ledger` / `n_below_floor` -> no_data (nothing was graded, so nothing is `measured`)."""
+    v = {"PASS": "pass", "FAIL": "fail", "INDETERMINATE": "indeterminate"}.get(str(res.get("verdict")), "indeterminate")
+    graded = res.get("read_state") == "graded"
+    n = res.get("n")
+    firms = res.get("verdict_by_firm") or {}
+    if graded:
+        pop = (f"{res.get('variant')} ledger n={n} ({res.get('from_unit') or res.get('ledger')}); "
+               f"{len(firms)} firms graded under {res.get('rule')}: " + ", ".join(f"{k}={x}" for k, x in firms.items()))
+    else:
+        pop = (f"{res.get('variant')}: NOT GRADED ({res.get('read_state')}); "
+               f"{res.get('missing_piece') or ('n=%s below floor %s' % (n, res.get('floor')))}")
+    out = {"verdict": v, "read_state": "measured" if graded else "no_data", "n": n if n is not None else None,
+           "population": pop, "note": f"{res.get('rule')}: {res.get('verdict')}" + (f" by firm {firms}" if firms else ""),
+           "result_json": "result.json beside this file holds the per-firm cells"}
+    return out
+
+
+def _emit(out: Path, res: dict) -> None:
+    (out / "result.json").write_text(json.dumps(res, indent=1))
+    (out / "verdict.json").write_text(json.dumps(contract_verdict(res), indent=1) + "\n")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--variant", required=True, help="slug, [a-z0-9-] only (no double underscore): names cells and the record")
@@ -90,7 +119,7 @@ def main() -> int:
     if led is None or not led.exists():
         res = {"rule": G.RULE_V3, "variant": a.variant, "from_unit": a.from_unit, "read_state": "no_variant_ledger",
                "verdict": "INDETERMINATE", "missing_piece": MISSING_PIECE}
-        (out / "result.json").write_text(json.dumps(res, indent=1))
+        _emit(out, res)
         print(json.dumps(res))
         return 0
     rows = [json.loads(x) for x in led.read_text().splitlines() if x.strip()]
@@ -99,7 +128,7 @@ def main() -> int:
     if len(rows) < G.N_FLOOR:
         res = {"rule": G.RULE_V3, "variant": a.variant, "ledger": str(led), "read_state": "n_below_floor", "n": len(rows),
                "floor": G.N_FLOOR, "verdict": "INDETERMINATE"}
-        (out / "result.json").write_text(json.dumps(res, indent=1))
+        _emit(out, res)
         print(json.dumps(res))
         return 0
     claim = None
@@ -127,7 +156,7 @@ def main() -> int:
     res["verdict_by_firm"] = {acct: arms["ven"]["v3_verdict"] for acct, arms in res["firms"].items()}
     res["verdict"] = "PASS" if any(v == "PASS" for v in res["verdict_by_firm"].values()) else \
         ("INDETERMINATE" if all(v == "INDETERMINATE" for v in res["verdict_by_firm"].values()) else "FAIL")
-    (out / "result.json").write_text(json.dumps(res, indent=1))
+    _emit(out, res)
     if a.write_record:
         h = res["firms"]["breakout_2"]["ven"]
         rec = {"leg": a.variant.replace("-", "_"), "harness": "ml_variant_prop_gate.py -> prop_ev_sim (path mode) via prop_gate.py",
