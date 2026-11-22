@@ -176,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     if not legs:
         v = {"verdict": "not_applicable", "read_state": "producer_failed", "population": "no tagged legs found", "n": None,
-             "note": f"no --legs-dir / --leg given, or the dir holds no *__tagged.jsonl"}
+             "note": "no --legs-dir / --leg given, or the dir holds no *__tagged.jsonl"}
         (out / "verdict.json").write_text(json.dumps(v, indent=1))
         print(json.dumps(v))
         return 2
