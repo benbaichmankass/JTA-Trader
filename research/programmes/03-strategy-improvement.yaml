@@ -6940,25 +6940,41 @@ two_week_plan:
         step: 'On the RQ-20261106-035 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
           step 2). PLANNED, authored when its input result is read.'
     xrp_pullback_2h:
-      verdict: pass_unconfirmed
-      evidence: 'comms/strategy_evidence/xrp_pullback_2h.json: coverage measured, n 53, net R 6.5558, fidelity faithful, rule pass'
-      state_before: overdue
+      verdict: fail
+      reasoned: 2026-11-23 (lane ITERATION-PLAN-2W-20261123, task 1; CORRECTED same day after the pairwise parity read)
+      evidence: 'Stage-0 comms/strategy_evidence/xrp_pullback_2h.json +6.56 R, n 53 OOS, 2 of 4 folds positive (fold 4 -1.9 R), fee 11 bps; long -4.0 R vs short +10.5
+        R (365 d); ADX 20-30 +10.0 R (n 22), 30-40 -2.7 R (n 13), >=40 -0.7 R (n 18). Live, price-return basis (journal exit vs entry, independent of the stop): bybit_2
+        n20 sum -41.6 percent, 0 TP; bybit_portfolio n16 -31.2 percent, 0 TP; bybit_1 demo n31 +7.8 percent, 4 TP. The earlier "+33.6 R demo" used the journaled stop,
+        which live review tightened on winners (e.g. 0.51 percent vs 4.25 percent on the 2026-10-09 twin), so it was an R-basis artifact.'
+      diagnosis: 'Pairwise parity read over 25 packages shared by bybit_1 and bybit_2: entry price, SL and TP as placed match (entry within 0.1 percent, TP at the
+        9.9 percent cap on both); no execution-price or TP-placement defect. Divergence is selection and exit mechanics: (a) bybit_1 took 17 packages bybit_2 never
+        did (+20.2 percent, 3 of the 4 demo TPs); bybit_2 left the roster 2026-11-06 (operator popup PROD-LEGS-DSR-DECISION, DSR fails), and 2026-09-19 has no bybit_2
+        package (cause not established); (b) on 14 paired closes b1 sums -12.4 percent, b2 -26.4 percent: b2 rides to SL (13 of 20) while the demo exits through reconciler_filled
+        and intent_reduce, plus one pair where b1 reached TP (+9.8 percent, 231 h) and b2 was reduced to zero in the same hour. The live TP rate is the open question:
+        1 TP in 14 paired packages vs 30 percent in Stage-0 (16 of 53). Ranked cause now: harness TP-hit rate vs live path (fidelity of the 9.9 percent cap TP) and
+        exit-mechanics differences, then regime; execution is not the cause.'
       lever_untested:
+      - regime_gating
       - timeframe
       - symbol_set
-      lever_thin:
       - sizing_vs_cost
       w2026_11_24:
-        type: unit
-        owner: unit
-        step: 'Run/grade queued RQ-20261106-036 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
-          used for selection, then a Tier-3 proposal to the manager.'
+        type: design
+        owner: lane
+        step: 'Row IPW-XRP-PULLBACK-PARITY test 1 (unchanged, now the TP-hit-rate read): backtest_fidelity_calibrate.py on the trainer, live closes of bybit_2 + bybit_portfolio
+          + bybit_1 vs harness trades over 2026-06-19..2026-11-22, --stratify direction, price-return basis for R. Registered rule on the row. The leg is already
+          off real money (roster removal 2026-11-06), so no demotion proposal is needed; the question is whether harness evidence for this leg is trusted. Needs trainer-resident
+          DBs: a build-and-run.'
       w2026_12_01:
         type: waiting
         owner: unit
-        waits_on: RQ-20261106-036
-        step: 'On the RQ-20261106-036 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
-          step 2). PLANNED, authored when its input result is read.'
+        step: 'Branch on test 1. HARNESS TP RATE OVERSTATED: harness evidence for this leg is a lead only; rebuild the TP/fill model (new family) and re-score on
+          the demo floor. HARNESS REPRODUCES THE LOSS: regime/design; author the disjoint-window confirmation of the ADX ceiling (ae17-04) and DI filter (3a84-01)
+          on the exit_lever_ablation template (--leg xrp_pullback_2h). Demo book (bybit_1) keeps gathering mechanics data. PLANNED, not authored: its input is the
+          parity result.'
+        waits_on: IPW-XRP-PULLBACK-PARITY test 1
+      depends_on: IPW-XRP-PULLBACK-PARITY (checklist row, trainer data)
+      state_before: overdue
     tsmom-crypto:
       verdict: fail
       evidence: 'RQ-20261101-58e4-01: loss is the SHORT side (-0.13 vs long +0.74) and reversal months; funding ~5x fees. Untested: regime gate, short-side funding

@@ -2444,33 +2444,34 @@ two_week_plan:
   subjects:
     ml-entry:
       verdict: fail
-      evidence: RQ-20261101-c692-01 PASS (+0.0073 R/decision, n=11,240); then the v2 feature-family ablation RQ-20261101-fs01-01 FAILED 2026-11-01 (adding 9 pure-noise
-        columns costs -0.…
-      state_before: covered
+      reasoned: 2026-11-23 (lane ITERATION-PLAN-2W-20261123, task 1; replaces the generated entry)
+      evidence: 'Live model ml-decision-entry-v1r20261122 (PR 28130, advisory, serves every ml_entry consumer). Grade window 2026-11-08..11-21 (comms/research/ml_entry_grade/45021344426):
+        +0.1457 R/decision, n 434, but by side long n 220 -0.526 R, short n 214 +0.836 R (served model: long n 184 -0.606, short n 215 +0.694). Old model live on
+        bybit_2 n51 (journal basis): sum R -6.0; long n30 -19.9 R, short n21 +13.9 R; sl 23 trades -24.7 R, live_review_close 15 trades +6.6 R; first 10 closes +8.3
+        R, last 10 -6.1 R.'
+      diagnosis: 'DESIGN or REGIME, not noise: the long deficit is about 7 standard errors on the graded window (se ~0.076) and has the same sign in two consecutive
+        models and in live; shorts carry the aggregate. The evidence cannot say whether it is persistent (label or features favour shorts) or specific to the Nov-2026
+        downtrend. Cost is not the cause (~0.06 R of ~0.20 R gross). Power is not the problem on the graded window; the dev-fold question has never been read by side.'
       lever_untested:
-      - features
-      - labels
-      - recipe
       - universe
       - horizon
       - threshold
       - calibration
-      lever_thin: []
       w2026_11_24:
-        type: unit
-        owner: unit
-        step: Run/grade queued RQ-20261101-b610-01, RQ-20261101-b620-01, RQ-20261101-b626-01 (+1 more) under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48.
-          diagnose the fail (design / power / cost / regime / harness / idea) before any retirement view.
-        also_blocked_waiting:
-        - RQ-20261101-b603-01
-        - RQ-20261101-b605-01
-        - RQ-20261101-b609-01
+        type: design
+        owner: lane
+        step: 'Row IPW-ML-ENTRY-SIDE-SPLIT build: add a by-side-by-fold report to the ml_decision_entry grade harness on the frozen model (dev folds 2022..2025 plus
+          held-out), same cost stack (fee 11 bps, slippage 3, funding 1 bps/8h). First-20 check pre-registered on the row: first 20 real-money closes under v1r20261122,
+          trigger sum R <= -6 R or long side n >= 10 with sum R <= -5 R => Tier-3 demotion-to-shadow proposal (n=20 detects a collapse, not the +0.146 R edge).'
       w2026_12_01:
         type: waiting
         owner: unit
-        waits_on: RQ-20261101-b610-01
-        step: 'On the RQ-20261101-b610-01 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
-          step 2). PLANNED, authored when its input result is read.'
+        step: 'Author the side-gate unit from the by-fold read: short-only (or long only with 4h trend aligned) vs both; PASS iff gated beats both by >= 0.05 R/decision
+          with clustered t >= 2 on dev folds, held-out read deflated per PLANNING 1d. Persistent long deficit => next family is a label rebuild (side-neutral target);
+          regime-specific => the gate is a regime lever, not a model change. PLANNED: its input is the build.'
+        waits_on: IPW-ML-ENTRY-SIDE-SPLIT build
+      depends_on: IPW-ML-ENTRY-SIDE-SPLIT (checklist row, harness change)
+      state_before: covered
     ml-entry-eq-struct:
       verdict: pass_unconfirmed
       evidence: RQ-20261107-98e3-06 PASS (+0.49 R/trade, n 207, confirm 2025-07-15..2026-10-31, third read of the window, month-clustered t ~2.06, 75 of 207 trades
