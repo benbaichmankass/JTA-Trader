@@ -75,3 +75,11 @@ def test_limit_entry_is_unfilled_when_price_never_pulls_back_and_filled_when_it_
     dip = [100.0, 99.6, 99.9, 100.6, 101.2, 101.6, 101.8, 101.8, 101.8, 101.8, 101.8, 101.8]
     f = _arm(_grade(dip, arm_set="extended"), "ext_limit_0.25atr", "ext_arms")
     assert f["filled"] is True and f["net_r"] is not None
+
+
+def test_entry_arms_keep_the_bracket_distances_so_r_cannot_blow_up():
+    # price gaps DOWN to just above the original stop at the delayed open: with a fixed stop PRICE the risk distance would collapse to 0.02
+    # and R would explode; with fixed distances R stays bounded in the original unit.
+    closes = [100.0, 99.02, 99.02, 99.5, 100.0, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5]
+    d1 = _arm(_grade(closes, arm_set="extended"), "ext_delay_1bar", "ext_arms")
+    assert d1["filled"] is True and abs(d1["net_r"]) < 5.0
