@@ -41,7 +41,7 @@ Source for status and counts: `roadmap_map.py --report` (36 milestones: 23 activ
 
 ### G4 AI trader
 - **L-ML-LIVE** (target 2026-11-11, past) — 99 / 52. **Moving, not at its done-condition**: ml_entry new model promoted to real money 11-23 (#28130, HELD); `ML-LIVE-PARITY-ML-LEGS`, `ML-EXITHEAD-ROWS-KAGGLE`, `ML-WEEK-PLAN-1119` in flight. Console ML plan status: 175 plan items, 111 flagged (STALE / CLOSED-OPEN / OPEN-DONE).
-- **L-DESK-V1** (target 2026-11-11, past) — 1 / 0. **Unclear**: desk decision mirrors land daily (about 40 commits 11-19..11-22), but the milestone has one live row and the done-condition is not restated; I did not read `comms/desk/`. Unverified.
+- **L-DESK-V1** (target 2026-11-11, past) — 1 / 0. **Unclear**: desk decision mirrors land daily (commits titled "desk: mirror decisions" on 11-19 through 11-22, count not taken), but the milestone has one live row and the done-condition is not restated; I did not read `comms/desk/`. Unverified.
 - **L-DESK** — 63 / 7. **Blocked**: seven later-phase DESK-19..26 rows blocked on DESK-11 / DESK-16 / DESK-17 / CJ-2 / CJ-4.
 - **L-REGIME** — 14 / 7. **Stalled**: next field (2026-11-04) asked for REGIME-UNITS-W45; plan items ML-R1, R5, R6 are STALE or dropped.
 - **M25** — 37 / 8. **Moving**: producers for demoted heads outstanding; `CJ-5-STUDENT-MANIFESTS` waits on `CJ-LABEL-ALTERNATIVE`.
@@ -53,7 +53,7 @@ Source for status and counts: `roadmap_map.py --report` (36 milestones: 23 activ
 - Closed/retired: M26, M14, M9.
 
 ### G5 Learning machine
-- **L-PROGRAMMES** — 55 / 7. **Moving but starved of authoring**: across the 8 programme files, 130 of 473 nodes `needs_authoring`, 46 are `authoring_closed`.
+- **L-PROGRAMMES** — 55 / 7. **Moving but starved of authoring**: across the 8 programme files, 130 of 473 nodes `needs_authoring`, 42 are `authoring_closed`.
 - **M40** — 11 / 0. **Degraded**: PI-20261118-JFWRQYOV-0001 (runner ~5% utilised), EFILLW47-0002/0003 (runtime estimate overstated ~8×; kaggle_cpu route lands `producer_failed`).
 - **L-OPS** — 210 / 17. **Overloaded**: 10 in-flight/blocked rows; the pipeline reads **806 due items with a ROUTING ALARM** (oldest unrouted 8d, PI-20261115-LRP-A6B86637).
 
