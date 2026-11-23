@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22 cycle 5: RQ-20261118-abab-17 result 45053810663 (producer_failed) vs abab-16 result 45053808317 (measured), comms/research/utilization/45053527299.json",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys; [print(r['id'],r['outcome'],r.get('backend')) for r in json.load(sys.stdin)['decisions'] if r['outcome']!='not_due']\"   # and read comms/research/utilization/<run>.json 'dispatched' for the backend each cpu_light unit actually got"
+  },
+  "owner": "unassigned (filed by QUEUE-FILL-STANDING-W48)",
+  "state": "queued",
+  "what": "KAGGLE ROUTE ANOMALY STRANDS A cpu_light UNIT: RQ-20261118-abab-17 (fade skip-hours, compute cpu_light, cadence once) was dispatched in run 45053527299 at 18:12Z to backend `kaggle` (the GPU slot) while its sibling RQ-20261118-abab-16 (same class, same harness, same run) went to `kaggle_cpu` and MEASURED. abab-17's Kaggle kernel ran ~72 s (quota file GPU used 0.02 h) and landed result 45053810663 with read_state producer_failed, 'no run-manifest.json', NEVER MEASURED. A producer_failed row is not a result (queue_grade.py: later measured row supersedes it) but cadence once + last_dispatched_at means the dispatcher will not run it again: the unit is stranded until its stamp is cleared. UNKNOWN (not established here): why the dispatcher placed a cpu_light unit on `kaggle` when `kaggle_cpu` was full, and why that kernel died. RISK: the 4 units unblocked in #28213 (abab-18/19/45/46, all cpu_light, one kaggle_cpu slot) could spill the same way and strand. population: 2 units in run 45053527299; 1 of 2 on `kaggle` failed. NEXT: read the Kaggle kernel log of run 45053810663 / the dispatcher's backend choice for cpu_light when kaggle_cpu is full; then clear abab-17's last_dispatched_at (or author a successor) so it re-runs on a backend that works."
+}

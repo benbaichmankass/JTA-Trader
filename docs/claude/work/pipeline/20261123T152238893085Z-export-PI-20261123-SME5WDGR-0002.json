@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 7, manager request; population: 11 once-cadence units in the 77 overdue ids whose latest result row is measured, 9 of which carry grading.needs_review true",
+    "rerun": "python3 - <<'PY'\nimport yaml,glob\nfor f in sorted(glob.glob('research/queue/RQ-20261101-*.yaml')):\n    u=yaml.safe_load(open(f)); g=u.get('grading') or {}\n    if g.get('needs_review') and u.get('status')=='queued': print(u['id'])\nPY"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "REVIEW READ OWED: 9 once-cadence units were mechanically graded 2026-11-12 with grading.needs_review true and have not had the review read: RQ-20261101-78fc-20, RQ-20261101-78fc-30, RQ-20261101-78fc-34, RQ-20261101-78fc-44, RQ-20261101-78fc-46, RQ-20261101-78fc-52, RQ-20261101-78fc-53, RQ-20261101-a508-01, RQ-20261101-b604-01. All have a measured result row and read status queued. Note that 78fc-20, 78fc-44 and others were re-stamped by 2026-11-22/23 re-runs, and a508-01 and b604-01 landed NEWER rows (no_action_warranted and indeterminate) after the 11-12 grading, so those two need a re-grade as well as a review read. Two more once-units in the same overdue set, RQ-20261101-b620-01 (pass) and RQ-20261101-b626-01 (fail), were graded 2026-11-07 without needs_review and are not in this item. Correction to the cycle-7 message to the manager: 9 carry needs_review true, not 11. No build; this is a read."
+}

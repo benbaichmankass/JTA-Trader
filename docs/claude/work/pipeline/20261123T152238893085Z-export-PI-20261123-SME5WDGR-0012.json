@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "an owner record exists for each of the seven units (retirement with the lever-exhaustion basis, or an explicit keep-blocked reason)",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0012",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the blocked iteration units",
+    "rerun": "ls research/results | grep -E 'd507|fs05|fs06'; grep -n 'wiring: manual-only' scripts/research/ml_entry_v2_run.py; read RQ-20261119-a10d-01 grading verdict"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[owner: ML programme owner (retire by record or restate the blocker)] Stale or superseded blockers. (1) d507-01 / fs05-01 / fs06-01: the builds HAVE landed (ml_entry_recipe.py; ml_entry_v2_run.py modes recipe, labels, ensemble; the runner header says wiring is manual-only until held PR #22158), and the questions of d507-01 and b607-01 cite their findings (so they were run by hand and the chain was superseded by b604/b606/b607, landed). Re-arming them would repeat answered questions: retire by record, do not re-arm. b605-01 waits on 'd507-01 has a result record on main' which does not exist as a file. (2) a10d-02 needs a10d-01 graded PASS but a10d-01 is graded FAIL, so the condition can never be met: retire by record or restate. (3) b609-01: manager ruling 2026-11-23, stays blocked (its W1 window was spent by b608-01); (4) 15c9-01 was dropped by the manager 2026-11-05. Units: RQ-20261101-d507-01, RQ-20261101-fs05-01, RQ-20261101-fs06-01, RQ-20261101-b605-01, RQ-20261119-a10d-02, RQ-20261101-b609-01, RQ-20261105-15c9-01. Population: the 41 research/queue/blocked/*.yaml units that carry an iteration block, read 2026-11-23 on origin/main; 0 of 41 can be re-armed mechanically today (cause verified for each in this item)."
+}

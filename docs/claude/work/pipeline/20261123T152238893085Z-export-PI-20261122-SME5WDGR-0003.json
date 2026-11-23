@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22 cycle 5, while diagnosing RQ-20261118-abab-17 for the manager",
+    "rerun": "python3 - <<'E'\nimport yaml,glob,json,os\nn=0\nfor f in glob.glob('research/queue/RQ-*.yaml'):\n    y=yaml.safe_load(open(f))\n    if y.get('cadence')!='once' or y.get('status')!='queued': continue\n    d='research/results/'+y['id']\n    if not os.path.isdir(d): continue\n    st=[json.loads(open(d+'/'+x).readline()).get('read_state') for x in os.listdir(d)]\n    n+= bool(st) and all(s=='producer_failed' for s in st)\nprint(n)\nE\n# expect 0 once triaged; was 73 on 2026-11-22"
+  },
+  "owner": "unassigned (filed by QUEUE-FILL-STANDING-W48)",
+  "state": "queued",
+  "what": "STRANDED once-UNITS: a `cadence: once` unit whose only result rows are `producer_failed` is never re-run, because the dispatch stamp (last_dispatched_at) reads as 'already ran' while queue_grade.py correctly treats a producer_failed row as 'we looked and it broke', not a result. MEASURED 2026-11-22 over research/queue/RQ-*.yaml + research/results/: 100 cadence-once units have ONLY producer_failed rows (status queued 73, done 17, retired 10); the 73 queued ones are stranded (they hold a stamp and will not dispatch) and are the largest pool of work that exists but is not runnable (queue floor is 25; dispatcher shows ~1 runnable). Examples: RQ-20261118-abab-17 (kernel exit ~72 s, no manifest), RQ-20261101-78fc-16/20/30/34/37/44/46/52/53/54 (cpu_light), RQ-20261101-b604-01 / b607-01 / b608-01 / a508-01 (cpu_long). Many failed for deterministic reasons (harness gaps, argparse), so a blind re-run would fail again. NEXT: group the 73 by failure cause (read each verdict/log under comms/research/<unit>/<run>/), re-queue (clear last_dispatched_at) the groups whose cause is now fixed, retire or block the rest with a stated reason; consider a dispatcher rule that re-opens a once-unit after a producer_failed-only history (bounded retries, diagnosis first), not an unconditional retry."
+}

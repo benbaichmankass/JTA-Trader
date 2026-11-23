@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 7, manager ruling on abab-08/09; logs comms/research/RQ-20261118-abab-08/44636002299 and RQ-20261118-abab-09/44636006235",
+    "rerun": "grep -h '^\\[TA20\\]' comms/research/RQ-20261118-abab-08/44636002299/logs/cmd-0.log | tr ' ' '\\n' | grep -c -e '--trail-adx-tight-mult'   # 0 = the tight-mult is still missing from the arm argv"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "abab-08 and abab-09 (iwm_trend_long_1d, qld_trend_long_1d EXIT family) stay HELD because arm TA20 is not runnable as registered and the unit's own rule text does not make the fix unambiguous. Read 2026-11-23 from the landed argv (comms/research/RQ-20261118-abab-08/44636002299/logs/cmd-0.log): the arm passes `--trail-adx-below=20` and no `--trail-adx-tight-mult`; backtest_trend.py refuses a half-declared momentum_trail (`--trail-adx-tight-mult needs --trail-adx-below and/or --trail-adx-falling-bars (and vice versa)`) and exits 2. The registered rule text and `question` state only `TA20: --trail-adx-below=20`; no tight-mult value appears anywhere in either unit. Choosing one now, after the other arms have landed rows, would be post-hoc, so no value was chosen (manager ruling 2026-11-23). The only candidate value on record is 2.5 from a DIFFERENT unit (RQ-20261016-005, eth 4h M1), which is a precedent, not this unit's registration. A SECOND, independent failure is in the same log: the harness was handed a 1h CSV for a 1d leg (`data source [explicit] ... timeframe=1h`), the 'F' cause from the stranded-pool triage; fixing the arm alone would not make these runnable. Next action for whoever owns it: decide the tight-mult for TA20 BEFORE any run (a value pre-registered in a superseding unit, with the precedent cited and the choice made by the manager, not read off a result), and fix the 1h-vs-1d data handoff, then re-arm. Both units have also been moved to the registered grade in #28296 but are deliberately not re-armed. Owner item for the wider needs_review cluster: PI-20261121-UGKSAUWU-0001 (due 11-27). || UPDATE 2026-11-23: manager ruling (option b): the TA20 arm (--trail-adx-below=20 with no tight mult) was DROPPED from abab-05/06/07/10 as a recorded pre-run grid correction (TA20 was unrunnable as registered: half-declared momentum_trail, refused by momentum_flag_errors, inert on fade's exit-style far). Thursday decision to add: a properly declared momentum-trail arm (a tight mult REGISTERED BEFORE ANY RUN, per leg, on a leg whose exit style has a trail) becomes its own new unit; do not re-add TA20 to those four units. abab-08/09's TA20 arm has the same defect and is still held."
+}

@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "abab-05/06/07/10/11/12/14 each have a measured landed row graded by the mechanical grader, and abab-15 is either given a per-leg signal-filter hook or retired by record with the reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0008",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the blocked iteration units",
+    "rerun": "python3 - <<< for each of the 8 blocked unit files, take the flags in run.command arms and test them against add_argument in the harness script (the check in the lane's 2026-11-23 triage)"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[owner: manager decision per flag (PI-20261119-FILLW47B-0003)] Harness lever-flag parity is still NOT built: re-checked today against each harness's declared arguments, every flag these units pass is still missing (fade: --be-floor-r --stale-exit-bars --trail-adx-below --vol-skip-*; ict_scalp: --be-floor-r --trail-adx-below; squeeze: --trail-adx-below --adx-max --vol-skip-*; fvg_range and turtle_soup: --vol-skip-* / --adx-max). They are builds (default byte-identical, golden test), not re-arms; the existing item says decide per flag whether the lever is live-expressible before building. Also abab-05/06/10/11/12/14/15 carry --grade sweep against a replace rule (same mismatch fixed on others in #28294), to correct when unblocking. Units: RQ-20261118-abab-05/06/07/10/11/12/14/15. Population: the 41 research/queue/blocked/*.yaml units that carry an iteration block, read 2026-11-23 on origin/main; 0 of 41 can be re-armed mechanically today (cause verified for each in this item). || UPDATE 2026-11-23 after #28371 merged (merged != observed): harness lever-flag parity is BUILT and merged for abab-05/06/07/10/11/12/14 (vol-skip on fade/fvg_range/squeeze, adx-max on squeeze, stale-exit/be-floor on fade, be-floor on ict_scalp; defaults byte-identical, tests fail without the change; the TA20 arm was removed from 05/06/07/10 by the manager's 2026-11-23 ruling, and a momentum-trail unit with a registered tight mult is PI-20261123-SME5WDGR-0004's Thursday decision). REMAINING: (1) abab-15 turtle_soup stays blocked: the live unit expresses neither --adx-max nor vol-skip and backtest_system has no per-leg signal-filter hook (a post-hoc trade filter would change the position sequence), so it needs an engine-hook decision or a retirement by record; (2) OBSERVATION: each of the 7 unblocked units landing a measured row on the runner (abab-06's full 527k-bar window never completed locally; it has a 330-minute limit and its sibling RQ-20261105-028 landed 3 times). Local runs were not the record."
+}

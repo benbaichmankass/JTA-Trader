@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22, at the manager's request (cross-session message 20:03Z) after diagnosing stuck automation PR #28063",
+    "rerun": "python3 scripts/ops/soak_report.py && git diff -U0 -- docs/claude/work/SOAK-REPORT.md > /tmp/soak.diff && python3 scripts/ci/check_stated_population.py /tmp/soak.diff   # exits 0 once the generator no longer emits an unstated percentage; (exact soak_report.py invocation: read its --help, it may need --write)"
+  },
+  "owner": "unassigned (file by QUEUE-FILL-STANDING-W48; due after the 11-25 reset)",
+  "state": "queued",
+  "what": "SOAK-REPORT GENERATOR STRANDS SOAK-GRADE AUTOMATION PRs: scripts/ops/soak_report.py echoes checklist-row text into docs/claude/work/SOAK-REPORT.md verbatim, so a bare percentage in a row note trips stated-population-guard (scripts/ci/check_stated_population.py) on the generated diff and the soak-book-grade-weekly automation PR cannot land. MEASURED 2026-11-22: automation PR #28063 (run 44981415778, head 1314d389) failed guards at 03:55Z on SOAK-REPORT.md:129 (CI-SCOPE-LAZY-EDGES row, '73% of PR heads ...') and :437 (UI-LIVE-CHART-FRAMING row, '+5% each side'); population: that one PR, other weekly grades 11-01/08/15 landed. It sat open 16h and went ~1,500 files stale; its result was re-landed by hand as PR #28201 (result files only). FIX on the generator side: make soak_report.py neutralise or annotate unstated percentages it echoes (strip them, or append '<!-- population-ok: echoed checklist-row text -->'), then regenerate. Not a gate change: the guard stays as is."
+}

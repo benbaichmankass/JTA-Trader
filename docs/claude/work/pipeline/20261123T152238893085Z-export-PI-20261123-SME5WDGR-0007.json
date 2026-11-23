@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the ML programme owner has recorded a retirement (or an explicit keep-blocked reason) for RQ-20261101-b609-01 in research/queue/blocked/, and its blocked_on no longer points at the b608 stack as an open dependency",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager ruling on b609-01",
+    "rerun": "read research/queue/blocked/RQ-20261101-b609-01.yaml blocked_on/clears_when; read the b608-01 landed result (sealed W1 -0.1161 n=320 vs v1 -0.0405; forward -0.0443 n=948 vs v1 +0.0245)"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "RQ-20261101-b609-01 is blocked on the b608 winning stack, which is now technically available, but b608-01's stack already failed its sealed W1 read and its forward read, so unblocking b609-01 would re-read a spent W1 window. Manager ruling 2026-11-23: leave it blocked; the retirement is for the ML programme owner to record, not this lane. Needs a retirement record (with the lever-exhaustion basis) or an explicit keep-blocked reason."
+}

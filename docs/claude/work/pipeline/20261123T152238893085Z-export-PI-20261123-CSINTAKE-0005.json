@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 8098's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-CSINTAKE-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8098 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8098"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 8098 (alpaca_paper/ml_entry IWM, exit_reason='max_hold'): bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm; exit_journaled: exit_reason='max_hold', no exit price; fill_and_fees: pnl or fee not recorded"
+}
