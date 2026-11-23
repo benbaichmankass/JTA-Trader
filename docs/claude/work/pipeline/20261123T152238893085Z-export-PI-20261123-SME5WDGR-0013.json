@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each blocker is built, supplied or its unit retired by record with the reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0013",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the blocked iteration units",
+    "rerun": "grep the named script for the missing flag/function; read each unit's blocked_on"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[owner: by blocker (ML harness / data-infra / edge / manager)] Builds and data gaps, each verified today: b603-01 horizon/cadence relabel arms absent (levers map says cadence 'untested'); 6d44-01 V2 ablation harness absent; 617c-04 alpaca_live_book.py declares no --recipe (its other blocker, c21d-06, has now landed FAIL); f5b4-01 ledger emission landed but the unit has no run block (needs a command authored); b3aa-06 desk_event_entry_replay.py has no --sl-atr (a banned-orphan driver family: not built here); 62e3-05 needs SPY option chain data plus --priced-straddle mode; 78fc-16/37 TQQQ/QLD: the Dukascopy lane refuses by design (daily-reset ETFs), needs a source holding the real instrument; d1f3-03 needs broker-sourced costs on >=95% of real rows (cost-levers-live-legs is in the orphan-driver list); abab-54 is blocked by uso_trend_1h long_only in config (Tier-3, not touched); ef40-05/06 wait on a positive-net D3 entry model (D3 is a no-build subject). Units: RQ-20261101-b603-01, RQ-20261113-6d44-01, RQ-20261117-617c-04, RQ-20261117-f5b4-01, RQ-20261117-b3aa-06, RQ-20261113-62e3-05, RQ-20261101-78fc-16, -37, RQ-20261101-d1f3-03, RQ-20261118-abab-54, RQ-20261119-ef40-05, -06. Population: the 41 research/queue/blocked/*.yaml units that carry an iteration block, read 2026-11-23 on origin/main; 0 of 41 can be re-armed mechanically today (cause verified for each in this item). || UPDATE 2026-11-23: RQ-20261101-78fc-16 (TQQQ) and -37 (QLD) are DONE: unblocked in #28372 (merged) by --non-crypto-source auto (the real-instrument yfinance lane; the runner installs yfinance==1.7.0 and the candle dataset carries yahoo__TQQQ__1d / yahoo__QLD__1d) plus rearmed_at; remaining observation is their first landed rows. The other units in this item are unchanged (still blocked, none a mechanical fix)."
+}

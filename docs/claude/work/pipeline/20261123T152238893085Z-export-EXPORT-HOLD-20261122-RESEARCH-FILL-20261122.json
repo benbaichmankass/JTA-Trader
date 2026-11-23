@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261122-RESEARCH-FILL-20261122",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-24",
+    "how_to_check": "the next export's summary no longer lists RESEARCH-FILL-20261122 as held",
+    "what": "RESEARCH-FILL-20261122 lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45024327810; held item RESEARCH-FILL-20261122",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [RESEARCH-FILL-20261122] held back from the work-store export of 2026-11-22: the store row fails the guard row check -- checklist row RESEARCH-FILL-20261122 enters landed_unproven with no soak contract (add a contract with id 'RESEARCH-FILL-20261122' to docs/claude/work/SOAKS.json: the mechanical checklist and n_needed <= 2) — or, for a one-shot check, an `observation: {what, how_to_check, due_by}` on the row."
+}

@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0005",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 8, manager request; evidence comms/research/RQ-20261118-abab-25 (registered-grade run 45109597191) and config/strategies.yaml ict_scalp_5m session_filter_enabled",
+    "rerun": "python3 - <<'PY'\nimport json\ns=json.load(open('comms/research/RQ-20261118-abab-25/45109597191/summary.json'))['arms']\nprint(s['A']['n'],s['A']['net_r'],s['S_ASIA']['n'],s['S_ASIA']['net_r'])\nPY\n# identical A and S_ASIA = the lever is a no-op because the baseline already carries it"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "PROPOSAL (manager asked, due 11-26, NOT a CI check, no gate): A-relative research units confound their own baseline when the leg's config changes after registration, because arm A is defined as 'the leg as declared in config/strategies.yaml' and is read at RUN time. Measured instance 2026-11-23: RQ-20261118-abab-25 (ict_scalp_5m, session lever S_ASIA = --skip-hours=0..7). config/strategies.yaml now carries session_filter_enabled true, hours 8-24 (the Tier-3 demo-floor proposal this unit's own earlier result supported), so on the registered-grade re-run A = the leg WITH the filter: n 455 (was 670), net -146.97, and the S_ASIA arm is byte-identical to A (n 455, net -146.97, delta 0.0); only S_LATE passes (skip 20-23 on top: -119.62 vs -146.97, 6/6 folds). The re-run therefore cannot confirm or overturn the S_ASIA lever; abab-24 (LONG/SHORT vs the same moved A) shares the moved baseline (n(A) 455 vs 670 at its first run). Any A-relative unit on a leg whose config changes between registration and run has the same exposure, and the grader records the verdict without a baseline-drift flag. Proposal for the manager: pin A to a registered config snapshot (the leg's config fields hashed at registration, recorded in the unit and in the result), so a later config change cannot move the baseline; at minimum have the result record the A config hash so a drifted baseline is visible in the row. Open question: how many other legs changed config after units on them were registered (a diff of strategies.yaml history against research/queue registration dates would size it)."
+}

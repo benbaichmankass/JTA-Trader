@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-DLMJKGH1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ITERATION-PLAN-2W-20261123 pairwise parity read, 2026-11-23 (checklist row IPW-XRP-PULLBACK-PARITY; manager ask 11:23Z)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000&offset=0' (page offsets for live closes by strategy and account), against the TP share in comms/strategy_evidence/runs/*__bt.json"
+  },
+  "state": "queued",
+  "what": "Live TP-hit rate vs Stage-0 harness TP-hit rate, pooled across legs. xrp_pullback_2h is one instance: 1 TP in 14 paired live packages (bybit_1/bybit_2) and 4 of 52 pooled live closes vs 16 of 53 in its Stage-0 record (P of <=4 at 0.30 is 1e-4); entry, SL and TP placement match across books, so it is not an execution-price defect there. Question for every rostered leg: does the live book hit take-profit at the harness rate, on the same price-return basis (not R on a journaled stop, which live review tightens)? Output: a per-leg table of live TP share vs Stage-0 TP share with n on both sides, and the legs where live is below the harness beyond chance. A gap across legs means the harness TP model is not trusted for promotion evidence; a gap on one leg is that leg's problem."
+}

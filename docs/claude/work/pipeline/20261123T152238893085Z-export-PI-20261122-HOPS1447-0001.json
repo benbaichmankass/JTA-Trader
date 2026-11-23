@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261122-HOPS1447-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261122-1447",
+    "rerun": "python3 scripts/research/iteration_orphans.py --json  # orphans still listed => block still open; python3 scripts/ops/pipeline.py --due"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 11-22 14:47Z] ML decision slots WITHOUT a next-iteration unit authored this pass (budget; each needs a diagnosis-led unit and, where noted, a driver): D3 Foxhound (ml_entry_v2 fail, RQ-20261113-6d44-01 OVERDUE; recipe/target is the open question per ML-ROADMAP-MECE D3: needs ML-RECIPE / ML-FS-LABELS units, not more serving); D4 Beagle (RQ-20261116-cc86-02 EV-challenger forward read is queued, never run; waits on logged live TD packages = live mechanics; PB2H meta-label failed: author the next head from the cost-net rebuild ML-P1-COSTNET-REBUILD); D6 Pointer (no ML at any stage; cheapest first = Labrador-1b TP-grid scored at bar 0, proposal P6: needs tm_bench.py entry-state mode run as a unit); D7 Labrador in-trade (only RQ-20261111-9b09-01 LTR lock-in queued; ltr-* classes owned by LTR-CLASS-GRADE); D9 Whippet (build: fill-replay on trade_journal.db order rows; VM-resident; ranked after D5 census). ALSO: kaggle_cpu has no diagnosed unit this pass -- every open diagnosis needs internet (runner) or trainer-resident rows; published market_raw is 1h BTC/ETH/SOL from 2021-11 only (the fa22-01 kaggle_cpu exit-head unit ran: INDETERMINATE n 909, d +0.009). fe57-02 (blocked, desk 1-minute information ceiling): its owner row DESK-EDGE-PROGRAM is done; the lever is a single run mode in scripts/research/desk_edge_1m.py chaining fetch+build+run with a test (Tier 1), then git mv to research/queue/. Authored this pass instead: 0104-01 (D8 supersede fa22-02), 0104-07 (D2), 0104-08 (D5), plus qqq/spy/mgc/xsec leg iterations."
+}
