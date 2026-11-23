@@ -26,8 +26,8 @@ def test_frequency_counts_closed_packages_only_and_annualises():
 
 
 def test_robust_arm_is_the_highest_lower_bound_not_the_highest_mean():
-    # A: steady +0.10 every trade; B: mean +0.20 but half the trades -0.6 / half +1.0 => wide CI
-    rows = [_r(i, {"A": 0.10, "B": (1.0 if i % 2 else -0.6)}) for i in range(1200)]
+    # A: steady +0.10 every trade; B: mean +0.20 but half the trades -3.6 / half +4.0 => a CI whose lower bound is below A's
+    rows = [_r(i, {"A": 0.10, "B": (4.0 if i % 2 else -3.6)}) for i in range(1200)]
     assert ll.robust_arm(rows)["arm"] == "A"
 
 
