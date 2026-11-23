@@ -94,7 +94,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f1-03
   timeout_minutes: 150
-status: blocked
+status: retired
 theme: regime
 title: 'DIR lever family never tested on mes_trend_long_1d: DIRECTION gate (+DI/-DI sign DI, Donchian-midline slope DS: --direction-filter di/slope) vs the declared leg, net
   of cost?'
@@ -129,3 +129,5 @@ blocked_on:
   ref: yfinance ES=F (mes_trend_long_1d feed) via regime_debt_matrix._fetch_csv
   what: 'Yahoo returns no rows for ES=F AND the SPY control (venue_state=refusing_us; yfinance 0.2.66 plain-requests UA gets HTTP 429), so exit_lever_ablation dies in fetch_candles before any arm runs. Same failure on all 7 sibling units, one run each (no result, nothing graded). A re-run on the same host repeats it. The alternative lane (--non-crypto-source dukascopy) serves MES only as an S&P index CFD PROXY (dukascopy_instruments REL_PROXY), a different instrument and cost basis than the registered feed, so switching is a population change that needs its own decision, not a silent edit.'
   clears_when: 'pipeline item PI-20261122-SME5WDGR-0007 lands MES 1d bars sourced from the venue the leg trades (IB historical bars, NOT the Dukascopy index-CFD proxy; manager ruling 2026-11-22) with a stated window and a --data-csv route for exit_lever_ablation; if that window starts after the registered 2018-06-01 the window is a registered-population decision for the manager. Then git mv this file back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged'
+superseded_by: RQ-20261123-c5d2-04
+retired_reason: 'SUPERSEDED 2026-11-23 by RQ-20261123-c5d2-04 (manager ruling, lane QUEUE-FILL-STANDING-W48): the Yahoo ES=F data defect that blocked this unit is fixed, but its registered 2018-06-01 window gives n(A)=31 < the floor of 39 (INDETERMINATE for every arm). The successor registers the window from 2012-01-01 (A-arm-only n(A)=51, chosen from data quality and power alone). This file is otherwise unedited.'
