@@ -1,0 +1,607 @@
+{
+  "leg": "fvg_range_15m",
+  "grade": {
+    "verdict": "pass",
+    "label": "candidate_replaces_incumbent",
+    "best": "VH90",
+    "baseline": "A",
+    "candidates": {
+      "VH90": {
+        "net_r": -9.4997,
+        "delta_net_r": 2.3903,
+        "max_drawdown_r": 12.0,
+        "max_drawdown_cap": 17.55,
+        "folds_ge_incumbent": 6,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "VL20": {
+        "net_r": -10.0535,
+        "delta_net_r": 1.8365,
+        "max_drawdown_r": 7.0,
+        "max_drawdown_cap": 17.55,
+        "folds_ge_incumbent": 4,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "AX40": {
+        "net_r": -48.5903,
+        "delta_net_r": -36.7003,
+        "max_drawdown_r": 23.5657,
+        "max_drawdown_cap": 17.55,
+        "folds_ge_incumbent": 2,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 0.88,
+    "why": "VH90 beats the incumbent A (net R -9.4997 vs -11.89) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 44,
+      "net_r": -11.89,
+      "net_r_fee_only": -9.1511,
+      "max_drawdown_r": 13.0,
+      "by_outcome": {
+        "target": 9,
+        "stop": 31,
+        "timeout": 4
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "range_lookback": 48,
+        "adx_max": 20.0,
+        "min_width_pct": 0.015,
+        "max_width_pct": 0.12,
+        "min_touches": 4,
+        "third_frac": 0.34,
+        "fvg_search": 24,
+        "min_fvg_size_bps": 2.0,
+        "atr_stop_buffer": 0.25,
+        "exit_style": "far",
+        "tp_r": 1.5,
+        "timeout_bars": 48,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:57:30+00:00",
+          "trades": 4,
+          "net_r": -0.8139
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:57:30+00:00",
+          "end": "2023-07-16 23:55:00+00:00",
+          "trades": 2,
+          "net_r": -2.5919
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 23:55:00+00:00",
+          "end": "2024-05-16 23:52:30+00:00",
+          "trades": 3,
+          "net_r": -0.6383
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 23:52:30+00:00",
+          "end": "2025-03-17 23:50:00+00:00",
+          "trades": 7,
+          "net_r": -5.4847
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 23:50:00+00:00",
+          "end": "2026-01-16 23:47:30+00:00",
+          "trades": 14,
+          "net_r": 11.6068
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 23:47:30+00:00",
+          "end": "2026-11-17 23:45:00+00:00",
+          "trades": 14,
+          "net_r": -13.968
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fvg_range.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "15m",
+        "--timeframe",
+        "15m",
+        "--range-lookback",
+        "48",
+        "--atr-period",
+        "14",
+        "--adx-period",
+        "14",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/A__bt.json",
+        "--adx-max",
+        "20.0",
+        "--min-width-pct",
+        "0.015",
+        "--max-width-pct",
+        "0.12",
+        "--touch-tol-pct",
+        "0.002",
+        "--min-touches",
+        "4",
+        "--third-frac",
+        "0.34",
+        "--fvg-search",
+        "24",
+        "--min-fvg-size-bps",
+        "2.0",
+        "--atr-stop-buffer",
+        "0.25",
+        "--timeout-bars",
+        "48",
+        "--exit-style",
+        "far"
+      ]
+    },
+    "VH90": {
+      "reach_ge_6r": 0.0,
+      "n": 42,
+      "net_r": -9.4997,
+      "net_r_fee_only": -6.8444,
+      "max_drawdown_r": 12.0,
+      "by_outcome": {
+        "target": 9,
+        "stop": 29,
+        "timeout": 4
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "range_lookback": 48,
+        "adx_max": 20.0,
+        "min_width_pct": 0.015,
+        "max_width_pct": 0.12,
+        "min_touches": 4,
+        "third_frac": 0.34,
+        "fvg_search": 24,
+        "min_fvg_size_bps": 2.0,
+        "atr_stop_buffer": 0.25,
+        "exit_style": "far",
+        "tp_r": 1.5,
+        "timeout_bars": 48,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.9,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:57:30+00:00",
+          "trades": 4,
+          "net_r": -0.8139
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:57:30+00:00",
+          "end": "2023-07-16 23:55:00+00:00",
+          "trades": 2,
+          "net_r": -2.5919
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 23:55:00+00:00",
+          "end": "2024-05-16 23:52:30+00:00",
+          "trades": 3,
+          "net_r": -0.6383
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 23:52:30+00:00",
+          "end": "2025-03-17 23:50:00+00:00",
+          "trades": 6,
+          "net_r": -4.3027
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 23:50:00+00:00",
+          "end": "2026-01-16 23:47:30+00:00",
+          "trades": 14,
+          "net_r": 11.6068
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 23:47:30+00:00",
+          "end": "2026-11-17 23:45:00+00:00",
+          "trades": 13,
+          "net_r": -12.7597
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fvg_range.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "15m",
+        "--timeframe",
+        "15m",
+        "--range-lookback",
+        "48",
+        "--atr-period",
+        "14",
+        "--adx-period",
+        "14",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/VH90__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/VH90__bt.json",
+        "--adx-max",
+        "20.0",
+        "--min-width-pct",
+        "0.015",
+        "--max-width-pct",
+        "0.12",
+        "--touch-tol-pct",
+        "0.002",
+        "--min-touches",
+        "4",
+        "--third-frac",
+        "0.34",
+        "--fvg-search",
+        "24",
+        "--min-fvg-size-bps",
+        "2.0",
+        "--atr-stop-buffer",
+        "0.25",
+        "--timeout-bars",
+        "48",
+        "--exit-style",
+        "far",
+        "--vol-skip-above-pctl",
+        "0.9"
+      ]
+    },
+    "VL20": {
+      "reach_ge_6r": 0.0,
+      "n": 27,
+      "net_r": -10.0535,
+      "net_r_fee_only": -8.5687,
+      "max_drawdown_r": 7.0,
+      "by_outcome": {
+        "stop": 20,
+        "target": 6,
+        "timeout": 1
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "range_lookback": 48,
+        "adx_max": 20.0,
+        "min_width_pct": 0.015,
+        "max_width_pct": 0.12,
+        "min_touches": 4,
+        "third_frac": 0.34,
+        "fvg_search": 24,
+        "min_fvg_size_bps": 2.0,
+        "atr_stop_buffer": 0.25,
+        "exit_style": "far",
+        "tp_r": 1.5,
+        "timeout_bars": 48,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.2,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:57:30+00:00",
+          "trades": 2,
+          "net_r": -2.4091
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:57:30+00:00",
+          "end": "2023-07-16 23:55:00+00:00",
+          "trades": 1,
+          "net_r": -1.2911
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 23:55:00+00:00",
+          "end": "2024-05-16 23:52:30+00:00",
+          "trades": 2,
+          "net_r": 0.6303
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 23:52:30+00:00",
+          "end": "2025-03-17 23:50:00+00:00",
+          "trades": 7,
+          "net_r": -5.4847
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 23:50:00+00:00",
+          "end": "2026-01-16 23:47:30+00:00",
+          "trades": 7,
+          "net_r": 4.7796
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 23:47:30+00:00",
+          "end": "2026-11-17 23:45:00+00:00",
+          "trades": 8,
+          "net_r": -6.2785
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fvg_range.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "15m",
+        "--timeframe",
+        "15m",
+        "--range-lookback",
+        "48",
+        "--atr-period",
+        "14",
+        "--adx-period",
+        "14",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/VL20__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/VL20__bt.json",
+        "--adx-max",
+        "20.0",
+        "--min-width-pct",
+        "0.015",
+        "--max-width-pct",
+        "0.12",
+        "--touch-tol-pct",
+        "0.002",
+        "--min-touches",
+        "4",
+        "--third-frac",
+        "0.34",
+        "--fvg-search",
+        "24",
+        "--min-fvg-size-bps",
+        "2.0",
+        "--atr-stop-buffer",
+        "0.25",
+        "--timeout-bars",
+        "48",
+        "--exit-style",
+        "far",
+        "--vol-skip-below-pctl",
+        "0.2"
+      ]
+    },
+    "AX40": {
+      "reach_ge_6r": 0.0,
+      "n": 234,
+      "net_r": -48.5903,
+      "net_r_fee_only": -34.5112,
+      "max_drawdown_r": 23.5657,
+      "by_outcome": {
+        "target": 46,
+        "stop": 140,
+        "timeout": 48
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "range_lookback": 48,
+        "adx_max": 40.0,
+        "min_width_pct": 0.015,
+        "max_width_pct": 0.12,
+        "min_touches": 4,
+        "third_frac": 0.34,
+        "fvg_search": 24,
+        "min_fvg_size_bps": 2.0,
+        "atr_stop_buffer": 0.25,
+        "exit_style": "far",
+        "tp_r": 1.5,
+        "timeout_bars": 48,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:57:30+00:00",
+          "trades": 16,
+          "net_r": 6.3475
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:57:30+00:00",
+          "end": "2023-07-16 23:55:00+00:00",
+          "trades": 14,
+          "net_r": 0.4599
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 23:55:00+00:00",
+          "end": "2024-05-16 23:52:30+00:00",
+          "trades": 16,
+          "net_r": -1.2595
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 23:52:30+00:00",
+          "end": "2025-03-17 23:50:00+00:00",
+          "trades": 52,
+          "net_r": -29.7539
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 23:50:00+00:00",
+          "end": "2026-01-16 23:47:30+00:00",
+          "trades": 71,
+          "net_r": -3.8993
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 23:47:30+00:00",
+          "end": "2026-11-17 23:45:00+00:00",
+          "trades": 65,
+          "net_r": -20.4852
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fvg_range.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "15m",
+        "--timeframe",
+        "15m",
+        "--range-lookback",
+        "48",
+        "--atr-period",
+        "14",
+        "--adx-period",
+        "14",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-12/45175058269/arms/AX40__bt.json",
+        "--adx-max",
+        "40",
+        "--min-width-pct",
+        "0.015",
+        "--max-width-pct",
+        "0.12",
+        "--touch-tol-pct",
+        "0.002",
+        "--min-touches",
+        "4",
+        "--third-frac",
+        "0.34",
+        "--fvg-search",
+        "24",
+        "--min-fvg-size-bps",
+        "2.0",
+        "--atr-stop-buffer",
+        "0.25",
+        "--timeout-bars",
+        "48",
+        "--exit-style",
+        "far"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "15",
+      "resample": "15m"
+    },
+    "fold_edges": [
+      "2021-11-14 00:00:00+00:00",
+      "2022-09-14 23:57:30+00:00",
+      "2023-07-16 23:55:00+00:00",
+      "2024-05-16 23:52:30+00:00",
+      "2025-03-17 23:50:00+00:00",
+      "2026-01-16 23:47:30+00:00",
+      "2026-11-17 23:45:00+00:00"
+    ]
+  }
+}
