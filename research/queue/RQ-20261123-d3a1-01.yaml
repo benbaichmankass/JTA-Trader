@@ -1,0 +1,145 @@
+# Hand-authored 2026-11-23 by lane ML-D3-UNLOCK-20261123 (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a).
+# From the committed by-side-by-fold record docs/research/ml-entry-side-by-fold-2026-11-23.md (comms/research/ML-D3-UNLOCK-20261123/).
+# One factor (side gate). Decision rule registered BEFORE any run. Gates this adds or changes: none (a research arm; changes no config).
+id: RQ-20261123-d3a1-01
+title: 'D3 side gate: on the registered ml_entry recipe refit per dev fold, does taking a side only when it agrees with the symbol''s
+  trailing 168 h return beat both-sides by +0.05 R/decision (week-clustered t >= 2), net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: ML-D3-UNLOCK-20261123/side_by_fold
+  verdict_read: indeterminate
+  diagnosis: 'The by-side-by-fold record (13 refit folds, 60 perps, 2022-01..2026-11-21) shows the long-loses / short-earns split is NOT a
+    persistent design deficit: on the 8 dev folds pooled long n 25,793 -0.006 R vs short n 45,541 +0.008 R, per-fold short-minus-long gap
+    mean -0.006 (se 0.042, t -0.15), long negative in 5 of 8 folds. It tracks the regime: across 13 folds the per-fold gap correlates 0.89
+    with the always-short minus always-long baseline gap (slope 1.78); the last fold (2026-10-01..11-21, always-long -0.291, always-short
+    +0.179) has long n 325 -0.446 / short n 1,024 +0.125, and 2026-07..10 is the mirror (long +0.670 / short -0.110). A static short-only
+    gate cannot clear +0.05 (dev short +0.008 vs both +0.003). The open mechanism: the model takes the side against the trailing trend.'
+  search: 'lever family filter/regime, mechanism: candidate sides = long iff ret_168 > 0, short iff ret_168 < 0 (ret_168 = 0 trades neither);
+    the model still picks the better predicted side among the allowed ones and thresholds at the served tau 0.10; one rule, no grid'
+  levers:
+  - filter
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 1
+  due_by: '2026-12-01'
+question: 'On the 8 dev folds (2022-01-01..2025-10-01, expanding refit of the registered recipe, tau 0.10), is the mean net R per decision of
+  the trend-aligned side gate at least +0.05 above the ungated both-sides policy, with a week-clustered t >= 2?'
+why_this_matters: 'D3 is the entry model on real money (ml_decision_entry_v1r20261122). Its dev OOS edge is ~0 (+0.003 R/decision pooled, se
+  0.018) and its live sides split by regime. A pass is the evidence for a data-backed Tier-3 proposal for a trend-aligned side gate on
+  ml_entry (confirmation on a fresh window first); a fail closes the trailing-trend gate and leaves the point-in-time macro features
+  (Foxhound-2) as the next D3 lever.'
+power:
+  expected_n: 36000
+  min_detectable_effect: 0.05
+  effect_units: R_per_decision
+  sd: 1.1
+  design: independent_arms_week_clustered
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE from the committed record: the both-sides dev arm has n 71,334, mean +0.003, week-clustered se 0.018 (MEASURED, summed over
+    the 8 folds x sides). The gated arm is a subset (about half the decisions, estimate 30-40k) so its own clustered se is ~0.025 and the
+    two arms share weeks, so se(delta) is estimated at 0.02-0.03. Then t >= 2 needs delta >= 0.04-0.06 and the 80%-power effect is
+    ~0.056-0.084: +0.05 is only marginally powered. INDETERMINATE is therefore a live outcome and is stated now; the unit reports the
+    realised se so the next step is chosen from it, not re-run at another rule.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ENTRY-SIDE-GATE
+  decision: 'which side ml_entry may take at a decision (both today)'
+  legs: [ml_entry]
+  book: money
+baseline:
+  definition: 'The ungated registered policy on the same refit folds: better predicted side if its prediction > tau 0.10, one open
+    position per symbol, 2/3 ATR bracket, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).'
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - side-by-fold
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --gate
+  - trend
+  - --gate
+  - short_only
+  - --tau
+  - '0.10'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261123-d3a1-01
+decision_rule:
+  id: RULE-ML-D3-SIDE-GATE-TREND-20261123
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  baseline: the ungated both-sides policy on the same refit predictions and folds
+  statistic: 'scripts/research/ml_decision_entry.py side-by-fold --gate trend (gate_verdict / GATE_TREND_RULE): pooled over the 8 dev folds,
+    delta = mean net R per decision (gated) - mean net R per decision (both-sides); se = week-clustered (ISO week) influence se over both
+    arms (arm_diff); gated n counted over the same folds. Dev folds only: no held-out window is read. short_only is reported as a control,
+    never gating.'
+  rule: 'PASS iff gated n >= 3000 AND delta >= +0.05 R/decision AND t >= 2.0. FAIL iff gated n >= 3000 AND delta + 2.0 se < +0.05.
+    INDETERMINATE otherwise. The gate (ret_168 sign), tau, folds, bar and cost stack are fixed now, never changed after a result.'
+  pass_action: 'A fresh-window confirmation unit first (the weeks after 2026-11-21 plus a held-out read claimed in the ledger at the deflated
+    bar), then a data-backed Tier-3 proposal for a trend-aligned side gate on ml_entry with this record and the confirmation. Applied
+    by the operator or a mandate, never by a lane.'
+  fail_action: 'Close the trailing-168h side gate on ml_entry; record it on research/levers/ml-entry.yaml; the next D3 lever is the
+    point-in-time macro feature set (Foxhound-2); no re-run at another lookback.'
+  proposal_mapping: 'pass -> confirmation then Tier-3 proposal; fail -> gate closed; indeterminate -> state the realised se and stop (no
+    re-run at another rule; a different gate is a new unit with its own diagnosis).'
+  what_it_does_not_do: 'Changes no served model, config or order path; reads no held-out window; is not a promotion. The refit arm is the
+    recipe, not the served booster (the served boosters are in-sample on every dev fold).'
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'ESTIMATE: ml_entry is the real-money learned leg; the regime split cost about 6R on the live old model over 51 closes.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'the control is the ungated policy on identical predictions; only the allowed-side mask differs'
+  matched_random:
+    draws: 0
+    note: 'not computed; a side mask on fixed predictions selects no new information path. short_only is the static-gate control.'
+  best_static:
+    grid:
+    - both sides (live)
+    - short_only (static gate, control)
+    excludes_test_folds: true
+    note: the model is refit per fold on rows before the fold; nothing is tuned on a fold
+  bootstrap_group: week
+practice_precedent: 'trend-aligned filtering of a mean-regression-free entry model (M6); week-clustered se per principles M13;
+  docs/research/ml-entry-side-by-fold-2026-11-23.md.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 30
+  why_runner: 'Keyless public Binance Vision data; 8 LightGBM refits on CPU (MEASURED 2026-11-23: dev-fold run 100 s on 4 cores after a ~12 min fetch).'
+  basis: 'MEASURED in this lane.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_decision_entry.py
+- docs/research/ml-entry-side-by-fold-2026-11-23.md

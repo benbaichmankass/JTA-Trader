@@ -1023,6 +1023,232 @@ def _self_test_universe_costed() -> None:
 
 
 # ----------------------------------------------------------------------------------------------- self-test
+# ----------------------------------------------------------------------------------------------- by-side-by-fold
+# ML-D3-UNLOCK-20261123 (IPW-ML-ENTRY-SIDE-SPLIT). Descriptive: does the long-loses / short-earns split of the served ENTRY model
+# persist across the dev folds, or is it one regime? Nothing here selects a model, a tau or a gate; tau is the served tau.
+SF_EXT_FOLDS = ["2025-10-01", "2026-01-01", "2026-04-01", "2026-07-01", "2026-10-01"]   # post-dev folds, read only with --ext-folds
+
+
+def side_stats(taken: pd.DataFrame) -> dict:
+    """n, mean net R, iid se, week-clustered se, mean gross R and mean cost R for one set of taken decisions."""
+    n = len(taken)
+    if n == 0:
+        return {"n": 0, "mean_net_r": None, "se_net_r": None, "se_week_clustered": None, "mean_gross_r": None, "mean_cost_r": None}
+    r = taken.net_r.to_numpy(float)
+    m = float(r.mean())
+    wk = pd.to_datetime(taken.ts, utc=True).dt.strftime("%G-%V").to_numpy()
+    dev = pd.Series(r - m).groupby(wk).sum().to_numpy()
+    return {"n": n, "mean_net_r": m, "se_net_r": float(r.std(ddof=1) / np.sqrt(n)) if n > 1 else None,
+            "se_week_clustered": float(np.sqrt((dev ** 2).sum()) / n) if n > 1 else None,
+            "mean_gross_r": float(taken.gross_r.mean()), "mean_cost_r": float(taken.cost_r.mean())}
+
+
+def split_by_side(taken: pd.DataFrame) -> dict:
+    return {side: side_stats(taken[taken.side == side]) for side in ("long", "short")} | {"all": side_stats(taken)}
+
+
+def fold_regime(test: pd.DataFrame) -> dict:
+    """What the fold's market did, independent of any model: mean net R of ALWAYS taking each side (every decision row, no
+    sequencing) and the always-long / always-short sequential baselines under the same one-position mechanics."""
+    al = sequential_baseline(test, lambda r: "long")
+    ash = sequential_baseline(test, lambda r: "short")
+    return {"rows_mean_net_long": float(test.net_long.mean()), "rows_mean_net_short": float(test.net_short.mean()),
+            "always_long_seq": {"n": len(al), "mean_net_r": float(al.net_r.mean()) if len(al) else None},
+            "always_short_seq": {"n": len(ash), "mean_net_r": float(ash.net_r.mean()) if len(ash) else None}}
+
+
+def persistence(folds: list[dict], key: str = "refit") -> dict:
+    """Across-fold persistence of the split on the ``key`` arm: sign counts, and the mean of the per-fold (short - long) gap with a
+    fold-level se (the folds are the independent units here; n_folds is small, so this is reported, never a gate)."""
+    rows = [(f[key]["long"]["mean_net_r"], f[key]["short"]["mean_net_r"]) for f in folds
+            if f.get(key) and f[key]["long"]["n"] and f[key]["short"]["n"]]
+    gaps = np.array([s - l for l, s in rows], float)
+    k = len(gaps)
+    out = {"n_folds_with_both_sides": k, "folds_long_negative": int(sum(1 for l, _ in rows if l < 0)),
+           "folds_short_positive": int(sum(1 for _, s in rows if s > 0)), "folds_short_beats_long": int((gaps > 0).sum())}
+    if k > 1:
+        sd = gaps.std(ddof=1)
+        out |= {"mean_gap_short_minus_long": float(gaps.mean()), "se_gap_across_folds": float(sd / np.sqrt(k)),
+                "t_gap_across_folds": float(gaps.mean() / (sd / np.sqrt(k))) if sd > 0 else None}
+    return out
+
+
+GATE_TREND_RULE = {"id": "RULE-ML-D3-SIDE-GATE-TREND-20261123", "min_delta_r": 0.05, "min_t": 2.0, "min_gated_n": 3000}
+
+
+def gate_masks(test: pd.DataFrame, kind: str) -> tuple[np.ndarray, np.ndarray]:
+    """Which sides a decision row may take. ``trend``: long only when the symbol's own trailing 168 h return is > 0, short only when
+    < 0 (point-in-time: ret_168 is a bar-t-close feature). ``short_only``: the static gate, reported as the control."""
+    if kind == "trend":
+        return (test.ret_168.to_numpy() > 0), (test.ret_168.to_numpy() < 0)
+    if kind == "short_only":
+        return np.zeros(len(test), bool), np.ones(len(test), bool)
+    raise ValueError(kind)
+
+
+def arm_diff(a: pd.DataFrame, b: pd.DataFrame) -> dict:
+    """mean(a.net_r) - mean(b.net_r) over two decision sets that need not be the same decisions (a gated arm re-sequences), with a
+    week-clustered se from the influence of each ISO week on both means. Reported with n of each arm."""
+    if len(a) < 2 or len(b) < 2:
+        return {"n_a": len(a), "n_b": len(b), "delta": None, "se_week_clustered": None, "t": None}
+    ma, mb = a.net_r.mean(), b.net_r.mean()
+    wa = pd.Series(a.net_r.to_numpy() - ma).groupby(pd.to_datetime(a.ts, utc=True).dt.strftime("%G-%V").to_numpy()).sum() / len(a)
+    wb = pd.Series(b.net_r.to_numpy() - mb).groupby(pd.to_datetime(b.ts, utc=True).dt.strftime("%G-%V").to_numpy()).sum() / len(b)
+    c = wa.sub(wb, fill_value=0.0)
+    se = float(np.sqrt((c ** 2).sum()))
+    d = float(ma - mb)
+    return {"n_a": len(a), "n_b": len(b), "mean_a": float(ma), "mean_b": float(mb), "delta": d, "se_week_clustered": se,
+            "t": d / se if se > 0 else None}
+
+
+def gate_verdict(d: dict, rule: dict = GATE_TREND_RULE) -> tuple[str, str]:
+    """Registered rule: PASS iff delta >= min_delta AND t >= min_t AND gated n >= min_gated_n; FAIL iff n ok and delta + min_t*se < min_delta
+    (the interval excludes the bar); INDETERMINATE otherwise."""
+    if d.get("delta") is None or d["n_a"] < rule["min_gated_n"]:
+        return "indeterminate", f"gated n={d.get('n_a')} < {rule['min_gated_n']} or no delta"
+    if d["delta"] >= rule["min_delta_r"] and d["t"] is not None and d["t"] >= rule["min_t"]:
+        return "pass", f"delta {d['delta']:+.4f} >= {rule['min_delta_r']} and t {d['t']:.2f} >= {rule['min_t']}"
+    if d["delta"] + rule["min_t"] * d["se_week_clustered"] < rule["min_delta_r"]:
+        return "fail", f"delta {d['delta']:+.4f} + {rule['min_t']} se {d['se_week_clustered']:.4f} < {rule['min_delta_r']}"
+    return "indeterminate", f"delta {d['delta']:+.4f}, t {d['t']:.2f}: between the bars"
+
+
+def by_side_by_fold(tab: pd.DataFrame, tau: float, frozen: dict, dev_folds: list[str] | None = None,
+                    dev_end: str | None = None, ext_folds: list[str] | None = None, data_end: pd.Timestamp | None = None,
+                    n_jobs: int | None = None, gates: list[str] | None = None) -> dict:
+    """Per fold and per side: n, mean net R, se, cost stack. ``refit`` = the registered recipe refit per fold (the only OUT-OF-SAMPLE
+    arm on dev folds). ``frozen[name]`` = (meta, boosters) of a served model scored on the same rows; it is IN-SAMPLE (flagged) for any fold that starts before the
+    artifact's ``train_end_exclusive``, and out-of-sample only for folds after it. Other commands are untouched."""
+    end = dev_end or HOLDOUT_START
+    d_bounds = [pd.Timestamp(x, tz="UTC") for x in (dev_folds or DEV_FOLDS)] + [pd.Timestamp(end, tz="UTC")]
+    bounds = list(itertools.pairwise(d_bounds))
+    if ext_folds:
+        eb = [pd.Timestamp(x, tz="UTC") for x in ext_folds] + [data_end or (tab.ts.max() + pd.Timedelta(hours=1))]
+        bounds += list(itertools.pairwise(eb))
+    dev_cut = pd.Timestamp(end, tz="UTC")
+    out, pooled = [], {g: [] for g in (gates or [])} | {"both": []}
+    for a, b in bounds:
+        test = tab[(tab.ts >= a) & (tab.ts < b - pd.Timedelta(hours=HORIZON_H + 1))]
+        if test.empty:
+            continue
+        train = purge_train(tab, a)       # expanding, strictly before a minus the registered embargo; dev folds see only dev rows
+        pl, ps = fit_predict(train, test, None, n_jobs)
+        rec = {"test_start": str(a.date()), "test_end": str(b.date()), "kind": "ext" if a >= dev_cut else "dev",
+               "n_test_rows": len(test), "n_train": len(train), "regime": fold_regime(test),
+               "refit": split_by_side(policy(test, pl, ps, tau)), "frozen": {}}
+        if gates:
+            rec["gated"] = {}
+            both = policy(test, pl, ps, tau)
+            if rec["kind"] == "dev":
+                pooled["both"].append(both)
+            for g in gates:
+                lo, so = gate_masks(test, g)
+                tk = policy(test, np.where(lo, pl, -np.inf), np.where(so, ps, -np.inf), tau)
+                rec["gated"][g] = split_by_side(tk)
+                if rec["kind"] == "dev":
+                    pooled[g].append(tk)
+        for name, (meta, boosters) in frozen.items():
+            # provenance: predict — Booster.predict is the regressed net R of that side, not a probability
+            fl = boosters["long"].predict(test[meta["features"]])
+            fs = boosters["short"].predict(test[meta["features"]])
+            te = pd.Timestamp(meta["train_end_exclusive"])
+            te = te.tz_localize("UTC") if te.tzinfo is None else te
+            rec["frozen"][name] = split_by_side(policy(test, fl, fs, tau)) | {"in_sample": bool(a < te)}
+        out.append(rec)
+        print(json.dumps({k: rec[k] for k in ("test_start", "test_end", "kind")} | {"refit": {s: (rec["refit"][s]["n"], rec["refit"][s]["mean_net_r"])
+                                                                                      for s in ("long", "short")}}), flush=True)
+    dev_f = [f for f in out if f["kind"] == "dev"]
+    res = {"folds": out, "persistence_refit_dev": persistence(dev_f)}
+    if ext_folds:
+        res["persistence_refit_all"] = persistence(out)
+    if gates:
+        both = pd.concat(pooled["both"], ignore_index=True)
+        res["gate_vs_both_dev"] = {g: arm_diff(pd.concat(pooled[g], ignore_index=True), both) for g in gates}
+    return res
+
+
+def side_fold_table(res: dict) -> str:
+    rows = ["| fold | kind | arm | long n | long mean | long se | short n | short mean | short se | always-long | always-short |",
+            "|---|---|---|---|---|---|---|---|---|---|---|"]
+
+    def f2(x):
+        return "—" if x is None else f"{x:+.3f}"
+    for f in res["folds"]:
+        arms = {"refit": f["refit"]} | dict(f["frozen"])
+        for arm, v in arms.items():
+            tag = arm + (" (in-sample)" if v.get("in_sample") else "")
+            rows.append(f"| {f['test_start']}..{f['test_end']} | {f['kind']} | {tag} | {v['long']['n']} | {f2(v['long']['mean_net_r'])} | "
+                        f"{f2(v['long']['se_net_r'])} | {v['short']['n']} | {f2(v['short']['mean_net_r'])} | {f2(v['short']['se_net_r'])} | "
+                        f"{f2(f['regime']['always_long_seq']['mean_net_r'])} | {f2(f['regime']['always_short_seq']['mean_net_r'])} |")
+    return "\n".join(rows)
+
+
+def side_by_fold_cmd(args) -> int:
+    from datetime import date
+    import ml_entry_retrain as R
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    if args.fetch:
+        R.fetch_through(cache, universe(), R.plan(date.fromisoformat(args.run_date)))
+    tab = build_table(cache, universe())
+    frozen, tau = {}, None
+    for spec in args.frozen:
+        name, _, path = spec.partition("=")
+        meta, boosters = _frozen_models(Path(path))
+        feats = meta["features"]
+        meta = dict(meta, features=feats if isinstance(feats, list) else json.loads(feats.replace("'", '"')))
+        frozen[name] = (meta, boosters)
+        tau = float(meta["tau"]) if tau is None else tau
+    tau = float(args.tau) if args.tau is not None else tau
+    if tau is None:
+        raise SystemExit("no tau: pass --frozen name=path or --tau")
+    claim = None
+    if args.ext_folds:
+        import holdout_lock
+        claim = holdout_lock.claim_read("ENTRY-v1-side-by-fold", "2025-10-01", str(tab.ts.max().date()), args.unit or "ml-side-by-fold",
+                                        args.reader, Path(args.ledger) if args.ledger else holdout_lock.LEDGER, train_end="2025-09-22",
+                                        family="ENTRY")
+    res = by_side_by_fold(tab, tau, frozen, ext_folds=SF_EXT_FOLDS if args.ext_folds else None, data_end=tab.ts.max() + pd.Timedelta(hours=1),
+                          gates=args.gate or None)
+    res |= {"schema": "ml_decision_entry_side_by_fold/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(),
+            "table_rows": len(tab), "table_max_ts": str(tab.ts.max()), "n_symbols": int(tab.symbol.nunique()),
+            "cost_stack": f"fee {FEE_BPS} bps rt + slippage 3.0 bps + funding 1.0 bps/8h (label_symbol net R, same as the grade harness)",
+            "frozen_models": {k: {"model_id": m.get("model_id"), "train_end_exclusive": m.get("train_end_exclusive")} for k, (m, _) in frozen.items()},
+            "holdout_claim": claim, "read_state": "measured", "elapsed_s": round(time.time() - t0)}
+    (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    (out / "table.md").write_text(side_fold_table(res) + "\n")
+    print(side_fold_table(res))
+    print(json.dumps(res["persistence_refit_dev"]), flush=True)
+    if "trend" in (args.gate or []):
+        v, why = gate_verdict(res["gate_vs_both_dev"]["trend"])
+        vj = {"verdict": v, "read_state": "measured", "n": res["gate_vs_both_dev"]["trend"]["n_a"], "note": why, "rule": GATE_TREND_RULE,
+              "population": (f"registered recipe refit per dev fold {DEV_FOLDS[0]}..{HOLDOUT_START} (60-perp frozen universe), tau {tau}, "
+                             f"trend-aligned side gate vs both sides, net R fee {FEE_BPS}+slip 3+funding 1 bps/8h, week-clustered se"),
+              "measurement": {"gate_vs_both_dev": res["gate_vs_both_dev"], "persistence_refit_dev": res["persistence_refit_dev"]}}
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+        print(json.dumps({"verdict": v, "why": why}), flush=True)
+    return 0
+
+
+def _self_test_side_by_fold() -> None:
+    ts = pd.to_datetime(["2025-01-01", "2025-01-02", "2025-01-09", "2025-01-10"], utc=True)
+    tk = pd.DataFrame({"symbol": ["A"] * 4, "ts": ts, "side": ["long", "long", "short", "short"], "net_r": [-1.0, 0.0, 2.0, 1.0],
+                       "gross_r": [-0.9, 0.1, 2.1, 1.1], "cost_r": [0.1] * 4})
+    s = split_by_side(tk)
+    assert s["long"]["n"] == 2 and abs(s["long"]["mean_net_r"] + 0.5) < 1e-12 and abs(s["short"]["mean_net_r"] - 1.5) < 1e-12
+    assert abs(s["long"]["se_net_r"] - 0.5) < 1e-12                     # sd 0.7071 / sqrt 2
+    assert abs(s["long"]["se_week_clustered"]) < 1e-12                  # both longs share one ISO week: deviations cancel in the cluster
+    assert side_stats(tk.iloc[0:0])["n"] == 0
+    p = persistence([{"refit": {"long": {"n": 5, "mean_net_r": -0.5}, "short": {"n": 5, "mean_net_r": 0.5}}},
+                     {"refit": {"long": {"n": 5, "mean_net_r": -0.1}, "short": {"n": 5, "mean_net_r": 0.3}}},
+                     {"refit": {"long": {"n": 5, "mean_net_r": 0.2}, "short": {"n": 0, "mean_net_r": None}}}])
+    assert p["n_folds_with_both_sides"] == 2 and p["folds_long_negative"] == 2 and p["folds_short_beats_long"] == 2
+    t = pd.DataFrame({"ret_168": [0.1, -0.1, 0.0]})
+    lo, so = gate_masks(t, "trend")
+    assert list(lo) == [True, False, False] and list(so) == [False, True, False]      # ret_168 == 0 trades neither side
+
+
 def _self_test() -> None:
     H = 4
     o = np.array([[100, 100, 100, 100.]])
@@ -1069,12 +1295,13 @@ def _self_test() -> None:
     t = traded_symbols()
     assert t and all(x.endswith("USDT") for x in t), t
     _self_test_universe_costed()
+    _self_test_side_by_fold()
     print("self-test ok")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "side-by-fold"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
@@ -1089,6 +1316,12 @@ def main(argv=None) -> int:
     ap.add_argument("--model-id", default="ENTRY-v1-universe-costed")
     ap.add_argument("--reader", default="research-script-run")
     ap.add_argument("--ledger", default="")
+    ap.add_argument("--run-date", default="2026-11-22", help="side-by-fold: data through the previous UTC day (only with --fetch)")
+    ap.add_argument("--fetch", action="store_true", help="side-by-fold: refresh the klines cache through --run-date first")
+    ap.add_argument("--frozen", action="append", default=[], metavar="NAME=PATH", help="side-by-fold: a served model.json to score per fold (repeatable)")
+    ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
+    ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
+    ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -1098,6 +1331,8 @@ def main(argv=None) -> int:
         return traded_subset(a)
     if a.cmd == "universe-costed":
         return universe_costed(a)
+    if a.cmd == "side-by-fold":
+        return side_by_fold_cmd(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
