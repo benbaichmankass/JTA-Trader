@@ -78,6 +78,11 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/am_heads_fit.py":
+        "AM-V2 stage A (RQ-20261123-a9d1-01): bounded CPU LightGBM, <= 400k rows per fit, n_jobs 4, 8 heads x 9 folds (about an hour of wall "
+        "time), on the cf_bar_labels corpus derived from the committed backtest trade corpus + public Binance Vision klines; the labels are "
+        "Actions artifacts / a lane container copy, never trainer-resident data (needs_trainer_resident_data false), no GPU, never routed to the "
+        "trainer VM; it writes a result row and a holdout claim, no served model.",
     "scripts/research/ml_overlay_noninferior.py":
         "ML-PRIMARY-8 D4 monotone GBM arm (RQ-20261119-e8a1-03, --cpcv-challenger mlgbm): a 200-tree, 7-leaf LGBMClassifier refit "
         "per CPCV split on ~2-3k TD trades of public Binance Vision candles (lightgbm is imported lazily, only for that arm); "

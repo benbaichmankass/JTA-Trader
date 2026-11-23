@@ -6,6 +6,10 @@
 
 Context: Alpaca fractional orders accept `time_in_force = day` only ([fractional page](https://docs.alpaca.markets/us/docs/fractional-trading), [orders page](https://docs.alpaca.markets/us/docs/orders-at-alpaca), read this session). `AlpacaClient.place` currently sends GTC brackets with whole shares; the GTC choice (PI-20260926-HJPL5ABP-0001) exists because day legs were cancelled at the entry day's close.
 
+## 0a. MEASURED constraint that changes this design (2026-11-23, paper, run 45251691248)
+
+Alpaca rejects a fractional bracket and a fractional OCO ("fractional orders must have order_class=simple", HTTP 422), and a live fractional DAY stop holds all the shares, so a fractional DAY limit take-profit is rejected with HTTP 403 ("insufficient qty available", `held_for_orders` 0.5). A fractional DAY stop alone is accepted. **So the venue can hold a stop OR a take-profit for a fractional position, never both.** Consequences: (1) the re-arm job places the stop only (loss protection wins); (2) the take-profit becomes a software-managed exit (the trader watches the TP price and cancels the stop / sells), which departs from "protection and target live at the venue" and from the TP doctrine as written; (3) the merged-OCO design cannot include a fractional package in a combined bracket. Whether a fractional stop can be swapped for a TP intraday without a naked gap is unmeasured.
+
 ## 0. Is overnight really worse? (INFERENCE, to be confirmed by the probe)
 
 Per the orders page, only limit orders are accepted as extended-hours eligible, so a stop (GTC or day) does not trigger outside the regular session. A GTC stop and a day stop re-armed **before the open** therefore give the same gap protection: neither fires overnight, both are live for the opening print. The real difference is **operational**: GTC needs nothing each day; a day stop needs a re-arm that must succeed before the open, otherwise the position opens the day unprotected. So the design cost is reliability, not market exposure, provided that:
