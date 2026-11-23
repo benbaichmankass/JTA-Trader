@@ -1,0 +1,107 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 9432030,
+ "rule": {
+  "id": "RULE-AM-HEADS-STAGE-A-20261123",
+  "min_dev_mean_skill_vs_state": 0.01,
+  "min_dev_folds_positive": 6,
+  "n_dev_folds": 8,
+  "graded_heads": {
+   "target": [
+    "q0.5",
+    "q0.9",
+    "reach_2"
+   ],
+   "invalidation": [
+    "stop_first",
+    "dip_recovers"
+   ]
+  }
+ },
+ "per_head": {
+  "q0.5": "pass",
+  "q0.9": "pass",
+  "reach_2": "pass",
+  "stop_first": "pass",
+  "dip_recovers": "pass"
+ },
+ "note": "per head {'q0.5': 'pass', 'q0.9': 'pass', 'reach_2': 'pass', 'stop_first': 'pass', 'dip_recovers': 'pass'}; target needs >=1 pass AND invalidation needs >=1 pass; skill_vs_state is vs the state-conditioned empirical baseline",
+ "population": "469172 labelled trades / 9432030 uncensored per-bar rows of the run-w corpus (cf_bar_labels), 8 dev half-year folds 2022-01..2026-01 + claimed holdout 2026-01-01.., purged by trade, <= 400000 rows per fold",
+ "measurement": {
+  "pooled_dev": {
+   "q0.25": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.0174,
+    "dev_se_skill_across_folds": 0.00087,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.00489,
+    "dev_se_skill_vs_state_across_folds": 0.00056
+   },
+   "q0.5": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.03266,
+    "dev_se_skill_across_folds": 0.00196,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.01072,
+    "dev_se_skill_vs_state_across_folds": 0.00148
+   },
+   "q0.75": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.05034,
+    "dev_se_skill_across_folds": 0.0045,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.02107,
+    "dev_se_skill_vs_state_across_folds": 0.00343
+   },
+   "q0.9": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.0748,
+    "dev_se_skill_across_folds": 0.0066,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.03506,
+    "dev_se_skill_vs_state_across_folds": 0.00484
+   },
+   "reach_1": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.03714,
+    "dev_se_skill_across_folds": 0.0025,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.01345,
+    "dev_se_skill_vs_state_across_folds": 0.0012
+   },
+   "reach_2": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.04217,
+    "dev_se_skill_across_folds": 0.00383,
+    "dev_folds_state_skill_positive": 7,
+    "dev_mean_skill_vs_state": 0.01674,
+    "dev_se_skill_vs_state_across_folds": 0.00297
+   },
+   "stop_first": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.13789,
+    "dev_se_skill_across_folds": 0.00412,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.02653,
+    "dev_se_skill_vs_state_across_folds": 0.00166
+   },
+   "dip_recovers": {
+    "n_dev_folds": 8,
+    "dev_folds_skill_positive": 8,
+    "dev_mean_skill": 0.0628,
+    "dev_se_skill_across_folds": 0.00169,
+    "dev_folds_state_skill_positive": 8,
+    "dev_mean_skill_vs_state": 0.02969,
+    "dev_se_skill_vs_state_across_folds": 0.00243
+   }
+  }
+ }
+}
