@@ -102,6 +102,7 @@ decision_rule:
     as its own unit. No bracket, config or order change; nothing graduates on skill.'
   fail_action: 'Record the heads as closed on these features on research/levers/ml-brackets.yaml and file the richer-feature build (structure, market state) as the next lever, not a re-run.'
   proposal_mapping: 'pass -> Stage B unit; fail -> features-richer unit; indeterminate -> state which heads and why and stop (no re-run at another bar).'
+  convention_caveat: 'The spot-check (75 trades on 3 legs, 0 mismatches vs an independent brute-force recomputation) validates the IMPLEMENTATION only. It shares the label CONVENTIONS and the bar source: entry at the signal bar''s close, stop at -1R from entry (the original stop), target +2R measured from the bar-k close, 6-bar dip window at 0.5 of the distance to the stop. A different convention would change every base rate; none is tested here.'
   what_it_does_not_do: 'Does not apply any head to a bracket, does not claim P&L, does not test ml_entry / ml_entry_eq decisions (they are NOT in this corpus: it holds rule-strategy backtest trades
     only), does not read a net-of-cost result (skill is a loss ratio, not R).'
   min_n: 100000
