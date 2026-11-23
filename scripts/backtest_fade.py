@@ -62,6 +62,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from scripts import lever_gates  # noqa: E402  (the ONE ATR-percentile vol-at-entry gate; PI-20261123-SME5WDGR-0008)
 
 # Execution-realism cost knobs (P1, FAITHFUL-BACKTEST-PLATFORM-DESIGN § 3.B).
 # main() (the CLI path) resolves unset --slippage/--funding flags to the
@@ -189,7 +190,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  emit_path: Optional[str] = None,
                  min_confidence: float = 0.0,
                  side_filter: str = "both",
-                 skip_hours: str = "") -> Dict[str, Any]:
+                 skip_hours: str = "",
+                 vol_skip_above_pctl: float = 0.0, vol_skip_below_pctl: float = 0.0,
+                 vol_pctl_window: int = lever_gates.DEFAULT_WINDOW) -> Dict[str, Any]:
+    _vol_errs = lever_gates.flag_errors(vol_skip_above_pctl, vol_skip_below_pctl, vol_pctl_window)
+    if _vol_errs:
+        raise ValueError("; ".join(_vol_errs))
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
     skip_hour_set = _parse_skip_hours(skip_hours)
@@ -202,6 +208,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     df["dc_hi"] = df["high"].rolling(donchian).max().shift(1)
     df["dc_lo"] = df["low"].rolling(donchian).min().shift(1)
     df["adx"] = _adx(df, adx_period).shift(1) if adx_max is not None else None
+    # VOL-AT-ENTRY gate series (PI-20261123-SME5WDGR-0008): built only when a flag is set, so a default run allocates nothing (byte-identical).
+    atr_pctl = (lever_gates.pctl_series(df["atr"], vol_pctl_window)
+                if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else None)
     trades: List[Trade] = []
     # Per-entry live-TP distance in R; empty when the cap is off.
     _tp_r_effective: List[float] = []
@@ -233,6 +242,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             if pd.isna(adx_i) or float(adx_i) >= adx_max:
                 i += 1
                 continue
+        # VOL-AT-ENTRY GATE (PI-20261123-SME5WDGR-0008): skip a signal whose SIGNAL-bar ATR trailing percentile is in a skipped tail (the
+        # backtest_trend.py M21 E-2 rule, lever_gates.skips; an undefined percentile never skips). Default 0/0 = no gate = byte-identical.
+        if atr_pctl is not None and lever_gates.skips(atr_pctl, i, vol_skip_above_pctl, vol_skip_below_pctl):
+            i += 1
+            continue
         hi, lo = float(hi), float(lo)
         bar_hi = float(df["high"].iloc[i])
         bar_lo = float(df["low"].iloc[i])
@@ -405,7 +419,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                       params={"donchian": donchian, "atr_stop_buffer": atr_stop_buffer,
                               "pierce_min": pierce_min, "exit_style": exit_style,
                               "tp_r": tp_r, "trail_mult": trail_mult,
-                              "adx_max": adx_max, "min_confidence": min_confidence})
+                              "adx_max": adx_max, "min_confidence": min_confidence,
+                              **({"vol_skip_above_pctl": vol_skip_above_pctl, "vol_skip_below_pctl": vol_skip_below_pctl,
+                                  "vol_pctl_window": vol_pctl_window}
+                                 if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else {})})
 
 
 def _fee_only_r(t: Trade) -> float:
@@ -661,6 +678,7 @@ def main(argv: List[str]) -> int:
                    help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
     p.add_argument("--skip-hours", default="",
                    help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
+    lever_gates.add_vol_skip_args(p)
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live-parity confidence (pierce/ATR) is below this.")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
@@ -715,7 +733,9 @@ def main(argv: List[str]) -> int:
                      cooldown_bars=args.cooldown_bars, timeframe=args.timeframe,
                      symbol=args.symbol, adx_max=args.adx_max,
                      adx_period=args.adx_period,
-                     side_filter=args.side_filter, skip_hours=args.skip_hours)
+                     side_filter=args.side_filter, skip_hours=args.skip_hours,
+                     vol_skip_above_pctl=args.vol_skip_above_pctl, vol_skip_below_pctl=args.vol_skip_below_pctl,
+                     vol_pctl_window=args.vol_pctl_window)
     if args.confidence_sweep:
         sw = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(sw))
