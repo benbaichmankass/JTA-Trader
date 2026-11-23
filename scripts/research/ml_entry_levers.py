@@ -73,23 +73,71 @@ def label_cell(df: pd.DataFrame, sl: float, tp: float) -> pd.DataFrame:
 LABEL_COLS = [f"{k}_{s}" for k in ("gross", "net", "cost", "reason", "bars") for s in ("long", "short")]
 
 
-def relabel_table(tab: pd.DataFrame, cache: Path, sl: float, tp: float) -> pd.DataFrame:
-    """The dev table with the label columns recomputed for bracket (sl, tp); rows, features and order unchanged."""
-    parts = []
-    for sym, g in tab.groupby("symbol", sort=False):
-        lab = label_cell(pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True), sl, tp)
-        lab["symbol"] = sym
-        parts.append(lab)
-    lab = pd.concat(parts, ignore_index=True)
-    key = pd.MultiIndex.from_frame(lab[["symbol", "i"]])
-    cols = lab.set_index(key)[LABEL_COLS]
-    got = cols.reindex(pd.MultiIndex.from_frame(tab[["symbol", "i"]]))
-    if got[["net_long", "net_short"]].isna().any().any():
+def relabel_table(tab: pd.DataFrame, cache: Path, sl: float, tp: float, hole_safe: bool = True) -> pd.DataFrame:
+    """The dev table with the label columns recomputed for bracket (sl, tp); rows, features and order unchanged.
+
+    ``hole_safe`` (default True) must match how the table was built: ``E.build_table`` has regridded every symbol hourly since
+    ML-ENTRY-HOLE-SAFE-ADOPT (2026-11-12), so the table's ``i`` is a position in the REGRIDDED frame. Reading the raw cache frame
+    instead shifts every position after a data hole by the missing bars, the decision phase changes (i = 3 mod 4 becomes 2 mod 4),
+    and every later row fails to join: RQ-20261101-b608-01 run 45086511890 died with 'relabel left rows without labels' on a one-hour
+    hole in ADAUSDT (2024-10-28). A table built with ``hole_safe=False`` passes ``hole_safe=False`` here."""
+    got, present = _relabelled(tab, cache, sl, tp, hole_safe)
+    if not present.all() or got[["net_long", "net_short"]].isna().any().any():
         raise RuntimeError("relabel left rows without labels")
     out = tab.copy()
     for c in LABEL_COLS:
         out[c] = got[c].to_numpy()
     return out
+
+
+def _relabelled(tab: pd.DataFrame, cache: Path, sl: float, tp: float, hole_safe: bool = True):
+    """(labels reindexed onto the table's rows, mask of rows present in the relabelled frame at all). A row that is present but has a NaN
+    net is an UNOBSERVABLE outcome (the bracket does not resolve before a data hole); a row that is absent is a keying error."""
+    parts = []
+    for sym, g in tab.groupby("symbol", sort=False):
+        raw = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        lab = label_cell(E.regrid_hourly(raw) if hole_safe else raw, sl, tp)
+        lab["symbol"] = sym
+        parts.append(lab)
+    lab = pd.concat(parts, ignore_index=True)
+    key = pd.MultiIndex.from_frame(lab[["symbol", "i"]])
+    cols = lab.set_index(key)[LABEL_COLS]
+    tkey = pd.MultiIndex.from_frame(tab[["symbol", "i"]])
+    return cols.reindex(tkey), np.asarray(tkey.isin(cols.index))
+
+
+UNOBSERVABLE_RULE = ("manager ruling 2026-11-23, option (a): a row whose outcome is unobservable at ANY bracket the unit uses (the bracket does not resolve "
+                     "before a data hole, so its later bars are NaN) is dropped from EVERY arm, so all arms compare the same rows; the count is reported")
+
+
+def unobservable_mask(tab: pd.DataFrame, cache: Path, brackets, hole_safe: bool = True) -> np.ndarray:
+    """True for rows whose relabelled net is NaN at any of ``brackets``. Rows missing from the relabelled frame are NOT unobservable: they are a keying
+    error and still refuse, loudly. ``stats()`` takes ``.mean()`` over net_r, which skips NaN silently while the row still counts in n, so a NaN row is
+    never allowed through to an arm."""
+    m = np.zeros(len(tab), bool)
+    for sl, tp in brackets:
+        got, present = _relabelled(tab, cache, sl, tp, hole_safe)
+        if not present.all():
+            raise RuntimeError("relabel left rows without labels (rows absent from the relabelled frame: a keying error, not an unobservable outcome)")
+        m |= got[["net_long", "net_short"]].isna().any(axis=1).to_numpy()
+    return m
+
+
+def _drop_info(brackets, n_dropped: int, n_total: int) -> dict:
+    return {"rule": UNOBSERVABLE_RULE, "brackets": [[float(a), float(b)] for a, b in brackets], "n_dropped": int(n_dropped), "n_total": int(n_total)}
+
+
+def drop_unobservable(tab: pd.DataFrame, cache: Path, brackets, hole_safe: bool = True):
+    """(table without the unobservable rows, info dict). Call BEFORE any model or arm touches the table, so every arm sees the same rows."""
+    m = unobservable_mask(tab, cache, brackets, hole_safe)
+    return tab.loc[~m].reset_index(drop=True), _drop_info(brackets, m.sum(), len(tab))
+
+
+def filter_unobservable(test: pd.DataFrame, cache: Path, bracket, *arrays, hole_safe: bool = True):
+    """The scored-window form: drop the unobservable rows from ``test`` AND from every per-row array (predictions, gate masks), so the arms and the v1
+    reference keep the same population. Returns (test, arrays, info)."""
+    keep = ~unobservable_mask(test, cache, [bracket], hole_safe)
+    return test.loc[keep].reset_index(drop=True), tuple(np.asarray(a)[keep] for a in arrays), _drop_info([bracket], (~keep).sum(), len(test))
 
 
 # ----------------------------------------------------------------------------------------------- arms and the rule
@@ -151,8 +199,9 @@ BRACKET_CELLS = [(2.0, 3.0), (2.0, 4.0), (2.0, 6.0), (1.5, 4.0), (3.0, 4.0)]    
 
 
 def bracket_unit(tab, out, n_jobs, cache: Path) -> dict:
+    tab, dropped = drop_unobservable(tab, cache, BRACKET_CELLS)   # option (a): every cell and the base compare the same rows
     mem = base_members(tab, out, n_jobs)
-    res = {"unit": "RQ-20261101-b601-01", "sealed_windows_read": 0, "cells": {}}
+    res = {"unit": "RQ-20261101-b601-01", "sealed_windows_read": 0, "cells": {}, "unobservable_rows_dropped": dropped}
     per = {}
     for sl, tp in BRACKET_CELLS:
         t = relabel_table(tab, cache, sl, tp)
@@ -453,6 +502,7 @@ def _stack_tweak(share, cost_x_atr, fold_of, gate):
 
 
 def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
+    tab, dropped = drop_unobservable(tab, cache, [(2.0, 4.0)])   # option (a): base, S1, S2 and S3 compare the same rows
     base_m = {sd: R.ens_member(tab, "R0", "S0", sd, out, n_jobs) for sd in SEEDS}
     r2_m = {sd: R.ens_member(tab, "R2", "S0", sd, out, n_jobs) for sd in SEEDS}
     share = {sd: [float((np.maximum(base_m[sd][f"pl{k}"], base_m[sd][f"ps{k}"]) > TAU).mean()) for k in range(8)] for sd in SEEDS}
@@ -475,7 +525,7 @@ def stack_unit(tab, out, n_jobs, cache: Path) -> dict:
             per[name].append(stats(tr))
             trades[name].append(tr)
         print("level", name, round(float(np.mean([x["mean"] for x in per[name]])), 4), flush=True)
-    res = {"unit": "RQ-20261101-b608-01", "sealed_windows_read": 0, "levels": {}}
+    res = {"unit": "RQ-20261101-b608-01", "sealed_windows_read": 0, "levels": {}, "unobservable_rows_dropped": dropped}
     res["levels"]["base"] = {"arm_mean": float(np.mean([x["mean"] for x in per["base"]])), "n": [x["n"] for x in per["base"]]}
     prev_mean, winner = res["levels"]["base"]["arm_mean"], "base"
     stopped = False
@@ -586,6 +636,9 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
         est = k_cost / test["atr_pct"].to_numpy()
         pl[est > GATE_V2] = ABSTAIN
         ps[est > GATE_V2] = ABSTAIN
+    unobs = _drop_info([(2.0, 4.0)], 0, len(test))
+    if use_bracket:   # option (a): the same rows for the v2 arm and the v1 reference
+        test, (pl, ps), unobs = filter_unobservable(test, cache, (2.0, 4.0), pl, ps)
     score_frame = relabel_table(test, cache, 2.0, 4.0) if use_bracket else test
     taken = E.policy(score_frame, pl, ps, tau_v2)
     m = E.summarize(taken)
@@ -605,7 +658,8 @@ def w1_unit(dev_streams, fwd_streams, oct_dir, out, n_jobs, stack_result: Path, 
            "stack": stack, "fixed_on_dev": fixed, "window": list(W1), "n_train": len(train), "n_test_rows": len(test), "test_symbols": int(test.symbol.nunique()),
            "v2": m, "v2_traded5": E.summarize(slice5), "v1_reference": m1, "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]),
            "baselines_v2_mechanics": _baselines(score_frame, taken), "holdout_lock": claim, "holdout_lock_v1ref": claim1,
-           "variants_on_window": claim1["variants_on_window"], "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
+           "variants_on_window": claim1["variants_on_window"], "unobservable_rows_dropped": unobs,
+           "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
     v1meta = json.loads((art / "meta.json").read_text())
     art_dir = out / "v2_artifact"
     art_dir.mkdir(exist_ok=True)
@@ -655,6 +709,9 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
     te = str((w0 - pd.Timedelta(days=1)).date())   # the frozen artifact was fit before the forward window opens
     claim = holdout_lock.claim_read(mid, start, end, "RQ-20261101-b610-01", reader, ledger, train_end=te)   # BEFORE any outcome
     br = meta["bracket"]
+    unobs = _drop_info([(float(br["sl_atr"]), float(br["tp_atr"]))], 0, len(test))
+    if float(br["tp_atr"]) != 3.0:   # option (a): the same rows for the v2 arm and the v1 reference
+        test, (pl, ps, passes), unobs = filter_unobservable(test, cache, (float(br["sl_atr"]), float(br["tp_atr"])), pl, ps, passes)
     score = relabel_table(test, cache, float(br["sl_atr"]), float(br["tp_atr"])) if float(br["tp_atr"]) != 3.0 else test
     pl2, ps2 = pl.copy(), ps.copy()
     pl2[~passes] = ABSTAIN
@@ -676,6 +733,7 @@ def fwd_unit(artifact: Path, dev_streams: Path, fwd_streams: Path, daily_dirs: l
             "v2": m, "v2_traded5": E.summarize(taken[taken.symbol.isin(TRADED)]), "v1_reference": m1,
             "v1_reference_traded5": E.summarize(taken1[taken1.symbol.isin(TRADED)]), "baselines_v2_mechanics": _baselines(score, taken),
             "holdout_lock": claim, "holdout_lock_v1ref": claim1, "variants_on_window": claim1["variants_on_window"],
+            "unobservable_rows_dropped": unobs,
             "result": f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}) vs v1 reference {m1['mean_net_r']:+.4f} (n={m1['n']})"}
 
 
