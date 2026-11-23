@@ -31,6 +31,7 @@ import glob
 import gzip
 import hashlib
 import json
+import os
 import random
 import re
 import sys
@@ -83,6 +84,49 @@ def is_crypto(symbol: str) -> bool:
     return str(symbol).endswith("USDT")
 
 
+#: harness default --timeout-bars per strategy family (the corpus rows do not carry it; the sidecar params do not either)
+DEFAULT_TIMEOUT_BARS = (("trend_donchian", 200), ("fade_breakout", 48), ("squeeze_breakout", 48))
+
+
+def sidecar(rel: str, root: Path = REPO, _cache: Dict[str, Optional[dict]] = {}) -> Optional[dict]:
+    """The harness summary beside a trades file (``<name>__trades.jsonl`` -> ``<name>__bt.json``): symbol, timeframe, strategy
+    and the run's ``params``. None when absent or unreadable. CF-BACKTEST-FIDELITY: it is what lets a replay use the SAME trail
+    geometry the harness used, and resolves a symbol/timeframe the rows themselves do not carry."""
+    if rel in _cache:
+        return _cache[rel]
+    d, b = os.path.split(rel)
+    cand = re.sub(r"_?_?trades\.jsonl(\.gz)?$", "__bt.json", b)
+    out: Optional[dict] = None
+    if cand != b:
+        try:
+            out = json.loads((root / d / cand).read_text())
+        except (OSError, ValueError):
+            out = None
+    _cache[rel] = out if isinstance(out, dict) else None
+    return _cache[rel]
+
+
+def leg_meta_for(row: dict, side: Optional[dict]) -> Optional[dict]:
+    """``{atr, trail_mult, tp}`` rebuilt from the sidecar params, or None. atr = |entry - sl| / atr_stop_mult (the trend and
+    squeeze harnesses set the stop at ``atr_stop_mult x ATR``); a fade stop is not ATR-derived, so fade carries a TP only (tp1r)."""
+    pr = (side or {}).get("params") or {}
+    entry, sl = lrc._num(row.get("entry")), lrc._num(row.get("sl"))
+    if entry is None or sl is None or entry == sl:
+        return None
+    risk, sign, meta = abs(entry - sl), (1.0 if str(row.get("direction")).lower() == "long" else -1.0), {}
+    asm, tm = lrc._num(pr.get("atr_stop_mult")), lrc._num(pr.get("trail_mult"))
+    if asm and tm:
+        meta["atr"], meta["trail_mult"] = risk / asm, tm
+    tp_r = lrc._num(pr.get("tp_r"))
+    if tp_r and tp_r < 50.0 and (pr.get("exit_style") in (None, "tp1r") or asm):
+        meta["tp"] = entry + sign * tp_r * risk
+    return meta or None
+
+
+def timeout_bars_for(strategy: Any) -> Optional[int]:
+    return next((n for pre, n in DEFAULT_TIMEOUT_BARS if str(strategy or "").startswith(pre)), None)
+
+
 def load_jobs(files: Iterable[str], root: Path = REPO) -> Tuple[Dict[str, dict], Dict[str, Any]]:
     """Distinct replay jobs keyed by ``trade_key`` (strategy|symbol|entry_time|direction|sl); the first occurrence wins.
     Rows without replayable geometry are counted, not dropped silently. Returns ``(jobs, counts)``."""
@@ -111,12 +155,22 @@ def load_jobs(files: Iterable[str], root: Path = REPO) -> Tuple[Dict[str, dict],
                     c["rows_not_replayable"] += 1
                     continue
                 c["rows_replayable"] += 1
+                side = sidecar(rel, root)
+                if r.get("symbol") is None and (side or {}).get("symbol"):
+                    r["symbol"] = side["symbol"]; c["symbol_from_sidecar"] += 1
+                if r.get("strategy") is None and (side or {}).get("strategy"):
+                    r["strategy"] = side["strategy"]; c["strategy_from_sidecar"] += 1
                 if r.get("symbol") is None:
                     r["symbol"] = "UNKNOWN"      # file carries no symbol: counted as could_not_grade symbol_unresolved, never dropped
                 k = cf_harness.trade_key(r.get("strategy"), r.get("symbol"), r.get("entry_time"), r.get("direction"), r.get("sl"))
                 if k in jobs:
                     continue
                 r["_file"] = rel
+                if (side or {}).get("timeframe"):
+                    r["_tf"] = side["timeframe"]
+                lm = leg_meta_for(r, side)
+                if lm:
+                    r["_leg_meta"] = lm
                 jobs[k] = r
             c["files_empty" if n_file == 0 else "files_nonempty"] += 1
     c["files"] = c["files_empty"] + c["files_nonempty"] + c["files_unreadable"]
@@ -130,6 +184,8 @@ def plan_shards(jobs: Dict[str, dict], max_jobs: int = DEFAULT_MAX_JOBS) -> Tupl
     groups: Dict[Tuple[str, Optional[str], Optional[str]], List[str]] = defaultdict(list)
     for k, r in sorted(jobs.items()):
         tf, why = resolve_timeframe(r["_file"], r.get("strategy"))
+        if tf is None and r.get("_tf") in _SUPPORTED_TF:
+            tf, why = r["_tf"], None                       # the harness summary beside the file names the timeframe
         groups[(str(r["symbol"]), tf, why)].append(k)
     shards: List[dict] = []
     chunks: Dict[str, List[str]] = {}
@@ -159,7 +215,7 @@ class BarStore:
 
 
 def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random: int) -> dict:
-    row = {k: v for k, v in job.items() if k != "_file"}
+    row = {k: v for k, v in job.items() if not k.startswith("_")}
     if row.get("symbol") == "UNKNOWN":
         cf = cf_harness._could_not(row, "symbol_unresolved")
     elif tf is None:
@@ -169,13 +225,13 @@ def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random:
     elif store is None:
         cf = cf_harness._could_not(row, "no_bars")
     else:
-        cfg = {"timeframe": tf}
+        cfg = {"timeframe": tf, **({"max_hold_bars": mb} if (mb := timeout_bars_for(row.get("strategy"))) else {})}
         t_entry, t_exit = lrc._ts(row.get("entry_time")), lrc._ts(row.get("exit_time"))
         if t_entry is None or t_exit is None:
             cf = cf_harness._could_not(row, "row_incomplete")
         else:
             h = cf_core.resolve_horizon({"timeframe": tf}, cfg)["seconds"]
-            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random)
+            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random, leg_meta=job.get("_leg_meta"))
     return {"trade_key": cf["trade_key"], "strategy": row.get("strategy"), "symbol": row.get("symbol"), "timeframe": tf,
             "direction": row.get("direction"), "entry_time": row.get("entry_time"), "net_r": row.get("net_r"),
             "source_file": job["_file"], "cf": cf}
@@ -199,7 +255,9 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
         else:
             try:
                 lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen)
-                hi = max(lrc._ts(jobs[k]["exit_time"]) for k in chosen) + cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf})["seconds"]
+                hi = max(lrc._ts(jobs[k]["exit_time"]) + cf_core.resolve_horizon(
+                    {"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := timeout_bars_for(jobs[k].get("strategy"))) else {})})["seconds"]
+                    for k in chosen)
                 bars = cf_bars.historical_bars(shard["symbol"], tf, lo, hi, fetcher)
                 store = BarStore(bars) if bars else None
             except Exception as e:                           # allow-silent: a failed fetch is a recorded state (state=fetch_failed, error kept in meta, no 'done' meta so a re-run retries), never a halt
