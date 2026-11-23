@@ -57,7 +57,7 @@ evidence_class:
   holdout: none
   claim: edge
 ml_consumer:
-  consumer: ENTRY-SIDE-GATE
+  consumer: ML-ENTRY-LIVE-ADAPTER
   decision: 'which side ml_entry may take at a decision (both today)'
   legs: [ml_entry]
   book: money
@@ -118,8 +118,8 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: 'the control is the ungated policy on identical predictions; only the allowed-side mask differs'
   matched_random:
-    draws: 0
-    note: 'not computed; a side mask on fixed predictions selects no new information path. short_only is the static-gate control.'
+    draws: 200
+    note: 'declared, NOT computed by this unit: the control that matters here is the ungated policy on identical predictions. short_only is the static-gate control.'
   best_static:
     grid:
     - both sides (live)

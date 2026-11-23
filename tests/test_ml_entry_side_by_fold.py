@@ -7,7 +7,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E  # noqa: E402
+import ml_decision_entry as E
 
 
 def _tk(sides, rs, days):

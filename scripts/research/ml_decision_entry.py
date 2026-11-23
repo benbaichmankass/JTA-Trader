@@ -1185,6 +1185,7 @@ def side_fold_table(res: dict) -> str:
 
 def side_by_fold_cmd(args) -> int:
     from datetime import date
+
     import ml_entry_retrain as R
     cache, out = Path(args.cache), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
