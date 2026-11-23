@@ -84,3 +84,43 @@ def test_zero_risk_and_bad_side():
 def test_exit_idx_ends_the_rows():
     rows = L.build_rows(side="long", entry=100.0, sl=98.0, bars=flat(10, 1), entry_time=0.0, bar_seconds=H, exit_idx=4)
     assert [r["k"] for r in rows] == [1, 2, 3]
+
+
+# ---- the driver (cf_bar_labels_run): job -> rows, no network ------------------------------------------------------------------
+def _driver():
+    sys.path[:0] = [str(Path(__file__).resolve().parents[1])]
+    import cf_bar_labels_run as D
+    return D
+
+
+def _job(direction="long", entry_time="1970-01-01T00:00:00+00:00", exit_time="1970-01-01T05:00:00+00:00"):
+    return {"entry": 100.0, "sl": 98.0, "direction": direction, "entry_time": entry_time, "exit_time": exit_time,
+            "strategy": "s", "symbol": "BTCUSDT"}
+
+
+def test_label_job_drops_signal_bar_and_ends_at_the_replayed_exit():
+    D = _driver()
+    bars = [bar(0, 100, 150, 50, 100)] + flat(8, start=1)                  # bar 0 = signal bar (1h tf), huge range
+    rows = D.label_job(_job(), bars, "1h")
+    assert rows and rows[0]["features"]["peak_r"] < 0.2                      # the 150 high is not read
+    assert [r["k"] for r in rows][-1] < 5                                    # exit_time 05:00 -> exit bar index 4 (bars close 02:00..05:00)
+
+
+def test_label_job_rejects_unusable_geometry():
+    D = _driver()
+    assert D.label_job({**_job(), "sl": None}, flat(5, 1), "1h") is None
+    assert D.label_job(_job(direction="flat"), flat(5, 1), "1h") is None
+    assert D.label_job({**_job(), "entry_time": None}, flat(5, 1), "1h") is None
+
+
+def test_run_shard_writes_census_and_counts_non_crypto(tmp_path):
+    D = _driver()
+    jobs = {"k1": {**_job(), "_file": "f"}}
+    shard = {"shard_id": "BTCUSDT_1h_x", "symbol": "BTCUSDT", "timeframe": "1h"}
+    meta = D.run_shard(shard, {"BTCUSDT_1h_x": ["k1"]}, jobs, tmp_path, fetcher=lambda s, tf, a, b: [
+        {"time": i * H, "open": 100, "high": 100.2, "low": 99.8, "close": 100, "volume": 1} for i in range(0, 12)])
+    assert meta["state"] == "done" and meta["n_labelled_trades"] == 1 and meta["census"]["n_rows"] > 0
+    assert D.reduce_census(tmp_path)["n_trades"] == 1
+    eq = {"shard_id": "SPY_1h_y", "symbol": "SPY", "timeframe": "1h"}
+    m2 = D.run_shard(eq, {"SPY_1h_y": ["k1"]}, {"k1": {**_job(), "symbol": "SPY", "_file": "f"}}, tmp_path)
+    assert m2["could_not_label"] == {"no_bar_source": 1} and m2["n_labelled_trades"] == 0
