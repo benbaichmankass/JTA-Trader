@@ -534,7 +534,8 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
             mae_pre = round(min(sign * ((b["low"] if sign > 0 else b["high"]) - entry_ref) for b in win) / r_dist, 4)
         dt0 = datetime.fromtimestamp(t_entry, timezone.utc)
         context = {"atr_pct": None if not atr else round(atr / entry_ref, 6), "risk_pct": round(r_dist / entry_ref, 6), "mfe_pre_r": mfe_pre,
-                   "mae_pre_r": mae_pre, "bars_held": len(win), "hour_utc": dt0.hour, "dow": dt0.weekday()}
+                   "mae_pre_r": mae_pre, "bars_held": len(win), "hour_utc": dt0.hour, "dow": dt0.weekday(),
+                   "replay_exit": rexit.get("reason")}
 
     # ---- (f) matched random intervention (same class: stop-tighten, same count)
     rc = None
