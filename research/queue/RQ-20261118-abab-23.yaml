@@ -96,23 +96,21 @@ run:
   - --research-unit
   - RQ-20261118-abab-23
   - --grade
-  - holdout
+  - replace
   - --baseline
   - A
   - --delta-r
   - '0'
+  - --delta-r-per-trade
+  - '0.02'
   - --folds
-  - '4'
+  - '6'
   - --fold-majority
-  - '3'
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
   - --n-floor
-  - '25'
-  - --holdout-frac
-  - '0.25'
-  - --holdout-min-trades
-  - '25'
-  - --holdout-max-frac
-  - '0.40'
+  - '39'
   - --out
   - '{out_dir}'
   inputs:
@@ -128,7 +126,7 @@ roadmap:
 related:
 - RQ-20261111-203c-06
 - research/levers/iaum_pullback_1d.yaml
-last_dispatched_at: '2026-11-19T19:56:59+00:00'
+rearmed_at: '2026-11-23T03:12:00+00:00'  # COMMAND/RULE MISMATCH fixed (manager 2026-11-23, same as abab-19): the command graded with `--grade holdout --baseline A --delta-r 0 --folds 4 --fold-majority 3` but the registered rule is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005). Landed rows are NOT rewritten. result row was graded under an unregistered grade; re-grade pending. status is `done` and is NOT changed: the dispatcher only runs status queued, so this re-arm does not dispatch until the manager decides the status.
 grading:
   attested: RULERQ20261118abab23
   auto: true
