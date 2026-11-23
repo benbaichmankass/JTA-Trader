@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261123-CF-C2-HARNESS-REST",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-25",
+    "how_to_check": "the next export's summary no longer lists CF-C2-HARNESS-REST as held",
+    "what": "CF-C2-HARNESS-REST lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45203862706; held item CF-C2-HARNESS-REST",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [CF-C2-HARNESS-REST] held back from the work-store export of 2026-11-23: the store row fails the guard row check -- row CF-C2-HARNESS-REST: closing to done needs `writeback` = {\"roadmap\": \"<milestone line you updated | none: reason>\", \"arch\": \"<ARCHITECTURE section you updated | none: reason>\"}"
+}

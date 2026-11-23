@@ -1,0 +1,21 @@
+{
+  "id": "AM-V2-LABELS-REVERIFY",
+  "title": "AM v2 labels (cfbl-20261123): re-verify or regenerate before the Actions artifacts expire 2026-12-07, if Stage A/B still need them",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "post-reset-ML",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-05",
+  "note": "Follow-up the manager asked for (2026-11-23). Check: artifacts cfbl-20261123-labels-0..23 still exist (gh api repos/benbaichmankass/JTA-Trader/actions/runs/45243829438/artifacts) and their sha256 match comms/research/AM-V2-LABELS-20261123/manifest.json; if Stage A/B needs them and they are about to expire, re-dispatch .github/workflows/cf-bar-labels.yml (default corpus_sha = run w) and compare labels_combined_sha256, or close the row with the reason if the heads are closed. Clears when: stage A verdict recorded AND (labels re-verified OR regenerated OR no longer needed).",
+  "phase": "research",
+  "updated_at": "2026-11-23T20:17:11Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}

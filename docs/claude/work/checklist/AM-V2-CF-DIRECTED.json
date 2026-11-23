@@ -1,0 +1,22 @@
+{
+  "id": "AM-V2-CF-DIRECTED",
+  "title": "Active management v2, directed by the counterfactual findings: predictive brackets that move both ways (target, invalidation, banking), not wider stops or trail-only",
+  "state": "queued",
+  "owner": "Manager (session_01AFoLuKifPRuyeVhkQU1Fsg); programme P1",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "2026-11-23 ~18:30Z operator, verbatim: \"models ... of each step, don't need to be limited to, like, a specific model from the first step. If they, like, can apply to strategies as well, or several models, like, we can mix and match, that's fine. I just want to make sure that's clear so that we're not, like, creating unnecessary limitations.\" Applied: the target/invalidation heads are entry-source-agnostic (any ML or rule strategy may consume them; pooled where the registered test supports it). For Thursday planning: L-ML-MECE's 'one owning model family per decision' means ownership of the question, NOT exclusivity of use; clarify the ROADMAP wording. Status 18:30Z: ML design #28440 merged; label builder + cf-bar-labels workflow in #28447 (corpus pinned to run w sha 1eb164f4); training on the trainer VM/Kaggle follows the census (operator 18:25Z: \"push those to training\"). 2026-11-23 ML worker: operator ~18:30Z clarification recorded for the training unit: target + invalidation heads are source-agnostic, trained/evaluated as consumable by ANY entry source (ml_entry, ml_entry_eq, rule strategies), pooled where the registered test supports it with per-source cuts reported; a pooled head applied to a real-money leg still needs its own population test before it acts. Labels (cf_bar_labels) carry strategy/symbol/direction per row so per-source cuts need no rebuild. Status: builder+driver+workflow in held PR 28447; full label run waits on merge. 2026-11-23 ML worker status: Stage A done and PASSED (PR 28460 held, merge on green; unit RQ-20261123-a9d1-01 graded pass). Handoff rows: AM-V2-STAGE-B-POLICY-ARM (top), AM-V2-RICHER-FEATURES, AM-V2-ML-ENTRY-LABELS; AM-V2-LABELS-REVERIFY due 2026-12-05. Labels run cfbl-20261123 (Actions 45243829438), manifest in comms/research/AM-V2-LABELS-20261123/.",
+  "phase": null,
+  "updated_at": "2026-11-23T20:17:01Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}

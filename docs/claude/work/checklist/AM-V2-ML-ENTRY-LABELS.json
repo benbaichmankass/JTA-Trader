@@ -1,0 +1,21 @@
+{
+  "id": "AM-V2-ML-ENTRY-LABELS",
+  "title": "AM v2: label ml_entry / ml_entry_eq decisions with cf_bar_labels.build_rows so the heads can be graded on ML entry sources",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "post-reset-ML",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-04",
+  "note": "The run-w corpus (469,172 trades) holds rule-strategy backtest trades only; NO ml_entry / ml_entry_eq trades, so per-source cuts and any claim for ML entry is transfer-only (operator 2026-11-23: heads must be consumable by ANY entry source, pooled where the registered test supports it, per-source cuts reported; a pooled head acting on a real-money leg still needs its own population test). Build: take ml_decision_entry taken decisions (policy() output with entry/sl from the 2/3 ATR bracket) and ml_entry_eq decisions, call cf_bar_labels.build_rows per decision on the same bars, tag strategy=ml_entry/ml_entry_eq, append to the label corpus, report per-source cuts in am_heads_fit.py.",
+  "phase": "research",
+  "updated_at": "2026-11-23T20:16:57Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}

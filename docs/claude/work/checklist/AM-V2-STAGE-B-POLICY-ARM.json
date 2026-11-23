@@ -1,0 +1,21 @@
+{
+  "id": "AM-V2-STAGE-B-POLICY-ARM",
+  "title": "AM v2 Stage B: heads as a bracket policy on the CF replay, graded by RULE-AM-RISK-ADJUSTED-V1 (target extend/pull-in, tighten, loosen-to-structure, bank)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "post-reset-ML",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-30",
+  "note": "TOP AM-V2 priority (manager 2026-11-23). Stage A PASSED (unit RQ-20261123-a9d1-01, PR 28460): 5 heads beat the state-conditioned baseline by 1-3.5% loss, holdout agrees; skill is NOT P&L. BUILD: a replay-side driver that re-runs each CF job with the head-driven bracket (target level from the q0.5/q0.9 head, stop moves from stop_first/dip_recovers) so each policy is an ARM with a full net R path; reuse cf_bulk plan/shards + cf_bar_labels_run as the bar plumbing, am_heads_fit.py for fits (it does not save models yet: add model dump per fold). REGISTER one unit per action class before the run, each with a matched random-intervention control (R4), purged folds, claimed holdout (family AM-HEADS, prior n_tries 1), per-leg cuts; book-level sim is still BOOK-SIM-REAL-SIZER (screen only). Pointers: docs/research/ml-am-heads-design-2026-11-23.md, comms/research/AM-V2-LABELS-20261123/ (manifest, census), comms/research/RQ-20261123-a9d1-01/. Clears when: a Stage B unit is registered with its rule and run.",
+  "phase": "research",
+  "updated_at": "2026-11-23T20:16:55Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}

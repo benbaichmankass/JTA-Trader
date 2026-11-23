@@ -1,0 +1,23 @@
+{
+  "id": "FRACTIONAL-ETF-EXECUTION",
+  "title": "Fractional-share execution for the index/leveraged ETF book (Alpaca day-only + daily bracket re-arm, or IBKR)",
+  "state": "queued",
+  "owner": "lane INDEX-LEVERAGED-ETF-ROSTER (session_01AFoLuM4G8wSVKsoyJcQc8q)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "execution capability for the leveraged/inverse index-ETF roster on a small real-money account",
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "Operator 2026-11-23 ~18:55Z, verbatim: \"Yes, go place the trades. Let's check out back a little bit further. If it's just building out a mechanism to make sure that the brackets are reapplied every morning, we can do that. As long as we know what design we need to make sure that it doesn't, that it works and it's stable and reliable ... for IBKR ... maybe we can do it on IBKR after all. Let's double check that against what we actually have.\" Context: alpaca_live refuses UPRO/SPXL/SSO/TZA on the CASH gate (whole shares, brackets, about 54 USD free on 11-16/17), not on risk_pct. Alpaca fractional = day-only (docs). IBKR code path = TWS API via ib_insync (ib_client.py); fractional via that API unverified. Steps: fractionable read; operator-approved PAPER test orders (alpaca_paper + ib_paper); IB interface check; re-arm design doc. Building the executor change is Tier 2 (order path) + any roster/account move Tier 3; both follow the design and the test results. The operator is separately looking at adding cash. 2026-11-23 IBKR closed via API (probe run 45258885219: Error 10243 'Fractional-sized order cannot be placed via API', desktop only); Alpaca fractional is DAY-only, stop XOR take-profit (no bracket/OCO, run 45251691248); whole shares + cash is the route. Premarket test (c) scheduled Tue 2026-11-24 13:00Z.",
+  "phase": null,
+  "updated_at": "2026-11-23T20:29:46Z",
+  "updated_by": "Lane: INDEX-LEVERAGED-ETF-ROSTER-20261123"
+}
