@@ -95,7 +95,7 @@ run:
   inputs:
     research_unit: RQ-20261117-9e1c-01
   timeout_minutes: 150
-status: blocked
+status: retired
 theme: regime
 title: 'REGIME lever family never tested on mes_trend_long_1d: ADX ceiling AX40/AX50 (--adx-max 40/50) vs the declared leg, net of cost?'
 value:
@@ -127,3 +127,4 @@ blocked_on:
   ref: yfinance ES=F (mes_trend_long_1d feed) via regime_debt_matrix._fetch_csv
   what: 'Yahoo returns no rows for ES=F AND the SPY control (venue_state=refusing_us; yfinance 0.2.66 plain-requests UA gets HTTP 429), so exit_lever_ablation dies in fetch_candles before any arm runs. Same failure on all 7 sibling units, one run each (no result, nothing graded). A re-run on the same host repeats it. The alternative lane (--non-crypto-source dukascopy) serves MES only as an S&P index CFD PROXY (dukascopy_instruments REL_PROXY), a different instrument and cost basis than the registered feed, so switching is a population change that needs its own decision, not a silent edit.'
   clears_when: 'pipeline item PI-20261122-SME5WDGR-0007 lands MES 1d bars sourced from the venue the leg trades (IB historical bars, NOT the Dukascopy index-CFD proxy; manager ruling 2026-11-22) with a stated window and a --data-csv route for exit_lever_ablation; if that window starts after the registered 2018-06-01 the window is a registered-population decision for the manager. Then git mv this file back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged'
+retired_reason: 'RETIRED BY RECORD 2026-11-23 (manager ruling, lane QUEUE-FILL-STANDING-W48). Reason: lever_never_fired -- the ADX-max arms AX40/AX50 are byte-identical to A on mes_trend_long_1d on both the registered window and the 2012+ window. Data (local runs of this unit''s exact command, registered flags, yfinance ES=F 1d, MES cost stack): registered window 2018-06-01..2026-10-15: A n=31 net_total_r 16.8556, AX40 n=31 net 16.8556, AX50 n=31 net 16.8556, all 31 trade rows (entry_time, direction, net_r, exit_time, exit_reason) equal across the three arms; 2012-01-01..2026-10-15: A n=51 net 25.0574, AX40 n=51 net 25.0574, AX50 n=51 net 25.0574, all 51 trade rows equal. Why: across the leg''s own trades the ADX at entry has max 38.23 (min 8.23 on the 2012+ window, 11.01 on the registered one) and 0 trades at or above 40, so a ceiling of 40 or 50 can never exclude an entry on this leg; the registered rule grades such a unit INDETERMINATE (every candidate byte-identical to A). Closes THIS arm grid on this leg, not the ADX-ceiling family on other legs. Not superseded: a successor would be a known-indeterminate run on any window. Its 2026-11-17 sibling units on this leg are superseded by RQ-20261123-c5d2-01/02/04/05/06/07.'
