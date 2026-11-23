@@ -1,0 +1,134 @@
+name: cf-bar-labels
+
+# AM-V2-CF-DIRECTED unit 1 (bar-expanded label build, docs/research/ml-am-heads-design-2026-11-23.md section 2). Applies
+# scripts/research/cf_bar_labels_run.py to the same job corpus and shard plan as cf-bulk-backtest (it imports cf_bulk.build_plan, so shard ids and
+# job keys are cf_bulk's own) on GitHub-hosted runners: plan -> sharded matrix -> census. No Claude, no API credits, no secrets; it only READS the
+# checked-out corpus + the keyless Binance Vision archive and UPLOADS artifacts (bar_labels shards, census.json). It does no bracket replay and
+# does not touch cf_bulk output. Gates this adds or changes: none. Nothing here touches the trade path.
+# no-durable-result: artifacts-only first run (labels are training input for the AM v2 heads, large); the small census.json is landed under comms/research/ by the unit that reads it
+# Resumable: a shard is cheap to redo; a failed shard job is retried by re-dispatching (batches are independent).
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id (names the artifacts), e.g. cfbl-20261123"
+        required: true
+      batches:
+        description: "Matrix width (balanced batches of shards)"
+        default: "24"
+      corpus_sha:
+        description: "Commit sha whose comms/research + comms/strategy_evidence trade corpus is labelled (pins the job set; default = the sha cfb-20261123w ran on, MEASURED: its file_list_sha1 8ea90ce7e5fc... reproduces from this sha, 7,289 files, 510,345 jobs). Empty = the dispatch ref's own corpus."
+        default: "1eb164f4ae641bea82ac34692af9cb7031640a62"
+      max_fwd_bars:
+        description: "Forward window (bars) the labels look ahead; rows with fewer bars left and no stop/target are censored"
+        default: "48"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-bar-labels-${{ github.event.inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+          echo "corpus pinned to $CORPUS_SHA"
+      - name: Plan shards (cf_bulk's own planner)
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          BATCHES: ${{ inputs.batches }}
+        run: python3 scripts/research/cf_bulk.py plan --run-id "$RUN_ID" --out out --batches "$BATCHES"
+      - id: m
+        run: echo "matrix=$(python3 -c "import json;print(json.dumps({'include':[{'batch':b['batch'],'index':' '.join(map(str,b['index']))} for b in json.load(open('out/batches.json'))]}))")" >> "$GITHUB_OUTPUT"
+      - run: echo "corpus_sha=$GITHUB_SHA" && python3 -c "import json;print(json.load(open('out/plan.json'))['input'])"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-plan
+          path: out/plan.json
+
+  shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+          echo "corpus pinned to $CORPUS_SHA"
+      - name: Label this batch's shards
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          INDEX: ${{ matrix.index }}
+          MAXF: ${{ inputs.max_fwd_bars }}
+        run: python3 scripts/research/cf_bar_labels_run.py shard --run-id "$RUN_ID" --out out --index $INDEX --max-fwd-bars "$MAXF"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.run_id }}-labels-${{ matrix.batch }}
+          path: out/bar_labels
+          if-no-files-found: ignore
+          retention-days: 14
+
+  census:
+    needs: shard
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.run_id }}-labels-*
+          path: out/bar_labels
+          merge-multiple: true
+      - run: python3 scripts/research/cf_bar_labels_run.py census --out out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.run_id }}-census
+          path: out/census.json
