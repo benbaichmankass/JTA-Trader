@@ -1,9 +1,10 @@
+# UNBLOCKED 2026-11-23 by lane QUEUE-FILL-STANDING-W48 (manager's PI-20261123-SME5WDGR-0013 direction): the blocker was a data source ('needs a different daily source for this symbol': the Dukascopy lane refuses QLD by design). --non-crypto-source is now `auto`, the yfinance lane that holds the REAL QLD instrument (the runner installs yfinance==1.7.0 in research-script-run.yml; the published candle dataset already carries yahoo__QLD__1d, 1830 rows). The unit's exact command ran locally end to end on QLD 1d candles (n(A)=47; a local run, not the record). Rule and every other flag unchanged.
 # BLOCKED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group C part 2; PI-20261122-SME5WDGR-0004): the Dukascopy lane refuses this symbol by design; three identical runs, nothing to re-run.
 # Hand-authored 2026-11-01 by lane RESEARCH-ITERATE (Tier 1), dispatched by Manager Session 2026-11-01a. ITERATION unit: authored from a written diagnosis of the subject's last result. Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-78fc-37
 title: 'ITERATION 1 of qld_trend_long_1d (indeterminate): Measured at power on 2018-06-01..2026-10-15 23:59, does qld_trend_long_1d as declared
   clear Stage 0 net of the full cost stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -86,7 +87,7 @@ run:
   - --end
   - 2026-10-15 23:59
   - --non-crypto-source
-  - dukascopy
+  - auto
   - --grade
   - stage0
   - --baseline
@@ -129,8 +130,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 3
   verdict: null
-blocked_on:
-- kind: data
-  ref: scripts/ops/fetch_backtest_candles.py --source dukascopy (QLD)
-  what: 'The Dukascopy lane REFUSES QLD by design on every attempt (3 landed runs, exit 1): a 3x/2x ETF with a DAILY leverage reset is not a QQQ path at any horizon (docs/research/dukascopy-coverage-adjudication-2026-08-24.md), so no re-run can ever fetch the candles. The test is still meaningful (a real alpaca leg) but needs a different daily source for this symbol.'
-  clears_when: 'exit_lever_ablation / fetch_backtest_candles can serve QLD daily bars from a source that holds the real instrument (e.g. the Alpaca bars the foxhound units already read, or a published dataset); then change --non-crypto-source accordingly, git mv back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged'
+rearmed_at: '2026-11-23T11:27:37+00:00'  # cause verified fixed (data source: real-instrument yfinance lane, local end-to-end run); the 3 earlier rows were Dukascopy refusals and do not count
