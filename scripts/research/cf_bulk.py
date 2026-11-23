@@ -304,6 +304,39 @@ def _arm_cells(cf: dict) -> Dict[str, Optional[float]]:
     return out
 
 
+def _bt_block(graded: List[dict], base_of) -> Dict[str, Any]:
+    if len(graded) < MIN_N:
+        return {"verdict": "INDETERMINATE", "why": f"n_graded {len(graded)} < {MIN_N}"}
+    cells: Dict[str, List[Tuple[int, float]]] = defaultdict(list)
+    for i, r in enumerate(graded):
+        base = base_of(r)
+        if base is None:
+            continue
+        for name, v in _arm_cells(r["cf"]).items():
+            if v is not None:
+                cells[name].append((i, v - base))
+    n = len(graded)
+    best = None
+    for name, dv in cells.items():
+        if len(dv) < MIN_N:
+            continue
+        folds_ok = 0
+        for f in range(FOLDS):
+            lo, hi = f * n // FOLDS, (f + 1) * n // FOLDS
+            fv = [d for i, d in dv if lo <= i < hi]
+            if fv and sum(fv) / len(fv) >= MIN_DELTA_R:
+                folds_ok += 1
+        mean = sum(d for _, d in dv) / len(dv)
+        if best is None or mean > best["mean_delta_r"]:
+            best = {"arm": name, "n": len(dv), "mean_delta_r": round(mean, 4), "folds_ge_threshold": folds_ok, "_vals": [d for _, d in dv]}
+    if best is None:
+        return {"verdict": "INDETERMINATE", "why": "no arm cell with n >= MIN_N"}
+    ci, p = _boot_p_le0(best.pop("_vals"))
+    ok = best["folds_ge_threshold"] >= FOLDS_NEEDED and ci[0] > 0
+    return {"verdict": "PASS" if ok else "FAIL", **best, "ci95_mean_delta": ci, "p_one_sided": round(p, 4),
+            "n_arm_cells": len(cells), "selection": "best cell over whole sample (candidate, not edge)"}
+
+
 def leg_verdicts(records: List[dict]) -> Dict[str, Any]:
     by_leg: Dict[str, List[dict]] = defaultdict(list)
     for r in records:
@@ -322,47 +355,19 @@ def leg_verdicts(records: List[dict]) -> Dict[str, Any]:
         else:
             pe["verdict"] = "INDETERMINATE"
         out["postexit"] = pe
-        # --- BT
-        if len(graded) < MIN_N:
-            out["bt"] = {"verdict": "INDETERMINATE", "why": f"n_graded {len(graded)} < {MIN_N}"}
-            legs[leg] = out
-            continue
-        cells: Dict[str, List[Tuple[int, float]]] = defaultdict(list)
-        for i, r in enumerate(graded):
-            base = (r["cf"]["arms"].get("original_brackets") or {}).get("net_r")
-            if base is None:
-                continue
-            for name, v in _arm_cells(r["cf"]).items():
-                if v is not None:
-                    cells[name].append((i, v - base))
-        n = len(graded)
-        best = None
-        for name, dv in cells.items():
-            if len(dv) < MIN_N:
-                continue
-            folds_ok = 0
-            for f in range(FOLDS):
-                lo, hi = f * n // FOLDS, (f + 1) * n // FOLDS
-                fv = [d for i, d in dv if lo <= i < hi]
-                if fv and sum(fv) / len(fv) >= MIN_DELTA_R:
-                    folds_ok += 1
-            mean = sum(d for _, d in dv) / len(dv)
-            if best is None or mean > best["mean_delta_r"]:
-                best = {"arm": name, "n": len(dv), "mean_delta_r": round(mean, 4), "folds_ge_threshold": folds_ok, "_vals": [d for _, d in dv]}
-        if best is None:
-            out["bt"] = {"verdict": "INDETERMINATE", "why": "no arm cell with n >= MIN_N"}
-        else:
-            ci, p = _boot_p_le0(best.pop("_vals"))
-            ok = best["folds_ge_threshold"] >= FOLDS_NEEDED and ci[0] > 0
-            out["bt"] = {"verdict": "PASS" if ok else "FAIL", **best, "ci95_mean_delta": ci, "p_one_sided": round(p, 4),
-                         "n_arm_cells": len(cells), "selection": "best cell over whole sample (candidate, not edge)"}
+        # --- BT: the registered rule (arms vs original_brackets) and, beside it, the same rule vs the replayed harness trade
+        # (CF-BACKTEST-FIDELITY: for a trailing leg original_brackets is a no-trail bracket, so the registered delta can read a
+        # TP-vs-trail difference; the replay baseline is the leg's own management). The registered rule itself is unchanged.
+        out["bt"] = _bt_block(graded, lambda r: (r["cf"]["arms"].get("original_brackets") or {}).get("net_r"))
+        out["bt_vs_replay"] = _bt_block(graded, lambda r: r["cf"]["arms"].get("replayed_actual_net_r"))
         legs[leg] = out
     # Holm across the legs that have a BT p
-    ps = sorted(((v["bt"]["p_one_sided"], k) for k, v in legs.items() if "p_one_sided" in v.get("bt", {})))
-    m, running = len(ps), 0.0
-    for i, (p, k) in enumerate(ps):
-        running = max(running, min(1.0, (m - i) * p))
-        legs[k]["bt"]["p_holm"] = round(running, 4)
+    for key in ("bt", "bt_vs_replay"):
+        ps = sorted(((v[key]["p_one_sided"], k) for k, v in legs.items() if "p_one_sided" in v.get(key, {})))
+        m, running = len(ps), 0.0
+        for i, (p, k) in enumerate(ps):
+            running = max(running, min(1.0, (m - i) * p))
+            legs[k][key]["p_holm"] = round(running, 4)
     return legs
 
 
@@ -383,6 +388,7 @@ def reduce_run(out: Path, plan: dict) -> dict:
     graded = sum(m["n_graded"] for m in metas)
     legs = leg_verdicts(records)
     bt = Counter(v["bt"]["verdict"] for v in legs.values())
+    bt_rp = Counter(v["bt_vs_replay"]["verdict"] for v in legs.values())
     pe = Counter(v["postexit"]["verdict"] for v in legs.values())
     fid = sorted(abs(r["cf"]["fidelity"]["abs_gap_r"]) for r in records if r["cf"].get("status") == "graded" and r["cf"].get("fidelity", {}).get("abs_gap_r") is not None)
     manifest = {"schema": BULK_SCHEMA, "run_id": plan["run_id"], "engine_schema_version": cf_core.SCHEMA_VERSION, "input": plan["input"],
@@ -392,7 +398,7 @@ def reduce_run(out: Path, plan: dict) -> dict:
     summary = {"schema": BULK_SCHEMA, "run_id": plan["run_id"], "population": f"{manifest['n_jobs_in_done_shards']} distinct replay jobs in {len(metas)} shards; {graded} graded",
                "rules": {"min_n": MIN_N, "bt": f"best arm cell mean delta vs original_brackets >= +{MIN_DELTA_R} R in >= {FOLDS_NEEDED}/{FOLDS} time folds and bootstrap-by-trade 95% CI > 0",
                          "postexit": f"exited_early share >= {POSTEXIT_HI} LEAVES_R, <= {POSTEXIT_LO} SAVES_R"},
-               "bt_verdicts": dict(bt), "postexit_verdicts": dict(pe),
+               "bt_verdicts": dict(bt), "bt_vs_replay_verdicts": dict(bt_rp), "postexit_verdicts": dict(pe),
                "fidelity_abs_gap_r": None if not fid else {"n": len(fid), "median": round(fid[len(fid) // 2], 4), "p90": round(fid[int(0.9 * len(fid))], 4), "max": round(fid[-1], 4),
                                                            "share_le_0.10": round(sum(1 for x in fid if x <= 0.10) / len(fid), 4)},
                "legs": legs, "provenance": "ESTIMATED"}

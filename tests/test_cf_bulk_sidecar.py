@@ -67,3 +67,19 @@ def test_harness_timeout_is_replayed_as_a_close_and_other_exits_are_unchanged():
     held = cf_harness.cf_fields(dict(trade, exit_reason="stop"), bars, horizon_cfg=cfg, n_random=5)
     assert got["status"] == "graded" and got["fidelity"]["abs_gap_r"] < 0.15                  # closed near the recorded 100.4
     assert held["fidelity"]["abs_gap_r"] > got["fidelity"]["abs_gap_r"]                         # a non-timeout row is not closed early
+
+
+def _graded(i, orig, replay, arm):
+    return {"strategy": "trend_donchian", "symbol": "BTCUSDT", "entry_time": f"2026-01-{i % 28 + 1:02d} {i // 28:02d}:00:00+00:00",
+            "cf": {"status": "graded", "post_exit": {"verdict": {"resolved": False}},
+                   "arms": {"original_brackets": {"net_r": orig}, "replayed_actual_net_r": replay,
+                            "alt_brackets": [{"sl_mult": 1.5, "tp_r": 6.0, "net_r": arm}], "less_management": [], "more_management": []}}}
+
+
+def test_bt_is_also_read_against_the_replayed_harness_trade_and_the_registered_rule_is_unchanged():
+    # arm beats a no-trail original bracket by +0.5 R, but only equals the harness's own (trailing) trade: the registered delta says PASS,
+    # the replay-baseline delta says FAIL. Both are reported; the registered rule keeps its original_brackets baseline.
+    recs = [_graded(i, orig=-0.5, replay=0.0, arm=0.0 + (0.001 * (i % 3))) for i in range(150)]
+    leg = cf_bulk.leg_verdicts(recs)["trend_donchian|BTCUSDT"]
+    assert leg["bt"]["verdict"] == "PASS" and leg["bt"]["mean_delta_r"] > 0.45
+    assert leg["bt_vs_replay"]["verdict"] == "FAIL" and abs(leg["bt_vs_replay"]["mean_delta_r"]) < 0.01
