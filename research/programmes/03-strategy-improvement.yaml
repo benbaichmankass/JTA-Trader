@@ -5881,3 +5881,1248 @@ nodes:
   after: []
   authoring_closed: '2026-11-20 lane QUEUE-FILL-STANDING-W47b (manager GO 07:43Z): AUTHORED as RQ-20261120-b2f6-01, the IB-bars vs Dukascopy XAU_USD feed-adequacy measurement for ict_scalp_mgc_15m (PI-20261120-FILLW47B-0014), on the trainer route with a pre-registered adequacy rule.'
   authoring_closed_ask: 'After the verdict the result goes on PI-20261120-FILLW47B-0014. If PROXY_INADEQUATE or INDETERMINATE (the IB span is shorter than 39 trades), the 7-year Dukascopy read stays proxy-only and the next step is whether to replay the other mgc_15m arms on the IB span; if ADEQUATE, the weekly 031 read (Gate-2 demotion input, 2 of 2) can be read as an MGC record. No config change and no retirement proposal comes from this unit.'
+
+# ── Two-week iteration plan (lane ITERATION-PLAN-2W-20261123, 2026-11-23) ─────────────────────────────
+two_week_plan:
+  schema: iteration-plan-2w/v1
+  authored: '2026-11-23'
+  lane: ITERATION-PLAN-2W-20261123
+  rule: 'manager skill, Iteration never ends; plan two weeks ahead, regroup at one (PR #28366). Weeks: 2026-11-24 and 2026-12-01; regroup 2026-12-01 (Tuesday) to
+    the Wednesday programme review.'
+  scope: every testing leg and research strategy_leg subject
+  derivation: 'Generated from scripts/research/iteration_orphans.py --json and --levers on 2026-11-23: the lever map (untested / thin families), open queue units
+    and the verdict. Retirement only on lever exhaustion, never on an attempt count; an exhausted subject gets a rebuild step. Units whose input is another unit result
+    are PLANNED, not authored.'
+  step_types:
+    unit: a unit to run or grade
+    waiting: a unit waiting on a named result
+    design: a build or design step with an owner
+    owner_types: lane | unit | operator
+  subjects:
+    avax_pullback_2h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/avax_pullback_2h.json: coverage measured, n 95, net R -15.7394, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-008 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-008
+        step: 'On the RQ-20261105-008 verdict, move to the first untested family: symbol_set. Never repeat a family after a flat result (programme-review step 2).
+          PLANNED, authored when its input result is read.'
+    claude_desk:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/claude_desk.json absent (not measured: a statement about us, not the leg)'
+      state_before: orphan
+      lever_untested:
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. not a verdict: the instrument lacks power, so fix power (pool siblings, longer window, a measured
+          n floor) before reading. Design the first iteration unit from the diagnosis: family exit, registered rule + net-of-cost power check at design time. Do not
+          author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family exit; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (filter) PLANNED
+          behind that verdict.
+    e4_oi_shock_1h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/e4_oi_shock.json: coverage measured, n 856, net R 18.7948, fidelity research_harness_not_live_code, rule fail'
+      state_before: covered
+      lever_untested:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261117-b3aa-06: name the blocker input and its owner (build or data) and either supply it or re-point the unit. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261117-b3aa-06
+        step: 'On the RQ-20261117-b3aa-06 verdict, move to the first untested family: entry (then regime_gating). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    eth_pullback_2h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/eth_pullback_2h.json: coverage measured, n 83, net R 1.3856, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-019 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-019
+        step: 'On the RQ-20261105-019 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    eth_pullback_prop_2h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/eth_pullback_prop_2h.json: coverage measured, n 81, net R -6.574, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-020, RQ-20261106-019 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-020
+        step: 'On the RQ-20261105-020 verdict, move to the first untested family: symbol_set. Never repeat a family after a flat result (programme-review step 2).
+          PLANNED, authored when its input result is read.'
+    fade_breakout_4h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/fade_breakout_4h.json: coverage measured, n 28, net R -14.2839, fidelity faithful, rule fail'
+      state_before: covered
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-021, RQ-20261123-b4c1-01 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail
+          (design / power / cost / regime / harness / idea) before any retirement view.
+        also_blocked_waiting:
+        - RQ-20261118-abab-05
+        - RQ-20261118-abab-11
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-021
+        step: 'On the RQ-20261105-021 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    fvg_range_15m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/fvg_range_15m.json: coverage measured, n 18, net R -9.4121, fidelity faithful, rule fail'
+      state_before: covered
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-022 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+        also_blocked_waiting:
+        - RQ-20261118-abab-12
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-022
+        step: 'On the RQ-20261105-022 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    gdx_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/gdx_pullback_1d.json: coverage measured, n 10, net R 1.2338, fidelity approximate, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-023 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-023
+        step: 'On the RQ-20261105-023 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    gld_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/gld_pullback_1d.json: coverage measured, n 8, net R 10.5108, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-024 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-024
+        step: 'On the RQ-20261105-024 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    htf_pullback_trend_2h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/htf_pullback_trend_2h.json: coverage measured, n 105, net R -23.3732, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested: []
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-026, RQ-20261106-020 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: design
+        owner: lane
+        waits_on: RQ-20261105-026
+        step: 'Every family has a reading: write the family-review record (research/family_reviews/, policy v3 lever_map): exhausted at power, net of the full cost
+          stack, across regimes? If NO, the next family is a REBUILD (new entry structure or new instrument set), never "done"; if YES, a Tier-3 retirement proposal
+          to the manager. Retirement never on an attempt count.'
+    iaum_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/iaum_pullback_1d.json: coverage measured, n 8, net R 10.6758, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-027 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-027
+        step: 'On the RQ-20261105-027 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_5m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_5m.json: coverage measured, n 90, net R -28.9104, fidelity faithful, rule fail'
+      state_before: covered
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-028 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+        also_blocked_waiting:
+        - RQ-20261118-abab-06
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-028
+        step: 'On the RQ-20261105-028 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_avax_5m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_avax_5m.json: coverage measured, n 186, net R -48.6833, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-029 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-029
+        step: 'On the RQ-20261105-029 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_eth_15m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_eth_15m.json: coverage measured, n 76, net R -2.925, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-030 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-030
+        step: 'On the RQ-20261105-030 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_mgc_15m:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/ict_scalp_mgc_15m.json: coverage harness_failed, n None, net R None, fidelity None, rule None'
+      state_before: covered
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-031 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+        also_blocked_waiting:
+        - RQ-20261118-abab-07
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-031
+        step: 'On the RQ-20261105-031 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_sol_15m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_sol_15m.json: coverage measured, n 87, net R -12.496, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-032 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-032
+        step: 'On the RQ-20261105-032 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_sol_5m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_sol_5m.json: coverage measured, n 116, net R -16.6392, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-033 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-033
+        step: 'On the RQ-20261105-033 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_xrp_15m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_xrp_15m.json: coverage measured, n 74, net R -2.8065, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-034 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-034
+        step: 'On the RQ-20261105-034 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ict_scalp_xrp_5m:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/ict_scalp_xrp_5m.json: coverage measured, n 163, net R -32.879, fidelity approximate, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261105-035 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-035
+        step: 'On the RQ-20261105-035 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ief_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/ief_pullback_1d.json: coverage measured, n 6, net R 1.0316, fidelity approximate, rule pass'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-036 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-036
+        step: 'On the RQ-20261105-036 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    iwm_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/iwm_trend_long_1d.json: coverage measured, n 8, net R 2.1071, fidelity faithful, rule pass'
+      state_before: covered
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261105-037, RQ-20261106-021, RQ-20261118-abab-08 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48.
+          not a verdict: the instrument lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261105-037
+        step: 'On the RQ-20261105-037 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+      depends_on: PI-20261123-SME5WDGR-0004 (abab-08 TA20 read)
+    mes_trend_long_1d:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/mes_trend_long_1d.json: coverage measured, n 5, net R -1.0012, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-001, RQ-20261106-022 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-001
+        step: 'On the RQ-20261106-001 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+      depends_on: 'PI-20261122-SME5WDGR-0007 (MES 1d from IB: the 1d span is too short on the proxy feed)'
+    mgc_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/mgc_pullback_1d.json: coverage measured, n 8, net R 3.8725, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-002, RQ-20261106-023 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the
+          instrument lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-002
+        step: 'On the RQ-20261106-002 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    mgc_trend_1h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/mgc_trend_1h.json: coverage measured, n 118, net R 25.612, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-004 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-004
+        step: 'On the RQ-20261106-004 verdict, move to the first untested family: timeframe (then sizing_vs_cost). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    mhg_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/mhg_pullback_1d.json: coverage measured, n 10, net R 4.0986, fidelity approximate, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-005 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-005
+        step: 'On the RQ-20261106-005 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml_entry_eq:
+      verdict: pass_unconfirmed
+      evidence: 'research/results/RQ-20261105-e9a1-02/42143223941.jsonl: coverage measured, n 858, net R None, fidelity result_record, rule pass'
+      state_before: covered
+      lever_untested:
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261117-617c-04: name the blocker input and its owner (build or data) and either supply it or re-point the unit. a discovery only: confirm
+          on data not used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261117-617c-04
+        step: 'On the RQ-20261117-617c-04 verdict, move to the first untested family: exit (then filter). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml_entry_v2:
+      verdict: fail
+      evidence: 'research/results/RQ-20261101-b610-01/local-20261112T1107Z.jsonl: coverage measured, n 948, net R None, fidelity result_record, rule fail'
+      state_before: overdue
+      lever_untested:
+      - entry
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261113-6d44-01: name the blocker input and its owner (build or data) and either supply it or re-point the unit. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261113-6d44-01
+        step: 'On the RQ-20261113-6d44-01 verdict, move to the first untested family: entry (then exit). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    qld_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/qld_trend_long_1d.json: coverage measured, n 9, net R 2.9844, fidelity faithful, rule pass'
+      state_before: covered
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-006, RQ-20261118-abab-09 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict:
+          the instrument lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+        also_blocked_waiting:
+        - RQ-20261101-78fc-37
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-006
+        step: 'On the RQ-20261106-006 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+      depends_on: PI-20261123-SME5WDGR-0004 (abab-09 TA20 read)
+    qqq_pullback_1h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/qqq_pullback_1h.json: coverage measured, n 73, net R 5.4886, fidelity faithful, rule pass'
+      state_before: orphan
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN ORPHAN (manager Thursday list): 1h pullback on QQQ, pass_unconfirmed with no unit. a discovery only: confirm on data not used for selection,
+          then a Tier-3 proposal to the manager. Design the first iteration unit from the diagnosis: family regime_gating, registered rule + net-of-cost power check
+          at design time. Do not author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family regime_gating; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (timeframe)
+          PLANNED behind that verdict.
+      depends_on: 'DESIGN ORPHAN (manager Thursday list): 1h pullback on QQQ, pass_unconfirmed with no unit'
+    qqq_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/qqq_trend_long_1d.json: coverage measured, n 8, net R 5.2971, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-007 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-007
+        step: 'On the RQ-20261106-007 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    scha_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/scha_trend_long_1d.json: coverage measured, n 28, net R 1.6527, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-008 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-008
+        step: 'On the RQ-20261106-008 verdict, move to the first untested family: timeframe (then direction). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    slv_pullback_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/slv_pullback_1d.json: coverage measured, n 10, net R 3.0026, fidelity approximate, rule pass'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-009 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-009
+        step: 'On the RQ-20261106-009 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    sol_pullback_2h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/sol_pullback_2h.json: coverage measured, n 34, net R 3.1859, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-011 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-011
+        step: 'On the RQ-20261106-011 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    splg_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/splg_trend_long_1d.json: coverage harness_failed, n None, net R None, fidelity None, rule None'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-012 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-012
+        step: 'On the RQ-20261106-012 verdict, move to the first untested family: timeframe (then direction). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    spy_pullback_1h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/spy_pullback_1h.json: coverage measured, n 75, net R -8.5535, fidelity approximate, rule fail'
+      state_before: orphan
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN ORPHAN (manager Thursday list): 1h pullback on SPY, fail with no unit. diagnose the fail (design / power / cost / regime / harness / idea) before
+          any retirement view. Design the first iteration unit from the diagnosis: family timeframe, registered rule + net-of-cost power check at design time. Do
+          not author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family timeframe; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (symbol_set)
+          PLANNED behind that verdict.
+      depends_on: 'DESIGN ORPHAN (manager Thursday list): 1h pullback on SPY, fail with no unit'
+    spy_trend_long_1d:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/spy_trend_long_1d.json: coverage measured, n 11, net R 2.3816, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-013 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-013
+        step: 'On the RQ-20261106-013 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    squeeze_breakout_4h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/squeeze_breakout_4h.json: coverage measured, n 14, net R -2.8132, fidelity faithful, rule fail'
+      state_before: covered
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-014 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+        also_blocked_waiting:
+        - RQ-20261118-abab-10
+        - RQ-20261118-abab-14
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-014
+        step: 'On the RQ-20261106-014 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    tlt_pullback_1d:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/tlt_pullback_1d.json: coverage measured, n 45, net R -6.9567, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin:
+      - entry
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-015 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-015
+        step: 'On the RQ-20261106-015 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    trend_donchian:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/trend_donchian.json: coverage measured, n 71, net R -16.226, fidelity approximate, rule fail'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - min_confidence
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-017 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-017
+        step: 'On the RQ-20261106-017 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    trend_donchian_1h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/trend_donchian_1h.json: coverage measured, n 184, net R -10.5698, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested: []
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-024 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: design
+        owner: lane
+        waits_on: RQ-20261106-024
+        step: 'Every family has a reading: write the family-review record (research/family_reviews/, policy v3 lever_map): exhausted at power, net of the full cost
+          stack, across regimes? If NO, the next family is a REBUILD (new entry structure or new instrument set), never "done"; if YES, a Tier-3 retirement proposal
+          to the manager. Retirement never on an attempt count.'
+    trend_donchian_ada_4h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/trend_donchian_ada_4h.json: coverage measured, n 55, net R -3.3544, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-025, RQ-20261113-f251-01 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail
+          (design / power / cost / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-025
+        step: 'On the RQ-20261106-025 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    trend_donchian_avax_4h:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/trend_donchian_avax_4h.json: coverage measured, n 57, net R -16.1781, fidelity faithful, rule fail'
+      state_before: overdue
+      lever_untested: []
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-026 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-026
+        step: 'Re-run the thin family/families (sizing_vs_cost) at declared power and net cost: the lever map records them underpowered or indeterminate only. PLANNED
+          behind RQ-20261106-026.'
+    trend_donchian_eth:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/trend_donchian_eth.json: coverage measured, n 108, net R 6.9034, fidelity approximate, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-027 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. not a verdict: the instrument lacks
+          power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-027
+        step: 'On the RQ-20261106-027 verdict, move to the first untested family: timeframe. Never repeat a family after a flat result (programme-review step 2).
+          PLANNED, authored when its input result is read.'
+    trend_donchian_eth_prop:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/trend_donchian_eth_prop.json: coverage measured, n 135, net R 10.296, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-029 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-029
+        step: 'On the RQ-20261106-029 verdict, move to the first untested family: timeframe. Never repeat a family after a flat result (programme-review step 2).
+          PLANNED, authored when its input result is read.'
+    trend_donchian_sol:
+      verdict: fail
+      evidence: 'comms/strategy_evidence/trend_donchian_sol.json: coverage measured, n 58, net R -2.8779, fidelity approximate, rule fail'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261106-030 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power / cost
+          / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-030
+        step: 'On the RQ-20261106-030 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    trend_donchian_sol_4h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/trend_donchian_sol_4h.json: coverage measured, n 115, net R 36.4198, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-031, RQ-20261113-f251-03 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only:
+          confirm on data not used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-031
+        step: 'On the RQ-20261106-031 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    trend_donchian_xrp_adx25:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/trend_donchian_xrp_adx25.json: coverage measured, n 46, net R 9.7183, fidelity faithful, rule pass'
+      state_before: covered
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-034, RQ-20261106-5b7a-03 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only:
+          confirm on data not used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-034
+        step: 'On the RQ-20261106-034 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    turtle_soup:
+      verdict: indeterminate
+      evidence: 'comms/strategy_evidence/turtle_soup.json: coverage no_harness, n None, net R None, fidelity None, rule None'
+      state_before: covered
+      lever_untested:
+      - regime_gating
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261118-abab-15: name the blocker input and its owner (build or data) and either supply it or re-point the unit. not a verdict: the instrument
+          lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261118-abab-15
+        step: 'On the RQ-20261118-abab-15 verdict, move to the first untested family: regime_gating (then direction). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    uso_trend_1h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/uso_trend_1h.json: coverage measured, n 58, net R 18.9395, fidelity faithful, rule pass'
+      state_before: covered
+      lever_untested:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-035 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+        also_blocked_waiting:
+        - RQ-20261118-abab-54
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-035
+        step: 'On the RQ-20261106-035 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    xrp_pullback_2h:
+      verdict: pass_unconfirmed
+      evidence: 'comms/strategy_evidence/xrp_pullback_2h.json: coverage measured, n 53, net R 6.5558, fidelity faithful, rule pass'
+      state_before: overdue
+      lever_untested:
+      - timeframe
+      - symbol_set
+      lever_thin:
+      - sizing_vs_cost
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261106-036 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data not
+          used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261106-036
+        step: 'On the RQ-20261106-036 verdict, move to the first untested family: timeframe (then symbol_set). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    tsmom-crypto:
+      verdict: fail
+      evidence: 'RQ-20261101-58e4-01: loss is the SHORT side (-0.13 vs long +0.74) and reversal months; funding ~5x fees. Untested: regime gate, short-side funding
+        awareness, rebalance f…'
+      state_before: covered
+      lever_untested:
+      - exit
+      - session
+      lever_thin:
+      - entry
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261117-617c-02: name the blocker input and its owner (build or data) and either supply it or re-point the unit. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261117-617c-02
+        step: 'On the RQ-20261117-617c-02 verdict, move to the first untested family: exit (then session). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    xsec-crypto:
+      verdict: fail
+      evidence: 'RQ-20261101-58e4-02: shorts -0.21 vs longs +1.86; 2021 is 68% of net. Untested: regime gate, universe/liquidity, short-leg treatment, residual momentum.'
+      state_before: orphan
+      lever_untested:
+      - exit
+      - session
+      lever_thin:
+      - direction
+      - sizing_vs_cost
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN ORPHAN (manager Thursday list): cross-sectional crypto family, fail with no unit. diagnose the fail (design / power / cost / regime / harness
+          / idea) before any retirement view. Design the first iteration unit from the diagnosis: family exit, registered rule + net-of-cost power check at design
+          time. Do not author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family exit; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (session) PLANNED
+          behind that verdict.
+      depends_on: 'DESIGN ORPHAN (manager Thursday list): cross-sectional crypto family, fail with no unit'
+    cost-levers-live-legs:
+      verdict: fail
+      evidence: 'RQ-20261101-58e4-04: costs ~7% of the loss; legs gross-negative (xrp_pullback_2h -35.9, ada_pullback_2h -15.9). Untested: signal-strength threshold,
+        hold length, symbol …'
+      state_before: orphan
+      lever_untested:
+      - entry
+      - exit
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. diagnose the fail (design / power / cost / regime / harness / idea) before any retirement view.
+          Design the first iteration unit from the diagnosis: family entry, registered rule + net-of-cost power check at design time. Do not author before the design
+          (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family entry; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (exit) PLANNED
+          behind that verdict.
+    tsmom-etf:
+      verdict: indeterminate
+      evidence: 'RQ-20261101-58e4-05: stable but small (Sharpe 0.42), shorts hurt, whipsaw years. Untested: dividend-adjusted series, asset-class gating, regime gate,
+        breadth.'
+      state_before: covered
+      lever_untested:
+      - exit
+      - filter
+      - session
+      - sizing_vs_cost
+      lever_thin:
+      - timeframe
+      - direction
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261117-617c-03: name the blocker input and its owner (build or data) and either supply it or re-point the unit. not a verdict: the instrument
+          lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261117-617c-03
+        step: 'On the RQ-20261117-617c-03 verdict, move to the first untested family: exit (then filter). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    movement-capture:
+      verdict: fail
+      evidence: 'RQ-20261101-58e4-06: vol predictable (Spearman ~0.5 every year) but the fade has zero gross edge; breakout entry adverse (gross -0.40%/trade). Untested:
+        maker fills, lon…'
+      state_before: orphan
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      lever_thin:
+      - filter
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. diagnose the fail (design / power / cost / regime / harness / idea) before any retirement view.
+          Design the first iteration unit from the diagnosis: family regime_gating, registered rule + net-of-cost power check at design time. Do not author before
+          the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family regime_gating; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (timeframe)
+          PLANNED behind that verdict.
+    vol-premium-proxy:
+      verdict: fail
+      evidence: 'RQ-20261101-58e4-07: long-variance side loses; profit is the base short-variance premium. Top untested lever: a PRICED straddle test on real chains
+        (DoltHub post-no-pref…'
+      state_before: overdue
+      lever_untested:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      lever_thin:
+      - exit
+      - direction
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261113-62e3-05: name the blocker input and its owner (build or data) and either supply it or re-point the unit. diagnose the fail (design
+          / power / cost / regime / harness / idea) before any retirement view.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261113-62e3-05
+        step: 'On the RQ-20261113-62e3-05 verdict, move to the first untested family: regime_gating (then timeframe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    funding-carry:
+      verdict: pass
+      evidence: 'RQ-20261101-58e4-03: the one discovery PASS of the candidate set (C1 net ann 11.2%, Sharpe 7.77, stress 9.7%/yr, worst month -0.18%, DSR(N=8)=1.0).
+        Return is decaying: 2…'
+      state_before: covered
+      lever_untested:
+      - exit
+      - regime_gating
+      - direction
+      - session
+      - sizing_vs_cost
+      lever_thin:
+      - entry
+      - filter
+      - timeframe
+      - symbol_set
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261101-d1f3-07: name the blocker input and its owner (build or data) and either supply it or re-point the unit. survivor: promotion proposal
+          (Tier 3, the manager) with its evidence record named.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261101-d1f3-07
+        step: 'On the RQ-20261101-d1f3-07 verdict, move to the first untested family: exit (then regime_gating). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'

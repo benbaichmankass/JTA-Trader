@@ -18047,3 +18047,154 @@ nodes:
   after: []
   authoring_closed: '2026-11-20 lane QUEUE-FILL-STANDING-W47b (manager GO 06:06Z): AUTHORED as RQ-20261120-b7e1-02, the one confirmation RQ-20261120-75e6-09 (trail-decay removal PASS on avax_pullback_2h, 4 of 4 folds, +20.67 R over 2020-09..2026-10) asks for before any Tier-3 proposal; run on the trainer''s Bybit-native 2h corpus (bybit_native_csv.py), Binance as robustness only.'
   authoring_closed_ask: 'No time-disjoint window exists (the discovery used the whole evidence feed), so the confirmation changes the corpus, not the dates: a PASS says the effect is not a Binance-feed artefact, nothing more. After the verdict: if PASS, the manager decides whether a forward not_before unit is worth the wait; if FAIL, the 75e6-09 discovery rests on the span the Bybit files do not cover.'
+
+# ── Two-week iteration plan (lane ITERATION-PLAN-2W-20261123, 2026-11-23) ─────────────────────────────
+two_week_plan:
+  schema: iteration-plan-2w/v1
+  authored: '2026-11-23'
+  lane: ITERATION-PLAN-2W-20261123
+  rule: 'manager skill, Iteration never ends; plan two weeks ahead, regroup at one (PR #28366). Weeks: 2026-11-24 and 2026-12-01; regroup 2026-12-01 (Tuesday) to
+    the Wednesday programme review.'
+  scope: every live-review (LTR) class
+  derivation: 'Generated from scripts/research/iteration_orphans.py --json and --levers on 2026-11-23: the lever map (untested / thin families), open queue units
+    and the verdict. Retirement only on lever exhaustion, never on an attempt count; an exhausted subject gets a rebuild step. Units whose input is another unit result
+    are PLANNED, not authored.'
+  step_types:
+    unit: a unit to run or grade
+    waiting: a unit waiting on a named result
+    design: a build or design step with an owner
+    owner_types: lane | unit | operator
+  subjects:
+    ltr-tighten-sl:
+      verdict: fail
+      evidence: 'comms/research/ltr_tighten_optimize/verdict.json (#21003): early-cell tighten loses (-0.041 R, CI [-0.087,-0.005]); operator chose advice-only (#21024).'
+      state_before: orphan
+      lever_untested: []
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'LEVER-EXHAUSTION REVIEW (manager Thursday list): all four triggers failed R2/R3 and their random controls (RQ-20261122-c8e1-01). diagnose the fail
+          (design / power / cost / regime / harness / idea) before any retirement view. Design the first iteration unit from the diagnosis: family trigger, registered
+          rule + net-of-cost power check at design time. Do not author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family trigger; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (next untested)
+          PLANNED behind that verdict.
+      depends_on: 'LEVER-EXHAUSTION REVIEW (manager Thursday list): all four triggers failed R2/R3 and their random controls (RQ-20261122-c8e1-01)'
+    ltr-close:
+      verdict: indeterminate
+      evidence: 'docs/audits/2026-11-01-from-scratch/AUDIT.md section 8: the only positive signal, found on one window; row LTR-CLOSE-CLASS-TEST (needs a disjoint-window
+        grade).'
+      state_before: orphan
+      lever_untested:
+      - timing
+      lever_thin:
+      - action_bounds
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. not a verdict: the instrument lacks power, so fix power (pool siblings, longer window, a measured
+          n floor) before reading. Design the first iteration unit from the diagnosis: family timing, registered rule + net-of-cost power check at design time. Do
+          not author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family timing; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (next untested)
+          PLANNED behind that verdict.
+    ltr-partial-close:
+      verdict: pending
+      evidence: awaiting lane LTR-CLASS-GRADE
+      state_before: orphan
+      lever_untested:
+      - timing
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. no evidence yet: first structured design (one-factor sweeps against a control). Design the first
+          iteration unit from the diagnosis: family timing, registered rule + net-of-cost power check at design time. Do not author before the design (floor-filler
+          ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family timing; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (next untested)
+          PLANNED behind that verdict.
+    ltr-widen-sl:
+      verdict: pending
+      evidence: 'awaiting lane LTR-CLASS-GRADE (desk labels: 0 widen rows, ML-LIVE-PROMOTION-PLAN section 0 item 11)'
+      state_before: overdue
+      lever_untested:
+      - trigger
+      - timing
+      - action_bounds
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261113-ed2b-02: name the blocker input and its owner (build or data) and either supply it or re-point the unit. no evidence yet: first
+          structured design (one-factor sweeps against a control).'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261113-ed2b-02
+        step: 'On the RQ-20261113-ed2b-02 verdict, move to the first untested family: trigger (then timing). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ltr-sl-to-structure:
+      verdict: pending
+      evidence: 'awaiting lane LTR-CLASS-GRADE (desk labels: 0 structure rows)'
+      state_before: orphan
+      lever_untested:
+      - timing
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. no evidence yet: first structured design (one-factor sweeps against a control). Design the first
+          iteration unit from the diagnosis: family timing, registered rule + net-of-cost power check at design time. Do not author before the design (floor-filler
+          ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family timing; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (next untested)
+          PLANNED behind that verdict.
+    ltr-tp-extend:
+      verdict: pending
+      evidence: awaiting lane LTR-CLASS-GRADE
+      state_before: overdue
+      lever_untested:
+      - trigger
+      - timing
+      - action_bounds
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261113-ed2b-04: name the blocker input and its owner (build or data) and either supply it or re-point the unit. no evidence yet: first
+          structured design (one-factor sweeps against a control).'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261113-ed2b-04
+        step: 'On the RQ-20261113-ed2b-04 verdict, move to the first untested family: trigger (then timing). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ltr-tp-pull-in:
+      verdict: pending
+      evidence: awaiting lane LTR-CLASS-GRADE
+      state_before: orphan
+      lever_untested:
+      - timing
+      - action_bounds
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. no evidence yet: first structured design (one-factor sweeps against a control). Design the first
+          iteration unit from the diagnosis: family timing, registered rule + net-of-cost power check at design time. Do not author before the design (floor-filler
+          ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family timing; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (action_bounds)
+          PLANNED behind that verdict.

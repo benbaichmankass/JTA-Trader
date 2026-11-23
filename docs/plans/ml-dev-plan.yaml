@@ -89,7 +89,7 @@ lines:
       baseline: the current roster, and 1/N over the same panel, net of the full cost stack
       pass: a Tier-3 roster proposal to the manager with the record
       fail: the slot stays a rule; re-check when the panel doubles
-  next_weeks: {W47: none, W48: none, W49: 'count legs with committed Stage-0 records on one cost basis (ML-LINE-S1-CORPUS)', W50: none}
+  next_weeks: {W47: none, W48: 'design (lane): define the one-cost-basis census query for ML-LINE-S1-CORPUS so W49 can count legs with committed Stage-0 records; no model is built (D1 stays a rule)', W49: 'count legs with committed Stage-0 records on one cost basis (ML-LINE-S1-CORPUS)', W50: none}
   exhaustion: not a model line; reopens when >= 30 legs carry committed Stage-0 records on one cost basis (the ML-LINE-S1-CORPUS panel).
   owner: AM-ML
   plan_items: [ML-S1, ML-S3]
@@ -196,7 +196,7 @@ lines:
       baseline: the leg family ungated, net of cost, matched-random cell control
       pass: Tier-3 proposal for a first cell naming that leg
       fail: proposed retirement of the head (manager)
-  next_weeks: {W47: 'none (bcd2-01 FAIL; gate-consumer unit NOT authored)', W48: 'feature-consumer read rides MLP-D2-REVIEW-HEADS', W49: none, W50: none}
+  next_weeks: {W47: 'none (bcd2-01 FAIL; gate-consumer unit NOT authored)', W48: 'feature-consumer read rides MLP-D2-REVIEW-HEADS', W49: 'read the feature-consumer result from MLP-D2-REVIEW-HEADS; if the regime-as-feature unit fails, the advisory heads route to the Thursday retire/keep list (owner: lane); a new consumer design is a build row, not a unit', W50: none}
   exhaustion: bcd2-01 FAIL (no consumer design worth repeating), or the per-family consumer test FAILs.
   owner: ML-PRIMARY
   plan_items: []
@@ -437,7 +437,7 @@ lines:
     - {lever: expanded feature set, ref: RQ-20261101-b609-01, verdict: fail}
     - {lever: symbol-holdout forward read, ref: RQ-20261101-b610-01, verdict: fail}
   levers_ahead: []
-  next_weeks: {W47: 'manager decides the disposition below', W48: none, W49: none, W50: none}
+  next_weeks: {W47: 'manager decides the disposition below', W48: 'manager disposition applied (owner: manager); then the D3 challenger slot is re-pointed at the population-test family (MLP-D3-FOXHOUND-1 levers_ahead) rather than repeating the head-to-head', W49: 'first population-test unit for the challenger slot authored from the Foxhound-1 diagnosis, only if the manager disposition keeps the slot (owner: lane)', W50: none}
   exhaustion: MET on the declared read (ML-D3-HEAD-TO-HEAD, "retire on a b610 FAIL"); b610 graded FAIL 2026-11-12.
   owner: AM-ML
   plan_items: []
@@ -643,7 +643,7 @@ lines:
       baseline: the census's post-only-with-taker-fallback scenario
       pass: re-run the census at the measured maker cost
       fail: small-TF ML closes until venue costs change
-  next_weeks: {W47: 'row disposition (manager)', W48: none, W49: none, W50: none}
+  next_weeks: {W47: 'row disposition (manager)', W48: 'rebuild design (lane): the small-TF census failed under the current cost stack; next family is a maker-fill / lower-cost-stack variant owned jointly with D9 (MLP-D9-WHIPPET), not a repeat of the census', W49: 'waits on the W49 D9 fills-with-decision-price count (MLP-D9-WHIPPET): if the count clears its floor, author the lower-cost-stack small-TF unit; if not, name the data build (owner: lane)', W50: none}
   exhaustion: MET for the current cost stack (census FAIL under every measured scenario); reopens when a measured fill cost below the census break-even exists.
   owner: AM-ML
   plan_items: []
@@ -841,7 +841,7 @@ lines:
       baseline: today's slices, 1/N, best-single, net of cost
       pass: Tier-3 allocation change
       fail: slices stay
-  next_weeks: {W47: 'a474-02 FAIL (11-15): no rule arm beats today''s slices/election rule in both windows; the learned aggregator is not built', W48: none, W49: none, W50: none}
+  next_weeks: {W47: 'a474-02 FAIL (11-15): no rule arm beats today''s slices/election rule in both windows; the learned aggregator is not built', W48: 'census (lane): count concurrent same-(account,symbol) packages per week on committed ledgers, to set the registered threshold the exhaustion clause is waiting on', W49: 'waits on the census: author the learned-aggregator unit only if concurrency clears the registered floor, else record the clause MET and keep slices (owner: unit)', W50: none}
   exhaustion: the census shows concurrency too rare to move net P&L (threshold set in its own registration).
   owner: AM-ML
   plan_items: []
@@ -879,7 +879,7 @@ lines:
       baseline: the leg's fixed bracket
       pass: as above
       fail: as above
-  next_weeks: {W47: 'a474-01 FAIL (11-15) and RQ-20261009-900 FAIL (11-13): Pointer v0 and the move-extent head are both closed; exhaustion clause MET for those two levers', W48: none, W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30) is the only D6 lever left'}
+  next_weeks: {W47: 'a474-01 FAIL (11-15) and RQ-20261009-900 FAIL (11-13): Pointer v0 and the move-extent head are both closed; exhaustion clause MET for those two levers', W48: 'rebuild read (lane): write down why Pointer v0 and the move-extent head failed (a474-01, 900) so the ML-FS-BRACKETS-HOLD design starts from the diagnosis, not a repeat', W49: 'design (lane): ML-FS-BRACKETS-HOLD is the only D6 lever left; scope its question, baseline (fixed ATR bracket plus structure_exit) and power so it can be authored at its 11-30 rank', W50: 'ML-FS-BRACKETS-HOLD (ranked LATER @11-30) is the only D6 lever left'}
   exhaustion: Pointer v0 and the predict head FAIL on their registered reads.
   owner: ML-PRIMARY
   plan_items: [ML-X1, ML-X2]
@@ -1002,7 +1002,7 @@ lines:
       pass: as above
       fail: as above
       parked: "PARKED ON POWER, not authored (ML-PRIMARY-3, 2026-11-15). Population MEASURED from comms/research/desk_lifecycle/full-c4e: 12,500 check-in labels on 507 pairs / 1,040 entries (520 claude-judged, 520 random), 6 symbols, 32 weeks; folds 1/2/3/4 = 320/632/70/18 entries, so at most 720 OOS trades walk-forward. Per-trade hold-vs-close delta sd ~0.85 R (backed out of 1ae8-01: CI95 half-width ~0.015 at n 13,243). SE ~0.032, MDE ~0.08 R at 80 percent power, against every exit-head effect seen so far within +/-0.06 R (a474-03, 1ae8-01, 0bc8-02, 78fc-03): INDETERMINATE by construction. Growing n needs more LLM-judged walks (plan capacity per label). RE-ENTRY TEST: desk labels on >= ~5,000 OOS trades (MDE <= 0.03 R), or a cheap mechanical label source of that size."
-  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); desk-label variant PARKED on power (n <= 720 OOS trades, MDE ~0.08 R)', W48: 'none (re-entry test on the desk-label lever)', W49: none, W50: none}
+  next_weeks: {W47: '1ae8-01 INDETERMINATE (no gain); a474-03 pooled donchian-4h head FAIL (11-15, B selected, AUC 0.613 but no arm beats B net of cost); desk-label variant PARKED on power (n <= 720 OOS trades, MDE ~0.08 R)', W48: 're-entry test on the desk-label lever: power check at design time (n <= 720 OOS trades, MDE ~0.08 R); author only if powered, else name the data that would power it (owner: lane)', W49: 'waits on W48 power check: if powered, run the desk-label variant; if not, the family moves to the next untested feature block (MLP-D7-ACTION-VALUE feature-block unit) (owner: unit)', W50: none}
   exhaustion: 'the eth_4h variant and the desk-label variant FAIL; with today''s FAILs the head''s feature set then has no lever left. 2026-11-15: eth_4h variant FAILED (a474-03); desk-label variant parked on power, so the line waits on that re-entry test (and on MLP-D7-ACTION-VALUE for the D8 question).'
   owner: AM-ML
   plan_items: [ML-X3, ML-X4, ML-N4]
@@ -1027,7 +1027,7 @@ lines:
       baseline: hold to bracket
       pass: see MLP-D7-ACTION-VALUE
       fail: see MLP-D7-ACTION-VALUE
-  next_weeks: {W47: none, W48: none, W49: none, W50: none}
+  next_weeks: {W47: none, W48: 'rebuild design (lane): entry-signal-reversal rule exhaustion clause is MET; the next D8 family is the learned exit-now head on the pooled donchian-4h population, rebuilt from the Labrador-2 diagnosis (AUC above 0.6 with no arm beating B net of cost)', W49: 'waits on W48 design: author one unit with the net-of-cost registered rule and a matched-random-exit control, only if powered (owner: unit)', W50: none}
   exhaustion: MET for the entry-signal reversal rule (0be0-01 FAIL at n 10,641); the D8 question continues only through MLP-D7-ACTION-VALUE and MLP-D8-LABRADOR-2.
   owner: AM-ML
   plan_items: []
@@ -1054,7 +1054,7 @@ lines:
       baseline: today's order type per venue, realised cost incl. missed fills priced at counterfactual R
       pass: Tier-2/3 order-type proposal
       fail: slot stays parked
-  next_weeks: {W47: none, W48: none, W49: count real-money fills carrying a decision price, W50: none}
+  next_weeks: {W47: none, W48: 'count real-money fills that carry a decision price (the D9 reopening floor is 300 fills); bring the count forward from W49 so W49 can act on it (owner: lane, read-only)', W49: count real-money fills carrying a decision price, W50: none}
   exhaustion: not exhausted, parked; reopens at >= 300 real-money fills with a decision price.
   owner: AM-ML
   plan_items: []
@@ -1079,7 +1079,7 @@ lines:
       baseline: Bernoulli CUSUM on realised R (overlay_cusum.py style)
       pass: the grade becomes a monitoring read (never a gate)
       fail: grades stay a label source only
-  next_weeks: {W47: none, W48: none, W49: none, W50: 'count blind-graded closes per leg family'}
+  next_weeks: {W47: none, W48: 'design (lane): define the blind-graded closes per leg family count query and the CUSUM-on-R baseline it must beat, so W50 counts against a registered baseline', W49: 'run the count once the query lands; if below the floor, the line stays parked with the reopening condition unchanged (owner: lane)', W50: 'count blind-graded closes per leg family'}
   exhaustion: not exhausted, parked; reopens when the CJ blind store reaches n >= 150 graded closes on one leg family (CJ-4's own bar).
   owner: AM-ML
   plan_items: []
