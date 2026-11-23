@@ -4,7 +4,9 @@
 >
 > **Gates this adds or changes: none.** A read-only scoping memo. No account opened, no credential used, nothing built, no roster or config edit.
 >
-> **Evidence quality, read this first.** Tradeify has published **no** Perps rules, fees or API terms that a public fetch could reach. `tradeifyperps.co` is a waitlist form; `app.tradeifyperps.co` is a JS app that returns only "Loading" to a fetch; the Tradeify 247 help centre (`help.tradeify247.co`) has no Perps article (all three read 2026-11-23). **Everything about Perps rules below is therefore UNVERIFIED**, and the operator, who has access, can read the real rules in the app in a few minutes (§ 6 questions). Every claim carries a source tag: **[1P]** first-party page read this pass · **[2P]** third-party / affiliate page read or summarised by the fetch tool (a small-model summary; re-read before relying) · **[REPO]** a measured or recorded fact already in this repo · **[UNV]** not verified. Some third-party search hits were not opened (propfirmcircle returned HTTP 429), so their content is only as quoted by the search summary.
+> **Update 2026-11-23 (manager relay of operator facts + Terms read).** Added: **[OPS]** = operator screenshot from the app, verified in-app; **[TOS]** = first-party Perps Terms of Use (`tradeifyperps.co/terms`, last updated 2026-11-20, read via WebFetch, a small-model summary: re-read before relying). The Terms point the trading rules (bots, holds, news, prohibited strategies, commission/swap, drawdown definitions, inactivity) to a **Trading Rules** document and the **Funded Trader Agreement (FTA)** that is not on that page. Those remain unread. Sections 1-3 and 6 below are updated; text from the first pass that conflicts is superseded by § 7.
+>
+> **Evidence quality (first pass), read this first.** Tradeify has published **no** Perps rules, fees or API terms that a public fetch could reach. `tradeifyperps.co` is a waitlist form; `app.tradeifyperps.co` is a JS app that returns only "Loading" to a fetch; the Tradeify 247 help centre (`help.tradeify247.co`) has no Perps article (all three read 2026-11-23). **Everything about Perps rules below is therefore UNVERIFIED**, and the operator, who has access, can read the real rules in the app in a few minutes (§ 6 questions). Every claim carries a source tag: **[1P]** first-party page read this pass · **[2P]** third-party / affiliate page read or summarised by the fetch tool (a small-model summary; re-read before relying) · **[REPO]** a measured or recorded fact already in this repo · **[UNV]** not verified. Some third-party search hits were not opened (propfirmcircle returned HTTP 429), so their content is only as quoted by the search summary.
 
 ## 1. What it is
 
@@ -107,3 +109,37 @@ X = the operator (who has access) reads the Perps terms in the app and confirms,
 - ArcaTrader perps launch, 2026-11-19: <https://www.financemagnates.com/thought-leadership/arcatrader-launches-247-perpetuals-for-brokers-and-prop-firms-powered-by-hyperliquid/> ([2P], promotional release; no leverage, fees or API stated).
 - Search summaries only (pages not opened; propfirmcircle gave 429): <https://propfirmcircle.com/blog/tradeify-perps-hyperliquid-review-and-rules> · <https://propfirmcircle.com/challenges/tradeify-crypto-10k-2-step> · <https://www.tapbit.com/en/learn/article/what-is-tradeify-crypto-funded-trading-platform-legit-20260818> ([2P], weak).
 - Repo ([REPO]): `config/accounts.yaml` (tradeify_1 roster, re-parsed), `config/prop_rulesets/tradeify_247_1step.yaml`, `config/prop_rulesets/tradeify_routing.yaml`, `comms/prop_survival/trend_donchian_eth_prop.json`, `docs/research/tradeify-platforms-2026-10-15.md`, `docs/research/hyperliquid-tradexyz-scoping-2026-11-19.md` (format template).
+
+## 7. Update: operator-verified app facts + the Terms of Use (supersedes first-pass guesses)
+
+**Verified facts.**
+
+| Fact | Value | Source |
+|---|---|---|
+| Sizes / one-time fees | 5K $60 · 10K $117 · 25K $286 · 50K $581 (no refunds once purchased, ToS § 9.5; fees are programme fees, not deposits, § 4.7; prices can change, § 9.1) | [OPS]; [TOS] |
+| 5K Evaluation | target $500 (10%); max loss **static** $250 (5%); daily loss selectable 3% ($150) **or None**; consistency selectable 50% **or None** | [OPS] |
+| 5K Funded | split 75%; "Live Fund" = 10% of each gross payout; payouts on demand; min payout $200; processing within 24 h; activation instant; identity verification (Sumsub) before payouts | [OPS]; [TOS] §§ 3.2, 26 |
+| "Live Fund" | collateral built from 10% of each gross payout; becomes the drawdown of a **Live Account** under a separate Live Trader Agreement; "never the trader's money", cannot be withdrawn, no cash value, not refunded on termination | [TOS] §§ 2.14, 19.4 |
+| Execution | **All trading is simulated; you never own the underlying** (§ 4.2). The company may place its own hedge trades at its discretion; this does not affect your account or payouts (§ 4.3). Confirms the first-pass "probably simulated" guess. | [TOS] |
+| Legal entity | Tradeify FX LLC, a Florida LLC, Boca Raton FL; part of Tradeify Holdings, Corp.; Novaflame LTD (Cyprus) processes some payments; payout processors Rise and Plane; payouts only to an account in the trader's own name. Differs from the 247 entity (Saint Lucia). | [TOS] §§ 1.1, 24.3, 9.2, 26.2, 7.6 |
+| Eligibility | **US persons are eligible** (§ 3.4); individuals only, 18+, one login per household (§ 7.5); restricted-jurisdiction list lives in the help centre (not read). | [TOS] |
+| Costs | Commission, swap, funding: **not stated** in the Terms (Trading Rules). | [TOS] § 5.3 |
+
+**Still not answered by anything read (the Trading Rules / FTA are the source):** bots/EAs/API (the Terms only bar using bots to scrape or copy *content*, § 14.1, and bar VPS/virtualised environments that obscure verification, § 14.2, which touches a VM-hosted executor: see Trading Rules A.20); overnight/weekend holds; max hold; news rule (named, not detailed); prohibited strategies (HFT, latency, copy trading, cross-account hedging; "Fair-Play Violations", § 5.5); inactivity; commission/swap; whether the funded account keeps the 5% static / 3% daily limits; the "50% consistency" meaning for funded.
+
+**Drawdown fit (5% static max loss; 3% daily or None).** UNVERIFIED for our legs: the only readable evidence is `comms/prop_survival/trend_donchian_eth_prop.json`, graded under a different ruleset (`breakout_turbo_1step`: EV +$75.74, p_breach 0.934, n=517); no Perps-shaped harness run exists. Direction only: 5% static is **tighter than the 6% static** `tradeify_1` runs under, and the daily limit can be chosen **None** (removes the 3% daily breach that our armed daily-DD switch otherwise guards), so choosing **daily None + consistency None** is the least restrictive evaluation. Whether our slow trend legs survive a 5% static floor at 10x is the one number to compute (prop_ev_sim with a new `prop_rulesets/tradeify_perps_5k.yaml`, a Tier-1 research task).
+
+**Break-even math (5K, fee $60).** Population: one evaluation attempt, funded rules assumed equal to the evaluation limits, no rebuy. Payout on a $500 gain at 75% split = $375 gross payout; Live Fund 10% of gross payout = $37.50 → **$337.50 net** (if the 10% is taken off profit instead, $325; assumption, [OPS] wording is "10% of payouts"). Min payout $200 means the first payout needs profit ≥ ~$267 at 75%. Break-even pass-and-first-payout probability = $60 / $337.50 ≈ **18%** per evaluation (10K: $117 / $675 ≈ 17%; 25K: $286 / $1,688 ≈ 17%; the ratio is flat across sizes). The cost of failure is only the fee. Our graded record shows p_breach 0.934 on a related ruleset, i.e. pass ≈ 7% there, **below the 18% break-even**: on that evidence the EV is negative; it flips only if a Perps-specific gate shows pass probability > ~18% net of costs (UNVERIFIED either way). Arithmetic cross-check: 337.50 × 0.178 = 60.1.
+
+**Revised recommendation: DON'T BUY YET; compute first (cheap, Tier 1), then buy the 5K only if the gate clears.**
+1. Read the **Trading Rules / FTA** (help centre or in-app, the operator has access) for bots/automation, VM use (A.20), weekend/overnight, news, prohibited strategies, commission/swap. If automation is barred or restricted to an official API, don't open.
+2. Run the survival harness under the real Perps limits (5% static; daily None vs 3%; consistency None) for `trend_donchian_eth_4h`, `trend_donchian_sol_4h`, `ml_entry`; require pass probability above the ~18% break-even net of the (still unknown) commission and swap.
+3. If both clear: buy the **5K ($60)** with daily None and consistency None, wire only after a Stage-1-style mechanical check, and a new adapter (no API seen).
+The ToS also removes the main first-pass worry about the platform being a real exchange: it is a simulation, so the economics are a fee-for-an-option, nothing about execution quality.
+
+**Remaining operator questions (the Terms do not answer them):**
+1. In the Trading Rules / FTA: are automated strategies allowed, may they run from a VM (A.20), and is an API offered? Any ban on HFT, copy trading, cross-account hedging?
+2. Overnight and weekend holds, maximum hold time, and the news rule: allowed or restricted?
+3. Commission and swap/funding rates, and whether the funded stage keeps the same 5% static / daily None choices?
+4. What does the selectable "consistency 50%" test (best day share of profit?), and does it apply to funded accounts?
+5. Is the restricted-jurisdiction list in the help centre clean for the entity that would buy?
