@@ -50,6 +50,16 @@ Our state (repo): `ib_live` is `mode: dry_run`, empty roster, with the open find
 - So **the code and the deploy both say "socket API, no web server."** If the operator has a web interface in mind, it is not in this repo: candidates are the IB Gateway/TWS login UI (VNC/Xvfb, not an order path), IBKR's web Client Portal for manual trading (a browser, not our code), or the Client Portal Web API, which is not deployed. I cannot read the live gateway VM from here (a one-off `vm-ops` read of `docker ps` and listening ports would settle it); that read was not run.
 - **Does IBKR's Web API do fractional?** From search results (not page reads): IBKR's FAQ says fractional trading is "supported via FIX/CTCI but not via API at this time"; an Order Types page says the IB APIs "do not support fractional or cash quantity trading with exception to Cryptocurrencies and Forex"; an IBKR staff reply says Cash Quantity orders are unsupported for non-crypto via the API; the Client Portal API docs on GitHub were reported updated to remove fractional-share references. A Place Order page documents `cashQty`, so the picture is not fully consistent. Net (INFERENCE, UNVERIFIED because the IBKR pages returned 403 to the fetcher): fractional ETF orders are not available through either the TWS socket API or the Web API; the paper probe's IB step (`ib_fractional_probe.py`) is the decisive test for the socket path.
 
+## 2c. MEASURED: IBKR API refuses fractional orders (IB PAPER, run 45258885219, `ib` job, 2026-11-23 ~20:24Z, SH 0.5 share, via `IBClient`'s path: ib_insync -> IB Gateway socket port 4002)
+
+| Order | Result |
+|---|---|
+| fractional market BUY 0.5 | `Cancelled`: `Error 10243: Fractional-sized order cannot be placed via API. Please use desktop version to place this order.` |
+| bracket parent (market BUY 0.5) | `Cancelled`, same Error 10243 |
+| bracket children (limit, stop) | `Cancelled`, Error 320 `Unable to parse field 'Limit Price' / 'Aux Price' for input string 'nan'` (the probe's own error: no market-data price) |
+
+Preflight passed; nothing placed or filled; probe-symbol positions after cleanup `[]`; the bot's orders and positions were not touched. **Conclusion (MEASURED for the TWS socket API; UNVERIFIED for the Client Portal Web API, which we do not deploy): IBKR fractional orders are desktop-only, so the IBKR route through our executor is closed.** Side finding: the `ib_paper` socket returned Error 10089 (no API market-data subscription; delayed data only), filed as PI-20261123-NEIELEFR-0001.
+
 ## 3. Our code
 
 - **Alpaca executor today:** `AlpacaClient.place` sends a **market bracket with `time_in_force: gtc`** and floors qty to whole shares (`max(1, int(round(qty)))`). The GTC choice was made deliberately (PI-20260926-HJPL5ABP-0001): with `day`, Alpaca cancels the stop and target at the close of the entry day and multi-session holds went broker-naked overnight.
