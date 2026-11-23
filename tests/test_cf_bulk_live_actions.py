@@ -74,3 +74,22 @@ def test_a_close_action_replays_the_journal_exit_and_labels_do_not_crash():
     rec = cf_core.grade_package(PKG, _leg(), bars, [], cl, {}, {}, n_random=5)
     assert _rep(rec)["exit"]["reason"] == "close"
     assert any(a["arm_id"] == "less_without_action_1" for a in rec["arms"])
+
+
+def _v2rec(strategy, a_reason, a_ts, a_net, r_reason, r_ts, r_net):
+    return {"strategy": strategy, "arms": [{"arm_id": "actual", "net_r": a_net, "exit": {"reason": a_reason, "ts": a_ts}},
+                                           {"arm_id": "replayed_actual", "net_r": r_net, "exit": {"reason": r_reason, "ts": r_ts}}]}
+
+
+def test_rule_v2_splits_mechanics_from_price_and_keeps_unmodelled_exits_out_of_both_rates():
+    t = lrc._iso(T0)
+    recs = [_v2rec("leg", "sl", t, -1.05, "stop", t, -1.0) for _ in range(10)]                      # matched, replay 0.05R better than actual
+    recs += [_v2rec("leg", "reconciler_filled", t, 0.4, "stop", t, -1.0) for _ in range(5)]          # managed exit: not modelled
+    recs += [_v2rec("leg", "tp", t, 2.0, "stop", t, -1.0)]                                           # bracket exit the replay got wrong
+    v = b.fidelity_v2(recs, {"leg": 0.05})
+    o = v["per_leg"]["leg"]
+    assert o["n_bracket_exits"] == 11 and o["exit_not_modelled"] == 5
+    assert o["mechanics_frac"] == round(10 / 11, 4) and o["price_frac"] == round(10 / 11, 4) and o["verdict"] == "PASS"
+    assert b.fidelity_v2(recs, {})["per_leg"]["leg"]["price_frac"] == round(10 / 11, 4)               # |0.05| is inside the 0.10 tolerance anyway
+    assert b.fidelity_v2(recs[:3], {"leg": 0.0})["per_leg"]["leg"]["verdict"] == "INDETERMINATE"      # n < 10
+    assert b.RULE_V2["mechanics_frac"] == 0.80 and b.RULE_V2["price_tol_r"] == 0.10 and b.RULE_V2["version"] == 2

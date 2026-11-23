@@ -72,7 +72,7 @@ def _could_not(trade: dict, reason: str) -> dict:
 
 
 def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = None, horizon_cfg: Optional[dict] = None,
-              n_random: int = cf_core.N_RANDOM, leg_meta: Optional[dict] = None) -> dict:
+              n_random: int = cf_core.N_RANDOM, leg_meta: Optional[dict] = None, arm_set: str = "standard") -> dict:
     """The ``cf`` block for one emitted harness row. ``trade`` is the row the harness writes (strategy, symbol,
     entry_time, exit_time, direction, entry, sl, exit_price?, net_r, cost_fee_r, cost_funding_r?). ``cost_policy`` =
     ``{'basis': 'full'|'fee_only'}`` (default: 'full' when the row carries ``cost_funding_r``). ``leg_meta`` may carry
@@ -103,8 +103,13 @@ def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = N
            "pnl": net_r * r_dist,                       # qty 1 => actual_r == the harness net_r, so fidelity is quoted against it
            "fee_taker_usd": fee_r * r_dist, "cost_source": "estimate"}
     horizon = cf_core.resolve_horizon(pkg, horizon_cfg)
-    g = cf_core.grade_package(pkg, [leg], list(bars), [], [], {"backtest": None}, {}, graded_at=lrc._iso(t_exit),
-                              n_random=n_random, horizon=horizon)
+    # a harness TIMEOUT is a deterministic rule (hold N bars, exit at that bar's close): replay it as a close at the next bar's open so
+    # ``replayed_actual`` reproduces it (CF-BACKTEST-FIDELITY). Other path-dependent exits (stale, break-even, giveback) are not replayed.
+    dur = TF_SECONDS.get((horizon_cfg or {}).get("timeframe") or "", 0)
+    acts = ([{"ts_epoch": t_exit + dur, "kind": "close", "frac": 1.0, "source": "harness_timeout"}]
+            if (str(trade.get("exit_reason") or "").lower() == "timeout" and dur) else [])
+    g = cf_core.grade_package(pkg, [leg], list(bars), [], acts, {"backtest": None}, {}, graded_at=lrc._iso(t_exit),
+                              n_random=n_random, horizon=horizon, arm_set=arm_set)
     if g.get("status") != "graded":
         return _could_not(trade, str(g.get("reason") or "engine_refused"))
     arms = g["arms"]
@@ -129,6 +134,8 @@ def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = N
                                    "resolved": a["resolved"]} for a in arms if a["family"] == "alt_brackets"],
                  "less_management": [compact(a) for a in arms if a["family"] == "less_management"],
                  "more_management": [compact(a) for a in arms if a["family"] == "more_management"]},
+        **({"extended": {a["arm_id"]: a.get("net_r") for a in g.get("ext_arms") or []}, "context": g.get("context")}
+           if arm_set == "extended" else {}),
         "random_control": g.get("random_control"),
         "post_exit": {"horizon_seconds": horizon["seconds"], "horizon_source": horizon["source"],
                       "horizon_reached": po.get("horizon_reached"), "mfe_r": po.get("mfe_r"), "mae_r": po.get("mae_r"),

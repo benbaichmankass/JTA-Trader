@@ -448,6 +448,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--boundary", default=None, help="the REGISTERED held-out boundary")
     ap.add_argument("--tf", default=None, choices=sorted(TF_S))
     ap.add_argument("--json", default=None)
+    ap.add_argument("--no-cf", action="store_true", help="skip the counterfactual-arms block (CF-ML-EVAL; default ON; single-leg path)")
     a = ap.parse_args(argv[1:])
     if a.self_test:
         _self_test_pooled()
@@ -479,6 +480,11 @@ def main(argv: list[str]) -> int:
 
     def done(verdict: str, why: str) -> int:
         out["rule_verdict"], out["rule_why"] = verdict, why
+        if not a.no_cf:      # CF-ML-EVAL: beside the realised R, the counterfactual arms on the same trades (additive key; never changes the verdict)
+            import cf_ml_eval
+            rows_all = sorted(emit.values(), key=lambda e: _epoch(e["entry_time"]))
+            out["cf"] = {"discovery": cf_ml_eval.cf_block([e for e in rows_all if _epoch(e["entry_time"]) < boundary], bt),
+                         "held_out": cf_ml_eval.cf_block([e for e in rows_all if _epoch(e["entry_time"]) >= boundary], bt)}
         rec = {"verdict": verdict if verdict in ("pass", "fail") else "indeterminate",
                "read_state": "measured" if verdict in ("pass", "fail") else "insufficient",
                "population": (f"{a.leg or 'leg'}: {len(emit)} baseline-arm trades (config-exact declared exit), "

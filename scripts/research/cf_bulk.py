@@ -31,6 +31,7 @@ import glob
 import gzip
 import hashlib
 import json
+import os
 import random
 import re
 import sys
@@ -83,6 +84,50 @@ def is_crypto(symbol: str) -> bool:
     return str(symbol).endswith("USDT")
 
 
+#: harness default --timeout-bars per strategy family (the corpus rows do not carry it; the sidecar params do not either)
+DEFAULT_TIMEOUT_BARS = (("trend_donchian", 200), ("fade_breakout", 48), ("squeeze_breakout", 48))
+
+
+def sidecar(rel: str, root: Path = REPO, _cache: Dict[str, Optional[dict]] = {}) -> Optional[dict]:
+    """The harness summary beside a trades file (``<name>__trades.jsonl`` -> ``<name>__bt.json``): symbol, timeframe, strategy
+    and the run's ``params``. None when absent or unreadable. CF-BACKTEST-FIDELITY: it is what lets a replay use the SAME trail
+    geometry the harness used, and resolves a symbol/timeframe the rows themselves do not carry."""
+    ck = f"{root}|{rel}"
+    if ck in _cache:
+        return _cache[ck]
+    d, b = os.path.split(rel)
+    cand = re.sub(r"_?_?trades\.jsonl(\.gz)?$", "__bt.json", b)
+    out: Optional[dict] = None
+    if cand != b:
+        try:
+            out = json.loads((root / d / cand).read_text())
+        except (OSError, ValueError):
+            out = None
+    _cache[ck] = out if isinstance(out, dict) else None
+    return _cache[ck]
+
+
+def leg_meta_for(row: dict, side: Optional[dict]) -> Optional[dict]:
+    """``{atr, trail_mult, tp}`` rebuilt from the sidecar params, or None. atr = |entry - sl| / atr_stop_mult (the trend and
+    squeeze harnesses set the stop at ``atr_stop_mult x ATR``); a fade stop is not ATR-derived, so fade carries a TP only (tp1r)."""
+    pr = (side or {}).get("params") or {}
+    entry, sl = lrc._num(row.get("entry")), lrc._num(row.get("sl"))
+    if entry is None or sl is None or entry == sl:
+        return None
+    risk, sign, meta = abs(entry - sl), (1.0 if str(row.get("direction")).lower() == "long" else -1.0), {}
+    asm, tm = lrc._num(pr.get("atr_stop_mult")), lrc._num(pr.get("trail_mult"))
+    if asm and tm:
+        meta["atr"], meta["trail_mult"] = risk / asm, tm
+    tp_r = lrc._num(pr.get("tp_r"))
+    if tp_r and tp_r < 50.0 and (pr.get("exit_style") in (None, "tp1r") or asm):
+        meta["tp"] = entry + sign * tp_r * risk
+    return meta or None
+
+
+def timeout_bars_for(strategy: Any) -> Optional[int]:
+    return next((n for pre, n in DEFAULT_TIMEOUT_BARS if str(strategy or "").startswith(pre)), None)
+
+
 def load_jobs(files: Iterable[str], root: Path = REPO) -> Tuple[Dict[str, dict], Dict[str, Any]]:
     """Distinct replay jobs keyed by ``trade_key`` (strategy|symbol|entry_time|direction|sl); the first occurrence wins.
     Rows without replayable geometry are counted, not dropped silently. Returns ``(jobs, counts)``."""
@@ -111,12 +156,24 @@ def load_jobs(files: Iterable[str], root: Path = REPO) -> Tuple[Dict[str, dict],
                     c["rows_not_replayable"] += 1
                     continue
                 c["rows_replayable"] += 1
+                side = sidecar(rel, root)
+                if r.get("symbol") is None and (side or {}).get("symbol"):
+                    r["symbol"] = side["symbol"]
+                    c["symbol_from_sidecar"] += 1
+                if r.get("strategy") is None and (side or {}).get("strategy"):
+                    r["strategy"] = side["strategy"]
+                    c["strategy_from_sidecar"] += 1
                 if r.get("symbol") is None:
                     r["symbol"] = "UNKNOWN"      # file carries no symbol: counted as could_not_grade symbol_unresolved, never dropped
                 k = cf_harness.trade_key(r.get("strategy"), r.get("symbol"), r.get("entry_time"), r.get("direction"), r.get("sl"))
                 if k in jobs:
                     continue
                 r["_file"] = rel
+                if (side or {}).get("timeframe"):
+                    r["_tf"] = side["timeframe"]
+                lm = leg_meta_for(r, side)
+                if lm:
+                    r["_leg_meta"] = lm
                 jobs[k] = r
             c["files_empty" if n_file == 0 else "files_nonempty"] += 1
     c["files"] = c["files_empty"] + c["files_nonempty"] + c["files_unreadable"]
@@ -130,6 +187,8 @@ def plan_shards(jobs: Dict[str, dict], max_jobs: int = DEFAULT_MAX_JOBS) -> Tupl
     groups: Dict[Tuple[str, Optional[str], Optional[str]], List[str]] = defaultdict(list)
     for k, r in sorted(jobs.items()):
         tf, why = resolve_timeframe(r["_file"], r.get("strategy"))
+        if tf is None and r.get("_tf") in _SUPPORTED_TF:
+            tf, why = r["_tf"], None                       # the harness summary beside the file names the timeframe
         groups[(str(r["symbol"]), tf, why)].append(k)
     shards: List[dict] = []
     chunks: Dict[str, List[str]] = {}
@@ -158,8 +217,8 @@ class BarStore:
         return self.bars[bisect_left(self.t, t0):bisect_left(self.t, t1)]
 
 
-def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random: int) -> dict:
-    row = {k: v for k, v in job.items() if k != "_file"}
+def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random: int, arm_set: str = "standard") -> dict:
+    row = {k: v for k, v in job.items() if not k.startswith("_")}
     if row.get("symbol") == "UNKNOWN":
         cf = cf_harness._could_not(row, "symbol_unresolved")
     elif tf is None:
@@ -169,19 +228,21 @@ def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random:
     elif store is None:
         cf = cf_harness._could_not(row, "no_bars")
     else:
-        cfg = {"timeframe": tf}
+        cfg = {"timeframe": tf, **({"max_hold_bars": mb} if (mb := timeout_bars_for(row.get("strategy"))) else {})}
         t_entry, t_exit = lrc._ts(row.get("entry_time")), lrc._ts(row.get("exit_time"))
         if t_entry is None or t_exit is None:
             cf = cf_harness._could_not(row, "row_incomplete")
         else:
             h = cf_core.resolve_horizon({"timeframe": tf}, cfg)["seconds"]
-            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random)
+            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random, leg_meta=job.get("_leg_meta"),
+                                        arm_set=arm_set)
     return {"trade_key": cf["trade_key"], "strategy": row.get("strategy"), "symbol": row.get("symbol"), "timeframe": tf,
             "direction": row.get("direction"), "entry_time": row.get("entry_time"), "net_r": row.get("net_r"),
             "source_file": job["_file"], "cf": cf}
 
 
-def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, n_random: int = cf_core.N_RANDOM, fetcher=None, force: bool = False) -> dict:
+def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, n_random: int = cf_core.N_RANDOM, fetcher=None, force: bool = False,
+              arm_set: str = "standard") -> dict:
     sdir = out / "shards"
     sdir.mkdir(parents=True, exist_ok=True)
     meta_p, data_p = sdir / f"{shard['shard_id']}.meta.json", sdir / f"{shard['shard_id']}.jsonl.gz"
@@ -199,7 +260,9 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
         else:
             try:
                 lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen)
-                hi = max(lrc._ts(jobs[k]["exit_time"]) for k in chosen) + cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf})["seconds"]
+                hi = max(lrc._ts(jobs[k]["exit_time"]) + cf_core.resolve_horizon(
+                    {"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := timeout_bars_for(jobs[k].get("strategy"))) else {})})["seconds"]
+                    for k in chosen)
                 bars = cf_bars.historical_bars(shard["symbol"], tf, lo, hi, fetcher)
                 store = BarStore(bars) if bars else None
             except Exception as e:                           # allow-silent: a failed fetch is a recorded state (state=fetch_failed, error kept in meta, no 'done' meta so a re-run retries), never a halt
@@ -208,7 +271,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
     tmp = data_p.with_suffix(".tmp")
     with gzip.open(tmp, "wt", encoding="utf-8") as fh:
         for k in chosen:
-            rec = grade_job(jobs[k], store, tf, n_random)
+            rec = grade_job(jobs[k], store, tf, n_random, arm_set)
             if rec["cf"].get("status") == "graded":
                 n_graded += 1
             else:
@@ -243,6 +306,39 @@ def _arm_cells(cf: dict) -> Dict[str, Optional[float]]:
     return out
 
 
+def _bt_block(graded: List[dict], base_of) -> Dict[str, Any]:
+    if len(graded) < MIN_N:
+        return {"verdict": "INDETERMINATE", "why": f"n_graded {len(graded)} < {MIN_N}"}
+    cells: Dict[str, List[Tuple[int, float]]] = defaultdict(list)
+    for i, r in enumerate(graded):
+        base = base_of(r)
+        if base is None:
+            continue
+        for name, v in _arm_cells(r["cf"]).items():
+            if v is not None:
+                cells[name].append((i, v - base))
+    n = len(graded)
+    best = None
+    for name, dv in cells.items():
+        if len(dv) < MIN_N:
+            continue
+        folds_ok = 0
+        for f in range(FOLDS):
+            lo, hi = f * n // FOLDS, (f + 1) * n // FOLDS
+            fv = [d for i, d in dv if lo <= i < hi]
+            if fv and sum(fv) / len(fv) >= MIN_DELTA_R:
+                folds_ok += 1
+        mean = sum(d for _, d in dv) / len(dv)
+        if best is None or mean > best["mean_delta_r"]:
+            best = {"arm": name, "n": len(dv), "mean_delta_r": round(mean, 4), "folds_ge_threshold": folds_ok, "_vals": [d for _, d in dv]}
+    if best is None:
+        return {"verdict": "INDETERMINATE", "why": "no arm cell with n >= MIN_N"}
+    ci, p = _boot_p_le0(best.pop("_vals"))
+    ok = best["folds_ge_threshold"] >= FOLDS_NEEDED and ci[0] > 0
+    return {"verdict": "PASS" if ok else "FAIL", **best, "ci95_mean_delta": ci, "p_one_sided": round(p, 4),
+            "n_arm_cells": len(cells), "selection": "best cell over whole sample (candidate, not edge)"}
+
+
 def leg_verdicts(records: List[dict]) -> Dict[str, Any]:
     by_leg: Dict[str, List[dict]] = defaultdict(list)
     for r in records:
@@ -261,47 +357,19 @@ def leg_verdicts(records: List[dict]) -> Dict[str, Any]:
         else:
             pe["verdict"] = "INDETERMINATE"
         out["postexit"] = pe
-        # --- BT
-        if len(graded) < MIN_N:
-            out["bt"] = {"verdict": "INDETERMINATE", "why": f"n_graded {len(graded)} < {MIN_N}"}
-            legs[leg] = out
-            continue
-        cells: Dict[str, List[Tuple[int, float]]] = defaultdict(list)
-        for i, r in enumerate(graded):
-            base = (r["cf"]["arms"].get("original_brackets") or {}).get("net_r")
-            if base is None:
-                continue
-            for name, v in _arm_cells(r["cf"]).items():
-                if v is not None:
-                    cells[name].append((i, v - base))
-        n = len(graded)
-        best = None
-        for name, dv in cells.items():
-            if len(dv) < MIN_N:
-                continue
-            folds_ok = 0
-            for f in range(FOLDS):
-                lo, hi = f * n // FOLDS, (f + 1) * n // FOLDS
-                fv = [d for i, d in dv if lo <= i < hi]
-                if fv and sum(fv) / len(fv) >= MIN_DELTA_R:
-                    folds_ok += 1
-            mean = sum(d for _, d in dv) / len(dv)
-            if best is None or mean > best["mean_delta_r"]:
-                best = {"arm": name, "n": len(dv), "mean_delta_r": round(mean, 4), "folds_ge_threshold": folds_ok, "_vals": [d for _, d in dv]}
-        if best is None:
-            out["bt"] = {"verdict": "INDETERMINATE", "why": "no arm cell with n >= MIN_N"}
-        else:
-            ci, p = _boot_p_le0(best.pop("_vals"))
-            ok = best["folds_ge_threshold"] >= FOLDS_NEEDED and ci[0] > 0
-            out["bt"] = {"verdict": "PASS" if ok else "FAIL", **best, "ci95_mean_delta": ci, "p_one_sided": round(p, 4),
-                         "n_arm_cells": len(cells), "selection": "best cell over whole sample (candidate, not edge)"}
+        # --- BT: the registered rule (arms vs original_brackets) and, beside it, the same rule vs the replayed harness trade
+        # (CF-BACKTEST-FIDELITY: for a trailing leg original_brackets is a no-trail bracket, so the registered delta can read a
+        # TP-vs-trail difference; the replay baseline is the leg's own management). The registered rule itself is unchanged.
+        out["bt"] = _bt_block(graded, lambda r: (r["cf"]["arms"].get("original_brackets") or {}).get("net_r"))
+        out["bt_vs_replay"] = _bt_block(graded, lambda r: r["cf"]["arms"].get("replayed_actual_net_r"))
         legs[leg] = out
     # Holm across the legs that have a BT p
-    ps = sorted(((v["bt"]["p_one_sided"], k) for k, v in legs.items() if "p_one_sided" in v.get("bt", {})))
-    m, running = len(ps), 0.0
-    for i, (p, k) in enumerate(ps):
-        running = max(running, min(1.0, (m - i) * p))
-        legs[k]["bt"]["p_holm"] = round(running, 4)
+    for key in ("bt", "bt_vs_replay"):
+        ps = sorted(((v[key]["p_one_sided"], k) for k, v in legs.items() if "p_one_sided" in v.get(key, {})))
+        m, running = len(ps), 0.0
+        for i, (p, k) in enumerate(ps):
+            running = max(running, min(1.0, (m - i) * p))
+            legs[k][key]["p_holm"] = round(running, 4)
     return legs
 
 
@@ -322,6 +390,7 @@ def reduce_run(out: Path, plan: dict) -> dict:
     graded = sum(m["n_graded"] for m in metas)
     legs = leg_verdicts(records)
     bt = Counter(v["bt"]["verdict"] for v in legs.values())
+    bt_rp = Counter(v["bt_vs_replay"]["verdict"] for v in legs.values())
     pe = Counter(v["postexit"]["verdict"] for v in legs.values())
     fid = sorted(abs(r["cf"]["fidelity"]["abs_gap_r"]) for r in records if r["cf"].get("status") == "graded" and r["cf"].get("fidelity", {}).get("abs_gap_r") is not None)
     manifest = {"schema": BULK_SCHEMA, "run_id": plan["run_id"], "engine_schema_version": cf_core.SCHEMA_VERSION, "input": plan["input"],
@@ -331,7 +400,7 @@ def reduce_run(out: Path, plan: dict) -> dict:
     summary = {"schema": BULK_SCHEMA, "run_id": plan["run_id"], "population": f"{manifest['n_jobs_in_done_shards']} distinct replay jobs in {len(metas)} shards; {graded} graded",
                "rules": {"min_n": MIN_N, "bt": f"best arm cell mean delta vs original_brackets >= +{MIN_DELTA_R} R in >= {FOLDS_NEEDED}/{FOLDS} time folds and bootstrap-by-trade 95% CI > 0",
                          "postexit": f"exited_early share >= {POSTEXIT_HI} LEAVES_R, <= {POSTEXIT_LO} SAVES_R"},
-               "bt_verdicts": dict(bt), "postexit_verdicts": dict(pe),
+               "bt_verdicts": dict(bt), "bt_vs_replay_verdicts": dict(bt_rp), "postexit_verdicts": dict(pe),
                "fidelity_abs_gap_r": None if not fid else {"n": len(fid), "median": round(fid[len(fid) // 2], 4), "p90": round(fid[int(0.9 * len(fid))], 4), "max": round(fid[-1], 4),
                                                            "share_le_0.10": round(sum(1 for x in fid if x <= 0.10) / len(fid), 4)},
                "legs": legs, "provenance": "ESTIMATED"}
@@ -364,6 +433,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     s.add_argument("--index", type=int, nargs="+", required=True, help="shard indices into plan.json (space separated)")
     s.add_argument("--plan")
     s.add_argument("--n-random", type=int, default=cf_core.N_RANDOM)
+    s.add_argument("--arm-set", default="standard", choices=("standard", "extended"), help="extended = CF-INSIGHTS stop grid / management / entry-side arms + context")
     s.add_argument("--max-jobs", type=int, default=DEFAULT_MAX_JOBS)
     s.add_argument("--force", action="store_true")
     r = sub.add_parser("reduce")
@@ -397,7 +467,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     for i in a.index:
         shard = plan["shards"][i]
         try:
-            meta = run_shard(shard, chunks, jobs, out, n_random=a.n_random, force=a.force)
+            meta = run_shard(shard, chunks, jobs, out, n_random=a.n_random, force=a.force, arm_set=a.arm_set)
         except Exception as e:                                # allow-silent: recorded as state=failed with the error and a non-zero exit; a re-run retries it, never a halt
             meta = {"shard_id": shard["shard_id"], "state": "failed", "error": f"{type(e).__name__}: {e}"[:300]}
             rc = 1
