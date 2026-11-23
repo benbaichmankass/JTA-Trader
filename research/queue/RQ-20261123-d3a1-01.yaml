@@ -4,7 +4,7 @@
 id: RQ-20261123-d3a1-01
 title: 'D3 side gate: on the registered ml_entry recipe refit per dev fold, does taking a side only when it agrees with the symbol''s
   trailing 168 h return beat both-sides by +0.05 R/decision (week-clustered t >= 2), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -144,3 +144,16 @@ related:
 - scripts/research/ml_decision_entry.py
 - docs/research/ml-entry-side-by-fold-2026-11-23.md
 last_dispatched_at: '2026-11-23T15:47:32+00:00'
+grading:
+  attested: RULE-ML-D3-SIDE-GATE-TREND-20261123
+  auto: true
+  decision_rule_id: RULE-ML-D3-SIDE-GATE-TREND-20261123
+  evidence:
+  - research/results/RQ-20261123-d3a1-01/45209224974.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
