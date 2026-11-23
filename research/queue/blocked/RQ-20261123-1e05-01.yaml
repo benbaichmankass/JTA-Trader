@@ -1,0 +1,80 @@
+id: RQ-20261123-1e05-01
+title: 'Dedicated bear-regime buy-side ML: population = inverse + hedge ETFs, features from INDEX and macro state, label = forward net R of buying the ETF under the
+  leg bracket (DESIGN NOTE + one registered unit; no training before 2026-11-25 18:00Z)'
+status: blocked
+cadence: once
+kind: experiment
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+question: Does a buy-side model trained on index/macro state (index trend and vol regime, 5/20/50-day returns, drawdown from high, realised-vol ratio, VIX-proxy VIXY,
+  rates via TLT/IEF returns, breadth if available) and scored on {SQQQ, SPXU, SPXS, SDOW, TZA, SH, PSQ, SDS, QID} and optionally {TLT, IEF, GLD}, labelled with the
+  forward net R of a buy under the structure bracket (SL 2 ATR, TP 3 ATR, 24-bar hold, ml_entry_eq_struct costs), beat (i) the own-chart twins and (ii) ml_entry_eq_struct's
+  existing scores on the same symbols, on a purged walk-forward then a confirm window read once?
+why_this_matters: The operator allowed mixing models across strategies; this decides whether a regime-conditioned extension of ml_entry_eq_struct (add index-state
+  features, keep one pooled model) is enough, or whether the bear population needs its own model.
+power:
+  expected_n: 80
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the bear population is ~9-12 symbols over ~4 y of 1h bars; decisions every 4 h in RTH with tau-filter leave ~100-400 confirm-window
+    trades, but regime conditioning (down-regimes only) cuts that; floor 30. Said before any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261123-1e05-01
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  statistic: 'ml_entry_equity.py-family walk-forward on the new dataset (row IELE-BEAR-ML-BUILD): arm S = standalone bear model on the bear population; arm X = ml_entry_eq_struct
+    retrained with the index-state features added, restricted-read on the same bear population; baselines B1 = own-chart twins, B2 = the existing artifact''s scores
+    on the same rows. Pooled mean net R per decision, n, month-clustered se, dev-selected tau fixed on the dev walk-forward only; confirm window read once. Costs
+    as ml_entry_eq_struct (slippage 5 bps provisional, regulatory 0.5 bps).'
+  rule: PASS(S) IFF confirm n >= 30 AND mean net R(S) >= t_min x iid se (ledger bar for this family) AND dev OOF mean > 0 AND mean(S) >= mean(B2) + 0.04 R. PASS(X)
+    is graded the same way against B2. If both pass, the smaller change (X) is proposed; if only S passes, a standalone model; if neither, FAIL and the existing pool
+    stands. INDETERMINATE if n < 30. Bars fixed now; ledger N declared at registration of the run.
+  what_it_does_not_do: No training before 2026-11-25 18:00Z; changes no config or artifact; per-symbol results never gate (population rule only); a pass is a real-money
+    candidate, not a promotion.
+  baseline: B1 own-chart twins; B2 existing ml_entry_eq_struct scores on the same symbols and rows.
+blocked_on:
+- kind: work_item
+  ref: IELE-BEAR-ML-BUILD
+  what: No dataset with index/macro-state features and ETF forward-R labels on the inverse/hedge population exists.
+  clears_when: Owning row done (dataset built, reproduces a known hash) and the reset has passed; then git mv to research/queue/, status queued, run.command set.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  workflow: null
+  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261107-98e3-06
+- RQ-20261123-1e03-01
+- RQ-20261123-1e01-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+ml_consumer:
+  consumer: ML-ENTRY-EQUITY-NATIVE
+  decision: whether the bear-regime buy population is served by a regime-conditioned ml_entry_eq_struct or a dedicated model
+  legs:
+  - ml_entry_eq_struct

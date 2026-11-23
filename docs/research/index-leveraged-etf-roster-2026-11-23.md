@@ -68,6 +68,21 @@ Design notes and honest gaps:
 - 1e03-01 is probably **UNDERPOWERED** (~20-60 subset trades expected); it reports a sign and a point estimate and states so. Per-symbol results never gate; only the pre-declared subset is read.
 - 1e03-01 removes the need for a separate pooled test of a population "including the inverse ETFs": that pooled population already includes them and passed (98e3-06). The remaining question is whether the subset carries edge, which is what the unit asks.
 
+## 4b. Scope add (operator 2026-11-23 ~18:45Z): index-driven strategies and a bear-regime ML
+
+All four are **blocked** on a named build row (rules written before any run; nothing has run; no training before 2026-11-25 18:00Z).
+
+| Unit | Blocked on | What |
+|---|---|---|
+| RQ-20261123-1e04-01 | `IELE-INDEX-DRIVEN-HARNESS` | Index breakdown (Donchian-20 low / pivot-5 swing break on SPY/QQQ/DIA/IWM) -> BUY the matching inverse ETF; stop = index pivot-high mapped through the ETF; baseline flat + the own-chart twin |
+| RQ-20261123-1e04-02 | same | Failed rally / lower-high continuation -> BUY the inverse; baseline flat + 1e04-01 |
+| RQ-20261123-1e04-03 | same | Bounce after capitulation (2 ATR flush, first up-close) -> BUY the 3x bull ETF; baseline flat + the same trigger in the 1x ETF |
+| RQ-20261123-1e05-01 | `IELE-BEAR-ML-BUILD` | Bear-regime buy-side ML on inverse + hedge ETFs (TLT/IEF/GLD optional), index/macro-state features, label = forward net R of a buy under the structure bracket |
+
+- **Cost and decay:** every unit reads the ETF's own price series, so daily-rebalance decay and the expense ratio over the hold are inside the net R; the 2x-slippage re-read and a per-hold "decay drag" (ETF return minus beta x index return) are reported. **TP doctrine:** the TP is the index-structure target mapped to the ETF and calibrated (`tp_prediction_derive`) before any leg is proposed; no `tp_r: 50`.
+- **ML slotting (1e05-01):** two arms on the same dataset: S = standalone bear model, X = `ml_entry_eq_struct` retrained with the index-state features added. Recommendation before any result (to be falsified by the unit): **start with X**, because the existing pool and serving path already hold the inverse ETFs (§ 1) and the cheapest change is features, not a second model; a standalone model is only worth its serving cost if S beats B2 (the existing scores) by the registered 0.04 R margin and X does not. Mixing and matching is allowed: nothing stops a later regime gate on the pool.
+- **Honest gaps:** no index-signal-to-ETF harness exists (hence the blocked status); breadth data availability is unverified; the power numbers are estimates.
+
 ## 5. Config change that would follow a pass (Tier 3 — NOT made; operator/manager approval; evidence record first)
 
 1. **Per twin that PASSES** (Stage-0 pass goes to real money per OPERATING-PLAN § 2; the leg is also put on the demo floor): add a strategy `sqqq_trend_long_1d` (etc.) to `config/strategies.yaml` as a copy of its parent leg with `symbols: [SQQQ]` and `long_only: true`, a TP per the TP doctrine (re-run `scripts/ci/check_tp_doctrine.py`), and put it on `alpaca_paper` first as the demo-floor leg; real-money (`alpaca_live` + `alpaca_portfolio`, strict-equality mirror rule, `alpaca_portfolio ⊇ alpaca_live`) only after a committed evidence record. A same-index same-symbol-allocation guard is needed so a bull leg and an inverse leg on one index cannot both size full risk (`same-symbol-allocation-guard` pattern; instruments differ, so it will not fire by itself).

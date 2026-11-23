@@ -1,0 +1,69 @@
+id: RQ-20261123-1e04-02
+title: Failed rally / lower-high continuation on the index -> buy the inverse ETF
+status: blocked
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: After an index bounces and fails at a lower high (daily close back below the 20-day mid, pivot-5 lower-high confirmed), does buying the inverse ETF with
+  the stop above that lower high and a calibrated TP earn positive net R net of decay, versus flat and the 1e04-01 breakdown form?
+why_this_matters: The continuation form trades the clean downtrend leg after confirmation, which should hold the ETF for fewer chop sessions than a breakdown-at-low
+  entry.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: index signal frequency ~4-8 per year per index over 2010-06..2026-10 (~15 y) gives ~60-120 episodes per index; floor 25. Said before
+    any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261123-1e04-02
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness: lower-high rule = confirmed pivot-5 high lower than the prior pivot-5 high while the index is below its 50-day mean; entry
+    next open in the inverse ETF; stop = that lower high mapped through the ETF; TP calibrated K*; hold cap 15 sessions; net_r, n, maxDD, per-fold, decay drag. Cost
+    stack: fee 0 + 5 bps slippage per side (2x slippage re-read), the ETF price series itself (embeds daily-rebalance decay and expense ratio over the hold), no funding.
+    TP doctrine: the TP is the index-structure target mapped to the ETF (index move x leverage sign), a real predictive TP at entry, calibrated by tp_prediction_derive
+    on the in-sample span, never tp_r 50.'
+  rule: PASS IFF n >= 25 AND net_r > 0 AND net_r > net_r of RQ-20261123-1e04-01 on the same index (or 1e04-01 INDETERMINATE and net_r > 0 in >= 3 of 4 folds) AND
+    net_r > 0 under 2x slippage. INDETERMINATE if n < 25. FAIL otherwise. Parameters fixed now.
+  what_it_does_not_do: Changes no config.
+  baseline: Flat; and 1e04-01 on the same index.
+blocked_on:
+- kind: work_item
+  ref: IELE-INDEX-DRIVEN-HARNESS
+  what: As 1e04-01.
+  clears_when: As 1e04-01.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  workflow: null
+  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261123-1e04-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
