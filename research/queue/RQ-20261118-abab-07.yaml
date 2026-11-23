@@ -1,7 +1,7 @@
 # UNBLOCKED 2026-11-23 by lane QUEUE-FILL-STANDING-W48 (manager's PI-20261123-SME5WDGR-0008 direction, TA20 option b): scripts/backtest_ict_scalp.py now declares --be-floor-r (intrabar-extreme floor, independent of the --sim-breakeven ratchet; default byte-identical to the committed golden, tests fail without the change); --stale-exit-bars already existed. PRE-RUN GRID CORRECTION: TA20 was unrunnable as registered (half-declared momentum_trail, refused by momentum_flag_errors; inert on fade's exit-style far), so it never produced a result; removed 2026-11-23 by manager ruling, no other arm changed. The command graded with `--grade replace --baseline A --delta-r 0 --delta-r-per-trade 0.02 --folds 6 --fold-majority 4 --dd-tol-frac 0.35 --n-floor 39` but the registered rule (RULERQ20261118abab07) is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005); the tail now carries the registered flags. Rule unchanged. SECOND COMMAND FIX: the command omitted `--non-crypto-source dukascopy`, which the sibling it names (RQ-20261117-9e1c-12, same leg, same window, landed) passes; without it the MGC 15m fetch falls to yfinance, which serves only the last 60 days at that interval and dies (`window_exceeds_intraday_limit`, reproduced locally 2026-11-23). Rule unchanged.
 id: RQ-20261118-abab-07
 title: 'EXIT lever family on ict_scalp_mgc_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of SE8/SE12/BE1 (EXIT-LEVER) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -131,3 +131,16 @@ related:
 - RQ-20261117-9e1c-12
 - research/levers/ict_scalp_mgc_15m.yaml
 last_dispatched_at: '2026-11-23T12:50:55+00:00'
+grading:
+  attested: RULERQ20261118abab07
+  auto: true
+  decision_rule_id: RULERQ20261118abab07
+  evidence:
+  - research/results/RQ-20261118-abab-07/45175054076.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

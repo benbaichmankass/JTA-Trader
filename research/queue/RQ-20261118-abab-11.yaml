@@ -1,7 +1,7 @@
 # UNBLOCKED 2026-11-23 by lane QUEUE-FILL-STANDING-W48 (manager's PI-20261123-SME5WDGR-0008 direction): scripts/backtest_fade.py now declares --vol-skip-above-pctl / --vol-skip-below-pctl / --vol-pctl-window (shared rule scripts/lever_gates.py, default byte-identical to main, tests fail without the change); the unit's exact command ran locally end to end (n(A)=136, every arm fired; local run, not the record). The command graded with `--grade sweep --baseline A --delta-r 4.0 --folds 4 --fold-majority 3 --n-floor 39` but the registered rule (RULERQ20261118abab11) is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005); the tail now carries the registered flags and the declared baseline A. Rule unchanged.
 id: RQ-20261118-abab-11
 title: 'FILTER lever family on fade_breakout_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of VH90/VL20/AX40 (FILTER) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -121,3 +121,17 @@ roadmap:
 related:
 - RQ-20261117-dc44-04
 - research/levers/fade_breakout_4h.yaml
+last_dispatched_at: '2026-11-23T12:30:46+00:00'
+grading:
+  attested: RULERQ20261118abab11
+  auto: true
+  decision_rule_id: RULERQ20261118abab11
+  evidence:
+  - research/results/RQ-20261118-abab-11/45175067432.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
