@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261122-HOPS1447-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261122-1447",
+    "rerun": "python3 -c \"import json,glob;f=sorted(glob.glob('research/results/RQ-20261118-aadc-13/*.jsonl'))[-1];m=json.loads(open(f).read().splitlines()[-1])['measurement'];print([[x['n_test_trades'] for x in l['folds']] for l in m['legs']])\"  # identical n per fold => the pooled n counts one block 5x"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 11-22] RQ-20261118-aadc-13 (D8 exit head, holding_pays_neg25 on five 4h donchian legs) graded PASS by its rule (d +0.0203, CI LB +0.012, n_oos 37,295) but each leg reports the SAME n_test_trades in all 5 folds (eth 1640, sol 1418, xrp 1413, ada 1595, avax 1393) and counts are 1-3k per 4h leg, far above a 4h donchian trade count: n is probably 1h corpus rows, and one block is pooled 5x. Audit exit_head_label_bakeoff.py's test-set construction under --timeframe 4h (fold partition + unit of n), then re-read the PASS clustered by trade (fa22-02's driver counts one trade = one cluster). Until then no Tier-3 proposal rests on aadc-13 and the RQ-20261117-aadc-12 / aadc-11 passes should be re-checked for the same count."
+}

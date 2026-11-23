@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22, stranded-pool triage; manager (cross-session message 22:46Z) asked it be filed as its own item due after the 11-25 reset",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys; print(sum(1 for r in json.load(sys.stdin)['decisions'] if 'cadence=once and it ran' in str(r.get('reason'))))\"   # then compare with the failed-only subset (PI-20261122-SME5WDGR-0003 rerun); self-heal is done when a failed-only once-unit is re-evaluated by the guards with its stamp present"
+  },
+  "owner": "unassigned (filed by QUEUE-FILL-STANDING-W48; Thursday plan)",
+  "state": "queued",
+  "what": "DISPATCHER SELF-HEAL FOR once-UNITS (research-tooling build, for Thursday's plan; NOT built): scripts/research/dispatch_queue.py already has retry guards for a unit with failed history (RETRY_CAP_MARK 'retry cap reached: N landed rows are all non-verdict outcomes (max 2 retries) -- needs a human', UNCHANGED_SINCE_FAILURE_MARK 'deterministic producer_failed, script unchanged'), but they only fire when the unit's last_dispatched_at stamp is absent. While the stamp is present a cadence-once unit reads 'cadence=once and it ran at <ts>' and is never re-evaluated, so a producer_failed-only history strands the unit and the guards never get to decide. MEASURED 2026-11-22 (population: 71 queued cadence-once units whose only result rows are producer_failed, PI-20261122-SME5WDGR-0003): with real stamps all 71 read 'cadence=once and it ran at'; on a temp copy with the stamps cleared the guards would dispatch 46 and refuse 25 (21 at the retry cap, 4 deterministic-unchanged) -- the guards worked, they just never ran. PROPOSED: when a once-unit's landed rows are ALL producer_failed (no measured/verdict row), treat the stamp as not-ran and run the existing guard chain (retry cap, script-unchanged-since-failure, backend/route re-check) to decide re-dispatch vs 'needs a human'; a measured or verdict row keeps the current 'ran' behaviour. Needs: a test with planted failed-only history (re-dispatches when script changed, refuses at cap, refuses when unchanged), byte-identical behaviour for units with any measured row, and a CHECKS-packet line counting failed-only once-units so the pool stays visible. Not a new gate: it only lets the existing guards decide."
+}

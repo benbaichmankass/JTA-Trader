@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the D3 and D7 builds named in what land, or research/family_reviews/ml-tm-action-value.yaml (PI-20261121-RIMARY17-0001) lands, or the manager kills this with a reason",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261122-CRWK64UZ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-18 2026-11-22, manager dispatch; companion to PI-20261122-HOPS1447-0001 (not on main when filed, PR 28153)",
+    "rerun": "ls research/queue/RQ-20261122-b18a-0*.yaml"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "ML slots with NO authored next unit after ML-PRIMARY-18, with the exact reason each (not padding). D3 Foxhound: every in-hand ENTRY lever has a committed read (timeframe b620-b626, tau 4654-02/c21d-01, bracket b601/4654-03, cost gate b606, selectivity b602, features F1-F5 fs01-01 noisy, trend-align 487c-01 FAIL, recipe fs05, target fs06 T1 +0.026 on 41-1,275 decisions per fold INDETERMINATE, K-seed ensemble d507-01 INDETERMINATE, population test 2e3b-01 FAIL, v2 forward b610-01 FAIL). The only untested class that ADDS information is a cross-asset / macro-state family (F8: equity-index, gold and dollar returns and realised vol as at-or-before-the-bar context): it needs a point-in-time builder in scripts/research/ml_entry_families.py and the Yahoo/Dukascopy intraday path on a runner (the published candle dataset holds only daily equity feeds). That is a BUILD (about one lane), then one unit through the fs01 harness with its noise control. D7 action-value: seven families failed S-OFFLINE on ONE corpus (tmb-73f5c3660014); the untested lever families are universe and calibration, and both need tm_bench builds (a symbol-held-out test-corpus mode; a calibration layer) that do not exist. The family review PI-20261121-RIMARY17-0001 (due 11-27) must first decide A/B/C. D6 SL head (distributional MAE head) is authorable but needs ml_decision_entry.label_symbol sl_rows plus an mae label (R is stop-denominated, so a per-row SL needs per-row R handling) and its value is gated on a positive-net D3; ML-PRIMARY-18 authored the static bracket ceiling (b18a-03/-04) first because it prices the headroom a head could capture. D9: maker exit PASS twice (04a5-05, e8a1-01), maker entry FAIL (e8a1-02), P(fill) gate FAIL (b9d0-03); b18a-01 re-grades the real-money cost basis; the step after it is a runtime maker-exit apply, Tier-2/3 and outside this lane."
+}

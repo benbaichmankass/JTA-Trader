@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-11-24",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22, stranded-pool triage at the manager's direction; groups built from research/results rows + comms/research/<unit>/<run>/logs, population: 71 queued cadence-once units with only producer_failed rows",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys; print(sum(1 for r in json.load(sys.stdin)['decisions'] if 'cadence=once and it ran' in str(r.get('reason'))))\"   # coarse: counts every once-unit held by a stamp; the failed-only set is the subset whose results/<unit>/*.jsonl are all read_state producer_failed (see PI-20261122-SME5WDGR-0003 rerun)"
+  },
+  "owner": "unassigned (filed by QUEUE-FILL-STANDING-W48)",
+  "state": "queued",
+  "what": "STRANDED-POOL RESIDUE (after group A re-queued in the triage PR): of the 71 queued cadence-once units whose ONLY rows are producer_failed (measured 2026-11-22; PI-20261122-SME5WDGR-0003), 24 were re-queued (group A, network: the Kaggle kernel fetched data.binance.vision before the candle dataset covered the feed; dataset now serves it). The other 47, by cause read from the result rows and logs: B) 7 mes_trend_long_1d exit_lever_ablation units (b2f1-03/-14, b2f2-02/-21, 9e1a-01, 9e1b-01, 9e1c-01) died on yfinance: ES=F returned no rows, venue_state=refusing_us (Yahoo refuses the Kaggle egress; the SPY control is empty too); the router still sends them to kaggle_cpu (cd.unit_feed is binance-only), so a blind re-run fails again -> needs a data-source fix (a published ES/MES daily feed, or route to a backend Yahoo answers). C) 19 'ran but no verdict.json': the script printed a result but wrote no verdict.json (8 prop-gate units print a FAIL JSON with ledger_ethsol cells; RQ-20261102-5e03-01 printed 'VERDICT fail ... n=110' and wrote its own JSON; RQ-20261103-009 printed FAIL n=206; RQ-20261112-09d2-05 printed fail MNQ_OR15 231): the measurement exists but never reached the contract, so a re-run only repeats it -> fix each harness to write verdict.json (or record the printed result and retire the unit with that reason). D) 13 'no logs' (kernel died before a manifest; 9 of them at the dispatcher retry cap 'max 2 retries -- needs a human', 4 incl. abab-17 are the Kaggle kernel-death case) -> read the Kaggle kernel log before any re-run. E) 3 e5b1-08/09/10 prop_candidate_gate: ValueError 'empty window: 2023-10-18 .. 2023-10-12' (--end earlier than the derived start; an argv date bug) -> fix the unit's dates. F) 2 abab-08/09 (iwm/qld 1d trend): harness exit 2, 'data source [explicit] ... symbol=IWM timeframe=1h' (a 1d leg is handed a 1h data file) -> harness/data-source gap. G) 1 f7c1-04 Alpaca foxhound: 254 HTTP 429s, runs to timeout -> rate-limit, deterministic. H) 1 fe57-03: ModuleNotFoundError sklearn on the Kaggle kernel -> needs a backend with sklearn. I) 1 RQ-20261102-001: FileNotFoundError /tmp/ml_decision_klines/ADAUSDT.pkl (trainer-resident data). Counts: A 24 + B 7 + C 19 + D 13 + E 3 + F 2 + G 1 + H 1 + I 1 = 71. NEXT: take the groups in order of units unlocked per fix (C 19, D 13, B 7, E 3), one fix + re-queue per group, retire a group only with a stated reason."
+}

@@ -29,7 +29,7 @@
   "due_by": "2026-11-14",
   "note": "Dispatched by Manager Session 2026-11-11a for AM-OPS. Built on branch claude/unblock-watch: src/runtime/unblock_conditions.py, scripts/ops/unblock_watch.py (hourly on the ict-work-digest tick, before alert_watch), brief BLOCKED section, warn-only writers (config/unblock_watch.yaml refuse_unconditioned=false pending the operator), skill rules. Backfill report 1 sent to the manager 10:59Z (210 items; 17 cleared); live-store re-run 11:05Z: 18 cleared, 126 unconditioned, 4 money waits >7d. 11:22Z: PR #25280 OPEN, HELD for the manager's merge (operator-approved writer gate: decision 2026-11-12 operator popup \"Yes: refuse it (Recommended)\"). Backfill + cleanup applied to the live work store; AM-ML/TRADING/OPS routed; report 2 sent. CLOSES ON: #25280 merged AND /api/diag/log_file?name=unblock_watch_receipt shows state=ran AND the alert ledger carries the unblock:seed row. HANDOFF 11:55Z (lane UNBLOCK-WATCH closing out): PR #25280 OPEN, approved by the manager for option (a) (merge on green, refusal ON); merger = AM-DEVOPS (session_01AFoLuMr7uensVVinDEwryw). All 4 CI checks (guards, pytest-collect, pytest-run, watch) QUEUED since 11:21Z, none started = Actions runner capacity, not this PR. Local: self-test 33/33, checklist+pipeline self-tests PASS, pytest 573 passed/3 skipped. NOT merged, NOT deployed, NOT observed. NEXT (AM-OPS owns): after merge + ict-git-sync, read /api/diag/log_file?name=unblock_watch_receipt (expect state ran, counts) and the alert ledger for dedup_key unblock:seed; then set this row done. If CI goes red on a guard this PR touched, fix on branch claude/unblock-watch.",
   "phase": null,
-  "queue_pos": 1000001.0,
-  "updated_at": "2026-11-17T11:08:33Z",
+  "queue_pos": 1000000.25,
+  "updated_at": "2026-11-22T22:13:59Z",
   "updated_by": "operator-spa"
 }

@@ -1,0 +1,21 @@
+{
+  "id": "IPW-ML-ENTRY-SIDE-SPLIT",
+  "title": "ml_entry (v1r20261122): long side loses, short side earns; side-split build + first-20 demotion check",
+  "state": "queued",
+  "owner": "ITERATION-PLAN-2W-20261123",
+  "lane": "ITERATION-PLAN-2W-20261123",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-01",
+  "note": "Diagnosis 2026-11-23: the model's own grade window (2026-11-08..11-21, comms/research/ml_entry_grade/45021344426) by side: served long n184 -0.606 R/decision, short n215 +0.694; candidate (now live) long n220 -0.526, short n214 +0.836; aggregate +0.146 hides it. Live old model bybit_2 n51: long n30 -19.9R, short n21 +13.9R, sumR -6.0 on journal basis; by exit sl 23 -24.7R, live_review_close 15 +6.6R; first10 +8.3 then last10 -6.1. The long deficit (t about -7 on the graded window, se 0.076) is the same sign live, so the cause is DESIGN or REGIME (short-biased window), not noise. Open question the evidence cannot answer: is the long deficit persistent across the 2022..2025 dev folds or specific to the Nov-2026 downtrend? BUILD: add a by-side-by-fold report to the ml_decision_entry grade harness (scripts/research/ml_decision_entry.py) on the frozen model, dev folds plus held-out, same cost stack (fee 11 bps + slip 3 + funding 1). Then unit (W49): side gate (short-only, or long only when 4h trend aligned) vs both, registered rule: PASS iff the gated arm beats both-sides by >=0.05 R/decision with clustered t>=2 over dev folds and the held-out read is deflated per PLANNING 1d. FIRST-20 CHECK (pre-registered): first 20 real-money closes under ml-decision-entry-v1r20261122 (bybit_2), trigger sumR <= -6R OR long side n>=10 with sumR <= -5R => Tier-3 demotion-to-shadow proposal (floor stays bybit_1). Expectation +2.9R at +0.146 R/trade, sd of sum ~5.1R: n=20 detects a collapse, not the edge. 2026-11-23 by-side-by-fold DONE (PR 28402, held): split does not persist across 8 dev folds (long -0.006 n25793, short +0.008 n45541), tracks regime (corr 0.89 over 13 folds). No Tier-3 change proposed. Gate unit RQ-20261123-d3a1-01 queued (PASS needs delta>=+0.05, t>=2; INDETERMINATE likely). First-20 check unchanged.",
+  "phase": "research",
+  "updated_at": "2026-11-23T14:04:48Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}
