@@ -686,7 +686,11 @@ def main(argv):
     p.add_argument("--vol-pctl-window", type=int, default=200,
                    help="Lookback for the ATR-percentile rank. The leading "
                         "window is left undefined rather than ranked as calm.")
-    lever_gates.add_vol_skip_args(p, with_window=False)      # --vol-pctl-window is declared above and shared with the vol-trail lever
+    # --vol-pctl-window is declared above and shared with the vol-trail lever. Flags are declared literally (check_queue_harness_flags reads the AST).
+    p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile exceeds this.")
+    p.add_argument("--vol-skip-below-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
     p.add_argument("--adx-max", type=float, default=None,
                    help="ADX ceiling (default off): skip a signal whose last-closed-bar ADX is >= this (same convention as backtest_fade / backtest_fvg_range).")
     p.add_argument("--adx-period", type=int, default=14)

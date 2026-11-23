@@ -55,18 +55,6 @@ def skips(pctl: Optional[pd.Series], i: int, above: float, below: float) -> bool
     return False
 
 
-def add_vol_skip_args(p, with_window: bool = True) -> None:
-    """The argparse flags, with trend's names and help so a unit's arms read the same on every harness. ``with_window=False`` for a harness
-    that already declares ``--vol-pctl-window`` (it shares the one window with its own vol-trail lever)."""
-    p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
-                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile exceeds this.")
-    p.add_argument("--vol-skip-below-pctl", type=float, default=0.0,
-                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
-    if with_window:
-        p.add_argument("--vol-pctl-window", type=int, default=DEFAULT_WINDOW,
-                       help="Trailing window (bars) for the ATR percentile rank.")
-
-
 # ---- ADX ceiling (--adx-max), the convention of the chop-family harnesses (backtest_fade.py / backtest_fvg_range.py) -----------------------
 
 def adx_series(df: pd.DataFrame, period: int) -> pd.Series:

@@ -794,7 +794,12 @@ def main(argv: List[str]) -> int:
                    help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
     p.add_argument("--skip-hours", default="",
                    help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
-    lever_gates.add_vol_skip_args(p)
+    p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile exceeds this.")
+    p.add_argument("--vol-skip-below-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
+    p.add_argument("--vol-pctl-window", type=int, default=lever_gates.DEFAULT_WINDOW,
+                   help="Trailing window (bars) for the ATR percentile rank.")
     p.add_argument("--min-confidence", type=float, default=0.0)
     p.add_argument("--stale-exit-bars", type=int, default=0,
                    help="M20 stale-stop: close at bar close after N bars if still below --stale-exit-below-r (0=off).")
