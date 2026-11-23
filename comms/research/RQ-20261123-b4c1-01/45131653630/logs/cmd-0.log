@@ -1,0 +1,9 @@
+candle dataset: served binance__SOLUSDT__240 (10950 rows, last 2026-11-17 20:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_fade.py --data <data> --symbol SOLUSDT --resample 4h --donchian 20 --atr-period 14 --atr-stop-buffer 0.5 --pierce-min 0.0 --trail-mult 3.5 --exit-style far --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__trades.jsonl --json comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__bt.json --adx-max 20.0 --adx-period 14 --timeout-bars 48 --tp-cap-pct 0.099 --tp-r 50.0
+[S_LATE] /usr/bin/python3 /tmp/repo/scripts/backtest_fade.py --data <data> --symbol SOLUSDT --resample 4h --donchian 20 --atr-period 14 --atr-stop-buffer 0.5 --pierce-min 0.0 --trail-mult 3.5 --exit-style far --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__trades.jsonl --json comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__bt.json --adx-max 20.0 --adx-period 14 --timeout-bars 48 --tp-cap-pct 0.099 --tp-r 50.0 --skip-hours 20,21,22,23
+[S_ASIA] /usr/bin/python3 /tmp/repo/scripts/backtest_fade.py --data <data> --symbol SOLUSDT --resample 4h --donchian 20 --atr-period 14 --atr-stop-buffer 0.5 --pierce-min 0.0 --trail-mult 3.5 --exit-style far --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__trades.jsonl --json comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__bt.json --adx-max 20.0 --adx-period 14 --timeout-bars 48 --tp-cap-pct 0.099 --tp-r 50.0 --skip-hours 0,1,2,3,4,5,6,7
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "S_ASIA beats the incumbent A (net R -8.5342 vs -28.8231) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

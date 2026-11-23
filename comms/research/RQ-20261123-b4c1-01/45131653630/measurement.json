@@ -1,0 +1,570 @@
+{
+  "leg": "fade_breakout_4h",
+  "label": "candidate_replaces_incumbent",
+  "grade": {
+    "verdict": "pass",
+    "label": "candidate_replaces_incumbent",
+    "best": "S_ASIA",
+    "baseline": "A",
+    "candidates": {
+      "S_LATE": {
+        "net_r": -18.6688,
+        "delta_net_r": 10.1543,
+        "max_drawdown_r": 24.5384,
+        "max_drawdown_cap": 33.6965,
+        "folds_ge_incumbent": 3,
+        "passes": false,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 50.0,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "S_ASIA": {
+        "net_r": -8.5342,
+        "delta_net_r": 20.2889,
+        "max_drawdown_r": 21.6101,
+        "max_drawdown_cap": 33.6965,
+        "folds_ge_incumbent": 4,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": 50.0,
+          "reach_ge_6r": 0.0,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 2.92,
+    "why": "S_ASIA beats the incumbent A (net R -8.5342 vs -28.8231) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 146,
+      "net_r": -28.8231,
+      "net_r_fee_only": -24.1528,
+      "max_drawdown_r": 24.9604,
+      "by_outcome": {
+        "stop": 111,
+        "target": 31,
+        "timeout": 4
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:20:00+00:00",
+          "trades": 28,
+          "net_r": -16.9493
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:20:00+00:00",
+          "end": "2023-07-16 22:40:00+00:00",
+          "trades": 20,
+          "net_r": 6.7068
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 22:40:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 19,
+          "net_r": 1.0261
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-03-17 21:20:00+00:00",
+          "trades": 31,
+          "net_r": -6.8772
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 21:20:00+00:00",
+          "end": "2026-01-16 20:40:00+00:00",
+          "trades": 21,
+          "net_r": -7.758
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 20:40:00+00:00",
+          "end": "2026-11-17 20:00:00+00:00",
+          "trades": 27,
+          "net_r": -4.972
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "S_LATE": {
+      "reach_ge_6r": 0.0,
+      "n": 134,
+      "net_r": -18.6688,
+      "net_r_fee_only": -14.2113,
+      "max_drawdown_r": 24.5384,
+      "by_outcome": {
+        "stop": 101,
+        "target": 29,
+        "timeout": 4
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:20:00+00:00",
+          "trades": 25,
+          "net_r": -9.4541
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:20:00+00:00",
+          "end": "2023-07-16 22:40:00+00:00",
+          "trades": 16,
+          "net_r": 9.9653
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 22:40:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 18,
+          "net_r": 0.0182
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-03-17 21:20:00+00:00",
+          "trades": 29,
+          "net_r": -4.6842
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 21:20:00+00:00",
+          "end": "2026-01-16 20:40:00+00:00",
+          "trades": 21,
+          "net_r": -9.3709
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 20:40:00+00:00",
+          "end": "2026-11-17 20:00:00+00:00",
+          "trades": 25,
+          "net_r": -5.1435
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "20,21,22,23"
+      ]
+    },
+    "S_ASIA": {
+      "reach_ge_6r": 0.0,
+      "n": 112,
+      "net_r": -8.5342,
+      "net_r_fee_only": -4.9561,
+      "max_drawdown_r": 21.6101,
+      "by_outcome": {
+        "stop": 82,
+        "target": 27,
+        "timeout": 3
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-14 00:00:00+00:00",
+      "data_end": "2026-11-17 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-14 00:00:00+00:00",
+          "end": "2022-09-14 23:20:00+00:00",
+          "trades": 22,
+          "net_r": -7.2327
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-14 23:20:00+00:00",
+          "end": "2023-07-16 22:40:00+00:00",
+          "trades": 15,
+          "net_r": -5.6391
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-16 22:40:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 13,
+          "net_r": 8.6294
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-03-17 21:20:00+00:00",
+          "trades": 24,
+          "net_r": 4.7034
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-17 21:20:00+00:00",
+          "end": "2026-01-16 20:40:00+00:00",
+          "trades": 17,
+          "net_r": -12.54
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-16 20:40:00+00:00",
+          "end": "2026-11-17 20:00:00+00:00",
+          "trades": 21,
+          "net_r": 3.5444
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2021-11-14 00:00:00+00:00",
+      "2022-09-14 23:20:00+00:00",
+      "2023-07-16 22:40:00+00:00",
+      "2024-05-16 22:00:00+00:00",
+      "2025-03-17 21:20:00+00:00",
+      "2026-01-16 20:40:00+00:00",
+      "2026-11-17 20:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/A__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "S_LATE": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_LATE__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "20,21,22,23"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "20,21,22,23"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "S_ASIA": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-b4c1-01/45131653630/arms/S_ASIA__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
