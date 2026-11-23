@@ -95,8 +95,11 @@ def build(run: Path, since: Optional[str] = None) -> Dict[str, Any]:
 
 
 def render(t: Dict[str, Any]) -> str:
-    f = lambda x: "—" if x is None else (f"{x:+.3f}" if isinstance(x, float) else str(x))
-    pc = lambda x: "—" if x is None else f"{x:.1%}"
+    def f(x):
+        return "—" if x is None else (f"{x:+.3f}" if isinstance(x, float) else str(x))
+
+    def pc(x):
+        return "—" if x is None else f"{x:.1%}"
     o = t["fidelity_overall"] or {}
     out = [f"## C14 Counterfactual CHECK table — run {t['run']}",
            f"population: {t['population']['graded']} graded of {t['population']['closed_n']} closed packages ({t['population']['window']}); "

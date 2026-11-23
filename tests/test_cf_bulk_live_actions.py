@@ -27,7 +27,7 @@ def test_path_actions_tighten_widen_and_tp_with_window_timing():
     acts = b.derive_path_actions(PKG, rows, "last")
     assert [(a["kind"], a["level"]) for a in acts] == [("set_stop", 100.0), ("widen_stop", 99.5), ("set_tp", 105.0)]
     first = b.derive_path_actions(PKG, rows, "first")
-    assert all(f["ts_epoch"] < l["ts_epoch"] for f, l in zip(first, acts))           # placement inside the write window
+    assert all(f["ts_epoch"] < la["ts_epoch"] for f, la in zip(first, acts))           # placement inside the write window
     assert all(a["time_provenance"] == "ESTIMATED(path_row_window)" for a in acts)
 
 
