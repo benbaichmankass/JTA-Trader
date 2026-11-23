@@ -2756,15 +2756,95 @@ two_week_plan:
         step: 'On the RQ-20261112-0f87-03 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
           step 2). PLANNED, authored when its input result is read.'
   decision_steps:
-    D1: 'docs/plans/ml-dev-plan.yaml lines with slot D1: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D2: 'docs/plans/ml-dev-plan.yaml lines with slot D2: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D3: 'docs/plans/ml-dev-plan.yaml lines with slot D3: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D4: 'docs/plans/ml-dev-plan.yaml lines with slot D4: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D5: 'docs/plans/ml-dev-plan.yaml lines with slot D5: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D6: 'docs/plans/ml-dev-plan.yaml lines with slot D6: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D7: 'docs/plans/ml-dev-plan.yaml lines with slot D7: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D8: 'docs/plans/ml-dev-plan.yaml lines with slot D8: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D9: 'docs/plans/ml-dev-plan.yaml lines with slot D9: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
-    D10: 'docs/plans/ml-dev-plan.yaml lines with slot D10: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D1:
+      live_today: 'Rule: the promotion ladder decides which legs sit on which book; no model, on purpose.'
+      two_week_path: No model path. The only open question is whether a leg-selection backtest over the Stage-0 panel beats the current roster and 1/N net of cost.
+      w2026_11_24: Define the one-cost-basis census query (ML-LINE-S1-CORPUS) that counts legs with committed Stage-0 records.
+      w2026_12_01: Run the count; the slot reopens only if the panel carries enough legs to power a selector (re-check when it doubles).
+      dependency: ML-LINE-S1-CORPUS census
+      live_model_in_two_weeks: no (parked by design)
+    D2:
+      live_today: Advisory heads, shadow; the consumer test bcd2-01 FAILED (2026-11-14), so no head changes a real order. Classifier quality only (macro-F1 0.582),
+        no cost-net figure for any head.
+      two_week_path: A D2 model goes live only through a money-judged consumer. Two weeks cannot get there; the work is to find whether any head is worth a consumer.
+      w2026_11_24: Grade the one-shard bake-offs RQ-20261112-ef4c-01..08 and the regime-as-feature unit (MLP-D2-REVIEW-HEADS); the winner per cell is the only head
+        kept.
+      w2026_12_01: Re-point survivors as features into D3 (not gates) and put losing heads on the retire list; author a consumer test for a SOL/MES family only if
+        a head clears the Mutt on the same shard.
+      dependency: ef4c-01..08 verdicts; the retire/keep list is a Tier-3 call for the manager
+      live_model_in_two_weeks: 'no'
+    D3:
+      live_today: Foxhound-1 (ml-decision-entry-v1r20261122, advisory, serves every ml_entry consumer, real money on bybit_2); Foxhound-4 equity champion on alpaca_live;
+        Foxhound-2/-3 on the demo floor.
+      two_week_path: The live model exists; the work is making it not lose. The open lever is the long-side deficit (see IPW-ML-ENTRY-SIDE-SPLIT), then the gross-decomposed
+        score (RQ-20261115-7e18-02, IC net 0.497 vs gross 0.003 diagnosis) and the Foxhound-4 head-to-head (ef4c-09).
+      w2026_11_24: Build the by-side-by-fold report (row IPW-ML-ENTRY-SIDE-SPLIT); grade ef4c-09 (Foxhound-3 vs Foxhound-4) and 7e18-02; register RESID-ENTRY-EQ.
+      w2026_12_01: Author the side-gate unit from the by-fold read (short-only or trend-aligned long vs both sides, clustered t >= 2 on dev folds, held-out deflated);
+        a passing gate is a Tier-3 proposal on the live model.
+      dependency: IPW-ML-ENTRY-SIDE-SPLIT build; ef4c-09 grade; the first-20-closes check on the new model
+      live_model_in_two_weeks: yes, already live; a gated refit is the two-week candidate
+    D4:
+      live_today: Beagle-1 (TD overlay, 2 legs reduce) is live and not yet observed at decision level; setup meta-label and conviction meta are stuck.
+      two_week_path: 'Beagle-1 stays live (operator 2026-11-16). The next live candidate is the population-filtered setup meta-label (RQ-20261119-3e98-01): the first
+        n-adequate design after 78fc-02 failed on the cost gate with 240 of 308 rows from a retired book.'
+      w2026_11_24: Run 3e98-01 and 3a23-01 if unblocked (name the blocker owner otherwise); weekly C11 CUSUM read on Beagle-1.
+      w2026_12_01: Grade; a pass is a reduce/annotate proposal for the legs in its population (Tier 3); a fail closes meta-label on catalog features for that family.
+        Confidence-scaled size (FRONTIER-Q-METALABEL-SIZE) is authored only after a pass.
+      dependency: blocker owner on ML-KEEP-ITERATION-COVERAGE; the metalabel emits already landed
+      live_model_in_two_weeks: a proposal at best
+    D5:
+      live_today: 'Rule: slices (allocator_ev.py + slice_allocation.yaml). The learned aggregator is not built; a474-02 FAILED (no rule arm beats the election rule
+        in both windows).'
+      two_week_path: 'Value of information first: only if concurrent same-(account, symbol) trades are material (>= 20 and >= 15 percent in both windows) is any build
+        worth it.'
+      w2026_11_24: Census of concurrent same-symbol packages per week from committed ledgers to set the registered threshold.
+      w2026_12_01: If concurrency clears the floor, author the learned-aggregator unit against slices, 1/N and best-single; else record the clause MET and keep slices.
+      dependency: 82fd-02 census; same-symbol allocation row
+      live_model_in_two_weeks: 'no'
+    D6:
+      live_today: No model; fixed ATR brackets plus structure_exit. Pointer v0 (a474-01) and the move-extent head (RQ-20261009-900) both FAILED.
+      two_week_path: The one lever left is ML-FS-BRACKETS-HOLD (ranked later, 11-30). Two weeks goes to the diagnosis and the design, not a model.
+      w2026_11_24: Write down why Pointer v0 and the move-extent head failed so the bracket design starts from it.
+      w2026_12_01: Scope the question, baseline (fixed bracket + structure_exit) and power so it can be authored at its 11-30 rank.
+      dependency: ML-FS-BRACKETS-HOLD
+      live_model_in_two_weeks: 'no'
+    D7:
+      live_today: 'Labrador-1b (TP extend-only on ml_entry) is live: forward +0.0081 R/trade, CI spans 0, prop-gate variant FAIL, live value unverified.'
+      two_week_path: 'Two paths: keep Labrador-1b honest (deflated re-read through the holdout ledger) and the action-value Stage B on the Stage-A passers (close,
+        partial_close_50), the best shot at a new D7 model after seven negatives.'
+      w2026_11_24: Add the ledger claim to ml_entry_tp_revision.py and run the deflated re-read; dispatch the TMBENCH-V2 train-input build; run 7e18-01 (Stage B)
+        once its input exists.
+      w2026_12_01: Grade Stage B against hold, best static rule, distance logit and matched-random; a fail goes to the feature-block unit (a state block that is not
+        R1-derived).
+      dependency: TMBENCH-V2-TRAIN-INPUT build
+      live_model_in_two_weeks: yes (Labrador-1b live); a new head no
+    D8:
+      live_today: Labrador-2 exit head closes one demo leg; exit-now v0 (1ae8-01) INDETERMINATE, pooled donchian-4h head FAILED (AUC 0.613, no arm beats B net of
+        cost); signal-reversal close FAILED.
+      two_week_path: The close action rides D7 Stage B (7e18-01 passed Stage A on close). The learned exit-now head on the pooled donchian-4h population is rebuilt
+        only from the Labrador-2 diagnosis.
+      w2026_11_24: Power check on the desk-label variant (n <= 720 OOS trades, MDE ~0.08 R); read Stage B close arm when 7e18-01 grades.
+      w2026_12_01: Author one exit-now unit with a matched-random-exit control only if powered; otherwise name the data that would power it.
+      dependency: D7 Stage B; the TM-BENCH input build
+      live_model_in_two_weeks: 'no'
+    D9:
+      live_today: Baseline only (Mutt-Execution-1a, shadow); the registry model is a constant scorer (n_eval 65).
+      two_week_path: 'Parked with a re-entry test: >= 300 real-money fills carrying a decision price. The desk maker-fill lever (RQ-20261030-f18f-01) is the first
+        data.'
+      w2026_11_24: Count real-money fills with a decision price.
+      w2026_12_01: If the count clears 300, author the fill replay on journal order rows; else the slot stays parked and the small-TF line (MLP-D3-SMALL-TF) keeps
+        waiting on it.
+      dependency: decision-price coverage on journal order rows
+      live_model_in_two_weeks: 'no'
+    D10:
+      live_today: None (Claude grades and forecast-grade are tools, not models); parked.
+      two_week_path: 'Parked with a re-entry test: does a grade predict the next N trades decay better than a Bernoulli CUSUM on R? The CJ-4 hazard (24 percent of
+        graded packages on tiny risk_atr) must be fixed first.'
+      w2026_11_24: Define the blind-graded-closes-per-leg-family count query and the CUSUM baseline.
+      w2026_12_01: Run the count; below the floor the line stays parked unchanged; if met, author the grade-vs-CUSUM join (a monitoring read, never a gate).
+      dependency: CJ-4 label hazard fix
+      live_model_in_two_weeks: 'no'
   dependencies:
     D3_point_in_time_macro_builder: 'build row (Thursday list): macro features for D3 entry models wait on it; no macro-feature unit is authored before it lands'
+  decision_steps_note: Reasoned 2026-11-23 (lane ITERATION-PLAN-2W-20261123, task 2) from docs/plans/ml-dev-plan.yaml lines (stage, levers_ahead, exhaustion) and
+    the live-close reads in the xrp/ml-entry entries. W48/W49 per line live in the ml-dev-plan; this table adds the path to a live model and the dependency.
