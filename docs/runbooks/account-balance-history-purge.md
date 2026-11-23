@@ -130,6 +130,30 @@ Check: `git ls-remote origin refs/heads/main` equals the new tip.
 * **Docs that cite commit shas** (`caaf1da524`, `76977fe61e`, ...) now point at nothing; add a one-line mapping note in the PR that lands this, or accept the dangling references.
 * Run `purge_balance_history.py verify` again against a **fresh clone** of GitHub, not the local mirror.
 
+## 7b. Post-purge: gitleaks full-history scan + baseline regeneration (manager 2026-11-23, wake Wed 11-25)
+
+The rewrite changes every commit SHA, so **every fingerprint in `.gitleaks-baseline.json` is stale** (gitleaks fingerprints include the commit). Do this on a runner
+(`workflow_dispatch` of `gitleaks-history-weekly`, or a scratch clone in a workflow), never on a laptop, **after** the force-push and the protection toggle is back on:
+
+1. **Scan the pushed history with the existing `.gitleaks.toml` and NO baseline** (`gitleaks detect --source . --redact=100 --no-banner --log-level error --exit-code 0 --report-format json --report-path new.json`).
+   This scan **doubles as purge verification**: (a) none of the purged balance values may match anything (the redaction removed them; spot-check the previously flagged backlog files),
+   (b) **no vendor-rule hit** (anything other than `generic-api-key`) may appear. A vendor hit is a stop-and-escalate, not a baseline row.
+2. Triage by eye with `scripts/ops/gitleaks_summarize.py` (rule / file / commit / line, values masked). The 2026-11-23 weekly run (45211501436, 4th straight failure) had 14 `generic-api-key`
+   findings, all false positives: 1 RFC 6455 sample `Sec-WebSocket-Key` (`.github/workflows/vm-net-diag.yml:99`), 10 SSH-key SHA256 fingerprints
+   (`docs/claude/work/checklist/SEC-HOST-CHANGES-1112.json:19`), 3 rows quoting a test fixture (`GITLEAKS-HISTORY-FALSE-POSITIVES`), 1 row/pipeline id
+   (`comms/reviews/ml-review-20261118-200000.json:124`). **Investigate why the `vm-net-diag.yml` entry, already in the baseline since 2026-11-16, was not matched** (Message / Date / Secret field drift)
+   before regenerating, or the same entry will fail again.
+3. **Regenerate `.gitleaks-baseline.json` from that scan**, keeping the four named known-revoked rows of `docs/security/gitleaks-baseline.md` (re-pointed at their new commit SHAs: find them by rule + file), and update the table in that doc.
+   **Do not widen any rule or path allowlist.**
+4. **Prove 0 new findings**: re-run with `--baseline-path .gitleaks-baseline.json` and require exit 0; and the planted-key proof (a scratch commit with a random synthetic `ghp_`-shaped string still fails, never pushed).
+   Land the baseline as a normal Tier-1 PR. `tests/test_gitleaks_baseline.py` must pass.
+
+## 7c. Timing (operator, 2026-11-23): Wednesday 11-25 morning, before the 18:00Z reset
+
+Runbook PR merged and a **fresh dry run against current `main` by Wed 06:30Z**; the manager starts the sequence from a wake at 07:00Z: (1) ping the operator with the dry-run result; (2) operator toggles branch protection;
+(3) one final operator confirmation; (4) pause lanes, force-push; (5) re-enable protection, run section 7; (6) section 7b. Keep it runner-side: sections 5 and 7b are scriptable in a single workflow
+(`scan` -> `rewrite` -> `verify` -> tree check), so the manager's usage before the reset is spent on decisions, not typing. The dry run takes ~25 min rewrite + ~25 min verify on 4 vCPU.
+
 ## 8. LIMITS (stated honestly)
 
 * **GitHub keeps the old commits.** Objects stay reachable through `refs/pull/*` (18,707 pull refs, which cannot be rewritten or deleted by a push) and in server-side caches until
