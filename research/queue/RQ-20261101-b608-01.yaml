@@ -2,7 +2,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1). Decision rule registered BEFORE the run. Gates: none.
 id: RQ-20261101-b608-01
 title: 'ENTRY v2 stack on dev: do the regularised recipe (R2), the cost gate (0.06) and the 2/4 bracket add up, and which stack goes to the one W1 read? Dev folds only'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -115,8 +115,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 3
   verdict: null
-blocked_on:
-- kind: decision
-  ref: scripts/research/ml_entry_levers.py relabel_table at bracket (sl 2.0, tp 4.0), stack_unit level S3_R2_gate_24
-  what: 'Run 45086511890 died with relabel left rows without labels. Two causes, read by rebuilding the table locally (60 symbols, 660,652 rows). (1) FIXED in the landing PR: relabel_table read the raw cache frame while E.build_table has regridded hourly since ML-ENTRY-HOLE-SAFE-ADOPT (2026-11-12), so every row after a one-hour data hole (ADAUSDT 2024-10-28) mis-keyed; with the regrid, relabel at the ENTRY bracket reproduces the table exactly (0 mismatching label columns over all rows). (2) OPEN, a methodology choice: at tp 4.0, 29 of 660,652 rows (0.0044%, around 2022-02-25 plus a few others; 4 on VETUSDT) hit their take-profit before a data hole at tp 3.0 but cannot resolve at tp 4.0 because the later bars are NaN, so their outcome is unobservable. relabel_table still refuses them, correctly: stats() takes .mean() over net_r, which skips NaN silently while still counting the row, so letting NaN through would bias S3 quietly. Options: (a) drop unobservable rows from every arm of the stack so all levels compare the same rows, (b) drop them from S3 only and state the n difference, (c) mark them to the last observed bar. Not chosen here because it changes a pre-registered unit population.'
-  clears_when: 'the manager picks (a), (b) or (c) for rows whose bracket outcome is unobservable, it is implemented with a test, and then set rearmed_at on this unit and git mv it back to research/queue/ with status queued and last_dispatched_at absent, rule unchanged. The same relabel_table call sites (ml_entry_levers lines ~158, 589, 658; ml_entry_v2_symholdout) share the same exposure at a non-entry bracket.'
+rearmed_at: '2026-11-23T01:55:00+00:00'  # run 45086511890 died in relabel_table on two causes: (1) raw-vs-regridded keying, fixed (relabel reproduces the table exactly at the entry bracket); (2) 29 of 660,652 rows with an unobservable tp-4.0 outcome, now dropped from every arm per the manager's option (a) ruling 2026-11-23 and counted in the result as unobservable_rows_dropped

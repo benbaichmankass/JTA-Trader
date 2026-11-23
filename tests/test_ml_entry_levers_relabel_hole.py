@@ -19,7 +19,7 @@ import scripts.research.ml_decision_entry as E
 import scripts.research.ml_entry_levers as L
 
 
-def _frame(n: int = 700, hole_at: int | None = 300, seed: int = 7) -> pd.DataFrame:
+def _frame(n: int = 700, hole_at: int | None = 300, seed: int = 7, hole_len: int = 1) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     close = 100 * np.exp(np.cumsum(rng.normal(0, 0.004, n)))
     open_ = np.r_[close[0], close[:-1]]
@@ -28,7 +28,7 @@ def _frame(n: int = 700, hole_at: int | None = 300, seed: int = 7) -> pd.DataFra
     df = pd.DataFrame({"ts": pd.date_range("2024-01-01", periods=n, freq="1h", tz="UTC"),
                        "open": open_, "high": high, "low": low, "close": close, "volume": 1.0})
     if hole_at is not None:
-        df = df.drop(index=hole_at).reset_index(drop=True)   # one missing hourly bar, as in the ADAUSDT data
+        df = df.drop(index=range(hole_at, hole_at + hole_len)).reset_index(drop=True)   # missing hourly bars (1 = the ADAUSDT hole)
     return df
 
 
@@ -72,3 +72,54 @@ def test_a_frame_without_a_hole_is_identical_under_both_settings(tmp_path):
     a = L.relabel_table(tab, cache, 2.0, 4.0)
     b = L.relabel_table(tab, cache, 2.0, 4.0, hole_safe=False)
     assert a[L.LABEL_COLS].equals(b[L.LABEL_COLS])
+
+
+# ---- option (a) (manager 2026-11-23): rows whose bracket outcome is unobservable are dropped from every arm, counted, never NaN ------------------
+
+def _wide_bracket_case(tmp_path):
+    """A 12-bar hole: rows that resolved before it at the entry bracket but not at a wider take-profit have NaN later bars."""
+    df = _frame(hole_at=300, hole_len=12, seed=4)
+    tab = _table_like_build_table(df)
+    return tab, _cache(tmp_path, df)
+
+
+def test_unobservable_rows_exist_at_a_wider_bracket_and_relabel_still_refuses(tmp_path):
+    tab, cache = _wide_bracket_case(tmp_path)
+    m = L.unobservable_mask(tab, cache, [(2.0, 50.0)])
+    assert m.sum() > 0 and m.sum() < len(tab)
+    with pytest.raises(RuntimeError, match="without labels"):
+        L.relabel_table(tab, cache, 2.0, 50.0)            # the refusal is kept: NaN never reaches an arm silently
+
+
+def test_drop_unobservable_makes_relabel_succeed_and_counts_the_drop(tmp_path):
+    tab, cache = _wide_bracket_case(tmp_path)
+    kept, info = L.drop_unobservable(tab, cache, [(2.0, 50.0)])
+    assert info["n_total"] == len(tab) and info["n_dropped"] == len(tab) - len(kept) > 0
+    assert info["brackets"] == [[2.0, 50.0]] and "option (a)" in info["rule"]
+    out = L.relabel_table(kept, cache, 2.0, 50.0)
+    assert not out[["net_long", "net_short"]].isna().any().any()
+
+
+def test_union_over_brackets_so_every_cell_compares_the_same_rows(tmp_path):
+    tab, cache = _wide_bracket_case(tmp_path)
+    a = L.unobservable_mask(tab, cache, [(2.0, 4.0)])
+    b = L.unobservable_mask(tab, cache, [(2.0, 50.0)])
+    both = L.unobservable_mask(tab, cache, [(2.0, 4.0), (2.0, 50.0)])
+    assert (both == (a | b)).all()
+
+
+def test_filter_unobservable_masks_the_arrays_with_the_frame(tmp_path):
+    tab, cache = _wide_bracket_case(tmp_path)
+    pl, ps = np.arange(len(tab), dtype=float), np.arange(len(tab), dtype=float) * 2
+    passes = np.ones(len(tab), bool)
+    kept, (pl2, ps2, pass2), info = L.filter_unobservable(tab, cache, (2.0, 50.0), pl, ps, passes)
+    assert len(kept) == len(pl2) == len(ps2) == len(pass2) == len(tab) - info["n_dropped"]
+    m = L.unobservable_mask(tab, cache, [(2.0, 50.0)])
+    assert (pl2 == pl[~m]).all() and (ps2 == ps[~m]).all()
+
+
+def test_a_keying_error_is_not_mistaken_for_an_unobservable_outcome(tmp_path):
+    df = _frame(hole_at=300, hole_len=1)
+    tab = _table_like_build_table(df)
+    with pytest.raises(RuntimeError, match="keying error"):
+        L.unobservable_mask(tab, _cache(tmp_path, df), [(2.0, 4.0)], hole_safe=False)

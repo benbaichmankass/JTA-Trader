@@ -157,6 +157,8 @@ def run(a) -> int:
     pl[~passes] = LV.ABSTAIN
     ps[~passes] = LV.ABSTAIN
     br = meta["bracket"]
+    # option (a), manager 2026-11-23: rows whose bracket outcome is unobservable are dropped from every arm (v2 and the v1 reference)
+    test, (pl, ps, passes), unobs = LV.filter_unobservable(test, cache, (float(br["sl_atr"]), float(br["tp_atr"])), pl, ps, passes)
     score = LV.relabel_table(test, cache, float(br["sl_atr"]), float(br["tp_atr"]))
     taken = E.policy(score, pl, ps, float(meta["tau"]))
     m = E.summarize(taken)
@@ -176,7 +178,7 @@ def run(a) -> int:
            "v2": m, "v2_registered_20_reported": E.summarize(reg20), "v1_reference": m1,
            "v1_reference_registered_20_reported": E.summarize(taken1[taken1.symbol.isin(s20)]),
            "baselines_v2_mechanics": LV._baselines(score, taken), "holdout_lock": claim, "holdout_lock_v1ref": claim1,
-           "variants_on_window": claim1["variants_on_window"], "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0),
+           "variants_on_window": claim1["variants_on_window"], "unobservable_rows_dropped": unobs, "git_sha": E._git_sha(), "elapsed_s": round(time.time() - t0),
            "result": (f"{verdict}: v2 {m['mean_net_r']:+.4f} (n={m['n']}, {m.get('n_symbols')} symbols) vs v1 reference "
                       f"{(m1['mean_net_r'] if m1['mean_net_r'] is not None else float('nan')):+.4f} (n={m1['n']})") if m["n"] else f"{verdict}: v2 took no decision"}
     (out / "b610_result.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
