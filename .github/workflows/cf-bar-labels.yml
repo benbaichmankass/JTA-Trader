@@ -17,6 +17,9 @@ on:
       batches:
         description: "Matrix width (balanced batches of shards)"
         default: "24"
+      corpus_sha:
+        description: "Commit sha whose comms/research + comms/strategy_evidence trade corpus is labelled (pins the job set; default = the sha cfb-20261123w ran on, set when the CF lane confirms it). Empty = the dispatch ref's own corpus."
+        default: ""
       max_fwd_bars:
         description: "Forward window (bars) the labels look ahead; rows with fewer bars left and no stop/target are censored"
         default: "48"
@@ -38,10 +41,20 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install numpy pandas pyyaml requests
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+          echo "corpus pinned to $CORPUS_SHA"
       - name: Plan shards (cf_bulk's own planner)
         env:
           RUN_ID: ${{ inputs.run_id }}
@@ -67,10 +80,20 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install numpy pandas pyyaml requests
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+          echo "corpus pinned to $CORPUS_SHA"
       - name: Label this batch's shards
         env:
           RUN_ID: ${{ inputs.run_id }}
@@ -94,6 +117,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
