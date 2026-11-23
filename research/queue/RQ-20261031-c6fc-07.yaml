@@ -94,7 +94,7 @@ run:
   inputs:
     research_unit: RQ-20261031-c6fc-07
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'TRANSFER of the top-volatility skip (VH95/VH85) lever to eth_pullback_2h: does it beat the declared leg net of cost over 2020-07-01..2026-10-15
   (41cc-30 PASS on sol_pullback_2h; which sibling legs does the PASS carry to)?'
@@ -107,19 +107,18 @@ why_this_matters: '41cc-30 PASS on sol_pullback_2h, chosen from a multi-arm batc
   is a discovery; a sibling-leg transfer separates a leg-specific artifact (FAIL here) from a lever that carries across the pullback / donchian families
   (PASS here). PASS = a lead for a Tier-3 note on the owning row, never a config edit; FAIL closes this leg x lever configuration only, the lever family
   stays open. Decision it changes: whether the lever is queued for a Tier-3 declare note on eth_pullback_2h or stays a one-leg observation.'
+last_dispatched_at: '2026-11-22T23:28:49+00:00'
 grading:
   attested: RULERQ20261031C6FC07
   auto: true
   decision_rule_id: RULERQ20261031C6FC07
   evidence:
   - research/results/RQ-20261031-c6fc-07/41783317241.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261031-c6fc-07/45081931779.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
-    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-22T23:28:49+00:00'
+  verdict: fail

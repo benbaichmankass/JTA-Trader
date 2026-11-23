@@ -2,7 +2,7 @@
 # Hand-authored 2026-11-12 by lane TRADEIFY-FUTURES-FRONTIER (Tier 1). ITERATION unit, authored from the written diagnosis of RQ-20261112-09d2-01's FAIL. Decision rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261112-09d2-05
 title: 'ITERATION 1 of the Tradeify-futures ORB (fail on proxies): on REAL CME MNQ 5m history, does MNQ_OR15 clear the same Stage-0 bar, deflated for having been picked from 6 cells?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -94,19 +94,18 @@ run:
   timeout_minutes: 30
   inputs:
     research_unit: RQ-20261112-09d2-05
+last_dispatched_at: '2026-11-23T00:02:48+00:00'
 grading:
   attested: RULE-RQ-20261112-09d2-05
   auto: true
   decision_rule_id: RULE-RQ-20261112-09d2-05
   evidence:
   - research/results/RQ-20261112-09d2-05/43361991285.jsonl
-  graded_at: '2026-11-13'
+  - research/results/RQ-20261112-09d2-05/45085014617.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261113-SX5INCOP-0001
-  owner_reason: 'producer_failed: verdict.json parses (verdict fail, MNQ_OR15 n 231) but read_state ''complete''
-    is not in READ_STATES; filed PI-20261113-SX5INCOP-0001'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:02:48+00:00'
+  verdict: fail

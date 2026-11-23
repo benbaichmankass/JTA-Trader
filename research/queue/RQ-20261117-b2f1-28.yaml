@@ -100,7 +100,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f1-28
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'MS lever family never tested on trend_donchian_xrp_adx25: MOMENTUM-STALE exit (--momentum-stale-bars 8/12 with --momentum-stale-adx-below 20) vs the declared leg, net
   of cost?'
@@ -112,21 +112,20 @@ value:
 why_this_matters: 'Plan node: research/levers/trend_donchian_xrp_adx25.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016 CONFIRMED momentum_stale_bars
   8 / adx_below 20 on slv_pullback_1d (20.73 vs 12.82 R, 3 of 4 folds, 2018-03..2026-10) and the leg-by-leg lever maps carry no momentum_stale family for this leg. One factor,
   2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-23T00:42:47+00:00'
 grading:
   attested: RULERQ20261117b2f128
   auto: true
+  awaiting: more_data
   decision_rule_id: RULERQ20261117b2f128
   evidence:
   - research/results/RQ-20261117-b2f1-28/44263066512.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261117-b2f1-28/45087271737.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261118-EFILLW47-0003
-  owner_reason: 'producer_failed on the kaggle_cpu kernel: no internet (data.binance.vision NameResolutionError)
-    or Yahoo refusing_us HTTP 429; not a verdict. Diagnosed and owned by PI-20261118-EFILLW47-0003 (W47b);
-    closes when the unit re-lands measured on a backend with the feed (PI-20261119-FILLW47B-0004 records
-    the backend per run). Triaged by research-ops 2026-11-19.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:42:47+00:00'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate (1 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
+  rows: 2
+  verdict: indeterminate

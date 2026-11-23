@@ -1,0 +1,444 @@
+{
+  "leg": "ict_scalp_5m",
+  "label": "candidate_replaces_incumbent",
+  "grade": {
+    "verdict": "pass",
+    "label": "candidate_replaces_incumbent",
+    "best": "S_LATE",
+    "baseline": "A",
+    "candidates": {
+      "S_LATE": {
+        "net_r": -119.6222,
+        "delta_net_r": 27.3446,
+        "max_drawdown_r": 121.673,
+        "max_drawdown_cap": 200.8404,
+        "folds_ge_incumbent": 6,
+        "passes": true,
+        "lever_fired": true,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0056,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      },
+      "S_ASIA": {
+        "net_r": -146.9668,
+        "delta_net_r": 0.0,
+        "max_drawdown_r": 148.7707,
+        "max_drawdown_cap": 200.8404,
+        "folds_ge_incumbent": 6,
+        "passes": false,
+        "lever_fired": false,
+        "tp_doctrine": {
+          "declared_tp_r": null,
+          "reach_ge_6r": 0.0044,
+          "satisfies_reach_floor": null,
+          "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+        }
+      }
+    },
+    "fold_majority": 4,
+    "n_floor": 39,
+    "dd_tol_frac": 0.35,
+    "control": null,
+    "delta_r_per_trade": 0.02,
+    "delta_r_bar": 9.1,
+    "why": "S_LATE beats the incumbent A (net R -119.6222 vs -146.9668) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0044,
+      "n": 455,
+      "net_r": -146.9668,
+      "net_r_fee_only": -116.8768,
+      "max_drawdown_r": 148.7707,
+      "by_outcome": {
+        "timeout": 209,
+        "sl_hit": 147,
+        "tp_hit": 81,
+        "be_stop": 18
+      },
+      "mean_bars_held": 18.024,
+      "net_r_per_capital_day": -5.1611,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-19 00:00:00+00:00",
+      "data_end": "2026-11-21 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-19 00:00:00+00:00",
+          "end": "2022-09-19 19:59:10+00:00",
+          "trades": 87,
+          "net_r": -14.2838
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-19 19:59:10+00:00",
+          "end": "2023-07-21 15:58:20+00:00",
+          "trades": 59,
+          "net_r": -22.7889
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-21 15:58:20+00:00",
+          "end": "2024-05-21 11:57:30+00:00",
+          "trades": 61,
+          "net_r": -15.3281
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-21 11:57:30+00:00",
+          "end": "2025-03-22 07:56:40+00:00",
+          "trades": 99,
+          "net_r": -47.0882
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-22 07:56:40+00:00",
+          "end": "2026-01-21 03:55:50+00:00",
+          "trades": 71,
+          "net_r": -25.9023
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-21 03:55:50+00:00",
+          "end": "2026-11-21 23:55:00+00:00",
+          "trades": 78,
+          "net_r": -21.5746
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ]
+    },
+    "S_LATE": {
+      "reach_ge_6r": 0.0056,
+      "n": 358,
+      "net_r": -119.6222,
+      "net_r_fee_only": -96.5127,
+      "max_drawdown_r": 121.673,
+      "by_outcome": {
+        "timeout": 177,
+        "sl_hit": 111,
+        "tp_hit": 58,
+        "be_stop": 12
+      },
+      "mean_bars_held": 18.726,
+      "net_r_per_capital_day": -5.1389,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-19 00:00:00+00:00",
+      "data_end": "2026-11-21 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-19 00:00:00+00:00",
+          "end": "2022-09-19 19:59:10+00:00",
+          "trades": 65,
+          "net_r": -8.7892
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-19 19:59:10+00:00",
+          "end": "2023-07-21 15:58:20+00:00",
+          "trades": 50,
+          "net_r": -18.2873
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-21 15:58:20+00:00",
+          "end": "2024-05-21 11:57:30+00:00",
+          "trades": 46,
+          "net_r": -9.4841
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-21 11:57:30+00:00",
+          "end": "2025-03-22 07:56:40+00:00",
+          "trades": 81,
+          "net_r": -42.0411
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-22 07:56:40+00:00",
+          "end": "2026-01-21 03:55:50+00:00",
+          "trades": 59,
+          "net_r": -23.928
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-21 03:55:50+00:00",
+          "end": "2026-11-21 23:55:00+00:00",
+          "trades": 57,
+          "net_r": -17.0917
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_LATE__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "20,21,22,23"
+      ]
+    },
+    "S_ASIA": {
+      "reach_ge_6r": 0.0044,
+      "n": 455,
+      "net_r": -146.9668,
+      "net_r_fee_only": -116.8768,
+      "max_drawdown_r": 148.7707,
+      "by_outcome": {
+        "timeout": 209,
+        "sl_hit": 147,
+        "tp_hit": 81,
+        "be_stop": 18
+      },
+      "mean_bars_held": 18.024,
+      "net_r_per_capital_day": -5.1611,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2021-11-19 00:00:00+00:00",
+      "data_end": "2026-11-21 23:55:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-19 00:00:00+00:00",
+          "end": "2022-09-19 19:59:10+00:00",
+          "trades": 87,
+          "net_r": -14.2838
+        },
+        {
+          "fold": 2,
+          "start": "2022-09-19 19:59:10+00:00",
+          "end": "2023-07-21 15:58:20+00:00",
+          "trades": 59,
+          "net_r": -22.7889
+        },
+        {
+          "fold": 3,
+          "start": "2023-07-21 15:58:20+00:00",
+          "end": "2024-05-21 11:57:30+00:00",
+          "trades": 61,
+          "net_r": -15.3281
+        },
+        {
+          "fold": 4,
+          "start": "2024-05-21 11:57:30+00:00",
+          "end": "2025-03-22 07:56:40+00:00",
+          "trades": 99,
+          "net_r": -47.0882
+        },
+        {
+          "fold": 5,
+          "start": "2025-03-22 07:56:40+00:00",
+          "end": "2026-01-21 03:55:50+00:00",
+          "trades": 71,
+          "net_r": -25.9023
+        },
+        {
+          "fold": 6,
+          "start": "2026-01-21 03:55:50+00:00",
+          "end": "2026-11-21 23:55:00+00:00",
+          "trades": 78,
+          "net_r": -21.5746
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_ASIA__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "5",
+      "resample": "5m"
+    },
+    "fold_edges": [
+      "2021-11-19 00:00:00+00:00",
+      "2022-09-19 19:59:10+00:00",
+      "2023-07-21 15:58:20+00:00",
+      "2024-05-21 11:57:30+00:00",
+      "2025-03-22 07:56:40+00:00",
+      "2026-01-21 03:55:50+00:00",
+      "2026-11-21 23:55:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/A__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "S_LATE": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_LATE__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_LATE__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "20,21,22,23"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "20,21,22,23"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "S_ASIA": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--timeframe",
+        "5m",
+        "--strategy-name",
+        "ict_scalp_5m",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_ASIA__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261118-abab-25/45109597191/arms/S_ASIA__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--skip-hours",
+        "0,1,2,3,4,5,6,7"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}

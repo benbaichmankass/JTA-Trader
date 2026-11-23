@@ -4,7 +4,7 @@ id: RQ-20261101-78fc-54
 title: 'ITERATION 1 of squeeze_breakout_4h (fail): On squeeze_breakout_4h over 2020-07-01..2026-10-15 23:59, does any of KC15 (kc_mult=1.5), CD6
   (cooldown_bars=6), SL35 (atr_stop_mult=3.5) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar
   folds, with maxDD <= 1'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -123,20 +123,18 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/squeeze_breakout_4h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
+rearmed_at: '2026-11-23T03:05:00+00:00'  # three runs (41838480139, 45082636132, 45083494258) died in build_arm_argv: exit_lever_ablation refused the squeeze harness (now covered, verified locally with this exact command: A n 126, KC15/CD6/SL35 all differ from A); command already on the registered grade
+last_dispatched_at: '2026-11-23T04:48:49+00:00'
 grading:
   attested: RULE-RQ-20261101-78fc-54
   auto: true
   decision_rule_id: RULE-RQ-20261101-78fc-54
   evidence:
-  - research/results/RQ-20261101-78fc-54/41838480139.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261101-78fc-54/45111066561.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
-    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
   rows: 1
-  verdict: null
-rearmed_at: '2026-11-23T03:05:00+00:00'  # three runs (41838480139, 45082636132, 45083494258) died in build_arm_argv: exit_lever_ablation refused the squeeze harness (now covered, verified locally with this exact command: A n 126, KC15/CD6/SL35 all differ from A); command already on the registered grade
-last_dispatched_at: '2026-11-23T04:48:49+00:00'
+  verdict: fail
