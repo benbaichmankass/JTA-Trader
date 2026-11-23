@@ -1,0 +1,151 @@
+{
+  "leg": "qqq_pullback_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 47.2994,
+    "n": 210,
+    "max_drawdown_r": 12.1477,
+    "folds_positive": 5,
+    "n_folds": 6,
+    "fold_majority": 4,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=47.2994 > 0 with 5/6 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0238,
+      "n": 210,
+      "net_r": 47.2994,
+      "net_r_fee_only": 54.6546,
+      "max_drawdown_r": 12.1477,
+      "by_outcome": {
+        "trail_stop": 93,
+        "stop": 99,
+        "timeout": 5,
+        "take_profit": 13
+      },
+      "mean_bars_held": 39.69,
+      "net_r_per_capital_day": 0.1362,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2019-01-02 14:00:00+00:00",
+      "data_end": "2025-05-30 19:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2019-01-01 00:00:00+00:00",
+          "end": "2020-01-26 15:59:50+00:00",
+          "trades": 27,
+          "net_r": 14.0057
+        },
+        {
+          "fold": 2,
+          "start": "2020-01-26 15:59:50+00:00",
+          "end": "2021-02-20 07:59:40+00:00",
+          "trades": 32,
+          "net_r": 18.398
+        },
+        {
+          "fold": 3,
+          "start": "2021-02-20 07:59:40+00:00",
+          "end": "2022-03-17 23:59:30+00:00",
+          "trades": 38,
+          "net_r": 4.2276
+        },
+        {
+          "fold": 4,
+          "start": "2022-03-17 23:59:30+00:00",
+          "end": "2023-04-12 15:59:20+00:00",
+          "trades": 38,
+          "net_r": -2.4883
+        },
+        {
+          "fold": 5,
+          "start": "2023-04-12 15:59:20+00:00",
+          "end": "2024-05-07 07:59:10+00:00",
+          "trades": 39,
+          "net_r": 1.9798
+        },
+        {
+          "fold": 6,
+          "start": "2024-05-07 07:59:10+00:00",
+          "end": "2025-06-01 23:59:00+00:00",
+          "trades": 36,
+          "net_r": 11.1765
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "QQQ",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261123-f3a8-01/45209230439/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261123-f3a8-01/45209230439/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2019-01-01",
+        "--end",
+        "2025-06-01 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2019-01-01",
+    "end": "2025-06-01 23:59",
+    "fetch_days": 3000,
+    "feed": {
+      "source": "dukascopy",
+      "ticker": "QQQ",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2019-01-01 00:00:00+00:00",
+      "2020-01-26 15:59:50+00:00",
+      "2021-02-20 07:59:40+00:00",
+      "2022-03-17 23:59:30+00:00",
+      "2023-04-12 15:59:20+00:00",
+      "2024-05-07 07:59:10+00:00",
+      "2025-06-01 23:59:00+00:00"
+    ]
+  }
+}
