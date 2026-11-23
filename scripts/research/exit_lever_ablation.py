@@ -257,9 +257,11 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     # 2026-11-17 (FVG-RANGE-ABLATION-DRIVER; RQ-20261116-d5a7-12/-13/-14 were producer_failed on this very refusal). Their argv
     # comes from the same rdm.build_harness_cmd branch the evidence builder runs; both harnesses emit net_total_r, max_drawdown_r,
     # total_trades and per-trade entry_time/net_r, which is all summarize_arm reads. Nothing is reimplemented here.
-    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup", "fade", "fvg_range"):
+    # squeeze (squeeze_breakout_4h -> scripts/backtest_squeeze.py) joined 2026-11-23 (QUEUE-FILL-STANDING-W48): RQ-20261118-abab-45/-46 and
+    # RQ-20261101-78fc-54 were producer_failed on this very refusal. Same rdm.build_harness_cmd branch the evidence builder runs.
+    if harness not in ("trend", "pullback", "ict_scalp", "turtle_soup", "fade", "fvg_range", "squeeze"):
         raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback, "
-                         "ict_scalp, turtle_soup, fade and fvg_range harnesses")
+                         "ict_scalp, turtle_soup, fade, fvg_range and squeeze harnesses")
     # forming_1m (EQ-FORMING-BAR-REPLAY): replay the leg's live FORMING-bar decision from 1m
     # data, through the same build_harness_cmd path the evidence builder uses.
     fkw = {"forming_1m": forming_1m, "forming_session": forming_session} if forming_1m else {}
@@ -1464,12 +1466,16 @@ def _self_test() -> int:
           any(t.endswith("scripts/backtest_fvg_range.py") for t in v_base) and "--atr-stop-mult" not in v_base
           and "--trail-mult" not in v_base and v_base[v_base.index("--range-lookback") + 1] == "48"
           and v_arm[v_arm.index("--range-lookback") + 1] == "96")
+    sq_cfg = {"symbols": ["BTCUSDT"], "kc_mult": 1.5, "bb_period": 20}
+    sq_argv, _ = build_arm_argv("squeeze_leg", sq_cfg, "<d>", "4h", "<e>", "<j>", ["--side-filter", "long"], None, None)
+    check("squeeze arm argv: routes to backtest_squeeze.py; the arm's side-filter reaches it",
+          any(t.endswith("scripts/backtest_squeeze.py") for t in sq_argv) and sq_argv[sq_argv.index("--side-filter") + 1] == "long")
     try:
-        build_arm_argv("squeeze_leg", {"symbols": ["BTCUSDT"], "kc_mult": 1.5, "bb_period": 20}, "<d>", "1h", "<e>", "<j>", [], None, None)
+        build_arm_argv("unclassified_leg", {"symbols": ["BTCUSDT"]}, "<d>", "1h", "<e>", "<j>", [], None, None)
         refused = False
     except ValueError as e:
-        refused = "fade and fvg_range" in str(e)
-    check("a harness still outside the list (squeeze) is refused loudly, not run", refused)
+        refused = "fvg_range and squeeze" in str(e)
+    check("a harness still outside the list (an unclassified config) is refused loudly, not run", refused)
     print("self-test:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
