@@ -386,6 +386,15 @@ Operator, verbatim: *Part of the weekly planning is making sure that we have a r
 
 Full text: [`docs/plans/weekly-planning-protocol.md`](../../../docs/plans/weekly-planning-protocol.md) § "Research queue full from the start of the week".
 
+### Iteration never ends; plan two weeks ahead, regroup at one (operator 2026-11-23, binding) — gates this adds or changes: none
+
+Operator, verbatim: *"it's clear in the manager's skill that ... there's always going to be more work. There's never going to be a situation where we're done working on, at least at the decision level. Like we might need to throw away the ML and start from scratch, but like we're never going to stop working on it. So we need to make sure that we have the iteration plan at least a week ahead always, and if the manager knows that when there's a lack of work, we should really plan 2 weeks ahead at a time, and when we get to a week, we need to regroup and plan."*
+
+1. **There is no "done" state for a decision step, a model or a strategy leg.** A failed family, an exhausted lever map or a retired model is an input to the next plan (a new family, a rebuild, a replacement), never the end of the work. "Nothing left to author" is a planning gap the manager fixes the same day, not an idle state.
+2. **Horizon.** Every subject in `scripts/research/iteration_subjects.yaml` plus every testing leg (`strategy_status.py`), and every ML decision step D1-D10, carries a written plan **at least one week ahead at all times**. When work runs short (the queue below its floor, or a cycle that finds nothing diagnosed to author), the manager plans **two weeks ahead**; when the remaining horizon falls to one week, the manager regroups and re-plans to two.
+3. **Where the plan lives.** The programme plans (`research/programmes/*.yaml`, `next` units by week, written by `/programme-review`) and the ML build plan in `ROADMAP.md`. No new register. A week's entry is a unit to run, a unit waiting on a named result, or a build or design step with an owner type; dependency-gated units are planned, not authored early (the floor-filler ban above still holds).
+4. **Measured, not asserted.** The manager checks horizon coverage each daily review, using `iteration_orphans.py` and the programme plans. A subject with less than one week of plan counts as an orphan for this rule.
+
 ## Assistant managers: one per class of work, at least through every surge (operator, 2026-11-12, binding) — gates this adds or changes: none
 
 Operator, 2026-11-12 ~09:00Z, verbatim: *"use assitant managers if needed (e.g. UI assistant manager, ML assitant manager, that manage all of their
