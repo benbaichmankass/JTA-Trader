@@ -12,9 +12,11 @@ What it does (no Claude, no API credits; reads the VM's read-only diag journal +
      or carries exactly one ``could_not_grade`` reason (``pairs_two_leg``, ``no_filled_leg``, ``legs_not_closed``,
      ``no_bars`` ...). Orphaned / rejected / shadow / emitted / open packages are counted, never graded.
   3. GRADE with the one engine (``cf_core.grade_package``) over bars from ``cf_bars.historical_bars`` (Binance Vision, 5m).
-     Only fully-closed legs of a package enter the grade. Management actions are NOT replayed (``position_path_history``
-     is not read per package here), so ``replayed_actual`` is the declared brackets + the leg's own trail only: the
-     fidelity gap below is measured against the JOURNAL outcome and carries that bias.
+     Only fully-closed legs of a package enter the grade. With ``--paths`` (CF-FIDELITY-ACTION-REPLAY) each package's RECORDED
+     stop/target path (``position_path_history``, one row per bar) is read and replayed as timed set_stop / widen_stop /
+     set_tp actions, so ``replayed_actual`` follows what the live monitor did. Without it ``replayed_actual`` is the declared
+     brackets + the leg's own trail only. Partial reduces are not in the path history and stay unreplayed (stated in the
+     record). The fidelity gap is measured against the JOURNAL outcome.
   4. FIDELITY (CF-BULK-LIVE, rule registered BEFORE the run, design § 3.4): ``abs_gap_r`` <= 0.10 on >= 80% of graded
      packages, per leg (strategy). A failing leg's arms are marked ESTIMATED_LOW_FIDELITY. Not a P&L claim.
 
@@ -83,6 +85,86 @@ def fetch_pages(table: str, page: int, *, retries: int = 5, fetch: Optional[Call
     return rows, failed
 
 
+def fetch_paths(pkg_ids: Sequence[str], cache_dir: Optional[Path], *, workers: int = 8,
+                fetch: Optional[Callable[[str], Any]] = None) -> Tuple[Dict[str, List[dict]], List[str]]:
+    """``position_path_history`` rows for each package id (one diag read per package, threaded, cached one file per package
+    under ``cache_dir`` so a re-run reads nothing twice). Returns ``(paths, failed_ids)``: a package whose read failed is
+    recorded, and is graded WITHOUT actions (never treated as "no actions")."""
+    from concurrent.futures import ThreadPoolExecutor
+    fetch = fetch or _diag
+    if cache_dir:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def one(pid: str) -> Tuple[str, Optional[List[dict]]]:
+        f = cache_dir / f"{pid}.json" if cache_dir else None
+        if f is not None and f.exists():
+            return pid, json.loads(f.read_text())
+        for k in range(4):
+            try:
+                d = fetch(f"position_path_history?order_package_id={pid}&limit=500")
+                rows = d.get("rows", d) if isinstance(d, dict) else d
+                if f is not None:
+                    f.write_text(json.dumps(rows))
+                return pid, rows
+            except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
+                time.sleep(1 + 2 * k)
+        return pid, None
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        got = list(ex.map(one, pkg_ids))
+    return {pid: r for pid, r in got if r is not None}, [pid for pid, r in got if r is None]
+
+
+#: where in the (previous row's last write, this row's last write] window a stop change is placed. The path row is upserted
+#: each exit-loop pass, so a change is only known to lie in that window; ``mid`` is the unbiased placement.
+ACTION_TIMING = "mid"
+
+
+def derive_path_actions(pkg: dict, rows: Sequence[dict], timing: str = ACTION_TIMING) -> List[dict]:
+    """Timed actions from the recorded path: every bar row whose ``sl_price`` / ``tp_price`` differs from the previous row's
+    becomes a ``set_stop`` (tightening) / ``widen_stop`` / ``set_tp`` action. Time is BAR-BOUNDED, so provenance is
+    ``ESTIMATED(path_row_window)``; ``timing`` picks the placement inside the window (``first``: the previous row's last
+    write, ``mid``: the midpoint, ``last``: this row's last write)."""
+    side = str(pkg.get("direction") or "").lower()
+    prev_sl, prev_tp = lrc.initial_stop(pkg), lrc._num(pkg.get("tp"))
+    out: List[dict] = []
+    prev_w: Optional[float] = None
+    for r in sorted(rows, key=lambda r: r.get("bar_ts") or ""):
+        w = lrc._ts(r.get("written_at")) or lrc._ts(r.get("bar_ts"))
+        lo = prev_w if prev_w is not None else (lrc._ts(r.get("first_seen_at")) or w)
+        t = {"first": lo, "mid": (lo + w) / 2.0, "last": w}[timing] if (lo is not None and w is not None) else w
+        sl, tp = lrc._num(r.get("sl_price")), lrc._num(r.get("tp_price"))
+        if sl is not None and prev_sl is not None and abs(sl - prev_sl) > 1e-12 and t is not None:
+            tighter = sl > prev_sl if side == "long" else sl < prev_sl
+            out.append({"ts_epoch": t, "kind": "set_stop" if tighter else "widen_stop", "level": sl, "source": "path_history_sl_change",
+                        "time_provenance": "ESTIMATED(path_row_window)"})
+        if tp is not None and prev_tp is not None and abs(tp - prev_tp) > 1e-12 and t is not None:
+            out.append({"ts_epoch": t, "kind": "set_tp", "level": tp, "source": "path_history_tp_change",
+                        "time_provenance": "ESTIMATED(path_row_window)"})
+        if sl is not None:
+            prev_sl = sl
+        if tp is not None:
+            prev_tp = tp
+        if w is not None:
+            prev_w = w
+    return sorted(out, key=lambda a: a["ts_epoch"])
+
+
+BRACKET_EXITS = {"sl", "tp", "stop", "stop_loss", "take_profit", "sl_cross", "tp_cross"}
+
+
+def journal_close_actions(legs: Sequence[dict]) -> List[dict]:
+    """The leg's own recorded exit as a ``close`` action, for a package that did NOT close on its bracket (reconciler fill,
+    reduce, stale stop, exit head, review close ...): the path history carries no close, so without this the replay holds to
+    the bracket and the gap is the whole discretionary exit. CIRCULAR by construction for these packages (the replay is told
+    when the trade ended), so the fidelity table reports them APART from the bracket-exit packages, which stay independent."""
+    lead = sorted(legs, key=lambda t: (t.get("account_class") != "real_money", t.get("timestamp") or ""))[0]
+    if str(lead.get("exit_reason") or "").lower() in BRACKET_EXITS or not lead.get("closed_at"):
+        return []
+    t = lrc._ts(lead.get("closed_at"))
+    return [] if t is None else [{"ts_epoch": t, "kind": "close", "frac": 1.0, "source": "journal_close",
+                                  "time_provenance": "MEASURED(journal closed_at)"}]
+
+
 def _diag(path: str) -> Any:
     o = subprocess.run([str(REPO / "scripts/ops/diag_fetch.sh"), path], capture_output=True, text=True, timeout=180, check=False)
     if o.returncode != 0:
@@ -118,7 +200,8 @@ def make_fetcher(span: Dict[str, Tuple[float, float]], bars_fn: Callable[[str, s
 
 
 def grade_all(packages: List[dict], trades: List[dict], *, bars_fn=None, now: Optional[float] = None, limit: Optional[int] = None,
-              n_random: int = cf_core.N_RANDOM) -> Tuple[List[dict], List[dict]]:
+              n_random: int = cf_core.N_RANDOM, paths: Optional[Dict[str, List[dict]]] = None,
+              timing: str = ACTION_TIMING, replay_closes: bool = False) -> Tuple[List[dict], List[dict]]:
     """``(records, skips)``: records are graded packages, skips are ``{order_package_id, reason}`` for every closed package
     that was not graded. Every closed package is in exactly one of the two."""
     now = now or datetime.now(timezone.utc).timestamp()
@@ -154,7 +237,12 @@ def grade_all(packages: List[dict], trades: List[dict], *, bars_fn=None, now: Op
         if not bars:
             skips.append({"order_package_id": p["order_package_id"], "reason": "no_bars", "strategy": p.get("strategy_name")})
             continue
-        rec = cf_core.grade_package(p, legs, bars, [], [], {}, {}, horizon=hz, n_random=n_random)
+        acts = derive_path_actions(p, paths[p["order_package_id"]], timing) if paths is not None and p["order_package_id"] in paths else []
+        jc = journal_close_actions(legs) if replay_closes else []
+        acts = sorted(acts + jc, key=lambda a: a["ts_epoch"])
+        rec = cf_core.grade_package(p, legs, bars, [], acts, {}, {}, horizon=hz, n_random=n_random,
+                                    actions_authoritative=paths is not None and p["order_package_id"] in paths)
+        rec["path_actions"] = {"read": paths is not None and p["order_package_id"] in paths, "n": len(acts) - len(jc), "journal_close": bool(jc)}
         if rec.get("status") != "graded":
             skips.append({"order_package_id": p["order_package_id"], "reason": rec.get("reason") or "not_graded", "strategy": p.get("strategy_name")})
             continue
@@ -189,7 +277,10 @@ def fidelity(records: List[dict]) -> Dict[str, Any]:
     legs: Dict[str, List[dict]] = defaultdict(list)
     for r in records:
         legs[str(r.get("strategy"))].append(r)
+    indep = [r for r in records if not (r.get("path_actions") or {}).get("journal_close")]
+    circ = [r for r in records if (r.get("path_actions") or {}).get("journal_close")]
     return {"rule": {"tol_r": FIDELITY_TOL_R, "frac": FIDELITY_FRAC, "min_leg_n": MIN_LEG_N}, "overall": block(records),
+            "independent_bracket_exits": block(indep), "journal_close_replayed_circular": block(circ),
             "per_leg": {k: block(v) for k, v in sorted(legs.items())}}
 
 
@@ -210,7 +301,8 @@ def population(packages: List[dict], trades: List[dict]) -> Dict[str, Any]:
             "note": "a package on several accounts counts once per account here and once in closed_n"}
 
 
-def run(out: Path, cache: Optional[Path], limit: Optional[int]) -> int:
+def run(out: Path, cache: Optional[Path], limit: Optional[int], use_paths: bool = False, timing: str = ACTION_TIMING,
+        replay_closes: bool = False) -> int:
     out.mkdir(parents=True, exist_ok=True)
     if cache and (cache / "order_packages.json").exists() and (cache / "trades.json").exists():
         packages, trades, failed = json.loads((cache / "order_packages.json").read_text()), json.loads((cache / "trades.json").read_text()), {"order_packages": [], "trades": []}
@@ -219,14 +311,22 @@ def run(out: Path, cache: Optional[Path], limit: Optional[int]) -> int:
         trades, ft = fetch_pages("trades", 1000)
         failed = {"order_packages": fp, "trades": ft}
     t0 = time.time()
-    records, skips = grade_all(packages, trades, limit=limit)
+    paths = failed_paths = None
+    if use_paths:
+        want = [p["order_package_id"] for p in packages if str(p.get("status")).lower() == "closed"
+                and not str(p.get("strategy_name") or "").startswith(PAIRS_PREFIX) and str(p.get("symbol") or "").endswith("USDT")]
+        paths, failed_paths = fetch_paths(want, (cache / "paths") if cache else None)
+    records, skips = grade_all(packages, trades, limit=limit, paths=paths, timing=timing, replay_closes=replay_closes)
     fid = fidelity(records)
     pop = population(packages, trades)
     reasons = Counter(s["reason"] for s in skips)
     manifest = {"schema": SCHEMA, "run_at": datetime.now(timezone.utc).isoformat(), "engine_schema_version": cf_core.SCHEMA_VERSION, "resolution": TF,
                 "population": pop, "failed_pages": failed, "input_sha1": hashlib.sha1(json.dumps([sorted(p["order_package_id"] for p in packages)]).encode()).hexdigest(),
                 "closed_packages_graded": len(records), "closed_packages_not_graded": len(skips), "could_not_grade_by_reason": dict(reasons),
-                "closed_accounted_for": len(records) + len(skips), "seconds": round(time.time() - t0, 1), "provenance": "ESTIMATED"}
+                "closed_accounted_for": len(records) + len(skips),
+                "path_actions": None if paths is None else {"packages_with_path_read": sum(1 for r in records if r["path_actions"]["read"]),
+                                                            "path_read_failed": len(failed_paths or []), "timing": timing,
+                                                            "packages_with_>=1_action": sum(1 for r in records if r["path_actions"]["n"] > 0)}, "seconds": round(time.time() - t0, 1), "provenance": "ESTIMATED"}
     with gzip.open(out / "records.jsonl.gz", "wt", encoding="utf-8") as fh:
         for r in records:
             fh.write(json.dumps(r, separators=(",", ":")) + "\n")
@@ -244,8 +344,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     r.add_argument("--out", required=True)
     r.add_argument("--cache", help="dir holding order_packages.json + trades.json (skips the paged VM read)")
     r.add_argument("--limit", type=int, help="grade only the newest N closed packages (smoke)")
+    r.add_argument("--paths", action="store_true", help="CF-FIDELITY-ACTION-REPLAY: read each package's position_path_history and replay its recorded stop/target moves")
+    r.add_argument("--timing", default=ACTION_TIMING, choices=("first", "mid", "last"), help="where in a path row's write window a recorded change is placed")
+    r.add_argument("--replay-closes", action="store_true", help="also replay a non-bracket journal close as a close action (circular for those packages; fidelity is then reported by exit type)")
     a = ap.parse_args(argv)
-    return run(Path(a.out), Path(a.cache) if a.cache else None, a.limit)
+    return run(Path(a.out), Path(a.cache) if a.cache else None, a.limit, a.paths, a.timing, a.replay_closes)
 
 
 if __name__ == "__main__":

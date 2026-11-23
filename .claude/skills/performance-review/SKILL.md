@@ -37,7 +37,7 @@ description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE, in 
 | Layer | Who does it | What it must produce | What it must NOT do |
 |---|---|---|---|
 | **0. Prior calls** | Claude, from the last review's `calls[]` | each call graded `hit / miss / unresolved / void`, with the check it named re-run | re-argue a call instead of running its check |
-| **1. CHECKS** | named scripts; Claude runs them and reads them | the fixed tables C1–C12 below, **every leg, every window**, each with its population | narrate, rank or interpret; quote a number without its n and window |
+| **1. CHECKS** | named scripts; Claude runs them and reads them | the fixed tables C1–C14 below, **every leg, every window**, each with its population | narrate, rank or interpret; quote a number without its n and window |
 | **2. ANALYSIS** | Claude | 3–7 **material questions**, each with competing hypotheses, the test run, what survived, confidence, and money at stake; surprises; ranked decisions | restate check numbers as findings; end on "n too small"; repeat a prior call without saying why it did not happen |
 | **3. Decisions** | Claude | every call is a checklist row / queue unit / pipeline item with a **pre-registered check**, or `no action, because …` | write a memo; enact a Tier-3 change |
 
@@ -122,6 +122,7 @@ caveats for each pull are in § "Reference" below.
 | **C11** | **Books and benchmarks**: paper-book tracker append, real-money allocation benchmark, prop trade quality | `scripts/ops/paper_book_tracker.py`, § Real-money allocation benchmark, `scripts/prop/trade_quality_review.py` | as each section states |
 | **C12** | **Backlog gate**: every open performance/research pipeline item re-checked | § Draining the backlog | `count_untriaged` MUST be 0 |
 | **C13** | **DSR probation** (standing metric, never a gate): every production leg with DSR ≤ 0.95 and its live iteration unit | `python3 scripts/research/dsr_probation.py` (DSR from `comms/research/trial_ledger.json`; refresh with `scripts/research/trial_ledger.py`) | a probation leg with `NO LIVE UNIT` is an iteration orphan (author one); a `not_in_ledger` / `not_computed` leg is `could_not_look`, never "passing". DSR is review-only: it never proposes a demotion by itself |
+| **C14** | **Counterfactual CHECK table** (CF-D4-PERFREVIEW-TABLE; operator 2026-11-23: the counterfactual "needs to be part of the regular performance review"): per leg, n graded, fidelity verdict, actual vs replayed net R, and the best counterfactual arm vs the replay with a package-bootstrap CI and the number of arms searched | `python3 scripts/research/cf_bulk_live.py run --out <dir> --paths` (reads the VM journal + `position_path_history`, Binance Vision bars; no Claude, ~5 min) then `python3 scripts/research/cf_check_table.py --run <dir>` | a leg whose fidelity is not `PASS` is `ESTIMATED_LOW_FIDELITY` and its arms are not read as results; the best arm is an in-sample maximum of N arms (a lead for a pre-registered test, never a change); non-crypto and pairs packages are listed under "not graded" with their reasons, never as 0. **Adds no gate: it prints, nothing blocks on it** |
 
 A check that needs a tool that does not exist is listed with `could_not_look: no instrument` and the
 row that builds it. Do not hand-roll a cruder substitute (`docs/research/RESEARCH-CAPABILITY-INDEX.md`
@@ -208,7 +209,7 @@ Two files, one PR. The markdown is for the operator; the JSON is for the next re
 # Performance review <date> — <one-sentence answer: what most affects money now>
 ## S. Scoreboard       — net $/% per book, with population; the sceptical-quant line per headline leg (above)
 ## 0. Prior calls      — table: call · p · check re-run · result (hit/miss/unresolved/void) · action happened? One footer line carries the counts/Brier; none of it is a headline.
-## 1. CHECKS           — C1–C12 tables; populations and windows; could_not_look listed. Numbers only.
+## 1. CHECKS           — C1–C14 tables; populations and windows; could_not_look listed. Numbers only.
 ## 2. ANALYSIS         — per material question: hypotheses · test run · result · survivor · p · money at stake
 ##    Surprises        — what did not fit, and what you did about it
 ## 3. Decisions        — ranked by money: call · decision · tier · pre-registered check · ending (row/unit/PI id)
@@ -217,7 +218,7 @@ Two files, one PR. The markdown is for the operator; the JSON is for the next re
 
 **`comms/reviews/performance-review-<stamp>.json`** — conforming to
 `comms/schema/performance_review_response.template.json`: the existing fields (§ Reference → Output
-fields) plus `checks{}` (C1–C12, each `{status: ok | could_not_look, population, result}`),
+fields) plus `checks{}` (C1–C14, each `{status: ok | could_not_look, population, result}`),
 `prior_calls_scorecard{}`, `analysis{questions[], surprises[]}` and `calls[]`.
 
 Then the Claude-channel ping (§ Posting) and the hand-off to `/perf-followup`: it **tests** the
@@ -1002,7 +1003,7 @@ Emit a single JSON object conforming to
 Each `note`/`rationale` ≤240 chars; cite `order_package_id`,
 `trade_id`, strategy name, and numbers so the operator can verify
 fast.
-- **New 2026-10-28:** `checks{}` (C1–C12: `{status: ok | could_not_look, population, result}`),
+- **New 2026-10-28:** `checks{}` (C1–C14: `{status: ok | could_not_look, population, result}`),
   `prior_calls_scorecard{n_calls, hit, miss, unresolved, void, brier, series[]}`, `analysis{questions[
   {question, money_at_stake, hypotheses[{name, predicts, test, result: survived | eliminated | untested}],
   conclusion, p}], surprises[]}`, and `calls[]` (`{id, claim, p, money_at_stake, decision, tier, check:
