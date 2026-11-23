@@ -7,8 +7,9 @@ ignored flag would pass a parse-only test), (3) bad values are refused. The ATR-
 whose semantics are locked here on a synthetic series.
 
 Default-vs-origin/main on the golden fixture when the flags landed: fvg_range 23 trades, fade 223, squeeze 72, each with an identical summary and
-identical emitted rows. Not built here (stated, not hidden): --be-floor-r / --stale-exit-bars / --trail-adx-below (held on the half-declared TA20 arm) and
-turtle_soup (its live unit expresses neither lever and the system engine has no per-leg signal-filter hook).
+identical emitted rows. fade 223 trades also for --stale-exit-bars / --be-floor-r (default identical, both exit styles). The TA20 arm (--trail-adx-below, half-declared) was
+removed from abab-05/06/07/10 by the manager's 2026-11-23 ruling, so that flag is NOT built. turtle_soup (abab-15) stays blocked: its live unit
+expresses neither lever and the system engine has no per-leg signal-filter hook.
 """
 from __future__ import annotations
 
@@ -155,3 +156,52 @@ def test_squeeze_adx_max_defaults_equal_off_and_changes_the_trade_set(tmp_path):
 def test_squeeze_bad_adx_max_refused(bad):
     with pytest.raises(ValueError):
         sq.run_backtest(_df(), **SQ_KW, adx_max=bad)
+
+
+# ---- fade: --stale-exit-bars / --be-floor-r (abab-05) ----------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("style", ["far", "trail"])
+def test_fade_exit_levers_default_equal_explicit_off(style, tmp_path):
+    mod, kw = HARNESSES["fade"]
+    out = []
+    for tag, extra in (("a", {}), ("b", {"stale_exit_bars": 0, "stale_exit_below_r": 0.0, "be_floor_r": 0.0})):
+        f = tmp_path / f"{tag}.jsonl"
+        res = mod.run_backtest(_df(), emit_path=str(f), **dict(kw, exit_style=style), **extra)
+        out.append((json.dumps(res, sort_keys=True, default=str), f.read_text()))
+    assert out[0] == out[1] and json.loads(out[0][0])["total_trades"] > 15
+    assert "stale_exit_bars" not in json.loads(out[0][0])["params"] and "be_floor_r" not in json.loads(out[0][0])["params"]
+
+
+def _fade_rows(tmp_path, tag, style="far", **extra):
+    mod, kw = HARNESSES["fade"]
+    f = tmp_path / f"{tag}.jsonl"
+    res = mod.run_backtest(_df(), emit_path=str(f), **dict(kw, exit_style=style), **extra)
+    return res, [json.loads(x) for x in f.read_text().splitlines() if x.strip()]
+
+
+@pytest.mark.parametrize("style", ["far", "trail"])
+def test_fade_stale_exit_cuts_only_trades_still_under_water(style, tmp_path):
+    base, _ = _fade_rows(tmp_path, "base", style)
+    res, rows = _fade_rows(tmp_path, "stale", style, stale_exit_bars=6)
+    stale = [r for r in rows if r["exit_reason"] == "stale_stop"]
+    assert stale, "the lever must fire on this fixture or the test proves nothing"
+    assert all(r["gross_r"] < 0.0 for r in stale)                      # default --stale-exit-below-r 0.0: only trades under water at the close
+    assert res["total_trades"] != base["total_trades"] and res["params"]["stale_exit_bars"] == 6
+
+
+def test_fade_be_floor_means_a_stop_out_after_the_floor_armed_exits_at_entry(tmp_path):
+    floor = 0.5
+    _, base_rows = _fade_rows(tmp_path, "base")
+    # non-vacuity: the baseline HAS full losses on trades that had already seen the floor
+    assert any(r["exit_reason"] == "stop" and r["mfe_r"] >= floor and r["gross_r"] < 0.0 for r in base_rows)
+    res, rows = _fade_rows(tmp_path, "floor", be_floor_r=floor)
+    assert res["params"]["be_floor_r"] == floor
+    armed = [r for r in rows if r["exit_reason"] == "stop" and r["mfe_r"] >= floor]
+    assert armed and all(r["gross_r"] == 0.0 for r in armed)           # the stop sat at entry: a scratch, never a loss
+
+
+@pytest.mark.parametrize("kw", [dict(stale_exit_bars=-1), dict(be_floor_r=-0.1)])
+def test_fade_exit_levers_refuse_negative_values(kw):
+    mod, base = HARNESSES["fade"]
+    with pytest.raises(ValueError):
+        mod.run_backtest(_df(), **base, **kw)

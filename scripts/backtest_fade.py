@@ -192,7 +192,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  side_filter: str = "both",
                  skip_hours: str = "",
                  vol_skip_above_pctl: float = 0.0, vol_skip_below_pctl: float = 0.0,
-                 vol_pctl_window: int = lever_gates.DEFAULT_WINDOW) -> Dict[str, Any]:
+                 vol_pctl_window: int = lever_gates.DEFAULT_WINDOW,
+                 stale_exit_bars: int = 0, stale_exit_below_r: float = 0.0,
+                 be_floor_r: float = 0.0) -> Dict[str, Any]:
+    if stale_exit_bars < 0 or be_floor_r < 0.0:
+        raise ValueError(f"stale_exit_bars and be_floor_r must be >= 0 (0 = off), got {stale_exit_bars!r}, {be_floor_r!r}")
     _vol_errs = lever_gates.flag_errors(vol_skip_above_pctl, vol_skip_below_pctl, vol_pctl_window)
     if _vol_errs:
         raise ValueError("; ".join(_vol_errs))
@@ -332,6 +336,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 continue
         ext = entry
         trail = sl
+        stop_px = sl          # the LIVE stop of the fixed-stop styles (== sl unless --be-floor-r raised it; Trade.sl and the R base stay the entry-time sl)
         exit_price: Optional[float] = None
         exit_reason = "timeout"
         exit_idx = min(i + timeout_bars, n - 1)
@@ -347,8 +352,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     ext = min(ext, bl)
                     trail = min(trail, ext + trail_mult * atr)
                 else:
-                    if bh >= sl:                       # SL-first (conservative)
-                        exit_price, exit_idx = sl, j
+                    if bh >= stop_px:                  # SL-first (conservative)
+                        exit_price, exit_idx = stop_px, j
                         exit_reason = "stop"
                         break
                     if target is not None and bl <= target:
@@ -357,6 +362,14 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         break
                     ext = min(ext, bl)
                 mfe = max(mfe, (entry - ext) / risk)
+                # BREAK-EVEN FLOOR (--be-floor-r; 0 = off, byte-identical; PI-20261123-SME5WDGR-0008): once the trade has SEEN >= be_floor_r R the stop may
+                # never be worse than entry (backtest_trend.py / backtest_squeeze.py MI-165 semantics). Applied after this bar's own tests, so it binds from the
+                # NEXT bar. On a trailing style it floors the trail; on a fixed-stop style it moves the stop.
+                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                    if exit_style == "trail":
+                        trail = min(trail, entry)
+                    else:
+                        stop_px = min(stop_px, entry)
             else:
                 if exit_style == "trail":
                     if bl <= trail:
@@ -366,8 +379,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     ext = max(ext, bh)
                     trail = max(trail, ext - trail_mult * atr)
                 else:
-                    if bl <= sl:
-                        exit_price, exit_idx = sl, j
+                    if bl <= stop_px:
+                        exit_price, exit_idx = stop_px, j
                         exit_reason = "stop"
                         break
                     if target is not None and bh >= target:
@@ -376,6 +389,21 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         break
                     ext = max(ext, bh)
                 mfe = max(mfe, (ext - entry) / risk)
+                if be_floor_r > 0.0 and mfe >= be_floor_r:
+                    if exit_style == "trail":
+                        trail = max(trail, entry)
+                    else:
+                        stop_px = max(stop_px, entry)
+            # STALE EXIT (--stale-exit-bars; 0 = off, byte-identical; PI-20261123-SME5WDGR-0008): close at the bar CLOSE once the trade has been held >= N bars and is
+            # still below --stale-exit-below-r of open profit. Checked only if neither the stop nor the target hit this bar (they break above), the same
+            # precedence as backtest_squeeze.py / backtest_trend.py.
+            if stale_exit_bars > 0 and (j - i) >= stale_exit_bars:
+                cl = float(df["close"].iloc[j])
+                r_close = (cl - entry) / risk if direction == "long" else (entry - cl) / risk
+                if r_close < stale_exit_below_r:
+                    exit_price, exit_idx = cl, j
+                    exit_reason = "stale_stop"
+                    break
         if exit_price is None:
             exit_price = float(df["close"].iloc[exit_idx])
         r = ((exit_price - entry) / risk if direction == "long"
@@ -422,7 +450,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                               "adx_max": adx_max, "min_confidence": min_confidence,
                               **({"vol_skip_above_pctl": vol_skip_above_pctl, "vol_skip_below_pctl": vol_skip_below_pctl,
                                   "vol_pctl_window": vol_pctl_window}
-                                 if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else {})})
+                                 if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else {}),
+                              **({"stale_exit_bars": stale_exit_bars, "stale_exit_below_r": stale_exit_below_r} if stale_exit_bars > 0 else {}),
+                              **({"be_floor_r": be_floor_r} if be_floor_r > 0.0 else {})})
 
 
 def _fee_only_r(t: Trade) -> float:
@@ -684,6 +714,11 @@ def main(argv: List[str]) -> int:
                    help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
     p.add_argument("--vol-pctl-window", type=int, default=lever_gates.DEFAULT_WINDOW,
                    help="Trailing window (bars) for the ATR percentile rank.")
+    p.add_argument("--stale-exit-bars", type=int, default=0,
+                   help="M20 stale-stop: close at bar close after N bars if still below --stale-exit-below-r (0=off).")
+    p.add_argument("--stale-exit-below-r", type=float, default=0.0)
+    p.add_argument("--be-floor-r", type=float, default=0.0,
+                   help="MI-165 break-even floor (0=off): once the trade has seen >= this many R the stop may never be worse than entry.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live-parity confidence (pierce/ATR) is below this.")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
@@ -740,7 +775,9 @@ def main(argv: List[str]) -> int:
                      adx_period=args.adx_period,
                      side_filter=args.side_filter, skip_hours=args.skip_hours,
                      vol_skip_above_pctl=args.vol_skip_above_pctl, vol_skip_below_pctl=args.vol_skip_below_pctl,
-                     vol_pctl_window=args.vol_pctl_window)
+                     vol_pctl_window=args.vol_pctl_window,
+                     stale_exit_bars=args.stale_exit_bars, stale_exit_below_r=args.stale_exit_below_r,
+                     be_floor_r=args.be_floor_r)
     if args.confidence_sweep:
         sw = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(sw))
