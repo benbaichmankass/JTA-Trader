@@ -17,14 +17,15 @@
       "context": {
         "account_id": "tradeify_1",
         "trigger": "the 21:11:45Z prop SL hit (SOL long, ticket prop-manual-7bc75cd2d4dd, -$50) left the account near its static floor",
-        "equity_usd": 9614.35,
-        "balance_usd": 9584.39,
+        "equity_usd": null,
+        "balance_usd": null,
         "static_dd_floor_usd": 9400.0,
-        "distance_to_floor_usd": 214.35,
+        "distance_to_floor_usd": null,
         "risk_per_ticket_usd": 50.0,
         "losses_to_floor_at_1r": 4,
         "status_reported_at": "2026-11-14T21:16:23Z",
-        "daily_dd_switch": "armed (daily limit only)"
+        "daily_dd_switch": "armed (daily limit only)",
+        "redaction_note": "account balance redacted (public repo); losses_to_floor_at_1r and the firm static_dd_floor_usd are kept"
       },
       "cat": "runtime-order-path",
       "where": "src/prop/prop_risk_gate.py (grade_ticket_risk); consumers src/prop/prop_executor.py evaluate_guards, src/prop/phone_executor.py live_cushion_refusals"
