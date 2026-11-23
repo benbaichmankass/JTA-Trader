@@ -1062,10 +1062,10 @@ def persistence(folds: list[dict], key: str = "refit") -> dict:
     fold-level se (the folds are the independent units here; n_folds is small, so this is reported, never a gate)."""
     rows = [(f[key]["long"]["mean_net_r"], f[key]["short"]["mean_net_r"]) for f in folds
             if f.get(key) and f[key]["long"]["n"] and f[key]["short"]["n"]]
-    gaps = np.array([s - l for l, s in rows], float)
+    gaps = np.array([sh - lo for lo, sh in rows], float)
     k = len(gaps)
-    out = {"n_folds_with_both_sides": k, "folds_long_negative": int(sum(1 for l, _ in rows if l < 0)),
-           "folds_short_positive": int(sum(1 for _, s in rows if s > 0)), "folds_short_beats_long": int((gaps > 0).sum())}
+    out = {"n_folds_with_both_sides": k, "folds_long_negative": int(sum(1 for lo, _ in rows if lo < 0)),
+           "folds_short_positive": int(sum(1 for _, sh in rows if sh > 0)), "folds_short_beats_long": int((gaps > 0).sum())}
     if k > 1:
         sd = gaps.std(ddof=1)
         out |= {"mean_gap_short_minus_long": float(gaps.mean()), "se_gap_across_folds": float(sd / np.sqrt(k)),

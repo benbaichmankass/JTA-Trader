@@ -7,7 +7,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import ml_decision_entry as E
+import ml_decision_entry as E  # noqa: E402
 
 
 def _tk(sides, rs, days):
@@ -35,7 +35,9 @@ def test_clustered_se_exceeds_iid_when_a_week_is_one_shock():
 
 
 def test_persistence_counts_only_folds_with_both_sides():
-    f = lambda l, s: {"refit": {"long": {"n": 5 if l is not None else 0, "mean_net_r": l}, "short": {"n": 5 if s is not None else 0, "mean_net_r": s}}}
+    def f(lo, sh):
+        return {"refit": {"long": {"n": 5 if lo is not None else 0, "mean_net_r": lo},
+                          "short": {"n": 5 if sh is not None else 0, "mean_net_r": sh}}}
     p = E.persistence([f(-0.5, 0.5), f(-0.1, 0.3), f(0.2, None)])
     assert p["n_folds_with_both_sides"] == 2 and p["folds_long_negative"] == 2 and p["folds_short_positive"] == 2
     assert abs(p["mean_gap_short_minus_long"] - 0.7) < 1e-12
