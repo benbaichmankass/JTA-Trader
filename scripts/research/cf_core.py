@@ -511,7 +511,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
                  rules=[{"kind": "stop_at", "trigger_r": trig, "level_r": lvl}])
         if i_in is not None:                                                      # (4) entry-side
             for d in EXT_DELAY_BARS:
-                j = i_in + d
+                j = i_in + d                                                       # i_in = the first bar at/after the (bar-close) fill: d bars later
                 xentry(f"ext_delay_{d}bar", f"enter {d} bar(s) later at the open, same stop/TP distances", {"delay_bars": d},
                        j, bars[j]["open"] if j < len(bars) else None)
             if atr:

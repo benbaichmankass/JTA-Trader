@@ -235,7 +235,7 @@ def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random:
         else:
             h = cf_core.resolve_horizon({"timeframe": tf}, cfg)["seconds"]
             cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random, leg_meta=job.get("_leg_meta"),
-                                        arm_set=arm_set)
+                                        arm_set=arm_set, entry_at_bar_close=True)
     return {"trade_key": cf["trade_key"], "strategy": row.get("strategy"), "symbol": row.get("symbol"), "timeframe": tf,
             "direction": row.get("direction"), "entry_time": row.get("entry_time"), "net_r": row.get("net_r"),
             "source_file": job["_file"], "cf": cf}
