@@ -1,0 +1,293 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "reduce",
+    "tighten",
+    "widen_sl"
+   ],
+   "evidence": "bybit_orders: SL None / TP None, position True, matched by symbol; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "mechanics": {
+    "by_design": null,
+    "evidence": "bybit_1: this package's own SL leg id is not resting, but a ETHUSDT SL leg rests at the package level 1668.31642857",
+    "verdict": "match"
+   },
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "unknown"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "read"
+  },
+  "correlated_open_packages": [],
+  "direction": "long",
+  "funding": null,
+  "news": {
+   "adjustment": -0.18125,
+   "decision": "reduce",
+   "ts": "2026-11-23T20:08:06.376404+00:00",
+   "veto": false
+  },
+  "previous_review": null,
+  "symbol": "ETHUSDT"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "MGC",
+    "long",
+    "mgc_trend_1h",
+    0.55
+   ],
+   [
+    "BTCUSDT",
+    "long",
+    "trend_donchian_1h",
+    0.226
+   ],
+   [
+    "ETHUSDT",
+    "long",
+    "eth_pullback_prop_2h",
+    -0.187
+   ],
+   [
+    "ADAUSDT",
+    "long",
+    "trend_donchian_ada_4h",
+    -0.747
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    1.1
+   ],
+   [
+    "BTCUSDT",
+    "long",
+    "trend_donchian",
+    0.173
+   ],
+   [
+    "SPY",
+    "short",
+    "spy_pullback_1h",
+    0.0732
+   ],
+   [
+    "QQQ",
+    "short",
+    "qqq_pullback_1h",
+    -0.0723
+   ],
+   [
+    "IEF",
+    "long",
+    "ief_pullback_1d",
+    0.986
+   ],
+   [
+    "ETHUSDT",
+    "long",
+    "trend_donchian_eth",
+    0.236
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": null,
+  "exit_plan": {
+   "declared": {},
+   "entry": 1745.71,
+   "exit_plan_state": null,
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": 1668.32,
+   "tp_now": null
+  },
+  "htf": null,
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": 0.016693975903614464,
+     "backtest_n": 83,
+     "book": "realMoney",
+     "closed": 19,
+     "live_percentile": 33.3,
+     "live_r": -2.4711,
+     "p5": -8.2593,
+     "p50": -0.004,
+     "p95": 10.3014,
+     "r_trades": 19,
+     "verdict": "CONSISTENT",
+     "why": null
+    },
+    {
+     "backtest_expectancy_r": 0.016693975903614464,
+     "backtest_n": 83,
+     "book": "mirror",
+     "closed": 11,
+     "live_percentile": 7.9,
+     "live_r": -5.4955,
+     "p5": -6.2069,
+     "p50": -0.2269,
+     "p95": 8.0023,
+     "r_trades": 11,
+     "verdict": "CONSISTENT",
+     "why": null
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": -0.1868,
+  "peak_r": null,
+  "r_to_stop": 0.8132,
+  "r_to_target": 2.403
+ },
+ "generator": {
+  "head": "ceeb10ee01",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-23T20:08:44Z",
+ "leg": "eth_pullback_2h",
+ "mechanics": {
+  "evidence": "bybit_1: this package's own SL leg id is not resting, but a ETHUSDT SL leg rests at the package level 1668.31642857",
+  "per_account": {
+   "bybit_1": {
+    "by_design": null,
+    "evidence": "bybit_1: this package's own SL leg id is not resting, but a ETHUSDT SL leg rests at the package level 1668.31642857",
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "state.sl/tp",
+   "reason": "order_packages row not in the paged journal read; falling back to the trade row"
+  },
+  {
+   "field": "state.sl",
+   "reason": "derived from telemetry entry +/- risk_per_unit (initial stop), not the live stop"
+  },
+  {
+   "field": "read:prop_status:breakout_2",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:tradeify_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:prop_status:velotrade_1",
+   "reason": "<urlopen error [Errno 111] Connection refused>"
+  },
+  {
+   "field": "read:order_packages@0",
+   "reason": "diag journal?table=order_packages&limit=150&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_con"
+  },
+  {
+   "field": "read:trades@0",
+   "reason": "diag journal?table=trades&limit=1000&offset=0: exit 3 (ict-bot.duckdns.org -> answered_502. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' m"
+  },
+  {
+   "field": "regime.atr_now_over_entry",
+   "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
+  },
+  {
+   "field": "regime.trend_now",
+   "reason": "fewer than 30 closed bars, or the detector could not be imported"
+  },
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime=None vol_regime=None: not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context_v3.chart",
+   "reason": "no closed candles on the leg timeframe (route unreachable or timeframe unrecorded)"
+  },
+  {
+   "field": "context_v3.htf",
+   "reason": "no closed candles on the higher timeframe '1d'"
+  }
+ ],
+ "order_package_id": "pkg-b39fcf1627894e3e",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "priced_options",
+    "reason": "could_not_price"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.chart",
+    "reason": "context_null:chart"
+   },
+   {
+    "count": 1,
+    "denominator": 1,
+    "field": "context_v3.htf",
+    "reason": "context_null:htf"
+   }
+  ],
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": null,
+ "priced_options_state": "could_not_price",
+ "regime": {
+  "adx_now": null,
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null,
+  "timeframe": "2h",
+  "timeframe_source": "leg_suffix",
+  "trend_now": null
+ },
+ "review_id": "LR-20261123T2008Z-pkg-b39fcf1627894e3e",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 1,
+  "giveback_r": null,
+  "open_r": -0.1868,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1668.31642857,
+  "tp": null
+ },
+ "trades": []
+}
