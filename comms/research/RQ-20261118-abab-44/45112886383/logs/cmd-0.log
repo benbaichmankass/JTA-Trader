@@ -1,0 +1,9 @@
+candle dataset: served yahoo__SPY__60m (5006 rows, last 2026-11-18 20:30:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261118-abab-44/45112886383/arms/A__trades.jsonl --json comms/research/RQ-20261118-abab-44/45112886383/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0
+[S_OPEN] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261118-abab-44/45112886383/arms/S_OPEN__trades.jsonl --json comms/research/RQ-20261118-abab-44/45112886383/arms/S_OPEN__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --skip-hours 13,14
+[S_CLOSE] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol SPY --resample 1h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261118-abab-44/45112886383/arms/S_CLOSE__trades.jsonl --json comms/research/RQ-20261118-abab-44/45112886383/arms/S_CLOSE__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --skip-hours 19,20
+{
+ "verdict": "fail",
+ "label": "incumbent_stands",
+ "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}
