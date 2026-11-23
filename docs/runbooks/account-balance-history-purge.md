@@ -1,6 +1,7 @@
 # Account balance / equity history purge (git history rewrite)
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-11-23` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `lookup` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+
 >
 > **Gates this adds or changes: none.** This is a one-off operation, not a standing rule. It is **prepared, not executed**: lane
 > `BALANCE-HISTORY-PURGE-PREP-20261123` ran it only on a scratch `--mirror` clone. Nothing has been pushed.
