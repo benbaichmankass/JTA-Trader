@@ -1,0 +1,10 @@
+candle dataset: served binance__BTCUSDT__5 (218881 rows, last 2026-11-17 23:55:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol BTCUSDT --timeframe 5m --strategy-name ict_scalp_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-44/45082630356/arms/A__trades.jsonl --json comms/research/RQ-20261101-78fc-44/45082630356/arms/A__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --start 2024-10-05 --end 2026-10-04 23:59
+[H4] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol BTCUSDT --timeframe 5m --strategy-name ict_scalp_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-44/45082630356/arms/H4__trades.jsonl --json comms/research/RQ-20261101-78fc-44/45082630356/arms/H4__bt.json --htf-rule 4h --htf-ema-period 20 --sim-breakeven --start 2024-10-05 --end 2026-10-04 23:59
+[SLB] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol BTCUSDT --timeframe 5m --strategy-name ict_scalp_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-44/45082630356/arms/SLB__trades.jsonl --json comms/research/RQ-20261101-78fc-44/45082630356/arms/SLB__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --atr-sl-buffer-mult 0.6 --start 2024-10-05 --end 2026-10-04 23:59
+[LIM] /usr/bin/python3 /tmp/repo/scripts/backtest_ict_scalp.py --data <data> --symbol BTCUSDT --timeframe 5m --strategy-name ict_scalp_5m --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261101-78fc-44/45082630356/arms/LIM__trades.jsonl --json comms/research/RQ-20261101-78fc-44/45082630356/arms/LIM__bt.json --htf-rule 1h --htf-ema-period 20 --sim-breakeven --entry-mode limit --start 2024-10-05 --end 2026-10-04 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "LIM beats the incumbent A (net R -57.8995 vs -85.1881) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}
