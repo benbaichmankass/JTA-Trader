@@ -1,6 +1,6 @@
 id: RQ-20261118-abab-44
 title: 'SESSION lever family on spy_pullback_1h (programme review 2026-11-18, lane QUEUE-FILL): does any of S_OPEN/S_CLOSE (SESSION skip-hours) beat the declared leg, net of the harness cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -119,17 +119,17 @@ related:
 - RQ-20261117-b3aa-05
 - research/levers/spy_pullback_1h.yaml
 rearmed_at: '2026-11-23T03:12:00+00:00'  # COMMAND/RULE MISMATCH fixed (manager 2026-11-23, same as abab-19): the command graded with `--grade sweep --baseline A --delta-r 4.0 --folds 4 --fold-majority 3` but the registered rule is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005). Landed rows are NOT rewritten. result row was graded under an unregistered grade; re-grade pending. Status flipped done -> queued (manager 2026-11-23) so this re-arm dispatches (the dispatcher only runs status queued); the grading block is kept and the grader re-reads the new row.
+last_dispatched_at: '2026-11-23T05:00:31+00:00'
 grading:
   attested: RULERQ20261118abab44
   auto: true
   decision_rule_id: RULERQ20261118abab44
   evidence:
-  - research/results/RQ-20261118-abab-44/44593881700.jsonl
-  graded_at: '2026-11-20'
+  - research/results/RQ-20261118-abab-44/45112886383.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
   note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
     confirmatory re-run)'
-  reason: 2 row(s), all measured, all fail
-  rows: 2
+  reason: 1 row(s), all measured, all fail
+  rows: 1
   verdict: fail
-last_dispatched_at: '2026-11-23T05:00:31+00:00'

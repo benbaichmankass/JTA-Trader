@@ -107,7 +107,7 @@ run:
   inputs:
     research_unit: RQ-20261123-a9f3-01
   timeout_minutes: 195
-status: queued
+status: done
 theme: live_strategy
 title: 'SESSION lever twin on XRPUSDT (fvg_range_15m config, S_ASIA only): does skipping UTC hours 0-7 beat the declared fvg_range_15m config on a disjoint symbol, net of the harness cost stack? (follow-up
   of RQ-20261118-abab-19, which is re-armed on its registered grade)'
@@ -125,3 +125,14 @@ why_this_matters: 'RQ-20261118-abab-19 landed a PASS for S_ASIA on fvg_range_15m
   except that the arm grid is one candidate. Caveat set before the run: XRP is highly correlated with BTC in time, so this is a different symbol, not an independent market. A PASS is a lead for a live-producer
   check and a Tier-3 declare PROPOSAL, never a config edit; a FAIL closes this grid on XRPUSDT only.'
 last_dispatched_at: '2026-11-23T02:38:47+00:00'
+grading:
+  attested: RULERQ20261123a9f301
+  auto: true
+  decision_rule_id: RULERQ20261123a9f301
+  evidence:
+  - research/results/RQ-20261123-a9f3-01/45101421522.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

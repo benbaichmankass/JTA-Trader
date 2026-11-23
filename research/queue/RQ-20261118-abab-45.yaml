@@ -2,7 +2,7 @@
 id: RQ-20261118-abab-45
 title: 'DIRECTION lever family on squeeze_breakout_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost
   stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -121,3 +121,16 @@ related:
 - research/levers/squeeze_breakout_4h.yaml
 rearmed_at: '2026-11-23T03:05:00+00:00'  # run 45091727521 and the 00:56Z dispatch died in build_arm_argv: exit_lever_ablation refused the squeeze harness (now covered, verified locally: A n 105, LONG/SHORT differ); command moved from --grade sweep (4 folds) to the registered replace/6-fold grade
 last_dispatched_at: '2026-11-23T05:00:33+00:00'
+grading:
+  attested: RULERQ20261118abab45
+  auto: true
+  decision_rule_id: RULERQ20261118abab45
+  evidence:
+  - research/results/RQ-20261118-abab-45/45112889142.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
