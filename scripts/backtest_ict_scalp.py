@@ -365,6 +365,7 @@ def _simulate_exit(
     stale_exit_bars: Optional[int] = None,
     stale_exit_below_r: float = 0.0,
     giveback_min_mfe_r: float = 0.0,
+    be_floor_r: float = 0.0,
     be_arm_on_touch: bool = False,
     giveback_r: float = 1.0,
     bank_frac: float = 0.0,
@@ -405,6 +406,7 @@ def _simulate_exit(
     risk_1r = abs(entry - sl) if entry is not None else None
     cur_sl = sl
     be_armed = False
+    floor_on = False          # --be-floor-r applied (PI-20261123-SME5WDGR-0008); labels the later stop-out a scratch, never arms the ratchet
     banked = False            # M20 partial-TP rung filled?
     banked_index = None        # ...and on WHICH bar, so capital freed at the
                                # rung can be credited its shorter hold. A
@@ -450,7 +452,7 @@ def _simulate_exit(
         if direction == "long":
             # Pessimistic ordering: if both touched in one bar, count SL first.
             if bar_low <= cur_sl:
-                return {"outcome": "be_stop" if be_armed else "sl_hit",
+                return {"outcome": "be_stop" if (be_armed or floor_on) else "sl_hit",
                         "exit_index": j, "exit_price": cur_sl,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
@@ -461,7 +463,7 @@ def _simulate_exit(
                         "banked_index": banked_index}
         else:
             if bar_high >= cur_sl:
-                return {"outcome": "be_stop" if be_armed else "sl_hit",
+                return {"outcome": "be_stop" if (be_armed or floor_on) else "sl_hit",
                         "exit_index": j, "exit_price": cur_sl,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
@@ -506,6 +508,15 @@ def _simulate_exit(
                         "exit_price": lever_close,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
+        # BREAK-EVEN FLOOR (--be-floor-r; 0 = off, byte-identical; PI-20261123-SME5WDGR-0008): once the trade has SEEN >= be_floor_r R of favourable
+        # excursion (the intrabar extreme, `best`), the stop may never be worse than entry. Same meaning as backtest_trend.py / backtest_squeeze.py
+        # (MI-165). It runs after this bar's own SL/TP/lever tests, so it binds from the NEXT bar (stop-first preserved), and it never touches the
+        # --sim-breakeven ratchet (which still arms on a CLOSE >= 1R and may set a stop above entry by be_offset_bps).
+        if be_floor_r > 0.0 and entry is not None and risk_1r and risk_1r > 0:
+            _mfe_floor_r = ((best - entry) / risk_1r if direction == "long" else (entry - best) / risk_1r)
+            if _mfe_floor_r >= be_floor_r:
+                cur_sl = max(cur_sl, entry) if direction == "long" else min(cur_sl, entry)
+                floor_on = True
         if (be_offset_bps is not None and not be_armed
                 and entry is not None and risk_1r and risk_1r > 0):
             # ARMING BASIS — close vs TOUCH (BL-20260810 intrabar-monitor work).
@@ -770,6 +781,7 @@ def run_backtest(
     stale_exit_bars: Optional[int] = None,
     stale_exit_below_r: float = 0.0,
     giveback_min_mfe_r: float = 0.0,
+    be_floor_r: float = 0.0,
     giveback_r: float = 1.0,
     bank_frac: float = 0.0,
     bank_at_r: float = 1.0,
@@ -788,6 +800,8 @@ def run_backtest(
     decision_bar: str = "closed",
     decision_1m: Optional[pd.DataFrame] = None,
 ) -> Dict[str, Any]:
+    if be_floor_r < 0.0:
+        raise ValueError(f"be_floor_r must be >= 0 (0 = off), got {be_floor_r!r}")
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
     skip_hour_set = _parse_skip_hours(skip_hours)
@@ -1024,6 +1038,7 @@ def run_backtest(
             stale_exit_bars=stale_exit_bars,
             stale_exit_below_r=stale_exit_below_r,
             giveback_min_mfe_r=giveback_min_mfe_r,
+            be_floor_r=be_floor_r,
             giveback_r=giveback_r,
             bank_frac=bank_frac,
             bank_at_r=bank_at_r,
@@ -1716,6 +1731,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stale-exit-below-r", type=float, default=0.0, metavar="R",
                    help="Threshold R for --stale-exit-bars (default 0.0 = only cut "
                         "trades still under water at N bars).")
+    p.add_argument("--be-floor-r", type=float, default=0.0, metavar="R",
+                   help="MI-165 break-even floor (0.0=off): once the trade has seen >= R of favourable excursion the stop may never be worse than entry. "
+                        "Binds from the next bar; independent of --sim-breakeven.")
     p.add_argument("--giveback-min-mfe-r", type=float, default=0.0, metavar="R",
                    help="M20 giveback-stop lever: arm once peak open profit reaches "
                         "this many R (0.0=off).")
@@ -1954,6 +1972,7 @@ def main(argv: List[str]) -> int:
                          if args.stale_exit_bars is not None else None),
         stale_exit_below_r=float(args.stale_exit_below_r),
         giveback_min_mfe_r=float(args.giveback_min_mfe_r),
+        be_floor_r=float(args.be_floor_r),
         giveback_r=float(args.giveback_r),
         bank_frac=float(args.bank_frac),
         bank_at_r=float(args.bank_at_r),

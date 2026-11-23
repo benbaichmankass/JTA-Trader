@@ -64,6 +64,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import target_basis  # noqa: E402  (the ONE take-profit-basis definition)
+import lever_gates  # noqa: E402  (the ONE ATR-percentile vol-at-entry gate; PI-20261123-SME5WDGR-0008)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
@@ -212,7 +213,12 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                  giveback_min_mfe_r: float = 0.0, giveback_r: float = 1.0,
                  tp_cap_pct: float = 0.0, no_tp: bool = False,
                  emit_path: Optional[str] = None,
-                 side_filter: str = "both", skip_hours: str = "") -> Dict[str, Any]:
+                 side_filter: str = "both", skip_hours: str = "",
+                 vol_skip_above_pctl: float = 0.0, vol_skip_below_pctl: float = 0.0,
+                 vol_pctl_window: int = lever_gates.DEFAULT_WINDOW) -> Dict[str, Any]:
+    _vol_errs = lever_gates.flag_errors(vol_skip_above_pctl, vol_skip_below_pctl, vol_pctl_window)
+    if _vol_errs:
+        raise ValueError("; ".join(_vol_errs))
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
     skip_hour_set = _parse_skip_hours(skip_hours)
@@ -220,6 +226,9 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
         raise ValueError(f"exit_style must be one of {_EXIT_STYLES}")
     df = df.reset_index(drop=True)
     df["atr"] = _atr(df, atr_period)
+    # VOL-AT-ENTRY gate series (PI-20261123-SME5WDGR-0008): only built when a flag is set, so the default run allocates nothing (byte-identical).
+    atr_pctl = (lever_gates.pctl_series(df["atr"], vol_pctl_window)
+                if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else None)
     # Range boundaries from the PRIOR `range_lookback` bars only (shift(1)) —
     # no lookahead; the current bar's own action decides the bounce.
     df["range_hi"] = df["high"].rolling(range_lookback).max().shift(1)
@@ -262,6 +271,11 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                     continue
             except (TypeError, ValueError):
                 pass
+        # VOL-AT-ENTRY GATE (PI-20261123-SME5WDGR-0008): skip a signal whose SIGNAL-bar ATR trailing percentile is in a skipped tail (same
+        # rule as backtest_trend.py M21 E-2, lever_gates.skips; an undefined percentile never skips). Default 0/0 = no gate = byte-identical.
+        if atr_pctl is not None and lever_gates.skips(atr_pctl, i, vol_skip_above_pctl, vol_skip_below_pctl):
+            i += 1
+            continue
         width = R - S
         price = c[i]
         # Width bounds (fraction of price) — reject degenerate (too tight to
@@ -499,7 +513,10 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                               "fvg_search": fvg_search, "min_fvg_size_bps": min_fvg_size_bps,
                               "atr_stop_buffer": atr_stop_buffer, "exit_style": exit_style,
                               "tp_r": tp_r, "timeout_bars": timeout_bars,
-                              "min_confidence": min_confidence})
+                              "min_confidence": min_confidence,
+                              **({"vol_skip_above_pctl": vol_skip_above_pctl, "vol_skip_below_pctl": vol_skip_below_pctl,
+                                  "vol_pctl_window": vol_pctl_window}
+                                 if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else {})})
 
 
 def _find_range_fvg(h, lo_arr, c, i, *, direction, fvg_search, min_fvg_size_bps,
@@ -777,6 +794,12 @@ def main(argv: List[str]) -> int:
                    help="Trade only this side (long suppresses shorts, short suppresses longs). Default both = unchanged.")
     p.add_argument("--skip-hours", default="",
                    help="CSV of UTC hours (0-23) whose SIGNAL bar is skipped. Default '' = no gate = unchanged.")
+    p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile exceeds this.")
+    p.add_argument("--vol-skip-below-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
+    p.add_argument("--vol-pctl-window", type=int, default=lever_gates.DEFAULT_WINDOW,
+                   help="Trailing window (bars) for the ATR percentile rank.")
     p.add_argument("--min-confidence", type=float, default=0.0)
     p.add_argument("--stale-exit-bars", type=int, default=0,
                    help="M20 stale-stop: close at bar close after N bars if still below --stale-exit-below-r (0=off).")
@@ -855,6 +878,8 @@ def main(argv: List[str]) -> int:
         tp_cap_pct=float(args.tp_cap_pct), no_tp=bool(args.no_tp),
         giveback_r=args.giveback_r,
         side_filter=args.side_filter, skip_hours=args.skip_hours,
+        vol_skip_above_pctl=args.vol_skip_above_pctl, vol_skip_below_pctl=args.vol_skip_below_pctl,
+        vol_pctl_window=args.vol_pctl_window,
         emit_path=args.emit_trades)
     print(_fmt(out))
     if args.json_out:
