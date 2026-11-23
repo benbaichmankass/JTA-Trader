@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group A: network). The landed row was producer_failed: the Kaggle kernel tried to fetch candles from data.binance.vision (no internet) before the published candle dataset covered this unit's feed (already diagnosed 2026-11-19 and owned by PI-20261118-EFILLW47-0003, which closes when the unit re-lands measured on a backend with the feed). The dataset now serves this feed (candle_dataset.covers True; a Kaggle run of the same harness on 2026-11-22, RQ-20261118-abab-16, logged 'candle dataset: served binance__BTCUSDT__240 ... from metis-research-candles'). last_dispatched_at cleared so the unit can re-run; rule and grading block unchanged (a measured re-run re-grades it). See PI-20261122-SME5WDGR-0003.
 # Hand-authored 2026-10-31 by the DAILY RESEARCH AUTHORING LANE (Tier 1), dispatched by the JTA Trader manager. Decision rule registered BEFORE any runner run. Gates: none.
 id: RQ-20261031-3ef3-09
 title: 'A top-volatility skip (skip entries above the trailing vol percentile) on trend_donchian_ada_4h: does VH95 or VH90 beat the declared leg net of cost over
@@ -104,7 +105,6 @@ related:
 - RQ-20261030-41cc-03
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
 status: queued
-last_dispatched_at: '2026-11-04T04:56:05+00:00'
 grading:
   attested: RULERQ202610313ef309
   auto: true
@@ -120,3 +120,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+last_dispatched_at: '2026-11-22T23:28:48+00:00'

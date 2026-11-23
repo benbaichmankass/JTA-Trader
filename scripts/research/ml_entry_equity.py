@@ -738,10 +738,12 @@ def h2h_stage(tab_fixed: pd.DataFrame, tab_struct: pd.DataFrame, v1: tuple, st: 
 
 def dev_row(d: dict, unit: str, where: str) -> dict:
     """The dev record in the runner's verdict.json contract (script_run.VERDICTS / READ_STATES): a descriptive stage carries
-    verdict 'indeterminate' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
-    research_result.validate REFUSES that pair: not_applicable is reserved for states where nothing was measured)."""
+    verdict 'no_action_warranted' (run 42119511272 wrote 'descriptive' -> malformed; run 42166322024 wrote 'not_applicable' with read_state measured ->
+    research_result.validate REFUSES that pair: not_applicable is reserved for states where nothing was measured). Manager ruling 2026-11-22:
+    'no_action_warranted' is the word for a descriptive stage with no decision rule; 'indeterminate' means a test that HAD a rule and could not decide
+    (thin n, mixed arms). The registered DEV rule (RQ-20261105-e9a1-01) is 'Descriptive: no pass bar'. Rows already recorded are not rewritten."""
     sel = d["selected"]
-    return {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": "indeterminate",
+    return {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": "no_action_warranted",
             "population": (f"DEV stage: purged walk-forward OOF restricted-long decisions on the {d.get('n_pool')}-ETF Alpaca liquidity pool, "
                            f"dates <= {d.get('train_end')}, {d['n_selection_draws']} (config, tau) draws"),
             "note": ("DEV stage (walk-forward <= %s; no confirming window loaded). Selected %s: OOF mean net R %s at n=%s"

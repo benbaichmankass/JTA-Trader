@@ -1,3 +1,4 @@
+# RE-ARMED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group D2; PI-20261122-SME5WDGR-0004): every landed row predates the fix and does not count against the retry cap. Cause fixed: ml_entry_equity.dev_row now records the descriptive DEV stage as measured + no_action_warranted (manager ruling 2026-11-22; the earlier rows were refused as malformed). The 98e3-* units do NOT supersede it: they use the structure-exit labels (pivot=5; sl_only), whereas e9a1-01 selects the equity-native model on the SL 2 / TP 3 / 24-bar labels; and e9a1-02 (the confirm, done, pass) consumed its selection (config B, tau 0.20), so a clean mechanically-graded dev row closes the chain. last_dispatched_at replaced by rearmed_at; rule unchanged.
 # Hand-authored 2026-11-05 by lane ML-ENTRY-ALL-ACCOUNTS / ML-ENTRY-EQUITY-NATIVE (Tier 1), dispatched by Manager Session 2026-11-05b.
 # DEV stage of the equity-native ENTRY model. Descriptive: iteration on the training-period walk-forward is unlimited and not claimed
 # (principles M13, #23461). The CONFIRMING read is a separate unit (RQ-20261105-e9a1-02) registered AFTER this result and BEFORE its run.
@@ -77,7 +78,7 @@ related:
 - ML-ENTRY-ALL-ACCOUNTS
 - RQ-20261104-a41f-01
 population: 'The registered POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2): active, tradable, us_equity ETFs (nasdaqtraded ETF=Y) with median daily dollar volume >= 50M USD over 2019-01-01..2020-12-31. The module refuses to run if the rule hash differs.'
-last_dispatched_at: '2026-11-06T03:38:56+00:00'
+rearmed_at: '2026-11-22T23:40:00+00:00'
 grading:
   auto: false
   graded_at: "2026-11-07"

@@ -1,3 +1,4 @@
+# RE-ARMED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group D2; PI-20261122-SME5WDGR-0004): every landed row predates the fix and does not count against the retry cap. Cause fixed: ml_entry_v2_run.write_verdict now maps the `levels` shape (winning_stack present -> pass, none -> fail); the committed local result (winning stack S3_R2_gate_24) maps to pass. last_dispatched_at replaced by rearmed_at; rule unchanged.
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1). Decision rule registered BEFORE the run. Gates: none.
 id: RQ-20261101-b608-01
 title: 'ENTRY v2 stack on dev: do the regularised recipe (R2), the cost gate (0.06) and the 2/4 bracket add up, and which stack goes to the one W1 read? Dev folds only'
@@ -97,7 +98,7 @@ programme_node:
   programme: P2
   node: P2-ENTRY-LEVERS
   goal: G4
-last_dispatched_at: '2026-11-02T10:49:24+00:00'
+rearmed_at: '2026-11-22T23:40:00+00:00'
 grading:
   attested: RULE-20261101-b608-01
   auto: true

@@ -170,6 +170,34 @@ def ci_edge_needed(rows):
             "n_needed_for_ci_lower_zero_at_edge": {str(e): math.ceil((G.Z95 * sd / e) ** 2) for e in (0.03, 0.05, 0.08, 0.10)}}
 
 
+def contract_verdict(res: dict) -> dict:
+    """The research-result contract's verdict.json for this DESCRIPTIVE diagnostic (script_run.py: verdict in VERDICTS, read_state in
+    READ_STATES, non-empty population, `n` present).
+
+    RQ-20261102-002 (minedge) and -003 (risk) register `Descriptive: no pass bar`, so a section that read is a measurement, not a
+    pass/fail: every requested section read_state `ok` -> read_state `measured`, verdict `no_action_warranted` (the result is read, nothing is
+    applied). A section that was requested but did not read (anything other than `ok`) means nothing usable was measured -> `no_data` +
+    `indeterminate`. `not_run` sections were not requested and are ignored. Before this the script wrote only result.json, so each
+    of these units landed as `producer_failed: no verdict.json` 2-3 times with byte-identical outputs (PI-20261122-SME5WDGR-0004)."""
+    asked = {k: res[k] for k in ("decomp", "risk", "minedge") if isinstance(res.get(k), dict) and res[k].get("read_state") != "not_run"}
+    ok = bool(asked) and all(v.get("read_state") == "ok" for v in asked.values())
+    bits = []
+    if "minedge" in asked and ok:
+        bits.append("min net edge (R/trade) on the grid clearing the V2 bar: " + ", ".join(
+            f"{f}={v.get('min_edge_r_on_grid_clearing_v2')}" for f, v in (asked["minedge"].get("firms") or {}).items())
+            + f"; CI clause true mean for lower bound 0 at n={asked['minedge'].get('ci_clause', {}).get('n')}: "
+              f"{asked['minedge'].get('ci_clause', {}).get('true_mean_net_r_for_ci_lower_bound_zero_at_this_n')}")
+    if "risk" in asked and ok:
+        bits.append("best EV risk_pct with breach odds under the ceiling: " + ", ".join(
+            f"{f}={v.get('best_ev_risk_with_B_below_ceiling')}" for f, v in (asked["risk"].get("firms") or {}).items()))
+    pop = f"{res.get('population')}; n={res.get('n')}; sections read: {', '.join(asked) or 'none'}" + (f"; {'; '.join(bits)}" if bits else "")
+    return {"verdict": "no_action_warranted" if ok else "indeterminate", "read_state": "measured" if ok else "no_data",
+            "n": res.get("n"), "population": pop,
+            "note": "descriptive diagnostic, no pass bar: " + ("every requested section read ok" if ok else
+                    "a requested section did not read (" + ", ".join(f"{k}={v.get('read_state')}" for k, v in asked.items()) + ")"),
+            "result_json": "result.json beside this file holds the per-firm points"}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ledger", default=str(DEFAULT_LEDGER))
@@ -201,6 +229,7 @@ def main():
         res["minedge"] = grid_section(rows, out / "minedge_work", a.jobs, seeds, "edge")
         res["minedge"]["ci_clause"] = ci_edge_needed(rows)
     (out / "result.json").write_text(json.dumps(res, indent=1))
+    (out / "verdict.json").write_text(json.dumps(contract_verdict(res), indent=1) + "\n")
     print(json.dumps({k: (v.get("read_state") if isinstance(v, dict) else v) for k, v in res.items() if k in ("decomp", "risk", "minedge", "enriched", "n")}))
 
 

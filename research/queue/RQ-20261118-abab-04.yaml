@@ -1,3 +1,4 @@
+# RE-QUEUED 2026-11-22 by lane QUEUE-FILL-STANDING-W48 (stranded-pool triage, group A: network). The landed row was producer_failed: the Kaggle kernel tried to fetch candles from data.binance.vision (no internet) before the published candle dataset covered this unit's feed (already diagnosed 2026-11-19 and owned by PI-20261118-EFILLW47-0003, which closes when the unit re-lands measured on a backend with the feed). The dataset now serves this feed (candle_dataset.covers True; a Kaggle run of the same harness on 2026-11-22, RQ-20261118-abab-16, logged 'candle dataset: served binance__BTCUSDT__240 ... from metis-research-candles'). last_dispatched_at cleared so the unit can re-run; rule and grading block unchanged (a measured re-run re-grades it). See PI-20261122-SME5WDGR-0003.
 id: RQ-20261118-abab-04
 title: 'DIRECTION lever family on trend_donchian_sol_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness
   cost stack?'
@@ -114,7 +115,6 @@ roadmap:
 related:
 - RQ-20261115-bf1b-24
 - research/levers/trend_donchian_sol_4h.yaml
-last_dispatched_at: '2026-11-18T23:44:57+00:00'
 grading:
   attested: RULERQ20261118abab04
   auto: true
@@ -133,3 +133,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 2
   verdict: null
+last_dispatched_at: '2026-11-22T23:28:57+00:00'

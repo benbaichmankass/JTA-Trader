@@ -1,6 +1,6 @@
 id: RQ-20261112-e4a7-01
 title: 'Desk event-driven packet arm (DESK-18H): does Claude, judging a masked packet opened ONLY when an open-interest shock (E4) fires, beat a same-geometry random entry by S3 >= +0.25 R (95% weekly-cluster CI lower bound > 0), net of the full cost stack, on the DEV window?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -136,17 +136,20 @@ related:
 - docs/design/desk-entry-review-redesign-2026-11-11.md
 last_dispatched_at: '2026-11-13T06:53:09+00:00'
 grading:
-  attested: RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM
-  auto: true
   decision_rule_id: RULE-RQ20261112-E4A7-01-DESK-EVENT-PACKET-ARM
   evidence:
+  - comms/research/RQ-20261112-e4a7-01/43381832714/verdict.json
+  - comms/research/RQ-20261112-e4a7-01/local-2026-11-12/verdict.json
   - research/results/RQ-20261112-e4a7-01/43381832714.jsonl
-  graded_at: '2026-11-13'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261113-SX5INCOP-0001
-  owner_reason: 'producer_failed: verdict.json parses (verdict S3_NOT_CLEARED, 762 judged) but the verdict
-    token is not in VERDICTS and n is absent; filed PI-20261113-SX5INCOP-0001'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
+  graded_at: '2026-11-22'
+  grader: lane QUEUE-FILL-STANDING-W48 (session_01AFoLuJnQqME7GPsme5wdGR), hand-graded from the committed verdict.json (the local run and the runner scoring agree) under the unit's registered rule
+  needs_review: false
+  reason: 'The landed runner row read producer_failed only because desk_event_packet_replay.py wrote the rule''s own word ''S3_NOT_CLEARED'' into the contract''s verdict field with no `n` (fixed in the same
+    PR as this grading: the word is now mapped and kept as verdict_word). The measurement itself is identical in the local run and the runner scoring. RESULT under the registered rule: S3_NOT_CLEARED (recorded
+    as fail). 762 of the 763-event DEV schedule were judged (a schedule prefix in whole batches of 100, as required); 113 filled proposals (take rate 0.148) over 29 weeks; S3 = +0.128 R, 95% weekly-cluster
+    CI [-0.258, +0.553], against the registered bar S3 >= +0.25 R with CI lower bound > 0: the point estimate is 0.122 R short and the CI lower bound is below zero. Controls held (planted oracle S3 +0.798,
+    CI [0.684, 0.912]; anti-oracle S3 -0.656, CI [-0.718, -0.593]). READ THIS WITH ITS POWER: at n=113 the iid minimum detectable effect is 0.403 R, larger than the +0.25 R bar, so this test could not have
+    detected a true +0.25 R; it is weak evidence against an effect of that size, not evidence of none. On the same 762 events the rule''s own entry earned S3 +0.149 R (CI [+0.049, +0.252]) and the judge-minus-rule
+    difference per event is +0.024 R (CI [-0.066, +0.116]): the judge did not measurably beat the rule''s entry. A clear would have been a DEV discovery only; this is not one. Advice-only; nothing applied.'
+  rows: 2
+  verdict: fail

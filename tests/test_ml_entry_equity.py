@@ -34,6 +34,8 @@ def test_dev_and_confirm_rows_satisfy_the_runner_verdict_contract():
     assert isinstance(row["population"], str) and row["population"].strip() and "n" in row
     row2 = Q.dev_row({**d, "selected": None}, "RQ-X", "research-script-run")
     assert row2["verdict"] in SR.VERDICTS and row2["n"] is None
+    # the DEV stage is descriptive (no pass bar): no_action_warranted, never 'indeterminate' (which means a test with a rule that could not decide)
+    assert row["verdict"] == "no_action_warranted" and row2["verdict"] == "no_action_warranted"
     import research_result as RR       # the emitter's own admissibility rule (measured + not_applicable is refused)
     for r in (row, row2):
         rec = RR.build(research_unit="RQ-20261105-001", decision_rule_id="R", decision_rule_registered_at="2026-11-05", verdict=r["verdict"],
