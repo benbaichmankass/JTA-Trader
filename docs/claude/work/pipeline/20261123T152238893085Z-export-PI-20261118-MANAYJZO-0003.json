@@ -1,0 +1,31 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the slug fix is merged on main before 2026-11-22T04:00Z and the next ml-entry-retrain PASS opens a promotion PR whose pr-landing guard is green (or a FAIL run, with the fix verified by reading the workflow on main)",
+    "conditions": [
+      "date:2026-11-22",
+      "manual:the 11-22 04:00Z ml-entry-retrain run either FAILs, or its PASS opens a bot/ml-entry-promote-* PR whose pr-landing-guard check is green"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-20",
+    "owner": "AM-OPS-11 (session_01AFoLuHd7TmmwRCXgeSYdCd)",
+    "reason": "code fix verified on main; only the first post-fix run remains"
+  },
+  "id": "PI-20261118-MANAYJZO-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-6, #26288 CI diagnosis",
+    "rerun": "git show origin/main:.github/workflows/ml-entry-retrain.yml | grep -n pr-landing/"
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "OBSERVED 2026-11-22 13:05Z (AM-OPS-11). ml-entry-retrain run 45021344426 (#11, schedule, started 12:15Z, about 8h late) concluded success and graded PASS. It opened HELD PR #28130 'ML entry: PROMOTE graded candidate ml_decision_entry_v1r20261122' from branch bot/ml-entry-promote-20261122-45021344426. The PR's guards job (137206759378) logs '--- pr-landing-guard: PASS' with 'pr-landing: OK — state=declared_needs_approval'. The landing file is .github/pr-landing/bot-ml-entry-promote-20261122-45021344426.json, the full branch slug, so the R11 failure that held #26288 red is fixed. pytest-run and pytest-collect are also green. The merge of #28130 is the operator's (Tier 3, real money).",
+  "tier": 1,
+  "what": "[ml/D3][real-money path] ml-entry-retrain.yml wrote its HELD promotion PR's landing file as .github/pr-landing/ml-entry-promote-<tag>-<run>.json while the branch is bot/ml-entry-promote-..., so pr-landing-guard R11 failed and #26288 (PASSing ENTRY refit ml_decision_entry_v1r20261115) sat red 11-15..11-18; its pointer note also named ml_decision_entry_v1 as revert target (real target = the previously served artifact). Fix on branch claude/ml6-entry-retrain-landing-slug (self-land): landing file = full branch slug; note reads the prior artifact_dir. Record note: the promotion grade's cost stack is the label stack (fee 11 + slip 3 + funding 1/8h), the stack RULE-ENTRY-PROMOTE-20261106 registered; not the per-symbol spread+impact stack. Must land before Sunday 11-22 04:00Z run. || [2026-11-20 AM-OPS-11] VERIFIED on origin/main 683171926: .github/workflows/ml-entry-retrain.yml:128 writes .github/pr-landing/${BR//\\//-}.json (the full branch slug, which matches check_pr_landing.py branch.replace('/', '-')); :103 reads the prior ENTRY_SERVED.json artifact_dir into the revert note. Remaining: observe the 11-22 04:00Z run. Nit: the PR body at :134 still says 'pushed with GITHUB_TOKEN, so CI does not start'. The push uses the BRANCH_PROTECTION_TOKEN PAT (:92-98), so that sentence is stale and may prompt a needless extra commit."
+}

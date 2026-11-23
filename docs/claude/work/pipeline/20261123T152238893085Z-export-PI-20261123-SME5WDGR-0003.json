@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0003",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 7, manager request (no new gate); population: 1,027 exit_lever_ablation units in research/queue/, 18 with registered-vs-executed grade mismatch",
+    "rerun": "python3 - <<'PY'\nimport yaml,glob\nn=0\nfor f in sorted(glob.glob('research/queue/RQ-*.yaml')):\n    u=yaml.safe_load(open(f)); c=[str(x) for x in (u.get('run') or {}).get('command') or []]\n    if 'exit_lever_ablation.py' not in ' '.join(c) or '--grade' not in c: continue\n    st=str((u.get('decision_rule') or {}).get('statistic',''))\n    if '--grade replace' in st and c[c.index('--grade')+1]!='replace': n+=1; print(u['id'])\nprint('mismatch',n)\nPY"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "PROPOSAL FOR THURSDAY (manager to propose; NOT a CI check, no gate added): research-queue units can execute a different grade than the one their registered decision_rule names, and nothing in the authoring path compares the two. Measured 2026-11-23 over 1,027 exit_lever_ablation units in research/queue/: 18 had a registered `--grade replace` (6 folds >= 4, 0.02 R x n(A), maxDD x 1.35) while the command ran `--grade sweep` (4 folds, majority 3, --delta-r 4.0) or `--grade holdout`: abab-04/08/09/13/16/17/18/21/23/24/25/30/34/36/43/44/45/46, plus abab-19 (fixed in #28286). 7 of them carried a PASS under the unregistered grade (abab-17/24/25/30/34/36/43). Already seen once on 11-19 as PI-20261119-FILLW47B-0005 for 25/31/35/37. Evidence the grade matters: abab-18 landed `fail` under sweep and previews `candidate_replaces_incumbent` under its registered grade (both arms still net negative). The fix applied was per-unit (PRs #28286, #28294, #28295, #28296). Open design question for the manager, not a build: whether the spec generator that wrote these (programme-review unit specs) should emit the registered flags from the rule, so the two cannot diverge, without adding any check that can refuse a PR. Also open: the 11 `done` units among the 18 cannot be re-run because the dispatcher only runs status queued; whether a re-armed done unit should be dispatchable is a dispatcher-policy question."
+}

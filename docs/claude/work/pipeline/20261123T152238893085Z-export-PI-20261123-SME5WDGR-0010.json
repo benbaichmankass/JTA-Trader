@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the continuation replay lands with a fidelity control (unmodified replay reproduces the recorded exit bar and net R) and the units are re-armed; the ltr-close replay is wired as a unit",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0010",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the blocked iteration units",
+    "rerun": "grep -n 'widen_sl\\|tp_extend' scripts/research/ltr_action_trigger_s0.py"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[owner: LTR / programme P1] ltr_action_trigger_s0.py states widen_sl and tp_extend are 'Not expressible here' (they need the path after the recorded exit: a continuation replay with a fidelity control); the ltr-close disjoint-window replay (LTR-CLOSE-CLASS-TEST) is not wired as a research-script-run unit. Verified: the only widen_sl/tp_extend mentions in the script are the not-offered note. Units: RQ-20261113-ed2b-02, RQ-20261113-ed2b-04, RQ-20261101-78fc-10. Population: the 41 research/queue/blocked/*.yaml units that carry an iteration block, read 2026-11-23 on origin/main; 0 of 41 can be re-armed mechanically today (cause verified for each in this item)."
+}

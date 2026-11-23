@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0006",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 8, manager request; evidence scripts/ops/dukascopy_instruments.py REL_PROXY rows and comms/research/RQ-20261118-abab-21 vs -23 summary.json",
+    "rerun": "python3 - <<'PY'\nimport json\nfor u,r in (('RQ-20261118-abab-21','45109589117'),('RQ-20261118-abab-23','45109587038')):\n    a=json.load(open(f'comms/research/{u}/{r}/summary.json'))['arms']\n    print(u,{k:(x['n'],x['net_r']) for k,x in a.items()})\nPY\n# identical lines = IAUM is read as GLD"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "PROXY-MAPPED SYMBOLS CARRY THEIR OWN POPULATION LABEL BUT READ ANOTHER INSTRUMENT'S CANDLES (manager asked, due 11-26). scripts/ops/dukascopy_instruments.py maps six symbols with REL_PROXY: SPYM->SPY CFD, IAUM->GLD CFD, SCHA->IWM CFD, MGC->XAU spot, MES->S&P index CFD, MNQ->NQ index CFD. Seven live legs sit on them: iaum_pullback_1d, scha_trend_long_1d, splg_trend_long_1d (SPYM), mgc_pullback_1d, mgc_trend_1h, ict_scalp_mgc_15m (MGC), mes_trend_long_1d (MES). AUDIT (2026-11-23, same-command pairs of exit_lever_ablation units, both landed, A arm compared): iaum_pullback_1d vs gld_pullback_1d: 3 pairs, ALL byte-identical (RQ-20261118-abab-23 vs -21: A n=63 +43.9371; RQ-20261101-5e01-01 vs -08 and 5e02-01 vs -08: A n=38 +21.7195), so every iaum unit that shares a command with a gld unit is a duplicate read under an IAUM label; scha_trend_long_1d vs iwm_trend_long_1d: 2 pairs, A differs (not duplicates); splg_trend_long_1d vs spy_trend_long_1d: 6 pairs, A differs (not duplicates); the mgc_* legs have no same-timeframe twin leg so were not compared. Action taken: the iaum_pullback_1d lever map now carries a manifest_notes entry marking abab-23 (and 5e01-01/5e02-01) as proxy duplicates that count once. Open for the manager: (1) whether a result row should carry the resolved instrument and relation (proxy vs same_ticker) so a label cannot hide a proxy, (2) whether a population test (pooled or promotion) may count a proxy-duplicate leg as a separate member, (3) the mgc_* and mes_* legs read a different vehicle than the one they trade (XAU spot, S&P CFD for futures): their results carry a vehicle gap in addition to the duplicate question. No unit was edited."
+}
