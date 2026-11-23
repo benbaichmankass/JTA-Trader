@@ -3,7 +3,7 @@
 id: RQ-20261122-c8e1-01
 title: 'ITERATION 3 of ltr-tighten-sl (late cell failed): does the SAME breakeven+0.25R tighten, fired only AFTER momentum has already failed (giveback / momentum_flip
   / structure_break / near_target), clear RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time tighten on the 4,076-trade Stage-0 corpus?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -142,3 +142,16 @@ run:
     research_unit: RQ-20261122-c8e1-01
   timeout_minutes: 120
 last_dispatched_at: '2026-11-22T20:49:09+00:00'
+grading:
+  attested: RULE-RQ-20261122-c8e1-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261122-c8e1-01
+  evidence:
+  - research/results/RQ-20261122-c8e1-01/45067107950.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

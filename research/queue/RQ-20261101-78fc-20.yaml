@@ -4,7 +4,7 @@ id: RQ-20261101-78fc-20
 title: 'ITERATION 1 of eth_pullback_prop_2h (fail): On eth_pullback_prop_2h over 2020-07-01..2026-10-15 23:59, does any of AD30 (adx_min=30),
   AD35 (adx_min=35), PF62 (pullback_frac=0.618) beat the declared leg (A) net of the full cost stack, by >= 0.02 R x n(A), in >= 4 of 6 calendar
   folds, with maxDD <= 1.'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -123,6 +123,7 @@ related:
 - RESEARCH-ITERATE
 - comms/strategy_evidence/eth_pullback_prop_2h.json
 what_it_does_not_do: Edits no config, roster or rule; places no order; a PASS is an input to the next iteration, not a promotion.
+last_dispatched_at: '2026-11-22T23:28:44+00:00'
 grading:
   attested: RULE-RQ-20261101-78fc-20
   auto: true
@@ -130,13 +131,9 @@ grading:
   evidence:
   - research/results/RQ-20261101-78fc-20/41541540586.jsonl
   - research/results/RQ-20261101-78fc-20/41577264148.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261101-78fc-20/45081920474.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
-    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 2 row(s), all measured, all pass (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 2
-  verdict: null
-last_dispatched_at: '2026-11-22T23:28:44+00:00'
+  verdict: pass

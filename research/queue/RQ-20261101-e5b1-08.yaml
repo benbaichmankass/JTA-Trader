@@ -89,7 +89,7 @@ run:
     research_unit: RQ-20261101-e5b1-08
   timeout_minutes: 150
   workflow: research-script-run.yml
-status: queued
+status: done
 theme: new_strategy_prop
 title: 'CONFIRMATION of a4e7-01 on a DISJOINT earlier window: trend_donchian_xrp_4h at the prop stack, V3 on breakout_2 / tradeify_1 / velotrade_1, 2020-10-01..2023-10-12'
 value:
@@ -102,20 +102,18 @@ why_this_matters: 'Operator 2026-10-31 (pipeline PI-20261031-TD4QC5GP-0005, verb
   its disjoint-window twin (as RQ-20261101-01-e5b1-08 does for a4e7-01) so a candidate PASS is never decided on one window. It runs whatever the verdict of a4e7-01
   is; it changes nothing by itself. Prior: docs/research/prop-replacement-2026-10-30/RESULT.md.'
 rearmed_at: '2026-11-22T23:35:00+00:00'  # argv fix: no --days so the 1110 d default fetch began 2023-10-18, after --end 2023-10-12 (empty window); --days 2400 verified to build the ledger (n=32 on e5b1-08, below min_n 88 = the registered INDETERMINATE)
+last_dispatched_at: '2026-11-23T00:42:48+00:00'
 grading:
   attested: RULE-RQ-20261101e5b108-PROP-CONFIRM
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-RQ-20261101e5b108-PROP-CONFIRM
   evidence:
-  - research/results/RQ-20261101-e5b1-08/41285715524.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261101-e5b1-08/45088114900.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: 'producer_failed (other:producer_failed: verdict.json malformed: population is requi)
-    on the newest row, 3 identical re-fires; failure mode and fix path named in PI-20261105-WDWYHZCN-0001
-    (RESEARCH-OPS-20261105-1449 triage)'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:42:48+00:00'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

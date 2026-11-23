@@ -2,7 +2,7 @@
 id: RQ-20261118-abab-04
 title: 'DIRECTION lever family on trend_donchian_sol_4h (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness
   cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -115,6 +115,7 @@ roadmap:
 related:
 - RQ-20261115-bf1b-24
 - research/levers/trend_donchian_sol_4h.yaml
+last_dispatched_at: '2026-11-22T23:45:50+00:00'
 grading:
   attested: RULERQ20261118abab04
   auto: true
@@ -122,15 +123,11 @@ grading:
   evidence:
   - research/results/RQ-20261118-abab-04/44383737943.jsonl
   - research/results/RQ-20261118-abab-04/44423403358.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261118-abab-04/45083496320.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261118-EFILLW47-0003
-  owner_reason: 'producer_failed on the kaggle_cpu kernel: no internet (data.binance.vision NameResolutionError)
-    or Yahoo refusing_us HTTP 429; not a verdict. Diagnosed and owned by PI-20261118-EFILLW47-0003 (W47b);
-    closes when the unit re-lands measured on a backend with the feed (PI-20261119-FILLW47B-0004 records
-    the backend per run). Triaged by research-ops 2026-11-19.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 2
-  verdict: null
-last_dispatched_at: '2026-11-22T23:45:50+00:00'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: fail

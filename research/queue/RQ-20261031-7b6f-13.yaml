@@ -92,7 +92,7 @@ run:
   inputs:
     research_unit: RQ-20261031-7b6f-13
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'TRANSFER of top-vol entry skip VH80/VH90 (VH80/VH90) to avax_pullback_2h: does any arm beat the declared leg net of cost over the leg''s declared window?'
 value:
@@ -104,19 +104,18 @@ why_this_matters: 'Transfer of a lever that PASSED elsewhere (top-vol entry skip
   to a sibling leg separates a leg-specific artifact (FAIL) from a lever that carries across the family (PASS). Decision it changes: whether the lever is queued for
   a Tier-3 note on avax_pullback_2h or stays an observation. PASS = lead for a Tier-3 note, never a config edit; FAIL closes this leg x arm-grid only, lever family
   stays open.'
+last_dispatched_at: '2026-11-22T23:28:45+00:00'
 grading:
   attested: RULERQ202610317B6F13
   auto: true
   decision_rule_id: RULERQ202610317B6F13
   evidence:
   - research/results/RQ-20261031-7b6f-13/41582609972.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261031-7b6f-13/45081922824.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
-    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 2
-  verdict: null
-last_dispatched_at: '2026-11-22T23:28:45+00:00'
+  verdict: fail
