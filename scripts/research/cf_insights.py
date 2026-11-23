@@ -58,7 +58,7 @@ def load(shards_dir: str) -> List[dict]:
                 rows.append({"k": r["trade_key"], "strat": r.get("strategy"), "fam": family(r.get("strategy")), "sym": r.get("symbol"),
                              "tf": r.get("timeframe"), "dir": r.get("direction"), "et": r.get("entry_time"), "rep": a.get("replayed_actual_net_r"),
                              "arm": arm, "ctx": c.get("context") or {}, "post_mfe": po.get("mfe_r"), "post_mae": po.get("mae_r"),
-                             "pv": (po.get("verdict") or {}).get("verdict"), "gap": (c.get("fidelity") or {}).get("abs_gap_r")})
+                             "pv": (po.get("verdict") or {}).get("verdict"), "rdiff": (po.get("verdict") or {}).get("r_diff"), "gap": (c.get("fidelity") or {}).get("abs_gap_r")})
     return rows
 
 
@@ -140,11 +140,49 @@ def decompose_leaves_r(rows: Sequence[dict]) -> List[dict]:
         g[(str(r["ctx"].get("replay_exit")), b)].append(r)
     out = []
     for (ex, b), rs in sorted(g.items(), key=lambda kv: -len(kv[1])):
-        pm = [x["post_mfe"] for x in rs if x["post_mfe"] is not None]
+        pm = [x["rdiff"] for x in rs if x["rdiff"] is not None]       # post-exit r_diff: R left on the table (post-exit MFE is not populated in cf_trade/1)
         pv = collections.Counter(x["pv"] for x in rs)
         out.append({"exit": ex, "mfe_pre_bucket": b, "n_unique": len(rs), "mean_rep_r": round(float(np.mean([x["rep"] for x in rs if x["rep"] is not None])), 4),
-                    "mean_post_exit_mfe_r": None if not pm else round(float(np.mean(pm)), 4),
+                    "mean_post_exit_r_diff": None if not pm else round(float(np.mean(pm)), 4),
                     "share_exited_early": round(pv.get("exited_early", 0) / max(1, sum(v for k, v in pv.items() if k)), 4)})
+    return out
+
+
+#: arms read on the round-trip population: do banking / break-even / wide-stop arms change what happens to trades that were once in profit?
+CENSUS_ARMS = ("ext_runner_50pct_at_1R", "ext_runner_50pct_at_1R_be", "ext_runner_50pct_at_2R", "ext_stopto_0R_at_0.5R", "ext_stopto_0.5R_at_1R",
+               "more_rule_1R_to_0R", "more_rule_1.5R_to_0R", "more_rule_2R_to_1R", "sl1.5_tp3", "ext_sl2.5x_tp3R", "ext_sl3x_tp3R", "ext_timestop_16bars")
+
+
+def round_trip_census(rows: Sequence[dict], thresholds: Sequence[float] = (1.0, 2.0)) -> Dict[str, Any]:
+    """ROUND-TRIP CENSUS (operator: bank R instead of round-tripping winners). Per MFE threshold T on UNIQUE trades:
+    reached  = trades whose pre-exit MFE (replayed path, in the trade's own R) reached >= T;
+    round-trip = of those, trades that ENDED at net R <= 0 (the replay baseline, net of cost);
+    given_back = MFE - final net R on those trades (R left between the peak and the exit). Shares carry their n.
+    ``arm_effect`` = mean (arm - replay) on the round-trip trades only: what each candidate does to exactly the trades the operator is worried about."""
+    out: Dict[str, Any] = {"n_unique": len(rows)}
+    have = [r for r in rows if r["ctx"].get("mfe_pre_r") is not None and r["rep"] is not None]
+    out["n_with_mfe"] = len(have)
+    # the SAME arms on ALL trades: the round-trip subset is selected on the OUTCOME (final R <= 0), so an arm that simply exits earlier always
+    # looks good there; the whole-book number beside it is the cost of acting on winners that would have gone on to pay.
+    allt = {}
+    for a_ in CENSUS_ARMS:
+        d_ = [r["arm"][a_] - r["rep"] for r in have if r["arm"].get(a_) is not None]
+        if len(d_) >= 500:
+            allt[a_] = {"n": len(d_), "mean_delta_r": round(float(np.mean(d_)), 4), "share_improved": round(float(np.mean(np.array(d_) > 0)), 4)}
+    out["arm_effect_all_trades"] = allt
+    for t in thresholds:
+        reach = [r for r in have if r["ctx"]["mfe_pre_r"] >= t]
+        rt = [r for r in reach if r["rep"] <= 0.0]
+        gb = [r["ctx"]["mfe_pre_r"] - r["rep"] for r in rt]
+        eff = {}
+        for a in CENSUS_ARMS:
+            d = [r["arm"][a] - r["rep"] for r in rt if r["arm"].get(a) is not None]
+            if len(d) >= 50:
+                eff[a] = {"n": len(d), "mean_delta_r": round(float(np.mean(d)), 4)}
+        out[f"mfe_ge_{t:g}R"] = {"n_reached": len(reach), "share_of_trades": None if not have else round(len(reach) / len(have), 4),
+                                 "n_round_trip": len(rt), "share_of_reached": None if not reach else round(len(rt) / len(reach), 4),
+                                 "mean_given_back_r": None if not gb else round(float(np.mean(gb)), 4),
+                                 "total_given_back_r": round(float(np.sum(gb)), 1), "arm_effect_on_round_trips": eff}
     return out
 
 
@@ -199,6 +237,13 @@ def slices(rows: Sequence[dict], arm: str) -> Dict[str, List[dict]]:
     return sl
 
 
+def _by_strategy(rows: Sequence[dict]) -> Dict[str, List[dict]]:
+    g: Dict[str, List[dict]] = collections.defaultdict(list)
+    for r in rows:
+        g[str(r["strat"])].append(r)
+    return g
+
+
 def analyze(shards_dir: str, min_n: int = MIN_N) -> Dict[str, Any]:
     raw = load(shards_dir)
     uniq = dedupe(raw)
@@ -216,7 +261,9 @@ def analyze(shards_dir: str, min_n: int = MIN_N) -> Dict[str, Any]:
         best = tab[0] if tab else None
         res["families"][fam] = {"n_unique_trades": len(rs), "mean_replay_r": round(float(np.mean([r["rep"] for r in rs if r["rep"] is not None])), 4),
                                 "stop_curve": stop_curve(rs), "top_arms": tab[:8], "worst_arms": tab[-4:],
-                                "entry_side": entry_side(rs), "leaves_r": decompose_leaves_r(rs)[:12],
+                                "entry_side": entry_side(rs), "leaves_r": decompose_leaves_r(rs)[:12], "round_trip_census": round_trip_census(rs),
+                                "round_trip_census_by_leg": {nm: round_trip_census(lr) for nm, lr in
+                                                             sorted(collections.defaultdict(list, {k: v for k, v in _by_strategy(rs).items() if len(v) >= 400}).items())},
                                 "slices_of_best": None if not best else {"arm": best["arm"], **slices(rs, best["arm"])}}
     return res
 

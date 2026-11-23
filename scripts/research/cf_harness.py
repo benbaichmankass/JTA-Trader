@@ -72,11 +72,14 @@ def _could_not(trade: dict, reason: str) -> dict:
 
 
 def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = None, horizon_cfg: Optional[dict] = None,
-              n_random: int = cf_core.N_RANDOM, leg_meta: Optional[dict] = None, arm_set: str = "standard") -> dict:
+              n_random: int = cf_core.N_RANDOM, leg_meta: Optional[dict] = None, arm_set: str = "standard", entry_at_bar_close: bool = False) -> dict:
     """The ``cf`` block for one emitted harness row. ``trade`` is the row the harness writes (strategy, symbol,
     entry_time, exit_time, direction, entry, sl, exit_price?, net_r, cost_fee_r, cost_funding_r?). ``cost_policy`` =
     ``{'basis': 'full'|'fee_only'}`` (default: 'full' when the row carries ``cost_funding_r``). ``leg_meta`` may carry
-    ``atr``, ``trail_mult``, ``tp`` (a price) to rebuild the leg's own trail/TP for the replay. Never raises on a
+    ``atr``, ``trail_mult``, ``tp`` (a price) to rebuild the leg's own trail/TP for the replay. ``entry_at_bar_close`` (default False =
+    byte-identical): the row's ``entry_time`` is the signal bar's OPEN stamp but the harness enters at that bar's CLOSE, so the replay must
+    start on the NEXT bar; True moves the fill to ``entry_time`` + one bar (otherwise the replay, and every entry-side arm, reads the
+    signal bar's own pre-entry range: a lookahead; measured on the first CF-INSIGHTS entry arms). Never raises on a
     ungradable row: it returns ``status: could_not_grade`` with a reason."""
     side = str(trade.get("direction") or "").lower()
     entry, sl = lrc._num(trade.get("entry")), lrc._num(trade.get("sl"))
@@ -98,7 +101,7 @@ def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = N
            "timeframe": (horizon_cfg or {}).get("timeframe")}
     fee_r = lrc._num(trade.get("cost_fee_r")) or 0.0
     leg = {"account_id": "backtest", "id": pkg["order_package_id"], "status": "closed", "account_class": "backtest",
-           "timestamp": lrc._iso(t_entry), "closed_at": lrc._iso(t_exit), "entry_price": entry,
+           "timestamp": lrc._iso(t_entry + (TF_SECONDS.get((horizon_cfg or {}).get("timeframe") or "", 0) if entry_at_bar_close else 0)), "closed_at": lrc._iso(t_exit), "entry_price": entry,
            "exit_price": lrc._num(trade.get("exit_price")), "position_size": 1.0, "exit_reason": trade.get("exit_reason"),
            "pnl": net_r * r_dist,                       # qty 1 => actual_r == the harness net_r, so fidelity is quoted against it
            "fee_taker_usd": fee_r * r_dist, "cost_source": "estimate"}

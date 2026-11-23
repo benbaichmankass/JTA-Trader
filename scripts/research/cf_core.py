@@ -473,16 +473,16 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
             ext_arms.append(_arm(arm_id, family, label, params, sim, legs, cm_lead, side, entry_fill, r, t_entry))
 
         def xentry(arm_id, label, params, j, px):
-            def unfilled(why=None):
-                ext_arms.append({"arm_id": arm_id, "family": "entry_side", "label": label, "params": params, "resolved": False, "net_r": None,
-                                 "filled": False, **({"why": why} if why else {})})
+            # ENTRY arms keep the bracket GEOMETRY: the stop (and TP) sit the same DISTANCES from the new fill as they did from the original
+            # entry, so risk per unit stays ``r_dist`` and R stays in the original unit. (Keeping the original stop PRICE shrinks the risk distance
+            # toward zero on a better fill and blows R up: measured, a -58,150,118 R outlier in the first extended run.)
             if j is None or j >= len(bars) or px is None:
-                return unfilled()
-            rd = abs(px - stop0)
-            if rd <= 0 or ((px <= stop0) if sign > 0 else (px >= stop0)):
-                return unfilled("entry_beyond_stop")
-            sim = simulate(bars[j:], side=side, entry_ref=px, r_dist=rd, t_entry=bars[j]["time"], stop0=stop0, tp=tp0, trail_dist=own_trail)
-            a = _arm(arm_id, "entry_side", label, params, sim, legs, cm_lead, side, px, rd, bars[j]["time"])
+                ext_arms.append({"arm_id": arm_id, "family": "entry_side", "label": label, "params": params, "resolved": False, "net_r": None, "filled": False})
+                return
+            stop_n = px - sign * r_dist
+            tp_n = None if tp0 is None else px + (tp0 - entry_ref)
+            sim = simulate(bars[j:], side=side, entry_ref=px, r_dist=r_dist, t_entry=bars[j]["time"], stop0=stop_n, tp=tp_n, trail_dist=own_trail)
+            a = _arm(arm_id, "entry_side", label, params, sim, legs, cm_lead, side, px, r_dist, bars[j]["time"])
             a["filled"] = True
             ext_arms.append(a)
 
@@ -511,8 +511,8 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
                  rules=[{"kind": "stop_at", "trigger_r": trig, "level_r": lvl}])
         if i_in is not None:                                                      # (4) entry-side
             for d in EXT_DELAY_BARS:
-                j = i_in + d
-                xentry(f"ext_delay_{d}bar", f"enter {d} bar(s) later at the open, same stop/TP prices", {"delay_bars": d},
+                j = i_in + d                                                       # i_in = the first bar at/after the (bar-close) fill: d bars later
+                xentry(f"ext_delay_{d}bar", f"enter {d} bar(s) later at the open, same stop/TP distances", {"delay_bars": d},
                        j, bars[j]["open"] if j < len(bars) else None)
             if atr:
                 for pa in EXT_LIMIT_ATR:

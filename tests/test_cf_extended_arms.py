@@ -8,6 +8,7 @@ REPO = Path(__file__).resolve().parents[1]
 for p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     sys.path.insert(0, str(p))
 import cf_core  # noqa: E402
+import cf_harness  # noqa: E402
 import live_review_counterfactual as lrc  # noqa: E402
 
 T0 = 1_792_000_000
@@ -75,3 +76,26 @@ def test_limit_entry_is_unfilled_when_price_never_pulls_back_and_filled_when_it_
     dip = [100.0, 99.6, 99.9, 100.6, 101.2, 101.6, 101.8, 101.8, 101.8, 101.8, 101.8, 101.8]
     f = _arm(_grade(dip, arm_set="extended"), "ext_limit_0.25atr", "ext_arms")
     assert f["filled"] is True and f["net_r"] is not None
+
+
+def test_entry_arms_keep_the_bracket_distances_so_r_cannot_blow_up():
+    # price gaps DOWN to just above the original stop at the delayed open: with a fixed stop PRICE the risk distance would collapse to 0.02
+    # and R would explode; with fixed distances R stays bounded in the original unit.
+    closes = [100.0, 99.02, 99.02, 99.5, 100.0, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5]
+    d1 = _arm(_grade(closes, arm_set="extended"), "ext_delay_1bar", "ext_arms")
+    assert d1["filled"] is True and abs(d1["net_r"]) < 5.0
+
+
+def test_entry_at_bar_close_stops_the_signal_bar_leaking_into_the_replay_and_the_entry_arms():
+    # the signal bar (time T0) dips to 98.5 BEFORE it closes at 100 (the harness entry price); the following bars only rise
+    bars = [{"time": T0, "open": 99.0, "high": 100.2, "low": 98.5, "close": 100.0, "volume": 1.0, "dur": 900}]
+    bars += [{"time": T0 + 900 * i, "open": 100.0 + 0.3 * i, "high": 100.4 + 0.3 * i, "low": 99.9 + 0.3 * i, "close": 100.2 + 0.3 * i, "volume": 1.0, "dur": 900}
+             for i in range(1, 14)]
+    trade = {"strategy": "s", "symbol": "ADAUSDT", "direction": "long", "entry_time": lrc._iso(T0), "exit_time": lrc._iso(T0 + 900 * 12), "entry": 100.0,
+             "sl": 99.0, "exit_price": 103.0, "exit_reason": "timeout", "net_r": 2.9, "cost_fee_r": 0.0, "cost_funding_r": 0.0}
+    cfg = {"timeframe": "15m", "max_hold_bars": 12}
+    meta = {"atr": 0.5, "trail_mult": 100.0}
+    leak = cf_harness.cf_fields(trade, bars, horizon_cfg=cfg, leg_meta=meta, n_random=3, arm_set="extended")
+    ok = cf_harness.cf_fields(trade, bars, horizon_cfg=cfg, leg_meta=meta, n_random=3, arm_set="extended", entry_at_bar_close=True)
+    assert leak["extended"]["ext_limit_0.5atr"] is not None          # default: fills on the signal bar's pre-entry low (the lookahead)
+    assert ok["extended"]["ext_limit_0.5atr"] is None                # fixed: the order exists only after the close, price never dips afterwards
