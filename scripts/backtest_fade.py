@@ -96,6 +96,8 @@ class Trade:
     # pierce depth past the channel / ATR, clamped [0,1]. Lets a backtest
     # sweep a min_confidence entry gate against the live one.
     confidence: float = 0.0
+    cf_atr: Optional[float] = None  # CF-C2: signal-bar ATR / resting target in force; read only by the --cf hook
+    cf_tp: Optional[float] = None
 
 
 def _load_candles(path: str) -> pd.DataFrame:
@@ -181,6 +183,17 @@ def _parse_skip_hours(raw: str) -> set:
     return out
 
 
+def _cf_for(t: "Trade", cb: Dict[str, float], strategy: str, symbol: str, frame_bars: Any, horizon_cfg: Dict[str, Any],
+            trail_mult: Optional[float]) -> Dict[str, Any]:
+    """The `cf` block (cf_trade/1) for one emitted row; see scripts/research/cf_harness.py."""
+    import cf_harness
+    row = {"strategy": strategy, "symbol": symbol, "entry_time": str(t.entry_time), "exit_time": str(t.exit_time),
+           "entry": t.entry, "sl": t.sl, "direction": t.direction, "exit_price": t.exit_price, "exit_reason": t.outcome,
+           "net_r": round(t.r_multiple - cb["total_cost_r"], 4), "cost_fee_r": cb["fee_r"], "cost_funding_r": cb["funding_r"]}
+    meta = {"atr": t.cf_atr, "trail_mult": trail_mult, "tp": t.cf_tp}
+    return cf_harness.cf_for_row(row, frame_bars, horizon_cfg, meta)
+
+
 def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  atr_stop_buffer: float, pierce_min: float, exit_style: str,
                  tp_cap_pct: float = 0.0,
@@ -194,7 +207,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  vol_skip_above_pctl: float = 0.0, vol_skip_below_pctl: float = 0.0,
                  vol_pctl_window: int = lever_gates.DEFAULT_WINDOW,
                  stale_exit_bars: int = 0, stale_exit_below_r: float = 0.0,
-                 be_floor_r: float = 0.0) -> Dict[str, Any]:
+                 be_floor_r: float = 0.0, cf: bool = False) -> Dict[str, Any]:
     if stale_exit_bars < 0 or be_floor_r < 0.0:
         raise ValueError(f"stale_exit_bars and be_floor_r must be >= 0 (0 = off), got {stale_exit_bars!r}, {be_floor_r!r}")
     _vol_errs = lever_gates.flag_errors(vol_skip_above_pctl, vol_skip_below_pctl, vol_pctl_window)
@@ -413,11 +426,17 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             entry=entry, sl=sl, risk=risk, exit_index=exit_idx,
             exit_time=df["timestamp"].iloc[exit_idx], exit_price=exit_price,
             outcome=exit_reason, r_multiple=round(r, 4), mfe_r=round(mfe, 3),
-            confidence=confidence))
+            confidence=confidence, cf_atr=float(atr), cf_tp=target))
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
     if emit_path:
         Path(emit_path).parent.mkdir(parents=True, exist_ok=True)
+        _cf_bars = _cf_horizon = None
+        if cf:        # CF-C2-HARNESS-REST (opt-in; off = byte-identical): adds one `cf` key per row (schema cf_trade/1)
+            sys.path.insert(0, str(Path(__file__).resolve().parent / "research"))
+            import cf_harness as _cf_h
+            _cf_horizon = {"timeframe": timeframe, "max_hold_bars": timeout_bars}
+            _cf_bars = _cf_h.frame_bars_for(df, timeframe)
         with open(emit_path, "w", encoding="utf-8") as fh:
             for t in trades:
                 cb = _cost_breakdown(t)
@@ -442,7 +461,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     "entry": t.entry, "sl": t.sl,
                     "exit_time": str(t.exit_time),
                     "mfe_r": t.mfe_r,
-                    "exit_reason": t.outcome}, default=str) + "\n")
+                    "exit_reason": t.outcome,
+                    **({} if not cf else {"cf": _cf_for(t, cb, "fade_breakout", symbol, _cf_bars, _cf_horizon,
+                                                        trail_mult if exit_style == "trail" else None)})},
+                    default=str) + "\n")
     return _summarize(trades, df, timeframe=timeframe, symbol=symbol,
                       params={"donchian": donchian, "atr_stop_buffer": atr_stop_buffer,
                               "pierce_min": pierce_min, "exit_style": exit_style,
@@ -725,6 +747,9 @@ def main(argv: List[str]) -> int:
                    help="Sweep min_confidence over GRID ('0:0.5:0.05' range or '0,0.1,0.2' list) "
                         "and tabulate net metrics per threshold instead of a single run.")
     p.add_argument("--json", dest="json_out", default=None)
+    p.add_argument("--cf", action="store_true",
+                   help="CF-C2-HARNESS-REST (opt-in): add a `cf` counterfactual-arms block (schema cf_trade/1) to every "
+                        "--emit-trades row. Existing keys unchanged; off = byte-identical.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write per-trade {entry_time, net_r, confidence} JSONL for portfolio_combine.")
     args = p.parse_args(argv[1:])
@@ -783,7 +808,7 @@ def main(argv: List[str]) -> int:
         print(_fmt_sweep(sw))
         out = sw
     else:
-        out = run_backtest(df, emit_path=args.emit_trades,
+        out = run_backtest(df, emit_path=args.emit_trades, cf=args.cf,
                            min_confidence=args.min_confidence, **bt_kwargs)
         print(_fmt(out))
     if args.json_out:

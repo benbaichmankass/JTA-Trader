@@ -61,6 +61,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import statistics
 import sys
@@ -444,6 +445,16 @@ def _simulate_trade(
     }
 
 
+def _cf_for(t: dict[str, Any], symbol: str | None, frame_bars: Any, horizon_cfg: dict[str, Any]) -> dict[str, Any]:
+    """The `cf` block (cf_trade/1) for one emitted vwap row; see scripts/research/cf_harness.py. The harness's trade
+    dict carries minute-precision UTC timestamps; a fixed bracket (no trail), so the replay is the initial stop + TP."""
+    import cf_harness
+    row = {"strategy": "vwap", "symbol": symbol, "entry_time": t["entry_time"], "exit_time": t["exit_time"],
+           "entry": t["entry"], "sl": t["sl"], "direction": t["direction"], "exit_price": t["exit_price"],
+           "exit_reason": t["exit_reason"], "net_r": t["net_pnl_r"], "cost_fee_r": t["fee_r"], "cost_funding_r": t["funding_r"]}
+    return cf_harness.cf_for_row(row, frame_bars, horizon_cfg, {"tp": t.get("tp")})
+
+
 def run_single(
     df: pd.DataFrame,
     htf_timeframe: str | None = "4h",
@@ -454,6 +465,9 @@ def run_single(
     sl_std_mult: float | None = None,
     vwap_anchor: str = "session",
     emit_trades: str | None = None,
+    cf: bool = False,
+    cf_symbol: str | None = None,
+    cf_timeframe: str | None = None,
 ) -> dict[str, Any]:
     """Run the VWAP backtest with one HTF config.
 
@@ -602,6 +616,14 @@ def run_single(
     if emit_trades:
         import json as _json
 
+        _cf_bars = _cf_horizon = None
+        if cf:   # CF-C2-HARNESS-REST (opt-in; off = byte-identical): adds one `cf` key per row (schema cf_trade/1)
+            import sys as _sys
+            from pathlib import Path as _Path
+            _sys.path.insert(0, str(_Path(__file__).resolve().parents[2] / "scripts" / "research"))
+            import cf_harness as _cf_h
+            _cf_horizon = {"timeframe": cf_timeframe, "max_hold_bars": None}
+            _cf_bars = _cf_h.frame_bars_for(df, cf_timeframe or "")
         with open(emit_trades, "w", encoding="utf-8") as _fh:
             for _t in trades:
                 _fh.write(
@@ -617,6 +639,7 @@ def run_single(
                             # policy_threshold + stamped regime keys) for the
                             # component-edge report's --backtest-log path.
                             "meta": _t.get("meta"),
+                            **({} if not cf else {"cf": _cf_for(_t, cf_symbol, _cf_bars, _cf_horizon)}),
                         },
                         default=str,
                     )
@@ -1169,6 +1192,9 @@ def main(argv: list[str]) -> int:
         ),
     )
     parser.add_argument("--label", default="", help="Label for the run")
+    parser.add_argument("--cf", action="store_true",
+                        help="CF-C2-HARNESS-REST (opt-in, single-run with --emit-trades): add a `cf` counterfactual-arms "
+                             "block (schema cf_trade/1) to every emitted row. Existing keys unchanged; off = byte-identical.")
     parser.add_argument(
         "--emit-trades",
         default=None,
@@ -1502,6 +1528,9 @@ def main(argv: list[str]) -> int:
                         sl_std_mult=args.sl_mult,
                         vwap_anchor=args.vwap_anchor,
                         emit_trades=args.emit_trades,
+                        cf=args.cf,
+                        cf_symbol=os.environ.get("BACKTEST_SYMBOL"),   # the harness has no symbol notion; None keys the row on "None"
+                        cf_timeframe="5m",   # the harness consumes 5m candles (module docstring)
                     )
             finally:
                 if args.entry_threshold is not None:
