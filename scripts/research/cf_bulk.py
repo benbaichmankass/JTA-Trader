@@ -157,9 +157,11 @@ def load_jobs(files: Iterable[str], root: Path = REPO) -> Tuple[Dict[str, dict],
                 c["rows_replayable"] += 1
                 side = sidecar(rel, root)
                 if r.get("symbol") is None and (side or {}).get("symbol"):
-                    r["symbol"] = side["symbol"]; c["symbol_from_sidecar"] += 1
+                    r["symbol"] = side["symbol"]
+                    c["symbol_from_sidecar"] += 1
                 if r.get("strategy") is None and (side or {}).get("strategy"):
-                    r["strategy"] = side["strategy"]; c["strategy_from_sidecar"] += 1
+                    r["strategy"] = side["strategy"]
+                    c["strategy_from_sidecar"] += 1
                 if r.get("symbol") is None:
                     r["symbol"] = "UNKNOWN"      # file carries no symbol: counted as could_not_grade symbol_unresolved, never dropped
                 k = cf_harness.trade_key(r.get("strategy"), r.get("symbol"), r.get("entry_time"), r.get("direction"), r.get("sl"))
