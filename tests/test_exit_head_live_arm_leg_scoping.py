@@ -119,5 +119,12 @@ def test_no_match_is_not_the_same_state_as_no_filter(tmp_path):
 def test_the_round_driver_forwards_legs_whenever_it_passes_db():
     """A flag the driver never sends is a flag that does not exist."""
     src = (REPO / "scripts" / "research" / "m20_exit_head_round.py").read_text()
-    assert 'build_cmd += ["--db", a.db, "--legs", a.legs]' in src, (
+    # The driver forwards the BASE leg names: a `leg:SYMBOL` spec (#28100, D8
+    # corpus widening) re-points the harness at another symbol, but the live
+    # arm's journal rows are stamped with the base leg, so that is what --legs
+    # must scope to.
+    assert 'build_cmd += ["--db", a.db, "--legs",' in src, (
         "the round driver passes --db without scoping the live arm to --legs")
+    assert "parse_leg_spec(x)[0] for x in a.legs.split" in src, (
+        "the round driver forwards raw leg:SYMBOL specs to --legs; the live arm "
+        "matches journal rows on the base leg name, so a spec would match nothing")

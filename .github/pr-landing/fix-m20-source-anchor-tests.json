@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tests only: two source-text anchors in tests/test_exit_head_round_fails_loudly.py and tests/test_exit_head_live_arm_leg_scoping.py still named the pre-#28100 literals (`for leg in a.legs.split`, `--legs a.legs`). #28100 renamed the loop variable to leg_spec and forwards base leg names; the tests failed on main since 11-22 10:10Z and redden every full-suite PR. The assertions keep their intent (pre-flight before the emit loop and the heavy lock; --legs always forwarded with --db) and add one check that raw leg:SYMBOL specs are not forwarded. No driver change."
+}
