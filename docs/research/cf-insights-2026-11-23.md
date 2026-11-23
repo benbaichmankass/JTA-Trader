@@ -1,6 +1,6 @@
 # CF-INSIGHTS — what the counterfactual engine says, 2026-11-23
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-23` · lane CF-FINISH-BACKFILL-20261123
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane CF-FINISH-BACKFILL-20261123
 
 Gates this adds or changes: none. Research memo; authorises nothing; no config touched.
 
