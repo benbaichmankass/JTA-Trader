@@ -1,6 +1,6 @@
 # Next-week focus — planning for the week of 2026-11-26
 
-> **Doc status:** `live` · category `plan` · produced 2026-11-23 by lane `ROADMAP-REVIEW-20261123` (dispatched by Manager Session 2026-11-22a) · a memo for Thursday's sync; it authorizes nothing.
+> **Doc status:** `unknown` · category `plan` · last verified `2026-11-23` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · produced by lane `ROADMAP-REVIEW-20261123`; a memo for Thursday's sync that authorizes nothing.
 
 **Gates this adds or changes: none.**
 
