@@ -17,7 +17,26 @@
 | `fractionable` per asset | "Not all assets are fractionable yet"; rejection reads "requested asset is not fractionable" | SOURCE |
 | Settlement | not read this session; our cash account runs a T+1 gate (`ALPACA_CASH_SETTLEMENT_MODE`, `accounts.yaml` comment) | repo, not venue docs |
 
-**MEASURED `fractionable` for SQQQ, SPXU, SPXS, SDOW, TZA, SH, PSQ, TQQQ, UPRO, SPXL, SSO, UDOW, TNA, QLD: UNVERIFIED.** No diag route reaches the Alpaca assets API (`alpaca/asset?...` answered 404; the Alpaca keys live on the VM). The exact read that settles it: `GET https://api.alpaca.markets/v2/assets/<SYMBOL>` per symbol (read-only; `AlpacaClient.asset_short_status` in `src/units/accounts/alpaca_client.py` already returns `{tradable, shortable, easy_to_borrow, fractionable}`), run from a workflow with the live key as a one-off read-only step. Not run here: it needs a new workflow step, and the manager said no new secrets.
+**MEASURED 2026-11-23 ~19:37Z (workflow run 45250700088, `assets` phase, Alpaca PAPER endpoint `GET /v2/assets/<SYM>`; the run log was removed because it also printed the paper account payload):** all 14 candidates are `tradable: true` and `fractionable: true`, and every one carries the attribute `fractional_eh_enabled` (also `has_options`, `overnight_tradable`). The paper environment's flag is not proof of the live account's flag (INFERENCE: the asset master is shared; not verified on the live host).
+
+| Symbol | fractionable | shortable | easy_to_borrow |
+|---|---|---|---|
+| SQQQ, PSQ, TQQQ, UPRO, SPXL, SSO, UDOW, QLD | true | true | true |
+| SPXU, SPXS, SDOW, TZA, SH, TNA | true | false | false |
+
+## 1b. MEASURED order-type results (Alpaca PAPER, run 45251691248, `open` phase, 0.5 share of SH, 2026-11-23 ~19:43Z)
+
+| Test | Request (fractional qty 0.5, DAY) | Response |
+|---|---|---|
+| (a) market bracket (stop + take-profit) | `order_class: bracket` | HTTP 422 `{"code":42210000,"message":"fractional orders must have order_class=simple"}` |
+| entry | market buy, simple | HTTP 200, status `pending_new`, then filled (position 0.5 long) |
+| (b1) stop sell | `type: stop`, stop_price 33.28 | HTTP 200, status `new` — ACCEPTED |
+| (b2) limit take-profit sell, while (b1) is live | `type: limit`, limit_price 35.34 | HTTP 403 `{"code":40310000,"message":"insufficient qty available for order (requested: 0.5, available: 0)","existing_qty":"0.5","held_for_orders":"0.5"}` — the live stop holds all the shares |
+| (b3) OCO of take-profit + stop | `order_class: oco` | HTTP 422 `{"code":42210000,"message":"fractional orders must have order_class=simple"}` |
+
+**Meaning (MEASURED):** a fractional position can carry a protective stop OR a take-profit at the venue, not both; there is no fractional bracket or OCO. The TP doctrine's "real predictive TP at entry" cannot rest at the venue for a fractional position. Not yet measured: (c) a fractional DAY stop placed while the market is closed (scheduled for 2026-11-24 13:00Z), and whether a fractional stop and a TP can be swapped intraday by software. Also unmeasured: whole-share stop on a fractional position.
+
+**Incident (this probe's own bug, fixed in the same PR):** the first `open` run used a bulk `DELETE /v2/orders`, which cancelled four orders on the paper account that the probe had not created (the account also runs the bot). The probe now cancels only the order ids it created, closes only its own quantity, refuses to run if the probe symbol already has a position or open order on the account, and logs only an allowlist of fields. The first (`assets`) run also printed the paper account payload; its log is to be deleted by the manager/operator.
 
 ## 2. IBKR
 
@@ -43,7 +62,7 @@ Our state (repo): `ib_live` is `mode: dry_run`, empty roster, with the open find
 | Option | Unlocks | Build | Tier | Risk |
 |---|---|---|---|---|
 | **A. Whole shares + more cash** (operator is already looking at this) | every candidate whose share price fits the cash gate (~1.1 x price free cash; ~$279 covers UPRO/SPXL/SSO/TZA as measured) | none | none | none new; position sizes are 1 share, so 1 share may be most of the account |
-| **B. Alpaca fractional** | all candidates that are `fractionable` (UNVERIFIED), any balance | executor + reconciler: fractional entry, day-only stop/TP re-armed each session; tests; the PI-…-0002 interaction | Tier 2 (order path) + Tier 3 (live account use) | HIGH: protective stops lose GTC (documented fractional restriction); bracket-with-fractional undocumented |
+| **B. Alpaca fractional** | all 14 candidates (`fractionable: true` on the paper asset master, measured 2026-11-23), any balance | executor + reconciler: fractional entry, day-only stop/TP re-armed each session; tests; the PI-…-0002 interaction | Tier 2 (order path) + Tier 3 (live account use) | HIGH: protective stops lose GTC (documented fractional restriction); bracket-with-fractional undocumented |
 | **C. IBKR fractional** | unknown | connectivity fix, funding, executor change; and fractional-via-API may not exist | Tier 2/3 | UNKNOWN: pages not read; snippet says API unsupported |
 
 **Recommended order (my judgement):** (1) do A now; (2) run the two decisive reads at no build cost: the Alpaca `fractionable` read for the 14 symbols and one fractional order on `ib_paper`; (3) build B only if (a) the symbols are fractionable and (b) a one-order test on `alpaca_paper` shows a fractional bracket with `day` is accepted and its legs behave; even then the day-only stop is a regression the operator should explicitly accept. C only if the IBKR API accepts fractional orders.
