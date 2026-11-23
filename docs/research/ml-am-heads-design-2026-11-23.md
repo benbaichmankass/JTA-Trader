@@ -4,6 +4,8 @@
 
 **Gates this adds or changes: none.** A design memo for two research heads. Nothing here trains before Wed 2026-11-25 18:00Z, serves anything, or touches a bracket. Both heads, if built, are advice-only until a class passes `RULE-AM-RISK-ADJUSTED-V1` ([`docs/ARCHITECTURE-CANONICAL.md`](../ARCHITECTURE-CANONICAL.md) § "Active management"); this memo points at that rule and does not restate it. **MEASURED** = read from a committed file (locator given); **PROPOSED** = design choice for the units below to register; **UNVERIFIED** = I did not check it.
 
+> **CORRECTION (manager, 2026-11-23, ~17:55Z): the CF population and fidelity figures below (468,525 graded of 510,345 jobs, 76.04% within 0.10 R, cfb-20261123b) are PENDING RE-MEASUREMENT.** The CF lane found a signal-bar lookahead in the replay baseline, so run b's verdicts and fidelity are contaminated; the corrected run is `cfb-20261123w`. The label build in unit 1 must use `entry_at_bar_close` and run `w` or later, and starts only after the CF lane posts the `w` re-read (cf_bulk owner: session_01AFoLuJ8QqNnzPArTNMx7xg).
+
 ## 0. The operator's frame (2026-11-23, row `AM-V2-CF-DIRECTED`, verbatim in the row)
 Brackets move in both directions. We need to know where the momentum will stop (TARGET), when we are wrong (INVALIDATION), and to bank something on the way; a dip that recovers means sometimes the stop should be loosened to structure. No-TP and trail-only arms are diagnostic, never candidates (TP doctrine).
 
