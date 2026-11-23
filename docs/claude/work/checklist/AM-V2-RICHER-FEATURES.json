@@ -1,0 +1,21 @@
+{
+  "id": "AM-V2-RICHER-FEATURES",
+  "title": "AM v2 heads: richer point-in-time features (structure, market state, index/regime state) and re-fit Stage A",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "post-reset-ML",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-04",
+  "note": "Stage A used only 6 path features + side/tf/strategy; incremental skill over the (strategy x open_r decile x bar-age) lookup is small (+0.01..0.035 loss, AUC .747 vs .724). Add point-in-time features computed from bars <= k: distance to nearest prior swing high/low in R, range position, 4h trend sign, ATR regime, BTC / index return since entry, breadth, funding; also the index/regime state the bear-ML work needs. Extend scripts/research/cf_bar_labels.py (features block) and re-run cf-bar-labels (default corpus_sha = run w) + am_heads_fit.py; new unit with the same STAGE_A_RULE shape registered first; compare skill vs the SAME state baseline. No lookahead test required for every new feature (see tests/test_cf_bar_labels.py).",
+  "phase": "research",
+  "updated_at": "2026-11-23T20:16:57Z",
+  "updated_by": "ML-D3-UNLOCK-20261123"
+}

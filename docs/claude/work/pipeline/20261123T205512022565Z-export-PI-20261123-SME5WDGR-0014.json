@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "every unit in the list has a measured landed row (read_state measured) graded by the mechanical grader, or a stated reason it did not run: RQ-20261118-abab-06 and -14 (dispatched 2026-11-23 12:30Z, first rows not seen), RQ-20261123-c5d2-01/02/04/05/06/07 (MES, github_runner), RQ-20261123-f3a8-01 (QQQ 1h confirmation, github_runner); and PRs #28419 and #28421 are merged",
+    "kind": "observation"
+  },
+  "id": "PI-20261123-SME5WDGR-0014",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 close-out 2026-11-23 (handoff, closed early by the manager before the 11-25 reset)",
+    "rerun": "for u in RQ-20261118-abab-06 RQ-20261118-abab-14 RQ-20261123-c5d2-01 RQ-20261123-c5d2-02 RQ-20261123-c5d2-04 RQ-20261123-c5d2-05 RQ-20261123-c5d2-06 RQ-20261123-c5d2-07 RQ-20261123-f3a8-01: ls research/results/$u and read read_state; python3 scripts/research/queue_grade.py --json (dry); python3 scripts/research/dispatch_queue.py --json | grep $u"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "HANDOFF from lane QUEUE-FILL-STANDING-W48 (closed early at the manager's direction, 2026-11-23). MERGED: #28294, #28280, #28331 (grade pass), #28328, #28332, #28337, #28371 (lever-flag parity: abab-05/06/07/10/11/12/14), #28372 (TQQQ/QLD), #28404 (six MES c5d2 units + 9e1c-01 retired by record). OPEN, manager merges: #28419 (RQ-20261123-f3a8-01 qqq_pullback_1h time-disjoint confirmation) and #28421 (diagnosis notes for spy_pullback_1h / ml-exit-head-donchian-1h / ml-btc-router-cells, plus a correction commit). NOT OBSERVED (merged is not observed): the first landed rows of abab-06, abab-14, c5d2-01/02/04/05/06/07, f3a8-01; abab-06's full 527k-bar window never completed locally (330-minute limit; sibling RQ-20261105-028 landed 3 times). KNOWN TEXT IMPRECISION left on purpose: the merged c5d2 unit text says ES=F 2001-2011 carries '1-2 malformed bars a year'; the measured count is 1-2 in 8 of those 11 years (none in 2001, 2003, 2009); the 2012-01-01 window and the rule are unaffected; registered units are not edited in place. DECISIONS WAITING FOR THE MANAGER/THURSDAY (all filed): PI-20261123-SME5WDGR-0004 (momentum-trail arm with a registered tight mult; abab-08/09 TA20), -0008 (abab-15 turtle_soup engine hook or retirement), -0009 to -0013 (blocked units by blocker owner), PI-20261122-SME5WDGR-0007 (MES, now resolved by c5d2). NEXT SESSION PICKS UP FIRST: observe those landed rows and apply the net-positive-winner read to any registered pass before anyone calls it an edge (abab-12 and abab-17 were loses-less passes); reason first: they are the only measured outcomes of this lane's work. DISCIPLINE CARRIED: the trend_donchian wide-stop confirmation was HELD (nothing authored; per-leg time-disjoint windows could not resolve +0.06..0.13 R at 80-300 trades, sd 1.2-2.4 R); no unit rests on any cf_bulk arm-vs-original lesson; no merge by this lane (landing holds). Scheduled tasks of this lane are deleted at close-out."
+}

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-12-07",
+    "kind": "date"
+  },
+  "id": "PI-20261123-NEIELEFR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane INDEX-LEVERAGED-ETF-ROSTER-20261123, probe run 45258885219 (ib_paper)",
+    "rerun": "Dispatch broker-fractional-probe.yml target=ib symbol=SH and read the job log for 'Error 10089' (no API market-data subscription, delayed only) on ib_paper."
+  },
+  "state": "queued",
+  "what": "ib_paper's API socket has no market-data subscription for API clients (IBKR error 10089: requested market data requires additional subscription for API; delayed data available). Any IB leg that needs live quotes via the API (entries, TP/SL prices, the fractional probe's reference price) gets nan or delayed prices. Decide: buy the API market-data subscription on ib_paper/ib_live, or accept delayed data and say which legs that rules out."
+}

@@ -15,9 +15,9 @@
   "prs": [],
   "blocked_on": [],
   "due_by": "2026-11-18",
-  "note": "Filed by Manager 2026-11-09a after the 14:04Z alert. MEASURED: gitleaks-history-weekly.yml runs 6, 7 and 8 (10-26, 11-02, 11-09; run 42629835484) all concluded failure; earlier runs not read. The failing job's last 40 lines are generic-api-key hits on comms/research/RQ-20261024-0142-25/.../trend_LTCUSDT_1d_D55__trades.jsonl (many lines), comms/research/broad_paths/bp2-f4271084b120/manifest.json:848, config/prop_phone_devices.yaml:18, tests/test_prop_platform_dxtrade_api.py:23 and docs/claude/work/checklist/E61.json:14. The last three were checked by eye (values masked): a token_sha256 hash, a test fixture TOKEN='tok-SECRET-123', and prose. NOT checked: the lines above the 40-line tail, so a real secret elsewhere in the history is NOT ruled out. Fix after the reset (operator throttle 2026-11-09: infra waits unless it affects live money): read the full findings list, confirm each is a false positive, then add a .gitleaks.toml allowlist (paths comms/research/**, test fixtures, *_sha256 fields) and confirm the next weekly run is green. Parent row SA-SEC (done) created the scan.",
+  "note": "2026-11-23 Manager 2026-11-22a: run 45211501436 (11-23) failed again, 14 generic-api-key findings (down from 387 after SEC-GITLEAKS-BASELINE-1116). All 14 checked by eye, values masked, all false positives: 1 RFC 6455 sample WebSocket nonce (vm-net-diag.yml:99, already in the baseline yet still reported, so baseline matching fails for it), 10 SSH key SHA256 fingerprints (SEC-HOST-CHANGES-1112 note), 3 this row quoting a fixture, 1 row/pipeline ids (ml-review-20261118 json:124). Not fixed now: the history purge at the 11-25 reset rewrites every commit SHA and invalidates every fingerprint. Folded into the PURGE-PREP lane (session_01AFoLuNKXBpirkHaVrN4cAu) runbook as a post-purge step: full-history scan = purge verification, then regenerate the baseline, keep the 4 named revoked rows, prove 0 new. Closes on the first green weekly run after the purge (next scheduled Mon 11-30).",
   "phase": null,
-  "updated_at": "2026-11-09T14:07:07Z",
-  "updated_by": "session_01AFoLuKgeM4bM8AQqUfQZjE",
+  "updated_at": "2026-11-23T16:11:49Z",
+  "updated_by": "session_01AFoLuKifPRuyeVhkQU1Fsg",
   "week_lane": "throttle"
 }
