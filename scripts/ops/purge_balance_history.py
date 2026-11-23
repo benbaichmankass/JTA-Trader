@@ -3,6 +3,7 @@
 
 PREPARATION TOOL (lane BALANCE-HISTORY-PURGE-PREP-20261123). Nothing here pushes; the manager runs the rewrite after review.
 Runbook: docs/runbooks/account-balance-history-purge.md
+# wiring: manual-only - one-off operator-gated history rewrite, run by the manager per the runbook (Tier 2/3), never from a schedule
 
 Subcommands (all operate on a LOCAL --mirror clone path, never on a working checkout):
   selftest                       positive + negative controls for the redaction rules (no repo needed)
