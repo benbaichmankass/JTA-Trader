@@ -1,6 +1,6 @@
 # Index leveraged + inverse ETF roster proposal — 2026-11-23
 
-> **Doc status:** `live` · category `research` · last verified `2026-11-23` · lane `INDEX-LEVERAGED-ETF-ROSTER-20261123` (manager Session 2026-11-22a)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `INDEX-LEVERAGED-ETF-ROSTER-20261123` (manager Session 2026-11-22a)
 >
 > **Gates this adds or changes:** none. Proposal only; no config edited. The config change in § 5 is **Tier 3** and waits on a Stage-0 pass.
 
