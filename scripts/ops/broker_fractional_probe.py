@@ -11,17 +11,23 @@ Phases:  assets  - GET /v2/assets/<SYM> for the candidate set (read-only)
                      or buys 0.5 SH with an extended-hours limit when closed)
 """
 from __future__ import annotations
-import json, os, sys, time, urllib.request, urllib.error
+
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
 
 BASE = "https://paper-api.alpaca.markets"
 DATA = "https://data.alpaca.markets"
-SYMS = "SQQQ SPXU SPXS SDOW TZA SH PSQ TQQQ UPRO SPXL SSO UDOW TNA QLD".split()
+SYMS = ["SQQQ", "SPXU", "SPXS", "SDOW", "TZA", "SH", "PSQ", "TQQQ", "UPRO", "SPXL", "SSO", "UDOW", "TNA", "QLD"]
 SYM = os.environ.get("PROBE_SYMBOL", "SH")
 QTY = os.environ.get("PROBE_QTY", "0.5")
 K, S = os.environ.get("ALPACA_API_KEY_ID", ""), os.environ.get("ALPACA_API_SECRET_KEY", "")
 
 def call(method, url, body=None):
-    assert url.startswith(BASE) or url.startswith(DATA), "refusing non-paper/non-data host"
+    assert url.startswith((BASE, DATA)), "refusing non-paper/non-data host"
     req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"APCA-API-KEY-ID": K, "APCA-API-SECRET-KEY": S, "Content-Type": "application/json"})
     try:
@@ -49,7 +55,7 @@ def main():
     if not K or not S:
         sys.exit("paper keys missing")
     acct = call("GET", f"{BASE}/v2/account")[1] or {}
-    print("paper account status:", acct.get("status"), "(trading_blocked=%s)" % acct.get("trading_blocked"))
+    print("paper account status:", acct.get("status"), f"(trading_blocked={acct.get('trading_blocked')})")
     if phase == "assets":
         for s in SYMS:
             c, o = call("GET", f"{BASE}/v2/assets/{s}")
@@ -75,7 +81,7 @@ def main():
             else:
                 print("== (b) separate legs after a fractional DAY market entry ==")
                 cleanup()
-                c2, o2 = call("POST", f"{BASE}/v2/orders", {"symbol": SYM, "qty": QTY, "side": "buy", "type": "market", "time_in_force": "day"})
+                call("POST", f"{BASE}/v2/orders", {"symbol": SYM, "qty": QTY, "side": "buy", "type": "market", "time_in_force": "day"})
                 time.sleep(3)
                 call("GET", f"{BASE}/v2/positions/{SYM}")
                 print("-- (b1) fractional DAY stop sell")
@@ -83,7 +89,7 @@ def main():
                 print("-- (b2) fractional DAY limit TP sell")
                 call("POST", f"{BASE}/v2/orders", {"symbol": SYM, "qty": QTY, "side": "sell", "type": "limit", "limit_price": f"{tp:.2f}", "time_in_force": "day"})
                 print("-- (b3) fractional OCO (DAY) of TP + stop")
-                cleanup_orders = call("DELETE", f"{BASE}/v2/orders")
+                call("DELETE", f"{BASE}/v2/orders")
                 call("POST", f"{BASE}/v2/orders", {"symbol": SYM, "qty": QTY, "side": "sell", "type": "limit", "time_in_force": "day",
                       "order_class": "oco", "take_profit": {"limit_price": f"{tp:.2f}"}, "stop_loss": {"stop_price": f"{sl:.2f}"}})
         elif phase == "premarket":

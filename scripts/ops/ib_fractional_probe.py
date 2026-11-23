@@ -5,8 +5,9 @@ Runs on the live VM (which can reach the gateway VM over the private subnet). Re
 Places ONE 0.5-share order of the symbol with an attached TP limit and stop (bracket); prints every result; cancels all
 and flattens in `finally`. clientId 899 is used only here (trader uses 496/497).
 """
-import sys, time
-from ib_insync import IB, Stock, MarketOrder, LimitOrder, StopOrder
+import sys
+
+from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 
 HOST, PORT, CID = (sys.argv[1] if len(sys.argv) > 1 else "10.0.0.251"), 4002, 899
 SYM, QTY = (sys.argv[2] if len(sys.argv) > 2 else "SH"), 0.5
