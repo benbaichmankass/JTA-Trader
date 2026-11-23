@@ -1,0 +1,80 @@
+{
+  "unit": "RQ-20261118-abab-18",
+  "run_id": "45091164029",
+  "commit_sha": "15e4eb6a79053af725f865b995f99e4e3eae15a5",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45091164029",
+  "timeout_minutes": 195,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "fvg_range_15m",
+        "--arm",
+        "A=",
+        "--arm",
+        "LONG=--side-filter=long",
+        "--arm",
+        "SHORT=--side-filter=short",
+        "--days",
+        "1830",
+        "--research-unit",
+        "RQ-20261118-abab-18",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "4.0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261118-abab-18/45091164029"
+      ],
+      "log": "comms/research/RQ-20261118-abab-18/45091164029/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 41.7
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
