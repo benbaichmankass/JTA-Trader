@@ -20,6 +20,9 @@ on:
       n_random:
         description: "Random-control draws per job (engine default 300)"
         default: "300"
+      arm_set:
+        description: "standard (registered grid) or extended (CF-INSIGHTS: wider stops, management, entry-side arms, context)"
+        default: "standard"
 
 permissions:
   contents: read
@@ -79,7 +82,8 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
           INDEX: ${{ matrix.index }}
           N_RANDOM: ${{ inputs.n_random }}
-        run: python3 scripts/research/cf_bulk.py shard --run-id "$RUN_ID" --out out --index $INDEX --n-random "$N_RANDOM"
+          ARM_SET: ${{ inputs.arm_set }}
+        run: python3 scripts/research/cf_bulk.py shard --run-id "$RUN_ID" --out out --index $INDEX --n-random "$N_RANDOM" --arm-set "${ARM_SET:-standard}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

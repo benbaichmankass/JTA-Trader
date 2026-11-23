@@ -217,7 +217,7 @@ class BarStore:
         return self.bars[bisect_left(self.t, t0):bisect_left(self.t, t1)]
 
 
-def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random: int) -> dict:
+def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random: int, arm_set: str = "standard") -> dict:
     row = {k: v for k, v in job.items() if not k.startswith("_")}
     if row.get("symbol") == "UNKNOWN":
         cf = cf_harness._could_not(row, "symbol_unresolved")
@@ -234,13 +234,15 @@ def grade_job(job: dict, store: Optional[BarStore], tf: Optional[str], n_random:
             cf = cf_harness._could_not(row, "row_incomplete")
         else:
             h = cf_core.resolve_horizon({"timeframe": tf}, cfg)["seconds"]
-            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random, leg_meta=job.get("_leg_meta"))
+            cf = cf_harness.cf_fields(row, store.window(t_entry, t_exit + h), None, cfg, n_random=n_random, leg_meta=job.get("_leg_meta"),
+                                        arm_set=arm_set)
     return {"trade_key": cf["trade_key"], "strategy": row.get("strategy"), "symbol": row.get("symbol"), "timeframe": tf,
             "direction": row.get("direction"), "entry_time": row.get("entry_time"), "net_r": row.get("net_r"),
             "source_file": job["_file"], "cf": cf}
 
 
-def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, n_random: int = cf_core.N_RANDOM, fetcher=None, force: bool = False) -> dict:
+def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, n_random: int = cf_core.N_RANDOM, fetcher=None, force: bool = False,
+              arm_set: str = "standard") -> dict:
     sdir = out / "shards"
     sdir.mkdir(parents=True, exist_ok=True)
     meta_p, data_p = sdir / f"{shard['shard_id']}.meta.json", sdir / f"{shard['shard_id']}.jsonl.gz"
@@ -269,7 +271,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
     tmp = data_p.with_suffix(".tmp")
     with gzip.open(tmp, "wt", encoding="utf-8") as fh:
         for k in chosen:
-            rec = grade_job(jobs[k], store, tf, n_random)
+            rec = grade_job(jobs[k], store, tf, n_random, arm_set)
             if rec["cf"].get("status") == "graded":
                 n_graded += 1
             else:
@@ -431,6 +433,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     s.add_argument("--index", type=int, nargs="+", required=True, help="shard indices into plan.json (space separated)")
     s.add_argument("--plan")
     s.add_argument("--n-random", type=int, default=cf_core.N_RANDOM)
+    s.add_argument("--arm-set", default="standard", choices=("standard", "extended"), help="extended = CF-INSIGHTS stop grid / management / entry-side arms + context")
     s.add_argument("--max-jobs", type=int, default=DEFAULT_MAX_JOBS)
     s.add_argument("--force", action="store_true")
     r = sub.add_parser("reduce")
@@ -464,7 +467,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     for i in a.index:
         shard = plan["shards"][i]
         try:
-            meta = run_shard(shard, chunks, jobs, out, n_random=a.n_random, force=a.force)
+            meta = run_shard(shard, chunks, jobs, out, n_random=a.n_random, force=a.force, arm_set=a.arm_set)
         except Exception as e:                                # allow-silent: recorded as state=failed with the error and a non-zero exit; a re-run retries it, never a halt
             meta = {"shard_id": shard["shard_id"], "state": "failed", "error": f"{type(e).__name__}: {e}"[:300]}
             rc = 1

@@ -37,6 +37,16 @@ N_RANDOM = 300
 SL_MULTS = (0.75, 1.0, 1.25, 1.5)
 TP_RS = (2.0, 3.0, 4.0, 5.0, 6.0)
 ATR_K = (1.5, 2.0, 3.0, 4.0)
+#: CF-INSIGHTS ``arm_set="extended"`` (default ``standard`` is byte-identical): the grid past the boundary and the arms the standard grid lacks
+EXT_SL_MULTS = (2.0, 2.5, 3.0)
+EXT_TP_RS = (3.0, 6.0)
+EXT_NOTP_SL = (1.0, 1.5, 2.0, 2.5, 3.0)
+EXT_TRAIL_K = (0.75, 1.0, 5.0, 6.0)
+EXT_TIME_STOP_BARS = (8, 16, 32)
+EXT_BE_RULES = ((0.5, 0.0), (1.0, 0.5), (3.0, 1.5))
+EXT_DELAY_BARS = (1, 2, 3)
+EXT_LIMIT_ATR = (0.25, 0.5)
+EXT_LIMIT_WINDOW_BARS = 3
 TF_SEC = {"1m": 60, "5m": 300, "15m": 900}
 BIASES = [
     "stop fills at its price (+ half round-trip slippage); a gap fills at the open",
@@ -147,6 +157,11 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
         for i, r in enumerate(rules):
             if i not in fired and ext_r >= r["trigger_r"]:
                 fired.add(i)
+                if r.get("kind") == "partial_at":            # CF-INSIGHTS: bank ``frac`` at +trigger_r (limit fill at that level), the rest keeps running
+                    f = min(remaining, float(r["frac"]))
+                    fills.append({"frac": f, "px": entry_ref + sign * r["trigger_r"] * r_dist, "ts": b["time"], "reason": "partial"})
+                    remaining -= f
+                    continue
                 lvl = entry_ref + sign * r["level_r"] * r_dist
                 if tight(lvl, stop if pending_stop is None else pending_stop):
                     pending_stop = lvl
@@ -291,7 +306,8 @@ def random_usable_bars(bars: Sequence[dict], *, t_entry: float, t_close: float, 
 def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: List[dict], actions: List[dict],
                   equity_now: Dict[str, Optional[float]], venue: Dict[str, dict],
                   graded_at: Optional[str] = None, n_random: int = N_RANDOM, horizon: Optional[dict] = None,
-                  random_mode: str = DEFAULT_RANDOM_MODE, actions_authoritative: bool = False) -> dict:
+                  random_mode: str = DEFAULT_RANDOM_MODE, actions_authoritative: bool = False,
+                  arm_set: str = "standard") -> dict:
     """Pure: one graded record for one closed package. See counterfactual_grader.py's docstring for the schema.
 
     ``random_mode``: ``causal`` (default since CF-RANDOM-CAUSAL-DEFAULT) draws the random intervention times from
@@ -301,7 +317,12 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
 
     ``actions_authoritative`` (CF-FIDELITY-ACTION-REPLAY, default False = byte-identical): the ``actions`` are the leg's RECORDED
     stop/target path (position_path_history), so ``replayed_actual`` replays them alone, without ALSO running the engine's own
-    ATR trail on top (the recorded stops already contain every trail step the live monitor made)."""
+    ATR trail on top (the recorded stops already contain every trail step the live monitor made).
+
+    ``arm_set`` (CF-INSIGHTS, default ``standard`` = byte-identical): ``extended`` additionally grades ``ext_arms`` (stop grid past 1.5x,
+    no-TP trail variants, more trail multiples, runner partials, time stops, break-even variants, delayed and limit-pullback ENTRY arms; an
+    entry arm that never fills carries ``net_r: None``, ``filled: False``) and a ``context`` block (ATR%, risk%, pre-exit MFE, bars held,
+    hour, weekday) for slicing. R of every arm is in ITS OWN stop distance at the constant risk budget (``net_of``)."""
     base = {"schema_version": SCHEMA_VERSION, "order_package_id": pkg["order_package_id"],
             "strategy": pkg.get("strategy_name"), "symbol": pkg.get("symbol"), "side": str(pkg.get("direction") or "").lower(),
             "graded_at": graded_at or lrc._iso(datetime.now(timezone.utc).timestamp()), "biases": BIASES}
@@ -439,6 +460,82 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
             run(f"more_unapplied_{rv['review_id'][-30:]}", "more_management", f"Unapplied review call {act} @ {rv.get('reviewed_at')}",
                 {"review_id": rv["review_id"], "action": act, "level": lvl}, acts=timed + [ac])
 
+    # ---- (g) EXTENDED arms (arm_set="extended" only): a separate list, so the standard record and every consumer of ``arms`` are untouched
+    ext_arms: List[dict] = []
+    context: Optional[dict] = None
+    if arm_set == "extended":
+        i_in = next((i for i, b in enumerate(bars) if b["time"] >= t_entry), None)
+        dur0 = bars[0]["dur"]
+
+        def xrun(arm_id, family, label, params, *, stop=stop0, tp=tp0, acts=(), rules=(), trail=own_trail, r=r_dist):
+            sim = simulate(bars, side=side, entry_ref=entry_ref, r_dist=r, t_entry=t_entry, stop0=stop, tp=tp,
+                           actions=acts, rules=rules, trail_dist=trail)
+            ext_arms.append(_arm(arm_id, family, label, params, sim, legs, cm_lead, side, entry_fill, r, t_entry))
+
+        def xentry(arm_id, label, params, j, px):
+            def unfilled(why=None):
+                ext_arms.append({"arm_id": arm_id, "family": "entry_side", "label": label, "params": params, "resolved": False, "net_r": None,
+                                 "filled": False, **({"why": why} if why else {})})
+            if j is None or j >= len(bars) or px is None:
+                return unfilled()
+            rd = abs(px - stop0)
+            if rd <= 0 or ((px <= stop0) if sign > 0 else (px >= stop0)):
+                return unfilled("entry_beyond_stop")
+            sim = simulate(bars[j:], side=side, entry_ref=px, r_dist=rd, t_entry=bars[j]["time"], stop0=stop0, tp=tp0, trail_dist=own_trail)
+            a = _arm(arm_id, "entry_side", label, params, sim, legs, cm_lead, side, px, rd, bars[j]["time"])
+            a["filled"] = True
+            ext_arms.append(a)
+
+        for m in EXT_SL_MULTS:                                                    # (2) the stop grid past the boundary
+            for tr in EXT_TP_RS:
+                rd = r_dist * m
+                xrun(f"ext_sl{m:g}x_tp{tr:g}R", "ext_stop_grid", f"SL {m:g}x, TP {tr:g}R", {"sl_mult": m, "tp_r": tr},
+                     stop=entry_ref - sign * rd, tp=entry_ref + sign * tr * rd, r=rd)
+        for m in EXT_NOTP_SL:                                                     # ... and no take-profit at all (own trail only)
+            rd = r_dist * m
+            xrun(f"ext_sl{m:g}x_notp", "ext_stop_grid", f"SL {m:g}x, no TP, trail only", {"sl_mult": m, "tp_r": None},
+                 stop=entry_ref - sign * rd, tp=None, r=rd)
+        if atr:                                                                   # (3) more trail multiples
+            for k in EXT_TRAIL_K:
+                xrun(f"ext_trail_{k:g}x", "ext_management", f"ATR trail {k:g}x", {"k": k}, trail=k * atr)
+        for trig, frac, extra in ((1.0, 0.5, ()), (1.0, 0.5, ((1.0, 0.0),)), (2.0, 0.5, ())):   # runner: bank a part, let the rest ride the trail
+            rules = [{"kind": "partial_at", "trigger_r": trig, "frac": frac}] + [{"kind": "stop_at", "trigger_r": a_, "level_r": b_} for a_, b_ in extra]
+            xrun(f"ext_runner_{int(frac * 100)}pct_at_{trig:g}R" + ("_be" if extra else ""), "ext_management",
+                 f"bank {frac:.0%} at +{trig:g}R" + (", stop of the rest to break-even" if extra else "") + ", rest on the trail",
+                 {"trigger_r": trig, "frac": frac, "be_rest": bool(extra)}, rules=rules)
+        for nb in EXT_TIME_STOP_BARS:                                             # time stops: flat after N bars if still open
+            xrun(f"ext_timestop_{nb}bars", "ext_management", f"close at market after {nb} bars", {"bars": nb},
+                 acts=[{"ts": t_entry + nb * dur0, "kind": "close", "frac": 1.0}])
+        for trig, lvl in EXT_BE_RULES:                                            # break-even / lock variants
+            xrun(f"ext_stopto_{lvl:g}R_at_{trig:g}R", "ext_management", f"stop to {lvl:g}R once +{trig:g}R", {"trigger_r": trig, "level_r": lvl},
+                 rules=[{"kind": "stop_at", "trigger_r": trig, "level_r": lvl}])
+        if i_in is not None:                                                      # (4) entry-side
+            for d in EXT_DELAY_BARS:
+                j = i_in + d
+                xentry(f"ext_delay_{d}bar", f"enter {d} bar(s) later at the open, same stop/TP prices", {"delay_bars": d},
+                       j, bars[j]["open"] if j < len(bars) else None)
+            if atr:
+                for pa in EXT_LIMIT_ATR:
+                    lim = entry_ref - sign * pa * atr
+                    jf, px = None, None
+                    for j in range(i_in, min(len(bars), i_in + EXT_LIMIT_WINDOW_BARS)):
+                        b = bars[j]
+                        if (b["low"] <= lim) if sign > 0 else (b["high"] >= lim):
+                            jf, px = j, (min(lim, b["open"]) if sign > 0 else max(lim, b["open"]))
+                            break
+                    xentry(f"ext_limit_{pa:g}atr", f"limit {pa:g} ATR better, {EXT_LIMIT_WINDOW_BARS}-bar window, unfilled = no trade",
+                           {"atr_frac": pa, "window_bars": EXT_LIMIT_WINDOW_BARS}, jf, px)
+        mfe_pre = mae_pre = None                                                  # context for slicing (reads the path only up to the replayed exit)
+        rexit = rep["exit"] or {}
+        t_x = lrc._ts(rexit.get("ts")) if rexit.get("ts") else t_close
+        win = [b for b in bars if t_entry <= b["time"] < (t_x or t_close)]
+        if win:
+            mfe_pre = round(max(sign * ((b["high"] if sign > 0 else b["low"]) - entry_ref) for b in win) / r_dist, 4)
+            mae_pre = round(min(sign * ((b["low"] if sign > 0 else b["high"]) - entry_ref) for b in win) / r_dist, 4)
+        dt0 = datetime.fromtimestamp(t_entry, timezone.utc)
+        context = {"atr_pct": None if not atr else round(atr / entry_ref, 6), "risk_pct": round(r_dist / entry_ref, 6), "mfe_pre_r": mfe_pre,
+                   "mae_pre_r": mae_pre, "bars_held": len(win), "hour_utc": dt0.hour, "dow": dt0.weekday()}
+
     # ---- (f) matched random intervention (same class: stop-tighten, same count)
     rc = None
     if timed:
@@ -494,4 +591,5 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
                 path={"bars": len(bars), "bars_by_tf": n_b, "first_bar": lrc._iso(bars[0]["time"]),
                       "last_bar": lrc._iso(bars[-1]["time"] + bars[-1]["dur"]), "t_entry": lrc._iso(t_entry), "t_close": lrc._iso(t_close)},
                 actions=[{k: v for k, v in a.items() if k != "ts_epoch"} | {"ts": lrc._iso(a["ts_epoch"])} for a in actions],
-                arms=arms, random_control=rc, fidelity=fid, post_exit=po)
+                arms=arms, random_control=rc, fidelity=fid, post_exit=po,
+                **({"ext_arms": ext_arms, "context": context} if arm_set == "extended" else {}))
