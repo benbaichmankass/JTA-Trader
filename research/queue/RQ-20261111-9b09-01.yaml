@@ -3,7 +3,7 @@ id: RQ-20261111-9b09-01
 title: 'LTR fast-move lock-in: after an IMPULSE (> 1.0 / 1.5 R in the last 2-3 closes, peak >= 1 R) does tightening the trail to 2.0 ATR beat
   the declared exit AND the same tighten taken on every trade at peak >= 1 R, on ada_pullback_2h / trend_donchian_xrp_4h / trend_donchian_sol_4h,
   net of the full cost stack? (operator 2026-11-10 ''these seem like good points to be locking in'')'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -141,13 +141,12 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-LTR-FAST-MOVE-LOCKIN-VEL-01
   evidence:
-  - research/results/RQ-20261111-9b09-01/43361980049.jsonl
-  - research/results/RQ-20261111-9b09-01/45085776406.jsonl
+  - research/results/RQ-20261111-9b09-01/45128115820.jsonl
   first_fail: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
     superseded)
   graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
-  rows: 2
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
   verdict: fail
