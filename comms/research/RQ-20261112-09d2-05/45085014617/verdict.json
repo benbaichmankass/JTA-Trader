@@ -1,0 +1,188 @@
+{
+ "research_unit": "RQ-20261112-09d2-05",
+ "generated_at": "2026-11-22T23:48:54+00:00",
+ "produced_by": "scripts/research/tradeify_futures_fit.py --source ibkr",
+ "stage": "stage0",
+ "population": {
+  "MNQ_OR15": 540
+ },
+ "data": "IB reqHistoricalData TRADES, real CME contracts, per-session volume roll (load_ibkr_percontract)",
+ "data_provenance": {
+  "MNQ": {
+   "path": "data/ibkr_datasets/market_raw_percontract/MNQ/5m/v020/data.jsonl",
+   "bars_raw": 519902,
+   "bars_continuous": 153696,
+   "first_ts": "2024-09-11 04:00:00+00:00",
+   "last_ts": "2026-11-11 23:55:00+00:00",
+   "contracts_served": {
+    "20241220": {
+     "first_ts": "2023-09-22 03:20:00+00:00",
+     "last_ts": "2024-12-20 21:55:00+00:00",
+     "bars": 61096
+    },
+    "20250321": {
+     "first_ts": "2024-01-02 15:30:00+00:00",
+     "last_ts": "2025-03-21 20:55:00+00:00",
+     "bars": 55293
+    },
+    "20250620": {
+     "first_ts": "2024-03-20 23:45:00+00:00",
+     "last_ts": "2025-06-20 20:55:00+00:00",
+     "bars": 52317
+    },
+    "20250919": {
+     "first_ts": "2024-07-03 16:30:00+00:00",
+     "last_ts": "2025-09-19 20:55:00+00:00",
+     "bars": 55383
+    },
+    "20251219": {
+     "first_ts": "2024-10-09 16:05:00+00:00",
+     "last_ts": "2025-12-19 21:55:00+00:00",
+     "bars": 58347
+    },
+    "20260320": {
+     "first_ts": "2025-01-14 06:30:00+00:00",
+     "last_ts": "2026-03-20 20:55:00+00:00",
+     "bars": 55079
+    },
+    "20260618": {
+     "first_ts": "2025-06-20 12:30:00+00:00",
+     "last_ts": "2026-06-18 20:55:00+00:00",
+     "bars": 53115
+    },
+    "20260918": {
+     "first_ts": "2025-10-15 15:50:00+00:00",
+     "last_ts": "2026-09-18 20:55:00+00:00",
+     "bars": 52103
+    },
+    "20261218": {
+     "first_ts": "2025-11-14 15:45:00+00:00",
+     "last_ts": "2026-11-11 23:55:00+00:00",
+     "bars": 48603
+    },
+    "20270319": {
+     "first_ts": "2026-01-27 16:15:00+00:00",
+     "last_ts": "2026-11-11 23:55:00+00:00",
+     "bars": 28566
+    }
+   },
+   "roll_calendar": [
+    {
+     "from_session": "2024-09-11",
+     "contract": "20241220"
+    },
+    {
+     "from_session": "2024-12-17",
+     "contract": "20250321"
+    },
+    {
+     "from_session": "2025-03-18",
+     "contract": "20250620"
+    },
+    {
+     "from_session": "2025-06-16",
+     "contract": "20250919"
+    },
+    {
+     "from_session": "2025-09-15",
+     "contract": "20251219"
+    },
+    {
+     "from_session": "2025-12-15",
+     "contract": "20260320"
+    },
+    {
+     "from_session": "2026-03-16",
+     "contract": "20260618"
+    },
+    {
+     "from_session": "2026-06-14",
+     "contract": "20260918"
+    },
+    {
+     "from_session": "2026-09-15",
+     "contract": "20261218"
+    }
+   ],
+   "roll_rule": "per ET session, max-volume contract, monotonic; no back-adjustment",
+   "front_days": 100,
+   "sessions_dropped_not_front": 226,
+   "first_session_kept": "2024-09-11"
+  }
+ },
+ "cells": {
+  "MNQ_OR15": {
+   "window": {
+    "sessions": 540,
+    "discovery": [
+     "2024-09-11",
+     "2026-04-30"
+    ],
+    "holdout": [
+     "2026-05-01",
+     "2026-11-11"
+    ],
+    "fold_bounds": {
+     "F1": [
+      "2024-09-11",
+      "2024-12-17"
+     ],
+     "F2": [
+      "2024-12-18",
+      "2025-03-28"
+     ],
+     "F3": [
+      "2025-03-31",
+      "2025-07-09"
+     ],
+     "F4": [
+      "2025-07-10",
+      "2025-10-13"
+     ],
+     "F5": [
+      "2025-10-14",
+      "2026-01-23"
+     ],
+     "F6": [
+      "2026-01-26",
+      "2026-04-30"
+     ]
+    }
+   },
+   "n_disc": 405,
+   "net_r_disc": 34.229,
+   "folds": {
+    "F1": 4.893,
+    "F2": 14.669,
+    "F3": -4.842,
+    "F4": 11.958,
+    "F5": -2.886,
+    "F6": 10.437
+   },
+   "folds_positive": 4,
+   "edge_ci_disc": {
+    "n": 405,
+    "mean": 0.08452,
+    "se": 0.05697,
+    "lo": -0.06578,
+    "hi": 0.23481,
+    "z": 2.638
+   },
+   "n_hold": 135,
+   "net_r_hold": -24.43,
+   "mean_r_hold": -0.18097,
+   "gross_r_disc": 39.479,
+   "cost_r_disc": 5.25,
+   "median_risk_usd_1c": 266.57,
+   "by_reason": {
+    "stop": 226,
+    "take_profit": 76,
+    "session_flat": 238
+   },
+   "verdict": "fail"
+  }
+ },
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 540
+}
