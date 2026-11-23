@@ -40,6 +40,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from scripts import lever_gates  # noqa: E402  (the ONE vol-at-entry gate + ADX ceiling; PI-20261123-SME5WDGR-0008)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
     effective_trail_mult,
     vol_trail_armed,
@@ -152,7 +153,14 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                  trail_vol_above_pctl: float = 0.0,
                  trail_vol_below_pctl: float = 0.0,
                  trail_vol_tight_mult: float = 0.0,
-                 be_floor_r: float = 0.0) -> Dict[str, Any]:
+                 be_floor_r: float = 0.0,
+                 vol_skip_above_pctl: float = 0.0, vol_skip_below_pctl: float = 0.0,
+                 adx_max: Optional[float] = None, adx_period: int = 14) -> Dict[str, Any]:
+    _vol_errs = lever_gates.flag_errors(vol_skip_above_pctl, vol_skip_below_pctl, vol_pctl_window)
+    if _vol_errs:
+        raise ValueError("; ".join(_vol_errs))
+    if adx_max is not None and adx_max <= 0:
+        raise ValueError(f"adx_max must be > 0 (omit it for no ceiling), got {adx_max!r}")
     if side_filter not in ("long", "short", "both"):
         raise ValueError(f"side_filter must be long|short|both, got {side_filter!r}")
     skip_hour_set = _parse_skip_hours(skip_hours)
@@ -179,9 +187,12 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                                    trail_vol_above_pctl,
                                    trail_vol_below_pctl)
     atr_pctl = None
-    if vol_trail_on:
+    if vol_trail_on or lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl):
+        # ONE percentile series for the vol-trail lever and the vol-at-entry gate (same rank, same window).
         atr_pctl = df["atr"].rolling(vol_pctl_window,
                                      min_periods=vol_pctl_window).rank(pct=True)
+    # ADX ceiling series (PI-20261123-SME5WDGR-0008): the ADX of the last CLOSED bar, only built when --adx-max is set (byte-identical off).
+    adx_prev = lever_gates.adx_series(df, adx_period).shift(1) if adx_max is not None else None
     trades: List[Trade] = []
     # Per-entry live-TP distance in R; empty when the lever is off.
     _tp_r_effective: List[float] = []
@@ -211,6 +222,13 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                 pass
         # squeeze fires: was ON last bar, OFF now (expansion)
         if not (bool(prev) and not bool(now)):
+            i += 1
+            continue
+        # VOL-AT-ENTRY GATE and ADX CEILING (PI-20261123-SME5WDGR-0008): skip a signal whose SIGNAL-bar ATR percentile is in a skipped tail
+        # (backtest_trend.py M21 E-2 rule) or whose last-closed-bar ADX is >= --adx-max (the backtest_fade / backtest_fvg_range convention).
+        # A skipped bar mutates no state, so the next qualifying bar fires. Defaults (0 / 0 / None) = no gate = byte-identical.
+        if lever_gates.skips(atr_pctl if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else None,
+                             i, vol_skip_above_pctl, vol_skip_below_pctl) or lever_gates.adx_blocks(adx_prev, i, adx_max):
             i += 1
             continue
         c = float(df["close"].iloc[i])
@@ -359,6 +377,9 @@ def run_backtest(df: pd.DataFrame, *, bb_period: int, bb_std: float,
                               "kc_mult": kc_mult, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence,
                               **({"be_floor_r": be_floor_r} if be_floor_r > 0.0 else {}),
+                              **({"vol_skip_above_pctl": vol_skip_above_pctl, "vol_skip_below_pctl": vol_skip_below_pctl}
+                                 if lever_gates.gate_armed(vol_skip_above_pctl, vol_skip_below_pctl) else {}),
+                              **({"adx_max": adx_max, "adx_period": adx_period} if adx_max is not None else {}),
                               "vol_pctl_window": vol_pctl_window,
                               "trail_vol_above_pctl": trail_vol_above_pctl,
                               "trail_vol_below_pctl": trail_vol_below_pctl,
@@ -665,6 +686,14 @@ def main(argv):
     p.add_argument("--vol-pctl-window", type=int, default=200,
                    help="Lookback for the ATR-percentile rank. The leading "
                         "window is left undefined rather than ranked as calm.")
+    # --vol-pctl-window is declared above and shared with the vol-trail lever. Flags are declared literally (check_queue_harness_flags reads the AST).
+    p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile exceeds this.")
+    p.add_argument("--vol-skip-below-pctl", type=float, default=0.0,
+                   help="M21 E-2 vol-at-entry (0=off): skip entries whose signal-bar ATR trailing percentile is below this.")
+    p.add_argument("--adx-max", type=float, default=None,
+                   help="ADX ceiling (default off): skip a signal whose last-closed-bar ADX is >= this (same convention as backtest_fade / backtest_fvg_range).")
+    p.add_argument("--adx-period", type=int, default=14)
     p.add_argument("--json", dest="json_out", default=None)
     p.add_argument("--emit-trades", default=None)
     a = p.parse_args(argv[1:])
@@ -719,6 +748,8 @@ def main(argv):
                      trail_vol_below_pctl=a.trail_vol_below_pctl,
                      trail_vol_tight_mult=a.trail_vol_tight_mult,
                      be_floor_r=a.be_floor_r,
+                     vol_skip_above_pctl=a.vol_skip_above_pctl, vol_skip_below_pctl=a.vol_skip_below_pctl,
+                     adx_max=a.adx_max, adx_period=a.adx_period,
                      side_filter=a.side_filter, skip_hours=a.skip_hours)
     if a.confidence_sweep:
         out = _confidence_sweep(df, _parse_grid(a.confidence_sweep), bt_kwargs)
