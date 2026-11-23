@@ -291,13 +291,17 @@ def random_usable_bars(bars: Sequence[dict], *, t_entry: float, t_close: float, 
 def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: List[dict], actions: List[dict],
                   equity_now: Dict[str, Optional[float]], venue: Dict[str, dict],
                   graded_at: Optional[str] = None, n_random: int = N_RANDOM, horizon: Optional[dict] = None,
-                  random_mode: str = DEFAULT_RANDOM_MODE) -> dict:
+                  random_mode: str = DEFAULT_RANDOM_MODE, actions_authoritative: bool = False) -> dict:
     """Pure: one graded record for one closed package. See counterfactual_grader.py's docstring for the schema.
 
     ``random_mode``: ``causal`` (default since CF-RANDOM-CAUSAL-DEFAULT) draws the random intervention times from
     [t_entry, t_entry + horizon), a per-leg constant; an action landing after the trade has closed simply never applies.
     ``legacy_own_length`` (explicit flag only, to reproduce pre-flip records) draws them from [t_entry, t_close) -- the
-    trade's OWN realised length, known only at its exit (lookahead). See ``random_usable_bars``."""
+    trade's OWN realised length, known only at its exit (lookahead). See ``random_usable_bars``.
+
+    ``actions_authoritative`` (CF-FIDELITY-ACTION-REPLAY, default False = byte-identical): the ``actions`` are the leg's RECORDED
+    stop/target path (position_path_history), so ``replayed_actual`` replays them alone, without ALSO running the engine's own
+    ATR trail on top (the recorded stops already contain every trail step the live monitor made)."""
     base = {"schema_version": SCHEMA_VERSION, "order_package_id": pkg["order_package_id"],
             "strategy": pkg.get("strategy_name"), "symbol": pkg.get("symbol"), "side": str(pkg.get("direction") or "").lower(),
             "graded_at": graded_at or lrc._iso(datetime.now(timezone.utc).timestamp()), "biases": BIASES}
@@ -359,7 +363,11 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
         return a
 
     sign = 1.0 if side == "long" else -1.0
-    timed = [{"ts": a["ts_epoch"], "kind": "set_stop", "level": a["level"]} for a in actions]
+    timed = [{"ts": a["ts_epoch"], "kind": a.get("kind", "set_stop"), "level": a.get("level"),
+              **({"frac": a["frac"]} if "frac" in a else {})} for a in actions]
+
+    def _lv(a):         # a close action has no level
+        return a["kind"] if a.get("level") is None else f"stop->{a['level']:.5g}"
 
     # ---- (a) actual: measured outcome, the venue pnl where it priced it
     actual_per = {}
@@ -377,7 +385,8 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     arms.append(actual)
 
     # ---- baseline: the actual management replayed
-    rep = run("replayed_actual", "baseline", "Actual management replayed (like-for-like baseline)", {"actions": len(timed)}, acts=timed)
+    rep = run("replayed_actual", "baseline", "Actual management replayed (like-for-like baseline)", {"actions": len(timed)}, acts=timed,
+              **({"trail": None} if (actions_authoritative and timed) else {}))
     run("original_brackets", "entry_brackets", "Original SL/TP, no in-trade action (own trail only)", {})
 
     # ---- (c) alternative entry brackets, constant risk
@@ -392,7 +401,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     # ---- (d) less management: each applied action removed one at a time
     for i, a in enumerate(timed):
         rest = [x for j, x in enumerate(timed) if j != i]
-        lbl = f"Without action {i + 1} ({lrc._iso(a['ts'])} stop->{a['level']:.5g}); kept: " + (", ".join(f"{x['level']:.5g}" for x in rest) or "none")
+        lbl = f"Without action {i + 1} ({lrc._iso(a['ts'])} {_lv(a)}); kept: " + (", ".join(_lv(x) for x in rest) or "none")
         run(f"less_without_action_{i + 1}", "less_management", lbl, {"removed": i + 1, "kept": len(rest)}, acts=rest)
 
     # ---- (e) more / different management
