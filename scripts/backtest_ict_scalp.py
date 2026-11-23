@@ -759,6 +759,17 @@ def _skip_hours_arg(raw: str) -> str:
     return raw
 
 
+def _cf_for(t: "Trade", cb: Dict[str, float], strategy: str, symbol: str, frame_bars: Any,
+            horizon_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """The `cf` block (cf_trade/1) for one emitted row; see scripts/research/cf_harness.py. ict_scalp is a fixed-bracket
+    strategy (no ATR trail), so the replay carries the initial stop and the resting TP only; bank/BE levers are not replayed."""
+    import cf_harness
+    row = {"strategy": strategy, "symbol": symbol, "entry_time": str(t.entry_time), "exit_time": str(t.exit_time),
+           "entry": t.entry, "sl": t.sl, "direction": t.direction, "exit_price": t.exit_price, "exit_reason": t.outcome,
+           "net_r": round(t.r_multiple - cb["total_cost_r"], 4), "cost_fee_r": cb["fee_r"], "cost_funding_r": cb["funding_r"]}
+    return cf_harness.cf_for_row(row, frame_bars, horizon_cfg, {"tp": t.tp})
+
+
 def run_backtest(
     df: pd.DataFrame,
     *,
@@ -774,6 +785,7 @@ def run_backtest(
     _collect_trades: bool = False,
     return_trades: bool = False,
     emit_path: Optional[str] = None,
+    cf: bool = False,
     vol_spec: Optional[Dict[str, Any]] = None,
     stamp_regime: bool = False,
     sim_breakeven: bool = False,
@@ -1163,6 +1175,12 @@ def run_backtest(
     # a default in-process caller keeps net_r == gross_r (byte-identical).
     if emit_path:
         Path(emit_path).parent.mkdir(parents=True, exist_ok=True)
+        _cf_bars = _cf_horizon = None
+        if cf:        # CF-C2-HARNESS-REST (opt-in; off = byte-identical): adds one `cf` key per row (schema cf_trade/1)
+            sys.path.insert(0, str(Path(__file__).resolve().parent / "research"))
+            import cf_harness as _cf_h
+            _cf_horizon = {"timeframe": timeframe, "max_hold_bars": timeout_bars}
+            _cf_bars = _cf_h.frame_bars_for(df, timeframe)
         with open(emit_path, "w", encoding="utf-8") as fh:
             for t in trades:
                 cb = _cost_breakdown(t)
@@ -1220,7 +1238,9 @@ def run_backtest(
                     # carried verbatim so the signal-research component-edge
                     # report can attribute entry-component edge over backtest
                     # volume (component_edge_report.py --backtest-log).
-                    "meta": t.meta}, default=str) + "\n")
+                    "meta": t.meta,
+                    **({} if not cf else {"cf": _cf_for(t, cb, strategy_name, symbol, _cf_bars, _cf_horizon)})},
+                    default=str) + "\n")
 
     summary = _summarize(trades, df, timeframe=timeframe, symbol=symbol,
                          bank_frac=bank_frac, bank_at_r=bank_at_r)
@@ -1700,6 +1720,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "live, MFE is truncated at it and can say nothing "
                         "about what lay above. Off by default, so every "
                         "existing caller is byte-identical.")
+    p.add_argument("--cf", action="store_true",
+                   help="CF-C2-HARNESS-REST (opt-in): add a `cf` counterfactual-arms block (schema cf_trade/1) to every "
+                        "--emit-trades row. Existing keys unchanged; off = byte-identical.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write one per-trade JSONL object per closed trade to PATH "
                         "(for the ML backtest-label recorder; single-run only, not with --confidence-sweep).")
@@ -1992,7 +2015,7 @@ def main(argv: List[str]) -> int:
             print(_fmt_sweep(summary))
         else:
             summary = run_backtest(df, min_confidence=float(args.min_confidence),
-                                   emit_path=args.emit_trades,
+                                   emit_path=args.emit_trades, cf=args.cf,
                                    strategy_name=args.strategy_name,
                                    **bt_kwargs)
             print(_format_text(summary))

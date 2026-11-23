@@ -64,7 +64,7 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
-from cf_harness import cf_summary  # noqa: E402  (CF-C1: pure aggregation of the per-trade `cf` blocks)
+from cf_harness import cf_summary, CF_HARNESSES  # noqa: E402  (CF-C1: pure aggregation of the per-trade `cf` blocks)
 
 FAMILIES: dict[str, dict[str, Any]] = {
     # The structural keys `regime_debt_matrix.classify` routes on come first; the rest are the harness
@@ -225,7 +225,7 @@ def run_cell(name: str, cfg: dict[str, Any], csv: Path, timeframe: str, extra: l
     ela.N_FOLDS = folds
     emit, jout = work / f"{name}__trades.jsonl", work / f"{name}__bt.json"
     argv = build_argv(name, cfg, str(csv), timeframe, str(emit), str(jout), extra, start, end)
-    cf_on = cf and Path(argv[1]).name == "backtest_trend.py" and "--cf" not in argv   # CF-C2 extends the other harnesses
+    cf_on = cf and Path(argv[1]).name in CF_HARNESSES and "--cf" not in argv   # CF-C1 trend; CF-C2 squeeze, fade, ict_scalp, vwap
     if cf_on:
         argv.append("--cf")
     log = work / f"{name}.log"

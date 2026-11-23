@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: library - CF-C1-HARNESS-HOOK; imported by scripts/backtest_trend.py (the --cf flag) and scripts/research/harness_stage0.py (cf_summary)
+# wiring: library - CF-C1-HARNESS-HOOK / CF-C2-HARNESS-REST; imported by the trend, squeeze, fade, ict_scalp and vwap harnesses (the --cf flag) and scripts/research/harness_stage0.py (cf_summary)
 """cf_harness: grade ONE backtest-harness trade on the counterfactual arms (per-trade record schema ``cf_trade/1``).
 
 Pure and OFFLINE: bars come IN as arguments, nothing is fetched. A harness ``Trade`` row is mapped to the shape
@@ -138,6 +138,32 @@ def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = N
                      "abs_gap_r": g["fidelity"]["abs_gap_r"]},
         "provenance": "ESTIMATED",
     }
+
+
+# ---- shared harness-side helpers (CF-C2-HARNESS-REST): one slicing path for every harness's --cf flag -------------------
+#: harnesses that accept ``--cf`` (harness_stage0 appends it for exactly these)
+CF_HARNESSES = ("backtest_trend.py", "backtest_squeeze.py", "backtest_fade.py", "backtest_ict_scalp.py", "run_backtest_vwap.py")
+
+
+def frame_bars_for(df: Any, timeframe: str, bar_label: str = "open") -> Optional["FrameBars"]:
+    """FrameBars for a run's frame, or None when the timeframe is not one the engine knows (rows then grade ``no_bars``)."""
+    return FrameBars(df, timeframe=timeframe, bar_label=bar_label) if timeframe in TF_SECONDS else None
+
+
+def cf_for_row(row: dict, frame_bars: Optional["FrameBars"], horizon_cfg: dict, leg_meta: Optional[dict] = None) -> dict:
+    """The ``cf`` block for an emitted harness row (``row`` carries the keys ``cf_fields`` documents): slice the post-entry
+    path from ``frame_bars`` out to the engine horizon and grade it. Never raises on an ungradable row."""
+    if frame_bars is None:
+        return cf_fields(row, [], horizon_cfg=horizon_cfg)
+    t_in, t_out = lrc._ts(row.get("entry_time")), lrc._ts(row.get("exit_time"))
+    h = cf_core.resolve_horizon({"timeframe": horizon_cfg.get("timeframe")}, horizon_cfg)
+    bars = frame_bars.slice(t_in, t_out + h["seconds"]) if t_in is not None and t_out is not None else []
+    return cf_fields(row, bars, horizon_cfg=horizon_cfg, leg_meta=leg_meta)
+
+
+def tp_price_or_none(entry: float, sign: float, tp_r: Optional[float], risk: float) -> Optional[float]:
+    """A harness TP expressed as a price, or None when it is the rest-at-cap sentinel (tp_r >= 50) or unset."""
+    return (entry + sign * tp_r * risk) if (tp_r and tp_r < 50.0) else None
 
 
 # ---- aggregation (harness_stage0.summarize_arm -> cf_summary) ----------------------------------------------------
