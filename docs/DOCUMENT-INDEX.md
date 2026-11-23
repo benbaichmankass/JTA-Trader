@@ -1157,6 +1157,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/tradeify-feed-trip-2026-10-07.md` | evidence | unknown | — | 2026-10-07 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-api-executor-design-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-portfolio-feasibility-2026-09-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/tradeify-perps-scoping-2026-11-23.md` | evidence | unknown | — | 2026-11-23 | `dir:research-is-measurement / not-assessed` | Tradeify Perps scoping memo (operator 2026-11-23): what it is, costs vs Bybit, prop rules unknowns, automation, per-leg fit, open-only-if recommendation + operator questions. |
 | `docs/research/tradeify-platforms-2026-10-15.md` | evidence | unknown | — | 2026-10-15 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-futures-frontier-2026-11-12.md` | evidence | unknown | — | 2026-11-12 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-dynamic-exits-faster-banking-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
