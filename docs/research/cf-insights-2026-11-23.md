@@ -11,14 +11,14 @@ in its own stop distance, so a wider stop is not more risk). Provenance **ESTIMA
 
 ## 0. Corrections to earlier numbers (read first)
 
-1. **Entry-side arms (+0.6R, 95% improved) were artefacts** — a collapsed risk denominator and signal-bar lookahead. Withdrawn; fixed by
+1. **Entry-side arms (+0.6R, 95% improved) were artefacts** — a collapsed risk denominator and signal-bar lookahead. Withdrawn; fixed by <!-- population-ok: withdrawn run-y figure quoted only to retract it -->
    keeping the bracket distances and entering at the bar close (`entry_at_bar_close`, with a test).
-2. **The wide-stop effect on trend was mostly an artefact.** In run z, 8.9% of trend trades were stopped on the signal bar by the same
+2. **The wide-stop effect on trend was mostly an artefact.** In run z (n = 16,546 of 185,000+ unique trend trades), 8.9% of trend trades were stopped on the signal bar by the same
    lookahead and supplied ~83% of the effect. On corrected run w the pooled trend_donchian effect is **+0.024R/trade** (3× stop, 3R TP,
    CI 0.005–0.044; n = 186,912 unique) against the ~0.14R the holdout units were built on. **The seven holdout units cf1a-01..07 are withdrawn
    before merge**; checklist row CF-TRENDDONCHIAN-WIDESTOP-HOLDOUT carries the note.
 3. A "limit at 0.25 ATR" fill looks +0.11R on *filled* trades only because the fill selects pullbacks; the honest figure is net per signal:
-   **+0.016R** (trend, fill rate 85%), +0.004R squeeze, −0.003R pullback. Nothing there.
+   **+0.016R** (trend, n = 186,912 unique, fill rate 85% of them), +0.004R squeeze (n = 48,869), −0.003R pullback (n = 60,948). Nothing there.
 
 ## 1. Ranked findings (all in-sample, unique trades)
 
@@ -60,7 +60,7 @@ too small to power a unit.
 **Two-way conditional moves (d)** — not done. The engine can tighten on a stall (giveback/BE arms) but has no *loosen on a pullback while the
 trend state holds* arm; that needs a trend-state flag per bar, i.e. the per-bar path emit below.
 
-**Where momentum stops / early exits (LEAVES_R).** Stopped-out trend trades with MFE < 0.5R are post-exit "right" 41.6% of the time
+**Where momentum stops / early exits (LEAVES_R).** Stopped-out trend trades with MFE < 0.5R are post-exit "right" 41.6% of the time (n = 61,333 unique trend stop-outs with MFE < 0.5R)
 (price went on in the trade's direction after the stop), and htf_pullback stops at ≥2R MFE leave +2.7R post-exit (84% exited early,
 n = 16,177) — the strongest hint that a real predictive/extend-TP on pullback winners is worth a unit. Post-exit verdict is a
 descriptive diagnostic, not a graded arm.
