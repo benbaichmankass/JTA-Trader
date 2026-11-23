@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261123-SME5WDGR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23 cycle 7, manager request; breakdown from iteration_orphans.py output joined to dispatch_queue.py --json decisions and research/results rows, population: 77 overdue unit ids of 34 strategy legs",
+    "rerun": "python3 scripts/research/iteration_orphans.py | grep -c '(OVERDUE)'   # then join each overdue unit's cadence in research/queue/<id>.yaml: count of cadence weekly or monthly among them is the artifact"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "REPORTING ARTIFACT, not a dispatch fault: scripts/research/iteration_orphans.py reads a subject as 'overdue' when every live iteration unit is past its iteration.due_by, so a RECURRING unit (cadence weekly or monthly) that ran on schedule and landed rows counts as overdue forever. Measured 2026-11-23 over the 34 overdue strategy legs = 77 unit ids: 46 are recurring units (44 weekly, 2 monthly) that ran and landed rows (dispatcher reason: not_due, cadence not elapsed); the other 31 are 14 blocked, 11 once-units with a measured row, 4 would_dispatch now, 2 producer_failed. Fix is in the report, not the queue: do not count a recurring unit whose latest run is inside its cadence as overdue (or report overdue and recurring separately). No unit change is needed. Nothing was built (manager ruling, cycle 7)."
+}

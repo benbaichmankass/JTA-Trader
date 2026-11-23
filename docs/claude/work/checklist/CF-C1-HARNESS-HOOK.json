@@ -1,33 +1,34 @@
 {
   "id": "CF-C1-HARNESS-HOOK",
   "title": "Call the grader from backtest_trend.py (cf_fields) and harness_stage0.py (--cf default-on, cf_summary); per-trade record schema cf_trade/1",
-  "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "session_01AFoLuKwVZaRfdWkVBsQDEa",
   "lane": "CF-C1-HARNESS-HOOK",
   "model": "sonnet",
+  "tier": 1,
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "priority_rank": 1,
   "ceiling_usd": 8,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     22003
   ],
   "blocked_on": [],
-  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added.",
-  "priority_rank": 1,
-  "updated_at": "2026-11-01T00:34:00Z",
-  "updated_by": "session_01AFoLuLpoWiu1SEu6vTJpKk",
-  "roadmap": [
-    "L-AM-STANDARD"
-  ],
+  "due_by": "2026-11-26",
+  "_seq": 829,
+  "note": "Phase from docs/plans/counterfactual-everywhere-DESIGN-2026-10-29.md \u00a7 5 (parent COUNTERFACTUAL-EVERYWHERE). No gates added. 2026-11-23 PROVEN: real-data run data/backtest_candles.csv (BTC 1m, 5000 bars) trend 144/144 graded cf_trade/1, mean abs_gap_r 0.104; see PR #28398.",
   "observation": {
-    "what": "the next harness_stage0 unit result on main carries cf_summary on its trend/pullback cells",
+    "due_by": "2026-11-08",
     "how_to_check": "open the newest comms/research results harness_stage0 json: arms.*.cells.*.cf_summary.n_graded == n and fidelity_abs_gap_r.max < 0.05",
-    "due_by": "2026-11-08"
+    "what": "the next harness_stage0 unit result on main carries cf_summary on its trend/pullback cells"
   },
+  "phase": null,
+  "updated_at": "2026-11-23T14:28:49Z",
+  "updated_by": "session_01AFoLuFJ8QqNnzPArTNMx7xg",
   "writeback": {
-    "roadmap": "L-AM-STANDARD: backtest_trend.py --cf and harness_stage0 (default on, --no-cf) grade every trade on the cf_core arms, schema cf_trade/1; non-trend harnesses follow in CF-C2",
-    "arch": "none: research tooling, no runtime component or contract changed"
-  },
-  "_seq": 829
+    "arch": "none: research tooling, no runtime component or contract changed",
+    "roadmap": "L-AM-STANDARD: backtest_trend.py --cf and harness_stage0 (default on, --no-cf) grade every trade on the cf_core arms, schema cf_trade/1; non-trend harnesses follow in CF-C2"
+  }
 }

@@ -1,0 +1,21 @@
+{
+  "id": "IPW-XRP-PULLBACK-PARITY",
+  "title": "xrp_pullback_2h: live-vs-harness parity read, then first-20 demotion check",
+  "state": "queued",
+  "owner": "ITERATION-PLAN-2W-20261123",
+  "lane": "ITERATION-PLAN-2W-20261123",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-01",
+  "note": "Diagnosis 2026-11-23: live closes (diag journal, R = pnl / (|entry-stop| x size), journal pnl, not venue basis) bybit_2 n20 sumR -12.4, 0 TP, 13 SL; bybit_portfolio mirror n17 2 wins; bybit_1 demo n32 +33.6R from 4 TP hits (+38.5R). Pooled TP hits 4/52 vs Stage-0 TP share 16/53 (0.30): P(<=4|0.30)=1e-4. Stage-0 record: +6.56R n53 OOS, 2 of 4 folds positive, fold 4 -1.9R, long -4.0R vs short +10.5R, ADX 20-30 +10.0R vs >=30 -3.4R. Candidate causes in order: harness/fidelity (TP rate), regime (fold 4), design (adx_min 25 admits ADX>=30). TEST 1 (build+run, trainer): backtest_fidelity_calibrate.py --strategy xrp_pullback_2h --symbol XRPUSDT --stratify direction on live closes of bybit_2+bybit_portfolio vs harness trades over 2026-06-19..2026-11-22; rule registered here: harness net R over that window >= +3R with live <= -6R => FIDELITY GAP (harness not trusted for this leg: Tier-3 demotion proposal to the demo floor, manager decides); harness <= 0R => REGIME/DESIGN (leg continues, ADX ceiling AX40 RQ-20261017-ae17-04 and DI filter RQ-20261022-3a84-01 get a disjoint-window confirmation). TEST 2 first-20: next 20 real-money closes after 2026-11-23, trigger sumR <= -6R (expectation +2.5R at +0.12R/trade, sd of sum ~5.8R) => Tier-3 demotion proposal. n=20 detects a collapse, not a small edge. CORRECTION 2026-11-23 after the pairwise parity read (25 shared packages, bybit_1/bybit_2/bybit_portfolio): the earlier demo +33.6 R was an R-basis artifact (journaled stop tightened by live review on winners). Price-return basis: bybit_2 n20 -41.6 pct, 0 TP; portfolio n16 -31.2 pct; bybit_1 n31 +7.8 pct, 4 TP (3 on packages bybit_2 never took, +20.2 pct over 17 b1-only closes). Entry/SL/TP placement identical across books: not an execution-price defect. xrp_pullback_2h left bybit_2/bybit_portfolio rosters 2026-11-06 (PROD-LEGS-DSR-DECISION), so the real-money exposure ended; demotion trigger is moot, the parity test now asks whether harness TP-hit evidence is trusted for this leg.",
+  "phase": "research",
+  "updated_at": "2026-11-23T11:22:26Z",
+  "updated_by": "session_01AFoLuMs8RsEaRCDLmJKgH1"
+}

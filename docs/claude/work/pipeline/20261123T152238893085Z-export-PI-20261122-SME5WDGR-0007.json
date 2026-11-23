@@ -1,0 +1,19 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261122-SME5WDGR-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-22, stranded-pool group B; manager ruling in cross-session message 23:52Z; logs comms/research/RQ-20261117-b2f1-03/44236947199/logs/cmd-0.log (+6 siblings)",
+    "rerun": "for u in b2f1-03 b2f1-14 b2f2-02 b2f2-21 9e1a-01 9e1b-01 9e1c-01; do ls research/queue/blocked/RQ-20261117-$u.yaml; done   # all 7 still blocked => not yet cleared; and grep -l refusing_us comms/research/RQ-20261117-*/*/logs/cmd-0.log"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "what": "SOURCE MES 1d candles from the venue the mes_trend_long_1d leg actually trades (the IB futures historical-bars path: src/exchange/ib_connector.py reqHistoricalData via market_data.fetch_candles, the ib-gateway route), NOT the Dukascopy S&P index CFD proxy (manager ruling 2026-11-22: test the leg on the instrument it trades). Why: 7 queued mes_trend_long_1d exit_lever_ablation units (RQ-20261117-b2f1-03/-14, b2f2-02/-21, 9e1a-01, 9e1b-01, 9e1c-01) died in fetch_candles on yfinance ES=F (no rows, SPY control also empty, venue_state=refusing_us, HTTP 429) and were moved to research/queue/blocked/ with a structured blocked_on in #28240; each depends on this item (clears_when). Open points to settle first: (1) does IB serve 1d MES/CONTFUT bars back to the units' registered window start 2018-06-01 (IB futures history depth is limited; if not, the window is a registered-population question for the manager, not a silent clamp); (2) the sources must reach a Kaggle/GitHub-runner lane with no gateway, so the bars are fetched on the gateway path once and published as a candle dataset the units read (the published candle_dataset.covers mechanism), not fetched live in the unit. Deliverable: a committed 1d MES bar file or published dataset with a stated window and row count, a --data-csv route for exit_lever_ablation that uses it, then git mv the 7 units back to research/queue/ with last_dispatched_at absent and rule unchanged. Related: PI-20261122-SME5WDGR-0004 (residue groups; this is group B's disposition). || UPDATE 2026-11-23 (lane W48, measured): the premise has changed. Yahoo now serves ES=F (502 daily rows, 2024-11..2026-11, with SPY and GC=F alongside) on yfinance 1.7.0, and the research runner already installs 1.7.0 (research-script-run.yml; the TQQQ/QLD units landed measured on it). The MES units' exact command (RQ-20261117-9e1a-01, local run) now runs end to end on the REGISTERED feed (yfinance ES=F), so the IB-bars route is no longer needed to unblock them. BUT the result is deterministic and unpowered: mes_trend_long_1d, window 2018-06-01..2026-10-15, A arm n=31 < the registered floor of 39, so all 7 units on that leg and window (9e1a-01, 9e1b-01, 9e1c-01, b2f1-03, b2f1-14, b2f2-02, b2f2-21) would land INDETERMINATE. Not re-armed (a known-indeterminate run is a floor-filler). Decision for the manager: retire the 7 by record as underpowered at the registered window, or register a longer window (ES=F reaches back to 2000; a window start change is a registered-population decision)."
+}
