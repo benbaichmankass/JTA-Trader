@@ -97,7 +97,7 @@ run:
   inputs:
     research_unit: RQ-20261123-c5d2-01
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'REGIME lever family never tested on mes_trend_long_1d: top-vol entry skip VH80/VH90 vs the declared leg, net of cost? [window 2012-01-01+, supersedes RQ-20261117-9e1a-01]'
 value:
@@ -116,3 +116,16 @@ why_this_matters: 'research/levers/mes_trend_long_1d.yaml lists no vol-skip-abov
   any arm result was read: 2016-01-01 n=37, 2014-01-01 n=42, 2012-01-01 n=51, 2010-01-01 n=58, 2008-01-01 n=66, 2006-01-01 n=74, 2004-01-01 n=81, 2002-01-01 n=87, 2001-01-01 n=90; the registered 2018-06-01
   start read n=31 < 39 (the same A arm for every unit on that leg, so all 7 units on it were unpowered).'
 last_dispatched_at: '2026-11-23T15:03:50+00:00'
+grading:
+  attested: RULERQ20261123c5d201
+  auto: true
+  decision_rule_id: RULERQ20261123c5d201
+  evidence:
+  - research/results/RQ-20261123-c5d2-01/45198717621.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
