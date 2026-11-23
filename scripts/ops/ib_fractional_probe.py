@@ -17,19 +17,22 @@ print("connected; accounts:", len(ib.managedAccounts()), "server version:", ib.c
 try:
     c = Stock(SYM, "SMART", "USD")
     print("qualify:", ib.qualifyContracts(c))
-    tk = ib.reqMktData(c, "", True, False); ib.sleep(3)
+    tk = ib.reqMktData(c, "", True, False)
+    ib.sleep(3)
     px = tk.last or tk.close or tk.marketPrice()
     print("price", px)
     # 1) plain fractional market order
-    t1 = ib.placeOrder(c, MarketOrder("BUY", QTY)); ib.sleep(4)
-    print("1) fractional market:", t1.orderStatus.status, [(l.message) for l in t1.log][-3:])
+    t1 = ib.placeOrder(c, MarketOrder("BUY", QTY))
+    ib.sleep(4)
+    print("1) fractional market:", t1.orderStatus.status, [e.message for e in t1.log][-3:])
     # 2) bracket: parent + TP + stop, fractional
     ids = ib.client.getReqId()
     parent = MarketOrder("BUY", QTY, orderId=ids, transmit=False)
     tp = LimitOrder("SELL", QTY, round(px * 1.03, 2), orderId=ids + 1, parentId=ids, transmit=False)
     sl = StopOrder("SELL", QTY, round(px * 0.97, 2), orderId=ids + 2, parentId=ids, transmit=True)
-    trs = [ib.placeOrder(c, o) for o in (parent, tp, sl)]; ib.sleep(5)
-    print("2) bracket:", [(t.order.orderType, t.orderStatus.status, [l.message for l in t.log][-2:]) for t in trs])
+    trs = [ib.placeOrder(c, o) for o in (parent, tp, sl)]
+    ib.sleep(5)
+    print("2) bracket:", [(t.order.orderType, t.orderStatus.status, [e.message for e in t.log][-2:]) for t in trs])
     print("errors seen (see log above for ib_insync error lines)")
 finally:
     for t in ib.openTrades():
