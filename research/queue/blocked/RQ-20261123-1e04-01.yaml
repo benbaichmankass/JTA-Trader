@@ -45,7 +45,8 @@ blocked_on:
 - kind: work_item
   ref: IELE-INDEX-DRIVEN-HARNESS
   what: No harness runs an index signal executed in a different instrument with an index-mapped stop.
-  clears_when: Owning row done and self-test passes; then git mv to research/queue/, status queued, run.command set.
+  clears_when: row_state:IELE-INDEX-DRIVEN-HARNESS=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader

@@ -47,7 +47,8 @@ blocked_on:
 - kind: work_item
   ref: IELE-BEAR-ML-BUILD
   what: No dataset with index/macro-state features and ETF forward-R labels on the inverse/hedge population exists.
-  clears_when: Owning row done (dataset built, reproduces a known hash) and the reset has passed; then git mv to research/queue/, status queued, run.command set.
+  clears_when: row_state:IELE-BEAR-ML-BUILD=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader

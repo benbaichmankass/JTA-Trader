@@ -1,5 +1,6 @@
 id: RQ-20261123-1e02-01
-title: 'Direction-switch: long the bull ETF in an index up-regime, long the inverse ETF in a down-regime, one position at a time, vs long-only the bull ETF (S&P 500 and Nasdaq-100 pairs), net of the full cost stack'
+title: 'Direction-switch: long the bull ETF in an index up-regime, long the inverse ETF in a down-regime, one position at a time, vs long-only the bull ETF (S&P 500
+  and Nasdaq-100 pairs), net of the full cost stack'
 status: blocked
 cadence: once
 kind: experiment
@@ -7,8 +8,12 @@ theme: live_strategy
 priority: 2
 roadmap:
 - L-LADDER
-question: 'Does switching between the bull and the inverse leveraged ETF of one index (SPY-family: UPRO<->SPXU, SPY<->SH; Nasdaq: TQQQ<->SQQQ, QQQ<->PSQ), one position at a time, flat when the regime signal is neutral, beat holding only the bull ETF (the tqqq_trend_long_1d form) on net R and drawdown, 2010-06-01..2026-10-22, 4 folds?'
-why_this_matters: 'It is the one-book form of the operator ask: the account stays long-only (buy orders) yet is positioned for either direction. If the switch only adds the inverse leg during down-regimes, it is the same as the twins plus a constraint; the test says whether the constraint (one position, shared risk) costs or earns.'
+question: 'Does switching between the bull and the inverse leveraged ETF of one index (SPY-family: UPRO<->SPXU, SPY<->SH; Nasdaq: TQQQ<->SQQQ, QQQ<->PSQ), one position
+  at a time, flat when the regime signal is neutral, beat holding only the bull ETF (the tqqq_trend_long_1d form) on net R and drawdown, 2010-06-01..2026-10-22, 4
+  folds?'
+why_this_matters: 'It is the one-book form of the operator ask: the account stays long-only (buy orders) yet is positioned for either direction. If the switch only
+  adds the inverse leg during down-regimes, it is the same as the twins plus a constraint; the test says whether the constraint (one position, shared risk) costs
+  or earns.'
 power:
   expected_n: 120
   min_detectable_effect: 0.3
@@ -16,7 +21,8 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE, not measured: regime flips ~ 6-10 per year per index over 15.4 y gives >100 position episodes per pair; paired against the long-only baseline on the same bars. Floor 25.'
+  basis: 'ESTIMATE, not measured: regime flips ~ 6-10 per year per index over 15.4 y gives >100 position episodes per pair; paired against the long-only baseline
+    on the same bars. Floor 25.'
   feasibility:
     source: none
     accrual_basis: Fixed in-hand window; nothing accrues.
@@ -27,15 +33,20 @@ decision_rule:
   id: RULE-RQ20261123-1e02-01-DIRSWITCH
   registered_at: '2026-11-23'
   registered_before_run: true
-  statistic: 'index_direction_switch.py (to be built, row IELE-DIRSWITCH-HARNESS): regime signal = the shipped trend_donchian filter of the index ETF (donchian 20 up = up-regime, donchian 20 down = down-regime, else flat), executed in the 3x pair; net_r, maxDD, n, per-fold net_r for (S) switch and (B) long-only bull ETF with the same signal, same cost stack (fee 0 + 5 bps slippage, 2x slippage re-read).'
-  rule: 'PASS IFF n(S) >= 25 AND net_r(S) > net_r(B) AND maxDD(S) <= maxDD(B) AND S beats B in >= 3 of 4 folds AND net_r(S) > 0 under 2x slippage. INDETERMINATE if n < 25. FAIL otherwise. Parameters fixed now (donchian 20, one position, flat on neutral); none changes after a result.'
-  what_it_does_not_do: 'Changes no config. A PASS does not create a new executor: the switch would be a roster of two long-only legs sharing a same-symbol/same-index allocation guard, proposed in the roster doc, not built here.'
-  baseline: 'B = long-only bull ETF on the same signal, same window, same cost stack.'
+  statistic: 'index_direction_switch.py (to be built, row IELE-DIRSWITCH-HARNESS): regime signal = the shipped trend_donchian filter of the index ETF (donchian 20
+    up = up-regime, donchian 20 down = down-regime, else flat), executed in the 3x pair; net_r, maxDD, n, per-fold net_r for (S) switch and (B) long-only bull ETF
+    with the same signal, same cost stack (fee 0 + 5 bps slippage, 2x slippage re-read).'
+  rule: PASS IFF n(S) >= 25 AND net_r(S) > net_r(B) AND maxDD(S) <= maxDD(B) AND S beats B in >= 3 of 4 folds AND net_r(S) > 0 under 2x slippage. INDETERMINATE if
+    n < 25. FAIL otherwise. Parameters fixed now (donchian 20, one position, flat on neutral); none changes after a result.
+  what_it_does_not_do: 'Changes no config. A PASS does not create a new executor: the switch would be a roster of two long-only legs sharing a same-symbol/same-index
+    allocation guard, proposed in the roster doc, not built here.'
+  baseline: B = long-only bull ETF on the same signal, same window, same cost stack.
 blocked_on:
 - kind: work_item
   ref: IELE-DIRSWITCH-HARNESS
-  what: 'No harness runs a two-instrument regime switch with one position at a time; exit_lever_ablation runs one leg on one symbol.'
-  clears_when: 'The owning row is done and its self-test passes; then git mv this file to research/queue/, status queued, run.command set.'
+  what: No harness runs a two-instrument regime switch with one position at a time; exit_lever_ablation runs one leg on one symbol.
+  clears_when: row_state:IELE-DIRSWITCH-HARNESS=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader

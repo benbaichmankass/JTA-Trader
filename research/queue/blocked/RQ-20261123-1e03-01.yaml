@@ -1,5 +1,6 @@
 id: RQ-20261123-1e03-01
-title: 'ML equity entry on the index leveraged + inverse ETF subset: does the ml_entry_eq_struct pooled pass (RQ-20261107-98e3-06) hold on the subset (TQQQ, UPRO, SPXL, UDOW, TNA, QLD, SSO + SQQQ, SPXU, SPXS, SH, SDS, PSQ, QID, SDOW, TZA)?'
+title: 'ML equity entry on the index leveraged + inverse ETF subset: does the ml_entry_eq_struct pooled pass (RQ-20261107-98e3-06) hold on the subset (TQQQ, UPRO,
+  SPXL, UDOW, TNA, QLD, SSO + SQQQ, SPXU, SPXS, SH, SDS, PSQ, QID, SDOW, TZA)?'
 status: blocked
 cadence: once
 kind: experiment
@@ -7,8 +8,12 @@ theme: ml_health
 priority: 2
 roadmap:
 - L-ML-LIVE
-question: 'ml_entry_eq_struct already trades the whole 173-ETF pool its pooled test passed on, and that pool (measured: artifact pool_symbols) already contains SQQQ, SPXU, SPXS, SH, SDS, PSQ, QID, SDOW, TZA and the long-leveraged index ETFs. The pooled pass is mostly SPY/QQQ/IWM-feature driven, though; is the edge on the leveraged/inverse subset itself positive net of cost, or does the pooled mean hide a negative subset (decay, spread, regime reversal)? Same pinned artifact and rule family, restricted read.'
-why_this_matters: 'Per the canonical rule an ML trades the whole population its registered pooled test passed on, but the subset is what delivers the operator ask (downside via buy orders). A negative subset on the confirm window is a pool_exclude proposal; a positive one confirms the downside coverage is real.'
+question: 'ml_entry_eq_struct already trades the whole 173-ETF pool its pooled test passed on, and that pool (measured: artifact pool_symbols) already contains SQQQ,
+  SPXU, SPXS, SH, SDS, PSQ, QID, SDOW, TZA and the long-leveraged index ETFs. The pooled pass is mostly SPY/QQQ/IWM-feature driven, though; is the edge on the leveraged/inverse
+  subset itself positive net of cost, or does the pooled mean hide a negative subset (decay, spread, regime reversal)? Same pinned artifact and rule family, restricted
+  read.'
+why_this_matters: Per the canonical rule an ML trades the whole population its registered pooled test passed on, but the subset is what delivers the operator ask
+  (downside via buy orders). A negative subset on the confirm window is a pool_exclude proposal; a positive one confirms the downside coverage is real.
 power:
   expected_n: 60
   min_detectable_effect: 0.1
@@ -17,10 +22,12 @@ power:
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE, not measured: the pooled confirm read had n 207 over 173 symbols (RQ-20261107-98e3-06); the 16-symbol subset is ~9% of the pool by symbol count but more active in volatile regimes, so ~20-60 trades. Likely UNDERPOWERED for an edge claim at +0.1 R; declared so, it still reports a point estimate and a sign.'
+  basis: 'ESTIMATE, not measured: the pooled confirm read had n 207 over 173 symbols (RQ-20261107-98e3-06); the 16-symbol subset is ~9% of the pool by symbol count
+    but more active in volatile regimes, so ~20-60 trades. Likely UNDERPOWERED for an edge claim at +0.1 R; declared so, it still reports a point estimate and a sign.'
   feasibility:
     source: none
-    accrual_basis: Replay of the confirm window already read in 98e3-06; the subset read is a descriptive restriction of an already-graded read and claims no new holdout look beyond it.
+    accrual_basis: Replay of the confirm window already read in 98e3-06; the subset read is a descriptive restriction of an already-graded read and claims no new
+      holdout look beyond it.
 evidence_class:
   holdout: in_sample
   claim: descriptive
@@ -28,15 +35,21 @@ decision_rule:
   id: RULE-RQ20261123-1e03-01-ML-SUBSET
   registered_at: '2026-11-23'
   registered_before_run: true
-  statistic: 'ml_entry_equity.py confirm-read with --population-subset (to be built, row IELE-ML-SUBSET-HARNESS), reproducing the graded 98e3-06 artifact (booster sha reproduces) and reporting mean net R, n, month-clustered se for (S) the subset above and (R) the rest of the pool, on the same trades; no re-selection of tau, no refit.'
-  rule: 'SUBSET-HOLDS IFF n(S) >= 30 AND mean net R (S) > 0 AND mean(S) >= mean(R) - 2 x se(S). SUBSET-NEGATIVE IFF n(S) >= 30 AND mean(S) < 0 -> a pool_exclude proposal for the inverse/leveraged symbols that read negative. INDETERMINATE if n(S) < 30. Parameters fixed now.'
-  what_it_does_not_do: 'Changes no config or artifact; takes no new holdout look (a restriction of the graded read). Per-symbol results never gate (canonical: an account configures strategies, never symbols); only the pre-declared subset is read, and a negative subset would be a population rule fixed before a rerun, not a per-symbol pick.'
-  baseline: 'R = the rest of the pool on the same trades and window.'
+  statistic: ml_entry_equity.py confirm-read with --population-subset (to be built, row IELE-ML-SUBSET-HARNESS), reproducing the graded 98e3-06 artifact (booster
+    sha reproduces) and reporting mean net R, n, month-clustered se for (S) the subset above and (R) the rest of the pool, on the same trades; no re-selection of
+    tau, no refit.
+  rule: SUBSET-HOLDS IFF n(S) >= 30 AND mean net R (S) > 0 AND mean(S) >= mean(R) - 2 x se(S). SUBSET-NEGATIVE IFF n(S) >= 30 AND mean(S) < 0 -> a pool_exclude proposal
+    for the inverse/leveraged symbols that read negative. INDETERMINATE if n(S) < 30. Parameters fixed now.
+  what_it_does_not_do: 'Changes no config or artifact; takes no new holdout look (a restriction of the graded read). Per-symbol results never gate (canonical: an
+    account configures strategies, never symbols); only the pre-declared subset is read, and a negative subset would be a population rule fixed before a rerun, not
+    a per-symbol pick.'
+  baseline: R = the rest of the pool on the same trades and window.
 blocked_on:
 - kind: work_item
   ref: IELE-ML-SUBSET-HARNESS
-  what: 'scripts/research/ml_entry_equity.py has no population-subset option; its confirm-read reads the whole pool.'
-  clears_when: 'The owning row is done; then git mv this file to research/queue/, status queued, run.command set.'
+  what: scripts/research/ml_entry_equity.py has no population-subset option; its confirm-read reads the whole pool.
+  clears_when: row_state:IELE-ML-SUBSET-HARNESS=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader
