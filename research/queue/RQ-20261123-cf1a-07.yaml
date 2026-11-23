@@ -1,0 +1,121 @@
+id: RQ-20261123-cf1a-07
+title: 'HOLDOUT-SELECTED wider stop buffer + far target on ict_scalp_5m (live, BTC 5m): atr-sl-buffer 1.0 / 2.0 with TP 6R vs declared 0.2 / 1.5R, net of cost (CF-INSIGHTS)'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'ict_scalp_5m (live, BTCUSDT 5m) ranks #1 in the CF-INSIGHTS live-leg lens by money (corpus ict_scalp_5m n=1,392 unique trades: ext_sl3x_tp6R +0.227 R/trade [0.129,0.323], ~137 trades/yr) although
+  its LIVE record fails (live mean net R +0.144 on 55 graded packages vs the replay -0.068; fidelity FAIL). Does a wider ATR stop buffer with a far target (C1 1.0 ATR / C2 2.0 ATR, TP 6R), selected on the
+  earliest ~75% of 2024-10-05..2026-11-15 and read once on the latest span, beat the declared leg net of cost, in the harness''s own R?'
+why_this_matters: 'Operator 2026-11-23 via the manager: the CF-INSIGHTS live-leg lens ranks this leg in the top three by lower-bound R/yr; every lead becomes a pre-registered, time-disjoint holdout unit,
+  no config change. The finding is IN-SAMPLE (best of ~30 arm cells; overlapping sweep jobs deduped to unique trades; corpus rows are family x symbol sweeps, not this leg''s exact params). WHY A WIDER STOP
+  COULD FLIP A LEG WHOSE LIVE RECORD FAILS: the ict_scalp stop sits just behind the sweep extreme (0.2 ATR buffer) with a 1.5R target; the counterfactual shows the sibling scalp legs FAIL every bracket
+  arm while their post-exit verdict is LEAVES_R (price keeps going our way after exit), i.e. the stop-hunt wick that takes the trade out is followed by the move the setup predicted; a stop that survives
+  the wick and a target beyond 1.5R lets that move pay. The mechanism is shown only on a 2-year 5m replay, not on live data; expect a small held-back n. MULTIPLE-TESTING DENOMINATOR: 2 arms on this leg,
+  selected on discovery only, read once on the holdout; siblings cf1a-01..07 are read as one family.'
+power:
+  expected_n: 68
+  min_detectable_effect: 0.34
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: expected_n is the HELD-BACK trade count, an ESTIMATE (live frequency ~137 trades/yr x ~2.1y x 25%; the 5m history window is limited to ~2 years). At n=68 a one-sample test detects d = 0.34 sd (alpha
+    0.05, power 0.8). The in-sample effect is ~0.1-0.2 sd, so a SINGLE leg is UNDERPOWERED for it; the sibling units cf1a-01..07 are read as ONE family (family rule in the decision rule). A single-leg PASS
+    is a LEAD, a null is not evidence against the family.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261123cf1a07-LIVE_STRATEGY
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on ict_scalp_5m, window 2024-10-05 .. 2026-11-15 23:59, every arm ONE continuous harness pass, net of the full cost stack the harness
+    resolves for the venue; per-trade net_r from --emit-trades (R in the arm''s own stop distance = constant money risk). Arms fixed now: A = the leg as declared (atr_sl_buffer_mult 0.2, tp_at_r 1.5); C1:
+    --atr-sl-buffer-mult=1.0;--tp-at-r=6.0 (the nearest harness expression of the corpus ~2.5x-stop step); C2: --atr-sl-buffer-mult=2.0;--tp-at-r=6.0 (the ~3x-stop, TP 6R corpus best arm). NOTE: the ict_scalp
+    stop is STRUCTURAL (sweep extreme + ATR buffer), so a stop multiple is not a harness flag; the buffer is the only widening lever, and these arms test the MECHANISM (a stop that survives the sweep wick
+    plus a far target), not the exact corpus cell. BOUNDARY, fixed before any outcome is read: the latest 25% of the calendar window, grown in 1% steps until it holds 25 of arm A''s entries, capped at 40%.
+    DISCOVERY = trades whose entry AND exit precede the boundary; 4 equal calendar folds. HOLDOUT = the selected arm''s trades entered on/after the boundary. Regime-robustness clause (default template):
+    the per-year table is read; a PASS with one calendar year above 50% of net gain, or a net-negative long or short side, is reported as a LEAD with that caveat.'
+  rule: 'SELECTION (discovery only): an arm is eligible iff discovery n >= 25 AND discovery net R > 0 AND >= 3 of 4 discovery folds net-positive; the eligible arm with the highest discovery net R is selected
+    (a tie goes to A). HOLDOUT (read once): INDETERMINATE/insufficient_discovery IF every arm holds < 25 discovery trades; FAIL/no_discovery IF no arm is eligible otherwise; INDETERMINATE/underpowered IF
+    the selected arm holds < 25 held-back trades; PASS/confirmed IF held-back net R > 0 AND the selected arm''s held-back net R exceeds arm A''s on the same span; FAIL/not_replicated otherwise (closes THAT
+    configuration on THIS window, never the lever family). FAMILY READ (cf1a-01..07 together, stated before any run): the family is CONFIRMED only if >= 3 of the 4 legs are PASS or the pooled held-back
+    (selected arm - A) mean net R per trade is > 0 with its 80% block-bootstrap lower bound > 0. A PASS is a LEAD for a Tier-3 proposal NOTE on CF-TRENDDONCHIAN-WIDESTOP-HOLDOUT, never a config edit. Thresholds
+    are not changed after any result. READ AGAINST THE LIVE MECHANICS (stated before the run): a PASS here is a LEAD only; before any Tier-3 note it is read next to the leg''s live closed-package R at constant
+    risk (the cf_check_table row) and the live realised slippage (realized_slippage.py), because this leg''s 5m fills and slippage are where backtest and live diverge.'
+  what_it_does_not_do: Edits no config, roster or record and places no order. A backtest of a few levers on one leg is not edge and not a P&L claim; not a Tier-3 case; does not deflate (one configuration
+    is read once on the holdout).
+  registered_before_run: true
+  registered_at: '2026-11-23'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: stand-in planning weight from the CF-INSIGHTS live-leg lens (lower-bound R/yr at constant risk); an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 120
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads
+    no trainer data.
+  basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + 5 harness passes; same shape as RQ-20261016-077e-08 (estimate, not measured).'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ict_scalp_5m
+  - --arm
+  - A=
+  - --arm
+  - C1=--atr-sl-buffer-mult=1.0;--tp-at-r=6.0
+  - --arm
+  - C2=--atr-sl-buffer-mult=2.0;--tp-at-r=6.0
+  - --days
+  - '770'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-11-15 23:59
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261123-cf1a-07
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261123-cf1a-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- scripts/research/cf_insights.py
+programme: P1
+practice_precedent: 'T1/M13 (docs/reference/trading-and-model-practice-principles.md): select on discovery, read a held-back span once; operator 2026-11-05 RESEARCH-NO-WAIT.'
+intervention_controls:
+  not_applicable: lever sweep against the declared config on the same trades over the harness (A/B arms), not an active-management action on live check-ins; hold_to_bracket is arm A itself
+grading:
+  attested: RULE-RQ20261123cf1a07-LIVE_STRATEGY
