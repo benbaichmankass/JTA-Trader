@@ -92,8 +92,9 @@ def sidecar(rel: str, root: Path = REPO, _cache: Dict[str, Optional[dict]] = {})
     """The harness summary beside a trades file (``<name>__trades.jsonl`` -> ``<name>__bt.json``): symbol, timeframe, strategy
     and the run's ``params``. None when absent or unreadable. CF-BACKTEST-FIDELITY: it is what lets a replay use the SAME trail
     geometry the harness used, and resolves a symbol/timeframe the rows themselves do not carry."""
-    if rel in _cache:
-        return _cache[rel]
+    ck = f"{root}|{rel}"
+    if ck in _cache:
+        return _cache[ck]
     d, b = os.path.split(rel)
     cand = re.sub(r"_?_?trades\.jsonl(\.gz)?$", "__bt.json", b)
     out: Optional[dict] = None
@@ -102,8 +103,8 @@ def sidecar(rel: str, root: Path = REPO, _cache: Dict[str, Optional[dict]] = {})
             out = json.loads((root / d / cand).read_text())
         except (OSError, ValueError):
             out = None
-    _cache[rel] = out if isinstance(out, dict) else None
-    return _cache[rel]
+    _cache[ck] = out if isinstance(out, dict) else None
+    return _cache[ck]
 
 
 def leg_meta_for(row: dict, side: Optional[dict]) -> Optional[dict]:

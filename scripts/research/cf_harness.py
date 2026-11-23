@@ -103,7 +103,12 @@ def cf_fields(trade: dict, bars: Sequence[dict], cost_policy: Optional[dict] = N
            "pnl": net_r * r_dist,                       # qty 1 => actual_r == the harness net_r, so fidelity is quoted against it
            "fee_taker_usd": fee_r * r_dist, "cost_source": "estimate"}
     horizon = cf_core.resolve_horizon(pkg, horizon_cfg)
-    g = cf_core.grade_package(pkg, [leg], list(bars), [], [], {"backtest": None}, {}, graded_at=lrc._iso(t_exit),
+    # a harness TIMEOUT is a deterministic rule (hold N bars, exit at that bar's close): replay it as a close at the next bar's open so
+    # ``replayed_actual`` reproduces it (CF-BACKTEST-FIDELITY). Other path-dependent exits (stale, break-even, giveback) are not replayed.
+    dur = TF_SECONDS.get((horizon_cfg or {}).get("timeframe") or "", 0)
+    acts = ([{"ts_epoch": t_exit + dur, "kind": "close", "frac": 1.0, "source": "harness_timeout"}]
+            if (str(trade.get("exit_reason") or "").lower() == "timeout" and dur) else [])
+    g = cf_core.grade_package(pkg, [leg], list(bars), [], acts, {"backtest": None}, {}, graded_at=lrc._iso(t_exit),
                               n_random=n_random, horizon=horizon)
     if g.get("status") != "graded":
         return _could_not(trade, str(g.get("reason") or "engine_refused"))
