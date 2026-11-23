@@ -2,9 +2,13 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · rows `CF-FIDELITY-RULE-DECISION`, `CF-FIDELITY-ACTION-REPLAY`, `CF-BACKTEST-FIDELITY` (Tier 1 research; a proposal for the manager's Thursday decision, nothing here is applied)
 
+## Status: ADOPTED by the operator 2026-11-23 (relayed by the manager) for the NEXT pre-registered read
+
+Registered in code as `cf_bulk_live.RULE_V2` (thresholds fixed BEFORE any v2 run: mechanics >= 80% and price >= 80% of bracket exits per leg, price tolerance 0.10 R net of the leg's measured slippage, n >= 10, 2-bar time tolerance); selected with `cf_bulk_live.py run --rule v2` (writes `fidelity_v2.json` beside the unchanged v1 `fidelity.json`). Slippage values are fixed in `comms/research/cf_bulk_live/fidelity_v2_slippage.json` (median signed gap of exit-type-matched bracket exits, read 2026-11-23, n=566). Baseline of v2 on that same read, in-sample for the slippage (NOT a pass or a result): 601 bracket exits, mechanics 79.4%, price 55.2%, 391 packages `exit_not_modelled`. Every read before this commit stays published under v1.
+
 ## Gates this adds or changes
 
-None. This is a PROPOSAL. The registered rule (`abs_gap_r <= 0.10` on >= 80% of graded, per leg, n >= 10; `cf_bulk_live.py`, design § 3.4) is NOT changed retroactively; every number below was measured under it and stays published under it. A revised rule would apply only to a read registered BEFORE its run.
+None beyond registering this read-only reporting rule. The text below is the adopted proposal. The registered rule (`abs_gap_r <= 0.10` on >= 80% of graded, per leg, n >= 10; `cf_bulk_live.py`, design § 3.4) is NOT changed retroactively; every number below was measured under it and stays published under it. A revised rule would apply only to a read registered BEFORE its run.
 
 ## What the data says about the registered rule (population stated per line)
 

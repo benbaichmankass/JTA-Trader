@@ -284,6 +284,59 @@ def fidelity(records: List[dict]) -> Dict[str, Any]:
             "per_leg": {k: block(v) for k, v in sorted(legs.items())}}
 
 
+# ---- REGISTERED RULE v2 (operator adopted 2026-11-23; docs/research/cf-fidelity-rule-proposal-2026-11-23.md). Applies ONLY to a read that
+# selects it (``--rule v2``) AFTER this commit; every earlier read stays published under v1. Thresholds are fixed here, before any v2 run.
+RULE_V2 = {"version": 2, "mechanics_frac": 0.80, "price_tol_r": 0.10, "price_frac": 0.80, "min_leg_n": 10, "time_tol_bars": 2,
+           "slippage_file": "comms/research/cf_bulk_live/fidelity_v2_slippage.json",
+           "non_bracket_exits": "reported apart (exit_not_modelled), never pooled into either rate"}
+_BRACKET_MAP = {"sl": "stop", "tp": "tp", "stop": "stop", "stop_loss": "stop", "take_profit": "tp"}
+
+
+def _arms(rec: dict) -> Dict[str, dict]:
+    return {a["arm_id"]: a for a in rec.get("arms", [])}
+
+
+def fidelity_v2(records: List[dict], slippage: Optional[Dict[str, Any]] = None, bar_s: float = 300.0) -> Dict[str, Any]:
+    """Rule v2: (a) MECHANICS: a bracket-exited package's replay exits on the same bracket within ``time_tol_bars`` bars (price-free);
+    (b) PRICE: the gap NET of the leg's measured slippage, |replayed_net_r - (actual_net_r + slippage_r)| <= price_tol_r. A package whose
+    actual exit was not a bracket (reconciler, reduce, review close, stale ...) is counted ``exit_not_modelled`` and appears in neither rate."""
+    slippage = slippage or {}
+    per: Dict[str, Dict[str, int]] = defaultdict(lambda: {"bracket": 0, "mech_ok": 0, "price_ok": 0, "not_modelled": 0})
+    for r in records:
+        a = _arms(r)
+        act, rep = a.get("actual") or {}, a.get("replayed_actual") or {}
+        leg = str(r.get("strategy"))
+        c = per[leg]
+        want = _BRACKET_MAP.get(str((act.get("exit") or {}).get("reason") or "").lower())
+        if want is None:
+            c["not_modelled"] += 1
+            continue
+        c["bracket"] += 1
+        got = str((rep.get("exit") or {}).get("reason") or "").lower()
+        t_a, t_r = lrc._ts((act.get("exit") or {}).get("ts")), lrc._ts((rep.get("exit") or {}).get("ts"))
+        if got == want and t_a is not None and t_r is not None and abs(t_r - t_a) <= RULE_V2["time_tol_bars"] * bar_s:
+            c["mech_ok"] += 1
+        an, rn = act.get("net_r"), rep.get("net_r")
+        if an is not None and rn is not None:
+            sl = slippage.get(leg, slippage.get("_all", 0.0)) or 0.0
+            if abs(rn - (an + sl)) <= RULE_V2["price_tol_r"]:
+                c["price_ok"] += 1
+
+    def block(c: Dict[str, int]) -> Dict[str, Any]:
+        n = c["bracket"]
+        if n < RULE_V2["min_leg_n"]:
+            v = "INDETERMINATE"
+        else:
+            v = "PASS" if (c["mech_ok"] / n >= RULE_V2["mechanics_frac"] and c["price_ok"] / n >= RULE_V2["price_frac"]) else "FAIL"
+        return {"n_bracket_exits": n, "mechanics_frac": None if not n else round(c["mech_ok"] / n, 4), "price_frac": None if not n else round(c["price_ok"] / n, 4),
+                "exit_not_modelled": c["not_modelled"], "verdict": v}
+    tot: Dict[str, int] = defaultdict(int)
+    for c in per.values():
+        for k, v in c.items():
+            tot[k] += v
+    return {"rule": RULE_V2, "overall": block(tot), "per_leg": {k: block(v) for k, v in sorted(per.items())}}
+
+
 def population(packages: List[dict], trades: List[dict]) -> Dict[str, Any]:
     st = Counter(str(p.get("status")) for p in packages)
     by_pkg: Dict[str, List[dict]] = defaultdict(list)
@@ -302,7 +355,7 @@ def population(packages: List[dict], trades: List[dict]) -> Dict[str, Any]:
 
 
 def run(out: Path, cache: Optional[Path], limit: Optional[int], use_paths: bool = False, timing: str = ACTION_TIMING,
-        replay_closes: bool = False) -> int:
+        replay_closes: bool = False, rule: str = "v1") -> int:
     out.mkdir(parents=True, exist_ok=True)
     if cache and (cache / "order_packages.json").exists() and (cache / "trades.json").exists():
         packages, trades, failed = json.loads((cache / "order_packages.json").read_text()), json.loads((cache / "trades.json").read_text()), {"order_packages": [], "trades": []}
@@ -333,6 +386,9 @@ def run(out: Path, cache: Optional[Path], limit: Optional[int], use_paths: bool 
     (out / "skips.json").write_text(json.dumps(skips, indent=0) + "\n")
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n")
     (out / "fidelity.json").write_text(json.dumps(fid, indent=1) + "\n")
+    if rule == "v2":
+        sf = REPO / RULE_V2["slippage_file"]
+        (out / "fidelity_v2.json").write_text(json.dumps(fidelity_v2(records, json.loads(sf.read_text()) if sf.exists() else {}), indent=1) + "\n")
     print(json.dumps({"closed_n": pop["closed_n"], "graded": len(records), "not_graded": dict(reasons), "fidelity_overall": fid["overall"]}, indent=1))
     return 0
 
@@ -346,9 +402,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     r.add_argument("--limit", type=int, help="grade only the newest N closed packages (smoke)")
     r.add_argument("--paths", action="store_true", help="CF-FIDELITY-ACTION-REPLAY: read each package's position_path_history and replay its recorded stop/target moves")
     r.add_argument("--timing", default=ACTION_TIMING, choices=("first", "mid", "last"), help="where in a path row's write window a recorded change is placed")
+    r.add_argument("--rule", default="v1", choices=("v1", "v2"), help="v2 = the split fidelity rule adopted 2026-11-23 (also written to fidelity_v2.json); v1 stays the default")
     r.add_argument("--replay-closes", action="store_true", help="also replay a non-bracket journal close as a close action (circular for those packages; fidelity is then reported by exit type)")
     a = ap.parse_args(argv)
-    return run(Path(a.out), Path(a.cache) if a.cache else None, a.limit, a.paths, a.timing, a.replay_closes)
+    return run(Path(a.out), Path(a.cache) if a.cache else None, a.limit, a.paths, a.timing, a.replay_closes, a.rule)
 
 
 if __name__ == "__main__":
