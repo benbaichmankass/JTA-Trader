@@ -44,33 +44,31 @@ Out of scope on purpose: `src/`, `tests/`, tools: hold **synthetic** fixtures (`
 * **A, structured:** in JSON/JSONL under scope, the numeric value of `equity_pre_usd`, `equity_usd`, `balance_usd`,
   `distance_to_floor_usd`, `account_equity`, `totalEquity`, `total_equity`, `pct_of_account`, `budget_usd`, `net_liquidation`,
   `buying_power`, `cash_usd`, `walletBalance`, `available_balance` (and spellings) becomes `null`. Formatting is byte-preserved.
-* **B, prose:** inside the same scope, a `$` amount within 60 characters after (or 25 before) `equity | balance(s) | net_liquidation |
+* **B, prose:** inside the same scope, a `$` amount within 120 characters after (`PURGE_WINDOW`, also across a wrapped line) (or 25 before) `equity | balance(s) | net_liquidation |
   buying power | wallet | distance to floor | cushion | funded`, and `key=number` / `<number> USDT` forms, becomes `$[redacted]` /
   `[redacted]`. **Heuristic.** It over-redacts (for example a `$50 risk` near the word balance) and can miss unusual phrasings.
   Both are visible in the dry run below; the over-redaction is accepted, the misses are measured by `verify`.
+* **Deleted outright from all history:** `docs/claude/*-backlog.json` (retired registers, `DELETE_GLOBS` in the script). Archived copies under `docs/archive/**` are redacted, not deleted.
 * `refs/pull/*` are dropped from the **rewrite input** (GitHub will not accept pushes to them anyway), so the result is exactly what is pushed.
 
-## 3. Dry-run result (scratch mirror, nothing pushed)
+## 3. Dry-run result (scratch mirror, nothing pushed; operator scope decision 2026-11-23: "Delete backlogs + iterate")
+
+Final dry run against `main` `6a2d6bbeb67b`, rules as committed (`PURGE_WINDOW` default 120, wrapped-line rules, backlog deletion):
 
 | Check | Result |
 |---|---|
-| Commits rewritten | all 33,669 reachable from branches + tags (every commit id changes once any ancestor file changes) |
-| Old tip -> new tip | `87570dab8a838cb2e31d939669e9655557e45625` -> `d3f31e800083dc15d5df461a63f8b8ec1a7867bc` (rules as committed; first iteration of the rules gave `96942ffe8b`) |
-| Refs | 2,377 branches/tags before and after; 18,707 `refs/pull/*` dropped from the rewrite input |
-| Tip tree vs current main | 111,635 paths both sides; **0 added, 0 removed**; **1,689 files differ**; every one of the 6,347 changed lines is a `null` (5,370) or `[redacted]` (1,102) substitution; 0 line-count changes; 0 unexplained lines |
-| Where the tip changed | `comms/research/utilization` 1,020 (`budget_usd`), `docs/claude/work` 188, `comms/reports` 66, `comms/research/RQ-*` and `comms/strategy_evidence` ~60, `docs/archive` 14, remainder docs/research, gates, scores jsonl, ROADMAP |
-| **Residual probe** (`verify`, in scope, branches + tags, rewritten mirror) | **NOT zero: 4,031 blobs still match.** Rewritten from 8,566 (all scopes) matching before. Honest breakdown below |
-| Size (packed, same machine) | before 2.32 GiB (includes `refs/pull/*`); after 2.18 GiB (`pull` refs excluded; -6%, the pack is repacked, not smaller content) |
-| Wall time | rewrite ~25 min on 4 vCPU, `verify` ~25 min; `gc --aggressive` is OOM-killed at 16 GB, so the tool runs a memory-capped full `repack -a -d -f` (a plain `gc` leaves the pack at ~4.7 GiB) |
+| Backlogs deleted from ALL history | `docs/claude/{health,ml,performance,research}-review-backlog.json`: 4 paths, 3,004 commits touched them, **0 remain** in rewritten history. Checked retired first: none exists on `main` (retired 2026-09-21; copies live in `docs/archive/2026-09-21-operating-reset/registers/`), the 45 files naming them are path lists in guards/docs/`.gitattributes` that tolerate absence, so the tip tree is unaffected. Archived copies under `docs/archive/**` are **redacted, not deleted** (same rules) |
+| Commits | all reachable from branches + tags rewritten; 2,377 refs kept; `refs/pull/*` dropped from the rewrite input |
+| Old tip -> new tip | `6a2d6bbeb67bd34ad4f9ea6f6f3348f00598de20` -> `39ba6215da58efee435b71a0cc73604ca07b1381` |
+| Tip tree vs current main | 112,099 paths both sides; **0 added, 0 removed**; **1,743 files differ**; all 6,506 changed lines are `null` (5,420) / `[redacted]` (1,261); 0 line-count changes; 0 unexplained |
+| Where the tip changed | `comms/research/utilization` ~1,033 (`budget_usd`), `docs/claude/work` ~209, `comms/reports` ~66, `docs/archive` ~18, `comms/research/RQ-*`, `comms/strategy_evidence`, gates, scores jsonl, ROADMAP |
+| Residual probe (`verify`) | **(i) real balance/equity/cash values: 0 unclassified** after one reviewed entry. **(ii) allowlisted non-balance numbers: 1,929 matches** (`firm_limit_or_floor` 1,178; `config_threshold` 518; `pnl_fee_price` 181; `demo_floor_stage_or_package_pnl` 33; `counts_and_ratios` 19) plus 1 reviewed delta (`delta_vs_redacted_start`) |
+| Size (packed) | 2.32 GiB before (with pull refs) -> 2.17 GiB after |
+| Wall time | rewrite 19-26 min, `verify` ~25 min on 4 vCPU / 16 GB |
 
-**What the residual is.** `verify` deliberately uses a wider and independent probe (90-char `word ... $amount` window, plus `floor` and `cash`). Classifying
-the 131 distinct masked residual contexts (`resid` analysis, not committed): (1) **dollar amounts that are not account balances and are kept on purpose**:
-static drawdown floor / daily-loss limits (firm rule limits), `min_balance_usd` config thresholds in YAML, P&L and "figure" amounts, price per share;
-(2) **genuine misses**: a second amount more than 60 characters after the trigger word in long prose lines (for example a list "alpaca_paper balance $X / ... ; alpaca_portfolio $Y"),
-and "balance"-less phrasings. Both sit mostly in `docs/claude/health-review-backlog.json`-style backlog files. **The rules are a first pass, not a proof of removal.**
-Raising `PURGE_WINDOW=120` (env var) trades more over-redaction for fewer misses. **The manager should (a) decide the window, (b) iterate once on `verify`'s
-residual list, (c) accept a documented remainder, or (d) narrow the purge to the structured fields + the backlog files and delete the backlog JSON history outright
-(`--path-glob 'docs/claude/*-backlog.json' --invert-paths`), which removes the bulk of the prose without a heuristic.** Option (d) is the most reliable for the biggest surface and is not dry-run here.
+`verify` prints (i) unclassified candidates, which the operator or manager must read, and (ii) counts by named allowlist rule (`ALLOW` in the script: reviewed regexes for firm drawdown/daily-loss limits, config thresholds, P&L / fee / price, demo-floor stage names, counts and ratios).
+Two iterations of misses were fixed by this loop (second amount beyond the window; amount and trigger word split across a wrapped line; `$N start`). **Honest limit:** 0 means "the probe, after the allowlist, finds none". The probe and
+the rules are related patterns, so a phrasing neither covers survives, and the allowlist (ii) is a classification by regex, not a proof that each of 1,929 matches is a non-balance. Read the (ii) rule list once before the real run; re-run `verify` on the day.
 
 Re-run on the day. Refs move, so counts and the new tip sha will differ. The dry-run numbers are a template, not the record.
 
