@@ -73,11 +73,18 @@ def label_cell(df: pd.DataFrame, sl: float, tp: float) -> pd.DataFrame:
 LABEL_COLS = [f"{k}_{s}" for k in ("gross", "net", "cost", "reason", "bars") for s in ("long", "short")]
 
 
-def relabel_table(tab: pd.DataFrame, cache: Path, sl: float, tp: float) -> pd.DataFrame:
-    """The dev table with the label columns recomputed for bracket (sl, tp); rows, features and order unchanged."""
+def relabel_table(tab: pd.DataFrame, cache: Path, sl: float, tp: float, hole_safe: bool = True) -> pd.DataFrame:
+    """The dev table with the label columns recomputed for bracket (sl, tp); rows, features and order unchanged.
+
+    ``hole_safe`` (default True) must match how the table was built: ``E.build_table`` has regridded every symbol hourly since
+    ML-ENTRY-HOLE-SAFE-ADOPT (2026-11-12), so the table's ``i`` is a position in the REGRIDDED frame. Reading the raw cache frame
+    instead shifts every position after a data hole by the missing bars, the decision phase changes (i = 3 mod 4 becomes 2 mod 4),
+    and every later row fails to join: RQ-20261101-b608-01 run 45086511890 died with 'relabel left rows without labels' on a one-hour
+    hole in ADAUSDT (2024-10-28). A table built with ``hole_safe=False`` passes ``hole_safe=False`` here."""
     parts = []
     for sym, g in tab.groupby("symbol", sort=False):
-        lab = label_cell(pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True), sl, tp)
+        raw = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        lab = label_cell(E.regrid_hourly(raw) if hole_safe else raw, sl, tp)
         lab["symbol"] = sym
         parts.append(lab)
     lab = pd.concat(parts, ignore_index=True)
