@@ -1,0 +1,70 @@
+id: RQ-20261123-1e04-03
+title: Bounce after capitulation -> buy the bull leveraged ETF (TQQQ/UPRO/UDOW/TNA) after an index flush
+status: blocked
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: After an index flush (close >= 2.0 ATR14 below its 5-day mean AND a lower low than the prior 20 sessions, then the first up-close), does buying the 3x bull
+  ETF with the stop at the flush low mapped through the ETF and a calibrated TP earn positive net R net of decay, versus flat and the same trigger executed in the
+  1x index ETF?
+why_this_matters: 'This is the mirror case: down-markets also end, and a flush entry is the only bear-market way to be long the bull ETF; the 1x baseline separates
+  timing edge from leverage.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: index signal frequency ~4-8 per year per index over 2010-06..2026-10 (~15 y) gives ~60-120 episodes per index; floor 25. Said before
+    any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261123-1e04-03
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness: flush rule as stated, entry next open in the bull ETF, stop = flush low mapped through the ETF, TP calibrated K*, hold cap
+    10 sessions; net_r, n, maxDD, per-fold, decay drag; arm B = the same trigger in the 1x index ETF. Cost stack: fee 0 + 5 bps slippage per side (2x slippage re-read),
+    the ETF price series itself (embeds daily-rebalance decay and expense ratio over the hold), no funding. TP doctrine: the TP is the index-structure target mapped
+    to the ETF (index move x leverage sign), a real predictive TP at entry, calibrated by tp_prediction_derive on the in-sample span, never tp_r 50.'
+  rule: PASS IFF n >= 25 AND net_r(3x) > 0 AND net_r(3x) > net_r(1x) AND >= 3 of 4 folds > 0 AND net_r > 0 under 2x slippage. INDETERMINATE if n < 25. FAIL otherwise.
+    Parameters fixed now.
+  what_it_does_not_do: Changes no config.
+  baseline: Flat; and the same trigger in the 1x ETF.
+blocked_on:
+- kind: work_item
+  ref: IELE-INDEX-DRIVEN-HARNESS
+  what: As 1e04-01.
+  clears_when: row_state:IELE-INDEX-DRIVEN-HARNESS=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  workflow: null
+  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261123-1e04-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'

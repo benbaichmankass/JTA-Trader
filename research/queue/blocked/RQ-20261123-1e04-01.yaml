@@ -1,0 +1,76 @@
+id: RQ-20261123-1e04-01
+title: 'Index breakdown -> buy the inverse ETF: SPY/QQQ/DIA/IWM Donchian-20 low break triggers a BUY of SPXU/SQQQ/SDOW/TZA (and SH/PSQ 1x), stop/TP from index structure
+  mapped to the ETF'
+status: blocked
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Does a Donchian-20 close-below-low (or pivot-5 swing-low break) on the INDEX ETF, executed as a long in the matching inverse ETF with the stop at the index's
+  prior-pivot-high mapped through the ETF, earn positive net R, net of decay over the hold, versus (i) flat and (ii) the same index-signal executed as the plain ETF-own
+  trend twin (RQ-20261123-1e01-*)?
+why_this_matters: Using the underlying index as the signal source decouples entry timing from the inverse ETF's own decaying chart; it is the first of the "downside
+  through buy orders" forms.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: index signal frequency ~4-8 per year per index over 2010-06..2026-10 (~15 y) gives ~60-120 episodes per index; floor 25. Said before
+    any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261123-1e04-01
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness (row IELE-INDEX-DRIVEN-HARNESS): per index, signal on daily index bars, entry next open in the inverse ETF, stop = index prior
+    pivot-high x ETF beta, TP = calibrated K* R, hold cap 20 sessions; net_r, n, maxDD, per-fold net_r, decay drag (ETF return minus beta x index return over each
+    hold). Cost stack: fee 0 + 5 bps slippage per side (2x slippage re-read), the ETF price series itself (embeds daily-rebalance decay and expense ratio over the
+    hold), no funding. TP doctrine: the TP is the index-structure target mapped to the ETF (index move x leverage sign), a real predictive TP at entry, calibrated
+    by tp_prediction_derive on the in-sample span, never tp_r 50.'
+  rule: PASS IFF n >= 25 AND net_r > 0 AND net_r > net_r of the own-chart twin on the same ETF AND >= 3 of 4 folds > 0 AND net_r > 0 under 2x slippage. INDETERMINATE
+    if n < 25. FAIL otherwise. Hold cap 20 sessions and Donchian 20 fixed now.
+  what_it_does_not_do: Changes no config. One signal family per unit; a pass on one index is not a pass on another.
+  baseline: Flat; and the own-chart twin on the same ETF (RQ-20261123-1e01-*).
+blocked_on:
+- kind: work_item
+  ref: IELE-INDEX-DRIVEN-HARNESS
+  what: No harness runs an index signal executed in a different instrument with an index-mapped stop.
+  clears_when: row_state:IELE-INDEX-DRIVEN-HARNESS=done
+  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  workflow: null
+  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261123-1e01-01
+- RQ-20261123-1e01-02
+- RQ-20261123-1e01-03
+- RQ-20261123-1e01-04
+- docs/research/index-leveraged-etf-roster-2026-11-23.md
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'

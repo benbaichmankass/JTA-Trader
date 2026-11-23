@@ -1,0 +1,74 @@
+name: broker-fractional-probe
+
+# PAPER-ONLY fractional-order probe (operator approval 2026-11-23 ~18:55Z, relayed by Manager Session 2026-11-22a).
+#   alpaca : read the `fractionable` flag for the 14 index-ETF candidates, then (phase open) a fractional DAY market bracket,
+#            fallback separate fractional DAY stop + limit TP + an OCO attempt; (phase premarket) a fractional DAY stop placed
+#            while the market is closed. Uses the PAPER keys (ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY) against
+#            paper-api.alpaca.markets ONLY; scripts/ops/broker_fractional_probe.py asserts the paper host.
+#   ib     : ONE 0.5-share order plus an attached TP + stop through ib_insync -> IB Gateway PAPER port 4002, run on the live VM
+#            (the gateway VM is private). scripts/ops/ib_fractional_probe.py refuses any other port.
+# NO LIVE KEYS are referenced. Size 0.5 share of SH (override via symbol); everything is cancelled/flattened in `finally`.
+# NO DURABLE RESULT: the job log is the only record (every request and response is printed); read it with the actions tools.
+# Gates this adds or changes: none (a manually dispatched probe).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "alpaca | ib | both"
+        default: "alpaca"
+      phase:
+        description: "alpaca phase: assets | open | premarket (open needs the US market open)"
+        default: "assets"
+      symbol:
+        description: "probe symbol (cheap, liquid)"
+        default: "SH"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: broker-fractional-probe
+  cancel-in-progress: false
+
+jobs:
+  alpaca:
+    if: inputs.target == 'alpaca' || inputs.target == 'both'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+      ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+      PROBE_SYMBOL: ${{ inputs.symbol }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Alpaca PAPER fractional probe
+        env:
+          PHASE: ${{ inputs.phase }}
+        run: python3 scripts/ops/broker_fractional_probe.py "$PHASE"
+
+  ib:
+    if: inputs.target == 'ib' || inputs.target == 'both'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      JUMP_HOST: ${{ secrets.VM_SSH_HOST }}
+      VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
+      GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST || '10.0.0.251' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH key
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "${VM_SSH_KEY}" ] && [ -n "${JUMP_HOST}" ] || { echo "::error::VM_SSH_KEY / VM_SSH_HOST unset"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa,ecdsa,ed25519 "${JUMP_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: IB PAPER fractional probe (runs on the live VM, reaches the gateway privately)
+        env:
+          PROBE_SYMBOL: ${{ inputs.symbol }}
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new "${VM_SSH_USER}@${JUMP_HOST}" \
+            "/home/ubuntu/ict-trading-bot/.venv/bin/python - '${GATEWAY_HOST}' '${PROBE_SYMBOL//[^A-Z]/}'" < scripts/ops/ib_fractional_probe.py

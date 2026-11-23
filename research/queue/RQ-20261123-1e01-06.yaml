@@ -1,0 +1,100 @@
+id: RQ-20261123-1e01-06
+title: 'Inverse-ETF trend twin: the config-exact qqq_trend_long_1d on PSQ (1x inverse Nasdaq-100), 2010-06-01..2026-10-22, net of the full cost stack, long-only (buy orders only)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: 'Operator 2026-11-23: the equity books should trade both directions of an index through BUY orders on leveraged/inverse ETFs. No dedicated leg trades any
+  inverse ETF. Does the shipped qqq_trend_long_1d logic (every config field unchanged, symbols[0] -> PSQ via exit_lever_ablation --symbol) earn a positive edge net of the
+  harness cost stack on the inverse instrument? Trend-following a decaying inverse ETF is the live question: the breakout filter must catch the down-regimes without
+  paying the leveraged decay in the chop.'
+why_this_matters: 'alpaca_live cannot short (side_filter long); the only way it can be positioned for a falling index is a long position in an inverse ETF. This is the
+  Stage-0 evidence behind any dedicated inverse-ETF leg in docs/research/index-leveraged-etf-roster-2026-11-23.md.'
+power:
+  expected_n: 80
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the TQQQ twin trades ~8/yr (RQ-20261113-4654-01 basis), so ~125 over 15.4 y; an inverse ETF trends only in down-regimes, so
+    assume ~60% of that, ~75. The registered n floor is 25; the harness reports n. Said before any run.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window 2010-06-01..2026-10-22 (inverse ETFs list from 2006-2010); nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ20261123-1e01-06-INV-TWIN
+  registered_at: '2026-11-23'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade sweep, single arm A (the shipped qqq_trend_long_1d config, long-only) on PSQ, 4 calendar folds: net_r over the
+    window, n, maxDD, per-fold net_r; harness cost stack (fee 0 + 5 bps slippage); a 2x-slippage re-read is reported beside it.'
+  rule: 'PASS IFF n >= 25 AND net_r > 0 AND net_r > 0 in >= 3 of 4 folds AND net_r stays > 0 under 2x slippage. INDETERMINATE if n < 25. FAIL otherwise. The
+    bar, the window and the symbol are fixed now and not changed after any result. Baseline: flat (zero) for the verdict; the bull twin''s per-trade R on its own
+    index (reported, not graded) for context. PASS is a Stage-0 pass of this twin on its own, which per the operating plan goes to real money; the roster proposal
+    in docs/research/index-leveraged-etf-roster-2026-11-23.md says what config follows. This unit changes no config.'
+  what_it_does_not_do: 'Changes no config, roster or order. Does not test the direction-switch form (RQ-20261123-1e02-01) or the ML entry (RQ-20261123-1e03-01).
+    A PASS on one inverse ETF is not a pass on another index: the twins are separate units.'
+  baseline: 'Flat (net_r = 0) for the verdict; the same config on the bull ETF of the same index, same window, for context.'
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: the operator-asked down-market coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; same shape as RQ-20261113-4654-01.
+  basis: One candle fetch of the window and one harness pass (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_trend_long_1d
+  - --symbol
+  - PSQ
+  - --arm
+  - A=
+  - --days
+  - '6200'
+  - --start
+  - '2010-06-01'
+  - --end
+  - 2026-10-22 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --research-unit
+  - RQ-20261123-1e01-06
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261123-1e01-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261113-4654-01
+- BL-20260823-NO-INVERSE-ETF-INSTRUMENTS-DECLARED
+- docs/research/index-leveraged-etf-roster-2026-11-23.md
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost, one read.'
