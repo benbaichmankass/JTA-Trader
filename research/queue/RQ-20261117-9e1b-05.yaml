@@ -102,7 +102,7 @@ run:
   inputs:
     research_unit: RQ-20261117-9e1b-05
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'REGIME lever family never tested on trend_donchian_xrp_adx25: cold-vol entry skip VL20/VL30 (--vol-skip-below-pctl 0.2/0.3) vs the declared leg, net of cost?'
 value:
@@ -112,21 +112,18 @@ value:
   usd_at_stake_per_month: 150
 why_this_matters: research/levers/trend_donchian_xrp_adx25.yaml lists no vol-skip-below (regime) family for this TESTING leg; sibling legs carry the same arms (RQ-20261017-ae17
   / RQ-20261031-7b6f families). One factor, 2 arms; a PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.
+last_dispatched_at: '2026-11-23T00:02:44+00:00'
 grading:
   attested: RULERQ202611179e1b05
   auto: true
   decision_rule_id: RULERQ202611179e1b05
   evidence:
   - research/results/RQ-20261117-9e1b-05/44170817928.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261117-9e1b-05/45084192860.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261118-EFILLW47-0003
-  owner_reason: 'producer_failed on the kaggle_cpu kernel: no internet (data.binance.vision NameResolutionError)
-    or Yahoo refusing_us HTTP 429; not a verdict. Diagnosed and owned by PI-20261118-EFILLW47-0003 (W47b);
-    closes when the unit re-lands measured on a backend with the feed (PI-20261119-FILLW47B-0004 records
-    the backend per run). Triaged by research-ops 2026-11-19.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:02:44+00:00'
+  verdict: fail

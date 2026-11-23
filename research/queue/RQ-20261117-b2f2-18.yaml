@@ -100,7 +100,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-18
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'SE lever family never tested on trend_donchian_xrp_adx25: STALE-EXIT (--stale-exit-bars, peer-tested grid for this bar size) vs the declared leg, net of cost?'
 value:
@@ -111,21 +111,16 @@ value:
 why_this_matters: 'Plan node: research/levers/trend_donchian_xrp_adx25.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-016-era stale_exit_bars
   reads PASS on peer legs (slv_pullback_1d 3/6 bars, eth_pullback_2h 8/12/20 bars) and the lever map for this leg carries no stale_exit_bars family. One factor, 2 arms; a PASS
   is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-23T00:50:44+00:00'
 grading:
   attested: RULERQ20261117b2f218
   auto: true
   decision_rule_id: RULERQ20261117b2f218
   evidence:
   - research/results/RQ-20261117-b2f2-18/44309624986.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261117-b2f2-18/45089329376.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261118-EFILLW47-0003
-  owner_reason: 'producer_failed on the kaggle_cpu kernel: no internet (data.binance.vision NameResolutionError)
-    or Yahoo refusing_us HTTP 429; not a verdict. Diagnosed and owned by PI-20261118-EFILLW47-0003 (W47b);
-    closes when the unit re-lands measured on a backend with the feed (PI-20261119-FILLW47B-0004 records
-    the backend per run). Triaged by research-ops 2026-11-19.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:50:44+00:00'
+  verdict: pass

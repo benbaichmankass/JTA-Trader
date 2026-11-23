@@ -2,7 +2,7 @@
 id: RQ-20261102-5e03-01
 title: 'Frozen ml_entry v1, LONG only, on alpaca_live symbols with a DAILY session-aware structure SL/TP (stop outside the overnight gap): mean net R per decision
   >= 0 at n >= 30, same clock and cost stack as bdc2-01 (FAILED -0.308 R, n=128, 59 SPY gap-throughs)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -122,19 +122,18 @@ amendments:
   text:
   - 'RESEARCH-NO-WAIT (lane of Manager Session 2026-11-05b). Operator 2026-11-05 ~17:08Z, verbatim: "Why does it need to wait for November? That''s not the workflow - we iterate in the data we have till we find what works, we don''t wait for new months of data". Window registered BEFORE any run; no outcome inside it was read by this lane; the rule text and every threshold are NOT edited.'
   - 'Its promotion-confirmation window is no longer "the forward window 2026-11-02..2026-11-30 of RQ-20261101-5b6b-01": 5b6b-01 is re-registered on SYMBOL-HOLDOUT-20, in hand today (see that unit). This unit''s own result and rule are unchanged.'
+last_dispatched_at: '2026-11-23T00:02:47+00:00'
 grading:
   attested: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
   auto: true
   decision_rule_id: RULE-RQ20261102-5E03-01-ENTRY-STRUCTURE-ON-ALPACA
   evidence:
   - research/results/RQ-20261102-5e03-01/41600034132.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261102-5e03-01/45085012382.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T00:02:47+00:00'
+  verdict: fail

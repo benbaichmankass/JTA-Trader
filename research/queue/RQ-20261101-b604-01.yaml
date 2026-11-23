@@ -2,7 +2,7 @@
 # Authored 2026-11-01 by lane ML-RECIPE (Tier 1) for the ENTRY lever plan (manager/operator 17:55Z). Decision rule registered BEFORE any run. Gates: none.
 id: RQ-20261101-b604-01
 title: 'ENTRY lever 6, calibration: does a reliability remap of the score restore a monotone score-to-outcome relation (the precondition for confidence-scaled sizing)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -102,21 +102,18 @@ programme_node:
   node: P2-ENTRY-LEVERS
   goal: G4
 rearmed_at: '2026-11-22T23:40:00+00:00'
+last_dispatched_at: '2026-11-23T00:31:23+00:00'
 grading:
   attested: RULE-20261101-b604-01
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-20261101-b604-01
   evidence:
-  - research/results/RQ-20261101-b604-01/41351024719.jsonl
-  - research/results/RQ-20261101-b604-01/41368743321.jsonl
-  - research/results/RQ-20261101-b604-01/41376491565.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261101-b604-01/45086514011.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (no_verdict) on the newest row, 3 identical re-fires; failure mode and
-    fix path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 3
-  verdict: null
-last_dispatched_at: '2026-11-23T00:31:23+00:00'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

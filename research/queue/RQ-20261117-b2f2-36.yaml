@@ -100,7 +100,7 @@ run:
   inputs:
     research_unit: RQ-20261117-b2f2-36
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'TA lever family never tested on trend_donchian_xrp_adx25: ADX-below trail tighten (--trail-adx-below 20/25 with --trail-adx-tight-mult 2.5) vs the declared leg, net
   of cost?'
@@ -112,21 +112,18 @@ value:
 why_this_matters: 'Plan node: research/levers/trend_donchian_xrp_adx25.yaml (testing leg; lever map shows this family untested). Source: RQ-20261016-005 CONFIRMED M1 trail_adx_below
   20 / tight 2.5 on trend_donchian_eth_4h (111.37 vs 88.27 R, 5 of 6 folds) and the lever map for this leg carries no trail_adx_below family. One factor, 2 arms; a PASS is
   a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this leg x arm-grid only.'
+last_dispatched_at: '2026-11-23T01:03:40+00:00'
 grading:
   attested: RULERQ20261117b2f236
   auto: true
   decision_rule_id: RULERQ20261117b2f236
   evidence:
   - research/results/RQ-20261117-b2f2-36/44345229113.jsonl
-  graded_at: '2026-11-19'
+  - research/results/RQ-20261117-b2f2-36/45090416452.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261118-EFILLW47-0003
-  owner_reason: 'producer_failed on the kaggle_cpu kernel: no internet (data.binance.vision NameResolutionError)
-    or Yahoo refusing_us HTTP 429; not a verdict. Diagnosed and owned by PI-20261118-EFILLW47-0003 (W47b);
-    closes when the unit re-lands measured on a backend with the feed (PI-20261119-FILLW47B-0004 records
-    the backend per run). Triaged by research-ops 2026-11-19.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-23T01:03:40+00:00'
+  verdict: fail

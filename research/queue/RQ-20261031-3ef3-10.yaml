@@ -103,20 +103,19 @@ lands:
 related:
 - RQ-20261030-41cc-03
 practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
-status: queued
+status: done
+last_dispatched_at: '2026-11-22T23:45:48+00:00'
 grading:
   attested: RULERQ202610313ef310
   auto: true
   decision_rule_id: RULERQ202610313ef310
   evidence:
   - research/results/RQ-20261031-3ef3-10/41788831390.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20261031-3ef3-10/45082628302.jsonl
+  graded_at: '2026-11-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: PI-20261105-WDWYHZCN-0001
-  owner_reason: producer_failed (cmd_exit) on the newest row, 3 identical re-fires; failure mode and fix
-    path named in PI-20261105-WDWYHZCN-0001 (RESEARCH-OPS-20261105-1449 triage)
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-last_dispatched_at: '2026-11-22T23:45:48+00:00'
+  verdict: fail

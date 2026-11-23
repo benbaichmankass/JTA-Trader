@@ -2,7 +2,7 @@
 id: RQ-20261122-d4a9-03
 title: 'ITERATION 4 of ltr-tighten-sl (action_bounds, 1 of 3): does the SAME r_milestone tighten with its stop moved only to breakeven (0.0 R), with >= 1 ATR room,
   clear RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time tighten on the 4,076-trade Stage-0 corpus?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -141,3 +141,16 @@ run:
     research_unit: RQ-20261122-d4a9-03
   timeout_minutes: 120
 last_dispatched_at: '2026-11-23T02:03:25+00:00'
+grading:
+  attested: RULE-RQ-20261122-d4a9-03
+  auto: true
+  decision_rule_id: RULE-RQ-20261122-d4a9-03
+  evidence:
+  - research/results/RQ-20261122-d4a9-03/45093028931.jsonl
+  graded_at: '2026-11-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
