@@ -58,7 +58,7 @@ def load(shards_dir: str) -> List[dict]:
                 rows.append({"k": r["trade_key"], "strat": r.get("strategy"), "fam": family(r.get("strategy")), "sym": r.get("symbol"),
                              "tf": r.get("timeframe"), "dir": r.get("direction"), "et": r.get("entry_time"), "rep": a.get("replayed_actual_net_r"),
                              "arm": arm, "ctx": c.get("context") or {}, "post_mfe": po.get("mfe_r"), "post_mae": po.get("mae_r"),
-                             "pv": (po.get("verdict") or {}).get("verdict"), "gap": (c.get("fidelity") or {}).get("abs_gap_r")})
+                             "pv": (po.get("verdict") or {}).get("verdict"), "rdiff": (po.get("verdict") or {}).get("r_diff"), "gap": (c.get("fidelity") or {}).get("abs_gap_r")})
     return rows
 
 
@@ -140,10 +140,10 @@ def decompose_leaves_r(rows: Sequence[dict]) -> List[dict]:
         g[(str(r["ctx"].get("replay_exit")), b)].append(r)
     out = []
     for (ex, b), rs in sorted(g.items(), key=lambda kv: -len(kv[1])):
-        pm = [x["post_mfe"] for x in rs if x["post_mfe"] is not None]
+        pm = [x["rdiff"] for x in rs if x["rdiff"] is not None]       # post-exit r_diff: R left on the table (post-exit MFE is not populated in cf_trade/1)
         pv = collections.Counter(x["pv"] for x in rs)
         out.append({"exit": ex, "mfe_pre_bucket": b, "n_unique": len(rs), "mean_rep_r": round(float(np.mean([x["rep"] for x in rs if x["rep"] is not None])), 4),
-                    "mean_post_exit_mfe_r": None if not pm else round(float(np.mean(pm)), 4),
+                    "mean_post_exit_r_diff": None if not pm else round(float(np.mean(pm)), 4),
                     "share_exited_early": round(pv.get("exited_early", 0) / max(1, sum(v for k, v in pv.items() if k)), 4)})
     return out
 
