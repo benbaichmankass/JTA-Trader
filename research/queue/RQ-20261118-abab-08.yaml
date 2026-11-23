@@ -91,15 +91,19 @@ run:
   - --research-unit
   - RQ-20261118-abab-08
   - --grade
-  - sweep
+  - replace
   - --baseline
   - A
   - --delta-r
-  - '4.0'
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
   - --folds
-  - '4'
+  - '6'
   - --fold-majority
-  - '3'
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
   - --n-floor
   - '39'
   - --out
@@ -117,7 +121,7 @@ roadmap:
 related:
 - RQ-20261106-021
 - research/levers/iwm_trend_long_1d.yaml
-last_dispatched_at: '2026-11-19T23:14:29+00:00'
+last_dispatched_at: '2026-11-19T23:14:29+00:00'  # COMMAND/RULE MISMATCH fixed (manager 2026-11-23, same as abab-19): the command graded with `--grade sweep --baseline A --delta-r 4.0 --folds 4 --fold-majority 3` but the registered rule is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005). Landed rows are NOT rewritten. result row was graded under an unregistered grade; re-grade pending. NOT re-armed: a separate cause (a half-declared momentum_trail arm) is not fixed, so the stamp stays and the unit stays held.
 grading:
   attested: RULERQ20261118abab08
   auto: true
