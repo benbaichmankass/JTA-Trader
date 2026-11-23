@@ -12,7 +12,7 @@ None. This is a PROPOSAL. The registered rule (`abs_gap_r <= 0.10` on >= 80% of 
 |---|---|---|
 | live + paper closed packages, 992 graded of 2,733 (journal as of 2026-11-23) | 29.2% -> 41.3% after action replay | independent bracket exits n=618: 45.2%; circular journal-close n=374: 35.0% |
 | ... of which exit type matched (sl->stop, tp->tp), n=566 | 48.1%, median gap 0.105 R | the gap is fill slippage + cost-model difference, not management |
-| backtest corpus, 400-job same-jobs sample (before/after the sidecar fix) | 46.8% -> 80.7%; median 0.187 -> 0.003 R | trail_stop 8% -> 86%; stop exits unchanged ~90% |
+| backtest corpus, 400-job same-jobs sample (before / after the sidecar fix / after the timeout replay) | 46.8% -> 80.7% -> 87.3%; median 0.187 -> 0.003 R; p90 2.22 -> 0.27 R | trail_stop 8% -> 86%, timeout 10% -> 100% (n=29); stop exits unchanged ~90%; stale/tp/be (n=9) not modelled |
 
 Reading: on the backtest corpus the rule is meaningful and, after the fix, near its bar. On live packages the 0.10 R tolerance sits at the cost floor (median 0.105 R for exit-type-matched packages), so the rule there measures slippage, not engine fidelity.
 
