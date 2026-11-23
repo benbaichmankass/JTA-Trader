@@ -1,7 +1,7 @@
 id: RQ-20261118-abab-30
 title: 'DIRECTION lever family on ict_scalp_sol_15m (programme review 2026-11-18, lane QUEUE-FILL): does any of LONG/SHORT (DIRECTION gate (--side-filter)) beat the declared leg, net of the harness cost
   stack?'
-status: done
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -118,7 +118,7 @@ roadmap:
 related:
 - RQ-20261105-032
 - research/levers/ict_scalp_sol_15m.yaml
-rearmed_at: '2026-11-23T03:10:00+00:00'  # COMMAND/RULE MISMATCH fixed (manager 2026-11-23, same as abab-19): the command graded with `--grade sweep --baseline A --delta-r 4.0 --folds 4 --fold-majority 3` but the registered rule is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005). Landed rows are NOT rewritten. PASS was under an unregistered grade; re-grade pending. status is `done` and is NOT changed: the dispatcher only runs status queued, so this re-arm does not dispatch until the manager decides the status.
+rearmed_at: '2026-11-23T03:10:00+00:00'  # COMMAND/RULE MISMATCH fixed (manager 2026-11-23, same as abab-19): the command graded with `--grade sweep --baseline A --delta-r 4.0 --folds 4 --fold-majority 3` but the registered rule is replace, 6 folds >= 4, 0.02 R x n(A), maxDD x 1.35 (PI-20261119-FILLW47B-0005). Landed rows are NOT rewritten. PASS was under an unregistered grade; re-grade pending. Status flipped done -> queued (manager 2026-11-23) so this re-arm dispatches (the dispatcher only runs status queued); the grading block is kept and the grader re-reads the new row.
 grading:
   attested: RULERQ20261118abab30
   auto: true
