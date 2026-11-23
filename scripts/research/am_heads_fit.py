@@ -59,6 +59,25 @@ def logloss(y: np.ndarray, p: np.ndarray) -> float:
     return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
 
 
+def pinball_rows(y, q, a):
+    d = y - q
+    return np.maximum(a * d, (a - 1.0) * d)
+
+
+def logloss_rows(y, p):
+    p = np.clip(p, 1e-6, 1 - 1e-6)
+    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
+
+
+def by_strategy_cut(strat_te, y_te, loss_model, loss_state, loss_uncond):
+    """Per-strategy [n, sum loss_model, sum loss_state, sum loss_uncond, sum y] on the test rows (aggregated across folds by the caller)."""
+    out = {}
+    for sid in np.unique(strat_te):
+        m = strat_te == sid
+        out[int(sid)] = [int(m.sum()), float(loss_model[m].sum()), float(loss_state[m].sum()), float(loss_uncond[m].sum()), float(y_te[m].sum())]
+    return out
+
+
 def skill(loss_model: float, loss_base: float):
     return None if not loss_base else round(1.0 - loss_model / loss_base, 5)
 
@@ -182,7 +201,9 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
                                    "skill": skill(pinball(y_te, p, a), pinball(y_te, b, a)), "coverage": round(float((y_te <= p).mean()), 4)}
         sb = state_q(y_tr, a)
         out["heads"][f"q{a:g}"].update({"pinball_state_base": round(pinball(y_te, sb, a), 5),
-                                        "skill_vs_state": skill(pinball(y_te, p, a), pinball(y_te, sb, a))})
+                                        "skill_vs_state": skill(pinball(y_te, p, a), pinball(y_te, sb, a)),
+                                        "by_strategy": by_strategy_cut(strat[te], y_te, pinball_rows(y_te, p, a), pinball_rows(y_te, sb, a),
+                                                                       pinball_rows(y_te, b, a))})
     for h in BIN_HEADS:
         yb_tr, yb_te = arr[h][tr], arr[h][te]
         if yb_tr.min() == yb_tr.max() or yb_te.min() == yb_te.max():
@@ -198,7 +219,8 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
                            "base_rate_test": round(float(yb_te.mean()), 5), "mean_pred": round(float(p.mean()), 5)}
         sbp = state_p(yb_tr)
         out["heads"][h].update({"logloss_state_base": round(logloss(yb_te, sbp), 5), "skill_vs_state": skill(logloss(yb_te, p), logloss(yb_te, sbp)),
-                                "auc_state_base": round(float(roc_auc_score(yb_te, sbp)), 5)})
+                                "auc_state_base": round(float(roc_auc_score(yb_te, sbp)), 5),
+                                "by_strategy": by_strategy_cut(strat[te], yb_te, logloss_rows(yb_te, p), logloss_rows(yb_te, sbp), logloss_rows(yb_te, b))})
     return out
 
 
@@ -239,7 +261,21 @@ def run(a) -> int:
                      "dev_folds_state_skill_positive": int(sum(1 for s in ss if s > 0)),
                      "dev_mean_skill_vs_state": round(float(np.mean(ss)), 5) if ss else None,
                      "dev_se_skill_vs_state_across_folds": round(float(np.std(ss, ddof=1) / np.sqrt(len(ss))), 5) if len(ss) > 1 else None}
-    res = {"schema": SCHEMA, "unit": a.unit, "meta": {k: v for k, v in meta.items() if k != "strategies"}, "strategies": meta["strategies"],
+    names = meta["strategies"]
+    by_leg = {}
+    for h in [f"q{x:g}" for x in QUANTILES] + list(BIN_HEADS):
+        acc = {}
+        for f in folds:
+            if f.get("kind") != "dev":
+                continue
+            for sid, v in (f.get("heads", {}).get(h, {}).get("by_strategy") or {}).items():
+                t = acc.setdefault(int(sid), [0, 0.0, 0.0, 0.0, 0.0])
+                for i in range(5):
+                    t[i] += v[i]
+        by_leg[h] = {names.get(sid, str(sid)): {"n_test_rows_dev": int(t[0]), "base_rate_or_mean_y": round(t[4] / t[0], 5),
+                                               "skill_vs_state": skill(t[1] / t[0], t[2] / t[0]), "skill_vs_unconditional": skill(t[1] / t[0], t[3] / t[0])}
+                     for sid, t in sorted(acc.items()) if t[0] >= 2000}
+    res = {"schema": SCHEMA, "unit": a.unit, "by_strategy_dev_pooled": by_leg, "meta": {k: v for k, v in meta.items() if k != "strategies"}, "strategies": meta["strategies"],
            "corpus_jobs": counts.get("distinct_jobs"), "folds": folds, "pooled_dev": pooled, "holdout_claim": claim,
            "limits": "features are the 6 PIT path features + side/tf/strategy only (no structure/market state); skill is a loss ratio vs the per-strategy unconditional baseline, not a P&L claim",
            "read_state": "measured", "provenance": "ESTIMATED", "elapsed_s": round(time.time() - t0)}

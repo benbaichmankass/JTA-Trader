@@ -65,6 +65,7 @@ baseline:
   definition: 'PRIMARY: the training fold''s empirical quantile / base rate per (strategy, open_r decile, bar-age bin) (>= 200 training rows per cell, else the per-strategy
     value). REFERENCE (reported, never gating): the per-strategy unconditional quantile / base rate. A head that does not beat a lookup on where the trade already sits has learned nothing a table does not say.'
   net_of_cost: false
+  per_leg_base_rates: 'comms/research/AM-V2-LABELS-20261123/by_strategy_cfbl-20261123.json (stop_first and dip_recovers base rate per strategy over the labelled corpus; pooled stop_first 36.41%, dip_recovers 2.64%, MEASURED, census_cfbl-20261123.json). Improvement is READ per strategy against that strategy''s own base rate: the run writes by_strategy_dev_pooled (n, base rate, skill vs the state baseline and vs the unconditional one) for every strategy with >= 2000 dev test rows. Per-strategy cuts are reported, never graded (the graded verdict is the pooled rule below).'
 run:
   command:
   - python3
