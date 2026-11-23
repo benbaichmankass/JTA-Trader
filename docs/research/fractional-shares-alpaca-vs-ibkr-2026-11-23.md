@@ -25,6 +25,12 @@
 
 Our state (repo): `ib_live` is `mode: dry_run`, empty roster, with the open finding BL-20260908-IB-LIVE-ENDPOINT-IS-STALE-AND-PROMOTION-WOULD-NOT-CONNECT (`ib_host/ib_port` point at 127.0.0.1:7496, not the isolated gateway VM); `ib_paper` is live. Moving the ETF book to IBKR live would need, at minimum (INFERENCE from the repo, not venue docs): the endpoint fix, funding, a decision on cash vs margin and PDT/settlement, an ETF-capable executor path (`IBClient.place` builds a native parent + TP limit + stop bracket with `parentId`), and an `ib_instruments` entry per ETF.
 
+## 2b. What is actually deployed for IBKR (operator asked, 2026-11-23 ~18:55Z; MEASURED from the repo, not from the VM)
+
+- The gateway VM runs the **gnzsnz/ib-gateway Docker image** (`deploy/ib-gateway.compose.yml`: IBC + Xvfb, headless), publishing only the **TWS socket API** (host loopback 4002 -> container 4004 for paper; live would be 4001 -> 4003). Nothing in `deploy/`, `src/`, `scripts/` or `docs/reference/` references the Client Portal Web API (`/iserver`, ibeam, CPAPI). The trader reaches it through `src/units/accounts/ib_client.py` (ib_insync, TWS socket) at `ib_host 10.0.0.251`, `ib_port 4002` for `ib_paper`.
+- So **the code and the deploy both say "socket API, no web server."** If the operator has a web interface in mind, it is not in this repo: candidates are the IB Gateway/TWS login UI (VNC/Xvfb, not an order path), IBKR's web Client Portal for manual trading (a browser, not our code), or the Client Portal Web API, which is not deployed. I cannot read the live gateway VM from here (a one-off `vm-ops` read of `docker ps` and listening ports would settle it); that read was not run.
+- **Does IBKR's Web API do fractional?** From search results (not page reads): IBKR's FAQ says fractional trading is "supported via FIX/CTCI but not via API at this time"; an Order Types page says the IB APIs "do not support fractional or cash quantity trading with exception to Cryptocurrencies and Forex"; an IBKR staff reply says Cash Quantity orders are unsupported for non-crypto via the API; the Client Portal API docs on GitHub were reported updated to remove fractional-share references. A Place Order page documents `cashQty`, so the picture is not fully consistent. Net (INFERENCE, UNVERIFIED because the IBKR pages returned 403 to the fetcher): fractional ETF orders are not available through either the TWS socket API or the Web API; the paper probe's IB step (`ib_fractional_probe.py`) is the decisive test for the socket path.
+
 ## 3. Our code
 
 - **Alpaca executor today:** `AlpacaClient.place` sends a **market bracket with `time_in_force: gtc`** and floors qty to whole shares (`max(1, int(round(qty)))`). The GTC choice was made deliberately (PI-20260926-HJPL5ABP-0001): with `day`, Alpaca cancels the stop and target at the close of the entry day and multi-session holds went broker-naked overnight.
@@ -41,6 +47,10 @@ Our state (repo): `ib_live` is `mode: dry_run`, empty roster, with the open find
 | **C. IBKR fractional** | unknown | connectivity fix, funding, executor change; and fractional-via-API may not exist | Tier 2/3 | UNKNOWN: pages not read; snippet says API unsupported |
 
 **Recommended order (my judgement):** (1) do A now; (2) run the two decisive reads at no build cost: the Alpaca `fractionable` read for the 14 symbols and one fractional order on `ib_paper`; (3) build B only if (a) the symbols are fractionable and (b) a one-order test on `alpaca_paper` shows a fractional bracket with `day` is accepted and its legs behave; even then the day-only stop is a regression the operator should explicitly accept. C only if the IBKR API accepts fractional orders.
+
+## 4b. Probe status (operator approval 2026-11-23 ~18:55Z)
+
+`.github/workflows/broker-fractional-probe.yml` + `scripts/ops/broker_fractional_probe.py` + `scripts/ops/ib_fractional_probe.py` are written (PAPER ONLY, tiny size, always flattened, log is the only record) and held in the PR. A `workflow_dispatch` workflow cannot be dispatched until it is on `main`. After merge: dispatch `target=alpaca phase=assets` (reads `fractionable` for the 14 candidates), `phase=open` during US market hours, `phase=premarket` while closed, and `target=ib`. **None has run.** The design that depends on the results: `docs/research/fractional-day-bracket-rearm-design-2026-11-23.md`.
 
 ## 5. Not done
 No test order was placed; no venue was queried; IBKR facts unread; Alpaca settlement not read; the merged-OCO design itself does not exist yet.

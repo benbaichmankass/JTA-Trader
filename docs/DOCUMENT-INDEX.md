@@ -711,6 +711,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/e4-prop-sim-2026-10-30/PLAN.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/entry-grade-42473814600-repro-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/fractional-day-bracket-rearm-design-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/fractional-shares-alpaca-vs-ibkr-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/hyperliquid-tradexyz-scoping-2026-11-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Hyperliquid / trade[XYZ] scoping memo (operator D10): unlocks, costs, jurisdiction blocker, effort, recommendation (eligibility first, then data adapter + Stage-0). |
 | `docs/research/index-leveraged-etf-roster-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
