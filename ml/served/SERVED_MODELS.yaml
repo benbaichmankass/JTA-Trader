@@ -16,6 +16,19 @@
 # when the record states only a verdict. provenance MEASURED = a graded run's number. When a record is regenerated,
 # update the entry here in the same PR.
 models:
+  ml-decision-entry-v1r20261122:
+    stage: advisory
+    stage_basis: "the artifact ml/served/ENTRY_SERVED.json points at once this ml-entry-retrain run 45021344426 promotion lands; serves every ml_entry consumer"
+    headline_metric:
+      name: promotion_grade_mean_net_r_per_trade
+      value: 0.1457
+      n: 434
+      window: "2026-11-08..2026-11-21"
+      population: "candidate refit vs served ml-decision-entry-v1r20261115 on the 14-day grade window (served +0.0945 R, n 399), net of the full cost stack"
+      verdict: pass
+      rule: RULE-ENTRY-PROMOTE-20261106
+      provenance: MEASURED
+      source: comms/research/ml_entry_grade/45021344426/grade_evidence.json
   ml-decision-entry-v1:
     stage: advisory
     stage_basis: "config id of ml_entry (strategies.yaml model:), executes live on bybit_2 (real money) + paper/prop; ml/served/ENTRY_SERVED.json currently serves the refit ml-decision-entry-v1r20261106 under this id"
