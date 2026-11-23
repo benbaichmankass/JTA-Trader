@@ -20,8 +20,8 @@ intervention_controls:
   not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
 iteration:
   attempt: 2
-  diagnosis: 'abab-19 read PASS for S_ASIA on BTCUSDT under a sweep-grade run (4 folds); its registered follow-up is one confirmation on a disjoint window. Time-disjoint is unpowered (about 19 trades) and
-    harness_stage0 refuses fvg_range, so the powered form is a disjoint symbol: XRPUSDT is the one twin with n(A) >= 39 in the lane''s local preview (ETH 32, SOL 27 are not).'
+  diagnosis: 'abab-19''s landed row was graded off its registered rule and is re-armed on the registered grade, so it is a lead, not a result. The disjoint-symbol form is the only powered one: a time-disjoint
+    BTC window is unpowered (about 19 trades) and harness_stage0 refuses fvg_range; XRPUSDT is the one twin with n(A) >= 39 in the lane''s local preview (ETH 32, SOL 27 are not).'
   due_by: '2026-11-27'
   from_result: RQ-20261118-abab-19
   levers:
@@ -31,7 +31,7 @@ iteration:
   search: 'session family: arm S_ASIA, one factor against the declared config A, on XRPUSDT, 6-fold replace grade.'
   subject: fvg_range_15m
   subject_kind: strategy_leg
-  verdict_read: pass
+  verdict_read: pending (abab-19's landed PASS was graded by a command that did not match its registered rule; it is re-armed on the registered grade and is NOT claimed as passed here)
 kind: experiment
 lands:
   assert_field: read_state
@@ -109,17 +109,18 @@ run:
   timeout_minutes: 195
 status: queued
 theme: live_strategy
-title: 'SESSION lever twin on XRPUSDT (fvg_range_15m config, S_ASIA only): does skipping UTC hours 0-7 beat the declared fvg_range_15m config on a disjoint symbol, net of the harness cost stack? (confirmation
-  of RQ-20261118-abab-19''s PASS)'
+title: 'SESSION lever twin on XRPUSDT (fvg_range_15m config, S_ASIA only): does skipping UTC hours 0-7 beat the declared fvg_range_15m config on a disjoint symbol, net of the harness cost stack? (follow-up
+  of RQ-20261118-abab-19, which is re-armed on its registered grade)'
 value:
   basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
   bucket: structural
   confidence: 0.1
   usd_at_stake_per_month: 150
-why_this_matters: 'RQ-20261118-abab-19 read PASS for S_ASIA on fvg_range_15m (BTCUSDT: n(A)=44 net -11.89 R, S_ASIA n=31 net +2.61 R, ahead in 4 of 4 folds; but the unit ran --grade sweep with 4 folds,
-  not the 6-fold replace grade its rule text registers). Its rule asks for ONE confirmation on a disjoint in-hand window. A time-disjoint BTC window is not available at power (about 19 trades expected before
-  the 2021-11 candle dataset start, against the floor of 39), and harness_stage0 refuses fvg_range, so this is the population-disjoint form. Only XRPUSDT is powered: lane preview 2026-11-23 (local, NOT
-  the record) read n(A)=46 and n(S_ASIA)=30 on XRPUSDT; ETHUSDT n(A)=32 and SOLUSDT n(A)=27 are below the floor of 39 and are deliberately not authored (a unit built to read INDETERMINATE is filler). The
-  preview used the same flags and is disclosed here; the committed run is the evidence. The rule below is copied unchanged from RULERQ20261118abab19 except that the arm grid is one candidate. Caveat set
-  before the run: XRP is highly correlated with BTC in time, so this is a different symbol, not an independent market. A PASS is a lead for a live-producer check and a Tier-3 declare PROPOSAL, never a config
-  edit; a FAIL closes this grid on XRPUSDT only.'
+why_this_matters: 'RQ-20261118-abab-19 landed a PASS for S_ASIA on fvg_range_15m (BTCUSDT: n(A)=44 net -11.89 R, S_ASIA n=31 net +2.61 R, ahead in 4 of 4 folds), but that row was graded by a command (--grade
+  sweep, 4 folds, majority 3) that did not match its registered rule (replace, 6 folds >= 4), so it is NOT claimed here as a PASS; abab-19 is re-armed on the registered grade (manager 2026-11-23) and its
+  own result decides. This unit is the same lever measured on a disjoint symbol, run under the registered grade from the start. Its rule asks for ONE confirmation on a disjoint in-hand window. A time-disjoint
+  BTC window is not available at power (about 19 trades expected before the 2021-11 candle dataset start, against the floor of 39), and harness_stage0 refuses fvg_range, so this is the population-disjoint
+  form. Only XRPUSDT is powered: lane preview 2026-11-23 (local, NOT the record) read n(A)=46 and n(S_ASIA)=30 on XRPUSDT; ETHUSDT n(A)=32 and SOLUSDT n(A)=27 are below the floor of 39 and are deliberately
+  not authored (a unit built to read INDETERMINATE is filler). The preview used the same flags and is disclosed here; the committed run is the evidence. The rule below is copied unchanged from RULERQ20261118abab19
+  except that the arm grid is one candidate. Caveat set before the run: XRP is highly correlated with BTC in time, so this is a different symbol, not an independent market. A PASS is a lead for a live-producer
+  check and a Tier-3 declare PROPOSAL, never a config edit; a FAIL closes this grid on XRPUSDT only.'
