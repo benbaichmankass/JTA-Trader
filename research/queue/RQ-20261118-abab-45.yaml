@@ -89,15 +89,19 @@ run:
   - --research-unit
   - RQ-20261118-abab-45
   - --grade
-  - sweep
+  - replace
   - --baseline
   - A
   - --delta-r
-  - '4.0'
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
   - --folds
-  - '4'
+  - '6'
   - --fold-majority
-  - '3'
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
   - --n-floor
   - '39'
   - --out
@@ -115,4 +119,4 @@ roadmap:
 related:
 - RQ-20261106-014
 - research/levers/squeeze_breakout_4h.yaml
-last_dispatched_at: '2026-11-23T00:56:41+00:00'
+rearmed_at: '2026-11-23T03:05:00+00:00'  # run 45091727521 and the 00:56Z dispatch died in build_arm_argv: exit_lever_ablation refused the squeeze harness (now covered, verified locally: A n 105, LONG/SHORT differ); command moved from --grade sweep (4 folds) to the registered replace/6-fold grade
