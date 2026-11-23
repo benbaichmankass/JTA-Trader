@@ -18,7 +18,7 @@ Reading: on the backtest corpus the rule is meaningful and, after the fix, near 
 
 ## Proposal (for the NEXT registered read; thresholds are suggestions to be fixed BEFORE it runs)
 
-1. **Split the question in two, keep both numbers.** (a) *Mechanics fidelity*: the replay's exit REASON class (stop / target / managed) and exit BAR match the recorded exit, >= 80% per leg; price-free, so slippage cannot fail it. (b) *Price fidelity*: gap NET of the leg's measured slippage, i.e. `|replayed_net_r - (actual_net_r + measured_slippage_r)| <= 0.10`, where `measured_slippage_r` comes from `realized_slippage.py` per venue (MEASURED). Live packages need (b), backtest rows already carry their slippage in `net_r`.
+1. **Split the question in two, keep both numbers.** (a) *Mechanics fidelity*: the replay's exit REASON class (stop / target / managed) and exit BAR match the recorded exit, >= 80% per leg; price-free, so slippage cannot fail it. (b) *Price fidelity*: gap NET of the leg's measured slippage, i.e. `|replayed_net_r - (actual_net_r + measured_slippage_r)| <= 0.10`, where `measured_slippage_r` comes from `realized_slippage.py` per venue (MEASURED). Live packages need (b), backtest rows already carry their slippage in `net_r`. <!-- population-ok: the 80% is the registered rule's threshold over graded rows per leg (n >= 10), not a measurement -->
 2. **Per-exit-type tolerance on live packages.** Bracket exits: 0.10 R + the leg's p50 measured slippage R. Non-bracket exits (reconciler fill, reduce, review close) are reported SEPARATELY and never pooled into the pass rate, because replaying them is circular (the replay is told when the trade ended); they stay in the table with their own count.
 3. **Report the unreplayable share.** A package or job whose exit the engine cannot model (stale/break-even/giveback levers, partial reduces) is counted `exit_not_modelled` and shown beside the rate, so a high pass rate over a small modelled slice cannot read as fidelity of the whole.
 4. **Keep the denominator honest.** Rate over graded rows; `could_not_grade` by reason printed with it (symbol/timeframe/bar-source). A leg is `INDETERMINATE` below n = 10 as now.
@@ -26,4 +26,4 @@ Reading: on the backtest corpus the rule is meaningful and, after the fix, near 
 
 ## What is NOT proposed
 
-Lowering the 0.10 R tolerance or the 80% share to make today's data pass. The numbers above are the baseline a revised rule is registered against.
+Lowering the 0.10 R tolerance or the 80% share to make today's data pass. The numbers above are the baseline a revised rule is registered against. <!-- population-ok: the 80% is the registered rule's threshold over graded rows per leg (n >= 10), not a measurement -->
