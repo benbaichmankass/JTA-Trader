@@ -2424,3 +2424,346 @@ nodes:
       changes a money decision at all -- log-loss lift is not a gate. Pre-mortem: FAIL most likely because the off-cells on these legs
       gate few trades (axis fidelity); first variant = the HAR-RV feature head (d5dd-17 PASS) as the label. Consumer: config/regime_policy.yaml
       trend_vol cells for the named legs (Tier 3).'
+
+# ── Two-week iteration plan (lane ITERATION-PLAN-2W-20261123, 2026-11-23) ─────────────────────────────
+two_week_plan:
+  schema: iteration-plan-2w/v1
+  authored: '2026-11-23'
+  lane: ITERATION-PLAN-2W-20261123
+  rule: 'manager skill, Iteration never ends; plan two weeks ahead, regroup at one (PR #28366). Weeks: 2026-11-24 and 2026-12-01; regroup 2026-12-01 (Tuesday) to
+    the Wednesday programme review.'
+  scope: every ML model subject; decision steps D1-D10 are planned in docs/plans/ml-dev-plan.yaml (next_weeks W48/W49) and indexed under decision_steps below
+  derivation: 'Generated from scripts/research/iteration_orphans.py --json and --levers on 2026-11-23: the lever map (untested / thin families), open queue units
+    and the verdict. Retirement only on lever exhaustion, never on an attempt count; an exhausted subject gets a rebuild step. Units whose input is another unit result
+    are PLANNED, not authored.'
+  step_types:
+    unit: a unit to run or grade
+    waiting: a unit waiting on a named result
+    design: a build or design step with an owner
+    owner_types: lane | unit | operator
+  subjects:
+    ml-entry:
+      verdict: fail
+      evidence: RQ-20261101-c692-01 PASS (+0.0073 R/decision, n=11,240); then the v2 feature-family ablation RQ-20261101-fs01-01 FAILED 2026-11-01 (adding 9 pure-noise
+        columns costs -0.…
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261101-b610-01, RQ-20261101-b620-01, RQ-20261101-b626-01 (+1 more) under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48.
+          diagnose the fail (design / power / cost / regime / harness / idea) before any retirement view.
+        also_blocked_waiting:
+        - RQ-20261101-b603-01
+        - RQ-20261101-b605-01
+        - RQ-20261101-b609-01
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261101-b610-01
+        step: 'On the RQ-20261101-b610-01 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-entry-eq-struct:
+      verdict: pass_unconfirmed
+      evidence: RQ-20261107-98e3-06 PASS (+0.49 R/trade, n 207, confirm 2025-07-15..2026-10-31, third read of the window, month-clustered t ~2.06, 75 of 207 trades
+        in 2026-03; dev OOF t…
+      state_before: covered
+      lever_untested:
+      - recipe
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261118-f7c1-04 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data
+          not used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261118-f7c1-04
+        step: 'On the RQ-20261118-f7c1-04 verdict, move to the first untested family: recipe. Never repeat a family after a flat result (programme-review step 2).
+          PLANNED, authored when its input result is read.'
+    ml-brackets:
+      verdict: indeterminate
+      evidence: 'RQ-20261101-c692-02 PASS under its rule (+0.0143 R/decision n=11,118) but the best STATIC cell chosen on dev gives +0.0144: the learned choice adds
+        ~nothing over a fixed…'
+      state_before: covered
+      lever_untested:
+      - features
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261101-78fc-01, RQ-20261119-ef40-05, RQ-20261119-ef40-06: name the blocker input and its owner (build or data) and either supply it or
+          re-point the unit. not a verdict: the instrument lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261101-78fc-01
+        step: 'On the RQ-20261101-78fc-01 verdict, move to the first untested family: features (then recipe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-setup-metalabel-p2pool:
+      verdict: indeterminate
+      evidence: 'comms/ml-plan/p1_costnet_verdict.json: cost gate +0.212 R/opp vs take-all -0.048, but n_eval 144 < 200 and 72.4% of the live book has no declared
+        initial risk. Row ML-P1…'
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - horizon
+      - calibration
+      lever_thin:
+      - universe
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261120-2cb9-01: name the blocker input and its owner (build or data) and either supply it or re-point the unit. not a verdict: the instrument
+          lacks power, so fix power (pool siblings, longer window, a measured n floor) before reading.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261120-2cb9-01
+        step: 'On the RQ-20261120-2cb9-01 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-exit-head-donchian-1h:
+      verdict: fail
+      evidence: 'Row ML-EXITHEAD-VALUE: BTC FAIL (pooled -0.0141 R/trade, n_oos 1041, 1/3 folds) and SOL FAIL (in-sample -0.0246 R/trade, n 286) -> annotate; ETH
+        in-sample only +0.0215 R…'
+      state_before: orphan
+      lever_untested:
+      - recipe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN ORPHAN (manager Thursday list): D8 exit head on trend_donchian_1h. diagnose the fail (design / power / cost / regime / harness / idea) before
+          any retirement view. Design the first iteration unit from the diagnosis: family recipe, registered rule + net-of-cost power check at design time. Do not
+          author before the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family recipe; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (horizon) PLANNED
+          behind that verdict.
+      depends_on: 'DESIGN ORPHAN (manager Thursday list): D8 exit head on trend_donchian_1h'
+    ml-tm-action-value:
+      verdict: fail
+      evidence: RQ-20261029-7294-02 FAIL (-0.056..-0.079 R/trade vs hold, 0/6 folds); Q-TM1b RQ-20261030-c7a1-01 done. Row ML-AM-NEXT-LIVE.
+      state_before: covered
+      lever_untested:
+      - recipe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: Run/grade queued RQ-20261118-04a5-07 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. diagnose the fail (design / power
+          / cost / regime / harness / idea) before any retirement view.
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261118-04a5-07
+        step: 'On the RQ-20261118-04a5-07 verdict, move to the first untested family: recipe (then horizon). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-holdbias-exit:
+      verdict: pending
+      evidence: 'Row ML-HOLDBIAS-EXIT-MODEL: not built; depends on ML-EXIT-ACTIONGRID-LABELS.'
+      state_before: orphan
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN (Thursday): orphan, no live iteration unit. no evidence yet: first structured design (one-factor sweeps against a control). Design the first
+          iteration unit from the diagnosis: family features, registered rule + net-of-cost power check at design time. Do not author before the design (floor-filler
+          ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family features; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (labels)
+          PLANNED behind that verdict.
+    ml-btc-router-cells:
+      verdict: fail
+      evidence: 'RQ-20261012-75b2-16: BTC 15m holdout macro-F1 lift -0.0001 vs the +0.10 bar; the cells still veto entries on 3 bybit_1 legs. Row ML-REGIME-15M-DRIFT.'
+      state_before: orphan
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin:
+      - regime_gating
+      w2026_11_24:
+        type: design
+        owner: lane
+        step: 'DESIGN ORPHAN (manager Thursday list): BTC regime-router cells. diagnose the fail (design / power / cost / regime / harness / idea) before any retirement
+          view. Design the first iteration unit from the diagnosis: family features, registered rule + net-of-cost power check at design time. Do not author before
+          the design (floor-filler ban).'
+      w2026_12_01:
+        type: unit
+        owner: unit
+        step: Author from the Thursday design, family features; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (labels)
+          PLANNED behind that verdict.
+      depends_on: 'DESIGN ORPHAN (manager Thursday list): BTC regime-router cells'
+    sol-regime-15m-lgbm-fc-pcv-v2:
+      verdict: pending
+      evidence: MEASURED config/regime_policy.yaml names only 3 BTC legs; no cost-net figure for any D2 head. Row ML-KEEP-ITERATION-COVERAGE, unit RQ-20261112-0f87-01.
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261112-0f87-01, RQ-20261119-a10d-02: name the blocker input and its owner (build or data) and either supply it or re-point the unit. no
+          evidence yet: first structured design (one-factor sweeps against a control).'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261112-0f87-01
+        step: 'On the RQ-20261112-0f87-01 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    mes-regime-5m-lgbm-v2:
+      verdict: pending
+      evidence: Same as sol-regime-15m-lgbm-fc-pcv-v2. Unit RQ-20261112-0f87-01.
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261112-0f87-01: name the blocker input and its owner (build or data) and either supply it or re-point the unit. no evidence yet: first
+          structured design (one-factor sweeps against a control).'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261112-0f87-01
+        step: 'On the RQ-20261112-0f87-01 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    eth-regime-1h-lgbm-xasset-v1:
+      verdict: pending
+      evidence: consolidation 2026-11-11 cons_strat empty; bake-off RQ-20261112-ef4c-03 is the feature-set read only. Unit RQ-20261112-0f87-01.
+      state_before: covered
+      lever_untested:
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261112-0f87-01: name the blocker input and its owner (build or data) and either supply it or re-point the unit. no evidence yet: first
+          structured design (one-factor sweeps against a control).'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261112-0f87-01
+        step: 'On the RQ-20261112-0f87-01 verdict, move to the first untested family: labels (then recipe). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-overlay-td-v1:
+      verdict: pass_unconfirmed
+      evidence: RQ-20261029-5785-02 TD PASS on RULE-ML-OVERLAY-NONINFERIOR-V2 (non-inferiority; PB2H FAIL). No live read of the reduced trades. Unit RQ-20261112-0f87-02.
+        Listed although…
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: unit
+        owner: unit
+        step: 'Run/grade queued RQ-20261122-b18a-02 under the registered rule(s); dispatch is dripped by QUEUE-FILL-STANDING-W48. a discovery only: confirm on data
+          not used for selection, then a Tier-3 proposal to the manager.'
+        also_blocked_waiting:
+        - RQ-20261112-0f87-02
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261122-b18a-02
+        step: 'On the RQ-20261122-b18a-02 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+    ml-entry-tp-revision-v1:
+      verdict: pass_unconfirmed
+      evidence: RQ-20261101-383f-01 PASS, held-out point estimate >= 0 (+0.0081 R n 868 in the power table), one read. Unit RQ-20261112-0f87-03. Listed although on
+        real money for the sa…
+      state_before: covered
+      lever_untested:
+      - features
+      - labels
+      - recipe
+      - universe
+      - horizon
+      - threshold
+      - calibration
+      lever_thin: []
+      w2026_11_24:
+        type: waiting
+        owner: lane
+        step: 'Unblock RQ-20261112-0f87-03: name the blocker input and its owner (build or data) and either supply it or re-point the unit. a discovery only: confirm
+          on data not used for selection, then a Tier-3 proposal to the manager.'
+      w2026_12_01:
+        type: waiting
+        owner: unit
+        waits_on: RQ-20261112-0f87-03
+        step: 'On the RQ-20261112-0f87-03 verdict, move to the first untested family: features (then labels). Never repeat a family after a flat result (programme-review
+          step 2). PLANNED, authored when its input result is read.'
+  decision_steps:
+    D1: 'docs/plans/ml-dev-plan.yaml lines with slot D1: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D2: 'docs/plans/ml-dev-plan.yaml lines with slot D2: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D3: 'docs/plans/ml-dev-plan.yaml lines with slot D3: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D4: 'docs/plans/ml-dev-plan.yaml lines with slot D4: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D5: 'docs/plans/ml-dev-plan.yaml lines with slot D5: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D6: 'docs/plans/ml-dev-plan.yaml lines with slot D6: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D7: 'docs/plans/ml-dev-plan.yaml lines with slot D7: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D8: 'docs/plans/ml-dev-plan.yaml lines with slot D8: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D9: 'docs/plans/ml-dev-plan.yaml lines with slot D9: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+    D10: 'docs/plans/ml-dev-plan.yaml lines with slot D10: next_weeks W48 (week of 11-24) and W49 (week of 12-01) filled on 2026-11-23; read with python3 scripts/ops/ml_dev_plan.py'
+  dependencies:
+    D3_point_in_time_macro_builder: 'build row (Thursday list): macro features for D3 entry models wait on it; no macro-feature unit is authored before it lands'
