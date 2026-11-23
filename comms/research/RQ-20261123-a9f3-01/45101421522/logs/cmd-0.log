@@ -1,0 +1,8 @@
+candle dataset: served binance__XRPUSDT__15 (175200 rows, last 2026-11-17 23:45:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_fvg_range.py --data <data> --symbol XRPUSDT --resample 15m --timeframe 15m --range-lookback 48 --atr-period 14 --adx-period 14 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261123-a9f3-01/45101421522/arms/A__trades.jsonl --json comms/research/RQ-20261123-a9f3-01/45101421522/arms/A__bt.json --adx-max 20.0 --min-width-pct 0.015 --max-width-pct 0.12 --touch-tol-pct 0.002 --min-touches 4 --third-frac 0.34 --fvg-search 24 --min-fvg-size-bps 2.0 --atr-stop-buffer 0.25 --timeout-bars 48 --exit-style far
+[S_ASIA] /usr/bin/python3 /tmp/repo/scripts/backtest_fvg_range.py --data <data> --symbol XRPUSDT --resample 15m --timeframe 15m --range-lookback 48 --atr-period 14 --adx-period 14 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261123-a9f3-01/45101421522/arms/S_ASIA__trades.jsonl --json comms/research/RQ-20261123-a9f3-01/45101421522/arms/S_ASIA__bt.json --adx-max 20.0 --min-width-pct 0.015 --max-width-pct 0.12 --touch-tol-pct 0.002 --min-touches 4 --third-frac 0.34 --fvg-search 24 --min-fvg-size-bps 2.0 --atr-stop-buffer 0.25 --timeout-bars 48 --exit-style far --skip-hours 0,1,2,3,4,5,6,7
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "S_ASIA beats the incumbent A (net R -12.8767 vs -21.5597) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

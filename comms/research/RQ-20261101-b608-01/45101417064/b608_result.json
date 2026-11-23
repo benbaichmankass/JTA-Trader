@@ -1,0 +1,135 @@
+{
+ "unit": "RQ-20261101-b608-01",
+ "sealed_windows_read": 0,
+ "levels": {
+  "base": {
+   "arm_mean": -0.0006967176359499444,
+   "n": [
+    71177,
+    70857,
+    70986
+   ]
+  },
+  "S1_R2": {
+   "arm_mean": 0.021101015907228377,
+   "base_mean": -0.0006967176359499444,
+   "delta": 0.02179773354317832,
+   "threshold": 0.01699669400568494,
+   "base_seed_range": 0.00849834700284247,
+   "arm_seed_means": [
+    0.021879540015276533,
+    0.02175029523964392,
+    0.01967321246676468
+   ],
+   "n": [
+    69101,
+    68941,
+    68662
+   ],
+   "min_fold_n": 3488,
+   "folds_better": 6,
+   "years_delta_positive": 3,
+   "year_delta": {
+    "2022": 0.04128111508048764,
+    "2023": -0.015905831420138496,
+    "2024": 0.03479577026801387,
+    "2025": 0.028655241396015545
+   },
+   "verdict": "win",
+   "marginal_vs_previous_level": 0.02179773354317832,
+   "adds_on_top": true,
+   "accepted": true
+  },
+  "S2_R2_gate": {
+   "arm_mean": 0.035533705247015546,
+   "base_mean": -0.0006967176359499444,
+   "delta": 0.03623042288296549,
+   "threshold": 0.01699669400568494,
+   "base_seed_range": 0.00849834700284247,
+   "arm_seed_means": [
+    0.03671626647071299,
+    0.037967465835876506,
+    0.03191738343445715
+   ],
+   "n": [
+    38933,
+    38874,
+    38660
+   ],
+   "min_fold_n": 1706,
+   "folds_better": 8,
+   "years_delta_positive": 4,
+   "year_delta": {
+    "2022": 0.02177115959029502,
+    "2023": 0.030419920397705264,
+    "2024": 0.0478755728956713,
+    "2025": 0.07337671419578742
+   },
+   "verdict": "win",
+   "marginal_vs_previous_level": 0.01443268933978717,
+   "adds_on_top": true,
+   "accepted": true
+  },
+  "S3_R2_gate_24": {
+   "arm_mean": 0.041547570977031094,
+   "base_mean": -0.0006967176359499444,
+   "delta": 0.04224428861298104,
+   "threshold": 0.01699669400568494,
+   "base_seed_range": 0.00849834700284247,
+   "arm_seed_means": [
+    0.04169610691495524,
+    0.043520765686873936,
+    0.039425840329264106
+   ],
+   "n": [
+    36508,
+    36420,
+    36227
+   ],
+   "min_fold_n": 1563,
+   "folds_better": 8,
+   "years_delta_positive": 4,
+   "year_delta": {
+    "2022": 0.02794616850719424,
+    "2023": 0.025113744169044896,
+    "2024": 0.059010284225825334,
+    "2025": 0.08493011002122189
+   },
+   "verdict": "win",
+   "marginal_vs_previous_level": 0.006013865730015548,
+   "adds_on_top": true,
+   "accepted": true
+  }
+ },
+ "unobservable_rows_dropped": {
+  "rule": "manager ruling 2026-11-23, option (a): a row whose outcome is unobservable at ANY bracket the unit uses (the bracket does not resolve before a data hole, so its later bars are NaN) is dropped from EVERY arm, so all arms compare the same rows; the count is reported",
+  "brackets": [
+   [
+    2.0,
+    4.0
+   ]
+  ],
+  "n_dropped": 29,
+  "n_total": 660652
+ },
+ "winning_stack": "S3_R2_gate_24",
+ "interaction": {
+  "stand_alone_delta": {
+   "R2": 0.0204,
+   "cost_gate_0.06": 0.0115,
+   "bracket_2_4": 0.0037
+  },
+  "marginal_on_stack": {
+   "R2": 0.02179773354317832,
+   "gate": 0.01443268933978717,
+   "bracket_2_4": 0.006013865730015548
+  }
+ },
+ "traded5_mean_by_level": {
+  "base": -0.04933714380182978,
+  "S1_R2": -0.024593508188902876,
+  "S2_R2_gate": 0.011431851956407795,
+  "S3_R2_gate_24": 0.02538485241230993
+ },
+ "result": "winning stack: S3_R2_gate_24"
+}
