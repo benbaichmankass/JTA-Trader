@@ -104,4 +104,6 @@ def test_committed_grade_and_rq_files_carry_no_balance():
         bad += [f"{f.name}{k}" for k in balance_keys(json.loads(f.read_text()))]
     for f in sorted((REPO / "comms/research/RQ-20261106-d5a1-01").glob("*/*.json")):
         bad += [f"{f.parent.name}/{f.name}{k}" for k in balance_keys(json.loads(f.read_text()))]
+    for f in sorted((REPO / "comms/gates").glob("gate_decisions_*.json")):
+        bad += [f"gates/{f.name}{k}" for k in balance_keys(json.loads(f.read_text()))]
     assert bad == [], bad[:5]
