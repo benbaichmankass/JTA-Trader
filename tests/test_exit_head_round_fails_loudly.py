@@ -130,7 +130,7 @@ def test_the_capability_preflight_runs_BEFORE_any_expensive_work() -> None:
     assert "pre-flight" in src.lower(), "the capability pre-flight is gone"
     preflight_at = src.index("PRE-FLIGHT FAILED")
     # The emit loop is the first expensive thing main() does.
-    emit_at = src.index('for leg in a.legs.split(",")')
+    emit_at = src.index('for leg_spec in a.legs.split(",")')
     assert preflight_at < emit_at, (
         "the pre-flight runs after the emit loop has already started, so it "
         "can only confirm that an hour was wasted rather than prevent it")
@@ -207,7 +207,7 @@ def test_the_round_takes_the_trainer_HEAVY_JOB_QUEUE() -> None:
         "the shared lock (BL-20260815-WORKTREE-RUN-TAKES-A-PRIVATE-HEAVY-LOCK)")
     lock_at = src.index("take_heavy_queue(")
     preflight_at = src.index("PRE-FLIGHT FAILED")
-    emit_at = src.index('for leg in a.legs.split(",")')
+    emit_at = src.index('for leg_spec in a.legs.split(",")')
     assert preflight_at < lock_at, (
         "the heavy lock is taken before the capability pre-flight, so a round "
         "with a flag the trainer will reject can sit in the queue for up to an "
