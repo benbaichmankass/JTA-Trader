@@ -18,8 +18,8 @@ on:
         description: "Matrix width (balanced batches of shards)"
         default: "24"
       corpus_sha:
-        description: "Commit sha whose comms/research + comms/strategy_evidence trade corpus is labelled (pins the job set; default = the sha cfb-20261123w ran on, set when the CF lane confirms it). Empty = the dispatch ref's own corpus."
-        default: ""
+        description: "Commit sha whose comms/research + comms/strategy_evidence trade corpus is labelled (pins the job set; default = the sha cfb-20261123w ran on, MEASURED: its file_list_sha1 8ea90ce7e5fc... reproduces from this sha, 7,289 files, 510,345 jobs). Empty = the dispatch ref's own corpus."
+        default: "1eb164f4ae641bea82ac34692af9cb7031640a62"
       max_fwd_bars:
         description: "Forward window (bars) the labels look ahead; rows with fewer bars left and no stop/target are censored"
         default: "48"
