@@ -12,7 +12,7 @@ attribution:
 manifest:
   trigger: tested
   timing: tested
-  action_bounds: untested
+  action_bounds: tested
 levers:
   trigger:
     tighten_be_trigger:
@@ -49,3 +49,20 @@ levers:
         shape: single_point
         note: 3,921 trades, all 8 legs negative; the late cell fails like the early cell
       shape: two_points_both_negative
+  action_bounds:
+    tighten_be_plus_r:
+      tests:
+      - unit: RQ-20261122-d4a9-01
+        value: -0.75
+        response: -0.0111 R/trade vs hold (CI -0.0246..+0.0008), n_fired 1,426; 0/6 folds, 0/200 controls; maxDD +3.6% worse
+        shape: single_point
+      - unit: RQ-20261122-d4a9-02
+        value: -0.5
+        response: -0.0131 R/trade (CI -0.0323..+0.0043), n_fired 1,426; 0/6 folds, 0/200 controls; maxDD +2.7% worse
+        shape: single_point
+      - unit: RQ-20261122-d4a9-03
+        value: 0.0
+        response: -0.0473 R/trade (CI -0.0814..-0.0159), n_fired 1,424; 0/6 folds, 0/200 controls; maxDD +1.1% worse
+        shape: single_point
+      note: trigger fixed at r_milestone, action tighten to BE + x R with >= 1 ATR room, x in {-0.75, -0.5, 0.0} (the c8e1-01 trigger family used +0.25 on a different trigger, so it is not a point on this curve). All three fail R2/R3 and none beats its random control (n_comparisons 3, bar 0.9833). The delta falls as x rises (-0.011, -0.013, -0.047 R/trade), a monotone loss with no interior optimum; no tested point clears the risk-adjusted rule.
+      shape: monotone
