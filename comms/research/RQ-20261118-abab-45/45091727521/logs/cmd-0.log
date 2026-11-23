@@ -1,0 +1,14 @@
+candle dataset: served binance__BTCUSDT__240 (10981 rows, last 2026-11-17 20:00:00+00:00) from metis-research-candles
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1478, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1148, in main
+    argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end,
+                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                     forming_1m=a.minutes_1m_csv, forming_session=a.decision_session)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 261, in build_arm_argv
+    raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback, "
+                     "ict_scalp, turtle_soup, fade and fvg_range harnesses")
+ValueError: squeeze_breakout_4h: harness 'squeeze' -- this ablation covers the trend, pullback, ict_scalp, turtle_soup, fade and fvg_range harnesses
