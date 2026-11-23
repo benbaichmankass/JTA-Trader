@@ -538,7 +538,15 @@ under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION` or filed with a reason, never just
 
 **One source:** [`config/reset_protocol.yaml`](../../../config/reset_protocol.yaml) (jobs with cadence/order/offset/model/ceiling/skill/dedupe tag,
 and one-shot `after_reset` items); machinery `scripts/ops/reset_protocol.py` (`--plan <reset-ts>`, `--receipt`, `--sweep`, `--self-test`); receipts
-`comms/ops/reset_receipts.jsonl` (append-only, committed by the manager to `main`). Primary trigger: a routine Wed **18:05Z**; backup:
+`comms/ops/reset_receipts.jsonl` (append-only, committed by the manager to `main`).
+
+**There is ALWAYS a reset timer attached to the current manager (operator 2026-11-23, binding, gates: none).** Operator, verbatim: *"make sure that you or whatever manager comes after you has a timer for the reset on Wednesday, so that as soon as the reset starts, we can kick everything off, so that even if I'm not immediately available, things will get going already ... there should basically always be a reset timer that the current manager is attached to ... I keep on saying it because I want to be sure, but I want to not have to do that."*
+1. The timer is a RECURRING scheduled task, cron `5 18 * * 3`, bound to the current manager session (`persistent_session_id`). Its prompt carries the standing protocol below plus a "this week only" block, which the manager updates during the week as work is deferred to the reset.
+2. Every manager checks it exists in `list_triggers` at **start of session** and at every **daily review**. If it's missing or bound to an old session, the manager creates it at once.
+3. **Handover moves it.** The incoming manager creates the same cron bound to itself and deletes the old one, and never deletes before the replacement exists. The timer's own prompt also forwards itself and rebinds if it fires into a session that is no longer the manager.
+4. The backup workflow (below) is a second line, not a substitute for the timer.
+
+Primary trigger: a routine Wed **18:05Z**; backup:
 `.github/workflows/reset-protocol-backup.yml` (18:15Z wake comment on the ops-flags PR if no receipt; 19:00Z red flag). Steps, in order (full text,
 trigger ids and the pipeline snippet: runbooks § D): **0 Claim** (`--receipt <ts> --write started`, push at once; **exit 4 = another trigger owns
 this reset: stop in one line**) · **1** restore the check-in cadence `17 */3 * * *` · **2 Stuck-work sweep** (`--sweep` plus `list_sessions`;
