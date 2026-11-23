@@ -163,7 +163,6 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
-| `docs/research/index-leveraged-etf-roster-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
@@ -713,6 +712,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/e4-prop-sim-2026-10-30/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/entry-grade-42473814600-repro-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/hyperliquid-tradexyz-scoping-2026-11-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Hyperliquid / trade[XYZ] scoping memo (operator D10): unlocks, costs, jurisdiction blocker, effort, recommendation (eligibility first, then data adapter + Stage-0). |
+| `docs/research/index-leveraged-etf-roster-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-am-heads-design-2026-11-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-hole-safe-adopt-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18g-event-entries-2026-10-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
