@@ -133,6 +133,9 @@ DECLARED_LIGHT = {
         "ALPACA-LIVE-ACTIVITY-ML B1 scorer: loads the already-trained ml-decision-entry-v1 booster and calls "
         "`.predict()` on ~5k rows of public Yahoo + Binance Vision bars; no `.fit(`. Unit RQ-20261101-bdc2-01 "
         "declares compute cpu_light (github_runner), never needs_vm_data, so it is never routed to the trainer.",
+    "scripts/research/ml_entry_fix_arms.py":
+        "ML-PRIMARY ml_entry fix arms (units RQ-20261124-f1a0-01..08): same data and route as ml_decision_entry.py, LightGBM refits on "
+        "the public Binance Vision table on a GitHub runner (research-script-run.yml), never on the trainer VM",
     "scripts/research/ml_decision_entry.py":
         "ML-DECISION-MODELS ENTRY harness: fits LightGBM on public Binance Vision 1h klines in a lane container or a "
         "GitHub runner. Its queue units (RQ-20261101-c692-01/-04/-06) declare compute cpu_long (backend github_runner), "
