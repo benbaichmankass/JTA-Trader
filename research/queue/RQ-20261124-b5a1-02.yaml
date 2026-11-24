@@ -77,11 +77,11 @@ decision_rule:
   registered_before_run: true
   statistic: 'scripts/research/am_policy_arm.py (decide, control_specs, reduce_run, unit_verdict) over scripts/research/am_risk_adjusted.grade_risk_adjusted: class
     tighten arm vs HOLD and 20 seeded matched random re-timings, on the dev segment (entry < 2026-01-01) and the claimed holdout (entry >= 2026-01-01).'
-  rule: 'RULE-AM-RISK-ADJUSTED-V1 with V1 parameters UNCHANGED, per segment: R1 net R given up per baseline trade <= 0.05; R2 max-drawdown cut >= 15% OR weekly-CVaR5
-    cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds; R4 beats >= 95% of the 20 controls (net R >= the control''s AND the risk cut >= the control''s, one
-    strictly); n floor 39; the lever must fire. UNIT verdict: PASS iff dev AND holdout both PASS; FAIL iff the dev segment FAILS (a necessary clause read and failed);
-    else INDETERMINATE. Every number in the policy (score cuts, levels, hysteresis, caps, fractions, seeds, 20 draws) is fixed in am_policy_arm.py before the first
-    run and never changed after a result.'
+  rule: 'REPLACES ltr-tighten-sl (retired 2026-11-24; prior failed family d4a9-01..03 counts toward n_tries). RULE-AM-RISK-ADJUSTED-V1 with V1 parameters UNCHANGED,
+    per segment: R1 net R given up per baseline trade <= 0.05; R2 max-drawdown cut >= 15% OR weekly-CVaR5 cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds;
+    R4 beats >= 95% of the 20 controls (net R >= the control''s AND the risk cut >= the control''s, one strictly); n floor 39; the lever must fire. UNIT verdict:
+    PASS iff dev AND holdout both PASS; FAIL iff the dev segment FAILS (a necessary clause read and failed); else INDETERMINATE. Every number in the policy (score
+    cuts, levels, hysteresis, caps, fractions, seeds, 20 draws) is fixed in am_policy_arm.py before the first run and never changed after a result.'
   what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; is a per-trade-R SCREEN (BOOK-SIM-REAL-SIZER owns the book-level
     $ measurement), so a pass is a Tier-3 proposal input only; says nothing about the other action classes (each is its own unit).
   pass_action: Propose the tighten class to the manager as a Tier-3 / mandate decision input (advice-only today); no apply from this unit.
@@ -90,6 +90,9 @@ decision_rule:
   proposal_mapping: pass -> Tier-3 proposal input; fail -> richer-features unit; indeterminate -> state which segment/clause and why and stop (no re-run at another
     threshold).
   choices_where_the_design_memo_is_silent:
+  - 'SCOPE (operator 2026-11-24 ~09:15Z, popup "Fold into AM v2", relayed by the manager): this unit is the ONE test of mid-trade stop-tightening and REPLACES the
+    retired standalone lever ltr-tighten-sl; the prior failed family is RQ-20261101-d4a9-01, -02, -03 (all FAIL) and COUNTS toward this class''s n_tries. It carries
+    the matched random-intervention control (R4: 20 seeded re-timings of the same tighten) like every class.'
   - 'DECISION ROWS: one decision per bar CLOSE k, k = 1.. the bars the UNMANAGED trade is still open (the cf_bar_labels rows the heads were fitted on); features use
     bars 1..k only; a move is effective on the first bar opening at or after bar k''s close. After the unmanaged trade''s last row the brackets stay where the policy
     left them (no head output outside its training distribution).'
@@ -117,6 +120,7 @@ decision_rule:
   - 'THIS CLASS: Fires when stop_first >= the fold''s training p90 AND dip_recovers <= its training p50; new stop = -1 R + 0.5 x (open R + 1 R), only ever tighter
     (set_stop), at least 0.05 R tighter than the last one. Heads: stop_first, dip_recovers (Stage A PASS).'
   min_n: 100000
+  replaces: ltr-tighten-sl (retired as a standalone lever 2026-11-24; prior failed family RQ-20261101-d4a9-01..03, counts toward n_tries)
 compute: cpu_long
 value:
   bucket: ai_trader
