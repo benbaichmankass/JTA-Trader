@@ -78,6 +78,18 @@ trades:
   # Fallback dedupe window when an event carries no order_package_id.
   no_package_bucket_minutes: 5
 
+# E. PROP FILLS / CLOSES (operator popup 2026-11-24 ~16:00Z, verbatim: "Fold into digest (Recommended)", after
+#    "I keep on getting system alerts on every prop trade"; its companion popup "Alert only if no close
+#    (Recommended)" governs src/prop/prop_sl_tp_alert.py). For a MACHINE-executed prop account (its executor places
+#    and records the trade) a routine fill / close is only RECORDED in the alert ledger (suppressed_by_policy,
+#    reason routine_prop_fill); Telegram keeps ANOMALIES as kind prop_alert: a fill later than `fill_late_minutes`
+#    after its signal, a close with no exit price / P&L, a signal that expired unfilled, and the missed-close alarm.
+#    Manual-flow accounts still send every fill. Gates this adds or changes: none (routing only; fail-open).
+#    ROLLBACK: `routine_fills: send` (or delete this section) and push.
+prop:
+  routine_fills: ledger_only
+  fill_late_minutes: 10
+
 # D. Prime Directive rule 4 (docs/CLAUDE-RULES-CANONICAL.md, amended 2026-11-04): rejection pings
 #    stay on real-money, prop and portfolio-mirror accounts; testing-paper rejections are recorded
 #    in runtime_logs/operator_alerts.jsonl only (route: ledger_only).

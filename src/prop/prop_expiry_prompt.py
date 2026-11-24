@@ -206,6 +206,21 @@ def find_tickets_to_prompt(
     return out
 
 
+#: A machine ticket that expires unfilled alerts only if its validity ended this
+#: recently (a deploy must not announce a stale backlog).
+MACHINE_UNFILLED_ALERT_WINDOW = timedelta(hours=3)
+
+
+def _alert_unfilled(ticket: Dict[str, Any], emitter: Optional[Callable[[Dict[str, Any]], bool]]) -> None:
+    try:
+        if emitter is None:
+            from src.prop.breakout_notify import emit_prop_unfilled_signal as emitter  # type: ignore
+        emitter(ticket)
+    except Exception as exc:  # noqa: BLE001 — notification never fatal
+        logger.warning("prop_expiry_prompt: unfilled alert failed for %s: %s",
+                       ticket.get("ticket_id"), exc)
+
+
 def _expire(ticket: Dict[str, Any], why: str) -> int:
     """CAS one swept ticket to ``expired``; 0 when it moved on first."""
     tid = str(ticket.get("ticket_id") or "")
@@ -226,6 +241,7 @@ def _expire(ticket: Dict[str, Any], why: str) -> int:
 def run_prop_expiry_prompts(
     *, now: Optional[datetime] = None,
     emitter: Optional[Callable[[Dict[str, Any]], bool]] = None,
+    unfilled_emitter: Optional[Callable[[Dict[str, Any]], bool]] = None,
 ) -> Dict[str, Any]:
     """End every expired, unfilled ticket as ``expired`` (not placed), per
     executor type. Called once per trader tick; never raises.
@@ -270,7 +286,12 @@ def run_prop_expiry_prompts(
                 if flow != FLOW_PHONE:  # rest / browser: the VM executor's intake
                     stats["rest_left_to_executor"] += 1
                 continue  # its executor gets the first word; it blocks nothing
-            stats["machine_expired"] += _expire(t, f"{flow} account, no fill logged")
+            n_exp = _expire(t, f"{flow} account, no fill logged")
+            stats["machine_expired"] += n_exp
+            if n_exp and status == "emitted" and now - vu < MACHINE_UNFILLED_ALERT_WINDOW:
+                # A signal the executor never filled: one Telegram anomaly (the CAS
+                # above fires once per ticket). Old backlog expires silently.
+                _alert_unfilled(t, unfilled_emitter)
             continue
         if status != "emitted":
             # An unanswered prompt past validity: not placed (directive 2026-10-07).
