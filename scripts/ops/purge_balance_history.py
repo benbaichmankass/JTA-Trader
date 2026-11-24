@@ -368,7 +368,7 @@ def cmd_verify(mirror, dump=None, load=None, samples=10):
     for (v, rule), lst in verdicts.items():
         tot[v] += sum(n for _, n in lst)
     print("REAL (target 0): %d matches in %d contexts | ALLOWED: %d matches" % (
-        tot["real"], sum(len(l) for (v, _), l in verdicts.items() if v == "real"), tot["allowed"]))
+        tot["real"], sum(len(lst_) for (v, _), lst_ in verdicts.items() if v == "real"), tot["allowed"]))
     for (v, rule), lst in sorted(verdicts.items(), key=lambda kv: (kv[0][0], -sum(n for _, n in kv[1]))):
         print("\n## %s / %s: %d matches, %d distinct contexts" % (v, rule, sum(n for _, n in lst), len(lst)))
         for c, n in (sorted(lst, key=lambda x: -x[1])[:samples] if v == "real" else rnd.sample(lst, min(samples, len(lst)))):
@@ -402,7 +402,7 @@ def selftest() -> int:
     assert '"static_dd_floor_usd": 4000.0' in redact_bytes("comms/gates/g.json", pos["comms/gates/g.json"].encode()).decode()
     for p, s in neg.items():
         assert redact_bytes(p, s.encode()) == s.encode(), p
-    def cls(t, which=0):
+    def cls(t):
         a = list(AMTV.finditer(t))
         return [classify(t, x.start(), x.end())[0] for x in a]
     assert cls("alpaca_live balance $1,234 on the SPY line") == ["real"]          # ticker never allowlists
