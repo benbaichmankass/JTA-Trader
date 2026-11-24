@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research tooling bug fix: index_signal_etf_harness.py wrote per-pair trade files named trades_<IDX>-><ETF>.jsonl; actions/upload-artifact refuses '>', so every 1e06 runner run (45496877325..45496898244) ran clean (exit 0) and then lost all outputs, landing as failed. Names now pass through artifact_safe() ('->' to '__', other forbidden characters to '_'); test added. No rule, unit, config or order-path change. Gates this adds or changes: none."
+}
