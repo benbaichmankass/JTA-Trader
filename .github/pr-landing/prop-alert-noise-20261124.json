@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Operator popup answers 2026-11-24 (relayed by Manager Session 2026-11-22a, dispatch to lane PROP-ALERT-NOISE): \"Alert only if no close (Recommended)\" and \"Fold into digest (Recommended)\". The dispatch grants merge on green + deploy + post-state verification; no approval record file is written by this session (R15 forgery rule), so the PR is declared hold and merged by the lane under that dispatch.",
+  "why": "Prop alert noise: machine-account SL/TP cross alert waits a 10-minute grace and fires only with no close recorded; routine machine-account prop fills/closes are recorded in the alerts ledger instead of Telegram, with anomalies (late fill, no exit/PnL, expired-unfilled signal, missed close) kept as prop_alert. Notification routing only, no order-path or gate change."
+}

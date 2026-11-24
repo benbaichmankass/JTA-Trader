@@ -105,6 +105,23 @@ def recurring_off(kind: str, policy: Optional[Mapping] = None) -> bool:
     return str(kind or "") in set(pol.get("recurring_off") or [])
 
 
+def prop_fill_policy(policy: Optional[Mapping] = None) -> Optional[Dict[str, Any]]:
+    """The ``prop:`` section's routine-fill rule, or ``None`` when fills should
+    all be sent (no section / rule not ``ledger_only`` / unreadable: fail OPEN).
+
+    ``{"fill_late_minutes": float}`` when a MACHINE account's routine fills and
+    closes are recorded in the ledger and only anomalies are sent."""
+    try:
+        pol = load_policy() if policy is None else policy
+        sec = pol.get("prop") or {}
+        if str(sec.get("routine_fills") or "send") != "ledger_only":
+            return None
+        return {"fill_late_minutes": float(sec.get("fill_late_minutes", 10))}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("telegram_policy: prop section unreadable (%s) — sending", exc)
+        return None
+
+
 def digest_event_lines(msgs: list, policy: Optional[Mapping] = None,
                        accounts: Optional[Mapping] = None) -> list:
     """The attention messages of an hourly digest that are EVENTS (still sent).
@@ -463,7 +480,7 @@ def record_suppressed(kind: str, text: str, *, reason: str, path: Optional[Path]
 
 
 __all__ = [
-    "load_policy", "recurring_off", "digest_event_lines", "account_class",
+    "load_policy", "recurring_off", "prop_fill_policy", "digest_event_lines", "account_class",
     "mirror_note", "portfolio_leg_on_real_money", "trade_decision", "should_send_trade",
     "claim", "rejection_ledger_only", "record_suppressed", "suppressed_log_path",
     "accounts_named", "paper_alert_route", "escalation_text", "PAPER_ALERT_MANAGER", "PAPER_ALERT_ESCALATE",
