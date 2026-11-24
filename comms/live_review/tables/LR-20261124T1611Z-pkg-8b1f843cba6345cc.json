@@ -1,0 +1,128 @@
+{
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "candles": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261017-004/39011790888/candles/BTCUSDT_2h_391d.csv",
+  "corpus": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/htf_pullback_trend_2h__trades.jsonl",
+  "leg": "htf_pullback_trend_2h",
+  "n_floor": 20,
+  "options": [
+    {
+      "action": "hold",
+      "mean_r": -0.8112,
+      "n": 20,
+      "n_floor": 20,
+      "p05_r": -1.099,
+      "p_giveback_gt_half": 0.9,
+      "sd_r": 0.3662,
+      "state": "measured",
+      "worst_r": -1.1002
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.3085,
+      "ev_cost_se_r": 0.0724,
+      "mean_r": -0.5027,
+      "n": 20,
+      "n_floor": 20,
+      "p05_r": -0.8622,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.1908,
+      "spec": "atr:1.0",
+      "state": "measured",
+      "stop_at_r_now": -0.2202,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.1936,
+      "worst_r": -0.9066
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.3153,
+      "ev_cost_se_r": 0.0675,
+      "mean_r": -0.4959,
+      "n": 20,
+      "n_floor": 20,
+      "p05_r": -0.8622,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.2045,
+      "spec": "atr:1.5",
+      "state": "measured",
+      "stop_at_r_now": -0.3869,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.1936,
+      "worst_r": -0.9066
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.3601,
+      "ev_cost_se_r": 0.0547,
+      "mean_r": -0.451,
+      "n": 20,
+      "n_floor": 20,
+      "p05_r": -0.8622,
+      "p_giveback_gt_half": 0.95,
+      "sd_r": 0.3558,
+      "spec": "atr:2.0",
+      "state": "measured",
+      "stop_at_r_now": -0.5536,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.1936,
+      "worst_r": -0.9066
+    },
+    {
+      "action": "close",
+      "ev_cost_r": -0.535,
+      "ev_cost_se_r": 0.0805,
+      "mean_r": -0.2762,
+      "n": 20,
+      "n_floor": 20,
+      "p05_r": -0.3101,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.0227,
+      "spec": "close",
+      "state": "measured",
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.7813,
+      "worst_r": -0.3189
+    }
+  ],
+  "population": {
+    "beyond_bars_slack": 0,
+    "comparable": 20,
+    "corpus_trades": 105,
+    "mfe_replay_mismatch": 0,
+    "never_reached_peak": 7,
+    "no_candles": 1,
+    "no_pullback_after_peak": 20,
+    "side_excluded": 57,
+    "side_filter": "long",
+    "symbol_excluded": 0,
+    "symbol_filter": null,
+    "symbols": [
+      "BTCUSDT"
+    ]
+  },
+  "read_state": "measured",
+  "state": {
+    "atr_stop_mult": 3.0,
+    "bars_held": 6,
+    "condition": "pullback",
+    "condition_asked": "state",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null,
+    "open_r": -0.207,
+    "peak_r": 0.1131,
+    "side": "long"
+  }
+}
