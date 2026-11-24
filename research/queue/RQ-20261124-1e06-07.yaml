@@ -1,0 +1,97 @@
+# Authored 2026-11-24 by lane ML-PRIMARY (REGIME arm for the ETF stream; queue fill on the manager's 23:14Z note). Rule registered BEFORE any run;
+# no local read of this population. Gates this adds or changes: none (a research unit; changes no config or order path).
+id: RQ-20261124-1e06-07
+title: 'REGIME arm, timing-gated: the capitulation trigger kept only when the index is above its 200-day SMA, executed in 1x ETFs on 8 FRESH indexes
+  (KBE, SMH, EWZ, FXI, EWG, EWU, VGK, IJR), graded POOLED'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Does the 1.5-ATR capitulation trigger, kept only when the index closes above its 200-day SMA at the signal bar and executed in the 1x
+  index ETF on 8 indexes used in no earlier read, earn positive pooled net R with >= 4 of 8 pairs positive, stay positive under 2x slippage, AND
+  beat >= 95% of 200 re-timed replays of the same signals?
+why_this_matters: 'Operator 2026-11-24: regime classification is a standing lever in every stream. 1e06-05 showed the capitulation timing at the
+  94.5th percentile of re-timed draws (fresh pairs) with leverage, not timing, breaking it; the IELE handoff noted the bull-only switch arm (+26..+30
+  R) as a lead, and 1e06-01 (bear-regime breakdown) failed. A dip bought inside an uptrend is the regime-conditioned form of the trigger; 1x avoids
+  the leverage loss.'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 1e06-05 measured pooled n 205 on six 3x pairs (shorter histories); these 8 1x ETFs trade back to 2010 or earlier, so n ~ 250-400,
+    above the floor 25. No local read of this population.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261124-1e06-07
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py unit 1e06-07: family capitulation_bull (capitulation_wide kept only when index close > SMA200) on (KBE,KBE),(SMH,SMH),(EWZ,EWZ),(FXI,FXI),(EWG,EWG),(EWU,EWU),(VGK,VGK),(IJR,IJR)
+    (1x execution, baseline flat); POOLED grade; the timing control (200 re-timed replays, shifts 40-400 sessions, same stop geometry, TP and
+    cost) is a RULE CLAUSE. Cost stack: 5 bps slippage per side (2x slippage re-read), the ETF price series itself (expense embedded), no funding;
+    TP = K* calibrated on the first 60% of trades, never tp_r 50.'
+  rule: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND pooled actual net_r beats
+    >= 95% of the 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise.
+  what_it_does_not_do: Changes no config. NO local read preceded this registration. A pass needs a fresh-window read before any manager proposal.
+  baseline: Flat; and the same trigger in each pair's 1x ETF.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261124-1e06-07
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261124-1e06-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-1e06-03
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+iteration:
+  subject: index-etf-capitulation
+  subject_kind: strategy
+  from_result: RQ-20261124-1e06-05/45504347080 + IELE handoff (bull-only switch lead)
+  verdict_read: fail
+  diagnosis: 'Operator 2026-11-24: regime classification is a standing lever in every stream. 1e06-05 showed the capitulation timing at the 94.5th
+    percentile of re-timed draws (fresh pairs) with leverage, not timing, breaking it; the IELE handoff noted the bull-only switch arm (+26..+30
+    R) as a lead, and 1e06-01 (bear-regime breakdown) failed. A dip bought inside an uptrend is the regime-conditioned form of the trigger; 1x
+    avoids the leverage loss.'
+  search: one fixed population (8 fresh 1x index ETFs), the SMA200 bull filter, and the same timing clause; trigger, TP calibration, hold cap
+    and costs unchanged.
+  levers:
+  - timing
+  - regime
+  attempt: 7
+  due_by: '2026-12-01'
+intervention_controls:
+  not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400
+    sessions, same stop geometry, TP and cost), which is a rule clause here
+not_before: '2026-11-25T03:00:00+00:00'
