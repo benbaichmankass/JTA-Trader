@@ -64,7 +64,7 @@ Final dry run (2026-11-24) against `main` `3e91ae8179870fb02b981a024233dc7434a89
 | New tier-size rule (B8) | **16,173 distinct lines** changed across history (counted once per distinct line, `PURGE_STATS`); a grep of the rewritten tip for `$amount` beside Breakout/Tradeify/Velotrade/tier/plan/eval/static-DD/daily-loss finds none |
 | Residual probe (`verify`) | **REAL: 0 matches, 0 contexts.** ALLOWED: 574 matches in 59 contexts, 6 narrow rules (below). The firm-limit allow rules are gone: a surviving tier amount would show as REAL |
 | Size (packed) | 2.32 GiB before (with pull refs) -> 2.17 GiB after |
-| Wall time | **rewrite ~103 min**, `verify` ~25 min, repack ~10 min on 4 vCPU / 16 GB. **Budget ~2.5 h from clone to push.** |
+| Wall time | **rewrite ~103 min**, `verify` ~25 min, repack ~10 min on 4 vCPU / 16 GB. **Budget ~2.25 h from clone to push** (repack skipped, manager 2026-11-24; the window runs from the 07:00Z freeze to ~09:15Z). |
 
 `verify` precedence (manager review 2026-11-23): (1) a NARROW rule on the key the amount is attached to; (2) else a balance-class word within 40 chars of the amount means REAL; (3) else a narrow context rule; (4) else REAL.
 Generic words and tickers allowlist nothing; `no amount found` is allowed only for named threshold/ratio keys, and `[redacted] NNN` (a partial leak) is REAL. Allowed rules in the final run, 10 random contexts each read, none is a balance:
@@ -96,7 +96,7 @@ set -euo pipefail
 git clone --mirror https://github.com/benbaichmankass/JTA-Trader work.git      # ~4 min
 cp -a work.git backup.git                                                      # sensitive; keep private
 python3 JTA-Trader/scripts/ops/purge_balance_history.py scan   work.git before.json   # inventory (about 10 min)
-python3 JTA-Trader/scripts/ops/purge_balance_history.py rewrite work.git              # filter-repo + reflog expire + capped repack
+python3 JTA-Trader/scripts/ops/purge_balance_history.py rewrite work.git              # filter-repo + reflog expire (repack is opt-in: `PURGE_REPACK=1`)
 python3 JTA-Trader/scripts/ops/purge_balance_history.py verify work.git               # expect exit 0 / 0 hits in scope
 # tree check: the only differences must be redactions
 git -C backup.git ls-tree -r main > old.tree; git -C work.git ls-tree -r main > new.tree
@@ -155,7 +155,7 @@ The rewrite changes every commit SHA, so **every fingerprint in `.gitleaks-basel
 
 Runbook PR merged and a **fresh dry run against current `main` by Wed 06:30Z**; the manager starts the sequence from a wake at 07:00Z: (1) ping the operator with the dry-run result; (2) operator toggles branch protection;
 (3) one final operator confirmation; (4) pause lanes, force-push; (5) re-enable protection, run section 7; (6) section 7b. Keep it runner-side: sections 5 and 7b are scriptable in a single workflow
-(`scan` -> `rewrite` -> `verify` -> tree check), so the manager's usage before the reset is spent on decisions, not typing. The dry run takes ~105 min rewrite + ~25 min verify + ~10 min repack on 4 vCPU (the tier rule and cross-line passes cost time).
+(`scan` -> `rewrite` -> `verify` -> tree check), so the manager's usage before the reset is spent on decisions, not typing. The dry run takes ~105 min rewrite + ~25 min verify + (repack is skipped by default; `PURGE_REPACK=1` adds ~10 min) on 4 vCPU (the tier rule and cross-line passes cost time).
 
 ## 8. LIMITS (stated honestly)
 

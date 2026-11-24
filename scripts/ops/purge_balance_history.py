@@ -215,7 +215,10 @@ def cmd_rewrite(mirror: str) -> int:
         subprocess.run(["git", "-C", mirror, "update-ref", "--stdin"], input=refs, text=True, check=True)
     subprocess.run(["git", "-C", mirror, "filter-repo", "--force", *[a for g in DELETE_GLOBS for a in ("--path-glob", g)], "--invert-paths", "--file-info-callback", FILTER_BODY % here], check=True)
     subprocess.run(["git", "-C", mirror, "reflog", "expire", "--expire=now", "--all"], check=True)
-    # memory-capped full repack (needed to shrink the pack; plain gc keeps 4.7 GiB, gc --aggressive was OOM-killed at 16 GB)
+    # Repack is OPT-IN (manager 2026-11-24: skip it, GitHub repacks server-side). PURGE_REPACK=1 runs a memory-capped full repack
+    # (plain gc keeps ~4.7 GiB, gc --aggressive is OOM-killed at 16 GB).
+    if os.environ.get("PURGE_REPACK") != "1":
+        return 0
     subprocess.run(["git", "-C", mirror, "-c", "pack.windowMemory=400m", "-c", "pack.threads=2", "repack", "-a", "-d", "-f", "--window=50", "--depth=50", "-q"], check=True)
     return 0
 
