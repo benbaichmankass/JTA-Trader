@@ -1,6 +1,6 @@
 id: RQ-20261123-1e01-02
 title: 'Inverse-ETF trend twin: the config-exact spy_trend_long_1d on SPXU (3x inverse S&P 500), 2010-06-01..2026-10-22, net of the full cost stack, long-only (buy orders only)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -99,3 +99,16 @@ related:
 - docs/research/index-leveraged-etf-roster-2026-11-23.md
 practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost, one read.'
 last_dispatched_at: '2026-11-23T19:59:36+00:00'
+grading:
+  attested: RULE-RQ20261123-1e01-02-INV-TWIN
+  auto: true
+  decision_rule_id: RULE-RQ20261123-1e01-02-INV-TWIN
+  evidence:
+  - research/results/RQ-20261123-1e01-02/45252457127.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
