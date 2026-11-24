@@ -196,7 +196,7 @@ def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:  # inert: 
     return out
 
 
-def signals_capitulation(i_o, i_h, i_l, i_c, flush_atr: float = FLUSH_ATR) -> list[dict[str, Any]]:
+def signals_capitulation(i_o, i_h, i_l, i_c, flush_atr: float = FLUSH_ATR) -> list[dict[str, Any]]:  # inert: i_o — uniform (open, high, low, close) signature across signal families; this trigger reads no index open
     """Flush: close >= 2.0 ATR14 below its 5-bar mean AND low below the prior 20 lows. Signal = the first up-close after the flush
     (within FLUSH_UP_WINDOW sessions). Stop = lowest low from the flush bar to the signal bar."""
     n = len(i_c)
