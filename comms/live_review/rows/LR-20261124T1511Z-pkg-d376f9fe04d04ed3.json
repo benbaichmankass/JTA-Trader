@@ -1,0 +1,186 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261124T1511Z-pkg-d376f9fe04d04ed3",
+ "reviewed_at": "2026-11-24T15:14:00Z",
+ "order_package_id": "pkg-d376f9fe04d04ed3",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "tradeify_1",
+  "velotrade_1",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "ADVERSE_R",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-24T15:10:00Z"
+ },
+ "info_cutoff_at": "2026-11-24T15:11:27Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 5,
+  "giveback_r": 0.8258,
+  "open_r": -0.5601,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2657,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1667.1771428571428,
+  "tp": 1754.0342857142857
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.8258,
+  "open_r": -0.5601,
+  "peak_r": 0.2657,
+  "r_to_stop": 0.4399,
+  "r_to_target": 2.2946
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 1667.1771428571428 / tp 1754.0342857142857 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "tradeify_1": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "velotrade_1": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 63,
+   "mean_r": -0.9908,
+   "sd_r": 0.326,
+   "worst_r": -1.1269,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 63,
+   "mean_r": -0.8857,
+   "sd_r": 0.2462,
+   "worst_r": -1.7841,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 63,
+   "mean_r": -0.6201,
+   "sd_r": 0.0222,
+   "worst_r": -0.6859,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261124T1511Z-pkg-d376f9fe04d04ed3.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.3707,
+  "worst_case_delta_r": 0.441,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.62,
+  "reason": "ADVERSE_R -0.56R, peak +0.27R gave back 0.83R, 1h chop (ADX 16). Table (long peak-then-pullback, n=63): hold mean -0.991R (worst -1.127, 98% gave back >half) vs close mean -0.620R (worst -0.686): +0.371R, SE ~0.041 (~9 SE), worst +0.441R. Tighten atr:2.0 -0.886 (worst -1.78) is worse than close; atr:1.0/1.5 invalid levels. Caveat: i.i.d. n=63 across 5 symbols, corpus lacks the structure SL, so hold is understated; a martingale view puts hold near -0.6R, so the edge is the leg's empirical continuation drift. TP is 2.29R away vs stop 0.44R, so hold is a ~16% lottery. Book is correlated longs (2 BTC ml/htf long, MGC long) and this model lost ADA, XRP x2, SOL x2 today. Exit cheaply.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: close vs hold from table n=63 (>= floor 20); live_vs_backtest CONSISTENT (real-money live -8.55R over 57 closed, p10.7)",
+  "book: correlated long crypto beta, BTCUSDT ml_entry -0.17R and htf_pullback_trend_2h -0.09R open, MGC long; same-day ml_entry losses ADA, XRP x2, SOL x2 (from dispatch note, not in packet)",
+  "regime: 1h chop ADX 16.4; 4h trending ADX 26 but 4h 1844 spike wick fully retraced",
+  "missing_input: regime.atr_now_over_entry, regime.vol_now, regime.cell_entry, context.funding",
+  "tighten_bias: stop-at-price fills flatter any tighten; atr:1.0/1.5 levels sit at or above price (invalid)",
+  "prop legs tradeify_1 and velotrade_1: 1 open each, read unknown (no would_apply evidence); close applies via apply_paths"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1667.18 / TP 1754.03, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "tradeify_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "velotrade_1",
+   "account_class": "prop",
+   "read": "unknown",
+   "evidence": "apply paths close, move_tp, reduce, tighten (live_review_apply.py); positions read: 1 open"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 1667.18 / TP 1754.03, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuHeEgMn8u5fegBEvvB",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "6c8d93a49af65d43987580e596b7cbc50e391035b6c4f28decf3a844a7f68929",
+ "forecast": {
+  "thesis": "1h is range-bound chop with lower highs (1721, 1709, 1707) and the 4h spike to 1844 fully retraced; price more likely to probe the 1671.79 swing low than reclaim 1707, so holding risks a stop-out while the TP is 2.3R away.",
+  "direction": "against_trade",
+  "target_px": 1671.79,
+  "p_target": 0.5,
+  "invalidation_px": 1707.38,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: lows 1671.79 / 1668.09 within 1.1-1.3 ATR, highs 1707.38 / 1709.02",
+   "regime: 1h chop ADX 16.4",
+   "priced_options: hold -0.991 vs close -0.620 n=63",
+   "book: correlated long BTC/MGC packages"
+  ]
+ }
+}
