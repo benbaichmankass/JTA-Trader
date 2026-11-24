@@ -130,7 +130,7 @@
     "expired": 154,
     "invalidation_first": 152,
     "no_data": 14,
-    "pending": 0,
+    "pending": 1,
     "target_first": 157,
     "tie_unresolved": 0
    },
@@ -138,14 +138,14 @@
     "n": 447,
     "rate": 0.4944
    },
-   "n": 477,
+   "n": 478,
    "n_graded": 463,
-   "n_packages": 160,
+   "n_packages": 161,
    "n_scored_with_p": 463,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-24T16:17:53Z",
+ "computed_at": "2026-11-24T16:33:20Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 207,
@@ -153,12 +153,20 @@
    "with_forecast": 32
   },
   "live_review": {
-   "records": 874,
-   "with_forecast": 477
+   "records": 875,
+   "with_forecast": 478
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
- "pending": [],
+ "pending": [
+  {
+   "fid": "LR-20261124T1601Z-pkg-92c5315c340a4153",
+   "horizon_end": "2026-11-24T22:08:00Z",
+   "source": "live_review",
+   "symbol": "BTCUSDT",
+   "time_remaining_s": 20079
+  }
+ ],
  "pooled": {
   "brier_by_class": {
    "expired": {
@@ -217,7 +225,7 @@
    "expired": 169,
    "invalidation_first": 158,
    "no_data": 14,
-   "pending": 0,
+   "pending": 1,
    "target_first": 168,
    "tie_unresolved": 0
   },
@@ -225,13 +233,13 @@
    "n": 477,
    "rate": 0.501
   },
-  "n": 509,
+  "n": 510,
   "n_graded": 495,
-  "n_packages": 160,
+  "n_packages": 161,
   "n_scored_with_p": 495,
   "unresolved_ties": 0
  },
- "population": "509 forecasts: live_review=477, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
+ "population": "510 forecasts: live_review=478, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
@@ -241,9 +249,9 @@
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
-   "main_reviews": 834,
+   "main_reviews": 835,
    "rows_branch": 534,
-   "union": 874
+   "union": 875
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000
