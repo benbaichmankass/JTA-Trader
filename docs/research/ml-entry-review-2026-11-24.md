@@ -86,7 +86,7 @@ Population, unless stated: the 26 closed real-money `ml_entry` trades on bybit_2
 | a same-side stop-out in the prior 24 h | 9 | −1.99 | −0.22 |
 | no same-side stop in the prior 24 h | 17 | −3.80 | −0.22 |
 
-On this sample, entering beside an open same-side trade did *not* lose more, and entering after a recent stop lost exactly the same per trade. **There is no measured value yet for a cooldown or exposure rule**, so none is proposed as a change; any such rule would also be a gate and need the operator's permission. The same split over the 8 dev folds (about 80k decisions; scratch script in this lane) did **not complete**: it was stopped at the session's 90-minute background limit while sharing 4 cores with the lever-arms run. It is filed as row **ML-ENTRY-BOOK-FEATURES** to run on the runner, together with the book/recency-feature retrain arm. The money in the book question is the *same-bar* stack (stage 3), not trades opened hours apart.
+On this sample, entering beside an open same-side trade did *not* lose more, and entering after a recent stop lost exactly the same per trade. **There is no measured value yet for a cooldown or exposure rule**, so none is proposed as a change; any such rule would also be a gate and need the operator's permission. The same split over the 8 dev folds (about 80k decisions; `scripts/research/ml_entry_book_state.py`) did **not complete**: it was stopped at the session's 90-minute background limit while sharing 4 cores with the lever-arms run. It is filed as row **ML-ENTRY-BOOK-FEATURES** to run on the runner, together with the book/recency-feature retrain arm. The money in the book question is the *same-bar* stack (stage 3), not trades opened hours apart.
 
 ## Part 2: equity ML (the blocking step)
 
