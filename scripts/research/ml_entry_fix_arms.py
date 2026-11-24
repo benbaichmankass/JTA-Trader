@@ -428,6 +428,28 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     return tab, alt
 
 
+def cache_fingerprint(cache: Path, symbols: list[str], fetch_report: dict | None = None) -> dict:
+    """What the run READ (PI-20261124-LDATAEND-0001: two runs with the same --run-date built tables of 72,996 vs 73,236 decisions). sha256 over
+    each symbol's (rows, first bar, last bar, close checksum), plus the archives fetch_through could not get (404 / not yet published), so a
+    re-run that read different data is visible in its verdict instead of silently differing."""
+    import hashlib
+    h, per, missing = hashlib.sha256(), {}, {}
+    for sym in symbols:
+        f = cache / f"{sym}.pkl"
+        if not f.exists():
+            per[sym] = None
+            continue
+        df = pd.read_pickle(f)
+        key = (len(df), str(df.ts.min()), str(df.ts.max()), round(float(df.close.sum()), 6))
+        per[sym] = key
+        h.update(repr((sym,) + key).encode())
+    for sym, rep in (fetch_report or {}).items():
+        if rep.get("missing"):
+            missing[sym] = rep["missing"]
+    return {"sha256": h.hexdigest(), "n_symbols": sum(v is not None for v in per.values()), "missing_archives": missing,
+            "provenance": "MEASURED (read from the klines cache this run used)"}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", choices=ARMS)
@@ -450,19 +472,21 @@ def main(argv=None) -> int:
     cache, out = Path(a.cache), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    if a.fetch:
-        R.fetch_through(cache, M.universe(), R.plan(date.fromisoformat(a.run_date)))
+    fetch_report = R.fetch_through(cache, M.universe(), R.plan(date.fromisoformat(a.run_date))) if a.fetch else None
+    data_fp = cache_fingerprint(cache, M.universe(), fetch_report)
     tab, alt = build(cache, a.arm)
     res = run_arm(tab, a.arm, alt, folds_lim=a.folds)
     pop = (f"registered recipe refit per dev fold {M.DEV_FOLDS[0]}..{M.HOLDOUT_START} (60-perp frozen universe, {tab.symbol.nunique()} symbols, "
            f"{len(tab)} rows), tau {TAU}, net R fee {M.FEE_BPS}+slip 3+funding 1 bps/8h, week-clustered se; arm {a.arm}"
            + (f"; DIAGNOSTIC first {a.folds} folds only" if a.folds else ""))
-    res |= {"schema": "ml_entry_fix_arms/1", "unit": a.unit, "git_sha": M._git_sha(), "population": pop, "elapsed_s": round(time.time() - t0),
+    res |= {"data_fingerprint": data_fp, "schema": "ml_entry_fix_arms/1", "unit": a.unit, "git_sha": M._git_sha(), "population": pop, "elapsed_s": round(time.time() - t0),
             "read_state": "measured"}
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     verdict = res["verdict"] if not a.folds else "indeterminate"
     vj = {"verdict": verdict, "read_state": "measured", "n": res["n"], "note": res["why"], "population": pop, "arm": a.arm,
-          "rule": res["rule"], "measurement": {k: v for k, v in res.items() if k not in ("folds",)}}
+          "rule": res["rule"], "data_window": {"klines_cache_sha256": data_fp["sha256"], "n_symbols": data_fp["n_symbols"],
+                                               "missing_archives": data_fp["missing_archives"]},
+          "measurement": {k: v for k, v in res.items() if k not in ("folds",)}}
     (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     print(json.dumps({"arm": a.arm, "verdict": verdict, "why": res["why"]}), flush=True)
     return 0
