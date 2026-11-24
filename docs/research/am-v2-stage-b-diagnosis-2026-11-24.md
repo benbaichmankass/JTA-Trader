@@ -1,6 +1,6 @@
 # AM v2 Stage B: why the head-timed actions lose to random timing, and the action-value redesign (2026-11-24)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-24` · lane ML-PRIMARY (dispatched by Manager Session 2026-11-22a), row `AM-V2-STAGE-B-POLICY-ARM`
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane ML-PRIMARY (dispatched by Manager Session 2026-11-22a), row `AM-V2-STAGE-B-POLICY-ARM`
 
 **Gates this adds or changes: none.** Research diagnosis and the units it authored. Nothing here touches a bracket, a config or the trade path.
 **MEASURED** = computed from a named file or run in this session; **ESTIMATE** = stated as such.

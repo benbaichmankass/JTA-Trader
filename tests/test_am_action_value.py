@@ -15,9 +15,9 @@ REPO = Path(__file__).resolve().parents[1]
 for p in (REPO, REPO / "scripts", REPO / "scripts" / "research", REPO / "tests"):
     sys.path.insert(0, str(p))
 
-import am_action_value as V  # noqa: E402
-import am_policy_arm as P  # noqa: E402
-from test_am_policy_arm import FLAT, SEC, T0, ctx_for  # noqa: E402
+import am_action_value as V
+import am_policy_arm as P
+from test_am_policy_arm import FLAT, ctx_for
 
 THR = {"stop_first": {"p90": 0.5}, "dip_recovers": {"p50": 0.1, "p90": 0.5}}
 
@@ -82,7 +82,7 @@ def test_control_is_same_kind_at_an_eligible_row():
 
 
 def test_label_fit_shard_round_trip(tmp_path):
-    ctx, job = ctx_for(FLAT, tp=106.0)
+    ctx, _job = ctx_for(FLAT, tp=106.0)
     rows = P.decision_rows(ctx)
     pred = preds5(len(rows))
     X = V.av_features(ctx, rows, pred, P.feature_matrix(ctx, rows, 0))

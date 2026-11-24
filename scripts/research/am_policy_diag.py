@@ -19,17 +19,16 @@ import random
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
 
 REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import am_policy_arm as P  # noqa: E402
-import cf_bars  # noqa: E402
-import cf_bulk  # noqa: E402
-import cf_core  # noqa: E402
-import live_review_counterfactual as lrc  # noqa: E402
+import am_policy_arm as P
+import cf_bars
+import cf_bulk
+import cf_core
+import live_review_counterfactual as lrc
 
 CLASSES = ("tighten", "bank", "loosen")
 SINGLE_ROWS = 6          # sampled decision rows per trade for the single-action ex-post pricing
@@ -39,7 +38,7 @@ def _r_of(ctx, px):
     return ctx["sign"] * (px - ctx["entry_ref"]) / ctx["r_dist"]
 
 
-def single_actions(ctx, rows, pred, base_net, rng) -> List[dict]:
+def single_actions(ctx, rows, pred, base_net, rng) -> list[dict]:
     """Ex-post value of ONE action placed at a sampled row k (never re-placed), net of the full cost stack, minus HOLD."""
     out = []
     if not rows:
@@ -114,7 +113,7 @@ def main(argv=None) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     rng = random.Random(a.seed)
-    fh = open(out / "diag.jsonl", "w")
+    fh = open(out / "diag.jsonl", "w")  # noqa: SIM115 -- held across the shard loop and flushed per shard
     n_tr = 0
     for si, shard in enumerate(plan["shards"]):
         if (si - a.shard_offset) % a.shard_every:
@@ -127,12 +126,12 @@ def main(argv=None) -> int:
         if not keys:
             continue
         sec = cf_bars.TF_SECONDS[tf]
-        hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
+        hz = lambda j, tf=tf: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]
         try:
             lo = min(lrc._ts(jobs[k]["entry_time"]) for k in keys) - P.PRE_BARS * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + hz(jobs[k]) for k in keys)
             store = cf_bulk.BarStore(cf_bars.historical_bars(sym, tf, lo, hi))
-        except Exception as e:   # allow-silent: diagnostic sample; a failed fetch skips the shard and is printed
+        except Exception as e:  # noqa: BLE001  # allow-silent: diagnostic sample; a failed fetch skips the shard and is printed
             print(json.dumps({"shard": shard["shard_id"], "fetch_failed": str(e)[:200]}), flush=True)
             continue
         items, mats = [], defaultdict(list)

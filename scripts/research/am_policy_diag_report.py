@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: reads the diag.jsonl that scripts/research/am_policy_diag.py writes; prints the diagnosis tables (Tier 1, read-only)
+# wiring: manual-only - a session runs it over the diag.jsonl scripts/research/am_policy_diag.py writes (the Stage B diagnosis, docs/research/am-v2-stage-b-diagnosis-2026-11-24.md); tests/test_am_action_value.py
 """Summarise am_policy_diag.py output: where the policy's actions fire vs the random controls', per-trade deltas by HOLD outcome, bank fills, and
 the single-action ex-post value against state and head scores (deciles). Read-only; prints JSON."""
 from __future__ import annotations
@@ -28,7 +28,8 @@ def _dec(pairs, n=5):
 
 
 def report(path: str) -> dict:
-    recs = [json.loads(l) for l in open(path) if l.strip()]
+    with open(path) as fh:
+        recs = [json.loads(ln) for ln in fh if ln.strip()]
     res = {"n_trades": len(recs), "hold_mean_net_r": _m([r["base"] for r in recs])}
     for cls in ("tighten", "bank", "loosen"):
         cells = [(r, r["cls"].get(cls, {"n": 0})) for r in recs]

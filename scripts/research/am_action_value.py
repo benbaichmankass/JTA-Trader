@@ -50,19 +50,20 @@ import random
 import sys
 import time
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import am_policy_arm as P  # noqa: E402
-import cf_bars  # noqa: E402
-import cf_bulk  # noqa: E402
-import cf_core  # noqa: E402
-import live_review_counterfactual as lrc  # noqa: E402
+import am_policy_arm as P
+import cf_bars
+import cf_bulk
+import cf_core
+import live_review_counterfactual as lrc
 
 SCHEMA = "am_action_value/1"
 RULE_ID = "RULE-AM-ACTION-VALUE-20261124"
@@ -108,11 +109,11 @@ class Heads5(P.Heads):
 
 
 # ---- actions -----------------------------------------------------------------------------------------------------------
-def action_spec(name: str, ctx: dict, row: dict, pr: dict) -> Optional[dict]:
+def action_spec(name: str, ctx: dict, row: dict, pr: dict) -> dict | None:
     """The single bracket action ``name`` placed at row ``row``'s close, or None where it is ineligible. ``pr`` = that row's head outputs."""
     k, o = row["k"], row["features"]["open_r"]
     ts = P._close_ts(ctx, ctx["post"], k)
-    mk = lambda kind, lvl, **kw: {"ts": ts, "kind": kind, "level": P._px(ctx, lvl), "k": k, "lvl_r": lvl, **kw}  # noqa: E731
+    mk = lambda kind, lvl, **kw: {"ts": ts, "kind": kind, "level": P._px(ctx, lvl), "k": k, "lvl_r": lvl, **kw}
     if name == "bank_now":
         return {"ts": ts, "kind": "close", "level": None, "frac": BANK_FRAC, "k": k, "lvl_r": o}
     if name == "bank_q50":
@@ -133,7 +134,7 @@ def action_spec(name: str, ctx: dict, row: dict, pr: dict) -> Optional[dict]:
     raise ValueError(name)
 
 
-def eligible(cls: str, name: str, ctx: dict, row: dict, pr: dict, thr: dict) -> Optional[dict]:
+def eligible(cls: str, name: str, ctx: dict, row: dict, pr: dict, thr: dict) -> dict | None:
     """The class's eligibility on top of the action's own: av_loosen also needs the dip head's Stage-B cut."""
     if cls == "av_loosen" and pr["p_dip"] < thr["dip_recovers"]["p90"]:
         return None
@@ -145,7 +146,7 @@ def _act(s: dict) -> dict:
 
 
 # ---- features ----------------------------------------------------------------------------------------------------------
-def row_preds(pred: Dict[str, Sequence[float]], i: int) -> dict:
+def row_preds(pred: dict[str, Sequence[float]], i: int) -> dict:
     q50 = max(0.0, float(pred["q0.5"][i]))
     return {"q50": q50, "q90": max(q50, float(pred["q0.9"][i])), "reach_1": float(pred["reach_1"][i]), "reach_2": float(pred["reach_2"][i]),
             "p_stop": float(pred["stop_first"][i]), "p_dip": float(pred["dip_recovers"][i])}
@@ -179,13 +180,13 @@ def prepare_shard(shard: dict, chunks, jobs, heads: Heads5, keep, fetcher=None) 
     elif not cf_bulk.is_crypto(sym):
         reasons["no_bar_source"] = len(chosen)
     elif chosen:
-        hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
+        hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]
         try:
             sec = cf_bars.TF_SECONDS[tf]
             lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - P.PRE_BARS * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + hz(jobs[k]) for k in chosen)
             bars = cf_bars.historical_bars(sym, tf, lo, hi, fetcher)
-        except Exception as e:   # allow-silent: a failed fetch is a recorded state (no 'done' meta, so a re-run retries), never a halt
+        except Exception as e:  # noqa: BLE001  # allow-silent: a failed fetch is a recorded state (no 'done' meta, so a re-run retries), never a halt
             state, err = "fetch_failed", f"{type(e).__name__}: {e}"[:300]
     store = cf_bulk.BarStore(bars) if bars else None
     if store is None and state == "done" and not reasons and chosen:
@@ -225,7 +226,7 @@ def prepare_shard(shard: dict, chunks, jobs, heads: Heads5, keep, fetcher=None) 
 
 
 # ---- label -------------------------------------------------------------------------------------------------------------
-def label_trade(ctx: dict, rows, pred, X, rng: random.Random) -> Optional[dict]:
+def label_trade(ctx: dict, rows, pred, X, rng: random.Random) -> dict | None:
     """Up to ROWS_PER_TRADE sampled rows x every action: delta = arm net R - HOLD net R (NaN where ineligible)."""
     import numpy as np
     if not rows:
@@ -301,11 +302,12 @@ def fit_one(X, y, seed_salt: str, min_rows: int = MIN_TRAIN_ROWS):
         Xm, ym = Xm[sel], ym[sel]
     model = lgb.LGBMRegressor(**LGB)
     model.fit(Xm, ym, feature_name=list(AV_FEATS))
+    # provenance: predict -- the regressor's in-sample predicted net-R value on its own TRAINING rows, used only for the p75 action cut
     cut = max(EV_MARGIN_R, float(np.percentile(model.booster_.predict(Xm), EV_CUT_PCT)))
-    return model.booster_, int(len(ym)), (float(np.mean(ym)), cut)
+    return model.booster_, len(ym), (float(np.mean(ym)), cut)
 
 
-def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS, only_fold: Optional[str] = None) -> dict:
+def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS, only_fold: str | None = None) -> dict:
     import numpy as np
     d = load_labels(labels)
     man = json.loads((Path(heads_dir) / "manifest.json").read_text())
@@ -317,7 +319,7 @@ def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS
         a = _day(f["test_start"])
         cut = min(a, _day(P.HOLDOUT_TRAIN_END)) if f["test_start"] >= P.HOLDOUT_START else a
         tr = np.where(d["end"] < cut - EMBARGO_DAYS * 86400)[0]
-        rec = {"fold_id": f["fold_id"], "test_start": f["test_start"], "test_end": f.get("test_end"), "n_train_rows": int(len(tr)), "files": {},
+        rec = {"fold_id": f["fold_id"], "test_start": f["test_start"], "test_end": f.get("test_end"), "n_train_rows": len(tr), "files": {},
                "train_mean": {}, "ev_cut": {}, "n_fit": {}}
         fdir = out / f["fold_id"]
         for scope in ["all"] + [f"fam:{x}" for x in FAMILIES]:
@@ -336,7 +338,7 @@ def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS
                 rec["ev_cut"][tag] = round(mu[1], 6)
         folds.append(rec)
         print(json.dumps({"fold": f["fold_id"], "n_train_rows": rec["n_train_rows"], "models": len(rec["files"])}), flush=True)
-    labelled = {"n_rows": int(len(d["entry"])), "n_cells": {a: int((~np.isnan(d["Y"][:, i])).sum()) for i, a in enumerate(ACTIONS)},
+    labelled = {"n_rows": len(d["entry"]), "n_cells": {a: int((~np.isnan(d["Y"][:, i])).sum()) for i, a in enumerate(ACTIONS)},
                 "mean_delta": {a: (round(float(np.nanmean(d["Y"][:, i])), 6) if (~np.isnan(d["Y"][:, i])).any() else None) for i, a in enumerate(ACTIONS)}}
     manifest = {"schema": "am_action_value_dump/1", "feats": AV_FEATS, "actions": list(ACTIONS), "families": list(FAMILIES), "lgb_params": LGB,
                 "label_cap_r": LABEL_CAP_R, "embargo_days": EMBARGO_DAYS, "rows_per_fit": ROWS_PER_FIT, "folds": folds, "labels": labelled,
@@ -363,8 +365,8 @@ class ValueModels:
         self.man = json.loads((self.root / "manifest.json").read_text())
         if self.man.get("schema") != "am_action_value_dump/1" or list(self.man["feats"]) != AV_FEATS:
             raise ValueError("unexpected action-value manifest")
-        self.boosters: Dict[tuple, Any] = {}
-        self.cuts: Dict[tuple, float] = {}
+        self.boosters: dict[tuple, Any] = {}
+        self.cuts: dict[tuple, float] = {}
         for f in self.man["folds"]:
             for tag, sha in f["files"].items():
                 scope, name = tag.split("|")
@@ -382,7 +384,7 @@ class ValueModels:
 
 
 # ---- policy ------------------------------------------------------------------------------------------------------------
-def decide_av(cls: str, ctx, rows, pred, thr, ev: Dict[str, Any], cuts: Dict[str, float]) -> List[dict]:
+def decide_av(cls: str, ctx, rows, pred, thr, ev: dict[str, Any], cuts: dict[str, float]) -> list[dict]:
     """First row where an eligible action's predicted value clears its cut (max(EV_MARGIN_R, training p75)): the highest-value such action, once.
     ``ev[name]`` aligns with ``rows``."""
     for i, row in enumerate(rows):
@@ -399,7 +401,7 @@ def decide_av(cls: str, ctx, rows, pred, thr, ev: Dict[str, Any], cuts: Dict[str
     return []
 
 
-def control_av(cls: str, ctx, rows, pred, thr, spec: dict, rng: random.Random) -> List[dict]:
+def control_av(cls: str, ctx, rows, pred, thr, spec: dict, rng: random.Random) -> list[dict]:
     """The same action kind, placed once at a uniformly drawn row where it is eligible (same eligibility as the policy, incl. the dip cut)."""
     cache = ctx.setdefault("_elig_av", {})
     el = cache.get(spec["name"])
@@ -429,6 +431,7 @@ def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls
             rec = {"b": P._arm_cell(base), "a": {}}
             specs = []
             if rows and pred is not None:
+                # provenance: predict -- ValueModels.predict: each action's predicted net-R value vs HOLD (E[R|act]-E[R|hold], cost included)
                 ev = {name: vm.predict(fold["fold_id"], scope, name, X) for name in menu}
                 specs = decide_av(cls, ctx, rows, pred, fold["thresholds"], ev, {n: vm.cuts[(fold["fold_id"], scope, n)] for n in menu})
             if not specs:
@@ -456,7 +459,7 @@ def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls
 
 
 # ---- reduce ------------------------------------------------------------------------------------------------------------
-def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Optional[Path], claim: bool, n_control: int = N_CONTROL) -> dict:
+def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None, claim: bool, n_control: int = N_CONTROL) -> dict:
     recs, metas = P.read_shards(out)
     dev = [r for r in recs if str(r["e"])[:10] < P.DEV_END]
     hold = [r for r in recs if str(r["e"])[:10] >= P.HOLDOUT_START]
@@ -497,7 +500,7 @@ def brief(res: dict) -> dict:
 
 
 # ---- cli ---------------------------------------------------------------------------------------------------------------
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     lb = sub.add_parser("label")
