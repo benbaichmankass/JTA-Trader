@@ -230,7 +230,7 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = S
 
 
 # ------------------------------------------------------------------------------------------------ calibration
-def calibrated_predict(train: pd.DataFrame, test: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None = None,
+def calibrated_predict(train: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None = None,
                        blocks: int = CALIB_BLOCKS) -> tuple[np.ndarray, np.ndarray, dict]:
     """Cross-fitted isotonic calibration: the training window is cut into ``blocks`` time blocks; each block is scored by the recipe fitted on the
     other blocks (rows within the label horizon of the block's edges are dropped from that fit), the out-of-fold predictions are mapped to realised
@@ -252,7 +252,9 @@ def calibrated_predict(train: pd.DataFrame, test: pd.DataFrame, pl: np.ndarray, 
         y = tr[f"net_{side}"].to_numpy()
         ok = np.isfinite(oof[side])
         iso = IsotonicRegression(increasing=True, out_of_bounds="clip").fit(oof[side][ok], y[ok])
+        # provenance: predict -- IsotonicRegression.predict maps a regressed net R to the calibrated expected net R (R units), not a probability
         out.append(iso.predict(p))
+        # provenance: predict -- the same isotonic map on the out-of-fold regressed net R: calibrated expected net R in R units
         info[side] = {"oof_n": int(ok.sum()), "max_calibrated": float(np.max(iso.predict(oof[side][ok]))),
                       "share_test_ev_pos": float(np.mean(out[-1] > EV_TAU))}
     return out[0], out[1], info
@@ -340,7 +342,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
         elif arm in ("ev_calib", "ev_cap3"):
-            cl, cs, cinfo = calibrated_predict(train, test, pl, ps, n_jobs)
+            cl, cs, cinfo = calibrated_predict(train, pl, ps, n_jobs)
             info["calibration"] = cinfo
             if arm == "ev_calib":
                 tk["arm"] = seq.run(cl, cs, tau=EV_TAU)
