@@ -1,0 +1,81 @@
+{
+  "arm": "bar_split",
+  "pooled": {
+    "base": {
+      "long": {
+        "n": 25793,
+        "mean_net_r": -0.006281106772456531,
+        "se_net_r": 0.006652973366614509,
+        "se_week_clustered": 0.03557026249311635,
+        "mean_gross_r": 0.04970430683736651,
+        "mean_cost_r": 0.05598541360982305
+      },
+      "short": {
+        "n": 45541,
+        "mean_net_r": 0.008229532308386458,
+        "se_net_r": 0.00527869867646938,
+        "se_week_clustered": 0.024683948214447592,
+        "mean_gross_r": 0.07677095000233711,
+        "mean_cost_r": 0.06854141769395064
+      },
+      "all": {
+        "n": 71334,
+        "mean_net_r": 0.0029827647948279376,
+        "se_net_r": 0.004140573793926027,
+        "se_week_clustered": 0.018347229429089226,
+        "mean_gross_r": 0.06698417332986553,
+        "mean_cost_r": 0.06400140853503761
+      },
+      "bar_risk": {
+        "n_bars": 6039,
+        "mean_r_per_bar": 0.03523307565395866,
+        "sd_r_per_bar": 14.254562743748641,
+        "mean_over_sd": 0.0024717051155715157,
+        "max_dd_r": 1603.8292593576268,
+        "mean_entries_per_bar": 11.812220566318928
+      }
+    }
+  },
+  "diffs": {
+    "split_vs_base_per_1R": {
+      "n_a": 71334,
+      "n_b": 71334,
+      "mean_a": -0.011649958845104577,
+      "mean_b": 0.0029827647948279376,
+      "delta": -0.014632723639932513,
+      "se_week_clustered": 0.011448602239654592,
+      "t": -1.278123157187614
+    }
+  },
+  "bar_sharpe": {
+    "n_bars": 6039,
+    "split": -0.013409415692425689,
+    "base": 0.0024717051155715157,
+    "random": -0.01915145079572868
+  },
+  "drawdown": {
+    "split_max_dd_r": 117.70638764824591,
+    "base_max_dd_r_full": 1603.8292593576268,
+    "base_max_dd_r_matched_mean_risk": 135.7771174651739,
+    "mean_entries_per_bar": 11.812220566318928,
+    "ratio": 0.8669088712863342
+  },
+  "folds_sharpe_better": 3,
+  "verdict": "fail",
+  "why": "delta/1R -0.0146 [-0.0375,+0.0083]; sharpe split -0.013409415692425689 base 0.0024717051155715157 random -0.01915145079572868; dd ratio 0.867; folds sharpe better 3",
+  "n": 6039,
+  "rule": {
+    "id": "RULE-ML-ENTRY-FIX-ARMS-20261124",
+    "noninferiority_margin_r": 0.0068,
+    "min_t": 2.0,
+    "min_bars": 3000,
+    "max_dd_ratio": 0.7,
+    "min_folds_sharpe_better": 5
+  },
+  "schema": "ml_entry_fix_arms/1",
+  "unit": "RQ-20261124-f1a0-02",
+  "git_sha": "05fac2936f620140e58a6a487ac762a1f4a25eae",
+  "population": "registered recipe refit per dev fold 2022-01-01..2025-10-01 (60-perp frozen universe, 60 symbols, 791234 rows), tau 0.1, net R fee 11.0+slip 3+funding 1 bps/8h, week-clustered se; arm bar_split",
+  "elapsed_s": 230,
+  "read_state": "measured"
+}
