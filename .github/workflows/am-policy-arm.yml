@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       classes:
-        description: "ONE action class: target | tighten | loosen | bank | combined | bank_skip | tighten_early"
+        description: "ONE action class: target | tighten | loosen | bank | combined"
         required: true
       research_unit:
         description: "The queue unit that dispatched this run (RQ-YYYYMMDD-xxxx-NN); empty for a manual run (lands under _unattributed)"
@@ -74,7 +74,7 @@ jobs:
         env:
           CLS: ${{ inputs.classes }}
         run: |
-          case "$CLS" in target|tighten|loosen|bank|combined|bank_skip|tighten_early) ;; *) echo "classes must be ONE of target|tighten|loosen|bank|combined|bank_skip|tighten_early, got '$CLS'"; exit 2;; esac
+          case "$CLS" in target|tighten|loosen|bank|combined) ;; *) echo "classes must be ONE of target|tighten|loosen|bank|combined, got '$CLS'"; exit 2;; esac
       - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
         if: ${{ inputs.corpus_sha != '' }}
         env:

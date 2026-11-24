@@ -338,35 +338,3 @@ def test_a_policy_that_never_fired_is_indeterminate_not_pass(tmp_path):
     _write_shard(tmp_path, recs)
     res = P.reduce_run(tmp_path, "target", "RQ-test", "tester", None, False, 20)
     assert res["verdict"] == "indeterminate" and res["lever"]["trades_fired"] == 0 and res["dev"]["label"] == "lever_never_fired"
-
-
-# ---- AM v3 (iteration from the Stage-B diagnosis) ---------------------------------------------------------------------
-def test_bank_skip_places_one_fixed_bank_at_bar_one_and_skips_a_predicted_runner():
-    path = [(100.8, 101.0, 100.0, 100.8), (100.8, 103.2, 100.5, 102.0), (102.0, 102.5, 97.0, 98.0)] + [(98.0, 98.5, 97.0, 97.5)] * 8
-    ctx, _ = ctx_for(path, tp=110.0)
-    rows = P.decision_rows(ctx)
-    specs = P.decide(ctx, rows, preds(len(rows), q50=1.0), THR, ["bank_skip"])
-    assert len(specs) == 1 and specs[0]["k"] == rows[0]["k"] and specs[0]["kind"] == "bank_at"
-    assert specs[0]["level"] == pytest.approx(100.0 + 2.0 * P.BANK_FIXED_R) and specs[0]["frac"] == P.BANK_FRAC
-    assert P.decide(ctx, rows, preds(len(rows), q50=P.BANK_SKIP_Q50_R), THR, ["bank_skip"]) == []      # a predicted runner: no bank
-    rec = P.replay_trade(ctx, rows, preds(len(rows), q50=P.BANK_SKIP_Q50_R + 1), THR, ["bank_skip"], 10)
-    cell = rec["a"]["bank_skip"]
-    assert cell["n"] == 1 and cell["placed"] is False and cell["p"][0] == rec["b"][0]   # skipped: the policy equals HOLD...
-    assert len(cell["c"]) == 10 and cell["s"][0] != rec["b"][0]                         # ...its controls bank at the default rate 1.0
-
-
-def test_tighten_early_acts_only_before_the_adverse_move():
-    path = [(100.8, 101.0, 100.0, 100.8), (100.8, 100.9, 99.0, 99.2), (99.2, 99.3, 97.5, 98.0)] + [(98.0, 98.5, 97.0, 97.5)] * 8
-    ctx, _ = ctx_for(path, tp=110.0)
-    rows = P.decision_rows(ctx)
-    early = P.decide(ctx, rows, preds(len(rows), stop=0.9, dip=0.0), THR, ["tighten_early"])
-    assert early and all(r["features"]["open_r"] >= P.TIGHTEN_EARLY_MIN_OPEN_R for r in rows if r["k"] in {s["k"] for s in early})
-    late = P.decide(ctx, rows, preds(len(rows), stop=0.9, dip=0.0), THR, ["tighten"])
-    assert len(early) <= len(late)
-    cs = P.control_specs(ctx, rows, early, P.control_rng("k1", "tighten_early", 0))
-    ok = {r["k"] for r in rows if r["features"]["open_r"] >= P.TIGHTEN_EARLY_MIN_OPEN_R}
-    assert cs and all(c["k"] in ok for c in cs)
-
-
-def test_v3_classes_stay_out_of_combined():
-    assert not set(P.V3_CLASSES) & set(P.COMPONENTS)

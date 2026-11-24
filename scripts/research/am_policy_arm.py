@@ -29,13 +29,6 @@ THE FOUR ACTION CLASSES (every number fixed before the first run; the heads' own
            LOOSEN_CAP_R from entry (``loosen_stop``: only ever loosens). A trailing leg's own trail re-tightens it as soon as the trail passes it.
   bank     a resting partial limit of BANK_FRAC at close + Q50 (``bank_at``), re-placed when the level moves by LEVEL_HYST_R; banks at most once.
   combined all four at once (they are mutually consistent: tighten needs a low dip score, loosen a high one).
-  AM v3 (iteration from the Stage-B diagnosis; never inside ``combined``):
-  bank_skip     ONE resting partial limit of BANK_FRAC at +BANK_FIXED_R from entry placed at bar 1 and never re-placed, unless the bar-1 q0.5 head
-                predicts a runner (q0.5 >= BANK_SKIP_Q50_R): then no bank. The head's only job is skip/keep. Control: the same fixed bank placed with
-                the policy's own place rate in the shard (seeded per trade and draw), so it carries the bank's mechanics and none of the head's choice.
-                The always-bank static arm is recorded per trade (``s``) and reported.
-  tighten_early the tighten rule, but only while open_r >= TIGHTEN_EARLY_MIN_OPEN_R (before the adverse move, not after it); control re-times to
-                rows meeting the same open_r condition.
 
 THE MATCHED RANDOM-INTERVENTION CONTROL (R4). N_CONTROL (100) seeded draws per class. A draw keeps, per trade, the policy's number of actions of the class and
 their level parameters (the TP / bank offset, the tighten fraction; loosen's structure level is head-free) but re-times them to rows drawn uniformly,
@@ -79,9 +72,7 @@ import live_review_counterfactual as lrc  # noqa: E402
 
 SCHEMA = "am_policy_arm/1"
 COMPONENTS = ("target", "tighten", "loosen", "bank")
-#: AM v3 (iteration from the Stage-B diagnosis, lane ML-PRIMARY 2026-11-24): never part of ``combined``
-V3_CLASSES = ("bank_skip", "tighten_early")
-CLASSES = COMPONENTS + ("combined",) + V3_CLASSES
+CLASSES = COMPONENTS + ("combined",)
 N_CONTROL = 100
 TP_MIN_DIST_R = 0.25          # a target/bank level sits at least this far (R) beyond the close: never a market-order in disguise
 LEVEL_HYST_R = 0.10           # re-place a target/bank level only when it moves by this much (R)
@@ -92,9 +83,6 @@ STRUCT_BUFFER_R = 0.10
 LOOSEN_MIN_R = 0.05           # the structure level must be at least this far beyond the live (original) stop to be worth moving to
 LOOSEN_CAP_R = 2.0            # never a stop farther than this from entry
 BANK_FRAC = 0.5
-BANK_FIXED_R = 1.0            # bank_skip: ONE resting partial at +1 R from entry, placed at bar 1, never re-placed (stage B's re-placing bank chased the close)
-BANK_SKIP_Q50_R = 1.5         # bank_skip: the head SKIPS the bank when its bar-1 median remaining-MFE prediction is >= this (a predicted runner)
-TIGHTEN_EARLY_MIN_OPEN_R = -0.25   # tighten_early: act only while the trade is at or above this (stage B's tighten fired after the adverse move)
 PRE_BARS = STRUCT_N + 5       # bars fetched before the fill so the swing window exists at bar 1
 DEV_END = "2026-01-01"
 HOLDOUT_START = "2026-01-01"
@@ -265,7 +253,7 @@ def decide(ctx: dict, rows: Sequence[dict], pred: Dict[str, Sequence[float]], th
     want = set(COMPONENTS) if "combined" in classes else set(classes)
     post = ctx["post"]
     tp0_r = _tp0_r(ctx)
-    last_tp, last_bank, last_tight, last_loose, last_tight_e = tp0_r, None, -1.0, -1.0, -1.0
+    last_tp, last_bank, last_tight, last_loose = tp0_r, None, -1.0, -1.0
     out: List[dict] = []
     for i, row in enumerate(rows):
         k, open_r = row["k"], row["features"]["open_r"]
@@ -289,26 +277,12 @@ def decide(ctx: dict, rows: Sequence[dict], pred: Dict[str, Sequence[float]], th
             if lvl >= last_tight + TIGHTEN_STEP_R:
                 out.append({"cls": "tighten", "k": k, "ts": ts, "kind": "set_stop", "level": _px(ctx, lvl), "rel": {"frac": TIGHTEN_FRAC}})
                 last_tight = lvl
-        if "tighten_early" in want and p_stop >= thr["stop_first"]["p90"] and p_dip <= thr["dip_recovers"]["p50"] and open_r >= TIGHTEN_EARLY_MIN_OPEN_R:
-            lvl = -1.0 + TIGHTEN_FRAC * (open_r + 1.0)
-            if lvl >= last_tight_e + TIGHTEN_STEP_R:
-                out.append({"cls": "tighten_early", "k": k, "ts": ts, "kind": "set_stop", "level": _px(ctx, lvl), "rel": {"frac": TIGHTEN_FRAC}})
-                last_tight_e = lvl
-        if "bank_skip" in want and i == 0 and q50 < BANK_SKIP_Q50_R:
-            out.append(_bank_fixed_spec(ctx, row, ts))
         if "loosen" in want and p_dip >= thr["dip_recovers"]["p90"]:
             lvl = structure_level_r(ctx, k)
             if lvl is not None and lvl <= last_loose - LOOSEN_MIN_R:
                 out.append({"cls": "loosen", "k": k, "ts": ts, "kind": "loosen_stop", "level": _px(ctx, lvl), "rel": {}})
                 last_loose = lvl
     return out
-
-
-def _bank_fixed_spec(ctx: dict, row: dict, ts: float) -> dict:
-    """The bank_skip action at bar 1: BANK_FRAC at +BANK_FIXED_R from entry, never closer than TP_MIN_DIST_R above the close."""
-    open_r = row["features"]["open_r"]
-    lvl = max(BANK_FIXED_R, open_r + TP_MIN_DIST_R)
-    return {"cls": "bank_skip", "k": row["k"], "ts": ts, "kind": "bank_at", "level": _px(ctx, lvl), "frac": BANK_FRAC, "rel": {"offset": lvl - open_r}}
 
 
 def _spec_action(s: dict) -> dict:
@@ -320,8 +294,6 @@ def _eligible(cls: str, ctx: dict, row: dict) -> bool:
         return ctx["tp0"] is not None
     if cls == "loosen":
         return structure_level_r(ctx, row["k"]) is not None
-    if cls == "tighten_early":
-        return row["features"]["open_r"] >= TIGHTEN_EARLY_MIN_OPEN_R
     return True
 
 
@@ -348,7 +320,7 @@ def control_specs(ctx: dict, rows: Sequence[dict], specs: Sequence[dict], rng: r
                 out.append({"cls": cls, "k": k, "ts": ts, "kind": "set_tp", "level": _px(ctx, open_r + rel["offset"])})
             elif cls == "bank":
                 out.append({"cls": cls, "k": k, "ts": ts, "kind": "bank_at", "level": _px(ctx, open_r + rel["offset"]), "frac": BANK_FRAC})
-            elif cls in ("tighten", "tighten_early"):
+            elif cls == "tighten":
                 out.append({"cls": cls, "k": k, "ts": ts, "kind": "set_stop", "level": _px(ctx, -1.0 + rel["frac"] * (open_r + 1.0))})
             else:
                 out.append({"cls": cls, "k": k, "ts": ts, "kind": "loosen_stop", "level": _px(ctx, structure_level_r(ctx, k))})
@@ -369,21 +341,6 @@ def replay_trade(ctx: dict, rows: Sequence[dict], pred: Optional[dict], thr: Opt
     base = run_arm(ctx)
     rec: Dict[str, Any] = {"b": _arm_cell(base), "a": {}}
     for cls in classes:
-        if cls == "bank_skip":
-            if not rows or pred is None:
-                rec["a"][cls] = {"n": 0}
-                continue
-            specs = decide(ctx, rows, pred, thr, [cls])
-            static = run_arm(ctx, [_spec_action(_bank_fixed_spec(ctx, rows[0], _close_ts(ctx, ctx["post"], rows[0]["k"])))])
-            arm = run_arm(ctx, [_spec_action(x) for x in specs]) if specs else base
-            rate = float(ctx.get("_bank_place_rate", 1.0))
-            ctl = []
-            for d in range(n_control):
-                c = static if control_rng(ctx["key"], cls, d).random() < rate else base
-                ctl.append([round(c["net_r"], 6), None if c["exit_ts"] is None else int(c["exit_ts"])])
-            # n = 1 on EVERY trade with rows: a skipped trade is a decision too, and its controls may bank (n = 0 would force HOLD on them)
-            rec["a"][cls] = {"n": 1, "p": _arm_cell(arm), "c": ctl, "s": _arm_cell(static), "placed": bool(specs)}
-            continue
         specs = decide(ctx, rows, pred, thr, [cls]) if rows and pred is not None else []
         if not specs:
             rec["a"][cls] = {"n": 0}                        # the lever never fired on this trade: policy and every control equal HOLD
@@ -461,13 +418,6 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
             n = len(m)
             item[5] = {h: p[h][i:i + n] for h in p}
             i += n
-    # pass 2b (bank_skip): the policy's place rate over this shard's scored trades, the control's matched rate
-    if "bank_skip" in classes:
-        scored = [it for it in prep if it[3] and it[5] is not None]
-        placed = sum(1 for it in scored if max(0.0, float(it[5]["q0.5"][0])) < BANK_SKIP_Q50_R)
-        rate = placed / len(scored) if scored else 1.0
-        for it in prep:
-            it[2]["_bank_place_rate"] = rate
     # pass 3: arms
     tmp = sdir / f"{shard['shard_id']}.jsonl.gz.tmp"
     n_rows = 0
@@ -602,22 +552,6 @@ def _segment(recs: Sequence[dict], cls: str, n_control: int, params: Optional[di
             "folds": cand.get("folds"), "why": res.get("why")}
 
 
-def _static_reference(dev: Sequence[dict], hold: Sequence[dict], cls: str) -> Dict[str, Any]:
-    """bank_skip only: the ALWAYS-bank static arm's book (net R, max drawdown) beside HOLD, per segment. Reported, never graded."""
-    import am_risk_adjusted as A
-    out = {}
-    for name, rs in (("dev", dev), ("holdout", hold)):
-        book = []
-        for r in rs:
-            e = r["e"] if isinstance(r["e"], str) else str(r["e"])
-            cell = r["a"].get(cls, {}).get("s") or r["b"]
-            x = cell[1] if cell[1] is not None else (r["b"][1] or 0)
-            book.append({"entry_time": e, "exit_time": _iso(x), "net_r": cell[0]})
-        m = A.book_metrics(book) if book else {}
-        out[name] = {"n": len(book), "net_r": m.get("net_r"), "max_drawdown_r": m.get("max_drawdown_r"), "provenance": "ESTIMATED", "graded": False}
-    return out
-
-
 def unit_verdict(dev: dict, hold: dict) -> str:
     """PASS iff dev and holdout both pass R1-R4; FAIL iff the dev segment FAILS (a necessary clause read and failed); else INDETERMINATE."""
     if dev.get("verdict") == "fail":
@@ -646,10 +580,6 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Optional[Pat
                "timeframe": _cuts(dev + hold, cls, lambda r: str(r["tf"]), 500)}
     fired = sum(1 for r in recs if r["a"].get(cls, {"n": 0})["n"] > 0)
     n_act = sum(r["a"].get(cls, {"n": 0})["n"] for r in recs)
-    if cls == "bank_skip":
-        fired = sum(1 for r in recs if r["a"].get(cls, {}).get("placed"))
-        n_act = fired
-    static_ref = _static_reference(dev, hold, cls) if cls == "bank_skip" else None
     could = Counter()
     for m in metas:
         could.update(m.get("could_not_replay") or {})
@@ -660,7 +590,6 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Optional[Pat
            "population": pop, "dev": seg_dev, "holdout": seg_hold, "lever": {"trades_fired": fired, "share_fired": round(fired / len(recs), 4) if recs else None,
                                                                          "actions": n_act, "mean_actions_per_fired_trade": round(n_act / fired, 3) if fired else None},
            "could_not_replay": dict(could), "n_shards": len(metas), "reported_cuts": rep_cls, "holdout_claim": claim_rec,
-           "static_reference": static_ref,
            "graduation_eligible": False, "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R books); a PASS is a Tier-3 proposal input, never an apply. "
                                                "BOOK-SIM-REAL-SIZER owns the book-level $ measurement.", "provenance": "ESTIMATED"}
     return res
@@ -677,7 +606,6 @@ def _brief(res: dict) -> dict:
             "note": f"class {res['class']}: dev {res['dev'].get('verdict')}/{res['dev'].get('label')}, holdout {res['holdout'].get('verdict')}/{res['holdout'].get('label')}; "
                     f"a per-trade-R screen, never a graduation",
             "measurement": {"rule_id": res["rule_id"], "class": res["class"], "dev": seg(res["dev"]), "holdout": seg(res["holdout"]), "lever": res["lever"],
-                            "static_reference": res.get("static_reference"),
                             "could_not_replay": res["could_not_replay"], "holdout_claim": res["holdout_claim"],
                             "top_strategy_cuts": dict(list(res["reported_cuts"]["strategy"].items())[:12])}}
 
