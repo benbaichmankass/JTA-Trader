@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-11-24T17:49:04Z",
+ "as_of": "2026-11-24T18:21:03Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -348,14 +348,14 @@
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 16,
+   "value": 20,
    "op": ">=",
-   "threshold": 27,
+   "threshold": 25,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "diagnostic": true,
    "evidence": {
-    "fired_24h_stamps": 33,
-    "queued": 232,
+    "fired_24h_stamps": 31,
+    "queued": 234,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -416,7 +416,7 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 512,
+    "n": 507,
     "ungraded_fresh": 20,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
@@ -433,7 +433,7 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 512,
+    "n": 507,
     "ungraded_fresh": 20,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
@@ -466,15 +466,15 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.02,
+   "value": 1.04,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "diagnostic": true,
    "evidence": {
-    "authored_7d": 404,
-    "consumed_7d": 396,
-    "authored_since_yesterday": 36,
+    "authored_7d": 406,
+    "consumed_7d": 391,
+    "authored_since_yesterday": 38,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
    }
@@ -592,7 +592,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.32,
+   "value": 0.86,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -606,7 +606,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.03,
+   "value": 0.56,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -620,7 +620,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 4.18,
+   "value": 4.72,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -634,7 +634,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 2.4,
+   "value": 2.93,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -667,21 +667,14 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 1.44,
+   "value": 0.0,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "diagnostic": true,
    "evidence": {
-    "open_unit_prs": 1,
-    "oldest": [
-     {
-      "pr": 28589,
-      "hours": 1.44,
-      "title": "research(ml_entry): review of the side decision + whole trade flow, equity-ML blocker, two"
-     }
-    ],
-    "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
+    "open_unit_prs": 0,
+    "basis": "no open non-automation PR adds research/queue/ files",
     "read_state": "measured"
    }
   }
@@ -834,6 +827,21 @@
   },
   {
    "at": "2026-11-24T17:49:04Z",
+   "counts": {
+    "ok": 17,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "theme_share_min_ratio",
+    "blocked_over_age"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-11-24T18:21:03Z",
    "counts": {
     "ok": 17,
     "breach": 3,
