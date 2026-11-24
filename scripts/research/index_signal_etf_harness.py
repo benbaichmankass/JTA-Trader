@@ -90,6 +90,13 @@ PAIRS["capitulation_wide"] = PAIRS["capitulation"]
 PAIRS["capitulation_holdout"] = [("XLK", "TECL", 3.0), ("SOXX", "SOXL", 3.0), ("XLF", "FAS", 3.0), ("MDY", "MIDU", 3.0),
                                  ("IYR", "DRN", 3.0), ("XLV", "CURE", 3.0)]
 PAIRS["capitulation_holdout_1x"] = [(i, i, 1.0) for i, _, _ in PAIRS["capitulation_holdout"]]
+#: 1e06-05 FRESH population (lane ML-PRIMARY 2026-11-24): 3x ETFs on indexes used in NO earlier read (discovery 1e06-03 or confirmation 1e06-04),
+#: no fossil-fuel instruments (same exclusion as 1e06-04)
+PAIRS["capitulation_fresh"] = [("XBI", "LABU", 3.0), ("KRE", "DPST", 3.0), ("EEM", "EDC", 3.0), ("XLI", "DUSL", 3.0),
+                               ("XLU", "UTSL", 3.0), ("XLY", "WANT", 3.0)]
+PAIRS["capitulation_fresh_1x"] = [(i, i, 1.0) for i, _, _ in PAIRS["capitulation_fresh"]]
+#: units whose rule GATES on the timing control (1e06-04 reported it: actual at the 86th percentile of re-timed draws)
+TIMING_GATED = {"RQ-20261124-1e06-05": 0.05}
 POOLED_MIN_POSITIVE_PAIRS = 3
 #: the own-chart trend twin per execution ETF (rule baseline of 1e04-01): unit id
 TWIN_UNIT = {"SQQQ": "RQ-20261123-1e01-01", "SPXU": "RQ-20261123-1e01-02", "SDOW": "RQ-20261123-1e01-03",
@@ -473,16 +480,20 @@ RULES = {
 
 
 BASELINE = {"RQ-20261123-1e04-01": "twin", "RQ-20261123-1e04-02": "family:breakdown", "RQ-20261123-1e04-03": "1x",
-            "RQ-20261124-1e06-01": "family:breakdown", "RQ-20261124-1e06-02": "1x", "RQ-20261124-1e06-03": "1x", "RQ-20261124-1e06-04": "1x"}
+            "RQ-20261124-1e06-01": "family:breakdown", "RQ-20261124-1e06-02": "1x", "RQ-20261124-1e06-03": "1x", "RQ-20261124-1e06-04": "1x",
+            "RQ-20261124-1e06-05": "1x"}
 #: unit -> (pairs key, 1x-arm pairs key) where it is not the family default; units graded on the POOLED population
-PAIRS_KEY = {"RQ-20261124-1e06-04": ("capitulation_holdout", "capitulation_holdout_1x")}
-POOLED = {"RQ-20261124-1e06-04"}
+PAIRS_KEY = {"RQ-20261124-1e06-04": ("capitulation_holdout", "capitulation_holdout_1x"),
+             "RQ-20261124-1e06-05": ("capitulation_fresh", "capitulation_fresh_1x")}
+POOLED = {"RQ-20261124-1e06-04", "RQ-20261124-1e06-05"}
 RULES["RQ-20261124-1e06-01"] = ("RULE-RQ-20261124-1e06-01", "breakdown_bear",
                                 "PASS IFF n>=25 AND net_r>0 AND net_r>1e04-01 net_r on the same pair (or 1e04-01 INDETERMINATE) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (a pass is per pair)")
 RULES["RQ-20261124-1e06-02"] = ("RULE-RQ-20261124-1e06-02", "breakdown_bounce",
                                 "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-04"] = ("RULE-RQ-20261124-1e06-04", "capitulation_wide",
                                 "CONFIRMATION of 1e06-03 on 6 untested 3x sector/mid-cap/REIT ETFs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage; INDETERMINATE if pooled n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-05"] = ("RULE-RQ-20261124-1e06-05", "capitulation_wide",
+                                "TIMING-GATED test of the 1e06-03/-04 capitulation 3x buy on 6 FRESH 3x ETFs (XBI/LABU, KRE/DPST, EEM/EDC, XLI/DUSL, XLU/UTSL, XLY/WANT), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-03"] = ("RULE-RQ-20261124-1e06-03", "capitulation_wide",
                                 "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
 
@@ -549,6 +560,10 @@ def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None)
         extra["timing_control"] = {"draws": 200, "shift_sessions": "40..400 either direction", "mean_net_r": round(float(draws.mean()), 3),
                                    "p95_net_r": round(float(np.percentile(draws, 95)), 3), "actual_net_r": round(net3, 3),
                                    "share_of_draws_ge_actual": round(float((draws >= net3).mean()), 3)}
+        if unit in TIMING_GATED:          # the timing control is a RULE clause here, not a diagnostic
+            chk["beats_timing_control_95"] = float((draws >= net3).mean()) <= TIMING_GATED[unit]
+            ov = "indeterminate" if npool < N_FLOOR else ("pass" if all(chk.values()) else "fail")
+            extra["timing_control"]["gating"] = True
         extra["pooled"] = {"n": npool, "net_r_3x": round(net3, 4), "net_r_1x": round(net1, 4), "net_r_2x_slip": round(net2x, 4),
                            "pairs_positive": npos, "checks": chk, "verdict": ov}
     return write_record(out, unit, rule_id, rule, family, per, extra, pop, ov)
