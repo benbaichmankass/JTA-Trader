@@ -13,10 +13,10 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
   long_mute     SIDE ASYMMETRY. The long side is unavailable when BTC's 7d log return < 0 AND BTC vol24 sits at or above its 90d
                 median (btc_vol_pct90d >= 0.5): the "buy the panic inside a downtrend" cell the review measured. The short side is
                 unchanged (a muted long may still trade short if the short prediction clears tau). Control: the same share of
-                long candidates muted at RANDOM (30 seeded draws). Reported, not graded: short-only and a long-side tau of 0.20.
+                long candidates muted at RANDOM (100 seeded draws). Reported, not graded: short-only and a long-side tau of 0.20.
   bar_split     BAR RISK SPLIT. Identical decisions; each decision bar's k entries share 1R (weight 1/k) instead of 1R each.
                 Statistic: net R per 1R deployed, bar Sharpe and bar max drawdown at matched mean risk. Control: random
-                Dirichlet(1) weights per bar summing to 1 (30 draws). A risk lever, so its rule is non-inferiority + risk.
+                Dirichlet(1) weights per bar summing to 1 (100 draws). A risk lever, so its rule is non-inferiority + risk.
   regime_heads  REGIME-CONDITIONED HEADS. The long and short regressors are fit separately in the BTC 7d up (btc_ret168 >= 0)
                 and down cells, and a row is scored by its cell's pair. Placebo: the same split on a seeded coin per timestamp
                 with the train up-share (prices halving each head's training set).
@@ -26,6 +26,18 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
   sl_wide       SL PLACEMENT. Same predictions; the bracket is SL 3 / TP 4.5 ATR14 (same 1.5 reward:risk, 24 h stop) instead of
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
+
+  ev_calib      CALIBRATED EV (iteration 2, from the 2026-11-24 dev calibration read: on 477,6xx dev rows the LONG head's realised net R is
+                negative in EVERY prediction decile, top decile pred +0.28 -> realised -0.044; the SHORT head is positive only for preds 0.03-0.22
+                and its top decile loses). Each side's regressor gets a cross-fitted isotonic map pred -> realised net R (CALIB_BLOCKS time blocks
+                of the training window, purged by the label horizon); the policy trades the better CALIBRATED side iff its calibrated EV > 0.
+                Control: the base policy thinned at random to the arm's per-side take rate (100 draws).
+  ev_cap3       ev_calib plus at most CAP_K entries per decision bar, ranked by calibrated EV; control: a random CAP_K-of-k pick from the same
+                calibrated candidates (100 draws).
+
+  sl_wide_retrain  ITERATION 2 of sl_wide (FAIL: the SL-2-trained predictions lose more gross edge under SL 3 than the cost they save): the recipe
+                REFIT on SL 3 / TP 4.5 labels per fold and traded under that bracket, vs the SL-2 recipe under SL 2. Control (reported): random-side
+                entries under both brackets, as sl_wide.
 
     python3 scripts/research/ml_entry_fix_arms.py --arm long_mute --cache /tmp/ml_entry_klines --fetch --run-date 2026-11-22 --out /tmp/o
     python3 scripts/research/ml_entry_fix_arms.py --self-test
@@ -46,8 +58,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide"]
-DRAWS = 30
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain"]
+CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
+EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
+CAP_K = 3
+DRAWS = 100                           # matched-random draws (research-queue-design-fields-guard minimum)
 TAU = 0.10
 SEED = 20261124
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
@@ -214,6 +229,35 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = S
     return m.drop(columns=["symbol", "ts"])
 
 
+# ------------------------------------------------------------------------------------------------ calibration
+def calibrated_predict(train: pd.DataFrame, test: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None = None,
+                       blocks: int = CALIB_BLOCKS) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Cross-fitted isotonic calibration: the training window is cut into ``blocks`` time blocks; each block is scored by the recipe fitted on the
+    other blocks (rows within the label horizon of the block's edges are dropped from that fit), the out-of-fold predictions are mapped to realised
+    net R by an increasing isotonic fit per side, and the map is applied to the full-train predictions ``pl`` / ``ps`` of the test rows."""
+    from sklearn.isotonic import IsotonicRegression
+    tr = train.sort_values("ts")
+    edges = np.array_split(np.arange(len(tr)), blocks)
+    hz = pd.Timedelta(hours=M.HORIZON_H + 1)
+    oof = {"long": np.full(len(tr), np.nan), "short": np.full(len(tr), np.nan)}
+    for idx in edges:
+        if len(idx) == 0:
+            continue
+        t0, t1 = tr.ts.iloc[idx[0]], tr.ts.iloc[idx[-1]]
+        fit = tr[(tr.ts < t0 - hz) | (tr.ts > t1 + hz)]
+        a, b = M.fit_predict(fit, tr.iloc[idx], None, n_jobs)
+        oof["long"][idx], oof["short"][idx] = a, b
+    out, info = [], {}
+    for side, p in (("long", pl), ("short", ps)):
+        y = tr[f"net_{side}"].to_numpy()
+        ok = np.isfinite(oof[side])
+        iso = IsotonicRegression(increasing=True, out_of_bounds="clip").fit(oof[side][ok], y[ok])
+        out.append(iso.predict(p))
+        info[side] = {"oof_n": int(ok.sum()), "max_calibrated": float(np.max(iso.predict(oof[side][ok]))),
+                      "share_test_ev_pos": float(np.mean(out[-1] > EV_TAU))}
+    return out[0], out[1], info
+
+
 # ------------------------------------------------------------------------------------------------ the fold loop
 def years_and_folds(cat: dict, folds: list[dict], arm: str, ref: str = "base") -> tuple[int, dict, int]:
     fb = sum(1 for f in folds if f.get(arm) and f[arm]["all"]["mean_net_r"] is not None and f[ref]["all"]["mean_net_r"] is not None
@@ -282,6 +326,34 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
+        elif arm == "sl_wide_retrain":
+            lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
+            al, as_ = M.fit_predict(tr_alt, test, None, n_jobs)
+            seq_alt = Seq(test, alt.loc[test.index])
+            tk["arm"] = seq_alt.run(al, as_)
+            rb, ra = [], []
+            for _ in range(DRAWS):
+                side_long = rng.random(len(pl)) < 0.5
+                fl, fs = np.where(side_long, 1.0, -1.0), np.where(side_long, -1.0, 1.0)
+                rb.append(seq.run(fl, fs, tau=0.0))
+                ra.append(seq_alt.run(fl, fs, tau=0.0))
+            tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
+        elif arm in ("ev_calib", "ev_cap3"):
+            cl, cs, cinfo = calibrated_predict(train, test, pl, ps, n_jobs)
+            info["calibration"] = cinfo
+            if arm == "ev_calib":
+                tk["arm"] = seq.run(cl, cs, tau=EV_TAU)
+                nb = tk["base"].side.value_counts()
+                na = tk["arm"].side.value_counts()
+                rate = {sd: min(1.0, float(na.get(sd, 0)) / float(nb[sd])) if nb.get(sd, 0) else 0.0 for sd in ("long", "short")}
+                info["take_rate_vs_base"] = rate
+                tk["control"] = pd.concat([seq.run(np.where(rng.random(len(pl)) < rate["long"], pl, -np.inf),
+                                                   np.where(rng.random(len(ps)) < rate["short"], ps, -np.inf)) for _ in range(DRAWS)], ignore_index=True)
+            else:
+                tk["arm"] = M.policy_bar_topk(test, cl, cs, EV_TAU, CAP_K)
+                tk["control"] = pd.concat([M.policy_bar_topk(test, cl, cs, EV_TAU, CAP_K, rng=rng) for _ in range(DRAWS)], ignore_index=True)
+                tk["calib_uncapped"] = seq.run(cl, cs, tau=EV_TAU)
         elif arm == "bar_split":
             base = tk["base"]
             w = split_weights(base)
@@ -317,10 +389,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE}
         return res
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat["base"]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
-    if arm == "sl_wide":
+    if arm in ("sl_wide", "sl_wide_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm")
-    ctl_gates = arm != "sl_wide"
+    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
             "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
@@ -338,7 +410,7 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
         tab = pd.concat([tab.reset_index(drop=True), bc, pb], axis=1)
-    if arm == "sl_wide":
+    if arm in ("sl_wide", "sl_wide_retrain"):
         tab = tab.reset_index(drop=True)
         alt = alt_labels(cache, syms, tab)
         ok = alt["net_long"].notna() & alt["net_short"].notna()

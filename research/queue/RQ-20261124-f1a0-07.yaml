@@ -1,0 +1,138 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a) on the
+# operator's 11-24 ask ("I want solutions"; "it's the whole trading flow for these trades that are failing, not just the ml").
+# Diagnosis: f1a0-01/-02 results + the 2026-11-24 dev calibration read (see iteration.diagnosis). One factor against a matched control.
+# Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261124-f1a0-07
+title: 'ml_entry CALIBRATED EV + PER-BAR CAP 3: does taking at most 3 entries per decision bar, ranked by calibrated EV, beat the raw recipe and
+  a random 3-of-k pick from the same calibrated candidates by +0.0068 R/decision on the dev folds?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-02/45484678545
+  verdict_read: fail
+  diagnosis: 'ITERATION 2 of RQ-20261124-f1a0-01 (long_mute, run 45484674095: INDETERMINATE, delta +0.0067 t 0.82, vs random mute +0.0023 -> random
+    removal of longs helps about as much) and RQ-20261124-e1a7-02 (top-1 by raw prediction INDETERMINATE). Dev calibration read (local, 2026-11-24,
+    registered recipe refit per dev fold, every decision row, n ~477,600 per side, MEASURED): the LONG head''s realised net R is negative in EVERY
+    prediction decile (top decile pred +0.28 -> realised -0.044; best decile -0.022); the SHORT head is positive only for preds 0.03-0.22 (+0.000..+0.026)
+    and its top decile (pred > 0.22) loses -0.007. So the model''s raw scale is not an EV: tau 0.10 on raw preds takes the overconfident tails
+    and every long, and ranking by raw pred (top-1) ranks by the worst tail. The fix is the model''s own calibration, not a gate. ITERATION 2
+    of RQ-20261124-f1a0-02 (bar_split FAIL: per-1R -0.0146, bar Sharpe -0.013 vs +0.002; lone-entry bars lose -0.053/decision, 3-8 entry bars
+    earn +0.031): equal splitting overweights the worst bars, so the concentration fix is a cap ranked by an EV that is actually calibrated.'
+  search: 'lever family selection/portfolio, one fixed rule (no grid): CAP_K 3, rank = calibrated EV, EV_TAU 0.0.'
+  levers:
+  - threshold
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 2
+  due_by: '2026-12-01'
+question: On the 8 dev folds, is mean net R per decision of ev_calib with at most 3 entries per decision bar (top 3 by calibrated EV) at least
+  +0.0068 above the recipe AND above a random 3-of-k pick from the same calibrated candidates (t >= 2, >= 6/8 folds, >= 3/4 years)? Uncapped calibrated
+  decisions are reported beside it.
+why_this_matters: Live bars stacked 4-5 single-signed entries; a cap ranked by calibrated EV is the concentration fix that does not throw away
+  the crowded bars that carry the dev edge.
+power:
+  expected_n: 15000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: n ~ 10,000-20,000 (<= 3 per bar over ~6,000 bars); se(delta) ~ 0.012-0.02, so INDETERMINATE is likely unless the effect is
+    large; stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry ev_cap3 (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - ev_cap3
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-f1a0-07
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm ev_cap3: delta = pooled mean net R per decision (arm) - (base) over the 8 dev folds,
+    base = the registered recipe refit per fold on the same table; se = week-clustered influence se (ml_decision_entry.arm_diff); folds_better
+    = dev folds where the arm mean beats the base mean; years = calendar years of fold starts with a positive pooled delta.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - control) >= +0.0068 AND folds_better >= 6 of 8 AND
+    years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. The arm's definition, tau 0.10, folds,
+    bar and cost stack are fixed now and never changed after a result.
+  pass_action: Fresh-window confirmation, then a data-backed Tier-3 proposal of a calibrated per-bar cap inside the ml_entry leg (a cap that blocks
+    entries is presented as a proposal with its measured value).
+  fail_action: Close ranking-based caps for ml_entry; the bar concentration report stands as the sizing input.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only which decisions are taken differs
+  matched_random:
+    draws: 100
+    note: 'COMPUTED: 100 seeded random 3-of-k picks per bar from the same calibrated candidates (policy_bar_topk with rng)'
+  best_static:
+    grid:
+    - recipe (live)
+    - control (see matched_random)
+    excludes_test_folds: true
+    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml

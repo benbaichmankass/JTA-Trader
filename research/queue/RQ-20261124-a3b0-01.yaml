@@ -1,0 +1,182 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (the standing ML lane, Manager Session 2026-11-22a; operator 2026-11-24 "every research path is iterative and
+# continuous"), Tier 1 research. AM v3: the next iteration authored from the Stage-B diagnosis (see iteration.diagnosis). Rule registered BEFORE any run.
+# Gates this adds or changes: none. Nothing here touches the trade path; a pass is a proposal input, never an apply.
+baseline:
+  definition: 'HOLD = `replayed_actual` of the same replay (the leg''s own TP, trail and harness timeout), net of the full cost stack. REFERENCE
+    (reported, never gating): the random re-timings of the same action (R4).'
+  net_of_cost: true
+  per_leg_base_rates: reported per strategy / leg / timeframe in the landed measurement (reported_cuts), never graded
+cadence: once
+compute: cpu_long
+decision_rule:
+  choices_where_the_design_memo_is_silent:
+  - 'DECISION ROWS: one decision per bar CLOSE k, k = 1.. the bars the UNMANAGED trade is still open (the cf_bar_labels rows the heads were fitted
+    on); features use bars 1..k only; a move is effective on the first bar opening at or after bar k''s close. After the unmanaged trade''s last
+    row the brackets stay where the policy left them (no head output outside its training distribution).'
+  - 'SCORE CUTS: the fold''s own TRAINING-score percentiles (p90, and p50 for the dip head), saved with the heads; never test data, never tuned.'
+  - 'HEADS: re-fits of the Stage-A recipe (same 9 features, LGB params, seed, 400k-row cap, purged half-year folds), saved by `am_heads_fit.py
+    dump`, because Stage A''s own models were not saved; a trade is scored by the head of the fold it ENTERED in (trained on trades whose label
+    window ends 7 days before that fold). The holdout fold''s head is fitted on pre-2026 data only. Trades before 2022-01-01 have no out-of-sample
+    head and are excluded (counted).'
+  - BASELINE = HOLD = `replayed_actual` of the same replay (the leg's own TP + trail + harness timeout), byte for byte (tests/test_am_policy_arm.py::test_baseline_arm_is_replayed_actual);
+    a policy that never acts equals it exactly. Entry at the signal bar's close (entry_at_bar_close, run-w convention), no signal-bar lookahead.
+  - R unit = the ORIGINAL stop distance; net R from the engine's own net_of (fee + exit slippage + funding, the full cost stack). Positions are
+    not re-sized in trade, so a loosened stop genuinely risks more than 1 R and that tail is charged to the arm's drawdown and CVaR.
+  - 'POPULATION: the run-w backtest corpus (sha 1eb164f4), the legs that have a keyless Binance Vision bar source (crypto); equity/ETF legs have
+    none (`no_bar_source`) and the ml_entry decision legs are not in this corpus; stated, not silently dropped. Fidelity of the replay to the
+    harness (76% within 0.10 R, cfb-20261123b, pending re-read on w) is a property of both HOLD and the arm, so the delta cancels it; the baseline
+    is the replay, not the harness.'
+  - 'CONTROL (R4): 100 seeded draws per class; each keeps the policy''s per-trade action count and level parameters and re-times them to uniformly
+    drawn rows from the unmanaged trade''s open rows that satisfy the class''s head-free precondition. It never fires into a closed trade, so
+    it is a STRONGER control than a causal one (conservative for the policy).'
+  - 'GRADING: RULE-AM-RISK-ADJUSTED-V1 with its V1 parameters unchanged (am_risk_adjusted.grade_risk_adjusted), on the DEV segment (entry before
+    2026-01-01) and again on the claimed HOLDOUT (entry from 2026-01-01). PASS iff both segments pass R1-R4; FAIL iff the dev segment fails a
+    necessary clause; else INDETERMINATE. Per-strategy / per-leg / per-timeframe cuts are REPORTED, never graded. BOOK-SIM-REAL-SIZER does not
+    exist yet, so this is a per-trade-R SCREEN (`graduation_eligible: false`): a PASS is a Tier-3 proposal input, never an apply.'
+  - 'HOLDOUT: each class unit is its own read of family AM-HEADS on 2026-01-01..end, claimed in the ledger by the reduce step BEFORE the holdout
+    books are built. Stage A was read 1 (prior n_tries 1), so the first Stage-B unit reads as n_tries 2 and later ones deflate further; the ledger
+    line is merged and landed with the result. The bar for each read is the ledger''s own `bar_for(n)`.'
+  - 'THIS CLASS (AM v3 bank_skip): one bank_at of 0.5 at max(+1.0 R, close + 0.25 R) at bar 1, never re-placed, skipped iff the bar-1 q0.5 >=
+    1.5 R. Controls: per trade and draw, the same fixed bank placed with probability = the policy''s place rate over the shard''s scored trades
+    (seeded), else HOLD. The ALWAYS-bank static arm is recorded per trade and reported (static_reference), never graded.'
+  - 'HEADS: the Stage-B heads artifact am-heads-45384292963 (fitted by run 45384292963 on the same recipe; reused via heads_run_id, not refitted),
+    so the only difference from Stage B is the policy.'
+  fail_action: Record head-chosen skip as closed for banking on these 9 features; the static_reference decides whether a head-free fixed bank
+    goes to the exit-refinement pipeline as a static lever (a separate unit), and the richer-feature heads (structure, market state) are the next
+    model lever.
+  id: RULE-AM-HEADS-STAGE-B-20261124
+  min_n: 100000
+  pass_action: Propose the bank_skip class to the manager as a Tier-3 / mandate decision input (advice-only today) after a fresh-window read;
+    no apply from this unit.
+  proposal_mapping: pass -> Tier-3 proposal input; fail -> richer-features unit; indeterminate -> state which segment/clause and why and stop
+    (no re-run at another threshold).
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 with V1 parameters UNCHANGED, per segment: R1 net R given up per baseline trade <= 0.05; R2 max-drawdown cut
+    >= 15% OR weekly-CVaR5 cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds; R4 beats >= 95% of the 100 controls (net R >= the control''s
+    AND the risk cut >= the control''s, one strictly); n floor 39; the lever must fire. UNIT verdict: PASS iff dev AND holdout both PASS; FAIL
+    iff the dev segment FAILS (a necessary clause read and failed); else INDETERMINATE. Every number in the policy (score cuts, levels, hysteresis,
+    caps, fractions, seeds, 100 draws) is fixed in am_policy_arm.py before the first run and never changed after a result.'
+  statistic: 'scripts/research/am_policy_arm.py (decide, control_specs, reduce_run, unit_verdict) over scripts/research/am_risk_adjusted.grade_risk_adjusted:
+    class bank_skip arm vs HOLD and 100 seeded matched random re-timings, on the dev segment (entry < 2026-01-01) and the claimed holdout (entry
+    >= 2026-01-01).'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; is a per-trade-R SCREEN (BOOK-SIM-REAL-SIZER
+    owns the book-level $ measurement), so a pass is a Tier-3 proposal input only; says nothing about the other action classes (each is its own
+    unit).
+evidence_class:
+  claim: edge
+  holdout: holdout_window
+id: RQ-20261124-a3b0-01
+intervention_controls:
+  best_static:
+    excludes_test_folds: true
+    grid:
+    - hold
+    - always-bank +1 R at bar 1 (static_reference, reported)
+    note: the static alternatives (alt_sl*/tp*) are reported by cf_bulk, not re-graded here
+  bootstrap_group: week
+  hold_to_bracket: true
+  hold_to_bracket_note: HOLD is `replayed_actual` of the same replay
+  matched_random:
+    draws: 100
+    note: 'seeded per (trade, class, draw): the same fixed +1 R bank placed with the policy''s shard-level place rate; isolates the head''s skip
+      choice from the bank''s mechanics'
+    same_class: true
+    same_mechanics_random_choice: true
+iteration:
+  attempt: 2
+  diagnosis: 'Stage B (RQ-20261124-b5a1-01..05, runs 45384282222..45384297711) all FAILED, and random re-timings of the same actions beat the
+    model (bank dev: HOLD -8526 R, policy -12268, controls mean -5229; tighten dev: policy -8694, controls -7615). Trade-level read of the bank
+    shard 0 (14,387 fired trades, MEASURED, scratch): banking helps losers by the same amount under the policy and under random timing (+0.133
+    vs +0.129 R/trade for HOLD < -0.9 R) and costs runners the same (-1.76 vs -1.62 R/trade for HOLD > 3 R): the heads do not tell runners from
+    losers at bank time. The policy''s extra loss is in long-lived trades (> 20 re-placements: -0.101 vs -0.011 R/trade): close + Q50 re-placed
+    as Q50 decays converges on the close and fills on noise (a chase). Tighten shard 13 (488 fired): the policy saves less on eventual losers
+    than random (+0.19 vs +0.31 R/trade) because P(stop_first) crosses its p90 AFTER the adverse move, when halfway-to-the-close is near the stop;
+    random timing tightens earlier.'
+  due_by: '2026-12-01'
+  from_result: research/results/RQ-20261124-b5a1-04/45384292963.jsonl
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  search: 'lever family bracket/bank; mechanism: one resting partial limit (BANK_FRAC 0.5) at +BANK_FIXED_R 1.0 from entry placed at bar 1, never
+    re-placed; skip iff bar-1 q0.5 >= BANK_SKIP_Q50_R 1.5. Fixed before any run; no grid.'
+  subject: ml-brackets
+  subject_kind: ml_model
+  verdict_read: fail
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+ml_consumer:
+  book: money
+  consumer: .claude/skills/live-trade-review/SKILL.md
+  decision: target, invalidation and banking levels a live-review packet states and may move (advice-only until a class passes RULE-AM-RISK-ADJUSTED-V1)
+  legs:
+  - ml_entry
+power:
+  alpha: 0.05
+  basis: 'ESTIMATE. The independent unit is the entry WEEK (~481 distinct entry weeks in the run-w corpus, MEASURED in Stage A''s power block),
+    not the ~469k trades or the 9.4M rows that share market paths. The statistic is the week''s mean paired (arm - HOLD) net R per trade; sd 0.05
+    R of that weekly mean is NOT measured (an inflated guess: ~975 trades a week at a per-trade delta sd of ~0.5 R gives ~0.016 if independent,
+    x3 for the shared market path). At sd 0.05 and a 0.02 R effect the paired floor is (2.8*0.05/0.02)^2 = 49 weeks, below 481. The graded verdict
+    is RULE-AM-RISK-ADJUSTED-V1''s R1-R4 screen, not this t-test.'
+  design: paired
+  effect_units: R_per_trade_weekly_mean_delta
+  expected_n: 481
+  feasibility:
+    accrual_basis: Re-reads the SAME fixed corpus Stage A measured (469,172 trades, 9.4M rows, ~481 entry weeks); nothing accrues.
+    source: replay
+    verdict: comms/research/RQ-20261123-a9d1-01/local-20261123T2011Z/verdict.json
+  min_detectable_effect: 0.02
+  power: 0.8
+  sd: 0.05
+practice_precedent: brackets as predictions (TP doctrine, reach calibration); matched random-intervention control (T1); RULE-AM-RISK-ADJUSTED-V1
+  per class; docs/research/ml-am-heads-design-2026-11-23.md.
+priority: 1
+programme: P2
+question: Does bank_skip (one fixed 50% partial at +1 R placed at bar 1, skipped when the bar-1 median remaining-MFE head predicts >= 1.5 R) clear
+  RULE-AM-RISK-ADJUSTED-V1 (R1-R4, V1 parameters unchanged) on the dev segment AND the claimed 2026 holdout, where R4's 100 controls place the
+  SAME fixed bank at the policy's own place rate in the shard with the choice random? The always-bank static arm is reported beside it.
+related:
+- scripts/research/am_policy_arm.py
+- scripts/research/am_heads_fit.py
+- scripts/research/am_risk_adjusted.py
+- .github/workflows/am-policy-arm.yml
+- docs/research/ml-am-heads-design-2026-11-23.md
+- docs/research/cf-insights-2026-11-23.md
+- AM-V2-STAGE-B-POLICY-ARM
+- BOOK-SIM-REAL-SIZER
+- research/queue/RQ-20261124-b5a1-02.yaml
+- research/queue/RQ-20261124-b5a1-04.yaml
+roadmap:
+- L-ML-LIVE
+routing:
+  basis: 'ESTIMATE from Stage B (MEASURED there: 24 replay shards + reduce inside one ~60-70 min run with heads fitted; heads reused here).'
+  est_minutes: 300
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 8.0
+  why_runner: CPU LightGBM scoring and a Python replay over keyless bars; sharded on GitHub-hosted runners (am-policy-arm.yml), not this session's
+    compute.
+run:
+  inputs:
+    research_unit: RQ-20261124-a3b0-01
+    classes: bank_skip
+    heads_run_id: '45384292963'
+    run_id: amv3-20261124
+  timeout_minutes: 330
+  workflow: am-policy-arm.yml
+status: queued
+theme: ml_health
+title: 'AM v3 (bank_skip): ONE fixed 50% bank at +1 R placed at bar 1 and never re-placed, SKIPPED when the bar-1 q0.5 head predicts a runner,
+  vs HOLD and a matched random skip'
+value:
+  basis: 'ESTIMATE: the operator named predictive two-way brackets the top ML priority; the value is whether any action class pays net of cost.'
+  bucket: ai_trader
+  confidence: 0.15
+  usd_at_stake_per_month: 500
+why_this_matters: 'A pass is a Tier-3 PROPOSAL input for this action class (advice-only today, ARCHITECTURE-CANONICAL § Active management) and
+  nothing else; a fail closes this class on these 9 features and sends the diagnosis to richer features (structure, market state). Operator priority
+  2026-11-23: active management v2 is top for ML and strategy work.'

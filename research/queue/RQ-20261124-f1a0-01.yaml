@@ -113,9 +113,11 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only which side may trade differs
   matched_random:
-    draws: 30
-    note: 'COMPUTED: 30 seeded draws per fold muting each long candidate at random with probability = the fold''s measured share of long candidates
-      inside the mute cell, pooled into one control mean'
+    draws: 100
+    note: 'COMPUTED: 100 seeded draws per fold muting each long candidate at random with probability = the fold''s measured share of long candidates
+      inside the mute cell, pooled into one control mean. AMENDED 2026-11-24 before merge, decision rule unchanged: the first runs (45484674095
+      / 45484678545) used 30 draws; research-queue-design-fields-guard requires >= 100, so the unit is re-run at 100 and the 30-draw runs are
+      superseded diagnostics'
   best_static:
     grid:
     - recipe (live)

@@ -113,9 +113,11 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: identical predictions, decisions, brackets and stops; only the per-entry risk weight differs
   matched_random:
-    draws: 30
-    note: 'COMPUTED: 30 seeded draws of Dirichlet(1) weights per bar (normalised to sum 1 per bar) on the same decisions; the control prices whether
-      EQUAL splitting beats arbitrary splitting'
+    draws: 100
+    note: 'COMPUTED: 100 seeded draws of Dirichlet(1) weights per bar (normalised to sum 1 per bar) on the same decisions; the control prices
+      whether EQUAL splitting beats arbitrary splitting. AMENDED 2026-11-24 before merge, decision rule unchanged: the first runs (45484674095
+      / 45484678545) used 30 draws; research-queue-design-fields-guard requires >= 100, so the unit is re-run at 100 and the 30-draw runs are
+      superseded diagnostics'
   best_static:
     grid:
     - recipe (live)

@@ -107,18 +107,8 @@ value:
   basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
     this arm targets one named cause of that loss.'
 intervention_controls:
-  hold_to_bracket: false
-  hold_to_bracket_note: 'the bracket IS the factor here: SL 3 / TP 4.5 vs SL 2 / TP 3; predictions, tau and the 24 h stop are identical'
-  matched_random:
-    draws: 30
-    note: 'COMPUTED: 30 seeded random-side draws per fold over the same rows (tau 0, one position per symbol) under BOTH brackets; reported as
-      control_alt_vs_base_bracket'
-  best_static:
-    grid:
-    - recipe (live)
-    - control (see matched_random)
-    excludes_test_folds: true
-    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  not_applicable: a static bracket alternative fixed at entry (SL 3 / TP 4.5 ATR vs SL 2 / TP 3 on the same predictions), not an active in-trade
+    action; the random-side control (30 seeded draws under both brackets) is computed and reported to attribute the gain
   bootstrap_group: week
 practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
 routing:

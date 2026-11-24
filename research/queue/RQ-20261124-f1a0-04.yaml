@@ -107,18 +107,8 @@ value:
   basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
     this arm targets one named cause of that loss.'
 intervention_controls:
-  hold_to_bracket: true
-  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ
-  matched_random:
-    draws: 1
-    note: 'COMPUTED (placebo, 1 seeded draw): the 5 columns with each timestamp''s values moved to a random other timestamp (own columns within
-      symbol), so the distribution is kept and the timing destroyed; prices the recipe''s known overfit to any extra column'
-  best_static:
-    grid:
-    - recipe (live)
-    - control (see matched_random)
-    excludes_test_folds: true
-    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  not_applicable: a model-input arm (5 recency columns), not an active in-trade intervention; its control is a PLACEBO refit with the same columns
+    timestamp-shuffled (1 seeded draw, each draw is a full refit), pricing the recipe's overfit to any extra column
   bootstrap_group: week
 practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
 routing:
