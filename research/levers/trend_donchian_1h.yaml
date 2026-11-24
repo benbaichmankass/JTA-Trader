@@ -409,6 +409,20 @@ levers:
         baseline_value: '2.5'
         arm: atr_stop_mult_hi
         unit: RQ-20261106-024
+        window: 2021-11-19..2026-11-21
+        n: 688
+        net_r: 16.8249
+        baseline_n: 766
+        baseline_net_r: -1.677
+        delta_net_r: 18.5019
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 22.5604
+        verdict: pass
+        joint_change: false
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261106-024
         window: 2021-11-11..2026-11-14
         n: 690
         net_r: 13.7611
@@ -437,6 +451,20 @@ levers:
         baseline_value: '2.5'
         arm: atr_stop_mult_lo
         unit: RQ-20261106-024
+        window: 2021-11-19..2026-11-21
+        n: 919
+        net_r: -22.5555
+        baseline_n: 766
+        baseline_net_r: -1.677
+        delta_net_r: -20.8785
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 53.0852
+        verdict: pass
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261106-024
         window: 2021-11-11..2026-11-14
         n: 922
         net_r: -26.2922
@@ -448,9 +476,9 @@ levers:
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 4
-      best_delta_r_per_trade: 0.0233
-      fold_stability: 0.562
+      points: 6
+      best_delta_r_per_trade: 0.0242
+      fold_stability: 0.583
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     tp_r:
       tests:
@@ -472,6 +500,20 @@ levers:
         baseline_value: '50.0'
         arm: tp_r_hi
         unit: RQ-20261106-024
+        window: 2021-11-19..2026-11-21
+        n: 766
+        net_r: -1.677
+        baseline_n: 766
+        baseline_net_r: -1.677
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 28.1334
+        verdict: pass
+        joint_change: false
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-024
         window: 2021-11-11..2026-11-14
         n: 768
         net_r: -4.1443
@@ -500,6 +542,20 @@ levers:
         baseline_value: '50.0'
         arm: tp_r_lo
         unit: RQ-20261106-024
+        window: 2021-11-19..2026-11-21
+        n: 766
+        net_r: -1.677
+        baseline_n: 766
+        baseline_net_r: -1.677
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 28.1334
+        verdict: pass
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-024
         window: 2021-11-11..2026-11-14
         n: 768
         net_r: -4.1443
@@ -511,7 +567,7 @@ levers:
         verdict: pass
         joint_change: false
       shape: flat
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.0
       fold_stability: 1.0
       reading: no response at the tested values

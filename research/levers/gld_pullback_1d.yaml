@@ -95,6 +95,20 @@ levers:
         max_drawdown_r: 2.9939
         verdict: indeterminate
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-21
+        window: 2018-03-01..2026-10-15
+        n: 35
+        net_r: 41.4925
+        baseline_n: 63
+        baseline_net_r: 43.9371
+        delta_net_r: -2.4446
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 2.9939
+        verdict: fail
+        joint_change: false
       - value: short
         baseline_value: 'off'
         arm: SHORT
@@ -109,10 +123,24 @@ levers:
         max_drawdown_r: 7.977
         verdict: indeterminate
         joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-21
+        window: 2018-03-01..2026-10-15
+        n: 35
+        net_r: 1.8242
+        baseline_n: 63
+        baseline_net_r: 43.9371
+        delta_net_r: -42.1129
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 7.977
+        verdict: fail
+        joint_change: false
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: -0.0388
-      fold_stability: 0.375
+      fold_stability: 0.271
       reading: every tested value is worse than the baseline
   entry:
     pullback_frac:

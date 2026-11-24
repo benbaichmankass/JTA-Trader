@@ -81,6 +81,34 @@ levers:
   entry:
     pullback_frac:
       tests:
+      - value: '0.618'
+        baseline_value: '0.5'
+        arm: PF62
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 476
+        net_r: 12.1777
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: 9.0699
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 13.3951
+        verdict: pass
+        joint_change: false
+      - value: '0.618'
+        baseline_value: '0.5'
+        arm: PF62
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 476
+        net_r: 12.1777
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: 9.0699
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 13.3951
+        verdict: pass
+        joint_change: false
       - value: '0.625'
         baseline_value: '0.5'
         arm: pullback_frac_hi
@@ -194,9 +222,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: peaked
-      points: 8
+      points: 10
       best_delta_r_per_trade: 0.0448
-      fold_stability: 0.562
+      fold_stability: 0.617
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_target_r:
@@ -1651,9 +1679,65 @@ levers:
         max_drawdown_r: 16.1518
         verdict: fail
         joint_change: false
+      - value: '30'
+        baseline_value: '25'
+        arm: AD30
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 304
+        net_r: -4.5208
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: -7.6286
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 16.3668
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: '25'
+        arm: AD30
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 304
+        net_r: -4.5208
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: -7.6286
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 16.3668
+        verdict: pass
+        joint_change: false
+      - value: '35'
+        baseline_value: '25'
+        arm: AD35
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 207
+        net_r: -0.0169
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: -3.1247
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 11.0942
+        verdict: pass
+        joint_change: false
+      - value: '35'
+        baseline_value: '25'
+        arm: AD35
+        unit: RQ-20261101-78fc-20
+        window: 2020-07-01..2026-10-15
+        n: 207
+        net_r: -0.0169
+        baseline_n: 419
+        baseline_net_r: 3.1078
+        delta_net_r: -3.1247
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 11.0942
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 2
-      best_delta_r_per_trade: -0.0194
+      points: 6
+      best_delta_r_per_trade: -0.0075
       fold_stability: 0.25
       reading: every tested value is worse than the baseline
     cooldown_bars:

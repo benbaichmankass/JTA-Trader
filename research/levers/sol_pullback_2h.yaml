@@ -2056,6 +2056,20 @@ levers:
         max_drawdown_r: 12.8067
         verdict: pass
         joint_change: false
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261118-abab-43
+        window: 2021-11-19..2026-11-21
+        n: 116
+        net_r: 20.844
+        baseline_n: 126
+        baseline_net_r: 15.2031
+        delta_net_r: 5.6409
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 12.8067
+        verdict: pass
+        joint_change: false
       - value: 20,21,22,23
         baseline_value: 'off'
         arm: S_LATE
@@ -2070,11 +2084,30 @@ levers:
         max_drawdown_r: 15.6759
         verdict: pass
         joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261118-abab-43
+        window: 2021-11-19..2026-11-21
+        n: 120
+        net_r: 11.8407
+        baseline_n: 126
+        baseline_net_r: 15.2031
+        delta_net_r: -3.3624
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 15.6759
+        verdict: pass
+        joint_change: false
       shape: noisy
-      points: 5
+      points: 7
       best_delta_r_per_trade: 0.0944
-      fold_stability: 0.75
+      fold_stability: 0.702
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+manifest_notes:
+  abab_43_confirmation_unpowered_2026_11_23: 'RQ-20261118-abab-43 (S_LATE / S_ASIA hour skips) graded PASS. Power check of the time-disjoint form
+    (SOLUSDT 2h, 2020-09-20 .. 2021-11-13, registered flags, local run): n(A)=23 against the registered floor of 39, so the form is unpowered
+    and no confirmation unit was authored. The candle dataset on the compute router starts 2021-11-14 for SOL, so an earlier window needs the
+    network lane. A confirmation needs a symbol-disjoint form or more history.'
 units:
 - RQ-20261101-e5b1-13
 - RQ-20261114-db1a-02
@@ -2256,5 +2289,3 @@ levers_tested:
   tested_at_power: true
   unit: RQ-20261114-db1a-05
   lever_family: exit
-manifest_notes:
-  abab_43_confirmation_unpowered_2026_11_23: 'RQ-20261118-abab-43 (S_LATE / S_ASIA hour skips) graded PASS. Power check of the time-disjoint form (SOLUSDT 2h, 2020-09-20 .. 2021-11-13, registered flags, local run): n(A)=23 against the registered floor of 39, so the form is unpowered and no confirmation unit was authored. The candle dataset on the compute router starts 2021-11-14 for SOL, so an earlier window needs the network lane. A confirmation needs a symbol-disjoint form or more history.'

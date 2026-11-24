@@ -123,6 +123,34 @@ levers:
         max_drawdown_r: 18.2094
         verdict: pass
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-30
+        window: 2021-11-19..2026-11-21
+        n: 183
+        net_r: -15.7865
+        baseline_n: 366
+        baseline_net_r: -22.3281
+        delta_net_r: 6.5416
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 17.2851
+        verdict: pass
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-30
+        window: 2021-11-14..2026-11-17
+        n: 187
+        net_r: -8.8595
+        baseline_n: 368
+        baseline_net_r: -23.9899
+        delta_net_r: 15.1304
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 15.8832
+        verdict: pass
+        joint_change: false
       - value: short
         baseline_value: 'off'
         arm: SHORT
@@ -155,20 +183,20 @@ levers:
         baseline_value: 'off'
         arm: SHORT
         unit: RQ-20261118-abab-30
-        window: 2021-11-14..2026-11-17
-        n: 187
-        net_r: -8.8595
-        baseline_n: 368
-        baseline_net_r: -23.9899
-        delta_net_r: 15.1304
-        folds_ge_baseline: 3/4
-        max_drawdown_r: 15.8832
+        window: 2021-11-19..2026-11-21
+        n: 186
+        net_r: -8.2399
+        baseline_n: 366
+        baseline_net_r: -22.3281
+        delta_net_r: 14.0882
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 15.8068
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 6
+      points: 8
       best_delta_r_per_trade: 0.0411
-      fold_stability: 0.625
+      fold_stability: 0.656
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_at_r:
@@ -370,4 +398,6 @@ levers:
       fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
 manifest_notes:
-  abab_30_loses_less_2026_11_23: 'RQ-20261118-abab-30 (side filter) graded PASS under the registered rule, but the best arm is net negative: A n=366 net -22.33 R; SHORT n=186 net -8.24 R; LONG n=183 net -15.79 R. Loses less, not a positive edge: no confirmation unit (manager ruling 2026-11-23).'
+  abab_30_loses_less_2026_11_23: 'RQ-20261118-abab-30 (side filter) graded PASS under the registered rule, but the best arm is net negative: A
+    n=366 net -22.33 R; SHORT n=186 net -8.24 R; LONG n=183 net -15.79 R. Loses less, not a positive edge: no confirmation unit (manager ruling
+    2026-11-23).'
