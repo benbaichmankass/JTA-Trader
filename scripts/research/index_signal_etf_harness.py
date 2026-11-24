@@ -63,7 +63,7 @@ ATR_LEN = 14
 FLUSH_ATR = 2.0
 FLUSH_MEAN = 5
 FLUSH_UP_WINDOW = 5      # fixed here (the unit text says "then the first up-close" without a bound): expire a flush after 5 sessions
-HOLD_CAP = {"breakdown": 20, "failed_rally": 15, "capitulation": 10, "breakdown_bear": 20, "breakdown_bounce": 10, "capitulation_wide": 10}
+HOLD_CAP = {"capitulation_bull": 10, "breakdown": 20, "failed_rally": 15, "capitulation": 10, "breakdown_bear": 20, "breakdown_bounce": 10, "capitulation_wide": 10}
 SMA_LONG = 200
 SMA_SLOPE_LOOKBACK = 20
 FLUSH_ATR_WIDE = 1.5
@@ -97,7 +97,14 @@ PAIRS["capitulation_fresh"] = [("XBI", "LABU", 3.0), ("KRE", "DPST", 3.0), ("EEM
                                ("XLU", "UTSL", 3.0), ("XLY", "WANT", 3.0)]
 PAIRS["capitulation_fresh_1x"] = [(i, i, 1.0) for i, _, _ in PAIRS["capitulation_fresh"]]
 #: units whose rule GATES on the timing control (1e06-04 reported it: actual at the 86th percentile of re-timed draws)
-TIMING_GATED = {"RQ-20261124-1e06-05": 0.05}
+TIMING_GATED = {"RQ-20261124-1e06-05": 0.05, "RQ-20261124-1e06-06": 0.05, "RQ-20261124-1e06-07": 0.05}
+#: 1e06-06 (lane ML-PRIMARY 2026-11-24): the capitulation trigger executed in 1x index ETFs on 8 indexes used in NO earlier read (1e06-05 showed the
+#: timing at the 94.5th percentile but 3x losing to 1x: leverage, not timing, broke it). No fossil-fuel instruments.
+PAIRS["capitulation_1x_fresh"] = [(t, t, 1.0) for t in ("XLB", "XLP", "ITB", "XME", "EFA", "EWJ", "IYT", "IWN")]
+#: pooled units graded against FLAT (no 1x arm: the execution IS 1x) and their pairs-positive floor where it is not POOLED_MIN_POSITIVE_PAIRS
+POOLED_MIN_POSITIVE = {"RQ-20261124-1e06-06": 4, "RQ-20261124-1e06-07": 4}
+#: 1e06-07 population: 8 more 1x index ETFs used in NO earlier read (no fossil-fuel instruments)
+PAIRS["capitulation_bull"] = [(t, t, 1.0) for t in ("KBE", "SMH", "EWZ", "FXI", "EWG", "EWU", "VGK", "IJR")]
 POOLED_MIN_POSITIVE_PAIRS = 3
 #: the own-chart trend twin per execution ETF (rule baseline of 1e04-01): unit id
 TWIN_UNIT = {"SQQQ": "RQ-20261123-1e01-01", "SPXU": "RQ-20261123-1e01-02", "SDOW": "RQ-20261123-1e01-03",
@@ -223,6 +230,12 @@ def signals_capitulation_wide(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return signals_capitulation(i_o, i_h, i_l, i_c, FLUSH_ATR_WIDE)
 
 
+def signals_capitulation_bull(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:  # inert: i_o — uniform (open, high, low, close) signature across signal families; this trigger reads no index open
+    """1e06-07 (REGIME arm): the 1.5-ATR capitulation trigger kept only in a bull regime, index close > its SMA200 at the signal bar (point-in-time)."""
+    sma = pd.Series(i_c).rolling(SMA_LONG).mean().to_numpy()
+    return [s for s in signals_capitulation_wide(i_o, i_h, i_l, i_c) if not np.isnan(sma[s["i"]]) and i_c[s["i"]] > sma[s["i"]]]
+
+
 def signals_breakdown_bear(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     """1e06-01: the 1e04-01 breakdown, kept only in a genuine bear regime: close < SMA200 AND SMA200 below its value 20 bars ago."""
     sma = pd.Series(i_c).rolling(SMA_LONG).mean().to_numpy()
@@ -245,7 +258,7 @@ def signals_breakdown_bounce(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return out
 
 
-SIGNALS = {"breakdown": signals_breakdown, "breakdown_bear": signals_breakdown_bear, "breakdown_bounce": signals_breakdown_bounce,
+SIGNALS = {"capitulation_bull": signals_capitulation_bull, "breakdown": signals_breakdown, "breakdown_bear": signals_breakdown_bear, "breakdown_bounce": signals_breakdown_bounce,
            "capitulation_wide": signals_capitulation_wide, "failed_rally": signals_failed_rally, "capitulation": signals_capitulation}
 
 
@@ -451,12 +464,22 @@ def unit_verdict(per_pair: dict[str, dict[str, Any]]) -> str:
     return "fail"
 
 
+def artifact_safe(name: str) -> str:
+    """A file-name fragment actions/upload-artifact accepts: it refuses " : < > | * ? \\r \\n". "SPY->UPRO" -> "SPY__UPRO"."""
+    out = name.replace("->", "__")
+    for ch in '":<>|*?\r\n':
+        out = out.replace(ch, "_")
+    return out
+
+
 def write_record(out: Path, unit: str, rule_id: str, rule: str, family: str, per_pair: dict[str, dict[str, Any]], extra: dict[str, Any],
                  population: str, verdict_override: str | None = None) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     slim = {k: {kk: vv for kk, vv in v["res"].items() if kk != "trades"} | {"grade": v["grade"]} for k, v in per_pair.items()}
     for k, v in per_pair.items():
-        (out / f"trades_{k}.jsonl").write_text("\n".join(json.dumps(t) for t in v["res"]["trades"]) + "\n")
+        # artifact-safe name: actions/upload-artifact refuses '>' (and ':' etc.), so "SPY->UPRO" lands as "SPY__UPRO" (1e06 runs 45496877325.. lost
+        # every output to an upload failure on "trades_EEM->EDC.jsonl")
+        (out / f"trades_{artifact_safe(k)}.jsonl").write_text("\n".join(json.dumps(t) for t in v["res"]["trades"]) + "\n")
     verdict = verdict_override or unit_verdict(per_pair)
     passed = [k for k, v in per_pair.items() if v["grade"]["verdict"] == "pass"]
     total_n = sum(v["res"]["n"] for v in per_pair.values())
@@ -482,17 +505,23 @@ RULES = {
 
 BASELINE = {"RQ-20261123-1e04-01": "twin", "RQ-20261123-1e04-02": "family:breakdown", "RQ-20261123-1e04-03": "1x",
             "RQ-20261124-1e06-01": "family:breakdown", "RQ-20261124-1e06-02": "1x", "RQ-20261124-1e06-03": "1x", "RQ-20261124-1e06-04": "1x",
-            "RQ-20261124-1e06-05": "1x"}
+            "RQ-20261124-1e06-05": "1x", "RQ-20261124-1e06-06": "flat", "RQ-20261124-1e06-07": "flat"}
 #: unit -> (pairs key, 1x-arm pairs key) where it is not the family default; units graded on the POOLED population
 PAIRS_KEY = {"RQ-20261124-1e06-04": ("capitulation_holdout", "capitulation_holdout_1x"),
-             "RQ-20261124-1e06-05": ("capitulation_fresh", "capitulation_fresh_1x")}
-POOLED = {"RQ-20261124-1e06-04", "RQ-20261124-1e06-05"}
+             "RQ-20261124-1e06-05": ("capitulation_fresh", "capitulation_fresh_1x"),
+             "RQ-20261124-1e06-06": ("capitulation_1x_fresh", "capitulation_1x_fresh"),
+             "RQ-20261124-1e06-07": ("capitulation_bull", "capitulation_bull")}
+POOLED = {"RQ-20261124-1e06-04", "RQ-20261124-1e06-05", "RQ-20261124-1e06-06", "RQ-20261124-1e06-07"}
 RULES["RQ-20261124-1e06-01"] = ("RULE-RQ-20261124-1e06-01", "breakdown_bear",
                                 "PASS IFF n>=25 AND net_r>0 AND net_r>1e04-01 net_r on the same pair (or 1e04-01 INDETERMINATE) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (a pass is per pair)")
 RULES["RQ-20261124-1e06-02"] = ("RULE-RQ-20261124-1e06-02", "breakdown_bounce",
                                 "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-04"] = ("RULE-RQ-20261124-1e06-04", "capitulation_wide",
                                 "CONFIRMATION of 1e06-03 on 6 untested 3x sector/mid-cap/REIT ETFs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage; INDETERMINATE if pooled n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-07"] = ("RULE-RQ-20261124-1e06-07", "capitulation_bull",
+                                "REGIME ARM, TIMING-GATED: the 1.5-ATR capitulation trigger kept only when the index closes above its SMA200, executed in 1x index ETFs on 8 FRESH indexes (KBE, SMH, EWZ, FXI, EWG, EWU, VGK, IJR), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-06"] = ("RULE-RQ-20261124-1e06-06", "capitulation_wide",
+                                "TIMING-GATED capitulation trigger executed in 1x index ETFs on 8 FRESH indexes (XLB, XLP, ITB, XME, EFA, EWJ, IYT, IWN), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-05"] = ("RULE-RQ-20261124-1e06-05", "capitulation_wide",
                                 "TIMING-GATED test of the 1e06-03/-04 capitulation 3x buy on 6 FRESH 3x ETFs (XBI/LABU, KRE/DPST, EEM/EDC, XLI/DUSL, XLU/UTSL, XLY/WANT), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-03"] = ("RULE-RQ-20261124-1e06-03", "capitulation_wide",
@@ -534,6 +563,8 @@ def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None)
         idx_t, etf_t = k.split("->")
         if kind == "twin":
             g = grade_pair(res, twin_net(etf_t), "own-chart trend twin (1e01-*), landed verdict net_r")
+        elif kind == "flat":
+            g = grade_pair(res, 0.0, "flat (no trade): the execution is already the 1x index ETF")
         elif kind.startswith("family:"):
             b = base_by_pair[k]
             g = grade_pair(res, b["net_r"], f"{kind[7:]} on the same pair", baseline_indeterminate=b["n"] < N_FLOOR)
@@ -548,12 +579,15 @@ def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None)
     ov = None
     if unit in POOLED:
         net3 = sum(v["res"]["net_r"] for v in per.values())
-        net1 = sum(arm_b[k.split("->")[0]]["net_r"] for k in per)
+        net1 = 0.0 if kind == "flat" else sum(arm_b[k.split("->")[0]]["net_r"] for k in per)
         net2x = sum(v["res"]["net_r_2x_slip"] for v in per.values())
         npool = sum(v["res"]["n"] for v in per.values())
         npos = sum(1 for v in per.values() if v["res"]["net_r"] > 0)
+        min_pos = POOLED_MIN_POSITIVE.get(unit, POOLED_MIN_POSITIVE_PAIRS)
         chk = {"pooled_n_ge_floor": npool >= N_FLOOR, "pooled_net_gt_0": net3 > 0, "pooled_net_gt_1x": net3 > net1,
-               "pairs_positive_ge_3": npos >= POOLED_MIN_POSITIVE_PAIRS, "pooled_net_gt_0_at_2x_slip": net2x > 0}
+               f"pairs_positive_ge_{min_pos}": npos >= min_pos, "pooled_net_gt_0_at_2x_slip": net2x > 0}
+        if kind == "flat":                # no separate 1x arm to beat: the execution is the 1x ETF
+            chk.pop("pooled_net_gt_1x")
         ov = "indeterminate" if npool < N_FLOOR else ("pass" if all(chk.values()) else "fail")
         draws = np.zeros(200)
         for k_, (f_, beta_) in frames.items():

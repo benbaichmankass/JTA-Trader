@@ -1,0 +1,360 @@
+name: am-action-value
+run-name: am-action-value ${{ inputs.research_unit || inputs.classes }}
+
+# AM v2 STAGE B ITERATION 2 (row AM-V2-STAGE-B-POLICY-ARM): ACTION-VALUE policies. Stage B (RQ-20261124-b5a1-01..05) FAILED R4 on every class: the
+# heads have skill but a probability-cut policy is not a value rule. This workflow measures each bracket action's own realised net value on the replay
+# (label), learns it per purged fold (fit), and acts only where the predicted value clears its cut (shard), graded by RULE-AM-RISK-ADJUSTED-V1 against
+# 100 matched random placements of the same action (reduce). plan -> label shards -> fit -> policy shards -> reduce/grade -> land one result record.
+# One dispatch = ONE class (av_bank | av_tighten | av_loosen | av_family), each its own registered unit RQ-20261124-c7e3-01..04. Tier 1: GitHub-hosted
+# runners, no Claude, no API credits, no secret in the compute jobs; it READS the pinned corpus + the keyless Binance Vision archive + the Stage-B heads
+# artifact and UPLOADS artifacts; only the last job writes (the shared research-result / commit-to-main actions). No trade path, no config, no VM.
+# Gates this adds or changes: none. Code: scripts/research/am_action_value.py. Diagnosis: docs/research/am-v2-stage-b-diagnosis-2026-11-24.md.
+#
+# The heads are REUSED from am-policy-arm run 45384292963 (artifact am-heads-45384292963, kept to 2026-12-24). The label + fit stages are deterministic
+# (fixed seeds, deterministic LightGBM), so a later class may pass the first run's id as `av_run_id` to reuse its am-av-models artifact and skip ~1 h.
+
+on:
+  workflow_dispatch:
+    inputs:
+      classes:
+        description: "ONE class: av_bank | av_tighten | av_loosen | av_family"
+        required: true
+      research_unit:
+        description: "The queue unit that dispatched this run (RQ-YYYYMMDD-xxxx-NN); empty for a manual run (lands under _unattributed)"
+        default: ""
+      power_state:
+        description: "Pass-through dispatcher power-state label, if any (never a command)"
+        default: ""
+      run_id:
+        description: "Run id (names the artifacts)"
+        default: "amv-20261124"
+      corpus_sha:
+        description: "Commit sha whose comms/research + comms/strategy_evidence trade corpus is replayed (the run-w corpus)"
+        default: "1eb164f4ae641bea82ac34692af9cb7031640a62"
+      heads_run_id:
+        description: "am-policy-arm run whose am-heads-<id> artifact supplies the Stage-B heads"
+        default: "45384292963"
+      av_run_id:
+        description: "Reuse the am-av-models-<id> artifact of this earlier am-action-value run instead of labelling + fitting again; empty = build here"
+        default: ""
+      batches:
+        description: "Replay matrix width (balanced batches of shards)"
+        default: "24"
+      n_control:
+        description: "Seeded matched random placements per trade (the registered number is 100)"
+        default: "100"
+
+permissions:
+  contents: read
+  actions: read          # ONLY so the heads / model artifacts of another run of this repo can be downloaded with the ambient read token
+
+concurrency:
+  group: am-action-value-${{ github.event.inputs.run_id }}-${{ github.event.inputs.classes }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - name: Check the class
+        env:
+          CLS: ${{ inputs.classes }}
+        run: |
+          case "$CLS" in av_bank|av_tighten|av_loosen|av_family) ;; *) echo "classes must be ONE of av_bank|av_tighten|av_loosen|av_family, got '$CLS'"; exit 2;; esac
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+      - name: Plan shards (cf_bulk's own planner)
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          BATCHES: ${{ inputs.batches }}
+        run: python3 scripts/research/cf_bulk.py plan --run-id "$RUN_ID" --out out --batches "$BATCHES"
+      - id: m
+        run: echo "matrix=$(python3 -c "import json;print(json.dumps({'include':[{'batch':b['batch'],'index':' '.join(map(str,b['index']))} for b in json.load(open('out/batches.json'))]}))")" >> "$GITHUB_OUTPUT"
+
+  label:
+    needs: plan
+    if: ${{ inputs.av_run_id == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
+      - name: Pin the trade corpus to corpus_sha
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+      - uses: actions/download-artifact@v4
+        with:
+          name: am-heads-${{ inputs.heads_run_id }}
+          path: heads
+          run-id: ${{ inputs.heads_run_id }}
+          github-token: ${{ github.token }}
+      - name: Label this batch's shards (every menu action replayed alone at up to 8 sampled rows per dev trade)
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          INDEX: ${{ matrix.index }}
+        run: python3 scripts/research/am_action_value.py label --run-id "$RUN_ID" --out out --heads heads --index $INDEX
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.run_id }}-avlabels-${{ github.run_id }}-${{ matrix.batch }}
+          path: out/av_labels
+          if-no-files-found: ignore
+          retention-days: 14
+
+  fit:
+    needs: label
+    if: ${{ always() && inputs.av_run_id == '' && needs.label.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        fold: ["2022-07-01", "2023-01-01", "2023-07-01", "2024-01-01", "2024-07-01", "2025-01-01", "2025-07-01", "2026-01-01"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
+      - uses: actions/download-artifact@v4
+        with:
+          name: am-heads-${{ inputs.heads_run_id }}
+          path: heads
+          run-id: ${{ inputs.heads_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.run_id }}-avlabels-${{ github.run_id }}-*
+          path: labels
+          merge-multiple: true
+      - name: Fit this fold's value models (scores no test row, claims no holdout)
+        env:
+          FOLD: ${{ matrix.fold }}
+        run: python3 scripts/research/am_action_value.py fit --labels labels --heads heads --out models --only-fold "$FOLD"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: am-av-fold-${{ github.run_id }}-${{ matrix.fold }}
+          path: models
+          retention-days: 14
+
+  fit_merge:
+    needs: fit
+    if: ${{ always() && inputs.av_run_id == '' && needs.fit.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: am-av-fold-${{ github.run_id }}-*
+          path: models
+          merge-multiple: true
+      - name: Merge the per-fold manifests
+        run: python3 scripts/research/am_action_value.py fit-merge --models models
+      - uses: actions/upload-artifact@v4
+        with:
+          name: am-av-models-${{ github.run_id }}
+          path: models
+          retention-days: 30
+
+  shard:
+    needs: [plan, fit_merge]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.fit_merge.result == 'success' || needs.fit_merge.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
+      - name: Pin the trade corpus to corpus_sha
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+      - uses: actions/download-artifact@v4
+        with:
+          name: am-heads-${{ inputs.heads_run_id }}
+          path: heads
+          run-id: ${{ inputs.heads_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: am-av-models-${{ inputs.av_run_id || github.run_id }}
+          path: models
+          run-id: ${{ inputs.av_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Replay this batch's shards with the action-value policy and its matched random placements
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          INDEX: ${{ matrix.index }}
+          CLS: ${{ inputs.classes }}
+          NCTL: ${{ inputs.n_control }}
+        run: python3 scripts/research/am_action_value.py shard --run-id "$RUN_ID" --out out --heads heads --av models --index $INDEX --classes "$CLS" --n-control "$NCTL"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.run_id }}-${{ inputs.classes }}-avshards-${{ github.run_id }}-${{ matrix.batch }}
+          path: out/am_policy
+          if-no-files-found: ignore
+          retention-days: 14
+
+  reduce:
+    needs: shard
+    if: ${{ always() && needs.shard.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.run_id }}-${{ inputs.classes }}-avshards-${{ github.run_id }}-*
+          path: out/am_policy
+          merge-multiple: true
+      - name: Grade (claims the AM-HEADS holdout FIRST, then reads it) under RULE-AM-RISK-ADJUSTED-V1
+        env:
+          CLS: ${{ inputs.classes }}
+          UNIT: ${{ inputs.research_unit }}
+          NCTL: ${{ inputs.n_control }}
+        run: python3 scripts/research/am_action_value.py reduce --out out --classes "$CLS" --unit "${UNIT:-am-action-value-manual}" --reader "workflow am-action-value run ${{ github.run_id }}" --n-control "$NCTL"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: am-av-result-${{ github.run_id }}
+          path: |
+            out/verdict.json
+            out/grade_full.json
+            out/holdout_claims.jsonl
+          retention-days: 30
+
+  research_result:
+    needs: [reduce]
+    # a FAILED or CANCELLED reduce still lands (read_state producer_failed: "we looked and it broke"); a SKIPPED one means nobody asked
+    if: ${{ always() && needs.reduce.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 110      # outlasts commit-to-main's verify-merged wait
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        id: fetch
+        continue-on-error: true
+        with:
+          name: am-av-result-${{ github.run_id }}
+          path: collected
+      - name: Derive the record fields from the run's own output
+        id: derive
+        env:
+          REDUCE: ${{ needs.reduce.result }}
+          CLS: ${{ inputs.classes }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib
+          out = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          v = pathlib.Path("collected/verdict.json")
+          if os.environ["REDUCE"] == "success" and v.exists():
+              d = json.loads(v.read_text())
+              rec = {"verdict": d["verdict"], "read_state": d["read_state"], "n": str(d["n"]), "population": d["population"]}
+              pathlib.Path("measurement.json").write_text(json.dumps({"note": d.get("note"), **d["measurement"]}))
+          else:
+              rec = {"verdict": "not_applicable", "read_state": "producer_failed", "n": "null",
+                     "population": "AM v2 action-value policy class " + os.environ["CLS"] + ": the replay or the grade did not complete (reduce job " + os.environ["REDUCE"] + "); nothing was measured"}
+              pathlib.Path("measurement.json").write_text(json.dumps({"reduce_job_result": os.environ["REDUCE"]}))
+          with out.open("a") as fh:
+              for k, x in rec.items():
+                  fh.write(f"{k}={x}\n")
+          PY
+      - name: Merge the holdout claim into this checkout's ledger (so the next AM-HEADS read is graded against a deflated bar)
+        run: |
+          if [ -f collected/holdout_claims.jsonl ]; then
+            python3 -c "import sys; from pathlib import Path; sys.path.insert(0, 'scripts/research'); import holdout_lock; print('holdout claims merged:', len(holdout_lock.merge_claims([Path('collected/holdout_claims.jsonl')])))"
+          fi
+      - name: Land the result on main
+        uses: ./.github/actions/research-result
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          research-unit: ${{ inputs.research_unit }}
+          power-state: ${{ inputs.power_state }}
+          decision-rule-id: RULE-AM-ACTION-VALUE-20261124
+          decision-rule-registered-at: '2026-11-24'
+          verdict: ${{ steps.derive.outputs.verdict }}
+          read-state: ${{ steps.derive.outputs.read_state }}
+          population: ${{ steps.derive.outputs.population }}
+          n: ${{ steps.derive.outputs.n }}
+          measurement-file: measurement.json
+          extra-paths: comms/research/holdout_reads.jsonl
+          artifact-store: research/results/
+          artifact-locator: >-
+            the `measurement` block on this record (dev and holdout grade, lever firing, the per-strategy cuts). The full grade (grade_full.json: every
+            fold, every control book, per-leg cuts) is the run artifact am-av-result-<run id>, kept 30 days and never committed: MEASURED
+            (source not durably retrievable beyond that).
+          tool: scripts/research/am_action_value.py (label, fit, shard, reduce) + scripts/research/am_heads_fit.py (dump)

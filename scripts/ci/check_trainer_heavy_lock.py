@@ -81,6 +81,10 @@ DECLARED_LIGHT = {
     "scripts/research/am_policy_arm.py":
         "AM-V2 stage B (RQ-20261124-b5a1-01..05): SCORES saved LightGBM boosters (am_heads_fit.py dump output) with booster.predict() and replays brackets in "
         "pure Python over keyless Binance Vision bars; fits nothing. Runs sharded on GitHub runners (am-policy-arm.yml), never trainer-resident data, no GPU.",
+    "scripts/research/am_action_value.py":
+        "AM-V2 iteration 2 (RQ-20261124-c7e3-01..04): bounded CPU LightGBM regressors, <= 300k rows per fit, n_jobs 4, one runner per fold "
+        "(am-action-value.yml), on labels it replays itself from the committed backtest corpus + public Binance Vision klines; Actions artifacts only, "
+        "never trainer-resident data, no GPU, never routed to the trainer VM; no served model.",
     "scripts/research/am_heads_fit.py":
         "AM-V2 stage A (RQ-20261123-a9d1-01): bounded CPU LightGBM, <= 400k rows per fit, n_jobs 4, 8 heads x 9 folds (about an hour of wall "
         "time), on the cf_bar_labels corpus derived from the committed backtest trade corpus + public Binance Vision klines; the labels are "

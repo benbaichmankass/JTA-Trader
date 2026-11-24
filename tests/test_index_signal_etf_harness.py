@@ -22,3 +22,13 @@ def test_index_signal_etf_harness_self_test():
 def test_index_direction_switch_self_test():
     out = _run("index_direction_switch.py")
     assert "SELF-TEST PASS" in out and "FAIL" not in out
+
+
+def test_trade_file_names_are_artifact_safe():
+    """1e06 runs 45496877325..45496898244 ran clean but lost every output: upload-artifact refused 'trades_EEM->EDC.jsonl'."""
+    sys.path.insert(0, str(REPO / "scripts" / "research"))
+    import index_signal_etf_harness as H
+    for k in ("SPY->UPRO", "EEM->EDC", "QQQ->QQQ", 'a:b<c>d|e*f?g"h'):
+        safe = H.artifact_safe(k)
+        assert not any(c in safe for c in '":<>|*?\r\n'), safe
+    assert H.artifact_safe("SPY->UPRO") == "SPY__UPRO"
