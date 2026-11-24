@@ -19,6 +19,7 @@ Reuses that module's data fetch, folds, stats and record writer; the signal pari
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import sys
 import time
@@ -29,7 +30,9 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import index_signal_etf_harness as H  # noqa: E402
+import itertools
+
+import index_signal_etf_harness as H
 
 ATR_STOP_MULT = 2.5
 ATR_LEN = 14
@@ -53,12 +56,14 @@ def regime(i_h: np.ndarray, i_l: np.ndarray, i_c: np.ndarray) -> np.ndarray:
                 cur = 1
             elif i_c[i] < ll[i]:
                 cur = -1
-            elif cur == 1 and i_c[i] < mid[i]:
-                cur = 0
-            elif cur == -1 and i_c[i] > mid[i]:
+            elif cur == 1 and i_c[i] < mid[i] or cur == -1 and i_c[i] > mid[i]:
                 cur = 0
         st[i] = cur
     return st
+
+
+def _px(legs: dict, k: int, d: int, c: str) -> float:
+    return float(legs[d][c].to_numpy(float)[k])
 
 
 def simulate_switch(bull: pd.DataFrame, inv: pd.DataFrame, reg: np.ndarray, *, long_only_bull: bool, slip_bps: float) -> list[dict[str, Any]]:
@@ -84,7 +89,7 @@ def simulate_switch(bull: pd.DataFrame, inv: pd.DataFrame, reg: np.ndarray, *, l
         want = int(reg[k - 1])  # the regime known at the previous close sets this bar's open
         if long_only_bull and want == -1:
             want = 0
-        f = lambda d, c: legs[d][c].to_numpy(float)[k]  # noqa: E731
+        f = functools.partial(_px, legs, k)
         if pos is not None and (want != pos["dir"]):
             close(k, f(pos["dir"], "o"), "regime_exit")
         if want != stopped_in:
@@ -168,7 +173,7 @@ def self_test() -> int:
     b = simulate_switch(bull, inv, reg, long_only_bull=True, slip_bps=5.0)
     ck("S trades both sides, B trades only bull", {t["side"] for t in s} == {"bull", "inverse"} and {t["side"] for t in b} == {"bull"})
     ck("B's trades are a subset of S's bull trades (same signal, same stop)", all(t in s for t in b if t["side"] == "bull") or len(b) > 0)
-    ck("one position at a time", all(x["exit_date"] <= y["entry_date"] for x, y in zip(s, s[1:])))
+    ck("one position at a time", all(x["exit_date"] <= y["entry_date"] for x, y in itertools.pairwise(s)))
     ck("net = gross - cost", all(abs(t["net_r"] - (t["gross_r"] - t["cost_r"])) < 2e-4 for t in s))
     s2 = simulate_switch(bull, inv, reg, long_only_bull=False, slip_bps=10.0)
     ck("2x slippage doubles cost", len(s) == len(s2) and all(abs(y["cost_r"] - 2 * x["cost_r"]) < 3e-4 for x, y in zip(s, s2)))

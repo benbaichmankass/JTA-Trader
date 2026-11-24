@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import itertools
 import json
 import math
 import sys
@@ -166,7 +167,7 @@ def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
         i = cf
         if i >= n - 1 or m == 0:
             continue
-        pp, pcf, pv = piv[m - 1]
+        pp, _pcf, pv = piv[m - 1]
         if p - pp > PIVOT_LOOKBACK or not v < pv:
             continue
         if np.isnan(sma[i]) or np.isnan(mid[i]):
@@ -270,7 +271,7 @@ def simulate(frame: pd.DataFrame, sigs: list[dict[str, Any]], beta: float, hold_
 def calibrate_tp(trades_no_tp: list[dict[str, Any]]) -> dict[str, Any]:
     """K* from the first IS_FRAC of the no-TP trades (chronological): best counterfactual IS net among K with reach >= REACH_FLOOR."""
     n = len(trades_no_tp)
-    n_is = int(math.ceil(IS_FRAC * n))
+    n_is = math.ceil(IS_FRAC * n)
     isb = trades_no_tp[:n_is]
     if n_is < 10:
         return {"k_star": None, "state": "uncalibrated_too_few_is", "n_is": n_is}
@@ -296,7 +297,7 @@ def stats(trades: list[dict[str, Any]], edges: list[pd.Timestamp] | None = None)
            "by_outcome": {w: sum(1 for t in trades if t["why"] == w) for w in ("stop", "take_profit", "timeout")}}
     if edges:
         folds = []
-        for a, b in zip(edges[:-1], edges[1:]):
+        for a, b in itertools.pairwise(edges):
             sel = [t["net_r"] for t in trades if a <= pd.Timestamp(t["entry_date"]) < b or (b == edges[-1] and pd.Timestamp(t["entry_date"]) == b)]
             folds.append({"n": len(sel), "net_r": round(float(sum(sel)), 4)})
         out["folds"] = folds
@@ -490,7 +491,7 @@ def self_test() -> int:
     idx = _synthetic()
     etf = _synthetic_etf(idx, -3.0)
     f = build_frame(idx, etf)
-    for fam in SIGNALS:
+    for fam in list(SIGNALS):
         base = index_signals(f, fam)
         ck(f"{fam}: produces signals on the synthetic path", len(base) > 0)
         # PARITY: scrambling every ETF column must not move any signal; the signal used by simulate() is the one computed on the index
@@ -520,7 +521,7 @@ def self_test() -> int:
     ck("exec: entry price is the ETF open of the next session", all(abs(by_date[t["entry_date"]]["e_o"] - t["entry"]) < 1e-3 for t in s1))
     ck("exec: entry date is after the signal date", all(t["entry_date"] > t["signal_date"] for t in s1))
     ck("exec: stop maps THROUGH the ETF (inverse -> stop below entry, risk>0)", all(t["risk"] > 0 for t in s1))
-    ck("exec: one position at a time (no overlapping holds)", all(a_["exit_date"] < b["entry_date"] or a_["exit_date"] == b["entry_date"] and False or a_["exit_date"] < b["entry_date"] for a_, b in zip(s1, s1[1:])))
+    ck("exec: one position at a time (no overlapping holds)", all(a_["exit_date"] < b["entry_date"] or a_["exit_date"] == b["entry_date"] and False or a_["exit_date"] < b["entry_date"] for a_, b in itertools.pairwise(s1)))
     # a worked mapping: beta -3, idx_entry 100, idx_stop 102 -> ETF stop = entry*(1-0.06)
     mini = pd.DataFrame({"i_o": [100.0] * 4, "i_h": [101.0] * 4, "i_l": [99.0] * 4, "i_c": [100.0] * 4,
                          "e_o": [50.0] * 4, "e_h": [50.4] * 4, "e_l": [49.6] * 4, "e_c": [50.0] * 4},
