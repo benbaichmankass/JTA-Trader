@@ -1232,6 +1232,214 @@ def side_by_fold_cmd(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------------------- lever arms (2026-11-24)
+# ML-ENTRY-REVIEW-20261124 (docs/research/ml-entry-review-2026-11-24.md): the served model's side is set by MARKET-WIDE inputs
+# (live SHAP: btc_vol24 +0.255 and btc_ret24 +0.114 toward long on the 22 crypto long packages since 11-16), i.e. a contrarian
+# "buy the BTC panic" rule with no input that says which REGIME the panic is in. Two one-factor arms, both on the dev folds only:
+#   regime  = the registered recipe + 5 slow market-STATE columns (REGIME_FEATURES), against a 5-column NOISE placebo (the lever map
+#             records that the recipe overfits any extra column: 9 noise columns cost -0.017), so a pass must beat the placebo too;
+#   top1    = per decision bar, take only the best-predicted symbol among those clearing tau (the 4-5 same-sign entries in one bar are
+#             one bet), against a matched-random 1-of-k pick from the same candidates.
+# Nothing here selects a tau, refits a served model, reads a held-out window or touches the order path.
+REGIME_FEATURES = ["btc_ret168", "btc_ret720", "btc_vol_pct90d", "btc_dist_sma1200", "breadth_up168"]
+NOISE_FEATURES = [f"noise_{k}" for k in range(len(REGIME_FEATURES))]
+RANDOM_DRAWS = 100                         # matched-random 1-of-k draws per fold (top1 control), pooled
+LEVER_RULE = {"id": "RULE-ML-ENTRY-LEVER-ARMS-20261124", "min_delta_r": 0.0068, "min_t": 2.0, "min_n": 3000,
+              "min_folds_better": 6, "min_years_same_sign": 3}
+
+
+def regime_columns(cache: Path, symbols: list[str], tab: pd.DataFrame, hole_safe: bool = True) -> pd.DataFrame:
+    """The 5 REGIME_FEATURES per row of ``tab`` (joined on ts) plus NOISE_FEATURES (one N(0,1) draw per ts per column, shared across
+    symbols like the market-wide columns they stand in for; seeded). Point-in-time: every input is a bar-t-close value."""
+    btc = pd.read_pickle(cache / "BTCUSDT.pkl").reset_index(drop=True)
+    if hole_safe:
+        btc = regrid_hourly(btc)
+    c = np.log(btc["close"].astype(float))
+    lr = c.diff()
+    v24 = lr.rolling(24).std()
+    win = 2160                                          # 90 days of 1h bars
+    pct = v24.rolling(win, min_periods=win).apply(lambda w: (w[:-1] < w[-1]).mean() if np.isfinite(w[-1]) else np.nan, raw=True)
+    reg = pd.DataFrame({"ts": btc["ts"], "btc_ret168": c - c.shift(168), "btc_ret720": c - c.shift(720), "btc_vol_pct90d": pct,
+                        "btc_dist_sma1200": c - np.log(btc["close"].astype(float).rolling(1200).mean())})
+    r168 = {}
+    for sym in symbols:
+        df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if hole_safe:
+            df = regrid_hourly(df)
+        cc = np.log(df["close"].astype(float))
+        r168[sym] = pd.Series((cc - cc.shift(168)).to_numpy(), index=df["ts"])
+    r = pd.DataFrame(r168)
+    reg = reg.set_index("ts")
+    reg["breadth_up168"] = ((r > 0).sum(axis=1) / r.notna().sum(axis=1)).reindex(reg.index)
+    rng = np.random.default_rng(SEED + 1124)
+    for k in NOISE_FEATURES:
+        reg[k] = rng.standard_normal(len(reg))
+    out = reg.reindex(pd.to_datetime(tab["ts"], utc=True)).reset_index(drop=True)
+    return out[REGIME_FEATURES + NOISE_FEATURES]
+
+
+def policy_bar_topk(test: pd.DataFrame, p_long: np.ndarray, p_short: np.ndarray, tau: float, k: int = 1,
+                    rng: np.random.Generator | None = None) -> pd.DataFrame:
+    """``policy`` with a per-bar cap: at each ts, of the free symbols whose better side clears tau, take the top ``k`` by prediction
+    (``rng`` given: k drawn at random from the same candidates, the matched-random control). A skipped symbol is NOT blocked."""
+    t = test.assign(p_long=p_long, p_short=p_short).sort_values(["ts", "symbol"])
+    busy: dict = {}
+    out = []
+    for ts, g in t.groupby("ts", sort=True):
+        cand = []
+        for row in g.itertuples(index=False):
+            if row.i <= busy.get(row.symbol, -1):
+                continue
+            side = "long" if row.p_long >= row.p_short else "short"
+            p = row.p_long if side == "long" else row.p_short
+            if p > tau:
+                cand.append((p, row, side))
+        if not cand:
+            continue
+        if rng is None:
+            pick = sorted(cand, key=lambda x: (-x[0], x[1].symbol))[:k]
+        else:
+            idx = rng.choice(len(cand), size=min(k, len(cand)), replace=False)
+            pick = [cand[j] for j in sorted(idx)]
+        for p, row, side in pick:
+            out.append((row.symbol, row.ts, side, getattr(row, f"net_{side}"), getattr(row, f"gross_{side}"),
+                        getattr(row, f"cost_{side}"), int(getattr(row, f"reason_{side}")), p))
+            busy[row.symbol] = row.i + getattr(row, f"bars_{side}")
+    return pd.DataFrame(out, columns=["symbol", "ts", "side", "net_r", "gross_r", "cost_r", "reason", "pred"])
+
+
+def bar_risk(taken: pd.DataFrame) -> dict:
+    """Per decision BAR (all entries at one ts summed, each at full risk): n bars, mean R per bar, sd, mean/sd, max drawdown in R.
+    Reported, never gating: it is the concentration the per-trade sizing does not see."""
+    if taken.empty:
+        return {"n_bars": 0}
+    b = taken.groupby("ts").net_r.sum().sort_index()
+    eq = np.concatenate([[0.0], b.cumsum().to_numpy()])          # the book starts flat: a first-bar loss is a drawdown
+    dd = float((np.maximum.accumulate(eq) - eq).max())
+    sd = float(b.std(ddof=1)) if len(b) > 1 else None
+    return {"n_bars": len(b), "mean_r_per_bar": float(b.mean()), "sd_r_per_bar": sd,
+            "mean_over_sd": float(b.mean() / sd) if sd else None, "max_dd_r": dd,
+            "mean_entries_per_bar": float(len(taken) / len(b))}
+
+
+def lever_verdict(diffs: dict, folds_better: int, years_same: int, rule: dict = LEVER_RULE, control: str | None = None) -> tuple[str, str]:
+    """PASS iff n >= min_n AND delta(arm - base) >= min_delta AND week-clustered t >= min_t AND (control given) delta(arm - control)
+    >= min_delta AND arm beats base in >= min_folds_better dev folds AND the yearly delta has the PASS sign in >= min_years_same_sign
+    years. FAIL iff n ok and delta + min_t*se < min_delta. INDETERMINATE otherwise."""
+    d = diffs["vs_base"]
+    if d.get("delta") is None or d["n_a"] < rule["min_n"]:
+        return "indeterminate", f"arm n={d.get('n_a')} < {rule['min_n']} or no delta"
+    ok_ctl = control is None or (diffs[control].get("delta") is not None and diffs[control]["delta"] >= rule["min_delta_r"])
+    if (d["delta"] >= rule["min_delta_r"] and d["t"] is not None and d["t"] >= rule["min_t"] and ok_ctl
+            and folds_better >= rule["min_folds_better"] and years_same >= rule["min_years_same_sign"]):
+        return "pass", (f"delta {d['delta']:+.4f} t {d['t']:.2f}; control ok {ok_ctl}; folds {folds_better}; years {years_same}")
+    if d["delta"] + rule["min_t"] * d["se_week_clustered"] < rule["min_delta_r"]:
+        return "fail", f"delta {d['delta']:+.4f} + {rule['min_t']} se {d['se_week_clustered']:.4f} < {rule['min_delta_r']}"
+    return "indeterminate", (f"delta {d['delta']:+.4f}, t {d['t']}; control ok {ok_ctl}; folds {folds_better}; years {years_same}")
+
+
+def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | None = None) -> dict:
+    """Dev folds only (DEV_FOLDS .. HOLDOUT_START), registered recipe refit per fold, same tau / cost stack / sequencing."""
+    d_bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
+    dev = tab[tab.ts < d_bounds[-1]]
+    pooled = {k: [] for k in ("base", "regime", "placebo", "top1", "random1")}
+    folds = []
+    for a, b in itertools.pairwise(d_bounds):
+        test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=HORIZON_H + 1))]
+        if test.empty:
+            continue
+        train = purge_train(dev, a)
+        pl, ps = fit_predict(train, test, None, n_jobs)
+        rec = {"test_start": str(a.date()), "test_end": str(b.date()), "n_test_rows": len(test)}
+        tk = {"base": policy(test, pl, ps, tau)}
+        if "regime" in arms:
+            rl, rs = fit_predict(train, test, FEATURES + REGIME_FEATURES, n_jobs)
+            nl, ns = fit_predict(train, test, FEATURES + NOISE_FEATURES, n_jobs)
+            tk["regime"], tk["placebo"] = policy(test, rl, rs, tau), policy(test, nl, ns, tau)
+        if "top1" in arms:
+            tk["top1"] = policy_bar_topk(test, pl, ps, tau, 1)
+            rng = np.random.default_rng(SEED + int(a.timestamp()) % 9973)   # RANDOM_DRAWS seeded draws, pooled: the control's mean
+            tk["random1"] = pd.concat([policy_bar_topk(test, pl, ps, tau, 1, rng=rng).assign(draw=k) for k in range(RANDOM_DRAWS)],
+                                      ignore_index=True)
+        for k, v in tk.items():
+            pooled[k].append(v)
+            rec[k] = split_by_side(v)
+        folds.append(rec)
+        print(json.dumps({"fold": rec["test_start"]} | {k: (rec[k]["all"]["n"], rec[k]["all"]["mean_net_r"]) for k in tk}), flush=True)
+    cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items() if v}
+    res = {"folds": folds, "pooled": {k: split_by_side(v) | {"bar_risk": bar_risk(v)} for k, v in cat.items()}, "arms": {}}
+    pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"}}
+    for arm in arms:
+        diffs = {name: arm_diff(cat[arm], cat[ref]) for name, ref in pairs[arm].items()}
+        fb = sum(1 for f in folds if f.get(arm) and f[arm]["all"]["mean_net_r"] is not None and f["base"]["all"]["mean_net_r"] is not None
+                 and f[arm]["all"]["mean_net_r"] > f["base"]["all"]["mean_net_r"])
+        yearly = {}
+        for y in sorted({pd.Timestamp(f["test_start"]).year for f in folds}):
+            a_ = cat[arm][pd.to_datetime(cat[arm].ts, utc=True).dt.year == y]
+            b_ = cat["base"][pd.to_datetime(cat["base"].ts, utc=True).dt.year == y]
+            yearly[str(y)] = (float(a_.net_r.mean() - b_.net_r.mean()) if len(a_) and len(b_) else None)
+        ys = sum(1 for v in yearly.values() if v is not None and v > 0)
+        ctl = "vs_placebo" if arm == "regime" else "vs_random1"
+        v, why = lever_verdict(diffs, fb, ys, control=ctl)
+        res["arms"][arm] = {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
+                            "verdict": v, "why": why}
+    return res
+
+
+def lever_arms_cmd(args) -> int:
+    from datetime import date
+
+    import ml_entry_retrain as R
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    if args.fetch:
+        R.fetch_through(cache, universe(), R.plan(date.fromisoformat(args.run_date)))
+    tab = build_table(cache, universe())
+    arms = args.arm or ["regime", "top1"]
+    if "regime" in arms:
+        tab = pd.concat([tab.reset_index(drop=True), regime_columns(cache, universe(), tab)], axis=1)
+        tab = tab.dropna(subset=REGIME_FEATURES).reset_index(drop=True)
+    tau = float(args.tau) if args.tau is not None else 0.10
+    res = lever_arms(tab, tau, arms)
+    res |= {"schema": "ml_decision_entry_lever_arms/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(), "rule": LEVER_RULE,
+            "table_rows": len(tab), "table_min_ts": str(tab.ts.min()), "table_max_ts": str(tab.ts.max()), "n_symbols": int(tab.symbol.nunique()),
+            "regime_features": REGIME_FEATURES, "cost_stack": f"fee {FEE_BPS} bps rt + slippage 3.0 bps + funding 1.0 bps/8h (label_symbol net R)",
+            "read_state": "measured", "elapsed_s": round(time.time() - t0)}
+    (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    for arm, r in res["arms"].items():
+        vj = {"verdict": r["verdict"], "read_state": "measured", "n": r["diffs"]["vs_base"]["n_a"], "note": r["why"], "rule": LEVER_RULE,
+              "arm": arm, "population": (f"registered recipe refit per dev fold {DEV_FOLDS[0]}..{HOLDOUT_START} (60-perp frozen universe), tau {tau}, "
+                                         f"net R fee {FEE_BPS}+slip 3+funding 1 bps/8h, week-clustered se"),
+              "measurement": r | {"pooled": {k: res["pooled"][k] for k in res["pooled"]}}}
+        (out / f"verdict_{arm}.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+        print(json.dumps({"arm": arm, "verdict": r["verdict"], "why": r["why"]}), flush=True)
+    return 0
+
+
+def _self_test_lever_arms() -> None:
+    ts = pd.to_datetime(["2025-01-01 00:00", "2025-01-01 00:00", "2025-01-01 00:00", "2025-01-01 04:00"], utc=True)
+    test = pd.DataFrame({"symbol": ["A", "B", "C", "A"], "i": [0, 0, 0, 4], "ts": ts,
+                         "net_long": [1.0, -1.0, 0.5, 2.0], "net_short": [0.0] * 4, "gross_long": [1.0, -1.0, 0.5, 2.0],
+                         "gross_short": [0.0] * 4, "cost_long": [0.0] * 4, "cost_short": [0.0] * 4, "reason_long": [2, 1, 0, 2],
+                         "reason_short": [0] * 4, "bars_long": [24, 24, 24, 24], "bars_short": [24] * 4})
+    pl, ps = np.array([0.5, 0.9, 0.05, 0.6]), np.zeros(4)
+    tk = policy_bar_topk(test, pl, ps, 0.1, 1)
+    assert list(tk.symbol) == ["B", "A"], tk              # C is below tau; B beats A at 00:00; A was skipped, NOT blocked, so it trades at 04:00
+    full = policy(test, pl, ps, 0.1)
+    assert list(full.symbol) == ["A", "B"], full          # the uncapped policy takes A and B at 00:00 and A is then busy at 04:00
+    r = policy_bar_topk(test, pl, ps, 0.1, 1, rng=np.random.default_rng(0))
+    assert len(r) == 2 and set(r.symbol) <= {"A", "B"}
+    br = bar_risk(pd.DataFrame({"ts": ts, "net_r": [1.0, -1.0, -1.0, 0.5]}))
+    assert br["n_bars"] == 2 and abs(br["mean_r_per_bar"] + 0.25) < 1e-12 and abs(br["max_dd_r"] - 1.0) < 1e-12
+    d = {"vs_base": {"n_a": 5000, "delta": 0.02, "t": 2.5, "se_week_clustered": 0.008}, "vs_placebo": {"delta": 0.01}}
+    assert lever_verdict(d, 6, 3, control="vs_placebo")[0] == "pass"
+    assert lever_verdict(d, 5, 3, control="vs_placebo")[0] == "indeterminate"
+    d["vs_placebo"]["delta"] = 0.0
+    assert lever_verdict(d, 6, 3, control="vs_placebo")[0] == "indeterminate"
+    assert lever_verdict({"vs_base": {"n_a": 5000, "delta": -0.02, "t": -2.0, "se_week_clustered": 0.01}}, 0, 0)[0] == "fail"
+
+
 def _self_test_side_by_fold() -> None:
     ts = pd.to_datetime(["2025-01-01", "2025-01-02", "2025-01-09", "2025-01-10"], utc=True)
     tk = pd.DataFrame({"symbol": ["A"] * 4, "ts": ts, "side": ["long", "long", "short", "short"], "net_r": [-1.0, 0.0, 2.0, 1.0],
@@ -1297,12 +1505,13 @@ def _self_test() -> None:
     assert t and all(x.endswith("USDT") for x in t), t
     _self_test_universe_costed()
     _self_test_side_by_fold()
+    _self_test_lever_arms()
     print("self-test ok")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "side-by-fold"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "side-by-fold", "lever-arms"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
@@ -1323,6 +1532,7 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
     ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
     ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
+    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1"], help="lever-arms: which arm(s); default both")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -1334,6 +1544,8 @@ def main(argv=None) -> int:
         return universe_costed(a)
     if a.cmd == "side-by-fold":
         return side_by_fold_cmd(a)
+    if a.cmd == "lever-arms":
+        return lever_arms_cmd(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
