@@ -7,7 +7,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 def _run(script: str) -> str:
-    r = subprocess.run([sys.executable, str(REPO / "scripts/research" / script), "--self-test"], capture_output=True, text=True, timeout=300)
+    r = subprocess.run([sys.executable, str(REPO / "scripts/research" / script), "--self-test"], capture_output=True, text=True, timeout=300, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
     return r.stdout
 
