@@ -39,6 +39,11 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 folds; a short-side max calibrated EV of +0.02 in some folds and a side switched off in another): the same cross-fitted OOF
                 predictions, but the isotonic map is fit ONLY on the most recent training block (the one nearest the test fold), so the side EVs
                 track the current regime. Control: random thinning at the arm's per-side take rate (100 draws), as ev_calib.
+  rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
+                training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
+                vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
+                to mean 1. Graded against the SAME recipe with uniform weights (the one factor); control: the same weighting with the regime states
+                permuted across timestamps (placebo). Per-regime-cell net R (BTC 30d trend sign x vol above/below median) reported for each arm.
   sl_xwide_h48_retrain ITERATION 4 of the bracket / cost lever (sl_xwide_retrain INDETERMINATE +0.0087, t 0.59, cost 0.037 R; with a 4-ATR stop
                 the 24 h time stop ends most trades): SL 4 / TP 6 labels and trading with a 48 h horizon (H48). The training purge (7-day embargo)
                 exceeds the 48 h label; the base stays the registered 24 h SL-2 recipe.
@@ -67,7 +72,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -77,6 +82,9 @@ SEED = 20261124
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
 SL_WIDE, TP_WIDE = 3.0, 4.5
 SL_XWIDE, TP_XWIDE = 4.0, 6.0          # sl_xwide_retrain: cost per R ~ half of SL 2 at the same 1.5 reward:risk
+RSW_STATE = ["btc_ret720", "btc_dist_sma1200", "btc_vol_pct90d"]   # rsw_xwide_h48: the causal 2-axis BTC regime state (trend, vol)
+RSW_BW = 1.0                          # Gaussian kernel bandwidth in train-standardized state units (fixed, no grid)
+RSW_REF_DAYS = 7                      # the reference state = mean state over the last 7 days BEFORE the test fold (point-in-time)
 H48 = 48                              # sl_xwide_h48_retrain: the label / time-stop horizon in 1h bars (registered 24)
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
@@ -240,6 +248,52 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = S
     return m.drop(columns=["symbol", "ts"])
 
 
+# ------------------------------------------------------------------------------------------------ regime-similarity weights
+def regime_weights(train: pd.DataFrame, test_start: pd.Timestamp, placebo_seed: int | None = None, bw: float = RSW_BW) -> tuple[np.ndarray, dict]:
+    """Gaussian-kernel weights of each training row's regime state to the state just before the test fold. Point-in-time: the reference uses
+    only rows strictly before test_start (the last RSW_REF_DAYS of the training window). ``placebo_seed``: states permuted across timestamps."""
+    st = train[RSW_STATE].astype(float)
+    mu, sd = st.mean(), st.std(ddof=0).replace(0, 1.0)
+    z = ((st - mu) / sd).to_numpy()
+    ts = pd.to_datetime(train["ts"], utc=True)
+    if placebo_seed is not None:                       # permute WHOLE timestamps (all symbols share the market state at a ts)
+        uts = np.sort(ts.unique())
+        perm = pd.Series(np.random.default_rng(placebo_seed).permutation(uts), index=uts)
+        lut = pd.DataFrame(z, columns=RSW_STATE).assign(ts=ts.to_numpy()).drop_duplicates("ts").set_index("ts")
+        z = lut.reindex(perm.reindex(ts.to_numpy()).to_numpy()).to_numpy()
+    ref_mask = (ts >= test_start - pd.Timedelta(days=RSW_REF_DAYS)).to_numpy()
+    ref = np.nanmean(((st[ref_mask] - mu) / sd).to_numpy(), axis=0) if ref_mask.any() else np.zeros(len(RSW_STATE))
+    d2 = np.nansum((z - ref) ** 2, axis=1)
+    w = np.exp(-d2 / (2.0 * bw * bw))
+    w = np.where(np.isfinite(w), w, 0.0)
+    w = w / w.mean() if w.mean() > 0 else np.ones(len(w))
+    return w, {"ref_state": dict(zip(RSW_STATE, np.round(ref, 4).tolist())), "eff_n_share": float((w.sum() ** 2 / (w ** 2).sum()) / len(w))}
+
+
+def fit_predict_w(train: pd.DataFrame, test: pd.DataFrame, w: np.ndarray, n_jobs: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """M.fit_predict with per-row sample weights (same FEATURES and LGB_PARAMS)."""
+    import lightgbm as lgb
+    params = M.LGB_PARAMS if n_jobs is None else {**M.LGB_PARAMS, "n_jobs": n_jobs}
+    out = []
+    for side in ("long", "short"):
+        m = lgb.LGBMRegressor(**params)
+        m.fit(train[M.FEATURES], train[f"net_{side}"], sample_weight=w)
+        # provenance: predict -- LGBMRegressor.predict is the regressed net R of that side, not a probability
+        out.append(m.predict(test[M.FEATURES]))
+    return out[0], out[1]
+
+
+def regime_cells(taken: pd.DataFrame, test: pd.DataFrame) -> dict:
+    """Net R per BTC regime cell (30d trend sign x vol percentile above / below 0.5) of the taken decisions. Reported, never gating."""
+    if taken.empty:
+        return {}
+    st = test.drop_duplicates("ts").set_index("ts")[["btc_ret720", "btc_vol_pct90d"]]
+    s = st.reindex(pd.to_datetime(taken.ts, utc=True))
+    cell = np.where(s.btc_ret720.to_numpy() > 0, "up", "down").astype(object) + np.where(s.btc_vol_pct90d.to_numpy() >= 0.5, "_hivol", "_lovol")
+    g = pd.Series(taken.net_r.to_numpy()).groupby(cell)
+    return {k: {"n": int(v.count()), "mean_net_r": float(v.mean())} for k, v in g}
+
+
 # ------------------------------------------------------------------------------------------------ calibration
 def calibrated_predict(train: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None = None,
                        blocks: int = CALIB_BLOCKS, recent_only: bool = False) -> tuple[np.ndarray, np.ndarray, dict]:
@@ -356,6 +410,17 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
+        elif arm == "rsw_xwide_h48":
+            lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
+            seq_alt = Seq(test, alt.loc[test.index])
+            ul, us = M.fit_predict(tr_alt, test, None, n_jobs)
+            w, winfo = regime_weights(tr_alt, a)
+            wl, ws = fit_predict_w(tr_alt, test, w, n_jobs)
+            pw, _ = regime_weights(tr_alt, a, placebo_seed=SEED + fi)
+            ql, qs = fit_predict_w(tr_alt, test, pw, n_jobs)
+            tk["uniform"], tk["arm"], tk["control"] = seq_alt.run(ul, us), seq_alt.run(wl, ws), seq_alt.run(ql, qs)
+            info |= {"regime_weights": winfo, "regime_cells": {k: regime_cells(tk[k], test) for k in ("uniform", "arm", "control")}}
         elif arm in ("ev_calib", "ev_cap3", "ev_calib_recent"):
             cl, cs, cinfo = calibrated_predict(train, pl, ps, n_jobs, recent_only=arm == "ev_calib_recent")
             info["calibration"] = cinfo
@@ -405,10 +470,13 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE}
         return res
-    diffs = {"vs_base": M.arm_diff(cat["arm"], cat["base"]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
+    ref = "uniform" if arm == "rsw_xwide_h48" else "base"      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
+    if arm == "rsw_xwide_h48":
+        diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
     if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
-    fb, yearly, ys = years_and_folds(cat, folds, "arm")
+    fb, yearly, ys = years_and_folds(cat, folds, "arm", ref)
     ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
@@ -427,10 +495,13 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
         tab = pd.concat([tab.reset_index(drop=True), bc, pb], axis=1)
-    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain"):
+    if arm == "rsw_xwide_h48":
+        tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
+        tab = tab.dropna(subset=RSW_STATE).reset_index(drop=True)
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48"):
         tab = tab.reset_index(drop=True)
-        sl_tp = (SL_XWIDE, TP_XWIDE) if arm in ("sl_xwide_retrain", "sl_xwide_h48_retrain") else (SL_WIDE, TP_WIDE)
-        alt = alt_labels(cache, syms, tab, *sl_tp, horizon=H48 if arm == "sl_xwide_h48_retrain" else None)
+        sl_tp = (SL_XWIDE, TP_XWIDE) if arm in ("sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48") else (SL_WIDE, TP_WIDE)
+        alt = alt_labels(cache, syms, tab, *sl_tp, horizon=H48 if arm in ("sl_xwide_h48_retrain", "rsw_xwide_h48") else None)
         ok = alt["net_long"].notna() & alt["net_short"].notna()
         tab, alt = tab[ok.to_numpy()], alt[ok]
     return tab, alt
@@ -530,6 +601,16 @@ def _self_test() -> None:
     assert bc.xs_prev_net_long[1] == 0.0 and bc.xs_prev_stop_long[1] == 0.5 and bc.xs_prev_stop_short[1] == 0.5
     sh = shuffle_ts(tab, bc)
     assert sh.shape == bc.shape and sorted(sh.own_prev_net_long.fillna(9)) == sorted(bc.own_prev_net_long.fillna(9))
+    # regime_weights: mean 1; rows whose state matches the pre-test reference weigh most; the placebo permutes whole timestamps
+    tsr = pd.date_range("2024-01-01", periods=40, freq="1D", tz="UTC")
+    tr = pd.DataFrame({"ts": np.repeat(tsr, 2), "btc_ret720": np.repeat(np.r_[np.full(30, -0.2), np.full(10, 0.2)], 2),
+                       "btc_dist_sma1200": np.repeat(np.r_[np.full(30, -0.1), np.full(10, 0.1)], 2),
+                       "btc_vol_pct90d": np.repeat(np.r_[np.full(30, 0.9), np.full(10, 0.2)], 2)})
+    w, wi = regime_weights(tr, tsr[-1] + pd.Timedelta(days=1))
+    assert abs(w.mean() - 1.0) < 1e-9 and w[-1] > w[0] and 0 < wi["eff_n_share"] <= 1.0, (w[:3], w[-3:], wi)
+    wp, _ = regime_weights(tr, tsr[-1] + pd.Timedelta(days=1), placebo_seed=1)
+    assert abs(wp.mean() - 1.0) < 1e-9 and not np.allclose(wp, w)
+    assert np.allclose(wp[0::2], wp[1::2])            # both symbols at one timestamp share a weight under the placebo too
     print("self-test ok")
 
 
