@@ -4,7 +4,7 @@ run-name: am-policy-arm ${{ inputs.research_unit || inputs.classes }}
 # AM v2 STAGE B (row AM-V2-STAGE-B-POLICY-ARM; parent AM-V2-CF-DIRECTED): the Stage-A heads applied as a bracket policy on the counterfactual replay and
 # graded by RULE-AM-RISK-ADJUSTED-V1. plan -> train + dump the heads (or reuse a prior run's) -> sharded replay -> reduce/grade -> land one result record.
 # One dispatch = ONE action class (target | tighten | loosen | bank | combined), each its own registered unit RQ-20261124-b5a1-01..05, each with its own
-# matched random-intervention control (20 seeded draws) and the claimed AM-HEADS holdout. Tier 1: GitHub-hosted runners, no Claude, no API credits, no
+# matched random-intervention control (100 seeded draws) and the claimed AM-HEADS holdout. Tier 1: GitHub-hosted runners, no Claude, no API credits, no
 # secret in the compute jobs; it READS the pinned corpus + the keyless Binance Vision archive + the Stage-A label shards and UPLOADS artifacts; only the
 # last job writes (through the shared research-result / commit-to-main actions). It touches no trade path, no config, no VM. Gates this adds or changes: none.
 # Code: scripts/research/am_policy_arm.py (driver), scripts/research/am_heads_fit.py dump (heads). Design: docs/research/ml-am-heads-design-2026-11-23.md.
@@ -44,8 +44,8 @@ on:
         description: "Replay matrix width (balanced batches of shards)"
         default: "24"
       n_control:
-        description: "Seeded matched random-intervention draws per class (the registered number is 20)"
-        default: "20"
+        description: "Seeded matched random-intervention draws per class (the registered number is 100)"
+        default: "100"
 
 permissions:
   contents: read

@@ -2,7 +2,7 @@
 # with its rule, its matched random-intervention control and its claimed holdout. Every choice the design memo left open is written down in decision_rule.choices_where_the_design_memo_is_silent.
 # Gates this adds or changes: none. Nothing here touches the trade path; a pass is a proposal input, never an apply.
 id: RQ-20261124-b5a1-05
-title: 'AM v2 stage B (combined): the COMBINED policy as a head-driven bracket policy on the CF replay vs HOLD and 20 matched random re-timings'
+title: 'AM v2 stage B (combined): the COMBINED policy as a head-driven bracket policy on the CF replay vs HOLD and 100 matched random re-timings'
 status: queued
 cadence: once
 theme: ml_health
@@ -30,7 +30,7 @@ iteration:
   attempt: 1
   due_by: '2026-12-01'
 question: Does the COMBINED policy (target + tighten + loosen + bank at once), driven by the Stage-A heads on the run-w counterfactual replay, clear RULE-AM-RISK-ADJUSTED-V1
-  (R1 cost <= 0.05 R/trade, R2 drawdown or weekly-CVaR5 cut >= 15%, R3 >= 4 of 6 calendar folds, R4 beats >= 95% of 20 matched random re-timings of the same action),
+  (R1 cost <= 0.05 R/trade, R2 drawdown or weekly-CVaR5 cut >= 15%, R3 >= 4 of 6 calendar folds, R4 beats >= 95% of 100 matched random re-timings of the same action),
   net of the full cost stack, on the dev segment AND on the claimed 2026 holdout?
 why_this_matters: 'A pass is a Tier-3 PROPOSAL input for this action class (advice-only today, ARCHITECTURE-CANONICAL § Active management) and nothing else; a fail
   closes this class on these 9 features and sends the diagnosis to richer features (structure, market state). Operator priority 2026-11-23: active management v2 is
@@ -76,11 +76,11 @@ decision_rule:
   registered_at: '2026-11-24'
   registered_before_run: true
   statistic: 'scripts/research/am_policy_arm.py (decide, control_specs, reduce_run, unit_verdict) over scripts/research/am_risk_adjusted.grade_risk_adjusted: class
-    combined arm vs HOLD and 20 seeded matched random re-timings, on the dev segment (entry < 2026-01-01) and the claimed holdout (entry >= 2026-01-01).'
+    combined arm vs HOLD and 100 seeded matched random re-timings, on the dev segment (entry < 2026-01-01) and the claimed holdout (entry >= 2026-01-01).'
   rule: 'RULE-AM-RISK-ADJUSTED-V1 with V1 parameters UNCHANGED, per segment: R1 net R given up per baseline trade <= 0.05; R2 max-drawdown cut >= 15% OR weekly-CVaR5
-    cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds; R4 beats >= 95% of the 20 controls (net R >= the control''s AND the risk cut >= the control''s, one
+    cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds; R4 beats >= 95% of the 100 controls (net R >= the control''s AND the risk cut >= the control''s, one
     strictly); n floor 39; the lever must fire. UNIT verdict: PASS iff dev AND holdout both PASS; FAIL iff the dev segment FAILS (a necessary clause read and failed);
-    else INDETERMINATE. Every number in the policy (score cuts, levels, hysteresis, caps, fractions, seeds, 20 draws) is fixed in am_policy_arm.py before the first
+    else INDETERMINATE. Every number in the policy (score cuts, levels, hysteresis, caps, fractions, seeds, 100 draws) is fixed in am_policy_arm.py before the first
     run and never changed after a result.'
   what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; is a per-trade-R SCREEN (BOOK-SIM-REAL-SIZER owns the book-level
     $ measurement), so a pass is a Tier-3 proposal input only; says nothing about the other action classes (each is its own unit).
@@ -104,7 +104,7 @@ decision_rule:
   - 'POPULATION: the run-w backtest corpus (sha 1eb164f4), the legs that have a keyless Binance Vision bar source (crypto); equity/ETF legs have none (`no_bar_source`)
     and the ml_entry decision legs are not in this corpus; stated, not silently dropped. Fidelity of the replay to the harness (76% within 0.10 R, cfb-20261123b,
     pending re-read on w) is a property of both HOLD and the arm, so the delta cancels it; the baseline is the replay, not the harness.'
-  - 'CONTROL (R4): 20 seeded draws per class; each keeps the policy''s per-trade action count and level parameters and re-times them to uniformly drawn rows from
+  - 'CONTROL (R4): 100 seeded draws per class; each keeps the policy''s per-trade action count and level parameters and re-times them to uniformly drawn rows from
     the unmanaged trade''s open rows that satisfy the class''s head-free precondition. It never fires into a closed trade, so it is a STRONGER control than a causal
     one (conservative for the policy).'
   - 'GRADING: RULE-AM-RISK-ADJUSTED-V1 with its V1 parameters unchanged (am_risk_adjusted.grade_risk_adjusted), on the DEV segment (entry before 2026-01-01) and again
@@ -127,7 +127,7 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: HOLD is `replayed_actual` of the same replay
   matched_random:
-    draws: 20
+    draws: 100
     same_class: true
     same_count_and_level_parameters: true
     note: seeded per (trade, class, draw); re-timed to eligible open rows; see choices_where_the_design_memo_is_silent

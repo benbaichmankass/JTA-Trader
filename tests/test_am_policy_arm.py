@@ -277,8 +277,8 @@ def test_run_shard_end_to_end_on_synthetic_bars(tmp_path):
     for rr in recs:                                               # HOLD in every record is replayed_actual of the same trade
         ctx = P.make_ctx(dict(jobs[rr["k"]], trade_key=rr["k"]), [b | {"dur": SEC} for b in allrows], "1h")
         assert rr["b"][0] == round(P.run_arm(ctx)["net_r"], 6)
-        for cls, cell in rr["a"].items():
-            assert cell["n"] == 0 or len(cell["c"]) == 3
+        for cell in rr["a"].values():
+            assert cell["n"] == 0 or len(cell["cn"]) == 3
     # a trade that entered before the first fold is counted, not replayed
     early = {**jobs["k0"], "entry_time": iso(T0 - 30 * 86400), "exit_time": iso(T0 - 30 * 86400 + 20 * SEC)}
     shift = -30 * 86400
@@ -317,7 +317,7 @@ def _write_shard(out: Path, recs):
 def test_reduce_claims_the_holdout_first_and_grades_both_segments(tmp_path):
     _write_shard(tmp_path, _recs(2000, edge=True))
     ledger = tmp_path / "ledger.jsonl"
-    res = P.reduce_run(tmp_path, "target", "RQ-test", "tester", ledger, True)
+    res = P.reduce_run(tmp_path, "target", "RQ-test", "tester", ledger, True, 20)
     assert ledger.exists() and json.loads(ledger.read_text().splitlines()[0])["family"] == "AM-HEADS"
     assert (tmp_path / "holdout_claims.jsonl").exists() and res["holdout_claim"]["n_tries"] == 1
     assert res["read_state"] == "measured" and res["graduation_eligible"] is False and res["n"] == 2000
@@ -336,5 +336,5 @@ def test_a_policy_that_never_fired_is_indeterminate_not_pass(tmp_path):
     for r in recs:
         r["a"] = {"target": {"n": 0}}
     _write_shard(tmp_path, recs)
-    res = P.reduce_run(tmp_path, "target", "RQ-test", "tester", None, False)
+    res = P.reduce_run(tmp_path, "target", "RQ-test", "tester", None, False, 20)
     assert res["verdict"] == "indeterminate" and res["lever"]["trades_fired"] == 0 and res["dev"]["label"] == "lever_never_fired"

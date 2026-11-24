@@ -30,7 +30,7 @@ THE FOUR ACTION CLASSES (every number fixed before the first run; the heads' own
   bank     a resting partial limit of BANK_FRAC at close + Q50 (``bank_at``), re-placed when the level moves by LEVEL_HYST_R; banks at most once.
   combined all four at once (they are mutually consistent: tighten needs a low dip score, loosen a high one).
 
-THE MATCHED RANDOM-INTERVENTION CONTROL (R4). N_CONTROL seeded draws per class. A draw keeps, per trade, the policy's number of actions of the class and
+THE MATCHED RANDOM-INTERVENTION CONTROL (R4). N_CONTROL (100) seeded draws per class. A draw keeps, per trade, the policy's number of actions of the class and
 their level parameters (the TP / bank offset, the tighten fraction; loosen's structure level is head-free) but re-times them to rows drawn uniformly,
 without replacement, from the same decision rows that satisfy the class's head-free precondition. The control therefore carries the same intervention
 count, size and kind and none of the head's timing information. (It is drawn from the unmanaged trade's open rows, so it never fires into a closed trade:
@@ -42,7 +42,7 @@ to the holdout ledger BEFORE the holdout books are built). Unit verdict: PASS if
 or R4; else INDETERMINATE. Until BOOK-SIM-REAL-SIZER exists this is a SCREEN (``graduation_eligible: false``): a PASS is a proposal input, never an apply.
 Per-strategy and per-leg cuts are REPORTED, never graded.
 
-  python3 scripts/research/am_policy_arm.py shard  --run-id ID --out DIR --heads DIR --index I [I ...] [--classes target] [--n-control 20]
+  python3 scripts/research/am_policy_arm.py shard  --run-id ID --out DIR --heads DIR --index I [I ...] [--classes target] [--n-control 100]
   python3 scripts/research/am_policy_arm.py reduce --out DIR --classes target --unit RQ-... --reader '...' [--ledger PATH] [--no-claim]
 """
 from __future__ import annotations
@@ -73,7 +73,7 @@ import live_review_counterfactual as lrc  # noqa: E402
 SCHEMA = "am_policy_arm/1"
 COMPONENTS = ("target", "tighten", "loosen", "bank")
 CLASSES = COMPONENTS + ("combined",)
-N_CONTROL = 20
+N_CONTROL = 100
 TP_MIN_DIST_R = 0.25          # a target/bank level sits at least this far (R) beyond the close: never a market-order in disguise
 LEVEL_HYST_R = 0.10           # re-place a target/bank level only when it moves by this much (R)
 TIGHTEN_FRAC = 0.5            # new stop = original stop + this fraction of the way to the close
@@ -411,6 +411,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
     # pass 2: score every row with the head of the fold the trade entered in
     for fid, items in by_fold.items():
         X = np.vstack([m for _, m in items])
+        # provenance: predict -- Booster.predict per head: the q0.5/q0.9 remaining-MFE quantiles in R0 and the binary stop_first / dip_recovers P(label=1)
         p = heads.predict(fid, X)
         i = 0
         for item, m in items:
@@ -444,6 +445,9 @@ def _iso(ts: int, _c: Dict[int, str] = {}) -> str:
 
 
 def read_shards(out: Path) -> tuple:
+    """Every shard's records plus metas. The per-trade control cells are converted to compact numpy arrays on read (``cn`` nets, ``cx`` exit
+    seconds) so ~100 controls x ~470k trades never sit in memory as Python lists."""
+    import numpy as np
     recs, metas = [], []
     for mp in sorted((out / "am_policy").glob("*.meta.json")):
         m = json.loads(mp.read_text())
@@ -452,31 +456,62 @@ def read_shards(out: Path) -> tuple:
             continue
         metas.append(m)
         with gzip.open(dp, "rt", encoding="utf-8") as fh:
-            recs.extend(json.loads(ln) for ln in fh if ln.strip())
+            for ln in fh:
+                if not ln.strip():
+                    continue
+                r = json.loads(ln)
+                for cell in r["a"].values():
+                    if cell.get("c"):
+                        cell["cn"] = np.array([c[0] for c in cell["c"]], dtype="float64")
+                        cell["cx"] = np.array([c[1] if c[1] is not None else -1 for c in cell["c"]], dtype="int64")
+                        del cell["c"]
+                recs.append(r)
     return recs, metas
 
 
-def build_books(recs: Sequence[dict], cls: str, n_control: int) -> Dict[str, List[dict]]:
-    """HOLD, the class arm ``cls`` and its controls ``cls_C00..`` as lists of trade dicts for ``am_risk_adjusted``. A trade whose lever never fired
-    carries the HOLD cell in every arm (it is part of every book)."""
-    books: Dict[str, List[dict]] = {"H": [], cls: []}
-    for d in range(n_control):
-        books[f"{cls}_C{d:02d}"] = []
-    for r in recs:
+class LazyBook:
+    """A control book as arrays: iterating yields the trade dicts ``am_risk_adjusted`` reads, built on demand (never ~47M dicts at once)."""
+
+    def __init__(self, entries: List[str], net, exit_ts):
+        self.entries, self.net, self.exit_ts = entries, net, exit_ts
+
+    def __len__(self) -> int:
+        return len(self.entries)
+
+    def __iter__(self):
+        for e, n, x in zip(self.entries, self.net, self.exit_ts):
+            yield {"entry_time": e, "exit_time": _iso(int(x)), "net_r": float(n)}
+
+
+def build_books(recs: Sequence[dict], cls: str, n_control: int) -> Dict[str, Any]:
+    """HOLD, the class arm ``cls`` and its controls ``cls_C00..`` for ``am_risk_adjusted``. A trade whose lever never fired carries the HOLD cell in
+    every arm (it is part of every book)."""
+    import numpy as np
+    n = len(recs)
+    books: Dict[str, Any] = {"H": [], cls: []}
+    cn = np.empty((n, n_control), dtype="float64") if n_control else None
+    cx = np.empty((n, n_control), dtype="int64") if n_control else None
+    ents: List[str] = []
+    for i, r in enumerate(recs):
         e = r["e"] if isinstance(r["e"], str) else str(r["e"])
+        ents.append(e)
         b = r["b"]
         base_x = b[1] if b[1] is not None else 0
-        books["H"].append({"entry_time": e, "exit_time": _iso(base_x), "net_r": b[0], "mfe_r": b[2]})
+        h = {"entry_time": e, "exit_time": _iso(base_x), "net_r": b[0], "mfe_r": b[2]}
+        books["H"].append(h)
         a = r["a"].get(cls, {"n": 0})
         if a["n"] == 0:
-            books[cls].append(books["H"][-1])
-            for d in range(n_control):
-                books[f"{cls}_C{d:02d}"].append(books["H"][-1])
+            books[cls].append(h)
+            if n_control:
+                cn[i, :], cx[i, :] = b[0], base_x
             continue
         p = a["p"]
         books[cls].append({"entry_time": e, "exit_time": _iso(p[1] if p[1] is not None else base_x), "net_r": p[0], "mfe_r": p[2]})
-        for d, c in enumerate(a["c"][:n_control]):
-            books[f"{cls}_C{d:02d}"].append({"entry_time": e, "exit_time": _iso(c[1] if c[1] is not None else base_x), "net_r": c[0]})
+        if n_control:
+            cn[i, :] = a["cn"][:n_control]
+            cx[i, :] = np.where(a["cx"][:n_control] < 0, base_x, a["cx"][:n_control])
+    for d in range(n_control):
+        books[f"{cls}_C{d:02d}"] = LazyBook(ents, cn[:, d], cx[:, d])
     return books
 
 
