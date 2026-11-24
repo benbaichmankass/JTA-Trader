@@ -1,7 +1,7 @@
 # Authored 2026-11-24 by lane RESEARCH-OPS-20261124-1447 (Tier 1, research-ops pass dispatched by the JTA Trader manager) from the diagnosis in `iteration`. Rule registered BEFORE the run. Gates this adds or changes: none.
 id: RQ-20261124-bd30-02
 title: 'DIRECTION lever never tested on qqq_pullback_1h: does a long-only side filter (--side-filter=long) beat the declared bidirectional leg net of cost over QQQ 1h 2019-01-01..2026-10-15, 6 folds?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -124,3 +124,14 @@ related:
 - research/levers/qqq_pullback_1h.yaml
 - research/levers/spy_pullback_1h.yaml
 last_dispatched_at: '2026-11-24T15:57:18+00:00'
+grading:
+  attested: RULERQ20261124bd3002
+  auto: true
+  decision_rule_id: RULERQ20261124bd3002
+  evidence:
+  - research/results/RQ-20261124-bd30-02/45431516161.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
