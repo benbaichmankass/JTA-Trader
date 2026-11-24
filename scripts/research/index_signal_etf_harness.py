@@ -451,12 +451,22 @@ def unit_verdict(per_pair: dict[str, dict[str, Any]]) -> str:
     return "fail"
 
 
+def artifact_safe(name: str) -> str:
+    """A file-name fragment actions/upload-artifact accepts: it refuses " : < > | * ? \\r \\n". "SPY->UPRO" -> "SPY__UPRO"."""
+    out = name.replace("->", "__")
+    for ch in '":<>|*?\r\n':
+        out = out.replace(ch, "_")
+    return out
+
+
 def write_record(out: Path, unit: str, rule_id: str, rule: str, family: str, per_pair: dict[str, dict[str, Any]], extra: dict[str, Any],
                  population: str, verdict_override: str | None = None) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     slim = {k: {kk: vv for kk, vv in v["res"].items() if kk != "trades"} | {"grade": v["grade"]} for k, v in per_pair.items()}
     for k, v in per_pair.items():
-        (out / f"trades_{k}.jsonl").write_text("\n".join(json.dumps(t) for t in v["res"]["trades"]) + "\n")
+        # artifact-safe name: actions/upload-artifact refuses '>' (and ':' etc.), so "SPY->UPRO" lands as "SPY__UPRO" (1e06 runs 45496877325.. lost
+        # every output to an upload failure on "trades_EEM->EDC.jsonl")
+        (out / f"trades_{artifact_safe(k)}.jsonl").write_text("\n".join(json.dumps(t) for t in v["res"]["trades"]) + "\n")
     verdict = verdict_override or unit_verdict(per_pair)
     passed = [k for k, v in per_pair.items() if v["grade"]["verdict"] == "pass"]
     total_n = sum(v["res"]["n"] for v in per_pair.values())
