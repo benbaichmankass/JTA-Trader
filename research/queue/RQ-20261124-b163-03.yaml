@@ -1,0 +1,128 @@
+# Authored 2026-11-24 by lane QUEUE-FILL-20261124 (Tier 1 research, spec-only), dispatched by the JTA Trader manager (Manager Session 2026-11-22a), from the two-week
+# iteration plan (lane ITERATION-PLAN-2W-20261123, research/programmes/03-strategy-improvement.yaml). Decision rule registered BEFORE the run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ20261124b16303
+  regime_robustness: 'Reported with the result, not graded here (the grade is the rule above): per-year net R table for every arm, long-side and short-side net R separately, and the largest single
+    year share of total net R. Set before the run.'
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C)
+    >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 4 candidate arm(s) here) and the follow-up is ONE
+    confirmation unit on a disjoint in-hand window, then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes with n(A)
+    >= 39: THIS arm grid is closed on fade_breakout_4h for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved
+    closest. Thresholds and the arm grid are not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg fade_breakout_4h --grade replace, SOLUSDT 4h 2021-11-14 .. 2026-11-17 (--days 1830) and 6 folds by entry time, net of the full cost
+    stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: ASIA=--skip-hours=0,1,2,3,4,5,6,7; T25=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=2.5;
+    T50=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=5.0; TO24=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=24; TO96=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=96. Per arm: n, net_total_r, max_drawdown_r,
+    net R per fold.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case. The S_ASIA base arm is itself only a lead (b4c1-01), so even a PASS here is two stacked leads. A
+    PASS needs a live producer for the lever, a disjoint-window confirmation and a Tier-3 declare. The take-profit (50 R sentinel) is not tested here. The arm grid is the whole search.
+id: RQ-20261124-b163-03
+intervention_controls:
+  not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+iteration:
+  attempt: 3
+  diagnosis: 'b4c1-01 PASS on the session family but the leg is still net negative (-8.53 R): next family is exit, not a promotion.'
+  due_by: '2026-12-01'
+  from_result: RQ-20261123-b4c1-01
+  levers:
+  - exit
+  map_entries:
+  - research/levers/fade_breakout_4h.yaml
+  search: 'exit family: trail_mult 2.5/5.0 and timeout_bars 24/96, one factor each against the S_ASIA base arm.'
+  subject: fade_breakout_4h
+  subject_kind: strategy_leg
+  verdict_read: pending
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (E35 floor). expected_n=112 is a MEASURED base-arm count: the S_ASIA arm on SOLUSDT in RQ-20261123-b4c1-01 (n=112 of the 146 A-arm trades).
+    The harness skip-hours arm is the same flag here, so the base arm should reproduce n=112; a different n is reported. Below 39 the unit grades INDETERMINATE. FOUR candidates are counted in
+    the denominator (no best-of picking).'
+  design: one_sample
+  effect_units: sd
+  expected_n: 112
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
+priority: 2
+programme: P3
+question: On fade_breakout_4h over SOLUSDT 4h, 2021-11-14 .. 2026-11-17 (the population b4c1-01 used), holding the S_ASIA skip (UTC hours 0-7) fixed in every arm, does any one-factor exit arm
+  (trail_mult 2.5, trail_mult 5.0, timeout_bars 24, timeout_bars 96) beat the S_ASIA base arm by the registered bar, net of the harness cost stack?
+related:
+- RQ-20261123-b4c1-01
+- RQ-20261118-abab-17
+- research/levers/fade_breakout_4h.yaml
+roadmap:
+- L-LADDER
+routing:
+  basis: Estimate from comparable exit_lever_ablation runs (a538-*, abab-*; measured actual/est ~0.12); the first run replaces it.
+  est_minutes: 60
+  needs_gpu: false
+  needs_internet: true
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - fade_breakout_4h
+  - --arm
+  - ASIA=--skip-hours=0,1,2,3,4,5,6,7
+  - --arm
+  - T25=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=2.5
+  - --arm
+  - T50=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=5.0
+  - --arm
+  - TO24=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=24
+  - --arm
+  - TO96=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=96
+  - --symbol
+  - SOLUSDT
+  - --days
+  - '1830'
+  - --grade
+  - replace
+  - --baseline
+  - ASIA
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-b163-03
+  timeout_minutes: 150
+status: queued
+theme: live_strategy
+title: 'EXIT lever family never tested on fade_breakout_4h (SOLUSDT, S_ASIA session as the base): trail multiple 2.5/5.0 and timeout 24/96 bars vs the declared 3.5 / 48, net of cost?'
+value:
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+why_this_matters: 'b4c1-01 (2026-11-23) PASSED S_ASIA on SOLUSDT (net -8.53 vs -28.82 R, n 112 vs 146) but the leg stays NET NEGATIVE at -8.53 R: the session lever shrinks the loss, it does not
+  create an edge, and the pass is a Tier-3 lead only. The lever map lists exit as the untested family (entry, filter, direction tested). The declared exit is trail_mult 3.5 with timeout_bars 48
+  and a 50 R sentinel TP (not touched here: the TP doctrine is its own row). The diagnosis step the manager asked for is the exit family on the same population with the session lever held constant,
+  so the unit isolates the exit effect from the session effect. SOLUSDT, not the leg own BTCUSDT, because the leg own n is 28 (comms/strategy_evidence/fade_breakout_4h.json), below the 39 floor;
+  the pooled-symbol population is the one that powers it and is stated, not hidden.'

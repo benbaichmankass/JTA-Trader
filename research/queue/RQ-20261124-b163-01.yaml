@@ -1,0 +1,128 @@
+# Authored 2026-11-24 by lane QUEUE-FILL-20261124 (Tier 1 research, spec-only), dispatched by the JTA Trader manager (Manager Session 2026-11-22a), from the two-week
+# iteration plan (lane ITERATION-PLAN-2W-20261123, research/programmes/03-strategy-improvement.yaml). Decision rule registered BEFORE the run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ20261124b16301
+  regime_robustness: 'Reported with the result, not graded here (the grade is the rule above): per-year net R table for every arm, long-side and short-side net R separately, and the largest single
+    year share of total net R. Set before the run.'
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C)
+    >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 2 candidate arm(s) here) and the follow-up is ONE
+    confirmation unit on a disjoint in-hand window, then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes with n(A)
+    >= 39: THIS arm grid is closed on qqq_pullback_1h for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved
+    closest. Thresholds and the arm grid are not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg qqq_pullback_1h --grade replace, the window 2019-01-01 .. 2026-10-15 (Dukascopy QQQ 1h) and 6 folds by entry time, net of the full cost
+    stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A=; VL20=--vol-skip-below-pctl=0.2; VL30=--vol-skip-below-pctl=0.3.
+    Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever and a Tier-3 declare. The arm grid is the whole
+    search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+id: RQ-20261124-b163-01
+intervention_controls:
+  not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+iteration:
+  attempt: 1
+  diagnosis: f3a8-01 PASS (pass_unconfirmed -> confirmed lead); the registered follow-up is the regime_gating family unit.
+  due_by: '2026-12-01'
+  from_result: RQ-20261123-f3a8-01
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/qqq_pullback_1h.yaml
+  search: 'regime_gating family: cold-vol entry skip, arms VL20 and VL30, one factor each against the declared config A, 6-fold replace grade.'
+  subject: qqq_pullback_1h
+  subject_kind: strategy_leg
+  verdict_read: pending
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n=210 is a MEASURED A-arm count on the sub-window 2019-01-01..2025-06-01 (RQ-20261123-f3a8-01,
+    Dukascopy QQQ 1h); the registered window adds 2025-06-02..2026-10-15, so n(A) is at least 210. Below 39 the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar is a materiality bar,
+    not a powered effect.
+  design: one_sample
+  effect_units: sd
+  expected_n: 210
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
+priority: 2
+programme: P3
+question: 'On qqq_pullback_1h, over 2019-01-01 .. 2026-10-15 (Dukascopy QQQ 1h, the window f3a8-01 confirmed the leg on, extended to the record end), with 6 folds and the harness bar, does either
+  of the arms VL20/VL30 (cold-vol entry skip, --vol-skip-below-pctl 0.2/0.3) beat the declared leg A by the registered bar, net of the harness cost stack? Lever map: research/levers/qqq_pullback_1h.yaml
+  (regime_gating untested).'
+related:
+- RQ-20261123-f3a8-01
+- research/levers/qqq_pullback_1h.yaml
+- RQ-20261123-c5d2-02
+roadmap:
+- L-REGIME
+- L-LADDER
+routing:
+  basis: Estimate from comparable exit_lever_ablation runs (a538-*, abab-*; measured actual/est ~0.12); the first run replaces it.
+  est_minutes: 40
+  needs_gpu: false
+  needs_internet: true
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - VL20=--vol-skip-below-pctl=0.2
+  - --arm
+  - VL30=--vol-skip-below-pctl=0.3
+  - --days
+  - '3000'
+  - --start
+  - '2019-01-01'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-b163-01
+  timeout_minutes: 150
+status: queued
+theme: regime
+title: 'REGIME lever family never tested on qqq_pullback_1h: cold-vol entry skip VL20/VL30 (--vol-skip-below-pctl 0.2/0.3) vs the declared leg, net of cost? [follow-up of RQ-20261123-f3a8-01 PASS]'
+value:
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+why_this_matters: 'f3a8-01 (2026-11-23) CONFIRMED the leg: net 47.3 R, n 210, 5 of 6 folds on 2019-01..2025-06, disjoint from the record window. Its registered pass_action names the regime_gating
+  family unit as the next step. The leg is an orphan with no live iteration unit; regime_gating is one of four untested families (regime_gating, timeframe, symbol_set, sizing_vs_cost) on its lever
+  map. The cold-vol skip is the cheapest regime lever the harness supports for a pullback builder (eth/xrp/sol/ada_pullback_2h each ran it; gdx_pullback_1d passed it), so this is the one-factor
+  first reading, not a sweep. A PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this arm grid on this leg only.'
