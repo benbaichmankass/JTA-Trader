@@ -35,6 +35,10 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
   ev_cap3       ev_calib plus at most CAP_K entries per decision bar, ranked by calibrated EV; control: a random CAP_K-of-k pick from the same
                 calibrated candidates (100 draws).
 
+  ev_calib_recent ITERATION 3 of the calibration lever (ev_calib INDETERMINATE -0.0099: the whole-window isotonic map is non-stationary across
+                folds; a short-side max calibrated EV of +0.02 in some folds and a side switched off in another): the same cross-fitted OOF
+                predictions, but the isotonic map is fit ONLY on the most recent training block (the one nearest the test fold), so the side EVs
+                track the current regime. Control: random thinning at the arm's per-side take rate (100 draws), as ev_calib.
   sl_wide_retrain  ITERATION 2 of sl_wide (FAIL: the SL-2-trained predictions lose more gross edge under SL 3 than the cost they save): the recipe
                 REFIT on SL 3 / TP 4.5 labels per fold and traded under that bracket, vs the SL-2 recipe under SL 2. Control (reported): random-side
                 entries under both brackets, as sl_wide.
@@ -58,7 +62,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -231,7 +235,7 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = S
 
 # ------------------------------------------------------------------------------------------------ calibration
 def calibrated_predict(train: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None = None,
-                       blocks: int = CALIB_BLOCKS) -> tuple[np.ndarray, np.ndarray, dict]:
+                       blocks: int = CALIB_BLOCKS, recent_only: bool = False) -> tuple[np.ndarray, np.ndarray, dict]:
     """Cross-fitted isotonic calibration: the training window is cut into ``blocks`` time blocks; each block is scored by the recipe fitted on the
     other blocks (rows within the label horizon of the block's edges are dropped from that fit), the out-of-fold predictions are mapped to realised
     net R by an increasing isotonic fit per side, and the map is applied to the full-train predictions ``pl`` / ``ps`` of the test rows."""
@@ -251,6 +255,10 @@ def calibrated_predict(train: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jo
     for side, p in (("long", pl), ("short", ps)):
         y = tr[f"net_{side}"].to_numpy()
         ok = np.isfinite(oof[side])
+        if recent_only:                       # ev_calib_recent: fit the map on the last time block only (nearest the test fold)
+            last = np.zeros(len(tr), bool)
+            last[edges[-1]] = True
+            ok &= last
         iso = IsotonicRegression(increasing=True, out_of_bounds="clip").fit(oof[side][ok], y[ok])
         # provenance: predict -- IsotonicRegression.predict maps a regressed net R to the calibrated expected net R (R units), not a probability
         out.append(iso.predict(p))
@@ -341,10 +349,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
-        elif arm in ("ev_calib", "ev_cap3"):
-            cl, cs, cinfo = calibrated_predict(train, pl, ps, n_jobs)
+        elif arm in ("ev_calib", "ev_cap3", "ev_calib_recent"):
+            cl, cs, cinfo = calibrated_predict(train, pl, ps, n_jobs, recent_only=arm == "ev_calib_recent")
             info["calibration"] = cinfo
-            if arm == "ev_calib":
+            if arm in ("ev_calib", "ev_calib_recent"):
                 tk["arm"] = seq.run(cl, cs, tau=EV_TAU)
                 nb = tk["base"].side.value_counts()
                 na = tk["arm"].side.value_counts()
