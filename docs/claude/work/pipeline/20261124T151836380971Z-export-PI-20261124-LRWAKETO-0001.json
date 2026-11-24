@@ -1,0 +1,16 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261124-LRWAKETO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, alert RUN cancelled live-review-wake 04:13Z",
+    "rerun": "mcp actions_list list_workflow_runs live-review-wake.yml; check conclusion=cancelled and Wake-step duration vs number of packages in that slot"
+  },
+  "state": "queued",
+  "what": "live-review-wake hit its 10-minute job timeout (timeout-minutes: 10, .github/workflows/live-review-wake.yml:44). MEASURED: run 45323605225 (04:02Z 2026-11-24) Wake step ran 04:03:39-04:12:53 and was cancelled; it had 2 due packages (XRP, SOL ml_entry on bybit_2) and its PR #17895 wake comment landed at 04:12:53, right at the kill. Prior runs 541/542 (1 package each) took ~4-5 min, so the Wake step costs ~4-5 min PER due package (checkout itself is ~55s). With 3+ packages due in one slot the run will be killed before posting, and a real-money adverse_r event could go unannounced. Fix: find the per-package cost (packet build / evidence commit to live-review/rows) and make it parallel or cheaper; raise the timeout only as a stopgap. Tooling = Tier 1. RECURRED 2026-11-24 ~08:02Z: a second live-review-wake run was cancelled at the timeout (alert RUN cancelled 08:12Z) in the 08:00 judgement slot with 2 packages due (XRP bybit_2, ADA bybit_portfolio). The 08:15Z structure_break for XRP was posted by the next run, so no event was lost yet. 2 timeouts in ~4h -> raise priority. 3rd timeout 12:02Z (4 pkgs). STOPGAP MERGED 2026-11-24 12:45Z: PR #28553 (7a6e679c) timeout-minutes 10 -> 25. Root fix (per-package parallelism / cheaper packet build) still open; observe: no RUN cancelled live-review-wake alerts after 12:45Z."
+}

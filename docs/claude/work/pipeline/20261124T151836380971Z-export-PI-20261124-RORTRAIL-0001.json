@@ -1,0 +1,16 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261124-RORTRAIL-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, alerts 2026-11-24T00:09Z and 00:57Z",
+    "rerun": "GET /api/bot/alerts?since=<ts> and grep 'EXIT-PATH GAP' 'DIVERGENT'; or run src/runtime/package_leg_coverage over open packages"
+  },
+  "state": "queued",
+  "what": "Stage-2 mirror parity break: a trail/stop move reaches only the LINKED (real-money) leg; the mirror sibling keeps its entry-time stop at the venue. MEASURED 2026-11-24: pkg-b7456c45491e44c2 (ml_entry ADAUSDT long): bybit_2 #8459 SL 0.14421 vs bybit_portfolio #8460 SL 0.14299 (LTR mechanics flag 00:09Z; EXIT-PATH GAP 'divergent' 00:57Z, src/runtime/package_leg_coverage.py). Real money is protected as declared; the mirror's P&L diverges from live, and the mirror's net-of-cost window is the Stage-2 DEMOTION signal (OPERATING-PLAN s.2), so this corrupts the demotion input. Fix: propagate every stop/TP amend to all sibling legs of the package (the same apply path live_review_apply / the trail uses), or re-sync siblings on each monitor pass; add a parity test. Order-path change = Tier 2. MEASURED 2026-11-24T04:01Z (second symptom, same root): the live-review CLOSE LR-20261124T0307Z applied to bybit_2 at 03:12Z did NOT close the bybit_portfolio mirror -- LTR packet LR-20261124T0401Z shows bybit_portfolio position True, SL 0.143 / TP 0.1568. So package-level actions (close as well as stop moves) reach only the linked leg; the fix must propagate close/reduce too, not only SL/TP amends."
+}

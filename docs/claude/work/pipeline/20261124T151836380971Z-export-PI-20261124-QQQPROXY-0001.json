@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261124-QQQPROXY-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "operator popup 2026-11-24 ~09:15Z to Manager Session 2026-11-22a",
+    "rerun": "ls research/queue | grep -i qqq; python3 scripts/ops/strategy_status.py | grep qqq"
+  },
+  "state": "queued",
+  "what": "OPERATOR DECISION (popup, verbatim 'Cheaper proxy instruction'): qqq_pullback_1h (re-test PASS RQ-20261123-f3a8-01, net +47.3R full cost stack, 5/6 folds) goes toward real money via a cheaper same-index stand-in for QQQ, which must pass its OWN Stage-0 test before alpaca_live. Constraints: Alpaca brackets need whole shares; alpaca_live free cash is small; live does not short, so the real-money leg is long-only (shorts stay on paper). Candidates to test: a lower-priced unlevered Nasdaq-100 ETF (check price vs free cash); a 2x/3x Nasdaq ETF changes exposure and needs re-sizing, state it. Unit: the declared qqq_pullback_1h signal on QQQ, executed on the proxy, full cost stack on the proxy, disjoint-window rule registered before the run, long-only arm reported. Also state the minimum free cash for 1 share at 2% risk."
+}
