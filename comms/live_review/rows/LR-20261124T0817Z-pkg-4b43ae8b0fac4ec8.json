@@ -1,0 +1,163 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261124T0817Z-pkg-4b43ae8b0fac4ec8",
+ "reviewed_at": "2026-11-24T08:21:00Z",
+ "order_package_id": "pkg-4b43ae8b0fac4ec8",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "structure_break",
+  "level": "2026-11-24T07:00:00Z",
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-11-24T08:17:00Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.5118,
+  "open_r": -0.1331,
+  "peak_provenance": "estimated",
+  "peak_r": 0.3787,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.929,
+  "tp": 0.9982999999999999
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 3,
+  "giveback_r": 0.5118,
+  "open_r": -0.1331,
+  "peak_r": 0.3787,
+  "r_to_stop": 0.432,
+  "r_to_target": 1.6183
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.929 / tp 0.9982999999999999 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 69,
+   "mean_r": -0.3595,
+   "sd_r": 1.01,
+   "worst_r": -1.1065,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 69,
+   "mean_r": -0.3916,
+   "sd_r": 0.3876,
+   "worst_r": -1.5529,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 69,
+   "mean_r": -0.1943,
+   "sd_r": 0.0201,
+   "worst_r": -0.2439,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261124T0817Z-pkg-4b43ae8b0fac4ec8.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.1652,
+  "worst_case_delta_r": 0.8626,
+  "basis": "judgement",
+  "confidence": "suggestive",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "STRUCTURE_BREAK confirmed: 07:00Z close broke since-entry low close, 1h chop (ADX 17.8), peak +0.38R gave back 0.51R, open -0.13R. Table hold n=69 mean -0.360R vs close -0.194R (+0.165R, SE 0.122, ~1.35 SE so modest; worst -1.11 vs -0.24; 78% of this peak-then-pullback cell gave back >half). Tighten atr:1.5 -0.392 worse than hold, atr:1.0/2.0 invalid levels. Caveat: corpus lacks the structure SL (arm F), so hold is slightly understated. Book is 10 correlated long crypto/beta packages with ADA/BTC/ETH flat-to-negative, so exit cheaply rather than add stacked beta risk.",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": true,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": true,
+  "would_apply": true,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "judgement: hold n=69 mean -0.3595R vs close -0.1943R (ev_cost_r -0.1652 SE 0.1224), table measured not judged",
+  "tighten atr:1.0 and atr:2.0 invalid_level (2/4 inapplicable); atr:1.5 mean -0.3916 worse than hold",
+  "table caveat: corpus does not model structure SL (arm F mean +0.037 overall); 8 mfe_replay_mismatch of 69",
+  "missing_inputs: atr_now_over_entry, vol_now, cell_entry, funding, news not available",
+  "live_vs_backtest: ml_entry live -7.61R over 54 closed (12.7th pct) CONSISTENT with backtest",
+  "mechanics match on both accounts; first review of this package (previous_review null)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.929 / TP 0.9983, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.929 / TP 0.9983, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuJM94SKzSGXZ4NDv1k",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "1725b585bb67cedeeb92219ffe3ee472fcb867600cb411f056196616adb69cbd",
+ "forecast": {
+  "thesis": "1h close broke the since-entry low (0.9418) after rejecting the 0.9609 high, with 1h ADX 17.8 chop; price is more likely to retest the 0.9313 swing low than reclaim 0.9609, so holding risks ~-0.36R expected vs -0.19R now.",
+  "direction": "against_trade",
+  "target_px": 0.9313,
+  "p_target": 0.5,
+  "invalidation_px": 0.9609,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: high 0.9609, low 0.9418, last close 0.9433",
+   "chart.swings: lows 0.9313 / 0.9332 within 1.1 ATR",
+   "chart.htf: 4h last bar closed back down from 0.9609",
+   "priced_options: hold -0.3595 vs close -0.1943 n=69",
+   "book: correlated long crypto packages"
+  ]
+ }
+}
