@@ -54,22 +54,27 @@ Out of scope on purpose: `src/`, `tests/`, tools: hold **synthetic** fixtures (`
 
 ## 3. Dry-run result (scratch mirror, nothing pushed; operator scope decision 2026-11-23: "Delete backlogs + iterate")
 
-Final dry run against `main` `6a2d6bbeb67b`, rules as committed (`PURGE_WINDOW` default 120, wrapped-line rules, backlog deletion):
+Final dry run against `main` `6a2d6bbeb67b` (2026-11-24), rules as committed (`PURGE_WINDOW` default 120, wrapped-line and cross-line rules, backlog deletion, narrow classifier):
 
 | Check | Result |
 |---|---|
-| Backlogs deleted from ALL history | `docs/claude/{health,ml,performance,research}-review-backlog.json`: 4 paths, 3,004 commits touched them, **0 remain** in rewritten history. Checked retired first: none exists on `main` (retired 2026-09-21; copies live in `docs/archive/2026-09-21-operating-reset/registers/`), the 45 files naming them are path lists in guards/docs/`.gitattributes` that tolerate absence, so the tip tree is unaffected. Archived copies under `docs/archive/**` are **redacted, not deleted** (same rules) |
-| Commits | all reachable from branches + tags rewritten; 2,377 refs kept; `refs/pull/*` dropped from the rewrite input |
-| Old tip -> new tip | `6a2d6bbeb67bd34ad4f9ea6f6f3348f00598de20` -> `39ba6215da58efee435b71a0cc73604ca07b1381` |
-| Tip tree vs current main | 112,099 paths both sides; **0 added, 0 removed**; **1,743 files differ**; all 6,506 changed lines are `null` (5,420) / `[redacted]` (1,261); 0 line-count changes; 0 unexplained |
-| Where the tip changed | `comms/research/utilization` ~1,033 (`budget_usd`), `docs/claude/work` ~209, `comms/reports` ~66, `docs/archive` ~18, `comms/research/RQ-*`, `comms/strategy_evidence`, gates, scores jsonl, ROADMAP |
-| Residual probe (`verify`) | **(i) real balance/equity/cash values: 0 unclassified** after one reviewed entry. **(ii) allowlisted non-balance numbers: 1,929 matches** (`firm_limit_or_floor` 1,178; `config_threshold` 518; `pnl_fee_price` 181; `demo_floor_stage_or_package_pnl` 33; `counts_and_ratios` 19) plus 1 reviewed delta (`delta_vs_redacted_start`) |
+| Backlogs deleted from ALL history | `docs/claude/{health,ml,performance,research}-review-backlog.json`: 4 paths, 3,004 commits touched them, **0 remain**. Retired first: none on `main` (retired 2026-09-21; copies in `docs/archive/2026-09-21-operating-reset/registers/`); the 45 files naming them are path lists in guards/docs/`.gitattributes` that tolerate absence. `docs/archive/**` copies are redacted, not deleted |
+| Old tip -> new tip | `6a2d6bbeb67bd34ad4f9ea6f6f3348f00598de20` -> `3d9c540c82e47d636049ee6578b8d078a9db464c`; 2,377 refs kept; `refs/pull/*` dropped from the rewrite input |
+| Tip tree vs current main | 112,099 paths both sides; **0 added, 0 removed**; **2,275 files differ**; all 7,874 changed lines are `null` (5,585) / `[redacted]` (2,623); 0 line-count changes; 0 unexplained |
+| Residual probe (`verify`) | **REAL: 0 matches, 0 contexts.** ALLOWED: 898 matches in 68 distinct contexts, each by a named narrow rule (below) |
 | Size (packed) | 2.32 GiB before (with pull refs) -> 2.17 GiB after |
-| Wall time | rewrite 19-26 min, `verify` ~25 min on 4 vCPU / 16 GB |
+| Wall time | rewrite **43-48 min** (cross-line pass), `verify` ~25 min on 4 vCPU / 16 GB. **Budget 90+ min for a dry run; start it early.** |
 
-`verify` prints (i) unclassified candidates, which the operator or manager must read, and (ii) counts by named allowlist rule (`ALLOW` in the script: reviewed regexes for firm drawdown/daily-loss limits, config thresholds, P&L / fee / price, demo-floor stage names, counts and ratios).
-Two iterations of misses were fixed by this loop (second amount beyond the window; amount and trigger word split across a wrapped line; `$N start`). **Honest limit:** 0 means "the probe, after the allowlist, finds none". The probe and
-the rules are related patterns, so a phrasing neither covers survives, and the allowlist (ii) is a classification by regex, not a proof that each of 1,929 matches is a non-balance. Read the (ii) rule list once before the real run; re-run `verify` on the day.
+`verify` classification (manager review 2026-11-23: the first allowlist was too broad). PRECEDENCE: (1) a NARROW rule on the key or phrase the amount is directly attached to; (2) else a balance-class word
+(balance, equity, net_liq, cash, buying power, wallet, account value, nav) within 40 chars of the amount means REAL; (3) else a narrow context rule; (4) else REAL. Generic words (loss, delta, cost, exposure, notional,
+`max_`, minimum, trailing) and tickers allowlist nothing. A bare `key: number` is judged by its own key only. Allowed rules and what they cover in the final run (10 random contexts per rule were read, none is a balance):
+`threshold_or_pct_key_no_amount` 295 (`min_balance_usd`, `risk_budget_usd`, `risk_pct`, `*_pct_equity` keys); `firm_limit_equation` 223 (prop YAML comments `STATIC 9% = $N`); `key_threshold` 162 (`min_balance_usd: N`);
+`firm_limit_phrase` 95 and `firm_limit_phrase_after` 1 (static-DD floor / daily-loss limit); `non_balance_key_value` 73 (`pos_size`, `daily_usd`, `n_*`); `demo_floor_stage_name` 29 (paper/demo-floor P&L tables);
+`key_count_or_ratio` 14; `prop_pass_target` 5; `comparison_threshold` 1. **Judgement call to confirm:** prop firm tier sizes (for example "$9k Breakout, static-DD floor $N") stay in the firm-limit rules; they are product-defined limits, not live balances.
+
+Fixes this loop made: second amount beyond the window; amount and trigger word split across a wrapped line; `$N start` / `$N snapshot` / `$N risk` / `% on $N`; single-quoted dict keys; `balance≈N`; balance word anywhere on a line redacts every `$` amount (3+ digits) on it.
+**Honest limit:** 0 REAL means the probe finds none after classification. The probe and the redaction rules are related patterns, so a phrasing neither covers survives; and the allowlist is regex classification of 898 matches,
+not a per-match proof. Re-run `verify` on the day and re-read the allowed samples (`verify` prints 10 per rule).
 
 Re-run on the day. Refs move, so counts and the new tip sha will differ. The dry-run numbers are a template, not the record.
 
@@ -151,7 +156,7 @@ The rewrite changes every commit SHA, so **every fingerprint in `.gitleaks-basel
 
 Runbook PR merged and a **fresh dry run against current `main` by Wed 06:30Z**; the manager starts the sequence from a wake at 07:00Z: (1) ping the operator with the dry-run result; (2) operator toggles branch protection;
 (3) one final operator confirmation; (4) pause lanes, force-push; (5) re-enable protection, run section 7; (6) section 7b. Keep it runner-side: sections 5 and 7b are scriptable in a single workflow
-(`scan` -> `rewrite` -> `verify` -> tree check), so the manager's usage before the reset is spent on decisions, not typing. The dry run takes ~25 min rewrite + ~25 min verify on 4 vCPU.
+(`scan` -> `rewrite` -> `verify` -> tree check), so the manager's usage before the reset is spent on decisions, not typing. The dry run takes ~45 min rewrite + ~25 min verify on 4 vCPU.
 
 ## 8. LIMITS (stated honestly)
 
