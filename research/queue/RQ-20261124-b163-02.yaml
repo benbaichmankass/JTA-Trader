@@ -1,0 +1,128 @@
+# Authored 2026-11-24 by lane QUEUE-FILL-20261124 (Tier 1 research, spec-only), dispatched by the JTA Trader manager (Manager Session 2026-11-22a), from the two-week
+# iteration plan (lane ITERATION-PLAN-2W-20261123, research/programmes/03-strategy-improvement.yaml). Decision rule registered BEFORE the run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULERQ20261124b16302
+  regime_robustness: 'Reported with the result, not graded here (the grade is the rule above): per-year net R table for every arm, long-side and short-side net R separately, and the largest single
+    year share of total net R. Set before the run.'
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C)
+    >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 2 candidate arm(s) here) and the follow-up is ONE
+    confirmation unit on a disjoint in-hand window, then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes with n(A)
+    >= 39: THIS arm grid is closed on splg_trend_long_1d for this window and the lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved
+    closest. Thresholds and the arm grid are not changed after any result.'
+  statistic: 'scripts/research/exit_lever_ablation.py --leg splg_trend_long_1d --grade replace, the window 2012-01-01 .. 2026-10-15 (SPYM 1d) and 6 folds by entry time, net of the full cost stack
+    the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A=; VL20=--vol-skip-below-pctl=0.2; VL30=--vol-skip-below-pctl=0.3. Per
+    arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case, and does not confirm the MES result on a disjoint window (the SPY-family leg tracks the same index
+    over the same years, so it is correlated evidence; a PASS here is consistency, never independent confirmation). The arm grid is the whole search.
+id: RQ-20261124-b163-02
+intervention_controls:
+  not_applicable: a parameter ablation of the declared entry/exit geometry run through the harness, not an in-trade action or active-management intervention
+iteration:
+  attempt: 2
+  diagnosis: c5d2-02 PASS (VL20) conflicts with 9e1b-07 FAIL on the SPY-family twin; the clean disjoint window for MES does not exist (ES=F 2001-2011 carries malformed bars), so the confirmation
+    is the instrument-twin on the same window.
+  due_by: '2026-12-01'
+  from_result: RQ-20261123-c5d2-02
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/mes_trend_long_1d.yaml
+  - research/levers/splg_trend_long_1d.yaml
+  search: 'regime_gating family: cold-vol entry skip, arms VL20 and VL30, the c5d2-02 grid, on the index-ETF twin over the MES window.'
+  subject: mes_trend_long_1d
+  subject_kind: strategy_leg
+  verdict_read: pending
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (E35 floor). expected_n=70 is an ESTIMATE: 9e1b-07 measured n(A)=103 over 2005-11-15..2026-10-27 (SPYM); scaled by years (14.8/21.0)
+    it is about 73, and c5d2-02 measured 51 on ES=F over the same 2012+ window. Not a measurement of this window; below 39 the unit grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 70
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg'
+priority: 2
+programme: P3
+question: On splg_trend_long_1d (SPYM 1d, the S&P 500 index family the micro MES also tracks) over exactly the window c5d2-02 used, 2012-01-01 .. 2026-10-15, with 6 folds and the same materiality
+  bar, does VL20 or VL30 beat the declared leg A net of the harness cost stack?
+related:
+- RQ-20261123-c5d2-02
+- RQ-20261117-9e1b-07
+- research/levers/splg_trend_long_1d.yaml
+- research/levers/mes_trend_long_1d.yaml
+roadmap:
+- L-REGIME
+- L-LADDER
+routing:
+  basis: Estimate from comparable exit_lever_ablation runs (a538-*, abab-*; measured actual/est ~0.12); the first run replaces it.
+  est_minutes: 40
+  needs_gpu: false
+  needs_internet: true
+  needs_trainer_resident_data: false
+  peak_memory_gb: 4.0
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - splg_trend_long_1d
+  - --arm
+  - A=
+  - --arm
+  - VL20=--vol-skip-below-pctl=0.2
+  - --arm
+  - VL30=--vol-skip-below-pctl=0.3
+  - --days
+  - '5600'
+  - --start
+  - '2012-01-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-b163-02
+  timeout_minutes: 150
+status: queued
+theme: regime
+title: 'RECONCILE: does the VL20 cold-vol skip that passed on mes_trend_long_1d (2012+) also move splg_trend_long_1d on the SAME window, or did the 2005+ window of RQ-20261117-9e1b-07 hide it?'
+value:
+  basis: planning weight for a lever cell on a leg that is rostered or prop-sized; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+why_this_matters: 'Two readings of the same lever on the same index disagree: mes_trend_long_1d VL20 PASSED (RQ-20261123-c5d2-02: net 26.72 vs 25.06 R, n 49 vs 51, drawdown 2.25 vs 2.92 R, 2012-2026),
+  while splg_trend_long_1d VL20/VL30 FAILED on 2005-11..2026-10 (RQ-20261117-9e1b-07: VL20 35.99 vs 35.67 R, n 90 vs 103, +0.32 R which is below the 2.06 R materiality bar at n 103; VL30 32.17).
+  Same index, different windows (2005+ vs 2012+) and different materiality scaling. Running the SPY-family leg on the MES window separates a window/materiality effect from an instrument effect,
+  which decides whether the MES lead is worth the disjoint-window confirmation the c5d2-02 rule asks for. It is a reconcile, not a new lever test: the arm grid is the one c5d2-02 registered. No
+  config change either way.'
