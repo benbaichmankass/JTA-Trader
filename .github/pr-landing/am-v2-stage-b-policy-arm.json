@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "AM-V2-STAGE-B-POLICY-ARM (manager order, lane AM-V2-STAGE-B-DRIVER-20261124): research tooling only. Adds scripts/research/am_policy_arm.py (replay-side head-driven bracket policy driver + reduce/grade under RULE-AM-RISK-ADJUSTED-V1), a `dump` mode on am_heads_fit.py, two ADDITIVE actions on cf_core.simulate (loosen_stop, bank_at; every earlier input replays byte-identically, tests/test_cf_core.py + tests/test_am_policy_arm.py), a features-only flag on cf_bar_labels.build_rows (default unchanged), the .github/workflows/am-policy-arm.yml runner (GitHub-hosted, no secret in the compute jobs, lands via the shared research-result action) and the five registered units RQ-20261124-b5a1-01..05 (one per action class, each with its rule and matched random control registered before any run). No src/, no deploy/, no config/, no order path, no strategy param, no risk cap, no VM, no live runtime file. Gates this adds or changes: none. Revert: git revert."
+}

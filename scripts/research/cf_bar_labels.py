@@ -35,9 +35,11 @@ SCHEMA = "cf_bar_labels/1"
 
 
 def build_rows(*, side: str, entry: float, sl: float, bars: Sequence[dict], entry_time: float, bar_seconds: float,
-               max_fwd_bars: int = 48, exit_idx: Optional[int] = None) -> List[Dict]:
+               max_fwd_bars: int = 48, exit_idx: Optional[int] = None, with_labels: bool = True) -> List[Dict]:
     """``bars``: dicts with time/open/high/low/close (epoch seconds), ascending. Bars with ``time < entry_time + bar_seconds`` (the signal
-    bar and anything earlier) are DROPPED. ``side`` is 'long' or 'short'. R0 = |entry - sl|."""
+    bar and anything earlier) are DROPPED. ``side`` is 'long' or 'short'. R0 = |entry - sl|.
+    ``with_labels=False`` (AM-V2 Stage B replay, which needs only the point-in-time features): ``labels`` is None and the forward scan is skipped;
+    the features and the row set are byte-identical to the default."""
     if side not in ("long", "short"):
         raise ValueError(side)
     sgn = 1.0 if side == "long" else -1.0
@@ -63,7 +65,7 @@ def build_rows(*, side: str, entry: float, sl: float, bars: Sequence[dict], entr
         close_r = sgn * (bar["close"] - entry) / r0
         feat = {"open_r": close_r, "peak_r": peak, "mae_r": mae, "bars_since_peak": k - peak_k, "bars_open": k,
                 "range_atr_k": ((bar["high"] - bar["low"]) / r0) / (rng_sum / k) if rng_sum > 0 else None}
-        rows.append({"k": k, "features": feat, "labels": _forward(b, k, sgn, entry, r0, close_r, max_fwd_bars)})
+        rows.append({"k": k, "features": feat, "labels": _forward(b, k, sgn, entry, r0, close_r, max_fwd_bars) if with_labels else None})
     return rows
 
 
