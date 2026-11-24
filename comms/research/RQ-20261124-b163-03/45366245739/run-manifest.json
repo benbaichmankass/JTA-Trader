@@ -1,0 +1,93 @@
+{
+  "unit": "RQ-20261124-b163-03",
+  "run_id": "45366245739",
+  "commit_sha": "b6fff41c394f272f9a5e8f45b7670e896407745b",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45366245739",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1016-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.88.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "fade_breakout_4h",
+        "--arm",
+        "ASIA=--skip-hours=0,1,2,3,4,5,6,7",
+        "--arm",
+        "T25=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=2.5",
+        "--arm",
+        "T50=--skip-hours=0,1,2,3,4,5,6,7;trail_mult=5.0",
+        "--arm",
+        "TO24=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=24",
+        "--arm",
+        "TO96=--skip-hours=0,1,2,3,4,5,6,7;timeout_bars=96",
+        "--symbol",
+        "SOLUSDT",
+        "--days",
+        "1830",
+        "--grade",
+        "replace",
+        "--baseline",
+        "ASIA",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0.02",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261124-b163-03/45366245739"
+      ],
+      "log": "comms/research/RQ-20261124-b163-03/45366245739/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 26.1
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
