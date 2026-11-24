@@ -1,0 +1,163 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261124T0307Z-pkg-b7456c45491e44c2",
+ "reviewed_at": "2026-11-24T03:11:30Z",
+ "order_package_id": "pkg-b7456c45491e44c2",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.5,
+  "l0_snapshot_at": "2026-11-24T03:06:32Z"
+ },
+ "info_cutoff_at": "2026-11-24T03:07:37Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 5,
+  "giveback_r": 0.9597,
+  "open_r": -0.5081,
+  "peak_provenance": "estimated",
+  "peak_r": 0.4516,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.14421071,
+  "tp": 0.15677142857142856
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 2,
+  "giveback_r": 0.9597,
+  "open_r": -0.5081,
+  "peak_r": 0.4516,
+  "r_to_stop": 0.2614,
+  "r_to_target": 2.1022
+ },
+ "mechanics": {
+  "verdict": "mismatch",
+  "evidence": "bybit_portfolio: venue SL 0.143 != package SL 0.14421071",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": "bybit_portfolio: venue SL 0.143 != package SL 0.14421071",
+    "verdict": "mismatch"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 38,
+   "mean_r": -0.8377,
+   "sd_r": 0.5754,
+   "worst_r": -1.0908,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 38,
+   "mean_r": -0.7826,
+   "sd_r": 0.2419,
+   "worst_r": -1.5529,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 38,
+   "mean_r": -0.5647,
+   "sd_r": 0.0204,
+   "worst_r": -0.6229,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261124T0307Z-pkg-b7456c45491e44c2.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.273,
+  "worst_case_delta_r": 0.4679,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.62,
+  "reason": "HOLD cell n=38 mean -0.838R vs close -0.565R (+0.273R, SE of close-cost 0.094; worst -1.09 vs -0.62); 95% of this peak-then-pullback population gave back >half. Price rejected the 0.1565 spike, lower highs on 1h (0.1507), 4h swing high rejected, stop 0.26R away so holding risks ~-0.8R more for a bounce to entry worth ~0R; TP 2.1R away. Book is 6 correlated long crypto/ADA-beta packages. First review of this package (previous_review null).",
+  "size_fraction": null,
+  "size_multiplier": null
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "mechanics_mismatch: bybit_portfolio: venue SL 0.143 != package SL 0.14421071 (known mirror-trail parity defect PI-20261124-RORTRAIL-0001, not re-filed); close applies on bybit_2 only, so the mirror stays open: live/mirror divergence until it hits its own SL 0.143",
+  "tighten options atr:1.0/atr:1.5 invalid_level (stop_level_not_below_price, 2/4); atr:2.0 measured mean -0.7826 worse than close",
+  "table caveat: hold cell is the leg's peak-then-pullback population (n=38 of 907), long side only; 8 mfe_replay_mismatch",
+  "book: 6 other long packages (BTC x2, ETH x2, ADA, MGC), correlated crypto beta, mixed open_r; ADA long ml_entry_v2 -0.50R",
+  "missing_inputs: atr_now_over_entry, vol_now, cell_entry, funding, news not available",
+  "live_vs_backtest: ml_entry live -7.24R over 52 closed (13th pct), CONSISTENT with backtest"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.1442 / TP 0.1568, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "unknown",
+   "evidence": "mechanics mismatch (venue SL 0.143 vs package SL 0.14421071); VM skips this account on a recommended action"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuHpwc5JuF8mwSiCZd3",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "c6f21ed0b648e2d7ccca2c8bc88ce800236680879d2072c0c4dd6176b013c723",
+ "forecast": {
+  "thesis": "1h lower highs since the 0.1565 spike (0.1507 then 0.1475 retest failed) and the 4h bar rejected the spike; price is drifting back toward the 0.1442 stop, so the bounce-to-entry case is the minority outcome.",
+  "direction": "against_trade",
+  "target_px": 0.1442,
+  "p_target": 0.55,
+  "invalidation_px": 0.1507,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.swings: lower highs 0.1507/0.1475",
+   "chart.since_entry: high 0.1507, low 0.1471",
+   "chart.htf: 4h rejection of 0.1565, ADX 27.8",
+   "priced_options: hold -0.838 vs close -0.565 n=38",
+   "book: correlated long crypto"
+  ]
+ }
+}
