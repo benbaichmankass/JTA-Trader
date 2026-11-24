@@ -1059,6 +1059,115 @@ def _update_source(verdict: Any, strategy: Any) -> str:
         return "source unknown"
 
 
+# ---------------------------------------------------------------------------
+# Sibling-leg re-sync (PI-20261124-RORTRAIL-0001, Tier 2)
+# ---------------------------------------------------------------------------
+# MEASURED 2026-11-24 (pkg-b7456c45491e44c2, ml_entry ADAUSDT long): the trail amended bybit_2's leg at
+# 00:03:58.118 and wrote the PACKAGE stop; the bybit_portfolio mirror leg's trade row was inserted at
+# 00:03:58.646, 0.5 s AFTER the leg read, so the fan-out in ``_apply_update`` never saw it. Every later
+# pass read the package stop as already moved (``no_meaningful_change``), so the mirror kept its
+# entry-time stop at the venue for 13 h (SL 0.14299 vs 0.14421), and the live-review close two hours
+# later skipped it on a mechanics mismatch. A modify "is not terminal", so a leg missed on the pass the
+# level moved was missed for good. This closes it: EVERY pass, any open leg whose stored stop is LOOSER
+# than the package stop is amended to the package stop (and a leg whose TP differs from a package TP the
+# monitor moved gets that TP). Idempotent; a failure retries after a back-off, never halts the loop.
+_RESYNC_RETRY_S = 300.0
+_RESYNC_NEXT_TRY: Dict[Tuple[str, str, str], float] = {}
+
+
+def _resync_package_legs(db, open_pkg: dict, *, now: Optional[float] = None) -> List[Dict[str, Any]]:
+    """Re-sync lagging sibling legs of ONE open package to the package's stop / monitor-moved TP.
+
+    Returns one record per amend attempted (``outcome`` applied / failed / unsupported). Never raises.
+    A leg is LAGGING when its ``trades.stop_loss`` is looser than ``order_packages.sl``; it is skipped
+    when a reviewed ``widen_sl`` put it there on purpose (``notes.sl_floor.action == "widen_sl"``).
+    """
+    from src.runtime.live_review_intent import floor_blocks, is_looser, sl_floor_from
+
+    out: List[Dict[str, Any]] = []
+    pkg_id = open_pkg.get("order_package_id")
+    try:
+        pkg_sl = float(open_pkg["sl"]) if open_pkg.get("sl") is not None else None
+        pkg_tp = float(open_pkg["tp"]) if open_pkg.get("tp") is not None else None
+    except (TypeError, ValueError):
+        return out
+    meta = open_pkg.get("meta")
+    if isinstance(meta, str):
+        meta = _decode_notes(meta)
+    tp_moved = isinstance(meta, dict) and isinstance(meta.get("last_tp_move"), dict)
+    if pkg_sl is None and not (tp_moved and pkg_tp is not None):
+        return out
+    legs, state = _package_open_legs(db, open_pkg)
+    if state != "resolved" or not legs:
+        return out
+    t_now = time.monotonic() if now is None else now
+    for leg in legs:
+        try:
+            direction = str(leg.get("direction") or "").lower()
+            if direction not in ("long", "short"):
+                continue
+            notes = _decode_notes(leg.get("notes"))
+            fl = notes.get("sl_floor")
+            widened = isinstance(fl, dict) and fl.get("action") == "widen_sl"
+            leg_sl = _to_float(leg.get("stop_loss"))
+            want_sl = None
+            if (pkg_sl is not None and leg_sl is not None and not widened
+                    and is_looser(direction, leg_sl, pkg_sl, tol=max(abs(pkg_sl) * 1e-9, 1e-12))
+                    and not floor_blocks(direction, pkg_sl, sl_floor_from(notes))):
+                want_sl = pkg_sl
+            leg_tp = _to_float(leg.get("take_profit_1"))
+            want_tp = None
+            if (tp_moved and pkg_tp is not None and leg_tp is not None
+                    and abs(leg_tp - pkg_tp) > max(abs(pkg_tp) * 1e-9, 1e-12)
+                    and not notes.get("live_review_actions")):
+                want_tp = pkg_tp
+            if want_sl is None and want_tp is None:
+                continue
+            key = (str(pkg_id), str(leg.get("id")), f"{want_sl}|{want_tp}")
+            if _RESYNC_NEXT_TRY.get(key, 0.0) > t_now:
+                continue
+            res = _send_modify_to_exchange(
+                leg, sl=want_sl, tp=want_tp, side=leg.get("direction"),
+                qty=_to_float(leg.get("position_size")),
+                cur_sl=leg_sl if leg_sl is not None else pkg_sl, cur_tp=pkg_tp)
+            rec = {"trade_id": leg.get("id"), "account_id": leg.get("account_id"),
+                   "from_sl": leg_sl, "to_sl": want_sl, "from_tp": leg_tp, "to_tp": want_tp}
+            if res.get("ok"):
+                sync: Dict[str, Any] = {}
+                if want_sl is not None:
+                    sync["stop_loss"] = want_sl
+                if want_tp is not None:
+                    sync["take_profit_1"] = want_tp
+                db.update_trade(int(leg["id"]), sync)
+                _RESYNC_NEXT_TRY.pop(key, None)
+                rec["outcome"] = "applied"
+                logger.warning(
+                    "order_monitor: SIBLING RE-SYNC pkg=%s trade=%s account=%s sl %s -> %s tp %s -> %s "
+                    "(leg missed the package move)", pkg_id, leg.get("id"), leg.get("account_id"),
+                    leg_sl, want_sl, leg_tp, want_tp)
+            else:
+                err = str(res.get("error") or "unknown")
+                rec["outcome"] = "unsupported" if _is_unsupported_op_error(err) else "failed"
+                rec["error"] = err
+                _RESYNC_NEXT_TRY[key] = t_now + _RESYNC_RETRY_S
+                if rec["outcome"] == "failed":
+                    logger.error("order_monitor: sibling re-sync FAILED pkg=%s trade=%s account=%s: %s "
+                                 "(retry in %.0fs)", pkg_id, leg.get("id"), leg.get("account_id"), err,
+                                 _RESYNC_RETRY_S)
+            out.append(rec)
+        except Exception as exc:  # noqa: BLE001 -- one leg never stops the pass
+            logger.warning("order_monitor: sibling re-sync error pkg=%s trade=%s: %s",
+                           pkg_id, leg.get("id"), exc)
+    return out
+
+
+def _to_float(v: Any) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                   summary: _StrategyTickSummary) -> None:
     """Translate a non-None monitor verdict into DB writes.
@@ -1938,6 +2047,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                     open_pkg.get("meta"), open_pkg.get("sl"), updates["sl"], _m["source"], _m["detail"])
             except Exception:  # noqa: BLE001 — attribution never blocks the confirmed stop write
                 logger.warning("order_monitor: sl mover stamp failed for pkg=%s", pkg_id, exc_info=True)
+        if "tp" in updates:
+            # SIBLING RE-SYNC: name the monitor's own TP move so a leg that missed it can be told apart from a
+            # leg a reviewed per-account move_tp put elsewhere on purpose.
+            _m2 = open_pkg.get("meta")
+            _m2 = dict(_m2) if isinstance(_m2, dict) else (_decode_notes(_m2) if isinstance(_m2, str) else {})
+            pkg_write["meta"] = {**(pkg_write.get("meta") or _m2),
+                                 "last_tp_move": {"ts": datetime.now(timezone.utc).isoformat(),
+                                                  "from": open_pkg.get("tp"), "to": updates["tp"]}}
         db.update_order_package(pkg_id, pkg_write)
         summary.updated_count += 1
     except Exception as exc:  # noqa: BLE001
@@ -18829,6 +18946,10 @@ def run_exit_evaluation_tick(
                         "(monitor will short-circuit)",
                         strategy_name, pkg_id_log, symbol_log, tf_used,
                     )
+                try:  # every pass: a leg that missed the package move is brought to it (never blocks the loop)
+                    _resync_package_legs(db, normalised)
+                except Exception:  # noqa: BLE001
+                    logger.warning("order_monitor: sibling re-sync failed pkg=%s", pkg_id_log, exc_info=True)
                 verdict, monitor_status = _call_strategy_monitor(
                     strategy_name, cfg, candles, normalised,
                 )
