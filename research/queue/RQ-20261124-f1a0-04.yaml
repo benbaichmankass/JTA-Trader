@@ -1,0 +1,138 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a) on the
+# operator's 11-24 ask ("I want solutions"; "it's the whole trading flow for these trades that are failing, not just the ml").
+# Diagnosis: docs/research/ml-entry-review-2026-11-24.md + RQ-20261124-e1a7-02 measurement. One factor against a matched control.
+# Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261124-f1a0-04
+title: 'ml_entry BOOK/RECENCY INPUTS: do 5 point-in-time recency columns (the symbol''s own long/short bracket outcome 24 h ago; universe mean
+  long R and long/short stop shares 24 h ago) beat the recipe and a timestamp-shuffled placebo by +0.0068 R/decision on the dev folds, net of
+  the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261124-e1a7-02/45455675005
+  verdict_read: indeterminate
+  diagnosis: 'RQ-20261124-e1a7-02 (run 45455675005, verdict_top1.json, MEASURED, dev folds 2022-01..2025-10, n 71,334 base decisions): the registered
+    recipe''s LONG side is net -0.0063 R/decision (n 25,793) vs SHORT +0.0082 (n 45,541); 11.8 entries per decision bar; bar-level max DD 1,604
+    R at full risk per entry; top-1 per bar was INDETERMINATE (+0.0042, t 0.26, beats random 1-of-k by +0.0115 t 1.16). Live (docs/research/ml-entry-review-2026-11-24.md):
+    the side is a market-wide contrarian rule on btc_ret24 / btc_vol24 (SHAP); 9 of 10 BTC-move bars went against the move; 11 of 11 bars single-signed;
+    management saved ~11 R vs the untouched bracket. Verified on the serving path: the model sees no input about its own recent results; live
+    it kept re-buying after stop-outs in the same tape. The policy-independent form of "recent own-trade R / recent stops" is the outcome of the
+    previous decision of each side, which is closed by bar t''s close.'
+  search: 'lever family features/book-recency, one fixed set of 5 columns (no grid): own_prev_net_long, own_prev_net_short, xs_prev_net_long,
+    xs_prev_stop_long, xs_prev_stop_short (all at t - 24 h).'
+  levers:
+  - features
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 1
+  due_by: '2026-12-01'
+question: On the 8 dev folds, is mean net R per decision of the recipe + BOOK_FEATURES at least +0.0068 above the recipe AND above the recipe
+  + the same 5 columns with timestamps shuffled (t >= 2, >= 6/8 folds, >= 3/4 years)?
+why_this_matters: Row ML-ENTRY-BOOK-FEATURES asked for this arm; it is the input-side answer to "does the model consider its own past trades".
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: arm n ~ base n (~70,000); se(delta) ~ 0.010-0.015 as in the e1a7-01 class; INDETERMINATE likely unless large, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry book_feats (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - book_feats
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-f1a0-04
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm book_feats: delta = pooled mean net R per decision (arm) - (base) over the 8 dev folds,
+    base = the registered recipe refit per fold on the same table; se = week-clustered influence se (ml_decision_entry.arm_diff); folds_better
+    = dev folds where the arm mean beats the base mean; years = calendar years of fold starts with a positive pooled delta.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - control) >= +0.0068 AND folds_better >= 6 of 8 AND
+    years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. The arm's definition, tau 0.10, folds,
+    bar and cost stack are fixed now and never changed after a result.
+  pass_action: Enter the arm in the ML-LEVER-PLAN combined held-out read; a pass there is a Tier-3 replacement packet (serving needs the 5 columns,
+    all computable from the bar history the trader already pulls). Applied by the operator or a mandate, never by a lane.
+  fail_action: Close policy-independent recency inputs; the next iteration is the policy-dependent form (actual own-book exposure) through a two-pass
+    fit, authored from this diagnosis.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ
+  matched_random:
+    draws: 1
+    note: 'COMPUTED (placebo, 1 seeded draw): the 5 columns with each timestamp''s values moved to a random other timestamp (own columns within
+      symbol), so the distribution is kept and the timing destroyed; prices the recipe''s known overfit to any extra column'
+  best_static:
+    grid:
+    - recipe (live)
+    - control (see matched_random)
+    excludes_test_folds: true
+    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 50
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml

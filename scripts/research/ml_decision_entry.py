@@ -1414,6 +1414,16 @@ def lever_arms_cmd(args) -> int:
               "measurement": r | {"pooled": {k: res["pooled"][k] for k in res["pooled"]}}}
         (out / f"verdict_{arm}.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
         print(json.dumps({"arm": arm, "verdict": r["verdict"], "why": r["why"]}), flush=True)
+    # THE HARNESS CONTRACT (scripts/research/script_run.py::derive_record) reads exactly <out>/verdict.json; a run that wrote only
+    # verdict_<arm>.json landed as producer_failed (RQ-20261124-e1a7-02 run 45455675005, PI-20261124-RQFAILS-0001). One arm per unit:
+    # verdict.json is that arm's verdict. Several arms: the first arm's verdict, with every arm's verdict beside it.
+    if res["arms"]:
+        first = next(iter(res["arms"]))
+        vj = json.loads((out / f"verdict_{first}.json").read_text())
+        if len(res["arms"]) > 1:
+            vj["arm_verdicts"] = {k: r["verdict"] for k, r in res["arms"].items()}
+            vj["note"] = f"{first}: {vj['note']} | " + "; ".join(f"{k}: {r['verdict']}" for k, r in res["arms"].items())
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     return 0
 
 

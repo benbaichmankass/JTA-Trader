@@ -6,7 +6,7 @@
 id: RQ-20261124-e1a7-02
 title: 'ml_entry ONE BET PER BAR: when several symbols clear tau in the same decision bar, does taking only the best-predicted one beat
   taking all of them by +0.0068 R/decision AND beat a random 1-of-k pick, on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -139,12 +139,14 @@ last_dispatched_at: '2026-11-24T18:05:08+00:00'
 grading:
   attested: RULE-ML-ENTRY-LEVER-ARMS-20261124
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-ML-ENTRY-LEVER-ARMS-20261124
   evidence:
   - research/results/RQ-20261124-e1a7-02/45455675005.jsonl
   graded_at: '2026-11-24'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
   rows: 1
-  verdict: null
+  verdict: indeterminate
