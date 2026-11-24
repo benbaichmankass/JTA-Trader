@@ -41,7 +41,9 @@ concurrency:
 jobs:
   wake:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 2026-11-24 stopgap (PI-20261124-LRWAKETO-0001): 10 min was hit 3x in ~8h (04:02Z 2 pkgs, 08:02Z 2, 12:02Z 4);
+    # the Wake step costs ~4-5 min per due package. 25 covers ~5 packages; the real fix is per-package parallelism.
+    timeout-minutes: 25
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
