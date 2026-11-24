@@ -136,7 +136,7 @@ def confirmed_pivot_highs(h: np.ndarray, k: int = PIVOT_K) -> list[tuple[int, in
     return out
 
 
-def signals_breakdown(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+def signals_breakdown(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:  # inert: i_o — uniform (open, high, low, close) signature across signal families; this trigger reads no index open
     """Donchian-20 close-below-prior-20-low on the index; stop = most recent confirmed pivot-5 high above the close."""
     n = len(i_c)
     piv = confirmed_pivot_highs(i_h)
@@ -153,7 +153,7 @@ def signals_breakdown(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return out
 
 
-def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:  # inert: i_o — uniform (open, high, low, close) signature across signal families; this trigger reads no index open
     """On the bar a pivot-5 high is CONFIRMED: it is lower than the prior confirmed pivot-5 high, the close is below its 50-day mean
     and below the 20-day mid (prior-20 channel). Stop = that lower high."""
     n = len(i_c)
@@ -177,7 +177,7 @@ def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return out
 
 
-def signals_capitulation(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+def signals_capitulation(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:  # inert: i_o — uniform (open, high, low, close) signature across signal families; this trigger reads no index open
     """Flush: close >= 2.0 ATR14 below its 5-bar mean AND low below the prior 20 lows. Signal = the first up-close after the flush
     (within FLUSH_UP_WINDOW sessions). Stop = lowest low from the flush bar to the signal bar."""
     n = len(i_c)
