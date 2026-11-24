@@ -27,8 +27,8 @@ def iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
 
 
-def bar(t, o, h, l, c):
-    return {"time": float(t), "open": o, "high": h, "low": l, "close": c, "dur": SEC}
+def bar(t, o, h, lo, c):
+    return {"time": float(t), "open": o, "high": h, "low": lo, "close": c, "dur": SEC}
 
 
 def make_bars(path, pre_low=99.0, n_pre=30):
