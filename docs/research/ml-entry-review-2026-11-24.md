@@ -58,6 +58,26 @@ At the 11:00 bar close, four packages reached bybit_2 (BTC, ETH, SOL, XRP); the 
 
 Already measured, and not repeated here: the HTF counter-trend filter (RQ-20261112-8d20-01 **FAIL**); a ret_168 side gate and a short-only gate (RQ-20261123-d3a1-01 **FAIL**, +0.012 t 0.83 and +0.009 t 0.46); the residual target, ridge, conformal and the decomposed target (lever map `research/levers/ml-entry.yaml`, all fail or indeterminate). A gate throws decisions away; the dev OOS edge is about +0.003 R/decision. Solution 1 is different: the regime goes in as an **input**, so the model can learn when its contrarian rule works.
 
+## The whole trade flow, stage by stage (operator 2026-11-24: "it's the whole trading flow for these trades that are failing, not just the ml")
+
+Population, unless stated: the 26 closed real-money `ml_entry` trades on bybit_2 (2026-11-16..11-24, journal). R uses the signal-time `risk_per_unit`. "Untouched" means the same decision held to its 2/3-ATR bracket and 24 h stop on Binance 1h (ESTIMATED proxy).
+
+| Stage | Measured contribution (n) | Where the money goes | Fixes |
+|---|---|---|---|
+| 1. Signal / side | Untouched bracket **−16.94 R** (n 26). This is the gross loss the entries carried into the trade | The contrarian market-wide rule (H5), with no regime input | **E1** regime-state inputs (RQ-20261124-e1a7-01); **E2** book/recency inputs (below) |
+| 2. Entry | Fill vs the decision-bar close: mean **−0.041 R** (favourable), median −0.016, worst +0.110, Σ −1.07 R (n 26). Bar close → journal entry: median 217 s, max 370 s | Not a loss source. Fills were slightly better than the reference | none |
+| 3. Sizing / concentration | Every bar single-signed (11 of 11); 4–5 entries at `risk_pct` 0.015 each = one bet at 6–7.5% of the book. 11-20 15:00Z and 11-22 07:00Z lost about 4 R each on bybit_2 | No correlation term in sizing (`allocator_corr` observe-only); one-open-per-(strategy, symbol) is the only book check | **E3** one bet per bar (RQ-20261124-e1a7-02); **E4** split the bar's risk across its k same-side entries (Tier-3 sizing proposal, value read below) |
+| 4. Bracket / stop | Initial SL = 2×ATR14 (1.2–4.1% of price), TP = 3×ATR14 extended by `ml_first_passage` (predictive, TP doctrine compliant). **XRP 11-24:** `structure_exit swing_ratchet` moved the stop at 12:03:35Z, **33 s after entry**, to the pre-entry swing low 0.9313 (fill 0.9318, 0.34% = ~0.15 ATR); it was hit 12:15Z for −0.20 R. Untouched, the same trade reads −1.05 R | The immediate ratchet is noise-level by construction (it uses the decision bar's own pivot). It still cut this loss | **E5** unit: no structure ratchet before the first post-entry bar closes, vs today (registered below) |
+| 5. In-trade management | Tightened stops then stopped out: real −4.52 vs untouched −10.39 R, **+5.88 R** (n 10). Live-review closes after a tighten: +3.40 vs −1.12, **+4.52 R** (n 11). Live-review closes on the original stop: −1.37 vs −2.14, +0.77 R (n 2). Untouched stops: −3.30 vs −3.28 (n 3) | Management **added ~11.2 R** in this regime | keep; AM v2 stage-B units (RQ-20261124-b5a1-01..05) already test each action class |
+| 6. Exit / fidelity | Realized **−5.79 R** vs the untouched backtest-style read **−16.94 R** on the same 26 decisions; exits 13 `sl`, 13 `live_review_close` | Live beat the backtest mechanics. The loss is in stage 1 | none |
+| 7. Prop and mirror legs | bybit_portfolio mirrors bybit_2 (same packages). Prop fill delay: tradeify_1 phone path median 14.6 min (n 6), velotrade_1 5.1 min (n 10) | Filed elsewhere: **PI-20261124-RORTRAIL-0001** (mirror close propagation) and **PI-20261124-VEANGDN1-0001/-0002** (prop fill delay, unpriced close) | referenced, not duplicated |
+
+### Does the model consider its own open and past trades? (operator question, 2026-11-24 ~15:45Z)
+
+**No.** Verified on the serving path. The 20 FEATURES (`src/runtime/ml_decision_features.py`) are all market state. `decide()` takes one feature row. The only book-aware checks before an order are: one open package per (strategy, symbol) (`src/runtime/strategy_monocle.py::_has_open_package_for_strategy`); a 300 s re-try cooldown after a `sized_qty=0` refusal (`_recent_refusal_for_strategy`); and the account's daily-loss limit and armed 3% daily DD switch (`RiskManager`). There is no same-side or correlation exposure cap, no cooldown after a stop, and no input carrying the leg's recent results.
+
+BOOK_STATE_RESULT
+
 ## Part 2: equity ML (the blocking step)
 
 Chain traced end to end on the live trader journal (complete scans):
