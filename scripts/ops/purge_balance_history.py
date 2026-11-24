@@ -52,7 +52,7 @@ RE_B2 = re.compile(r"(" + AMT + "|" + BIGNUM + r")(?=[^\n$]{0,40}" + WORDS + r"|
 #: B7: "<n>% on $amount" (a risk % applied to an account size)
 RE_ON = re.compile(r"(\d%\s+(?:on|of)\s+)(" + AMT + ")", re.I)
 #: B3: key=value / key: value with a bare number in prose (gate_balance=123.4, min_balance_usd: 99); counts/provenance kept
-RE_B3 = re.compile(r"(?i)(?<![A-Za-z])([A-Za-z_]*(?:net_?liquidation|equity|balance|buying_power|wallet|cash)[A-Za-z_]*)(\s*[=:]\s*)~?\$?-?\d[\d,]*(?:\.\d+)?")
+RE_B3 = re.compile(r"(?i)(?<![A-Za-z])([A-Za-z_]*(?:net_?liquidation|equity|balance|buying_power|wallet|cash)[A-Za-z_]*)(\s*(?:[=:]|≈|~)\s*)~?\$?-?\d[\d,]*(?:\.\d+)?")
 #: B4: number with a currency suffix near a trigger word ("balance 1234.5 USDT")
 RE_B4 = re.compile(r"(?i)(" + WORDS + r"[^\n$]{0,35}?)(?<![\w.])\d[\d,]*(?:\.\d+)?(\s?(?:USDT|USD)\b)")
 #: B5: number + currency suffix followed (<= 20 chars) by a trigger word ("8765.4 USDT balance")
@@ -296,6 +296,9 @@ BALKEY = re.compile(r"(?i)(balance|equity|net_?liq|cash|buying_?power|wallet)[A-
 ANYKEY = re.compile(r"(?i)[A-Za-z_]+[\"']?\s*[:=]\s*\"?$")
 
 
+NO_AMOUNT_OK = re.compile(r"(?i)min_balance_usd|risk_budget_usd|risk_pct|_pct_equity|pct_of_equity")
+
+
 def classify(ctx: str, amt_start: int, amt_end: int):
     """-> (verdict, rule): verdict in {'allowed', 'real'}."""
     left, right = ctx[max(0, amt_start - 40):amt_start], ctx[amt_end:amt_end + 14]
@@ -354,7 +357,8 @@ def cmd_verify(mirror, dump=None, load=None, samples=10):
     for c, n in ctxs.items():
         amts = list(AMTV.finditer(c))
         if not amts:
-            verdicts[("allowed", "no_amount_in_context")].append((c, n))
+            ok = NO_AMOUNT_OK.search(c) and not re.search(r"(?i)(balance|equity|cash|wallet|net_?liq)\w*\s*(?:\u2248|~|=|:)\s*\$?\d{3,}", c)
+            verdicts[("allowed", "threshold_or_pct_key_no_amount") if ok else ("real", "no_amount_unrecognised")].append((c, n))
             continue
         res = [classify(c, a.start(), a.end()) for a in amts]
         worst = next((r for r in res if r[0] == "real"), res[0])
@@ -407,6 +411,7 @@ def selftest() -> int:
     assert cls("static-DD floor $9,999 on a balance $8,888 account") == ["allowed", "real"]
     assert cls("GLD at $999 per share") == ["allowed"] and cls("n_refused_cash: 999") == ["allowed"]
     assert cls("wallet truth -$777 vs journal") == ["real"]
+    assert "4444" not in redact_text("sized_qty=9 with balance\u22484444 available") and "5555" not in redact_text("equity~5555 here")
     assert cls("pos_size: 999 risk_pct: 9.99 min_balance_usd: 99 snapshot_balance: 5555") == ["allowed", "real"]
     assert cls("under the $999 daily-loss limit") == ["allowed"]
     assert cls("balance >= $5,000 here") == ["real"] and cls("realized loss is \u2265 $999") == ["allowed"]
