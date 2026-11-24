@@ -15,9 +15,9 @@ REPO = Path(__file__).resolve().parents[1]
 for p in (REPO, REPO / "scripts", REPO / "scripts" / "research", REPO / "tests"):
     sys.path.insert(0, str(p))
 
-import am_action_value as V
-import am_policy_arm as P
-from test_am_policy_arm import FLAT, ctx_for
+import am_action_value as V  # noqa: E402
+import am_policy_arm as P  # noqa: E402
+from test_am_policy_arm import FLAT, ctx_for  # noqa: E402
 
 THR = {"stop_first": {"p90": 0.5}, "dip_recovers": {"p50": 0.1, "p90": 0.5}}
 

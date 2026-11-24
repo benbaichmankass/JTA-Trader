@@ -59,11 +59,11 @@ REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import am_policy_arm as P
-import cf_bars
-import cf_bulk
-import cf_core
-import live_review_counterfactual as lrc
+import am_policy_arm as P  # noqa: E402
+import cf_bars  # noqa: E402
+import cf_bulk  # noqa: E402
+import cf_core  # noqa: E402
+import live_review_counterfactual as lrc  # noqa: E402
 
 SCHEMA = "am_action_value/1"
 RULE_ID = "RULE-AM-ACTION-VALUE-20261124"
@@ -113,7 +113,7 @@ def action_spec(name: str, ctx: dict, row: dict, pr: dict) -> dict | None:
     """The single bracket action ``name`` placed at row ``row``'s close, or None where it is ineligible. ``pr`` = that row's head outputs."""
     k, o = row["k"], row["features"]["open_r"]
     ts = P._close_ts(ctx, ctx["post"], k)
-    mk = lambda kind, lvl, **kw: {"ts": ts, "kind": kind, "level": P._px(ctx, lvl), "k": k, "lvl_r": lvl, **kw}
+    mk = lambda kind, lvl, **kw: {"ts": ts, "kind": kind, "level": P._px(ctx, lvl), "k": k, "lvl_r": lvl, **kw}  # noqa: E731
     if name == "bank_now":
         return {"ts": ts, "kind": "close", "level": None, "frac": BANK_FRAC, "k": k, "lvl_r": o}
     if name == "bank_q50":
@@ -180,7 +180,7 @@ def prepare_shard(shard: dict, chunks, jobs, heads: Heads5, keep, fetcher=None) 
     elif not cf_bulk.is_crypto(sym):
         reasons["no_bar_source"] = len(chosen)
     elif chosen:
-        hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]
+        hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
         try:
             sec = cf_bars.TF_SECONDS[tf]
             lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - P.PRE_BARS * sec

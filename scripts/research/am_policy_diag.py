@@ -24,11 +24,11 @@ REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO, REPO / "scripts", REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import am_policy_arm as P
-import cf_bars
-import cf_bulk
-import cf_core
-import live_review_counterfactual as lrc
+import am_policy_arm as P  # noqa: E402
+import cf_bars  # noqa: E402
+import cf_bulk  # noqa: E402
+import cf_core  # noqa: E402
+import live_review_counterfactual as lrc  # noqa: E402
 
 CLASSES = ("tighten", "bank", "loosen")
 SINGLE_ROWS = 6          # sampled decision rows per trade for the single-action ex-post pricing
@@ -126,7 +126,7 @@ def main(argv=None) -> int:
         if not keys:
             continue
         sec = cf_bars.TF_SECONDS[tf]
-        hz = lambda j, tf=tf: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]
+        hz = lambda j, tf=tf: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
         try:
             lo = min(lrc._ts(jobs[k]["entry_time"]) for k in keys) - P.PRE_BARS * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + hz(jobs[k]) for k in keys)
