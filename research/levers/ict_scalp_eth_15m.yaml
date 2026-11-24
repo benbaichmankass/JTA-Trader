@@ -105,6 +105,41 @@ levers:
       fold_stability: 0.5
       reading: no response at the tested values
   filter:
+    adx_max:
+      tests:
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261117-9e1c-11
+        window: 2024-10-05..2026-10-04
+        n: 148
+        net_r: -1.7087
+        baseline_n: 150
+        baseline_net_r: -2.8426
+        delta_net_r: 1.1339
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 12.91
+        verdict: fail
+        joint_change: false
+      - value: '50'
+        baseline_value: 'off'
+        arm: AX50
+        unit: RQ-20261117-9e1c-11
+        window: 2024-10-05..2026-10-04
+        n: 150
+        net_r: -2.8426
+        baseline_n: 150
+        baseline_net_r: -2.8426
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 13.9885
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0076
+      fold_stability: 1.0
+      reading: no response at the tested values
     cooldown_bars:
       tests:
       - value: '8'

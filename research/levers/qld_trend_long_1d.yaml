@@ -173,6 +173,34 @@ levers:
         baseline_value: 'off'
         arm: VH90
         unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 42
+        net_r: 16.7765
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -1.4757
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 2.9142
+        verdict: pass
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 42
+        net_r: 16.7765
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -1.4757
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 2.9142
+        verdict: pass
+        joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261118-abab-13
         window: 2021-11-15..2026-11-18
         n: 27
         net_r: 7.2093
@@ -212,12 +240,40 @@ levers:
         verdict: fail
         joint_change: false
       shape: noisy
-      points: 3
+      points: 5
       best_delta_r_per_trade: -0.001
-      fold_stability: 0.639
+      fold_stability: 0.717
       reading: every tested value is worse than the baseline
     adx_max:
       tests:
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 41
+        net_r: 19.2606
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: 1.0084
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 2.9142
+        verdict: pass
+        joint_change: false
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 41
+        net_r: 19.2606
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: 1.0084
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 2.9142
+        verdict: pass
+        joint_change: false
       - value: '40'
         baseline_value: 'off'
         arm: AX40
@@ -232,13 +288,41 @@ levers:
         max_drawdown_r: 2.9142
         verdict: indeterminate
         joint_change: false
-      shape: single_point
-      points: 1
+      shape: monotone
+      points: 3
       best_delta_r_per_trade: 0.0373
       fold_stability: 1.0
-      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     vol_skip_below_pctl:
       tests:
+      - value: '0.2'
+        baseline_value: 'off'
+        arm: VL20
+        unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 41
+        net_r: 17.5441
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -0.7081
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 3.184
+        verdict: pass
+        joint_change: false
+      - value: '0.2'
+        baseline_value: 'off'
+        arm: VL20
+        unit: RQ-20261118-abab-13
+        window: 2019-08-13..2026-11-20
+        n: 41
+        net_r: 17.5441
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -0.7081
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 3.184
+        verdict: pass
+        joint_change: false
       - value: '0.2'
         baseline_value: 'off'
         arm: VL20
@@ -254,7 +338,7 @@ levers:
         verdict: indeterminate
         joint_change: false
       shape: flat
-      points: 1
+      points: 3
       best_delta_r_per_trade: -0.0034
       fold_stability: 0.5
       reading: no response at the tested values

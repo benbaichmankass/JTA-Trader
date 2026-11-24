@@ -85,6 +85,34 @@ levers:
         baseline_value: 'off'
         arm: LONG
         unit: RQ-20261118-abab-34
+        window: 2021-11-19..2026-11-21
+        n: 143
+        net_r: -23.8441
+        baseline_n: 304
+        baseline_net_r: -8.3797
+        delta_net_r: -15.4644
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 26.3616
+        verdict: pass
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-34
+        window: 2021-11-19..2026-11-21
+        n: 143
+        net_r: -23.8441
+        baseline_n: 304
+        baseline_net_r: -8.3797
+        delta_net_r: -15.4644
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 26.3616
+        verdict: pass
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-34
         window: 2021-11-14..2026-11-17
         n: 143
         net_r: -24.5816
@@ -93,6 +121,34 @@ levers:
         delta_net_r: -13.9529
         folds_ge_baseline: 2/4
         max_drawdown_r: 27.0284
+        verdict: pass
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-34
+        window: 2021-11-19..2026-11-21
+        n: 165
+        net_r: 13.4134
+        baseline_n: 304
+        baseline_net_r: -8.3797
+        delta_net_r: 21.7931
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 8.7926
+        verdict: pass
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-34
+        window: 2021-11-19..2026-11-21
+        n: 165
+        net_r: 13.4134
+        baseline_n: 304
+        baseline_net_r: -8.3797
+        delta_net_r: 21.7931
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 8.7926
         verdict: pass
         joint_change: false
       - value: short
@@ -110,9 +166,9 @@ levers:
         verdict: pass
         joint_change: false
       shape: noisy
-      points: 2
+      points: 6
       best_delta_r_per_trade: 0.0739
-      fold_stability: 0.625
+      fold_stability: 0.542
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_at_r:
@@ -377,4 +433,8 @@ levers:
       fold_stability: 0.375
       reading: no response at the tested values
 manifest_notes:
-  abab_34_not_confirmed_2026_11_23: 'RQ-20261118-abab-34 (side filter, SHORT arm) graded PASS under the registered rule, but a non-registered time-disjoint read of the same arms (XRPUSDT 15m, 2020-01-10 .. 2021-11-13, registered flags, venue-aware cost stack, local run, n(A)=101) shows SHORT net -0.585 R against A -11.10 R: loses less, net negative. Not a confirmation and no confirmation unit was authored (manager ruling 2026-11-23: only a winning arm that is net positive gets one). Read as loses less, not confirmed. The window was read as a power check, so it cannot serve as a registered confirmation window.'
+  abab_34_not_confirmed_2026_11_23: 'RQ-20261118-abab-34 (side filter, SHORT arm) graded PASS under the registered rule, but a non-registered
+    time-disjoint read of the same arms (XRPUSDT 15m, 2020-01-10 .. 2021-11-13, registered flags, venue-aware cost stack, local run, n(A)=101)
+    shows SHORT net -0.585 R against A -11.10 R: loses less, net negative. Not a confirmation and no confirmation unit was authored (manager ruling
+    2026-11-23: only a winning arm that is net positive gets one). Read as loses less, not confirmed. The window was read as a power check, so
+    it cannot serve as a registered confirmation window.'

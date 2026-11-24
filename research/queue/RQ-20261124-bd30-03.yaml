@@ -1,0 +1,125 @@
+# Authored 2026-11-24 by lane RESEARCH-OPS-20261124-1447 (Tier 1, research-ops pass dispatched by the JTA Trader manager) from the diagnosis in `iteration`. Rule registered BEFORE the run. Gates this adds or changes: none.
+id: RQ-20261124-bd30-03
+title: 'CONFIRM the cold-vol skip on the S&P index family on pre-dev history: does VL20 or VL30 beat the declared splg_trend_long_1d (SPYM 1d) net of cost over 2005-11-15..2011-12-31, a window the 2012+
+  passes (mes c5d2-02, splg b163-02) were not read on?'
+status: queued
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: On splg_trend_long_1d over SPYM 1d 2005-11-15 .. 2011-12-31, does VL20 or VL30 beat the declared leg A net of the full cost stack, in >= 2 of 3 folds within 1.35x the drawdown?
+why_this_matters: 'A pass confirms (by the twin) that the cold-vol skip is not a 2012+ artefact and clears the way to a Tier-3 declare proposal on mes_trend_long_1d / splg_trend_long_1d; a fail on a window
+  including the 2008-09 crash and its aftermath says the lever acts only in the post-2012 regime and the MES PASS stays a discovery. Both branches change the manager''s Tier-3 proposal list. LIMIT: SPYM-as-SPLG
+  history pre-2012 and ES=F differ (twin, not the same series), and the 2005-2026 run 9e1b-07 already contained these bars in its aggregate (they were not read separately), stated here.'
+power:
+  alpha: 0.05
+  basis: 'ESTIMATE: 9e1b-07 measured n(A)=103 over 2005-11-15..2026-10-27; scaled by years (6.1/21.0) it is about 30. Below the 25 floor (set because the 39 E35 floor is unreachable on a 6-year daily window)
+    the unit grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 30
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+decision_rule:
+  id: RULERQ20261124bd3003
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg splg_trend_long_1d --grade replace, window 2005-11-15 .. 2011-12-31 (SPYM 1d), 3 folds by entry time, net of the full cost stack. Arms fixed now:
+    A=; VL20=--vol-skip-below-pctl=0.2; VL30=--vol-skip-below-pctl=0.3. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 25 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net
+    R(A) in >= 2 of 3 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named (the denominator is the 2 candidate arm(s) here) and the follow-up is a Tier-3 declare PROPOSAL
+    (mes_trend_long_1d and splg_trend_long_1d together, mirror in the same PR) for the manager, never a config edit. FAIL IF none passes with n(A) >= 25: THIS arm grid is closed for this window and the
+    lever FAMILY is NOT retired (scripts/research/family_retirement_policy.yaml); the record names the arm that moved closest. Thresholds and the arm grid are not changed after any result.'
+  regime_robustness: 'Reported with the result, not graded here (the grade is the rule above): per-year net R table for every arm, long-side and short-side net R separately, and the largest single year
+    share of total net R. Set before the run.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case, and is a twin confirmation of the MES lead, not a read of ES=F or MES itself.
+practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg, confirmation on an in-hand window the
+  lead was not read on'
+intervention_controls:
+  not_applicable: a Stage-0 / parameter-ablation re-measurement of the declared leg through the harness, not an in-trade action or active-management intervention
+iteration:
+  subject: mes_trend_long_1d
+  subject_kind: strategy_leg
+  from_result: RQ-20261123-c5d2-02 (mes VL20 PASS) and RQ-20261124-b163-02 (splg VL20/VL30 PASS, 2012+)
+  verdict_read: pass_unconfirmed
+  diagnosis: 'mes VL20 passed on 2012+ (net 26.72 vs 25.06 R, 6/6 folds >= A, n 49 vs 51, fewer drawdown) and the S&P twin passed on the same window (VL30 +6.17 R, VL20 +5.51 R, 4/6 folds). Both are PASSes
+    read on ONE window each, so they are discoveries (denominator: 2 arms on each leg). The earlier splg 2005-2026 run (9e1b-07) failed on materiality (+0.32 R vs a 2.06 R bar at n 103), so the lever may
+    only act post-2012. The mes confirmation cannot use ES=F 2001-2011 (malformed bars, per b163-02), so the pre-dev read is taken on the instrument twin SPYM over 2005-11-15..2011-12-31, a window with
+    no bar shared with the 2012+ passes. Manager-cited PI-20261124-MESVL20C-0001 asks for the disjoint-window confirmation; this is it, by twin.'
+  search: 'regime_gating (cold-vol entry skip) confirmation: arms A, VL20, VL30 (the c5d2-02 / b163-02 grid unchanged) on pre-dev history, 3 folds.'
+  levers:
+  - regime_gating
+  map_entries:
+  - research/levers/mes_trend_long_1d.yaml
+  - research/levers/splg_trend_long_1d.yaml
+  attempt: 1
+  due_by: '2026-12-01'
+compute: cpu_light
+value:
+  basis: planning weight for a lever/confirmation cell on a rostered or Stage-0-passing leg; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  peak_memory_gb: 4.0
+  est_minutes: 20
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (b163-*, f3a8-01); the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - splg_trend_long_1d
+  - --arm
+  - A=
+  - --arm
+  - VL20=--vol-skip-below-pctl=0.2
+  - --arm
+  - VL30=--vol-skip-below-pctl=0.3
+  - --days
+  - '7800'
+  - --start
+  - '2005-11-15'
+  - --end
+  - 2011-12-31 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '3'
+  - --fold-majority
+  - '2'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '25'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-bd30-03
+  timeout_minutes: 150
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-REGIME
+- L-LADDER
+related:
+- RQ-20261123-c5d2-02
+- RQ-20261124-b163-02
+- RQ-20261117-9e1b-07
+- research/levers/mes_trend_long_1d.yaml

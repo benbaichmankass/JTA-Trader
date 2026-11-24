@@ -109,6 +109,20 @@ levers:
         max_drawdown_r: 2.9939
         verdict: indeterminate
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-23
+        window: 2018-03-01..2026-10-15
+        n: 35
+        net_r: 41.4925
+        baseline_n: 63
+        baseline_net_r: 43.9371
+        delta_net_r: -2.4446
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 2.9939
+        verdict: fail
+        joint_change: false
       - value: short
         baseline_value: 'off'
         arm: SHORT
@@ -136,11 +150,25 @@ levers:
         folds_ge_baseline: 0/4
         max_drawdown_r: 7.977
         verdict: indeterminate
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-23
+        window: 2018-03-01..2026-10-15
+        n: 35
+        net_r: 1.8242
+        baseline_n: 63
+        baseline_net_r: 43.9371
+        delta_net_r: -42.1129
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 7.977
+        verdict: fail
         joint_change: false
       shape: monotone
-      points: 4
+      points: 6
       best_delta_r_per_trade: -0.0388
-      fold_stability: 0.375
+      fold_stability: 0.306
       reading: every tested value is worse than the baseline
   entry:
     pullback_frac:
@@ -1015,4 +1043,10 @@ levers:
       fold_stability: 0.5
       reading: every tested value is worse than the baseline
 manifest_notes:
-  proxy_duplicate_2026_11_23: 'IAUM resolves to the GLD CFD (a REL_PROXY mapping in scripts/ops/dukascopy_instruments.py), so every ablation unit on iaum_pullback_1d that shares a command with its gld_pullback_1d twin reads GLD candles under an IAUM label and is NOT an independent read. Measured 2026-11-23 over the same-command pairs with both landed: RQ-20261118-abab-23 vs -21 (A n=63, net +43.9371), RQ-20261101-5e01-01 vs -08 and 5e02-01 vs -08 (A n=38, net +21.7195): all three byte-identical on the A arm and on every candidate arm. The abab-23 tests in this map therefore duplicate gld_pullback_1d abab-21 and count once. Not duplicates on the same check: scha_trend_long_1d vs iwm_trend_long_1d (2 pairs, A differs) and splg_trend_long_1d vs spy_trend_long_1d (6 pairs, A differs). The mgc_* legs (MGC resolves to XAU spot) have no same-timeframe twin leg and were not compared. See PI-20261123-SME5WDGR-0006.'
+  proxy_duplicate_2026_11_23: 'IAUM resolves to the GLD CFD (a REL_PROXY mapping in scripts/ops/dukascopy_instruments.py), so every ablation unit
+    on iaum_pullback_1d that shares a command with its gld_pullback_1d twin reads GLD candles under an IAUM label and is NOT an independent read.
+    Measured 2026-11-23 over the same-command pairs with both landed: RQ-20261118-abab-23 vs -21 (A n=63, net +43.9371), RQ-20261101-5e01-01 vs
+    -08 and 5e02-01 vs -08 (A n=38, net +21.7195): all three byte-identical on the A arm and on every candidate arm. The abab-23 tests in this
+    map therefore duplicate gld_pullback_1d abab-21 and count once. Not duplicates on the same check: scha_trend_long_1d vs iwm_trend_long_1d
+    (2 pairs, A differs) and splg_trend_long_1d vs spy_trend_long_1d (6 pairs, A differs). The mgc_* legs (MGC resolves to XAU spot) have no same-timeframe
+    twin leg and were not compared. See PI-20261123-SME5WDGR-0006.'

@@ -130,6 +130,20 @@ levers:
         baseline_value: '20'
         arm: donchian_hi
         unit: RQ-20261106-033
+        window: 2021-11-19..2026-11-21
+        n: 52
+        net_r: 9.9649
+        baseline_n: 62
+        baseline_net_r: 10.3868
+        delta_net_r: -0.4219
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6634
+        verdict: pass
+        joint_change: false
+      - value: '25'
+        baseline_value: '20'
+        arm: donchian_hi
+        unit: RQ-20261106-033
         window: 2021-11-03..2026-11-05
         n: 50
         net_r: 10.344
@@ -152,6 +166,20 @@ levers:
         delta_net_r: -0.4219
         folds_ge_baseline: 2/4
         max_drawdown_r: 7.6634
+        verdict: pass
+        joint_change: false
+      - value: '15'
+        baseline_value: '20'
+        arm: donchian_lo
+        unit: RQ-20261106-033
+        window: 2021-11-19..2026-11-21
+        n: 71
+        net_r: 16.9036
+        baseline_n: 62
+        baseline_net_r: 10.3868
+        delta_net_r: 6.5168
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 6.2779
         verdict: pass
         joint_change: false
       - value: '15'
@@ -183,7 +211,7 @@ levers:
         verdict: pass
         joint_change: false
       shape: peaked
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.1086
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
@@ -235,6 +263,20 @@ levers:
         baseline_value: '0.8'
         arm: min_confidence_hi
         unit: RQ-20261106-033
+        window: 2021-11-19..2026-11-21
+        n: 47
+        net_r: 14.9924
+        baseline_n: 62
+        baseline_net_r: 10.3868
+        delta_net_r: 4.6056
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 5.1968
+        verdict: pass
+        joint_change: false
+      - value: '1.0'
+        baseline_value: '0.8'
+        arm: min_confidence_hi
+        unit: RQ-20261106-033
         window: 2021-11-03..2026-11-05
         n: 45
         net_r: 15.3716
@@ -257,6 +299,20 @@ levers:
         delta_net_r: 4.6057
         folds_ge_baseline: 3/4
         max_drawdown_r: 5.1968
+        verdict: pass
+        joint_change: false
+      - value: '0.6'
+        baseline_value: '0.8'
+        arm: min_confidence_lo
+        unit: RQ-20261106-033
+        window: 2021-11-19..2026-11-21
+        n: 87
+        net_r: 7.7613
+        baseline_n: 62
+        baseline_net_r: 10.3868
+        delta_net_r: -2.6255
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.6686
         verdict: pass
         joint_change: false
       - value: '0.6'
@@ -288,9 +344,9 @@ levers:
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 7
+      points: 9
       best_delta_r_per_trade: 0.0768
-      fold_stability: 0.643
+      fold_stability: 0.639
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     tp_target_r:

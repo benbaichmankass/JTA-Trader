@@ -95,6 +95,20 @@ levers:
         baseline_value: '24'
         arm: donchian_hi
         unit: RQ-20261106-035
+        window: 2024-01-10..2026-11-20
+        n: 95
+        net_r: 8.098
+        baseline_n: 110
+        baseline_net_r: 9.517
+        delta_net_r: -1.419
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 10.172
+        verdict: pass
+        joint_change: false
+      - value: '30'
+        baseline_value: '24'
+        arm: donchian_hi
+        unit: RQ-20261106-035
         window: 2024-01-03..2026-11-13
         n: 95
         net_r: 13.4167
@@ -123,6 +137,20 @@ levers:
         baseline_value: '24'
         arm: donchian_lo
         unit: RQ-20261106-035
+        window: 2024-01-10..2026-11-20
+        n: 123
+        net_r: 16.6752
+        baseline_n: 110
+        baseline_net_r: 9.517
+        delta_net_r: 7.1582
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 12.6147
+        verdict: pass
+        joint_change: false
+      - value: '18'
+        baseline_value: '24'
+        arm: donchian_lo
+        unit: RQ-20261106-035
         window: 2024-01-03..2026-11-13
         n: 125
         net_r: 20.9444
@@ -134,9 +162,9 @@ levers:
         verdict: pass
         joint_change: false
       shape: peaked
-      points: 4
-      best_delta_r_per_trade: 0.0552
-      fold_stability: 0.875
+      points: 6
+      best_delta_r_per_trade: 0.0651
+      fold_stability: 0.833
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
     atr_stop_mult:
