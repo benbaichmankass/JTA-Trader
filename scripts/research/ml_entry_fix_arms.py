@@ -39,6 +39,8 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 folds; a short-side max calibrated EV of +0.02 in some folds and a side switched off in another): the same cross-fitted OOF
                 predictions, but the isotonic map is fit ONLY on the most recent training block (the one nearest the test fold), so the side EVs
                 track the current regime. Control: random thinning at the arm's per-side take rate (100 draws), as ev_calib.
+  sl_xwide_retrain ITERATION 3 of the bracket / cost lever (11 arms: gross ~ +0.067 R/decision vs cost ~ 0.064 R; sl_wide_retrain cut cost to
+                0.045 at a neutral delta, positive 2024-25): the recipe refit on SL 4 / TP 6 ATR14 labels and traded under that bracket.
   sl_wide_retrain  ITERATION 2 of sl_wide (FAIL: the SL-2-trained predictions lose more gross edge under SL 3 than the cost they save): the recipe
                 REFIT on SL 3 / TP 4.5 labels per fold and traded under that bracket, vs the SL-2 recipe under SL 2. Control (reported): random-side
                 entries under both brackets, as sl_wide.
@@ -62,7 +64,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -71,6 +73,7 @@ TAU = 0.10
 SEED = 20261124
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
 SL_WIDE, TP_WIDE = 3.0, 4.5
+SL_XWIDE, TP_XWIDE = 4.0, 6.0          # sl_xwide_retrain: cost per R ~ half of SL 2 at the same 1.5 reward:risk
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
               "max_dd_ratio": 0.7, "min_folds_sharpe_better": 5}
@@ -336,7 +339,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
-        elif arm == "sl_wide_retrain":
+        elif arm in ("sl_wide_retrain", "sl_xwide_retrain"):
             lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
             tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
             al, as_ = M.fit_predict(tr_alt, test, None, n_jobs)
@@ -399,10 +402,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE}
         return res
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat["base"]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
-    if arm in ("sl_wide", "sl_wide_retrain"):
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm")
-    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain")
+    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
             "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
@@ -420,9 +423,9 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
         tab = pd.concat([tab.reset_index(drop=True), bc, pb], axis=1)
-    if arm in ("sl_wide", "sl_wide_retrain"):
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain"):
         tab = tab.reset_index(drop=True)
-        alt = alt_labels(cache, syms, tab)
+        alt = alt_labels(cache, syms, tab, *((SL_XWIDE, TP_XWIDE) if arm == "sl_xwide_retrain" else (SL_WIDE, TP_WIDE)))
         ok = alt["net_long"].notna() & alt["net_short"].notna()
         tab, alt = tab[ok.to_numpy()], alt[ok]
     return tab, alt
