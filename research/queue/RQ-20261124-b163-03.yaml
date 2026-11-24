@@ -113,7 +113,7 @@ run:
   inputs:
     research_unit: RQ-20261124-b163-03
   timeout_minutes: 150
-status: queued
+status: done
 theme: live_strategy
 title: 'EXIT lever family never tested on fade_breakout_4h (SOLUSDT, S_ASIA session as the base): trail multiple 2.5/5.0 and timeout 24/96 bars vs the declared 3.5 / 48, net of cost?'
 value:
@@ -127,3 +127,16 @@ why_this_matters: 'b4c1-01 (2026-11-23) PASSED S_ASIA on SOLUSDT (net -8.53 vs -
   so the unit isolates the exit effect from the session effect. SOLUSDT, not the leg own BTCUSDT, because the leg own n is 28 (comms/strategy_evidence/fade_breakout_4h.json), below the 39 floor;
   the pooled-symbol population is the one that powers it and is stated, not hidden.'
 last_dispatched_at: '2026-11-24T09:39:37+00:00'
+grading:
+  attested: RULERQ20261124b16303
+  auto: true
+  decision_rule_id: RULERQ20261124b16303
+  evidence:
+  - research/results/RQ-20261124-b163-03/45366245739.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

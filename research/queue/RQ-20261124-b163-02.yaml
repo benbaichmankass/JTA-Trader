@@ -113,7 +113,7 @@ run:
   inputs:
     research_unit: RQ-20261124-b163-02
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'RECONCILE: does the VL20 cold-vol skip that passed on mes_trend_long_1d (2012+) also move splg_trend_long_1d on the SAME window, or did the 2005+ window of RQ-20261117-9e1b-07 hide it?'
 value:
@@ -127,3 +127,14 @@ why_this_matters: 'Two readings of the same lever on the same index disagree: me
   which decides whether the MES lead is worth the disjoint-window confirmation the c5d2-02 rule asks for. It is a reconcile, not a new lever test: the arm grid is the one c5d2-02 registered. No
   config change either way.'
 last_dispatched_at: '2026-11-24T09:39:36+00:00'
+grading:
+  attested: RULERQ20261124b16302
+  auto: true
+  decision_rule_id: RULERQ20261124b16302
+  evidence:
+  - research/results/RQ-20261124-b163-02/45366241912.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
