@@ -111,8 +111,8 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: 'identical predictions, brackets and stops; only how many same-bar candidates are taken differs'
   matched_random:
-    draws: 1
-    note: 'a seeded random 1-of-k pick from the same candidate set at every bar (policy_bar_topk with rng); one draw per fold, declared'
+    draws: 100
+    note: 'COMPUTED: 100 seeded random 1-of-k picks from the same candidate set at every bar per fold (lever_arms RANDOM_DRAWS), pooled into one control mean'
   best_static:
     grid:
     - all candidates (live)

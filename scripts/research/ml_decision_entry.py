@@ -1243,6 +1243,7 @@ def side_by_fold_cmd(args) -> int:
 # Nothing here selects a tau, refits a served model, reads a held-out window or touches the order path.
 REGIME_FEATURES = ["btc_ret168", "btc_ret720", "btc_vol_pct90d", "btc_dist_sma1200", "breadth_up168"]
 NOISE_FEATURES = [f"noise_{k}" for k in range(len(REGIME_FEATURES))]
+RANDOM_DRAWS = 100                         # matched-random 1-of-k draws per fold (top1 control), pooled
 LEVER_RULE = {"id": "RULE-ML-ENTRY-LEVER-ARMS-20261124", "min_delta_r": 0.0068, "min_t": 2.0, "min_n": 3000,
               "min_folds_better": 6, "min_years_same_sign": 3}
 
@@ -1316,7 +1317,7 @@ def bar_risk(taken: pd.DataFrame) -> dict:
     eq = np.concatenate([[0.0], b.cumsum().to_numpy()])          # the book starts flat: a first-bar loss is a drawdown
     dd = float((np.maximum.accumulate(eq) - eq).max())
     sd = float(b.std(ddof=1)) if len(b) > 1 else None
-    return {"n_bars": int(len(b)), "mean_r_per_bar": float(b.mean()), "sd_r_per_bar": sd,
+    return {"n_bars": len(b), "mean_r_per_bar": float(b.mean()), "sd_r_per_bar": sd,
             "mean_over_sd": float(b.mean() / sd) if sd else None, "max_dd_r": dd,
             "mean_entries_per_bar": float(len(taken) / len(b))}
 
@@ -1357,7 +1358,9 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             tk["regime"], tk["placebo"] = policy(test, rl, rs, tau), policy(test, nl, ns, tau)
         if "top1" in arms:
             tk["top1"] = policy_bar_topk(test, pl, ps, tau, 1)
-            tk["random1"] = policy_bar_topk(test, pl, ps, tau, 1, rng=np.random.default_rng(SEED + int(a.timestamp()) % 9973))
+            rng = np.random.default_rng(SEED + int(a.timestamp()) % 9973)   # RANDOM_DRAWS seeded draws, pooled: the control's mean
+            tk["random1"] = pd.concat([policy_bar_topk(test, pl, ps, tau, 1, rng=rng).assign(draw=k) for k in range(RANDOM_DRAWS)],
+                                      ignore_index=True)
         for k, v in tk.items():
             pooled[k].append(v)
             rec[k] = split_by_side(v)
