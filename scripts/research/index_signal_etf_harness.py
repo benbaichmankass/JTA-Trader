@@ -62,7 +62,11 @@ ATR_LEN = 14
 FLUSH_ATR = 2.0
 FLUSH_MEAN = 5
 FLUSH_UP_WINDOW = 5      # fixed here (the unit text says "then the first up-close" without a bound): expire a flush after 5 sessions
-HOLD_CAP = {"breakdown": 20, "failed_rally": 15, "capitulation": 10}
+HOLD_CAP = {"breakdown": 20, "failed_rally": 15, "capitulation": 10, "breakdown_bear": 20, "breakdown_bounce": 10, "capitulation_wide": 10}
+SMA_LONG = 200
+SMA_SLOPE_LOOKBACK = 20
+FLUSH_ATR_WIDE = 1.5
+BOUNCE_STOP_BARS = 5
 SLIP_BPS_SIDE = 5.0
 MIN_RISK_FRAC = 0.0025   # a mapped stop closer than 0.25% of the ETF price is skipped (R explodes); skip counts are reported
 N_FLOOR = 25
@@ -79,6 +83,14 @@ PAIRS = {
     "capitulation_1x": [("SPY", "SPY", 1.0), ("QQQ", "QQQ", 1.0), ("DIA", "DIA", 1.0), ("IWM", "IWM", 1.0)],
 }
 PAIRS["failed_rally"] = PAIRS["breakdown"]
+PAIRS["breakdown_bear"] = PAIRS["breakdown"]
+PAIRS["breakdown_bounce"] = PAIRS["capitulation"]
+PAIRS["capitulation_wide"] = PAIRS["capitulation"]
+#: 1e06-04 confirmation population: 3x ETFs on sector/mid-cap/REIT indexes NOT used in the 1e06-03 discovery read (no fossil-fuel instruments)
+PAIRS["capitulation_holdout"] = [("XLK", "TECL", 3.0), ("SOXX", "SOXL", 3.0), ("XLF", "FAS", 3.0), ("MDY", "MIDU", 3.0),
+                                 ("IYR", "DRN", 3.0), ("XLV", "CURE", 3.0)]
+PAIRS["capitulation_holdout_1x"] = [(i, i, 1.0) for i, _, _ in PAIRS["capitulation_holdout"]]
+POOLED_MIN_POSITIVE_PAIRS = 3
 #: the own-chart trend twin per execution ETF (rule baseline of 1e04-01): unit id
 TWIN_UNIT = {"SQQQ": "RQ-20261123-1e01-01", "SPXU": "RQ-20261123-1e01-02", "SDOW": "RQ-20261123-1e01-03",
              "TZA": "RQ-20261123-1e01-04", "SH": "RQ-20261123-1e01-05", "PSQ": "RQ-20261123-1e01-06"}
@@ -176,7 +188,7 @@ def signals_failed_rally(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return out
 
 
-def signals_capitulation(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+def signals_capitulation(i_o, i_h, i_l, i_c, flush_atr: float = FLUSH_ATR) -> list[dict[str, Any]]:
     """Flush: close >= 2.0 ATR14 below its 5-bar mean AND low below the prior 20 lows. Signal = the first up-close after the flush
     (within FLUSH_UP_WINDOW sessions). Stop = lowest low from the flush bar to the signal bar."""
     n = len(i_c)
@@ -185,7 +197,7 @@ def signals_capitulation(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     out = []
     start = None
     for i in range(max(DONCHIAN, ATR_LEN) + 1, n - 1):
-        flush = (not np.isnan(atr[i])) and i_c[i] <= m5[i] - FLUSH_ATR * atr[i] and i_l[i] < np.min(i_l[i - DONCHIAN:i])
+        flush = (not np.isnan(atr[i])) and i_c[i] <= m5[i] - flush_atr * atr[i] and i_l[i] < np.min(i_l[i - DONCHIAN:i])
         if start is not None and i - start > FLUSH_UP_WINDOW:
             start = None
         if start is None:
@@ -198,7 +210,35 @@ def signals_capitulation(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
     return out
 
 
-SIGNALS = {"breakdown": signals_breakdown, "failed_rally": signals_failed_rally, "capitulation": signals_capitulation}
+def signals_capitulation_wide(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+    """1e06-03: the capitulation trigger with the flush loosened from 2.0 to 1.5 ATR14 (everything else identical) to reach n >= 25."""
+    return signals_capitulation(i_o, i_h, i_l, i_c, FLUSH_ATR_WIDE)
+
+
+def signals_breakdown_bear(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+    """1e06-01: the 1e04-01 breakdown, kept only in a genuine bear regime: close < SMA200 AND SMA200 below its value 20 bars ago."""
+    sma = pd.Series(i_c).rolling(SMA_LONG).mean().to_numpy()
+    out = []
+    for s in signals_breakdown(i_o, i_h, i_l, i_c):
+        i = s["i"]
+        if i - SMA_SLOPE_LOOKBACK < 0 or np.isnan(sma[i]) or np.isnan(sma[i - SMA_SLOPE_LOOKBACK]):
+            continue
+        if i_c[i] < sma[i] and sma[i] < sma[i - SMA_SLOPE_LOOKBACK]:
+            out.append(s)
+    return out
+
+
+def signals_breakdown_bounce(i_o, i_h, i_l, i_c) -> list[dict[str, Any]]:
+    """1e06-02: the 1e04-01 breakdown trigger executed as a BOUNCE BUY of the bull ETF; stop = lowest low of the last 5 index bars."""
+    out = []
+    for s in signals_breakdown(i_o, i_h, i_l, i_c):
+        i = s["i"]
+        out.append({"i": i, "stop_idx": float(np.min(i_l[i - BOUNCE_STOP_BARS + 1:i + 1]))})
+    return out
+
+
+SIGNALS = {"breakdown": signals_breakdown, "breakdown_bear": signals_breakdown_bear, "breakdown_bounce": signals_breakdown_bounce,
+           "capitulation_wide": signals_capitulation_wide, "failed_rally": signals_failed_rally, "capitulation": signals_capitulation}
 
 
 def index_signals(frame: pd.DataFrame, family: str) -> list[dict[str, Any]]:
@@ -265,6 +305,29 @@ def simulate(frame: pd.DataFrame, sigs: list[dict[str, Any]], beta: float, hold_
                        "decay_drag": round(etf_ret - beta * idx_ret, 5)})
         last_exit = k_exit
     return {"trades": trades, "skips": skips}
+
+
+def timing_control(frame: pd.DataFrame, family: str, beta: float, hold_cap: int, k_star: float | None, ndraw: int = 200, seed: int = 11) -> list[float]:
+    """Null for TIMING: each real signal keeps its stop geometry (stop/close ratio) but moves to a random bar 40-400 sessions away
+    (either direction); returns the net_r total of each of `ndraw` re-timed replays (same TP K*, same cost). Diagnostic, not a gate."""
+    sigs = index_signals(frame, family)
+    ic = frame["i_c"].to_numpy(float)
+    n = len(frame)
+    rng = np.random.default_rng(seed)
+    out = []
+    for _ in range(ndraw):
+        ss = []
+        for s in sigs:
+            if s.get("stop_idx") is None:
+                continue
+            off = int(rng.integers(40, 400)) * (1 if rng.random() < 0.5 else -1)
+            ni = s["i"] + off
+            if not (60 <= ni < n - 1):
+                continue
+            ss.append({"i": ni, "stop_idx": ic[ni] * s["stop_idx"] / ic[s["i"]]})
+        ss.sort(key=lambda x: x["i"])
+        out.append(float(sum(t["net_r"] for t in simulate(frame, ss, beta, hold_cap, SLIP_BPS_SIDE, k_star)["trades"])))
+    return out
 
 
 def calibrate_tp(trades_no_tp: list[dict[str, Any]]) -> dict[str, Any]:
@@ -381,12 +444,12 @@ def unit_verdict(per_pair: dict[str, dict[str, Any]]) -> str:
 
 
 def write_record(out: Path, unit: str, rule_id: str, rule: str, family: str, per_pair: dict[str, dict[str, Any]], extra: dict[str, Any],
-                 population: str) -> dict[str, Any]:
+                 population: str, verdict_override: str | None = None) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     slim = {k: {kk: vv for kk, vv in v["res"].items() if kk != "trades"} | {"grade": v["grade"]} for k, v in per_pair.items()}
     for k, v in per_pair.items():
         (out / f"trades_{k}.jsonl").write_text("\n".join(json.dumps(t) for t in v["res"]["trades"]) + "\n")
-    verdict = unit_verdict(per_pair)
+    verdict = verdict_override or unit_verdict(per_pair)
     passed = [k for k, v in per_pair.items() if v["grade"]["verdict"] == "pass"]
     total_n = sum(v["res"]["n"] for v in per_pair.values())
     rec = {"schema_version": 1, "research_unit": unit, "read_state": "measured", "verdict": verdict, "n": total_n,
@@ -409,6 +472,21 @@ RULES = {
 }
 
 
+BASELINE = {"RQ-20261123-1e04-01": "twin", "RQ-20261123-1e04-02": "family:breakdown", "RQ-20261123-1e04-03": "1x",
+            "RQ-20261124-1e06-01": "family:breakdown", "RQ-20261124-1e06-02": "1x", "RQ-20261124-1e06-03": "1x", "RQ-20261124-1e06-04": "1x"}
+#: unit -> (pairs key, 1x-arm pairs key) where it is not the family default; units graded on the POOLED population
+PAIRS_KEY = {"RQ-20261124-1e06-04": ("capitulation_holdout", "capitulation_holdout_1x")}
+POOLED = {"RQ-20261124-1e06-04"}
+RULES["RQ-20261124-1e06-01"] = ("RULE-RQ-20261124-1e06-01", "breakdown_bear",
+                                "PASS IFF n>=25 AND net_r>0 AND net_r>1e04-01 net_r on the same pair (or 1e04-01 INDETERMINATE) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (a pass is per pair)")
+RULES["RQ-20261124-1e06-02"] = ("RULE-RQ-20261124-1e06-02", "breakdown_bounce",
+                                "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-04"] = ("RULE-RQ-20261124-1e06-04", "capitulation_wide",
+                                "CONFIRMATION of 1e06-03 on 6 untested 3x sector/mid-cap/REIT ETFs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage; INDETERMINATE if pooled n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-03"] = ("RULE-RQ-20261124-1e06-03", "capitulation_wide",
+                                "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
+
+
 def load_frames(pairs, start, end, cache_dir):
     cache: dict[str, pd.DataFrame] = {}
     frames = {}
@@ -425,26 +503,28 @@ def load_frames(pairs, start, end, cache_dir):
 def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None) -> dict[str, Any]:
     rule_id, family, rule = RULES[unit]
     cap = HOLD_CAP[family]
-    frames = load_frames(PAIRS[family], start, end, cache_dir)
+    pk, pk1 = PAIRS_KEY.get(unit, (family, "capitulation_1x"))
+    frames = load_frames(PAIRS[pk], start, end, cache_dir)
     per: dict[str, dict[str, Any]] = {}
     extra: dict[str, Any] = {"hold_cap_sessions": cap, "slip_bps_per_side": SLIP_BPS_SIDE, "window": [start, end]}
+    kind = BASELINE[unit]
     base_by_pair: dict[str, dict[str, Any]] = {}
-    if unit == "RQ-20261123-1e04-02":  # baseline = 1e04-01 on the same pair, same harness
-        fr0 = load_frames(PAIRS["breakdown"], start, end, cache_dir)
-        for k, (f, beta) in fr0.items():
-            base_by_pair[k] = run_pair(f, "breakdown", beta, HOLD_CAP["breakdown"])
+    if kind.startswith("family:"):  # baseline = another family on the same pair, same harness (1e04-01 for 1e04-02 and 1e06-01)
+        bf = kind.split(":", 1)[1]
+        for k, (f, beta) in load_frames(PAIRS[bf], start, end, cache_dir).items():
+            base_by_pair[k] = run_pair(f, bf, beta, HOLD_CAP[bf])
     arm_b: dict[str, dict[str, Any]] = {}
-    if unit == "RQ-20261123-1e04-03":  # arm B: same trigger in the 1x index ETF
-        for k, (f, beta) in load_frames(PAIRS["capitulation_1x"], start, end, cache_dir).items():
-            arm_b[k.split("->")[0]] = run_pair(f, "capitulation", beta, cap)
+    if kind == "1x":  # arm B: the same trigger executed in the 1x index ETF
+        for k, (f, beta) in load_frames(PAIRS[pk1], start, end, cache_dir).items():
+            arm_b[k.split("->")[0]] = run_pair(f, family, beta, cap)
     for k, (f, beta) in frames.items():
         res = run_pair(f, family, beta, cap)
         idx_t, etf_t = k.split("->")
-        if unit == "RQ-20261123-1e04-01":
+        if kind == "twin":
             g = grade_pair(res, twin_net(etf_t), "own-chart trend twin (1e01-*), landed verdict net_r")
-        elif unit == "RQ-20261123-1e04-02":
+        elif kind.startswith("family:"):
             b = base_by_pair[k]
-            g = grade_pair(res, b["net_r"], "1e04-01 breakdown on the same pair", baseline_indeterminate=b["n"] < N_FLOOR)
+            g = grade_pair(res, b["net_r"], f"{kind[7:]} on the same pair", baseline_indeterminate=b["n"] < N_FLOOR)
             g["baseline_n"] = b["n"]
         else:
             b = arm_b[idx_t]
@@ -453,7 +533,25 @@ def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None)
         per[k] = {"res": res, "grade": g}
     pop = (f"{family}: {len(per)} (index, ETF) pairs, daily bars {start}..{end} (yfinance auto_adjust=False), trades net of "
            f"{SLIP_BPS_SIDE} bps/side slippage on the ETF's own price series; n per pair in measurement.pairs")
-    return write_record(out, unit, rule_id, rule, family, per, extra, pop)
+    ov = None
+    if unit in POOLED:
+        net3 = sum(v["res"]["net_r"] for v in per.values())
+        net1 = sum(arm_b[k.split("->")[0]]["net_r"] for k in per)
+        net2x = sum(v["res"]["net_r_2x_slip"] for v in per.values())
+        npool = sum(v["res"]["n"] for v in per.values())
+        npos = sum(1 for v in per.values() if v["res"]["net_r"] > 0)
+        chk = {"pooled_n_ge_floor": npool >= N_FLOOR, "pooled_net_gt_0": net3 > 0, "pooled_net_gt_1x": net3 > net1,
+               "pairs_positive_ge_3": npos >= POOLED_MIN_POSITIVE_PAIRS, "pooled_net_gt_0_at_2x_slip": net2x > 0}
+        ov = "indeterminate" if npool < N_FLOOR else ("pass" if all(chk.values()) else "fail")
+        draws = np.zeros(200)
+        for k_, (f_, beta_) in frames.items():
+            draws += np.array(timing_control(f_, family, beta_, cap, per[k_]["res"]["tp_calibration"].get("k_star")))
+        extra["timing_control"] = {"draws": 200, "shift_sessions": "40..400 either direction", "mean_net_r": round(float(draws.mean()), 3),
+                                   "p95_net_r": round(float(np.percentile(draws, 95)), 3), "actual_net_r": round(net3, 3),
+                                   "share_of_draws_ge_actual": round(float((draws >= net3).mean()), 3)}
+        extra["pooled"] = {"n": npool, "net_r_3x": round(net3, 4), "net_r_1x": round(net1, 4), "net_r_2x_slip": round(net2x, 4),
+                           "pairs_positive": npos, "checks": chk, "verdict": ov}
+    return write_record(out, unit, rule_id, rule, family, per, extra, pop, ov)
 
 
 # ---------------------------------------------------------------------------------------------------- self-test -------------

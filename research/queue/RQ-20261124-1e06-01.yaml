@@ -1,0 +1,70 @@
+id: RQ-20261124-1e06-01
+title: 'Bear-regime breakdown -> buy the inverse ETF: the 1e04-01 trigger kept only when the index closes below a falling SMA200'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: The 1e04-01 read showed index breakdowns are followed by RISES on average over 10-20 sessions. Does restricting the same breakdown to a genuine bear regime
+  (index close < SMA200 AND SMA200 below its value 20 sessions earlier) make the inverse-ETF buy earn positive net R, vs 1e04-01 on the same pair?
+why_this_matters: 'Diagnosis-driven iteration of 1e04-01: continuation may exist only inside bear regimes.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: from the 1e04-0x first local reads (n per pair 9-150); floor 25. A local exploratory read with the same code preceded this registration;
+    the graded record is the runner run of the committed command.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261124-1e06-01
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py family breakdown_bear: 1e04-01 trigger AND close<SMA200 AND SMA200<SMA200[-20]; stop/TP/hold cap 20 as 1e04-01; net_r, n,
+    per-fold, 2x slip. Cost stack: fee 0 + 5 bps slippage per side (2x slippage re-read), the ETF price series itself (decay + expense embedded), no funding; TP =
+    K* calibrated on the first 60% of trades (tp_prediction_derive constants), never tp_r 50.'
+  rule: PASS IFF n>=25 AND net_r>0 AND net_r>1e04-01 net_r on the same pair (or 1e04-01 INDETERMINATE) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE
+    if n<25; FAIL otherwise (per pair).
+  what_it_does_not_do: Changes no config. One signal family per unit; any pass needs the fresh-window / out-of-population confirmation before a manager proposal.
+    A local exploratory read (same code) preceded this registration.
+  baseline: Flat; and 1e04-01 on the same pair.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261124-1e06-01
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261124-1e06-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261123-1e04-01
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
