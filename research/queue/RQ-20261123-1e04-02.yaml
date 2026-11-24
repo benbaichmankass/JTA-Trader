@@ -1,6 +1,6 @@
 id: RQ-20261123-1e04-02
 title: Failed rally / lower-high continuation on the index -> buy the inverse ETF
-status: blocked
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -39,12 +39,6 @@ decision_rule:
     net_r > 0 under 2x slippage. INDETERMINATE if n < 25. FAIL otherwise. Parameters fixed now.
   what_it_does_not_do: Changes no config.
   baseline: Flat; and 1e04-01 on the same index.
-blocked_on:
-- kind: work_item
-  ref: IELE-INDEX-DRIVEN-HARNESS
-  what: As 1e04-01.
-  clears_when: row_state:IELE-INDEX-DRIVEN-HARNESS=done
-  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -59,8 +53,16 @@ routing:
   why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
   basis: ESTIMATE, not measured; set when the harness exists.
 run:
-  workflow: null
-  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261123-1e04-02
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261123-1e04-02
 lands:
   store: research/results/
   assert_field: read_state
