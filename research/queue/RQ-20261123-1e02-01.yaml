@@ -1,7 +1,7 @@
 id: RQ-20261123-1e02-01
 title: 'Direction-switch: long the bull ETF in an index up-regime, long the inverse ETF in a down-regime, one position at a time, vs long-only the bull ETF (S&P 500
   and Nasdaq-100 pairs), net of the full cost stack'
-status: blocked
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -41,12 +41,6 @@ decision_rule:
   what_it_does_not_do: 'Changes no config. A PASS does not create a new executor: the switch would be a roster of two long-only legs sharing a same-symbol/same-index
     allocation guard, proposed in the roster doc, not built here.'
   baseline: B = long-only bull ETF on the same signal, same window, same cost stack.
-blocked_on:
-- kind: work_item
-  ref: IELE-DIRSWITCH-HARNESS
-  what: No harness runs a two-instrument regime switch with one position at a time; exit_lever_ablation runs one leg on one symbol.
-  clears_when: row_state:IELE-DIRSWITCH-HARNESS=done
-  owner: 'manager Session 2026-11-22a (row owner: lane INDEX-LEVERAGED-ETF-ROSTER-20261123)'
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -61,8 +55,16 @@ routing:
   why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
   basis: ESTIMATE, not measured; set when the harness exists.
 run:
-  workflow: null
-  note: Null until the owning harness row is done; then git mv to research/queue/, status queued, run.command set.
+  command:
+  - python3
+  - scripts/research/index_direction_switch.py
+  - --unit
+  - RQ-20261123-1e02-01
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261123-1e02-01
 lands:
   store: research/results/
   assert_field: read_state
