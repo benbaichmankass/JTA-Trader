@@ -52,11 +52,18 @@ RE_B2 = re.compile(r"(" + AMT + "|" + BIGNUM + r")(?=[^\n$]{0,40}" + WORDS + r"|
 #: B7: "<n>% on $amount" (a risk % applied to an account size)
 RE_ON = re.compile(r"(\d%\s+(?:on|of)\s+)(" + AMT + ")", re.I)
 #: B3: key=value / key: value with a bare number in prose (gate_balance=123.4, min_balance_usd: 99); counts/provenance kept
-RE_B3 = re.compile(r"(?i)(?<![A-Za-z])([A-Za-z_]*(?:net_?liquidation|equity|balance|buying_power|wallet|cash)[A-Za-z_]*)(\s*(?:[=:]|≈|~)\s*)~?\$?-?\d[\d,]*(?:\.\d+)?")
+RE_B3 = re.compile(r"(?i)(?<![A-Za-z])([A-Za-z_]*(?:net_?liquidation|equity|balance|buying_power|wallet|cash)[A-Za-z_]*)(\s*(?:[=:]|≈|~)\s*)~?\$?-?\d[\d,]*(?:[  ]\d{3}\b)*(?:\.\d+)?")
 #: B4: number with a currency suffix near a trigger word ("balance 1234.5 USDT")
 RE_B4 = re.compile(r"(?i)(" + WORDS + r"[^\n$]{0,35}?)(?<![\w.])\d[\d,]*(?:\.\d+)?(\s?(?:USDT|USD)\b)")
 #: B5: number + currency suffix followed (<= 20 chars) by a trigger word ("8765.4 USDT balance")
 RE_B5 = re.compile(r"(?i)(?<![\w.])\d[\d,]*(?:\.\d+)?(\s?(?:USDT|USD)\b)(?=[^\n$]{0,20}" + WORDS + r")")
+#: B8 (operator 2026-11-24 "Redact them"): prop-firm ACCOUNT-SIZE TIERS and the limits derived from them (a static-DD floor or daily-loss limit
+#: back-solves the tier). An amount within 25 chars of a firm / tier / limit word, either side, plus "STATIC 9% = $N" equations.
+FIRM = (r"(?<![A-Za-z])(?:breakout|tradeify|velotrade|topstep|apex|ftmo|funded ?next|prop(?:[- ]firm)?|tier|plan|eval(?:uation)?|challenge|"
+        r"pass|profit target|static[- ]?dd|daily[- ]loss|drawdown|(?<!demo-)(?<!demo )(?<!pre-)(?<!post-)floor)(?![A-Za-z])")
+RE_T1 = re.compile(r"(" + AMT + "|" + BIGNUM + r")(?=[^\n$]{0,25}" + FIRM + ")", re.I)
+RE_T2 = re.compile(r"(" + FIRM + r"[^\n$]{0,25}?)(" + AMT + "|" + BIGNUM + ")", re.I)
+RE_T3 = re.compile(r"((?:static|daily)[^=\n]{0,15}=\s*)(" + AMT + ")", re.I)
 RED = "$[redacted]"
 
 
@@ -64,9 +71,21 @@ def in_scope(path: str) -> bool:
     return path.startswith(SCOPE_PREFIXES) and path.lower().endswith(TEXT_EXT)
 
 
+STATS = collections.Counter()
 _LINE_MEMO: dict = {}
+
+
+def _dump_stats():
+    f = os.environ.get("PURGE_STATS")
+    if f and STATS:
+        json.dump(dict(STATS), open(f, "w"))
+
+
+import atexit  # noqa: E402
+
+atexit.register(_dump_stats)
 _TRIGGERS = ("equity", "balance", "liquidation", "buying", "wallet", "floor", "distance to", "distance_to", "cushion", "funded", "cash", "account",
-             "pct_of_account", "budget_usd")
+             "pct_of_account", "budget_usd", "breakout", "tradeify", "velotrade", "topstep", "apex", "ftmo", "prop", "tier", "plan", "static", "daily", "drawdown", "challenge", "eval", "pass", "target")
 
 
 def _redact_line(ln: str) -> str:
@@ -127,6 +146,12 @@ def redact_text(s: str) -> str:
     s = _b1(s)
     s = RE_B2.sub(RED, s)
     s = RE_ON.sub(lambda m: m.group(1) + RED, s)
+    t0 = s
+    s = RE_T3.sub(lambda m: m.group(1) + RED, s)
+    s = RE_T2.sub(lambda m: m.group(1) + RED, s)
+    s = RE_T1.sub(RED, s)
+    if s != t0:
+        STATS["tier_rule_distinct_lines"] += 1       # distinct lines (per-line memo) where the B8 tier-size rule changed something
     s = RE_B3.sub(_b3_sub, s)
     s = RE_B4.sub(lambda m: m.group(1) + "[redacted]" + m.group(2), s)
     s = RE_B5.sub(lambda m: "[redacted]" + m.group(1), s)
@@ -269,15 +294,11 @@ AMTV = re.compile(r"~?-?\$\s?-?\d[\d,]{2,}(?:\.\d+)?(?:[kKmM](?![A-Za-z]))?|(?<=
 ATTACHED = {   # matched against the <=40 chars immediately LEFT of the amount, anchored at its end
     "key_threshold": r"(?:min_balance_usd|min_equity_usd|static_dd_floor_usd|daily_loss_limit(?:_usd)?|risk_budget_usd|account_size_usd)[\"']?\W{0,6}$",
     "key_count_or_ratio": r"(?:n_affordable|n_refused_\w+|n_no_bars|days_below\w*|pct_equity|pct_of_equity)[\"']?\W{0,6}$",
-    "firm_limit_phrase": r"(?:static[- ]?dd(?:[- ]floor)?|daily[- ]loss(?: limit)?|drawdown floor|dd[- ]floor|\bfloor(?: (?:is|of|at|on))?)\W{0,12}$",
     "threshold_param": r"N[≥>=]+\d+\s*/\s*$",
-    "firm_limit_equation": r"(?:static|daily)[^=\n]{0,15}=\s*$",
-    "prop_pass_target": r"pass \(\s*(?:>=|>|≥)\s*$",
     "pnl_key": r"(?:pnl|p&l|realized|profit)(?:_usd)?[\"']?\W{0,8}$",
 }
 ATTACHED_RIGHT = {  # matched against the <=14 chars immediately RIGHT of the amount
     "price_per_share": r"^\s?(?:/|per\s)(?:share|sh)\b",
-    "firm_limit_phrase_after": r"^\W{0,3}(?:daily[- ]loss|static[- ]?dd|floor\b|drawdown)",
     "threshold_bleed": r"^\s?bleed",
 }
 CONTEXT_RULES = {   # only consulted when NO balance-class word is within 40 chars of the amount
@@ -357,7 +378,7 @@ def cmd_verify(mirror, dump=None, load=None, samples=10):
     for c, n in ctxs.items():
         amts = list(AMTV.finditer(c))
         if not amts:
-            ok = NO_AMOUNT_OK.search(c) and not re.search(r"(?i)(balance|equity|cash|wallet|net_?liq)\w*\s*(?:\u2248|~|=|:)\s*\$?\d{3,}", c)
+            ok = NO_AMOUNT_OK.search(c) and not re.search(r"\[redacted\][ \u00a0,]\d{3}", c) and not re.search(r"(?i)(balance|equity|cash|wallet|net_?liq)\w*\s*(?:\u2248|~|=|:)\s*\$?\d{3,}", c)
             verdicts[("allowed", "threshold_or_pct_key_no_amount") if ok else ("real", "no_amount_unrecognised")].append((c, n))
             continue
         res = [classify(c, a.start(), a.end()) for a in amts]
@@ -408,16 +429,23 @@ def selftest() -> int:
     assert cls("alpaca_live balance $1,234 on the SPY line") == ["real"]          # ticker never allowlists
     assert cls("bybit_2 loss delta cost $5,000 exposure; equity $7,777") == ["real", "real"]
     assert cls('"min_balance_usd": 999') == ["allowed"] and cls("static_dd_floor_usd: 9999") == ["allowed"]
-    assert cls("static-DD floor $9,999 on a balance $8,888 account") == ["allowed", "real"]
+    assert cls("static-DD floor $9,999 on a balance $8,888 account") == ["real", "real"]
     assert cls("GLD at $999 per share") == ["allowed"] and cls("n_refused_cash: 999") == ["allowed"]
     assert cls("wallet truth -$777 vs journal") == ["real"]
     assert "4444" not in redact_text("sized_qty=9 with balance\u22484444 available") and "5555" not in redact_text("equity~5555 here")
     assert cls("pos_size: 999 risk_pct: 9.99 min_balance_usd: 99 snapshot_balance: 5555") == ["allowed", "real"]
-    assert cls("under the $999 daily-loss limit") == ["allowed"]
+    assert cls("under the $999 daily-loss limit") == ["real"]   # firm limits are no longer allowed: they are redacted (tier sizes)
     assert cls("balance >= $5,000 here") == ["real"] and cls("realized loss is \u2265 $999") == ["allowed"]
     assert "5,000" not in redact_text("at 2% on $5,000 and a $7,000 snapshot, ~$300 risk")
     assert redact_text("the 'balance': 12345.6 repro") != "the 'balance': 12345.6 repro"
     assert "$[redacted]" in redact_text("room k=9 +$999.99 and equity here, then $555 more")
+    for t in ("a $9k Breakout account", "the $50K tier", "static-DD floor $9,999 here", "daily-loss limit $999", "Tradeify $150K plan",
+              "Turbo STATIC 9% = $999 (floor $9,999)", "pass (>= $9,999) or die (<= $9,999 floor"):
+        out = redact_text(t)
+        assert not re.search(r"\$\s?\d", out), (t, out)
+    assert redact_text("demo-floor sag +$9,999 and risk per ticket $50") == "demo-floor sag +$9,999 and risk per ticket $50"
+    assert "999" not in redact_text("sized_qty=9 with balance\u2248123 999 available_usd=n/a")      # space-grouped thousands
+    print("tier-size controls ok")
     print("classifier controls ok")
     print("selftest ok: %d positive, %d negative controls" % (len(pos), len(neg)))
     return 0
