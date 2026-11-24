@@ -114,7 +114,7 @@ run:
   inputs:
     research_unit: RQ-20261124-b163-01
   timeout_minutes: 150
-status: queued
+status: done
 theme: regime
 title: 'REGIME lever family never tested on qqq_pullback_1h: cold-vol entry skip VL20/VL30 (--vol-skip-below-pctl 0.2/0.3) vs the declared leg, net of cost? [follow-up of RQ-20261123-f3a8-01 PASS]'
 value:
@@ -127,3 +127,16 @@ why_this_matters: 'f3a8-01 (2026-11-23) CONFIRMED the leg: net 47.3 R, n 210, 5 
   map. The cold-vol skip is the cheapest regime lever the harness supports for a pullback builder (eth/xrp/sol/ada_pullback_2h each ran it; gdx_pullback_1d passed it), so this is the one-factor
   first reading, not a sweep. A PASS is a lead for a confirmation on a disjoint window, never a config edit; a FAIL closes this arm grid on this leg only.'
 last_dispatched_at: '2026-11-24T09:39:35+00:00'
+grading:
+  attested: RULERQ20261124b16301
+  auto: true
+  decision_rule_id: RULERQ20261124b16301
+  evidence:
+  - research/results/RQ-20261124-b163-01/45366237561.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
