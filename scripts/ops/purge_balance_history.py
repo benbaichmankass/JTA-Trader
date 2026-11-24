@@ -9,7 +9,7 @@ Subcommands (all operate on a LOCAL --mirror clone path, never on a working chec
   selftest                       positive + negative controls for the redaction rules (no repo needed)
   scan    <mirror> [out.json]    inventory: every blob in the repo that matches the balance probe, mapped to path + commits
   rewrite <mirror>               run git-filter-repo on the mirror with the redaction callback (rewrites the mirror in place)
-  verify  <mirror>               residual probe over the mirror's refs/heads + refs/tags (expects 0 hits in scope)
+  verify  <mirror> [--dump F | --load F]   classified residual probe (REAL target 0; ALLOWED per named narrow rule, with samples); --load re-classifies a dump offline
 
 Two rule classes, applied only to files under SCOPE_PREFIXES with a text extension (src/ and tests/ hold synthetic fixtures and
 are left alone; the tip diff is the check that nothing else moved):
@@ -36,7 +36,7 @@ KEYS_A = ("equity_pre_usd", "equity_usd", "balance_usd", "distance_to_floor_usd"
           "walletBalance", "wallet_balance", "available_balance", "wallet_balance_usd")
 RE_A = re.compile(r'("(?:' + "|".join(KEYS_A) + r')"\s*:\s*)(?:-?\d[\d.eE+\-]*|"-?\d[\d,.]*")')
 #: A2: ANY json key whose name carries a balance word (gate_balance, snapshot_balance, ...) with a numeric value; counts/provenance excluded
-RE_AG = re.compile(r'("[A-Za-z_]*(?:balance|equity|net_?liquidation|buying_?power|wallet|cash)[A-Za-z_]*"\s*:\s*)(?:-?\d[\d.eE+\-]*|"-?\d[\d,.]*")', re.I)
+RE_AG = re.compile(r'(["\'][A-Za-z_]*(?:balance|equity|net_?liquidation|buying_?power|wallet|cash)[A-Za-z_]*["\']\s*:\s*)(?:-?\d[\d.eE+\-]*|"-?\d[\d,.]*")', re.I)
 _KEEP_KEY = re.compile(r"(?i)snapshots|rows|count|as_of|source|_n$|n_")
 
 _FLOOR = r"(?:(?:above|below|to)\s+(?:the\s+)?(?:\$\s?[\d,.]+\s+)?(?:static[- ]?)?(?:dd[- ])?floor|distance[ _]to)"
@@ -48,7 +48,9 @@ WINDOW = int(os.environ.get("PURGE_WINDOW", "120"))   # chars after a trigger wo
 RE_B1 = re.compile(r"(?i)(?=(" + WORDS + r"[^\n]{0," + str(WINDOW) + r"}))")
 RE_AMT = re.compile(AMT + "|" + BIGNUM)
 #: B2: an amount followed (<= 25 chars) by a trigger word ("$99k of equity", "$12,345 above the floor"), or by "account" ("a $87,654 account")
-RE_B2 = re.compile(r"(" + AMT + r")(?=[^\n$]{0,25}" + WORDS + r"|\s?(?:[A-Za-z-]{1,12}\s)?account(?![A-Za-z_])|\s?start(?:ing)?(?![A-Za-z_]))", re.I)
+RE_B2 = re.compile(r"(" + AMT + "|" + BIGNUM + r")(?=[^\n$]{0,40}" + WORDS + r"|\s?(?:[A-Za-z-]{1,12}\s)?account(?![A-Za-z_])|\s?start(?:ing)?(?![A-Za-z_])|\s?(?:risk|snapshot)(?![A-Za-z_]))", re.I)
+#: B7: "<n>% on $amount" (a risk % applied to an account size)
+RE_ON = re.compile(r"(\d%\s+(?:on|of)\s+)(" + AMT + ")", re.I)
 #: B3: key=value / key: value with a bare number in prose (gate_balance=123.4, min_balance_usd: 99); counts/provenance kept
 RE_B3 = re.compile(r"(?i)(?<![A-Za-z])([A-Za-z_]*(?:net_?liquidation|equity|balance|buying_power|wallet|cash)[A-Za-z_]*)(\s*[=:]\s*)~?\$?-?\d[\d,]*(?:\.\d+)?")
 #: B4: number with a currency suffix near a trigger word ("balance 1234.5 USDT")
@@ -92,6 +94,25 @@ def _b1(s: str) -> str:
     return s
 
 
+_BALW = re.compile(r"(?i)(?<![A-Za-z])(?:balances?|equity|net[_ ]?liq\\w*|cash|buying[ _]?power|wallet|account value|nav)(?![A-Za-z])")
+_AMT3 = re.compile(r"~?-?\$\s?-?\d[\d,]{2,}(?:\.\d+)?(?:[kKmM](?![A-Za-z]))?")
+RE_B1X = re.compile(r"(?i)(?=(" + WORDS + r"(?:[^\n]|\n[ \t#>*|-]{0,12}){0,%d}))" % WINDOW)
+
+
+def _b1x(s: str) -> str:
+    """B1 across wrapped lines (YAML/markdown continuation): amounts within WINDOW chars after a trigger word, newlines allowed."""
+    spans = []
+    for m in RE_B1X.finditer(s):
+        a, b = m.start(1), m.end(1)
+        if spans and a <= spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], b)
+        else:
+            spans.append([a, b])
+    for a, b in reversed(spans):
+        s = s[:a] + RE_AMT.sub(RED, s[a:b]) + s[b:]
+    return s
+
+
 def _key_sub(m):
     return m.group(0) if _KEEP_KEY.search(m.group(1)) else m.group(1) + "null"
 
@@ -105,9 +126,12 @@ def redact_text(s: str) -> str:
     s = RE_AG.sub(_key_sub, s)
     s = _b1(s)
     s = RE_B2.sub(RED, s)
+    s = RE_ON.sub(lambda m: m.group(1) + RED, s)
     s = RE_B3.sub(_b3_sub, s)
     s = RE_B4.sub(lambda m: m.group(1) + "[redacted]" + m.group(2), s)
     s = RE_B5.sub(lambda m: "[redacted]" + m.group(1), s)
+    if "$" in s and _BALW.search(s):                       # B6: a balance word anywhere on the line -> every $amount (3+ digits) on it
+        s = _AMT3.sub(RED, s)
     return s
 
 
@@ -127,6 +151,7 @@ def redact_bytes(path: str, data: bytes) -> bytes:
     if "$" in out and "\n" in out:
         out = RE_WRAP1.sub(RED, out)
         out = RE_WRAP2.sub(lambda m: m.group(1) + RED, out)
+        out = _b1x(out)
     return data if out == txt else out.encode("utf-8")
 
 
@@ -233,49 +258,118 @@ def cmd_scan(mirror, out=None):
     return 0
 
 
-#: Reviewed allowlist (operator-approved class: intended NON-balance numbers). A residual context matching one of these is counted, not a hit.
-#: Each rule is a regex over the lower-cased masked context (digits -> 9). Add a rule only after reading the contexts it would hide.
-ALLOW = {
-    "firm_limit_or_floor": r"static[- ]?dd|drawdown|dd[- ]floor|daily[- ]?loss|noise floor|absolute floor|floor (?:is|of|at|\()|9 floor|floor \$|trailing|max[- ]?loss|\bn.9 / \$",
-    "config_threshold": r"risk_budget_usd|min_balance_usd|min_equity|max_|risk_pct|risk budget|risk per|per trade|account_size_usd|_default_standard_size|min balance|minimum",
-    "demo_floor_stage_or_package_pnl": r"demo[- ]floor|soak \+ floor|pre-floor|post-floor|floor shipped|packages? .{0,20}[−-]\$|\[balance removed\]",
-    "delta_vs_redacted_start": r"from its \$\[redacted\] start",   # reviewed 2026-11-23: a loss delta; the start value itself is redacted
-    "counts_and_ratios": r"n_affordable|n_refused_|n_no_bars|pct_equity|pct_of_equity|days_below",
-    "pnl_fee_price": r"risk_budget_usd|pnl|p&l|profit|loss|gained|realized|delta|\bfee|cost|slippage|bleed|/share|per share|-share|share \(|\bgld\b|\bspy\b|\bqqq\b|\biwm\b|\bxlk\b|notional|exposure",
+#: Residual classification (manager review 2026-11-23: the first allowlist was too broad). PRECEDENCE:
+#:   1. a NARROW rule that matches the KEY / PHRASE the amount is directly attached to  -> allowed (named rule)
+#:   2. else a balance-class word within 40 chars of the amount (either side)           -> REAL
+#:   3. else a NARROW context rule                                                      -> allowed
+#:   4. else                                                                            -> REAL (unclassified)
+#: Generic words (loss, delta, cost, exposure, notional, max_, minimum, trailing, tickers) never allowlist anything.
+BALW = re.compile(r"(?i)(?<![A-Za-z])(balance|equity|net[_ ]?liq\w*|cash|buying[ _]?power|wallet|account value|nav)(?![A-Za-z])")
+AMTV = re.compile(r"~?-?\$\s?-?\d[\d,]{2,}(?:\.\d+)?(?:[kKmM](?![A-Za-z]))?|(?<=[:=])\s?\"?-?\d[\d,]{2,}(?:\.\d+)?|-?\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b")
+ATTACHED = {   # matched against the <=40 chars immediately LEFT of the amount, anchored at its end
+    "key_threshold": r"(?:min_balance_usd|min_equity_usd|static_dd_floor_usd|daily_loss_limit(?:_usd)?|risk_budget_usd|account_size_usd)[\"']?\W{0,6}$",
+    "key_count_or_ratio": r"(?:n_affordable|n_refused_\w+|n_no_bars|days_below\w*|pct_equity|pct_of_equity)[\"']?\W{0,6}$",
+    "firm_limit_phrase": r"(?:static[- ]?dd(?:[- ]floor)?|daily[- ]loss(?: limit)?|drawdown floor|dd[- ]floor|\bfloor(?: (?:is|of|at|on))?)\W{0,12}$",
+    "threshold_param": r"N[≥>=]+\d+\s*/\s*$",
+    "firm_limit_equation": r"(?:static|daily)[^=\n]{0,15}=\s*$",
+    "prop_pass_target": r"pass \(\s*(?:>=|>|≥)\s*$",
+    "pnl_key": r"(?:pnl|p&l|realized|profit)(?:_usd)?[\"']?\W{0,8}$",
 }
-ALLOW_RE = {k: re.compile(v, re.I) for k, v in ALLOW.items()}
+ATTACHED_RIGHT = {  # matched against the <=14 chars immediately RIGHT of the amount
+    "price_per_share": r"^\s?(?:/|per\s)(?:share|sh)\b",
+    "firm_limit_phrase_after": r"^\W{0,3}(?:daily[- ]loss|static[- ]?dd|floor\b|drawdown)",
+    "threshold_bleed": r"^\s?bleed",
+}
+CONTEXT_RULES = {   # only consulted when NO balance-class word is within 40 chars of the amount
+    "demo_floor_stage_name": r"demo[- ]floor|soak \+ floor|pre-floor|post-floor|floor shipped",
+    "balance_removed_marker": r"\[balance removed\]",
+    "start_delta_marker": r"from its \$\[redacted\] start",
+}
+ATT_RE = {k: re.compile(v, re.I) for k, v in ATTACHED.items()}
+ATTR_RE = {k: re.compile(v, re.I) for k, v in ATTACHED_RIGHT.items()}
+CTX_RE = {k: re.compile(v, re.I) for k, v in CONTEXT_RULES.items()}
+#: LEFT rules consulted only AFTER the balance-word check (a comparison threshold next to a balance word stays REAL)
+LEFT_AFTER_BAL = {"comparison_threshold": re.compile(r"(?:\u2265|>=|<=|\u2264)\s*$")}
 
 
-def cmd_verify(mirror):
-    """Residual probe over branches + tags, in scope. Prints (i) unclassified candidates (target 0) and (ii) allowlisted counts by rule."""
-    objs = _blobs(mirror, ["--branches", "--tags"])
-    cand = [o for o, ps in objs.items() if any(in_scope(p) for p in ps)]
-    q = subprocess.Popen(["git", "-C", mirror, "cat-file", "--batch"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    import threading
-    threading.Thread(target=lambda: (q.stdin.write("".join(c + "\n" for c in cand).encode()), q.stdin.close())).start()
-    ctx = collections.Counter()
-    while True:
-        h = q.stdout.readline()
-        if not h:
-            break
-        _o, t, s = h.split()
-        d = q.stdout.read(int(s))
-        q.stdout.read(1)
-        if t != b"blob" or int(s) > 8_000_000 or not any(p in d for p in PRE) or b"\0" in d[:4000]:
+BALKEY = re.compile(r"(?i)(balance|equity|net_?liq|cash|buying_?power|wallet)[A-Za-z_]*[\"']?\s*[:=]\s*\"?$")
+ANYKEY = re.compile(r"(?i)[A-Za-z_]+[\"']?\s*[:=]\s*\"?$")
+
+
+def classify(ctx: str, amt_start: int, amt_end: int):
+    """-> (verdict, rule): verdict in {'allowed', 'real'}."""
+    left, right = ctx[max(0, amt_start - 40):amt_start], ctx[amt_end:amt_end + 14]
+    if ctx[amt_start:amt_start + 1] != "$" and ANYKEY.search(left):      # a bare number is judged by ITS key only
+        for k, rx in ATT_RE.items():
+            if rx.search(left):
+                return "allowed", k
+        if BALKEY.search(left):
+            return "real", "balance_key_value"
+        return "allowed", "non_balance_key_value"
+    for k, rx in ATT_RE.items():
+        if rx.search(left):
+            return "allowed", k
+    for k, rx in ATTR_RE.items():
+        if rx.search(right):
+            return "allowed", k
+    if BALW.search(ctx[max(0, amt_start - 40):amt_start]) or BALW.search(ctx[amt_end:amt_end + 40]):
+        return "real", "balance_word_near_amount"
+    for k, rx in LEFT_AFTER_BAL.items():
+        if rx.search(left):
+            return "allowed", k
+    for k, rx in CTX_RE.items():
+        if rx.search(ctx):
+            return "allowed", k
+    return "real", "unclassified"
+
+
+def cmd_verify(mirror, dump=None, load=None, samples=10):
+    """Residual probe over branches + tags, in scope. --dump FILE saves every residual context; --load FILE re-classifies offline."""
+    import random
+    ctxs = collections.Counter()
+    if load:
+        ctxs.update({k: v for k, v in json.load(open(load)).items()})
+    else:
+        objs = _blobs(mirror, ["--branches", "--tags"])
+        cand = [o for o, ps in objs.items() if any(in_scope(p) for p in ps)]
+        q = subprocess.Popen(["git", "-C", mirror, "cat-file", "--batch"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        import threading
+        threading.Thread(target=lambda: (q.stdin.write("".join(c + "\n" for c in cand).encode()), q.stdin.close())).start()
+        while True:
+            h = q.stdout.readline()
+            if not h:
+                break
+            _o, t, sz = h.split()
+            d = q.stdout.read(int(sz))
+            q.stdout.read(1)
+            if t != b"blob" or int(sz) > 8_000_000 or not any(p in d for p in PRE) or b"\0" in d[:4000]:
+                continue
+            for rx in (PROBE_KEYS, PROBE_DOL, PROBE_DOL_REV):
+                for m in rx.finditer(d):
+                    c = d[max(0, m.start() - 80):m.end() + 60].decode("utf8", "replace").replace("\n", " ")
+                    ctxs[c if False else re.sub(r"\d", "9", c)] += 1
+        if dump:
+            json.dump(ctxs, open(dump, "w"))
+    verdicts = collections.defaultdict(list)   # (verdict, rule) -> [(ctx, n)]
+    for c, n in ctxs.items():
+        amts = list(AMTV.finditer(c))
+        if not amts:
+            verdicts[("allowed", "no_amount_in_context")].append((c, n))
             continue
-        for rx in (PROBE_KEYS, PROBE_DOL, PROBE_DOL_REV):
-            for m in rx.finditer(d):
-                c = d[max(0, m.start() - 60):m.end() + 40].decode("utf8", "replace").replace("\n", " ")
-                ctx[re.sub(r"\d", "9", c)] += 1
-    real, allowed = collections.Counter(), collections.Counter()
-    for c, n in ctx.items():
-        rule = next((k for k, rx in ALLOW_RE.items() if rx.search(c)), None)
-        (allowed if rule else real)[rule or c] += n
-    print("(ii) allowlisted matches by rule:", dict(allowed), "total", sum(allowed.values()))
-    print("(i) UNCLASSIFIED candidates: %d matches in %d distinct masked contexts (target 0)" % (sum(real.values()), len(real)))
-    for c, n in real.most_common(60):
-        print(" ", n, repr(c[:230]))
-    return 0 if not real else 1
+        res = [classify(c, a.start(), a.end()) for a in amts]
+        worst = next((r for r in res if r[0] == "real"), res[0])
+        verdicts[worst].append((c, n))
+    rnd = random.Random(20261123)
+    tot = collections.Counter()
+    for (v, rule), lst in verdicts.items():
+        tot[v] += sum(n for _, n in lst)
+    print("REAL (target 0): %d matches in %d contexts | ALLOWED: %d matches" % (
+        tot["real"], sum(len(l) for (v, _), l in verdicts.items() if v == "real"), tot["allowed"]))
+    for (v, rule), lst in sorted(verdicts.items(), key=lambda kv: (kv[0][0], -sum(n for _, n in kv[1]))):
+        print("\n## %s / %s: %d matches, %d distinct contexts" % (v, rule, sum(n for _, n in lst), len(lst)))
+        for c, n in (sorted(lst, key=lambda x: -x[1])[:samples] if v == "real" else rnd.sample(lst, min(samples, len(lst)))):
+            print("  %4d  %s" % (n, repr(c[:250])))
+    return 0 if not tot["real"] else 1
 
 
 # ---- self-test: positive and negative controls (synthetic numbers only) -----------------------------------------------------------
@@ -304,6 +398,22 @@ def selftest() -> int:
     assert '"static_dd_floor_usd": 4000.0' in redact_bytes("comms/gates/g.json", pos["comms/gates/g.json"].encode()).decode()
     for p, s in neg.items():
         assert redact_bytes(p, s.encode()) == s.encode(), p
+    def cls(t, which=0):
+        a = list(AMTV.finditer(t))
+        return [classify(t, x.start(), x.end())[0] for x in a]
+    assert cls("alpaca_live balance $1,234 on the SPY line") == ["real"]          # ticker never allowlists
+    assert cls("bybit_2 loss delta cost $5,000 exposure; equity $7,777") == ["real", "real"]
+    assert cls('"min_balance_usd": 999') == ["allowed"] and cls("static_dd_floor_usd: 9999") == ["allowed"]
+    assert cls("static-DD floor $9,999 on a balance $8,888 account") == ["allowed", "real"]
+    assert cls("GLD at $999 per share") == ["allowed"] and cls("n_refused_cash: 999") == ["allowed"]
+    assert cls("wallet truth -$777 vs journal") == ["real"]
+    assert cls("pos_size: 999 risk_pct: 9.99 min_balance_usd: 99 snapshot_balance: 5555") == ["allowed", "real"]
+    assert cls("under the $999 daily-loss limit") == ["allowed"]
+    assert cls("balance >= $5,000 here") == ["real"] and cls("realized loss is \u2265 $999") == ["allowed"]
+    assert "5,000" not in redact_text("at 2% on $5,000 and a $7,000 snapshot, ~$300 risk")
+    assert redact_text("the 'balance': 12345.6 repro") != "the 'balance': 12345.6 repro"
+    assert "$[redacted]" in redact_text("room k=9 +$999.99 and equity here, then $555 more")
+    print("classifier controls ok")
     print("selftest ok: %d positive, %d negative controls" % (len(pos), len(neg)))
     return 0
 
@@ -320,6 +430,10 @@ if __name__ == "__main__":
     if a[0] == "rewrite":
         sys.exit(cmd_rewrite(a[1]))
     if a[0] == "verify":
-        sys.exit(cmd_verify(a[1]))
+        kw = {}
+        for flag, key in (("--dump", "dump"), ("--load", "load")):
+            if flag in a:
+                kw[key] = a[a.index(flag) + 1]
+        sys.exit(cmd_verify(a[1] if not a[1].startswith("--") else None, **kw))
     print(__doc__)
     sys.exit(2)
