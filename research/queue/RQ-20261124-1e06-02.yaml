@@ -1,0 +1,71 @@
+id: RQ-20261124-1e06-02
+title: 'Index breakdown executed as a BOUNCE: the 1e04-01 trigger bought in the 3x BULL ETF, stop = 5-bar index low, vs the same trigger in the 1x ETF'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Index breakdowns are followed by index rises on average (1e04-01 diagnosis). Does buying the 3x bull ETF on the Donchian-20 breakdown (stop at the lowest
+  index low of the last 5 sessions mapped through the ETF, hold cap 10, calibrated TP) earn positive net R and beat the same trigger in the 1x index ETF?
+why_this_matters: Tests whether the breakdown is a bounce entry rather than a short-side signal.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: from the 1e04-0x first local reads (n per pair 9-150); floor 25. A local exploratory read with the same code preceded this registration;
+    the graded record is the runner run of the committed command.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261124-1e06-02
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py family breakdown_bounce: Donchian-20 close-below-low on the index, entry next open in UPRO/TQQQ/UDOW/TNA, stop = min index
+    low of last 5 bars mapped x3, hold cap 10, K* calibrated; arm B = same trigger in SPY/QQQ/DIA/IWM. Cost stack: fee 0 + 5 bps slippage per side (2x slippage re-read),
+    the ETF price series itself (decay + expense embedded), no funding; TP = K* calibrated on the first 60% of trades (tp_prediction_derive constants), never tp_r
+    50.'
+  rule: PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (per pair).
+  what_it_does_not_do: Changes no config. One signal family per unit; any pass needs the fresh-window / out-of-population confirmation before a manager proposal.
+    A local exploratory read (same code) preceded this registration.
+  baseline: Flat; and the same trigger in the 1x index ETF.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261124-1e06-02
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261124-1e06-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261123-1e04-01
+- RQ-20261123-1e04-03
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
