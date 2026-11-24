@@ -1,0 +1,346 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261123-1e02-01",
+ "read_state": "measured",
+ "verdict": "fail",
+ "n": 628,
+ "note": "direction switch: FAIL; pairs passed none of 4; a pass needs the fresh-window confirmation",
+ "decision_rule": {
+  "id": "RULE-RQ20261123-1e02-01-DIRSWITCH",
+  "rule": "PASS IFF n(S)>=25 AND net_r(S)>net_r(B) AND maxDD(S)<=maxDD(B) AND S beats B in >=3 of 4 folds AND net_r(S)>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (a pass is per pair)"
+ },
+ "population": "4 bull/inverse pairs, daily bars 2010-06-01..2026-10-22 (yfinance auto_adjust=False), net of 5.0 bps/side slippage; n = switch-arm trades",
+ "measurement": {
+  "pairs": {
+   "SPY:UPRO<->SPXU": {
+    "S": {
+     "n": 160,
+     "net_r": -8.32,
+     "mean_net_r": -0.052,
+     "max_drawdown_r": 14.9316,
+     "win_rate": 0.35,
+     "by_outcome": {
+      "stop": 19,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 45,
+       "net_r": -6.8105
+      },
+      {
+       "n": 36,
+       "net_r": -0.9121
+      },
+      {
+       "n": 43,
+       "net_r": -4.0139
+      },
+      {
+       "n": 36,
+       "net_r": 3.4165
+      }
+     ],
+     "net_r_2x_slip": -10.346
+    },
+    "B": {
+     "n": 88,
+     "net_r": 28.4283,
+     "mean_net_r": 0.323,
+     "max_drawdown_r": 2.9438,
+     "win_rate": 0.489,
+     "by_outcome": {
+      "stop": 5,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 25,
+       "net_r": 3.698
+      },
+      {
+       "n": 19,
+       "net_r": 9.4166
+      },
+      {
+       "n": 24,
+       "net_r": 5.453
+      },
+      {
+       "n": 20,
+       "net_r": 9.8607
+      }
+     ],
+     "net_r_2x_slip": 27.3016
+    },
+    "folds_S_beats_B": 0,
+    "regime_days": {
+     "up": 2070,
+     "down": 597,
+     "neutral": 1458
+    },
+    "grade": {
+     "verdict": "fail",
+     "checks": {
+      "n_ge_floor": true,
+      "S_net_gt_B_net": false,
+      "S_dd_le_B_dd": false,
+      "S_beats_B_in_ge_3_folds": false,
+      "S_net_gt_0_at_2x_slip": false
+     }
+    },
+    "data_start": "2010-06-01",
+    "data_end": "2026-10-22"
+   },
+   "QQQ:TQQQ<->SQQQ": {
+    "S": {
+     "n": 154,
+     "net_r": -1.9001,
+     "mean_net_r": -0.0123,
+     "max_drawdown_r": 9.6452,
+     "win_rate": 0.344,
+     "by_outcome": {
+      "stop": 26,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 42,
+       "net_r": 0.5215
+      },
+      {
+       "n": 36,
+       "net_r": -7.0001
+      },
+      {
+       "n": 39,
+       "net_r": 2.4659
+      },
+      {
+       "n": 37,
+       "net_r": 2.1126
+      }
+     ],
+     "net_r_2x_slip": -3.4197
+    },
+    "B": {
+     "n": 89,
+     "net_r": 29.8913,
+     "mean_net_r": 0.3359,
+     "max_drawdown_r": 3.2354,
+     "win_rate": 0.472,
+     "by_outcome": {
+      "stop": 13,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 24,
+       "net_r": 9.5408
+      },
+      {
+       "n": 22,
+       "net_r": 2.5562
+      },
+      {
+       "n": 19,
+       "net_r": 11.265
+      },
+      {
+       "n": 24,
+       "net_r": 6.5293
+      }
+     ],
+     "net_r_2x_slip": 28.9784
+    },
+    "folds_S_beats_B": 0,
+    "regime_days": {
+     "up": 2019,
+     "down": 620,
+     "neutral": 1486
+    },
+    "grade": {
+     "verdict": "fail",
+     "checks": {
+      "n_ge_floor": true,
+      "S_net_gt_B_net": false,
+      "S_dd_le_B_dd": false,
+      "S_beats_B_in_ge_3_folds": false,
+      "S_net_gt_0_at_2x_slip": false
+     }
+    },
+    "data_start": "2010-06-01",
+    "data_end": "2026-10-22"
+   },
+   "SPY:SPY<->SH": {
+    "S": {
+     "n": 160,
+     "net_r": -7.9109,
+     "mean_net_r": -0.0494,
+     "max_drawdown_r": 15.6804,
+     "win_rate": 0.375,
+     "by_outcome": {
+      "stop": 13,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 45,
+       "net_r": -7.9602
+      },
+      {
+       "n": 36,
+       "net_r": -2.2666
+      },
+      {
+       "n": 43,
+       "net_r": -2.7354
+      },
+      {
+       "n": 36,
+       "net_r": 5.0513
+      }
+     ],
+     "net_r_2x_slip": -13.6624
+    },
+    "B": {
+     "n": 88,
+     "net_r": 26.2772,
+     "mean_net_r": 0.2986,
+     "max_drawdown_r": 2.441,
+     "win_rate": 0.523,
+     "by_outcome": {
+      "stop": 3,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 25,
+       "net_r": 2.0282
+      },
+      {
+       "n": 19,
+       "net_r": 8.0738
+      },
+      {
+       "n": 24,
+       "net_r": 5.052
+      },
+      {
+       "n": 20,
+       "net_r": 11.1232
+      }
+     ],
+     "net_r_2x_slip": 23.0704
+    },
+    "folds_S_beats_B": 0,
+    "regime_days": {
+     "up": 2070,
+     "down": 597,
+     "neutral": 1458
+    },
+    "grade": {
+     "verdict": "fail",
+     "checks": {
+      "n_ge_floor": true,
+      "S_net_gt_B_net": false,
+      "S_dd_le_B_dd": false,
+      "S_beats_B_in_ge_3_folds": false,
+      "S_net_gt_0_at_2x_slip": false
+     }
+    },
+    "data_start": "2010-06-01",
+    "data_end": "2026-10-22"
+   },
+   "QQQ:QQQ<->PSQ": {
+    "S": {
+     "n": 154,
+     "net_r": -2.6975,
+     "mean_net_r": -0.0175,
+     "max_drawdown_r": 10.7674,
+     "win_rate": 0.364,
+     "by_outcome": {
+      "stop": 21,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 42,
+       "net_r": -1.2299
+      },
+      {
+       "n": 36,
+       "net_r": -7.3153
+      },
+      {
+       "n": 39,
+       "net_r": 2.5769
+      },
+      {
+       "n": 37,
+       "net_r": 3.2708
+      }
+     ],
+     "net_r_2x_slip": -6.9846
+    },
+    "B": {
+     "n": 89,
+     "net_r": 25.9809,
+     "mean_net_r": 0.2919,
+     "max_drawdown_r": 3.3458,
+     "win_rate": 0.483,
+     "by_outcome": {
+      "stop": 11,
+      "take_profit": 0,
+      "timeout": 0
+     },
+     "folds": [
+      {
+       "n": 24,
+       "net_r": 7.2039
+      },
+      {
+       "n": 22,
+       "net_r": 1.9733
+      },
+      {
+       "n": 19,
+       "net_r": 9.7735
+      },
+      {
+       "n": 24,
+       "net_r": 7.0302
+      }
+     ],
+     "net_r_2x_slip": 23.408
+    },
+    "folds_S_beats_B": 0,
+    "regime_days": {
+     "up": 2019,
+     "down": 620,
+     "neutral": 1486
+    },
+    "grade": {
+     "verdict": "fail",
+     "checks": {
+      "n_ge_floor": true,
+      "S_net_gt_B_net": false,
+      "S_dd_le_B_dd": false,
+      "S_beats_B_in_ge_3_folds": false,
+      "S_net_gt_0_at_2x_slip": false
+     }
+    },
+    "data_start": "2010-06-01",
+    "data_end": "2026-10-22"
+   }
+  }
+ },
+ "generated_at": "2026-11-24T22:03:40Z"
+}
