@@ -17,7 +17,15 @@ open_r, peak_r, mae_r, bars_since_peak, bars_open, range_atr_k, plus side, timef
 are NOT built here and are recorded as a limitation.
 
   python3 scripts/research/am_heads_fit.py run --labels DIR [DIR...] --corpus ROOT --out DIR [--max-trades N] [--rows-per-fold N]
+  python3 scripts/research/am_heads_fit.py dump --labels DIR [DIR...] --corpus ROOT --out DIR [--rows-per-fold 400000]
   python3 scripts/research/am_heads_fit.py --self-test
+
+``dump`` (AM v2 STAGE B, unit family RQ-20261124-b5a1-*): re-fits the Stage A recipe (same features, LGB params, seed, row cap, purged folds) on each
+fold's TRAIN rows only and SAVES the heads, one LightGBM text model per (fold, head) plus ``manifest.json`` (fold id and test window, feature list,
+strategy-code map, per-file sha256, and the training-score thresholds the policy uses). It scores NO test row and claims NO holdout: the holdout
+fold's head is fitted on trades whose label window ends 7 days before 2026-01-01, never on a holdout outcome. A replay then loads the head of the
+fold a trade ENTERED in, i.e. a head that never saw that trade (``am_policy_arm.load_heads``). Stage A's own models were not saved, so these are
+re-fits of the same recipe with the same seed, not byte-identical copies of the Stage A fits; the manifest says so.
 """
 from __future__ import annotations
 
@@ -295,6 +303,81 @@ def run(a) -> int:
     return 0
 
 
+HEADS_DUMP_SCHEMA = "am_heads_dump/1"
+#: heads saved by ``dump`` (every head Stage A fitted); the Stage B policy reads q0.5, q0.9, stop_first and dip_recovers
+DUMP_HEADS = tuple(f"q{a:g}" for a in QUANTILES) + BIN_HEADS
+#: training-score percentiles stored per binary head: the policy acts on the TOP DECILE of the fold's own training scores (a pre-registered, fold-PIT cut)
+THRESH_PCTS = (50, 90)
+
+
+def dump_fold(arr, tidx, train_trades, rows_per_fold, rng, fold_id, out_dir: Path) -> dict:
+    """Fit every head on the TRAIN rows of one fold and save them under ``out_dir/<fold_id>/``. Never touches a test row."""
+    import hashlib
+    import lightgbm as lgb
+    tr = np.where(np.isin(tidx, train_trades))[0]
+    if len(tr) > rows_per_fold:
+        tr = rng.choice(tr, rows_per_fold, replace=False)
+    if len(tr) < 5000:
+        return {"fold_id": fold_id, "skipped": f"train rows {len(tr)}"}
+    X = np.column_stack([arr[k] for k in FEATS])
+    fdir = out_dir / fold_id
+    fdir.mkdir(parents=True, exist_ok=True)
+    files, thresholds = {}, {}
+    for a in QUANTILES:
+        m = lgb.LGBMRegressor(objective="quantile", alpha=a, **LGB)
+        m.fit(X[tr], arr["fwd_mfe_r"][tr], categorical_feature=[FEATS.index("strat")])
+        p = fdir / f"q{a:g}.txt"
+        m.booster_.save_model(str(p))
+        files[f"q{a:g}"] = hashlib.sha256(p.read_bytes()).hexdigest()
+    for h in BIN_HEADS:
+        y = arr[h][tr]
+        if y.min() == y.max():
+            continue
+        m = lgb.LGBMClassifier(**LGB)
+        m.fit(X[tr], y, categorical_feature=[FEATS.index("strat")])
+        p = fdir / f"{h}.txt"
+        m.booster_.save_model(str(p))
+        files[h] = hashlib.sha256(p.read_bytes()).hexdigest()
+        # provenance: predict_proba -- P(label=1) on the TRAIN rows, used only to set the fold's percentile cuts
+        sc = m.predict_proba(X[tr])[:, 1]
+        thresholds[h] = {f"p{q}": float(np.percentile(sc, q)) for q in THRESH_PCTS}
+    return {"fold_id": fold_id, "n_train_rows": int(len(tr)), "n_train_trades": int(len(train_trades)), "files": files, "thresholds": thresholds}
+
+
+def dump(a) -> int:
+    import pandas as pd
+    import cf_bars
+    import cf_bulk
+    t0 = time.time()
+    root = Path(a.corpus)
+    jobs, counts = cf_bulk.load_jobs(cf_bulk.discover(root), root)
+    arr, tidx, te_, tend, meta = load(a.labels, jobs, cf_bars.TF_SECONDS, a.max_trades)
+    print(json.dumps({k: v for k, v in meta.items() if k != "strategies"}), flush=True)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    emb = EMBARGO_DAYS * 86400.0
+    ts = lambda s: pd.Timestamp(s, tz="UTC").timestamp()  # noqa: E731
+    bounds = [ts(x) for x in DEV_FOLDS] + [ts(HOLDOUT_START)]
+    folds = []
+    for i, (lo, hi) in enumerate(zip(bounds[:-1], bounds[1:])):
+        trn, _ = split(te_, tend, lo, hi, emb)
+        rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + i), DEV_FOLDS[i], out)
+        folds.append({**rec, "kind": "dev", "test_start": DEV_FOLDS[i], "test_end": (DEV_FOLDS[i + 1] if i + 1 < len(DEV_FOLDS) else HOLDOUT_START)})
+        print(json.dumps({k: rec[k] for k in ("fold_id", "n_train_rows") if k in rec}), flush=True)
+    trn, _ = split(te_, tend, bounds[-1], float("inf"), emb)
+    rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + len(DEV_FOLDS)), HOLDOUT_START, out)
+    folds.append({**rec, "kind": "holdout", "test_start": HOLDOUT_START, "test_end": None})
+    man = {"schema": HEADS_DUMP_SCHEMA, "feats": FEATS, "heads": list(DUMP_HEADS), "lgb_params": {k: v for k, v in LGB.items() if k != "n_jobs"},
+           "seed": SEED, "rows_per_fold": a.rows_per_fold, "embargo_days": EMBARGO_DAYS, "mfe_cap": MFE_CAP, "strategies": meta["strategies"],
+           "threshold_percentiles": list(THRESH_PCTS), "folds": folds,
+           "note": "re-fit of the Stage A recipe (RQ-20261123-a9d1-01) on each fold's TRAIN rows; no test row scored, no holdout claimed or read; "
+                   "Stage A's own models were not saved, so these are same-recipe, same-seed re-fits, not byte-identical copies",
+           "labels_n_trades": meta["n_trades"], "corpus_jobs": counts.get("distinct_jobs"), "elapsed_s": round(time.time() - t0),
+           "provenance": "ESTIMATED"}
+    (out / "manifest.json").write_text(json.dumps(man, indent=1) + "\n")
+    return 0
+
+
 STAGE_A_RULE = {"id": "RULE-AM-HEADS-STAGE-A-20261123", "min_dev_mean_skill_vs_state": 0.01, "min_dev_folds_positive": 6, "n_dev_folds": 8,
                 "graded_heads": {"target": ["q0.5", "q0.9", "reach_2"], "invalidation": ["stop_first", "dip_recovers"]}}
 
@@ -348,7 +431,7 @@ def _self_test() -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "dump"])
     ap.add_argument("--labels", nargs="+", default=[])
     ap.add_argument("--corpus", default="")
     ap.add_argument("--out", default="/tmp/am_heads_out")
@@ -364,8 +447,8 @@ def main(argv=None) -> int:
         _self_test()
         return 0
     if not a.labels or not a.corpus:
-        ap.error("run needs --labels and --corpus")
-    return run(a)
+        ap.error("run/dump need --labels and --corpus")
+    return dump(a) if a.cmd == "dump" else run(a)
 
 
 if __name__ == "__main__":
