@@ -1,0 +1,139 @@
+{
+  "biases": [
+    "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+    "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+    "live peak_r is a lower bound on true MFE",
+    "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "bounds_r": {
+    "auto_apply": 0.25,
+    "shadow": 0.5
+  },
+  "candles": {
+    "ADAUSDT": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261022-4b82-07/40095360985/data/ADAUSDT_60.csv",
+    "BTCUSDT": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261022-4b82-02/39965645154/data/BTCUSDT_60.csv",
+    "ETHUSDT": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261026-f679-02/40574160194/data/ETHUSDT_60.csv",
+    "SOLUSDT": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261026-f679-02/40574160194/data/SOLUSDT_60.csv",
+    "XRPUSDT": "/home/ubuntu/ict-trading-bot/comms/research/RQ-20261026-f679-02/40574160194/data/XRPUSDT_60.csv"
+  },
+  "corpus": "comms/strategy_evidence/ltr_corpus/ml_entry__trades.jsonl",
+  "corpus_note": "ml_entry pooled Stage-0 held-out ledger (2025-10-01..2026-09-30, the 5 bybit_2 symbols; c692-06 population, extend-only TP arm = arm A of RQ-20261103-5e04-01, which reproduces the record's 0.0271). The committed record's current arm F adds the structure SL (pivot=5, mean 0.0371 over the same 907 decisions); this corpus does NOT model that SL, so HOLD here is the extend-only exit. Row ML-ENTRY-LTR-OUTCOME-TABLE.",
+  "leg": "ml_entry",
+  "n_floor": 20,
+  "options": [
+    {
+      "action": "hold",
+      "mean_r": -0.2422,
+      "n": 158,
+      "n_floor": 20,
+      "p05_r": -1.091,
+      "p_giveback_gt_half": 0.6709,
+      "sd_r": 1.0268,
+      "state": "measured",
+      "worst_r": -1.1269
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.0034,
+      "ev_cost_se_r": 0.0776,
+      "mean_r": -0.2456,
+      "n": 158,
+      "n_floor": 20,
+      "p05_r": -0.6054,
+      "p_giveback_gt_half": 0.9177,
+      "sd_r": 0.3046,
+      "spec": "atr:1.0",
+      "state": "measured",
+      "stop_at_r_now": -0.3528,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": -0.2198,
+      "worst_r": -1.3467
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": 0.0278,
+      "ev_cost_se_r": 0.0664,
+      "mean_r": -0.27,
+      "n": 158,
+      "n_floor": 20,
+      "p05_r": -0.6718,
+      "p_giveback_gt_half": 0.8544,
+      "sd_r": 0.5338,
+      "spec": "atr:1.5",
+      "state": "measured",
+      "stop_at_r_now": -0.6028,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": -0.2198,
+      "worst_r": -1.3467
+    },
+    {
+      "action": "tighten",
+      "ev_cost_r": -0.0182,
+      "ev_cost_se_r": 0.0516,
+      "mean_r": -0.224,
+      "n": 158,
+      "n_floor": 20,
+      "p05_r": -0.864,
+      "p_giveback_gt_half": 0.7595,
+      "sd_r": 0.7413,
+      "spec": "atr:2.0",
+      "state": "measured",
+      "stop_at_r_now": -0.8528,
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": -0.2198,
+      "worst_r": -1.3467
+    },
+    {
+      "action": "close",
+      "ev_cost_r": -0.1605,
+      "ev_cost_se_r": 0.082,
+      "mean_r": -0.0816,
+      "n": 158,
+      "n_floor": 20,
+      "p05_r": -0.1223,
+      "p_giveback_gt_half": 1.0,
+      "sd_r": 0.0225,
+      "spec": "close",
+      "state": "measured",
+      "within_auto_bound": true,
+      "within_shadow_bound": true,
+      "worst_case_gain_r": 0.9732,
+      "worst_r": -0.1537
+    }
+  ],
+  "population": {
+    "beyond_bars_slack": 0,
+    "comparable": 158,
+    "corpus_trades": 907,
+    "mfe_replay_mismatch": 17,
+    "never_reached_peak": 42,
+    "no_candles": 0,
+    "no_pullback_after_peak": 94,
+    "side_excluded": 596,
+    "side_filter": "long",
+    "symbol_excluded": 0,
+    "symbol_filter": null,
+    "symbols": [
+      "ADAUSDT",
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT"
+    ]
+  },
+  "read_state": "measured",
+  "state": {
+    "atr_stop_mult": 2.0,
+    "bars_held": 2,
+    "condition": "pullback",
+    "condition_asked": "state",
+    "dist_to_stop_atr": null,
+    "dist_to_target_atr": null,
+    "open_r": -0.0201,
+    "peak_r": 0.1472,
+    "side": "long"
+  }
+}
