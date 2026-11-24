@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 order path (src/runtime/order_monitor.py): each monitor pass re-amends any open leg whose stored stop is looser than the package stop (and a leg that missed a monitor-moved TP) to the package level. Plus the live-review dispatcher no longer skips an account for a close / partial_close when its only mechanics mismatch is a bracket level. Do NOT merge or deploy without the operator's OK. Revert: git revert the PR; the ml_entry mirror then keeps an entry-time stop as before.",
+  "why": "PI-20261124-RORTRAIL-0001: a package-level action reached only the real-money leg, so the mirror's net-of-cost window (the Stage-2 demotion signal) diverged from live."
+}

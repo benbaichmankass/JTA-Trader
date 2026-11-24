@@ -39,6 +39,13 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 folds; a short-side max calibrated EV of +0.02 in some folds and a side switched off in another): the same cross-fitted OOF
                 predictions, but the isotonic map is fit ONLY on the most recent training block (the one nearest the test fold), so the side EVs
                 track the current regime. Control: random thinning at the arm's per-side take rate (100 draws), as ev_calib.
+  volsl_retrain REGIME ARM 2 (f1a0-12's pre-named next form): the SL 4 / TP 6 recipe with the bracket WIDTH set by the regime: SL = 3 + 2 x
+                BTC vol24 percentile over 90 d (3..5 ATR14), TP = 1.5 x SL, 24 h; refit on those labels. Graded vs the fixed SL 4 / TP 6 / 24 h refit
+                (the one factor is the vol scaling); random-side entries under both reported.
+  rsz_xwide     REGIME-CONDITIONED SIZING (REGIME-PROGRAM R4): the SL 4 / TP 6 / 24 h refit's decisions, each sized by
+                clip(train-median BTC vol24 / BTC vol24 at the bar, 0.5, 2) normalised to mean 1 (vol parity across regimes; keeps every decision,
+                so no power loss). Statistic as bar_split: net R per 1R deployed (non-inferiority), bar Sharpe and bar max DD vs the same decisions
+                unweighted; control: the same weights permuted across bars.
   rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
                 training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
                 vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
@@ -72,7 +79,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -85,6 +92,10 @@ SL_XWIDE, TP_XWIDE = 4.0, 6.0          # sl_xwide_retrain: cost per R ~ half of 
 RSW_STATE = ["btc_ret720", "btc_dist_sma1200", "btc_vol_pct90d"]   # rsw_xwide_h48: the causal 2-axis BTC regime state (trend, vol)
 RSW_BW = 1.0                          # Gaussian kernel bandwidth in train-standardized state units (fixed, no grid)
 RSW_REF_DAYS = 7                      # the reference state = mean state over the last 7 days BEFORE the test fold (point-in-time)
+VOLSL_LO, VOLSL_HI = 3.0, 5.0         # volsl_retrain: SL = 3 + 2 x BTC vol percentile (ATR14 multiples), TP = 1.5 x SL, 24 h
+RSZ_CAP = (0.5, 2.0)                   # rsz_xwide: per-decision weight = clip(train-median BTC vol24 / BTC vol24 at the bar), then mean 1
+RSZ_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
+            "max_dd_ratio": 0.85, "min_folds_sharpe_better": 5}
 H48 = 48                              # sl_xwide_h48_retrain: the label / time-stop horizon in 1h bars (registered 24)
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
@@ -214,8 +225,9 @@ def shuffle_ts(tab: pd.DataFrame, cols: pd.DataFrame, seed: int = SEED) -> pd.Da
     return pd.concat([own, xs.reindex(src.reindex(key["ts"]).to_numpy()).reset_index(drop=True)], axis=1)[list(cols.columns)]
 
 
-def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = SL_WIDE, tp: float = TP_WIDE, horizon: int | None = None) -> pd.DataFrame:
-    """label_symbol's arithmetic with a different bracket (risk = sl x ATR14), joined to ``tab`` on (symbol, ts)."""
+def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl=SL_WIDE, tp=TP_WIDE, horizon: int | None = None) -> pd.DataFrame:
+    """label_symbol's arithmetic with a different bracket (risk = sl x ATR14), joined to ``tab`` on (symbol, ts). ``sl`` may be a callable
+    ts_array -> per-row SL multiple (then TP = ``tp`` x SL, ``tp`` read as a reward:risk ratio)."""
     rows = []
     for sym in symbols:
         df = M.regrid_hourly(pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True))
@@ -233,10 +245,12 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl: float = S
         win = cand[:, None] + np.arange(1, H + 1)[None, :]
         Ob, Hh, Lb, Cb = o[win], h[win], lo[win], c[win]
         entry, a = Ob[:, 0], atr[cand]
-        risk = sl * a
+        sl_r = np.asarray(sl(ts.to_numpy()[cand]), float) if callable(sl) else sl
+        tp_r = tp * sl_r if callable(sl) else tp
+        risk = sl_r * a
         out = {"symbol": sym, "ts": ts.to_numpy()[cand]}
         for name, side in (("long", 1), ("short", -1)):
-            px, j, reason = M.bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side, sl_atr=sl, tp_atr=tp)
+            px, j, reason = M.bracket_outcome(Ob, Hh, Lb, Cb, entry, a, side, sl_atr=sl_r, tp_atr=tp_r)
             gross = side * (px - entry) / risk
             fee, slip, fund = M._cost_r(entry, px, risk, t_ns[cand + 1] / 1e9, t_ns[cand + j] / 1e9 + 3600.0)
             out |= {f"net_{name}": gross - fee - slip - fund, f"gross_{name}": gross, f"cost_{name}": fee + slip + fund,
@@ -410,6 +424,37 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
+        elif arm in ("volsl_retrain", "rsz_xwide"):
+            alt, alt2 = alt
+            lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: alt.loc[train.index, c] for c in lab})
+            seq_fix = Seq(test, alt.loc[test.index])
+            fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
+            tk["fixed"] = seq_fix.run(fl_, fs_)
+            if arm == "volsl_retrain":
+                tr_v = train.assign(**{c: alt2.loc[train.index, c] for c in lab})
+                seq_v = Seq(test, alt2.loc[test.index])
+                vl, vs = M.fit_predict(tr_v, test, None, n_jobs)
+                tk["arm"] = seq_v.run(vl, vs)
+                rb, ra = [], []
+                for _ in range(DRAWS):
+                    side_long = rng.random(len(pl)) < 0.5
+                    fl, fs = np.where(side_long, 1.0, -1.0), np.where(side_long, -1.0, 1.0)
+                    rb.append(seq_fix.run(fl, fs, tau=0.0))
+                    ra.append(seq_v.run(fl, fs, tau=0.0))
+                tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
+                info["regime_cells"] = {k: regime_cells(tk[k], test) for k in ("fixed", "arm")}
+            else:
+                fx = tk["fixed"]
+                vol = test.drop_duplicates("ts").set_index("ts")["btc_vol24"].reindex(pd.to_datetime(fx.ts, utc=True)).to_numpy()
+                med = float(np.nanmedian(train.btc_vol24))
+                w = np.clip(med / np.where(np.isfinite(vol) & (vol > 0), vol, med), *RSZ_CAP)
+                w = w / w.mean() if len(w) else w
+                perms = [w[rng.permutation(len(w))] for _ in range(DRAWS)]     # DRAWS permuted-weight controls (same weights, random bars)
+                bs, bb = bar_series(fx, w), bar_series(fx, np.ones(len(fx)))
+                info |= {"sharpe_split": sharpe(bs), "sharpe_base": sharpe(bb),
+                         "sharpe_random_mean": float(np.nanmean([sharpe(bar_series(fx, pw)) or np.nan for pw in perms]))}
+                extra.append((fx, w, perms))
         elif arm == "rsw_xwide_h48":
             lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
             tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
@@ -451,8 +496,8 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         print(json.dumps({"fold": info["test_start"]} | {k: (info[k]["all"]["n"], info[k]["all"]["mean_net_r"]) for k in tk}), flush=True)
     cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items()}
     res = {"arm": arm, "folds": folds, "pooled": {k: M.split_by_side(v) | {"bar_risk": M.bar_risk(v)} for k, v in cat.items()}}
-    if arm == "bar_split":
-        base = cat["base"]
+    if arm in ("bar_split", "rsz_xwide"):
+        base = cat["base"] if arm == "bar_split" else cat["fixed"]
         w = np.concatenate([e[1] for e in extra])
         ctl = pd.concat([e[0] for e in extra for _ in range(DRAWS)], ignore_index=True)
         ctl_w = np.concatenate([cw for e in extra for cw in e[2]]) / DRAWS
@@ -465,19 +510,19 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
               "mean_entries_per_bar": mean_k}
         dd["ratio"] = dd["split_max_dd_r"] / dd["base_max_dd_r_matched_mean_risk"] if dd["base_max_dd_r_matched_mean_risk"] > 0 else float("inf")
         folds_sh = sum(1 for f in folds if f["sharpe_split"] is not None and f["sharpe_base"] is not None and f["sharpe_split"] > f["sharpe_base"])
-        v, why = split_verdict(d, sh, dd, folds_sh)
+        v, why = split_verdict(d, sh, dd, folds_sh, SPLIT_RULE if arm == "bar_split" else RSZ_RULE)
         _ = ctl, ctl_w
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
-                "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE}
+                "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else "base"      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm == "volsl_retrain" else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
-    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain"):
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm", ref)
-    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain")
+    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
             "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
@@ -495,6 +540,18 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
         tab = pd.concat([tab.reset_index(drop=True), bc, pb], axis=1)
+    if arm in ("volsl_retrain", "rsz_xwide"):
+        tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
+        tab = tab.dropna(subset=["btc_vol_pct90d"]).reset_index(drop=True)
+        fixed = alt_labels(cache, syms, tab, SL_XWIDE, TP_XWIDE)
+        vp = tab.drop_duplicates("ts").set_index(pd.to_datetime(tab.drop_duplicates("ts").ts, utc=True))["btc_vol_pct90d"]
+
+        def sl_of(ts_arr, _vp=vp):
+            v = _vp.reindex(pd.to_datetime(ts_arr, utc=True)).to_numpy()
+            return VOLSL_LO + (VOLSL_HI - VOLSL_LO) * np.where(np.isfinite(v), v, 0.5)
+        volsl = alt_labels(cache, syms, tab, sl_of, TP_XWIDE / SL_XWIDE) if arm == "volsl_retrain" else fixed
+        ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & volsl["net_long"].notna() & volsl["net_short"].notna()).to_numpy()
+        return tab[ok], (fixed[ok], volsl[ok])
     if arm == "rsw_xwide_h48":
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=RSW_STATE).reset_index(drop=True)
