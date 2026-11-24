@@ -2,7 +2,7 @@
 id: RQ-20261124-bd30-03
 title: 'CONFIRM the cold-vol skip on the S&P index family on pre-dev history: does VL20 or VL30 beat the declared splg_trend_long_1d (SPYM 1d) net of cost over 2005-11-15..2011-12-31, a window the 2012+
   passes (mes c5d2-02, splg b163-02) were not read on?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -124,3 +124,16 @@ related:
 - RQ-20261117-9e1b-07
 - research/levers/mes_trend_long_1d.yaml
 last_dispatched_at: '2026-11-24T15:57:18+00:00'
+grading:
+  attested: RULERQ20261124bd3003
+  auto: true
+  decision_rule_id: RULERQ20261124bd3003
+  evidence:
+  - research/results/RQ-20261124-bd30-03/45431502924.jsonl
+  graded_at: '2026-11-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
