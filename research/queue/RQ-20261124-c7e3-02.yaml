@@ -4,7 +4,7 @@ id: RQ-20261124-c7e3-02
 title: 'AM v2 iteration 2 (av_tighten): TIGHTEN chosen by an ACTION-VALUE model on the CF replay vs HOLD and 100 matched random placements'
 status: queued
 cadence: once
-not_before: '2026-11-24T23:00:00+00:00'
+not_before: '2026-11-25T03:00:00+00:00'
 theme: ml_health
 priority: 1
 roadmap:
@@ -113,7 +113,7 @@ decision_rule:
     BOOK-SIM-REAL-SIZER does not exist: a per-trade-R SCREEN (graduation_eligible false).'
   - 'HOLDOUT: family AM-HEADS, 2026-01-01..end, claimed by the reduce step BEFORE the holdout books are built. The family has been read 6 times (Stage A 1 + Stage B 5), so these units
     read as n_tries 7-10 in dispatch order and each is graded against the ledger''s deflated bar_for(n).'
-  - 'DISPATCH STAGGER: the four units carry not_before one hour apart so their result jobs never append comms/research/holdout_reads.jsonl concurrently (PI-20261124-RQFAILS-0001 stranded
+  - 'DISPATCH STAGGER: the four units carry not_before two hours apart (re-staggered 2026-11-24 21:40Z by the next owner, lane ML-PRIMARY, so a late merge cannot make two due at once) so their result jobs never append comms/research/holdout_reads.jsonl concurrently (PI-20261124-RQFAILS-0001 stranded
     4 results that way).'
   - R unit = the ORIGINAL stop distance; positions are not re-sized in trade, so a loosened stop genuinely risks more than 1 R and that tail is charged to the arm's drawdown and CVaR.
   - 'THIS CLASS (av_tighten): a stop tightened by value: half-way from the original stop to the close, to entry (open_r >= 0.5), or to entry + half the open profit (open_r >= 1.0), or
