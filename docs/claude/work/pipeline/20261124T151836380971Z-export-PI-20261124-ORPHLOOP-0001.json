@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261124-ORPHLOOP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, alerts TRADE CLOSED SH 13:05Z and 13:37Z",
+    "rerun": "diag_fetch 'journal?table=trades&limit=20' | grep SH adopted_orphan; alpaca_open_orders?account_id=alpaca_paper"
+  },
+  "state": "queued",
+  "what": "Order monitor re-adopts the same orphan every ~30 min and writes a new closed journal row each time. MEASURED 2026-11-24 on alpaca_paper: the fractional probe left 0.5 SH long with its own exit (market DAY sell, accepted 13:02:16Z, fills at the 14:30Z open). The monitor adopted it as trade 8488 (13:02Z) and closed it as exit_coverage_no_strategy, then adopted it AGAIN as 8489 (13:35Z) and closed it the same way. Both rows: exit_price None, unpriced. The venue showed ONE SH sell order (no extra close orders placed, so no over-sell or short risk). Effect: duplicate unpriced orphan rows pollute trade counts and the hourly snapshot until the position is actually flat. Fix: when an adopted orphan already has a resting/accepted exit order at the venue, mark it pending_exit and do not re-adopt; or dedupe adoption by venue position + open exit order id. Tier 2 (order monitor)."
+}

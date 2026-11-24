@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261124-MESVL20C-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a; lane TIER3-DATA-BACKED-20261124 (session_01AFoLuKrBptMtaNsfj7nykn) report 09:03Z",
+    "rerun": "ls research/queue | grep -i mes_trend; read research/results/RQ-20261123-c5d2-02/*.jsonl"
+  },
+  "state": "queued",
+  "what": "mes_trend_long_1d VL20 (vol_skip_below_pctl 0.2) PASSED RQ-20261123-c5d2-02 (net R 26.72 vs 25.06, n 49 vs 51, maxDD 2.25 vs 2.92, 6/6 folds >= A; gain = 2 skipped trades, only fold 5 differs). Its own registered rule: a PASS is a lead needing ONE disjoint-window confirmation unit, then a live-producer check, then a Tier-3 declare proposal, never a direct config edit. No confirmation unit exists; ES=F 2001-2011 bars are malformed, so the disjoint window needs another source. Producer exists (trend_donchian.py reads vol_skip_below_pctl); verify live percentile definition == harness. b163-02 (PR #28530) reconciles vs the SPLG VL FAIL on the same window: correlated, not a confirmation."
+}

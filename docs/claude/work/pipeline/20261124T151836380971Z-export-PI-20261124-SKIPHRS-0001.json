@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261124-SKIPHRS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a; lane TIER3-DATA-BACKED-20261124 (session_01AFoLuKrBptMtaNsfj7nykn) report 09:03Z",
+    "rerun": "grep -n skip_hours src/units/strategies/fade_breakout_4h.py src/units/strategies/fvg_range_15m.py; strategy_status.py; config/strategies.yaml blocks"
+  },
+  "state": "queued",
+  "what": "S_ASIA session-filter PASSes on fade_breakout_4h (SOL twin, RQ-20261123-b4c1-01, net R -28.82 -> -8.53, n=146) and fvg_range_15m (XRP twin, RQ-20261123-a9f3-01, -21.56 -> -12.88, n=45) cannot ship: (1) neither strategy module has a skip-hours/session producer (config key would be inert; pattern exists in ict_scalp.py / trend_donchian.py / htf_pullback_trend_2h.py); (2) both config blocks say symbols: [BTCUSDT], so the tests were --symbol twins, not the rostered config; check which symbols each leg trades on bybit_1. Both legs stay net negative with the filter (loss reduction only). Next: check roster symbols; if the twin matches, Tier-3 code build of the gate + confirmation unit per the units own rule; RQ-20261118-abab-19 decides fvg_range_15m on its rostered symbol."
+}
