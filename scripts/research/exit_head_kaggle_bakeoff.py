@@ -203,6 +203,25 @@ def candle_dataset_candles(sym: str, dst: Path, start: str, end: str | None = No
     return {**info, "served_by": "binance_vision", "dataset_miss": miss}
 
 
+def exit_now_verdict(row: dict, a) -> dict[str, Any]:
+    """--judge exit_now (plan node P2-PR1125-D8-exit-now-powered): the head under test is the CHAMPION exit-now head vs the
+    leg's DECLARED exit, on the POOLED OOS trades, against the causal matched random-exit control.
+    PASS iff n_oos >= --n-floor AND head mean dR/trade >= --pass-dr AND head mean > the control's 95th percentile.
+    INDETERMINATE iff n_oos < --n-floor or the pooled leg / control is absent. FAIL otherwise."""
+    pooled = next((lg for lg in (row.get("measurement") or {}).get("legs", []) if lg.get("leg") == "POOLED"), None)
+    rc = (pooled or {}).get("random_control")
+    if not rc:
+        return {"verdict": "indeterminate", "n": 0, "note": "exit_now judge: no pooled leg or no random control (needs --pool-folds --random-control)"}
+    n, head, p95 = int(rc["n_oos"]), float(rc["head_mean_dr_per_trade"]), float(rc["control_p95"])
+    if n < a.n_floor:
+        v, why = "indeterminate", f"n_oos {n} < floor {a.n_floor}"
+    elif head >= a.pass_dr and head > p95:
+        v, why = "pass", f"head {head:+.4f} R/trade >= {a.pass_dr} and > control p95 {p95:+.4f}"
+    else:
+        v, why = "fail", f"head {head:+.4f} R/trade vs bar {a.pass_dr}, control p95 {p95:+.4f}"
+    return {"verdict": v, "n": n, "note": "exit_now judge: " + why, "label_arm_judge_note": row.get("note")}
+
+
 def census_row(a, harness_legs: list[dict], built: dict, spans: dict) -> dict[str, Any]:
     """--census-only: the POWER RECOUNT the D8 node asks for before any bake-off is authored (P2-PR1125-D8-exit-now-powered:
     'author only if the recount powers MDE <= 0.05 R'). Counts harness trades per leg and pooled, the OOS share the
@@ -319,6 +338,8 @@ def run(a) -> int:
                 + (["--pool-folds"] if a.pool_folds else [])
                 + (["--random-control", str(a.random_control)] if a.random_control else []))
     row = json.loads(bj.read_text())
+    if a.judge == "exit_now":
+        row.update(exit_now_verdict(row, a))
     row["decision_rule"] = {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}
     row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from { {'bybit': f'public Bybit {TF} klines', 'binance_vision': f'public Binance-vision USD-M perp {TF} klines (basis vs Bybit not measured)', 'candle_dataset': f'Binance USD-M perp {TF} candles (metis-research-candles, else data.binance.vision)'}.get(a.candle_source, 'published market_raw 1h v002') }; no journal trades) -- "
                          + str(row.get("population", "")))
@@ -402,6 +423,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pool-folds", action="store_true", help="pooled calendar folds across legs (exit_head_label_bakeoff)")
     ap.add_argument("--fetch-workers", type=int, default=8, help="candle_dataset source: parallel symbol fetches")
     ap.add_argument("--random-control", type=int, default=0, help="pooled mode: causal matched random-exit control draws")
+    ap.add_argument("--judge", choices=("label_arms", "exit_now"), default="label_arms",
+                    help="exit_now = the D8 rule: champion head vs the declared exit and the causal random control")
+    ap.add_argument("--n-floor", type=int, default=3000, help="exit_now judge: OOS n below which the read is INDETERMINATE")
     ap.add_argument("--census-only", action="store_true", help="stop after the row build; write the power recount")
     ap.add_argument("--power-sd", type=float, default=0.99, help="census: per-trade dR sd in R (default f7c1-02 measured)")
     ap.add_argument("--power-mde", type=float, default=0.05, help="census: the MDE bar in R (D8 node: 0.05)")

@@ -72,3 +72,13 @@ def test_causal_random_control_never_closes_a_trade_after_its_own_exit():
     assert set(round(x, 6) for x in sums) <= {0.0, 3.0} and 0.0 in sums and 3.0 in sums
     summ = L._causal_random_summary([{"r_holding_pays": 2.0, "baseline_r": 2.0}] * 2, [sums], 200)
     assert summ["draws"] == 200 and summ["control_p95"] == 1.5 and summ["head_mean_dr_per_trade"] == 0.0
+
+
+def test_exit_now_judge_reads_the_pooled_control():
+    a = SimpleNamespace(n_floor=3000, pass_dr=0.05)
+    mk = lambda n, h, p: {"measurement": {"legs": [{"leg": "POOLED", "random_control": {"n_oos": n, "head_mean_dr_per_trade": h, "control_p95": p}}]}}  # noqa: E731
+    assert K.exit_now_verdict(mk(9000, 0.06, 0.02), a)["verdict"] == "pass"
+    assert K.exit_now_verdict(mk(9000, 0.06, 0.07), a)["verdict"] == "fail"      # does not beat random
+    assert K.exit_now_verdict(mk(9000, 0.03, 0.0), a)["verdict"] == "fail"       # below the bar
+    assert K.exit_now_verdict(mk(2000, 0.09, 0.0), a)["verdict"] == "indeterminate"
+    assert K.exit_now_verdict({"measurement": {"legs": []}}, a)["verdict"] == "indeterminate"
