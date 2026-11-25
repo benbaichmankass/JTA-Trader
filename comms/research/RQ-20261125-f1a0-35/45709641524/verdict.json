@@ -1,0 +1,146 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 7963,
+ "note": "filter: fail delta -0.0026 t -0.144 share 0.0",
+ "population": "21 of 21 rostered crypto legs (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (7963 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "rule": {
+  "id": "RULE-REGIME-ENTRY-FILTER-20261125",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "data_window": {
+  "start": "2020-09-01",
+  "end": "2026-10-26",
+  "legs": [
+   "ada_pullback_2h",
+   "avax_pullback_2h",
+   "eth_pullback_2h",
+   "eth_pullback_prop_2h",
+   "fade_breakout_4h",
+   "htf_pullback_trend_2h",
+   "sol_pullback_2h",
+   "squeeze_breakout_4h",
+   "trend_donchian",
+   "trend_donchian_1h",
+   "trend_donchian_ada_4h",
+   "trend_donchian_avax_4h",
+   "trend_donchian_eth",
+   "trend_donchian_eth_4h",
+   "trend_donchian_eth_prop",
+   "trend_donchian_sol",
+   "trend_donchian_sol_4h",
+   "trend_donchian_sol_prop",
+   "trend_donchian_xrp_4h",
+   "trend_donchian_xrp_adx25",
+   "xrp_pullback_2h"
+  ]
+ },
+ "measurement": {
+  "arms": {
+   "filter": {
+    "n_trades": 6158,
+    "money_base": 0.08305,
+    "money_arm": 0.08047,
+    "delta": -0.00258,
+    "se_week_boot": 0.01796,
+    "t": -0.144,
+    "random": {
+     "draws": 200,
+     "kind": "raw tilts permuted within leg x month",
+     "mean": -0.02191,
+     "p95": -0.01089,
+     "share_ge_arm": 0.0
+    },
+    "yearly_delta": {
+     "2022": 0.0237,
+     "2023": -0.0333,
+     "2024": 0.0022,
+     "2025": -0.0009,
+     "2026": -0.0051
+    },
+    "share_tilted": 0.2553,
+    "share_up_tilt": 0.0,
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": true,
+     "years_positive": false
+    },
+    "verdict": "fail",
+    "skipped": {
+     "n": 1572,
+     "share": 0.2553,
+     "mean_net_r": 0.0101,
+     "kept_mean_net_r": 0.10806
+    },
+    "per_family": {
+     "fade": {
+      "n": 134,
+      "skip_share": 0.4627,
+      "delta": 0.03687
+     },
+     "pullback": {
+      "n": 2090,
+      "skip_share": 0.1876,
+      "delta": -0.03332
+     },
+     "squeeze": {
+      "n": 100,
+      "skip_share": 0.11,
+      "delta": -0.07604
+     },
+     "trend": {
+      "n": 3834,
+      "skip_share": 0.2887,
+      "delta": 0.01472
+     }
+    },
+    "walk_forward": {
+     "2022": {
+      "n_train": 1792,
+      "n_test": 1290,
+      "q1": -0.44151,
+      "q2": -0.04734,
+      "corr_pred_r_test": 0.0935
+     },
+     "2023": {
+      "n_train": 3090,
+      "n_test": 1284,
+      "q1": -0.44781,
+      "q2": -0.13645,
+      "corr_pred_r_test": 0.0156
+     },
+     "2024": {
+      "n_train": 4372,
+      "n_test": 1283,
+      "q1": -0.46507,
+      "q2": -0.20335,
+      "corr_pred_r_test": 0.0304
+     },
+     "2025": {
+      "n_train": 5659,
+      "n_test": 1262,
+      "q1": -0.45941,
+      "q2": -0.23343,
+      "corr_pred_r_test": 0.0538
+     },
+     "2026": {
+      "n_train": 6917,
+      "n_test": 1039,
+      "q1": -0.46995,
+      "q2": -0.26338,
+      "corr_pred_r_test": -0.0153
+     }
+    },
+    "btc_state": "present"
+   }
+  },
+  "verdict": "fail",
+  "n_legs": 21
+ }
+}
