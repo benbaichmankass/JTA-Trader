@@ -1608,6 +1608,33 @@ strategies:
     tp_r: 1.5                  # 3 ATR on a 2 ATR stop, the arm that was scored
     shadow_model_ids: []
 
+  index_capitulation_1x:
+    # INDEX-CAPIT-1X-LEG (Tier 3). Daily LONG-ONLY capitulation bounce on 18 1x index ETFs, signal and execution on the same ticker.
+    # decision: operator popup 2026-11-25 06:28Z "Real money directly (Recommended)" (alpaca_live + its alpaca_portfolio mirror once wired
+    #   and parity-checked); ~14:22Z, after the 1e06-12/13/14 out-of-time FAILs were shown: "Proceed as approved", FULL SIZE; ~18:00Z
+    #   popup: the first live order does not wait for the Alpaca stop-fault diagnosis ("Don't wait"). Relayed by Manager Session 2026-11-25a.
+    # Evidence (Stage 0, net of 5 bps/side): RQ-20261124-1e06-06 (8 fresh 1x ETFs, n 410, +83.2 R) and 1e06-08 (10 fresh country ETFs,
+    #   n 687, +118.2 R, +64.5 R at 2x slippage, beats 200/200 re-timed draws); window 2010-06-01..2026-10-22 shared by both.
+    # KNOWN AND ACCEPTED: RQ-20261125-1e06-12 (this spec, these 18 tickers, 2000-01..2010-05) FAILED: n 493, -148.3 R, 3/18 positive.
+    # Spec + parity fixture: comms/research/INDEX-CAPIT-1X-LEG/ (#28680). Live parity: comms/research/INDEX-CAPIT-1X-LEG/live_parity.json.
+    # Module src/units/strategies/index_capitulation_1x.py. Unfiltered by record (SMA200 1e06-09 and credit 1e06-11 gates FAILED).
+    # ROLLBACK: remove index_capitulation_1x from alpaca_live + alpaca_portfolio `strategies:` (this block can stay).
+    model: null
+    signal_prefixes: [index_capitulation_1x]
+    enabled: true
+    execution: live
+    timeframe: "1d"
+    decision_bar: closed       # decides on the closed daily bars; enters during the next session (spec: the next session's open)
+    symbols: [EFA, EWA, EWC, EWH, EWJ, EWL, EWP, EWQ, EWS, EWT, EWW, EWY, ITB, IWN, IYT, XLB, XLP, XME]
+    flush_atr: 1.5             # flush: close <= mean(close,5) - 1.5 x ATR14 (simple mean of TR) AND low < min(prior 20 lows)
+    hold_cap_sessions: 10      # entry session counted; monitor() closes in the 10th session's last minutes
+    confidence: 1.0            # full size (operator ~14:22Z "FULL SIZE"); the RiskManager sizes off the account risk_pct
+    # TP doctrine: entry TP = entry + K* x risk, K* per ticker, calibrated on the first 60% of that ticker's no-TP evidence trades
+    # (harness calibrate_tp: grid 1..8 R, reach floor 10%), never 50. Static through the trade (the evidence holds it fixed).
+    k_star: {EFA: 2.5, EWA: 3.5, EWC: 2.5, EWH: 1.5, EWJ: 3.5, EWL: 3.5, EWP: 3.0, EWQ: 3.5, EWS: 4.0, EWT: 2.0, EWW: 2.0, EWY: 5.0,
+             ITB: 3.0, IWN: 1.0, IYT: 6.0, XLB: 4.0, XLP: 8.0, XME: 2.5}
+    shadow_model_ids: []
+
   trend_donchian_eth_4h:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]

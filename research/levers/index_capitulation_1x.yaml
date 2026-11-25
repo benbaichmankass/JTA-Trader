@@ -1,0 +1,49 @@
+# Author-owned seed (lane INDEX-CAPIT-1X-LEG, 2026-11-25); scripts/research/lever_map.py --backfill may add generated keys and preserves
+# `declared` and `manifest_notes`. Canonical: OPERATING-PLAN § 2 (research loop) and the new-strategy skill's research-loop note.
+subject: index_capitulation_1x
+kind: strategy_leg
+status: production
+books:
+- alpaca_live
+- alpaca_portfolio
+baseline:
+  verdict: pass_in_window_fail_out_of_time
+  basis: 'Stage 0 PASS on two populations in one window (2010-06-01..2026-10-22): RQ-20261124-1e06-06 (8 1x ETFs, n 410, +83.2 R) and
+    RQ-20261124-1e06-08 (10 country ETFs, n 687, +118.2 R, +64.5 R at 2x slippage, beats 200/200 re-timed draws), net of 5 bps/side.
+    Pooled OOS (after each ticker''s K* boundary) n 432, +71.86 R. OUT-OF-TIME FAIL: RQ-20261125-1e06-12 (this spec, these 18 tickers,
+    2000-01..2010-05) n 493, -148.3 R, 3/18 positive, timing worse than all 200 re-timed draws; 2006-2010 -130 R. The operator put it on
+    real money at full size knowing this (2026-11-25 ~14:22Z "Proceed as approved"). Demotion signal: the live mirror''s net-of-cost window
+    (OPERATING-PLAN s2).'
+  spec: comms/research/INDEX-CAPIT-1X-LEG/spec.json
+  live_parity: comms/research/INDEX-CAPIT-1X-LEG/live_parity.json
+declared:
+  owner: row INDEX-CAPIT-1X-LEG until a programme owns it (map it at the next weekly programme review)
+  baseline: the live leg as configured (capitulation_wide, flush 1.5 ATR14, up-close within 5, per-ticker K*, hold cap 10, unfiltered),
+    read on the harness scripts/research/index_signal_etf_harness.py, net of 5 bps/side, on BOTH windows (2000-01..2010-05 and
+    2010-06..2026-10); a lever wins only if it improves the out-of-time window without giving back the evidence window
+  levers:
+  - lever: regime robustness (why 2006-2010 loses -130 R)
+    range: trend state, volatility state, drawdown depth, crisis vs correction flush; one factor at a time
+    hypothesis: the bounce works in corrections inside an uptrend and fails in a secular bear; the SMA200 and BAA10Y gates were window-specific
+      (1e06-09 / 1e06-11 FAIL), so the next forms are state measures that read both windows in one registered unit
+    status: open (iteration path named on the row 11-25 14:20Z)
+  - lever: K* (take-profit geometry)
+    range: re-fit K* on 2000-2010 (exit side) vs the 2010-2026 calibration; a pooled single K vs per ticker
+    hypothesis: per-ticker K* is fitted to one window; a pooled K is more robust
+    status: untested
+  - lever: hold cap
+    range: 5 / 10 / 15 sessions
+    hypothesis: the bounce decays within ~10 sessions; shorter caps cut the timeout losers
+    status: untested
+  - lever: flush threshold
+    range: 1.25 / 1.5 / 2.0 ATR14 (2.0 is the 1e06-03 discovery spec)
+    hypothesis: a deeper flush trades less and better; 1.5 was loosened from 2.0 to reach n
+    status: tested in-window only (1e06-03 2.0 vs 1e06-04+ 1.5); not at power out-of-time
+  - lever: shorter timeframes
+    range: 1h / 4h on ETF-18 and crypto majors
+    hypothesis: the trigger carries to intraday bars
+    status: CLOSED 2026-11-25 (RQ-20261125-1e07-01..04 all FAIL; costs per R rise and the timing edge vanishes)
+  - lever: data feed (live IEX daily bars vs the consolidated bars the evidence read)
+    range: Alpaca iex vs sip daily OHLC, same live signal function
+    hypothesis: IEX-only prints move a flush or a low enough to add or drop signals
+    status: open (follow-up filed on the row; mechanics, not edge)

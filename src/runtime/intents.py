@@ -414,6 +414,8 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     "ml_entry_eq": 0,
     # ML ENTRY equity structure-exit 5-seed ensemble (RQ-20261107-98e3-06): alpaca_live + alpaca_portfolio; same lowest priority.
     "ml_entry_eq_struct": 0,
+    # Daily capitulation bounce, 18 1x index ETFs (INDEX-CAPIT-1X-LEG): alpaca_live + alpaca_portfolio; same lowest priority.
+    "index_capitulation_1x": 0,
     "trend_donchian_sol_4h": 0,
     "trend_donchian_xrp_4h": 0,
     "trend_donchian_xrp_adx25": 0,

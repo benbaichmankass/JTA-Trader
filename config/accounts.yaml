@@ -1472,7 +1472,9 @@ accounts:
     # 2026-11-14 TLT-1H-PROMOTE (Tier 3; OPERATOR popup ~16:28Z, relayed by Manager Session 2026-11-13a, verbatim "Promote long-only 3.5R (Recommended)"):
     # tlt_pullback_1h mirrors alpaca_live (superset rule). Long only by its own config (side_filter: long), so this book trades the same side as
     # live. TLT is split with ml_entry_eq_struct by comms/same_symbol_allocation/tlt-alpaca_live-alpaca_portfolio.json. ROLLBACK with alpaca_live's line.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-25 INDEX-CAPIT-1X-LEG (Tier 3; operator popups 06:28Z / ~14:22Z / ~18:00Z, see alpaca_live): index_capitulation_1x mirrors
+    # alpaca_live (superset rule). Long only by its own logic, so this book trades the same side as live. ROLLBACK with alpaca_live's line.
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h, index_capitulation_1x]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Mirror of alpaca_live (superset rule: alpaca_portfolio carries every alpaca_live leg).
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
@@ -1618,7 +1620,12 @@ accounts:
     # is ESTIMATED. TLT split with ml_entry_eq_struct: comms/same_symbol_allocation/tlt-alpaca_live-alpaca_portfolio.json.
     # ROLLBACK: delete `tlt_pullback_1h` here AND on alpaca_portfolio, restore `- tlt_pullback_1h` on alpaca_paper (and its allocation record), and
     # revert the strategies.yaml block.
-    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
+    # 2026-11-25 INDEX-CAPIT-1X-LEG (Tier 3; OPERATOR popups 06:28Z "Real money directly (Recommended)", ~14:22Z "Proceed as approved" at FULL SIZE
+    # after the 1e06-12 out-of-time FAIL was shown, ~18:00Z "Don't wait" for the Alpaca stop-fault diagnosis; relayed by Manager Session 2026-11-25a):
+    # index_capitulation_1x joins (daily long-only capitulation bounce, 18 1x index ETFs; Stage-0 RQ-20261124-1e06-06/-08, no soak step per
+    # OPERATING-PLAN s2). 12 of its tickers are shared with ml_entry_eq_struct: comms/same_symbol_allocation/index-capit-*.json.
+    # ROLLBACK: drop index_capitulation_1x here AND on alpaca_portfolio (mirror superset).
+    strategies: [tqqq_trend_long_1d, ml_entry_eq_struct, slv_trend_1h, tlt_pullback_1h, index_capitulation_1x]   # 2026-11-06 ALPACA-LIVE-MECHANICS (Tier-3; OPERATOR popup ~11:10Z, relayed by Manager Session 2026-11-06a, verbatim "Probe with tqqq_trend_long (Recommended)"):
                                        # MECHANICS-ONLY EXCEPTION (kind=mechanics), NOT an edge bet and NOT a promotion (no committed DSR/trial-ledger record for tqqq_trend_long_1d; PROD-LEGS-DSR-DECISION did not measure it). Long-only via side_filter; existing risk_pct sizing; no new knob.
                                        # Purpose: ONE real-money GTC-bracket trade on alpaca_live (entry booked at the venue fill once #23777 lands, bracket at
                                        # the broker, venue exit, correct close reason, graded). REMOVE after that ONE trade closes and is graded: set this back
