@@ -1,0 +1,125 @@
+# Authored 2026-11-25 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager PRIORITY (row ALPACA-LIVE-COST-REPRICE-FAIL). Rule registered BEFORE the run. Gates this adds or changes: none.
+id: RQ-20261125-11d7-02
+title: 'FOLD-ROBUSTNESS ITERATION 1 of slv_trend_1h: at 26 bps, does donchian 32, stale_exit_bars 8/12 or a vol-skip-above filter make the +25.5 R edge hold across >= 3 of 4 folds?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On slv_trend_1h over SLV 1h 2025-06-02 .. 2026-11-11 at --slippage-bps-roundtrip=26, does any single-lever arm keep net R >= the S26 baseline, out-earn it in >= 3 of 4 folds
+  and be net-positive in >= 3 of 4 folds?
+why_this_matters: 'slv_trend_1h is a real-money alpaca_live leg: net +25.5 R n 74 at 26 bps (RQ-20261119-f2a4-06) but net-positive in only 2 of 4 folds, so the aggregate leans on two
+  folds. The operator rule (2026-11-25) is iterate before any demotion. PASS gives the manager a fold-robust variant as a Tier-3 declare proposal; FAIL closes THESE arms and keeps the
+  leg live while regime_gating / timeframe / symbol_set stay untested.'
+power:
+  alpha: 0.05
+  basis: 'ESTIMATE: S26 n=74 on this window. Below 39 the arm grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 74
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+decision_rule:
+  id: RULERQ20261125-11d7-02
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg slv_trend_1h --grade sweep, window 2025-06-02 .. 2026-11-11, 4 calendar folds, every arm carries --slippage-bps-roundtrip=26.
+    Arms fixed now: S26 (baseline); D32 donchian=32; SE12 stale_exit_bars=12; SE8 stale_exit_bars=8; VH90 --vol-skip-above-pctl=0.9; VH80 --vol-skip-above-pctl=0.8. One lever per arm.
+    Per arm: n, net R, maxDD, net R per fold.'
+  rule: 'INDETERMINATE IF n(S26) < 39 or the producer fails. A candidate C PASSES iff net_r(C) >= net_r(S26) AND maxDD(C) <= maxDD(S26) AND C out-earns S26 in >= 3 of 4 folds AND C is
+    net-positive in >= 3 of 4 folds (read from the per-fold table) AND n(C) >= 39. PASS if one or more pass: the best by net R is named, denominator 6 arms, S53 reported on it. FAIL
+    IF none passes with n(S26) >= 39: these arms are closed at this window and the lever families stay open. Thresholds and arms are not changed after any result.'
+  regime_robustness: Per-fold net R table for every arm is reported with the result and is part of the rule above. Set before the run.
+  what_it_does_not_do: 'Edits no config, roster or account mode and places no order. Both legs stay live (operator 2026-11-25: no demotion until iterated and nothing is left to try).
+    Not a promotion case; a PASS is a Tier-3 declare PROPOSAL for the manager.'
+practice_precedent: 'T3 (docs/reference/trading-and-model-practice-principles.md): cost measured, not assumed; M4 every arm counted'
+intervention_controls:
+  not_applicable: a Stage-0 parameter re-measurement of the declared leg through the harness, not an in-trade action
+iteration:
+  subject: slv_trend_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261119-f2a4-06 (S26 +25.5 R n 74, 2/4 folds)
+  verdict_read: indeterminate
+  diagnosis: 'f2a4-06 (MEASURED 2026-11-19): S26 net +25.5 R, n 74, 2/4 folds net-positive; 2025 net +36.9 R n 42 vs 2026 +17.6 R n 50 on the record, so the edge is front-loaded. Lever
+    map: donchian D32 +12.9 R 3/4 folds on 2019-2026 (cdb2-03) but -6.0 on 2016-18 and was never read at 26 bps; stale_exit_bars SE12/SE8 +4.7/+3.2 on 2016-18 (b2f2-08), indeterminate;
+    vol_skip_above_pctl untried (vol_skip_below no response); atr_stop_mult, adx_min, flat_at_utc, skip_hours already worse, not repeated.'
+  search: one-factor sweep of the only lever values with fold-stable positive deltas plus the untried vol-skip-above filter; regime_gating / timeframe / symbol_set untested.
+  levers:
+  - entry
+  - exit
+  - filter
+  map_entries:
+  - research/levers/slv_trend_1h.yaml#levers.entry.donchian
+  - research/levers/slv_trend_1h.yaml#levers.exit.stale_exit_bars
+  attempt: 1
+  due_by: '2026-12-02'
+compute: cpu_light
+value:
+  basis: a real-money alpaca_live leg whose edge failed or is fold-fragile at the measured 26 bps cost (operator 2026-11-25); an estimate, not a measurement
+  bucket: own_losses
+  confidence: 0.3
+  usd_at_stake_per_month: 250
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (b163-*, f3a8-01); the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_trend_1h
+  - --arm
+  - S26=--slippage-bps-roundtrip=26
+  - --arm
+  - D32=donchian=32;--slippage-bps-roundtrip=26
+  - --arm
+  - SE12=stale_exit_bars=12;--slippage-bps-roundtrip=26
+  - --arm
+  - SE8=stale_exit_bars=8;--slippage-bps-roundtrip=26
+  - --arm
+  - VH90=--vol-skip-above-pctl=0.9;--slippage-bps-roundtrip=26
+  - --arm
+  - VH80=--vol-skip-above-pctl=0.8;--slippage-bps-roundtrip=26
+  - --days
+  - '540'
+  - --start
+  - '2025-06-02'
+  - --end
+  - 2026-11-11 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - S26
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261125-11d7-02
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-11d7-02
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- research/levers/slv_trend_1h.yaml
+- RQ-20261119-f2a4-06
