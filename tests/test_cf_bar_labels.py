@@ -124,3 +124,58 @@ def test_run_shard_writes_census_and_counts_non_crypto(tmp_path):
     eq = {"shard_id": "SPY_1h_y", "symbol": "SPY", "timeframe": "1h"}
     m2 = D.run_shard(eq, {"SPY_1h_y": ["k1"]}, {"k1": {**_job(), "symbol": "SPY", "_file": "f"}}, tmp_path)
     assert m2["could_not_label"] == {"no_bar_source": 1} and m2["n_labelled_trades"] == 0
+
+
+# ---- AM-V2-RICHER-FEATURES: the ctx block ---------------------------------------------------------------------------------------------
+def _walk(n=260, seed=3):
+    import random
+    rnd = random.Random(seed)
+    p, out = 100.0, []
+    for i in range(n):
+        o = p
+        p = p * (1 + rnd.gauss(0, 0.01))
+        out.append(bar(i, o, max(o, p) * 1.003, min(o, p) * 0.997, p))
+    return out
+
+
+def test_context_off_is_byte_identical_and_on_only_adds_ctx():
+    bs = _walk()
+    et, e = 150 * H, bs[150]["close"]
+    plain = L.build_rows(side="long", entry=e, sl=e * 0.95, bars=bs, entry_time=et, bar_seconds=H)
+    ctx = L.build_rows(side="long", entry=e, sl=e * 0.95, bars=bs, entry_time=et, bar_seconds=H, context=True)
+    assert plain and [{k: v for k, v in r.items() if k != "ctx"} for r in ctx] == plain
+    assert all(set(r["ctx"]) == set(L.CTX_KEYS) for r in ctx)
+    assert all(r["ctx"][k] is not None for r in ctx for k in L.CTX_KEYS)          # 150 bars of history cover every window
+
+
+def test_context_never_reads_a_future_bar():
+    bs = _walk()
+    et, e = 150 * H, bs[150]["close"]
+    full = L.build_rows(side="short", entry=e, sl=e * 1.05, bars=bs, entry_time=et, bar_seconds=H, context=True, with_labels=False)
+    for k in (1, 3, 7):
+        cut = [b for b in bs if b["time"] < et + H * (k + 1)]                       # bars up to and including bar k
+        part = L.build_rows(side="short", entry=e, sl=e * 1.05, bars=cut, entry_time=et, bar_seconds=H, context=True, with_labels=False)
+        assert part[k - 1]["ctx"] == full[k - 1]["ctx"]
+
+
+def test_context_signs_and_short_history():
+    bs = _walk()
+    et, e = 150 * H, bs[150]["close"]
+    lg = L.build_rows(side="long", entry=e, sl=e * 0.95, bars=bs, entry_time=et, bar_seconds=H, context=True)
+    sh = L.build_rows(side="short", entry=e, sl=e * 1.05, bars=bs, entry_time=et, bar_seconds=H, context=True)
+    for a, b in zip(lg, sh):
+        assert a["ctx"]["fav_ext_r"] >= 0 and a["ctx"]["adv_ext_r"] >= 0 and 0 <= a["ctx"]["range_pos"] <= 1
+        assert abs(a["ctx"]["range_pos"] + b["ctx"]["range_pos"] - 1.0) < 1e-9       # mirrored range position
+        assert abs(a["ctx"]["trend_atr"] + b["ctx"]["trend_atr"]) < 1e-9
+    few = L.build_rows(side="long", entry=bs[10]["close"], sl=bs[10]["close"] * 0.95, bars=bs, entry_time=10 * H, bar_seconds=H, context=True)
+    assert few[0]["ctx"]["atr_ratio"] is None and few[0]["ctx"]["fav_ext_r"] is None   # windows longer than the history: None, never filled
+
+
+def test_driver_context_rows_match_plain_rows():
+    D = _driver()
+    bs = _walk()
+    job = {"entry": bs[150]["close"], "sl": bs[150]["close"] * 0.95, "direction": "long", "entry_time": 150 * H, "exit_time": 180 * H,
+           "strategy": "s", "symbol": "BTCUSDT"}
+    plain = D.label_job(job, bs, "1h")
+    ctx = D.label_job(job, bs, "1h", context=True)
+    assert plain and [{k: v for k, v in r.items() if k != "ctx"} for r in ctx] == plain and "ctx" in ctx[0]
