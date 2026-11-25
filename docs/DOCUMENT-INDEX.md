@@ -544,7 +544,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-05-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-06-01AFoLuLm-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-15-manager-14a-to-new.md` | history | unknown | — | 2026-11-15 | `not-assessed / not-assessed` | — |
-| `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | history | historical | — | 2026-11-25 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
+| `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -650,7 +650,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ml-claude-distillation-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-producers-milestones-2026-10-08.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ops-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
-| `docs/plans/planning-2026-W48-open-items.md` | plan | live | — | 2026-11-25 | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/planning-2026-W48-open-items.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/operator-grant-merge-deploy-on-green-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/review-pack-2026-09-27.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |

@@ -1,6 +1,6 @@
 # Planning input — week of 2026-11-26 (open items at the 11-25 reset)
 
-> **Doc status:** `live` · category `plan` · last verified `2026-11-25` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · written 2026-11-25 ~17:55Z by Manager Session 2026-11-22a for Thursday planning.
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · written 2026-11-25 ~17:55Z by Manager Session 2026-11-22a for Thursday planning.
 > It points at the source of truth: the work store, `pipeline.py` and `docs/roadmap/milestones.yaml`. **Re-read those; never quote counts from here.**
 
 Gates this adds or changes: none.
