@@ -1,0 +1,134 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (REGIME-PROGRAM, next form after the book-level closures). Rule fixed before any run. DISCLOSURE: the
+# f1a0-24 book-level reads on these replayed trades were read; no trade-level own-symbol-state read exists. Gates this adds or changes: none.
+id: RQ-20261125-f1a0-25
+title: 'REGIME-PROGRAM trade-level state: within each rostered leg, does tilting each trade 2.0 / 0.5 by the leg''s prior net R in its OWN
+  symbol''s current trend x vol cell beat equal risk by +0.01 R/trade and beat permutations within leg-month?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-24/45525451835
+  verdict_read: indeterminate
+  diagnosis: 'f1a0-24 (run 45525451835): on the 21 rostered legs replayed with declared params, book-level tilts did not confirm (no-state +0.0025 t 0.33; advol -0.0128; hmm2 -0.0034), and f1a0-23 showed BTC state adds nothing beyond book quality. Every rostered leg is net positive, so selecting BOOKS adds nothing; the remaining regime question is whether, within a good leg, the state of the leg''s OWN traded symbol at entry separates its better trades from its worse ones. BTC-wide state is the wrong axis for an alt leg; its own trend / vol is the axis the regime directive names.'
+  search: one fixed cell definition (own symbol daily close vs 50-day mean x 20-day vol vs 365-day median), one tilt rule (2.0 / 0.5, >= 20
+    exited prior trades in the cell), one renormalisation (leg x month); no grid.
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 8
+  due_by: '2026-12-01'
+question: 'On every rostered crypto trend / pullback / fade / squeeze leg replayed with declared params (2020-09-01..2026-10-26; test trades from
+  2022-01-03), does tilting each trade 2.0 / 0.5 by the sign of the mean net R of the same leg x direction''s prior trades that had EXITED before its
+  entry in the same OWN-symbol cell (trend x vol), renormalised within leg x month, beat equal risk by >= +0.01 R/trade (entry-week bootstrap t >= 2),
+  beat >= 95% of 200 within-leg-month permutations of the tilts, and hold in >= 4 of 5 years?'
+why_this_matters: 'The regime lever in the form a live leg can use: per-trade risk set by the traded symbol''s state at entry, every trade kept. A pass
+  goes to a fresh-window confirmation, then a Tier-3 per-leg sizing proposal; a fail closes own-symbol trend x vol cells and moves the program to
+  the ML state head (the vol head) and change-point state on the same trades.'
+power:
+  expected_n: 251
+  min_detectable_effect: 0.01
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'MEASURED from f1a0-24: 7,963 replayed trades over 21 legs, ~5,500 in the test window; the cluster is the entry week (~250). INDETERMINATE
+    is a live outcome.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: per-trade risk sizing within each rostered leg by its own symbol state
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: Equal risk per trade on the same replayed trades (weight 1); and 200 permutations of the raw trade tilts within each leg x month.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - tradestate
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261125-f1a0-25
+decision_rule:
+  id: RULE-REGIME-TRADESTATE-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: equal risk per trade on the same trades; 200 permutations of the raw tilts within each leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode tradestate (daily_closes, symbol_cell, tradestate_raw, ts_weights, grade_tradestate):
+    delta = mean (w - 1) x net R over test trades; se from 1,000 entry-week bootstrap draws; permutation share of 200 within leg x month permutations
+    of the raw tilts; yearly delta.'
+  rule: 'PASS iff delta >= +0.01 R/trade AND t >= 2 AND permutation share <= 0.05 AND >= 4 of 5 test years > 0; FAIL iff delta <= 0 or share >= 0.5;
+    else INDETERMINATE.'
+  pass_action: Fresh-window confirmation (trades after 2026-10-26 as they accrue, or the held-out ict_scalp legs), then a Tier-3 per-leg sizing
+    proposal (sizing, never a drop gate).
+  fail_action: Record own-symbol trend x vol cells closed for trade-level sizing; next regime form is the ML vol head state and change-point state on
+    the same replayed trades.
+  proposal_mapping: pass -> confirmation -> Tier-3 sizing proposal; fail or indeterminate -> the next regime form from this diagnosis.
+    on the same metric.
+  what_it_does_not_do: Changes no config, sizing or order path; adds no gate. Re-runs the evidence builder's harness path read-only (writes only
+    under --out).
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: the raw trade tilts permuted within each leg x calendar month (200 draws, renormalised); the arm must beat >= 95% of draws
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket; only its risk weight changes, with the weekly total unchanged'
+  best_static:
+    grid:
+    - equal risk per trade on every book (weight 1), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule, not chosen on any fold; no grid was searched'
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  why_runner: Keyless Binance Vision candles for ~20 legs plus the repo harnesses; numpy only for the grade.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est.
+    under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- scripts/research/regime_r2_family_router.py
+- REGIME-ROSTERED-CONFIG-REPLAY
+- research/queue/RQ-20261125-f1a0-24.yaml
+- REGIME-PROGRAM
