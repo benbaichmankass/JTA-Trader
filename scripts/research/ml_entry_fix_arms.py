@@ -64,6 +64,12 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 R), so the limit's ~0.125 R price gain on fills was spent on forfeited winners. lim_fallback keeps the limit and, when it is still
                 unfilled after LIM_W hours, enters at MARKET at the next bar's open (taker fee, full slippage): fills keep their price, winners are
                 kept at a worse price. Scored on exactly the market arm's decisions (paired, as lim_paired).
+  lim_choose    ITERATION 4 of the limit entry (f1a0-22 lim_fallback INDETERMINATE -0.0027: re-entering the unfilled winners at market gave back
+                more than the limit saved). The limit is a SELECTIVE thinning (it beat random thinning by +0.012 R on f1a0-21) whose value flips by
+                fold: positive where the market arm loses, negative where it wins. lim_choose learns that per decision: a LightGBM regressor
+                (huber, LIMC_PARAMS, per fold on TRAIN decisions only, both sides as rows with a side feature) on delta = limit net R - market net R
+                (unfilled = 0 R) from M.FEATURES, and on the market arm's taken decisions uses the LIMIT only where the predicted delta > 0, else
+                MARKET. Paired, scored on exactly those decisions. Control: the same choice made at RANDOM at the arm's limit share (100 draws).
   rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
                 training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
                 vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
@@ -97,10 +103,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
+#: lim_choose's delta regressor: fixed before any run (a smaller, more regularised copy of M.LGB_PARAMS; the target is a noisy per-decision difference)
+LIMC_PARAMS = {"n_estimators": 200, "learning_rate": 0.03, "num_leaves": 15, "min_child_samples": 1000, "subsample": 0.8, "subsample_freq": 1,
+               "colsample_bytree": 0.8, "reg_lambda": 10.0, "random_state": 20261125, "verbose": -1, "deterministic": True, "force_row_wise": True}
 DRAWS = 100                           # matched-random draws (research-queue-design-fields-guard minimum)
 TAU = 0.10
 SEED = 20261124
@@ -458,6 +467,30 @@ def years_and_folds(cat: dict, folds: list[dict], arm: str, ref: str = "base") -
     return fb, yearly, sum(1 for v in yearly.values() if v is not None and v > 0)
 
 
+def fit_lim_chooser(train: pd.DataFrame, fixed: pd.DataFrame, lim: pd.DataFrame, n_jobs: int | None = None):
+    """lim_choose's delta regressor, fitted on TRAIN decisions only: one row per (decision, side) with M.FEATURES + side (+1 long / -1 short),
+    target = limit net R - market net R for that side (an unfilled limit is 0 R), rows with a missing label dropped."""
+    import lightgbm as lgb
+    X0 = train[list(M.FEATURES)].to_numpy(float)
+    Xs, ys = [], []
+    for sd, sg in (("long", 1.0), ("short", -1.0)):
+        y = lim[f"net_{sd}"].to_numpy(float) - fixed[f"net_{sd}"].to_numpy(float)
+        ok = np.isfinite(y)
+        Xs.append(np.column_stack([X0[ok], np.full(ok.sum(), sg)]))
+        ys.append(y[ok])
+    m = lgb.LGBMRegressor(objective="huber", n_jobs=n_jobs or 4, **LIMC_PARAMS)
+    m.fit(np.vstack(Xs), np.concatenate(ys))
+    return m
+
+
+def choose_rows(mk: pd.DataFrame, lim_df: pd.DataFrame, use: np.ndarray) -> pd.DataFrame:
+    """Per decision: the limit outcome where ``use`` else the market outcome (same rows, same sides)."""
+    out = mk.copy()
+    for c in ("net_r", "gross_r", "cost_r", "reason"):
+        out[c] = np.where(use, lim_df[c].to_numpy(), mk[c].to_numpy())
+    return out
+
+
 def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs: int | None = None, folds_lim: int | None = None) -> dict:
     bounds = [pd.Timestamp(x, tz="UTC") for x in M.DEV_FOLDS] + [pd.Timestamp(M.HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < bounds[-1]]
@@ -587,6 +620,33 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                      "market_mean_net_r_same_rows_when_unfilled": float(mk.net_r.to_numpy()[((arm_df.reason < 0) | (arm_df.reason >= 10)).to_numpy()].mean())
                      if ((arm_df.reason < 0) | (arm_df.reason >= 10)).any() else None,
                      "fallback_mean_net_r": float(arm_df.net_r[arm_df.reason >= 10].mean()) if (arm_df.reason >= 10).any() else None}
+        elif arm == "lim_choose":
+            fixed, lim = alt
+            lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: fixed.loc[train.index, c] for c in lab})
+            fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
+            mk = Seq(test, fixed.loc[test.index]).run(fl_, fs_)
+            tk["fixed"] = mk
+            chooser = fit_lim_chooser(train, fixed.loc[train.index], lim.loc[train.index], n_jobs)
+            key = test[["symbol", "ts"] + list(M.FEATURES)].assign(**{c: lim.loc[test.index, c].to_numpy() for c in lab})
+            key["ts"] = pd.to_datetime(key.ts, utc=True)
+            m = mk.assign(ts=pd.to_datetime(mk.ts, utc=True)).merge(key, on=["symbol", "ts"], how="left", validate="one_to_one")
+            lg = (m.side == "long").to_numpy()
+            pick = lambda k: np.where(lg, m[f"{k}_long"].to_numpy(), m[f"{k}_short"].to_numpy())  # noqa: E731
+            lim_df = mk.copy()
+            lim_df["net_r"], lim_df["gross_r"], lim_df["cost_r"], lim_df["reason"] = pick("net"), pick("gross"), pick("cost"), pick("reason").astype(int)
+            # provenance: predict -- the chooser's predicted (limit - market) net R for the side the market arm took; > 0 -> use the limit
+            pd_ = chooser.predict(np.column_stack([m[list(M.FEATURES)].to_numpy(float), np.where(lg, 1.0, -1.0)])) if len(m) else np.zeros(0)
+            use = pd_ > 0
+            tk["arm"] = choose_rows(mk, lim_df, use)
+            share = float(use.mean()) if len(use) else 0.0
+            tk["control"] = pd.concat([choose_rows(mk, lim_df, rng.random(len(mk)) < share) for _ in range(DRAWS)], ignore_index=True)
+            realised = lim_df.net_r.to_numpy() - mk.net_r.to_numpy()
+            info |= {"limit_share": share, "pred_delta_mean": float(pd_.mean()) if len(pd_) else None,
+                     "corr_pred_realised_delta": float(np.corrcoef(pd_, realised)[0, 1]) if len(pd_) > 2 and np.std(pd_) > 0 else None,
+                     "realised_delta_where_limit": float(realised[use].mean()) if use.any() else None,
+                     "realised_delta_where_market": float(realised[~use].mean()) if (~use).any() else None,
+                     "all_limit_delta": float(realised.mean()) if len(realised) else None}
         elif arm == "lim_xwide":
             fixed, lim = alt
             lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
@@ -670,7 +730,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired", "lim_fallback") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
@@ -707,7 +767,7 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         volsl = alt_labels(cache, syms, tab, sl_of, TP_XWIDE / SL_XWIDE) if arm == "volsl_retrain" else fixed
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & volsl["net_long"].notna() & volsl["net_short"].notna()).to_numpy()
         return tab[ok], (fixed[ok], volsl[ok])
-    if arm in ("lim_xwide", "lim_paired", "lim_fallback"):
+    if arm in ("lim_xwide", "lim_paired", "lim_fallback", "lim_choose"):
         fixed = alt_labels(cache, syms, tab, SL_XWIDE, TP_XWIDE)
         lim = lim_labels(cache, syms, tab, fallback=arm == "lim_fallback")
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & lim["net_long"].notna() & lim["net_short"].notna()).to_numpy()
@@ -852,6 +912,21 @@ def _self_test() -> None:
         assert all(fb.reason_long.iloc[j] == 10 and abs(fb.gross_long.iloc[j]) < 1e-9 and fb.cost_long.iloc[j] > lab.cost_long.iloc[hit[0]]
                    for j in miss if okfb[j]), fb.iloc[miss]   # flat path: a market fallback earns 0 gross and pays the full taker cost
         assert (fb.reason_short.dropna() == 10).all()
+    # lim_choose: the chooser learns a delta that follows a feature (limit pays when ret_24 > 0, market otherwise), and choose_rows picks per row
+    rg = np.random.default_rng(3)
+    n_c = 6000
+    trc = pd.DataFrame({f: rg.normal(size=n_c) for f in M.FEATURES})
+    fx = pd.DataFrame({"net_long": rg.normal(size=n_c), "net_short": rg.normal(size=n_c)})
+    sig = np.where(trc.ret_24.to_numpy() > 0, 0.5, -0.5)
+    lm = pd.DataFrame({"net_long": fx.net_long + sig + rg.normal(0, 0.3, n_c), "net_short": fx.net_short + sig + rg.normal(0, 0.3, n_c)})
+    ch = fit_lim_chooser(trc, fx, lm, 2)
+    te = pd.DataFrame({f: rg.normal(size=400) for f in M.FEATURES})
+    pr = ch.predict(np.column_stack([te[list(M.FEATURES)].to_numpy(float), np.ones(400)]))
+    assert ((pr > 0) == (te.ret_24.to_numpy() > 0)).mean() > 0.9
+    mk_ = pd.DataFrame({"net_r": [1.0, 2.0], "gross_r": [1.0, 2.0], "cost_r": [0.0, 0.0], "reason": [1, 1]})
+    li_ = pd.DataFrame({"net_r": [5.0, 6.0], "gross_r": [5.0, 6.0], "cost_r": [0.0, 0.0], "reason": [0, -1]})
+    out_ = choose_rows(mk_, li_, np.array([True, False]))
+    assert out_.net_r.tolist() == [5.0, 2.0] and out_.reason.tolist() == [0, 1]
     print("self-test ok")
 
 
