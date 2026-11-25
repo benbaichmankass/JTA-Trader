@@ -1,0 +1,17 @@
+# Trades excluded from every PROMOTION / DEMOTION read, kept visible and labelled everywhere else.
+# Gates this adds or changes: none (this is a read-path population filter, not an execution gate; nothing here blocks or enables a trade).
+#
+# Operator decision, 2026-11-25 W48 planning decision doc, Q3 (row AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED), verbatim:
+#   "Exclude it from every promotion/demotion read, keep it visible and labelled (Recommended)"
+# Consumers: scripts/ops/promotion_exclusions.py (helper) -> scripts/research/live_bar.py, scripts/ops/scoreboard.py.
+# The row stays in trade_journal.db and in every inception total; only the promotion/demotion population drops it.
+exclusions:
+  - trade_id: 4773
+    account_id: ib_paper
+    symbol: MGC
+    provenance: ESTIMATED
+    pnl_usd_estimated: 249000   # approximate (+$249k); the journal row is the record
+    reason: >-
+      priced 262 points past its TP during the 2026-08-23 protection failure; its +$249k estimated pnl alone sets the sign of the
+      paper book's inception headline (weekly audit 2026-11-25, measured paper -$67.8k n=908 vs blended +$28.4k).
+    decided: "2026-11-25"

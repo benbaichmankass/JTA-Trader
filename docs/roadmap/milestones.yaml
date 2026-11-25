@@ -91,7 +91,7 @@ milestones:
     name: "WEEK PRIORITY 3 -- active management on every real-money strategy, as a standard (target 2026-11-04)"
     status: active
     week_priority: 3
-    target: 2026-11-11
+    target: 2026-12-16
     where: >-
       Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
       WEEKLY-PLANNING note): "(3) Active management: mature, stable infra (triggers, reviews, updates). Week milestone: every
@@ -107,6 +107,7 @@ milestones:
       "I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases". Plan of
       record due 2026-10-29 05:30Z from lane ACTIVE-MGMT-REAL-MONEY-PLAN.
       2026-11-04 DISPOSITION (weekly planning close; re-baseline docs/reviews/2026-11-04-roadmap-rebaseline.md): target reached, done-condition NOT shown met. MEASURED over comms/live_review/reviews.jsonl since 2026-10-28 (292 records): reviews exist for bybit_2 (35), bybit_portfolio (34), alpaca_portfolio (10); alpaca_live 0 records (denominator unread: not established whether alpaca_live held an open package); applied = 0 of 292. 28 live rows now exist. Re-targeted +1 week to 2026-11-11 (operator, "Record outcome, re-target +1 week (Recommended)").
+      2026-11-25 RE-TARGET (operator, W48 planning decision doc Q10, verbatim: "Target 12-16: decide on c7e3-08/09; if none passes, re-scope to one action family on one leg (Recommended)"). CONDITIONAL RE-SCOPE: by 2026-12-16 the action classes tested by c7e3-08/09 are decided on their own pre-registered, cost-net results (R4 control voided, pre-read P-8); if none passes, this milestone is re-scoped to ONE action family on ONE leg, not all real-money legs. Second carry-over: AM v2 Stage B is all FAIL.
     next: >-
       Done-condition (by 2026-11-04): every real-money leg (re-parse config/accounts.yaml for the roster, never quote it)
       runs the active-management mechanics in production -- live review on its bar, a recommendation over the full action
@@ -376,8 +377,7 @@ milestones:
   - id: L-ML-LIVE
     goal: G4
     name: "WEEK PRIORITY 1 -- ML in live trading loops within days, plus ML infra and ops (target 2026-11-01)"
-    status: active
-    week_priority: 1
+    status: closed
     target: 2026-11-11
     where: >-
       Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
@@ -388,19 +388,17 @@ milestones:
       strategy status model (in testing / in production / inactive, adopted ~21:05Z) is being written into the operating
       plan by lane STRATEGY-STATUS-MODEL. Plan of record due 2026-10-29 05:30Z from lane ML-LIVE-PROMOTION-PLAN.
       2026-11-04 DISPOSITION (weekly planning close): target 2026-11-01 passed with no outcome recorded; done-condition (a handful of ML models change a live order decision, each on its own evidence record) NOT shown met by the re-baseline, which counted rows (49 live) not decisions. ML-UNIVERSE-RULE (in_flight, PR #22928; Tier-3 HOLD on #22900) and ML-ROADMAP-MECE carry it forward. Re-targeted +1 week to 2026-11-11 (operator, "Record outcome, re-target +1 week (Recommended)").
-    next: >-
-      Done-condition (target 2026-11-01): a handful of ML models change a live decision in a trading loop (advisory or
-      executed, each on its own committed evidence record), with the promotion plan committed and the ML infra/ops checks
-      (serve parity, freshness, drift, registry) validated on the live path. Measure: models whose output reached an order
-      decision, re-read from the decision records, never quoted.
+      2026-11-25 CLOSED, folded into L-ML-MECE (operator, W48 planning decision doc Q8, verbatim: "Close it and fold it into L-ML-MECE"; note: "But that is the planning priority this week"). Writeback: the done-condition (a handful of ML models change a live order decision, each on its own evidence record) was not met by the target; ml_entry is live but is the losing real-money leg (planning pre-read 2026-11-26 section 1) and no served order-changing model is in the trainer registry (ML-REGISTRY-SERVED-MODELS-NO-STAGE). The remaining work (serving inventory, per-slot harness, promotion on disjoint data) is L-ML-MECE's, whose done-condition now carries it; open rows keep their ids and re-point there.
+    next: Consumed by L-ML-MECE; no separate build.
+    no_rows_reason: closed 2026-11-25 and folded into L-ML-MECE (operator Q8); its open rows re-point there
     owner: manager
-    reviewed: 2026-11-04
+    reviewed: 2026-11-25
   - id: L-DESK-V1
     goal: G4
-    name: "WEEK PRIORITY 2 -- trading desk production-ready V1 by the end of the week (target 2026-11-04)"
+    name: "WEEK PRIORITY 2 -- desk capacity + DESK-MACRO-DAILY in production end to end (target 2026-12-09)"
     status: active
     week_priority: 2
-    target: 2026-11-11
+    target: 2026-12-09
     where: >-
       Opened 2026-10-28 ~21:10Z (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch). Operator, verbatim (~20:55Z, row
       WEEKLY-PLANNING note): "(2) Trading desk: production-ready V1 by end of week". The desk's in-trade role follows
@@ -408,14 +406,15 @@ milestones:
       and loses (#20967). Long-run desk history stays on L-DESK. Plan of record due 2026-10-29 05:30Z from lane
       DESK-V1-PRODUCTION-PLAN.
       2026-11-04 DISPOSITION (weekly planning close): target reached; V1 production-ready not shown met (1 live row, 1 open; re-baseline docs/reviews/2026-11-04-roadmap-rebaseline.md). Re-targeted +1 week to 2026-11-11 (operator, "Record outcome, re-target +1 week (Recommended)"); fold-into-L-DESK stays a choice for the 11-11 pass.
+      2026-11-25 RE-SCOPE (operator, W48 planning decision doc Q9, verbatim: "Re-scope to desk capacity + DESK-MACRO-DAILY in production end to end, target 12-09 (Recommended)"). Second carry-over (target 11-04 then 11-11): DESK-14 and DESK-18G are landed_unproven and DESK-19..26 blocked "later phase" (pre-read 2026-11-26 section 4). The V1 scope below is replaced by the narrower one; the rest of the original V1 stays under L-DESK.
     next: >-
-      Done-condition (by 2026-11-04): the desk V1 runs in production on its rostered books without operator relay --
+      Done-condition (target 2026-12-09, re-scoped 2026-11-25): desk capacity exists (desk wakes run beyond real-money reviews; paper desk accounts no longer idle) and DESK-MACRO-DAILY runs in production end to end, observed (brief produced on schedule, consumed by a desk wake, recorded in comms/desk/), re-read from the records, never quoted. Original V1 done-condition kept for history (by 2026-11-04): the desk V1 runs in production on its rostered books without operator relay --
       scheduled wakes, records, grading and the per-account apply path observed end to end -- with its scope and
       acceptance checks stated in the DESK-V1-PRODUCTION-PLAN plan. Measure: desk decision and outcome records
       (comms/desk/), re-read, never quoted.
     architecture: ["Active management"]
     owner: manager
-    reviewed: 2026-11-04
+    reviewed: 2026-11-25
   - id: L-REGIME
     goal: G4
     name: Regime program -- know when each strategy is primed
@@ -606,6 +605,7 @@ milestones:
     goal: G4
     name: Every trade-lifecycle decision has one owning model family with a registered question, baseline, label and harness
     status: active
+    week_priority: 1
     where: >-
       Adopted 2026-11-04 ~21:33Z, operator (popup, verbatim): "Adopt both". 2026-11-04 (lane ML-ROADMAP-MECE):
       docs/plans/ML-ROADMAP-MECE-2026-11.md maps 10 decisions (D1-D10) to one family each; 3 have no model at any stage
@@ -615,11 +615,12 @@ milestones:
       harness + 2026-11 forward window); P4 is the existing unit RQ-20261101-a24c-01 (same question, no new unit); Whippet stays
       parked with its re-entry test (plan section 8), no row. Form corrected from the plan's section 7 per
       docs/reviews/2026-11-04-roadmap-rebaseline.md section 3 (status must be active|dormant|backlog|closed; no_rows_reason).
+      2026-11-25 (operator, W48 planning decision doc Q8 note, verbatim: "But that is the planning priority this week"): THE WEEK'S TOP PLANNING PRIORITY (W48). It absorbs L-ML-LIVE (closed, folded in): one ML model on real money must clear the promotion rule on disjoint data.
     next: >-
       Done when (a) one serving inventory lists every order-changing model with its slot and books (P1), and (b) the
       weekly /ml-review prints a slot report where every open ML row/unit names a slot and every slot names its next unit (P3).
     owner: manager
-    reviewed: 2026-11-04
+    reviewed: 2026-11-25
   - id: L-ML-AGGREGATOR
     goal: G4
     name: Position aggregator (Mastiff) -- offline research only

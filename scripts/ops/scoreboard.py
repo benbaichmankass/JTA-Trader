@@ -43,6 +43,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.runtime import provenance as prov  # noqa: E402
+from scripts.ops import promotion_exclusions as _pex  # noqa: E402
 
 SCHEMA_VERSION = 1
 TRAILING_DAYS = 30
@@ -171,6 +172,12 @@ def pct_for_window(rows: list[dict], idx: dict, start: datetime | None, until: d
 
 # ── aggregation ────────────────────────────────────────────────────────────
 
+def _promotion_exclusion_block(rows: list[dict], pnls: list[float]) -> dict[str, Any]:
+    _kept, excluded = _pex.split(rows)
+    ex_usd = sum(float(e["pnl"]) for e in excluded if e.get("pnl") is not None)
+    return {"n": len(excluded), "rows": excluded, "net_usd_priced_without_excluded": round(sum(pnls) - ex_usd, 2)}
+
+
 def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
     """Net / PF / win% over *rows* (already priced + closed). Empty → read_state ``empty``, numbers None."""
     n = len(rows)
@@ -200,6 +207,19 @@ def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
         # never folded into it; net_usd_measured is the number a sign claim should cite.
         "net_usd_by_provenance": {k: round(v, 2) for k, v in net_by.items()},
         "net_usd_measured": round(net_by[prov.MEASURED], 2) if counts[prov.MEASURED] else None,
+        # Operator 2026-11-25 (W48 Q6), verbatim: "Yes: measured headline, the other parts labelled beside it (Recommended)".
+        # headline_usd is the venue-MEASURED part; the other parts are named beside it and never folded into it. ``net_usd``
+        # stays the all-priced total (API-compatible). Null means no measured row, rendered "—", never 0.
+        "headline_usd": round(net_by[prov.MEASURED], 2) if counts[prov.MEASURED] else None,
+        "headline_basis": "venue-measured pnl",
+        "headline_beside": {
+            "estimated_usd": round(net_by[prov.ESTIMATED], 2), "estimated_n": counts[prov.ESTIMATED],
+            "unverified_usd": round(net_by[prov.UNVERIFIED], 2), "unverified_n": counts[prov.UNVERIFIED],
+            "fabricated_usd": round(net_by[prov.FABRICATED], 2), "fabricated_n": counts[prov.FABRICATED],
+        },
+        # Operator 2026-11-25 (W48 Q3): trades in config/promotion_exclusions.yaml are out of every promotion/demotion read but
+        # stay in net_usd above and are listed here, labelled.
+        "promotion_exclusions": _promotion_exclusion_block(rows, pnls),
     }
 
 
@@ -515,16 +535,27 @@ def render_lines(sb: dict | None) -> list[str]:
         return L + [f"**Scoreboard {_DASH} we could not look** ({reason}). This is not zero.", ""]
     L += [f"_As of {sb['asOf']} · source `{sb['source']}` · {sb['rowsRead']} journal rows read. `—` = no number "
           "(unreadable / empty / no capital basis). Populations are in the JSON (`/api/bot/work/scoreboard`)._", "",
-          "| book | inception net | inception % | n | PF | trailing 30 d net | 30 d % | n | PF | pnl measured |",
+          "| book | inception net (venue-measured) | inception % (all priced) | n | PF | trailing 30 d net (venue-measured) | 30 d % (all priced) | n | PF | pnl measured |",
           "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for b in BOOKS:
         bk = sb["books"][b]
         i, t = bk["inception"], bk["trailing_30d"]
         share = i.get("pnl_measured_share")
-        L.append(f"| {bk['label']} | {fmt_money(i['net_usd'])} | {fmt_pct(i.get('pct'))} | {i['n'] if i['n'] is not None else _DASH} "
-                 f"| {fmt_num(i['profit_factor'])} | {fmt_money(t['net_usd'])} | {fmt_pct(t.get('pct'))} "
+        L.append(f"| {bk['label']} | {fmt_money(i.get('headline_usd', i['net_usd']))} | {fmt_pct(i.get('pct'))} | {i['n'] if i['n'] is not None else _DASH} "
+                 f"| {fmt_num(i['profit_factor'])} | {fmt_money(t.get('headline_usd', t['net_usd']))} | {fmt_pct(t.get('pct'))} "
                  f"| {t['n'] if t['n'] is not None else _DASH} | {fmt_num(t['profit_factor'])} "
                  f"| {_DASH if share is None else f'{share * 100:.0f}%'} |")
+    for b in BOOKS:  # operator 2026-11-25 (W48 Q6): the non-measured parts are labelled beside the measured headline, never folded in
+        i = sb["books"][b]["inception"]
+        be = i.get("headline_beside")
+        if be:
+            L.append(f"- {sb['books'][b]['label']} inception, beside the measured headline: all priced {fmt_money(i['net_usd'])} = measured "
+                     f"{fmt_money(i.get('headline_usd'))} + ESTIMATED {fmt_money(be['estimated_usd'])} (n={be['estimated_n']}) + UNVERIFIED "
+                     f"{fmt_money(be['unverified_usd'])} (n={be['unverified_n']}) + FABRICATED {fmt_money(be['fabricated_usd'])} (n={be['fabricated_n']}).")
+        px = (i.get("promotion_exclusions") or {})
+        if px.get("n"):
+            L.append(f"- {sb['books'][b]['label']}: {px['n']} trade(s) excluded from promotion/demotion reads (operator 2026-11-25, "
+                     f"config/promotion_exclusions.yaml): " + "; ".join(f"id {r['trade_id']} {fmt_money(r['pnl'])} {r['provenance']}" for r in px["rows"]) + ".")
     L += ["", "Paper and mirror dollars are paper notional, not money. % = net / broker equity at window start "
           "(`balance_snapshots`; prop: declared `account_size_usd`); `—` where no start equity could be read."]
     c = sb["cost"]
