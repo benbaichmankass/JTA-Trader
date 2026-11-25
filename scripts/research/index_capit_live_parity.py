@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: tests/test_index_capitulation_1x.py (reads the committed record); run by hand / runner for INDEX-CAPIT-1X-LEG
+# wiring: manual-only - re-run by a session whenever src/units/strategies/index_capitulation_1x.py changes; tests/test_index_capitulation_1x.py fails until it is (the record pins the module sha1)
 """Live-path parity for ``index_capitulation_1x`` against the harness fixture (row INDEX-CAPIT-1X-LEG).
 
 WHAT IT PROVES
