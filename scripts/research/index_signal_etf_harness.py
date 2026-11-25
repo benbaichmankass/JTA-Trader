@@ -602,6 +602,25 @@ RULES["RQ-20261124-1e06-05"] = ("RULE-RQ-20261124-1e06-05", "capitulation_wide",
                                 "TIMING-GATED test of the 1e06-03/-04 capitulation 3x buy on 6 FRESH 3x ETFs (XBI/LABU, KRE/DPST, EEM/EDC, XLI/DUSL, XLU/UTSL, XLY/WANT), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-03"] = ("RULE-RQ-20261124-1e06-03", "capitulation_wide",
                                 "PASS IFF n>=25 AND net_r(3x)>0 AND net_r(3x)>net_r(1x same trigger) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise")
+# UNFILTERED-LEG READS (lane ML-PRIMARY 2026-11-25, registered before any run, no local read): the leg the operator sent to real money
+# (INDEX-CAPIT-1X-LEG = capitulation_wide, 1x, unfiltered, on the 18 tickers of 1e06-06 + 1e06-08) was never read on the pre-sample window;
+# only its SMA200 (1e06-09) and credit (1e06-11) variants were, both FAIL. 1e06-12 = the leg's own 18 tickers pre-sample; 1e06-13 / 1e06-14 =
+# the unfiltered trigger on the 1e06-07 pairs pre-sample / evidence window (separates the window from the filter in the 1e06-09 FAIL, and is a
+# third population for the unfiltered spec). Same family, procedure, costs, TP calibration and timing clause as 1e06-06 / -08; only the window
+# and population differ. Pairs with no bars in a window count as NOT positive.
+PAIRS["capitulation_leg18"] = PAIRS["capitulation_1x_fresh"] + PAIRS["capitulation_1x_confirm"]
+for _u, _pk, _min, _npairs, _w in (("RQ-20261125-1e06-12", "capitulation_leg18", 9, 18, "2000-01-01..2010-05-28 (pre-sample)"),
+                                   ("RQ-20261125-1e06-13", "capitulation_bull", 4, 8, "2000-01-01..2010-05-28 (pre-sample)"),
+                                   ("RQ-20261125-1e06-14", "capitulation_bull", 4, 8, "2010-06-01..2026-10-22 (evidence window)")):
+    PAIRS_KEY[_u] = (_pk, _pk)
+    BASELINE[_u] = "flat"
+    POOLED.add(_u)
+    TIMING_GATED[_u] = 0.05
+    POOLED_MIN_POSITIVE[_u] = _min
+    RULES[_u] = (f"RULE-{_u}", "capitulation_wide",
+                 f"UNFILTERED capitulation trigger (1.5-ATR flush, 1x execution, no regime gate) on {_w}, {_npairs} pairs ({_pk}), graded POOLED: "
+                 f"PASS IFF pooled n>=25 AND pooled net_r>0 AND >={_min} of {_npairs} pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled "
+                 "actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 
 
 def load_frames(pairs, start, end, cache_dir):
