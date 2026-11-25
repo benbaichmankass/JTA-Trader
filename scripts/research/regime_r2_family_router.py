@@ -41,6 +41,16 @@ and routing DROPS 61% of trades. R4 keeps EVERY trade and tilts risk instead: we
 it is <= 0, 1.0 where there is no history; renormalised each week so the weighted trade count equals the actual count (pure reallocation, same total
 risk). Statistic: weighted net R per trade minus the unweighted; se from 1,000 week-bootstrap draws; control: the same weights PERMUTED across books within
 each week (200 draws).
+
+R3, STATE CLASSIFIERS ON MONEY (``--books symbol --mode state``, unit RQ-20261125-f1a0-20, RULE-REGIME-R3-STATE-CELLS-20261125), from f1a0-19 (run 45515431409):
+the book's OWN trailing performance carries real but small, decaying information (R4 +0.0098, t 1.27, permutation share 0.00, 2025-26 flat). R3 asks
+whether the MARKET STATE says which books earn: each week gets a BTC state cell from a classifier using data before the week, and each book is tilted
+TILT[0] / TILT[1] by the sign of its mean net R per trade in PRIOR weeks of the SAME cell (>= STATE_MIN_N trades there, else 1.0); same renormalisation,
+statistic and within-week permutation control as R4. Classifiers (fixed, no search):
+  advol   2 x 2: BTC close above / below its 50-day mean x 20-day realised vol above / below its trailing 365-day median (last daily close before the week)
+  hmm2    a 2-state Gaussian HMM on weekly BTC log returns, fit by EM on weeks before TEST_START only; the week's cell is the FILTERED (forward) most
+          probable state given returns through the previous week.
+Two classifiers, so each needs permutation share <= 0.025.
 """
 from __future__ import annotations
 
@@ -274,6 +284,105 @@ def _git_sha() -> str:
         return "unknown"
 
 
+RULE_STATE = dict(RULE_TILT, id="RULE-REGIME-R3-STATE-CELLS-20261125", max_random_share=0.025)
+STATE_MIN_N = 20
+BTC_CACHE = "/tmp/ml_entry_klines"
+
+
+def btc_daily(cache: str = BTC_CACHE) -> pd.Series:
+    """Daily BTCUSDT closes (UTC) from the ml_entry klines cache (fetched by ml_entry_retrain.fetch_through when absent)."""
+    p = Path(cache) / "BTCUSDT.pkl"
+    if not p.exists():
+        from datetime import date
+        import ml_entry_retrain as RT
+        RT.fetch_through(Path(cache), ["BTCUSDT"], RT.plan(date(2026, 11, 22)))
+    d = pd.read_pickle(p)
+    s_ = d.set_index(pd.to_datetime(d.ts, utc=True))["close"].astype(float)
+    return s_.resample("1D").last().dropna()
+
+
+def cells_advol(close: pd.Series, weeks: Sequence[pd.Timestamp]) -> pd.Series:
+    sma = close.rolling(50).mean()
+    rv = np.log(close).diff().rolling(20).std()
+    med = rv.rolling(365, min_periods=180).median()
+    st = pd.DataFrame({"up": close > sma, "hv": rv > med, "ok": sma.notna() & med.notna()})
+    out = {}
+    for w in weeks:
+        prev = st[st.index < pd.Timestamp(w, tz="UTC")]
+        if prev.empty or not prev.ok.iloc[-1]:
+            out[w] = None
+        else:
+            out[w] = f"{'up' if prev.up.iloc[-1] else 'dn'}_{'hv' if prev.hv.iloc[-1] else 'lv'}"
+    return pd.Series(out)
+
+
+def _hmm2_fit(x: np.ndarray, iters: int = 200) -> Dict[str, np.ndarray]:
+    """2-state Gaussian HMM by EM (numpy). States ordered by mean (0 = lower mean)."""
+    mu = np.array([np.percentile(x, 25), np.percentile(x, 75)])
+    sd = np.array([x.std(), x.std()]) + 1e-9
+    A = np.array([[0.9, 0.1], [0.1, 0.9]])
+    pi = np.array([0.5, 0.5])
+    for _ in range(iters):
+        B = np.exp(-0.5 * ((x[:, None] - mu) / sd) ** 2) / sd + 1e-300
+        T = len(x)
+        al, c = np.zeros((T, 2)), np.zeros(T)
+        al[0] = pi * B[0]
+        c[0] = al[0].sum()
+        al[0] /= c[0]
+        for t in range(1, T):
+            al[t] = (al[t - 1] @ A) * B[t]
+            c[t] = al[t].sum()
+            al[t] /= c[t]
+        be = np.ones((T, 2))
+        for t in range(T - 2, -1, -1):
+            be[t] = (A @ (B[t + 1] * be[t + 1])) / c[t + 1]
+        g = al * be
+        g /= g.sum(1, keepdims=True)
+        xi = np.zeros((2, 2))
+        for t in range(T - 1):
+            m = al[t][:, None] * A * (B[t + 1] * be[t + 1])[None, :]
+            xi += m / m.sum()
+        A = xi / xi.sum(1, keepdims=True)
+        pi = g[0]
+        mu = (g * x[:, None]).sum(0) / g.sum(0)
+        sd = np.sqrt((g * (x[:, None] - mu) ** 2).sum(0) / g.sum(0)) + 1e-9
+    o = np.argsort(mu)
+    return {"mu": mu[o], "sd": sd[o], "A": A[np.ix_(o, o)], "pi": pi[o]}
+
+
+def cells_hmm2(close: pd.Series, weeks: Sequence[pd.Timestamp], fit_end: str = TEST_START) -> Tuple[pd.Series, Dict[str, Any]]:
+    wk = close.resample("W-SUN").last().dropna()
+    r = np.log(wk).diff().dropna()
+    tr = r[r.index < pd.Timestamp(fit_end, tz="UTC")].to_numpy()
+    par = _hmm2_fit(tr)
+    B = np.exp(-0.5 * ((r.to_numpy()[:, None] - par["mu"]) / par["sd"]) ** 2) / par["sd"] + 1e-300
+    al = np.zeros((len(r), 2))
+    a = par["pi"] * B[0]
+    al[0] = a / a.sum()
+    for t in range(1, len(r)):
+        a = (al[t - 1] @ par["A"]) * B[t]
+        al[t] = a / a.sum()
+    filt = pd.Series(np.argmax(al, 1), index=r.index)
+    out = {}
+    for w in weeks:
+        prev = filt[filt.index < pd.Timestamp(w, tz="UTC")]
+        out[w] = None if prev.empty else f"s{int(prev.iloc[-1])}"
+    info = {"n_fit_weeks": int(len(tr)), "mu": [round(float(v), 5) for v in par["mu"]], "sd": [round(float(v), 5) for v in par["sd"]],
+            "A": [[round(float(v), 4) for v in row] for row in par["A"]]}
+    return pd.Series(out), info
+
+
+def state_raw(f: pd.DataFrame, cell_by_week: pd.Series) -> pd.Series:
+    """Per (week, book) row: TILT by the sign of the book's mean net R per trade in PRIOR weeks of the same cell (>= STATE_MIN_N trades), else 1."""
+    d = f[["week", "book", "y_sum", "y_n"]].copy()
+    d["cell"] = d.week.map(cell_by_week)
+    d = d.sort_values(["book", "week"])
+    d["cs"] = d.groupby(["book", "cell"], dropna=True).y_sum.cumsum() - d.y_sum
+    d["cn"] = d.groupby(["book", "cell"], dropna=True).y_n.cumsum() - d.y_n
+    raw = np.where(d.cell.isna() | (d.cn < STATE_MIN_N), 1.0, np.where(d.cs / d.cn.replace(0, np.nan) > 0, TILT[0], TILT[1]))
+    return pd.Series(raw, index=d.index).reindex(f.index)
+
+
 def tilt_weights(t: pd.DataFrame, raw: np.ndarray) -> np.ndarray:
     """Renormalise ``raw`` per week so sum(w * n) == sum(n) within each week (same total risk)."""
     w = np.asarray(raw, float).copy()
@@ -285,9 +394,13 @@ def tilt_weights(t: pd.DataFrame, raw: np.ndarray) -> np.ndarray:
     return w * scale.reindex(wk).to_numpy()
 
 
-def grade_tilt(f: pd.DataFrame, test_weeks: Sequence[pd.Timestamp], rng: np.random.Generator) -> Dict[str, Any]:
-    t = f[f.week.isin(test_weeks) & (f.y_n > 0)].reset_index(drop=True)
-    raw = np.where(t["m13"].isna(), 1.0, np.where(t["m13"] > 0, TILT[0], TILT[1]))
+def grade_tilt(f: pd.DataFrame, test_weeks: Sequence[pd.Timestamp], rng: np.random.Generator, raw_all: Optional[pd.Series] = None) -> Dict[str, Any]:
+    sel = f.week.isin(test_weeks) & (f.y_n > 0)
+    t = f[sel].reset_index(drop=True)
+    if raw_all is None:
+        raw = np.where(t["m13"].isna(), 1.0, np.where(t["m13"] > 0, TILT[0], TILT[1]))
+    else:
+        raw = raw_all[sel].to_numpy(float)
     w = tilt_weights(t, raw)
     ys, yn = t.y_sum.to_numpy(float), t.y_n.to_numpy(float)
     wk = t.week.to_numpy()
@@ -335,7 +448,25 @@ def tilt_verdict(g: Dict[str, Any], rule: Dict[str, Any] = RULE_TILT) -> Tuple[s
     return "indeterminate", chk
 
 
-def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family", mode: str = "route") -> Dict[str, Any]:
+def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family", mode: str = "route", btc: Optional[pd.Series] = None) -> Dict[str, Any]:
+    if mode == "state":
+        S, N = weekly_books(trades, level)
+        f = features(S, N)
+        test_weeks = [w for w in S.index if w >= pd.Timestamp(TEST_START)]
+        btc = btc if btc is not None else btc_daily()
+        arms, verdicts = {}, {}
+        ca = cells_advol(btc, list(S.index))
+        ch, hinfo = cells_hmm2(btc, list(S.index))
+        for name, cells in (("advol", ca), ("hmm2", ch)):
+            g = grade_tilt(f, test_weeks, np.random.default_rng(seed), raw_all=state_raw(f, cells))
+            v, g["checks"] = tilt_verdict(g, RULE_STATE)
+            g["verdict"] = verdicts[name] = v
+            g["cell_counts_test"] = {str(k): int(n) for k, n in cells[[w for w in test_weeks if w in cells.index]].value_counts(dropna=False).items()}
+            arms[name] = g
+        arms["hmm2"]["hmm"] = hinfo
+        census = {"n_books": int(S.shape[1]), "trades": int(N.to_numpy().sum()), "sum_r": round(float(S.to_numpy().sum()), 2)}
+        return {"arms": arms, "verdict": unit_verdict(verdicts), "books": census, "n_test_weeks": len(test_weeks), "level": level, "mode": mode,
+                "rule": RULE_STATE}
     if mode == "tilt":
         S, N = weekly_books(trades, level)
         f = features(S, N)
@@ -368,7 +499,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--out", default="/tmp/regime_r2")
     ap.add_argument("--unit", default="")
     ap.add_argument("--books", choices=["family", "symbol"], default="family")
-    ap.add_argument("--mode", choices=["route", "tilt"], default="route")
+    ap.add_argument("--mode", choices=["route", "tilt", "state"], default="route")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -452,6 +583,22 @@ def _self_test() -> int:
     check("tilt weights renormalise per week", abs((wt[:2] * t0_.y_n[:2]).sum() - 40.0) < 1e-9 and abs(wt[2] - 1.0) < 1e-9)
     mt0 = run(_synthetic(seed=4, persistent=False), level="symbol", mode="tilt")
     check("tilt: no regimes, no pass", mt0["verdict"] != "pass")
+    x_ = np.r_[np.random.default_rng(1).normal(-0.05, 0.02, 60), np.random.default_rng(2).normal(0.05, 0.02, 60)]
+    hp = _hmm2_fit(x_)
+    check("hmm2 recovers two separated means", hp["mu"][0] < -0.03 and hp["mu"][1] > 0.03)
+    # state mode on synthetic trades whose edge sign follows a synthetic BTC trend: advol must find it
+    days = pd.date_range("2019-01-01", "2026-10-26", freq="1D", tz="UTC")
+    rng_ = np.random.default_rng(5)
+    regime = np.repeat(rng_.choice([1.0, -1.0], size=len(days) // 60 + 1), 60)[:len(days)]
+    btc_ = pd.Series(100 * np.exp(np.cumsum(0.004 * regime + rng_.normal(0, 0.01, len(days)))), index=days)
+    trd = _synthetic(persistent=False)
+    up = btc_ > btc_.rolling(50).mean()
+    sgn = np.where(trd.direction == "long", 1.0, -1.0)
+    st = up.reindex(trd.ts.dt.floor("D")).fillna(False).to_numpy()
+    trd = trd.assign(net_r=trd.net_r + 0.3 * sgn * np.where(st, 1.0, -1.0))
+    ms_ = run(trd, level="symbol", mode="state", btc=btc_)
+    check("state mode: a trend-conditioned edge is found by advol", ms_["arms"]["advol"]["delta"] > 0.02
+          and ms_["arms"]["advol"]["random"]["share_ge_arm"] <= 0.05)
     check("verdict mapping", unit_verdict({"a": "fail", "b": "indeterminate"}) == "indeterminate" and unit_verdict({"a": "fail", "b": "fail"}) == "fail")
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
