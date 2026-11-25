@@ -181,8 +181,11 @@ def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
     gw = sum(p for p in pnls if p > 0)
     gl = -sum(p for p in pnls if p < 0)
     counts = {prov.MEASURED: 0, prov.ESTIMATED: 0, prov.FABRICATED: 0, prov.UNVERIFIED: 0, "total": n}
+    net_by = {prov.MEASURED: 0.0, prov.ESTIMATED: 0.0, prov.FABRICATED: 0.0, prov.UNVERIFIED: 0.0}
     for r in rows:
-        counts[prov.classify_pnl(r)[0]] += 1
+        k = prov.classify_pnl(r)[0]
+        counts[k] += 1
+        net_by[k] += float(r["pnl"])
     return {
         "read_state": "read", "population": population, "n": n,
         "net_usd": round(sum(pnls), 2),
@@ -191,6 +194,12 @@ def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
         # share of this population's pnl whose own provenance keys say MEASURED (provenance.coverage).
         "pnl_measured_share": prov.coverage(counts),
         "pnl_provenance_counts": {k: counts[k] for k in (prov.MEASURED, prov.ESTIMATED, prov.FABRICATED, prov.UNVERIFIED)},
+        # WEEKLY-AUDIT-2026-11-25 (AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED): net_usd above sums EVERY priced row, so
+        # a book's sign can rest on ESTIMATED / FABRICATED pnl (measured 11-25: paper inception +$28.4k headline vs
+        # MEASURED-only -$67.8k; one estimated ib_paper MGC row carried +$249k). The split is published beside it,
+        # never folded into it; net_usd_measured is the number a sign claim should cite.
+        "net_usd_by_provenance": {k: round(v, 2) for k, v in net_by.items()},
+        "net_usd_measured": round(net_by[prov.MEASURED], 2) if counts[prov.MEASURED] else None,
     }
 
 

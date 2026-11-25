@@ -2,7 +2,7 @@
 
 > **Doc status:** `live` · category `lookup` · last verified `2026-11-14` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md)
 
-> **Generated 2026-11-14 23:19Z** from `docs/reference/trading-pipeline-map.skeleton.md` by `src/runtime/pipeline_map.py`. Edit the skeleton, never this output; the generated blocks are rebuilt from their sources on every build.
+> **Generated 2026-11-25 18:37Z** from `docs/reference/trading-pipeline-map.skeleton.md` by `src/runtime/pipeline_map.py`. Edit the skeleton, never this output; the generated blocks are rebuilt from their sources on every build.
 
 **Gates this adds or changes:** none. This is a map, not a rule; it adds no CI guard, gate or required check.
 
@@ -26,6 +26,15 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
   (`GET /api/bot/work/pipeline-map`); the committed `docs/reference/trading-pipeline-map.md` is a snapshot
   that `scripts/ops/pipeline_map_numbers.py` writes. Every number carries an "as of", a population and a
   provenance label (`src/runtime/provenance.py`); an unreadable source reads "—" with its read state, never 0.
+- **Structure the v2 view reads** (`GET /api/bot/work/pipeline-map` field `structured`, built by
+  `pipeline_map.build_structured`). The Work tab draws one straight vertical spine of these steps, technical
+  elements to the LEFT and trading elements to the RIGHT, with the loops on the side. It is PARSED from this file,
+  so keep the shape: each step is a `## N · Title` heading followed by a `| TECHNICAL | TRADING |` table with one row
+  (technical = backticked modules, files, units and routes; trading = `**Name**: text` rules, which become the
+  openable right-hand elements; if a cell has no bold rule it shows as one note). The loops are the DASHED edges
+  (`X -. "label" .-> Y`) of the mermaid flow below; node labels must stay `N · Name`. Generated trading elements
+  (legs, ML models, accounts, DD switch state, mandates) are attached by `pipeline_map.STEP_SOURCES`
+  (step number to source of truth). Add a step by adding a heading and a node; no UI change is needed.
 - **The skeleton checks itself.** The "Drift checks" block at the end lists any module path the skeleton cites
   that no longer exists, any rostered leg with no definition, and any enabled leg on no book.
 - **A live book never establishes edge.** Backtest evidence (offline, Stage 0) and live results are shown in
@@ -51,7 +60,7 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
 | **Dashboard** | `benbaichmankass/ict-trader-dashboard`, a Svelte SPA on GitHub Pages that calls the API browser-direct through Caddy (CORS is load-bearing). |
 
 <!-- BEGIN GEN:where -->
-**Every systemd unit in the repo and what it runs** (source: `deploy/*.service`, `deploy/trainer/*.service`; 54 units; a unit file in the repo is not proof it is enabled on the VM: `/api/diag/services` is the runtime truth).
+**Every systemd unit in the repo and what it runs** (source: `deploy/*.service`, `deploy/trainer/*.service`; 56 units; a unit file in the repo is not proof it is enabled on the VM: `/api/diag/services` is the runtime truth).
 
 | Unit | Host | Runs |
 |---|---|---|
@@ -92,13 +101,15 @@ for it on 2026-11-14 so the system is easy to review; it is shown on the dashboa
 | `ict-trainer-disk-alarm` | live VM (`ict-bot-arm`) | `python -u scripts/ops/trainer_disk_alarm.py` |
 | `ict-trainer-git-sync` | live VM (`ict-bot-arm`) | `bash scripts/ops/trainer_git_sync.sh` |
 | `ict-web-api-watchdog` | live VM (`ict-bot-arm`) | `python3 -u scripts/check_web_api.py --auto-restart --restart-after 2 --max-restarts 3 --cooldown-min 10` |
-| `ict-web-api` | live VM (`ict-bot-arm`) | `python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001` |
+| `ict-web-api` | live VM (`ict-bot-arm`) | `python3 -m uvicorn src.web.api.main:app --host 127.0.0.1 --port 8001 --timeout-graceful-shutdown 5` |
 | `ict-work-digest` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_digest_now.py` |
 | `ict-work-report` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_report.py` |
 | `ict-work-store-import` | live VM (`ict-bot-arm`) | `python3 scripts/ops/work_store_import.py --apply` |
-| `ict-candle-refresh` | trainer VM (`ict-trainer-vm`) | `python -u scripts/ops/refresh_candle_history.py --data-dir data SOLUSDT:15 XRPUSDT:15 ETHUSDT:15` |
+| `ict-candle-refresh` | trainer VM (`ict-trainer-vm`) | `-python -u scripts/ops/extend_data_from_lake.py --data-dir data --lake datasets-out/market_raw --apply` |
 | `ict-drift-retrain` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_drift_retrain.sh` |
 | `ict-keeper-dispatch` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/keeper_dispatch.sh` |
+| `ict-ltr-wake-dispatch` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/keeper_dispatch.sh` |
+| `ict-notify-failure@` | trainer VM (`ict-trainer-vm`) | `python3 -u scripts/ops/notify_unit_failure.py %i` |
 | `ict-offload-drain` | trainer VM (`ict-trainer-vm`) | `bash scripts/ops/run_offload_drain.sh` |
 | `ict-orderflow-capture` | trainer VM (`ict-trainer-vm`) | `python -m scripts.ml.orderflow_capture \` |
 | `ict-pm-snapshot` | trainer VM (`ict-trainer-vm`) | `python -u scripts/macro/pm_snapshot_collect.py` |
@@ -127,6 +138,7 @@ flowchart TD
   J --> K["11 · Grading, evidence, research<br/>promotion ladder"]
   K -. "new evidence changes rosters and params" .-> C
   K -. "retrained and promoted models" .-> C
+  J -. "the mirror's net-of-cost window demotes a leg to the demo floor" .-> E
 ```
 
 ## 1 · Data in
@@ -148,12 +160,14 @@ flowchart TD
 | Strategy modules in `src/units/strategies/`: `trend_donchian.py`, `htf_pullback_trend_2h.py`, `fvg_range_15m.py`, `turtle_soup.py`, `ict_scalp.py`, `squeeze_breakout_4h.py`, `fade_breakout_4h.py`, `e4_oi_shock_1h.py`, `hf_displacement_cont.py`, `hf_vwap_revert.py`, `vwap.py`, `macro_thesis/`, the ML legs `ml_entry.py`, `ml_entry_v2.py`, `ml_entry_eq.py`, the Claude desk `claude_desk.py`, and the pairs sleeve (`pairs_engine.py`, `pairs_executor.py`, its own gate `config/pairs.yaml`). Leg config and params: `config/strategies.yaml`. Served ML artifacts: `ml/served/` (the entry pointer is `ml/served/ENTRY_SERVED.json`, read by `src/runtime/ml_entry_served.py`; the model inventory and stages are `ml/served/SERVED_MODELS.yaml`). Models are trained on `ict-trainer-vm` (`ml/` package, `python -m ml ...`) and published to the repo. | **Rule legs**: trend (Donchian breakout), pullback in trend (2h/1d), fair-value-gap range, liquidity sweep reversal (turtle soup), ICT scalp, squeeze and fade breakouts, OI-shock, VWAP. Each trades the symbol its own evidence measured. **ML legs**: `ml_entry` (crypto entry classifier: a served model scores each candidate and trades above a threshold), `ml_entry_v2`, `ml_entry_eq` / `ml_entry_eq_struct` (equities). An ML leg trades the population its pooled test passed on. **Claude desk**: `claude_desk` (judgement-driven entries, paper). **Status** (testing / production / inactive) is derived from roster membership by `scripts/ops/strategy_status.py`, never declared. **Track record**: backtest and live per leg in the generated table; ML headline metrics with provenance in `ml/served/SERVED_MODELS.yaml`. |
 
 <!-- BEGIN GEN:ml -->
-**Served ML models** (source: `ml/served/SERVED_MODELS.yaml`; 8 models; the entry pointer `ml/served/ENTRY_SERVED.json` serves `ml_decision_entry_v1r20261106`). Headline metrics are the registry's own, with its provenance and population.
+**Served ML models** (source: `ml/served/SERVED_MODELS.yaml`; 10 models; the entry pointer `ml/served/ENTRY_SERVED.json` serves `ml_decision_entry_v1r20261122`). Headline metrics are the registry's own, with its provenance and population.
 
 | Model | Stage | Headline metric | Value | n | Window | Verdict | Provenance | Source |
 |---|---|---|---|---|---|---|---|---|
+| `ml-decision-entry-v1r20261122` | advisory | promotion_grade_mean_net_r_per_trade | +0.1457 | 434 | 2026-11-08..2026-11-21 | pass | MEASURED | `comms/research/ml_entry_grade/45021344426/grade_evidence.json` |
 | `ml-decision-entry-v1` | advisory | heldout_mean_net_r_per_trade | +0.0371 | 907 | 2025-10-01..2026-09-29 | pass | MEASURED | `comms/strategy_evidence/ml_entry.json` |
 | `ml-decision-entry-v1r20261106` | advisory | promotion_grade_mean_net_r_per_trade | +0.0018 | 281 | 2026-10-23..2026-11-05 | pass | MEASURED | `comms/research/ml_entry_grade/42250040398/verdict_amended_2.json` |
+| `ml-decision-entry-v1r20261115` | advisory | promotion_grade_mean_net_r_per_trade | +0.1692 | 366 | 2026-11-01..2026-11-14 | pass | MEASURED | `comms/research/ml_entry_grade/43710344172/grade_evidence.json` |
 | `ml-decision-entry-v2` | advisory | w1_mean_net_r_per_trade | -0.1161 | 320 | W1 forward read | fail | MEASURED | `comms/research/RQ-20261101-b609-01/local-20261101T2000Z/result.json` |
 | `ml-entry-eq-v1` | advisory | confirm_mean_net_r_per_trade | +0.0392 | 858 | 2025-07-15..2026-10-31 | pass | MEASURED | `research/results/RQ-20261105-e9a1-02/42143223941.jsonl` |
 | `ml-entry-eq-struct-ens5-v1` | advisory | confirm_mean_net_r_per_trade | +0.4922 | 207 | 2025-07-15..2026-10-31 | pass | MEASURED | `comms/strategy_evidence/ml_entry_eq_struct.json` |
@@ -272,65 +286,65 @@ flowchart TD
 
 | Leg | Status | Books | Exec (gate 2) | Backtest net R OOS (full cost) | n OOS | Folds + | Cost basis | Stage-0 verdict | Evidence as of | Live real money (R) | Live paper (R) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ada_pullback_2h` | production | bybit_2, bybit_portfolio | live | +27.09 `measured` | 67 | 4/4 | full | pass | [2026-11-06](../../comms/strategy_evidence/ada_pullback_2h.json) | n=19 · ΣR -0.56 · E[R] -0.03 · R basis: confirmed 7, unverified 8, contaminated 4 | n=52 · ΣR +10.35 · E[R] +0.20 · R basis: confirmed 13, unverified 29, contaminated 10 |
-| `ml_entry` | production | alpaca_paper, bybit_2, bybit_portfolio, tradeify_1, velotrade_1 | live | +33.68 `measured` | 907 | 1/1 | full | pass | [2026-11-04](../../comms/strategy_evidence/ml_entry.json) | n=27 · ΣR -4.41 · E[R] -0.16 · R basis: confirmed 11, unverified 16 | n=39 · ΣR -2.65 · E[R] -0.07 · R basis: confirmed 16, unverified 22, contaminated 1 |
-| `ml_entry_eq_struct` | production | alpaca_live, alpaca_portfolio | live | +101.89 `measured` | 207 | — | full | pass | [2026-11-08](../../comms/strategy_evidence/ml_entry_eq_struct.json) | 0 trades | 0 trades |
-| `slv_trend_1h` | production | alpaca_live, alpaca_options_paper, alpaca_portfolio | live | +54.52 `measured` | 92 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/slv_trend_1h.json) | 0 trades | n=26 · ΣR -10.33 · E[R] -0.40 · R basis: confirmed 19, unverified 4, contaminated 3 |
+| `ada_pullback_2h` | production | bybit_2, bybit_portfolio | live | +27.09 `measured` | 67 | 4/4 | full | pass | [2026-11-06](../../comms/strategy_evidence/ada_pullback_2h.json) | n=21 · ΣR +0.47 · E[R] +0.02 · R basis: confirmed 7, unverified 9, contaminated 5 | n=54 · ΣR +11.38 · E[R] +0.21 · R basis: confirmed 13, unverified 30, contaminated 11 |
+| `ml_entry` | production | alpaca_paper, bybit_2, bybit_portfolio, tradeify_1, velotrade_1 | live | +33.68 `measured` | 907 | 1/1 | full | pass | [2026-11-04](../../comms/strategy_evidence/ml_entry.json) | n=59 · ΣR -9.84 · E[R] -0.17 · R basis: confirmed 11, unverified 47, contaminated 1 | n=85 · ΣR -5.91 · E[R] -0.07 · R basis: confirmed 16, unverified 66, contaminated 3 |
+| `ml_entry_eq_struct` | production | alpaca_live, alpaca_portfolio | live | +101.89 `measured` | 207 | — | full | pass | [2026-11-08](../../comms/strategy_evidence/ml_entry_eq_struct.json) | n=1 · ΣR -0.11 · E[R] -0.11 · R basis: unverified 1 | n=4 · ΣR +0.07 · E[R] +0.02 · R basis: unverified 4 |
+| `slv_trend_1h` | production | alpaca_live, alpaca_options_paper, alpaca_portfolio | live | +54.52 `measured` | 92 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/slv_trend_1h.json) | 0 trades | n=36 · ΣR +32.95 · E[R] +0.92 · R basis: confirmed 19, unverified 6, contaminated 11 |
 | `tlt_pullback_1h` | production | alpaca_live, alpaca_portfolio | live | +8.17 `measured` | 75 | 3/4 | full | pass | [2026-11-14](../../comms/strategy_evidence/tlt_pullback_1h.json) | n=1 · ΣR +1.29 · E[R] +1.29 · R basis: contaminated 1 | n=15 · ΣR -7.16 · E[R] -0.48 · R basis: confirmed 9, unverified 1, contaminated 5 |
 | `tqqq_trend_long_1d` | production | alpaca_live, alpaca_paper, alpaca_portfolio | live | +12.77 `measured` | 54 | 5/8 | full | pass | [2026-11-13](../../comms/strategy_evidence/tqqq_trend_long_1d.json) | 0 trades | n=1 · ΣR -1.00 · E[R] -1.00 · R basis: confirmed 1 |
-| `trend_donchian_sol_prop` | production | bybit_2, bybit_portfolio | live | +49.81 `measured` | 538 | 4/4 | full | pass | [2026-11-12](../../comms/strategy_evidence/trend_donchian_sol_prop.json) | n=4 · ΣR -3.33 · E[R] -0.83 · R basis: confirmed 1, unverified 3 | n=7 · ΣR -5.98 · E[R] -0.85 · R basis: confirmed 3, unverified 4 |
-| `trend_donchian_xrp_4h` | production | bybit_2, bybit_portfolio | live | +3.48 `measured` | 46 | 3/4 | full | pass | [2026-11-06](../../comms/strategy_evidence/trend_donchian_xrp_4h.json) | n=9 · ΣR +0.46 · E[R] +0.05 · R basis: confirmed 5, unverified 3, contaminated 1 | n=12 · ΣR +0.21 · E[R] +0.02 · R basis: confirmed 5, unverified 6, contaminated 1 |
-| `trend_donchian_xrp_adx25` | production | bybit_2, bybit_portfolio | live | +9.72 `measured` | 46 | 3/4 | full | pass | [2026-10-28](../../comms/strategy_evidence/trend_donchian_xrp_adx25.json) | 0 trades | n=2 · ΣR -0.35 · E[R] -0.17 · R basis: unverified 1, contaminated 1 |
-| `avax_pullback_2h` | testing | bybit_1 | live | -15.74 `measured` | 95 | 1/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/avax_pullback_2h.json) | 0 trades | n=11 · ΣR -7.33 · E[R] -0.67 · R basis: unverified 10, contaminated 1 |
-| `claude_desk` | testing | alpaca_paper, bybit_1, ib_paper | live | — | — | — | — | — | — | 0 trades | n=9 · ΣR +5.53 · E[R] +0.61 · R basis: confirmed 4, unverified 4, contaminated 1 |
-| `e4_oi_shock_1h` | testing | bybit_1 | live | — | — | — | — | — | — | 0 trades | n=26 · ΣR +9.12 · E[R] +0.35 · R basis: confirmed 17, unverified 9 |
-| `eth_pullback_2h` | testing | bybit_1 | live | +1.39 `measured` | 83 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/eth_pullback_2h.json) | n=19 · ΣR -2.47 · E[R] -0.13 · R basis: confirmed 3, unverified 15, contaminated 1 | n=37 · ΣR -2.19 · E[R] -0.06 · R basis: confirmed 4, unverified 29, contaminated 4 |
-| `eth_pullback_prop_2h` | testing | bybit_1 | live | -6.57 `measured` | 81 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/eth_pullback_prop_2h.json) | 0 trades | n=6 · ΣR +1.85 · E[R] +0.31 · R basis: confirmed 1, unverified 2, contaminated 3 |
+| `trend_donchian_eth_4h` | production | bybit_2, bybit_portfolio, tradeify_1, velotrade_1 | live | +30.91 `measured` | 135 | 3/4 | full | pass | [2026-11-15](../../comms/strategy_evidence/trend_donchian_eth_4h.json) | n=19 · ΣR +4.66 · E[R] +0.24 · R basis: confirmed 6, unverified 10, contaminated 3 | n=37 · ΣR -6.02 · E[R] -0.16 · R basis: confirmed 10, unverified 19, contaminated 8 |
+| `trend_donchian_sol_prop` | production | bybit_2, bybit_portfolio | live | +49.81 `measured` | 538 | 4/4 | full | pass | [2026-11-12](../../comms/strategy_evidence/trend_donchian_sol_prop.json) | n=6 · ΣR -4.58 · E[R] -0.76 · R basis: confirmed 1, unverified 5 | n=9 · ΣR -7.15 · E[R] -0.79 · R basis: confirmed 3, unverified 6 |
+| `trend_donchian_xrp_4h` | production | bybit_2, bybit_portfolio | live | +3.48 `measured` | 46 | 3/4 | full | pass | [2026-11-06](../../comms/strategy_evidence/trend_donchian_xrp_4h.json) | n=10 · ΣR -0.54 · E[R] -0.05 · R basis: confirmed 6, unverified 3, contaminated 1 | n=13 · ΣR -0.79 · E[R] -0.06 · R basis: confirmed 6, unverified 6, contaminated 1 |
+| `avax_pullback_2h` | testing | bybit_1 | live | -15.74 `measured` | 95 | 1/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/avax_pullback_2h.json) | 0 trades | n=13 · ΣR -7.01 · E[R] -0.54 · R basis: confirmed 1, unverified 11, contaminated 1 |
+| `claude_desk` | testing | alpaca_paper, bybit_1, ib_paper | live | — | — | — | — | — | — | 0 trades | n=14 · ΣR +7.10 · E[R] +0.51 · R basis: confirmed 4, unverified 9, contaminated 1 |
+| `e4_oi_shock_1h` | testing | bybit_1 | live | — | — | — | — | — | — | 0 trades | n=48 · ΣR +8.84 · E[R] +0.18 · R basis: confirmed 18, unverified 30 |
+| `eth_pullback_2h` | testing | bybit_1 | live | +1.39 `measured` | 83 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/eth_pullback_2h.json) | n=19 · ΣR -2.47 · E[R] -0.13 · R basis: confirmed 3, unverified 15, contaminated 1 | n=39 · ΣR -2.85 · E[R] -0.07 · R basis: confirmed 4, unverified 31, contaminated 4 |
+| `eth_pullback_prop_2h` | testing | bybit_1 | live | -6.57 `measured` | 81 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/eth_pullback_prop_2h.json) | 0 trades | n=8 · ΣR +1.18 · E[R] +0.15 · R basis: confirmed 1, unverified 3, contaminated 4 |
 | `fade_breakout_4h` | testing | bybit_1 | live | -14.28 `measured` | 28 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/fade_breakout_4h.json) | n=7 · ΣR -0.84 · E[R] -0.12 · R basis: confirmed 1, unverified 6 | n=6 · ΣR -2.47 · E[R] -0.41 · R basis: unverified 6 |
 | `fvg_range_15m` | testing | bybit_1 | live | -9.41 `measured` | 18 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/fvg_range_15m.json) | 0 trades | n=1 · ΣR -0.01 · E[R] -0.01 · R basis: unverified 1 |
 | `gdx_pullback_1d` | testing | alpaca_options_paper, alpaca_paper | live | +1.23 `measured` | 10 | 2/4 | full | pass | [2026-10-22](../../comms/strategy_evidence/gdx_pullback_1d.json) | 0 trades | n=4 · ΣR -1.68 · E[R] -0.42 · R basis: confirmed 2, unverified 1, contaminated 1 |
-| `gld_pullback_1d` | testing | ib_paper | live | +10.51 `measured` | 8 | 4/4 | full | pass | [2026-11-05](../../comms/strategy_evidence/gld_pullback_1d.json) | 0 trades | n=2 · ΣR -1.23 · E[R] -0.62 · R basis: confirmed 1, unverified 1 |
-| `htf_pullback_trend_2h` | testing | bybit_1 | live | -23.37 `measured` | 105 | 0/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/htf_pullback_trend_2h.json) | n=6 · ΣR -3.95 · E[R] -0.66 · R basis: confirmed 3, unverified 3 | n=26 · ΣR -25.00 · E[R] -0.96 · R basis: unverified 26 |
+| `gld_pullback_1d` | testing | ib_paper | live | +10.51 `measured` | 8 | 4/4 | full | pass | [2026-11-05](../../comms/strategy_evidence/gld_pullback_1d.json) | 0 trades | n=3 · ΣR +1.95 · E[R] +0.65 · R basis: confirmed 1, unverified 1, contaminated 1 |
+| `htf_pullback_trend_2h` | testing | bybit_1 | live | -23.37 `measured` | 105 | 0/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/htf_pullback_trend_2h.json) | n=6 · ΣR -3.95 · E[R] -0.66 · R basis: confirmed 3, unverified 3 | n=27 · ΣR -26.07 · E[R] -0.97 · R basis: unverified 27 |
 | `iaum_pullback_1d` | testing | alpaca_paper | live | +10.68 `measured` | 8 | 4/4 | full | pass | [2026-11-05](../../comms/strategy_evidence/iaum_pullback_1d.json) | n=1 · ΣR -1.47 · E[R] -1.47 · R basis: confirmed 1 | n=2 · ΣR +0.14 · E[R] +0.07 · R basis: unverified 1, contaminated 1 |
-| `ict_scalp_5m` | testing | bybit_1 | live | -42.46 `measured` | 146 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_5m.json) | n=35 · ΣR +4.94 · E[R] +0.14 · R basis: confirmed 6, unverified 20, contaminated 9 | n=65 · ΣR -7.63 · E[R] -0.12 · R basis: confirmed 6, unverified 46, contaminated 13 |
-| `ict_scalp_avax_5m` | testing | bybit_1 | live | -48.68 `measured` | 186 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_avax_5m.json) | 0 trades | n=90 · ΣR -9.60 · E[R] -0.11 · R basis: confirmed 21, unverified 30, contaminated 39 |
-| `ict_scalp_eth_15m` | testing | bybit_1 | live | -2.92 `measured` | 76 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_eth_15m.json) | 0 trades | n=40 · ΣR +6.75 · E[R] +0.17 · R basis: confirmed 26, unverified 3, contaminated 11 |
+| `ict_scalp_5m` | testing | bybit_1 | live | -28.91 `measured` | 90 | 0/4 | full | fail | [2026-11-20](../../comms/strategy_evidence/ict_scalp_5m.json) | n=35 · ΣR +4.94 · E[R] +0.14 · R basis: confirmed 6, unverified 20, contaminated 9 | n=71 · ΣR -2.83 · E[R] -0.04 · R basis: confirmed 6, unverified 49, contaminated 16 |
+| `ict_scalp_avax_5m` | testing | bybit_1 | live | -48.68 `measured` | 186 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_avax_5m.json) | 0 trades | n=95 · ΣR -7.25 · E[R] -0.08 · R basis: confirmed 21, unverified 32, contaminated 42 |
+| `ict_scalp_eth_15m` | testing | bybit_1 | live | -2.92 `measured` | 76 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_eth_15m.json) | 0 trades | n=48 · ΣR +7.61 · E[R] +0.16 · R basis: confirmed 26, unverified 10, contaminated 12 |
 | `ict_scalp_mgc_15m` | testing | ib_paper | live | — | — | — | — | — | [2026-09-22](../../comms/strategy_evidence/ict_scalp_mgc_15m.json) | 0 trades | n=22 · ΣR +8.24 · E[R] +0.37 · R basis: confirmed 15, contaminated 7 |
-| `ict_scalp_sol_15m` | testing | bybit_1 | live | -12.50 `measured` | 87 | 1/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_sol_15m.json) | 0 trades | n=51 · ΣR +9.32 · E[R] +0.18 · R basis: confirmed 9, unverified 28, contaminated 14 |
-| `ict_scalp_sol_5m` | testing | bybit_1 | live | -31.49 `measured` | 181 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_sol_5m.json) | 0 trades | n=66 · ΣR +9.29 · E[R] +0.14 · R basis: confirmed 20, unverified 22, contaminated 24 |
-| `ict_scalp_xrp_15m` | testing | bybit_1 | live | -2.81 `measured` | 74 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_xrp_15m.json) | 0 trades | n=48 · ΣR -8.10 · E[R] -0.17 · R basis: confirmed 12, unverified 22, contaminated 14 |
-| `ict_scalp_xrp_5m` | testing | bybit_1 | live | -32.88 `measured` | 163 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_xrp_5m.json) | 0 trades | n=46 · ΣR -35.75 · E[R] -0.78 · R basis: confirmed 7, unverified 21, contaminated 18 |
+| `ict_scalp_sol_15m` | testing | bybit_1 | live | -12.50 `measured` | 87 | 1/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_sol_15m.json) | 0 trades | n=54 · ΣR +12.69 · E[R] +0.23 · R basis: confirmed 9, unverified 30, contaminated 15 |
+| `ict_scalp_sol_5m` | testing | bybit_1 | live | -16.64 `measured` | 116 | 1/4 | full | fail | [2026-11-19](../../comms/strategy_evidence/ict_scalp_sol_5m.json) | 0 trades | n=69 · ΣR +6.58 · E[R] +0.10 · R basis: confirmed 20, unverified 25, contaminated 24 |
+| `ict_scalp_xrp_15m` | testing | bybit_1 | live | -2.81 `measured` | 74 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_xrp_15m.json) | 0 trades | n=52 · ΣR -9.50 · E[R] -0.18 · R basis: confirmed 12, unverified 23, contaminated 17 |
+| `ict_scalp_xrp_5m` | testing | bybit_1 | live | -32.88 `measured` | 163 | 0/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/ict_scalp_xrp_5m.json) | 0 trades | n=52 · ΣR -37.27 · E[R] -0.72 · R basis: confirmed 7, unverified 25, contaminated 20 |
 | `ief_pullback_1d` | testing | alpaca_paper | live | +1.03 `measured` | 6 | 1/3 | full | pass | [2026-10-22](../../comms/strategy_evidence/ief_pullback_1d.json) | n=1 · ΣR -0.48 · E[R] -0.48 · R basis: confirmed 1 | n=4 · ΣR +5.90 · E[R] +1.48 · R basis: confirmed 2, contaminated 2 |
 | `iwm_trend_long_1d` | testing | alpaca_paper, ib_paper | live | +2.11 `measured` | 8 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/iwm_trend_long_1d.json) | 0 trades | n=4 · ΣR -1.07 · E[R] -0.27 · R basis: confirmed 1, unverified 3 |
 | `mes_trend_long_1d` | testing | ib_paper | live | -1.00 `measured` | 5 | 1/4 | full | fail | [2026-09-24](../../comms/strategy_evidence/mes_trend_long_1d.json) | 0 trades | n=4 · ΣR -1.16 · E[R] -0.29 · R basis: unverified 4 |
-| `mgc_pullback_1d` | testing | ib_paper | live | +3.87 `measured` | 8 | 3/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mgc_pullback_1d.json) | 0 trades | n=1 · ΣR -1.00 · E[R] -1.00 · R basis: confirmed 1 |
-| `mgc_trend_1h` | testing | ib_paper | live | +25.61 `measured` | 118 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mgc_trend_1h.json) | 0 trades | n=4 · ΣR +1.07 · E[R] +0.27 · R basis: confirmed 1, unverified 1, contaminated 2 |
-| `mhg_pullback_1d` | testing | ib_paper | live | +4.10 `measured` | 10 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mhg_pullback_1d.json) | 0 trades | n=5 · ΣR -4.60 · E[R] -0.92 · R basis: confirmed 2, unverified 3 |
-| `ml_entry_eq` | testing | alpaca_paper | live | — | — | — | — | — | — | 0 trades | n=2 · ΣR -2.45 · E[R] -1.23 · R basis: unverified 2 |
-| `ml_entry_v2` | testing | bybit_1 | live | — | — | — | — | — | — | 0 trades | n=5 · ΣR -2.34 · E[R] -0.47 · R basis: confirmed 2, unverified 3 |
+| `mgc_pullback_1d` | testing | ib_paper | live | +3.87 `measured` | 8 | 3/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mgc_pullback_1d.json) | 0 trades | n=2 · ΣR +2.93 · E[R] +1.46 · R basis: confirmed 1, contaminated 1 |
+| `mgc_trend_1h` | testing | ib_paper | live | +25.61 `measured` | 118 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mgc_trend_1h.json) | 0 trades | n=6 · ΣR +5.57 · E[R] +0.93 · R basis: confirmed 1, unverified 2, contaminated 3 |
+| `mhg_pullback_1d` | testing | ib_paper | live | +4.10 `measured` | 10 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/mhg_pullback_1d.json) | 0 trades | n=6 · ΣR -2.63 · E[R] -0.44 · R basis: confirmed 2, unverified 3, contaminated 1 |
+| `ml_entry_eq` | testing | alpaca_paper | live | — | — | — | — | — | — | 0 trades | n=6 · ΣR -4.77 · E[R] -0.80 · R basis: unverified 6 |
+| `ml_entry_v2` | testing | bybit_1 | live | — | — | — | — | — | — | 0 trades | n=24 · ΣR -8.59 · E[R] -0.36 · R basis: confirmed 3, unverified 18, contaminated 3 |
 | `qld_trend_long_1d` | testing | alpaca_paper | live | +2.98 `measured` | 9 | 3/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/qld_trend_long_1d.json) | 0 trades | n=2 · ΣR -1.41 · E[R] -0.70 · R basis: confirmed 1, unverified 1 |
-| `qqq_pullback_1h` | testing | alpaca_paper | live | +5.49 `measured` | 73 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/qqq_pullback_1h.json) | 0 trades | n=21 · ΣR -18.59 · E[R] -0.89 · R basis: confirmed 12, unverified 6, contaminated 3 |
+| `qqq_pullback_1h` | testing | alpaca_paper | live | +5.49 `measured` | 73 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/qqq_pullback_1h.json) | 0 trades | n=24 · ΣR -19.46 · E[R] -0.81 · R basis: confirmed 13, unverified 7, contaminated 4 |
 | `qqq_trend_long_1d` | testing | alpaca_paper, ib_paper | live | +5.30 `measured` | 8 | 2/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/qqq_trend_long_1d.json) | 0 trades | n=3 · ΣR -0.91 · E[R] -0.30 · R basis: confirmed 3 |
 | `scha_trend_long_1d` | testing | alpaca_paper | live | +1.65 `measured` | 28 | 4/8 | full | pass | [2026-11-13](../../comms/strategy_evidence/scha_trend_long_1d.json) | 0 trades | n=2 · ΣR -2.00 · E[R] -1.00 · R basis: confirmed 2 |
 | `slv_pullback_1d` | testing | alpaca_options_paper, alpaca_paper | live | +3.00 `measured` | 10 | 2/4 | full | pass | [2026-10-22](../../comms/strategy_evidence/slv_pullback_1d.json) | n=1 · ΣR -1.03 · E[R] -1.03 · R basis: confirmed 1 | n=4 · ΣR -4.21 · E[R] -1.05 · R basis: confirmed 4 |
-| `sol_pullback_2h` | testing | bybit_1 | live | +3.19 `measured` | 34 | 2/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/sol_pullback_2h.json) | 0 trades | n=13 · ΣR -2.71 · E[R] -0.21 · R basis: confirmed 2, unverified 8, contaminated 3 |
+| `sol_pullback_2h` | testing | bybit_1 | live | +3.19 `measured` | 34 | 2/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/sol_pullback_2h.json) | 0 trades | n=15 · ΣR -2.61 · E[R] -0.17 · R basis: confirmed 3, unverified 9, contaminated 3 |
 | `splg_trend_long_1d` | testing | alpaca_paper | live | — | — | — | — | — | [2026-09-24](../../comms/strategy_evidence/splg_trend_long_1d.json) | 0 trades | 0 trades |
-| `spy_pullback_1h` | testing | alpaca_paper | live | -8.55 `measured` | 75 | 2/4 | full | fail | [2026-09-29](../../comms/strategy_evidence/spy_pullback_1h.json) | 0 trades | n=15 · ΣR -6.43 · E[R] -0.43 · R basis: confirmed 8, unverified 2, contaminated 5 |
+| `spy_pullback_1h` | testing | alpaca_paper | live | -8.55 `measured` | 75 | 2/4 | full | fail | [2026-09-29](../../comms/strategy_evidence/spy_pullback_1h.json) | 0 trades | n=17 · ΣR -8.40 · E[R] -0.49 · R basis: confirmed 8, unverified 4, contaminated 5 |
 | `spy_trend_long_1d` | testing | alpaca_paper, ib_paper | live | +2.38 `measured` | 11 | 3/4 | full | pass | [2026-09-24](../../comms/strategy_evidence/spy_trend_long_1d.json) | 0 trades | n=1 · ΣR -0.40 · E[R] -0.40 · R basis: unverified 1 |
 | `squeeze_breakout_4h` | testing | bybit_1 | live | -2.81 `measured` | 14 | 1/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/squeeze_breakout_4h.json) | n=1 · ΣR -1.11 · E[R] -1.11 · R basis: unverified 1 | n=10 · ΣR -3.36 · E[R] -0.34 · R basis: confirmed 1, unverified 9 |
 | `tlt_pullback_1d` | testing | alpaca_paper, ib_paper | live | -6.96 `measured` | 45 | 2/8 | full | fail | [2026-11-13](../../comms/strategy_evidence/tlt_pullback_1d.json) | 0 trades | n=10 · ΣR -1.05 · E[R] -0.11 · R basis: confirmed 4, unverified 2, contaminated 4 |
-| `trend_donchian` | testing | bybit_1 | live | -16.23 `measured` | 71 | 1/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/trend_donchian.json) | n=15 · ΣR +7.64 · E[R] +0.51 · R basis: confirmed 5, unverified 9, contaminated 1 | n=29 · ΣR +23.71 · E[R] +0.82 · R basis: confirmed 4, unverified 23, contaminated 2 |
-| `trend_donchian_1h` | testing | bybit_1 | live | -10.57 `measured` | 184 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_1h.json) | 0 trades | n=7 · ΣR +1.28 · E[R] +0.18 · R basis: confirmed 3, unverified 1, contaminated 3 |
-| `trend_donchian_ada_4h` | testing | bybit_1 | live | -3.35 `measured` | 55 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_ada_4h.json) | 0 trades | n=25 · ΣR +10.74 · E[R] +0.43 · R basis: confirmed 5, unverified 20 |
-| `trend_donchian_avax_4h` | testing | bybit_1 | live | -16.18 `measured` | 57 | 1/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_avax_4h.json) | 0 trades | n=27 · ΣR +6.38 · E[R] +0.24 · R basis: confirmed 6, unverified 19, contaminated 2 |
-| `trend_donchian_eth` | testing | bybit_1 | live | +6.90 `measured` | 108 | 2/4 | full | pass | [2026-10-28](../../comms/strategy_evidence/trend_donchian_eth.json) | 0 trades | n=33 · ΣR -1.61 · E[R] -0.05 · R basis: confirmed 9, unverified 18, contaminated 6 |
-| `trend_donchian_eth_4h` | testing | bybit_1, tradeify_1, velotrade_1 | live | +28.95 `measured` | 135 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/trend_donchian_eth_4h.json) | n=19 · ΣR +4.66 · E[R] +0.24 · R basis: confirmed 6, unverified 10, contaminated 3 | n=36 · ΣR -6.01 · E[R] -0.17 · R basis: confirmed 10, unverified 19, contaminated 7 |
-| `trend_donchian_eth_prop` | testing | bybit_1 | live | +10.30 `measured` | 135 | 3/4 | full | pass | [2026-11-14](../../comms/strategy_evidence/trend_donchian_eth_prop.json) | 0 trades | n=13 · ΣR +3.22 · E[R] +0.25 · R basis: confirmed 1, unverified 7, contaminated 5 |
-| `trend_donchian_sol` | testing | bybit_1 | live | -2.88 `measured` | 58 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/trend_donchian_sol.json) | 0 trades | n=12 · ΣR -1.33 · E[R] -0.11 · R basis: confirmed 2, unverified 8, contaminated 2 |
-| `trend_donchian_sol_4h` | testing | bybit_1, tradeify_1, velotrade_1 | live | +36.42 `measured` | 115 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/trend_donchian_sol_4h.json) | 0 trades | n=22 · ΣR +6.07 · E[R] +0.28 · R basis: confirmed 5, unverified 14, contaminated 3 |
-| `turtle_soup` | testing | bybit_1 | live | — | — | — | — | — | [2026-09-22](../../comms/strategy_evidence/turtle_soup.json) | 0 trades | 0 trades |
+| `trend_donchian` | testing | bybit_1 | live | -16.23 `measured` | 71 | 1/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/trend_donchian.json) | n=15 · ΣR +7.64 · E[R] +0.51 · R basis: confirmed 5, unverified 9, contaminated 1 | n=30 · ΣR +23.29 · E[R] +0.78 · R basis: confirmed 4, unverified 24, contaminated 2 |
+| `trend_donchian_1h` | testing | bybit_1 | live | -10.57 `measured` | 184 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_1h.json) | 0 trades | n=16 · ΣR +1.84 · E[R] +0.11 · R basis: confirmed 3, unverified 8, contaminated 5 |
+| `trend_donchian_ada_4h` | testing | bybit_1 | live | -3.35 `measured` | 55 | 2/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_ada_4h.json) | 0 trades | n=28 · ΣR +10.41 · E[R] +0.37 · R basis: confirmed 6, unverified 22 |
+| `trend_donchian_avax_4h` | testing | bybit_1 | live | -16.18 `measured` | 57 | 1/4 | full | fail | [2026-11-13](../../comms/strategy_evidence/trend_donchian_avax_4h.json) | 0 trades | n=31 · ΣR +4.60 · E[R] +0.15 · R basis: confirmed 6, unverified 23, contaminated 2 |
+| `trend_donchian_eth` | testing | bybit_1 | live | +6.90 `measured` | 108 | 2/4 | full | pass | [2026-10-28](../../comms/strategy_evidence/trend_donchian_eth.json) | 0 trades | n=41 · ΣR -4.55 · E[R] -0.11 · R basis: confirmed 9, unverified 24, contaminated 8 |
+| `trend_donchian_eth_prop` | testing | bybit_1 | live | +10.30 `measured` | 135 | 3/4 | full | pass | [2026-11-14](../../comms/strategy_evidence/trend_donchian_eth_prop.json) | 0 trades | n=16 · ΣR +7.19 · E[R] +0.45 · R basis: confirmed 1, unverified 8, contaminated 7 |
+| `trend_donchian_sol` | testing | bybit_1 | live | -2.88 `measured` | 58 | 2/4 | full | fail | [2026-10-28](../../comms/strategy_evidence/trend_donchian_sol.json) | 0 trades | n=13 · ΣR -2.20 · E[R] -0.17 · R basis: confirmed 2, unverified 9, contaminated 2 |
+| `trend_donchian_sol_4h` | testing | bybit_1, tradeify_1, velotrade_1 | live | +36.42 `measured` | 115 | 3/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/trend_donchian_sol_4h.json) | 0 trades | n=24 · ΣR +7.81 · E[R] +0.33 · R basis: confirmed 5, unverified 16, contaminated 3 |
+| `trend_donchian_xrp_adx25` | testing | bybit_1 | live | +9.72 `measured` | 46 | 3/4 | full | pass | [2026-10-28](../../comms/strategy_evidence/trend_donchian_xrp_adx25.json) | n=1 · ΣR -1.00 · E[R] -1.00 · R basis: unverified 1 | n=3 · ΣR -1.34 · E[R] -0.45 · R basis: unverified 2, contaminated 1 |
+| `turtle_soup` | testing | bybit_1 | live | — | — | — | — | — | [2026-09-22](../../comms/strategy_evidence/turtle_soup.json) | 0 trades | n=3 · ΣR -3.37 · E[R] -1.12 · R basis: unverified 2, contaminated 1 |
 | `uso_trend_1h` | testing | alpaca_paper | live | +18.94 `measured` | 58 | 4/4 | full | pass | [2026-11-13](../../comms/strategy_evidence/uso_trend_1h.json) | 0 trades | n=23 · ΣR +13.02 · E[R] +0.57 · R basis: confirmed 12, unverified 5, contaminated 6 |
-| `xrp_pullback_2h` | testing | bybit_1 | live | +6.56 `measured` | 53 | 2/4 | full | pass | [2026-11-05](../../comms/strategy_evidence/xrp_pullback_2h.json) | n=20 · ΣR -12.10 · E[R] -0.60 · R basis: confirmed 6, unverified 13, contaminated 1 | n=39 · ΣR -4.66 · E[R] -0.12 · R basis: confirmed 9, unverified 29, contaminated 1 |
+| `xrp_pullback_2h` | testing | bybit_1 | live | +6.56 `measured` | 53 | 2/4 | full | pass | [2026-11-05](../../comms/strategy_evidence/xrp_pullback_2h.json) | n=20 · ΣR -12.10 · E[R] -0.60 · R basis: confirmed 6, unverified 13, contaminated 1 | n=40 · ΣR -5.69 · E[R] -0.14 · R basis: confirmed 9, unverified 30, contaminated 1 |
 | `gld_pullback_1h` | inactive | — | live | +32.84 `measured` | 90 | 3/4 | full | pass | [2026-09-28](../../comms/strategy_evidence/gld_pullback_1h.json) | 0 trades | n=14 · ΣR -22.19 · E[R] -1.58 · R basis: confirmed 6, unverified 8 |
 | `vwap` | inactive | — | shadow | — | — | — | — | — | — | n=318 · ΣR -145.85 · E[R] -0.46 · R basis: unverified 318 | n=29 · ΣR -32.95 · E[R] -1.14 · R basis: unverified 29 |
 | `xauusd_trend_1h` | inactive | — | live | — | — | — | — | — | — | 0 trades | 0 trades |
@@ -343,10 +357,10 @@ flowchart TD
 
 ```
 population: 85 routings / 59 distinct legs, every account in config/accounts.yaml
-  real_money routings= 9  entry_tp FAIL= 1  tp_revision FAIL= 8  compliant= 1
-  prop       routings= 6  entry_tp FAIL= 4  tp_revision FAIL= 4  compliant= 1
-  mirror     routings= 9  entry_tp FAIL= 1  tp_revision FAIL= 8  compliant= 1
-  paper      routings=61  entry_tp FAIL=28  tp_revision FAIL=56  compliant= 4
+  real_money routings= 9  entry_tp FAIL= 1  tp_revision FAIL= 7  compliant= 2
+  prop       routings= 6  entry_tp FAIL= 2  tp_revision FAIL= 2  compliant= 4
+  mirror     routings= 9  entry_tp FAIL= 1  tp_revision FAIL= 7  compliant= 2
+  paper      routings=61  entry_tp FAIL=27  tp_revision FAIL=57  compliant= 4
 ```
 <!-- END GEN:legs -->
 
