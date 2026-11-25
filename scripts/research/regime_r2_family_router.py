@@ -250,7 +250,7 @@ def corpus_fingerprint(trades: pd.DataFrame) -> str:
 def _git_sha() -> str:
     try:
         return subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True, timeout=10).stdout.strip()
-    except Exception:  # noqa: BLE001 - provenance only
+    except Exception:  # noqa: BLE001  # allow-silent: provenance only (git sha in the summary); "unknown" is recorded, never a measurement
         return "unknown"
 
 
