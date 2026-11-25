@@ -311,6 +311,29 @@ def _load_yaml_params(name: str = DEFAULT_CFG_KEY) -> Dict[str, Any]:
     return cfg
 
 
+def apply_cfg_overrides(cfg: Dict[str, Any], sets: List[str], unsets: List[str]) -> Dict[str, Any]:
+    """``--cfg-set KEY=VALUE`` / ``--cfg-unset KEY`` applied to the yaml-read leg config. VALUE is parsed as YAML
+    (``1.5`` a float, ``true`` a bool, ``none`` None). Only keys the unit consumes are accepted, so a typo is refused
+    instead of being carried as a dead key (the defect this flag exists to remove). Empty lists = the same dict."""
+    if not sets and not unsets:
+        return cfg
+    import yaml
+    known = set(_UNIT_DEFAULTS) | set(cfg)
+    out = dict(cfg)
+    for tok in sets:
+        k, eq, v = str(tok).partition("=")
+        if not eq or not k:
+            raise ValueError(f"--cfg-set {tok!r}: expected KEY=VALUE")
+        if k not in known:
+            raise ValueError(f"--cfg-set {k!r}: not a key the ict_scalp unit consumes ({sorted(known)})")
+        out[k] = yaml.safe_load(v)
+    for k in unsets:
+        if k not in known:
+            raise ValueError(f"--cfg-unset {k!r}: not a key the ict_scalp unit consumes")
+        out.pop(k, None)
+    return out
+
+
 def session_flat_marks(df: pd.DataFrame, flat_et: str,
                        reopen_et: str = "18:00") -> tuple:
     """(flat_bar, no_entry) boolean arrays for a session-flat account (Tradeify futures, 2026-11-12).
@@ -1671,6 +1694,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Ignore config/strategies.yaml; use unit defaults only.")
     p.add_argument("--min-confidence", type=float, default=0.0,
                    help="Skip entries whose live order_package() confidence is below this.")
+    p.add_argument("--cfg-set", action="append", default=[], metavar="KEY=VALUE",
+                   help="Override one leg-config key AFTER the config/strategies.yaml read (VALUE parsed as YAML; repeatable). "
+                        "The channel exit_lever_ablation uses for an arm key no dedicated flag carries (PI-20261119-FILLW47B-0013: "
+                        "such keys used to be dropped silently). Absent = byte-identical.")
+    p.add_argument("--cfg-unset", action="append", default=[], metavar="KEY",
+                   help="Remove one leg-config key after the yaml read, so the unit default applies (repeatable). Absent = byte-identical.")
     p.add_argument("--side-filter", choices=["long", "short", "both"], default="both",
                    help="Directional gate, the shared live _side_filter_suppresses: long skips shorts, short skips longs, "
                         "both (default) = no gate, byte-identical. exit_lever_ablation passes it for the DIRECTION arms.")
@@ -1941,6 +1970,11 @@ def main(argv: List[str]) -> int:
         cfg_overrides = {} if args.ignore_yaml else _load_yaml_params(args.strategy_name)
     except KeyError as exc:
         print(f"ERROR: {exc.args[0]}", file=sys.stderr)
+        return 2
+    try:
+        cfg_overrides = apply_cfg_overrides(cfg_overrides, args.cfg_set, args.cfg_unset)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     try:
         _tp_override = resolve_tp_at_r_override(args.tp_at_r)

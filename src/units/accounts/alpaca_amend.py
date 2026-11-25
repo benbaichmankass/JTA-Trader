@@ -59,7 +59,10 @@ Bracket / OCO semantics this relies on (Alpaca Trading API v2):
   (new ``id``, ``replaces`` = old id) and the old one goes ``replaced``. The
   read-back therefore looks for the returned id, and falls back to "a stop
   leg of this trade's size resting at the new level" when the response
-  carries no id;
+  carries no id. The nested LISTING can lag the replace by 30 s+ (QQQ 8454,
+  2026-11-25), so when it still shows the old leg the returned order is read
+  by id (``GET /v2/orders/{id}``), and a 422 "order already replaced" follows
+  ``replaced_by`` to the resting successor (ALPACA-PAPER-BRACKETS-GONE-1116);
 * a parent still ``partially_filled`` has legs sized to the ORDER, not to the
   shares held. Patching them is refused until the parent completes.
 
@@ -338,6 +341,75 @@ def _replace_pending(after: Dict[str, Any], kind: str, sent: Dict[str, Any], old
     return bool(leg and want_id and want_id != old_id and leg.get("id") == old_id)
 
 
+#: ALPACA-PAPER-BRACKETS-GONE-1116 (2026-11-25): the nested open-orders listing can keep showing a REPLACED OCO
+#: leg as ``held`` at its old price for 30 s or more -- far past the settle wait. MEASURED alpaca_paper QQQ trade
+#: 8454: PATCH of stop 9ceb80e9 (673.03 -> 660.44) at 15:00:24Z; /v2/orders history reads 9ceb80e9 ``replaced``
+#: (replaced_by 44e7d717, held at 660.44) from 15:00:24.109Z, yet the nested listing still returned 9ceb80e9 held at
+#: 673.03 at 15:00:50Z (read-back -> apply_failed) and 15:00:56Z (re-PATCH -> 422 "order already replaced"); it
+#: caught up by 15:01:26Z. So when the listing still shows the old leg, the ORDER ITSELF is read by id -- the
+#: authoritative per-order state -- and a resting successor at the requested level is ``applied``.
+_RESTING = frozenset({"new", "accepted", "held"})
+_REPLACED_CHAIN_MAX = 5
+
+
+def _order_by_id(client: Any, oid: Any) -> Optional[Dict[str, Any]]:
+    """``GET /v2/orders/{oid}`` -> the order dict, or ``None`` when the read fails. Never raises."""
+    oid = str(oid or "").strip()
+    if not oid:
+        return None
+    try:
+        env = client._request("GET", f"/v2/orders/{oid}")
+    except Exception:  # noqa: BLE001 — a failed read is "could not confirm", judged by the caller
+        return None
+    if not isinstance(env, dict) or env.get("retCode") != 0 or not isinstance(env.get("result"), dict):
+        return None
+    return env["result"]
+
+
+def _resting_successor(client: Any, old_id: str) -> Optional[Dict[str, Any]]:
+    """Follow ``replaced_by`` from *old_id* to the order that rests now, or ``None`` (a read failed, the chain ends
+    in a non-resting order, or it is longer than ``_REPLACED_CHAIN_MAX``)."""
+    oid: Any = old_id
+    for _ in range(_REPLACED_CHAIN_MAX):
+        o = _order_by_id(client, oid)
+        if o is None:
+            return None
+        status = str(o.get("status") or "").lower()
+        if status == "replaced" and o.get("replaced_by"):
+            oid = o["replaced_by"]
+            continue
+        return o if status in _RESTING else None
+    return None
+
+
+def _confirm_by_id(order: Optional[Dict[str, Any]], kind: str, level: float, qty: float,
+                   direction: str) -> Optional[Dict[str, Any]]:
+    """The leg view of *order* when it is a resting *kind* leg of this trade's size and reducing side at *level*;
+    else ``None``."""
+    if not isinstance(order, dict) or not order.get("id"):
+        return None
+    if str(order.get("status") or "").lower() not in _RESTING or _side(order) != kind:
+        return None
+    if str(order.get("side") or "").lower() not in ("", _reducing_side(direction)):
+        return None
+    lq = _f(order.get("qty"))
+    if lq is None or abs(lq - qty) > _QTY_EPS:
+        return None
+    view = _leg_view(order)
+    if view is None or view.get("price") is None or abs(view["price"] - level) > _PRICE_TOL:
+        return None
+    return view
+
+
+def _with_confirmed_leg(after: Dict[str, Any], kind: str, view: Dict[str, Any]) -> Dict[str, Any]:
+    """*after* with the by-id confirmed leg in place of the stale listed one."""
+    fixed = dict(after)
+    fixed["stop_leg" if kind == "stop" else "target_leg"] = view
+    fixed["venue_sl" if kind == "stop" else "venue_tp"] = view["price"]
+    fixed["readback_source"] = "order_by_id"
+    return fixed
+
+
 def _verify(after: Dict[str, Any], kind: str, level: float, sent: Dict[str, Any],
             old_id: str) -> Optional[str]:
     """``None`` when the read-back shows *level* on this trade's *kind* leg,
@@ -436,6 +508,16 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
         sent_all.append({**step, **sent})
         out["sent"] = sent_all
         if not sent.get("ok"):
+            # A 422 "order already replaced" means the leg we read was a stale listing of one that a previous amend
+            # already replaced. Follow replaced_by: a resting successor at this level is the amend, already applied.
+            if "replaced" in str(sent.get("retMsg") or "").lower():
+                view = _confirm_by_id(_resting_successor(client, step["leg_id"]), step["kind"], step["to"],
+                                      qty, direction)
+                if view is not None:
+                    after = _with_confirmed_leg(out["before"], step["kind"], view)
+                    out["after"] = after
+                    out["stale_listing"] = {step["kind"]: {"listed": step["leg_id"], "resting": view["id"]}}
+                    continue
             return {**out, "result": X_APPLY_FAILED,
                     "detail": f"PATCH {step['kind']} leg {step['leg_id']} refused: {sent.get('retMsg')}"}
         waited = 0.0
@@ -452,6 +534,14 @@ def tighten(client: Any, *, symbol: str, direction: str, qty: float,
                 break
             _sleep(_REPLACE_SETTLE_STEP_S)
             waited += _REPLACE_SETTLE_STEP_S
+        if _replace_pending(after, step["kind"], sent, step["leg_id"]):
+            # The listing still shows the old leg after the settle wait: read the returned order by id.
+            view = _confirm_by_id(_order_by_id(client, sent.get("new_id")), step["kind"], step["to"],
+                                  qty, direction)
+            if view is not None:
+                after = _with_confirmed_leg(after, step["kind"], view)
+                out.setdefault("stale_listing", {})[step["kind"]] = {"listed": step["leg_id"],
+                                                                     "resting": view["id"]}
         out["after"] = after
         if waited:
             out.setdefault("replace_settle_s", {})[step["kind"]] = waited

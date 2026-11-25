@@ -22,7 +22,17 @@ import desk_event_entry_replay as m  # noqa: E402
 import desk_gen_replay_driver as gr  # noqa: E402
 
 
-def rows_for(root: Path, window, oi_z: float = m.OI_Z) -> list:
+#: E4-OI-LEVER-DRIVER side modes: as_event (the frozen arm), long_only / short_only (drop the other side), fade (invert).
+SIDE_MODES = ("as_event", "long_only", "short_only", "fade")
+
+
+def rows_for(root: Path, window, oi_z: float = m.OI_Z, geom: dict | None = None, side_mode: str = "as_event") -> list:
+    """Filled E4 trades in `window`. `geom` overrides keys of the frozen m.GEOM (e.g. {"horizon": 48}); `side_mode` is one
+    of SIDE_MODES. Both default to the frozen arm, byte-identical to before (E4-OI-LEVER-DRIVER, 2026-11-25)."""
+    if side_mode not in SIDE_MODES:
+        raise ValueError(f"side_mode {side_mode!r} not in {SIDE_MODES}")
+    g = dict(m.GEOM, **(geom or {}))
+    sl_atr = float(g["sl_atr"])
     mkt, missing = gr.load_market(root / "candles", list(m.SYMS))
     if missing:
         raise SystemExit(f"candles missing {missing}")
@@ -36,11 +46,15 @@ def rows_for(root: Path, window, oi_z: float = m.OI_Z) -> list:
         if i < 0 or s.t[i] + gr.SEC != ev["cutoff"]:
             continue
         side = float(ev["side"])
-        t = gr.transplant(s, i, dict(m.GEOM, side=side))
+        if (side_mode == "long_only" and side < 0) or (side_mode == "short_only" and side > 0):
+            continue
+        if side_mode == "fade":
+            side = -side
+        t = gr.transplant(s, i, dict(g, side=side))
         if t is None or t.state != "filled":
             continue                                   # refused/unresolved are no-trade, as in the score
         a = float(s.atr[i])
-        stop = float(s.c[i]) - side * m.SL_ATR * a
+        stop = float(s.c[i]) - side * sl_atr * a
         seg_h, seg_l = s.h[t.fill_i:t.exit_i + 1], s.l[t.fill_i:t.exit_i + 1]
         fav = (seg_h.max() - t.fill_px) if side > 0 else (t.fill_px - seg_l.min())
         out.append({"strategy": "e4_oi_shock", "symbol": ev["sym"], "direction": "long" if side > 0 else "short",

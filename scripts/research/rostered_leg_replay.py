@@ -75,6 +75,9 @@ _FETCHED: Dict[Tuple[str, str], str] = {}
 ID_FEATS = ["id_rangepos48", "id_volburst", "id_ret12", "id_hi96", "dir", "leg", "fam"]
 RULE_ID = dict(RULE_MS, id="RULE-REGIME-INTRADAY-20261125")
 MS_MIN_TRAIN = 300
+# ENTRY FILTER (--mode filter, unit RQ-20261125-f1a0-35, the registered fail_action of f1a0-32): the f1a0-26 walk-forward model, but a trade whose
+# prediction is below the TRAINING predictions' 1/3 quantile is SKIPPED (contributes 0 R), every other trade taken at size 1; no renormalisation.
+RULE_FILTER = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-20261125")
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
 
@@ -276,10 +279,11 @@ def metastate_frame(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optiona
     return X
 
 
-def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str, feats: Optional[List[str]] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
+def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str, feats: Optional[List[str]] = None,
+                  kind: str = "tilt") -> Tuple[np.ndarray, Dict[str, Any]]:
     """Walk-forward by calendar year from ``test_start``: fit a LightGBM regressor on net_r (clipped at +-MS_CLIP_R) over the trades that EXITED
     before Jan 1 of the year, predict that year's entries, TILT up (RR.TILT[0]) above the training predictions' 2/3 quantile and down below the 1/3
-    quantile, else 1. Trades before ``test_start`` keep 1 (they are training only)."""
+    quantile, else 1. Trades before ``test_start`` keep 1 (they are training only). ``kind="filter"``: 0 (skip) below the 1/3 quantile, else 1."""
     import lightgbm as lgb
     raw = np.ones(len(tr))
     info: Dict[str, Any] = {}
@@ -300,7 +304,8 @@ def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str, feats: Opt
         # provenance: predict -- the model's predicted net R per trade; training-row predictions only set the tercile cuts
         p_tr, p_te = m.predict(Xv[trn]), m.predict(Xv[tst])
         q1, q2 = np.quantile(p_tr, [1 / 3, 2 / 3])
-        raw[tst] = np.where(p_te > q2, RR.TILT[0], np.where(p_te < q1, RR.TILT[1], 1.0))
+        raw[tst] = (np.where(p_te < q1, 0.0, 1.0) if kind == "filter"
+                    else np.where(p_te > q2, RR.TILT[0], np.where(p_te < q1, RR.TILT[1], 1.0)))
         info[str(yr)] = {"n_train": int(len(trn)), "n_test": int(len(tst)), "q1": round(float(q1), 5), "q2": round(float(q2), 5),
                          "corr_pred_r_test": round(float(np.corrcoef(p_te, y[tst])[0, 1]), 4) if len(tst) > 2 and np.std(p_te) > 0 else None}
     return raw, info
@@ -356,6 +361,25 @@ def grade_metastate(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optiona
     return {"arms": {"metastate": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
 
 
+def grade_filter(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optional[pd.Series], seed: int = RR.SEED) -> Dict[str, Any]:
+    """ENTRY FILTER: the f1a0-26 frozen recipe (MS_FEATS, MS_LGB, yearly walk-forward), skip the bottom training tercile, no renormalisation."""
+    tr = tr.copy().reset_index(drop=True)
+    X = metastate_frame(tr, closes, btc)
+    raw_all, info = metastate_raw(tr, X, RR.TEST_START, kind="filter")
+    keep = (tr.ts >= pd.Timestamp(RR.TEST_START, tz="UTC")).to_numpy()
+    t = tr[keep].reset_index(drop=True)
+    g = grade_raw(t, raw_all[keep], RULE_FILTER, seed, normalise=False)
+    sk = raw_all[keep] == 0.0
+    g["skipped"] = {"n": int(sk.sum()), "share": round(float(sk.mean()), 4), "mean_net_r": round(float(t.net_r[sk].mean()), 5) if sk.any() else None,
+                    "kept_mean_net_r": round(float(t.net_r[~sk].mean()), 5) if (~sk).any() else None}
+    g["per_family"] = {f: {"n": int(m.sum()), "skip_share": round(float(sk[m].mean()), 4),
+                           "delta": round(float(-(t.net_r.to_numpy(float)[m & sk]).sum() / max(m.sum(), 1)), 5)}
+                       for f in sorted(t.harness.unique()) for m in [(t.harness == f).to_numpy()]} if "harness" in t else {}
+    g["walk_forward"] = info
+    g["btc_state"] = "present" if btc is not None and len(btc) else "absent (NaN features)"
+    return {"arms": {"filter": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
+
+
 def grade_intraday(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str, float], seed: int = RR.SEED) -> Dict[str, Any]:
     tr = tr.copy().reset_index(drop=True)
     X = intraday_frame(tr, bars, tf)
@@ -368,9 +392,12 @@ def grade_intraday(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str
     return {"arms": {"intraday": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
 
 
-def grade_raw(t: pd.DataFrame, raw: np.ndarray, rule: Dict[str, Any], seed: int = RR.SEED) -> Dict[str, Any]:
-    """The f1a0-25 grade for any per-trade raw tilt: leg-month renormalised weights, week-bootstrap se, 200 within leg x month permutations."""
-    w = ts_weights(t, raw)
+def grade_raw(t: pd.DataFrame, raw: np.ndarray, rule: Dict[str, Any], seed: int = RR.SEED, normalise: bool = True) -> Dict[str, Any]:
+    """The f1a0-25 grade for any per-trade raw tilt: leg-month renormalised weights, week-bootstrap se, 200 within leg x month permutations.
+    ``normalise=False`` (entry filter): weights are the raw 0/1 keep flags, so delta = -(sum of skipped net R) / all trades, and each
+    permutation is a random skip of the same count within the same leg x month (the matched-random control)."""
+    wf = (lambda x: ts_weights(t, x)) if normalise else (lambda x: np.asarray(x, float))
+    w = wf(raw)
     r = t.net_r.to_numpy(float)
     n = len(t)
     delta = float(((w - 1.0) * r).sum() / n)
@@ -388,7 +415,7 @@ def grade_raw(t: pd.DataFrame, raw: np.ndarray, rule: Dict[str, Any], seed: int 
         pr = raw.copy()
         for ii in groups:
             pr[ii] = pr[ii][rng.permutation(len(ii))]
-        draws.append(float(((ts_weights(t, pr) - 1.0) * r).sum() / n))
+        draws.append(float(((wf(pr) - 1.0) * r).sum() / n))
     draws = np.array(draws)
     share = float(np.mean(draws >= delta))
     yrs = {str(y): round(float(((w - 1.0) * r)[t.ts.dt.year.to_numpy() == y].sum() / max((t.ts.dt.year == y).sum(), 1)), 4)
@@ -428,7 +455,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--work", default="")
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
-    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday"], default="book")
+    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
     ap.add_argument("--self-test", action="store_true")
@@ -442,7 +469,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     cfgs = rostered_legs()
     btc_cfg = next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
     if a.population in ("fresh", "fresh2"):
-        if a.mode not in ("metastate", "intraday"):
+        if a.mode not in ("metastate", "intraday", "filter"):
             ap.error("--population fresh/fresh2 is defined for --mode metastate / intraday only")
         cfgs = fresh_legs(cfgs, FRESH_SYMBOLS if a.population == "fresh" else FRESH_SYMBOLS_2)
     if a.legs:
@@ -470,15 +497,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
         m = grade_intraday(tr, bars, tfs) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_ID
-    elif a.mode == "metastate":
+    elif a.mode in ("metastate", "filter"):
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == "BTCUSDT"), None)
         btc = closes.get(btc_leg)
         if btc is None and btc_cfg is not None:                    # fresh population: no BTC leg in it, so fetch BTC on the rostered BTC leg's timeframe
             btc = fetch_btc_closes(btc_cfg, work)
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
-        m = grade_metastate(tr, closes, btc) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
-        rule_used = {"fresh": RULE_MS_FRESH, "fresh2": RULE_MS_FRESH2}.get(a.population, RULE_MS)
+        gfn = grade_filter if a.mode == "filter" else grade_metastate
+        m = gfn(tr, closes, btc) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_FILTER if a.mode == "filter" else {"fresh": RULE_MS_FRESH, "fresh2": RULE_MS_FRESH2}.get(a.population, RULE_MS)
     else:
         m = grade(tr) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE
@@ -576,6 +604,17 @@ def _self_test() -> int:
     gi = grade_intraday(tri, {"L": bars}, {"L": 3600.0})["arms"]["intraday"]
     check("intraday: an injected range-position edge is found and beats the permutation control", gi["delta"] > 0.02 and gi["random"]["share_ge_arm"] <= 0.05)
     check("intraday: tf parse", tf_seconds("4h") == 14400.0 and tf_seconds("15m") == 900.0)
+    # filter: skipping the predicted-bad tercile of a BTC-trend edge is found; shuffled R does not pass; the arithmetic is -(skipped R)/n
+    gf = grade_filter(trm, {"L": sym}, btc)["arms"]["filter"]
+    check("filter: a BTC-trend edge's bad tercile is skipped and the skip beats random skips of the same count",
+          gf["delta"] > 0.02 and gf["random"]["share_ge_arm"] <= 0.05 and 0.2 < gf["skipped"]["share"] < 0.65 and gf["skipped"]["mean_net_r"] < 0)
+    gfn = grade_filter(trm.assign(net_r=rng.permutation(r1)), {"L": sym}, btc)["arms"]["filter"]
+    check("filter: shuffled R does not pass", gfn["verdict"] != "pass")
+    tt = trm.iloc[:400].reset_index(drop=True)
+    kf = np.r_[np.zeros(100), np.ones(300)]
+    ga = grade_raw(tt, kf, RULE_FILTER, normalise=False)
+    check("filter: delta = -(sum of skipped net R) / n, no renormalisation",
+          abs(ga["delta"] - (-tt.net_r.iloc[:100].sum() / 400)) < 1e-4 and abs(ga["money_arm"] - tt.net_r.iloc[100:].sum() / 400) < 1e-4)
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
