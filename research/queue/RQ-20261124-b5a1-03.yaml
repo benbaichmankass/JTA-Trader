@@ -3,7 +3,7 @@
 # Gates this adds or changes: none. Nothing here touches the trade path; a pass is a proposal input, never an apply.
 id: RQ-20261124-b5a1-03
 title: 'AM v2 stage B (loosen): a LOOSEN-TO-STRUCTURE as a head-driven bracket policy on the CF replay vs HOLD and 100 matched random re-timings'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -161,3 +161,16 @@ related:
 - AM-V2-STAGE-B-POLICY-ARM
 - BOOK-SIM-REAL-SIZER
 last_dispatched_at: '2026-11-24T11:33:27+00:00'
+grading:
+  attested: RULE-AM-HEADS-STAGE-B-20261124
+  auto: true
+  decision_rule_id: RULE-AM-HEADS-STAGE-B-20261124
+  evidence:
+  - research/results/RQ-20261124-b5a1-03/45384288840.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -4,7 +4,7 @@
 id: RQ-20261124-1e06-05
 title: 'Timing-gated test of the capitulation 3x buy on six FRESH 3x ETFs (LABU, DPST, EDC, DUSL, UTSL, WANT): must beat 95% of 200 re-timed entries,
   graded POOLED'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -97,3 +97,16 @@ intervention_controls:
   not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400
     sessions, same stop geometry, TP and cost), which is a rule clause here
 last_dispatched_at: '2026-11-24T23:18:32+00:00'
+grading:
+  attested: RULE-RQ-20261124-1e06-05
+  auto: true
+  decision_rule_id: RULE-RQ-20261124-1e06-05
+  evidence:
+  - research/results/RQ-20261124-1e06-05/45504347080.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
