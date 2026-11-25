@@ -2,7 +2,7 @@
 # registered BEFORE any run with its rule, matched random control and claimed holdout. Gates this adds or changes: none. No trade path; a pass is a confirmation input, never an apply.
 id: RQ-20261124-c7e3-02
 title: 'AM v2 iteration 2 (av_tighten): TIGHTEN chosen by an ACTION-VALUE model on the CF replay vs HOLD and 100 matched random placements'
-status: queued
+status: done
 cadence: once
 not_before: '2026-11-25T03:00:00+00:00'
 theme: ml_health
@@ -161,3 +161,16 @@ related:
 - AM-V2-STAGE-B-POLICY-ARM
 - BOOK-SIM-REAL-SIZER
 last_dispatched_at: '2026-11-25T03:39:59+00:00'
+grading:
+  attested: RULE-AM-ACTION-VALUE-20261124
+  auto: true
+  decision_rule_id: RULE-AM-ACTION-VALUE-20261124
+  evidence:
+  - research/results/RQ-20261124-c7e3-02/45537635254.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

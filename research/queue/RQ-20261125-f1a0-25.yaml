@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-25
 title: 'REGIME-PROGRAM trade-level state: within each rostered leg, does tilting each trade 2.0 / 0.5 by the leg''s prior net R in its OWN
   symbol''s current trend x vol cell beat equal risk by +0.01 R/trade and beat permutations within leg-month?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -133,3 +133,17 @@ related:
 - research/queue/RQ-20261125-f1a0-24.yaml
 - REGIME-PROGRAM
 last_dispatched_at: '2026-11-25T03:39:42+00:00'
+grading:
+  attested: RULE-REGIME-TRADESTATE-20261125
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-REGIME-TRADESTATE-20261125
+  evidence:
+  - research/results/RQ-20261125-f1a0-25/45529431070.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

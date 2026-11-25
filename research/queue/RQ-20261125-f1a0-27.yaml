@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-27
 title: 'ml_entry LEARNED ENTRY-ORDER CHOICE: on exactly the SL 4 / TP 6 refit''s market-entry decisions, does choosing limit vs market per
   decision by a per-fold model of (limit - market) net R beat plain market entry by +0.0068 R/decision and beat a random choice at the same share?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -140,3 +140,17 @@ related:
 - research/queue/RQ-20261125-f1a0-21.yaml
 - research/queue/RQ-20261125-f1a0-22.yaml
 last_dispatched_at: '2026-11-25T04:36:11+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261125-f1a0-27/45535748199.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
