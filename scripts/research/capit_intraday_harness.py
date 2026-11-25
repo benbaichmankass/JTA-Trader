@@ -48,13 +48,8 @@ REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO, REPO / "scripts" / "research"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-import index_signal_etf_harness as H
-
-from src.runtime.execution_costs import (
-    resolve_cost_policy,
-    resolve_fee_bps_roundtrip,
-    roundtrip_cost_r,
-)
+import index_signal_etf_harness as H  # noqa: E402
+from src.runtime.execution_costs import resolve_cost_policy, resolve_fee_bps_roundtrip, roundtrip_cost_r  # noqa: E402
 
 FAMILY = "capitulation_wide"
 HOLD_CAP_BARS = 10
