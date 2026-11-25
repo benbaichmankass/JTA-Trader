@@ -1,0 +1,90 @@
+{
+  "unit": "RQ-20261125-0838-02",
+  "run_id": "45715823262",
+  "commit_sha": "68ff4b8923dd58b4b96fd2461179b12978320c07",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45715823262",
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261122.9.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "pullback",
+        "--symbols",
+        "ETHUSDT,SOLUSDT",
+        "--timeframe",
+        "2h",
+        "--days",
+        "2330",
+        "--start",
+        "2020-06-01",
+        "--end",
+        "2026-10-22",
+        "--arm",
+        "B=",
+        "--arm",
+        "W30=--atr-stop-mult=3.0",
+        "--baseline",
+        "B",
+        "--delta-r-per-trade",
+        "0.05",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "39",
+        "--pooled-n-floor",
+        "88",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ20261125-0838-02-PULLBACK-COSTSHARE",
+        "--data-dir",
+        "comms/research/RQ-20261125-0838-02/45715823262/data",
+        "--out",
+        "comms/research/RQ-20261125-0838-02/45715823262"
+      ],
+      "log": "comms/research/RQ-20261125-0838-02/45715823262/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 81.8
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
