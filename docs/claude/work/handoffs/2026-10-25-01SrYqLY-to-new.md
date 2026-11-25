@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-25 (afternoon): session_01SrYqLY4Ui9RKns12r2zthj → new
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · written 2026-10-25 ~15:25Z by the outgoing manager `session_01SrYqLY4Ui9RKns12r2zthj` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `history` · last verified `never` · written 2026-10-25 ~15:25Z by the outgoing manager `session_01SrYqLY4Ui9RKns12r2zthj` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 **Why rotating:** context 671k at 15:17Z, past the ~650k threshold. Quiet boundary: no merge or deploy half-done. Follow `.claude/skills/manager/SKILL.md` § Start of session (Rotation case). Subscribe ONLY to ops-flags #17895 and your own PRs.
 

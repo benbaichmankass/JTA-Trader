@@ -1,6 +1,6 @@
 # Manager handoff — Manager Session 2026-10-31a → next
 
-> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `handoff` · last verified `2026-11-01` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 Old manager: `session_01AFoLuJwBvR58WBtD4qc5Gp` (Manager Session 2026-10-31a, Opus, lineage depth 6/8, ~520k tokens at 2026-11-01T06:30Z).
 Assistant manager (shallow, creates the new manager): `session_011c3qoaBvGBioDWkPVToQSb`.
