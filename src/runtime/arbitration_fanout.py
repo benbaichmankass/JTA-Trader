@@ -346,6 +346,7 @@ PLAN_STATES = (
     "elected",         # this account elected a live winner from its OWN candidates
     "elected_flat",    # it has candidates, but its own election came out flat
     "elected_undispatchable",  # it elected a winner whose geometry is incomplete
+    "allocated",       # a slice account (NETTED-SLICES): every strategy in its `allocation` gets a round
     "no_candidates",   # it runs none of this tick's candidates — correctly silent
     "unknown",         # roster unreadable / election raised — we could not look
 )
