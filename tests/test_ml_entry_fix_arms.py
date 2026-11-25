@@ -62,3 +62,28 @@ def test_clf_target_breakeven_and_edge_scores():
     assert cl[hi].mean() > 0.2 and cl[~hi].mean() < cl[hi].mean()       # the learnable side clears p* where the feature says so
     assert info["short"]["test_share_above_p_star"] < 0.2                  # the noise side (30% win < p* 40%) rarely clears
     assert "clf_target" in F.ARMS
+
+
+
+def test_h8_retrain_relabels_on_the_registered_bracket_with_an_8h_time_stop(tmp_path):
+    """h8_retrain (the registered fail_action of f1a0-31/33): the SAME 2/3 ATR bracket with an 8-bar label/time-stop horizon. No 8 h label
+    holds longer than 8 bars, while the registered 24-bar labels on the same rows do."""
+    import ml_decision_entry as M
+    import ml_entry_fix_arms as F
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(1)
+    n = 24 * 60
+    ts = pd.date_range("2025-01-01", periods=n, freq="1h", tz="UTC")
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.002, n)))
+    o = np.r_[c[0], c[:-1]]
+    pd.DataFrame({"ts": ts, "open": o, "high": np.maximum(o, c) * 1.001, "low": np.minimum(o, c) * 0.999, "close": c,
+                  "volume": 1.0}).to_pickle(tmp_path / "BTCUSDT.pkl")
+    dec = ts[((ts + pd.Timedelta(hours=1)).hour % M.DECISION_EVERY_H == 0)][20:-30]
+    tab = pd.DataFrame({"symbol": "BTCUSDT", "ts": dec})
+    lab8 = F.alt_labels(tmp_path, ["BTCUSDT"], tab, M.SL_ATR, M.TP_ATR, horizon=F.H8)
+    lab24 = F.alt_labels(tmp_path, ["BTCUSDT"], tab, M.SL_ATR, M.TP_ATR, horizon=None)
+    assert F.H8 == 8 and "h8_retrain" in F.ARMS
+    assert lab8["net_long"].notna().all() and len(lab8) == len(tab)
+    assert lab8[["bars_long", "bars_short"]].max().max() <= 8
+    assert lab24[["bars_long", "bars_short"]].max().max() > 8
