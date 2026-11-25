@@ -37,6 +37,10 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
 
+  h8_retrain    HORIZON LEVER (registered fail_action of f1a0-31/33: a 4 h or 8 h horizon with the cost stack re-scaled): the registered
+                SL 2 / TP 3 ATR14 bracket with an 8 h time-stop instead of 24 h; labels recomputed on that bracket (canonical cost stack
+                per trade via M._cost_r, so funding shrinks with the shorter hold) and the recipe refit on them; graded vs the registered
+                recipe (base). Control: random-side entries under both brackets (reported, not gating), as sl_xwide_h48_retrain.
   clf_target    TARGET LEVER (registered fail_action of f1a0-29/31: every input arm landed within noise, so the next lever is the LABEL):
                 per side a LightGBM CLASSIFIER of P(net R > 0) on the same features / rows / folds replaces the net-R regressor; a side is
                 traded iff its probability clears that side's TRAINING breakeven p* = mean|loss| / (mean win + mean|loss|) (EV > 0 at the side's
@@ -119,7 +123,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["clf_target", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
+ARMS = ["h8_retrain", "clf_target", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -145,6 +149,7 @@ LIM_K, LIM_W = 0.5, 4                 # lim_xwide: limit LIM_K x ATR14 better th
 LIM_TICK_BPS = 1.0                    # strict fill: the bar must trade 1 bp THROUGH the limit (queue position)
 MAKER_BPS, TAKER_BPS = 2.0, 5.5       # Bybit linear per side, the same constants as ml_entry_maker_replay.py (delta_F: 5.5 - 2.0 if filled)
 H48 = 48                              # sl_xwide_h48_retrain: the label / time-stop horizon in 1h bars (registered 24)
+H8 = 8                                # h8_retrain: the SHORT horizon form (registered fail_action of f1a0-31/33), registered 2/3 ATR bracket
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
               "max_dd_ratio": 0.7, "min_folds_sharpe_better": 5}
@@ -642,7 +647,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 rb.append(seq.run(fl, fs, tau=0.0))
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
-        elif arm in ("sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain"):
+        elif arm in ("sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "h8_retrain"):
             lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
             tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
             al, as_ = M.fit_predict(tr_alt, test, None, n_jobs)
@@ -839,10 +844,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
-    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain"):
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain", "h8_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm", ref)
-    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain", "lim_fallback")
+    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain", "lim_fallback", "h8_retrain")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
             "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
@@ -895,10 +900,12 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     if arm == "rsw_xwide_h48":
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=RSW_STATE).reset_index(drop=True)
-    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48"):
+    if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "h8_retrain"):
         tab = tab.reset_index(drop=True)
-        sl_tp = (SL_XWIDE, TP_XWIDE) if arm in ("sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48") else (SL_WIDE, TP_WIDE)
-        alt = alt_labels(cache, syms, tab, *sl_tp, horizon=H48 if arm in ("sl_xwide_h48_retrain", "rsw_xwide_h48") else None)
+        sl_tp = ((SL_XWIDE, TP_XWIDE) if arm in ("sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48")
+                 else (M.SL_ATR, M.TP_ATR) if arm == "h8_retrain" else (SL_WIDE, TP_WIDE))
+        hz = H48 if arm in ("sl_xwide_h48_retrain", "rsw_xwide_h48") else H8 if arm == "h8_retrain" else None
+        alt = alt_labels(cache, syms, tab, *sl_tp, horizon=hz)
         ok = alt["net_long"].notna() & alt["net_short"].notna()
         tab, alt = tab[ok.to_numpy()], alt[ok]
     return tab, alt

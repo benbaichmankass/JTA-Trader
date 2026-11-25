@@ -1,0 +1,149 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (the registered fail_action of f1a0-31/33: the HORIZON lever). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261125-f1a0-34
+title: 'ml_entry HORIZON LEVER (h8_retrain): the registered SL 2 / TP 3 ATR14 bracket with an 8 h label / time stop (registered 24 h), labels recomputed net of the
+  full cost stack and the recipe refit on them, vs the registered recipe on the 8 dev folds'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-33/45660328335
+  verdict_read: indeterminate
+  diagnosis: 'f1a0-33 (sign classifier) INDETERMINATE -0.0115 vs base; with inputs (f1a0-29/31), execution, sizing, bracket width (f1a0-10/11) and the target form
+    all within noise, the binding constraint is cost per R: gross ~0.067 vs cost ~0.064 R per trade on the 24 h bracket. The registered fail_action of f1a0-31/33
+    names the HORIZON next. A shorter hold cuts funding per trade and lets the model fit the near-term move its 1h features carry most information about; it also
+    raises the share of time-stop exits (smaller |gross|), which may raise cost per R. The run decides which wins.'
+  search: 'one fixed definition: 8 h (the larger of the two registered candidates 4 h / 8 h, so slippage+fee per R is not dominated by tiny exits); no grid.'
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 20
+  due_by: '2026-12-01'
+question: Does the registered recipe refit on labels with an 8 h time stop (same 2/3 ATR14 bracket, 20 features, rows, folds, LGB params, tau 0.10; labels recomputed
+  with the canonical cost stack per trade) beat the registered 24 h recipe by >= +0.0068 R/decision with t >= 2, on the dev folds, net of the full cost stack?
+why_this_matters: 'Every input, execution, sizing, bracket-width and target lever on ml_entry (f1a0-10..33) landed within noise and cost per R is the binding constraint.
+  The horizon is the remaining registered label lever. A pass goes to a fresh-window confirmation (not the spent 2025-10 window: ENTRY has 28 reads there), then a
+  Tier-3 proposal input for the leg time stop.'
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (f1a0-21 MEASURED 52,029 paired decisions): arm n = decisions (unfilled limits count as 0 R), the same decisions as the comparator so se(delta)
+    ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry entry order type (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol, SL 2 / TP 3 ATR14,
+    24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - h8_retrain
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-34
+decision_rule:
+  id: RULE-RQ-20261125-f1a0-34
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm h8_retrain: delta = pooled mean net R per decision (arm, refit on 8 h labels, traded on 8 h labels) - (base,
+    the registered recipe on 24 h labels) over the 8 dev folds, same table; se = week-clustered influence se (ml_decision_entry.arm_diff); folds_better = dev folds
+    where the arm mean beats base; years = calendar years of fold starts with a positive pooled delta. Reported: the random-side control under both horizons, gross
+    / cost per trade under each.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND folds_better >= 6 of 8 AND years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta
+    + 2.0 se < +0.0068. INDETERMINATE otherwise. The random-side control is COMPUTED and REPORTED, not gating (a horizon is a mechanics lever, as sl_xwide_h48_retrain
+    under RULE-ML-ENTRY-FIX-ARMS-20261124). Fixed now.
+  pass_action: Fresh-window confirmation (bars after the last ENTRY holdout read, holdout ledger claim, deflated bar), then a data-backed Tier-3 proposal of the ml_entry
+    time stop (8 h) to the manager. Applied by the operator or a mandate, never by a lane.
+  fail_action: Record the horizon lever closed at 8 h on this recipe (with 24 h and 48 h already read); the next lever is cross-asset inputs (BTC/ETH lead, index
+    futures) or the decision bar timeframe (a 4h-bar recipe), authored from this result at once.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager with this evidence
+    record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+  choices_where_the_design_memo_is_silent:
+  - 'HORIZON: 8 one-hour bars from the entry bar (t+1 open); the time stop exits at the close of bar 8; SL/TP touch rules as M.bracket_outcome.'
+  - 'COSTS: M._cost_r per trade (fee 11 bps rt + slip 3 bps rt + funding 1 bp per 8 h of the ACTUAL hold), so the shorter hold is charged its own funding.'
+  - 'POLICY: the registered sequential policy (better side, > tau 0.10, symbol busy until exit), the symbol frees after at most 8 h.'
+  - 'No grid: 4 h is not run in this unit; it is authored only if 8 h is INDETERMINATE with a positive point estimate.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: the arm holds the registered 2/3 ATR bracket; only the time stop (24 h -> 8 h) and the labels it implies change
+  matched_random:
+    draws: 100
+    note: 'COMPUTED, reported not gating: 100 seeded random-side draws per fold under each horizon (how much of the delta is the horizon itself vs the model)'
+  best_static:
+    grid:
+    - recipe (live)
+    - control (see matched_random)
+    excludes_test_folds: true
+    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 150
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
+- research/queue/RQ-20261125-f1a0-21.yaml
+- research/queue/RQ-20261125-f1a0-22.yaml
+- research/queue/RQ-20261125-f1a0-27.yaml
+- research/queue/RQ-20261125-f1a0-29.yaml
+- research/queue/RQ-20261124-f1a0-14.yaml
+- scripts/research/prop_ml_leg.py
+- RQ-20261125-f1a0-31
+- RQ-20261124-f1a0-06
+- RQ-20261125-f1a0-33
+- research/queue/RQ-20261124-f1a0-11.yaml
+not_before: '2026-11-25T20:30:00+00:00'

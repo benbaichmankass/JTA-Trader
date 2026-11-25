@@ -870,6 +870,21 @@ def test_a_real_prop_ticket_stamped_source_order_package_is_still_an_account():
     assert sorted(a["account_id"] for a in accts) == ["tradeify_1", "velotrade_1"] and all(a["account_id"] for a in accts)
 
 
+def test_a_suppressed_prop_ticket_is_not_an_account_and_is_listed_apart():
+    """LTR-PACKET-PROP-SUPPRESSED-LEGS: pkg-858c60dc674d418f listed tradeify_1 + velotrade_1 whose tickets were
+    suppressed (opposite_direction_blocked) and never opened."""
+    pkg = "pkg-sup"
+    s = L.Snapshot()
+    s.packages[pkg] = {"order_package_id": pkg, "status": "open", "direction": "long"}
+    s.trades = [{"id": 1, "order_package_id": pkg, "account_id": "bybit_2", "status": "open"}]
+    s.reads["prop_tickets"] = {"tickets": [
+        {"order_package_id": pkg, "ticket_id": "T1", "account_id": "tradeify_1", "status": "suppressed"},
+        {"order_package_id": pkg, "ticket_id": "T2", "account_id": "velotrade_1", "status": "Suppressed"}]}
+    view = L._package_view(s, pkg)
+    assert [a["account_id"] for a in L._accounts_for(view, {})] == ["bybit_2"]
+    assert sorted(t["account_id"] for t in view["suppressed_tickets"]) == ["tradeify_1", "velotrade_1"]
+
+
 def test_price_returns_a_named_state_when_the_outcomes_stdout_is_not_json(monkeypatch):
     """LR wake 2026-11-06T01:56Z: an exit-0 outcomes run with non-JSON stdout raised out of the builder (could_not_build)."""
     monkeypatch.setattr(L, "LTR_CORPUS_DIR", L.LTR_CORPUS_DIR)
@@ -1144,3 +1159,18 @@ def test_collect_stops_order_packages_paging_at_the_end_of_history():
     s = L.collect(["pkg-missing"], diag=_paged_diag(200, calls), public=lambda p: {})
     assert "pkg-missing" not in s.packages
     assert len([c for c in calls if c.startswith("journal?table=order_packages")]) == 2
+
+
+def test_collect_reads_run_concurrently_and_are_timed():
+    """LTR-PACKET-BUILD-TIMEOUT: ~15 independent I/O reads, sequential ~48 s at the 4h burst; now concurrent + timed."""
+    import time as _t
+
+    def slow(path):
+        _t.sleep(0.15)
+        return [] if path.startswith("journal") else {"rows": [], "accounts": [], "tickets": []}
+    t0 = _t.monotonic()
+    s = L.collect(["pkg-x"], max_pages=1, diag=slow, public=slow)
+    wall = _t.monotonic() - t0
+    assert {"telemetry", "bybit_orders", "prop_status:tradeify_1", "news"} <= set(s.timings)
+    assert wall < 0.15 * 11 * 0.6  # 11 first-wave reads would take 1.65 s one by one
+    assert not s.errors or all("pkg-x" not in k for k in s.errors)

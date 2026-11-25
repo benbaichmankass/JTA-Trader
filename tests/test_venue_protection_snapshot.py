@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -35,6 +36,9 @@ def db(tmp_path):
     path = str(tmp_path / "journal.db")
     Database(path)  # the production DDL, including venue_protection_snapshot
     vps._last_prune.clear()
+    # NOW is a fixed 2026-10-26 timestamp; once it is older than RETENTION_DAYS the write path's own
+    # first-write prune (wall clock) would delete every row these tests just wrote. Hold it off.
+    vps._last_prune[path] = time.monotonic()
     return path
 
 
