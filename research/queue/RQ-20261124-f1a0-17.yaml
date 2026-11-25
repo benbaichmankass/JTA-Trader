@@ -105,6 +105,14 @@ intervention_controls:
   matched_random:
     draws: 100
     description: the same decisions' market-entry outcomes thinned at random to the arm's fill rate; the arm must beat it by >= +0.0068
+  hold_to_bracket: true
+  hold_to_bracket_note: 'the comparator is the same decisions entered at market and held to the same SL 4 / TP 6 / 24 h bracket (no in-trade action in
+    either arm); added to the controls metadata after run 45512130236 to satisfy the design-fields guard, the decision rule is unchanged'
+  best_static:
+    grid:
+    - market entry on the same decisions (the registered comparator)
+    excludes_test_folds: true
+    note: 'one fixed limit policy (0.5 ATR, 4 h), not chosen on any fold; no grid of offsets or windows was searched'
   bootstrap_group: week
 practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
 routing:
