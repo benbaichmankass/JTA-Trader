@@ -1,6 +1,6 @@
 # Desk development plan, W48 (for Thursday 2026-11-26 planning)
 
-> **Doc status:** `live` · category `plan` · last verified `2026-11-25` · lane `DESK-DEV-W48` (row `DESK-DEV-W48`, roadmap `L-DESK-V1`)
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `DESK-DEV-W48` (row `DESK-DEV-W48`, roadmap `L-DESK-V1`)
 
 **Gates this adds or changes: none.** Operator ask 2026-11-25: set aside capacity for desk work and desk development, to make it more functional and better.
 
