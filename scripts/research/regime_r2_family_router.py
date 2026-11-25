@@ -34,6 +34,13 @@ ITERATION 2 (``--books symbol``, unit RQ-20261124-f1a0-18, RULE-REGIME-R2B-SYMBO
 INDETERMINATE (+0.021 R/trade, t 0.76, random share 0.10, 4 of 5 years positive) and ``logit`` FAILED (anti-predictive, 0.49 books/week). With only 8
 books the week-clustered se is wide. Iteration 2 makes each book a family x SYMBOL x direction (hundreds of books, so many more routing decisions
 per week) and runs the ``persist`` arm ONLY (logit dropped as failed); everything else is unchanged. One arm, so random share <= 0.05.
+
+R4, REGIME-CONDITIONED SIZING (``--books symbol --mode tilt``, unit RQ-20261125-f1a0-19, RULE-REGIME-R4-BOOK-TILT-20261125), from f1a0-18 (run 45513198865):
+the trailing-book signal beat ALL 200 random routings (share 0.00) but its money delta (+0.018 R/trade, t 1.14) was small against week-to-week variance,
+and routing DROPS 61% of trades. R4 keeps EVERY trade and tilts risk instead: weight TILT[0] where the book's trailing 13-week mean > 0, TILT[1] where
+it is <= 0, 1.0 where there is no history; renormalised each week so the weighted trade count equals the actual count (pure reallocation, same total
+risk). Statistic: weighted net R per trade minus the unweighted; se from 1,000 week-bootstrap draws; control: the same weights PERMUTED across books within
+each week (200 draws).
 """
 from __future__ import annotations
 
@@ -94,6 +101,9 @@ def unique_trades(jobs: Dict[str, dict]) -> pd.DataFrame:
 
 
 RULE_SYMBOL = dict(RULE, id="RULE-REGIME-R2B-SYMBOL-BOOKS-20261124", max_random_share=0.05)
+TILT = (2.0, 0.5)
+RULE_TILT = {"id": "RULE-REGIME-R4-BOOK-TILT-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05, "min_years_positive": 4,
+             "n_test_years": 5, "fail_random_share": 0.5}
 
 
 def weekly_books(trades: pd.DataFrame, level: str = "family") -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -264,7 +274,77 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family") -> Dict[str, Any]:
+def tilt_weights(t: pd.DataFrame, raw: np.ndarray) -> np.ndarray:
+    """Renormalise ``raw`` per week so sum(w * n) == sum(n) within each week (same total risk)."""
+    w = np.asarray(raw, float).copy()
+    n = t.y_n.to_numpy(float)
+    wk = t.week.to_numpy()
+    df = pd.DataFrame({"wk": wk, "wn": w * n, "n": n})
+    g = df.groupby("wk").agg(wn=("wn", "sum"), n=("n", "sum"))
+    scale = (g.n / g.wn.replace(0, np.nan)).fillna(1.0)
+    return w * scale.reindex(wk).to_numpy()
+
+
+def grade_tilt(f: pd.DataFrame, test_weeks: Sequence[pd.Timestamp], rng: np.random.Generator) -> Dict[str, Any]:
+    t = f[f.week.isin(test_weeks) & (f.y_n > 0)].reset_index(drop=True)
+    raw = np.where(t["m13"].isna(), 1.0, np.where(t["m13"] > 0, TILT[0], TILT[1]))
+    w = tilt_weights(t, raw)
+    ys, yn = t.y_sum.to_numpy(float), t.y_n.to_numpy(float)
+    wk = t.week.to_numpy()
+    weeks = np.unique(wk)
+    idx = {x: np.flatnonzero(wk == x) for x in weeks}
+    ws_ = np.array([float((w[idx[x]] * ys[idx[x]]).sum()) for x in weeks])
+    bs_ = np.array([float(ys[idx[x]].sum()) for x in weeks])
+    n_ = np.array([float(yn[idx[x]].sum()) for x in weeks])
+    m_arm, m_base = ws_.sum() / n_.sum(), bs_.sum() / n_.sum()
+    delta = float(m_arm - m_base)
+    boots = []
+    for _ in range(N_BOOT):
+        ix = rng.integers(0, len(weeks), len(weeks))
+        boots.append((ws_[ix].sum() - bs_[ix].sum()) / n_[ix].sum())
+    se = float(np.std(boots))
+    draws = []
+    for _ in range(N_RANDOM):
+        rw = raw.copy()
+        for x in weeks:
+            ii = idx[x]
+            rw[ii] = rw[ii][rng.permutation(len(ii))]
+        pw = tilt_weights(t, rw)
+        draws.append(float((pw * ys).sum() / yn.sum()))
+    draws = np.array(draws)
+    share = float(np.mean(draws >= m_arm))
+    years = {}
+    for y in sorted({pd.Timestamp(x).year for x in weeks}):
+        sel = np.array([pd.Timestamp(x).year == y for x in weeks])
+        years[str(y)] = round(float((ws_[sel].sum() - bs_[sel].sum()) / n_[sel].sum()), 4)
+    return {"n_weeks": int(len(weeks)), "trades": int(yn.sum()), "money_arm": round(float(m_arm), 5), "money_base": round(float(m_base), 5),
+            "delta": round(delta, 5), "se_week_boot": round(se, 5), "t": round(delta / se, 3) if se > 0 else None,
+            "random": {"draws": N_RANDOM, "kind": "weights permuted across books within each week", "mean": round(float(draws.mean()), 5),
+                       "p95": round(float(np.percentile(draws, 95)), 5), "share_ge_arm": round(share, 4)},
+            "yearly_delta": years, "share_book_weeks_up": round(float((raw == TILT[0]).mean()), 4), "trade_share": 1.0}
+
+
+def tilt_verdict(g: Dict[str, Any], rule: Dict[str, Any] = RULE_TILT) -> Tuple[str, Dict[str, bool]]:
+    yrs = [v for v in g["yearly_delta"].values() if v == v]
+    chk = {"delta_ge_min": g["delta"] >= rule["min_delta_r"], "t_ge_min": (g["t"] or 0) >= rule["min_t"],
+           "beats_random": g["random"]["share_ge_arm"] <= rule["max_random_share"], "years_positive": sum(1 for v in yrs if v > 0) >= rule["min_years_positive"]}
+    if all(chk.values()):
+        return "pass", chk
+    if g["delta"] <= 0 or g["random"]["share_ge_arm"] >= rule["fail_random_share"]:
+        return "fail", chk
+    return "indeterminate", chk
+
+
+def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family", mode: str = "route") -> Dict[str, Any]:
+    if mode == "tilt":
+        S, N = weekly_books(trades, level)
+        f = features(S, N)
+        test_weeks = [w for w in S.index if w >= pd.Timestamp(TEST_START)]
+        g = grade_tilt(f, test_weeks, np.random.default_rng(seed))
+        v, g["checks"] = tilt_verdict(g)
+        g["verdict"] = v
+        census = {"n_books": int(S.shape[1]), "trades": int(N.to_numpy().sum()), "sum_r": round(float(S.to_numpy().sum()), 2)}
+        return {"arms": {"tilt": g}, "verdict": v, "books": census, "n_test_weeks": len(test_weeks), "level": level, "mode": mode, "rule": RULE_TILT}
     S, N = weekly_books(trades, level)
     f = features(S, N)
     test_weeks = [w for w in S.index if w >= pd.Timestamp(TEST_START)]
@@ -288,6 +368,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--out", default="/tmp/regime_r2")
     ap.add_argument("--unit", default="")
     ap.add_argument("--books", choices=["family", "symbol"], default="family")
+    ap.add_argument("--mode", choices=["route", "tilt"], default="route")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -299,7 +380,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     files = cf_bulk.discover()
     jobs, counts = cf_bulk.load_jobs(files)
     trades = unique_trades(jobs)
-    m = run(trades, level=a.books)
+    m = run(trades, level=a.books, mode=a.mode)
     fp = corpus_fingerprint(trades)
     pop = (f"backtest trade corpus (cf_bulk.TRADE_GLOBS, {counts.get('files')} files, {counts.get('distinct_jobs')} distinct jobs) -> {len(trades)} unique crypto "
            f"trades of {list(FAMILIES)} with entries {DATA_START}..{DATA_END} (variants averaged), {m['books']['n_books'] if a.books == 'symbol' else 8} {'family x symbol x direction' if a.books == 'symbol' else 'family x direction'} books, weekly; test weeks "
@@ -363,6 +444,14 @@ def _self_test() -> int:
     check("symbol books: persist only, symbol-level rule", list(ms["arms"]) == ["persist"] and ms["rule"]["max_random_share"] == 0.05
           and ms["books"]["n_books"] > 8)
     check("symbol books: persistent regimes beat baseline", ms["arms"]["persist"]["delta"] > 0.05)
+    mt = run(tr, level="symbol", mode="tilt")
+    check("tilt: keeps every trade, persistent regimes beat baseline and the permuted control", mt["arms"]["tilt"]["delta"] > 0.02
+          and mt["arms"]["tilt"]["random"]["share_ge_arm"] <= 0.05 and mt["rule"]["id"] == RULE_TILT["id"])
+    t0_ = pd.DataFrame({"week": [1, 1, 2], "y_n": [10.0, 30.0, 5.0]})
+    wt = tilt_weights(t0_, np.array([2.0, 0.5, 2.0]))
+    check("tilt weights renormalise per week", abs((wt[:2] * t0_.y_n[:2]).sum() - 40.0) < 1e-9 and abs(wt[2] - 1.0) < 1e-9)
+    mt0 = run(_synthetic(seed=4, persistent=False), level="symbol", mode="tilt")
+    check("tilt: no regimes, no pass", mt0["verdict"] != "pass")
     check("verdict mapping", unit_verdict({"a": "fail", "b": "indeterminate"}) == "indeterminate" and unit_verdict({"a": "fail", "b": "fail"}) == "fail")
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
