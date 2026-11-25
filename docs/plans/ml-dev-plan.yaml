@@ -707,14 +707,16 @@ lines:
   kind: model
   subject: setup-candidates-metalabel-p2pool-v2 (KEEP for its open unit)
   consumer: {class: none}
-  stage: stuck
+  stage: passed_waiting
   row: MLP-D4-SETUP-METALABEL
   carried_by: [ML-KEEP-ITERATION-COVERAGE]
   state:
-    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 RQ-20261119-3e98-01 (rostered PAPER book, n 1,053) graded INDETERMINATE: PASS with estimated outcomes (value +0.0585, deflated LB +0.0164), FAIL on the 698 measured rows (LB -0.0061, take 0.043 < 0.05). Iteration 3 (threshold lever on train folds, then measured-only re-read): PI-20261119-RIMARY12-0006.'
+    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 RQ-20261119-3e98-01 (rostered PAPER book, n 1,053) graded INDETERMINATE: PASS with estimated outcomes (value +0.0585, deflated LB +0.0164), FAIL on the 698 measured rows (LB -0.0061, take 0.043 < 0.05). Iteration 3 RQ-20261119-2780-04 graded PASS 2026-11-20 (threshold 0.48 chosen on TRAINING OOF folds only; ONE read on the MEASURED rostered paper book: value +0.0362 R/opp vs take_all -0.0304, take_none 0, matched random -0.0018; n_eval 698, all measured). Its registered pass action is ONE out-of-time confirmation before any Tier-3 proposal: RQ-20261120-2cb9-01 (blocked on accrual: ~600 rows entered after the v024 build, ~2027-01-15 at the measured rate). Not stuck: waiting on data (2026-11-25, ML-PRIMARY).'
     evidence:
       - {record: research/queue/RQ-20261101-78fc-02.yaml, provenance: MEASURED}
       - {record: comms/ml-plan/p1_costnet_verdict_v023.json, provenance: MEASURED}
+      - {record: research/queue/RQ-20261119-2780-04.yaml, provenance: MEASURED}
+      - {record: research/queue/blocked/RQ-20261120-2cb9-01.yaml, provenance: MEASURED}
   levers_tried:
     - {lever: P1 read on gross costs, ref: ML-P1, verdict: 'indeterminate (n_eval 144 < 200; PI-20261029-MLP1-0001)'}
     - {lever: eval population = rostered paper book (v024), ref: RQ-20261119-3e98-01, verdict: 'INDETERMINATE (primary PASS n 1,053; measured-only FAIL n 698; provenance clause)'}
@@ -725,9 +727,9 @@ lines:
       baseline: take-all on the same legs, and same-rate random skip, net of cost
       pass: a reduce/annotate proposal for the legs in its population (Tier 3)
       fail: a family-review record (retirement only via family_retirement_policy.yaml)
-  next_weeks: {W47: 'name the blocker owner on ML-KEEP-ITERATION-COVERAGE', W48: run if unblocked, W49: grade, W50: none}
+  next_weeks: {W47: 'name the blocker owner on ML-KEEP-ITERATION-COVERAGE', W48: '2780-04 PASS recorded; confirmation 2cb9-01 waits on accrual (~2027-01-15); owner ML-PRIMARY', W49: 'accrual count check', W50: 'accrual count check'}
   exhaustion: 78fc-02 FAIL on a powered population, or the population cannot reach the registered n because the legs lack declared initial risk (then a data row, not more arms).
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: [ML-M5]
 
 - id: MLP-D4-CONVICTION-META
@@ -751,9 +753,10 @@ lines:
       baseline: take-all and the confidence-only rule on the same rows, net of cost
       pass: a D4 consumer proposal
       fail: proposed retirement
-  next_weeks: {W47: name the blocker owner, W48: run if unblocked, W49: grade, W50: none}
+  next_weeks: {W47: name the blocker owner, W48: 'proposed_disposition below (owner ML-PRIMARY; manager decides)', W49: none, W50: none}
+  proposed_disposition: 'RETIRE (proposed 2026-11-25, ML-PRIMARY; manager decides): its only lever ahead (a conviction retrain on cost-stamped rows) needs ML-P4-CONVICTION-REGATE, which the operator DROPPED 2026-11-12 (decisions page w1, verbatim "Kill all of them (except the git-history one, asked below)"); its unit RQ-20261101-78fc-06 was retired 2026-11-13 for that reason. Re-open only if a conviction retrain is re-approved.'
   exhaustion: 78fc-06 FAIL.
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: []
 
 - id: MLP-D4-METALABEL-TEST-RESULTS
