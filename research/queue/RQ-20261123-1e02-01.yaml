@@ -1,7 +1,7 @@
 id: RQ-20261123-1e02-01
 title: 'Direction-switch: long the bull ETF in an index up-regime, long the inverse ETF in a down-regime, one position at a time, vs long-only the bull ETF (S&P 500
   and Nasdaq-100 pairs), net of the full cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -75,3 +75,16 @@ related:
 - docs/research/index-leveraged-etf-roster-2026-11-23.md
 practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
 last_dispatched_at: '2026-11-24T22:09:00+00:00'
+grading:
+  attested: RULE-RQ20261123-1e02-01-DIRSWITCH
+  auto: true
+  decision_rule_id: RULE-RQ20261123-1e02-01-DIRSWITCH
+  evidence:
+  - research/results/RQ-20261123-1e02-01/45496527684.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
