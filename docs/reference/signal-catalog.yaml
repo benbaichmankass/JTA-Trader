@@ -137,6 +137,24 @@ strategy_modules:
       accounts_yaml_roster_entries: 1
       timeframes:
         1h: 1
+  index_capitulation_1x:
+    file: src/units/strategies/index_capitulation_1x.py
+    # INDEX-CAPIT-1X-LEG (2026-11-25): daily capitulation bounce on 18 1x ETFs. Reads the daily frame (_fetch_session_frame; open/high/low/close
+    # via the frame's columns, which the column regex does not count) and the US session clock. Health: unmeasured.
+    candle_columns:
+    - timestamp
+    runtime_imports:
+    - src.runtime.market_hours
+    legs:
+      strategy_ids: 1
+      enabled: 1
+      enabled_live: 1
+      enabled_shadow: 0
+      disabled: 0
+      accounts_yaml_rostered_legs: 1
+      accounts_yaml_roster_entries: 2
+      timeframes:
+        1d: 1
   fade_breakout_4h:
     file: src/units/strategies/fade_breakout_4h.py
     candle_columns:

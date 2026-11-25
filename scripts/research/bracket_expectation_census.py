@@ -177,6 +177,14 @@ def resolve_target(name: str, cfg: Dict[str, Any],
                 return float(v), k, ORIGIN_DECLARED
             except (TypeError, ValueError):
                 return None, k, ORIGIN_DECLARED
+    # A per-SYMBOL target map (``k_star: {SYM: R, ...}``; index_capitulation_1x, row INDEX-CAPIT-1X-LEG) is a declared target per
+    # ticker. It is graded on its LARGEST entry: if any ticker's target reaches the sentinel floor the leg is a sentinel.
+    km = cfg.get("k_star")
+    if isinstance(km, dict) and km:
+        try:
+            return max(float(v) for v in km.values()), "k_star", ORIGIN_DECLARED
+        except (TypeError, ValueError):
+            return None, "k_star", ORIGIN_DECLARED
     d = defaults.get(family_of(name, cfg))
     if d is not None:
         return d, "tp_r", ORIGIN_CLASS_DEFAULT
