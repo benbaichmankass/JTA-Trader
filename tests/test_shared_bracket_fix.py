@@ -444,3 +444,28 @@ def test_read_venue_context_carries_each_snapshots_trade_status(tmp_path):
     ctx = lrd.read_venue_context(["pkg-5414797739ba4589"], db_path=db.path)
     sn = ctx["pkg-5414797739ba4589"]["snapshots"]
     assert len(sn) == 1 and sn[0]["trade_status"] == "closed"
+
+
+class _NettedClient(_SolClient):
+    """Two shorts netted in one book: only the SIBLING's stop is still resting (the own leg just filled)."""
+    def get_open_orders(self, **kw):
+        return {"result": {"list": [
+            {"orderId": "sib-sl", "side": "Buy", "stopOrderType": "PartialStopLoss",
+             "qty": "293", "triggerPrice": "0.9707", "positionIdx": 2}]}}
+
+
+def test_netted_book_grades_the_packages_own_stop_leg_never_a_siblings():
+    """LTR-VENUE-SL-NETTED-SIBLING-FALSE-DIVERGE: pkg-a7b186d4 (SL 0.95642857) was compared to the sibling's 0.9707."""
+    from src.runtime import venue_protection_snapshot as vps
+    st = om._bybit_position_protection(_NettedClient(), "linear", "XRPUSDT")
+    cov = om._bybit_snapshot_cov(st, "short")
+    assert cov["stop_legs"] == [{"id": "sib-sl", "price": 0.9707, "book": "short"}]
+    kw = dict(order_package_id="pkg-own", account_id="bybit_2", direction="short", stop_prices=cov["stop_prices"],
+              stop_legs=cov["stop_legs"], position_size=cov["size"], ref_sl=0.95642857)
+    gone = vps.build_snapshot_row(own_sl_order_id="own-sl", **kw)       # own leg filled / not resting
+    assert gone["read_state"] == "could_not_look" and gone["read_reason"] == "own_leg_absent" and gone["venue_sl"] is None
+    sib = vps.build_snapshot_row(own_sl_order_id="sib-sl", **dict(kw, ref_sl=0.97067143))
+    assert sib["read_state"] == "measured" and sib["venue_sl"] == 0.9707
+    # no own id in the journal, or a read without per-leg ids: the nearest-to-package-stop pick is unchanged
+    assert vps.build_snapshot_row(own_sl_order_id=None, **kw)["read_state"] == "measured"
+    assert vps.build_snapshot_row(own_sl_order_id="own-sl", **dict(kw, stop_legs=None))["read_state"] == "measured"

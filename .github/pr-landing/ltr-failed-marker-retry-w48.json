@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "runtime_change",
+  "hold_text": "Wake planner: a posted ltr-wake marker entry whose evidence_state/packet_state is could_not_commit / could_not_build / evidence_conflict no longer counts as already posted (nor starts the per-package cooldown) once it is 10 minutes old, so the next poster pass rebuilds it and wakes a reviewer. Before this, a failed wake from either poster (18:33Z VM, 19:36Z Actions during the rows-branch 403 incident) suppressed that review for the cooldown or for good. No order path touched; both posters share plan(). Revert: git revert.",
+  "why": "Stop a failed packet commit from silently dropping a live review."
+}

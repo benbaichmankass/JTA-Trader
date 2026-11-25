@@ -117,10 +117,16 @@ slos:
     op: max
     threshold: 14            # cron 50 */6 + one missed cycle + scheduler lag
   research_ops_age_h:
-    what: "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day"
+    what: "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs ONCE a day at 14:47Z"
     diagnostic: true
     op: max
-    threshold: 8
+    # 8 -> 26 on 2026-11-25 (AUD-20261125-RESEARCH-OPS-CADENCE-CONTRADICTION). 8 h assumed the 4x/day pacing. Operator
+    # 2026-11-17, quoted in the research-ops routine prompt (trig_01CY11WsVqyuq6oqdU2eAa2e, cron '47 14 * * *'):
+    # "keep the routine on Sonnet at once a day". 26 = 24 h cadence + 2 h scheduler/lane lag. MEASURED: the newest
+    # pass records in comms/research/ops/ are 11-20 15:00Z, 11-21 15:25Z, 11-22 10:10Z + 16:30Z, 11-24 15:25Z, i.e.
+    # about one a day, so 8 h was red ~16 h of every day by construction. The threshold moved because the cadence
+    # changed, not to hide a miss: a pass that skips a whole day still breaches at 26 h.
+    threshold: 26
   research_ops_not_run:
     what: "steps the newest research-ops pass declared not_run"
     diagnostic: true

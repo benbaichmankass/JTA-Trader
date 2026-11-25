@@ -7143,3 +7143,705 @@ two_week_plan:
         waits_on: RQ-20261101-d1f3-07
         step: 'On the RQ-20261101-d1f3-07 verdict, move to the first untested family: exit (then regime_gating). Never repeat a family after a flat result (programme-review
           step 2). PLANNED, authored when its input result is read.'
+
+# ── PROGRAMME REVIEW 2026-11-25 (lane PROGRAMME-REVIEW-20261125): regroup of the 11-23 two-week plan; weeks 12-01 and 12-08. Gates this adds or changes: none.
+rollforward_2026_11_25:
+  schema: iteration-plan-2w/v1-regroup
+  regrouped: '2026-11-25'
+  weeks:
+  - w2026_12_01
+  - w2026_12_08
+  regroup_next: 2026-12-02 (Wednesday programme review)
+  derivation: DERIVED by lane PROGRAMME-REVIEW-20261125 from research/queue grading.verdict/status of each unit the 11-23 plan waited on, blocked_on
+    refs, and the lever map remaining families (iteration_orphans --legacy --json, 2026-11-25). A derived step is a routing instruction for research-ops,
+    not a unit; units are authored from it after the diagnosis.
+  subjects:
+    avax_pullback_2h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-008: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (symbol_set): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile
+        no re-sweep of a tested family.'
+      w2026_12_08: symbol_set sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - symbol_set
+    claude_desk:
+      state_2026_11_25: orphan (verdict indeterminate)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to exit (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the exit sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    e4_oi_shock_1h:
+      state_2026_11_25: covered (verdict fail)
+      w48_outcome: 'RQ-20261117-b3aa-06: blocked, blocked on scripts/research/desk_event_entry_replay.py'
+      w2026_12_01: Clear the blocker named on RQ-20261117-b3aa-06 (scripts/research/desk_event_entry_replay.py) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - exit
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    eth_pullback_2h:
+      state_2026_11_25: overdue (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261105-019: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    eth_pullback_prop_2h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-020: queued, last grade fail; RQ-20261106-019: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (symbol_set): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile
+        no re-sweep of a tested family.'
+      w2026_12_08: symbol_set sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - symbol_set
+    fade_breakout_4h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-021: queued; RQ-20261118-abab-05: done, last grade fail; RQ-20261118-abab-11: done, last grade fail; RQ-20261123-b4c1-01:
+        done, last grade pass'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    fvg_range_15m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-022: queued; RQ-20261118-abab-12: done, last grade pass'
+      w2026_12_01: 'A sweep PASSED (RQ-20261118-abab-12): a PASS from the walk-forward template is a LEAD; author its holdout read (symbol or
+        pre-development window) before any Tier-3 proposal.'
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    gdx_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-023: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    gld_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-024: queued, last grade pass'
+      w2026_12_01: 'Only non-config families remain (regime_gating, timeframe, symbol_set, session, sizing_vs_cost): the generator cannot reach
+        them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: regime_gating sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    htf_pullback_trend_2h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-026: queued, last grade fail; RQ-20261106-020: queued, last grade fail'
+      w2026_12_01: 'Every family has a reading: write the family-review record (research/family_reviews/, policy v3 lever_map) before any further
+        sweep.'
+      w2026_12_08: If the record shows no family with an edge at declared power net of cost across regimes, propose the retirement record to the
+        manager (Tier 3); otherwise sweep the family the record names. Never on an attempt count.
+      driver_row: 'none (authoring: research-ops)'
+      remaining_families: []
+    iaum_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-027: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - session
+      - sizing_vs_cost
+    ict_scalp_5m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-028: queued, last grade fail; RQ-20261118-abab-06: done, last grade pass'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+    ict_scalp_avax_5m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-029: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+    ict_scalp_eth_15m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-030: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    ict_scalp_mgc_15m:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-031: queued; RQ-20261118-abab-07: done, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    ict_scalp_sol_15m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-032: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    ict_scalp_sol_5m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-033: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+    ict_scalp_xrp_15m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-034: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    ict_scalp_xrp_5m:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261105-035: queued, last grade fail'
+      w2026_12_01: 'The weekly entry sweep was a harness no-op (identical arms graded FAIL): row RESEARCH-LEVER-ARM-NOOP voids it; no lever was
+        learned.'
+      w2026_12_08: First real sweep of entry once arms reach the harness (entry keys the ict_scalp harness can express, else the next family).
+      driver_row: RESEARCH-LEVER-ARM-NOOP
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+    ief_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-036: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (regime_gating, timeframe, symbol_set, session, sizing_vs_cost): the generator cannot reach
+        them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: regime_gating sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    iwm_trend_long_1d:
+      state_2026_11_25: covered (verdict indeterminate)
+      w48_outcome: 'RQ-20261105-037: queued, last grade indeterminate; RQ-20261106-021: queued, last grade indeterminate; RQ-20261118-abab-08:
+        queued'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - exit
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+    mes_trend_long_1d:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-001: queued, last grade indeterminate; RQ-20261106-022: queued, last grade indeterminate'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    mgc_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-002: queued, last grade fail; RQ-20261106-023: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    mgc_trend_1h:
+      state_2026_11_25: overdue (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-004: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - sizing_vs_cost
+    mhg_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-005: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    ml_entry_eq:
+      state_2026_11_25: covered (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261117-617c-04: blocked, blocked on RQ-20261117-c21d-06'
+      w2026_12_01: Clear the blocker named on RQ-20261117-617c-04 (RQ-20261117-c21d-06) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    ml_entry_v2:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261113-6d44-01: blocked, blocked on the ablation harness does not exist. ml_entry_levers.py has stack_unit (cumulative
+        S1..S3 on DEV folds only) and w1_unit'
+      w2026_12_01: Clear the blocker named on RQ-20261113-6d44-01 (the ablation harness does not exist. ml_entry_levers.py has stack_unit (cumulative
+        S1..S3 on DEV folds only) and w1_unit) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    qld_trend_long_1d:
+      state_2026_11_25: covered (verdict indeterminate)
+      w48_outcome: 'RQ-20261101-78fc-37: done, last grade pass; RQ-20261106-006: queued, last grade fail; RQ-20261118-abab-09: queued'
+      w2026_12_01: 'A sweep PASSED (RQ-20261101-78fc-37): a PASS from the walk-forward template is a LEAD; author its holdout read (symbol or
+        pre-development window) before any Tier-3 proposal.'
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - exit
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    qqq_pullback_1h:
+      state_2026_11_25: orphan (verdict pass_unconfirmed)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: 'Only non-config families remain (sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: sizing_vs_cost sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - sizing_vs_cost
+    qqq_trend_long_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-007: queued, last grade indeterminate'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - session
+      - sizing_vs_cost
+    scha_trend_long_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-008: queued, last grade indeterminate'
+      w2026_12_01: 'Only non-config families remain (timeframe, direction, session, sizing_vs_cost): the generator cannot reach them; blocked
+        on RESEARCH-LEVER-FAMILY-REACH. Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+    slv_pullback_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-009: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (regime_gating, timeframe, symbol_set, session, sizing_vs_cost): the generator cannot reach
+        them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: regime_gating sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    sol_pullback_2h:
+      state_2026_11_25: overdue (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-011: queued, last grade pass'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    splg_trend_long_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-012: queued, last grade indeterminate'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+    spy_pullback_1h:
+      state_2026_11_25: orphan (verdict fail)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    spy_trend_long_1d:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-013: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+    squeeze_breakout_4h:
+      state_2026_11_25: covered (verdict fail)
+      w48_outcome: 'RQ-20261106-014: queued; RQ-20261118-abab-10: done, last grade fail; RQ-20261118-abab-14: queued'
+      w2026_12_01: 'Only non-config families remain (regime_gating, timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked
+        on RESEARCH-LEVER-FAMILY-REACH. Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: regime_gating sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    tlt_pullback_1d:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-015: queued, last grade fail'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    trend_donchian:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-017: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+    trend_donchian_1h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-024: queued, last grade pass'
+      w2026_12_01: 'Every family has a reading: write the family-review record (research/family_reviews/, policy v3 lever_map) before any further
+        sweep.'
+      w2026_12_08: If the record shows no family with an edge at declared power net of cost across regimes, propose the retirement record to the
+        manager (Tier 3); otherwise sweep the family the record names. Never on an attempt count.
+      driver_row: 'none (authoring: research-ops)'
+      remaining_families: []
+    trend_donchian_ada_4h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-025: queued, last grade fail; RQ-20261113-f251-01: queued'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    trend_donchian_avax_4h:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-026: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: sizing_vs_cost sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - sizing_vs_cost
+    trend_donchian_eth:
+      state_2026_11_25: overdue (verdict indeterminate)
+      w48_outcome: 'RQ-20261106-027: queued, last grade pass'
+      w2026_12_01: 'A sweep PASSED (RQ-20261106-027): a PASS from the walk-forward template is a LEAD; author its holdout read (symbol or pre-development
+        window) before any Tier-3 proposal.'
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+    trend_donchian_eth_prop:
+      state_2026_11_25: overdue (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-029: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (timeframe): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH. Meanwhile
+        no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+    trend_donchian_sol:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261106-030: queued, last grade fail'
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+    trend_donchian_sol_4h:
+      state_2026_11_25: overdue (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-031: queued, last grade fail; RQ-20261113-f251-03: queued, last grade pass'
+      w2026_12_01: 'A sweep PASSED (RQ-20261113-f251-03): a PASS from the walk-forward template is a LEAD; author its holdout read (symbol or
+        pre-development window) before any Tier-3 proposal.'
+      w2026_12_08: Read the entry sweep; then timeframe once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+    trend_donchian_xrp_adx25:
+      state_2026_11_25: covered (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-034: queued, last grade fail; RQ-20261106-5b7a-03: queued'
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - session
+      - sizing_vs_cost
+    turtle_soup:
+      state_2026_11_25: covered (verdict indeterminate)
+      w48_outcome: 'RQ-20261118-abab-15: blocked, blocked on scripts/backtest_turtle_soup.py'
+      w2026_12_01: Clear the blocker named on RQ-20261118-abab-15 (scripts/backtest_turtle_soup.py) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to filter.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - filter
+      - regime_gating
+      - direction
+      - session
+      - sizing_vs_cost
+    uso_trend_1h:
+      state_2026_11_25: covered (verdict pass_unconfirmed)
+      w48_outcome: 'RQ-20261106-035: queued, last grade pass; RQ-20261118-abab-54: blocked, blocked on config/strategies.yaml::strategies.uso_trend_1h.long_only'
+      w2026_12_01: Clear the blocker named on RQ-20261118-abab-54 (config/strategies.yaml::strategies.uso_trend_1h.long_only) (owner on the units
+        blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - timeframe
+      - symbol_set
+      - direction
+      - sizing_vs_cost
+    xrp_pullback_2h:
+      state_2026_11_25: covered (verdict pass_unconfirmed)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: 'Only non-config families remain (timeframe, symbol_set, sizing_vs_cost): the generator cannot reach them; blocked on RESEARCH-LEVER-FAMILY-REACH.
+        Meanwhile no re-sweep of a tested family.'
+      w2026_12_08: timeframe sweep as soon as the row lands (first emit after it).
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - timeframe
+      - symbol_set
+      - sizing_vs_cost
+    tsmom-crypto:
+      state_2026_11_25: covered (verdict fail)
+      w48_outcome: 'RQ-20261117-617c-02: blocked, blocked on EDGE-HOLDOUT-READ-MODE'
+      w2026_12_01: Clear the blocker named on RQ-20261117-617c-02 (EDGE-HOLDOUT-READ-MODE) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - exit
+      - session
+    xsec-crypto:
+      state_2026_11_25: orphan (verdict fail)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to exit (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the exit sweep; then direction once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - exit
+      - direction
+      - session
+      - sizing_vs_cost
+    cost-levers-live-legs:
+      state_2026_11_25: orphan (verdict fail)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to entry (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the entry sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - entry
+      - exit
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+    tsmom-etf:
+      state_2026_11_25: covered (verdict indeterminate)
+      w48_outcome: 'RQ-20261117-617c-03: blocked, blocked on EDGE-HOLDOUT-READ-MODE'
+      w2026_12_01: Clear the blocker named on RQ-20261117-617c-03 (EDGE-HOLDOUT-READ-MODE) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to exit.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - exit
+      - filter
+      - timeframe
+      - direction
+      - session
+      - sizing_vs_cost
+    movement-capture:
+      state_2026_11_25: orphan (verdict fail)
+      w48_outcome: no unit was waited on in the 11-23 plan (orphan or authoring step)
+      w2026_12_01: The waited sweep is graded; the weekly emit must rotate to filter (untested, config-reachable). Check the next emit names it.
+      w2026_12_08: Read the filter sweep; then regime_gating once RESEARCH-LEVER-FAMILY-REACH lands.
+      driver_row: RESEARCH-LEVER-FAMILY-REACH
+      remaining_families:
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+    vol-premium-proxy:
+      state_2026_11_25: overdue (verdict fail)
+      w48_outcome: 'RQ-20261113-62e3-05: blocked, blocked on OPTIONS-IV-HISTORY-GAP'
+      w2026_12_01: Clear the blocker named on RQ-20261113-62e3-05 (OPTIONS-IV-HISTORY-GAP) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to exit.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - exit
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost
+    funding-carry:
+      state_2026_11_25: covered (verdict pass)
+      w48_outcome: 'RQ-20261101-d1f3-07: blocked, blocked on EDGE-HOLDOUT-READ-MODE'
+      w2026_12_01: Clear the blocker named on RQ-20261101-d1f3-07 (EDGE-HOLDOUT-READ-MODE) (owner on the units blocked_on).
+      w2026_12_08: Run the unblocked unit; on FAIL move to entry.
+      driver_row: blocked_on of the waited unit
+      remaining_families:
+      - entry
+      - exit
+      - filter
+      - regime_gating
+      - timeframe
+      - symbol_set
+      - direction
+      - session
+      - sizing_vs_cost

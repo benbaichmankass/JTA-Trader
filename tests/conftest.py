@@ -290,6 +290,22 @@ def _reset_intent_emission_debounce():
     _clear()
 
 
+# Per-leg placement backoff (IB-MGC-INACTIVE-1125) is process-lived state in
+# src.core.placement_backoff: a rejection streak in one test would put the same
+# (account, strategy, symbol, direction) leg into backoff for an unrelated later
+# test. Clear it around every test, import-free like its neighbours.
+@pytest.fixture(autouse=True)
+def _reset_placement_backoff():
+    def _clear() -> None:
+        mod = sys.modules.get("src.core.placement_backoff")
+        if mod is not None:
+            mod.reset_all()
+
+    _clear()
+    yield
+    _clear()
+
+
 # Bybit instrument-filter caches (tick size / lot bounds) are module state with a 2h TTL. A test
 # that hands the order path a MagicMock client stores that mock's attributes in them, and the next
 # test in the SAME PROCESS then fails with "conversion from MagicMock to Decimal is not supported".

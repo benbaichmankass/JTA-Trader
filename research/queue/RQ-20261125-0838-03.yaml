@@ -1,0 +1,131 @@
+id: RQ-20261125-0838-03
+title: 'eth_pullback_2h / sol_pullback_2h COST-SHARE iteration: gross edge survives but cost takes ~80% of gross at 2h; does the same leg at a 4h bar cut cost per
+  R enough to pass Stage 0 net?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: 'On ETHUSDT and SOLUSDT, 2020-06..2026-10, full cost stack, harness pullback family at the live params (== family defaults): does arm B at a 4h bar (same
+  live params) beat the 2h record of 0838-02 arm B by >= 0.05 R per trade pooled, with pooled n >= 88, pooled net R > 0 and >= 4 of 6 calendar folds net positive?'
+why_this_matters: 'lever map research/levers/eth_pullback_2h.yaml: n 83, net +1.39R, gross +6.76R, cost 5.38R = 79.5% of gross (verdict_hint: gross edge survives
+  cost); timeframe and symbol_set families are UNTESTED. Cost in R falls as the stop widens in price terms (cost_bps / stop_bps) and as the bar coarsens (fewer, larger
+  moves), so these two arms are the levers the diagnosis implicates. A PASS is a discovery (Stage-0 selection of 2 arms) for a confirmation on a disjoint window,
+  never a roster edit.'
+power:
+  expected_n: 90
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: a 4h bar halves signal count vs 2h, so ~80-170 over 2 symbols x ~6y; below 88 grades INDETERMINATE. d 0.3 at alpha 0.05 / power 0.8, pooled floor
+    88; below it grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261125-0838-03-PULLBACK-4H
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  rule: 'Registered 2026-11-25 before the run. The 4h arm B is graded absolutely by the Stage-0 pooled rule (pooled n >= 88, pooled net_r > 0, >= 4 of 6 calendar
+    folds net positive, >= half the powered cells pass, per-year / long-short robustness clause as 0838-02) AND compared to the 2h arm B of 0838-02 on the same window
+    by >= 0.05 R per trade (read from both records). PASS = selection, unconfirmed (one confirmation on a disjoint window follows). FAIL if the Stage-0 rule fails
+    with n >= floor: the timeframe lever does not rescue cost at 4h; next family is symbol_set. INDETERMINATE if pooled n < 88 (4h yields fewer trades: stated expected_n
+    60-110) or fewer than half the cells measured. Denominator across 0838-02/-03: 2 candidate arms.'
+  statistic: 'harness_stage0.py --family pullback: per cell and pooled net R/trade, per-fold, per-year, full cost stack by venue.'
+  pass_action: ONE confirmation unit on a disjoint window; then the Stage-0 evidence record for the leg (never a roster edit, Tier-3 the manager's).
+  fail_action: Record the stop-width response on research/levers/eth_pullback_2h.yaml; the 4h arm (0838-03) and symbol_set are the remaining untested families.
+  what_it_does_not_do: Edits no config or roster, places no order, promotes nothing; the live legs run unchanged.
+  min_n: 88
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: two live demo-floor 2h pullback legs whose cost share of gross is ~80%; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; the dispatcher's idle backends cannot hold it (no published-data shard
+    for these symbols); CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - ETHUSDT,SOLUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2330'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-22'
+  - --arm
+  - B=
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261125-0838-03-PULLBACK-4H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-0838-03
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- scripts/research/harness_stage0.py
+- RQ-20261010-353c-06
+- RQ-20261010-353c-10
+- RQ-20261011-8753-06
+- RQ-20261011-8753-08
+- AUTHOR-FLOOR-1022
+levers_declared:
+- name: timeframe
+  values:
+  - 2h
+  - 4h
+  hypothesised_effect: a coarser bar means fewer, larger moves so cost per R falls
+iteration:
+  subject: eth_pullback_2h
+  subject_kind: strategy_leg
+  from_result: lever map attribution (RQ-20261106-019 / comms/strategy_evidence/eth_pullback_2h.json)
+  verdict_read: pass_unconfirmed
+  diagnosis: 'gross +6.76R, cost 5.38R (79.5% of gross) on n 83 (2025-2026): the edge survives cost only by 1.39R and the loss of ~1.8R in 2025 shows it is fragile;
+    cost, not signal, is the binding term.'
+  search: 'timeframe family: 4h bar (the paired stop-width arm is 0838-02)'
+  attempt: 2
+  due_by: '2026-12-04'
+  map_entries:
+  - research/levers/eth_pullback_2h.yaml#attribution
+  - research/levers/eth_pullback_2h.yaml#levers
+practice_precedent: 'Execution cost is a first-order term: turnover and cost per unit risk are cut by slower signals or wider risk units before the signal is changed
+  (docs/reference/trading-and-model-practice-principles.md T3).'

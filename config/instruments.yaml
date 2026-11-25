@@ -276,7 +276,12 @@ instruments:
     contract_value_usd: 10.0    # 10 troy oz per contract
     max_leverage: 0             # no leverage cap (futures margin set by broker)
     display_name: "Micro Gold (COMEX/IB)"
-    ib: { sec_type: FUT, exchange: COMEX, currency: USD }
+    # roll_days_before_month / active_months (IB-MGC-INACTIVE-1125): physically
+    # delivered — IBKR refuses opening orders inside the delivery window (Error
+    # 201 on MGCZ6, 2026-11-25; first notice is the last business day of the
+    # prior month). Opening orders roll to the next active month (Feb/Apr/Jun/
+    # Aug/Oct/Dec) once the front month starts within 10 calendar days.
+    ib: { sec_type: FUT, exchange: COMEX, currency: USD, roll_days_before_month: 10, active_months: [2, 4, 6, 8, 10, 12] }
 
   # ------------------------------------------------------------------
   # MHG — Micro Copper futures via COMEX / Interactive Brokers (WS-A, 2026-06-02)
@@ -299,7 +304,9 @@ instruments:
     contract_value_usd: 2500.0  # 2,500 lb per contract
     max_leverage: 0             # no leverage cap (futures margin set by broker)
     display_name: "Micro Copper (COMEX/IB)"
-    ib: { sec_type: FUT, exchange: COMEX, currency: USD }
+    # Same physical-delivery roll as MGC (IB-MGC-INACTIVE-1125); active months
+    # Mar/May/Jul/Sep/Dec.
+    ib: { sec_type: FUT, exchange: COMEX, currency: USD, roll_days_before_month: 10, active_months: [3, 5, 7, 9, 12] }
 
   # ------------------------------------------------------------------
   # XAUUSD — spot gold vs USD via OANDA v20 (practice account first).

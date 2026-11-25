@@ -1,0 +1,125 @@
+# Authored 2026-11-25 by lane QUEUE-FILL-STANDING-W49 (Tier 1) from the 40-unit overdue diagnosis (attempt 2, pooled). Rule registered BEFORE the run; the author read only trade COUNTS of the emits, no outcomes. Gates this adds or changes: none.
+id: RQ-20261125-11d7-05
+title: 'POOLED ATTEMPT-2 for the 1d ETF/futures pullback_1d family: does pullback_frac_hi (x1.25 of each leg''s declared pullback_frac (0.4635/0.7725 for the 0.618 legs, 0.375/0.625
+  for mhg at 0.5)) beat the declared leg on the pooled paired read of 5 legs, where a single leg cannot resolve the effect?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+question: Across gdx_pullback_1d, iaum_pullback_1d, mgc_pullback_1d, slv_pullback_1d, mhg_pullback_1d (pooled n(A) ~267 from the kept arm emits of RQ-20261105-023, RQ-20261105-027, RQ-20261106-002,
+  RQ-20261106-009, RQ-20261106-005), is the paired per-entry net-R difference of pullback_frac_hi minus A >= 0.08 R per baseline trade with a month-block bootstrap CI lower bound > 0,
+  in >= 3 of 4 folds, with pooled maxDD <= 1.35x baseline?
+why_this_matters: 'The 5 weekly one-factor sweeps of this family each graded fail/indeterminate on one leg''s n (23-70 trades), below the n a single leg needs to resolve a 0.02-0.05
+  R/trade effect (pool_arm_diff.py header). Pooling the legs that carry the SAME lever is the design that can resolve it. Tested values: x0.75 / x1.25 of each leg''s declared pullback_frac
+  (0.4635/0.7725 for the 0.618 legs, 0.375/0.625 for mhg at 0.5). PASS gives a family-level Tier-3 declare PROPOSAL input (population redefinition needs its own pooled test, stated here);
+  FAIL closes THIS lever value for THIS pool and leaves the family and the other lever side open. Reads only committed arm emits: nothing is refetched, so it costs seconds, and it uses
+  no new data (the same trades the five sweeps already produced; stated, not hidden: this is a pooled re-read, not an independent sample).'
+power:
+  alpha: 0.05
+  basis: 'MEASURED n(A) per leg from the kept emits (latest run): pooled 267. MDE = 2.487*paired_sd/sqrt(n) is computed by the harness; if it exceeds the 0.08 bar the unit grades INDETERMINATE
+    (said, never graded as a fail).'
+  design: one_sample
+  effect_units: sd
+  expected_n: 267
+  feasibility:
+    accrual_basis: Re-reads committed arm emits; nothing accrues.
+    source: none
+  min_detectable_effect: 0.3
+  power: 0.8
+decision_rule:
+  id: RULERQ20261125-11d7-05
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: scripts/research/pool_arm_diff.py over --unit gdx_pullback_1d=RQ-20261105-023 --unit iaum_pullback_1d=RQ-20261105-027 --unit mgc_pullback_1d=RQ-20261106-002 --unit slv_pullback_1d=RQ-20261106-009
+    --unit mhg_pullback_1d=RQ-20261106-005, baseline A, candidate pullback_frac_hi, --bar 0.08 --min-n 150 --folds 4 --fold-majority 3 --dd-mult 1.35 --seed 20261125.
+  rule: 'Per the harness, thresholds fixed now: INDETERMINATE if any unit''s arm files are missing, pooled n(A) < 150, or the MDE exceeds 0.08. PASS iff pooled diff per baseline trade
+    >= 0.08 R AND the bootstrap CI lower bound > 0 AND fold wins >= 3 of 4 AND pooled maxDD <= 1.35x baseline. FAIL otherwise at pooled n >= 150 and MDE <= 0.08: this lever value is
+    closed for this pool; the family and the other value (lo) are NOT retired. The denominator for the family is 2 candidate values (Holm over the pair is reported). Thresholds are not
+    changed after any result.'
+  regime_robustness: Per-leg and per-year pooled diff table reported, not graded. Set before the run.
+  what_it_does_not_do: 'Edits no config or roster and places no order. Not an independent sample (re-reads the five sweeps'' emits); not a promotion case, and per-symbol results never
+    gate (operator 2026-11-04): a PASS is a population-level proposal input needing its own pooled test on fresh data.'
+compute: cpu_light
+value:
+  basis: planning weight for a pooled lever read on testing legs; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.15
+  usd_at_stake_per_month: 80
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: false
+  peak_memory_gb: 1.0
+  est_minutes: 3
+  why_runner: Reads committed arm emits only; no fetch, no trainer data; CPU only.
+  basis: Same module as RQ-20261025-d7e6-01 (30 min timeout, far over need).
+run:
+  command:
+  - python3
+  - scripts/research/pool_arm_diff.py
+  - --unit
+  - gdx_pullback_1d=RQ-20261105-023
+  - --unit
+  - iaum_pullback_1d=RQ-20261105-027
+  - --unit
+  - mgc_pullback_1d=RQ-20261106-002
+  - --unit
+  - slv_pullback_1d=RQ-20261106-009
+  - --unit
+  - mhg_pullback_1d=RQ-20261106-005
+  - --baseline
+  - A
+  - --candidate
+  - pullback_frac_hi
+  - --bar
+  - '0.08'
+  - --min-n
+  - '150'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-mult
+  - '1.35'
+  - --seed
+  - '20261125'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-11d7-05
+  timeout_minutes: 30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-023
+- RQ-20261105-027
+- RQ-20261106-002
+- RQ-20261106-009
+- RQ-20261106-005
+programme: P3
+practice_precedent: M4, M13 (docs/reference/trading-and-model-practice-principles.md); scripts/research/pool_arm_diff.py header (pooling is the design that reaches the effect floor)
+intervention_controls:
+  not_applicable: a pooled paired re-read of Stage-0 parameter-lever arms, not an in-trade action
+iteration:
+  subject: pullback_1d family (gdx_pullback_1d, iaum_pullback_1d, mgc_pullback_1d, slv_pullback_1d, mhg_pullback_1d)
+  subject_kind: strategy_leg
+  from_result: the five weekly sweeps RQ-20261105-023, RQ-20261105-027, RQ-20261106-002, RQ-20261106-009, RQ-20261106-005 (kept arm emits under comms/research/)
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-12-02'
+  diagnosis: 'Attempt 2 of the weekly one-factor sweeps (all dispatched 2026-11-20..23, graded fail/indeterminate, per-leg n(A) 23-70 vs the n a single leg needs). Same lever on five
+    legs of one family: pool, do not repeat per leg.'
+  search: pooled paired read of pullback_frac_hi; the other value and the remaining lever families (atr_stop_mult, tp_r, regime) are separate iterations.
+  levers:
+  - entry
+  map_entries:
+  - research/levers/gdx_pullback_1d.yaml
+  - research/levers/iaum_pullback_1d.yaml
+  - research/levers/mgc_pullback_1d.yaml
+  - research/levers/slv_pullback_1d.yaml
+  - research/levers/mhg_pullback_1d.yaml

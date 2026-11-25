@@ -125,6 +125,22 @@ Operator, 2026-11-06 ~19:35Z (Manager Session 2026-11-06a, popup "Holdout govern
 
 Gates this adds or changes: removes DSR as a promotion gate (operator decision above); adds none.
 
+### A number measured only over the grading window never promotes (operator, 2026-11-23, reconfirmed 2026-11-25, binding)
+
+<!-- GRADE-WINDOW-RULE-CANONICAL: the ONE statement of this rule. Other docs point here. -->
+
+**Gates this adds or changes:** none new. This states the operator's decision as a property every existing promotion bar must have: the holdout bar above, the live bar below, the ENTRY replacement rule (`RULE-ENTRY-PROMOTE-20261106`, Amendment 4) and every Stage-0 record. It changes which data a bar's number may come from. It adds no bar, threshold, floor or step, and changes no threshold. Row `PROMOTION-RULE-GRADE-WINDOW`.
+
+Operator, 2026-11-23, reconfirmed 2026-11-25, verbatim (relayed by Manager Session 2026-11-25a): *"Promotion-rule fix THIS WEEK: a number measured only over the grading window must not promote. Then re-grade ml_entry under the fixed rule; any promotion or demotion proposal goes to the operator."*
+
+1. **The rule.** A promotion or replacement is decided by a bar. The number that clears the bar must come from data **disjoint** from the window used to **choose** (select, tune, compare or grade) the thing being promoted. Three kinds of data qualify: a held-out span, an out-of-time span that comes after the choosing window, or live trades that come after the decision. A number measured only over the window that did the choosing may **choose**, but it never **promotes**. The record names both populations: the window that chose and the window that cleared the bar, each with its n and dates.
+2. **What it covers.** Choosing includes: picking params, tau, a lever arm or a symbol subset; comparing a candidate with the served artifact; and picking the better of several variants (the swap rule). The disjoint number is held to the same bar that path already has. The holdout pass, the live bar and "at least as good as served" each keep their own threshold.
+3. **Where it bites today** (inventory and re-grade: [`docs/research/promotion-rule-grade-window-2026-11-25.md`](../research/promotion-rule-grade-window-2026-11-25.md)):
+   - **The ENTRY replacement read** chose the candidate and promoted it on the same 14-day window. Fix: the candidate is chosen on the first half and must clear "at least as good as served" again on the second half, which is disjoint (`RULE-ENTRY-PROMOTE-20261106` Amendment 4, `scripts/research/ml_entry_candidate_grade.py`).
+   - **The swap rule** (live path, item 3) picks the better of two variants on the same live trades. The winner's live-bar pass must come from trades after that comparison, or from trades the comparison did not use.
+   - **Stage-0 records whose `param_selection_provenance` reads `not_established`** cannot show that their window is disjoint from the window the params were chosen on. A new promotion on such a record needs a disjoint re-measure, such as the leg's harness run on data after its params were last changed. Legs already on a real-money roster are not moved by this rule on its own. Each one gets a re-measure, and any demotion that follows goes to the operator.
+4. **Already compliant, unchanged.** TEMPLATE-cell discoveries confirm on a fresh window or a pre-registered holdout (`queue_grade.py`, operator 2026-10-16). Purged walk-forward folds with a sealed holdout that is read once under a ledger claim (`holdout_lock`) also qualify.
+
 ### Live-performance promotion path (operator, 2026-11-17, binding)
 
 **Gates this adds or changes: none. It adds a promotion path and removes friction.** The backtest path above (holdout pass on held-out data, net of the full cost stack, committed record) stays the primary, fast path and needs nothing from live. This is a SECOND way up.
@@ -146,6 +162,7 @@ Popup answers, 2026-11-17, verbatim:
    - A real-money roster change is still a Tier-3 act. It promotes on this record under the standing data-backed rule, with the operator notified at once.
 3. **The swap rule.** Operator ~16:29Z, verbatim: *"if, for example, it's a thing where like the ADA was on paper because it was 2 hours and we were keeping the 4 hours, but the 2 hours outperforming the 4 hours, then let the 2 hours take over instead of the 4 hours."*
    - When a demo-floor variant on the same symbol clears the live bar and beats the real-money variant on the same bar, the better variant **takes the slot**. It is a swap, not an add: the live one moves to the demo floor.
+   - The comparison chooses. The winner's live-bar pass must come from trades disjoint from the comparison (§ "A number measured only over the grading window never promotes", 2026-11-23).
    - The same-symbol and non-slice rules still apply.
 4. **This is not a soak and never a precondition.**
    - The soak stays MECHANICAL (1–2 clean trades, § "The soak is MECHANICAL").
