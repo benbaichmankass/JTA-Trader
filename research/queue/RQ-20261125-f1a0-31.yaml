@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-31
 title: 'ml_entry POSITIONING INPUTS: does adding open-interest change / z, long-short ratios and taker flow (Binance Vision daily metrics, as-of the
   bar close) to the registered recipe beat it by +0.0068 R/decision and beat the same columns timestamp-shuffled?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -133,3 +133,17 @@ related:
 - research/queue/RQ-20261124-f1a0-14.yaml
 - scripts/research/prop_ml_leg.py
 last_dispatched_at: '2026-11-25T05:50:48+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261125-f1a0-31/45550064744.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -7,7 +7,7 @@ id: RQ-20261124-f1a0-15
 title: 'REGIME-PROGRAM R4, regime-conditioned SIZING: do vol-parity weights per decision (clip(train-median BTC vol24 / BTC vol24 at the bar,
   0.5, 2), mean 1) keep net R per 1R deployed (non-inferior) while raising bar Sharpe and cutting bar max DD, on the SL 4 / TP 6 / 24 h refit,
   vs unweighted and vs permuted weights?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -132,3 +132,17 @@ related:
 - research/queue/RQ-20261124-e1a7-02.yaml
 not_before: '2026-11-25T04:00:00+00:00'
 last_dispatched_at: '2026-11-25T04:57:21+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-15/45547963303.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

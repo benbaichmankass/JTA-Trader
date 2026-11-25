@@ -3,7 +3,7 @@
 id: RQ-20261125-1e06-10
 title: 'CREDIT-STATE GATE for the capitulation trigger (2010-06-01..2026-10-22 (the evidence window)): kept only when the Baa-10y spread is at or below its trailing 252-day median,
   1x ETFs on the 1e06-07 pairs, graded POOLED (paired with RQ-20261125-1e06-11; both must pass)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -106,3 +106,14 @@ intervention_controls:
     sessions, same stop geometry, TP and cost), which is a rule clause here
 not_before: '2026-11-25T05:00:00+00:00'
 last_dispatched_at: '2026-11-25T05:50:52+00:00'
+grading:
+  attested: RULE-RQ-20261125-1e06-10
+  auto: true
+  decision_rule_id: RULE-RQ-20261125-1e06-10
+  evidence:
+  - research/results/RQ-20261125-1e06-10/45551046958.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
