@@ -26,6 +26,35 @@
   family-level AUC can come from leg base rates through the leg one-hots (the M23 P1 trap), so it is not evidence of a
   within-leg confidence signal (9d20-02 found none within leg).
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — MODEL track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P2 in the window:** 82 programmed units (9 pass, 29 fail, 37 indeterminate, 1 no-action, 6 ungraded) plus the unprogrammed ml_health (35) and regime (10) clusters assigned here.
+
+**The D-slot gap.** research-ops 11-24 found a next unit only for D1 (rule) and D4. Every slot D1–D10 now carries two weeks of written plan (weeks of 12-01 and 12-08) in `research/programmes/02-ai-trader.yaml` → `rollforward_2026_11_25.decision_steps`, and slots D2, D3, D5–D10 each have a planned node (`P2-PR1125-D*`, needs_authoring, owner ML-PRIMARY). The driver builds are named rows: **D7/D8 in-trade policy = ML-AM-NEXT-LIVE** (queued, due 11-12, overdue) with input TMBENCH-V2-TRAIN-INPUT (landed_unproven); **D9 fill model = MLP-D9-WHIPPET** (queued, due 11-19, overdue) with ML-D9-MAKER-EXIT-HARNESS.
+
+**What was learned**
+- **D2: the 15m-and-slower regime heads clear the class prior; the 5m BTC/ETH heads do not** (ef4c-01..08: 5 PASS, 2 FAIL, 1 IND; at 15m or slower 4 PASS + BTC 15m IND; at 5m SOL PASS, BTC and ETH FAIL). Clearing the prior is necessary, not edge; no head has a cost-net consumer read (bcd2-01 FAIL).
+- **D3: the long-side deficit is regime-shaped, not a label defect.** A static side gate failed across dev folds (d3a1-01) while the live deficit is ~7 se; two label variants (ATR-neutral c21d-06, gross-decomposed 7e18-02) moved nothing. Foxhound-4 lost its head-to-head (ef4c-09).
+- **D4: the setup meta-label's signal survives on measured rows but is underpowered at the take-rate floor** (3e98-01 IND: PASS on 1,053 measured+estimated, FAIL on 698 measured-only, LB −0.006, take rate 0.043).
+- **D7: the heads carry information; acting on them did not pay** (a9d1-01 Stage A PASS, 7e18-01 Stage B FAIL). The gap is the policy layer — that is ML-AM-NEXT-LIVE.
+- **D9: four limit-entry reads in two days, all INDETERMINATE** (f1a0-17/-21/-22/-27). Without a fill model, more arms on the same replay will not resolve fill-rate vs adverse selection.
+
+**Failed tests: diagnosis.** D3 side gate: *regime / window* (dev folds 2022-25 vs the Nov-2026 downtrend) over *design*; variant = trend-conditioned long side (P2-PR1125-D3-trend-conditioned-side). D6 ceiling FAIL: *idea headroom* — no static bracket beats the configured one on that leg; variant = the ceiling on two more legs before any model. D7 Stage B: *design* (no policy), variant = Stage B v2 through the policy. D9: *harness* (no fill model).
+
+**Answered:** D5 value-of-information clause (82fd-02 PASS: concurrency is material). **Retired:** none (the BTC 5m / ETH 5m regime heads are proposed for the retire list, Tier 3 manager via MLP-D2-REVIEW-HEADS).
+
+**Next 3–4 weeks** (value-ranked; full step text in the yaml)
+| # | Node / row | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | IPW-ML-ENTRY-SIDE-SPLIT + P2-PR1125-D3-trend-conditioned-side | trend-conditioned long filter on the live Foxhound-1 (Tier 3) | proposal | label family (side-neutral target) | runner + build | dev folds hold few aligned-down regimes |
+| 2 | ML-AM-NEXT-LIVE → P2-PR1125-D7-stageB-v2-policy | a new in-trade model beside Labrador-1b | Tier-3 candidate | feature-block unit | build | policy acts too often; close-only first |
+| 3 | MLP-D9-WHIPPET → P2-PR1125-D9-limit-entry-through-fill-model | post-only entries for ml_entry | Tier-3 order-type change | market entry stays | build | adverse selection eats the spread |
+| 4 | P2-PR1125-D2-survivors-as-d3-features | which D2 heads stay (as features) or retire | keep as D3 inputs | retire list | trainer | redundancy with the recipe's vol block |
+| 5 | P2-PR1125-D5-aggregator-vs-rules | replace the election rule | Tier 3 | keep slices | runner | correlated concurrent packages |
+| 6 | b18a-02 (queued) | Beagle learner reduce/annotate | proposal | features family | trainer | — |
+
+**Feeds:** TRADING → MODEL: the qqq/spy pullback direction finding (shorts lose gross on both) feeds the D3 side question; P1 partial/tighten reads are D7's static baselines. MODEL → TRADING: no head beat its consumer's prior net of cost this week, so no new gate.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — MODEL track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

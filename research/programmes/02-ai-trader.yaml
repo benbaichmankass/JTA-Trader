@@ -2425,6 +2425,120 @@ nodes:
       gate few trades (axis fidelity); first variant = the HAR-RV feature head (d5dd-17 PASS) as the label. Consumer: config/regime_policy.yaml
       trend_vol cells for the named legs (Tier 3).'
 
+  # ── Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125): the D-slot plan nodes ─────────────────────
+  # One node per decision slot that had no next unit at the 11-24 research-ops pass (D2, D3, D5-D10; D4 has b18a-02).
+  # needs_authoring only: the ML lane (ML-PRIMARY) or research-ops writes the unit body from the step text, since
+  # these slots are ML-owned. Build-gated slots carry `authoring_blocked:` naming the driver row. See rollforward_2026_11_25.
+  - id: P2-PR1125-D2-survivors-as-d3-features
+    goal: G4
+    theme: regime
+    roadmap: [L-REGIME, L-ML-LIVE]
+    value: {usd_at_stake_per_month: 150, confidence: 0.2}
+    after:
+    - {unit: RQ-20261112-ef4c-02, verdict: pass}
+    needs_authoring: 'D2 (Collie): the 5 regime heads that beat the class prior in ef4c-01..08 (BTC 1h yz, ETH 1h, ETH 15m, MES 1d,
+      SOL 5m) as FEATURES in the registered Foxhound D3 recipe, same folds, same cost stack. Decision it changes: which D2 heads stay
+      (as D3 inputs) and which go on the retire list (MLP-D2-REVIEW-HEADS, Tier 3 manager). PASS iff mean net R per decision improves
+      >= 0.02 R with day-clustered t >= 2 on dev folds and held-out not negative; FAIL: a head that fails as a feature and has no
+      consumer is retired. Pre-mortem: FAIL most likely because the D3 recipe already carries the vol features the heads summarise
+      (redundancy); first variant = residualise each head on the recipe''s own vol block. ml_consumer: ml_entry (Foxhound-1) on bybit_2
+      and its mirror; the decision changed is which features the next refit trains on.'
+  - id: P2-PR1125-D3-trend-conditioned-side
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE, L-LADDER]
+    value: {usd_at_stake_per_month: 400, confidence: 0.25}
+    after:
+    - {unit: RQ-20261123-d3a1-01, verdict: fail}
+    needs_authoring: 'D3 (Foxhound): the static side gate failed across dev folds (d3a1-01) while the live long deficit is ~7 se on the
+      graded window, which points at regime, not label. ONE arm: take longs only when the 4h trend is aligned (shorts unchanged) vs
+      both sides, registered recipe refit per dev fold, net of fee 11 bps + slippage 3 + funding. Decision it changes: whether the live
+      model gets a trend-conditioned long filter (Tier 3 on the live model) or the long deficit is left to the first-20-closes check of
+      IPW-ML-ENTRY-SIDE-SPLIT. PASS iff >= 0.05 R per decision over both-sides with clustered t >= 2 on dev folds, held-out deflated per
+      PLANNING 1d; FAIL closes the side family for this recipe and moves to the label family (side-neutral target). Pre-mortem: FAIL
+      most likely because dev folds 2022-2025 hold few aligned-down regimes, so the arm is under-powered; first variant = the same arm on
+      the pooled crypto population. ml_consumer: ml_entry on bybit_2 + bybit_portfolio.'
+  - id: P2-PR1125-D5-aggregator-vs-rules
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 150, confidence: 0.2}
+    after:
+    - {unit: RQ-20261114-82fd-02, verdict: pass}
+    needs_authoring: 'D5 (Mastiff): the concurrency census passed (82fd-02), so the value-of-information clause is met. A learned
+      position aggregator vs slices, 1/N and best-single on the pre-dev window, then the dev window with the fa22-06 robustness split.
+      Decision it changes: whether the election rule in allocator_ev.py / slice_allocation.yaml is replaced (Tier 3). PASS iff it beats
+      all three baselines net of cost in both windows; FAIL keeps slices and records the clause. Pre-mortem: FAIL most likely because
+      concurrent packages on the same symbol are highly correlated, so any rule that sizes the pair once captures the gain; first
+      variant = the best rule arm from 0104-08 as the baseline instead of A0. ml_consumer: the RiskManager slice split on bybit_2 /
+      bybit_portfolio.'
+  - id: P2-PR1125-D6-ceiling-two-legs
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE, L-AM-STANDARD]
+    value: {usd_at_stake_per_month: 100, confidence: 0.15}
+    after:
+    - {unit: RQ-20261122-b18a-03, verdict: fail}
+    needs_authoring: 'D6 (Pointer): the static-bracket ceiling failed on ada_pullback_2h (b18a-03): no static bracket beats the
+      configured one, so a learned bracket has no headroom there. Read the same ceiling on one trend leg (trend_donchian_eth_4h) and one
+      more pullback leg (xrp_pullback_2h), atr_stop_mult x tp_r grid, net of cost, 4 calendar folds. Decision it changes: whether any
+      learned-bracket unit is worth authoring (headroom exists) or D6 stays parked with this re-entry test. PASS iff some static cell
+      beats the configured bracket by >= 4 R over the window in >= 3 of 4 folds on either leg; FAIL on both parks the slot. Pre-mortem:
+      FAIL most likely because the configured brackets were themselves chosen on this history; first variant = the ceiling on a
+      held-out 2018-2020 window. ml_consumer: ml_entry / trend legs brackets on bybit_2 (Tier 3).'
+  - id: P2-PR1125-D7-stageB-v2-policy
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE, L-AM-STANDARD]
+    value: {usd_at_stake_per_month: 300, confidence: 0.2}
+    after:
+    - {unit: RQ-20261115-7e18-01, verdict: fail}
+    authoring_blocked: 'BUILD-GATED on ML-AM-NEXT-LIVE (the in-trade policy) and TMBENCH-V2-TRAIN-INPUT; author once both land.'
+    needs_authoring: 'D7 (Labrador): Stage A passed (a9d1-01: target and invalidation heads separate outcomes) but acting on them
+      (Stage B, 7e18-01) did not beat hold. Stage B v2 runs the a9d1-01 heads through the in-trade policy (tighten / partial / close)
+      against hold, the best static rule, the distance logit and matched-random, on the money legs, net of cost. Decision it changes:
+      whether a new in-trade model is a Tier-3 candidate beside Labrador-1b. PASS iff mean delta net R per trade >= 0.03 R vs hold AND
+      beats matched-random at the 95th percentile; FAIL goes to the feature-block unit (a state block not derived from R1). Pre-mortem:
+      FAIL most likely because the policy acts too often (cost of partials); first variant = close-only. ml_consumer: live_review
+      apply path on bybit_2 under MD-TRADE-DESK (advice-only until its own test passes).'
+  - id: P2-PR1125-D8-exit-now-powered
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 120, confidence: 0.15}
+    after: []
+    authoring_blocked: 'BUILD-GATED on ML-EXITHEAD-ROWS-KAGGLE (widened exit-head corpus); author only if the recount powers MDE <= 0.05 R.'
+    needs_authoring: 'D8 (Labrador exit): one exit-now unit on the widened pooled donchian-4h corpus with a matched-random-exit control,
+      out of sample, net of cost. Decision it changes: whether a learned exit-now head replaces Labrador-2 on the demo leg and becomes a
+      Tier-3 candidate. PASS iff delta net R per trade >= 0.05 R vs the declared exit and beats matched-random at the 95th percentile;
+      FAIL keeps D8 riding D7 Stage B. Pre-mortem: FAIL most likely because exits on trend legs give back little before the trail
+      fires (low headroom); first variant = restrict to trades whose MFE >= 2R. ml_consumer: trend_donchian legs exit_head_model on
+      bybit_1 (demo) then bybit_2.'
+  - id: P2-PR1125-D9-limit-entry-through-fill-model
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-MECE, L-ML-LIVE]
+    value: {usd_at_stake_per_month: 200, confidence: 0.2}
+    after: []
+    authoring_blocked: 'BUILD-GATED on MLP-D9-WHIPPET (the fill model: queue position / trade-print fills for post-only orders). The four
+      limit-entry reads f1a0-17/-21/-22/-27 were all INDETERMINATE on a replay with no fill model; no further limit arm until it lands.'
+    needs_authoring: 'D9 (Whippet): re-run the paired limit-entry design (f1a0-21) on exactly the refit''s market-entry decisions through
+      the fill model. Decision it changes: whether ml_entry orders go post-only with market fallback (Tier 3 order-type change). PASS iff
+      net R per decision >= market entry + 0.02 R with clustered t >= 2 and the missed-fill cost counted; FAIL keeps market entry.
+      Pre-mortem: FAIL most likely because adverse selection on filled limits eats the spread saved; first variant = limit at 0.25 ATR.
+      ml_consumer: ml_entry order type on bybit_2.'
+  - id: P2-PR1125-D10-count
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-MECE]
+    value: {usd_at_stake_per_month: 30, confidence: 0.1}
+    after: []
+    needs_authoring: 'D10 (Basset): a count, not a model. Blind-graded closes per leg family in comms/claude_strategy_scores.jsonl and a
+      Bernoulli CUSUM on R as the baseline. Decision it changes: whether the grade-vs-CUSUM join (a monitoring read, never a gate) is
+      worth authoring. PASS iff >= 100 blind-graded closes in >= 2 leg families; FAIL parks the slot with the count as its re-entry test.
+      Pre-mortem: FAIL most likely because most grades are not blind (graded after the outcome); first variant = count only grades
+      written before close. ml_consumer: none yet by design (monitoring read); named so the guard sees an explicit null.'
+
 # ── Two-week iteration plan (lane ITERATION-PLAN-2W-20261123, 2026-11-23) ─────────────────────────────
 two_week_plan:
   schema: iteration-plan-2w/v1
@@ -2850,3 +2964,94 @@ two_week_plan:
     D3_point_in_time_macro_builder: 'build row (Thursday list): macro features for D3 entry models wait on it; no macro-feature unit is authored before it lands'
   decision_steps_note: Reasoned 2026-11-23 (lane ITERATION-PLAN-2W-20261123, task 2) from docs/plans/ml-dev-plan.yaml lines (stage, levers_ahead, exhaustion) and
     the live-close reads in the xrp/ml-entry entries. W48/W49 per line live in the ml-dev-plan; this table adds the path to a live model and the dependency.
+
+# ── PROGRAMME REVIEW 2026-11-25 (lane PROGRAMME-REVIEW-20261125): regroup of the 11-23 two-week plan ─────────────
+# The 11-23 plan covered weeks 2026-11-24 and 2026-12-01 and regrouped here. This block records what week 1 produced
+# (graded verdicts read from research/queue/*.yaml grading.verdict on 2026-11-25) and extends every decision slot one
+# more week (2026-12-08), so each slot carries two weeks of written plan ahead of Thursday planning. Planning only:
+# no unit is authored here for a slot the ML lane owns (ML-PRIMARY coordinated by send_message 2026-11-25); planned
+# units are authored by their owner (ML-PRIMARY) or research-ops from the step text. Gates this adds or changes: none.
+rollforward_2026_11_25:
+  schema: iteration-plan-2w/v1-regroup
+  regrouped: '2026-11-25'
+  weeks: [w2026_12_01, w2026_12_08]
+  regroup_next: '2026-12-02 (Wednesday programme review)'
+  decision_steps:
+    D1:
+      w48_outcome: 'No model by design. The census query (ML-LINE-S1-CORPUS, landed_unproven) has no committed count yet.'
+      w2026_12_01: 'Run the ML-LINE-S1-CORPUS count of legs with a committed Stage-0 record on one cost basis.'
+      w2026_12_08: 'If the panel carries >= 30 legs, write the leg-selector design (selector vs current roster vs 1/N, net of cost); else record the count and leave the slot parked.'
+      owner: ML-PRIMARY
+      driver_row: ML-LINE-S1-CORPUS
+      next_unit: none (by design; the census is a row step)
+    D2:
+      w48_outcome: 'Bake-offs RQ-20261112-ef4c-01..08 graded: 5 PASS vs the class prior (BTC 1h yz, ETH 1h, ETH 15m, MES 1d, SOL 5m), 2 FAIL (BTC 5m, ETH 5m), 1 INDETERMINATE (BTC 15m). Classifier quality only; no head has a cost-net consumer read (bcd2-01 FAIL 11-14).'
+      belief: 'The 5m regime heads do not beat the prior on BTC and ETH (2 of 2 FAIL) while SOL 5m does; at 15m or slower 4 heads PASS and BTC 15m is INDETERMINATE. A head clearing the prior is necessary, not edge.'
+      w2026_12_01: 'Keep list = the 5 PASS heads; the BTC 5m and ETH 5m heads go on the retire list (Tier-3 call for the manager, MLP-D2-REVIEW-HEADS). Planned node P2-PR1125-D2-survivors-as-d3-features (below).'
+      w2026_12_08: 'Run the survivor-as-feature read: the 5 kept heads as features in the Foxhound D3 recipe on the same folds; PASS iff mean net R per decision improves >= 0.02 R with clustered t >= 2 on dev folds. A head that fails as a feature AND has no consumer is retired, never re-pointed again.'
+      owner: ML-PRIMARY
+      driver_row: MLP-D2-REVIEW-HEADS
+      next_unit: planned node P2-PR1125-D2-survivors-as-d3-features
+    D3:
+      w48_outcome: 'Side gate RQ-20261123-d3a1-01 FAIL (taking one side only per dev fold does not beat both sides); Foxhound-4 head-to-head ef4c-09 FAIL; decomposed gross score 7e18-02 INDETERMINATE; ATR-neutral target c21d-06 FAIL.'
+      belief: 'The live long-side deficit is real on the graded window (11-23 evidence, ~7 se) but a static side gate does not generalise across dev folds, so it is regime-specific (the Nov-2026 downtrend) more likely than a label defect. Two label variants (ATR-neutral, gross-decomposed) moved nothing.'
+      w2026_12_01: 'Build IPW-ML-ENTRY-SIDE-SPLIT (queued, due 12-01): the by-side-by-fold report plus the first-20-closes demotion check on the live model. Read the first-20 trigger.'
+      w2026_12_08: 'Trend-conditioned side (long only with 4h trend aligned) as ONE arm against both-sides on the same folds; this is the regime hypothesis the static gate could not test. Planned node P2-PR1125-D3-trend-conditioned-side.'
+      owner: ML-PRIMARY
+      driver_row: IPW-ML-ENTRY-SIDE-SPLIT
+      next_unit: planned node P2-PR1125-D3-trend-conditioned-side
+    D4:
+      w48_outcome: 'Setup meta-label 3e98-01 INDETERMINATE: PASS on measured+estimated (n 1,053), FAIL on measured-only (n 698: LB -0.0061, take rate 0.043 < 0.05). Beagle LEARNER blind holdout b18a-02 queued.'
+      belief: 'The selection signal survives on measured rows (beats take-all and take-none); what fails is power at the take-rate floor. The binding input is the measured share of the paper book, not the model.'
+      w2026_12_01: 'Grade b18a-02 (queued). Re-read 3e98-01 on measured rows only once the paper book adds >= 300 measured rows (its registered INDETERMINATE action).'
+      w2026_12_08: 'On a b18a-02 PASS: reduce/annotate proposal for its population (Tier 3, manager). On FAIL: close meta-label on catalog features for the TD family and move to the features family (FRONTIER-Q-METALABEL-SIZE stays unauthored until a pass).'
+      owner: ML-PRIMARY
+      driver_row: ML-KEEP-ITERATION-COVERAGE
+      next_unit: RQ-20261122-b18a-02 (queued)
+    D5:
+      w48_outcome: 'Concurrency census 82fd-02 PASS (concurrency is material on the real-money pairs); rule-arm pre-dev read 0104-08 PASS; robustness read fa22-06 INDETERMINATE.'
+      belief: 'The value-of-information clause is met: concurrent same-(account, symbol) packages are frequent enough that aggregation matters. Rule arms beat the election rule pre-dev but not robustly.'
+      w2026_12_01: 'Author the learned-aggregator unit against slices, 1/N and best-single on the pre-dev window (planned node P2-PR1125-D5-aggregator-vs-rules).'
+      w2026_12_08: 'Read it on the dev window with the fa22-06 robustness split; a PASS on both windows is a Tier-3 proposal to replace the election rule; a FAIL keeps slices and records the clause.'
+      owner: ML-PRIMARY
+      driver_row: 'none needed (harness exists, allocator_ev.py)'
+      next_unit: planned node P2-PR1125-D5-aggregator-vs-rules
+    D6:
+      w48_outcome: 'Pointer ceiling b18a-03 FAIL (no static entry bracket on ada_pullback_2h beats the configured one); b18a-04 FAIL.'
+      belief: 'If no static bracket beats the configured one in-sample, a learned bracket has no headroom on that leg; the ceiling must be read on a leg where static brackets differ before any model is built.'
+      w2026_12_01: 'Write the Pointer v0 / move-extent / ceiling failure diagnosis into ML-FS-BRACKETS-HOLD (blocked, owner manager) so the bracket design starts from it.'
+      w2026_12_08: 'Ceiling read on two more legs (one trend, one pullback) before any learned-bracket unit: if no leg has static headroom, the slot stays parked with that re-entry test.'
+      owner: ML-PRIMARY
+      driver_row: ML-FS-BRACKETS-HOLD (blocked; unblock owner = manager)
+      next_unit: planned node P2-PR1125-D6-ceiling-two-legs
+    D7:
+      w48_outcome: 'Action-value Stage B 7e18-01 FAIL on the money legs; AM v2 stage A a9d1-01 PASS (target and invalidation heads separate outcomes). Labrador-1b stays live, value unverified.'
+      belief: 'Stage A heads carry information but acting on them (Stage B) did not beat hold after cost; the policy layer, not the heads, is the gap. That is the in-trade policy build.'
+      w2026_12_01: 'Driver build ML-AM-NEXT-LIVE (queued, due 11-12, overdue): the in-trade policy that turns the a9d1-01 heads into tighten / partial / close actions with a matched-random control. TMBENCH-V2-TRAIN-INPUT (landed_unproven) is its input.'
+      w2026_12_08: 'Stage B v2 on the a9d1-01 heads through the policy, graded against hold, best static rule and matched-random; a FAIL goes to the feature-block unit (a state block that is not R1-derived).'
+      owner: ML-PRIMARY
+      driver_row: ML-AM-NEXT-LIVE (in-trade policy) + TMBENCH-V2-TRAIN-INPUT
+      next_unit: planned node P2-PR1125-D7-stageB-v2-policy
+    D8:
+      w48_outcome: 'Rides D7: the close arm of Stage B failed with it (7e18-01 FAIL). ML-EXITHEAD-ROWS-KAGGLE in flight (due 11-25).'
+      belief: 'A learned exit-now head is not powered on the pooled donchian-4h population (n <= 720 OOS, MDE ~0.08 R) unless the Kaggle-published rows widen it.'
+      w2026_12_01: 'Land ML-EXITHEAD-ROWS-KAGGLE; recount OOS trades on the widened corpus.'
+      w2026_12_08: 'If the widened corpus powers MDE <= 0.05 R, author one exit-now unit with a matched-random-exit control; else name the data that would power it and keep the slot on D7 Stage B.'
+      owner: ML-PRIMARY
+      driver_row: ML-EXITHEAD-ROWS-KAGGLE + ML-AM-NEXT-LIVE
+      next_unit: planned node P2-PR1125-D8-exit-now-powered
+    D9:
+      w48_outcome: 'Active: real-money cost basis b18a-01 INDETERMINATE; ml_entry limit-entry series f1a0-17/-21/-22/-27 all INDETERMINATE (paired limit, limit+fallback, learned order choice). Maker exit harness ML-D9-MAKER-EXIT-HARNESS queued (due 11-24).'
+      belief: 'Four limit-entry reads in two days all INDETERMINATE: fill-rate x adverse-selection is unresolved because the replay has no fill model; more arms on the same replay will not resolve it.'
+      w2026_12_01: 'Driver build = the fill model (MLP-D9-WHIPPET: a queue-position / trade-print fill model for post-only orders) plus ML-D9-MAKER-EXIT-HARNESS. No further limit-entry arm until the fill model exists.'
+      w2026_12_08: 'Re-run the paired limit-entry read (f1a0-21 design) through the fill model; PASS iff net R per decision >= market entry + 0.02 R with clustered t >= 2.'
+      owner: ML-PRIMARY
+      driver_row: MLP-D9-WHIPPET (fill model) + ML-D9-MAKER-EXIT-HARNESS
+      next_unit: planned node P2-PR1125-D9-limit-entry-through-fill-model
+    D10:
+      w48_outcome: 'Parked; the count query was not defined in week 1 (no unit or row matched).'
+      w2026_12_01: 'Define the blind-graded-closes-per-leg-family count and the Bernoulli CUSUM baseline (planned node P2-PR1125-D10-count).'
+      w2026_12_08: 'Run the count; below the floor the slot stays parked; at the floor, author the grade-vs-CUSUM join (monitoring read, never a gate).'
+      owner: ML-PRIMARY
+      driver_row: none (CJ-4 label hazard fix named in the 11-23 plan has no checklist row; see record handoff)
+      next_unit: planned node P2-PR1125-D10-count

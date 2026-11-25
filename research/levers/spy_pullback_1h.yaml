@@ -123,8 +123,22 @@ levers:
         max_drawdown_r: 17.2876
         verdict: pass
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261124-bd30-05
+        window: 2018-06-01..2020-06-30
+        n: 52
+        net_r: 14.0773
+        baseline_n: 92
+        baseline_net_r: 10.9496
+        delta_net_r: 3.1277
+        folds_ge_baseline: 2/3
+        max_drawdown_r: 9.1189
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 3
+      points: 4
       best_delta_r_per_trade: 0.0449
       fold_stability: 0.667
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'

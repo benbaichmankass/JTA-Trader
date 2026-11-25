@@ -21,6 +21,23 @@ programmes' shape: most open nodes wait on predecessors (W47b's measurement), an
 | P1 | P2 | new_peak is the informative in-trade trigger across three action classes: a candidate event feature for the D7 in-trade head | ML lane | told in the handoff |
 | P1 | desk | level-break fade, small edge, clustered firings | DESK-ENTRY-REVIEW-REDESIGN (decluster build) | blocked node |
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125)
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5.
+
+**Two tracks.** *TRADING:* the loop runs (378 units authored in 7 days, 79% cite a parent or map) but learns on few legs — 39 of 57 testing legs are overdue because the weekly generator re-sweeps families it can already vary and cannot reach timeframe / symbol_set / sizing / session / regime / direction; 8 legs' sweeps were no-ops graded FAIL. Two build rows (RESEARCH-LEVER-ARM-NOOP, RESEARCH-LEVER-FAMILY-REACH) are the highest-leverage TRADING work this week. *MODEL:* every decision slot D1–D10 has two weeks of written plan; the binding constraints are three builds (ML-AM-NEXT-LIVE in-trade policy for D7/D8, MLP-D9-WHIPPET fill model for D9, IPW-ML-ENTRY-SIDE-SPLIT for D3), not authoring.
+
+**Feed table (changes this week)**
+| From | To | What | Destination | State |
+|---|---|---|---|---|
+| P3 | P2 | shorts lose gross on qqq and spy pullbacks | P2-PR1125-D3-trend-conditioned-side | planned |
+| P1 | P2 | partial-close / tighten reads as static baselines | P2-PR1125-D7-stageB-v2-policy | planned (build-gated) |
+| P2 | P1 | D7 Stage B v2 policy actions | ltr classes on MD-TRADE-DESK | waits on ML-AM-NEXT-LIVE |
+| P3 | P6 | no-op armed results graded FAIL | RESEARCH-LEVER-ARM-NOOP + an armed-result hygiene unit | row filed |
+| P3 | P7 | timeframe untested on 34 of 39 overdue legs | RESEARCH-LEVER-FAMILY-REACH | row filed |
+| P8 | manager | 2 real-money legs fail measured-cost reprice | ALPACA-LIVE-COST-REPRICE-FAIL | Tier-3 decision |
+| P4 | P2 | event-class weights (a5b3-02 PASS) | D3 feature candidate | handoff |
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118)
 
 Record: [`comms/research/programme_review/20261118.json`](../../../comms/research/programme_review/20261118.json). Population: 2,528 units, 1,044 result rows in the 7-day window, 428 units with rows (256 unprogrammed, assigned in the record). Last week's calls: 3 hit / 3 miss (Brier 0.232).

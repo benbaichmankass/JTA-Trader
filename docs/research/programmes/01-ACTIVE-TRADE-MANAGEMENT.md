@@ -199,6 +199,28 @@ p 1e-4) below the +0.15 R bar, and half the firings are clustered. The `--declus
 **Grader fix:** exit_lever_ablation's replace grade now returns INDETERMINATE / lever_never_fired when every arm reproduces A.
 abab-47 was a dead lever graded FAIL.
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P1 in the window:** 49 programmed units (12 pass, 35 fail, 2 indeterminate).
+
+**What was learned**
+- **Dev-fold LTR wins did not survive out of sample this week, on both reads.** tp-pull-in@new_peak (dev 5 of 6 folds, maxDD −43%) FAILED its holdout (RQ-20261119-020); the breakeven+0.25R tighten fired after momentum failed FAILED (c8e1-01). One class, one lever, two windows each: the belief is that *timing* is the untested and likely binding family for 5 of 7 LTR classes, not that the actions are useless.
+- **Two classes cannot be read at all**: widen_sl and tp_extend (ed2b-02/-04) wait on a continuation (past-the-recorded-exit) replay that has no owner row; both overdue since 11-20.
+
+**Failed tests: diagnosis.** tp-pull-in holdout FAIL: rivals are *regime / window* (dev folds concentrated in 2024-25) and *noise* (one cell selected from several, best-of-k); the first variant is a fold-date + TP-hit-share read, then a timing variant — never a re-run of the cell. tighten iteration 3 FAIL: *design* (the momentum-failure trigger fires late, after most giveback), variant = fixed bars-in-trade timing with a matched-random-time control.
+
+**Answered:** none. **Retired:** none. **Orphans:** 5 LTR classes (close, partial_close, sl_to_structure, tp_pull_in, tighten_sl) get a written first design in `rollforward_2026_11_25`; authoring is research-ops'.
+
+**Next 3–4 weeks** (two weeks written per class in `research/programmes/01-active-trade-management.yaml` → `rollforward_2026_11_25`)
+| # | Test | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | Continuation replay for widen_sl / tp_extend (harness gap on ed2b-02) | whether two LTR classes can be graded at all | run ed2b-02/-04 | — | build | nobody owns the harness, so it stays blocked another week |
+| 2 | ltr-tighten-sl iteration 4: timing grid vs momentum trigger | MD-TRADE-DESK tighten class rule | holdout read | family-review record for the class | runner | the timing grid tracks the same bars the trigger did |
+| 3 | ltr-tp-pull-in diagnosis, then timing variant | whether the pull-in lever is regime-bound | timing unit | class parked with re-entry test | runner | the dev PASS came from one regime |
+| 4 | ltr-partial-close first design (TM-BENCH v2) | static baseline for D7 Stage B v2 | feeds D7 | feeds D7 | runner | partials pay cost twice |
+
+**Feeds:** P1 → P2: partial-close and tighten reads are the static-rule baselines for P2-PR1125-D7-stageB-v2-policy. P3 → P1: none new this week.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

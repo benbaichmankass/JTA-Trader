@@ -4,6 +4,12 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P7 in the window:** no unit carries programme P7. The timeframe question now lives in the iteration loop: **timeframe is the most common untested family across overdue testing legs (34 of 39)**, and the weekly generator cannot reach it (row RESEARCH-LEVER-FAMILY-REACH). That row is P7's driver build; until it lands, P7 has no runnable instrument for per-leg timeframe sweeps.
+
+**Next 3–4 weeks:** the first emitted timeframe sweeps after RESEARCH-LEVER-FAMILY-REACH lands (avax_pullback_2h, trend_donchian_eth_prop, trend_donchian_eth: one remaining family each) — they decide whether a leg's timeframe is a lever at all; pre-mortem: per-arm resampling changes the trade count enough that arms are not paired.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

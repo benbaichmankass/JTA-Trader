@@ -1,0 +1,690 @@
+{
+ "run": "PROGRAMME-REVIEW-2026-11-25",
+ "finished_at": "2026-11-25T18:40Z",
+ "by": "session_01AFoLuNNDuAoybFeX6bDEM8 (lane PROGRAMME-REVIEW-20261125, dispatched by Manager Session 2026-11-25a session_01AFoLuKKEyjyRMDSxQ1prHf)",
+ "population": "research_ops_checks.py --kind programme_review --since 7d at 2026-11-25T18:25Z: 2,906 units (0 unreadable), 953 result rows, 534 units with rows (142 pass / 261 fail / 78 ind / 2 no-action / 19 ungraded); 312 carry a programme, 222 do not (assigned: live_strategy 161 -> P3, ml_health 35 + regime 10 -> P2, infra 11 -> P6, new_strategy_prop 3 -> P5, 2 no theme).",
+ "prior_calls_scorecard": [
+  {
+   "call": "At least 3 of the 4 trend_donchian_1h DS twin units PASS",
+   "p": 0.3,
+   "track": "TRADING",
+   "check_rerun": "grep -l 'P3-RP1119-trend-donchian-1h-ds' research/queue/RQ-202611*.yaml | xargs grep -h -A3 '^grading:'",
+   "outcome": "miss",
+   "why": "1 of 4 DS twins PASS (RQ-20261119-004 ETH); 003/005/006 FAIL",
+   "action_happened": true
+  },
+  {
+   "call": "The top-vol skip passes on at least 3 of spy/qqq/iwm/qld_trend_long_1d",
+   "p": 0.25,
+   "track": "TRADING",
+   "check_rerun": "grep -l 'P3-RP1119-trend-long-family-vh' research/queue/RQ-202611*.yaml | xargs grep -h -A3 '^grading:'",
+   "outcome": "miss",
+   "why": "2 of 4 PASS (024 iwm, 026 qqq); 025 qld, 027 spy FAIL; pre-dev 010 FAIL",
+   "action_happened": true
+  },
+  {
+   "call": "ltr-tp-pull-in@new_peak PASSES on the real-TP holdout corpus",
+   "p": 0.35,
+   "track": "TRADING",
+   "check_rerun": "grep -l 'P1-RP1119-ltr-tp-pull-in-newpeak-realtp' research/queue/RQ-202611*.yaml | xargs grep -h -A3 '^grading:'",
+   "outcome": "miss",
+   "why": "RQ-20261119-020 FAIL",
+   "action_happened": true
+  },
+  {
+   "call": "P3-ITER-qqq-pullback-1h-session-holdout grades PASS",
+   "p": 0.3,
+   "track": "TRADING",
+   "check_rerun": "python3 scripts/research/queue_replenish.py --programme-state | grep -A3 P3-ITER-qqq-pullback-1h-session-holdout, then the emitted unit's grading.verdict",
+   "outcome": "hit",
+   "why": "RQ-20261118-001 PASS",
+   "action_happened": true
+  },
+  {
+   "call": "RQ-20261111-207f-01 lands a row with read_state measured",
+   "p": 0.75,
+   "track": "MODEL",
+   "check_rerun": "cat research/results/RQ-20261111-207f-01/*.jsonl | python3 -c \"import sys,json;print([json.loads(l)['read_state'] for l in sys.stdin])\"",
+   "outcome": "hit",
+   "why": "rows 2 and 3 read_state measured (row 1 producer_failed)",
+   "action_happened": true
+  },
+  {
+   "call": "RQ-20261117-c21d-06 (ATR-neutral target) grades PASS",
+   "p": 0.25,
+   "track": "MODEL",
+   "check_rerun": "grep -A12 '^grading:' research/queue/RQ-20261117-c21d-06.yaml",
+   "outcome": "miss",
+   "why": "RQ-20261117-c21d-06 FAIL (call was p 0.25 on PASS; outcome as the probability favoured)",
+   "action_happened": true
+  },
+  {
+   "call": ">= 20 queue units cite PROGRAMME-REVIEW-2026-11-18 (the handed spec list) by the next review",
+   "p": 0.5,
+   "track": "TRADING",
+   "check_rerun": "grep -l 'PROGRAMME-REVIEW-2026-11-18' research/queue/RQ-2026111[89]*.yaml research/queue/RQ-2026112*.yaml | wc -l",
+   "outcome": "miss",
+   "why": "registered command counts 1; but 53 units in RQ-20261118..25 cite the spec list by other spellings (20261118-unit-specs): the action happened, the check was mis-keyed",
+   "action_happened": true
+  },
+  {
+   "call": "kaggle_cpu has >= 1 due unit at the next review's runway read",
+   "p": 0.6,
+   "track": "INFRA",
+   "check_rerun": "the runway method in checks.runway_per_backend (dispatch_queue.due_within + compute_router.plan)",
+   "outcome": "unresolved",
+   "why": "runway read (dispatch_queue.due_within + compute_router.plan) not run by this lane; could_not_look",
+   "action_happened": false
+  },
+  {
+   "call": "ML-EXITHEAD-ROWS-KAGGLE reaches done",
+   "p": 0.2,
+   "track": "MODEL",
+   "check_rerun": "python3 scripts/ops/work.py get ML-EXITHEAD-ROWS-KAGGLE",
+   "outcome": "miss",
+   "why": "ML-EXITHEAD-ROWS-KAGGLE state in_flight (due 2026-11-25)",
+   "action_happened": true
+  }
+ ],
+ "prior_calls_summary": "9 calls: 2 hit, 6 miss, 1 unresolved. Mean p 0.38 vs hit rate 2/8 resolved. Calibration error is concentrated in TRADING confirmation calls (3 of 3 missed at p 0.25-0.35): single-symbol leads were over-trusted to travel.",
+ "followthrough": "review_followthrough.py --source programme-review --window-days 7: oldest open MOMENTUM-LEVERS-PARITY 32d landed_unproven, ML-HEALTH-BUILDS-1027 31d, P3-STRATEGY-PROGRAMME 24d, P4-MACRO-PROGRAMME 24d (landed_unproven), DATA-CATALOG 24d queued. All have owners; none killed here (scheduling is the manager's).",
+ "iteration": {
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_note": "No unit bodies authored (ML slots are ML-PRIMARY's; LTR/strategy orphans get a written two-week design in rollforward_2026_11_25 for research-ops to author). Named in handoff.",
+  "overdue": {
+   "strategy_leg": 39,
+   "ltr_class": 2
+  },
+  "advanced": 0,
+  "survivors": [
+   "qqq_pullback_1h session skip (RQ-20261118-001 holdout PASS): Tier-3 declare candidate for the manager"
+  ],
+  "lever_coverage": {
+   "avax_pullback_2h": {
+    "remaining": [
+     "symbol_set"
+    ],
+    "tested": [
+     "entry",
+     "exit",
+     "filter",
+     "regime_gating",
+     "timeframe",
+     "direction",
+     "session",
+     "sizing_vs_cost"
+    ]
+   },
+   "ict_scalp_5m": {
+    "remaining": [
+     "entry",
+     "regime_gating",
+     "timeframe",
+     "symbol_set"
+    ],
+    "tested": [
+     "exit",
+     "filter",
+     "direction",
+     "session",
+     "sizing_vs_cost"
+    ]
+   },
+   "trend_donchian_1h": {
+    "remaining": [],
+    "tested": [
+     "entry",
+     "exit",
+     "filter",
+     "regime_gating",
+     "timeframe",
+     "symbol_set",
+     "direction",
+     "session",
+     "sizing_vs_cost"
+    ]
+   },
+   "htf_pullback_trend_2h": {
+    "remaining": [],
+    "tested": [
+     "entry",
+     "exit",
+     "filter",
+     "regime_gating",
+     "timeframe",
+     "symbol_set",
+     "direction",
+     "session",
+     "sizing_vs_cost"
+    ]
+   },
+   "qqq_pullback_1h": {
+    "remaining": [
+     "sizing_vs_cost"
+    ],
+    "tested": [
+     "entry",
+     "exit",
+     "filter",
+     "regime_gating",
+     "timeframe",
+     "symbol_set",
+     "direction",
+     "session"
+    ]
+   }
+  },
+  "lever_coverage_note": "full per-subject coverage in checks.iteration.lever_coverage; remaining families across the 39 overdue legs: timeframe 34, symbol_set 28, sizing_vs_cost 26, entry 22, session 16, regime_gating 15, direction 7.",
+  "retirement_proposals": [],
+  "workflow": {
+   "read_state": "measured",
+   "window_days": 7,
+   "population": "research/queue units with id date >= 20261118 (378); result dirs of units with id date >= 20261118 (356)",
+   "structured_designs": {
+    "count": 142,
+    "of": 378,
+    "share": 0.376
+   },
+   "units_citing_parent_or_map": {
+    "count": 300,
+    "of": 378,
+    "share": 0.794
+   },
+   "units_declaring_levers": {
+    "count": 277,
+    "of": 378,
+    "share": 0.733
+   },
+   "results_in_a_lever_map": {
+    "count": 129,
+    "of": 356,
+    "share": 0.362
+   },
+   "note": "results_in_a_lever_map counts a result only once lever_map.py --backfill has recorded its arms; stage0/holdout reads of a baseline carry no lever and are not expected there"
+  }
+ },
+ "checks": {
+  "graded_by_window": {
+   "7d": {
+    "INFRA": {
+     "pass": 8,
+     "fail": 3
+    },
+    "MODEL": {
+     "pass": 26,
+     "fail": 42,
+     "no_action_warranted": 1,
+     "indeterminate": 52
+    },
+    "TRADING": {
+     "no_action_warranted": 3,
+     "pass": 127,
+     "fail": 260,
+     "indeterminate": 30
+    }
+   },
+   "30d": {
+    "INFRA": {
+     "pass": 8,
+     "fail": 3
+    },
+    "MODEL": {
+     "pass": 99,
+     "indeterminate": 106,
+     "fail": 171,
+     "no_action_warranted": 1
+    },
+    "TRADING": {
+     "no_action_warranted": 36,
+     "pass": 286,
+     "indeterminate": 91,
+     "fail": 711,
+     "not_applicable": 1
+    }
+   },
+   "lifetime": {
+    "INFRA": {
+     "pass": 11,
+     "indeterminate": 1,
+     "fail": 4
+    },
+    "MODEL": {
+     "fail": 200,
+     "pass": 119,
+     "indeterminate": 152,
+     "no_action_warranted": 1
+    },
+    "TRADING": {
+     "pass": 479,
+     "indeterminate": 230,
+     "no_action_warranted": 56,
+     "fail": 1217,
+     "not_applicable": 1
+    }
+   }
+  },
+  "runnable_by_track": {
+   "TRADING": 0,
+   "MODEL": 9,
+   "INFRA": 9,
+   "total": 18
+  },
+  "fails_without_next": 121,
+  "batches_quoted": [
+   "RQ-20261118-abab n 67: 28 pass / 36 fail / 3 ind",
+   "RQ-20261117-b2f2 n 12: 3 pass / 9 fail",
+   "RQ-20261117-b2f1 n 11: 2 pass / 8 fail / 1 ind"
+  ],
+  "could_not_look": [
+   "kaggle_cpu runway (dispatch_queue/compute_router) not run",
+   "github-actions MCP down: no workflow-run listing",
+   "per-backend runnable hours not measured"
+  ]
+ },
+ "analysis": {
+  "ranking_error": "Last week ranked symbol/family twins of single-symbol leads (trend_donchian_1h DS, trend-long VH) as top TRADING tests; both mostly failed, which was informative but predictable. What it missed entirely: the weekly generated sweeps (the largest result cluster, 161 unprogrammed live_strategy units) were partly no-ops (8 ict_scalp legs) and structurally unable to reach 6 lever families. The highest-value TRADING work was in the instrument, not the next twin.",
+  "programmes": {
+   "P1": {
+    "learned": [
+     "Dev-fold LTR wins did not hold out this week on both reads (tp-pull-in@new_peak holdout RQ-20261119-020 FAIL after 5/6 dev folds; tighten iteration 3 c8e1-01 FAIL): timing is the untested family on 5 of 7 classes."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "ltr-tp-pull-in holdout",
+      "cause": "regime/window vs noise (best-of-k)",
+      "variant": "fold-date + TP-hit share read, then timing variant"
+     },
+     {
+      "cluster": "ltr-tighten-sl iter 3",
+      "cause": "design (late trigger)",
+      "variant": "fixed bars-in-trade timing + matched-random-time control"
+     }
+    ],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "continuation replay for ed2b-02/-04",
+      "decision_changed": "whether widen_sl / tp_extend can be graded",
+      "on_pass": "run ed2b-02/-04",
+      "on_fail": "-",
+      "cost": "build",
+      "premortem": "no owner row"
+     },
+     {
+      "node_or_unit": "ltr-tighten-sl iteration 4 (timing)",
+      "decision_changed": "MD-TRADE-DESK tighten rule",
+      "on_pass": "holdout read",
+      "on_fail": "family-review record",
+      "cost": "runner",
+      "premortem": "timing grid tracks the trigger"
+     }
+    ]
+   },
+   "P2": {
+    "learned": [
+     "D2: heads at 15m or slower clear the class prior (4 PASS + BTC 15m IND); 5m BTC/ETH do not (2 FAIL), SOL 5m PASS (ef4c-01..08, n=8 bake-offs). Necessary, not edge.",
+     "D3: static side gate fails across dev folds (d3a1-01) while the live long deficit is ~7 se: regime-shaped, not a label defect; two label variants moved nothing (c21d-06 FAIL, 7e18-02 IND).",
+     "D4: meta-label selection survives on 698 measured rows but fails power at the take-rate floor (3e98-01 IND).",
+     "D7: Stage A heads informative (a9d1-01 PASS), acting on them did not beat hold (7e18-01 FAIL): the policy layer is the gap.",
+     "D9: 4 limit-entry reads all INDETERMINATE (f1a0-17/-21/-22/-27): no fill model."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "D3 side gate",
+      "cause": "regime/window",
+      "variant": "P2-PR1125-D3-trend-conditioned-side"
+     },
+     {
+      "cluster": "D6 ceiling b18a-03",
+      "cause": "idea headroom",
+      "variant": "P2-PR1125-D6-ceiling-two-legs"
+     },
+     {
+      "cluster": "D7 Stage B",
+      "cause": "design (no policy)",
+      "variant": "P2-PR1125-D7-stageB-v2-policy after ML-AM-NEXT-LIVE"
+     },
+     {
+      "cluster": "D9 limit entry",
+      "cause": "harness (no fill model)",
+      "variant": "P2-PR1125-D9 after MLP-D9-WHIPPET"
+     }
+    ],
+    "answered": [
+     "D5 VOI clause (RQ-20261114-82fd-02 PASS)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "IPW-ML-ENTRY-SIDE-SPLIT + P2-PR1125-D3-trend-conditioned-side",
+      "decision_changed": "trend-conditioned long filter on Foxhound-1 (Tier 3)",
+      "on_pass": "proposal",
+      "on_fail": "label family",
+      "cost": "build + runner",
+      "premortem": "few aligned-down regimes in dev folds"
+     },
+     {
+      "node_or_unit": "ML-AM-NEXT-LIVE -> P2-PR1125-D7-stageB-v2-policy",
+      "decision_changed": "new in-trade model beside Labrador-1b",
+      "on_pass": "Tier-3 candidate",
+      "on_fail": "feature-block unit",
+      "cost": "build",
+      "premortem": "policy acts too often"
+     },
+     {
+      "node_or_unit": "MLP-D9-WHIPPET -> P2-PR1125-D9-limit-entry-through-fill-model",
+      "decision_changed": "post-only entries for ml_entry",
+      "on_pass": "Tier-3 order-type change",
+      "on_fail": "market entry stays",
+      "cost": "build",
+      "premortem": "adverse selection"
+     },
+     {
+      "node_or_unit": "P2-PR1125-D2-survivors-as-d3-features",
+      "decision_changed": "which D2 heads stay or retire",
+      "on_pass": "D3 inputs",
+      "on_fail": "retire list",
+      "cost": "trainer",
+      "premortem": "redundant with recipe vol block"
+     },
+     {
+      "node_or_unit": "P2-PR1125-D5-aggregator-vs-rules",
+      "decision_changed": "replace the election rule",
+      "on_pass": "Tier 3",
+      "on_fail": "keep slices",
+      "cost": "runner",
+      "premortem": "correlated concurrent packages"
+     }
+    ]
+   },
+   "P3": {
+    "learned": [
+     "39 of 57 testing legs overdue: the loop turns without learning. 8 ict_scalp legs' weekly entry sweeps (RQ-20261105-028..035, 23 rows) were no-ops graded FAIL (identical argv/n/net R on every arm); the generator cannot reach timeframe/symbol_set/sizing/session/regime/direction (16 overdue legs have only those left).",
+     "Single-symbol leads mostly do not travel: trend_donchian_1h DS 1 of 4 symbols; trend-long top-vol skip 2 of 4 ETFs and FAIL pre-2018.",
+     "qqq_pullback_1h session skip confirmed on holdout (RQ-20261118-001)."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "roster-walkforward ict_scalp entry sweeps",
+      "cause": "harness (omitted keys stepped)",
+      "variant": "RESEARCH-LEVER-ARM-NOOP"
+     },
+     {
+      "cluster": "trend_donchian_1h DS twins",
+      "cause": "regime/symbol vs noise",
+      "variant": "none: family-review record (map exhausted)"
+     },
+     {
+      "cluster": "trend-long VH",
+      "cause": "regime/window (post-2018)",
+      "variant": "iwm/qqq pre-development reads only"
+     }
+    ],
+    "answered": [
+     "P3-ITER-qqq-pullback-1h-session-holdout",
+     "P3-RP1119-trend-donchian-1h-ds",
+     "P3-RP1119-trend-long-family-vh"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "RESEARCH-LEVER-ARM-NOOP",
+      "decision_changed": "whether 8 legs' entry family is read",
+      "on_pass": "real sweeps",
+      "on_fail": "-",
+      "cost": "build",
+      "premortem": "other harnesses omit keys too"
+     },
+     {
+      "node_or_unit": "RESEARCH-LEVER-FAMILY-REACH",
+      "decision_changed": "whether 16 legs can iterate",
+      "on_pass": "timeframe/symbol_set sweeps emit",
+      "on_fail": "-",
+      "cost": "build",
+      "premortem": "per-arm resample breaks pairing"
+     },
+     {
+      "node_or_unit": "qqq_pullback_1h session declare",
+      "decision_changed": "qqq packet filter",
+      "on_pass": "declare",
+      "on_fail": "-",
+      "cost": "proposal",
+      "premortem": "too few bars skipped"
+     }
+    ]
+   },
+   "P4": {
+    "learned": [
+     "PPI rank-tilt passes only on NQ=F at the bar (7769-22 t 2.009); FAIL on ES, RTY rung and symbol holdout: one of four, consistent with noise."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "PPI tilt",
+      "cause": "noise/multiple comparisons",
+      "variant": "NQ on a disjoint pre-2015 window"
+     }
+    ],
+    "answered": [
+     "P4-Q2 PPI on ES/RTY"
+    ],
+    "retired": [],
+    "next": []
+   },
+   "P5": {
+    "learned": [
+     "D55 prop-pace lead fails on 4 independent populations (abab-01/-02/-63, 5d2a-01); ORB on real MNQ FAIL (09d2-05)."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "D55",
+      "cause": "idea (4 populations)",
+      "variant": "none on symbols; timeframe/exit only"
+     }
+    ],
+    "answered": [],
+    "retired": [],
+    "next": []
+   },
+   "P6": {
+    "learned": [
+     "Queue hygiene passes; armed results can be graded on no-op runs (from P3)."
+    ],
+    "fail_diagnoses": [],
+    "answered": [],
+    "retired": [],
+    "next": []
+   },
+   "P7": {
+    "learned": [
+     "timeframe untested on 34 of 39 overdue legs; driver = RESEARCH-LEVER-FAMILY-REACH."
+    ],
+    "fail_diagnoses": [],
+    "answered": [],
+    "retired": [],
+    "next": []
+   },
+   "P8": {
+    "learned": [
+     "slv_trend_1h (f2a4-06) and tlt_pullback_1h (f2a4-07), both on alpaca_live, FAIL the Stage-0 reprice at measured Alpaca cost; tqqq PASS (f2a4-05). Uncited until this review."
+    ],
+    "fail_diagnoses": [
+     {
+      "cluster": "cost reprice",
+      "cause": "cost drag",
+      "variant": "manager decision ALPACA-LIVE-COST-REPRICE-FAIL"
+     }
+    ],
+    "answered": [],
+    "retired": [],
+    "next": []
+   }
+  },
+  "tracks": {
+   "TRADING": "Research volume is high but the weekly generator, the largest producer, is learning on few legs: no-op sweeps on 8 legs and 6 unreachable families leave 39 legs overdue. Single-symbol leads keep failing their twins, so confirmations should be cheap and the instrument fixed first. One survivor (qqq session skip) and one real-money cost FAIL pair need manager decisions.",
+   "MODEL": "Every slot D1-D10 now has two weeks of plan; the constraint is three builds (in-trade policy, fill model, side-split report), not ideas. D2/D3/D7 reads this week sharpened the diagnosis (regime-shaped long deficit; heads informative but no policy) without producing a survivor. No head beats its consumer's prior net of cost, so no gate changes."
+  },
+  "feeds": [
+   {
+    "from": "P3",
+    "to": "P2",
+    "what": "shorts lose gross on qqq/spy pullbacks",
+    "dest": "P2-PR1125-D3-trend-conditioned-side",
+    "state": "planned"
+   },
+   {
+    "from": "P1",
+    "to": "P2",
+    "what": "partial/tighten static baselines",
+    "dest": "P2-PR1125-D7-stageB-v2-policy",
+    "state": "build-gated"
+   },
+   {
+    "from": "P3",
+    "to": "P6",
+    "what": "no-op armed results",
+    "dest": "RESEARCH-LEVER-ARM-NOOP",
+    "state": "row filed"
+   },
+   {
+    "from": "P3",
+    "to": "P7",
+    "what": "timeframe unreachable",
+    "dest": "RESEARCH-LEVER-FAMILY-REACH",
+    "state": "row filed"
+   },
+   {
+    "from": "P8",
+    "to": "manager",
+    "what": "real-money cost reprice FAILs",
+    "dest": "ALPACA-LIVE-COST-REPRICE-FAIL",
+    "state": "Tier-3 decision"
+   },
+   {
+    "from": "P4",
+    "to": "P2",
+    "what": "event-class weights (a5b3-02)",
+    "dest": "D3 feature candidate",
+    "state": "handoff"
+   }
+  ],
+  "surprises": [
+   "The largest result cluster of the week contained graded FAILs for runs in which no variant reached the harness (23 rows).",
+   "Two of three real-money alpaca_live legs failed the measured-cost reprice 6 days ago and nothing cited it.",
+   "Four ml_entry limit-entry units were authored and graded INDETERMINATE within ~24h on the same replay (f1a0-17..27)."
+  ]
+ },
+ "calls": [
+  {
+   "call": "RESEARCH-LEVER-ARM-NOOP reaches done (or landed_unproven) by the next review",
+   "p": 0.4,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/ops/work.py get RESEARCH-LEVER-ARM-NOOP",
+    "rule": "hit iff state in (done, landed_unproven)",
+    "resolves_when": "2026-12-02"
+   }
+  },
+  {
+   "call": "At least one roster-walkforward unit emitted after 2026-11-25 names a lever in {timeframe, symbol_set, sizing_vs_cost, session, regime_gating, direction}",
+   "p": 0.15,
+   "track": "TRADING",
+   "check": {
+    "command": "grep -lE \"next lever (timeframe|symbol_set|sizing_vs_cost|session|regime_gating|direction)\" research/queue/RQ-2026112[6-9]*.yaml research/queue/RQ-202612*.yaml | wc -l",
+    "rule": "hit iff >= 1",
+    "resolves_when": "2026-12-02"
+   }
+  },
+  {
+   "call": "The manager moves ALPACA-LIVE-COST-REPRICE-FAIL off queued (decision recorded)",
+   "p": 0.7,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/ops/work.py get ALPACA-LIVE-COST-REPRICE-FAIL",
+    "rule": "hit iff state != queued",
+    "resolves_when": "2026-12-02"
+   }
+  },
+  {
+   "call": ">= 3 of the 8 P2-PR1125-D* nodes have an authored unit citing them",
+   "p": 0.45,
+   "track": "MODEL",
+   "check": {
+    "command": "grep -l 'P2-PR1125-D' research/queue/RQ-2026112[6-9]*.yaml research/queue/RQ-202612*.yaml research/queue/blocked/RQ-202611*.yaml 2>/dev/null | wc -l",
+    "rule": "hit iff >= 3",
+    "resolves_when": "2026-12-02"
+   }
+  },
+  {
+   "call": "RQ-20261122-b18a-02 (Beagle learner blind holdout) grades PASS",
+   "p": 0.35,
+   "track": "MODEL",
+   "check": {
+    "command": "grep -A12 '^grading:' research/queue/RQ-20261122-b18a-02.yaml | grep verdict",
+    "rule": "hit iff verdict: pass",
+    "resolves_when": "2026-12-02"
+   }
+  },
+  {
+   "call": "IPW-ML-ENTRY-SIDE-SPLIT reaches landed_unproven or done",
+   "p": 0.4,
+   "track": "MODEL",
+   "check": {
+    "command": "python3 scripts/ops/work.py get IPW-ML-ENTRY-SIDE-SPLIT",
+    "rule": "hit iff state in (landed_unproven, done)",
+    "resolves_when": "2026-12-02"
+   }
+  }
+ ],
+ "nodes_authored": [],
+ "nodes_added": [
+  "P2-PR1125-D2-survivors-as-d3-features",
+  "P2-PR1125-D3-trend-conditioned-side",
+  "P2-PR1125-D5-aggregator-vs-rules",
+  "P2-PR1125-D6-ceiling-two-legs",
+  "P2-PR1125-D7-stageB-v2-policy",
+  "P2-PR1125-D8-exit-now-powered",
+  "P2-PR1125-D9-limit-entry-through-fill-model",
+  "P2-PR1125-D10-count"
+ ],
+ "plans_extended": {
+  "P1": "rollforward_2026_11_25 (7 LTR classes, weeks 12-01/12-08)",
+  "P2": "rollforward_2026_11_25.decision_steps D1-D10 (weeks 12-01/12-08)",
+  "P3": "rollforward_2026_11_25 (57 subjects, derived)"
+ },
+ "rows_filed": [
+  "RESEARCH-LEVER-ARM-NOOP (owner manager, due 2026-12-02, L-PROGRAMMES)",
+  "RESEARCH-LEVER-FAMILY-REACH (owner manager, due 2026-12-09, L-PROGRAMMES)",
+  "ALPACA-LIVE-COST-REPRICE-FAIL (owner manager, due 2026-11-27, L-LADDER, Tier 3)"
+ ],
+ "driver_rows_named": {
+  "D7/D8 in-trade policy": "ML-AM-NEXT-LIVE (queued, due_by 2026-11-12 overdue) + TMBENCH-V2-TRAIN-INPUT (landed_unproven)",
+  "D9 fill model": "MLP-D9-WHIPPET (queued, due_by 2026-11-19 overdue) + ML-D9-MAKER-EXIT-HARNESS (queued, due 2026-11-24 overdue)",
+  "D3": "IPW-ML-ENTRY-SIDE-SPLIT (queued, due 2026-12-01)",
+  "D2": "MLP-D2-REVIEW-HEADS (queued, due 2026-11-19 overdue)",
+  "D6": "ML-FS-BRACKETS-HOLD (blocked)",
+  "D8": "ML-EXITHEAD-ROWS-KAGGLE (in_flight)"
+ },
+ "not_run": [
+  "Full unit bodies for the 8 P2 nodes (ML-owned slots; left needs_authoring for ML-PRIMARY)",
+  "kaggle_cpu runway read",
+  "needs_review triage (81 open; owners listed in checks.needs_review)",
+  "programme sidecars: all 8 programmes already have one"
+ ],
+ "handoff": [
+  "ML-PRIMARY: author unit bodies for P2-PR1125-D2/D3/D5/D6/D10 (ready) and D7/D8/D9 once their driver rows land; re-date ML-AM-NEXT-LIVE, MLP-D9-WHIPPET, MLP-D2-REVIEW-HEADS, ML-D9-MAKER-EXIT-HARNESS (all past due_by).",
+  "research-ops: author from rollforward_2026_11_25 first designs for orphans ltr-close, ltr-partial-close, ltr-sl-to-structure, ltr-tp-pull-in, ltr-tighten-sl (P1) and claude_desk, qqq_pullback_1h (session declare is a manager Tier-3 proposal), spy_pullback_1h, xsec-crypto, cost-levers-live-legs, movement-capture (P3); ml-exit-head-donchian-1h, ml-holdbias-exit, ml-btc-router-cells (P2, via ML-PRIMARY).",
+  "manager: the continuation-replay harness for ed2b-02/-04 (ltr widen_sl / tp_extend) has no checklist row; owner on blocked_on is 'lane ORPHANS-LTR (or the P1 programme lane)'.",
+  "manager: the CJ-4 label hazard (D10 dependency, 11-23 plan) has no checklist row.",
+  "manager: family-review records due for htf_pullback_trend_2h and trend_donchian_1h (lever maps exhausted)."
+ ]
+}

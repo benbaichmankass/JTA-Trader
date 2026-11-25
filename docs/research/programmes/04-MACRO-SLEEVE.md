@@ -4,6 +4,16 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P4 in the window:** 5 units (2 pass, 3 fail).
+
+**What was learned.** The PPI rank-tilt passes on NQ=F only (7769-22, t 2.009, at the bar) and fails on ES=F (7769-20), on the RTY=F economic rung (RQ-20261119-031) and on its symbol holdout (-032). Belief: the PPI tilt is an NQ-specific result at the edge of significance, consistent with *noise* as much as with a growth-sensitivity mechanism; one symbol of four does not make a sleeve. Event-class weights from our own markets (a5b3-02) PASSED — usable as a feature, not a signal.
+
+**Failed tests: diagnosis.** *noise / multiple comparisons* first (4 symbols, one at the bar); the variant is not another symbol but the same NQ tilt on a disjoint earlier window. **Answered:** P4-Q2 PPI tilt on ES/RTY (FAIL). **Retired:** none.
+
+**Next 3–4 weeks:** (1) NQ PPI tilt on a disjoint pre-2015 window — decides whether P4-Q2 gets any sleeve weight; PASS → Tier-3 sleeve proposal with two windows; FAIL → Q2 closed for PPI, move to the next surprise series; pre-mortem: consensus history thin before 2015. (2) event-class weights as a D3 feature (feed to P2). Authoring is research-ops'.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

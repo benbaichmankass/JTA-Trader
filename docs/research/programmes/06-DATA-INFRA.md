@@ -6,6 +6,14 @@
 
 ---
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — INFRA / MODEL plumbing
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P6 in the window:** 6 programmed units (6 pass) + 11 unprogrammed infra units (8 pass, 3 fail) assigned here.
+
+**What was learned.** Queue hygiene checks pass (starvation, roadmap refs, related paths, routed targets, clone and rule hygiene). The INFRA fails are the blocked-backlog SLO (RQ-20261022-3a84-12) and value-block coverage (RQ-20261024-0142-18), both in `fails_without_next`. The finding that matters for P6 came from P3: **result rows can carry a graded FAIL for a run where no variant reached the harness** (RESEARCH-LEVER-ARM-NOOP); a hygiene unit that checks "every armed result has at least one arm whose argv differs from control" would have caught it in week 1.
+
+**Next 3–4 weeks:** (1) author that armed-result hygiene check once RESEARCH-LEVER-ARM-NOOP lands (decides whether no-op runs recur on other harnesses; 3 exit rows look identical too); (2) the two failing SLO units need a diagnosis (owner research-ops), not a re-run.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — INFRA / MODEL plumbing
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).
