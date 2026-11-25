@@ -1,0 +1,89 @@
+# Authored 2026-11-24 by lane ML-PRIMARY (the standing ML lane, Manager Session 2026-11-22a) from the 1e06-06 PASS. Rule registered BEFORE any run;
+# no local read of this population. Gates this adds or changes: none (a research unit; changes no config or order path).
+id: RQ-20261124-1e06-08
+title: 'CONFIRMATION of the 1e06-06 pass: timing-gated capitulation trigger in 1x index ETFs on 10 FRESH country indexes (EWC, EWA, EWT,
+  EWY, EWW, EWH, EWS, EWL, EWQ, EWP), graded POOLED'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: Does the 1e06-06 pass replicate on 10 country index ETFs used in no earlier read, with positive pooled net R, >= 5 of 10 pairs
+  positive, positive under 2x slippage, AND the actual beating >= 95% of 200 re-timed replays of the same signals?
+why_this_matters: 'RQ-20261124-1e06-06 (run 45506679715) PASSED every clause: pooled n 410, +83.2 R net of 5 bps/side, +51.5 R at 2x slippage, 5 of 8 pairs positive, and the actual beat 99% of 200 re-timed draws (share 0.01, draw mean +6.7 R, p95 +52.6 R). Per the registered note, a pass needs a fresh read before any proposal. The daily window cannot be extended by a usable amount (it ends 2026-10-22), so the confirmation is a FRESH POPULATION: the same trigger, TP calibration, hold cap, costs and timing clause on 10 country index ETFs used in no earlier read. Caveat to carry: the per-pair out-of-sample tails were mixed in 1e06-06 (XLP -1.1 R, IYT -2.2 R, IWN -4.2 R in the last 40%).'
+power:
+  expected_n: 450
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 1e06-06 measured pooled n 410 on 8 1x ETFs (about 51 per pair); 10 country ETFs trading since 1996-2000 give n ~ 400-550,
+    above the floor 25. No local read of this population.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261124-1e06-08
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py unit 1e06-08: family capitulation_wide on 10 (t,t) 1x pairs t in EWC,EWA,EWT,EWY,EWW,EWH,EWS,EWL,EWQ,EWP
+    (1x execution, baseline flat); POOLED grade; the timing control (200 re-timed replays, shifts 40-400 sessions, same stop geometry, TP and
+    cost) is a RULE CLAUSE. Cost stack: 5 bps slippage per side (2x slippage re-read), the ETF price series itself (expense embedded), no funding;
+    TP = K* calibrated on the first 60% of trades, never tp_r 50.'
+  rule: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=5 of 10 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND pooled actual net_r beats
+    >= 95% of the 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise.
+  what_it_does_not_do: Changes no config. NO local read preceded this registration. A pass is the confirmation of 1e06-06 and goes to the manager as a Tier-3 proposal (1x ETF capitulation leg on the equity demo floor); a fail sends the family back to diagnosis.
+  baseline: Flat; and the same trigger in each pair's 1x ETF.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261124-1e06-08
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261124-1e06-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-1e06-06
+- RQ-20261124-1e06-05
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+iteration:
+  subject: index-etf-capitulation
+  subject_kind: strategy
+  from_result: RQ-20261124-1e06-06/45506679715
+  verdict_read: pass
+  diagnosis: 'RQ-20261124-1e06-06 (run 45506679715) PASSED every clause: pooled n 410, +83.2 R net of 5 bps/side, +51.5 R at 2x slippage, 5 of 8 pairs positive, and the actual beat 99% of 200 re-timed draws (share 0.01, draw mean +6.7 R, p95 +52.6 R). Per the registered note, a pass needs a fresh read before any proposal. The daily window cannot be extended by a usable amount (it ends 2026-10-22), so the confirmation is a FRESH POPULATION: the same trigger, TP calibration, hold cap, costs and timing clause on 10 country index ETFs used in no earlier read. Caveat to carry: the per-pair out-of-sample tails were mixed in 1e06-06 (XLP -1.1 R, IYT -2.2 R, IWN -4.2 R in the last 40%).'
+  search: one fixed population (10 fresh 1x country index ETFs); trigger, TP calibration, hold cap, costs and the timing clause unchanged from
+    1e06-06.
+  levers:
+  - timing
+  attempt: 7
+  due_by: '2026-12-01'
+intervention_controls:
+  not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400
+    sessions, same stop geometry, TP and cost), which is a rule clause here
