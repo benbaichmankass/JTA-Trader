@@ -48,7 +48,8 @@ RULE_ID = "RULE-RQ20261118-f7c1-02-EXITHEAD-KAGGLE-NEG25"
 REGISTERED_AT = "2026-11-18"
 LEGS: list[tuple[str, str]] = [("trend_donchian", "BTCUSDT"), ("trend_donchian_eth", "ETHUSDT"), ("trend_donchian_sol", "SOLUSDT")]
 SHARD = "datasets-out/market_raw/{sym}/1h/v002/data.jsonl"
-TF = "1h"
+TF = "1h"                                  # set from --timeframe in run() (1h | 4h)
+_INTERVAL = {"1h": "60", "4h": "240"}      # Bybit interval codes, as fetch_backtest_candles / candle_dataset speak them
 
 
 def shard_path(root: Path, sym: str) -> tuple[str, Path]:
@@ -68,7 +69,7 @@ def fetch_bybit_candles(sym: str, dst: Path, start: str, end: str | None = None)
     import fetch_backtest_candles as fbc
     t0 = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
     t1 = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else datetime.now(timezone.utc)
-    rows = fbc.fetch_klines(sym, "60", int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
+    rows = fbc.fetch_klines(sym, _INTERVAL[TF], int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
     if not rows:
         return {"read_state": "could_not_look", "why": "bybit returned no klines"}
     import pandas as pd
@@ -86,7 +87,7 @@ def fetch_binance_vision_candles(sym: str, dst: Path, start: str, end: str | Non
     import fetch_backtest_candles as fbc
     t0 = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
     t1 = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else datetime.now(timezone.utc)
-    rows = fbc.fetch_klines_binance_vision(sym, "60", int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
+    rows = fbc.fetch_klines_binance_vision(sym, _INTERVAL[TF], int(t0.timestamp() * 1000), int(t1.timestamp() * 1000))
     if not rows:
         return {"read_state": "could_not_look", "why": "binance_vision returned no klines"}
     import pandas as pd
@@ -169,6 +170,67 @@ def build_rows(emits: list[Path], candles: dict[str, Path], out: Path) -> dict[s
             "build_report": rep}
 
 
+def universe_legs(name: str, template: str) -> list[tuple[str, str]]:
+    """TWIN legs: one config/strategies.yaml leg (`template`, its params unchanged) on every symbol of a frozen universe.
+    `bp2` = the 60-perp ML-DATA-BROAD-PATHS universe ml_decision_entry trades (comms/research/broad_paths/bp2-*)."""
+    if name != "bp2":
+        raise SystemExit(f"refused: unknown universe {name!r} (have: bp2)")
+    import ml_decision_entry as E
+    return [(template, sym) for sym in E.universe()]
+
+
+def candle_dataset_candles(sym: str, dst: Path, start: str, end: str | None = None) -> dict[str, Any]:
+    """Binance USD-M perp candles for `sym` at TF: the mounted metis-research-candles dataset when it holds the feed
+    (a Kaggle kernel, internet off), else the data.binance.vision archive (runner / trainer). Market data only."""
+    import candle_dataset as cd
+    from datetime import datetime, timezone
+    days = int((datetime.now(timezone.utc) - datetime.fromisoformat(start).replace(tzinfo=timezone.utc)).days) + 1
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if cd.serve(("binance", sym, _INTERVAL[TF]), days, str(dst)):
+            import pandas as pd
+            df = pd.read_csv(dst)
+            info = _csv_from_df(df, dst)
+            return {**info, "served_by": "candle_dataset"}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: a dataset miss falls back to the archive below and says so
+        miss = f"{type(exc).__name__}: {exc}"
+    else:
+        miss = "feed not in the mounted dataset"
+    try:
+        info = fetch_binance_vision_candles(sym, dst, start, end)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: lands as could_not_look in verdict.json, never a silent empty
+        info = {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
+    return {**info, "served_by": "binance_vision", "dataset_miss": miss}
+
+
+def census_row(a, harness_legs: list[dict], built: dict, spans: dict) -> dict[str, Any]:
+    """--census-only: the POWER RECOUNT the D8 node asks for before any bake-off is authored (P2-PR1125-D8-exit-now-powered:
+    'author only if the recount powers MDE <= 0.05 R'). Counts harness trades per leg and pooled, the OOS share the
+    sequential folds test (num_folds of num_folds+1 blocks), and MDE = (z_a + z_b) x sd / sqrt(n_oos) at alpha 0.05 two-sided,
+    power 0.8, with sd = --power-sd (stated; default 0.99 R = the per-trade dR sd MEASURED by RQ-20261118-f7c1-02: se 0.0448
+    at n 485). Under --pool-folds the 64-trade fold floor applies to the pool; per leg it applies to each leg."""
+    import math
+    n_by_leg = {f"{h.get('leg')}:{h.get('symbol')}": int(h.get("n_trades") or 0) for h in harness_legs}
+    total = sum(n_by_leg.values())
+    k = a.num_folds
+    if a.pool_folds:
+        n_oos = int(total * k / (k + 1)) if total // (k + 1) >= 64 else 0
+    else:
+        n_oos = sum(int(n * k / (k + 1)) for n in n_by_leg.values() if n // (k + 1) >= 64)
+    mde = (1.959964 + 0.841621) * a.power_sd / math.sqrt(n_oos) if n_oos else None
+    powered = mde is not None and mde <= a.power_mde
+    return {"schema_version": 1, "research_unit": a.unit, "read_state": "measured" if total else "no_data",
+            "verdict": "pass" if powered else "fail", "n": n_oos,
+            "note": (f"census: {total} harness trades on {sum(1 for v in n_by_leg.values() if v)} legs; OOS n {n_oos} "
+                     f"({'pooled' if a.pool_folds else 'per-leg'} folds); MDE {mde if mde is None else round(mde, 4)} R vs bar {a.power_mde}"),
+            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
+            "population": f"BACKTEST-SOURCE harness trades only ({a.candle_source}, {TF}); no journal trades",
+            "measurement": {"n_trades_by_leg": n_by_leg, "n_trades_total": total, "n_oos": n_oos, "mde_r": mde,
+                            "power_sd_r": a.power_sd, "power_mde_bar_r": a.power_mde, "num_folds": k,
+                            "pool_folds": bool(a.pool_folds), "rows_build": built, "candle_spans": spans,
+                            "harness_legs": harness_legs}}
+
+
 def run(a) -> int:
     root = Path(a.data_root or os.environ.get("ML_DATA_ROOT") or "")
     out = Path(a.out)
@@ -176,9 +238,24 @@ def run(a) -> int:
     work = Path(tempfile.mkdtemp(prefix="exithead_kaggle_"))
     import yaml
     conf = yaml.safe_load((_REPO / "config/strategies.yaml").read_text(encoding="utf-8"))
-    legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
+    global TF
+    TF = a.timeframe
+    if a.timeframe != "1h" and a.candle_source == "published":
+        raise SystemExit("refused: published market_raw is 1h only; use --candle-source candle_dataset|binance_vision for 4h")
+    legs = universe_legs(a.universe, a.leg_template) if a.universe else [tuple(x.split(":")) for x in a.legs.split(",") if x]
+    a.legs = ",".join(f"{s}:{y}" for s, y in legs)
     spans: dict[str, Any] = {}
     csvs: dict[str, Path] = {}
+    if a.candle_source == "candle_dataset":
+        # I/O-bound (one archive zip per symbol-month): fetch symbols in parallel; each writes only its own CSV
+        from concurrent.futures import ThreadPoolExecutor
+        syms = list(dict.fromkeys(sym for _, sym in legs))
+        with ThreadPoolExecutor(max_workers=max(1, a.fetch_workers)) as ex:
+            got = dict(zip(syms, ex.map(lambda y: candle_dataset_candles(y, work / "candles" / f"{y}_{TF}.csv", a.start, a.end), syms)))
+        for sym, info in got.items():
+            spans[sym] = {"source": "candle_dataset (metis-research-candles) else binance_vision", **info}
+            if info.get("read_state") == "measured":
+                csvs[sym] = work / "candles" / f"{sym}_{TF}.csv"
     for _, sym in legs:
         if sym in csvs or sym in spans:
             continue
@@ -227,16 +304,23 @@ def run(a) -> int:
         (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
         print(json.dumps({k: row[k] for k in ("read_state", "verdict", "note")}))
         return 2
+    if a.census_only:
+        row = census_row(a, harness_legs, built, spans)
+        (out / "verdict.json").write_text(json.dumps(row, indent=1, default=str) + "\n")
+        print(json.dumps({k: row.get(k) for k in ("read_state", "verdict", "note", "n")}))
+        return 0
     import exit_head_label_bakeoff as L
     bj = work / "bakeoff.json"
     rc = L.main(["--rows", built["rows_path"], "--candles-dir", str(work / "candles"), "--timeframe", TF,
                  "--legs", a.legs, "--arms", a.arms, "--unit", a.unit, "--rule-id", a.rule_id, "--z", str(a.z),
                  "--pass-dr", str(a.pass_dr), "--num-folds", str(a.num_folds), "--embargo-days", str(a.embargo_days),
                  "--lookback", str(a.lookback), "--registered-at", a.registered_at, "--json", str(bj)]
-                + (["--feature-arms", a.feature_arms] if a.feature_arms else []))
+                + (["--feature-arms", a.feature_arms] if a.feature_arms else [])
+                + (["--pool-folds"] if a.pool_folds else [])
+                + (["--random-control", str(a.random_control)] if a.random_control else []))
     row = json.loads(bj.read_text())
     row["decision_rule"] = {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True}
-    row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from { {'bybit': 'public Bybit 1h klines', 'binance_vision': 'public Binance-vision USD-M perp 1h klines (basis vs Bybit not measured)'}.get(a.candle_source, 'published market_raw 1h v002') }; no journal trades) -- "
+    row["population"] = (f"BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from { {'bybit': f'public Bybit {TF} klines', 'binance_vision': f'public Binance-vision USD-M perp {TF} klines (basis vs Bybit not measured)', 'candle_dataset': f'Binance USD-M perp {TF} candles (metis-research-candles, else data.binance.vision)'}.get(a.candle_source, 'published market_raw 1h v002') }; no journal trades) -- "
                          + str(row.get("population", "")))
     row.setdefault("measurement", {}).update(extra)
     row["produced_by"] = {"tool": "python3 scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py)"}
@@ -307,11 +391,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--registered-at", default=REGISTERED_AT, help="the unit's decision_rule.registered_at")
-    ap.add_argument("--candle-source", choices=("published", "bybit", "binance_vision"), default="published",
+    ap.add_argument("--candle-source", choices=("published", "bybit", "binance_vision", "candle_dataset"), default="published",
                     help="published = metis-market-data market_raw (kaggle_cpu, internet off); bybit = public klines (runner; "
                          "403 from GitHub runners); binance_vision = data.binance.vision archive (runner, geoblock-safe)")
     ap.add_argument("--start", default="2020-06-01", help="bybit source: first bar date")
     ap.add_argument("--end", default=None, help="bybit source: last bar date (default now)")
+    ap.add_argument("--timeframe", choices=("1h", "4h"), default="1h")
+    ap.add_argument("--universe", default="", help="bp2 = the 60-perp ML universe; with --leg-template builds TWIN legs")
+    ap.add_argument("--leg-template", default="trend_donchian_eth_4h", help="the config leg whose params every twin uses")
+    ap.add_argument("--pool-folds", action="store_true", help="pooled calendar folds across legs (exit_head_label_bakeoff)")
+    ap.add_argument("--fetch-workers", type=int, default=8, help="candle_dataset source: parallel symbol fetches")
+    ap.add_argument("--random-control", type=int, default=0, help="pooled mode: causal matched random-exit control draws")
+    ap.add_argument("--census-only", action="store_true", help="stop after the row build; write the power recount")
+    ap.add_argument("--power-sd", type=float, default=0.99, help="census: per-trade dR sd in R (default f7c1-02 measured)")
+    ap.add_argument("--power-mde", type=float, default=0.05, help="census: the MDE bar in R (D8 node: 0.05)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
