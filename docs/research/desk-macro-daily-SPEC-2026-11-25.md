@@ -1,6 +1,8 @@
 # Desk macro daily: trades + teacher labels (SPEC, step 1 of row DESK-MACRO-DAILY)
 
-> Doc status: `draft` · category `spec` · lane ML-PRIMARY · 2026-11-25 · row `DESK-MACRO-DAILY`
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
+> Lane ML-PRIMARY · 2026-11-25 · row `DESK-MACRO-DAILY` · a DESIGN for the manager's review (not yet adopted).
 >
 > **Gates this adds or changes: none.** Advice-only. The brief never places, sizes, amends or cancels an order and writes no
 > `config/`. Its trade proposals are recorded as **shadow** rows and graded; nothing it emits reaches a venue until its own
