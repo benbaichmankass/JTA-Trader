@@ -178,8 +178,10 @@ def test_every_enabled_leg_routes_except_the_non_harness_legs():
     # 58 -> 59 on 2026-11-08: ml_entry_eq_struct (ML-ENTRY-EQ-STRUCT-LIVE), unrouted for the same reason as ml_entry_eq.
     # 2026-11-13 (build gap b, #25743): turtle_soup now ROUTES (scripts/backtest_turtle_soup.py), so it leaves the
     # unrouted list; every leg still unrouted is one with no harness-family params by design.
-    assert len(legs) == 59
-    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2"]
+    # 59 -> 60 on 2026-11-25: index_capitulation_1x (INDEX-CAPIT-1X-LEG), UNROUTED like e4_oi_shock_1h: a daily index capitulation EVENT rule
+    # with no harness-family params; its Stage 0 is scripts/research/index_signal_etf_harness.py, not this matrix.
+    assert len(legs) == 60
+    assert unrouted == ["claude_desk", "e4_oi_shock_1h", "index_capitulation_1x", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2"]
     assert rdm.classify(legs["turtle_soup"]) == "turtle_soup"
 
 

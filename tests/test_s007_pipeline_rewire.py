@@ -83,6 +83,7 @@ def test_registry_roster_is_exactly_turtle_soup_and_vwap():
         "ict_scalp_xrp_15m",
         "ict_scalp_xrp_5m",
         "ief_pullback_1d",
+        "index_capitulation_1x",  # 2026-11-25 INDEX-CAPIT-1X-LEG: daily capitulation bounce, alpaca_live + alpaca_portfolio
         "iwm_trend_long_1d",
         "mes_trend_long_1d",
         "mgc_pullback_1d",
