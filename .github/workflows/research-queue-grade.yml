@@ -123,6 +123,10 @@ jobs:
             Self-lands only while `queue_grade.py --verify` reproduces every
             edit at the merge-base (check_pr_landing.py E58).
           branch-prefix: automation/research-queue-grade
+          # A stale-branch merge of main conflicts in research/queue (stamps/results land concurrently);
+          # re-derive the dispositions over main instead of stranding for the full verify wait
+          # (run 45567748608: refresh=failed_conflict, 80 min, PR closed unmerged).
+          refresh-command: python3 scripts/research/queue_grade.py --write
       - name: Summarize
         if: always()
         run: |
