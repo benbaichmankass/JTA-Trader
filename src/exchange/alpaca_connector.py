@@ -11,8 +11,9 @@ executor branch), not this module.
 Uses plain ``requests`` (no alpaca-py dependency). Credentials come
 from ``ALPACA_API_KEY_ID`` / ``ALPACA_API_SECRET_KEY`` (free paper
 account keys work for data). ``ALPACA_DATA_FEED`` selects the feed
-(default ``iex`` — the free real-time feed; ``sip`` needs the paid
-consolidated plan).
+(default ``iex`` — the free real-time feed; real-time ``sip`` needs the paid
+consolidated plan, but the free plan serves ``sip`` for requests ending more than
+15 minutes ago: ``get_closed_bars``, row INDEX-CAPIT-SIP-CLOSED-BARS).
 """
 from __future__ import annotations
 
@@ -38,6 +39,10 @@ _TIMEFRAME_MAP = {
     "4h": "4Hour",
     "1d": "1Day",
 }
+
+#: The free plan withholds only the latest 15 minutes of ``feed=sip``; a closed-bar read ends one minute beyond that
+#: (row INDEX-CAPIT-SIP-CLOSED-BARS).
+SIP_FREE_DELAY_MINUTES = 16
 
 # Bar span in minutes, used to derive the explicit ``start`` lookback below.
 _TIMEFRAME_MINUTES = {
@@ -251,7 +256,8 @@ class AlpacaMarketData:
             logger.warning("alpaca: read_state=could_not_look get_ohlcv failed for %s %s (%s)", symbol, timeframe, exc)
             return None
 
-    def _bars_paged(self, symbol: str, tf: str, tf_key: str, limit: int) -> list:
+    def _bars_paged(self, symbol: str, tf: str, tf_key: str, limit: int, *, feed: str | None = None,
+                    end: str | None = None) -> list:
         """Up to ``limit`` most-recent bars, following ``next_page_token``.
 
         Alpaca can answer a page SHORT of ``limit`` and hand back a ``next_page_token`` for the rest; reading only the
@@ -270,9 +276,11 @@ class AlpacaMarketData:
                 # current day's bars (see _lookback_start docstring).
                 "start": start,
                 "adjustment": "split",
-                "feed": self.feed,
+                "feed": feed or self.feed,
                 "sort": "desc",
             }
+            if end:
+                params["end"] = end
             if token:
                 params["page_token"] = token
             try:
@@ -297,6 +305,39 @@ class AlpacaMarketData:
             logger.info("alpaca: %s %s %d/%d bars after %d page(s), next_page_token=%s",
                         symbol, tf, len(out), limit, page + 1, "set" if token else "none")
         return out[:limit]
+
+    def get_closed_bars(self, symbol: str, timeframe: str = "1d", limit: int = 200, *, feed: str = "sip",
+                        delay_minutes: int = SIP_FREE_DELAY_MINUTES):
+        """The most recent *limit* bars on ``feed`` whose request ENDS ``delay_minutes`` ago (row INDEX-CAPIT-SIP-CLOSED-BARS).
+
+        WHY: the free market-data plan serves ``feed=sip`` (the consolidated tape, the feed a backtest's daily bars match) for any
+        request that ends more than 15 minutes in the past; only the latest 15 minutes are withheld (the venue answers 403). A
+        decision on CLOSED daily bars never needs those 15 minutes, so a caller that decides on closed bars can read SIP here while
+        the forming bar keeps coming from ``get_ohlcv`` on the account's feed. Same frame shape and read-state bookkeeping as
+        ``get_ohlcv``; ``None`` on any failure. A bar whose session is still forming at ``end`` can be in the answer: the caller keeps
+        only the rows it knows are closed. Does not touch ``self.feed`` (every other consumer keeps its feed)."""
+        tf_key = str(timeframe).lower()
+        tf = _TIMEFRAME_MAP.get(tf_key)
+        if tf is None:
+            logger.warning("alpaca: unsupported timeframe %r", timeframe)
+            return None
+        end = (datetime.now(timezone.utc) - timedelta(minutes=int(delay_minutes))).strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            bars = self._bars_paged(symbol, tf, tf_key, int(limit), feed=feed, end=end)
+        except AlpacaRateLimited as exc:
+            self._record(symbol, "rate_limited")
+            logger.warning("alpaca: read_state=rate_limited closed %s %s feed=%s (%s)", symbol, timeframe, feed, exc)
+            return None
+        except Exception as exc:  # noqa: BLE001
+            self._record(symbol, "could_not_look")
+            logger.warning("alpaca: read_state=could_not_look closed %s %s feed=%s end=%s (%s)", symbol, timeframe, feed, end, exc)
+            return None
+        if not bars:
+            self._record(symbol, "empty")
+            logger.warning("alpaca: empty closed bars for %s %s (limit=%s feed=%s end=%s)", symbol, timeframe, limit, feed, end)
+            return None
+        self._record(symbol, "ok")
+        return _bars_frame(bars)
 
     def _bars_since(self, symbol: str, tf: str, since_ms: int, limit: int) -> list:
         """Up to ``limit`` bars from ``since_ms`` forward (ascending), following ``next_page_token``; bounded by

@@ -164,6 +164,31 @@ def _live_feed_bars(ticker: str, api: str) -> pd.DataFrame:
     return df[["open", "high", "low", "close", "volume"]].sort_index()
 
 
+def _sip_closed_bars(ticker: str, start: str, end: str) -> pd.DataFrame:
+    """Alpaca ``feed=sip`` daily bars (``adjustment=split``, the live connector's), through the read-only research client (row
+    INDEX-CAPIT-SIP-CLOSED-BARS: the leg's signal input). Needs the runner's Alpaca data pair in env."""
+    sys.path.insert(0, str(REPO / "scripts" / "research"))
+    import alpaca_readonly as A
+    cli = A.AlpacaReadOnly.from_env()
+    bars = cli.bars([ticker], "1Day", f"{start}T00:00:00Z", f"{end}T23:59:00Z", feed="sip").get(ticker) or []
+    if not bars:
+        raise RuntimeError(f"sip bars for {ticker}: empty")
+    df = pd.DataFrame(bars).rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
+    # a daily bar is stamped at midnight ET (04:00/05:00Z) on its session date: the UTC calendar date is the session date
+    df.index = pd.to_datetime(df["t"], utc=True).dt.tz_convert(None).dt.normalize()
+    return df[["open", "high", "low", "close", "volume"]].sort_index()
+
+
+def _hybrid(sip: pd.DataFrame, iex: pd.DataFrame) -> pd.DataFrame:
+    """The frame the leg trades on after INDEX-CAPIT-SIP-CLOSED-BARS: SIP high/low/close (the signal and the stop) with the IEX
+    open of each session (the forming bar's first-tick price the entry reference reads)."""
+    out = sip.copy()
+    common = out.index.intersection(iex.index)
+    out = out.loc[common]
+    out["open"] = iex.loc[common, "open"].to_numpy()
+    return out
+
+
 def feed_compare(t: str, k: float, live: pd.DataFrame, cons: pd.DataFrame, warmup: int = 30) -> Dict[str, Any]:
     """Signals + trades of the live leg on the live feed vs on the consolidated (harness) bars, over their common sessions.
     Both frames start on the same date (state machines start together); signals in the first ``warmup`` sessions are not compared."""
@@ -217,6 +242,9 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--feed-compare", action="store_true",
                     help="compare the live trader's daily bars (/api/bot/candles, Alpaca IEX) with the consolidated harness bars")
     ap.add_argument("--api", default="https://ict-bot.duckdns.org")
+    ap.add_argument("--live-source", choices=("api", "sip"), default="api",
+                    help="feed-compare: 'api' = the trader's /api/bot/candles (IEX); 'sip' = Alpaca feed=sip closed daily bars "
+                         "(row INDEX-CAPIT-SIP-CLOSED-BARS), plus the hybrid SIP signal + IEX open entry when the API is readable")
     a = ap.parse_args(argv)
     if a.feed_compare:
         return run_feed_compare(a)
@@ -262,14 +290,32 @@ def run_feed_compare(a: Any) -> int:
     import yfinance as yf
     spec = json.loads((LEG_DIR / "spec.json").read_text())
     tickers = a.tickers.split(",") if a.tickers else spec["population"]
-    out_path = a.out if a.out != str(LEG_DIR / "live_parity.json") else str(LEG_DIR / "feed_agreement.json")
-    res: Dict[str, Any] = {"schema": "index_capit_feed_agreement/1", "leg": L.NAME,
-                           "live_feed": f"{a.api}/api/bot/candles interval=1d limit=1000 (the signal builders' fetch path)",
+    sip_mode = getattr(a, "live_source", "api") == "sip"
+    default_name = "feed_agreement_sip.json" if sip_mode else "feed_agreement.json"
+    out_path = a.out if a.out != str(LEG_DIR / "live_parity.json") else str(LEG_DIR / default_name)
+    if Path(out_path).is_dir():
+        out_path = str(Path(out_path) / default_name)
+    live_feed = (f"Alpaca feed=sip daily bars adjustment=split (closed bars; the leg's signal input after INDEX-CAPIT-SIP-CLOSED-BARS), "
+                 f"over the sessions {a.api}/api/bot/candles (IEX) serves" if sip_mode else
+                 f"{a.api}/api/bot/candles interval=1d limit=1000 (the signal builders' fetch path)")
+    res: Dict[str, Any] = {"schema": "index_capit_feed_agreement/1", "leg": L.NAME, "live_source": "sip" if sip_mode else "api",
+                           "live_feed": live_feed,
                            "consolidated_feed": "yfinance daily auto_adjust=False (the harness feed)", "tickers": {}}
     rc = 0
+    hybrid_rows: Dict[str, Any] = {}
     for t in tickers:
         try:
-            live = _live_feed_bars(t, a.api)
+            iex = None
+            if sip_mode:
+                try:
+                    iex = _live_feed_bars(t, a.api)
+                    start = str(iex.index[0].date())
+                except Exception as exc:  # noqa: BLE001  # allow-silent: recorded per ticker; SIP window then starts at the IEX run's first date
+                    res.setdefault("iex_unreadable", {})[t] = str(exc)[:200]
+                    start = "2022-12-01"
+                live = _sip_closed_bars(t, start, H.WINDOW_END)
+            else:
+                live = _live_feed_bars(t, a.api)
             raw = yf.download(t, start=str(live.index[0].date()), end=H.WINDOW_END, interval="1d", auto_adjust=False,
                               progress=False, threads=False)
             if isinstance(raw.columns, pd.MultiIndex):
@@ -282,6 +328,8 @@ def run_feed_compare(a: Any) -> int:
             continue
         r = feed_compare(t, float(spec["k_star"][t]), live, cons)
         res["tickers"][t] = r
+        if sip_mode and iex is not None:
+            hybrid_rows[t] = feed_compare(t, float(spec["k_star"][t]), _hybrid(live, iex), cons)
         print(f"{t}: sessions {r['sessions']} signals live {r['n_signals_live']} cons {r['n_signals_consolidated']} match {r['n_matching']} "
               f"live_only {r['live_only']} cons_only {r['consolidated_only']} net_r live {r['net_r_live']} cons {r['net_r_consolidated']} "
               f"entry_gap_med {r.get('entry_gap_bps_abs_median')} vol_ratio {r['volume_ratio_live_over_consolidated']}")
@@ -299,6 +347,20 @@ def run_feed_compare(a: Any) -> int:
                       "matched_trades_net_r_live": round(sum(v["matched_trades_net_r"]["live"] for v in rows), 4),
                       "matched_trades_net_r_consolidated": round(sum(v["matched_trades_net_r"]["consolidated"] for v in rows), 4),
                       "tickers_unreadable": sorted(t for t, v in res["tickers"].items() if "sessions" not in v)}
+    if hybrid_rows:
+        hv = list(hybrid_rows.values())
+        res["hybrid_sip_signal_iex_open"] = {
+            "what": "SIP high/low/close (signal, stop) with each session's IEX open (the entry reference the live forming bar carries)",
+            "tickers": hybrid_rows,
+            "summary": {"tickers_read": len(hv), "signals_live": sum(v["n_signals_live"] for v in hv),
+                        "signals_consolidated": sum(v["n_signals_consolidated"] for v in hv),
+                        "matching": sum(v["n_matching"] for v in hv), "live_only": sum(len(v["live_only"]) for v in hv),
+                        "consolidated_only": sum(len(v["consolidated_only"]) for v in hv),
+                        "matched_trades_net_r_live": round(sum(v["matched_trades_net_r"]["live"] for v in hv), 4),
+                        "matched_trades_net_r_consolidated": round(sum(v["matched_trades_net_r"]["consolidated"] for v in hv), 4),
+                        "net_r_live": round(sum(v["net_r_live"] for v in hv), 4),
+                        "net_r_consolidated": round(sum(v["net_r_consolidated"] for v in hv), 4)}}
+        print("hybrid:", json.dumps(res["hybrid_sip_signal_iex_open"]["summary"]))
     Path(out_path).write_text(json.dumps(res, indent=1, default=str) + "\n")
     print(json.dumps(res["summary"]))
     return rc
