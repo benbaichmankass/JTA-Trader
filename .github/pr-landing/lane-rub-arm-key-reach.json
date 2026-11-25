@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research harness only (RESEARCH-UNBLOCK-BUILDS-W48, fixes PI-20261119-FILLW47B-0013): exit_lever_ablation detects an arm config key whose change leaves the harness argv byte-identical (it cannot reach the backtest and used to run as the baseline under its own label). On ict_scalp it now routes such keys through a new --cfg-set/--cfg-unset flag of scripts/backtest_ict_scalp.py (applied after its yaml read, unknown keys refused, absent = byte-identical); on any other harness the run is REFUSED with failure.json, never silent. Measured: 8 of 74 queued exit_lever_ablation units (ict_scalp displacement entry sweeps) were silent no-ops; 0 queued units hit the refusal. Positive control on real SOL 5m candles: the displacement arm moves n 14 -> 9. No src/, no config/, no order path."
+}

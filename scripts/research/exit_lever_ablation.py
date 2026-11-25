@@ -228,6 +228,49 @@ def tp_mover_conflict(label: str, cfg: dict[str, Any], extra: list[str]) -> str 
             "the arm so the candidate replaces the declared mover.")
 
 
+# ── arm-key reachability (PI-20261119-FILLW47B-0013, RESEARCH-UNBLOCK-BUILDS-W48) ──
+#: Harnesses with a generic leg-config channel (``--cfg-set KEY=VALUE`` / ``--cfg-unset KEY``, applied after their
+#: yaml read). An arm key the argv builder does not forward is sent through it; on any other harness it is REFUSED.
+_CFG_SET_HARNESSES = ("ict_scalp",)
+
+
+def route_unforwarded_keys(leg: str, base: dict[str, Any], specs: list[Any], *, csv: str, resample: str,
+                           forming_1m: str | None = None, forming_session: str | None = None
+                           ) -> tuple[list[Any], dict[str, list[str]], list[str]]:
+    """(specs with routed keys added as raw ``--cfg-set``/``--cfg-unset`` flags, {label: routed tokens}, refusals).
+
+    The test is the argv itself: an arm key whose change (alone, on the leg's config) leaves the harness argv
+    byte-identical cannot reach the backtest, because the argv is the only channel. Before this, such an arm ran as
+    the baseline under its own label -- ict_scalp's ``displacement_atr_mult`` / ``min_displacement_body_to_range``
+    entry sweeps (8 weekly units, measured 2026-11-25) and the session / HTF filters (2026-11-19/20)."""
+    import regime_debt_matrix as rdm
+    harness = rdm.classify(base)
+
+    def argv_of(cfg: dict[str, Any]) -> list[str]:
+        return build_arm_argv(leg, cfg, csv, resample, "<emit>", "<json>", [], None, None,
+                              forming_1m=forming_1m, forming_session=forming_session)[0]
+
+    b0 = argv_of(base)
+    out, routed, refused = [], {}, []
+    for label, sets, unsets, extra in specs:
+        add: list[str] = []
+        for k, v in sets.items():
+            if base.get(k) == v or argv_of(arm_cfg(base, {k: v}, [])) != b0:
+                continue
+            add.append(f"--cfg-set={k}={json.dumps(v)}")
+        for k in unsets:
+            if k not in base or argv_of(arm_cfg(base, {}, [k])) != b0:
+                continue
+            add.append(f"--cfg-unset={k}")
+        if add and harness not in _CFG_SET_HARNESSES:
+            refused.append(f"arm {label!r}: {[t.split('=', 1)[1] for t in add]} change nothing in the {harness} harness "
+                           "argv, so they cannot reach the backtest; forward them in regime_debt_matrix.build_harness_cmd "
+                           "or pass the harness's raw --flag in the arm")
+        routed[label] = add
+        out.append((label, sets, unsets, list(extra) + [x for t in add for x in t.split("=", 1)]))
+    return out, {k: v for k, v in routed.items() if v}, refused
+
+
 # ── harness runs ────────────────────────────────────────────────────────────
 def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
     out = list(argv)
@@ -270,7 +313,10 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     i = 0
     while i < len(extra):
         flag = extra[i]
-        if i + 1 < len(extra) and not extra[i + 1].startswith("--"):
+        if flag in ("--cfg-set", "--cfg-unset") and i + 1 < len(extra):
+            argv += [flag, extra[i + 1]]    # repeatable (one per key): appended, never replaced
+            i += 2
+        elif i + 1 < len(extra) and not extra[i + 1].startswith("--"):
             argv = _replace_opt(argv, flag, extra[i + 1])
             i += 2
         else:
@@ -1140,6 +1186,15 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: an arm names @trigger_file but --trigger-from-path-metrics K was not given",
               file=sys.stderr)
         return 2
+    specs, routed, refused = route_unforwarded_keys(a.leg, base, specs, csv=csv, resample=str(feed["resample"]),
+                                                    forming_1m=a.minutes_1m_csv, forming_session=a.decision_session)
+    if refused:
+        for m in refused:
+            print(f"ERROR: {m}", file=sys.stderr)
+        _write_failure(out, {"stage": "arm_key_reachability", "errors": refused})
+        return 2
+    for lab, toks in routed.items():
+        print(f"[{lab}] arm keys routed through the harness's generic config channel: {toks}", flush=True)
     arms_dir = out / "arms"
     arms_dir.mkdir(exist_ok=True)
     arms: dict[str, dict[str, Any]] = {}
@@ -1152,7 +1207,7 @@ def main(argv: list[str] | None = None) -> int:
         shown = [("<data>" if t == csv else "<minutes_1m>" if a.minutes_1m_csv and t == a.minutes_1m_csv else t)
                  for t in argv_i]
         argvs[label] = {"argv": shown, "cfg_set": sets, "cfg_unset": unsets, "extra_flags": extra,
-                        "omitted_levers_per_builder": omitted}
+                        "omitted_levers_per_builder": omitted, "routed_cfg_keys": routed.get(label, [])}
         print(f"[{label}] {' '.join(shown)}", flush=True)
         r = subprocess.run(argv_i, cwd=str(REPO), capture_output=True, text=True, check=False)
         (arms_dir / f"{label}__stderr.log").write_text(r.stderr[-20000:], encoding="utf-8")
