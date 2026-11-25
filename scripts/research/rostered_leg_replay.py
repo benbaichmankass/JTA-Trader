@@ -70,6 +70,10 @@ RULE_MS_FRESH = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH-20261125")
 FRESH_SYMBOLS_2 = ("DOTUSDT", "ATOMUSDT", "BCHUSDT", "ETCUSDT")
 RULE_MS_FRESH2 = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH2-20261125")
 _FETCHED: Dict[Tuple[str, str], str] = {}
+#: INTRADAY STATE (RQ-20261125-f1a0-32): the metastate machinery with the DAILY own-symbol + BTC block replaced by the leg's OWN-TIMEFRAME state at
+#: entry (the REGIME-PROGRAM next form after f1a0-30 FAIL). Features from the last bar fully CLOSED at or before the entry time.
+ID_FEATS = ["id_rangepos48", "id_volburst", "id_ret12", "id_hi96", "dir", "leg", "fam"]
+RULE_ID = dict(RULE_MS, id="RULE-REGIME-INTRADAY-20261125")
 MS_MIN_TRAIN = 300
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
@@ -148,6 +152,43 @@ def trades_frame(per_leg: Dict[str, Dict[str, Any]], cfgs: Dict[str, Dict[str, A
     return df.dropna(subset=["ts"])
 
 
+def tf_seconds(tf: str) -> float:
+    """'15m' / '1h' / '4h' / '1d' -> seconds."""
+    tf = str(tf).strip().lower()
+    return float(int(tf[:-1]) * {"m": 60, "h": 3600, "d": 86400}[tf[-1]])
+
+
+def ohlc_bars(csv: Path) -> pd.DataFrame:
+    """The fetched candle CSV as an OHLC frame indexed by bar OPEN time (UTC), the same time-column rules as daily_closes."""
+    d = pd.read_csv(csv)
+    cols = {c.lower(): c for c in d.columns}
+    tcol = next((cols[c] for c in ("timestamp", "time", "datetime", "date", "open_time") if c in cols), d.columns[0])
+    t = d[tcol]
+    num = pd.api.types.is_numeric_dtype(t)
+    ts = pd.to_datetime(t, unit="ms", utc=True) if num and t.max() > 1e11 else (
+        pd.to_datetime(t, unit="s", utc=True) if num else pd.to_datetime(t, utc=True, errors="coerce"))
+    out = pd.DataFrame({k: d[cols.get(k, k)].astype(float).to_numpy() for k in ("open", "high", "low", "close")}, index=ts)
+    return out[~out.index.isna()].sort_index()
+
+
+def intraday_features(bars: pd.DataFrame, when: pd.Series, tf_sec: float) -> pd.DataFrame:
+    """ID_FEATS (minus the codes) at each entry, from the last bar whose CLOSE (open + tf) is <= the entry time: close position in the 48-bar range,
+    6-bar / 96-bar mean true range, 12-bar log return over the 96-bar return vol x sqrt(12), close / 96-bar high - 1."""
+    c, h, lo = bars["close"], bars["high"], bars["low"]
+    tr = pd.concat([h - lo, (h - c.shift()).abs(), (lo - c.shift()).abs()], axis=1).max(axis=1)
+    lr = np.log(c).diff()
+    f = pd.DataFrame({"id_rangepos48": (c - lo.rolling(48).min()) / (h.rolling(48).max() - lo.rolling(48).min()),
+                      "id_volburst": tr.rolling(6).mean() / tr.rolling(96).mean(),
+                      "id_ret12": np.log(c / c.shift(12)) / (lr.rolling(96).std() * np.sqrt(12)),
+                      "id_hi96": c / h.rolling(96).max() - 1})
+    close_t = bars.index + pd.Timedelta(seconds=tf_sec)
+    idx = close_t.searchsorted(pd.DatetimeIndex(when), side="right") - 1
+    out = f.iloc[np.clip(idx, 0, None)].reset_index(drop=True)
+    out.loc[idx < 0, :] = np.nan
+    out.index = when.index
+    return out.replace([np.inf, -np.inf], np.nan)
+
+
 def daily_closes(csv: Path) -> pd.Series:
     """Daily closes (UTC) from a fetched candle CSV (fetch_backtest_candles output); the time column is the first datetime-like column."""
     d = pd.read_csv(csv)
@@ -207,6 +248,18 @@ def state_features(close: pd.Series, when: pd.Series, prefix: str) -> pd.DataFra
     return out
 
 
+def intraday_frame(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str, float]) -> pd.DataFrame:
+    """ID_FEATS per trade: the leg's own-timeframe state at entry plus direction / leg / family codes (as metastate_frame)."""
+    X = pd.DataFrame(index=tr.index, columns=ID_FEATS, dtype=float)
+    for leg, g in tr.groupby("family"):
+        if leg in bars:
+            X.loc[g.index, [c for c in ID_FEATS if c.startswith("id_")]] = intraday_features(bars[leg], g.ts, tf[leg]).to_numpy()
+    X["dir"] = np.where(tr.direction.str.lower().isin(["long", "buy"]), 1.0, -1.0)
+    X["leg"] = tr.family.map({k: i for i, k in enumerate(sorted(tr.family.unique()))}).astype(float)
+    X["fam"] = tr.get("harness", pd.Series("", index=tr.index)).map({k: i for i, k in enumerate(FAMILIES)}).astype(float)
+    return X
+
+
 def metastate_frame(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optional[pd.Series]) -> pd.DataFrame:
     """MS_FEATS per trade: own-symbol state, BTC state (NaN when no BTC series), direction (+1 long / -1 short), leg and family codes."""
     X = pd.DataFrame(index=tr.index, columns=MS_FEATS, dtype=float)
@@ -223,7 +276,7 @@ def metastate_frame(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optiona
     return X
 
 
-def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str) -> Tuple[np.ndarray, Dict[str, Any]]:
+def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str, feats: Optional[List[str]] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
     """Walk-forward by calendar year from ``test_start``: fit a LightGBM regressor on net_r (clipped at +-MS_CLIP_R) over the trades that EXITED
     before Jan 1 of the year, predict that year's entries, TILT up (RR.TILT[0]) above the training predictions' 2/3 quantile and down below the 1/3
     quantile, else 1. Trades before ``test_start`` keep 1 (they are training only)."""
@@ -231,7 +284,8 @@ def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str) -> Tuple[n
     raw = np.ones(len(tr))
     info: Dict[str, Any] = {}
     y = tr.net_r.clip(-MS_CLIP_R, MS_CLIP_R).to_numpy(float)
-    Xv = X[MS_FEATS].to_numpy(float)
+    feats = feats or MS_FEATS
+    Xv = X[feats].to_numpy(float)
     years = sorted(int(v) for v in tr.ts[tr.ts >= pd.Timestamp(test_start, tz="UTC")].dt.year.unique())
     for yr in years:
         cut = pd.Timestamp(f"{yr}-01-01", tz="UTC")
@@ -242,7 +296,7 @@ def metastate_raw(tr: pd.DataFrame, X: pd.DataFrame, test_start: str) -> Tuple[n
             info[str(yr)] = {"n_train": int(len(trn)), "n_test": int(len(tst)), "skipped": "train < MS_MIN_TRAIN" if len(trn) < MS_MIN_TRAIN else "no test"}
             continue
         m = lgb.LGBMRegressor(objective="huber", **MS_LGB)
-        m.fit(Xv[trn], y[trn], categorical_feature=[MS_FEATS.index("leg"), MS_FEATS.index("fam")])
+        m.fit(Xv[trn], y[trn], categorical_feature=[feats.index("leg"), feats.index("fam")])
         # provenance: predict -- the model's predicted net R per trade; training-row predictions only set the tercile cuts
         p_tr, p_te = m.predict(Xv[trn]), m.predict(Xv[tst])
         q1, q2 = np.quantile(p_tr, [1 / 3, 2 / 3])
@@ -300,6 +354,18 @@ def grade_metastate(tr: pd.DataFrame, closes: Dict[str, pd.Series], btc: Optiona
     g["btc_state"] = "present" if btc is not None and len(btc) else "absent (NaN features)"
     g["feature_coverage"] = {c: round(float(X.loc[keep, c].notna().mean()), 4) for c in MS_FEATS}
     return {"arms": {"metastate": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
+
+
+def grade_intraday(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str, float], seed: int = RR.SEED) -> Dict[str, Any]:
+    tr = tr.copy().reset_index(drop=True)
+    X = intraday_frame(tr, bars, tf)
+    raw_all, info = metastate_raw(tr, X, RR.TEST_START, ID_FEATS)
+    keep = (tr.ts >= pd.Timestamp(RR.TEST_START, tz="UTC")).to_numpy()
+    t = tr[keep].reset_index(drop=True)
+    g = grade_raw(t, raw_all[keep], RULE_ID, seed)
+    g["walk_forward"] = info
+    g["feature_coverage"] = {c: round(float(X.loc[keep, c].notna().mean()), 4) for c in ID_FEATS}
+    return {"arms": {"intraday": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
 
 
 def grade_raw(t: pd.DataFrame, raw: np.ndarray, rule: Dict[str, Any], seed: int = RR.SEED) -> Dict[str, Any]:
@@ -362,7 +428,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--work", default="")
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
-    ap.add_argument("--mode", choices=["book", "tradestate", "metastate"], default="book")
+    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
     ap.add_argument("--self-test", action="store_true")
@@ -376,8 +442,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     cfgs = rostered_legs()
     btc_cfg = next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
     if a.population in ("fresh", "fresh2"):
-        if a.mode != "metastate":
-            ap.error("--population fresh/fresh2 is defined for --mode metastate only")
+        if a.mode not in ("metastate", "intraday"):
+            ap.error("--population fresh/fresh2 is defined for --mode metastate / intraday only")
         cfgs = fresh_legs(cfgs, FRESH_SYMBOLS if a.population == "fresh" else FRESH_SYMBOLS_2)
     if a.legs:
         cfgs = {k: v for k, v in cfgs.items() if k in set(a.legs.split(","))}
@@ -397,6 +463,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         m = grade_tradestate(tr, closes) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_TS
+    elif a.mode == "intraday":
+        meas = [leg for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()]
+        bars = {leg: ohlc_bars(work / f"{leg}.csv") for leg in meas}
+        tfs = {leg: tf_seconds(cfgs[leg]["cfg"].get("timeframe")) for leg in meas}
+        tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
+        m = grade_intraday(tr, bars, tfs) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_ID
     elif a.mode == "metastate":
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == "BTCUSDT"), None)
@@ -487,6 +560,22 @@ def _self_test() -> int:
     check("fresh: no FRESH symbol is traded by a rostered leg", not ({v["cfg"]["symbols"][0] for v in legs.values()} & set(FRESH_SYMBOLS)))
     check("fresh2: disjoint from the rostered symbols AND from FRESH_SYMBOLS",
           not ({v["cfg"]["symbols"][0] for v in legs.values()} & set(FRESH_SYMBOLS_2)) and not (set(FRESH_SYMBOLS) & set(FRESH_SYMBOLS_2)))
+    # intraday: features come from the last bar CLOSED at or before entry (no lookahead), and an injected range-position edge is found
+    hb = pd.date_range("2020-09-01", periods=24 * 2000, freq="1h", tz="UTC")
+    px = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, len(hb))))
+    bars = pd.DataFrame({"open": px, "high": px * 1.004, "low": px * 0.996, "close": px}, index=hb)
+    e1 = pd.Series([hb[500] + pd.Timedelta(minutes=30), hb[500] + pd.Timedelta(hours=1)])
+    f1 = intraday_features(bars, e1, 3600.0)
+    full = intraday_features(bars, pd.Series(hb[[499, 500]] + pd.Timedelta(hours=1)), 3600.0)
+    check("intraday: an entry inside bar k reads bar k-1; at bar k's close it reads bar k",
+          np.allclose(f1.iloc[0].to_numpy(), full.iloc[0].to_numpy(), equal_nan=True) and np.allclose(f1.iloc[1].to_numpy(), full.iloc[1].to_numpy(), equal_nan=True))
+    ents2 = hb[200::13][:3000] + pd.Timedelta(hours=1)
+    rp = intraday_features(bars, pd.Series(ents2), 3600.0)["id_rangepos48"].to_numpy()
+    r2 = rng.normal(0, 1, len(ents2)) + np.where(rp > 0.5, 0.6, -0.6)
+    tri = pd.DataFrame({"family": "L", "direction": "long", "net_r": r2, "ts": ents2, "xts": ents2 + pd.Timedelta(hours=10), "harness": "trend"})
+    gi = grade_intraday(tri, {"L": bars}, {"L": 3600.0})["arms"]["intraday"]
+    check("intraday: an injected range-position edge is found and beats the permutation control", gi["delta"] > 0.02 and gi["random"]["share_ge_arm"] <= 0.05)
+    check("intraday: tf parse", tf_seconds("4h") == 14400.0 and tf_seconds("15m") == 900.0)
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
