@@ -1,0 +1,131 @@
+# Authored 2026-11-24 by lane ML-PRIMARY (REGIME-PROGRAM R2, manager plan 2026-11-24). Rule fixed before any run; NO local read of the outcome preceded
+# registration (only file/row coverage counts were read). Gates this adds or changes: none.
+id: RQ-20261124-f1a0-16
+title: 'REGIME-PROGRAM R2: strategy-performance regimes. Does a causal weekly router over 8 family x direction books beat all books and random
+  routing on net R per trade?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-13/45507416598
+  verdict_read: indeterminate
+  diagnosis: 'R1 (regime_persistence, run 45507416598) found the BTC regime STATE persistent (30d-return acf 0.87 week to week) but the SIDE edge
+    not persistent at any window (side-gap r -0.06 at 1w, +0.08 at 1m, -0.35 at 1q; the down / low-vol cell anti-persists at 1w, r -0.31, 90% CI
+    -0.47..-0.19). A side router keyed on regime state is ruled out. The manager plan''s R2 labels periods by which strategy FAMILY earned; this
+    unit tests whether that label is predictable one week ahead (the shortest R1 window, where state persistence is highest).'
+  search: two registered arms (persist, logit), one population, one horizon (1 week), fixed features; no grid.
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 2
+  due_by: '2026-12-01'
+question: On the backtest trade corpus (unique crypto trades of trend_donchian, htf_pullback, fade_breakout and squeeze_breakout, 2020-09-01..2026-10-26,
+  harness net R with the full cost stack), does routing each week only to the family x direction books that a causal rule (trailing 13-week mean
+  > 0) or a causal logistic classifier expects to earn raise net R per trade taken over trading every book, beat random routing with the same
+  number of books per week, and hold in >= 4 of 5 test years (2022-2026)?
+why_this_matters: 'REGIME-PROGRAM (operator 2026-11-24: regime classification is a standing, first-class lever, graded on money, never on forecast
+  accuracy). R1 ruled out side routing; R2 is the strategy-performance form. A pass gives R4 (regime-conditioned SIZING across books) a measured
+  signal; a fail closes the trailing-performance form and moves R2 to richer state features (R3 classifier head-to-head), never closing the program.'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'ESTIMATE: about 250 test weeks x 8 books; the cluster is the week, so the binding n is ~250 weeks. Weekly book-mean sd unknown before
+    the run (no local read); 0.05 R/trade is a stand-in. INDETERMINATE is a live outcome.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: weekly risk routing across strategy books (R4 sizing input)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: All 8 books every week (no routing), on the same trades; and 200 random routings with each week's number of chosen books held fixed.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/regime_r2_family_router.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-f1a0-16
+decision_rule:
+  id: RULE-REGIME-R2-FAMILY-ROUTER-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: all books every week; random same-count routing (200 draws)
+  statistic: 'scripts/research/regime_r2_family_router.py (run, grade, arm_verdict): per arm, delta = net R per trade taken - all-books net R per
+    trade over test weeks 2022-01-03..2026-10-26; se from 1,000 week-bootstrap draws; random share = share of 200 same-count random routings whose
+    R per trade >= the arm''s; yearly delta 2022..2026; trade share = arm trades / all trades.'
+  rule: 'An arm PASSES iff delta >= +0.02 R/trade AND delta/se >= 2 AND random share <= 0.025 (Bonferroni over two arms) AND delta > 0 in >= 4
+    of 5 test years AND trade share >= 0.30. The unit PASSES iff either arm passes; FAILS iff both arms have delta <= 0 or random share >= 0.5;
+    INDETERMINATE otherwise.'
+  pass_action: Fresh-window confirmation (the next corpus slice or held-out families), then R4 regime-conditioned sizing across books on the passing
+    arm's signal; a Tier-3 proposal only after both.
+  fail_action: Record that trailing book performance does not route; author R3 (HMM / change-point / ADX-vol / LGBM state classifiers head-to-head
+    on the same money metric and random-routing control).
+  proposal_mapping: nothing is proposed for the trade path from this unit alone; any proposal is sizing (R4), never a drop gate.
+  what_it_does_not_do: Changes no config, adds no gate, trains nothing that reaches a book. No local read of the outcome preceded registration.
+    The router SKIPS books inside the research simulation only; a live form would be sizing (R4) and would be presented as a proposal with measured
+    value.
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: same number of books chosen each test week, which ones at random; the arm must beat >= 97.5% of draws
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket in every arm; the arm only chooses which books trade. Added to the controls metadata after run 45511033292 for the design-fields guard; the decision rule is unchanged'
+  best_static:
+    grid:
+    - all books every week (no routing), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule, not chosen on any fold; no grid was searched'
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 15
+  why_runner: Reads the in-repo trade corpus; numpy only.
+  basis: 'MEASURED locally: loading the corpus with cf_bulk.load_jobs took 80 s (2.39M rows, 510,883 distinct jobs); the self-test runs in 14 s.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/regime_r2_family_router.py
+- research/queue/RQ-20261124-f1a0-13.yaml
+- REGIME-PROGRAM
