@@ -28,6 +28,11 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 CLOSE (Binance Vision monthly fundingRate, the prop_ml_leg.f1_features convention). Placebo: the same 4 columns with their
                 timestamps shuffled (seeded, shuffle_ts). Graded vs the registered recipe on the same rows (rows lacking funding history dropped
                 from BOTH sides before any fit).
+  oi_feats      POSITIONING INPUTS (f1a0-29 funding INDETERMINATE -0.0093; its fail_action): open-interest change / z, top-trader and global
+                long-short ratios and taker buy/sell flow (prop_ml_leg F1_OI_COLS via f1_features, as-of bar t's CLOSE) from the Binance Vision DAILY
+                metrics files, which exist only from 2021-12. Every row is kept: before 2021-12 the columns are NaN (LightGBM routes NaN natively),
+                so early folds train mostly without them and later folds with them; the test rows (2022-01..) all carry them. Placebo: the same
+                columns timestamp-shuffled AMONG THE ROWS THAT HAVE THEM (NaN rows stay NaN). Graded vs the registered recipe on the same rows.
   sl_wide       SL PLACEMENT. Same predictions; the bracket is SL 3 / TP 4.5 ATR14 (same 1.5 reward:risk, 24 h stop) instead of
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
@@ -108,7 +113,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -118,6 +123,7 @@ LIMC_PARAMS = {"n_estimators": 200, "learning_rate": 0.03, "num_leaves": 15, "mi
 DRAWS = 100                           # matched-random draws (research-queue-design-fields-guard minimum)
 TAU = 0.10
 SEED = 20261124
+OI_FEATURES = ["oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24"]   # == prop_ml_leg.F1_OI_COLS
 FUND_FEATURES = ["fund", "fund_ma3d", "fund_z", "xs_fund_mean"]
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
 SL_WIDE, TP_WIDE = 3.0, 4.5
@@ -244,6 +250,28 @@ def book_columns(tab: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame({"own_prev_net_long": own["net_long"].to_numpy(), "own_prev_net_short": own["net_short"].to_numpy()})
     x = xs.reindex(pd.to_datetime(tab["ts"], utc=True)).reset_index(drop=True)
     return pd.concat([out, x], axis=1)[BOOK_FEATURES]
+
+
+def oi_columns(cache: Path, syms: list[str], tab: pd.DataFrame) -> pd.DataFrame:
+    """OI_FEATURES per decision row: prop_ml_leg.f1_features on each symbol's full HOURLY klines (so the 24 h change and 168 h z are in hours),
+    as-of bar t's close, joined to the decision rows on (symbol, ts). NaN where the metrics have no history (before 2021-12) or a day is missing."""
+    import prop_ml_leg as P
+    met = P.fetch_metrics(cache, syms)
+    parts = []
+    for sym in syms:
+        kl = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if not len(kl):
+            continue
+        f = P.f1_features(kl[["ts"]].assign(ts=pd.to_datetime(kl["ts"], utc=True)), pd.DataFrame(), met.get(sym, pd.DataFrame()))
+        for c in OI_FEATURES:
+            if c not in f:
+                f[c] = np.nan
+        parts.append(f[["ts"] + OI_FEATURES].assign(symbol=sym))
+    lut = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["ts", "symbol"] + OI_FEATURES)
+    key = pd.DataFrame({"symbol": tab["symbol"].to_numpy(), "ts": pd.to_datetime(tab["ts"], utc=True).reset_index(drop=True)})
+    lut["ts"] = pd.to_datetime(lut["ts"], utc=True)
+    out = key.merge(lut.drop_duplicates(["symbol", "ts"]), on=["symbol", "ts"], how="left", validate="many_to_one")
+    return out[OI_FEATURES].astype(float).reset_index(drop=True)
 
 
 def fund_asof(fund: pd.DataFrame, close_ts: pd.Series) -> pd.DataFrame:
@@ -572,8 +600,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 arms_p[name] = (ql, qs)
                 tk[name] = seq.run(ql, qs)
             info |= {"train_up_share": share, "test_up_share": float(up_te.mean())}
-        elif arm in ("book_feats", "fund_feats"):
-            fcols = BOOK_FEATURES if arm == "book_feats" else FUND_FEATURES
+        elif arm in ("book_feats", "fund_feats", "oi_feats"):
+            fcols = {"book_feats": BOOK_FEATURES, "fund_feats": FUND_FEATURES, "oi_feats": OI_FEATURES}[arm]
+            info |= {"feature_coverage_train": float(train[fcols].notna().all(axis=1).mean()) if len(train) else None,
+                     "feature_coverage_test": float(test[fcols].notna().all(axis=1).mean()) if len(test) else None}
             for name, cols in {"arm": fcols, "control": [f"pb_{c}" for c in fcols]}.items():
                 ql, qs = M.fit_predict(train, test, M.FEATURES + cols, n_jobs)
                 tk[name] = seq.run(ql, qs)
@@ -791,6 +821,15 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     if arm in ("long_mute", "regime_heads"):
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=["btc_ret168", "btc_vol_pct90d"]).reset_index(drop=True)
+    if arm == "oi_feats":
+        tab = tab.reset_index(drop=True)
+        oc = oi_columns(cache, syms, tab)
+        have = oc.notna().any(axis=1).to_numpy()
+        pb = pd.DataFrame(np.nan, index=oc.index, columns=OI_FEATURES)
+        if have.any():
+            sub = tab[have].reset_index(drop=True)
+            pb.loc[have, OI_FEATURES] = shuffle_ts(sub, oc[have].reset_index(drop=True)).to_numpy()
+        tab = pd.concat([tab, oc, pb.add_prefix("pb_")], axis=1)
     if arm == "fund_feats":
         tab = tab.reset_index(drop=True)
         fc = fund_columns(cache, syms, tab)
@@ -980,6 +1019,24 @@ def _self_test() -> None:
     assert abs(q.fund.iloc[0] - 99e-5) < 1e-12 and abs(q.fund.iloc[1] - 100e-5) < 1e-12 and np.isnan(q.fund.iloc[2])
     assert abs(q.fund_ma3d.iloc[1] - np.mean(np.arange(92, 101)) * 1e-5) < 1e-12 and np.isfinite(q.fund_z.iloc[1])
     assert fund_asof(pd.DataFrame(), pd.Series(fts[:2])).isna().all().all()
+    # oi_feats: hourly features joined to decision rows; a row before the metrics start is NaN; the join is on (symbol, ts) with tz-aware keys
+    import prop_ml_leg as P
+    with tempfile.TemporaryDirectory() as td2:
+        kts = pd.date_range("2021-11-20", periods=24 * 40, freq="1h", tz="UTC")
+        pd.DataFrame({"ts": kts, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}).to_pickle(Path(td2) / "AUSDT.pkl")
+        mts = pd.date_range("2021-12-01", periods=12 * 24 * 25, freq="5min", tz="UTC")
+        met = pd.DataFrame({"ts": mts, "sum_open_interest": 1.0, "sum_open_interest_value": np.linspace(100, 200, len(mts)),
+                            "count_toptrader_long_short_ratio": 1.5, "sum_toptrader_long_short_ratio": 1.2, "count_long_short_ratio": 0.9,
+                            "sum_taker_long_short_vol_ratio": 1.1})
+        real = P.fetch_metrics
+        P.fetch_metrics = lambda cache, syms: {"AUSDT": met}
+        try:
+            tabo = pd.DataFrame({"symbol": ["AUSDT", "AUSDT"], "ts": [kts[24], kts[24 * 30]]})
+            oc = oi_columns(Path(td2), ["AUSDT"], tabo)
+        finally:
+            P.fetch_metrics = real
+        assert list(oc.columns) == OI_FEATURES and oc.iloc[0].isna().all(), oc
+        assert abs(oc.taker_ratio.iloc[1] - np.log(1.1)) < 1e-9 and oc.oi_chg24.iloc[1] > 0
     print("self-test ok")
 
 
