@@ -1,0 +1,106 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (manager ask 10:25Z: cheap units on existing harnesses during light mode). Rule registered BEFORE
+# any run; no local read of this window/population. Gates this adds or changes: none (a research unit; changes no config or order path).
+id: RQ-20261125-1e06-14
+title: 'Third POPULATION for the unfiltered leg spec: the unfiltered capitulation trigger on the 1e06-07 pairs, evidence window 2010-06..2026-10, graded
+  POOLED'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: On the evidence window 2010-06-01..2026-10-22, does the UNFILTERED 1.5-ATR capitulation trigger executed in the 1x ETF on the 1e06-07 pairs (KBE,
+  SMH, EWZ, FXI, EWG, EWU, VGK, IJR) earn positive pooled net R with >= 4 of 8 pairs positive, stay positive under 2x slippage, AND beat >= 95% of 200 re-timed
+  replays?
+why_this_matters: 'The unfiltered spec has two populations (1e06-06, 1e06-08). The 1e06-07 pairs were read only WITH the SMA200 filter (PASS, n 190, 5/8).
+  Unfiltered on them is a third population for the spec as wired, and the in-window counterpart of 1e06-13 (filter contribution in-window vs pre-sample).
+  DISCLOSED: these pairs are not fully fresh (the bull-filtered trades are a subset of this unit''s trades).'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 1e06-09 (bull-filtered, these 8 pairs, pre-sample) measured pooled n 61; the unfiltered trigger fires more (1e06-06 n 410 / 1e06-08
+    n 687 in-window on 8 / 10 pairs), so n ~ 80-300, above the floor 25. No local read of this population and window.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261125-1e06-14
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py unit RQ-20261125-1e06-14 --start 2010-06-01 --end 2026-10-22: family capitulation_wide (UNFILTERED, no regime
+    gate) on capitulation_bull (8 pairs, 1x execution, baseline flat); POOLED grade; the timing control (200 re-timed replays, shifts 40-400 sessions, same
+    stop geometry, TP and cost) is a RULE CLAUSE. Cost stack: 5 bps slippage per side (2x slippage re-read), the ETF price series itself (expense embedded),
+    no funding; TP = K* calibrated on the first 60% of in-window trades, never tp_r 50. Pairs with no bars in the window count as not positive.'
+  rule: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND pooled actual net_r beats >= 95% of
+    the 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise. The 1e06-06/-08 rule, only window and population
+    differ.
+  pass_action: Record on INDEX-CAPIT-1X-LEG as a third population for the unfiltered spec (input to widening the leg's ticker population later; a widening
+    needs its own population test, which this is).
+  fail_action: Record that the unfiltered spec does not carry to these pairs in-window, compare with the filtered 1e06-07 PASS (the filter's in-window value),
+    and author the next iteration from the per-pair diagnosis.
+  proposal_mapping: pass -> evidence record on INDEX-CAPIT-1X-LEG; fail or indeterminate -> manager flag + the next iteration from its diagnosis.
+  what_it_does_not_do: Changes no config and no roster. NO local read of this window/population preceded this registration.
+  baseline: Flat (the execution is already the 1x index ETF).
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261125-1e06-14
+  - --start
+  - '2010-06-01'
+  - --end
+  - '2026-10-22'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261125-1e06-14
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-1e06-06
+- RQ-20261124-1e06-08
+- RQ-20261124-1e06-07
+- RQ-20261125-1e06-09
+- INDEX-CAPIT-1X-LEG
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+iteration:
+  subject: index-etf-capitulation
+  subject_kind: strategy
+  from_result: RQ-20261125-1e06-09/45543181077
+  verdict_read: fail
+  diagnosis: Same trigger, a third population; costs one runner pass on the existing harness. Read with 1e06-13 it measures the SMA200 filter's contribution
+    in both windows.
+  search: 'none new: the same family, procedure, costs and rule as 1e06-06/-08; only window and population differ (fixed now).'
+  levers:
+  - timing
+  attempt: 9
+  due_by: '2026-12-01'
+intervention_controls:
+  not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400 sessions,
+    same stop geometry, TP and cost), which is a rule clause here
+not_before: '2026-11-25T13:00:00+00:00'
