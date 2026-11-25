@@ -1,0 +1,727 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261125-1e07-04",
+ "read_state": "measured",
+ "verdict": "fail",
+ "n": 918,
+ "note": "capitulation 4h crypto: FAIL (pooled n 918); symbols without bars: none",
+ "decision_rule": {
+  "id": "RULE-RQ-20261125-1e07-04",
+  "rule": "UNFILTERED capitulation trigger (daily spec kept in 4h BARS, not re-tuned) on 6 crypto majors (Binance USDT-M), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND pooled net_r>0 at 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05) AND >= 4 of 6 symbols net_r>0 (strict majority) AND the chronologically latest 40% of pooled trades net_r>0; INDETERMINATE if pooled n<25; FAIL otherwise"
+ },
+ "population": "6 of 6 symbols with bars (crypto, 4h, 2020-01-01..2026-10-22); Binance Vision USDT-M klines; trades net of the full cost stack (fee + slippage + funding)",
+ "measurement": {
+  "family": "capitulation_wide",
+  "timeframe": "4h",
+  "kind": "crypto",
+  "window": [
+   "2020-01-01",
+   "2026-10-22"
+  ],
+  "hold_cap_bars": 10,
+  "symbols": {
+   "BTCUSDT": {
+    "n_signals": 166,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 2.0,
+     "state": "calibrated",
+     "n_is": 100,
+     "is_boundary": "2024-05-01T12:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.36,
+       "is_cf_net_r": -15.687
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.3,
+       "is_cf_net_r": -16.632
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.27,
+       "is_cf_net_r": -12.799
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.25,
+       "is_cf_net_r": -6.812
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.23,
+       "is_cf_net_r": -1.89
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.15,
+       "is_cf_net_r": -5.091
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.12,
+       "is_cf_net_r": -4.726
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.07,
+       "is_cf_net_r": -6.708
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.06,
+       "is_cf_net_r": -4.292
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.06,
+       "is_cf_net_r": 1.708
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.02,
+       "is_cf_net_r": -1.824
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.01,
+       "is_cf_net_r": -0.405
+      }
+     ]
+    },
+    "n": 166,
+    "net_r": -25.1031,
+    "mean_net_r": -0.1512,
+    "max_drawdown_r": 30.2703,
+    "win_rate": 0.373,
+    "by_outcome": {
+     "stop": 86,
+     "take_profit": 29,
+     "timeout": 51
+    },
+    "folds": [
+     {
+      "n": 37,
+      "net_r": -9.7818
+     },
+     {
+      "n": 40,
+      "net_r": 11.107
+     },
+     {
+      "n": 38,
+      "net_r": -8.6614
+     },
+     {
+      "n": 51,
+      "net_r": -17.7669
+     }
+    ],
+    "net_r_2x_slip": -28.2694,
+    "mean_bars_held": 5.27,
+    "mean_cost_r": 0.1029,
+    "mean_funding_r": 0.0138,
+    "data_start": "2020-01-01 00:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 14922,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   },
+   "ETHUSDT": {
+    "n_signals": 164,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 2.5,
+     "state": "calibrated",
+     "n_is": 99,
+     "is_boundary": "2024-05-01T00:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.354,
+       "is_cf_net_r": -9.556
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.253,
+       "is_cf_net_r": -13.563
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.222,
+       "is_cf_net_r": -11.545
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.202,
+       "is_cf_net_r": -9.341
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.182,
+       "is_cf_net_r": -6.833
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.141,
+       "is_cf_net_r": -3.44
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.111,
+       "is_cf_net_r": -4.913
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.091,
+       "is_cf_net_r": -1.138
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.061,
+       "is_cf_net_r": -0.683
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.051,
+       "is_cf_net_r": 4.168
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.03,
+       "is_cf_net_r": 2.696
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.01,
+       "is_cf_net_r": 3.173
+      }
+     ]
+    },
+    "n": 164,
+    "net_r": -23.2623,
+    "mean_net_r": -0.1418,
+    "max_drawdown_r": 29.1776,
+    "win_rate": 0.396,
+    "by_outcome": {
+     "stop": 79,
+     "take_profit": 18,
+     "timeout": 67
+    },
+    "folds": [
+     {
+      "n": 35,
+      "net_r": 2.6633
+     },
+     {
+      "n": 44,
+      "net_r": -3.9419
+     },
+     {
+      "n": 38,
+      "net_r": -2.4505
+     },
+     {
+      "n": 47,
+      "net_r": -19.5332
+     }
+    ],
+    "net_r_2x_slip": -25.4356,
+    "mean_bars_held": 6.15,
+    "mean_cost_r": 0.0728,
+    "mean_funding_r": 0.011,
+    "data_start": "2020-01-01 00:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 14922,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   },
+   "SOLUSDT": {
+    "n_signals": 126,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 76,
+     "is_boundary": "2024-06-08T00:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.355,
+       "is_cf_net_r": -12.71
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.237,
+       "is_cf_net_r": -17.005
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.184,
+       "is_cf_net_r": -20.816
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.171,
+       "is_cf_net_r": -17.953
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.132,
+       "is_cf_net_r": -19.844
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.092,
+       "is_cf_net_r": -24.32
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.079,
+       "is_cf_net_r": -21.551
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.053,
+       "is_cf_net_r": -23.152
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.039,
+       "is_cf_net_r": -21.99
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.026,
+       "is_cf_net_r": -22.342
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -24.467
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -24.467
+      }
+     ]
+    },
+    "n": 126,
+    "net_r": -20.4243,
+    "mean_net_r": -0.1621,
+    "max_drawdown_r": 21.8224,
+    "win_rate": 0.437,
+    "by_outcome": {
+     "stop": 59,
+     "take_profit": 46,
+     "timeout": 21
+    },
+    "folds": [
+     {
+      "n": 27,
+      "net_r": -6.4345
+     },
+     {
+      "n": 40,
+      "net_r": -4.3068
+     },
+     {
+      "n": 30,
+      "net_r": -8.3885
+     },
+     {
+      "n": 29,
+      "net_r": -1.2945
+     }
+    ],
+    "net_r_2x_slip": -21.7825,
+    "mean_bars_held": 4.27,
+    "mean_cost_r": 0.0557,
+    "mean_funding_r": 0.0054,
+    "data_start": "2020-09-14 04:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 13349,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   },
+   "XRPUSDT": {
+    "n_signals": 151,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 1.25,
+     "state": "calibrated",
+     "n_is": 91,
+     "is_boundary": "2024-01-31T08:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.385,
+       "is_cf_net_r": -1.854
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.341,
+       "is_cf_net_r": 3.58
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.253,
+       "is_cf_net_r": 3.336
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.209,
+       "is_cf_net_r": 2.022
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.176,
+       "is_cf_net_r": 0.786
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.121,
+       "is_cf_net_r": 0.125
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.088,
+       "is_cf_net_r": 3.719
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.066,
+       "is_cf_net_r": 3.949
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.066,
+       "is_cf_net_r": 6.949
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.033,
+       "is_cf_net_r": 6.564
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.022,
+       "is_cf_net_r": 8.326
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.011,
+       "is_cf_net_r": 10.279
+      }
+     ]
+    },
+    "n": 151,
+    "net_r": -5.8721,
+    "mean_net_r": -0.0389,
+    "max_drawdown_r": 15.3675,
+    "win_rate": 0.51,
+    "by_outcome": {
+     "stop": 60,
+     "take_profit": 45,
+     "timeout": 46
+    },
+    "folds": [
+     {
+      "n": 30,
+      "net_r": 6.4507
+     },
+     {
+      "n": 47,
+      "net_r": -1.7084
+     },
+     {
+      "n": 34,
+      "net_r": -3.3072
+     },
+     {
+      "n": 40,
+      "net_r": -7.3072
+     }
+    ],
+    "net_r_2x_slip": -7.5329,
+    "mean_bars_held": 5.28,
+    "mean_cost_r": 0.0588,
+    "mean_funding_r": 0.0075,
+    "data_start": "2020-01-06 08:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 14860,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   },
+   "BNBUSDT": {
+    "n_signals": 173,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 104,
+     "is_boundary": "2024-01-08T08:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.356,
+       "is_cf_net_r": -10.358
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.269,
+       "is_cf_net_r": -10.536
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.212,
+       "is_cf_net_r": -16.695
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.173,
+       "is_cf_net_r": -14.352
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.144,
+       "is_cf_net_r": -14.324
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.087,
+       "is_cf_net_r": -15.552
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.077,
+       "is_cf_net_r": -12.124
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.058,
+       "is_cf_net_r": -14.076
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.029,
+       "is_cf_net_r": -13.962
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.019,
+       "is_cf_net_r": -12.265
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.019,
+       "is_cf_net_r": -10.265
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.01,
+       "is_cf_net_r": -7.901
+      }
+     ]
+    },
+    "n": 173,
+    "net_r": -16.7784,
+    "mean_net_r": -0.097,
+    "max_drawdown_r": 17.7462,
+    "win_rate": 0.497,
+    "by_outcome": {
+     "stop": 69,
+     "take_profit": 63,
+     "timeout": 41
+    },
+    "folds": [
+     {
+      "n": 36,
+      "net_r": -10.8507
+     },
+     {
+      "n": 56,
+      "net_r": 1.605
+     },
+     {
+      "n": 40,
+      "net_r": -4.9875
+     },
+     {
+      "n": 41,
+      "net_r": -2.5452
+     }
+    ],
+    "net_r_2x_slip": -19.3883,
+    "mean_bars_held": 4.72,
+    "mean_cost_r": 0.0794,
+    "mean_funding_r": 0.009,
+    "data_start": "2020-02-10 08:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 14680,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   },
+   "ADAUSDT": {
+    "n_signals": 138,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 83,
+     "is_boundary": "2024-02-07T16:00:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.422,
+       "is_cf_net_r": 5.034
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.325,
+       "is_cf_net_r": 0.579
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.289,
+       "is_cf_net_r": 3.595
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.241,
+       "is_cf_net_r": 2.892
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.181,
+       "is_cf_net_r": -0.103
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.096,
+       "is_cf_net_r": -8.353
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.06,
+       "is_cf_net_r": -9.812
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.048,
+       "is_cf_net_r": -8.746
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -6.746
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.012,
+       "is_cf_net_r": -9.25
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.012,
+       "is_cf_net_r": -8.25
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -7.893
+      }
+     ]
+    },
+    "n": 138,
+    "net_r": -4.0843,
+    "mean_net_r": -0.0296,
+    "max_drawdown_r": 12.9602,
+    "win_rate": 0.522,
+    "by_outcome": {
+     "stop": 50,
+     "take_profit": 52,
+     "timeout": 36
+    },
+    "folds": [
+     {
+      "n": 32,
+      "net_r": 1.3762
+     },
+     {
+      "n": 45,
+      "net_r": 2.4116
+     },
+     {
+      "n": 30,
+      "net_r": -4.958
+     },
+     {
+      "n": 31,
+      "net_r": -2.9141
+     }
+    ],
+    "net_r_2x_slip": -5.5927,
+    "mean_bars_held": 4.64,
+    "mean_cost_r": 0.0568,
+    "mean_funding_r": 0.0058,
+    "data_start": "2020-01-31 08:00:00+00:00",
+    "data_end": "2026-10-22 20:00:00+00:00",
+    "n_bars": 14740,
+    "cost_bps": {
+     "fee": 11.0,
+     "slip": 3.0,
+     "fund": 1.0
+    }
+   }
+  },
+  "symbols_missing": [],
+  "pooled": {
+   "n": 918,
+   "net_r": -95.5245,
+   "net_r_2x_slip": -108.0014,
+   "symbols_positive": 0,
+   "latest_40pct": {
+    "n": 368,
+    "net_r": -78.1854,
+    "from": "2024-04-05T16:00:00+00:00"
+   },
+   "timing_control": {
+    "draws": 200,
+    "shift_bars": "40..400 either direction",
+    "mean_net_r": -77.759,
+    "p95_net_r": -30.801,
+    "share_of_draws_ge_actual": 0.71
+   },
+   "checks": {
+    "pooled_n_ge_floor": true,
+    "pooled_net_gt_0": false,
+    "pooled_net_gt_0_at_2x_slip": false,
+    "beats_timing_control_95": false,
+    "latest_40pct_net_gt_0": false,
+    "symbols_positive_ge_4_of_6": false
+   },
+   "verdict": "fail"
+  },
+  "provenance": "ESTIMATED"
+ },
+ "generated_at": "2026-11-25T17:04:05Z"
+}
