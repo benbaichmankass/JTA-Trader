@@ -961,6 +961,27 @@ def account_closed_pnl_for_trade(
         # arithmetic, `exit_price_source` describes the evidence.
         try:
             from src.runtime.fills_pnl import exit_from_fills, exit_from_one_order_fills
+            got = None
+            if any(own_order_ids or ()):
+                # SHARED-BRACKET-FIX (2026-11-25): the row's OWN bracket order is tried FIRST, not only
+                # after the cumulative read refuses. The cumulative read takes the earliest close-side
+                # fills on the symbol whose qty matches, so on a netted position a sibling's fill of a
+                # similar size is accepted as this row's exit. MEASURED (bybit_1, journal 2026-11-25):
+                # trade 7555 SOL exit 71.47 vs its own TP fill 65.51; 8123 ETH 1659.15 vs its own SL
+                # fill 1695.79; 7215 took sibling 7187's 73.32. Only an own-order match is taken here
+                # (a qty-only single-order match is not identity).
+                own = exit_from_one_order_fills(
+                    account_id=str(account.get("account_id") or ""),
+                    symbol=symbol,
+                    direction=direction,
+                    opened_at_ms=int(opened_at_ms),
+                    closed_at_ms=int(closed_at_ms) if closed_at_ms else int(
+                        datetime.now(timezone.utc).timestamp() * 1000),
+                    qty=qty,
+                    own_order_ids=tuple(own_order_ids),
+                )
+                if own is not None and own.get("match") == "own_bracket_order":
+                    return own
             got = exit_from_fills(
                 account_id=str(account.get("account_id") or ""),
                 symbol=symbol,

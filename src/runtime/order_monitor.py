@@ -8917,6 +8917,26 @@ def _close_trade_from_order_status(
             normalize_closed_at_value(closed_pnl_rec.get("closed_at"))
             or datetime.now(timezone.utc).isoformat()
         )
+        # SHARED-BRACKET-FIX (2026-11-25): a record built from the fills store
+        # (demo Bybit, `source == exchange_fill`) that is not matched to this
+        # row's own order is a symbol + qty match, and on a netted position it
+        # can be a SIBLING's fill. MEASURED: bybit_1 trade 8123 (ETH short, SL
+        # 1694.62) was finalised here at 1659.15, a sibling's fill, while its own
+        # SL filled at 1695.79. When the venue says one of THIS row's own legs
+        # filled, its order record prices the exit (identity beats a qty match).
+        _own_first: Optional[Dict[str, Any]] = None
+        if (_is_fills_record(closed_pnl_rec)
+                and closed_pnl_rec.get("match") != "own_bracket_order"):
+            _own_first = _own_bracket_fill_from_venue(
+                cfg, row, is_reduce_leg=is_reduce_leg)
+            if _own_first is not None:
+                avg_exit_price = float(_own_first["avg_price"])
+                closed_at = (
+                    normalize_closed_at_value(_own_first.get("exec_time"))
+                    or closed_at
+                )
+                # The record's fees were the sibling's fills, not this row's.
+                closed_pnl_rec = {**closed_pnl_rec, "fees": None}
         # Classify the broker close as sl/tp from exit price vs the bracket
         # levels (2026-06-23) — a stop/target fired at the broker before the
         # monitor; surface the TRUE reason instead of the generic reconciler tag.
@@ -8929,6 +8949,10 @@ def _close_trade_from_order_status(
             db, row, avg_exit_price, is_reduce_leg=is_reduce_leg,
         )
         reason_source = "price_vs_pkg_bracket" if resolved_reason else "unresolved"
+        if _own_first is not None:
+            # The leg that filled IS the reason; no price classification needed.
+            resolved_reason = _own_first["leg"]
+            reason_source = BRACKET_ORDER_LABEL_SOURCE
         if not resolved_reason:
             # RECONCILER-CLOSEDPNL-OWN-LEG (2026-11-05, bybit_2 trade 6881): the
             # price classifier could not place the venue exit against the
@@ -8959,6 +8983,8 @@ def _close_trade_from_order_status(
                 closed_pnl_rec.get("closed_pnl"),
             "finalised_by": "reconciler",
             "exit_reason_source": reason_source,
+            **({"exit_price_order_id": _own_first.get("order_id")}
+               if _own_first is not None else {}),
         })
         updates: Dict[str, Any] = {
             "status": "closed",
@@ -9052,6 +9078,7 @@ def _close_trade_from_order_status(
                 "reconciler — Bybit reports order filled and position flat",
             "exit_price_source": "exchange_fill",
             "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+            "exit_price_order_id": _own_leg.get("order_id"),
             "finalised_by": "reconciler",
         })
         updates = {
@@ -14615,6 +14642,7 @@ def _netting_close_from_own_leg(db, *, row, own_leg) -> bool:
             "exit_price_source": "exchange_fill",
             "own_leg_fill": {"leg": own_leg["leg"],
                              "order_id": own_leg.get("order_id")},
+            "exit_price_order_id": own_leg.get("order_id"),
         })
         db.update_trade(int(row["id"]), {
             "status": "closed",
@@ -15788,6 +15816,27 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _is_fills_record(rec: Optional[Dict[str, Any]]) -> bool:
+    """True when a closed-pnl-shaped record was built from the exchange-fills
+    store (demo Bybit, Alpaca), not from the venue's own closed-pnl record."""
+    return isinstance(rec, dict) and str(rec.get("source") or "") == "exchange_fill"
+
+
+def _exit_priced_by_own_order(notes_raw: Any, own_ids: Any) -> bool:
+    """True when the row's ``exit_price`` was taken from one of its OWN venue
+    orders (SHARED-BRACKET-FIX). Reads ``exit_price_order_id`` and, for rows
+    closed before that marker existed, ``own_leg_fill.order_id`` (the netting
+    own-leg close). ``own_ids`` are the row's ``sl_order_id``/``tp_order_id``."""
+    own = {str(o) for o in (own_ids or ()) if o}
+    if not own:
+        return False
+    notes = _decode_notes(notes_raw)
+    leg = notes.get("own_leg_fill")
+    marker = notes.get("exit_price_order_id") or (
+        leg.get("order_id") if isinstance(leg, dict) else None)
+    return bool(marker) and str(marker) in own
+
+
 def _own_leg_exit_for_demo_row(
     db, cfg: Optional[Dict[str, Any]], row: Dict[str, Any], opened_at_ms: Optional[int],
 ) -> Optional[Dict[str, Any]]:
@@ -15904,6 +15953,9 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
         # re-classified NOTHING reports 0 instead of omitting the key —
         # "we looked and none qualified" must not read as "we did not look".
         "reclassified": 0,
+        # SHARED-BRACKET-FIX: rows whose own-order exit was kept over a
+        # fills-store record that was not matched to the row's own order.
+        "own_order_exit_kept": 0,
     }
 
     # Scope: closed, non-backtest, pnl IS NULL, CLOSED within
@@ -16059,6 +16111,19 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 # tick. This is the steady-state path for trades that
                 # just closed seconds ago.
                 summary["still_pending"] += 1
+                continue
+
+            # SHARED-BRACKET-FIX (2026-11-25): the close path already priced this
+            # row from its OWN venue order (`exit_price_order_id`). A fills-store
+            # record not matched to that order is a symbol + qty match, which on
+            # a netted position can be a sibling's fill: MEASURED bybit_1 trade
+            # 7555 (SOL short) was closed at its own TP fill and then rewritten
+            # here to 71.47 vs its own 65.51. Keep the own-order price; a venue
+            # closed-pnl record (real money, carries pnl) is still written.
+            if (_is_fills_record(rec)
+                    and rec.get("match") != "own_bracket_order"
+                    and _exit_priced_by_own_order(row.get("notes"), own_ids)):
+                summary["own_order_exit_kept"] += 1
                 continue
 
             # Got Bybit truth — write it.
