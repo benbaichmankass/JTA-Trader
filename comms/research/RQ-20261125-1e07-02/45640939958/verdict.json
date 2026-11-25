@@ -1,0 +1,2124 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261125-1e07-02",
+ "read_state": "measured",
+ "verdict": "fail",
+ "n": 1670,
+ "note": "capitulation 4h etf: FAIL (pooled n 1670); symbols without bars: none",
+ "decision_rule": {
+  "id": "RULE-RQ-20261125-1e07-02",
+  "rule": "UNFILTERED capitulation trigger (daily spec kept in 4h BARS, not re-tuned) on the 18 INDEX-CAPIT-1X-LEG ETFs, US regular session, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND pooled net_r>0 at 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05) AND >= 10 of 18 symbols net_r>0 (strict majority) AND the chronologically latest 40% of pooled trades net_r>0; INDETERMINATE if pooled n<25; FAIL otherwise"
+ },
+ "population": "18 of 18 symbols with bars (etf, 4h, 2016-01-01..2026-10-22); Alpaca SIP 30Min regular-session bars resampled session-anchored; trades net of the full cost stack (fee + slippage + funding)",
+ "measurement": {
+  "family": "capitulation_wide",
+  "timeframe": "4h",
+  "kind": "etf",
+  "window": [
+   "2016-01-01",
+   "2026-10-22"
+  ],
+  "hold_cap_bars": 10,
+  "symbols": {
+   "XLB": {
+    "n_signals": 83,
+    "skips": {
+     "stop_wrong_side_at_entry": 5,
+     "risk_degenerate": 4
+    },
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 45,
+     "is_boundary": "2021-12-01T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.511,
+       "is_cf_net_r": -3.397
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.378,
+       "is_cf_net_r": -8.702
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.311,
+       "is_cf_net_r": -8.097
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.178,
+       "is_cf_net_r": -15.278
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.178,
+       "is_cf_net_r": -13.278
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.156,
+       "is_cf_net_r": -12.778
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.111,
+       "is_cf_net_r": -12.687
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.111,
+       "is_cf_net_r": -10.187
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.067,
+       "is_cf_net_r": -9.943
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.067,
+       "is_cf_net_r": -6.943
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.067,
+       "is_cf_net_r": -3.943
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.044,
+       "is_cf_net_r": 1.231
+      }
+     ]
+    },
+    "n": 74,
+    "net_r": -6.9597,
+    "mean_net_r": -0.0941,
+    "max_drawdown_r": 13.7789,
+    "win_rate": 0.527,
+    "by_outcome": {
+     "stop": 34,
+     "take_profit": 37,
+     "timeout": 3
+    },
+    "folds": [
+     {
+      "n": 12,
+      "net_r": 4.9857
+     },
+     {
+      "n": 26,
+      "net_r": -9.5263
+     },
+     {
+      "n": 19,
+      "net_r": 2.1428
+     },
+     {
+      "n": 17,
+      "net_r": -4.5619
+     }
+    ],
+    "net_r_2x_slip": -14.0952,
+    "mean_bars_held": 3.26,
+    "mean_cost_r": 0.0964,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5424,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "XLP": {
+    "n_signals": 78,
+    "skips": {
+     "stop_wrong_side_at_entry": 4,
+     "risk_degenerate": 6
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 41,
+     "is_boundary": "2021-09-21T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.317,
+       "is_cf_net_r": -21.179
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.293,
+       "is_cf_net_r": -20.179
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.244,
+       "is_cf_net_r": -18.753
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.22,
+       "is_cf_net_r": -16.543
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.22,
+       "is_cf_net_r": -14.293
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.195,
+       "is_cf_net_r": -10.64
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.122,
+       "is_cf_net_r": -9.811
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.049,
+       "is_cf_net_r": -15.53
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.049,
+       "is_cf_net_r": -14.53
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.049,
+       "is_cf_net_r": -12.53
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.049,
+       "is_cf_net_r": -10.53
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.049,
+       "is_cf_net_r": -6.53
+      }
+     ]
+    },
+    "n": 68,
+    "net_r": -21.7121,
+    "mean_net_r": -0.3193,
+    "max_drawdown_r": 29.1241,
+    "win_rate": 0.294,
+    "by_outcome": {
+     "stop": 47,
+     "take_profit": 8,
+     "timeout": 13
+    },
+    "folds": [
+     {
+      "n": 19,
+      "net_r": -2.4903
+     },
+     {
+      "n": 19,
+      "net_r": -7.4422
+     },
+     {
+      "n": 18,
+      "net_r": -10.3373
+     },
+     {
+      "n": 12,
+      "net_r": -1.4423
+     }
+    ],
+    "net_r_2x_slip": -31.2599,
+    "mean_bars_held": 4.46,
+    "mean_cost_r": 0.1404,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5427,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "ITB": {
+    "n_signals": 76,
+    "skips": {
+     "stop_wrong_side_at_entry": 7
+    },
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 42,
+     "is_boundary": "2023-02-22T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.476,
+       "is_cf_net_r": -5.963
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.357,
+       "is_cf_net_r": -12.653
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.357,
+       "is_cf_net_r": -8.903
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.333,
+       "is_cf_net_r": -8.382
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.286,
+       "is_cf_net_r": -9.364
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.214,
+       "is_cf_net_r": -11.59
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.119,
+       "is_cf_net_r": -10.881
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.095,
+       "is_cf_net_r": -10.853
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -10.412
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -8.412
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -6.412
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -2.412
+      }
+     ]
+    },
+    "n": 69,
+    "net_r": -19.0875,
+    "mean_net_r": -0.2766,
+    "max_drawdown_r": 19.6249,
+    "win_rate": 0.435,
+    "by_outcome": {
+     "stop": 37,
+     "take_profit": 30,
+     "timeout": 2
+    },
+    "folds": [
+     {
+      "n": 15,
+      "net_r": -2.2209
+     },
+     {
+      "n": 14,
+      "net_r": -3.8792
+     },
+     {
+      "n": 18,
+      "net_r": -1.7691
+     },
+     {
+      "n": 22,
+      "net_r": -11.2183
+     }
+    ],
+    "net_r_2x_slip": -25.0265,
+    "mean_bars_held": 2.88,
+    "mean_cost_r": 0.0861,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5420,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "XME": {
+    "n_signals": 80,
+    "skips": {
+     "stop_wrong_side_at_entry": 8,
+     "risk_degenerate": 3
+    },
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 42,
+     "is_boundary": "2021-11-29T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.5,
+       "is_cf_net_r": -2.914
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.405,
+       "is_cf_net_r": -6.664
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.262,
+       "is_cf_net_r": -11.011
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.19,
+       "is_cf_net_r": -11.88
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.19,
+       "is_cf_net_r": -9.88
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.19,
+       "is_cf_net_r": -5.88
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.071,
+       "is_cf_net_r": -8.934
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.071,
+       "is_cf_net_r": -7.434
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.071,
+       "is_cf_net_r": -5.934
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": -4.867
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -6.787
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -6.787
+      }
+     ]
+    },
+    "n": 69,
+    "net_r": -13.2757,
+    "mean_net_r": -0.1924,
+    "max_drawdown_r": 17.6066,
+    "win_rate": 0.435,
+    "by_outcome": {
+     "stop": 37,
+     "take_profit": 29,
+     "timeout": 3
+    },
+    "folds": [
+     {
+      "n": 14,
+      "net_r": 1.2086
+     },
+     {
+      "n": 21,
+      "net_r": -1.9507
+     },
+     {
+      "n": 17,
+      "net_r": -6.1099
+     },
+     {
+      "n": 17,
+      "net_r": -6.4237
+     }
+    ],
+    "net_r_2x_slip": -17.8646,
+    "mean_bars_held": 2.96,
+    "mean_cost_r": 0.0665,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5419,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EFA": {
+    "n_signals": 130,
+    "skips": {
+     "stop_wrong_side_at_entry": 20,
+     "risk_degenerate": 11
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 60,
+     "is_boundary": "2022-09-02T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.45,
+       "is_cf_net_r": -18.836
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.383,
+       "is_cf_net_r": -17.284
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.3,
+       "is_cf_net_r": -20.239
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.233,
+       "is_cf_net_r": -21.753
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.217,
+       "is_cf_net_r": -18.497
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.15,
+       "is_cf_net_r": -19.278
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.117,
+       "is_cf_net_r": -15.648
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.083,
+       "is_cf_net_r": -15.708
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.05,
+       "is_cf_net_r": -14.905
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.033,
+       "is_cf_net_r": -13.71
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.017,
+       "is_cf_net_r": -12.261
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.017,
+       "is_cf_net_r": -10.261
+      }
+     ]
+    },
+    "n": 99,
+    "net_r": 10.3876,
+    "mean_net_r": 0.1049,
+    "max_drawdown_r": 22.7524,
+    "win_rate": 0.414,
+    "by_outcome": {
+     "stop": 52,
+     "take_profit": 15,
+     "timeout": 32
+    },
+    "folds": [
+     {
+      "n": 17,
+      "net_r": 6.481
+     },
+     {
+      "n": 25,
+      "net_r": -12.2222
+     },
+     {
+      "n": 31,
+      "net_r": -0.1861
+     },
+     {
+      "n": 26,
+      "net_r": 16.3149
+     }
+    ],
+    "net_r_2x_slip": -1.2273,
+    "mean_bars_held": 5.84,
+    "mean_cost_r": 0.1173,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5429,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWJ": {
+    "n_signals": 134,
+    "skips": {
+     "stop_wrong_side_at_entry": 28,
+     "risk_degenerate": 8
+    },
+    "tp_calibration": {
+     "k_star": 4.0,
+     "state": "calibrated",
+     "n_is": 59,
+     "is_boundary": "2022-07-15T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.441,
+       "is_cf_net_r": -13.71
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.407,
+       "is_cf_net_r": -12.71
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.356,
+       "is_cf_net_r": -13.317
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.288,
+       "is_cf_net_r": -10.993
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.22,
+       "is_cf_net_r": -8.607
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.186,
+       "is_cf_net_r": -3.132
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.153,
+       "is_cf_net_r": 0.955
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.136,
+       "is_cf_net_r": 4.136
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.136,
+       "is_cf_net_r": 8.136
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.068,
+       "is_cf_net_r": 6.525
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.051,
+       "is_cf_net_r": 9.482
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.034,
+       "is_cf_net_r": 13.232
+      }
+     ]
+    },
+    "n": 98,
+    "net_r": 20.24,
+    "mean_net_r": 0.2065,
+    "max_drawdown_r": 12.7529,
+    "win_rate": 0.459,
+    "by_outcome": {
+     "stop": 45,
+     "take_profit": 11,
+     "timeout": 42
+    },
+    "folds": [
+     {
+      "n": 21,
+      "net_r": 4.143
+     },
+     {
+      "n": 26,
+      "net_r": 11.1536
+     },
+     {
+      "n": 25,
+      "net_r": 4.1034
+     },
+     {
+      "n": 26,
+      "net_r": 0.84
+     }
+    ],
+    "net_r_2x_slip": 8.3762,
+    "mean_bars_held": 6.35,
+    "mean_cost_r": 0.1211,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5424,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "IYT": {
+    "n_signals": 96,
+    "skips": {
+     "risk_degenerate": 2,
+     "stop_wrong_side_at_entry": 5
+    },
+    "tp_calibration": {
+     "k_star": 4.0,
+     "state": "calibrated",
+     "n_is": 54,
+     "is_boundary": "2022-04-05T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.537,
+       "is_cf_net_r": -6.324
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.481,
+       "is_cf_net_r": -3.596
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.407,
+       "is_cf_net_r": -3.037
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.352,
+       "is_cf_net_r": -3.696
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.296,
+       "is_cf_net_r": -5.61
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.241,
+       "is_cf_net_r": -0.553
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.185,
+       "is_cf_net_r": -1.134
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.167,
+       "is_cf_net_r": 3.583
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.111,
+       "is_cf_net_r": 5.219
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.074,
+       "is_cf_net_r": 5.464
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.074,
+       "is_cf_net_r": 9.464
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.056,
+       "is_cf_net_r": 12.918
+      }
+     ]
+    },
+    "n": 89,
+    "net_r": 4.4961,
+    "mean_net_r": 0.0505,
+    "max_drawdown_r": 15.8616,
+    "win_rate": 0.393,
+    "by_outcome": {
+     "stop": 49,
+     "take_profit": 8,
+     "timeout": 32
+    },
+    "folds": [
+     {
+      "n": 15,
+      "net_r": -1.6499
+     },
+     {
+      "n": 26,
+      "net_r": 9.3545
+     },
+     {
+      "n": 31,
+      "net_r": -3.7951
+     },
+     {
+      "n": 17,
+      "net_r": 0.5866
+     }
+    ],
+    "net_r_2x_slip": -4.7547,
+    "mean_bars_held": 5.73,
+    "mean_cost_r": 0.1819,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5415,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "IWN": {
+    "n_signals": 84,
+    "skips": {
+     "risk_degenerate": 4,
+     "stop_wrong_side_at_entry": 8
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 44,
+     "is_boundary": "2022-04-26T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.545,
+       "is_cf_net_r": -1.751
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.455,
+       "is_cf_net_r": -4.305
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.455,
+       "is_cf_net_r": 0.695
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.409,
+       "is_cf_net_r": 2.554
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.364,
+       "is_cf_net_r": 3.324
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.25,
+       "is_cf_net_r": 5.667
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.205,
+       "is_cf_net_r": 7.894
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.136,
+       "is_cf_net_r": 5.384
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.068,
+       "is_cf_net_r": 3.316
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.045,
+       "is_cf_net_r": 3.667
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -2.319
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -2.319
+      }
+     ]
+    },
+    "n": 72,
+    "net_r": -2.5957,
+    "mean_net_r": -0.0361,
+    "max_drawdown_r": 15.4686,
+    "win_rate": 0.319,
+    "by_outcome": {
+     "stop": 44,
+     "take_profit": 11,
+     "timeout": 17
+    },
+    "folds": [
+     {
+      "n": 12,
+      "net_r": 4.2364
+     },
+     {
+      "n": 25,
+      "net_r": 4.3293
+     },
+     {
+      "n": 20,
+      "net_r": -8.9981
+     },
+     {
+      "n": 15,
+      "net_r": -2.1633
+     }
+    ],
+    "net_r_2x_slip": -9.9958,
+    "mean_bars_held": 4.78,
+    "mean_cost_r": 0.1028,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5416,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWC": {
+    "n_signals": 100,
+    "skips": {
+     "risk_degenerate": 8,
+     "stop_wrong_side_at_entry": 9
+    },
+    "tp_calibration": {
+     "k_star": 2.5,
+     "state": "calibrated",
+     "n_is": 50,
+     "is_boundary": "2022-05-11T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.46,
+       "is_cf_net_r": -6.062
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.4,
+       "is_cf_net_r": -4.365
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.28,
+       "is_cf_net_r": -8.13
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.22,
+       "is_cf_net_r": -6.082
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.18,
+       "is_cf_net_r": -6.895
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.18,
+       "is_cf_net_r": -2.395
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.12,
+       "is_cf_net_r": -4.652
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.06,
+       "is_cf_net_r": -3.438
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.04,
+       "is_cf_net_r": -2.234
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.02,
+       "is_cf_net_r": -0.635
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.02,
+       "is_cf_net_r": 0.365
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -0.477
+      }
+     ]
+    },
+    "n": 83,
+    "net_r": 6.8098,
+    "mean_net_r": 0.082,
+    "max_drawdown_r": 12.5659,
+    "win_rate": 0.434,
+    "by_outcome": {
+     "stop": 42,
+     "take_profit": 17,
+     "timeout": 24
+    },
+    "folds": [
+     {
+      "n": 15,
+      "net_r": 1.7088
+     },
+     {
+      "n": 21,
+      "net_r": -4.3016
+     },
+     {
+      "n": 30,
+      "net_r": 2.9544
+     },
+     {
+      "n": 17,
+      "net_r": 6.4482
+     }
+    ],
+    "net_r_2x_slip": -1.4759,
+    "mean_bars_held": 5.4,
+    "mean_cost_r": 0.0998,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5417,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWA": {
+    "n_signals": 135,
+    "skips": {
+     "stop_wrong_side_at_entry": 17,
+     "risk_degenerate": 12
+    },
+    "tp_calibration": {
+     "k_star": 3.5,
+     "state": "calibrated",
+     "n_is": 64,
+     "is_boundary": "2022-02-25T14:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.453,
+       "is_cf_net_r": -15.298
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.328,
+       "is_cf_net_r": -13.349
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.297,
+       "is_cf_net_r": -8.988
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.234,
+       "is_cf_net_r": -9.204
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.188,
+       "is_cf_net_r": -11.295
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.156,
+       "is_cf_net_r": -7.403
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.125,
+       "is_cf_net_r": -7.772
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.125,
+       "is_cf_net_r": -3.772
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.094,
+       "is_cf_net_r": -1.914
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.094,
+       "is_cf_net_r": 4.086
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.031,
+       "is_cf_net_r": 1.005
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.016,
+       "is_cf_net_r": 1.729
+      }
+     ]
+    },
+    "n": 106,
+    "net_r": -11.8713,
+    "mean_net_r": -0.112,
+    "max_drawdown_r": 27.7788,
+    "win_rate": 0.396,
+    "by_outcome": {
+     "stop": 58,
+     "take_profit": 12,
+     "timeout": 36
+    },
+    "folds": [
+     {
+      "n": 25,
+      "net_r": 5.4012
+     },
+     {
+      "n": 28,
+      "net_r": -3.6838
+     },
+     {
+      "n": 27,
+      "net_r": -10.8015
+     },
+     {
+      "n": 26,
+      "net_r": -2.7872
+     }
+    ],
+    "net_r_2x_slip": -22.8578,
+    "mean_bars_held": 5.63,
+    "mean_cost_r": 0.1814,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5419,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWT": {
+    "n_signals": 139,
+    "skips": {
+     "stop_wrong_side_at_entry": 22,
+     "risk_degenerate": 8
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 66,
+     "is_boundary": "2022-12-14T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.5,
+       "is_cf_net_r": -8.92
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.364,
+       "is_cf_net_r": -10.996
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.273,
+       "is_cf_net_r": -10.891
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.242,
+       "is_cf_net_r": -7.637
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.197,
+       "is_cf_net_r": -6.431
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.182,
+       "is_cf_net_r": -3.431
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.167,
+       "is_cf_net_r": 1.004
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.106,
+       "is_cf_net_r": -3.422
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.091,
+       "is_cf_net_r": -4.922
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.045,
+       "is_cf_net_r": -2.073
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.03,
+       "is_cf_net_r": -9.936
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.015,
+       "is_cf_net_r": -9.186
+      }
+     ]
+    },
+    "n": 109,
+    "net_r": 23.7041,
+    "mean_net_r": 0.2175,
+    "max_drawdown_r": 13.1073,
+    "win_rate": 0.459,
+    "by_outcome": {
+     "stop": 53,
+     "take_profit": 19,
+     "timeout": 37
+    },
+    "folds": [
+     {
+      "n": 23,
+      "net_r": 11.4931
+     },
+     {
+      "n": 22,
+      "net_r": -3.8244
+     },
+     {
+      "n": 36,
+      "net_r": 6.5708
+     },
+     {
+      "n": 28,
+      "net_r": 9.4646
+     }
+    ],
+    "net_r_2x_slip": 14.0746,
+    "mean_bars_held": 6.12,
+    "mean_cost_r": 0.0884,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5416,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWY": {
+    "n_signals": 161,
+    "skips": {
+     "risk_degenerate": 7,
+     "stop_wrong_side_at_entry": 23
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 79,
+     "is_boundary": "2022-03-08T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.443,
+       "is_cf_net_r": -27.021
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.405,
+       "is_cf_net_r": -26.899
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.367,
+       "is_cf_net_r": -23.738
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.316,
+       "is_cf_net_r": -20.267
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.253,
+       "is_cf_net_r": -22.634
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.215,
+       "is_cf_net_r": -18.7
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.165,
+       "is_cf_net_r": -13.98
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.051,
+       "is_cf_net_r": -19.652
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.038,
+       "is_cf_net_r": -18.071
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -26.186
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -26.186
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -26.186
+      }
+     ]
+    },
+    "n": 131,
+    "net_r": -35.3496,
+    "mean_net_r": -0.2698,
+    "max_drawdown_r": 42.5495,
+    "win_rate": 0.351,
+    "by_outcome": {
+     "stop": 79,
+     "take_profit": 16,
+     "timeout": 36
+    },
+    "folds": [
+     {
+      "n": 26,
+      "net_r": -0.1063
+     },
+     {
+      "n": 34,
+      "net_r": -14.4448
+     },
+     {
+      "n": 43,
+      "net_r": -0.0495
+     },
+     {
+      "n": 28,
+      "net_r": -20.749
+     }
+    ],
+    "net_r_2x_slip": -47.5213,
+    "mean_bars_held": 5.6,
+    "mean_cost_r": 0.0929,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5420,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWW": {
+    "n_signals": 81,
+    "skips": {
+     "stop_wrong_side_at_entry": 8,
+     "risk_degenerate": 1
+    },
+    "tp_calibration": {
+     "k_star": 5.0,
+     "state": "calibrated",
+     "n_is": 44,
+     "is_boundary": "2022-01-20T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.5,
+       "is_cf_net_r": 0.286
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.477,
+       "is_cf_net_r": 4.156
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.409,
+       "is_cf_net_r": 5.719
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.386,
+       "is_cf_net_r": 9.323
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.364,
+       "is_cf_net_r": 11.662
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.318,
+       "is_cf_net_r": 16.624
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.205,
+       "is_cf_net_r": 16.952
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.159,
+       "is_cf_net_r": 16.393
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.159,
+       "is_cf_net_r": 19.893
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.114,
+       "is_cf_net_r": 21.39
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.068,
+       "is_cf_net_r": 17.495
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.023,
+       "is_cf_net_r": 16.864
+      }
+     ]
+    },
+    "n": 72,
+    "net_r": 16.8771,
+    "mean_net_r": 0.2344,
+    "max_drawdown_r": 9.538,
+    "win_rate": 0.486,
+    "by_outcome": {
+     "stop": 35,
+     "take_profit": 5,
+     "timeout": 32
+    },
+    "folds": [
+     {
+      "n": 18,
+      "net_r": -1.2101
+     },
+     {
+      "n": 21,
+      "net_r": 16.8859
+     },
+     {
+      "n": 19,
+      "net_r": 9.048
+     },
+     {
+      "n": 14,
+      "net_r": -7.8467
+     }
+    ],
+    "net_r_2x_slip": 10.5876,
+    "mean_bars_held": 6.24,
+    "mean_cost_r": 0.0874,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5424,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWH": {
+    "n_signals": 148,
+    "skips": {
+     "stop_wrong_side_at_entry": 30,
+     "risk_degenerate": 13
+    },
+    "tp_calibration": {
+     "k_star": 3.5,
+     "state": "calibrated",
+     "n_is": 63,
+     "is_boundary": "2022-03-16T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.46,
+       "is_cf_net_r": -15.963
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.397,
+       "is_cf_net_r": -13.398
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.349,
+       "is_cf_net_r": -11.008
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.286,
+       "is_cf_net_r": -9.936
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.206,
+       "is_cf_net_r": -11.155
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.159,
+       "is_cf_net_r": -7.544
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.143,
+       "is_cf_net_r": -3.398
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.111,
+       "is_cf_net_r": -0.347
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.095,
+       "is_cf_net_r": 2.27
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.079,
+       "is_cf_net_r": 7.094
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.048,
+       "is_cf_net_r": 8.93
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.016,
+       "is_cf_net_r": 7.138
+      }
+     ]
+    },
+    "n": 105,
+    "net_r": 20.0719,
+    "mean_net_r": 0.1912,
+    "max_drawdown_r": 10.5928,
+    "win_rate": 0.448,
+    "by_outcome": {
+     "stop": 51,
+     "take_profit": 13,
+     "timeout": 41
+    },
+    "folds": [
+     {
+      "n": 23,
+      "net_r": 3.4317
+     },
+     {
+      "n": 29,
+      "net_r": 3.6324
+     },
+     {
+      "n": 33,
+      "net_r": -4.9969
+     },
+     {
+      "n": 20,
+      "net_r": 18.0047
+     }
+    ],
+    "net_r_2x_slip": 7.7714,
+    "mean_bars_held": 6.21,
+    "mean_cost_r": 0.1171,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5416,
+    "cost_bps": {
+     "fee": 0.0,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWS": {
+    "n_signals": 135,
+    "skips": {
+     "risk_degenerate": 12,
+     "stop_wrong_side_at_entry": 18
+    },
+    "tp_calibration": {
+     "k_star": 5.0,
+     "state": "calibrated",
+     "n_is": 63,
+     "is_boundary": "2022-01-25T14:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.556,
+       "is_cf_net_r": -14.91
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.508,
+       "is_cf_net_r": -13.871
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.413,
+       "is_cf_net_r": -14.705
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.381,
+       "is_cf_net_r": -10.599
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.317,
+       "is_cf_net_r": -16.201
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.238,
+       "is_cf_net_r": -15.987
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.206,
+       "is_cf_net_r": -14.927
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.19,
+       "is_cf_net_r": -8.564
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.143,
+       "is_cf_net_r": -8.706
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.111,
+       "is_cf_net_r": -7.054
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.079,
+       "is_cf_net_r": -7.864
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.032,
+       "is_cf_net_r": -7.236
+      }
+     ]
+    },
+    "n": 105,
+    "net_r": 18.5519,
+    "mean_net_r": 0.1767,
+    "max_drawdown_r": 29.9148,
+    "win_rate": 0.429,
+    "by_outcome": {
+     "stop": 54,
+     "take_profit": 11,
+     "timeout": 40
+    },
+    "folds": [
+     {
+      "n": 19,
+      "net_r": -13.9997
+     },
+     {
+      "n": 35,
+      "net_r": 10.3587
+     },
+     {
+      "n": 28,
+      "net_r": 11.5878
+     },
+     {
+      "n": 23,
+      "net_r": 10.6051
+     }
+    ],
+    "net_r_2x_slip": 4.8717,
+    "mean_bars_held": 6.61,
+    "mean_cost_r": 0.228,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5413,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWL": {
+    "n_signals": 108,
+    "skips": {
+     "stop_wrong_side_at_entry": 18,
+     "risk_degenerate": 2
+    },
+    "tp_calibration": {
+     "k_star": 1.0,
+     "state": "calibrated",
+     "n_is": 53,
+     "is_boundary": "2022-07-15T13:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.509,
+       "is_cf_net_r": -10.923
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.415,
+       "is_cf_net_r": -14.447
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.377,
+       "is_cf_net_r": -11.985
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.245,
+       "is_cf_net_r": -16.894
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.208,
+       "is_cf_net_r": -16.203
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.132,
+       "is_cf_net_r": -13.65
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.113,
+       "is_cf_net_r": -11.417
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.094,
+       "is_cf_net_r": -8.603
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.075,
+       "is_cf_net_r": -6.658
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.038,
+       "is_cf_net_r": -5.405
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -5.355
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.0,
+       "is_cf_net_r": -5.355
+      }
+     ]
+    },
+    "n": 88,
+    "net_r": -16.3114,
+    "mean_net_r": -0.1854,
+    "max_drawdown_r": 16.3114,
+    "win_rate": 0.5,
+    "by_outcome": {
+     "stop": 36,
+     "take_profit": 43,
+     "timeout": 9
+    },
+    "folds": [
+     {
+      "n": 18,
+      "net_r": -12.1769
+     },
+     {
+      "n": 21,
+      "net_r": 5.9129
+     },
+     {
+      "n": 29,
+      "net_r": 1.2938
+     },
+     {
+      "n": 20,
+      "net_r": -11.3412
+     }
+    ],
+    "net_r_2x_slip": -27.0167,
+    "mean_bars_held": 3.98,
+    "mean_cost_r": 0.2129,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5414,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWQ": {
+    "n_signals": 147,
+    "skips": {
+     "stop_wrong_side_at_entry": 22,
+     "risk_degenerate": 7
+    },
+    "tp_calibration": {
+     "k_star": 1.75,
+     "state": "calibrated",
+     "n_is": 71,
+     "is_boundary": "2022-08-23T17:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.352,
+       "is_cf_net_r": -36.645
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.324,
+       "is_cf_net_r": -31.757
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.268,
+       "is_cf_net_r": -30.354
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.225,
+       "is_cf_net_r": -28.957
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.169,
+       "is_cf_net_r": -31.006
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.099,
+       "is_cf_net_r": -36.834
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.085,
+       "is_cf_net_r": -35.87
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.07,
+       "is_cf_net_r": -33.423
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.056,
+       "is_cf_net_r": -31.923
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.056,
+       "is_cf_net_r": -27.922
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.042,
+       "is_cf_net_r": -26.344
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.042,
+       "is_cf_net_r": -20.343
+      }
+     ]
+    },
+    "n": 118,
+    "net_r": -36.5789,
+    "mean_net_r": -0.31,
+    "max_drawdown_r": 36.5789,
+    "win_rate": 0.373,
+    "by_outcome": {
+     "stop": 64,
+     "take_profit": 26,
+     "timeout": 28
+    },
+    "folds": [
+     {
+      "n": 19,
+      "net_r": -11.0634
+     },
+     {
+      "n": 31,
+      "net_r": -3.0713
+     },
+     {
+      "n": 39,
+      "net_r": -11.4059
+     },
+     {
+      "n": 29,
+      "net_r": -11.0383
+     }
+    ],
+    "net_r_2x_slip": -48.7376,
+    "mean_bars_held": 5.08,
+    "mean_cost_r": 0.1803,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5415,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   },
+   "EWP": {
+    "n_signals": 140,
+    "skips": {
+     "risk_degenerate": 6,
+     "stop_wrong_side_at_entry": 19
+    },
+    "tp_calibration": {
+     "k_star": 3.0,
+     "state": "calibrated",
+     "n_is": 69,
+     "is_boundary": "2022-02-15T18:30:00+00:00",
+     "curve": [
+      {
+       "k": 1.0,
+       "is_reach": 0.348,
+       "is_cf_net_r": -29.863
+      },
+      {
+       "k": 1.25,
+       "is_reach": 0.29,
+       "is_cf_net_r": -27.972
+      },
+      {
+       "k": 1.5,
+       "is_reach": 0.261,
+       "is_cf_net_r": -25.681
+      },
+      {
+       "k": 1.75,
+       "is_reach": 0.217,
+       "is_cf_net_r": -27.6
+      },
+      {
+       "k": 2.0,
+       "is_reach": 0.174,
+       "is_cf_net_r": -30.296
+      },
+      {
+       "k": 2.5,
+       "is_reach": 0.145,
+       "is_cf_net_r": -28.453
+      },
+      {
+       "k": 3.0,
+       "is_reach": 0.101,
+       "is_cf_net_r": -25.246
+      },
+      {
+       "k": 3.5,
+       "is_reach": 0.087,
+       "is_cf_net_r": -24.046
+      },
+      {
+       "k": 4.0,
+       "is_reach": 0.072,
+       "is_cf_net_r": -21.855
+      },
+      {
+       "k": 5.0,
+       "is_reach": 0.043,
+       "is_cf_net_r": -23.626
+      },
+      {
+       "k": 6.0,
+       "is_reach": 0.043,
+       "is_cf_net_r": -20.626
+      },
+      {
+       "k": 8.0,
+       "is_reach": 0.014,
+       "is_cf_net_r": -21.492
+      }
+     ]
+    },
+    "n": 115,
+    "net_r": -35.7506,
+    "mean_net_r": -0.3109,
+    "max_drawdown_r": 37.5775,
+    "win_rate": 0.357,
+    "by_outcome": {
+     "stop": 70,
+     "take_profit": 13,
+     "timeout": 32
+    },
+    "folds": [
+     {
+      "n": 27,
+      "net_r": -8.8919
+     },
+     {
+      "n": 28,
+      "net_r": -9.5031
+     },
+     {
+      "n": 36,
+      "net_r": -15.181
+     },
+     {
+      "n": 24,
+      "net_r": -2.1746
+     }
+    ],
+    "net_r_2x_slip": -48.2054,
+    "mean_bars_held": 5.59,
+    "mean_cost_r": 0.1895,
+    "mean_funding_r": 0.0,
+    "data_start": "2016-01-04 14:30:00+00:00",
+    "data_end": "2026-10-22 17:30:00+00:00",
+    "n_bars": 5415,
+    "cost_bps": {
+     "fee": 7.5,
+     "slip": 10.0,
+     "fund": 0.0
+    }
+   }
+  },
+  "symbols_missing": [],
+  "pooled": {
+   "n": 1670,
+   "net_r": -78.354,
+   "net_r_2x_slip": -254.3572,
+   "symbols_positive": 8,
+   "latest_40pct": {
+    "n": 668,
+    "net_r": -21.2155,
+    "from": "2022-04-26T13:30:00+00:00"
+   },
+   "timing_control": {
+    "draws": 200,
+    "shift_bars": "40..400 either direction",
+    "mean_net_r": -135.697,
+    "p95_net_r": -25.968,
+    "share_of_draws_ge_actual": 0.2
+   },
+   "checks": {
+    "pooled_n_ge_floor": true,
+    "pooled_net_gt_0": false,
+    "pooled_net_gt_0_at_2x_slip": false,
+    "beats_timing_control_95": false,
+    "latest_40pct_net_gt_0": false,
+    "symbols_positive_ge_10_of_18": false
+   },
+   "verdict": "fail"
+  },
+  "provenance": "ESTIMATED"
+ },
+ "generated_at": "2026-11-25T15:23:48Z"
+}
