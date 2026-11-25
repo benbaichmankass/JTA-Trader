@@ -1,0 +1,306 @@
+{
+ "run": "ML-FRONTIER-PREP-20261125",
+ "finished_at": "2026-11-25T20:30:00Z",
+ "plan_items": 85,
+ "open": 32,
+ "flags": [
+  "REGISTRY-STAGES-CHANGED (unchanged 3 wks)",
+  "TRAINING-STALENESS stale2 never2",
+  "CONCENTRATION gbdt 14/19",
+  "DISK trainer 85-86%"
+ ],
+ "plumbing_findings": [
+  "8 served models have no trainer registry entry",
+  "desk H2->H3 0"
+ ],
+ "results_read": [
+  {
+   "unit": "RQ-20261118-dbf8-01",
+   "verdict": "fail",
+   "plan_item": "D3 family"
+  },
+  {
+   "unit": "RQ-20261125-f1a0-33",
+   "verdict": "indeterminate",
+   "plan_item": "ml-entry target lever"
+  },
+  {
+   "unit": "RQ-20261124-c7e3-01..04",
+   "verdict": "fail",
+   "plan_item": "AM v2"
+  },
+  {
+   "unit": "RQ-20261125-c7e3-05",
+   "verdict": "pass (invalid: control lookahead)",
+   "plan_item": "AM v2"
+  },
+  {
+   "unit": "RQ-20261125-c7e3-06",
+   "verdict": "fail (R2,R3)",
+   "plan_item": "AM v2"
+  }
+ ],
+ "ideas": [
+  {
+   "id": "P-6",
+   "source": "Dwork et al. 2015 arXiv 1506.02629; Bailey et al. PBO",
+   "rule_registered": false,
+   "power_unit": "n/a (instrument)"
+  },
+  {
+   "id": "P-2",
+   "source": "fresh-window confirmation",
+   "rule_registered": "proposed text in walkthrough P-2",
+   "power_unit": "trades (~200 vs 3453 to confirm)"
+  }
+ ],
+ "frontier": {
+  "run": "ML-FRONTIER-PREP-20261125",
+  "doc": "docs/research/frontier-scan-2026-11-25.md",
+  "grades": [
+   {
+    "candidate": "CatBoost on D3",
+    "grade": "hit"
+   },
+   {
+    "candidate": "TabICLv2 full n",
+    "grade": "miss"
+   },
+   {
+    "candidate": "Heterogeneous stack (dropped)",
+    "grade": "hit"
+   },
+   {
+    "candidate": "TSFM for D2 (dropped)",
+    "grade": "hit"
+   },
+   {
+    "candidate": "Offline RL exits (dropped)",
+    "grade": "hit"
+   },
+   {
+    "candidate": "Moirai licence (dropped)",
+    "grade": "hit"
+   },
+   {
+    "candidate": "Mitra",
+    "grade": "unresolved"
+   },
+   {
+    "candidate": "Distributional head",
+    "grade": "unresolved"
+   },
+   {
+    "candidate": "Kronos",
+    "grade": "unresolved"
+   },
+   {
+    "candidate": "TabPFN serving",
+    "grade": "unresolved"
+   }
+  ],
+  "diversity": "CONCENTRATION gbdt 14/19",
+  "sources_checked": [
+   {
+    "source": "hf-hub papers search",
+    "date": "2026-11-25",
+    "state": "checked"
+   },
+   {
+    "source": "arXiv/methods (1506.02629, 2604.27150, PBO)",
+    "date": "2026-11-25",
+    "state": "checked"
+   },
+   {
+    "source": "lab releases (secondary roundup)",
+    "date": "2026-11-25",
+    "state": "checked"
+   },
+   {
+    "source": "quant practitioner (PBO/CSCV)",
+    "date": "2026-11-25",
+    "state": "checked"
+   },
+   {
+    "source": "github (triple-barrier libs)",
+    "date": "2026-11-25",
+    "state": "checked"
+   },
+   {
+    "source": "competitions (VN2 2601.18919)",
+    "date": "2026-11-25",
+    "state": "checked"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "Held-out read ledger / reusable holdout",
+    "kept": true,
+    "p_pass": 0.6,
+    "unit_or_row": "P-6 -> promotion-rule-fix decision"
+   },
+   {
+    "name": "PBO/CSCV deflation",
+    "kept": true,
+    "p_pass": 0.4,
+    "unit_or_row": "P-6"
+   },
+   {
+    "name": "Fresh-window confirmation",
+    "kept": true,
+    "p_pass": 0.25,
+    "unit_or_row": "P-2"
+   },
+   {
+    "name": "TabAbax/Kumo Tabular on D3",
+    "kept": false,
+    "gate_failed": "compute (no learner kind; lever row dropped)"
+   },
+   {
+    "name": "TiRex-2/Toto2/TimesFM-3 for D2",
+    "kept": false,
+    "gate_failed": "data (D2 parity)"
+   },
+   {
+    "name": "Exit-policy replay 2604.27150",
+    "kept": false,
+    "gate_failed": "business"
+   },
+   {
+    "name": "Triple-barrier libs",
+    "kept": false,
+    "gate_failed": "duplicate"
+   }
+  ],
+  "lever_rows": {
+   "FRONTIER-LEVER-TABULAR": "dropped since 2026-10-23 -> blocker to manager (dbf8-02 has no live lever)"
+  },
+  "calls": [
+   {
+    "call": "P-6 adopted into promotion-rule text by 11-30",
+    "p": 0.6
+   },
+   {
+    "call": "dbf8-02 still blocked at 12-02 scan",
+    "p": 0.8
+   }
+  ]
+ },
+ "practice": "owned by sibling lane PRACTICE-REFRESH",
+ "drift": {
+  "scan_rc": 0,
+  "heads_scanned": 19,
+  "drifted": [],
+  "persistent": [
+   "btc-regime-15m-lgbm-fc-pcv-v2 (API KS 0.504; scan shows 0)"
+  ],
+  "watch": [],
+  "rows_filed": [],
+  "could_not_look": []
+ },
+ "checks": {
+  "C1": "finding",
+  "C2": "finding",
+  "C3": "ok",
+  "C4": "finding",
+  "C5": "could-not-look",
+  "C6": "finding",
+  "C7": "finding",
+  "C8": "finding",
+  "C9": "ok",
+  "C10": "finding",
+  "C11": "ok"
+ },
+ "calls": [
+  {
+   "id": "ML-20261125-1",
+   "call": "P-2 fresh-window read of frozen ml_entry v1 returns PASS",
+   "p": 0.25,
+   "tier": 1,
+   "check": {
+    "command": "research/results/<P-2 unit>/*.jsonl verdict",
+    "rule": "hit if pass; miss if fail/indeterminate",
+    "resolves_when": "unit graded; void if not run by 2026-12-02"
+   },
+   "ending": "unit to be authored (ML-PRIMARY on manager go)"
+  },
+  {
+   "id": "ML-20261125-2",
+   "call": "ml_entry real-money lifetime sum R stays < 0 at the 2026-12-02 read",
+   "p": 0.7,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/performance?window=all perStrategy ml_entry totalR (real-money block)",
+    "rule": "hit if < 0",
+    "resolves_when": "2026-12-02 ml-review"
+   },
+   "ending": "no action, because: tracks the Q1 hypothesis"
+  },
+  {
+   "id": "ML-20261125-3",
+   "call": "live_decay_cusum ml_entry does not trip by 2026-12-02",
+   "p": 0.85,
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_decay_cusum.py --leg ml_entry --out <dir>",
+    "rule": "hit if verdict pass (no trip)",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "no action, because: CUSUM is the registered demotion instrument"
+  },
+  {
+   "id": "ML-20261125-4",
+   "call": "BTC fc-pcv-v2 /shadow/drift KS >= 0.20 on 2026-12-02",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2",
+    "rule": "hit if ks >= 0.20",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2"
+  },
+  {
+   "id": "ML-20261125-5",
+   "call": "A D7 or D8 iteration unit is queued by 2026-12-02",
+   "p": 0.5,
+   "tier": 1,
+   "check": {
+    "command": "research/queue/*.yaml status queued with iteration.subject in (ml-entry-tp-revision, ml-exit-head-donchian-1h)",
+    "rule": "hit if >= 1 per slot for both slots; miss otherwise",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "rows ML-ENTRY-TP-REVISION / ML-EXITHEAD-VALUE"
+  },
+  {
+   "id": "ML-20261125-6",
+   "call": "The 2026-11-25 promotion-rule re-grade classifies ml_entry as not qualifying",
+   "p": 0.85,
+   "tier": 3,
+   "check": {
+    "command": "the committed re-grade record (promotion-rule-fix row)",
+    "rule": "hit if not_qualifying",
+    "resolves_when": "record lands; void if none by 2026-12-02"
+   },
+   "ending": "named operator decision (promotion-rule fix, 11-25)"
+  }
+ ],
+ "writebacks": [
+  "pipeline redate x4 (ZZUFKM1F-0001, EUWZZMDP-0003, TX7TX2ZN-0002, DGUBH8UA-0002)"
+ ],
+ "rows_filed": [],
+ "units_filed": [],
+ "pipeline_filed": [],
+ "next_by_value_per_cost": [
+  "P-1",
+  "P-2",
+  "P-5",
+  "P-3",
+  "P-4",
+  "P-6",
+  "P-7",
+  "P-8",
+  "P-9"
+ ],
+ "handoff": "Manager: P-1/P-6 to the operator with the promotion-rule fix; dispatch P-2 (ML-PRIMARY), P-3, P-4, P-5, P-7; FRONTIER-LEVER-TABULAR dropped = dbf8-02 blocker."
+}
