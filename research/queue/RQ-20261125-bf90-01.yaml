@@ -5,7 +5,7 @@ title: 'Alpaca SIP closed daily bars: is the free-plan entitlement real for a re
 status: queued
 cadence: once
 roadmap:
-- unmapped
+- L-LADDER
 theme: infra
 priority: 1
 kind: deterministic
@@ -15,6 +15,7 @@ question: 'With the runner''s Alpaca data pair, does feed=sip with end = now - 1
 why_this_matters: 'Row INDEX-CAPIT-SIP-CLOSED-BARS: index_capitulation_1x goes live on alpaca_live reading Alpaca IEX daily bars; over 975 sessions on
   12 tickers IEX reproduces 144/148 backtest signals but adds 21 IEX-only signals and costs ~4.9 R on matched entries
   (comms/research/INDEX-CAPIT-1X-LEG/feed_agreement.json). The fix reads the signal from SIP closed bars; it ships only if the plan serves them.'
+practice_precedent: 'none: a deterministic read of what the venue serves on this plan plus a signal-set comparison; no modelling practice applies'
 why_not_inferential: 'Deterministic: the venue either serves the request or refuses it, and the signal sets either match or they do not. No sampling question.'
 decision_rule:
   id: RULE-RQ-20261125-bf90-01-SIP-CLOSED
