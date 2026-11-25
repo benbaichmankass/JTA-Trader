@@ -169,7 +169,7 @@ def feed_compare(t: str, k: float, live: pd.DataFrame, cons: pd.DataFrame, warmu
     Both frames start on the same date (state machines start together); signals in the first ``warmup`` sessions are not compared."""
     common = live.index.intersection(cons.index)
     common = common[common <= pd.Timestamp(H.WINDOW_END)]
-    out: Dict[str, Any] = {"sessions": int(len(common)), "from": str(common[0].date()) if len(common) else None,
+    out: Dict[str, Any] = {"ticker": t, "sessions": int(len(common)), "from": str(common[0].date()) if len(common) else None,
                            "to": str(common[-1].date()) if len(common) else None}
     res = {}
     for name, f in (("live", live), ("consolidated", cons)):
