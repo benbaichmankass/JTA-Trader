@@ -99,6 +99,13 @@ intervention_controls:
   matched_random:
     draws: 200
     description: the same raw weights permuted across books within each test week (renormalised); the arm must beat >= 95% of draws
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket; only its risk weight changes, with the weekly total unchanged'
+  best_static:
+    grid:
+    - equal risk per trade on every book (weight 1), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule, not chosen on any fold; no grid was searched'
   bootstrap_group: week
 practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
   M13).
