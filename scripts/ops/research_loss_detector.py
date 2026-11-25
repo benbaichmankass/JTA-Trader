@@ -133,7 +133,16 @@ NOT_RESEARCH_WORKFLOWS = frozenset({
 #: out, and `queue_grade.py` on main then reported 0 changed: every disposition was
 #: already landed by a later grade run. A landing failure of the grade itself is a
 #: different question (the run-failure alert), not a lost artifact.
-TRANSPORT_ARTIFACTS = frozenset({"research-store-bundle"})
+#:
+#: ``watchdog-rows`` (research-watchdog.yml) is the watch -> land hand-off WITHIN one run: the `watch` job uploads its
+#: incident rows (retention 3 d) and the run's own `land` job downloads them, appends them to
+#: comms/research/ops/watchdog_incidents.jsonl and lands that file with commit-to-main (the workflow carries a
+#: `no-durable-result` marker for exactly this). MEASURED 2026-11-25 (loss-detector page 21:58Z, question C): run
+#: 45703697928, artifact watchdog-rows 396 B created 21:33Z expiring 2026-11-28; both jobs concluded success (`land`
+#: 21:39-22:03Z, step "Land the incident ledger" success with verify-merged) and main carries a499faaca
+#: "chore(research-watchdog): incident ledger rows (run 45703697928) (#28914)". Git holds the rows, so the artifact is a
+#: transport copy; a failure of the landing itself is the run-failure alert's question, not a lost artifact.
+TRANSPORT_ARTIFACTS = frozenset({"research-store-bundle", "watchdog-rows"})
 
 
 def is_research_workflow(name: str) -> bool:
