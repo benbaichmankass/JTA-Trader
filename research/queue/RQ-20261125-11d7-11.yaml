@@ -1,0 +1,116 @@
+# Authored 2026-11-25 by lane QUEUE-FILL-STANDING-W49 (Tier 1), attempt 2 pooled. Rule registered BEFORE the run; the author read only counts and arm-vs-A identity of the emits, no outcomes. Gates this adds or changes: none.
+id: RQ-20261125-11d7-11
+title: 'POOLED ATTEMPT-2 for the crypto 2h pullback family (AVAX, BTC htf, SOL): does pullback_frac_hi (pullback_frac 0.625, declared 0.5) beat the declared leg on the pooled paired
+  read of 3 legs?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 2
+kind: experiment
+question: Across avax_pullback_2h, htf_pullback_trend_2h, sol_pullback_2h (pooled n(A) 875 from the kept arm emits of RQ-20261105-008, RQ-20261106-020, RQ-20261106-011), is the paired
+  per-entry net-R difference of pullback_frac_hi minus A >= 0.06 R per baseline trade with a month-block bootstrap CI lower bound > 0, in >= 3 of 4 folds, with pooled maxDD <= 1.35x
+  baseline?
+why_this_matters: 'The weekly one-factor sweeps of this family graded fail/indeterminate leg by leg although every leg ran the SAME lever values (pullback_frac 0.375 / pullback_frac
+  0.625, declared 0.5); a per-leg verdict cannot resolve a 0.02-0.05 R/trade effect (pool_arm_diff.py header). Pooling the legs that carry the same lever is the design that can. Dedupe:
+  one symbol per leg (AVAXUSDT, BTCUSDT, SOLUSDT 2h): no trade is shared between legs. PASS gives a family-level Tier-3 declare PROPOSAL input (a population redefinition needs its own
+  pooled test on fresh data, stated here); FAIL closes THIS value for THIS pool and leaves the family and the other value open. This is a pooled re-read of the same trades the sweeps
+  produced, not an independent sample.'
+power:
+  alpha: 0.05
+  basis: 'MEASURED n(A) per leg from the kept emits (latest run): pooled 875. The harness computes MDE = 2.487*paired_sd/sqrt(n); if it exceeds the 0.06 bar the unit grades INDETERMINATE
+    (said, never a fail).'
+  design: one_sample
+  effect_units: sd
+  expected_n: 875
+  feasibility:
+    accrual_basis: Re-reads committed arm emits; nothing accrues.
+    source: none
+  min_detectable_effect: 0.3
+  power: 0.8
+decision_rule:
+  id: RULERQ20261125-11d7-11
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: scripts/research/pool_arm_diff.py over --unit avax_pullback_2h=RQ-20261105-008 --unit htf_pullback_trend_2h=RQ-20261106-020 --unit sol_pullback_2h=RQ-20261106-011, baseline
+    A, candidate pullback_frac_hi, --bar 0.06 --min-n 300 --folds 4 --fold-majority 3 --dd-mult 1.35 --seed 20261125.
+  rule: 'Per the harness, thresholds fixed now: INDETERMINATE if any unit''s arm files are missing, pooled n(A) < 300, or the MDE exceeds 0.06. PASS iff pooled diff per baseline trade
+    >= 0.06 R AND the bootstrap CI lower bound > 0 AND fold wins >= 3 of 4 AND pooled maxDD <= 1.35x baseline. FAIL otherwise at pooled n >= 300 and MDE <= 0.06: this value is closed
+    for this pool; the family and the other value (lo) are NOT retired. Family denominator: 2 candidate values (Holm over the pair reported). Thresholds are not changed after any result.'
+  regime_robustness: Per-leg and per-year pooled diff table reported, not graded. Set before the run.
+  what_it_does_not_do: 'Edits no config or roster and places no order. Not an independent sample (re-reads the five sweeps'' emits); not a promotion case, and per-symbol results never
+    gate (operator 2026-11-04): a PASS is a population-level proposal input needing its own pooled test on fresh data.'
+compute: cpu_light
+value:
+  basis: planning weight for a pooled lever read on testing legs; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.15
+  usd_at_stake_per_month: 100
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: false
+  peak_memory_gb: 1.0
+  est_minutes: 3
+  why_runner: Reads committed arm emits only; no fetch, no trainer data; CPU only.
+  basis: Same module as RQ-20261025-d7e6-01 (30 min timeout, far over need).
+run:
+  command:
+  - python3
+  - scripts/research/pool_arm_diff.py
+  - --unit
+  - avax_pullback_2h=RQ-20261105-008
+  - --unit
+  - htf_pullback_trend_2h=RQ-20261106-020
+  - --unit
+  - sol_pullback_2h=RQ-20261106-011
+  - --baseline
+  - A
+  - --candidate
+  - pullback_frac_hi
+  - --bar
+  - '0.06'
+  - --min-n
+  - '300'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-mult
+  - '1.35'
+  - --seed
+  - '20261125'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-11d7-11
+  timeout_minutes: 30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261105-008
+- RQ-20261106-020
+- RQ-20261106-011
+programme: P3
+practice_precedent: M4, M13 (docs/reference/trading-and-model-practice-principles.md); scripts/research/pool_arm_diff.py header (pooling is the design that reaches the effect floor)
+intervention_controls:
+  not_applicable: a pooled paired re-read of Stage-0 parameter-lever arms, not an in-trade action
+iteration:
+  subject: crypto 2h pullback family (AVAX, BTC htf, SOL) (avax_pullback_2h, htf_pullback_trend_2h, sol_pullback_2h)
+  subject_kind: strategy_leg
+  from_result: the weekly sweeps RQ-20261105-008, RQ-20261106-020, RQ-20261106-011 (kept arm emits under comms/research/)
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-12-02'
+  diagnosis: 'Attempt 2 of weekly one-factor sweeps (dispatched 2026-11-20..23, graded fail/indeterminate on single-leg n). Same lever values on every leg of one family: pool. The author
+    read only trade COUNTS and arm-vs-A byte identity of the emits (the pullback_frac_hi arm differs from A on every pooled leg), never outcomes.'
+  search: pooled paired read of pullback_frac_hi; the other value and the remaining lever families (exit, regime) are separate iterations.
+  levers:
+  - entry
+  map_entries:
+  - research/levers/avax_pullback_2h.yaml
+  - research/levers/htf_pullback_trend_2h.yaml
+  - research/levers/sol_pullback_2h.yaml
