@@ -163,8 +163,6 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
-| `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
-| `docs/plans/planning-2026-W48-open-items.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
@@ -546,6 +544,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-05-01AFoLuJ-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-06-01AFoLuLm-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-11-15-manager-14a-to-new.md` | history | unknown | — | 2026-11-15 | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -666,6 +665,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/weekly/2026-11-12/triage/BRIEF.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/WORK-STORE-DESIGN-2026-11.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | WORK-STORE-DESIGN: one register (items+events SQLite on the VM behind the API) replacing checklist+pipeline files; bot-output ledgers off the repo; measured repo-flow inventory; deploy path (keep ict-git-sync); migration dry-run; build order; operator decisions D1-D9. Design only. |
+| `docs/plans/planning-2026-W48-open-items.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/risk-objective-tier3-proposals-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/sizer-margin-base-2026-10-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
