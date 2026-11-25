@@ -102,7 +102,7 @@ the PRICE side (event studies on archived events with mechanical classification)
 | News + unscheduled events | Bigdata.com search/events (MCP) | per-doc published_at | exists, live only |
 | News archive for event studies | GDELT (`news_alpha_features.py`) | yes | exists (features part built) |
 | Live web context | DESK-14 web reads (`external_context[]` logging) | retrieved_at | exists |
-| Earnings calendar for rostered symbols + heavyweights | — | — | **GAP**: probe a source on a runner before building (macro-research invariant 3) |
+| Earnings calendar for rostered symbols + heavyweights | PROBED 2026-11-25 (fixtures in `comms/macro/earnings_calendar_probe_20261125/`): (a) Nasdaq `api.nasdaq.com/api/calendar/earnings?date=` (keyless, per-date list: symbol, time, consensus EPS forecast, # ests, reported EPS, surprise); (b) yfinance `get_earnings_dates` (per-symbol history + next date, EPS estimate / reported / surprise) | forward: yes if snapshotted daily (append-only `observed_at`); historical estimates: **unverified PIT** (may be the last pre-release consensus or revised) | **source found**; build a daily forward snapshot producer; use history only for event DATES, not for consensus, until PIT is shown |
 | Open positions / rostered legs | desk scan packet (`latest_scan.json`) | yes | exists |
 
 ## 5. Grading (how Claude's macro judgement gets a measured hit rate)
