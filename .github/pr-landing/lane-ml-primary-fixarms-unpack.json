@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Bug fix in research tooling: ml_entry_fix_arms.run_arm rebound its per-run (fixed, vol) label pair inside the fold loop (`alt, alt2 = alt`), so the volsl_retrain and rsz_xwide arms died at fold 2 (RQ-20261124-f1a0-14 run 45532031095; f1a0-15 shares the branch). Unpack into new names; a regression test fails on the old code and passes now. Changes no rule, unit or result. Gates this adds or changes: none."
+}
