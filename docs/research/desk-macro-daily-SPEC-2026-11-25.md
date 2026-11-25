@@ -135,8 +135,8 @@ the PRICE side (event studies on archived events with mechanical classification)
      dropped as value-unknown, so this is the pooled release-day read under a fresh unit, not a revival of the row);
    - (b) unscheduled event study per taxonomy class on the GDELT / Bigdata.com archive with MECHANICAL classification
      (no Claude labels, see label hygiene), abnormal return at 1d/5d/20d net of cost, one unit per class with n stated;
-   - (c) the longer-horizon macro trade arm: graded from the live briefs' shadow trades. Forward-only by nature (Claude
-     labels cannot be backfilled cleanly), so its n accrues ~1-3 trades/day: the unit states the accrual rate and the date
+   - (c) the longer-horizon macro trade arm: graded from the live briefs' shadow trades. Forward-only by nature (a Claude
+     label on a past event may carry remembered outcomes, see Label hygiene in section 2), so its n accrues ~1-3 trades/day: the unit states the accrual rate and the date
      its pre-registered n is reached (macro-research invariant 4), and the event-study units (b) carry the near-term evidence.
 4. A pass → the normal ladder. A fail → the next iteration from the diagnosis (regime is a standing lever, REGIME-PROGRAM).
 
