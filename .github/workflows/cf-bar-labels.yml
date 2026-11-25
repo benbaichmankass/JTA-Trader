@@ -23,6 +23,12 @@ on:
       max_fwd_bars:
         description: "Forward window (bars) the labels look ahead; rows with fewer bars left and no stop/target are censored"
         default: "48"
+      context:
+        description: "AM-V2-RICHER-FEATURES: 'true' adds the ctx block (market structure + vol regime, bars <= k incl. pre-entry history) to every row"
+        default: "false"
+      fit_rich_unit:
+        description: "Optional queue unit id (e.g. RQ-20261124-a9d2-01): after the labels, run am_heads_fit.py run --feats rich on them (needs context=true) and upload summary/verdict"
+        default: ""
 
 permissions:
   contents: read
@@ -99,7 +105,11 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
           INDEX: ${{ matrix.index }}
           MAXF: ${{ inputs.max_fwd_bars }}
-        run: python3 scripts/research/cf_bar_labels_run.py shard --run-id "$RUN_ID" --out out --index $INDEX --max-fwd-bars "$MAXF"
+          CTX: ${{ inputs.context }}
+        run: |
+          EXTRA=""
+          if [ "$CTX" = "true" ]; then EXTRA="--context"; fi
+          python3 scripts/research/cf_bar_labels_run.py shard --run-id "$RUN_ID" --out out --index $INDEX --max-fwd-bars "$MAXF" $EXTRA
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -132,3 +142,48 @@ jobs:
         with:
           name: ${{ inputs.run_id }}-census
           path: out/census.json
+
+  fit_rich:
+    # AM-V2-RICHER-FEATURES: the registered BASE-vs-RICH head fit (RULE-AM-HEADS-RICHER-20261124) on this run's labels. Research only: it reads the
+    # labels artifacts + the pinned corpus and uploads summary.json / verdict.json; the record is landed by the lane through script_run --derive-record.
+    needs: shard
+    if: always() && needs.plan.result == 'success' && inputs.fit_rich_unit != '' && inputs.context == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests lightgbm scikit-learn
+      - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          cp comms/research/holdout_reads.jsonl /tmp/holdout_reads.jsonl   # the CURRENT ledger, so the claim's n_tries counts every prior read
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+          cp /tmp/holdout_reads.jsonl comms/research/holdout_reads.jsonl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.run_id }}-labels-*
+          path: labels
+          merge-multiple: true
+      - name: Fit BASE vs RICH heads
+        env:
+          UNIT: ${{ inputs.fit_rich_unit }}
+        run: |
+          python3 scripts/research/am_heads_fit.py run --feats rich --labels labels --corpus . --out fit --unit "$UNIT" \
+            --reader "cf-bar-labels fit_rich (${{ github.run_id }})" --rows-per-fold 400000
+          tail -n 1 comms/research/holdout_reads.jsonl > fit/holdout_claim_row.jsonl   # the claim this run appended; the lane lands it in the repo ledger
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.run_id }}-fit-rich
+          path: fit
+          if-no-files-found: ignore
