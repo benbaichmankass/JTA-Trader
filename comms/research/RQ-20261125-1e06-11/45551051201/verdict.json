@@ -1,0 +1,546 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261125-1e06-11",
+ "read_state": "measured",
+ "verdict": "fail",
+ "n": 77,
+ "note": "capitulation_credit: FAIL; pairs passed none of 8; 6-pair family read -> any pass needs the fresh-window confirmation before a proposal",
+ "decision_rule": {
+  "id": "RULE-RQ-20261125-1e06-11",
+  "rule": "CREDIT-STATE GATE on 2000-01-01..2010-05-28 (pre-sample): the 1.5-ATR capitulation trigger kept only when Moody's Baa-10y spread (FRED BAA10Y, as-of the prior day) is <= its trailing 252-observation median, 1x ETF on the 1e06-07 pairs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise. The pair (1e06-10, 1e06-11) passes only if BOTH pass."
+ },
+ "population": "capitulation_credit: 8 (index, ETF) pairs, daily bars 2000-01-01..2010-05-28 (yfinance auto_adjust=False), trades net of 5.0 bps/side slippage on the ETF's own price series; n per pair in measurement.pairs",
+ "measurement": {
+  "family": "capitulation_credit",
+  "pairs": {
+   "KBE->KBE": {
+    "n_signals": 8,
+    "skips": {
+     "stop_wrong_side_at_entry": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 5
+    },
+    "n": 7,
+    "net_r": -1.1558,
+    "mean_net_r": -0.1651,
+    "max_drawdown_r": 3.177,
+    "win_rate": 0.286,
+    "by_outcome": {
+     "stop": 4,
+     "take_profit": 0,
+     "timeout": 3
+    },
+    "folds": [
+     {
+      "n": 3,
+      "net_r": 0.2775
+     },
+     {
+      "n": 2,
+      "net_r": -2.1435
+     },
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 2,
+      "net_r": 0.7102
+     }
+    ],
+    "net_r_2x_slip": -1.5755,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 6.14,
+    "sizing_note": {
+     "median_entry_price": 52.92,
+     "median_risk_per_share": 0.75,
+     "min_equity_for_1_share_at_1pct_risk": 75.0
+    },
+    "data_start": "2005-11-15",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "SMH->SMH": {
+    "n_signals": 8,
+    "skips": {},
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 5
+    },
+    "n": 8,
+    "net_r": -7.3559,
+    "mean_net_r": -0.9195,
+    "max_drawdown_r": 7.3559,
+    "win_rate": 0.125,
+    "by_outcome": {
+     "stop": 6,
+     "take_profit": 0,
+     "timeout": 2
+    },
+    "folds": [
+     {
+      "n": 1,
+      "net_r": -0.6101
+     },
+     {
+      "n": 5,
+      "net_r": -4.6074
+     },
+     {
+      "n": 1,
+      "net_r": -1.0684
+     },
+     {
+      "n": 1,
+      "net_r": -1.07
+     }
+    ],
+    "net_r_2x_slip": -7.8253,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 4.38,
+    "sizing_note": {
+     "median_entry_price": 16.492,
+     "median_risk_per_share": 0.292,
+     "min_equity_for_1_share_at_1pct_risk": 29.0
+    },
+    "data_start": "2000-06-05",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "EWZ->EWZ": {
+    "n_signals": 16,
+    "skips": {
+     "stop_wrong_side_at_entry": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 9
+    },
+    "n": 15,
+    "net_r": -2.9093,
+    "mean_net_r": -0.194,
+    "max_drawdown_r": 6.7779,
+    "win_rate": 0.4,
+    "by_outcome": {
+     "stop": 8,
+     "take_profit": 0,
+     "timeout": 7
+    },
+    "folds": [
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 7,
+      "net_r": -0.534
+     },
+     {
+      "n": 6,
+      "net_r": 0.4027
+     },
+     {
+      "n": 2,
+      "net_r": -2.778
+     }
+    ],
+    "net_r_2x_slip": -3.4159,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 6.33,
+    "sizing_note": {
+     "median_entry_price": 24.31,
+     "median_risk_per_share": 0.81,
+     "min_equity_for_1_share_at_1pct_risk": 81.0
+    },
+    "data_start": "2000-07-14",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "FXI->FXI": {
+    "n_signals": 14,
+    "skips": {
+     "stop_wrong_side_at_entry": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 8
+    },
+    "n": 13,
+    "net_r": -0.806,
+    "mean_net_r": -0.062,
+    "max_drawdown_r": 2.6216,
+    "win_rate": 0.462,
+    "by_outcome": {
+     "stop": 6,
+     "take_profit": 0,
+     "timeout": 7
+    },
+    "folds": [
+     {
+      "n": 6,
+      "net_r": 0.1568
+     },
+     {
+      "n": 4,
+      "net_r": -0.3752
+     },
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 3,
+      "net_r": -0.5876
+     }
+    ],
+    "net_r_2x_slip": -1.6234,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 6.46,
+    "sizing_note": {
+     "median_entry_price": 23.0,
+     "median_risk_per_share": 0.62,
+     "min_equity_for_1_share_at_1pct_risk": 62.0
+    },
+    "data_start": "2004-10-08",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "EWG->EWG": {
+    "n_signals": 14,
+    "skips": {
+     "stop_wrong_side_at_entry": 1,
+     "risk_degenerate": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 8
+    },
+    "n": 12,
+    "net_r": 11.5106,
+    "mean_net_r": 0.9592,
+    "max_drawdown_r": 5.6954,
+    "win_rate": 0.333,
+    "by_outcome": {
+     "stop": 7,
+     "take_profit": 0,
+     "timeout": 5
+    },
+    "folds": [
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 5,
+      "net_r": -3.7867
+     },
+     {
+      "n": 3,
+      "net_r": 9.2918
+     },
+     {
+      "n": 4,
+      "net_r": 6.0055
+     }
+    ],
+    "net_r_2x_slip": 10.6936,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 6.42,
+    "sizing_note": {
+     "median_entry_price": 17.525,
+     "median_risk_per_share": 0.29,
+     "min_equity_for_1_share_at_1pct_risk": 29.0
+    },
+    "data_start": "2000-01-03",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": true,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": true,
+      "beats_baseline": true
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "EWU->EWU": {
+    "n_signals": 10,
+    "skips": {
+     "risk_degenerate": 1,
+     "stop_wrong_side_at_entry": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 5
+    },
+    "n": 8,
+    "net_r": 5.5102,
+    "mean_net_r": 0.6888,
+    "max_drawdown_r": 3.1272,
+    "win_rate": 0.375,
+    "by_outcome": {
+     "stop": 4,
+     "take_profit": 0,
+     "timeout": 4
+    },
+    "folds": [
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 2,
+      "net_r": 1.2418
+     },
+     {
+      "n": 3,
+      "net_r": 7.16
+     },
+     {
+      "n": 3,
+      "net_r": -2.8916
+     }
+    ],
+    "net_r_2x_slip": 4.9239,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 5.88,
+    "sizing_note": {
+     "median_entry_price": 32.07,
+     "median_risk_per_share": 0.54,
+     "min_equity_for_1_share_at_1pct_risk": 54.0
+    },
+    "data_start": "2000-01-03",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": true,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": true,
+      "beats_baseline": true
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "VGK->VGK": {
+    "n_signals": 8,
+    "skips": {
+     "stop_wrong_side_at_entry": 1,
+     "risk_degenerate": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 4
+    },
+    "n": 6,
+    "net_r": -5.5145,
+    "mean_net_r": -0.9191,
+    "max_drawdown_r": 5.5145,
+    "win_rate": 0.167,
+    "by_outcome": {
+     "stop": 4,
+     "take_profit": 0,
+     "timeout": 2
+    },
+    "folds": [
+     {
+      "n": 2,
+      "net_r": -1.2491
+     },
+     {
+      "n": 1,
+      "net_r": -1.1006
+     },
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 3,
+      "net_r": -3.1648
+     }
+    ],
+    "net_r_2x_slip": -5.8409,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 5.0,
+    "sizing_note": {
+     "median_entry_price": 51.765,
+     "median_risk_per_share": 1.245,
+     "min_equity_for_1_share_at_1pct_risk": 125.0
+    },
+    "data_start": "2005-03-10",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   },
+   "IJR->IJR": {
+    "n_signals": 9,
+    "skips": {
+     "stop_wrong_side_at_entry": 1
+    },
+    "tp_calibration": {
+     "k_star": null,
+     "state": "uncalibrated_too_few_is",
+     "n_is": 5
+    },
+    "n": 8,
+    "net_r": -3.3346,
+    "mean_net_r": -0.4168,
+    "max_drawdown_r": 8.0382,
+    "win_rate": 0.125,
+    "by_outcome": {
+     "stop": 7,
+     "take_profit": 0,
+     "timeout": 1
+    },
+    "folds": [
+     {
+      "n": 0,
+      "net_r": 0.0
+     },
+     {
+      "n": 5,
+      "net_r": -0.0396
+     },
+     {
+      "n": 2,
+      "net_r": -2.2276
+     },
+     {
+      "n": 1,
+      "net_r": -1.0674
+     }
+    ],
+    "net_r_2x_slip": -3.9517,
+    "oos": null,
+    "mean_decay_drag": 0.0,
+    "mean_bars_held": 4.5,
+    "sizing_note": {
+     "median_entry_price": 24.008,
+     "median_risk_per_share": 0.413,
+     "min_equity_for_1_share_at_1pct_risk": 41.0
+    },
+    "data_start": "2000-05-26",
+    "data_end": "2010-05-28",
+    "grade": {
+     "verdict": "indeterminate",
+     "checks": {
+      "n_ge_floor": false,
+      "net_gt_0": false,
+      "folds_ge_3": false,
+      "net_gt_0_at_2x_slip": false,
+      "beats_baseline": false
+     },
+     "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+     "baseline_net_r": 0.0
+    }
+   }
+  },
+  "hold_cap_sessions": 10,
+  "slip_bps_per_side": 5.0,
+  "window": [
+   "2000-01-01",
+   "2010-05-28"
+  ],
+  "timing_control": {
+   "draws": 200,
+   "shift_sessions": "40..400 either direction",
+   "mean_net_r": 6.046,
+   "p95_net_r": 38.409,
+   "actual_net_r": -4.055,
+   "share_of_draws_ge_actual": 0.715,
+   "gating": true
+  },
+  "pooled": {
+   "n": 77,
+   "net_r_3x": -4.0553,
+   "net_r_1x": 0.0,
+   "net_r_2x_slip": -8.6152,
+   "pairs_positive": 2,
+   "checks": {
+    "pooled_n_ge_floor": true,
+    "pooled_net_gt_0": false,
+    "pairs_positive_ge_4": false,
+    "pooled_net_gt_0_at_2x_slip": false,
+    "beats_timing_control_95": false
+   },
+   "verdict": "fail"
+  }
+ },
+ "generated_at": "2026-11-25T05:27:26Z"
+}

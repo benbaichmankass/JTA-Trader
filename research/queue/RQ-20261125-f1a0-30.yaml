@@ -1,0 +1,145 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (REGIME-PROGRAM, a THIRD disjoint population for the frozen metastate recipe). Rule fixed before any run.
+# DISCLOSURE: f1a0-26 (rostered) and f1a0-28 (BNB/DOGE/LINK/LTC) were read; nothing on these 4 symbols was. Gates this adds or changes: none.
+id: RQ-20261125-f1a0-30
+title: 'REGIME-PROGRAM learned trade state, FRESH POPULATION 2: with f1a0-26''s recipe frozen, on the rostered leg configs replayed on DOT / ATOM / BCH / ETC
+  (disjoint from the rostered symbols and from f1a0-28''s), does the 2.0 / 0.5 tilt beat equal risk by +0.01 R/trade and beat permutations within leg-month?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-28/45538741195
+  verdict_read: indeterminate
+  diagnosis: 'f1a0-28 (fresh population BNB/DOGE/LINK/LTC, run 45538741195; 24,774 test trades, 84 leg@symbol): delta +0.0119 R/trade (clears +0.01),
+    permutation share 0.000 (beats all 200), t 1.56 and 3 / 5 years positive (2024 -0.029, 2026 -0.009) fail. f1a0-26 (rostered): +0.0168, share 0.005,
+    t 1.31, 4 / 5 years. Two disjoint populations show the same pattern: the within-leg-month TIMING of the tilt is clearly informative (no permutation
+    matches it) but the LEVEL is unstable year to year, so neither population alone reaches t 2. The frozen recipe gets a third disjoint population; its
+    verdict is its own. REPORTED, not graded (computed after both reads): inverse-variance pooling of f1a0-26 and f1a0-28 gives ~ +0.013, t ~ 2.0.'
+  search: 'NONE new: f1a0-26''s frozen recipe; the only new choice is the third symbol list (DOTUSDT, ATOMUSDT, BCHUSDT, ETCUSDT: liquid USDT perps with
+    Binance Vision history from 2020 that neither the rostered legs nor f1a0-28 trade), fixed before any run.'
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 11
+  due_by: '2026-12-01'
+question: 'On every rostered crypto trend / pullback / fade / squeeze leg CONFIG replayed with declared params on DOTUSDT, ATOMUSDT, BCHUSDT and ETCUSDT
+  (2020-09-01..2026-10-26; test trades from 2022-01-03; leg key = leg@symbol), does tilting each trade 2.0 / 0.5 by f1a0-26''s frozen walk-forward
+  LightGBM on its own-symbol and BTC daily state, renormalised within leg x month, beat equal risk by >= +0.01 R/trade (entry-week bootstrap t >= 2),
+  beat >= 95% of 200 within-leg-month permutations of the tilts, and hold in >= 4 of 5 years?'
+why_this_matters: 'The regime lever in the form a live leg can use: per-trade risk set by the traded symbol''s state at entry, every trade kept. A pass
+  goes to a fresh-window confirmation, then a Tier-3 per-leg sizing proposal; a fail closes daily own-symbol + BTC state as a per-trade sizing input and
+  moves the program to intraday state at entry (the leg''s own timeframe: range position, vol burst, funding) and change-point state.'
+power:
+  expected_n: 251
+  min_detectable_effect: 0.01
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'ESTIMATE scaled from f1a0-24/25/26 (MEASURED there: 7,963 trades over 21 legs, 6,158 test): 84 leg@symbol replays should give ~4x the
+    trades, about halving the se of f1a0-26 (0.013); at f1a0-26''s +0.0168 that is t ~ 2.6. Earlier basis: 7,963 replayed trades (6,158 test) over 21 legs, ~5,500 in the test window; the cluster is the entry week (~250). INDETERMINATE
+    is a live outcome.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: per-trade risk sizing within each rostered leg by its own symbol state
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: Equal risk per trade on the same replayed trades (weight 1); and 200 permutations of the raw trade tilts within each leg x month.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - metastate
+  - --population
+  - fresh2
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261125-f1a0-30
+decision_rule:
+  id: RULE-REGIME-METASTATE-FRESH2-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: equal risk per trade on the same trades; 200 permutations of the raw tilts within each leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode metastate --population fresh2 (fresh_legs on FRESH_SYMBOLS_2; daily_closes, state_features, metastate_frame, metastate_raw, ts_weights,
+    grade_raw; BTC state from fetch_btc_closes on the rostered BTCUSDT leg''s timeframe):
+    delta = mean (w - 1) x net R over test trades; se from 1,000 entry-week bootstrap draws; permutation share of 200 within leg x month permutations
+    of the raw tilts; yearly delta.'
+  rule: 'PASS iff delta >= +0.01 R/trade AND t >= 2 AND permutation share <= 0.05 AND >= 4 of 5 test years > 0; FAIL iff delta <= 0 or share >= 0.5;
+    else INDETERMINATE.'
+  pass_action: 'With f1a0-26 and f1a0-28 (both INDETERMINATE on t only / t + years) this is the third population; a pass here goes to the manager as
+    the evidence set for a Tier-3 per-leg sizing proposal on the rostered legs (sizing, never a drop gate), after a forward fresh-window read as trades
+    accrue after 2026-10-26.'
+  fail_action: 'Record the daily-state tilt as informative in timing but not in level across 3 populations; the next regime form is intraday state at
+    entry on the leg''s own timeframe (range position, vol burst) and a continuous (not tercile) tilt that trades level noise for timing.'
+  proposal_mapping: pass -> confirmation -> Tier-3 sizing proposal; fail or indeterminate -> the next regime form from this diagnosis.
+  what_it_does_not_do: Changes no config, sizing or order path; adds no gate. Re-runs the evidence builder's harness path read-only (writes only
+    under --out).
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: the raw trade tilts permuted within each leg x calendar month (200 draws, renormalised); the arm must beat >= 95% of draws
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket; only its risk weight changes, with the weekly total unchanged'
+  best_static:
+    grid:
+    - equal risk per trade on every book (weight 1), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule and one fixed model recipe, not chosen on any fold; no grid was searched'
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  why_runner: Keyless Binance Vision candles for ~20 legs plus the repo harnesses; LightGBM (installed by research-script-run) for 5 small yearly fits.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est.
+    under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- scripts/research/regime_r2_family_router.py
+- REGIME-ROSTERED-CONFIG-REPLAY
+- research/queue/RQ-20261125-f1a0-24.yaml
+- research/queue/RQ-20261125-f1a0-25.yaml
+- research/queue/RQ-20261125-f1a0-26.yaml
+- research/queue/RQ-20261125-f1a0-28.yaml
+- REGIME-PROGRAM

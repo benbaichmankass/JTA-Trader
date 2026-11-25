@@ -65,6 +65,10 @@ MS_CLIP_R = 3.0
 #: metastate recipe is confirmed on trades it has never seen, with no re-tune. Leg key = "<leg>@<symbol>".
 FRESH_SYMBOLS = ("BNBUSDT", "DOGEUSDT", "LINKUSDT", "LTCUSDT")
 RULE_MS_FRESH = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH-20261125")
+#: FRESH POPULATION 2 (RQ-20261125-f1a0-30): a third, disjoint population for the same frozen recipe (fixed before any run); f1a0-26 and f1a0-28 are
+#: REPORTED beside it (inverse-variance pooled), never part of its verdict.
+FRESH_SYMBOLS_2 = ("DOTUSDT", "ATOMUSDT", "BCHUSDT", "ETCUSDT")
+RULE_MS_FRESH2 = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH2-20261125")
 _FETCHED: Dict[Tuple[str, str], str] = {}
 MS_MIN_TRAIN = 300
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
@@ -359,8 +363,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
     ap.add_argument("--mode", choices=["book", "tradestate", "metastate"], default="book")
-    ap.add_argument("--population", choices=["rostered", "fresh"], default="rostered",
-                    help="fresh: the rostered configs on FRESH_SYMBOLS (metastate only; RULE_MS_FRESH)")
+    ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
+                    help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -371,10 +375,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     work = Path(a.work) if a.work else out / "work"
     cfgs = rostered_legs()
     btc_cfg = next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
-    if a.population == "fresh":
+    if a.population in ("fresh", "fresh2"):
         if a.mode != "metastate":
-            ap.error("--population fresh is defined for --mode metastate only")
-        cfgs = fresh_legs(cfgs)
+            ap.error("--population fresh/fresh2 is defined for --mode metastate only")
+        cfgs = fresh_legs(cfgs, FRESH_SYMBOLS if a.population == "fresh" else FRESH_SYMBOLS_2)
     if a.legs:
         cfgs = {k: v for k, v in cfgs.items() if k in set(a.legs.split(","))}
     per = {}
@@ -401,13 +405,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             btc = fetch_btc_closes(btc_cfg, work)
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
         m = grade_metastate(tr, closes, btc) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
-        rule_used = RULE_MS_FRESH if a.population == "fresh" else RULE_MS
+        rule_used = {"fresh": RULE_MS_FRESH, "fresh2": RULE_MS_FRESH2}.get(a.population, RULE_MS)
     else:
         m = grade(tr) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE
     legs_report = {k: {x: v[x] for x in v if x != "trades"} | {"book": cfgs[k]["book"], "harness": cfgs[k]["harness"]} for k, v in per.items()}
-    what = (f"rostered crypto leg configs on the FRESH symbols {'/'.join(FRESH_SYMBOLS)} (leg@symbol)" if a.population == "fresh"
-            else "rostered crypto legs")
+    fsyms = {"fresh": FRESH_SYMBOLS, "fresh2": FRESH_SYMBOLS_2}.get(a.population)
+    what = f"rostered crypto leg configs on the FRESH symbols {'/'.join(fsyms)} (leg@symbol)" if fsyms else "rostered crypto legs"
     pop = (f"{sum(1 for v in per.values() if v.get('state') == 'measured')} of {len(per)} {what} ({'/'.join(FAMILIES)} harnesses) "
            f"replayed with DECLARED params over {WINDOW[0]}..{WINDOW[1]} ({len(tr)} trades, harness net_r full cost stack); books = leg x direction; "
            f"test weeks {RR.TEST_START}..{WINDOW[1]}")
@@ -481,6 +485,8 @@ def _self_test() -> int:
           sorted(fl) == sorted([f"L1@{x}" for x in FRESH_SYMBOLS if x != "BNBUSDT"] + [f"L2@{x}" for x in FRESH_SYMBOLS])
           and fl["L2@DOGEUSDT"]["cfg"] == {"symbols": ["DOGEUSDT"], "timeframe": "1h"} and fl["L1@LTCUSDT"]["harness"] == "trend")
     check("fresh: no FRESH symbol is traded by a rostered leg", not ({v["cfg"]["symbols"][0] for v in legs.values()} & set(FRESH_SYMBOLS)))
+    check("fresh2: disjoint from the rostered symbols AND from FRESH_SYMBOLS",
+          not ({v["cfg"]["symbols"][0] for v in legs.values()} & set(FRESH_SYMBOLS_2)) and not (set(FRESH_SYMBOLS) & set(FRESH_SYMBOLS_2)))
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
