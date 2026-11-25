@@ -1336,7 +1336,11 @@ def pending_stamp_units(api: Any = _gh_api_json) -> Optional[Dict[str, str]]:
 #: The workflows whose runs carry a unit id in their `run-name` (REFILL 2026-11-03).
 RESEARCH_RUN_WORKFLOW_FILES = ("research-script-run.yml", "research-script-run-data.yml",
                                "research-script-run-kaggle.yml", "research-script-run-kaggle-cpu.yml",
-                               "research-script-run-trainer.yml")
+                               "research-script-run-trainer.yml",
+                               # DISPATCH-DOUBLE-FIRE-1125 (2026-11-25): units whose `run.workflow` is one of these
+                               # were invisible here, so every am-action-value unit fired twice ~7 min apart (the
+                               # next cycle saw no stamp, no stamp PR, no result). Their run-name carries the unit id.
+                               "am-action-value.yml", "am-policy-arm.yml")
 _UNIT_IN_TITLE_RE = re.compile(r"\b(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))\b")
 
 
