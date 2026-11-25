@@ -35,6 +35,18 @@ def test_books_split_and_populations():
     assert "pnl NOT NULL" in rm["population"]
 
 
+def test_net_is_split_by_provenance_never_folded():
+    """AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED: the headline net may carry estimated pnl; the split must show it."""
+    measured = _t(1, "bybit_1", "paper", -10.0, notes='{"exit_price_source": "bybit_closed_pnl"}')
+    estimated = _t(2, "bybit_1", "paper", 50.0, notes='{"exit_price_source": "recorded_exit_price"}')
+    a = sb.aggregate([measured, estimated], "x")
+    by = a["net_usd_by_provenance"]
+    assert a["net_usd"] == 40.0
+    assert round(sum(by.values()), 2) == a["net_usd"]          # the split partitions the headline exactly
+    assert by["measured"] == -10.0 and by["estimated"] == 50.0   # positive control: the +50 is not measured
+    assert a["net_usd_measured"] == -10.0                       # the sign flips on the provenance filter
+
+
 def test_empty_book_is_empty_not_zero():
     a = sb.aggregate([], "x")
     assert a["read_state"] == "empty" and a["net_usd"] is None and a["profit_factor"] is None
