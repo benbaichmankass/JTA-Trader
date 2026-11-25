@@ -3,7 +3,7 @@
 id: RQ-20261124-1e06-06
 title: 'Timing-gated capitulation trigger executed in 1x index ETFs on 8 FRESH indexes (XLB, XLP, ITB, XME, EFA, EWJ, IYT, IWN): must beat 95%
   of 200 re-timed entries, graded POOLED'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -94,3 +94,14 @@ intervention_controls:
   not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400
     sessions, same stop geometry, TP and cost), which is a rule clause here
 last_dispatched_at: '2026-11-24T23:50:08+00:00'
+grading:
+  attested: RULE-RQ-20261124-1e06-06
+  auto: true
+  decision_rule_id: RULE-RQ-20261124-1e06-06
+  evidence:
+  - research/results/RQ-20261124-1e06-06/45506679715.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass
