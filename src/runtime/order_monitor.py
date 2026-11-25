@@ -13563,6 +13563,7 @@ def _snapshot_venue_read(row, account_id: str, venue: str, *,
             direction=row["direction"], venue=venue,
             stop_prices=(cov or {}).get("stop_prices"),
             target_prices=(cov or {}).get("target_prices"),
+            stop_legs=(cov or {}).get("stop_legs"),
             position_size=(cov or {}).get("size"), unreadable=unreadable)
     except Exception:  # noqa: BLE001 — observe-only, never raises into the sweep
         logger.debug("venue snapshot hook failed", exc_info=True)
@@ -13591,8 +13592,11 @@ def _bybit_snapshot_cov(state: Optional[dict], direction: Any) -> Optional[dict]
     split = (state.get("prices_by_book") or {}).get(book) if book else None
     if split is None:
         return state
-    return {**state, "stop_prices": list(split.get("stop") or []),
-            "target_prices": list(split.get("target") or [])}
+    out = {**state, "stop_prices": list(split.get("stop") or []),
+           "target_prices": list(split.get("target") or [])}
+    if state.get("stop_legs") is not None:
+        out["stop_legs"] = [leg for leg in state["stop_legs"] if leg.get("book") in (book, None)]
+    return out
 
 
 def _bybit_full_mode_target(pos: dict) -> List[float]:
@@ -13883,6 +13887,10 @@ def _bybit_position_protection(client, category: str, symbol: str,
     # A leg with no readable side is left out of both (never guessed).
     by_book: Dict[str, Dict[str, List[float]]] = {
         "long": {"stop": [], "target": []}, "short": {"stop": [], "target": []}}
+    # LTR-VENUE-SL-NETTED-SIBLING-FALSE-DIVERGE (2026-11-25): each resting stop leg with its order id and book, so the
+    # venue snapshot can grade a package's OWN stop (journal ``trades.sl_order_id``), not whichever sibling leg on the
+    # same netted book is nearest. OBSERVE-ONLY (the snapshot only); no re-arm decision reads it.
+    stop_legs: List[Dict[str, Any]] = []
     for o in legs:
         _kind = str(o.get("stopOrderType") or "").lower()
         _book = {"sell": "long", "buy": "short"}.get(str(o.get("side") or "").lower())
@@ -13910,8 +13918,11 @@ def _bybit_position_protection(client, category: str, symbol: str,
             leg_prices.append(_lpx)
             if _book:
                 by_book[_book]["stop"].append(_lpx)
+            if oid:
+                stop_legs.append({"id": str(oid), "price": _lpx, "book": _book})
     return {
         "size": size, "side": side, "covered_qty": covered,
+        "stop_legs": stop_legs,
         "source": "partial_sl_legs",
         "prices_by_book": {b: {k: sorted(v) for k, v in d.items()}
                            for b, d in by_book.items()},

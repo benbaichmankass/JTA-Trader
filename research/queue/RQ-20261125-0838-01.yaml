@@ -1,0 +1,166 @@
+id: RQ-20261125-0838-01
+title: 'D5 position aggregation CONFIRMATION on 2021-06..2023-04 (history 0104-08, a474-02 and fa22-06 never used): does the 0104-08 PASS of rule arms A1-A3 over
+  today''s rule A0 hold?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+why_not_inferential: 'A fixed replay, not a sample: every arm re-weights the SAME fully replayed solo streams over two fixed windows, so a re-run returns the same
+  numbers. The chance element is handled inside the rule by A4 (matched random exposure, 1000 seeded draws, the arm must beat its 95th percentile) and by requiring
+  the SAME arm to clear the bar in both windows.'
+question: 0104-08 PASSED (A1, A2, A3 beat A0 by >= 5 R, beat matched random, kept maxDD <= 1.25x in BOTH pre-dev windows 2023-04..2024-10) while a474-02 FAILED and
+  fa22-06 was INDETERMINATE on 2024-10..2026-10. On two further disjoint windows (p1 2021-06..2022-03, p2 2022-03..2023-04), same five pair streams, same arms and
+  thresholds, does ONE named arm clear the unchanged bar in both?
+why_this_matters: A PASS read on one window is a discovery, not a confirmation (research-ops step D). The three reads disagree by window (FAIL / INDETERMINATE / PASS),
+  so this is the tie-break on untouched in-hand history. PASS -> MLP-D5-MASTIFF builds its learned arm against the best rule arm and the rule arm is proposed (Tier-3,
+  the manager's); FAIL -> the 0104-08 PASS was window noise and D5 stays the slices rule.
+power:
+  expected_n: 2900
+  min_detectable_effect: 5.0
+  effect_units: R_summed_over_pairs_per_window
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: a deterministic replay; n = trades across 5 pairs x 2 windows from the census record (~2,900). The materiality bar (>= 5 R over A0 summed over
+    the 5 pairs, per window) is the declared resolution.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision 5m / 1h history through 2026-09-30; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: stage0_allocation_rule_arms
+ml_consumer:
+  consumer: config/slice_allocation.yaml
+  decision: whether the per-(account, symbol) budget split gets a learned aggregator (and which rule arm is its baseline), or stays the slices / election rule
+  legs:
+  - ml_entry
+  - trend_donchian_xrp_4h
+  - trend_donchian_xrp_adx25
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  book: money
+arms_on:
+  pairs:
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: XRPUSDT
+    legs:
+    - trend_donchian_xrp_4h
+    - trend_donchian_xrp_adx25
+    - ml_entry
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: ADAUSDT
+    legs:
+    - ada_pullback_2h
+    - ml_entry
+  - accounts:
+    - bybit_2
+    - bybit_portfolio
+    symbol: SOLUSDT
+    legs:
+    - trend_donchian_sol_prop
+    - ml_entry
+  - accounts:
+    - tradeify_1
+    - velotrade_1
+    symbol: ETHUSDT
+    legs:
+    - trend_donchian_eth_4h
+    - ml_entry
+  - accounts:
+    - tradeify_1
+    - velotrade_1
+    symbol: SOLUSDT
+    legs:
+    - trend_donchian_sol_4h
+    - ml_entry
+  source: the five pairs of RQ-20261114-82fd-02, unchanged; windows are 2021-06..2023-04 history that none of a474-02, fa22-06, 0104-08 used. A pair whose leg has
+    no stream in a window (ml_entry did not exist; its stream is the harness replay) is reported in coverage.
+  windows:
+    p1:
+    - '2021-06-01'
+    - '2022-03-01'
+    p2:
+    - '2022-03-01'
+    - '2023-04-01'
+  fetch_start: '2021-01-01'
+run:
+  command:
+  - python3
+  - scripts/research/d5_aggregator_arms.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  - --cache
+  - /tmp/ml_decision_klines
+  timeout_minutes: 330
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261125-0838-01
+decision_rule:
+  id: RULE-RQ20261125-0838-01-D5-ARMS-CONFIRM
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'Per arm and window (EARLY 2024-10-01..2025-06-30, LATE 2025-07-01..2026-09-30, by entry time): net R = sum over the 5 pairs of w x net_r (w fixed at
+    entry, budget 1.0 per pair, so R per capital-day = net R / (5 x days)); max_dd = max drawdown of the combined equity (pairs summed, ordered by exit). A0 slices:
+    same-side w = 1 - open weights, opposite open slice refuses, w < 0.05 not opened, stops not trailed; A0 election: one open package per pair. A1 w = 1/N, opposite
+    allowed, no netting fee credit. A2 w = 1 for the leg with the highest net R on the OTHER window. A3 w_leg = positive part of the leg''s mean net R on the OTHER
+    window, normalised (equal when none positive). A4: each trade kept with p = A0 exposure / n trades, w = 1, 1000 seeded draws -> p95. Rule legs at the full cost
+    stack (resolve_run_costs, require_full_costs); ml_entry net R from its own cost stack (BTCUSDT slippage/funding for every symbol: levels overstated for alts,
+    the same for every arm).'
+  rule: 'Registered 2026-11-25 BEFORE any run. Same bars as 0104-08 / fa22-06 / a474-02, unchanged: PASS iff ONE arm X in {A1, A2, A3} has net R(X) - net R(A0) >=
+    5.0, net R(X) > A4 p95, and max_dd(X) <= 1.25 x max(1, max_dd(A0)) in BOTH windows p1 and p2. FAIL iff no X has net R(X) > net R(A0) in both windows. INDETERMINATE
+    otherwise, or a pair stream missing in these windows (coverage attached). The winner must be named and be the same arm that passed 0104-08 selection (A1-A3 denominator
+    3 arms).'
+  what_it_does_not_do: Changes no slice weight or position_model, places no order, trains nothing. Solo streams with untrailed stops are a ceiling read for A0's refusals;
+    the conviction score live slices split by is not replayed (first-come at full weight stands in for it).
+  min_n: 20 trades per pair-window
+  pass_action: 'Two of three independent windows agree: build the learned D5 aggregator against the named rule arm and file the rule arm as a Tier-3 proposal on this
+    record (manager). Never applied here.'
+  fail_action: 'The 0104-08 PASS was window noise: D5 stays the slices / election rule; record on research/levers/ml-position-aggregator-d5.yaml.'
+compute: cpu_long
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (baseline before a learned model) + docs/plans/ML-ROADMAP-MECE-2026-11.md § 4.7 (rule
+  arms before a learned arm); the census RQ-20261114-82fd-02 (same streams, same harness calls); forecast combination: equal / performance weights as the standard
+  combination baselines.'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision archives; GBDT on CPU (GitHub runner).
+  basis: INFERRED from the census run (same stream replays; the arms add seconds).
+  needs_internet: true
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-position-aggregator-d5
+  subject_kind: ml_model
+  from_result: RQ-20261122-0104-08
+  verdict_read: pass_unconfirmed
+  diagnosis: '0104-08 PASS (A1-A3 over A0, both pre-dev windows) vs a474-02 FAIL and fa22-06 INDETERMINATE on 2024-10..2026-10: three reads, three verdicts, split
+    by window. A PASS selected from 3 rule arms on one window pair is a discovery; the tie-break is a further disjoint in-hand window.'
+  search: two earlier windows 2021-06..2023-04; arms A0-A4 and every threshold unchanged; denominator 3 arms
+  attempt: 4
+  due_by: '2026-12-04'
+  map_entries:
+  - research/levers/ml-position-aggregator-d5.yaml
+related:
+- RQ-20261122-0104-08
+- RQ-20261122-fa22-06
+- RQ-20261115-a474-02

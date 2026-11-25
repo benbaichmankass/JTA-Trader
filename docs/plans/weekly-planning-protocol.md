@@ -111,7 +111,7 @@ current ids via `list_triggers`):
 | Mon 06:07 | weekly audit (`trig_017awLRNy4rmdL57NHKXehet`) | one Opus lane: CORE + rotating deep pass (ISO week mod 4), per `.claude/skills/weekly-audit/SKILL.md` |
 | Wed 19:29 (per the manager's 2026-10-28 dispatch; trigger time not re-read by that lane) | research programme review (`trig_01GuB9kH3CM4WJCJUgAb1s8Q`) | one Opus lane runs `.claude/skills/programme-review/SKILL.md` (CHECKS packet + per-programme, per-track ANALYSIS) and updates the research map and programme plans (`docs/research/programmes/`, `research/programmes/`); the queue is fed ONLY from these; one HELD PR (programme trees are landing machinery) |
 
-Unchanged: research-ops 4×/day, the daily review ONCE a day at 05:52Z (operator 2026-11-04: "we switched the twice daily to once daily leave it like that"), lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
+Unchanged: research-ops once a day at 14:47Z (operator 2026-11-17; was 4×/day), the daily review ONCE a day at 05:52Z (operator 2026-11-04: "we switched the twice daily to once daily leave it like that"), lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
 session and `ROADMAP-PASS-<week>` rows; file the roadmap outcome on `WEEKLY-PLANNING`.
 
 ### Research queue full from the start of the week (operator 2026-11-17, binding)

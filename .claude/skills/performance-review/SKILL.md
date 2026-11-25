@@ -554,7 +554,7 @@ false` if the generator hasn't run yet) and:
 **Operator directive, 2026-08-30:** the review owns *"ensuring there is a healthy pipeline of
 backtests, monitoring that they are running properly, reviewing and validating results, running
 analyses to infer decisions, and then creating and implementing action items based on the
-findings."* Since 2026-10-10 stages 1–3 run 4×/day as `.claude/skills/research-ops/SKILL.md`; this
+findings."* Since 2026-10-10 stages 1–3 run once a day (14:47Z) as `.claude/skills/research-ops/SKILL.md`; this
 review **reads its newest record** (`ls -1 comms/research/ops/*.json | sort | tail -1`) and re-derives
 nothing it already covers. What stays here:
 

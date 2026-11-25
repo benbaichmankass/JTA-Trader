@@ -19,6 +19,7 @@ dq = importlib.import_module("dispatch_queue")
 WF = ROOT / ".github" / "workflows"
 FAMILY = ["research-script-run", "research-script-run-data", "research-script-run-kaggle",
           "research-script-run-kaggle-cpu", "research-script-run-trainer"]
+RUN_NAMED = FAMILY + ["am-action-value", "am-policy-arm"]   # workflows whose run-name the in-flight read relies on
 NOW = datetime(2026, 11, 3, 5, 0, tzinfo=timezone.utc)
 
 
@@ -26,7 +27,7 @@ def _wf(name):
     return yaml.safe_load((WF / f"{name}.yml").read_text())
 
 
-@pytest.mark.parametrize("name", FAMILY)
+@pytest.mark.parametrize("name", RUN_NAMED)
 def test_every_research_run_names_its_unit(name):
     rn = _wf(name).get("run-name", "")
     assert "inputs.research_unit" in rn, f"{name}: in-flight runs would not expose their unit"
@@ -98,3 +99,17 @@ def test_a_workflow_run_cycle_is_rate_limited_by_a_gap_job():
     assert gap["if"] == "github.event_name == 'workflow_run'"
     assert "600" in gap["steps"][0]["run"], "10-minute floor between cycles"
     assert "gap" in jobs["dispatch"]["needs"] and "needs.gap.outputs.skip" in jobs["dispatch"]["if"]
+
+
+def test_an_am_action_value_run_marks_its_unit_pending_so_a_second_cycle_skips_it():
+    """DISPATCH-DOUBLE-FIRE-1125: am-action-value units fired twice ~7 min apart because their run was not read."""
+    run_at = NOW - timedelta(minutes=7)
+    api = _api({"am-action-value.yml": [{"display_title": "am-action-value RQ-20261125-c7e3-05",
+                                         "created_at": run_at.strftime("%Y-%m-%dT%H:%M:%SZ")}]})
+    runs = dq.fired_run_units(NOW, api)
+    assert runs == {"RQ-20261125-c7e3-05": run_at}
+    assert dq.unit_pending_by_run({"last_dispatched_at": None}, runs["RQ-20261125-c7e3-05"], None)
+
+
+def test_every_run_named_workflow_is_read_by_the_in_flight_check():
+    assert {f"{n}.yml" for n in RUN_NAMED} == set(dq.RESEARCH_RUN_WORKFLOW_FILES)

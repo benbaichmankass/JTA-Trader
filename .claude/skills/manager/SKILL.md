@@ -374,7 +374,7 @@ names that file; read it before running or changing the planning.** What binds, 
   or live-trading arrivals are surge and dispatched at once.
 - **Cadence table** (Wed planning, review prep, Thursday walk-through, Saturday health review, Monday weekly audit, Wed programme review, reset
   protocol): `config/reset_protocol.yaml` and `list_triggers` are the source; the moved doc carries the table as agreed 2026-10-14. Unchanged:
-  research-ops 4×/day, the daily review ONCE a day at 05:52Z, lane check-ins.
+  research-ops ONCE a day (14:47Z, operator 2026-11-17), the daily review ONCE a day at 05:52Z, lane check-ins.
 
 ### Research queue full from the start of the week (operator 2026-11-17, binding) — gates this adds or changes: none
 

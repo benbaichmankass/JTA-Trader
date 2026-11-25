@@ -32,6 +32,7 @@ import ml_decision_entry as E
 import ml_entry_families as F
 
 ARMS = {"A": [], "A2": [], "B": ["F1"], "C": ["F2"], "D": ["F3"], "E": ["F4"], "F": ["F5"], "G": ["F1", "F2", "F3", "F4", "F5"]}
+ARMS["M"] = ["F8"]   # D3-POINT-IN-TIME-MACRO-BUILDER: cross-asset / macro-state family, evaluated by the ablation_macro run mode only
 ARMS["T"] = ["F7"]   # TREND-ALIGNMENT-FEATURE step 5: trend-align directional family, evaluated by the ablation_trend run mode only
 FAM_COLS = {k: [c for c in v if c != "f3_present"] if k == "F3" else v for k, v in F.FAMILIES.items()}
 ALL_FAM_COLS = [c for v in F.FAMILIES.values() for c in v]
@@ -52,7 +53,7 @@ def _cat(frames):
     return pd.concat(frames, ignore_index=True) if frames else None
 
 
-def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str]) -> pd.DataFrame:
+def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str], macro_dir: Path | None = None) -> pd.DataFrame:
     cache = out / "klines"
     cache.mkdir(parents=True, exist_ok=True)
     fam, frames = [], {}
@@ -84,6 +85,10 @@ def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str])
     famdf = pd.concat(fam, ignore_index=True)
     tab["ts"] = tab["ts"].astype("datetime64[ns, UTC]")
     tab = tab.merge(famdf, on=["symbol", "ts"], how="left").merge(cs, on=["symbol", "ts"], how="left")
+    if macro_dir is not None:
+        # F8 is market-wide: computed once per decision ts, then joined to every symbol's row at that ts
+        uts = pd.Series(tab["ts"].drop_duplicates().sort_values().to_numpy())
+        tab = tab.merge(F.f8(uts, F.load_macro_daily(macro_dir)), on="ts", how="left")
     for c in ALL_FAM_COLS:
         if c not in tab.columns:
             tab[c] = np.nan
@@ -281,6 +286,7 @@ def main() -> int:
     ap.add_argument("cmd", nargs="?", choices=["build-table", "arm", "combine", "forward"])
     ap.add_argument("--streams", default="")
     ap.add_argument("--oct-dir", default="")
+    ap.add_argument("--macro-dir", default="", help="F8: the <TICKER>.csv daily closes ml_entry_families.fetch_macro_daily wrote")
     ap.add_argument("--out", default="/tmp/ml_entry_v2")
     ap.add_argument("--arm", default="A")
     ap.add_argument("--n-jobs", type=int, default=2)
@@ -296,7 +302,8 @@ def main() -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "build-table":
-        tab = build_table(Path(a.streams), Path(a.oct_dir) if a.oct_dir else None, out, E.universe())
+        tab = build_table(Path(a.streams), Path(a.oct_dir) if a.oct_dir else None, out, E.universe(),
+                          macro_dir=Path(a.macro_dir) if a.macro_dir else None)
         print(f"table rows={len(tab)} symbols={tab.symbol.nunique()}", flush=True)
         return 0
     tab = pd.read_pickle(out / "table.pkl")
