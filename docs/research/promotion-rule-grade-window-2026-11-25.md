@@ -49,6 +49,21 @@ The only disjoint read registered for any refit is RQ-20261119-b9d0-02 (the v1r2
 
 The dispatch says "lost 5/5 real-money trades 11-24". The journal shows **8 closes on bybit_2 on 11-24, all losers** (SOL, ADA, SOL, XRP, XRP, SOL, ETH, BTC; −0.015 to −0.728 R each). No ml_entry order package was created after 2026-11-24 16:01Z, up to the pull at ~19Z on 11-25. No config change explains this (`git log` on strategies/accounts/ml/served since 11-24 is empty). Below-tau silence is the likely reason, but I did not verify it from the decision audit.
 
+### 2b-bis. Inputs relayed by the manager, checked against the records (2026-11-25 ~19:10Z)
+
+**ML-FRONTIER-PREP-20261125 (#28854): "+0.0371 was measured on its grading window (27 reads of that window)".** Partly confirmed.
+- The ENTRY ledger (`comms/research/holdout_reads.jsonl`) shows the sealed year 2025-10-01..2026-09-30 was first read once, by c692-01, on 2026-11-01 08:35Z. That read pooled 60 symbols: +0.0073, n 11,240.
+- The 5-symbol population behind +0.0371 (c692-06, `registered_at 2026-11-01`) is bybit_2's existing symbol list. It was registered before its run, and its own text says it was not picked on the result. Arm F (5e04-01, registered 2026-11-03) is the live exit, and the unit says it "does not select or credit an intervention among alternatives".
+- So by its registration the record is disjoint from the window that chose it, and it stays usable under the rule.
+- But it is the second and third look at a year that had already been read. Since then the same year has been re-read many times, and the `holdout_lock` deflated bar now sits at read 27 or more. At t ≈ 1 (fixed-TP CI −0.042..+0.099), the number clears only the registered point bar (≥ 0). It would not clear any deflated bar.
+- **Read +0.0371 as weak, not as a positive edge.**
+
+**PERF-REVIEW-PREP-20261125 (#28862): "live_bar.py counts account copies and repeated-entry fragments as separate decisions".** Confirmed from the code.
+- `live_bar.live_bar` groups only by `strategy_name`, across every account.
+- So one ml_entry decision on bybit_2 is counted again on bybit_portfolio and on each prop account.
+- The ml_entry n in this memo is per account (bybit_2 only), so it carries no copies.
+- Counting the same decision twice inflates n and narrows the LCB. That is the same flaw class as this rule: a number that does not represent independent evidence. The fix is on row `LIVE-BAR-KEY-BY-CONFIG`. #28862 reports that, counted once per decision, slv_trend_1h and ada_pullback_2h (real money) and ict_scalp_sol_15m go from PASS to FAIL on the live bar. That claim is quoted, not recomputed here.
+
 ### 2c. Reading
 
 1. **Under the fixed rule, the leg keeps its real-money record**: the c692-01 held-out year is disjoint and clears its registered bar (≥ 0). **The served artifact does not**: v1r20261122 has no disjoint number, and neither did the two refits before it. The only ENTRY artifact with a disjoint promoting number is `ml_decision_entry_v1`, the frozen c692-01 booster.
@@ -62,6 +77,8 @@ The dispatch says "lost 5/5 real-money trades 11-24". The journal shows **8 clos
 - Why: the only disjoint number that still passes (+0.037, n 907, a CI that spans 0) was measured on a frozen booster that is no longer served. That booster's own post-training reads since October are negative (−0.092 n 342, −0.058 n 118). The recipe's out-of-time edge is +0.003 ± 0.033, and real money is at −10.9 R over 58 trades.
 - Revert: re-add the leg to the rosters (one YAML edit per account). Net effect on the books: removes ml_entry's 4–5 same-bar entries at `risk_pct` 0.015 each on bybit_2.
 - Tier 3 (roster change). It also changes the prop rosters, so the operator decides.
+
+**An option for you, proposed by PERF-REVIEW-PREP-20261125 (#28862, PI-...-0003): a demotion trigger for ml_entry.** It would fire when real money, counted once per entry bar, has n ≥ 20, ΣR < 0 and LCB80 < 0. #28862 says it would fire now (24 bars, −10.90 R; quoted, not recomputed). There is no demotion trigger today, so this would be a new one, and it needs your permission (No new gates).
 
 **If you keep it on real money, the fixed rule still requires one change:** repoint `ml/served/ENTRY_SERVED.json` to `ml_decision_entry_v1`, the only artifact whose promoting number is disjoint. This is a one-line pointer edit, and revert is one line. Keeping v1r20261122 served is not consistent with the fixed rule.
 
