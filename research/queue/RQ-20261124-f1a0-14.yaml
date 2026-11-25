@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-14
 title: 'ml_entry REGIME ARM 2: does setting the bracket width by the BTC vol regime (SL = 3 + 2 x BTC vol percentile ATR14, TP = 1.5 x SL, 24
   h, refit) beat the fixed SL 4 / TP 6 / 24 h refit by +0.0068 R/decision on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -125,3 +125,19 @@ related:
 - research/queue/RQ-20261124-e1a7-02.yaml
 not_before: '2026-11-25T02:00:00+00:00'
 last_dispatched_at: '2026-11-25T03:39:49+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-14/45532031095.jsonl
+  - research/results/RQ-20261124-f1a0-14/45536638875.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate (2 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
+  rows: 2
+  verdict: indeterminate

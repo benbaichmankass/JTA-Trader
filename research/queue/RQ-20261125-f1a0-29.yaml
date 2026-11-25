@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-29
 title: 'ml_entry FUNDING INPUTS: does adding the symbol''s funding rate (last, 3-day mean, 90-print z) and the universe-mean funding, as-of the
   decision bar''s close, to the registered recipe beat it by +0.0068 R/decision and beat the same columns with their timestamps shuffled?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -132,3 +132,17 @@ related:
 - research/queue/RQ-20261124-f1a0-14.yaml
 - scripts/research/prop_ml_leg.py
 last_dispatched_at: '2026-11-25T03:58:03+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261125-f1a0-29/45541701353.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

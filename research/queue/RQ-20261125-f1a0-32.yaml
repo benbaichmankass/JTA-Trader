@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-32
 title: 'REGIME-PROGRAM intraday state: does tilting each rostered-leg trade 2.0 / 0.5 by a walk-forward LightGBM on the leg''s OWN-TIMEFRAME state at entry
   (range position, vol burst, normalised return, distance from the high) beat equal risk by +0.01 R/trade and beat permutations within leg-month?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -141,3 +141,17 @@ related:
 - research/queue/RQ-20261125-f1a0-30.yaml
 - REGIME-PROGRAM
 last_dispatched_at: '2026-11-25T05:50:51+00:00'
+grading:
+  attested: RULE-REGIME-INTRADAY-20261125
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-REGIME-INTRADAY-20261125
+  evidence:
+  - research/results/RQ-20261125-f1a0-32/45550595880.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
