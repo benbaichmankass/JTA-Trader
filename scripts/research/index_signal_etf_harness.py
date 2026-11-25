@@ -527,6 +527,15 @@ RULES["RQ-20261124-1e06-04"] = ("RULE-RQ-20261124-1e06-04", "capitulation_wide",
                                 "CONFIRMATION of 1e06-03 on 6 untested 3x sector/mid-cap/REIT ETFs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage; INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-07"] = ("RULE-RQ-20261124-1e06-07", "capitulation_bull",
                                 "REGIME ARM, TIMING-GATED: the 1.5-ATR capitulation trigger kept only when the index closes above its SMA200, executed in 1x index ETFs on 8 FRESH indexes (KBE, SMH, EWZ, FXI, EWG, EWU, VGK, IJR), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise")
+# FRESH-WINDOW read of 1e06-07 (its pass required one before any proposal): the SAME family, pairs, rule and timing clause on the PRE-SAMPLE window
+# 2000-01-01..2010-05-28 (the unit passes --start/--end; nothing here reads the 2010-06.. evidence window). K* is re-calibrated in-window by the same procedure.
+PAIRS_KEY["RQ-20261125-1e06-09"] = ("capitulation_bull", "capitulation_bull")
+BASELINE["RQ-20261125-1e06-09"] = "flat"
+POOLED.add("RQ-20261125-1e06-09")
+TIMING_GATED["RQ-20261125-1e06-09"] = 0.05
+POOLED_MIN_POSITIVE["RQ-20261125-1e06-09"] = 4
+RULES["RQ-20261125-1e06-09"] = ("RULE-RQ-20261125-1e06-09", "capitulation_bull",
+                                "FRESH-WINDOW confirmation of RQ-20261124-1e06-07 on 2000-01-01..2010-05-28 (pre-sample), same 8 pairs and procedure, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-06"] = ("RULE-RQ-20261124-1e06-06", "capitulation_wide",
                                 "TIMING-GATED capitulation trigger executed in 1x index ETFs on 8 FRESH indexes (XLB, XLP, ITB, XME, EFA, EWJ, IYT, IWN), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-08"] = ("RULE-RQ-20261124-1e06-08", "capitulation_wide",
