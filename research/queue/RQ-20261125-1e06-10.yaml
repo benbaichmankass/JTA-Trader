@@ -1,0 +1,107 @@
+# Authored 2026-11-25 by lane ML-PRIMARY: the ETF regime form after 1e06-09 FAIL (the SMA200 gate was window-specific). ONE rule on TWO windows,
+# registered together with RQ-20261125-1e06-11; the pair passes only if BOTH pass. No local read of either window. Gates this adds or changes: none.
+id: RQ-20261125-1e06-10
+title: 'CREDIT-STATE GATE for the capitulation trigger (2010-06-01..2026-10-22 (the evidence window)): kept only when the Baa-10y spread is at or below its trailing 252-day median,
+  1x ETFs on the 1e06-07 pairs, graded POOLED (paired with RQ-20261125-1e06-11; both must pass)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: On 2010-06-01..2026-10-22 (the evidence window), does the 1.5-ATR capitulation trigger kept only when Moody's Baa-10y spread (FRED BAA10Y, as-of the prior day) is at or below
+  the median of its trailing 252 observations, executed in the 1x ETF on the 1e06-07 pairs (KBE, SMH, EWZ, FXI, EWG, EWU, VGK, IJR), earn positive
+  pooled net R with >= 4 of 8 pairs positive, stay positive under 2x slippage, AND beat >= 95% of 200 re-timed replays?
+why_this_matters: 'The index''s own SMA200 gate passed on 2010-2026 (1e06-07) and failed on 2000-2010 (1e06-09): it is window-specific. A dip-buying
+  rule''s failure mode is buying into a credit event (2008, 2020), which the price trend sees late; the credit spread sees it directly and has data
+  for both windows. Registering one rule on both windows at once makes the out-of-time read part of the test, not an afterthought. A pass on both
+  goes to the manager as the evidence for adding the credit gate to the INDEX-CAPIT-1X-LEG spec; a fail closes macro gating for this leg.'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 1e06-05 measured pooled n 205 on six 3x pairs (shorter histories); these 8 1x ETFs trade back to 2010 or earlier, so n ~ 250-400,
+    above the floor 25. No local read of this population.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261125-1e06-10
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'index_signal_etf_harness.py unit RQ-20261125-1e06-10: family capitulation_credit (capitulation_wide kept where x_credit_ok: credit_ok_series on FRED
+    BAA10Y, last observation strictly before the signal date <= the median of its trailing 252 observations; False without a full window) on the
+    1e06-07 pairs (1x execution, baseline flat), 2010-06-01..2026-10-22 (the evidence window); POOLED grade; the timing control (200 re-timed replays, shifts 40-400 sessions, same
+    stop geometry, TP and cost) is a RULE CLAUSE. Cost stack: 5 bps slippage per side (2x slippage re-read), the ETF price series itself (expense
+    embedded), no funding; TP = K* calibrated on the first 60% of in-window trades, never tp_r 50.'
+  rule: 'PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND pooled actual net_r beats >= 95%
+    of the 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise. The (RQ-20261125-1e06-10, RQ-20261125-1e06-11) PAIR passes only if both
+    units PASS; either FAIL fails the pair.'
+  pass_action: If BOTH units pass, report to the manager as the evidence for adding the credit gate to the INDEX-CAPIT-1X-LEG spec (a Tier-3 proposal
+    input, applied by the operator or a mandate).
+  fail_action: Record macro (SMA200 and credit) gating closed for the capitulation leg; the leg stays as specified; the next ETF iteration moves to the
+    leg's exit side (TP doctrine K* per ticker re-fit as a fresh-window read) or to new populations.
+  proposal_mapping: both pass -> manager proposal input; any fail or indeterminate -> the next iteration from its diagnosis.
+  what_it_does_not_do: Changes no config. NO local read of either window preceded this registration.
+  baseline: Flat; the ungated trigger on the same pairs is reported in 1e06-07 / 1e06-09 context, never re-graded here.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public/Alpaca read-only candles plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/index_signal_etf_harness.py
+  - --unit
+  - RQ-20261125-1e06-10
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261125-1e06-10
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-1e06-03
+- RQ-20261124-1e06-07
+- INDEX-CAPIT-1X-LEG
+- RQ-20261125-1e06-09
+- RQ-20261125-1e06-11
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+iteration:
+  subject: index-etf-capitulation
+  subject_kind: strategy
+  from_result: RQ-20261125-1e06-09/45543181077
+  verdict_read: fail
+  diagnosis: 'The SMA200 bull gate passed 2010-06..2026-10 (1e06-07: +57.4 R, 5/8 pairs, 0/200 re-timed draws) but failed 2000-01..2010-05 (1e06-09:
+    n 61, -11.1 R, 2/8 pairs, timing share 0.88): the index''s own trend does not identify the regime where capitulation dips pay. The dips that lose
+    are bought into credit events, which the credit spread sees before the price trend does.'
+  search: 'one fixed gate (BAA10Y as-of the prior day <= its trailing 252-observation median), one population (the 1e06-07 pairs), both windows; trigger,
+    TP calibration, hold cap, costs and timing clause unchanged.'
+  levers:
+  - timing
+  - regime
+  attempt: 9
+  due_by: '2026-12-01'
+intervention_controls:
+  not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400
+    sessions, same stop geometry, TP and cost), which is a rule clause here
+not_before: '2026-11-25T05:00:00+00:00'

@@ -63,7 +63,7 @@ ATR_LEN = 14
 FLUSH_ATR = 2.0
 FLUSH_MEAN = 5
 FLUSH_UP_WINDOW = 5      # fixed here (the unit text says "then the first up-close" without a bound): expire a flush after 5 sessions
-HOLD_CAP = {"capitulation_bull": 10, "breakdown": 20, "failed_rally": 15, "capitulation": 10, "breakdown_bear": 20, "breakdown_bounce": 10, "capitulation_wide": 10}
+HOLD_CAP = {"capitulation_credit": 10, "capitulation_bull": 10, "breakdown": 20, "failed_rally": 15, "capitulation": 10, "breakdown_bear": 20, "breakdown_bounce": 10, "capitulation_wide": 10}
 SMA_LONG = 200
 SMA_SLOPE_LOOKBACK = 20
 FLUSH_ATR_WIDE = 1.5
@@ -104,6 +104,7 @@ PAIRS["capitulation_1x_fresh"] = [(t, t, 1.0) for t in ("XLB", "XLP", "ITB", "XM
 #: pooled units graded against FLAT (no 1x arm: the execution IS 1x) and their pairs-positive floor where it is not POOLED_MIN_POSITIVE_PAIRS
 POOLED_MIN_POSITIVE = {"RQ-20261124-1e06-06": 4, "RQ-20261124-1e06-07": 4}
 #: 1e06-07 population: 8 more 1x index ETFs used in NO earlier read (no fossil-fuel instruments)
+PAIRS["capitulation_credit"] = [(t, t, 1.0) for t in ("KBE", "SMH", "EWZ", "FXI", "EWG", "EWU", "VGK", "IJR")]   # the 1e06-07 pairs: like-for-like with the SMA200 gate
 PAIRS["capitulation_bull"] = [(t, t, 1.0) for t in ("KBE", "SMH", "EWZ", "FXI", "EWG", "EWU", "VGK", "IJR")]
 POOLED_MIN_POSITIVE_PAIRS = 3
 #: 1e06-08 CONFIRMATION of the 1e06-06 pass (lane ML-PRIMARY 2026-11-24): the same 1x timing-gated trigger on 10 country index ETFs used in NO
@@ -267,10 +268,54 @@ SIGNALS = {"capitulation_bull": signals_capitulation_bull, "breakdown": signals_
            "capitulation_wide": signals_capitulation_wide, "failed_rally": signals_failed_rally, "capitulation": signals_capitulation}
 
 
+#: MACRO-GATED families (RQ-20261125-1e06-10/-11): a base family's signals kept only where an as-of macro state column of the frame is true. The
+#: base family still sees ONLY the index columns; the gate column is added by add_credit_gate (as-of the PRIOR day), never an ETF column.
+GATED = {"capitulation_credit": ("capitulation_wide", "x_credit_ok")}
+CREDIT_SERIES = "BAA10Y"          # Moody's Baa corporate minus 10y Treasury, FRED daily from 1986 (ICE HY OAS is truncated on FRED)
+CREDIT_MEDIAN_OBS = 252
+
+
 def index_signals(frame: pd.DataFrame, family: str) -> list[dict[str, Any]]:
-    """The ONLY entry point that turns a frame into signals: it hands the family function the INDEX columns and nothing else."""
+    """The ONLY entry point that turns a frame into signals: it hands the family function the INDEX columns and nothing else (a GATED family
+    then keeps the base family's signals where the frame's as-of gate column is true)."""
     a = [frame[c].to_numpy(float) for c in ("i_o", "i_h", "i_l", "i_c")]
+    if family in GATED:
+        base, col = GATED[family]
+        ok = frame[col].to_numpy(bool)
+        return [s for s in SIGNALS[base](*a) if ok[s["i"]]]
     return SIGNALS[family](*a)
+
+
+def credit_ok_series(spread: pd.Series, dates: pd.DatetimeIndex) -> np.ndarray:
+    """True on date d iff the spread's last observation strictly BEFORE d is <= the median of the CREDIT_MEDIAN_OBS observations ending there
+    (calm credit). False where there is not yet a full median window (no signal without the state)."""
+    sp = spread.dropna().sort_index()
+    med = sp.rolling(CREDIT_MEDIAN_OBS, min_periods=CREDIT_MEDIAN_OBS).median()
+    calm = (sp <= med) & med.notna()
+    idx = sp.index.searchsorted(pd.DatetimeIndex(dates), side="left") - 1
+    return np.where(idx >= 0, calm.to_numpy()[np.clip(idx, 0, None)], False)
+
+
+def fetch_credit(cache_dir: Path | None) -> pd.Series:
+    """FRED CREDIT_SERIES (full history), cached as CSV when a cache dir is given."""
+    cp = (cache_dir / f"fred_{CREDIT_SERIES}.csv") if cache_dir else None
+    if cp is not None and cp.exists():
+        d = pd.read_csv(cp)
+    else:
+        import io
+        import requests
+        r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={CREDIT_SERIES}", timeout=60)
+        r.raise_for_status()
+        d = pd.read_csv(io.StringIO(r.text))
+        if cp is not None:
+            cp.parent.mkdir(parents=True, exist_ok=True)
+            d.to_csv(cp, index=False)
+    d.columns = ["d", "v"]
+    return pd.Series(pd.to_numeric(d["v"], errors="coerce").to_numpy(), index=pd.to_datetime(d["d"])).dropna()
+
+
+def add_credit_gate(frame: pd.DataFrame, spread: pd.Series) -> pd.DataFrame:
+    return frame.assign(x_credit_ok=credit_ok_series(spread, frame.index))
 
 
 # --------------------------------------------------------------------------------------- execution (ETF columns) -------------
@@ -536,6 +581,19 @@ TIMING_GATED["RQ-20261125-1e06-09"] = 0.05
 POOLED_MIN_POSITIVE["RQ-20261125-1e06-09"] = 4
 RULES["RQ-20261125-1e06-09"] = ("RULE-RQ-20261125-1e06-09", "capitulation_bull",
                                 "FRESH-WINDOW confirmation of RQ-20261124-1e06-07 on 2000-01-01..2010-05-28 (pre-sample), same 8 pairs and procedure, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise")
+# CREDIT-STATE GATE (the ETF regime form after 1e06-09 FAIL): ONE rule, two windows, both units registered together; the pair verdict is PASS only
+# if BOTH pass (stated in each unit). Same pairs, trigger, TP calibration, hold cap, costs and timing clause as 1e06-07 / -09.
+for _u, _w in (("RQ-20261125-1e06-10", "2010-06-01..2026-10-22 (evidence window)"), ("RQ-20261125-1e06-11", "2000-01-01..2010-05-28 (pre-sample)")):
+    PAIRS_KEY[_u] = ("capitulation_credit", "capitulation_credit")
+    BASELINE[_u] = "flat"
+    POOLED.add(_u)
+    TIMING_GATED[_u] = 0.05
+    POOLED_MIN_POSITIVE[_u] = 4
+    RULES[_u] = (f"RULE-{_u}", "capitulation_credit",
+                 f"CREDIT-STATE GATE on {_w}: the 1.5-ATR capitulation trigger kept only when Moody's Baa-10y spread (FRED BAA10Y, as-of the prior "
+                 "day) is <= its trailing 252-observation median, 1x ETF on the 1e06-07 pairs, graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND "
+                 ">=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; "
+                 "INDETERMINATE if pooled n<25; FAIL otherwise. The pair (1e06-10, 1e06-11) passes only if BOTH pass.")
 RULES["RQ-20261124-1e06-06"] = ("RULE-RQ-20261124-1e06-06", "capitulation_wide",
                                 "TIMING-GATED capitulation trigger executed in 1x index ETFs on 8 FRESH indexes (XLB, XLP, ITB, XME, EFA, EWJ, IYT, IWN), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-08"] = ("RULE-RQ-20261124-1e06-08", "capitulation_wide",
@@ -564,6 +622,9 @@ def run_unit(unit: str, out: Path, start: str, end: str, cache_dir: Path | None)
     cap = HOLD_CAP[family]
     pk, pk1 = PAIRS_KEY.get(unit, (family, "capitulation_1x"))
     frames = load_frames(PAIRS[pk], start, end, cache_dir)
+    if family in GATED:
+        spread = fetch_credit(cache_dir)
+        frames = {k: (add_credit_gate(f, spread), b) for k, (f, b) in frames.items()}
     per: dict[str, dict[str, Any]] = {}
     extra: dict[str, Any] = {"hold_cap_sessions": cap, "slip_bps_per_side": SLIP_BPS_SIDE, "window": [start, end]}
     kind = BASELINE[unit]
@@ -708,6 +769,16 @@ def self_test() -> int:
     ck("grade: indeterminate when n<25", grade_pair({**r, "n": 10}, 1.0, "x")["verdict"] == "indeterminate")
     ck("grade: indeterminate when the baseline is missing", grade_pair(r, None, "x")["verdict"] == "indeterminate")
     ck("grade: indeterminate-baseline branch waives the baseline", grade_pair(r, 9.0, "x", baseline_indeterminate=True)["verdict"] == "pass")
+    # credit gate: as-of the PRIOR day, needs a full median window, and the gated family is a subset of its base family's signals
+    dts = pd.bdate_range("2001-01-01", periods=600)
+    sp = pd.Series(np.r_[np.full(300, 2.0), np.full(300, 1.0)], index=dts)
+    okc = credit_ok_series(sp, pd.DatetimeIndex([dts[100], dts[400], dts[300], dts[301]]))
+    ck("credit gate: no state before a full median window", not okc[0])
+    ck("credit gate: a spread below its trailing median is calm", bool(okc[1]))
+    ck("credit gate: as-of the prior day (day 300 reads day 299's 2.0 = median -> calm; the drop on 300 is seen from 301)", bool(okc[2]) and bool(okc[3]))
+    fz = f.assign(x_credit_ok=np.arange(len(f)) % 2 == 0)
+    base_s, gated = index_signals(f, "capitulation_wide"), index_signals(fz, "capitulation_credit")
+    ck("credit gate: gated signals are the base signals on gate-true bars only", gated == [x for x in base_s if x["i"] % 2 == 0])
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
