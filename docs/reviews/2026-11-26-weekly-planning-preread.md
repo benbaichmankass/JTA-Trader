@@ -298,7 +298,7 @@ Source: the planning doc § 0 and § 7, measured 17:50Z and 19:01Z. These are it
 ## 11. Outcome (operator answers 2026-11-25)
 
 Recorded by lane `PLANNING-OUTCOME-W48` (dispatched by Manager Session 2026-11-25b). Source: the W48 planning decision doc, answered ~22:36-22:41Z; choices
-copied verbatim. **Q4 was not answered in this batch** and is not recorded here. **Gates this section adds or changes: none.**
+copied verbatim. **Q4 is not in this batch on purpose:** the operator had already decided it on 2026-11-25 ("Don't wait", recorded on the body of #28869), so it was dropped from the doc rather than re-asked. **Gates this section adds or changes: none.**
 
 | Q | operator answer (verbatim) | what it changes | where it lives |
 |---|---|---|---|
