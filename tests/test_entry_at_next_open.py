@@ -17,10 +17,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from tests.trend_harness_engine import trend_trades  # noqa: E402
+from tests.trend_harness_engine import trend_trades
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from backtest_pullback import run_backtest as pb_run  # noqa: E402
+from backtest_pullback import run_backtest as pb_run
 
 
 def _df(bars):
