@@ -181,6 +181,10 @@ DECLARED_LIGHT = {
         "lane container or a GitHub runner. Its queue units declare compute cpu_light / cpu_long (backend "
         "github_runner only, scripts/research/research_compute.yaml), never needs_vm_data, so it is never "
         "routed to the 6 GB trainer and never shares memory with a trainer job.",
+    "scripts/research/rostered_leg_replay.py":
+        "REGIME-PROGRAM rostered-leg replay (units RQ-20261125-f1a0-24..28): --mode metastate fits five small LightGBM regressors (200 trees, "
+        "15 leaves, one per calendar test year) on a few thousand replayed harness trades with public Binance Vision candles, on a GitHub "
+        "runner (research-script-run.yml, compute cpu_light); never on the trainer VM.",
     "scripts/research/tm_bench.py":
         "TM-BENCH trade-management bench: fits LightGBM / logit action-value heads on harness paths replayed from "
         "public Binance Vision candles in a lane container or a GitHub runner. Its queue units declare compute "

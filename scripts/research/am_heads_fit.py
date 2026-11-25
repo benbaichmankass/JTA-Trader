@@ -420,8 +420,10 @@ DUMP_HEADS = tuple(f"q{a:g}" for a in QUANTILES) + BIN_HEADS
 THRESH_PCTS = (50, 90)
 
 
-def dump_fold(arr, tidx, train_trades, rows_per_fold, rng, fold_id, out_dir: Path) -> dict:
-    """Fit every head on the TRAIN rows of one fold and save them under ``out_dir/<fold_id>/``. Never touches a test row."""
+def dump_fold(arr, tidx, train_trades, rows_per_fold, rng, fold_id, out_dir: Path, feats=None) -> dict:
+    """Fit every head on the TRAIN rows of one fold and save them under ``out_dir/<fold_id>/``. Never touches a test row.
+    ``feats``: FEATS (default) or RICH_FEATS (``dump --feats rich``: the a9d2-01 rich heads, same recipe, same rows, same seed)."""
+    feats = feats or FEATS
     import hashlib
     import lightgbm as lgb
     tr = np.where(np.isin(tidx, train_trades))[0]
@@ -429,13 +431,13 @@ def dump_fold(arr, tidx, train_trades, rows_per_fold, rng, fold_id, out_dir: Pat
         tr = rng.choice(tr, rows_per_fold, replace=False)
     if len(tr) < 5000:
         return {"fold_id": fold_id, "skipped": f"train rows {len(tr)}"}
-    X = np.column_stack([arr[k] for k in FEATS])
+    X = np.column_stack([arr[k] for k in feats])
     fdir = out_dir / fold_id
     fdir.mkdir(parents=True, exist_ok=True)
     files, thresholds = {}, {}
     for a in QUANTILES:
         m = lgb.LGBMRegressor(objective="quantile", alpha=a, **LGB)
-        m.fit(X[tr], arr["fwd_mfe_r"][tr], categorical_feature=[FEATS.index("strat")])
+        m.fit(X[tr], arr["fwd_mfe_r"][tr], categorical_feature=[feats.index("strat")])
         p = fdir / f"q{a:g}.txt"
         m.booster_.save_model(str(p))
         files[f"q{a:g}"] = hashlib.sha256(p.read_bytes()).hexdigest()
@@ -444,7 +446,7 @@ def dump_fold(arr, tidx, train_trades, rows_per_fold, rng, fold_id, out_dir: Pat
         if y.min() == y.max():
             continue
         m = lgb.LGBMClassifier(**LGB)
-        m.fit(X[tr], y, categorical_feature=[FEATS.index("strat")])
+        m.fit(X[tr], y, categorical_feature=[feats.index("strat")])
         p = fdir / f"{h}.txt"
         m.booster_.save_model(str(p))
         files[h] = hashlib.sha256(p.read_bytes()).hexdigest()
@@ -461,7 +463,9 @@ def dump(a) -> int:
     t0 = time.time()
     root = Path(a.corpus)
     jobs, counts = cf_bulk.load_jobs(cf_bulk.discover(root), root)
-    arr, tidx, te_, tend, meta = load(a.labels, jobs, cf_bars.TF_SECONDS, a.max_trades)
+    rich = getattr(a, "feats", "base") == "rich"
+    feats = RICH_FEATS if rich else FEATS
+    arr, tidx, te_, tend, meta = load(a.labels, jobs, cf_bars.TF_SECONDS, a.max_trades, rich=rich)
     print(json.dumps({k: v for k, v in meta.items() if k != "strategies"}), flush=True)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -471,13 +475,13 @@ def dump(a) -> int:
     folds = []
     for i, (lo, hi) in enumerate(zip(bounds[:-1], bounds[1:])):
         trn, _ = split(te_, tend, lo, hi, emb)
-        rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + i), DEV_FOLDS[i], out)
+        rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + i), DEV_FOLDS[i], out, feats)
         folds.append({**rec, "kind": "dev", "test_start": DEV_FOLDS[i], "test_end": (DEV_FOLDS[i + 1] if i + 1 < len(DEV_FOLDS) else HOLDOUT_START)})
         print(json.dumps({k: rec[k] for k in ("fold_id", "n_train_rows") if k in rec}), flush=True)
     trn, _ = split(te_, tend, bounds[-1], float("inf"), emb)
-    rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + len(DEV_FOLDS)), HOLDOUT_START, out)
+    rec = dump_fold(arr, tidx, trn, a.rows_per_fold, np.random.default_rng(SEED + len(DEV_FOLDS)), HOLDOUT_START, out, feats)
     folds.append({**rec, "kind": "holdout", "test_start": HOLDOUT_START, "test_end": None})
-    man = {"schema": HEADS_DUMP_SCHEMA, "feats": FEATS, "heads": list(DUMP_HEADS), "lgb_params": {k: v for k, v in LGB.items() if k != "n_jobs"},
+    man = {"schema": HEADS_DUMP_SCHEMA, "feats": feats, "feats_kind": "rich" if rich else "base", "heads": list(DUMP_HEADS), "lgb_params": {k: v for k, v in LGB.items() if k != "n_jobs"},
            "seed": SEED, "rows_per_fold": a.rows_per_fold, "embargo_days": EMBARGO_DAYS, "mfe_cap": MFE_CAP, "strategies": meta["strategies"],
            "threshold_percentiles": list(THRESH_PCTS), "folds": folds,
            "note": "re-fit of the Stage A recipe (RQ-20261123-a9d1-01) on each fold's TRAIN rows; no test row scored, no holdout claimed or read; "
@@ -557,7 +561,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-trades", type=int, default=0, help="subsample ~this many trades (dev smoke only; 0 = all)")
     ap.add_argument("--rows-per-fold", type=int, default=800_000)
     ap.add_argument("--no-holdout", action="store_true", help="dev smoke: do not claim or score the holdout")
-    ap.add_argument("--feats", choices=["base", "rich"], default="base", help="rich: base vs base+ctx on the same rows, RICHER_RULE (run only)")
+    ap.add_argument("--feats", choices=["base", "rich"], default="base", help="rich: run = base vs base+ctx on the same rows (RICHER_RULE); dump = fit and save the RICH heads (manifest feats = RICH_FEATS)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

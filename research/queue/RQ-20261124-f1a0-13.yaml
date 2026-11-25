@@ -3,7 +3,7 @@
 id: RQ-20261124-f1a0-13
 title: 'REGIME-PROGRAM R1: how long do the BTC regime state and the per-state side edge persist (1w / 1m / 1q / 6m)? The measured horizon fixes
   the R2-R4 classifier horizon'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -119,4 +119,18 @@ related:
 - scripts/research/regime_persistence.py
 - research/queue/RQ-20261124-f1a0-09.yaml
 - REGIME-PROGRAM
-last_dispatched_at: '2026-11-24T23:41:07+00:00'
+last_dispatched_at: '2026-11-25T00:15:14+00:00'
+grading:
+  attested: RULE-REGIME-R1-PERSISTENCE-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-REGIME-R1-PERSISTENCE-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-13/45507416598.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

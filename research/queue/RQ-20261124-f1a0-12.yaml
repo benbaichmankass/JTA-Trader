@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-12
 title: 'ml_entry REGIME ARM: does weighting every training row by the similarity of its BTC regime state to the pre-fold state beat the same SL
   4 / TP 6 / 48 h recipe unweighted, and a permuted-regime placebo, by +0.0068 R/decision on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -130,3 +130,17 @@ related:
 - docs/research/ml-entry-review-2026-11-24.md
 - research/queue/RQ-20261124-e1a7-02.yaml
 last_dispatched_at: '2026-11-24T23:50:07+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-12/45505516869.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
