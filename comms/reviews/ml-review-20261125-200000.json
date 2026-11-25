@@ -1,0 +1,920 @@
+{
+ "request_id": "ML-REVIEW-20261125",
+ "reviewed_at": "2026-11-25T20:00:00Z",
+ "reviewer": "lane ML-FRONTIER-PREP-20261125 (Manager Session 2026-11-25a)",
+ "window_start": "2026-11-18T20:00:00Z",
+ "window_end": "2026-11-25T20:00:00Z",
+ "overall_assessment": "investigate",
+ "overall_assessment_reason": "C5 could-not-look and no trainer gate packet exists for any order-changing model (C1)",
+ "headline": "The real-money ML entry model ml_entry lost 9.8 R over its first 59 live trades, and its only promoting number was measured on the window that graded it",
+ "scoreboard": {
+  "source": "GET /api/bot/performance window=7d|30d|all (~18:40Z)",
+  "unit": "R on declared signal-time risk",
+  "real_money": {
+   "7d": [
+    26,
+    -7.6823
+   ],
+   "30d": [
+    77,
+    -11.1129
+   ],
+   "all": [
+    542,
+    -166.3751
+   ]
+  },
+  "mirror": {
+   "7d": [
+    35,
+    33.0923
+   ],
+   "30d": [
+    90,
+    33.447
+   ],
+   "all": [
+    237,
+    -3.1864
+   ]
+  },
+  "paper": {
+   "7d": [
+    144,
+    31.8859
+   ],
+   "30d": [
+    418,
+    54.0242
+   ],
+   "all": [
+    2054,
+    -78.0526
+   ]
+  },
+  "ml_legs": {
+   "ml_entry_real": {
+    "7d": [
+     23,
+     -8.2076
+    ],
+    "all": [
+     59,
+     -9.8372
+    ]
+   },
+   "ml_entry_eq_struct_real": {
+    "all": [
+     1,
+     -0.1128
+    ]
+   }
+  }
+ },
+ "prior_calls_scorecard": {
+  "graded": [
+   {
+    "id": "ML-20261118-1",
+    "grade": "miss",
+    "evidence": "research/results/RQ-20261118-dbf8-01/44382439615.jsonl verdict fail; cb paired -0.032 CI[-0.099,0.035] k13",
+    "action_happened": true
+   },
+   {
+    "id": "ML-20261118-2",
+    "grade": "void",
+    "evidence": "FRONTIER-LEVER-TABULAR state dropped since 2026-10-23 (premise misread)",
+    "action_happened": null
+   },
+   {
+    "id": "ML-20261118-3",
+    "grade": "hit",
+    "evidence": "3/3 ml_bakeoff results in window target regime/direction (2a2e-11,b3c9-19,a10d-05); thin n",
+    "action_happened": false
+   },
+   {
+    "id": "ML-20261118-4",
+    "grade": "hit",
+    "evidence": "/shadow/drift KS 0.504 PSI 0.528 ref 3336 cur 696",
+    "action_happened": false
+   },
+   {
+    "id": "ML-20261118-5",
+    "grade": "unresolved",
+    "evidence": "PI-20261118-ZZUFKM1F-0001 queued",
+    "action_happened": false
+   },
+   {
+    "id": "ML-20261118-6",
+    "grade": "unresolved",
+    "evidence": "no record yet; resolves 12-02",
+    "action_happened": null
+   },
+   {
+    "id": "ML-20261104-4-carry",
+    "grade": "hit",
+    "evidence": "/trades/closed bybit_2 since 11-01: 59 ml_entry closes mean realizedPnlPct -0.488",
+    "action_happened": null
+   }
+  ],
+  "hit": 3,
+  "miss": 1,
+  "void": 1,
+  "unresolved": 2,
+  "brier_resolved": 0.134,
+  "brier_state": "INDETERMINATE (<10 resolved)"
+ },
+ "checks": {
+  "C1": {
+   "state": "finding",
+   "summary": "timer active; last cycle_end 2026-11-25T08:08Z rc0; 0 OOM red flags; stages 3/16/80/1 vs plan 3/21/72/1; stage-guard demote btc fc-pcv-v2; gate-check no registry entry for all 8 served models; disk 86%",
+   "source": "issue #28843"
+  },
+  "C2": {
+   "state": "finding",
+   "summary": "plumbing rc1, 115 flags/85 items; TRAINING-STALENESS stale 2 never_trained 2 of 5"
+  },
+  "C3": {
+   "state": "ok",
+   "summary": "8 models with consumer, 7 order-changing; x=12/85 account-legs, y=3/9 real-money legs; refit pointer v1r20261122 NO POWER RECORD"
+  },
+  "C4": {
+   "state": "finding",
+   "summary": "first broken hop desk H2->H3 (5 -> 0); live_review H3 could_not_look; H5 163, H6 0, H7 6"
+  },
+  "C5": {
+   "state": "could-not-look",
+   "summary": "no registry entry for served models; LRP parity could_not_check 6 rows 11-09..11-15; owner ML-LIVE-PARITY-ML-LEGS overdue"
+  },
+  "C6": {
+   "state": "finding",
+   "summary": "no trainer gate-check possible; AM random controls leaked exit-time knowledge (R4 invalid on all prior AM results); f1a0-33 indeterminate d -0.0115 t -1.22"
+  },
+  "C7": {
+   "state": "finding",
+   "summary": "(a) plan-only scan 0 drifted / 19 rows vs API KS 0.504 (3rd consecutive); (b) CUSUM ml_entry no trip S4.25 h8.02 n59"
+  },
+  "C8": {
+   "state": "finding",
+   "summary": "CONCENTRATION gbdt 14/19 open items; 79/108 manifests; 8 served UNMAPPED"
+  },
+  "C9": {
+   "state": "ok",
+   "summary": "195 ML-tagged results since 11-18T20Z: fail 88 indet 54 pass 32 n/a 19 no_action 2"
+  },
+  "C10": {
+   "state": "finding",
+   "summary": "ml_entry and ml_entry_eq_struct DSR not_computed; 7/9 production legs on probation"
+  },
+  "C11": {
+   "state": "ok",
+   "summary": "bybit_2 joined 5 reduced 1 S0/H2 no alarm; tradeify_1 no_reduced_trades"
+  }
+ },
+ "weekly_progress_lines": {
+  "data_coverage": "could_not_look",
+  "features_in_use": "could_not_look",
+  "retrain_freshness": "served pointer v1r20261122 (3 d, INFERRED from id)",
+  "live_vs_heldout": "ml_entry live -0.167 R/trade n59 vs held-out +0.0371 n907"
+ },
+ "analysis": {
+  "questions": [
+   "Q1 ml_entry evidence under the promotion-rule fix",
+   "Q2 this week's ML tests (33 ml_entry levers 0 PASS over dev base +0.003; AM c7e3-06 FAIL stands on R2/R3)",
+   "Q3 D7/D8 empty slots",
+   "Q4 served models invisible to trainer",
+   "Q5 concentration and frontier"
+  ],
+  "surprises": [
+   "Foxhound-1 refit pointer has no power record",
+   "FRONTIER-LEVER-TABULAR dropped since 10-23 while called queued",
+   "15 open ML pipeline items on done owner rows"
+  ]
+ },
+ "calls": [
+  {
+   "id": "ML-20261125-1",
+   "call": "P-2 fresh-window read of frozen ml_entry v1 returns PASS",
+   "p": 0.25,
+   "tier": 1,
+   "check": {
+    "command": "research/results/<P-2 unit>/*.jsonl verdict",
+    "rule": "hit if pass; miss if fail/indeterminate",
+    "resolves_when": "unit graded; void if not run by 2026-12-02"
+   },
+   "ending": "unit to be authored (ML-PRIMARY on manager go)"
+  },
+  {
+   "id": "ML-20261125-2",
+   "call": "ml_entry real-money lifetime sum R stays < 0 at the 2026-12-02 read",
+   "p": 0.7,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/performance?window=all perStrategy ml_entry totalR (real-money block)",
+    "rule": "hit if < 0",
+    "resolves_when": "2026-12-02 ml-review"
+   },
+   "ending": "no action, because: tracks the Q1 hypothesis"
+  },
+  {
+   "id": "ML-20261125-3",
+   "call": "live_decay_cusum ml_entry does not trip by 2026-12-02",
+   "p": 0.85,
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_decay_cusum.py --leg ml_entry --out <dir>",
+    "rule": "hit if verdict pass (no trip)",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "no action, because: CUSUM is the registered demotion instrument"
+  },
+  {
+   "id": "ML-20261125-4",
+   "call": "BTC fc-pcv-v2 /shadow/drift KS >= 0.20 on 2026-12-02",
+   "p": 0.65,
+   "tier": 1,
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2",
+    "rule": "hit if ks >= 0.20",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2"
+  },
+  {
+   "id": "ML-20261125-5",
+   "call": "A D7 or D8 iteration unit is queued by 2026-12-02",
+   "p": 0.5,
+   "tier": 1,
+   "check": {
+    "command": "research/queue/*.yaml status queued with iteration.subject in (ml-entry-tp-revision, ml-exit-head-donchian-1h)",
+    "rule": "hit if >= 1 per slot for both slots; miss otherwise",
+    "resolves_when": "2026-12-02"
+   },
+   "ending": "rows ML-ENTRY-TP-REVISION / ML-EXITHEAD-VALUE"
+  },
+  {
+   "id": "ML-20261125-6",
+   "call": "The 2026-11-25 promotion-rule re-grade classifies ml_entry as not qualifying",
+   "p": 0.85,
+   "tier": 3,
+   "check": {
+    "command": "the committed re-grade record (promotion-rule-fix row)",
+    "rule": "hit if not_qualifying",
+    "resolves_when": "record lands; void if none by 2026-12-02"
+   },
+   "ending": "named operator decision (promotion-rule fix, 11-25)"
+  }
+ ],
+ "trainer_findings": {
+  "state": "finding",
+  "summary": "timer active; last cycle_end 2026-11-25T08:08Z rc0; 0 OOM red flags; stages 3/16/80/1 vs plan 3/21/72/1; stage-guard demote btc fc-pcv-v2; gate-check no registry entry for all 8 served models; disk 86%",
+  "source": "issue #28843"
+ },
+ "model_status": [
+  {
+   "model_id": "ml-decision-entry-v1",
+   "slot": "D3"
+  },
+  {
+   "model_id": "ml-decision-entry-v1r20261122",
+   "slot": "D3"
+  },
+  {
+   "model_id": "ml-entry-eq-struct-ens5-v1",
+   "slot": "D3"
+  },
+  {
+   "model_id": "ml-entry-tp-revision-v1",
+   "slot": "D7"
+  },
+  {
+   "model_id": "overlay-td-v1",
+   "slot": "D4"
+  },
+  {
+   "model_id": "exit-head-donchian-1h-v1",
+   "slot": "D8"
+  },
+  {
+   "model_id": "ml-decision-entry-v2",
+   "slot": "D3"
+  },
+  {
+   "model_id": "ml-entry-eq-v1",
+   "slot": "D3"
+  }
+ ],
+ "model_status_summary": "8 models with a consumer (7 order-changing); trainer registry 100 rows: advisory 3, shadow 16, candidate 80, research_only 1; gbdt 79/108 manifests",
+ "promotion_recommendations": [
+  {
+   "leg": "ml_entry",
+   "recommendation": "re-grade under 11-25 promotion-rule fix (P-1); Tier-3 operator decision on outcome",
+   "evidence": "comms/strategy_evidence/ml_entry.json"
+  }
+ ],
+ "experiments_proposed": [
+  {
+   "id": "P-1",
+   "label": "TRADING",
+   "what": "Re-grade ml_entry and ml_entry_eq_struct under the 11-25 promotion-rule fix",
+   "maps_to": "named operator decision: promotion-rule-fix row (manager opens)",
+   "due_by": "2026-11-30",
+   "roadmap": null
+  },
+  {
+   "id": "P-2",
+   "label": "MODEL",
+   "what": "Fresh-window read of frozen ml_entry v1 (2026-10-01..latest, 5 bybit_2 symbols, full cost stack; rule registered before run)",
+   "maps_to": "unit to be authored by ML-PRIMARY on manager go",
+   "due_by": "2026-12-02",
+   "roadmap": "L-ML-LIVE"
+  },
+  {
+   "id": "P-3",
+   "label": "MODEL",
+   "what": "D7 next unit: Labrador-1b revised-vs-held TP delta net R with day-clustered se",
+   "maps_to": "row ML-ENTRY-TP-REVISION",
+   "due_by": "2026-12-01",
+   "roadmap": "L-ML-LIVE"
+  },
+  {
+   "id": "P-4",
+   "label": "MODEL",
+   "what": "D8 next unit: Labrador-2 ETH out-of-sample delta net R (declared read)",
+   "maps_to": "row ML-EXITHEAD-VALUE",
+   "due_by": "2026-12-02",
+   "roadmap": "M25"
+  },
+  {
+   "id": "P-5",
+   "label": "MODEL",
+   "what": "Register served models in the trainer registry / gate-check served path",
+   "maps_to": "row ML-REGISTRY-SERVED-MODELS-NO-STAGE",
+   "due_by": "2026-12-03",
+   "roadmap": "unmapped"
+  },
+  {
+   "id": "P-6",
+   "label": "MODEL",
+   "what": "Held-out read ledger (reusable holdout) + PBO/CSCV as the instrument for the promotion-rule fix",
+   "maps_to": "named operator decision: fold into promotion-rule-fix row",
+   "due_by": "2026-11-30",
+   "roadmap": null
+  },
+  {
+   "id": "P-7",
+   "label": "MODEL",
+   "what": "Re-route or kill 15 ML pipeline items whose owner row is done",
+   "maps_to": "manager (Thursday planning)",
+   "due_by": "2026-11-27",
+   "roadmap": null
+  },
+  {
+   "id": "P-8",
+   "label": "MODEL",
+   "what": "Void the R4 control clause on every AM result before c7e3-08/09 (grading note)",
+   "maps_to": "ML-PRIMARY (c7e3-08/09 in flight)",
+   "due_by": "2026-11-27",
+   "roadmap": "L-ML-LIVE"
+  },
+  {
+   "id": "P-9",
+   "label": "MODEL",
+   "what": "DRIFT-REMEDIATE BTC fc-pcv-v2: 3rd consecutive drift read; apply drift-remediation",
+   "maps_to": "row DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2",
+   "due_by": "2026-12-02",
+   "roadmap": "L-ML-LIVE"
+  }
+ ],
+ "next_by_value_per_cost": [
+  "P-1",
+  "P-2",
+  "P-5",
+  "P-3",
+  "P-4",
+  "P-6",
+  "P-7",
+  "P-8",
+  "P-9"
+ ],
+ "backlog_drain": [
+  {
+   "id": "BL-20260813-E1E2-LIVE-ARM-NO-MINIMUM-N",
+   "state_at_start": "routed",
+   "owner_row": "ML-EXITHEAD-VALUE",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-EXITHEAD-VALUE state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "BL-20260823-REGISTRY-STATUS-AXIS-IS-VESTIGIAL",
+   "state_at_start": "routed",
+   "owner_row": "ML-REGISTRY-LADDER-GAPS",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-REGISTRY-LADDER-GAPS is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE-SO-ITS-30-DAY-REFERENCE-WINDOW-COVERS-28-DAYS-AND-71-PERCENT-OF-THE-FLEET-IS-BLOCKED-ON-AN-UNTRUSTWORTHY-VERDICT",
+   "state_at_start": "routed",
+   "owner_row": "ML-DRIFT-COVERED-SPAN",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-DRIFT-COVERED-SPAN state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "MB-20260712-SHADOW-LOG-HISTORY",
+   "state_at_start": "routed",
+   "owner_row": "SA-DATA",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner SA-DATA state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "MB-20260719-PROMOREADY-OOSEDGE-OOM",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0004",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0005",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20260929-UAOAYGBB-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261009-01FXMMUG-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261013-CAZHXZNE-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-DATA-OFF-TRAINER",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-DATA-OFF-TRAINER state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261014-MVBJLVJ3-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261015-SBAQDDVQ-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-DATA-OFF-TRAINER",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-DATA-OFF-TRAINER state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261028-GNVUF1ES-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-PROGRAMME-PLAN",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-PROGRAMME-PLAN state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261029-MLP1-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-P1-COSTNET-REBUILD",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-P1-COSTNET-REBUILD state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261029-Q17QWHDZ-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-SERVE-SETUP-FEATURES",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-SERVE-SETUP-FEATURES state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-LINE-S6-CUSUM-RETRAIN",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LINE-S6-CUSUM-RETRAIN state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-ADVISORY-SCOPE-GUARD",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-ADVISORY-SCOPE-GUARD is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261029-XME2GXW7-0003",
+   "state_at_start": "routed",
+   "owner_row": "ML-LINE-S3-GATE",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LINE-S3-GATE state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261030-0261030B-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-LINE-S3-GATE",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LINE-S3-GATE state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261031-TD4QC5GP-0005",
+   "state_at_start": "routed",
+   "owner_row": "ML-PROP-ITERATE",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-PROP-ITERATE state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261031-YEIYJWC5-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-QUEUE-DIVERSIFY",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-QUEUE-DIVERSIFY is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261102-LRP-A66D9AD4",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0002",
+   "state_at_start": "routed",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "ml_entry live 59 trades sum R -9.84; CUSUM no trip S 4.25 < h 8.02"
+  },
+  {
+   "id": "PI-20261104-DGUBH8UA-0003",
+   "state_at_start": "routed",
+   "owner_row": "ML-PROGRAMME-PLAN",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-PROGRAMME-PLAN state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261104-ELSFP54S-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-ENTRY-ALL-ACCOUNTS",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-ENTRY-ALL-ACCOUNTS state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261105-GEXSLEAK-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-DECISION-MODELS",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-DECISION-MODELS state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261105-WSKQN47K-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-ENTRY-ALPACA-BAR-PARITY",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-ENTRY-ALPACA-BAR-PARITY state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261106-5A1BGFHC-0004",
+   "state_at_start": "routed",
+   "owner_row": "ML-ENTRY-RETRAIN-CADENCE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-ENTRY-RETRAIN-CADENCE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261106-5A1BGFHC-0005",
+   "state_at_start": "routed",
+   "owner_row": "ML-EQ-ENTRY-TIMING",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-EQ-ENTRY-TIMING state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261106-QH1QSHD8-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-ENTRY-RETRAIN-CADENCE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-ENTRY-RETRAIN-CADENCE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261106-UE1PFQZX-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-TIMEFRAME",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-TIMEFRAME state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261109-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261110-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261111-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0001",
+   "state_at_start": "routed",
+   "owner_row": "ML-ENTRY-EQ-STRUCT-LIVE",
+   "owner_state": "landed_unproven",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-ENTRY-EQ-STRUCT-LIVE state landed_unproven; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0002",
+   "state_at_start": "routed",
+   "owner_row": "DRIFT-REMEDIATE",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "3rd consecutive drift read KS 0.504 PSI 0.528; stage-guard demote proposed again"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0003",
+   "state_at_start": "routed",
+   "owner_row": "PERF-API-SINCE-IGNORED",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner PERF-API-SINCE-IGNORED state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261111-TX7TX2ZN-0004",
+   "state_at_start": "routed",
+   "owner_row": "ML-HYGIENE",
+   "owner_state": "done",
+   "disposition": "kept_open",
+   "category": "owner_done",
+   "revalidation": "owner row ML-HYGIENE is done while this item is open -> re-route or kill (P-7)"
+  },
+  {
+   "id": "PI-20261112-GERETIRE-0001",
+   "state_at_start": "routed",
+   "owner_row": "MLP-D2-COLLIE-5A",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner MLP-D2-COLLIE-5A state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261112-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261113-B38CQPVI-0003",
+   "state_at_start": "routed",
+   "owner_row": "ML-LIVE-PARITY-ML-LEGS",
+   "owner_state": "in_flight",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-LIVE-PARITY-ML-LEGS state in_flight; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261114-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-EQ-NOPKG-AUDIT",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-EQ-NOPKG-AUDIT state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261115-LRP-A038E248",
+   "state_at_start": "routed",
+   "owner_row": "ML-EQ-NOPKG-AUDIT",
+   "owner_state": "queued",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-EQ-NOPKG-AUDIT state queued; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0001",
+   "state_at_start": "queued",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0003",
+   "state_at_start": "queued",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0004",
+   "state_at_start": "queued",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261117-ZFRREVN5-0005",
+   "state_at_start": "queued",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261117-ZZUFKM1F-0002",
+   "state_at_start": "routed",
+   "owner_row": "ML-PRIMARY-6",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner ML-PRIMARY-6 state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261118-EUWZZMDP-0001",
+   "state_at_start": "routed",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  },
+  {
+   "id": "PI-20261118-EUWZZMDP-0002",
+   "state_at_start": "routed",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "consumer feed still lists 8 consumers; D2 router heads absent"
+  },
+  {
+   "id": "PI-20261118-EUWZZMDP-0003",
+   "state_at_start": "routed",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "re-confirmed: plan-only scan 0 drifted of 19 rows vs /shadow/drift BTC fc-pcv-v2 KS 0.504"
+  },
+  {
+   "id": "PI-20261118-EUWZZMDP-0004",
+   "state_at_start": "routed",
+   "owner_row": "None",
+   "owner_state": "\u2014",
+   "disposition": "kept_open",
+   "category": "kept_open",
+   "revalidation": "owner None state \u2014; re-validated 2026-11-25 against this run's checks"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 55,
+  "triaged": 55,
+  "resolved": 0,
+  "fixed_now": 0,
+  "closed_stale": 0,
+  "kept_open": 55,
+  "owner_done_reroute": 15,
+  "count_untriaged": 0
+ },
+ "anomalies": [
+  "gate-check no registry entry for all served models",
+  "drift instruments disagree",
+  "AM control lookahead"
+ ],
+ "recommended_action": "Operator: decide ml_entry under the promotion-rule fix (P-1) with the fresh-window read (P-2); manager: dispatch P-3/P-4/P-5/P-7",
+ "operator_attention_required": true,
+ "claude_channel_ping": "/ml-review \u2014 ML changes 12/85 legs (real-money 3); chain: desk H2->H3; 9 proposals; calls hit/miss 3/1; trainer=ok (no served registry entries).",
+ "sources": [
+  "comms/ml-plan/20261125T2000Z-ML-FRONTIER-PREP.json",
+  "docs/reviews/2026-11-25-weekly-walkthrough.md",
+  "docs/research/frontier-scan-2026-11-25.md",
+  "https://github.com/benbaichmankass/JTA-Trader/issues/28843"
+ ]
+}

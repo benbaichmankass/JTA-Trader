@@ -147,10 +147,24 @@ levers:
         max_drawdown_r: 13.1282
         verdict: pass
         joint_change: true
+      - value: long
+        baseline_value: 'off'
+        arm: SL
+        unit: RQ-20261124-bd30-02
+        window: 2019-01-01..2026-10-15
+        n: 162
+        net_r: 65.2044
+        baseline_n: 256
+        baseline_net_r: 54.0356
+        delta_net_r: 11.1688
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 12.4753
+        verdict: pass
+        joint_change: false
       shape: noisy
-      points: 5
+      points: 6
       best_delta_r_per_trade: 0.0762
-      fold_stability: 0.6
+      fold_stability: 0.611
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   entry:
     trend_lookback:
