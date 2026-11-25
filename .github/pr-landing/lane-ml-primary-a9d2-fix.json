@@ -1,0 +1,6 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "edits a registered unit (RQ-20261124-a9d2-01) and a workflow's inputs",
+  "why": "Fixes main red introduced by #28674: tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable (a9d2-01 is an accruing unit and must thread run.inputs.research_unit) and tests/test_research_queue_timeouts_in_preflight_range.py (timeout 360 outside [10, 330]). cf-bar-labels.yml gains pass-through research_unit / power_state inputs (labels only, never commands); a9d2-01 threads research_unit and declares timeout 330. Decision rule, statistic and commands unchanged. Gates this adds or changes: none."
+}
