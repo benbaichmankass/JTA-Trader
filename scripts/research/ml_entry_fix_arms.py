@@ -37,6 +37,12 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
 
+  clf_target    TARGET LEVER (registered fail_action of f1a0-29/31: every input arm landed within noise, so the next lever is the LABEL):
+                per side a LightGBM CLASSIFIER of P(net R > 0) on the same features / rows / folds replaces the net-R regressor; a side is
+                traded iff its probability clears that side's TRAINING breakeven p* = mean|loss| / (mean win + mean|loss|) (EV > 0 at the side's
+                average win and loss sizes, point-in-time), the better side by p - p*. Control: the base policy thinned at random to the arm's
+                per-side take rate (100 draws), as ev_calib. Comparator: the registered recipe (base). Same LEVER rule.
+
   ev_calib      CALIBRATED EV (iteration 2, from the 2026-11-24 dev calibration read: on 477,6xx dev rows the LONG head's realised net R is
                 negative in EVERY prediction decile, top decile pred +0.28 -> realised -0.044; the SHORT head is positive only for preds 0.03-0.22
                 and its top decile loses). Each side's regressor gets a cross-fitted isotonic map pred -> realised net R (CALIB_BLOCKS time blocks
@@ -113,7 +119,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
+ARMS = ["clf_target", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -558,6 +564,25 @@ def choose_rows(mk: pd.DataFrame, lim_df: pd.DataFrame, use: np.ndarray) -> pd.D
     return out
 
 
+def clf_predict(train: pd.DataFrame, test: pd.DataFrame, n_jobs: int | None = None) -> tuple[np.ndarray, np.ndarray, dict]:
+    """clf_target: per side P(net R > 0) from a LightGBM classifier (M.LGB_PARAMS, M.FEATURES), returned as EDGE scores p - p* so the
+    sequential policy's 'better side, > tau' rule with tau 0 trades a side iff p > p* (its training breakeven probability)."""
+    import lightgbm as lgb
+    params = M.LGB_PARAMS if n_jobs is None else {**M.LGB_PARAMS, "n_jobs": n_jobs}
+    out, info = [], {}
+    for side in ("long", "short"):
+        y = train[f"net_{side}"].to_numpy()
+        win, loss = y[y > 0], y[y <= 0]
+        p_star = float(np.mean(np.abs(loss)) / (np.mean(win) + np.mean(np.abs(loss)))) if len(win) and len(loss) else 1.0
+        m = lgb.LGBMClassifier(**params)
+        m.fit(train[M.FEATURES], (y > 0).astype(int))
+        # provenance: predict -- LGBMClassifier.predict_proba[:, 1] is P(net R > 0) of that side; the score is that probability minus p*
+        p = m.predict_proba(test[M.FEATURES])[:, 1]
+        out.append(p - p_star)
+        info[side] = {"p_star": round(p_star, 4), "train_win_rate": round(float((y > 0).mean()), 4), "test_share_above_p_star": round(float((p > p_star).mean()), 4)}
+    return out[0], out[1], info
+
+
 def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs: int | None = None, folds_lim: int | None = None) -> dict:
     bounds = [pd.Timestamp(x, tz="UTC") for x in M.DEV_FOLDS] + [pd.Timestamp(M.HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < bounds[-1]]
@@ -751,6 +776,16 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
             ql, qs = fit_predict_w(tr_alt, test, pw, n_jobs)
             tk["uniform"], tk["arm"], tk["control"] = seq_alt.run(ul, us), seq_alt.run(wl, ws), seq_alt.run(ql, qs)
             info |= {"regime_weights": winfo, "regime_cells": {k: regime_cells(tk[k], test) for k in ("uniform", "arm", "control")}}
+        elif arm == "clf_target":
+            cl, cs, cinfo = clf_predict(train, test, n_jobs)
+            info["classifier"] = cinfo
+            tk["arm"] = seq.run(cl, cs, tau=0.0)
+            nb = tk["base"].side.value_counts()
+            na = tk["arm"].side.value_counts()
+            rate = {sd: min(1.0, float(na.get(sd, 0)) / float(nb[sd])) if nb.get(sd, 0) else 0.0 for sd in ("long", "short")}
+            info["take_rate_vs_base"] = rate
+            tk["control"] = pd.concat([seq.run(np.where(rng.random(len(pl)) < rate["long"], pl, -np.inf),
+                                               np.where(rng.random(len(ps)) < rate["short"], ps, -np.inf)) for _ in range(DRAWS)], ignore_index=True)
         elif arm in ("ev_calib", "ev_cap3", "ev_calib_recent"):
             cl, cs, cinfo = calibrated_predict(train, pl, ps, n_jobs, recent_only=arm == "ev_calib_recent")
             info["calibration"] = cinfo

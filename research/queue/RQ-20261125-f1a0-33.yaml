@@ -1,0 +1,152 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (manager 12:25Z: build the ENTRY family's registered target lever). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261125-f1a0-33
+title: 'ml_entry TARGET LEVER (clf_target): a per-side CLASSIFIER of P(net R > 0), traded iff it clears the side''s training breakeven probability, vs the
+  registered net-R regressor and 100 take-rate-matched random thinnings, on the 8 dev folds, net of the full cost stack'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-31/45550064744
+  verdict_read: indeterminate
+  diagnosis: f1a0-31 (OI / long-short / taker inputs) INDETERMINATE +0.0044 vs base (t 0.39); with funding (f1a0-29) and every execution / sizing lever
+    within noise, inputs and mechanics are exhausted on this recipe. The registered fail_action names the target. The recipe regresses net R on a fixed
+    1.5:1 bracket, so most label variance is the payoff magnitude the bracket fixes, not the ranking the policy acts on.
+  search: 'one fixed definition: the sign target with a training-label breakeven cut; no grid.'
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 19
+  due_by: '2026-12-01'
+question: Does replacing the registered per-side net-R regressor with a per-side LightGBM classifier of P(net R > 0) (same 20 features, rows, folds, LGB
+  params and bracket), trading a side iff its probability clears that side's training breakeven p* = mean|loss|/(mean win + mean|loss|), beat the registered
+  recipe by >= +0.0068 R/decision with t >= 2 AND beat 100 random thinnings of the base at the arm's per-side take rate, on the dev folds, net of the full
+  cost stack?
+why_this_matters: 'Every execution, sizing and input lever on ml_entry (f1a0-14..32) landed within noise; the registered fail_action of f1a0-29/31 names
+  the LABEL / target as the next lever. A net-R regressor on a 1.5:1 bracket spends capacity fitting payoff magnitudes that the bracket already fixes; a
+  classifier of the sign of net R puts it on ranking, which is what the policy acts on. A pass goes to a fresh-window confirmation (not the spent 2025-10
+  window: ENTRY has 27 reads there), then a Tier-3 proposal input.'
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (f1a0-21 MEASURED 52,029 paired decisions): arm n = decisions (unfilled limits count as 0 R), the same decisions as the comparator so
+    se(delta) ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry entry order type (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol, SL
+    2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - clf_target
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-33
+decision_rule:
+  id: RULE-RQ-20261125-f1a0-33
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm oi_feats (oi_columns, prop_ml_leg.fetch_metrics / f1_features, shuffle_ts on the rows with data):
+    per dev fold the registered recipe refit with FEATURES + OI_FEATURES vs without (same rows); delta = pooled mean net R per decision of the arm policy
+    - the base policy; week-clustered influence se; folds / years vs base; vs_control = the arm vs the same recipe with the 7 columns timestamp-shuffled
+    (GATING). Per-fold coverage of the columns is reported.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - the mean of 100 take-rate-matched random thinnings of the base) >= +0.0068 AND folds_better >= 6 of 8 AND
+    years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. Fixed now (the LEVER rule, control gating, as book_feats).
+  pass_action: Register a FRESH-WINDOW confirmation (a forward window after the last ENTRY holdout read, or a wider population) before any proposal; on
+    that pass, a Tier-3 proposal input for the served ml_entry target.
+  fail_action: Record the sign target closed on this recipe; the next target form is the HORIZON (a 4 h or 8 h bracket with the cost stack re-scaled), then
+    cross-asset inputs (ETH/BTC lead, index futures), each as its own unit.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager with
+    this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+  choices_where_the_design_memo_is_silent:
+  - 'TARGET: y = 1[net R of that side > 0] on the registered labels (fee + slippage + funding already in net R); LightGBM classifier with M.LGB_PARAMS (the
+    regressor''s params; default binary objective).'
+  - 'DECISION: score = P(y=1) - p*, p* per side from that fold''s TRAINING labels only (point-in-time); the registered sequential policy (better side, >
+    tau, symbol busy until exit) with tau = 0.'
+  - 'CONTROL: 100 seeded draws per fold of the base policy with each side kept at the arm''s take rate vs base (capped at 1: if the arm takes MORE than
+    base on a side, that side''s control equals base).'
+  - 'No grid, no tau search: p* is a fixed function of training labels.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only which decisions are taken differs
+  matched_random:
+    draws: 100
+    note: 'COMPUTED: 100 seeded draws per fold of the base policy thinned to the arm''s per-side take rate vs base: prices whether the classifier picks
+      better than cutting the same share at random'
+  best_static:
+    grid:
+    - recipe (live)
+    - control (see matched_random)
+    excludes_test_folds: true
+    note: nothing is tuned on a fold; the arm is one fixed definition, no grid
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 150
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
+- research/queue/RQ-20261125-f1a0-21.yaml
+- research/queue/RQ-20261125-f1a0-22.yaml
+- research/queue/RQ-20261125-f1a0-27.yaml
+- research/queue/RQ-20261125-f1a0-29.yaml
+- research/queue/RQ-20261124-f1a0-14.yaml
+- scripts/research/prop_ml_leg.py
+- RQ-20261125-f1a0-31
+- RQ-20261124-f1a0-06
+not_before: '2026-11-25T17:00:00+00:00'

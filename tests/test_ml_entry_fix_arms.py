@@ -38,3 +38,27 @@ def test_run_arm_never_rebinds_its_per_run_inputs_inside_the_fold_loop():
                 for tgt in (n.targets if isinstance(n, ast.Assign) else [n.target]):
                     bad += [n.lineno for nm in ast.walk(tgt) if isinstance(nm, ast.Name) and nm.id in ("alt", "tab")]
     assert bad == [], f"run_arm rebinds alt/tab inside a fold loop at lines {bad}"
+
+
+def test_clf_target_breakeven_and_edge_scores():
+    """clf_target: p* = mean|loss| / (mean win + mean|loss|) from TRAINING labels only, the score is P(net>0) - p*, and a side whose
+    signal is pure noise scores near -p* + base rate (so the policy rarely trades it)."""
+    import ml_decision_entry as M
+    import ml_entry_fix_arms as F
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(0)
+    n = 4000
+    X = pd.DataFrame(rng.normal(size=(n, len(M.FEATURES))), columns=M.FEATURES)
+    sig = X[M.FEATURES[0]].to_numpy()
+    long_ = np.where(sig + rng.normal(0, 0.5, n) > 0, 1.5, -1.0)          # long label learnable from feature 0
+    short_ = np.where(rng.random(n) < 0.3, 1.5, -1.0)                       # short label pure noise, 30% win
+    df = X.assign(net_long=long_, net_short=short_)
+    tr, te = df.iloc[:3000], df.iloc[3000:]
+    cl, cs, info = F.clf_predict(tr, te, n_jobs=1)
+    assert abs(info["long"]["p_star"] - 1.0 / 2.5) < 1e-6 and abs(info["short"]["p_star"] - 1.0 / 2.5) < 1e-6
+    assert cl.shape == cs.shape == (len(te),)
+    hi = te[M.FEATURES[0]].to_numpy() > 0.5
+    assert cl[hi].mean() > 0.2 and cl[~hi].mean() < cl[hi].mean()       # the learnable side clears p* where the feature says so
+    assert info["short"]["test_share_above_p_star"] < 0.2                  # the noise side (30% win < p* 40%) rarely clears
+    assert "clf_target" in F.ARMS
