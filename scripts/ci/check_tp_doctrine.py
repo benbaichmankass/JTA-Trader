@@ -249,6 +249,13 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # the same PR (K* RQ-20261112-5ab1-01, calibration gap 0.005; L35 arm RQ-20261114-db1a-10). Only tp_revision is owed (no revision rule).
     "alpaca_live/tlt_pullback_1h": R,
     "alpaca_portfolio/tlt_pullback_1h": R,
+    # 2026-11-25 INDEX-CAPIT-1X-LEG (Tier 3; OPERATOR popups 06:28Z "Real money directly (Recommended)", ~14:22Z "Proceed as approved" at
+    # FULL SIZE, relayed by Manager Session 2026-11-25a): index_capitulation_1x enters alpaca_live + its mirror with a REAL entry target per
+    # ticker (k_star: K* calibrated on the first 60% of each ticker's no-TP evidence trades, 1.0..8.0 R, never 50; spec
+    # comms/research/INDEX-CAPIT-1X-LEG/spec.json). The evidence holds the TP fixed through the 10-session hold, so no revision rule has been
+    # tested on this leg: only tp_revision is owed. Next: a revision ablation on the harness (the exit-refinement coverage row).
+    "alpaca_live/index_capitulation_1x": R,
+    "alpaca_portfolio/index_capitulation_1x": R,
     # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3, operator chat ~23:35Z): ml_entry on the prop books as a measured baseline. The ENTRY bracket is compliant (real predictive 3 ATR TP,
     # declared); the extend-only TP revision cannot reach a phone / manual-ticket venue (revision path absent), so only the revision is owed. velotrade_1 (VM executor) is plumbed and
     # passes. The SL-only structure stop does propagate through the prop trail (src/prop/prop_trail.py structure_exit). Follow-up row ML-ENTRY-PROP-BASELINE.

@@ -1,0 +1,30 @@
+{
+  "kind": "allocation_weights",
+  "covers": [
+    {
+      "account": "alpaca_live",
+      "symbol": "XLB"
+    },
+    {
+      "account": "alpaca_portfolio",
+      "symbol": "XLB"
+    }
+  ],
+  "legs": [
+    "index_capitulation_1x",
+    "ml_entry_eq_struct"
+  ],
+  "weights": {
+    "index_capitulation_1x": 0.401749,
+    "ml_entry_eq_struct": 0.598251
+  },
+  "inputs": [
+    "src/runtime/allocator_ev.py backtest_input (c_bt = clamp(0.5 + expectancy_r_oos, 0, 1)) -> compute_conviction -> allocation_weights (score_i / sum score); index_capitulation_1x c_bt from the pooled OOS (post-K*-calibration) trades of comms/research/RQ-20261124-1e06-06/45506679715/verdict.json + RQ-20261124-1e06-08/45509974875/verdict.json (no comms/strategy_evidence file); ml_entry_eq_struct c_bt from comms/research/RQ-20261107-98e3-06/42432561069/measurement.json stats.mean_net_r, as in tlt-alpaca_live-alpaca_portfolio.json"
+  ],
+  "recorded_at": "2026-11-25",
+  "basis": "2026-11-25 INDEX-CAPIT-1X-LEG (Tier 3; OPERATOR popups 06:28Z \"Real money directly (Recommended)\", ~14:22Z \"Proceed as approved\" at FULL SIZE, relayed by Manager Session 2026-11-25a): index_capitulation_1x joins ml_entry_eq_struct on alpaca_live + its mirror alpaca_portfolio, both able to trade XLB. Same method as tlt-alpaca_live-alpaca_portfolio.json and slv-alpaca_live-alpaca_portfolio.json (operator popups 'Shared ETFs + weights'; 'Allocator score (Recommended)'): score = c_bt; weights = score / sum. c_bt = index_capitulation_1x 0.6663 (pooled OOS mean net R +0.1663: n 432, +71.86 R = 1e06-06 n 161 +29.14 R + 1e06-08 n 271 +42.71 R, the trades after each ticker's K* calibration boundary, net of 5 bps/side), ml_entry_eq_struct 0.9922 (registered pooled OOS mean net R +0.4922, RQ-20261107-98e3-06).",
+  "population": "Per leg: index_capitulation_1x the pooled OOS of its two Stage-0 units (18 1x index ETFs, 2010-06-01..2026-10-22), NOT a per-symbol figure; ml_entry_eq_struct the pooled OOS of its registered test (n 207, 113 symbols), NOT a per-symbol figure.",
+  "not_in_basis": "c_strat, c_setup, c_wr, c_reg are stamped per intent at runtime and c_live reads runtime trade_journal.db (VM only); not read, not invented. The out-of-time read RQ-20261125-1e06-12 (this spec, 2000-01..2010-05, n 493, -148.3 R) FAILED and is not in c_bt: the operator accepted it (~14:22Z) and this record follows the existing method, which reads the registered evidence window. Both legs trade long only on alpaca_live (account side_filter long); index_capitulation_1x is long only by its own logic on alpaca_portfolio too.",
+  "applies_to_runtime": "no. This is the record the guard reads. Live allocation is the election in src/runtime/intents.py; the record changes no config, roster or sizing.",
+  "supersede_with": "slice support on these accounts, or a refreshed record once c_live / c_strat are readable or either leg has its own comms/strategy_evidence file."
+}

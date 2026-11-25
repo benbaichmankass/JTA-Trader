@@ -35,7 +35,9 @@ def test_every_current_rostered_leg_resolves_to_a_unit():
     # 2026-11-01 (ML-ENTRY-LIVE-ADAPTER, #22079): ml_entry's trigger is a pooled model prediction over 60 reference
     # symbols, which no single-symbol candle probe can see, so the desk reads it `unlooked` (loud). Known gap, noted on
     # row ML-ENTRY-LIVE-ADAPTER.
-    assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2", "squeeze_breakout_4h",
+    # 2026-11-25 INDEX-CAPIT-1X-LEG: index_capitulation_1x has no name-family rule in desk_near_signals.UNIT_ORDER, so the desk reads it
+    # `unlooked` (loud). Known gap, noted on row INDEX-CAPIT-1X-LEG.
+    assert unresolved == ["e4_oi_shock_1h", "fade_breakout_4h", "fvg_range_15m", "index_capitulation_1x", "ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "ml_entry_v2", "squeeze_breakout_4h",
                           "turtle_soup"]
 
 

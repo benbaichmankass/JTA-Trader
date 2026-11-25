@@ -4255,6 +4255,95 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     return _with_signal_package("tqqq_trend_long_1d", sig)
 
 
+def index_capitulation_1x_signal_builder(settings: dict) -> Dict[str, Any]:
+    """Daily LONG-ONLY capitulation-bounce leg on 18 1x index ETFs (row INDEX-CAPIT-1X-LEG; module
+    ``src.units.strategies.index_capitulation_1x``, spec ``comms/research/INDEX-CAPIT-1X-LEG/spec.json``).
+
+    Decides on the CLOSED daily bars and enters during the entry session (spec: "buy the next session's open"). So it emits only
+    in US regular hours, on a frame whose last row is that session's bar (``_fetch_session_frame``), and only once per signal:
+    a package already created for this symbol in the entry session means the signal's one trade was taken (a stop-out followed
+    by a bounce above the stop the same day must not re-enter; the bar debounce that used to hold this was removed 2026-11-12).
+    These three are the strategy's own entry rule, not account or execution gates. Honours the YAML ``enabled`` flag.
+    """
+    from src.units.strategies import load_strategy_config
+    from src.units.strategies.index_capitulation_1x import NAME, order_package
+    from src.runtime.market_hours import us_equity_session
+
+    try:
+        strategies_cfg = load_strategy_config()
+    except Exception:  # noqa: BLE001 - never fail-open on a config error
+        strategies_cfg = {}
+    cfg_yaml = strategies_cfg.get(NAME, {}) or {}
+    symbol = settings.get("SYMBOL", settings.get("symbol", ""))
+
+    def _none(reason: str, candles_df: Any = None) -> Dict[str, Any]:
+        if candles_df is not None:
+            try:
+                log_signal(_stamp_regime({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol,
+                                          "timeframe": "1d", "side": "none", "reason": reason}, candles_df))
+            except Exception:  # noqa: BLE001
+                logger.exception("%s: dedicated audit emit failed", NAME)
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": reason}})
+
+    if not bool(cfg_yaml.get("enabled", False)):
+        return _none("disabled_in_yaml")
+    if symbol not in (cfg_yaml.get("symbols") or []):
+        return _none("symbol_not_in_leg_population")
+    try:
+        session = us_equity_session()
+    except Exception:  # noqa: BLE001 - unreadable clock: let the frame check below decide
+        session = "rth"
+    if session != "rth":
+        return _none(f"outside_entry_session:{session}")
+
+    timeframe = "1d"
+    exchange = _build_killzone_exchange(settings)
+    candles_df, _session_skip = _fetch_session_frame(NAME, symbol, timeframe, exchange)
+    if _session_skip is not None:
+        return _none(_session_skip)
+    if candles_df is None:
+        raise RuntimeError(f"{NAME}: no candle data returned for symbol={symbol} timeframe={timeframe}")
+    _publish_liquidity_state(symbol, candles_df)
+
+    cfg: Dict[str, Any] = {**cfg_yaml, "symbol": symbol, "timeframe": timeframe, "strategy_label": NAME}
+    try:
+        pkg = order_package(cfg, candles_df=candles_df)
+    except ValueError as exc:
+        return _none(str(exc), candles_df)
+
+    try:
+        from src.runtime.strategy_monocle import _same_bar_entry_for_strategy
+        taken = _same_bar_entry_for_strategy(NAME, symbol=symbol)
+    except Exception:  # noqa: BLE001 - an unreadable journal must not strand the leg; the open-package gate still holds stacking
+        taken = None
+    if taken is not None:
+        return _none(f"signal_already_entered:{taken.get('order_package_id')}", candles_df)
+
+    pkg_meta = pkg.get("meta") or {}
+    logger.info("%s: buy signal at %s (signal %s, entry=%s sl=%s tp=%s K*=%s)", NAME, symbol,
+                pkg_meta.get("signal_date"), pkg["entry"], pkg["sl"], pkg["tp"], pkg_meta.get("k_star"))
+    try:
+        log_signal(_stamp_regime({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
+                                  "side": "buy", "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],
+                                  "confidence": pkg["confidence"], "signal_date": pkg_meta.get("signal_date")}, candles_df))
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: dedicated audit emit failed", NAME)
+    sig = {
+        "symbol": symbol,
+        "side": "buy",
+        "price": pkg["entry"],
+        "entry_price": pkg["entry"],
+        "stop_loss": pkg["sl"],
+        "take_profit": pkg["tp"],
+        "pattern": NAME,
+        "meta": {**pkg_meta, "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long"},
+    }
+    _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # label only
+    return _with_signal_package(NAME, sig)
+
+
 def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     """QLD (2x Nasdaq-100) daily LONG-ONLY trend-follower.
 
