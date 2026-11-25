@@ -1269,6 +1269,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-18-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-25-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-04-weekly-planning-preread.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-26-weekly-planning-preread.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-followthrough-triage.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-system-conformance-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
