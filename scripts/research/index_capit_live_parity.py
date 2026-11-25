@@ -173,7 +173,7 @@ def main(argv: List[str] | None = None) -> int:
     for t in tickers:
         try:
             etf = _bars(t, Path(a.bars_dir) if a.bars_dir else None, Path(a.cache) if a.cache else None)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the read failure is recorded per ticker (read_state could_not_read) and the exit code becomes 2
             res["tickers"][t] = {"read_state": "could_not_read", "error": str(exc)}
             rc = max(rc, 2)
             continue
