@@ -7,7 +7,7 @@ id: RQ-20261124-f1a0-02
 title: 'ml_entry BAR RISK SPLIT: with each decision bar''s k same-bar entries sharing 1R instead of taking 1R each, is net R per 1R deployed non-inferior
   (margin 0.0068) while bar Sharpe rises and bar max drawdown at matched mean risk falls by >= 30%, vs the all-full-R recipe and random per-bar
   weights?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -142,3 +142,17 @@ related:
 - docs/research/ml-entry-review-2026-11-24.md
 - research/queue/RQ-20261124-e1a7-02.yaml
 last_dispatched_at: '2026-11-24T21:59:03+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-02/45484678545.jsonl
+  - research/results/RQ-20261124-f1a0-02/45488227806.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

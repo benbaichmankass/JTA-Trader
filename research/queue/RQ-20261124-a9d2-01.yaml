@@ -3,7 +3,7 @@
 id: RQ-20261124-a9d2-01
 title: 'AM v2 RICHER FEATURES: do market-structure and vol-regime features (ctx block, bars <= k incl. pre-entry history) raise the TARGET and INVALIDATION
   heads'' skill over the SAME state baseline by >= 1% loss vs the 9-feature heads, on the same rows (>= 6 of 8 dev folds, positive on the claimed holdout)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -126,3 +126,14 @@ related:
 - .github/workflows/cf-bar-labels.yml
 - AM-V2-RICHER-FEATURES
 last_dispatched_at: '2026-11-25T02:18:26+00:00'
+grading:
+  attested: RULE-AM-HEADS-RICHER-20261124
+  auto: true
+  decision_rule_id: RULE-AM-HEADS-RICHER-20261124
+  evidence:
+  - research/results/RQ-20261124-a9d2-01/45514380130.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
