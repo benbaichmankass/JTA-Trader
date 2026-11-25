@@ -1106,6 +1106,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pairs-sleeve-real-money-readiness-2026-07-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-stocktake-2026-10-07.md` | evidence | live | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/practice-review-2026-11-18.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/practice-review-2026-11-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/programmes/02-AI-TRADER.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for G4; re-measured by the weekly roadmap pass |
 | `docs/research/programmes/04-MACRO-SLEEVE.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass |
@@ -1276,6 +1277,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-12-weekly-walkthrough.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-18-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-18-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-25-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/account-balance-history-purge.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
