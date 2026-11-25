@@ -1,0 +1,133 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a) on the
+# operator's 11-24 ask ("I want solutions"; "it's the whole trading flow for these trades that are failing, not just the ml").
+# Authored from the f1a0-12 read and the cost-per-R diagnosis. Rule registered before any run; a 1-fold code-path smoke ran with its output discarded (exit code only).
+# Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261124-f1a0-17
+title: 'ml_entry PULLBACK LIMIT ENTRY: does entering the SL 4 / TP 6 refit''s own decisions by a post-only limit 0.5 ATR better (4 h, maker
+  fee) beat the same decisions at market by +0.0068 R/decision, and beat random thinning to the same fill rate?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-12/45505516869
+  verdict_read: indeterminate
+  diagnosis: 'Cost per R is the binding constraint on ml_entry (gross ~ +0.067 vs cost ~ 0.064 R/decision over 11 arms). Widening the bracket cut cost per R monotonically (SL 2 / 3 / 4 refits: +0.003 / +0.011 / +0.012 net) but no arm cleared the bar; regime soft-weighting f1a0-12 (run 45505516869) was INDETERMINATE (+0.0128, t 1.04) and beat its placebo by only +0.0033, so the regime lever is moving to sizing (f1a0-15) and routing (R2). The ENTRY ORDER is the untested cost term at this scale: a maker fill saves 3.5 bps of fee and 1.5 bps of slippage and buys 0.5 ATR (0.125 R at SL 4) of price, against the adverse selection 1c4e-01 found for a touch-peg entry (directional picks run away). This unit measures that trade-off on the model''s own decisions at the 1h scale.'
+  search: 'lever family entry-execution, one fixed policy (no grid): limit 0.5 ATR14 better than bar t+1 open, 4 x 1h bars resting, strict
+    fill 1 bp through, maker 2.0 bps entry + taker 5.5 bps exit; LGB_PARAMS, FEATURES and the SL 4 / TP 6 / 24 h labels unchanged.'
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 13
+  due_by: '2026-12-01'
+question: On the 8 dev folds, is mean net R per DECISION of the SL 4 / TP 6 / 24 h refit's decisions entered by a post-only limit 0.5 ATR14
+  better than bar t+1's open (resting 4 h, strict fill, maker entry fee; an unfilled decision is 0 R) at least +0.0068 above the same decisions
+  entered at market (week-clustered t >= 2, >= 6/8 folds, >= 3/4 years), AND at least +0.0068 above those market outcomes thinned at random
+  to the arm's fill rate (100 draws)?
+why_this_matters: Cost per R binds; the entry order is the remaining cost term, and a pullback fill also improves the price. The random-thinning
+  control separates the fill's selection from mere trade reduction.
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: arm n = decisions (~70,000, unfilled count as 0 R), the same decisions as the comparator so se(delta) ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry entry order type (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - lim_xwide
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-f1a0-17
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm lim_xwide (lim_labels): delta = pooled mean net R per decision (limit entry) - (same
+    decisions at market, SL 4 / TP 6 refit) over the 8 dev folds; week-clustered influence se; folds/years vs the market entry; vs_control =
+    arm - the market outcomes thinned at random to the arm fill rate (100 draws). Fill rate and filled-only net R reported per fold.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - market entry) >= +0.0068 AND t >= 2.0 AND delta(arm - random thinning) >= +0.0068 AND folds_better
+    >= 6 of 8 AND years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. Fixed now.
+  pass_action: Fresh-window confirmation (2025-10..2026-11, holdout ledger claim), then a data-backed Tier-3 entry-order proposal to the manager (applied
+    by the operator or a mandate).
+  fail_action: Record the 0.5 ATR / 4 h pullback limit closed; the next execution form is a fill-probability model (post a limit only when
+    P(fill) x price gain exceeds the expected missed-winner cost), the D9 learned step.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  matched_random:
+    draws: 100
+    description: the same decisions' market-entry outcomes thinned at random to the arm's fill rate; the arm must beat it by >= +0.0068
+  hold_to_bracket: true
+  hold_to_bracket_note: 'the comparator is the same decisions entered at market and held to the same SL 4 / TP 6 / 24 h bracket (no in-trade action in
+    either arm); added to the controls metadata after run 45512130236 to satisfy the design-fields guard, the decision rule is unchanged'
+  best_static:
+    grid:
+    - market entry on the same decisions (the registered comparator)
+    excludes_test_folds: true
+    note: 'one fixed limit policy (0.5 ATR, 4 h), not chosen on any fold; no grid of offsets or windows was searched'
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 50
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
+not_before: '2026-11-25T02:30:00+00:00'
