@@ -118,8 +118,8 @@ jobs:
               entry = (f"  {mid}:\n    stage: advisory\n"
                        f"    stage_basis: \"the artifact ml/served/ENTRY_SERVED.json points at once this ml-entry-retrain run {run} promotion lands; serves every ml_entry consumer\"\n"
                        f"    headline_metric:\n      name: promotion_grade_mean_net_r_per_trade\n      value: {c['mean_net_r']:.4f}\n      n: {c['n']}\n"
-                       f"      window: \"{pl['window_start']}..{pl['window_end']}\"\n"
-                       f"      population: \"candidate refit vs served {s['model_id']} on the {pl['window_days']}-day grade window (served {s['result']['mean_net_r']:+.4f} R, n {s['result']['n']}), net of the full cost stack\"\n"
+                       f"      window: \"{pl['confirm_start']}..{pl['confirm_end']}\"\n"
+                       f"      population: \"candidate refit vs served {s['model_id']} on the {pl['confirm_days']}-day CONFIRMATION half, disjoint from the selection half {pl['selection_start']}..{pl['selection_end']} that chose it (RULE-ENTRY-PROMOTE-20261106 Amendment 4; served {s['result']['mean_net_r']:+.4f} R, n {s['result']['n']}), net of the full cost stack\"\n"
                        f"      verdict: pass\n      rule: {ev['rule_id']}\n      provenance: MEASURED\n      source: comms/research/ml_entry_grade/{run}/grade_evidence.json\n")
               txt = txt.replace("\nmodels:\n", "\nmodels:\n" + entry, 1)
               open(p, "w").write(txt)
@@ -131,7 +131,7 @@ jobs:
           git commit -qm "ML entry: graded candidate PASS -> ml/served/${D} + repoint (HELD, run ${RUN_ID})"
           git push -q origin "$BR"
           gh pr create --draft --base main --head "$BR" --title "ML entry: PROMOTE graded candidate ${D} (HELD, run ${RUN_ID})" \
-            --body "ml-entry-retrain run ${RUN_ID} graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 (docs/research/ml-entry-promotion-rule-2026-11-06.md). Evidence: comms/research/ml_entry_grade/${RUN_ID}/grade_evidence.json. Adds ml/served/${D} and repoints ml/served/ENTRY_SERVED.json; the old directory stays (revert = one-line pointer edit). Gates this adds or changes: none. HELD: a human merges. NOTE: this PR is pushed with GITHUB_TOKEN, so CI does not start until someone pushes an ordinary commit to the branch."
+            --body "ml-entry-retrain run ${RUN_ID} graded a candidate PASS under RULE-ENTRY-PROMOTE-20261106 (docs/research/ml-entry-promotion-rule-2026-11-06.md; Amendment 4: chosen on the selection half, confirmed on the disjoint confirmation half). Evidence: comms/research/ml_entry_grade/${RUN_ID}/grade_evidence.json. Adds ml/served/${D} and repoints ml/served/ENTRY_SERVED.json; the old directory stays (revert = one-line pointer edit). Gates this adds or changes: none. HELD: a human merges. NOTE: this PR is pushed with GITHUB_TOKEN, so CI does not start until someone pushes an ordinary commit to the branch."
       - name: Stage the non-pass evidence record (the ledger row is already appended by the grader)
         id: stage
         if: steps.grade.outcome == 'failure' && github.ref == 'refs/heads/main'
