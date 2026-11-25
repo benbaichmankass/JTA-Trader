@@ -6,6 +6,9 @@ regression against something that actually happened, not an invented scenario.
 """
 from __future__ import annotations
 
+import json
+
+import src.runtime.package_leg_coverage as plc
 from src.runtime.package_leg_coverage import VERDICTS, assess, summarize
 
 
@@ -111,3 +114,60 @@ def test_every_declared_verdict_is_reachable():
             "P4": _p("P4", "open", 777, sl=1.0)}
     seen = {row["verdict"] for row in assess(trades, pkgs).values()}
     assert seen == set(VERDICTS)
+
+
+# --- latch age-out (PI-20261125-0261122A-0001) ------------------------------
+# Measured 2026-11-25: 25 latched entries whose legs were ALL journal-closed (and
+# the accounts broker-flat) never cleared, because a package with no open leg is
+# absent from assess()'s output and only a `managed` verdict popped an entry.
+
+def _run(monkeypatch, tmp_path, trades, packages, state, skip=""):
+    path = tmp_path / "package_leg_coverage_state.json"
+    path.write_text(json.dumps(state))
+    monkeypatch.setattr(plc, "_state_path", lambda: path)
+    monkeypatch.setattr(plc, "_read_journal", lambda _db: (trades, packages))
+    monkeypatch.setattr(plc, "_send_alert", lambda _m: None)
+    monkeypatch.setenv("PACKAGE_LEG_CHECK_SKIP", skip)
+    out = plc.run_package_leg_check(force=True)
+    return out, json.loads(path.read_text())
+
+
+def _latched(verdict="stranded"):
+    return {"verdict": verdict, "reason": "r", "legs": [], "since": "2026-08-18"}
+
+
+def test_latched_package_with_no_open_leg_is_aged_out(monkeypatch, tmp_path):
+    out, state = _run(monkeypatch, tmp_path, [], {},
+                      {"__last_check__": 1.0, "pkg-gone": _latched()})
+    assert "pkg-gone" not in state
+    assert out["aged_out"] == 1
+
+
+def test_still_stranded_package_stays_latched_without_re_alerting(monkeypatch, tmp_path):
+    trades = [_t(1, "a", "pkg-s", 10.0)]
+    packages = {"pkg-s": _p("pkg-s", "closed", 9)}
+    out, state = _run(monkeypatch, tmp_path, trades, packages,
+                      {"pkg-s": _latched(), "pkg-gone": _latched()})
+    assert state["pkg-s"]["verdict"] == "stranded"
+    assert state["pkg-s"]["since"] == "2026-08-18"  # unchanged latch
+    assert out["alerts_fired"] == 0
+    assert "pkg-gone" not in state
+
+
+def test_skipped_package_is_never_aged_out(monkeypatch, tmp_path):
+    _, state = _run(monkeypatch, tmp_path, [], {}, {"pkg-skip": _latched()},
+                    skip="pkg-skip")
+    assert "pkg-skip" in state
+
+
+def test_failed_journal_read_ages_nothing_out(monkeypatch, tmp_path):
+    path = tmp_path / "package_leg_coverage_state.json"
+    path.write_text(json.dumps({"pkg-x": _latched()}))
+    monkeypatch.setattr(plc, "_state_path", lambda: path)
+
+    def boom(_db):
+        raise RuntimeError("locked")
+    monkeypatch.setattr(plc, "_read_journal", boom)
+    out = plc.run_package_leg_check(force=True)
+    assert out["checked"] is False
+    assert "pkg-x" in json.loads(path.read_text())

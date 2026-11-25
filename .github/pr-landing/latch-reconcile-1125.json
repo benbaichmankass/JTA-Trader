@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime change (src/runtime/package_leg_coverage.py, observe-only detector in the live trader process; no order path, no DB write). Operator Tier-2 OK granted 2026-11-25 for the stale-latch cleanup PI-20261125-0261122A-0001, relayed by Manager Session 2026-11-25a; the manager merges. Effect: the hourly check drops a latched package once it has no open journal leg. Measured on live 18:27Z: all 25 latched entries have every leg status=closed and the accounts broker-flat, so all 25 clear on the first check after restart. Revert: git revert.",
+  "why": "The package_leg_coverage latch never cleared a package whose last leg closed, so 25 stale entries since Aug buried any new exit-path gap."
+}

@@ -357,6 +357,24 @@ def run_package_leg_check(*, force: bool = False) -> Dict[str, Any]:
                          "since": datetime.now(timezone.utc).isoformat()}
         fired.append(_describe(pkg_id, row))
 
+    # Age out packages that no longer hold ANY open leg (PI-20261125-0261122A-0001).
+    # `assess()` only sees packages with an open trade row, so a package whose
+    # last leg closed vanishes from `verdicts` and the `managed` branch above never
+    # runs for it: before this, such an entry stayed latched forever (25 entries on
+    # 2026-11-25, every one with all legs journal-closed and the accounts
+    # broker-flat), which buries any NEW gap. Gone from the open book = recovered.
+    # Safe only because the journal read above SUCCEEDED (a failed read returned
+    # earlier and latched nothing). Skipped packages are left as they are.
+    aged_out: List[str] = []
+    for key in list(state.keys()):
+        if key == _LAST_CHECK_KEY or key in verdicts or key in skip:
+            continue
+        state.pop(key, None)
+        aged_out.append(key)
+    if aged_out:
+        logger.info("package_leg_coverage: cleared %d latched package(s) with no "
+                    "open leg left: %s", len(aged_out), ", ".join(sorted(aged_out)[:10]))
+
     _save_state(state)
 
     if fired:
@@ -368,7 +386,7 @@ def run_package_leg_check(*, force: bool = False) -> Dict[str, Any]:
         _send_alert(head + "\n\n" + "\n\n".join(fired[:5]))
 
     return {"checked": True, "summary": summary, "alerts_fired": len(fired),
-            "verdicts": verdicts}
+            "aged_out": len(aged_out), "verdicts": verdicts}
 
 
 def write_state_snapshot() -> None:
