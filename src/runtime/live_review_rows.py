@@ -94,7 +94,36 @@ def merge(legacy: Iterable[Dict[str, Any]], files: Iterable[Dict[str, Any]]) -> 
     return out
 
 
-def read_at(ref: str, git: Git) -> Dict[str, Any]:
+def cat_blobs_batch(blobs: List[str], root: Any, timeout: int = 60) -> Dict[str, str]:
+    """``{blob sha: text}`` for ``blobs`` through ONE ``git cat-file --batch`` (LTR-DUE-COLD-BLOB-CACHE, 2026-11-25).
+    A blob git cannot give is left out (the caller falls back to one ``cat-file`` for it). Never raises."""
+    import subprocess
+    out: Dict[str, str] = {}
+    if not blobs:
+        return out
+    try:
+        r = subprocess.run(["git", "-C", str(root), "cat-file", "--batch"], input=("\n".join(blobs) + "\n").encode(),
+                           capture_output=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError):
+        return out
+    if r.returncode != 0:
+        return out
+    data, i = r.stdout, 0
+    while i < len(data):
+        j = data.find(b"\n", i)
+        if j < 0:
+            break
+        head = data[i:j].split()
+        if len(head) == 3 and head[1] == b"blob" and head[2].isdigit():
+            size = int(head[2])
+            out[head[0].decode()] = data[j + 1:j + 1 + size].decode("utf-8", "replace")
+            i = j + 1 + size + 1
+        else:  # "<sha> missing": nothing follows the header line
+            i = j + 1
+    return out
+
+
+def read_at(ref: str, git: Git, read_blobs: Optional[Callable[[List[str]], Dict[str, str]]] = None) -> Dict[str, Any]:
     """Every row at ``ref``. ``state`` is ``ok`` or ``could_not_read`` (with ``detail``).
 
     ``rows``: merged (:func:`merge`); ``legacy_rows`` / ``file_rows``: counts; ``bad_lines``: legacy
@@ -114,6 +143,24 @@ def read_at(ref: str, git: Git) -> Dict[str, Any]:
         text = ""
     legacy, bad = parse_legacy(text)
     files, bad_files = [], []
+    if read_blobs is not None:
+        # One subprocess for every blob this process has not parsed yet. A cold cache (every restart) cost one
+        # `git cat-file` per row file: ~24 s of the 25.6 s a cold live_review_due took with 536 row files.
+        want = []
+        for ln in listing.splitlines():
+            meta, _, path = ln.partition("\t")
+            parts = meta.split()
+            if len(parts) == 3 and parts[1] == "blob" and path.endswith(".json") and parts[2] not in _blob_cache:
+                want.append(parts[2])
+        if want:
+            names = {}
+            for ln in listing.splitlines():
+                meta, _, path = ln.partition("\t")
+                parts = meta.split()
+                if len(parts) == 3:
+                    names[parts[2]] = path
+            for blob, body in read_blobs(sorted(set(want))).items():
+                _blob_cache[blob] = parse_row_file(names.get(blob, ""), body)
     for ln in listing.splitlines():
         meta, _, path = ln.partition("\t")
         parts = meta.split()
