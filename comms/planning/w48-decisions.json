@@ -1,0 +1,254 @@
+[
+ {
+  "id": "Q1",
+  "title": "Demotion rule for ml_entry",
+  "context": "ml_entry is the real-money crypto ML entry leg. It lost 8.21 R of the book's 7.68 R this week, and nothing today can move it off real money however it trades. The performance review proposes a rule: it goes to the demo floor once, counted per entry bar since the served model went live, there are at least 20 bars, net R below zero and an 80% lower bound below zero. On the old model that would have fired (24 bars, -10.90 R). Tonight's revert to v1 restarts the count at zero.",
+  "options": [
+   {
+    "label": "Grant the rule as written (Recommended)",
+    "description": "The count restarts with tonight's v1 revert. Each new model that passes offline on disjoint data gets a fresh count. A demoted leg keeps trading on the demo floor for data."
+   },
+   {
+    "label": "Grant it, but at 30 bars",
+    "description": "Same rule, slower to fire: it gives the 14-month-old model more room before it triggers."
+   },
+   {
+    "label": "Refuse; judge it in the weekly review",
+    "description": "There is no automatic trigger. The performance review flags it each week and you decide."
+   }
+  ],
+  "row": "PI-20261125-PREP1125-0003"
+ },
+ {
+  "id": "Q2",
+  "title": "How long ml_entry may trade real money on the old model",
+  "context": "Tonight ml_entry was reverted to its first model. That model's training data ends on 2025-09-22, about 14 months ago, and the freshness check warns. The next candidate is Sunday's (11-29) retrain, graded under the new rule that a number measured only on its grading window cannot promote it.",
+  "options": [
+   {
+    "label": "Until the 11-29 retrain is graded, hard stop at the 12-02 review (Recommended)",
+    "description": "If the retrain passes on disjoint data it replaces v1. If it fails, the 12-02 review brings you keep or demote with v1's live per-bar numbers."
+   },
+   {
+    "label": "Until the Q1 rule fires, with no date",
+    "description": "Only the demotion rule (if granted) ends the run."
+   },
+   {
+    "label": "Demo floor now until a fresh model passes",
+    "description": "No real-money ML entry until a model trained on recent data clears the rule."
+   }
+  ],
+  "row": "ML-ENTRY-FINETUNE"
+ },
+ {
+  "id": "Q3",
+  "title": "The +$249k estimated MGC row in the paper corpus",
+  "context": "One ib_paper gold-futures row (id 4773) is booked at +$249k. That is an estimate: it was priced 262 points past its target during the August protection failure, not taken from the venue. On its own it turns the paper book's headline from about -$221k to positive; venue-measured paper is -$67.8k over 908 rows.",
+  "options": [
+   {
+    "label": "Exclude it from every promotion/demotion read, keep it visible and labelled (Recommended)",
+    "description": "The row stays in the journal, shown as ESTIMATED beside the measured figure. No grade or evidence record uses it."
+   },
+   {
+    "label": "Keep it in, labelled ESTIMATED",
+    "description": "It stays in the totals with its provenance label. The headline sign stays set by one row."
+   },
+   {
+    "label": "Remove it from the corpus entirely",
+    "description": "The row is dropped from every aggregate, including display."
+   }
+  ],
+  "row": "AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED"
+ },
+ {
+  "id": "Q4",
+  "title": "Should the ETF leg's first live order wait on the Alpaca stop faults?",
+  "context": "The index ETF leg goes to real money at full size (your decision; the PR merges tonight). Today Alpaca showed three stop faults: an unprotected USO with a refused re-arm, a QQQ trailing-stop change accepted but never applied, and a mirror close that never reached the journal. The diagnosis lane can run first, or the leg can go now with the naked-position sweep as the backstop.",
+  "options": [
+   {
+    "label": "Wait for the diagnosis, about 1-2 days (Recommended)",
+    "description": "The first live order goes once the stop and re-arm faults have a named cause and fix. This is surge item 3."
+   },
+   {
+    "label": "Go now; the naked sweep is the backstop",
+    "description": "Trade from the first signal. A missing stop is re-armed on the next sweep."
+   },
+   {
+    "label": "Go now at reduced size until the fix",
+    "description": "Trade, but smaller until the diagnosis lands, then go to full size."
+   }
+  ],
+  "row": "INDEX-CAPIT-1X-LEG"
+ },
+ {
+  "id": "Q5",
+  "title": "Should the measured markout cost become the grading basis?",
+  "context": "A measurement over 2,375 fills found that our recorded costs understate the true cost one hour after a fill by about 3.8 basis points per fill (95% range 0.4 to 7.3). On real-money fills alone the result is indeterminate. If it becomes the grading basis, every backtest's net figure falls by that amount, and some marginal legs would fail.",
+  "options": [
+   {
+    "label": "Report it beside the current net for 2 weeks, then decide (Recommended)",
+    "description": "Every backtest net gets a second, markout-adjusted figure. In 2 weeks we see which decisions it would have changed."
+   },
+   {
+    "label": "Make it the grading basis now",
+    "description": "All Stage-0 grades use the higher cost from this week."
+   },
+   {
+    "label": "Do not add it",
+    "description": "Keep the current cost stack."
+   }
+  ],
+  "row": "COST-STACK-MARKOUT-TERM"
+ },
+ {
+  "id": "Q6",
+  "title": "Headline the scoreboard on venue-measured P&L?",
+  "context": "Today the scoreboard sums every priced row, including estimated and unverified ones. That is why the paper book reads positive while its venue-measured rows lose. The proposal is to make venue-measured net P&L the headline, with the estimated and unmeasured parts on their own labelled lines.",
+  "options": [
+   {
+    "label": "Yes: measured headline, the other parts labelled beside it (Recommended)",
+    "description": "The headline only moves on numbers the venue confirmed. Estimated stays visible but is never folded in."
+   },
+   {
+    "label": "Keep the blended headline with a provenance split under it",
+    "description": "The current headline stays and the split is a second line."
+   }
+  ],
+  "row": "AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED"
+ },
+ {
+  "id": "Q7",
+  "title": "How often paper trades get a live review",
+  "context": "Live review now covers every account, paper included. Each review costs plan usage, and this week's capacity buys about 4 lanes. The choice is between reviewing paper packages only when something happens (a new package, a stop threatened, a big move) or on a fixed 4-hourly sweep as well.",
+  "options": [
+   {
+    "label": "Event-only for paper, real money and prop unchanged (Recommended)",
+    "description": "Paper is reviewed when an event fires. This saves usage for the surge; real-money and prop cadence stays as it is."
+   },
+   {
+    "label": "4-hourly sweep for paper as well",
+    "description": "Every open paper package is reviewed at least every 4 hours. Better coverage, more usage."
+   },
+   {
+    "label": "Paper off live review this week",
+    "description": "Only real money and prop are reviewed until the capacity reading improves."
+   }
+  ],
+  "row": "LTR (live-review cadence)"
+ },
+ {
+  "id": "Q8",
+  "title": "Re-plan L-ML-LIVE (ML in live trading loops; was due 11-11)",
+  "context": "The goal was a handful of ML models changing live decisions, each on its own evidence. Today ML changes 3 of 9 real-money legs. The main one, ml_entry, is losing and has just been reverted, and no served model is in the trainer's registry. This is the second carry-over, so it needs your call.",
+  "options": [
+   {
+    "label": "Re-scope to 'one ML model on real money passes the new rule on disjoint data', target 12-09 (Recommended)",
+    "description": "Narrower and measurable: the 11-29 retrain or ml_entry_eq_struct is the candidate, and served models get registry entries."
+   },
+   {
+    "label": "Keep the scope, new target 12-16",
+    "description": "Same done-condition, three more weeks."
+   },
+   {
+    "label": "Close it and fold it into L-ML-MECE",
+    "description": "Stop treating it as a week priority; the per-decision ML plan carries it."
+   }
+  ],
+  "row": "WEEKLY-PLANNING (milestone L-ML-LIVE)"
+ },
+ {
+  "id": "Q9",
+  "title": "Re-plan L-DESK-V1 (desk production-ready; was due 11-04)",
+  "context": "Desk wakes run, but the desk was throttled to real-money reviews. DESK-14 and DESK-18G have landed and are not yet proven, and DESK-19..26 are blocked as 'later phase'. Your first priority this week is desk capacity plus the daily macro brief (DESK-MACRO-DAILY).",
+  "options": [
+   {
+    "label": "Re-scope to desk capacity + DESK-MACRO-DAILY in production end to end, target 12-09 (Recommended)",
+    "description": "Done when the macro brief runs daily, the desk wakes on paper as well as real money, and one apply path is observed."
+   },
+   {
+    "label": "Keep the original V1 scope, target 12-16",
+    "description": "Include DESK-19..26."
+   },
+   {
+    "label": "Close V1 and track the work under L-DESK",
+    "description": "No separate week-priority milestone."
+   }
+  ],
+  "row": "WEEKLY-PLANNING (milestone L-DESK-V1)"
+ },
+ {
+  "id": "Q10",
+  "title": "Re-plan L-AM-STANDARD (active management on every real-money leg; was due 11-04)",
+  "context": "Every AM v2 Stage B test has failed, and every earlier AM random control saw the exit time, so old 'beats random' claims are void. Tonight's c7e3-07/08/09 runs are the decisive tighten tests. If they fail, the tighten lever closes and work moves to another action family.",
+  "options": [
+   {
+    "label": "Target 12-16: decide on c7e3-08/09; if none passes, re-scope to one action family on one leg (Recommended)",
+    "description": "Keeps the milestone alive but makes the next step depend on this week's decisive tests."
+   },
+   {
+    "label": "Make it dormant until an AM test passes",
+    "description": "No target; it re-opens on the first valid PASS."
+   },
+   {
+    "label": "Close it",
+    "description": "AM stays as research under L-ATM with no week priority."
+   }
+  ],
+  "row": "WEEKLY-PLANNING (milestone L-AM-STANDARD)"
+ },
+ {
+  "id": "Q11",
+  "title": "Tier-2 and operator-only fixes: approve as a batch?",
+  "context": "Four fixes need your OK. (1) The closed-flat alerter crashes, so 0 of 23 violations reached you. (2) An options close leaves its legs open at the venue. (3) The stale-latch cleanup. (4) A bulk cancel of about 390 GitHub Actions runs stuck in 'queued' since as far back as May. Each is a defect fix with its own test; none changes strategy or risk.",
+  "options": [
+   {
+    "label": "Approve all four (Recommended)",
+    "description": "Each ships with its test and is verified after deploy, and you get one line per fix."
+   },
+   {
+    "label": "Approve 1-3; leave the zombie runs",
+    "description": "The runs do not consume runners; they only inflate counts."
+   },
+   {
+    "label": "One at a time",
+    "description": "Each comes back to you separately with its diff."
+   }
+  ],
+  "row": "HEALTH-20261125-CFI-ALERTER"
+ },
+ {
+  "id": "Q12",
+  "title": "Unlogged skill amendments: backfill once, or retire the ritual?",
+  "context": "43 skill and brief edits have no entry in the amendments log, and the gap has grown for 4 audits (18 to 43). Either one lane backfills the log once and keeps it, or we retire the log because git history already records every change.",
+  "options": [
+   {
+    "label": "One backfill pass by the housekeeping lane, then keep it (Recommended)",
+    "description": "About one Sonnet hour. The audit check stays."
+   },
+   {
+    "label": "Retire the amendments log",
+    "description": "Git history is the record and the audit stops checking it."
+   }
+  ],
+  "row": "AUD-20261104-AMENDMENTS-UNLOGGED"
+ },
+ {
+  "id": "Q13",
+  "title": "The daily email digest routine",
+  "context": "A daily email digest routine still runs, and its prompt says you are away until 11-22. It needs a target inbox and a decision on whether it should run while you are active.",
+  "options": [
+   {
+    "label": "Pause it while you are active; re-arm on request (Recommended)",
+    "description": "No digest emails until you say you are away again."
+   },
+   {
+    "label": "Keep it daily to the account inbox",
+    "description": "It keeps running; the 'away' wording is updated."
+   },
+   {
+    "label": "Delete it",
+    "description": "The routine is removed."
+   }
+  ],
+  "row": "WEEKLY-PLANNING"
+ }
+]
