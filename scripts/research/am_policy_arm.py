@@ -89,6 +89,10 @@ HOLDOUT_START = "2026-01-01"
 HOLDOUT_TRAIN_END = "2025-12-01"   # what the heads' training windows end by (matches Stage A's claim)
 RULE_ID = "RULE-AM-HEADS-STAGE-B-20261124"
 HEAD_FEATS = ["open_r", "peak_r", "mae_r", "bars_since_peak", "bars_open", "range_atr_k", "side", "tf_log_sec", "strat"]
+#: RICH heads (``am_heads_fit.py dump --feats rich``, unit RQ-20261124-a9d2-01 PASS): the 9 features + the cf_bar_labels ctx block. A rich manifest makes every
+#: driver build its decision rows with ``context=True`` over CTX_LOOKBACK bars of pre-fill history (``attach_history``); a base manifest is unchanged.
+CTX_HEAD_FEATS = [f"ctx_{k}" for k in L.CTX_KEYS]
+RICH_HEAD_FEATS = HEAD_FEATS + CTX_HEAD_FEATS
 
 
 # ---- the heads --------------------------------------------------------------------------------------------------------
@@ -103,8 +107,11 @@ class Heads:
         self.man = json.loads((self.root / "manifest.json").read_text())
         if self.man.get("schema") != "am_heads_dump/1":
             raise ValueError(f"unexpected heads manifest schema {self.man.get('schema')!r}")
-        if list(self.man["feats"]) != HEAD_FEATS:
-            raise ValueError(f"head feature list {self.man['feats']} != driver feature list {HEAD_FEATS}")
+        if list(self.man["feats"]) not in (HEAD_FEATS, RICH_HEAD_FEATS):
+            raise ValueError(f"head feature list {self.man['feats']} is neither driver feature list {HEAD_FEATS} nor {RICH_HEAD_FEATS}")
+        self.feats = list(self.man["feats"])
+        self.rich = self.feats == RICH_HEAD_FEATS
+        self.pre_bars = max(PRE_BARS, L.CTX_LOOKBACK + 1) if self.rich else PRE_BARS   # bars the shard fetch reaches back before the earliest fill
         self.strat = {str(name): int(code) for code, name in self.man["strategies"].items()}   # the manifest stores {code: name}
         self.folds: List[dict] = []
         self.boosters: Dict[tuple, Any] = {}
@@ -203,21 +210,48 @@ def _mfe_r(ctx: dict, x_ts: Optional[float]) -> Optional[float]:
 
 
 # ---- decision rows and the policy -------------------------------------------------------------------------------------
+def attach_history(ctx: Optional[dict], store: Any, heads: "Heads") -> Optional[dict]:
+    """RICH heads only: stash the CTX_LOOKBACK closed bars before the fill (``store.window``) as ``ctx["hist_pre"]`` so ``decision_rows`` builds the ctx block
+    exactly as ``cf_bar_labels_run.py shard --context`` did for the labels the heads were fitted on (``pre`` = bars with time < t_fill, last CTX_LOOKBACK).
+    The replay bars (``ctx["bars"]``) are untouched, so every arm, HOLD included, replays byte-identically to a base run. No-op for base heads."""
+    if ctx is not None and getattr(heads, "rich", False):
+        ctx["hist_pre"] = [b for b in store.window(ctx["t_fill"] - (L.CTX_LOOKBACK + 1) * ctx["sec"], ctx["t_fill"]) if b["time"] < ctx["t_fill"]][-L.CTX_LOOKBACK:]
+    return ctx
+
+
 def decision_rows(ctx: dict) -> List[dict]:
-    """The point-in-time rows of the unmanaged trade (``cf_bar_labels``, features only), capped at the harness exit exactly as the label build is."""
+    """The point-in-time rows of the unmanaged trade (``cf_bar_labels``, features only), capped at the harness exit exactly as the label build is.
+    With ``ctx["hist_pre"]`` (rich heads) each row also carries the ctx block; the base features and the row set are unchanged (they never read pre-fill bars)."""
     post = ctx["post"]
     exit_idx = next((k for k, b in enumerate(post, start=1) if b["time"] + ctx["sec"] >= ctx["t_exit"]), None)
+    if "hist_pre" in ctx:
+        return L.build_rows(side=ctx["side"], entry=ctx["entry_ref"], sl=ctx["stop0"], bars=list(ctx["hist_pre"]) + list(post), entry_time=ctx["t_row"],
+                            bar_seconds=ctx["sec"], exit_idx=exit_idx, with_labels=False, context=True)
     return L.build_rows(side=ctx["side"], entry=ctx["entry_ref"], sl=ctx["stop0"], bars=ctx["bars"], entry_time=ctx["t_row"], bar_seconds=ctx["sec"],
                         exit_idx=exit_idx, with_labels=False)
 
 
+def _nan(v) -> float:
+    return float("nan") if v is None else float(v)
+
+
 def feature_matrix(ctx: dict, rows: Sequence[dict], strat_id: int):
+    """The heads' input matrix: the 9 HEAD_FEATS, plus the 6 ctx columns (NaN where None, as ``am_heads_fit.load(rich=True)`` reads them) when the
+    rows carry a ctx block (rich heads)."""
     import numpy as np
     sg = ctx["sign"]
     ltf = math.log(ctx["sec"])
-    return np.array([[r["features"]["open_r"], r["features"]["peak_r"], r["features"]["mae_r"], r["features"]["bars_since_peak"],
-                      r["features"]["bars_open"], r["features"]["range_atr_k"] if r["features"]["range_atr_k"] is not None else float("nan"),
-                      sg, ltf, float(strat_id)] for r in rows], dtype="float32").reshape(len(rows), len(HEAD_FEATS))
+    rich = "hist_pre" in ctx
+    width = len(RICH_HEAD_FEATS) if rich else len(HEAD_FEATS)
+    out = []
+    for r in rows:
+        f = r["features"]
+        v = [f["open_r"], f["peak_r"], f["mae_r"], f["bars_since_peak"], f["bars_open"], _nan(f["range_atr_k"]), sg, ltf, float(strat_id)]
+        if rich:
+            c = r.get("ctx") or {}
+            v += [_nan(c.get(k)) for k in L.CTX_KEYS]
+        out.append(v)
+    return np.array(out, dtype="float32").reshape(len(rows), width)
 
 
 def _px(ctx: dict, level_r: float) -> float:
@@ -371,7 +405,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
     else:
         try:
             sec = cf_bars.TF_SECONDS[tf]
-            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - PRE_BARS * sec
+            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - heads.pre_bars * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + cf_core.resolve_horizon(
                 {"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(jobs[k].get("strategy"))) else {})})["seconds"]
                 for k in chosen)
@@ -397,7 +431,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
             continue
         sec = cf_bars.TF_SECONDS[tf]
         h = cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(job.get("strategy"))) else {})})["seconds"]
-        ctx = make_ctx(job, store.window(t_row - PRE_BARS * sec, t_exit + h), tf)
+        ctx = attach_history(make_ctx(job, store.window(t_row - PRE_BARS * sec, t_exit + h), tf), store, heads)
         if ctx is None:
             reasons["no_replay_context"] += 1
             continue

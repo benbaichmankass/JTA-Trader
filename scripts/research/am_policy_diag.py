@@ -128,7 +128,7 @@ def main(argv=None) -> int:
         sec = cf_bars.TF_SECONDS[tf]
         hz = lambda j, tf=tf: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
         try:
-            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in keys) - P.PRE_BARS * sec
+            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in keys) - heads.pre_bars * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + hz(jobs[k]) for k in keys)
             store = cf_bulk.BarStore(cf_bars.historical_bars(sym, tf, lo, hi))
         except Exception as e:  # noqa: BLE001  # allow-silent: diagnostic sample; a failed fetch skips the shard and is printed
@@ -141,7 +141,7 @@ def main(argv=None) -> int:
             fold = heads.fold_of(t_row) if t_row else None
             if fold is None or t_exit is None:
                 continue
-            ctx = P.make_ctx(job, store.window(t_row - P.PRE_BARS * sec, t_exit + hz(job)), tf)
+            ctx = P.attach_history(P.make_ctx(job, store.window(t_row - P.PRE_BARS * sec, t_exit + hz(job)), tf), store, heads)
             if ctx is None:
                 continue
             rows = P.decision_rows(ctx)
